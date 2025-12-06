@@ -1,0 +1,22 @@
+{
+  "vertices": [
+    { "id": "v0", "x": 0, "y": 0, "z": 0, "data": {} },
+    { "id": "v1", "x": 4, "y": 0, "z": 0, "data": {} },
+    { "id": "v2", "x": 4, "y": 2, "z": 0, "data": {} },
+    { "id": "v3", "x": 0, "y": 2, "z": 0, "data": {} },
+    { "id": "v4", "x": 4, "y": 2, "z": 2, "data": {} },
+    { "id": "v5", "x": 0, "y": 2, "z": 2, "data": {} }
+  ],
+  "faces": [
+     {
+      "id": "f0",
+      "vertex_ids": ["v0", "v1", "v2", "v3"],
+      "data": { "space_name": "Test Room" }
+    },
+    {
+      "id": "f1",
+      "vertex_ids": ["v2", "v4", "v5", "v3"],
+      "data": { "space_name": "Room 1" }
+    }
+  ]
+}

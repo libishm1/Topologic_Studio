@@ -1,0 +1,15 @@
+{
+  "vertices": [
+    { "id": "v0", "x": 0, "y": 0, "z": 0, "data": {} },
+    { "id": "v1", "x": 2, "y": 0, "z": 0, "data": {} },
+    { "id": "v2", "x": 2, "y": 2, "z": 0, "data": {} },
+    { "id": "v3", "x": 0, "y": 2, "z": 0, "data": {} }
+  ],
+  "faces": [
+    {
+      "id": "f0",
+      "vertex_ids": ["v0", "v1", "v2", "v3"],
+      "data": { "space_name": "Test Room" }
+    }
+  ]
+}
