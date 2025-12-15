@@ -2,8 +2,9 @@
 import React, { useState, useMemo } from "react";
 import axios from "axios";
 import TopologyViewer from "./TopologyViewer.jsx";
-import "./App.css"; // ← make sure this line is present
-import logoImg from "./assets/topologicStudio-white-logo400x400.png"; // adjust path/name if needed
+import "./App.css";
+import logoImg from "./assets/topologicStudio-white-logo400x400.png";
+
 const API_BASE = "http://localhost:8000"; // FastAPI backend
 
 export default function App() {
@@ -23,13 +24,12 @@ export default function App() {
 
     try {
       const text = await file.text();
-
       let originalJson;
       try {
         originalJson = JSON.parse(text);
       } catch (parseErr) {
         console.error("JSON parse error:", parseErr);
-        setError("JSON parse error – is this a valid JSON file?");
+        setError("JSON parse error: is this a valid JSON file?");
         return;
       }
 
@@ -52,19 +52,56 @@ export default function App() {
       }
 
       const payload = res.data;
-
       if (!payload.vertices || !payload.faces) {
         setError("Unexpected response format from backend.");
         return;
       }
-
       if (!payload.edges) payload.edges = [];
       if (!payload.raw) payload.raw = [];
-
       setTopology(payload);
     } catch (err) {
       console.error("Unexpected error:", err);
       setError("Unexpected error while loading topology.");
+    }
+  }
+
+  async function handleIfcUpload(event, includePath = false) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // reset input so the same file can be picked twice in a row
+    event.target.value = null;
+
+    setError(null);
+    setSelection(null);
+    setTopology(null);
+    setFileName(includePath ? `${file.name} (path)` : file.name);
+
+    const form = new FormData();
+    form.append("file", file);
+
+    try {
+      const res = await axios.post(
+        `${API_BASE}/upload-ifc?include_path=${includePath ? "true" : "false"}`,
+        form,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+      const payload = res.data;
+      if (!payload?.vertices || !payload?.faces) {
+        setError("Unexpected response format from IFC upload.");
+        return;
+      }
+      if (!payload.edges) payload.edges = [];
+      if (!payload.raw) payload.raw = [];
+      setTopology(payload);
+    } catch (apiErr) {
+      setError(
+        apiErr.response?.data?.detail ||
+          apiErr.message ||
+          "IFC upload failed"
+      );
     }
   }
 
@@ -94,11 +131,10 @@ export default function App() {
   }, [topology]);
 
   const formatDictValue = (value) => {
-    if (value === null || value === undefined) return "—";
+    if (value === null || value === undefined) return "null";
     if (typeof value === "boolean") return value ? "true" : "false";
     if (typeof value === "number") return value;
     if (typeof value === "string") return value;
-    // Arrays / objects
     try {
       return JSON.stringify(value);
     } catch {
@@ -145,6 +181,24 @@ export default function App() {
               className="file-upload-input"
             />
             <span>Load JSON</span>
+          </label>
+          <label className="file-upload-button">
+            <input
+              type="file"
+              accept=".ifc"
+              onChange={(e) => handleIfcUpload(e, false)}
+              className="file-upload-input"
+            />
+            <span>Load IFC</span>
+          </label>
+          <label className="file-upload-button">
+            <input
+              type="file"
+              accept=".ifc"
+              onChange={(e) => handleIfcUpload(e, true)}
+              className="file-upload-input"
+            />
+            <span>Calculate shortest path / generate wires</span>
           </label>
           {fileName && (
             <span className="file-chip" title={fileName}>
@@ -194,7 +248,7 @@ export default function App() {
               <p>Click on a face, edge, or vertex to inspect its metadata.</p>
               <p className="sidebar-empty-hint">
                 Repeated clicks on the same location will cycle through the
-                hierarchy (CellComplex → Cell → Shell → Face → Edge → Vertex).
+                hierarchy (CellComplex -> Cell -> Shell -> Face -> Edge -> Vertex).
               </p>
             </div>
           )}
@@ -218,44 +272,43 @@ export default function App() {
               </div>
 
               <div className="sidebar-section">
-              <div className="sidebar-section-header">Dictionary</div>
-              <div className="sidebar-section-body">
-                {selectedEntity ? (
-                  (() => {
-                    const dict = selectedEntity.dictionary || {};
-                    const entries = Object.entries(dict).sort(([a], [b]) =>
-                      a.localeCompare(b)
-                    );
-
-                    if (entries.length === 0) {
-                      return (
-                        <p className="sidebar-empty-hint">
-                          No dictionary entries for this entity.
-                        </p>
+                <div className="sidebar-section-header">Dictionary</div>
+                <div className="sidebar-section-body">
+                  {selectedEntity ? (
+                    (() => {
+                      const dict = selectedEntity.dictionary || {};
+                      const entries = Object.entries(dict).sort(([a], [b]) =>
+                        a.localeCompare(b)
                       );
-                    }
 
-                    return (
-                      <div className="sidebar-dict-container">
-                        {entries.map(([key, value]) => (
-                          <div className="sidebar-dict-row" key={key}>
-                            <div className="sidebar-dict-key">{key}</div>
-                            <div className="sidebar-dict-value">
-                              {formatDictValue(value)}
+                      if (entries.length === 0) {
+                        return (
+                          <p className="sidebar-empty-hint">
+                            No dictionary entries for this entity.
+                          </p>
+                        );
+                      }
+
+                      return (
+                        <div className="sidebar-dict-container">
+                          {entries.map(([key, value]) => (
+                            <div className="sidebar-dict-row" key={key}>
+                              <div className="sidebar-dict-key">{key}</div>
+                              <div className="sidebar-dict-value">
+                                {formatDictValue(value)}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <p className="sidebar-empty-hint">
-                    No dictionary found for this entity.
-                  </p>
-                )}
+                          ))}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <p className="sidebar-empty-hint">
+                      No dictionary found for this entity.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-
             </>
           )}
         </aside>

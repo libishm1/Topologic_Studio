@@ -28,8 +28,11 @@ from collections import defaultdict
 # backend/main.py
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+import os
+import tempfile
+import math
 
 
 app = FastAPI(
@@ -39,7 +42,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # fine for local dev
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -378,21 +384,42 @@ from fastapi import Body
 async def upload_topology(payload: Union[List[Any], dict] = Body(...)):
     """
     Accept either:
-    - the original TopologicPy export (list of dicts), OR
-    - a pre-converted 'contract' dict with vertices/edges/faces/etc.
-
-    You will use your TopologicPy helper to turn 'payload'
-    into the viewer contract JSON.
+    - a pre-converted viewer contract dict (has vertices/faces keys)
+    - the original TopologicPy JSON export (list of dicts)
+    Anything else is rejected with a helpful error instead of 500s.
     """
-    # CASE 1: payload is already in viewer-contract form (like contract.json)
-    # if isinstance(payload, dict) and "vertices" in payload and "faces" in payload:
-    #     # You generated the contract on the TopologicPy side already
-    #     return payload
+    # Already in viewer contract form
+    if isinstance(payload, dict) and "vertices" in payload and "faces" in payload:
+        return payload
 
-    # CASE 2: payload is original TopologicPy JSON export (list of dicts)
-    # Call your existing TopologicPy conversion here.
-    # I'm using a placeholder function name; replace with your real one.
-    topologies = Topology.ByJSONDictionary(jsonDictionary = payload, tolerance = 0.0001, silent = False)
+    # Clearly not a TopologicPy export (e.g., Blender/Sverchok graph JSON)
+    if isinstance(payload, dict) and "export_version" in payload and "main_tree" in payload:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unsupported JSON format: looks like a Blender/Sverchok graph. "
+                "Please upload a TopologicPy topology export or a pre-converted viewer contract."
+            ),
+        )
+
+    if not isinstance(payload, list):
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported JSON format: expected a list of TopologicPy topology dictionaries.",
+        )
+
+    try:
+        topologies = Topology.ByJSONDictionary(
+            jsonDictionary=payload,
+            tolerance=0.0001,
+            silent=False,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Failed to parse TopologicPy JSON: {exc}",
+        )
+
     cluster = Cluster.ByTopologies(topologies)
     contract = json_by_cluster(cluster)
     return contract
@@ -574,3 +601,224 @@ async def upload_topology(payload: Union[List[Any], dict] = Body(...)):
 #         parents=ParentsMap(parents=parents),
 #         raw=[i.dict() for i in items],
 #     )
+
+
+
+
+
+@app.post("/upload-ifc")
+async def upload_ifc(include_path: bool = False, file: UploadFile = File(...)):
+    """
+    Accept IFC upload and return a viewer contract.
+    - include_path=True will also generate slab grid wires and a simple egress path.
+    """
+    filename = file.filename or "uploaded.ifc"
+    if not filename.lower().endswith(".ifc"):
+        raise HTTPException(status_code=400, detail="Only .ifc files are supported.")
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file provided.")
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".ifc")
+    try:
+        tmp.write(data)
+        tmp.flush()
+        tmp.close()
+        return convert_ifc_to_contract(tmp.name, include_path=include_path)
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+
+
+def convert_ifc_to_contract(file_path: str, include_path: bool = False):
+    """
+    Parse IFC with ifcopenshell.geom and return viewer contract.
+    If include_path is True, generate:
+      - grid wires on each floor/slab element
+      - a simple multi-floor egress polyline (red, thick)
+    """
+    try:
+        import ifcopenshell
+        import ifcopenshell.geom
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"IFC library unavailable: {exc}")
+
+    try:
+        model = ifcopenshell.open(file_path)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to read IFC: {exc}")
+
+    settings = ifcopenshell.geom.settings()
+    settings.set(settings.USE_WORLD_COORDS, True)
+
+    vertices = []
+    vertex_index = {}
+    faces = []
+    raw = []
+    edges = []
+    vertex_uid_seq = 0
+    face_uid_seq = 0
+    edge_uid_seq = 0
+
+    floor_bboxes = []
+    all_bbox = {
+        "minx": math.inf,
+        "maxx": -math.inf,
+        "miny": math.inf,
+        "maxy": -math.inf,
+        "minz": math.inf,
+        "maxz": -math.inf,
+    }
+
+    def add_vertex(x, y, z):
+        nonlocal vertex_uid_seq, all_bbox
+        key = (round(x, 6), round(y, 6), round(z, 6))
+        if key in vertex_index:
+            return vertex_index[key]
+        uid = f"v{vertex_uid_seq}"
+        vertex_uid_seq += 1
+        vertex_index[key] = uid
+        vertices.append({
+            "type": "Vertex",
+            "uid": uid,
+            "coordinates": [x, y, z],
+            "dictionary": {"uid": uid},
+        })
+        all_bbox["minx"] = min(all_bbox["minx"], x)
+        all_bbox["maxx"] = max(all_bbox["maxx"], x)
+        all_bbox["miny"] = min(all_bbox["miny"], y)
+        all_bbox["maxy"] = max(all_bbox["maxy"], y)
+        all_bbox["minz"] = min(all_bbox["minz"], z)
+        all_bbox["maxz"] = max(all_bbox["maxz"], z)
+        return uid
+
+    def add_edge(v0, v1, color="red", width=2):
+        nonlocal edge_uid_seq
+        uid = f"e{edge_uid_seq}"
+        edge_uid_seq += 1
+        edges.append({
+            "type": "Edge",
+            "uid": uid,
+            "vertices": [v0, v1],
+            "dictionary": {"edgeColor": color, "edgeWidth": width},
+        })
+        return uid
+
+    def is_floor(product) -> bool:
+        try:
+            ptype = product.is_a()
+        except Exception:
+            ptype = ""
+        name = getattr(product, "Name", "") or ""
+        upper = str(name).upper()
+        return (
+            "SLAB" in upper
+            or "FLOOR" in upper
+            or "SLAB" in ptype.upper()
+            or "FLOOR" in ptype.upper()
+        )
+
+    for product in model.by_type("IfcProduct"):
+        if not getattr(product, "Representation", None):
+            continue
+        try:
+            shape = ifcopenshell.geom.create_shape(settings, product)
+        except Exception:
+            continue
+        geom = shape.geometry
+        verts = getattr(geom, "verts", None) or getattr(geom, "vertices", None)
+        inds = getattr(geom, "faces", None) or getattr(geom, "indices", None)
+        if not verts or not inds:
+            continue
+
+        pxs, pys, pzs = [], [], []
+
+        for i in range(0, len(inds), 3):
+            tri_idxs = inds[i : i + 3]
+            tri_coords = []
+            for idx in tri_idxs:
+                base = idx * 3
+                x, y, z = verts[base : base + 3]
+                add_vertex(x, y, z)
+                tri_coords.append([x, y, z])
+                pxs.append(x)
+                pys.append(y)
+                pzs.append(z)
+            faces.append({
+                "type": "Face",
+                "uid": f"f{face_uid_seq}",
+                "triangles": [tri_coords],
+                "dictionary": {
+                    "ifc_guid": getattr(product, "GlobalId", None),
+                    "ifc_name": getattr(product, "Name", None),
+                    "ifc_type": product.is_a() if hasattr(product, "is_a") else None,
+                },
+            })
+            face_uid_seq += 1
+
+        raw.append({
+            "ifc_guid": getattr(product, "GlobalId", None),
+            "ifc_name": getattr(product, "Name", None),
+            "ifc_type": product.is_a() if hasattr(product, "is_a") else None,
+        })
+
+        if include_path and is_floor(product) and pxs and pys and pzs:
+            floor_bboxes.append(
+                {
+                    "minx": min(pxs),
+                    "maxx": max(pxs),
+                    "miny": min(pys),
+                    "maxy": max(pys),
+                    "z": sum(pzs) / len(pzs),
+                }
+            )
+
+    if include_path and floor_bboxes:
+        floor_bboxes.sort(key=lambda b: b["z"])
+        for bbox in floor_bboxes:
+            span_x = bbox["maxx"] - bbox["minx"]
+            span_y = bbox["maxy"] - bbox["miny"]
+            step = max(min(span_x, span_y) / 12.0, 0.75)
+            z = bbox["z"] + 0.05
+            x_values = []
+            y_values = []
+            n_x = max(2, int(span_x / step) + 1)
+            n_y = max(2, int(span_y / step) + 1)
+            for i in range(n_x + 1):
+                x_values.append(bbox["minx"] + i * step)
+            for j in range(n_y + 1):
+                y_values.append(bbox["miny"] + j * step)
+
+            for x in x_values:
+                v0 = add_vertex(x, bbox["miny"], z)
+                v1 = add_vertex(x, bbox["maxy"], z)
+                add_edge(v0, v1, color="#8888ff", width=1)
+            for y in y_values:
+                v0 = add_vertex(bbox["minx"], y, z)
+                v1 = add_vertex(bbox["maxx"], y, z)
+                add_edge(v0, v1, color="#8888ff", width=1)
+
+        path_points = []
+        for bbox in floor_bboxes:
+            cx = 0.5 * (bbox["minx"] + bbox["maxx"])
+            cy = 0.5 * (bbox["miny"] + bbox["maxy"])
+            cz = bbox["z"] + 0.1
+            path_points.append((cx, cy, cz))
+
+        if len(path_points) >= 2:
+            prev_uid = add_vertex(*path_points[0])
+            for pt in path_points[1:]:
+                cur_uid = add_vertex(*pt)
+                add_edge(prev_uid, cur_uid, color="red", width=6)
+                prev_uid = cur_uid
+
+    if not faces:
+        raise HTTPException(status_code=422, detail="IFC parsed but no renderable geometry found.")
+
+    return {
+        "vertices": vertices,
+        "edges": edges,
+        "faces": faces,
+        "raw": raw,
+    }
