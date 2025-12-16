@@ -764,15 +764,20 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False):
         })
 
         if include_path and is_floor(product) and pxs and pys and pzs:
-            floor_bboxes.append(
-                {
-                    "minx": min(pxs),
-                    "maxx": max(pxs),
-                    "miny": min(pys),
-                    "maxy": max(pys),
-                    "z": sum(pzs) / len(pzs),
-                }
-            )
+            span_x = max(pxs) - min(pxs)
+            span_y = max(pys) - min(pys)
+            area = span_x * span_y
+            MIN_FLOOR_AREA = 9.0  # m^2 threshold to qualify as a floor/slab
+            if area >= MIN_FLOOR_AREA:
+                floor_bboxes.append(
+                    {
+                        "minx": min(pxs),
+                        "maxx": max(pxs),
+                        "miny": min(pys),
+                        "maxy": max(pys),
+                        "z": sum(pzs) / len(pzs),
+                    }
+                )
 
     if include_path and floor_bboxes:
         floor_bboxes.sort(key=lambda b: b["z"])
