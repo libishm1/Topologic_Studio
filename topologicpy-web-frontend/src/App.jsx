@@ -12,6 +12,7 @@ export default function App() {
   const [selection, setSelection] = useState(null);
   const [error, setError] = useState(null);
   const [fileName, setFileName] = useState("");
+  const [translucent, setTranslucent] = useState(true);
 
   async function handleFileChange(event) {
     const file = event.target.files?.[0];
@@ -130,6 +131,16 @@ export default function App() {
     };
   }, [topology]);
 
+  const displayTopology = useMemo(() => {
+    if (!topology) return null;
+    if (!translucent) return topology;
+    const faces = (topology.faces || []).map((f) => {
+      const opacity = 0.25;
+      return { ...f, opacity, dictionary: { ...(f.dictionary || {}), opacity } };
+    });
+    return { ...topology, faces };
+  }, [topology, translucent]);
+
   const formatDictValue = (value) => {
     if (value === null || value === undefined) return "null";
     if (typeof value === "boolean") return value ? "true" : "false";
@@ -200,6 +211,13 @@ export default function App() {
             />
             <span>Calculate shortest path / generate wires</span>
           </label>
+          <button
+            type="button"
+            className="file-upload-button"
+            onClick={() => setTranslucent((v) => !v)}
+          >
+            {translucent ? "Show opaque" : "Make translucent"}
+          </button>
           {fileName && (
             <span className="file-chip" title={fileName}>
               {fileName}
@@ -213,7 +231,7 @@ export default function App() {
         <div className="viewer-panel">
           {topology ? (
             <TopologyViewer
-              data={topology}
+              data={displayTopology || topology}
               selection={selection}
               onSelectionChange={setSelection}
             />

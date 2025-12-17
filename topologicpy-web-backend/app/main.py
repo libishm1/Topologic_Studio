@@ -769,6 +769,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False):
             area = span_x * span_y
             MIN_FLOOR_AREA = 9.0  # m^2 threshold to qualify as a floor/slab
             if area >= MIN_FLOOR_AREA:
+                pts2d = list({(round(x, 4), round(y, 4)) for x, y in zip(pxs, pys)})
                 floor_bboxes.append(
                     {
                         "minx": min(pxs),
@@ -776,11 +777,56 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False):
                         "miny": min(pys),
                         "maxy": max(pys),
                         "z": sum(pzs) / len(pzs),
+                        "pts": pts2d,
                     }
                 )
 
     if include_path and floor_bboxes:
         floor_bboxes.sort(key=lambda b: b["z"])
+        # precompute medial axis (approx.) per floor using PCA of footprint points
+        for bbox in floor_bboxes:
+            pts = bbox.get("pts") or []
+            if len(pts) >= 2:
+                cx = sum(p[0] for p in pts) / len(pts)
+                cy = sum(p[1] for p in pts) / len(pts)
+                sx = sy = sxy = 0.0
+                for x, y in pts:
+                    dx = x - cx
+                    dy = y - cy
+                    sx += dx * dx
+                    sy += dy * dy
+                    sxy += dx * dy
+                n = len(pts)
+                sx /= n; sy /= n; sxy /= n
+                trace = sx + sy
+                det = sx * sy - sxy * sxy
+                tmp = (trace * trace) / 4 - det
+                lam = trace / 2 + (tmp ** 0.5 if tmp > 0 else 0)
+                if abs(sxy) < 1e-6 and abs(lam - sx) < 1e-9:
+                    dir_vec = (1.0, 0.0)
+                else:
+                    dir_vec = (sxy, lam - sx)
+                norm = (dir_vec[0] ** 2 + dir_vec[1] ** 2) ** 0.5
+                if norm < 1e-9:
+                    dir_vec = (1.0, 0.0)
+                    norm = 1.0
+                dir_vec = (dir_vec[0] / norm, dir_vec[1] / norm)
+
+                # project points on axis to find span
+                min_t = 1e18
+                max_t = -1e18
+                for x, y in pts:
+                    t = (x - cx) * dir_vec[0] + (y - cy) * dir_vec[1]
+                    if t < min_t:
+                        min_t = t
+                    if t > max_t:
+                        max_t = t
+                start_xy = (cx + dir_vec[0] * min_t, cy + dir_vec[1] * min_t)
+                end_xy = (cx + dir_vec[0] * max_t, cy + dir_vec[1] * max_t)
+                z = bbox["z"] + 0.1
+                bbox["medial_start"] = (start_xy[0], start_xy[1], z)
+                bbox["medial_end"] = (end_xy[0], end_xy[1], z)
+
         for bbox in floor_bboxes:
             span_x = bbox["maxx"] - bbox["minx"]
             span_y = bbox["maxy"] - bbox["miny"]
@@ -804,12 +850,18 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False):
                 v1 = add_vertex(bbox["maxx"], y, z)
                 add_edge(v0, v1, color="#8888ff", width=1)
 
+        # Build path along medial axes instead of simple centroids
         path_points = []
         for bbox in floor_bboxes:
-            cx = 0.5 * (bbox["minx"] + bbox["maxx"])
-            cy = 0.5 * (bbox["miny"] + bbox["maxy"])
-            cz = bbox["z"] + 0.1
-            path_points.append((cx, cy, cz))
+            start = bbox.get("medial_start")
+            end = bbox.get("medial_end")
+            if start and end:
+                path_points.extend([start, end])
+            else:
+                cx = 0.5 * (bbox["minx"] + bbox["maxx"])
+                cy = 0.5 * (bbox["miny"] + bbox["maxy"])
+                cz = bbox["z"] + 0.1
+                path_points.append((cx, cy, cz))
 
         if len(path_points) >= 2:
             prev_uid = add_vertex(*path_points[0])
@@ -817,6 +869,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False):
                 cur_uid = add_vertex(*pt)
                 add_edge(prev_uid, cur_uid, color="red", width=6)
                 prev_uid = cur_uid
+
 
     if not faces:
         raise HTTPException(status_code=422, detail="IFC parsed but no renderable geometry found.")
