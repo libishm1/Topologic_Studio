@@ -101,7 +101,7 @@ function extractAlphaFromColorSpec(spec) {
   return null;
 }
 
-export default function TopologyViewer({ data, selection, onSelectionChange }) {
+export default function TopologyViewer({ data, selection, onSelectionChange, showFaces = true }) {
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -401,6 +401,7 @@ export default function TopologyViewer({ data, selection, onSelectionChange }) {
     clearGroup(facesGroup);
     clearGroup(edgesGroup);
     clearGroup(vertsGroup);
+    facesGroup.visible = showFaces;
 
     const baseFaceColor = new THREE.Color(0xcccccc);
     const baseEdgeColor = new THREE.Color(0x222222);
@@ -430,7 +431,7 @@ export default function TopologyViewer({ data, selection, onSelectionChange }) {
     }
 
     // --- 2. Faces ---
-    if (Array.isArray(data.faces)) {
+    if (showFaces && Array.isArray(data.faces)) {
       data.faces.forEach((face) => {
         const id = face.uid ?? face.uuid;
         if (!id) return;
@@ -628,7 +629,7 @@ export default function TopologyViewer({ data, selection, onSelectionChange }) {
         controls.update();
       }
     }
-  }, [data]);
+  }, [data, showFaces]);
 
 // ---------- HIGHLIGHTING BASED ON SELECTION ----------
     useEffect(() => {

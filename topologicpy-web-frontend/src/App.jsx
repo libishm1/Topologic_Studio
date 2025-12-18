@@ -18,6 +18,7 @@ export default function App() {
   const [floorMinArea, setFloorMinArea] = useState(9);
   const [lastIfcFile, setLastIfcFile] = useState(null);
   const [lastIncludePath, setLastIncludePath] = useState(false);
+  const [showFaces, setShowFaces] = useState(true);
 
 
   async function uploadIfc(file, includePath) {
@@ -238,6 +239,13 @@ export default function App() {
           >
             {translucent ? "Show opaque" : "Make translucent"}
           </button>
+          <button
+            type="button"
+            className="file-upload-button"
+            onClick={() => setShowFaces((v) => !v)}
+          >
+            {showFaces ? "Hide meshes" : "Show meshes"}
+          </button>
           {fileName && (
             <span className="file-chip" title={fileName}>
               {fileName}
@@ -292,6 +300,7 @@ export default function App() {
               data={displayTopology || topology}
               selection={selection}
               onSelectionChange={setSelection}
+              showFaces={showFaces}
             />
           ) : (
             <div className="viewer-placeholder">
