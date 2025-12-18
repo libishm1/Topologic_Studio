@@ -596,20 +596,25 @@ export default function TopologyViewer({ data, selection, onSelectionChange }) {
 
     // --- 5. Recenter camera ---
     if (camera && vertexById.size > 0) {
-      const xs = [];
-      const ys = [];
-      const zs = [];
+      const bbox = new THREE.Box3();
       vertexById.forEach((v) => {
-        xs.push(v.x);
-        ys.push(v.y);
-        zs.push(v.z);
+        bbox.expandByPoint(new THREE.Vector3(v.x, v.y, v.z));
       });
-      const center = new THREE.Vector3(
-        (Math.min(...xs) + Math.max(...xs)) / 2,
-        (Math.min(...ys) + Math.max(...ys)) / 2,
-        (Math.min(...zs) + Math.max(...zs)) / 2
-      );
-      camera.position.set(center.x + 5, center.y + 5, center.z + 5);
+      const center = new THREE.Vector3();
+      bbox.getCenter(center);
+      const size = new THREE.Vector3();
+      bbox.getSize(size);
+      const maxSize = Math.max(size.x, size.y, size.z, 1);
+
+      const fitOffset = 2.2;
+      const distance = (maxSize / 2) / Math.tan((camera.fov * Math.PI) / 360) * fitOffset;
+      const dir = new THREE.Vector3(1, 1, 1).normalize();
+      const newPos = center.clone().add(dir.multiplyScalar(distance));
+
+      camera.position.copy(newPos);
+      camera.near = Math.max(distance / 1000, 0.01);
+      camera.far = distance * 1000;
+      camera.updateProjectionMatrix();
       camera.lookAt(center);
       if (controls) {
         controls.target.copy(center);
