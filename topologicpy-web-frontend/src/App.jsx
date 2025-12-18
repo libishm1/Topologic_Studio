@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 import TopologyViewer from "./TopologyViewer.jsx";
 import "./App.css";
@@ -13,6 +13,44 @@ export default function App() {
   const [error, setError] = useState(null);
   const [fileName, setFileName] = useState("");
   const [translucent, setTranslucent] = useState(true);
+  const [floorTilt, setFloorTilt] = useState(0.3);
+  const [floorMaxZ, setFloorMaxZ] = useState(1.0);
+  const [floorMinArea, setFloorMinArea] = useState(9);
+  const [lastIfcFile, setLastIfcFile] = useState(null);
+  const [lastIncludePath, setLastIncludePath] = useState(false);
+
+
+  async function uploadIfc(file, includePath) {
+    setError(null);
+    setSelection(null);
+    setTopology(null);
+    setFileName(includePath ? `${file.name} (path)` : file.name);
+
+    const form = new FormData();
+    form.append("file", file);
+
+    const query = includePath
+      ? `include_path=true&tilt_min=${floorTilt}&max_z_span=${floorMaxZ}&min_floor_area=${floorMinArea}`
+      : `include_path=false`;
+
+    try {
+      const res = await axios.post(`${API_BASE}/upload-ifc?${query}`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const payload = res.data;
+      if (!payload?.vertices || !payload?.faces) {
+        setError("Unexpected response format from IFC upload.");
+        return;
+      }
+      if (!payload.edges) payload.edges = [];
+      if (!payload.raw) payload.raw = [];
+      setTopology(payload);
+    } catch (apiErr) {
+      setError(
+        apiErr.response?.data?.detail || apiErr.message || "IFC upload failed"
+      );
+    }
+  }
 
   async function handleFileChange(event) {
     const file = event.target.files?.[0];
@@ -69,41 +107,10 @@ export default function App() {
   async function handleIfcUpload(event, includePath = false) {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    // reset input so the same file can be picked twice in a row
     event.target.value = null;
-
-    setError(null);
-    setSelection(null);
-    setTopology(null);
-    setFileName(includePath ? `${file.name} (path)` : file.name);
-
-    const form = new FormData();
-    form.append("file", file);
-
-    try {
-      const res = await axios.post(
-        `${API_BASE}/upload-ifc?include_path=${includePath ? "true" : "false"}`,
-        form,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-      const payload = res.data;
-      if (!payload?.vertices || !payload?.faces) {
-        setError("Unexpected response format from IFC upload.");
-        return;
-      }
-      if (!payload.edges) payload.edges = [];
-      if (!payload.raw) payload.raw = [];
-      setTopology(payload);
-    } catch (apiErr) {
-      setError(
-        apiErr.response?.data?.detail ||
-          apiErr.message ||
-          "IFC upload failed"
-      );
-    }
+    setLastIfcFile(file);
+    setLastIncludePath(includePath);
+    await uploadIfc(file, includePath);
   }
 
   const rawById = useMemo(() => {
@@ -140,6 +147,19 @@ export default function App() {
     });
     return { ...topology, faces };
   }, [topology, translucent]);
+
+
+  useEffect(() => {
+    let timer;
+    if (lastIncludePath && lastIfcFile) {
+      timer = setTimeout(() => {
+        uploadIfc(lastIfcFile, true);
+      }, 400);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [floorTilt, floorMaxZ, floorMinArea, lastIncludePath, lastIfcFile]);
 
   const formatDictValue = (value) => {
     if (value === null || value === undefined) return "null";
@@ -223,6 +243,44 @@ export default function App() {
               {fileName}
             </span>
           )}
+          <div className="slider-panel">
+            <label>
+              Tilt min
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={floorTilt}
+                onChange={(e) => setFloorTilt(Number(e.target.value))}
+              />
+              <span className="slider-value">{floorTilt.toFixed(2)}</span>
+            </label>
+            <label>
+              Max z-span (m)
+              <input
+                type="range"
+                min="0"
+                max="3"
+                step="0.1"
+                value={floorMaxZ}
+                onChange={(e) => setFloorMaxZ(Number(e.target.value))}
+              />
+              <span className="slider-value">{floorMaxZ.toFixed(2)}</span>
+            </label>
+            <label>
+              Min area (m?)
+              <input
+                type="range"
+                min="1"
+                max="50"
+                step="1"
+                value={floorMinArea}
+                onChange={(e) => setFloorMinArea(Number(e.target.value))}
+              />
+              <span className="slider-value">{floorMinArea.toFixed(0)}</span>
+            </label>
+          </div>
         </div>
       </header>
 

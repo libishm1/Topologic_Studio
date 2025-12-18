@@ -607,7 +607,7 @@ async def upload_topology(payload: Union[List[Any], dict] = Body(...)):
 
 
 @app.post("/upload-ifc")
-async def upload_ifc(include_path: bool = False, file: UploadFile = File(...)):
+async def upload_ifc(include_path: bool = False, tilt_min: float = 0.3, max_z_span: float = 1.0, min_floor_area: float = 9.0, file: UploadFile = File(...)):
     """
     Accept IFC upload and return a viewer contract.
     - include_path=True will also generate slab grid wires and a simple egress path.
@@ -623,7 +623,7 @@ async def upload_ifc(include_path: bool = False, file: UploadFile = File(...)):
         tmp.write(data)
         tmp.flush()
         tmp.close()
-        return convert_ifc_to_contract(tmp.name, include_path=include_path)
+        return convert_ifc_to_contract(tmp.name, include_path=include_path, tilt_min=tilt_min, max_z_span=max_z_span, min_floor_area=min_floor_area)
     finally:
         try:
             os.unlink(tmp.name)
@@ -631,7 +631,7 @@ async def upload_ifc(include_path: bool = False, file: UploadFile = File(...)):
             pass
 
 
-def convert_ifc_to_contract(file_path: str, include_path: bool = False):
+def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min: float = 0.3, max_z_span: float = 1.0, min_floor_area: float = 9.0):
     """
     Parse IFC with ifcopenshell.geom and return viewer contract.
     If include_path is True, generate:
@@ -733,6 +733,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False):
             continue
 
         pxs, pys, pzs = [], [], []
+        normals = []
 
         for i in range(0, len(inds), 3):
             tri_idxs = inds[i : i + 3]
@@ -745,6 +746,14 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False):
                 pxs.append(x)
                 pys.append(y)
                 pzs.append(z)
+            if len(tri_coords) == 3:
+                (x1, y1, z1), (x2, y2, z2), (x3, y3, z3) = tri_coords
+                ux, uy, uz = x2 - x1, y2 - y1, z2 - z1
+                vx, vy, vz = x3 - x1, y3 - y1, z3 - z1
+                cx, cy, cz = uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
+                norm = math.sqrt(cx * cx + cy * cy + cz * cz)
+                if norm > 1e-6:
+                    normals.append((cx / norm, cy / norm, cz / norm))
             faces.append({
                 "type": "Face",
                 "uid": f"f{face_uid_seq}",
@@ -767,8 +776,9 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False):
             span_x = max(pxs) - min(pxs)
             span_y = max(pys) - min(pys)
             area = span_x * span_y
-            MIN_FLOOR_AREA = 9.0  # m^2 threshold to qualify as a floor/slab
-            if area >= MIN_FLOOR_AREA:
+            z_span = max(pzs) - min(pzs)
+            avg_abs_nz = sum(abs(n[2]) for n in normals) / len(normals) if normals else 1.0
+            if area >= min_floor_area and (avg_abs_nz >= tilt_min or z_span <= max_z_span):
                 pts2d = list({(round(x, 4), round(y, 4)) for x, y in zip(pxs, pys)})
                 floor_bboxes.append(
                     {
