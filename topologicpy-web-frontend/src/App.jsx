@@ -21,6 +21,7 @@ export default function App() {
   const [lastIfcFile, setLastIfcFile] = useState(null);
   const [lastIncludePath, setLastIncludePath] = useState(false);
   const [showFaces, setShowFaces] = useState(false);
+  const [showVerts, setShowVerts] = useState(false);
   const [loading, setLoading] = useState(false);
 
 
@@ -256,6 +257,13 @@ export default function App() {
           >
             {showFaces ? "Hide meshes" : "Show meshes"}
           </button>
+          <button
+            type="button"
+            className="file-upload-button"
+            onClick={() => setShowVerts((v) => !v)}
+          >
+            {showVerts ? "Hide vertices" : "Show vertices"}
+          </button>
           {fileName && (
             <span className="file-chip" title={fileName}>
               {fileName}
@@ -311,6 +319,7 @@ export default function App() {
               selection={selection}
               onSelectionChange={setSelection}
               showFaces={showFaces}
+              showVerts={showVerts}
             />
           ) : (
             <div className="viewer-placeholder">

@@ -662,6 +662,8 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
     edge_uid_seq = 0
 
     floor_bboxes = []
+    floor_bboxes_hint = []
+    stair_bboxes_hint = []
     all_bbox = {
         "minx": math.inf,
         "maxx": -math.inf,
@@ -729,8 +731,14 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
         geom = shape.geometry
         verts = getattr(geom, "verts", None) or getattr(geom, "vertices", None)
         inds = getattr(geom, "faces", None) or getattr(geom, "indices", None)
-        if not verts or not inds:
-            continue
+        name_upper = str(getattr(product, "Name", "") or "").upper()
+        otype_upper = str(getattr(product, "ObjectType", "") or "").upper()
+        try:
+            ptype_upper = product.is_a().upper()
+        except Exception:
+            ptype_upper = ""
+        hint_floor = any(w in name_upper for w in ["FLOOR", "SLAB"]) or any(w in otype_upper for w in ["FLOOR", "SLAB"]) or ("FLOOR" in ptype_upper or "SLAB" in ptype_upper)
+        hint_stair = any(w in name_upper for w in ["STAIR", "STAIRS"]) or any(w in otype_upper for w in ["STAIR", "STAIRS"]) or ("STAIR" in ptype_upper)
 
         pxs, pys, pzs = [], [], []
         normals = []
@@ -772,24 +780,39 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
             "ifc_type": product.is_a() if hasattr(product, "is_a") else None,
         })
 
-        if include_path and is_floor(product) and pxs and pys and pzs:
+        if include_path and (is_floor(product) or hint_stair) and pxs and pys and pzs:
             span_x = max(pxs) - min(pxs)
             span_y = max(pys) - min(pys)
             area = span_x * span_y
             z_span = max(pzs) - min(pzs)
             avg_abs_nz = sum(abs(n[2]) for n in normals) / len(normals) if normals else 1.0
+            heuristic_stair = (1.0 <= z_span <= 4.0) and max(span_x, span_y) >= 1.0 and 0.2 <= avg_abs_nz <= 0.8 and (z_span / max(span_x, span_y) >= 0.2)
+            is_stair_flag = bool(hint_stair or heuristic_stair)
             if area >= min_floor_area and (avg_abs_nz >= tilt_min or z_span <= max_z_span):
                 pts2d = list({(round(x, 4), round(y, 4)) for x, y in zip(pxs, pys)})
-                floor_bboxes.append(
-                    {
-                        "minx": min(pxs),
-                        "maxx": max(pxs),
-                        "miny": min(pys),
-                        "maxy": max(pys),
-                        "z": sum(pzs) / len(pzs),
-                        "pts": pts2d,
-                    }
-                )
+                record = {
+                    "minx": min(pxs),
+                    "maxx": max(pxs),
+                    "miny": min(pys),
+                    "maxy": max(pys),
+                    "z": sum(pzs) / len(pzs),
+                    "z_min": min(pzs),
+                    "z_max": max(pzs),
+                    "pts": pts2d,
+                    "is_stair": is_stair_flag,
+                }
+                floor_bboxes.append(record)
+                if hint_floor:
+                    floor_bboxes_hint.append(dict(record))
+                if is_stair_flag:
+                    stair_bboxes_hint.append(dict(record))
+
+    if include_path:
+        # Prefer named floors if provided; otherwise use geometric detection
+        if floor_bboxes_hint:
+            floor_bboxes = floor_bboxes_hint
+        if stair_bboxes_hint:
+            floor_bboxes = floor_bboxes + stair_bboxes_hint
 
     if include_path and floor_bboxes:
         # merge nearby floors (mezzanines) to reduce duplicate grids
@@ -808,8 +831,11 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
                 last["maxx"] = max(last["maxx"], record["maxx"])
                 last["miny"] = min(last["miny"], record["miny"])
                 last["maxy"] = max(last["maxy"], record["maxy"])
+                last["z_min"] = min(last.get("z_min", last["z"]), record.get("z_min", record["z"]))
+                last["z_max"] = max(last.get("z_max", last["z"]), record.get("z_max", record["z"]))
                 pts = last.get("pts", []) + record.get("pts", [])
                 last["pts"] = pts
+                last["is_stair"] = last.get("is_stair") or record.get("is_stair")
                 last["count"] += 1
                 last["z"] = (last["z"] * (last["count"] - 1) + record["z"]) / last["count"]
             else:
@@ -863,6 +889,31 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
                 bbox["medial_start"] = (start_xy[0], start_xy[1], z)
                 bbox["medial_end"] = (end_xy[0], end_xy[1], z)
 
+        # Split floors and stairs for path generation
+        floors_only = [b for b in floor_bboxes if not b.get("is_stair")]
+        stairs_only = [b for b in floor_bboxes if b.get("is_stair")]
+        if not floors_only:
+            floors_only = list(floor_bboxes)
+
+        # Add stair connectors
+        stair_connectors = []
+        for st in stairs_only:
+            if st.get("z_min") is None or st.get("z_max") is None:
+                continue
+            cx = 0.5 * (st["minx"] + st["maxx"])
+            cy = 0.5 * (st["miny"] + st["maxy"])
+            lower_uid = add_vertex(cx, cy, st["z_min"] + 0.05)
+            upper_uid = add_vertex(cx, cy, st["z_max"] - 0.05)
+            add_edge(lower_uid, upper_uid, color="red", width=4)
+            stair_connectors.append({
+                "cx": cx,
+                "cy": cy,
+                "z_min": st["z_min"],
+                "z_max": st["z_max"],
+                "lower_uid": lower_uid,
+                "upper_uid": upper_uid,
+            })
+
         for bbox in floor_bboxes:
             span_x = bbox["maxx"] - bbox["minx"]
             span_y = bbox["maxy"] - bbox["miny"]
@@ -877,27 +928,53 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
             for j in range(n_y + 1):
                 y_values.append(bbox["miny"] + j * step)
 
+            grid_color = "#88bbff" if bbox.get("is_stair") else "#8888ff"
             for x in x_values:
                 v0 = add_vertex(x, bbox["miny"], z)
                 v1 = add_vertex(x, bbox["maxy"], z)
-                add_edge(v0, v1, color="#8888ff", width=1)
+                add_edge(v0, v1, color=grid_color, width=1)
             for y in y_values:
                 v0 = add_vertex(bbox["minx"], y, z)
                 v1 = add_vertex(bbox["maxx"], y, z)
-                add_edge(v0, v1, color="#8888ff", width=1)
+                add_edge(v0, v1, color=grid_color, width=1)
+            # For stairs, add a simple diagonal guide along the run
+            if bbox.get("is_stair") and bbox.get("z_max") is not None:
+                diag_start = add_vertex(bbox["minx"], bbox["miny"], bbox.get("z_min", bbox["z"]))
+                diag_end = add_vertex(bbox["maxx"], bbox["maxy"], bbox.get("z_max", bbox["z"]))
+                add_edge(diag_start, diag_end, color="red", width=2)
 
-        # Build path along medial axes instead of simple centroids
+        # Build path using stairs when available
         path_points = []
-        for bbox in floor_bboxes:
-            start = bbox.get("medial_start")
-            end = bbox.get("medial_end")
-            if start and end:
-                path_points.extend([start, end])
-            else:
-                cx = 0.5 * (bbox["minx"] + bbox["maxx"])
-                cy = 0.5 * (bbox["miny"] + bbox["maxy"])
-                cz = bbox["z"] + 0.1
-                path_points.append((cx, cy, cz))
+        def floor_center(bb):
+            return (
+                0.5 * (bb["minx"] + bb["maxx"]),
+                0.5 * (bb["miny"] + bb["maxy"]),
+                bb["z"] + 0.1,
+            )
+
+        floor_sorted = sorted(floors_only, key=lambda b: b["z"])
+        if stair_connectors and len(floor_sorted) >= 2:
+            path_points.append(floor_center(floor_sorted[0]))
+            for i in range(len(floor_sorted) - 1):
+                f0 = floor_sorted[i]
+                f1 = floor_sorted[i + 1]
+                mid_z = 0.5 * (f0["z"] + f1["z"])
+                stair = min(stair_connectors, key=lambda s: abs(mid_z - 0.5 * (s["z_min"] + s["z_max"])))
+                path_points.append((stair["cx"], stair["cy"], stair["z_min"] + 0.05))
+                path_points.append((stair["cx"], stair["cy"], stair["z_max"] - 0.05))
+                path_points.append(floor_center(f1))
+        else:
+            # fallback: use medial start/end per floor
+            for bbox in floor_bboxes:
+                start = bbox.get("medial_start")
+                end = bbox.get("medial_end")
+                if start and end:
+                    path_points.extend([start, end])
+                else:
+                    cx = 0.5 * (bbox["minx"] + bbox["maxx"])
+                    cy = 0.5 * (bbox["miny"] + bbox["maxy"])
+                    cz = bbox["z"] + 0.1
+                    path_points.append((cx, cy, cz))
 
         if len(path_points) >= 2:
             prev_uid = add_vertex(*path_points[0])
