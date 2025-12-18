@@ -792,7 +792,33 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
                 )
 
     if include_path and floor_bboxes:
+        # merge nearby floors (mezzanines) to reduce duplicate grids
         floor_bboxes.sort(key=lambda b: b["z"])
+        merged = []
+        MIN_GAP = 1.5  # meters: floors closer than this merge together
+        for bbox in floor_bboxes:
+            record = dict(bbox)
+            record["count"] = 1
+            if not merged:
+                merged.append(record)
+                continue
+            last = merged[-1]
+            if abs(record["z"] - last["z"]) <= MIN_GAP:
+                last["minx"] = min(last["minx"], record["minx"])
+                last["maxx"] = max(last["maxx"], record["maxx"])
+                last["miny"] = min(last["miny"], record["miny"])
+                last["maxy"] = max(last["maxy"], record["maxy"])
+                pts = last.get("pts", []) + record.get("pts", [])
+                last["pts"] = pts
+                last["count"] += 1
+                last["z"] = (last["z"] * (last["count"] - 1) + record["z"]) / last["count"]
+            else:
+                merged.append(record)
+        floor_bboxes = []
+        for m in merged:
+            m.pop("count", None)
+            floor_bboxes.append(m)
+
         # precompute medial axis (approx.) per floor using PCA of footprint points
         for bbox in floor_bboxes:
             pts = bbox.get("pts") or []

@@ -8,6 +8,8 @@ import logoImg from "./assets/topologicStudio-white-logo400x400.png";
 const API_BASE = "http://localhost:8000"; // FastAPI backend
 
 export default function App() {
+  const spinnerStyle = { __html: `@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }` };
+
   const [topology, setTopology] = useState(null);
   const [selection, setSelection] = useState(null);
   const [error, setError] = useState(null);
@@ -18,10 +20,12 @@ export default function App() {
   const [floorMinArea, setFloorMinArea] = useState(9);
   const [lastIfcFile, setLastIfcFile] = useState(null);
   const [lastIncludePath, setLastIncludePath] = useState(false);
-  const [showFaces, setShowFaces] = useState(true);
+  const [showFaces, setShowFaces] = useState(false);
+  const [loading, setLoading] = useState(false);
 
 
   async function uploadIfc(file, includePath) {
+    setLoading(true);
     setError(null);
     setSelection(null);
     setTopology(null);
@@ -50,6 +54,8 @@ export default function App() {
       setError(
         apiErr.response?.data?.detail || apiErr.message || "IFC upload failed"
       );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -57,6 +63,7 @@ export default function App() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setLoading(true);
     setError(null);
     setSelection(null);
     setTopology(null);
@@ -102,6 +109,8 @@ export default function App() {
     } catch (err) {
       console.error("Unexpected error:", err);
       setError("Unexpected error while loading topology.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -176,6 +185,7 @@ export default function App() {
 
   return (
     <div className="app-root">
+      <style dangerouslySetInnerHTML={spinnerStyle} />
       {/* Top bar */}
       <header className="app-header">
         <div className="app-header-left">
@@ -294,7 +304,7 @@ export default function App() {
 
       {/* Main content */}
       <div className="app-main">
-        <div className="viewer-panel">
+        <div className="viewer-panel" style={{ position: "relative" }}>
           {topology ? (
             <TopologyViewer
               data={displayTopology || topology}
@@ -313,6 +323,48 @@ export default function App() {
                 <p className="viewer-placeholder-hint">
                   Use the button in the top right to load a file.
                 </p>
+              </div>
+            </div>
+          )}
+          {loading && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(10,12,24,0.55)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 15,
+                backdropFilter: "blur(2px)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "12px",
+                  color: "#fff",
+                  fontWeight: 600,
+                }}
+              >
+                <img
+                  src={logoImg}
+                  alt="Loading"
+                  style={{ width: "64px", height: "64px", opacity: 0.9 }}
+                />
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    border: "4px solid rgba(255,255,255,0.35)",
+                    borderTopColor: "#7ad7ff",
+                    animation: "spin 0.9s linear infinite",
+                  }}
+                />
+                <span>Loading?</span>
               </div>
             </div>
           )}
