@@ -672,6 +672,17 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
         "minz": math.inf,
         "maxz": -math.inf,
     }
+    # Geometry-first stair detection buffers and thresholds
+    tread_candidates = []
+    HORIZONTAL_DOT = 0.95
+    TREAD_AREA_MIN = 0.25
+    TREAD_AREA_MAX = 3.00
+    RISER_MIN = 0.12
+    RISER_MAX = 0.22
+    MIN_STEPS = 4
+    MAX_TREAD_WIDTH = 1.8
+    DELTA_Z_TOL = 0.04
+    XY_OVERLAP_MIN = 0.25
 
     def add_vertex(x, y, z):
         nonlocal vertex_uid_seq, all_bbox
@@ -721,6 +732,91 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
             or "FLOOR" in ptype.upper()
         )
 
+    def _overlap_xy(a, b):
+        dx = min(a["maxx"], b["maxx"]) - max(a["minx"], b["minx"])
+        dy = min(a["maxy"], b["maxy"]) - max(a["miny"], b["miny"])
+        return dx, dy
+
+    def detect_stairs_from_treads(cands):
+        if not cands:
+            return []
+        filtered = []
+        for c in cands:
+            width = max(c["maxx"] - c["minx"], c["maxy"] - c["miny"])
+            if width <= MAX_TREAD_WIDTH and TREAD_AREA_MIN <= c.get("area", 0) <= TREAD_AREA_MAX:
+                filtered.append(c)
+        if len(filtered) < MIN_STEPS:
+            return []
+        filtered.sort(key=lambda x: x["z"])
+        chains = []
+        visited = set()
+        for i, base in enumerate(filtered):
+            if i in visited:
+                continue
+            chain = [i]
+            visited.add(i)
+            current = i
+            while True:
+                best = None
+                best_dz = 1e9
+                cz = filtered[current]["z"]
+                for j in range(current + 1, len(filtered)):
+                    if j in visited:
+                        continue
+                    dz = filtered[j]["z"] - cz
+                    if dz < RISER_MIN:
+                        continue
+                    if dz > RISER_MAX:
+                        break
+                    dx, dy = _overlap_xy(filtered[current], filtered[j])
+                    if dx < XY_OVERLAP_MIN or dy < XY_OVERLAP_MIN:
+                        continue
+                    if dz < best_dz:
+                        best = j
+                        best_dz = dz
+                if best is None:
+                    break
+                chain.append(best)
+                visited.add(best)
+                current = best
+            if len(chain) >= MIN_STEPS:
+                chains.append(chain)
+        # drop very shallow stacks (likely noise)
+        filtered_chains = []
+        for ch in chains:
+            zs_tmp = [filtered[idx]["z"] for idx in ch]
+            if (max(zs_tmp) - min(zs_tmp)) >= 0.6:
+                filtered_chains.append(ch)
+        chains = filtered_chains
+
+        results = []
+        for chain in chains:
+            zs = [filtered[idx]["z"] for idx in chain]
+            dzs = [zs[k+1] - zs[k] for k in range(len(zs)-1)]
+            if dzs and (max(dzs) - min(dzs)) > DELTA_Z_TOL:
+                continue
+            minx = min(filtered[idx]["minx"] for idx in chain)
+            maxx = max(filtered[idx]["maxx"] for idx in chain)
+            miny = min(filtered[idx]["miny"] for idx in chain)
+            maxy = max(filtered[idx]["maxy"] for idx in chain)
+            z_min = min(filtered[idx].get("z", 0.0) for idx in chain)
+            z_max = max(filtered[idx].get("z", 0.0) for idx in chain)
+            pts = [
+                (minx, miny), (minx, maxy), (maxx, miny), (maxx, maxy)
+            ]
+            results.append({
+                "minx": minx,
+                "maxx": maxx,
+                "miny": miny,
+                "maxy": maxy,
+                "z": sum(zs) / len(zs),
+                "z_min": z_min,
+                "z_max": z_max,
+                "pts": pts,
+                "is_stair": True,
+            })
+        return results
+
     for product in model.by_type("IfcProduct"):
         if not getattr(product, "Representation", None):
             continue
@@ -761,7 +857,28 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
                 cx, cy, cz = uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
                 norm = math.sqrt(cx * cx + cy * cy + cz * cz)
                 if norm > 1e-6:
-                    normals.append((cx / norm, cy / norm, cz / norm))
+                    nx, ny, nz = cx / norm, cy / norm, cz / norm
+                    normals.append((nx, ny, nz))
+                    if include_path and abs(nz) >= HORIZONTAL_DOT and len(tri_coords) == 3:
+                        area = 0.5 * norm
+                        if TREAD_AREA_MIN <= area <= TREAD_AREA_MAX:
+                            xs = [p[0] for p in tri_coords]
+                            ys = [p[1] for p in tri_coords]
+                            zs_ = [p[2] for p in tri_coords]
+                            w_x = max(xs) - min(xs)
+                            w_y = max(ys) - min(ys)
+                            if max(w_x, w_y) <= MAX_TREAD_WIDTH:
+                                cxc = sum(xs) / 3.0
+                                cyc = sum(ys) / 3.0
+                                czc = sum(zs_) / 3.0
+                                tread_candidates.append({
+                                    "minx": min(xs),
+                                    "maxx": max(xs),
+                                    "miny": min(ys),
+                                    "maxy": max(ys),
+                                    "z": czc,
+                                    "area": area,
+                                })
             faces.append({
                 "type": "Face",
                 "uid": f"f{face_uid_seq}",
@@ -808,6 +925,12 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
                     stair_bboxes_hint.append(dict(record))
 
     if include_path:
+        # geometry-first stair detection from tread candidates (no IFC annotations needed)
+        detected_stairs = detect_stairs_from_treads(tread_candidates)
+        if detected_stairs:
+            floor_bboxes.extend(detected_stairs)
+
+    if include_path:
         # Prefer named floors if provided; otherwise use geometric detection
         if floor_bboxes_hint:
             floor_bboxes = floor_bboxes_hint
@@ -826,7 +949,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
                 merged.append(record)
                 continue
             last = merged[-1]
-            if abs(record["z"] - last["z"]) <= MIN_GAP:
+            if abs(record["z"] - last["z"]) <= MIN_GAP and bool(record.get("is_stair")) == bool(last.get("is_stair")):
                 last["minx"] = min(last["minx"], record["minx"])
                 last["maxx"] = max(last["maxx"], record["maxx"])
                 last["miny"] = min(last["miny"], record["miny"])
@@ -917,7 +1040,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
         for bbox in floor_bboxes:
             span_x = bbox["maxx"] - bbox["minx"]
             span_y = bbox["maxy"] - bbox["miny"]
-            step = max(min(span_x, span_y) / 12.0, 0.75)
+            step = max(min(span_x, span_y) / (6.0 if bbox.get("is_stair") else 12.0), 0.5 if bbox.get("is_stair") else 0.75)
             z = bbox["z"] + 0.05
             x_values = []
             y_values = []
@@ -945,6 +1068,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
 
         # Build path using stairs when available
         path_points = []
+
         def floor_center(bb):
             return (
                 0.5 * (bb["minx"] + bb["maxx"]),
