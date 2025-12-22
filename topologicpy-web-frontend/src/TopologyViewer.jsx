@@ -101,7 +101,7 @@ function extractAlphaFromColorSpec(spec) {
   return null;
 }
 
-export default function TopologyViewer({ data, selection, onSelectionChange, showFaces = true, showVerts = false }) {
+export default function TopologyViewer({ data, selection, onSelectionChange, showFaces = true, showVerts = false, wireframe = true }) {
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -492,18 +492,17 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
         if (opacity < 0.0) opacity = 0.0;
 
         const material = new THREE.MeshStandardMaterial({
-        color,
-        transparent: opacity < 1.0,
-        opacity,
-        side: THREE.DoubleSide,
-      });
-        
+          color,
+          transparent: opacity < 1.0,
+          opacity,
+          side: THREE.DoubleSide,
+          wireframe,
+        });
+
         // Store original appearance for later reset
         material.userData = material.userData || {};
         material.userData.baseColor = color.clone();
         material.userData.baseOpacity = opacity;
-
-
 
         const mesh = new THREE.Mesh(geometry, material);
         mesh.userData.uid = id;
@@ -630,7 +629,7 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
         controls.update();
       }
     }
-  }, [data, showFaces, showVerts]);
+  }, [data, showFaces, showVerts, wireframe]);
 
 // ---------- HIGHLIGHTING BASED ON SELECTION ----------
     useEffect(() => {
@@ -710,3 +709,5 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
     />
   );
 }
+
+

@@ -22,6 +22,7 @@ export default function App() {
   const [lastIncludePath, setLastIncludePath] = useState(false);
   const [showFaces, setShowFaces] = useState(false);
   const [showVerts, setShowVerts] = useState(false);
+  const [wireframe, setWireframe] = useState(true);
   const [loading, setLoading] = useState(false);
 
 
@@ -264,6 +265,13 @@ export default function App() {
           >
             {showVerts ? "Hide vertices" : "Show vertices"}
           </button>
+          <button
+            type="button"
+            className="file-upload-button"
+            onClick={() => setWireframe((v) => !v)}
+          >
+            {wireframe ? "Disable wireframe" : "Enable wireframe"}
+          </button>
           {fileName && (
             <span className="file-chip" title={fileName}>
               {fileName}
@@ -320,6 +328,7 @@ export default function App() {
               onSelectionChange={setSelection}
               showFaces={showFaces}
               showVerts={showVerts}
+              wireframe={wireframe}
             />
           ) : (
             <div className="viewer-placeholder">
@@ -462,3 +471,5 @@ export default function App() {
     </div>
   );
 }
+
+
