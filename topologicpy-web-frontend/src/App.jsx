@@ -335,6 +335,9 @@ export default function App() {
               <div className="viewer-placeholder-card">
                 <h2>Welcome to TopologicStudio</h2>
                 <p>
+                  IFC viewer and fire egress calculator for TopologicPy models.
+                </p>
+                <p>
                   Load a TopologicPy JSON export to explore cells, shells,
                   faces, and their graphs in an interactive 3D view.
                 </p>
