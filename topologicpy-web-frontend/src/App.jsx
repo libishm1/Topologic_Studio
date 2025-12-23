@@ -5,7 +5,7 @@ import TopologyViewer from "./TopologyViewer.jsx";
 import "./App.css";
 import logoImg from "./assets/topologicStudio-white-logo400x400.png";
 
-const API_BASE = "http://localhost:8000"; // FastAPI backend
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000"; // FastAPI backend
 
 export default function App() {
   const spinnerStyle = { __html: `@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }` };
