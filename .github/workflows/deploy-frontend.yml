@@ -34,7 +34,7 @@ jobs:
       - name: Build
         env:
           BASE_PATH: '/${{ github.event.repository.name }}/'
-          VITE_API_BASE: 'https://YOUR-BACKEND.onrender.com'
+          VITE_API_BASE: 'https://topologicstudio-backend.onrender.com'
         run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
