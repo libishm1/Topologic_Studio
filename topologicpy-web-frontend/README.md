@@ -1,5 +1,18 @@
 # React + Vite
 
+## Local development (Windows)
+
+Start the frontend with the bundled Node runtime (no admin install needed):
+
+```powershell
+cd "C:/Users/lmurugesan/OneDrive - Alfaisal University/CM-iTAD/topologic_webapp/TopologicStudio/topologicpy-web-frontend"
+$nodeDir = "C:/Users/lmurugesan/OneDrive - Alfaisal University/CM-iTAD/topologic_webapp/TopologicStudio/node-v24.11.1-win-x64"
+$env:Path = "$nodeDir;$env:Path"
+& "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173
+```
+
+If the backend is running on a different port (not 8000), update `API_BASE` in `src/App.jsx`.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
