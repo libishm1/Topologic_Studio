@@ -29,10 +29,14 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Body, UploadFile, File
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import tempfile
 import math
+import json
+import time
+import random
 
 
 app = FastAPI(
@@ -59,6 +63,415 @@ app.add_middleware(
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+LAST_GRAPHS = {"wire": None, "cell": None}
+
+def _vertex_coord_map(vertices):
+    coords = {}
+    for v in vertices or []:
+        uid = v.get("uid") or v.get("uuid")
+        coord = v.get("coordinates") or v.get("Coordinates")
+        if uid and coord and len(coord) >= 3:
+            coords[uid] = coord[:3]
+    return coords
+
+def _build_adjacency(edges, vertex_ids, allowed_kinds=None):
+    adj = {uid: set() for uid in vertex_ids}
+    for e in edges or []:
+        if allowed_kinds is not None:
+            kind = (e.get("dictionary") or {}).get("edgeKind")
+            if kind not in allowed_kinds:
+                continue
+        verts = e.get("vertices") or []
+        if len(verts) < 2:
+            continue
+        v0, v1 = verts[0], verts[1]
+        if v0 in adj and v1 in adj:
+            adj[v0].add(v1)
+            adj[v1].add(v0)
+    return {k: list(v) for k, v in adj.items()}
+
+def _nearest_node_id(coords_map, point, allowed=None):
+    if not coords_map or not point or len(point) < 3:
+        return None
+    px, py, pz = point[0], point[1], point[2]
+    best = None
+    best_d = 1e18
+    allowed_set = set(allowed) if allowed is not None else None
+    for uid, coord in coords_map.items():
+        if allowed_set is not None and uid not in allowed_set:
+            continue
+        x, y, z = coord
+        d = (x - px) ** 2 + (y - py) ** 2 + (z - pz) ** 2
+        if d < best_d:
+            best = uid
+            best_d = d
+    return best
+
+def _resolve_start_id(graph, start_id=None, start_point=None):
+    adj = graph.get("adjacency") or {}
+    if start_id and start_id in adj:
+        return start_id
+    if start_point:
+        coords = graph.get("coords", {})
+        return _nearest_node_id(coords, start_point, allowed=adj.keys())
+    return None
+
+
+def _default_start_id(graph):
+    adj = graph.get("adjacency") or {}
+    if not adj:
+        return None
+    coords = graph.get("coords") or {}
+    if coords:
+        xs = [c[0] for c in coords.values()]
+        ys = [c[1] for c in coords.values()]
+        zs = [c[2] for c in coords.values()]
+        center = [
+            (min(xs) + max(xs)) / 2,
+            (min(ys) + max(ys)) / 2,
+            (min(zs) + max(zs)) / 2,
+        ]
+        return _nearest_node_id(coords, center, allowed=adj.keys())
+    return next(iter(adj.keys()), None)
+
+def _estimate_step_size(coords, adjacency=None):
+    if coords and adjacency:
+        min_dist = None
+        for node, nbrs in adjacency.items():
+            if node not in coords:
+                continue
+            x0, y0, z0 = coords[node]
+            for nbr in nbrs:
+                if nbr not in coords:
+                    continue
+                x1, y1, z1 = coords[nbr]
+                d = ((x1 - x0) ** 2 + (y1 - y0) ** 2 + (z1 - z0) ** 2) ** 0.5
+                if d <= 0:
+                    continue
+                if min_dist is None or d < min_dist:
+                    min_dist = d
+        if min_dist:
+            return min_dist
+    return 1.0
+
+
+def _compute_radial_timeline(coords, start_id, end_id=None, max_steps=60, step_size=None, allowed=None):
+    if not coords or start_id not in coords:
+        return [], {}
+    if not step_size or step_size <= 0:
+        step_size = 1.0
+    allowed_set = set(allowed) if allowed is not None else None
+    sx, sy, sz = coords[start_id]
+    dist_map = {}
+    for uid, coord in coords.items():
+        if allowed_set is not None and uid not in allowed_set:
+            continue
+        x, y, z = coord
+        dist_map[uid] = ((x - sx) ** 2 + (y - sy) ** 2 + (z - sz) ** 2) ** 0.5
+    if not dist_map:
+        return [], {}
+    max_dist = max(dist_map.values())
+    if end_id and end_id in coords:
+        ex, ey, ez = coords[end_id]
+        end_dist = ((ex - sx) ** 2 + (ey - sy) ** 2 + (ez - sz) ** 2) ** 0.5
+        max_dist = min(max_dist, end_dist)
+    max_bucket = max(0, int(math.ceil(max_dist / step_size)))
+    max_bucket = min(max_bucket, max_steps - 1)
+    buckets = {}
+    for uid, dist in dist_map.items():
+        bucket = int(dist / step_size)
+        if bucket > max_bucket:
+            continue
+        buckets.setdefault(bucket, []).append(uid)
+    timeline = []
+    ignite_time = {}
+    for bucket in range(max_bucket + 1):
+        nodes = buckets.get(bucket, [])
+        timeline.append(nodes)
+        for n in nodes:
+            ignite_time[n] = bucket
+    return timeline, ignite_time
+
+
+def _compute_fire_timeline(adjacency, coords, start_id, max_steps=60, radial=False, end_id=None, step_size=None):
+    if radial:
+        allowed = adjacency.keys() if adjacency else None
+        return _compute_radial_timeline(coords, start_id, end_id, max_steps, step_size, allowed=allowed)
+    if not adjacency or start_id not in adjacency:
+        return [], {}
+    visited = {start_id}
+    current = [start_id]
+    timeline = [current]
+    steps = 0
+    while current and steps < max_steps:
+        nxt = []
+        for node in current:
+            for nbr in adjacency.get(node, []):
+                if nbr not in visited:
+                    visited.add(nbr)
+                    nxt.append(nbr)
+        if not nxt:
+            break
+        timeline.append(nxt)
+        current = nxt
+        steps += 1
+    ignite_time = {}
+    for step, nodes in enumerate(timeline):
+        for n in nodes:
+            ignite_time[n] = step
+    return timeline, ignite_time
+
+
+def _build_cell_grid(bounds, cell_size=1.0, max_cells=2000):
+    minx = bounds.get("minx")
+    maxx = bounds.get("maxx")
+    miny = bounds.get("miny")
+    maxy = bounds.get("maxy")
+    minz = bounds.get("minz")
+    maxz = bounds.get("maxz")
+    if minx is None or maxx is None or not math.isfinite(minx) or not math.isfinite(maxx):
+        return [], {}, None
+    span_x = maxx - minx
+    span_y = maxy - miny
+    span_z = maxz - minz
+    if span_x <= 0 or span_y <= 0 or span_z <= 0:
+        return [], {}, None
+    nx = max(1, int(span_x / cell_size))
+    ny = max(1, int(span_y / cell_size))
+    nz = max(1, int(span_z / cell_size))
+    total = nx * ny * nz
+    if total > max_cells:
+        scale = (max_cells / total) ** (1.0 / 3.0)
+        nx = max(1, int(nx * scale))
+        ny = max(1, int(ny * scale))
+        nz = max(1, int(nz * scale))
+    dx = span_x / nx
+    dy = span_y / ny
+    dz = span_z / nz
+    step = min(dx, dy, dz)
+
+    nodes = []
+    node_index = {}
+    for k in range(nz):
+        z = minz + (k + 0.5) * dz
+        for j in range(ny):
+            y = miny + (j + 0.5) * dy
+            for i in range(nx):
+                x = minx + (i + 0.5) * dx
+                uid = f"cell_{i}_{j}_{k}"
+                nodes.append({
+                    "id": uid,
+                    "center": [x, y, z],
+                    "minx": x - dx * 0.5,
+                    "maxx": x + dx * 0.5,
+                    "miny": y - dy * 0.5,
+                    "maxy": y + dy * 0.5,
+                    "z_min": z - dz * 0.5,
+                    "z_max": z + dz * 0.5,
+                })
+                node_index[(i, j, k)] = uid
+
+    adjacency = {n["id"]: [] for n in nodes}
+    for i in range(nx):
+        for j in range(ny):
+            for k in range(nz):
+                uid = node_index[(i, j, k)]
+                for di, dj, dk in [(-1, 0, 0), (1, 0, 0), (0, -1, 0), (0, 1, 0), (0, 0, -1), (0, 0, 1)]:
+                    ni, nj, nk = i + di, j + dj, k + dk
+                    if 0 <= ni < nx and 0 <= nj < ny and 0 <= nk < nz:
+                        adjacency[uid].append(node_index[(ni, nj, nk)])
+
+    return nodes, adjacency, step
+
+def _q_learning_path(adjacency, start_id, exit_id, ignite_time=None, episodes=200, max_steps=200):
+    if not adjacency or start_id not in adjacency or exit_id not in adjacency:
+        return []
+    q = defaultdict(lambda: defaultdict(float))
+    epsilon = 0.2
+    alpha = 0.5
+    gamma = 0.9
+    for _ in range(max(1, episodes)):
+        state = start_id
+        t = 0
+        for _ in range(max_steps):
+            neighbors = adjacency.get(state, [])
+            if not neighbors:
+                break
+            if random.random() < epsilon:
+                nxt = random.choice(neighbors)
+            else:
+                nxt = max(neighbors, key=lambda n: q[state][n])
+            reward = -0.1
+            done = False
+            if ignite_time and t >= ignite_time.get(nxt, 1e9):
+                reward = -10.0
+                done = True
+            if nxt == exit_id:
+                reward = 10.0
+                done = True
+            max_next = max(q[nxt].values()) if q[nxt] else 0.0
+            q[state][nxt] = (1 - alpha) * q[state][nxt] + alpha * (reward + gamma * max_next)
+            state = nxt
+            t += 1
+            if done:
+                break
+    # greedy rollout
+    path = [start_id]
+    state = start_id
+    visited = {start_id}
+    for _ in range(max_steps):
+        neighbors = adjacency.get(state, [])
+        if not neighbors:
+            break
+        nxt = max(neighbors, key=lambda n: q[state][n])
+        path.append(nxt)
+        if nxt == exit_id or nxt in visited:
+            break
+        visited.add(nxt)
+        state = nxt
+    return path
+
+def _sse_event(payload):
+    return f"data: {json.dumps(payload)}\n\n"
+
+
+class FireSimRequest(BaseModel):
+    mode: str = "wire"
+    start_id: Optional[str] = None
+    end_id: Optional[str] = None
+    start_point: Optional[List[float]] = None
+    end_point: Optional[List[float]] = None
+    max_steps: int = 60
+    precompute: bool = True
+    radial: bool = True
+    delay_ms: int = 200
+
+class RLRequest(BaseModel):
+    mode: str = "wire"
+    start_id: Optional[str] = None
+    exit_id: Optional[str] = None
+    start_point: Optional[List[float]] = None
+    exit_point: Optional[List[float]] = None
+    episodes: int = 200
+    max_steps: int = 200
+    use_fire: bool = True
+
+@app.post("/fire-sim")
+def fire_sim(req: FireSimRequest):
+    graph = LAST_GRAPHS.get(req.mode) if LAST_GRAPHS else None
+    if not graph or not graph.get("adjacency"):
+        raise HTTPException(status_code=400, detail="No graph available. Load an IFC file first.")
+    start_id = _resolve_start_id(graph, req.start_id, req.start_point)
+    end_id = _resolve_start_id(graph, req.end_id, req.end_point)
+    if not start_id:
+        start_id = _default_start_id(graph)
+    if not start_id:
+        raise HTTPException(status_code=400, detail="Invalid start point or start id.")
+    step_size = graph.get("step") or _estimate_step_size(graph.get("coords"), graph.get("adjacency"))
+    timeline, _ = _compute_fire_timeline(graph["adjacency"], graph.get("coords"), start_id, req.max_steps, req.radial, end_id, step_size)
+    return {
+        "mode": req.mode,
+        "start_id": start_id,
+        "timeline": timeline,
+        "cell_bboxes": graph.get("bboxes", []),
+    }
+
+@app.get("/fire-sim/stream")
+def fire_sim_stream(
+    mode: str = "wire",
+    start_id: Optional[str] = None,
+    end_id: Optional[str] = None,
+    start_x: Optional[float] = None,
+    start_y: Optional[float] = None,
+    start_z: Optional[float] = None,
+    end_x: Optional[float] = None,
+    end_y: Optional[float] = None,
+    end_z: Optional[float] = None,
+    max_steps: int = 60,
+    precompute: bool = True,
+    radial: bool = True,
+    delay_ms: int = 200,
+):
+    graph = LAST_GRAPHS.get(mode) if LAST_GRAPHS else None
+    if not graph or not graph.get("adjacency"):
+        raise HTTPException(status_code=400, detail="No graph available. Load an IFC file first.")
+    start_point = None
+    end_point = None
+    if start_x is not None and start_y is not None and start_z is not None:
+        start_point = [start_x, start_y, start_z]
+    if end_x is not None and end_y is not None and end_z is not None:
+        end_point = [end_x, end_y, end_z]
+    start_id = _resolve_start_id(graph, start_id, start_point)
+    end_id = _resolve_start_id(graph, end_id, end_point)
+    if not start_id:
+        start_id = _default_start_id(graph)
+    if not start_id:
+        raise HTTPException(status_code=400, detail="Invalid start point or start id.")
+
+    def gen():
+        if mode == "cell" and graph.get("bboxes"):
+            yield _sse_event({"type": "meta", "cell_bboxes": graph.get("bboxes", [])})
+        if precompute:
+            step_size = graph.get("step") or _estimate_step_size(graph.get("coords"), graph.get("adjacency"))
+            timeline, _ = _compute_fire_timeline(graph["adjacency"], graph.get("coords"), start_id, max_steps, radial, end_id, step_size)
+            for step, nodes in enumerate(timeline):
+                yield _sse_event({"type": "step", "step": step, "nodes": nodes})
+                time.sleep(max(delay_ms, 0) / 1000.0)
+        else:
+            visited = {start_id}
+            current = [start_id]
+            step = 0
+            yield _sse_event({"type": "step", "step": step, "nodes": current})
+            while current and step < max_steps:
+                nxt = []
+                for node in current:
+                    for nbr in graph["adjacency"].get(node, []):
+                        if nbr not in visited:
+                            visited.add(nbr)
+                            nxt.append(nbr)
+                if not nxt:
+                    break
+                step += 1
+                yield _sse_event({"type": "step", "step": step, "nodes": nxt})
+                time.sleep(max(delay_ms, 0) / 1000.0)
+                current = nxt
+        yield _sse_event({"type": "done"})
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+@app.post("/rl/train")
+def rl_train(req: RLRequest):
+    graph = LAST_GRAPHS.get(req.mode) if LAST_GRAPHS else None
+    if not graph or not graph.get("adjacency"):
+        raise HTTPException(status_code=400, detail="No graph available. Load an IFC file first.")
+    start_id = _resolve_start_id(graph, req.start_id, req.start_point)
+    exit_id = _resolve_start_id(graph, req.exit_id, req.exit_point)
+    if not start_id or not exit_id:
+        raise HTTPException(status_code=400, detail="Invalid start or exit.")
+    ignite_time = None
+    if req.use_fire:
+        _, ignite_time = _compute_fire_timeline(graph["adjacency"], graph.get("coords"), start_id, req.max_steps, False, None, None)
+    path = _q_learning_path(graph["adjacency"], start_id, exit_id, ignite_time, req.episodes, req.max_steps)
+    return {
+        "mode": req.mode,
+        "start_id": start_id,
+        "exit_id": exit_id,
+        "path": path,
+        "cell_bboxes": graph.get("bboxes", []),
+    }
+
+
+@app.get("/graph-meta")
+def graph_meta(mode: str = "wire"):
+    graph = LAST_GRAPHS.get(mode) if LAST_GRAPHS else None
+    if not graph:
+        raise HTTPException(status_code=400, detail="No graph available. Load an IFC file first.")
+    return {
+        "mode": mode,
+        "cell_bboxes": graph.get("bboxes", []),
+    }
+
 
 class RawTopologyItem(BaseModel):
     type: str
@@ -669,6 +1082,9 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
     floor_bboxes = []
     floor_bboxes_hint = []
     stair_bboxes_hint = []
+    cell_nodes = []
+    cell_adjacency = {}
+    cell_bboxes = []
     all_bbox = {
         "minx": math.inf,
         "maxx": -math.inf,
@@ -711,15 +1127,18 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
         all_bbox["maxz"] = max(all_bbox["maxz"], z)
         return uid
 
-    def add_edge(v0, v1, color="red", width=2):
+    def add_edge(v0, v1, color="red", width=2, kind=None):
         nonlocal edge_uid_seq
         uid = f"e{edge_uid_seq}"
         edge_uid_seq += 1
+        edge_dict = {"edgeColor": color, "edgeWidth": width}
+        if kind:
+            edge_dict["edgeKind"] = kind
         edges.append({
             "type": "Edge",
             "uid": uid,
             "vertices": [v0, v1],
-            "dictionary": {"edgeColor": color, "edgeWidth": width},
+            "dictionary": edge_dict,
         })
         return uid
 
@@ -741,6 +1160,10 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
         dx = min(a["maxx"], b["maxx"]) - max(a["minx"], b["minx"])
         dy = min(a["maxy"], b["maxy"]) - max(a["miny"], b["miny"])
         return dx, dy
+
+    
+
+
 
     def detect_stairs_from_treads(cands):
         if not cands:
@@ -929,6 +1352,9 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
                 if is_stair_flag:
                     stair_bboxes_hint.append(dict(record))
 
+    # build coarse cell graph (simple mode)
+    cell_nodes, cell_adjacency, cell_step = _build_cell_grid(all_bbox)
+
     if include_path:
         # geometry-first stair detection from tread candidates (no IFC annotations needed)
         detected_stairs = detect_stairs_from_treads(tread_candidates)
@@ -947,6 +1373,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
         floor_bboxes.sort(key=lambda b: b["z"])
         merged = []
         MIN_GAP = 1.5  # meters: floors closer than this merge together
+
         for bbox in floor_bboxes:
             record = dict(bbox)
             record["count"] = 1
@@ -974,6 +1401,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
             floor_bboxes.append(m)
 
         # precompute medial axis (approx.) per floor using PCA of footprint points
+
         for bbox in floor_bboxes:
             pts = bbox.get("pts") or []
             if len(pts) >= 2:
@@ -1032,7 +1460,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
             cy = 0.5 * (st["miny"] + st["maxy"])
             lower_uid = add_vertex(cx, cy, st["z_min"] + 0.05)
             upper_uid = add_vertex(cx, cy, st["z_max"] - 0.05)
-            add_edge(lower_uid, upper_uid, color="red", width=4)
+            add_edge(lower_uid, upper_uid, color="red", width=4, kind="stair")
             stair_connectors.append({
                 "cx": cx,
                 "cy": cy,
@@ -1041,6 +1469,7 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
                 "lower_uid": lower_uid,
                 "upper_uid": upper_uid,
             })
+
 
         for bbox in floor_bboxes:
             span_x = bbox["maxx"] - bbox["minx"]
@@ -1060,16 +1489,16 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
             for x in x_values:
                 v0 = add_vertex(x, bbox["miny"], z)
                 v1 = add_vertex(x, bbox["maxy"], z)
-                add_edge(v0, v1, color=grid_color, width=1)
+                add_edge(v0, v1, color=grid_color, width=1, kind="grid")
             for y in y_values:
                 v0 = add_vertex(bbox["minx"], y, z)
                 v1 = add_vertex(bbox["maxx"], y, z)
-                add_edge(v0, v1, color=grid_color, width=1)
+                add_edge(v0, v1, color=grid_color, width=1, kind="grid")
             # For stairs, add a simple diagonal guide along the run
             if bbox.get("is_stair") and bbox.get("z_max") is not None:
                 diag_start = add_vertex(bbox["minx"], bbox["miny"], bbox.get("z_min", bbox["z"]))
                 diag_end = add_vertex(bbox["maxx"], bbox["maxy"], bbox.get("z_max", bbox["z"]))
-                add_edge(diag_start, diag_end, color="red", width=2)
+                add_edge(diag_start, diag_end, color="red", width=2, kind="stair_diag")
 
         # Build path using stairs when available
         path_points = []
@@ -1109,9 +1538,28 @@ def convert_ifc_to_contract(file_path: str, include_path: bool = False, tilt_min
             prev_uid = add_vertex(*path_points[0])
             for pt in path_points[1:]:
                 cur_uid = add_vertex(*pt)
-                add_edge(prev_uid, cur_uid, color="red", width=6)
+                add_edge(prev_uid, cur_uid, color="red", width=6, kind="path")
                 prev_uid = cur_uid
 
+
+    global LAST_GRAPHS
+    vertex_coords = _vertex_coord_map(vertices)
+    wire_adjacency = _build_adjacency(edges, vertex_coords.keys(), {"grid", "stair", "stair_diag"})
+    cell_coords = {n["id"]: n["center"] for n in cell_nodes}
+    LAST_GRAPHS = {
+        "wire": {
+            "adjacency": wire_adjacency,
+            "coords": vertex_coords,
+            "edges": edges,
+            "step": _estimate_step_size(vertex_coords, wire_adjacency),
+        },
+        "cell": {
+            "adjacency": cell_adjacency,
+            "coords": cell_coords,
+            "bboxes": cell_nodes,
+            "step": cell_step,
+        },
+    }
 
     if not faces:
         raise HTTPException(status_code=422, detail="IFC parsed but no renderable geometry found.")

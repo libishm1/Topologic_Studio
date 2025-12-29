@@ -101,21 +101,26 @@ function extractAlphaFromColorSpec(spec) {
   return null;
 }
 
-export default function TopologyViewer({ data, selection, onSelectionChange, showFaces = true, showVerts = false, wireframe = true }) {
+export default function TopologyViewer({ data, selection, onSelectionChange, showFaces = true, showVerts = false, wireframe = true, fitRequest = 0, fireVertices = [], fireEdges = [], pathEdges = [], pathVertices = [], extraVertices = [], extraVerticesVisible = false }) {
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
   const controlsRef = useRef(null);
+  const onSelectionChangeRef = useRef(onSelectionChange);
 
   const facesGroupRef = useRef(null);
   const edgesGroupRef = useRef(null);
   const vertsGroupRef = useRef(null);
+  const extraVertsGroupRef = useRef(null);
 
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerRef = useRef(new THREE.Vector2());
 
   const faceMeshByIdRef = useRef(new Map());
+  const edgeMeshByIdRef = useRef(new Map());
+  const vertMeshByIdRef = useRef(new Map());
+  const vertexByIdRef = useRef(new Map());
   const dataRef = useRef(null);
 
   const lastHitRef = useRef({
@@ -135,6 +140,10 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
   useEffect(() => {
     selectionRef.current = selection;
   }, [selection]);
+
+  useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange;
+  }, [onSelectionChange]);
 
   // ---------- SCENE INIT (once) ----------
   useEffect(() => {
@@ -175,9 +184,11 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
     const facesGroup = new THREE.Group();
     const edgesGroup = new THREE.Group();
     const vertsGroup = new THREE.Group();
+    const extraVertsGroup = new THREE.Group();
     scene.add(facesGroup);
     scene.add(edgesGroup);
     scene.add(vertsGroup);
+    scene.add(extraVertsGroup);
 
     sceneRef.current = scene;
     rendererRef.current = renderer;
@@ -186,8 +197,9 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
     facesGroupRef.current = facesGroup;
     edgesGroupRef.current = edgesGroup;
     vertsGroupRef.current = vertsGroup;
+    extraVertsGroupRef.current = extraVertsGroup;
 
-    raycasterRef.current.params.Line.threshold = 0.01;
+    raycasterRef.current.params.Line.threshold = 0.05;
 
     renderer.setAnimationLoop(() => {
       controls.update();
@@ -211,6 +223,7 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
       const facesGroup = facesGroupRef.current;
       const edgesGroup = edgesGroupRef.current;
       const vertsGroup = vertsGroupRef.current;
+      const extraVertsGroup = extraVertsGroupRef.current;
       const topo = dataRef.current;
 
       if (!renderer || !camera || !facesGroup || !topo) return;
@@ -245,11 +258,12 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
       let baseHit =
         pickFromGroup(facesGroup, "Face") ||
         pickFromGroup(edgesGroup, "Edge") ||
+        pickFromGroup(extraVertsGroup, "Vertex") ||
         pickFromGroup(vertsGroup, "Vertex");
 
       // Background click: clear selection & reset
       if (!baseHit) {
-        onSelectionChange?.(null);
+        onSelectionChangeRef.current?.(null);
         lastHitRef.current = {
           baseUid: null,
           parentsKey: null,
@@ -295,9 +309,10 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
           chain: [],
           point,
         };
-        onSelectionChange?.({
+        onSelectionChangeRef.current?.({
           uid: baseUid,
           level: topoType,
+          point: point ? [point.x, point.y, point.z] : null,
         });
         return;
       }
@@ -353,9 +368,10 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
       const singularLevel =
         PLURAL_TO_SINGULAR[chosen.levelPlural] || topoType || "Unknown";
 
-      onSelectionChange?.({
+      onSelectionChangeRef.current?.({
         uid: chosen.uid,
         level: singularLevel,
+        point: point ? [point.x, point.y, point.z] : null,
       });
     };
 
@@ -369,20 +385,29 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
         mount.removeChild(renderer.domElement);
       }
     };
-  }, [onSelectionChange]);
+  }, []);
 
   // ---------- BUILD GEOMETRY WHEN DATA CHANGES ----------
   useEffect(() => {
     const facesGroup = facesGroupRef.current;
     const edgesGroup = edgesGroupRef.current;
     const vertsGroup = vertsGroupRef.current;
+    const extraVertsGroup = extraVertsGroupRef.current;
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     const faceMeshById = faceMeshByIdRef.current;
+    const edgeMeshById = edgeMeshByIdRef.current;
+    const vertMeshById = vertMeshByIdRef.current;
 
     faceMeshById.clear();
+    edgeMeshById.clear();
+    vertMeshById.clear();
+    vertexByIdRef.current = new Map();
 
-    if (!facesGroup || !edgesGroup || !vertsGroup || !data) return;
+    if (!data) {
+      return;
+    }
+    if (!facesGroup || !edgesGroup || !vertsGroup) return;
 
     const clearGroup = (group) => {
       while (group.children.length > 0) {
@@ -401,8 +426,14 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
     clearGroup(facesGroup);
     clearGroup(edgesGroup);
     clearGroup(vertsGroup);
+    if (extraVertsGroup) {
+      clearGroup(extraVertsGroup);
+    }
     facesGroup.visible = showFaces;
     vertsGroup.visible = showVerts;
+    if (extraVertsGroup) {
+      extraVertsGroup.visible = extraVerticesVisible;
+    }
 
     const baseFaceColor = new THREE.Color(0xcccccc);
     const baseEdgeColor = new THREE.Color(0x222222);
@@ -558,6 +589,8 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
         linewidth: 1,
         depthTest: false, // on top of faces
       });
+      material.userData = material.userData || {};
+      material.userData.baseColor = color.clone();
 
       const line = new THREE.Line(geometry, material);
       line.userData.uid = id;
@@ -565,9 +598,31 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
       line.userData.parents = edge.parents || {};
 
       edgesGroup.add(line);
+      edgeMeshById.set(id, line);
     });
 
     // --- 4. Vertices ---
+    if (extraVertsGroup && extraVertices && extraVertices.length) {
+      const extraGeom = new THREE.SphereGeometry(0.05, 12, 12);
+      extraVertices.forEach((v) => {
+        if (!v || !v.id || !Array.isArray(v.coord) || v.coord.length < 3) return;
+        const color = parseColorSpec(v.color, baseVertColor);
+        const material = new THREE.MeshBasicMaterial({
+          color,
+          depthTest: false,
+        });
+        material.userData = material.userData || {};
+        material.userData.baseColor = color.clone();
+        const mesh = new THREE.Mesh(extraGeom, material);
+        mesh.position.set(v.coord[0], v.coord[1], v.coord[2]);
+        mesh.userData.uid = v.id;
+        mesh.userData.topoType = "Vertex";
+        mesh.userData.parents = {};
+        extraVertsGroup.add(mesh);
+        vertMeshById.set(v.id, mesh);
+      });
+    }
+
     if (vertexById.size > 0) {
       const vertGeom = new THREE.SphereGeometry(0.02, 10, 10);
       vertexById.forEach((v) => {
@@ -585,6 +640,8 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
           color,
           depthTest: false, // on top
         });
+        material.userData = material.userData || {};
+        material.userData.baseColor = color.clone();
         const mesh = new THREE.Mesh(vertGeom, material);
         mesh.position.set(v.x, v.y, v.z);
         mesh.userData.uid = v.uid;
@@ -592,114 +649,158 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
         mesh.userData.parents = v.parents || {};
 
         vertsGroup.add(mesh);
+        vertMeshById.set(v.uid, mesh);
       });
     }
+    vertexByIdRef.current = vertexById;
+  }, [data, showFaces, showVerts, wireframe, extraVertices, extraVerticesVisible]);
 
-    // --- 5. Recenter camera ---
-    if (camera && vertexById.size > 0) {
-      const bbox = new THREE.Box3();
-      vertexById.forEach((v) => {
-        bbox.expandByPoint(new THREE.Vector3(v.x, v.y, v.z));
-      });
-      const center = new THREE.Vector3();
-      bbox.getCenter(center);
-      const size = new THREE.Vector3();
-      bbox.getSize(size);
-      const maxSize = Math.max(size.x, size.y, size.z, 1);
+  // ---------- MANUAL CAMERA FIT ----------
+  useEffect(() => {
+    if (!fitRequest) return;
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const vertexById = vertexByIdRef.current;
+    if (!camera || !vertexById || vertexById.size === 0) return;
 
-      const fitOffset = 2.2;
-      const distance = (maxSize / 2) / Math.tan((camera.fov * Math.PI) / 360) * fitOffset;
-      const dir = new THREE.Vector3(1, 1, 1).normalize();
-      const newPos = center.clone().add(dir.multiplyScalar(distance));
-
-      camera.position.copy(newPos);
-      camera.near = Math.max(distance / 1000, 0.01);
-      camera.far = distance * 1000;
-      camera.updateProjectionMatrix();
-      camera.lookAt(center);
-      if (controls) {
-        controls.target.copy(center);
-        controls.update();
-      }
-    } else if (camera) {
-      camera.position.set(5, 5, 5);
-      camera.lookAt(0, 0, 0);
-      if (controls) {
-        controls.target.set(0, 0, 0);
-        controls.update();
-      }
+    const xs = [];
+    const ys = [];
+    const zs = [];
+    vertexById.forEach((v) => {
+      xs.push(v.x);
+      ys.push(v.y);
+      zs.push(v.z);
+    });
+    const center = new THREE.Vector3(
+      (Math.min(...xs) + Math.max(...xs)) / 2,
+      (Math.min(...ys) + Math.max(...ys)) / 2,
+      (Math.min(...zs) + Math.max(...zs)) / 2
+    );
+    camera.position.set(center.x + 5, center.y + 5, center.z + 5);
+    camera.lookAt(center);
+    if (controls) {
+      controls.target.copy(center);
+      controls.update();
     }
-  }, [data, showFaces, showVerts, wireframe]);
+  }, [fitRequest]);
 
-// ---------- HIGHLIGHTING BASED ON SELECTION ----------
-    useEffect(() => {
-      const faceMeshById = faceMeshByIdRef.current;
-      const highlightColor = new THREE.Color(0xff0000);
+// ---------- FIRE/PATH HIGHLIGHTING ----------
+  useEffect(() => {
+    const edgeMeshById = edgeMeshByIdRef.current;
+    const vertMeshById = vertMeshByIdRef.current;
+    const fireEdgeSet = new Set(fireEdges || []);
+    const pathEdgeSet = new Set(pathEdges || []);
+    const fireVertSet = new Set(fireVertices || []);
+    const pathVertSet = new Set(pathVertices || []);
+    const fireColor = new THREE.Color(0xff3333);
+    const pathColor = new THREE.Color(0xffa000);
 
-      // 1) Reset all faces to their stored base colour + opacity
-      faceMeshById.forEach((mesh) => {
-        const mat = mesh.material;
-        if (!mat) return;
+    edgeMeshById.forEach((mesh) => {
+      const mat = mesh.material;
+      if (!mat || !mat.color) return;
+      const baseColor =
+        mat.userData?.baseColor instanceof THREE.Color
+          ? mat.userData.baseColor
+          : null;
+      if (baseColor) {
+        mat.color.copy(baseColor);
+      }
+      const uid = mesh.userData.uid;
+      if (pathEdgeSet.has(uid)) {
+        mat.color.copy(pathColor);
+      } else if (fireEdgeSet.has(uid)) {
+        mat.color.copy(fireColor);
+      }
+    });
 
-        const baseColor =
-          mat.userData?.baseColor instanceof THREE.Color
-            ? mat.userData.baseColor
-            : null;
+    vertMeshById.forEach((mesh) => {
+      const mat = mesh.material;
+      if (!mat || !mat.color) return;
+      const baseColor =
+        mat.userData?.baseColor instanceof THREE.Color
+          ? mat.userData.baseColor
+          : null;
+      if (baseColor) {
+        mat.color.copy(baseColor);
+      }
+      const uid = mesh.userData.uid;
+      if (fireVertSet.has(uid)) {
+        mat.color.copy(fireColor);
+      } else if (pathVertSet.has(uid)) {
+        mat.color.copy(pathColor);
+      }
+    });
+  }, [fireEdges, fireVertices, pathEdges, pathVertices]);
+
+  // ---------- HIGHLIGHTING BASED ON SELECTION ----------
+  useEffect(() => {
+    const faceMeshById = faceMeshByIdRef.current;
+    const highlightColor = new THREE.Color(0xff0000);
+
+    // 1) Reset all faces to their stored base colour + opacity
+    faceMeshById.forEach((mesh) => {
+      const mat = mesh.material;
+      if (!mat) return;
+
+      const baseColor =
+        mat.userData?.baseColor instanceof THREE.Color
+          ? mat.userData.baseColor
+          : null;
+      const baseOpacity =
+        typeof mat.userData?.baseOpacity === "number"
+          ? mat.userData.baseOpacity
+          : 0.6;
+
+      if (baseColor && mat.color) {
+        mat.color.copy(baseColor);
+      }
+      mat.opacity = baseOpacity;
+      mat.transparent = baseOpacity < 1.0;
+    });
+
+    // No active selection: nothing highlighted
+    if (!selection) return;
+
+    const pluralKey = SINGULAR_TO_PLURAL[selection.level];
+    if (!pluralKey) return;
+
+    // 2) If the selection is a Face: highlight just that one
+    if (selection.level === "Face") {
+      const mesh = faceMeshById.get(selection.uid);
+      if (mesh && mesh.material && mesh.material.color) {
+        mesh.material.color.copy(highlightColor);
+
+        const baseOpacity =
+          typeof mesh.material.userData?.baseOpacity === "number"
+            ? mesh.material.userData.baseOpacity
+            : 0.6;
+
+        mesh.material.opacity = Math.max(baseOpacity, 0.6);
+        mesh.material.transparent = mesh.material.opacity < 1.0;
+      }
+      return;
+    }
+
+    // 3) Higher-level selection: highlight all faces whose parents contain this uid
+    faceMeshById.forEach((mesh) => {
+      const mat = mesh.material;
+      if (!mat || !mat.color) return;
+
+      const parents = mesh.userData.parents || {};
+      const ids = parents[pluralKey] || [];
+      if (Array.isArray(ids) && ids.includes(selection.uid)) {
+        mat.color.copy(highlightColor);
+
         const baseOpacity =
           typeof mat.userData?.baseOpacity === "number"
             ? mat.userData.baseOpacity
             : 0.6;
 
-        if (baseColor && mat.color) {
-          mat.color.copy(baseColor);
-        }
-        mat.opacity = baseOpacity;
-        mat.transparent = baseOpacity < 1.0;
-      });
-
-      // No active selection → nothing highlighted
-      if (!selection) return;
-
-      const pluralKey = SINGULAR_TO_PLURAL[selection.level];
-      if (!pluralKey) return;
-
-      // 2) If the selection is a Face: highlight just that one
-      if (selection.level === "Face") {
-        const mesh = faceMeshById.get(selection.uid);
-        if (mesh && mesh.material && mesh.material.color) {
-          mesh.material.color.copy(highlightColor);
-
-          const baseOpacity =
-            typeof mesh.material.userData?.baseOpacity === "number"
-              ? mesh.material.userData.baseOpacity
-              : 0.6;
-
-          mesh.material.opacity = Math.max(baseOpacity, 0.6);
-          mesh.material.transparent = mesh.material.opacity < 1.0;
-        }
-        return;
+        mat.opacity = Math.max(baseOpacity, 0.9);
+        mat.transparent = mat.opacity < 1.0;
       }
-
-      // 3) Higher-level selection: highlight all faces whose parents contain this uid
-      faceMeshById.forEach((mesh) => {
-        const mat = mesh.material;
-        if (!mat || !mat.color) return;
-
-        const parents = mesh.userData.parents || {};
-        const ids = parents[pluralKey] || [];
-        if (Array.isArray(ids) && ids.includes(selection.uid)) {
-          mat.color.copy(highlightColor);
-
-          const baseOpacity =
-            typeof mat.userData?.baseOpacity === "number"
-              ? mat.userData.baseOpacity
-              : 0.6;
-
-          mat.opacity = Math.max(baseOpacity, 0.9);
-          mat.transparent = mat.opacity < 1.0;
-        }
-      });
-    }, [selection]);
+    });
+  }, [selection]);
 
 
   return (
