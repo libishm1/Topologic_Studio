@@ -10,10 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@thatopen/components": "^3.2.6",
+    "@thatopen/fragments": "^3.2.13",
     "axios": "^1.13.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "three": "^0.181.2"
+    "three": "^0.181.2",
+    "web-ifc": "^0.0.73"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

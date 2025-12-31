@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import axios from "axios";
 import TopologyViewer from "./TopologyViewer.jsx";
+import IFCViewer from "./IFCViewer.jsx";
 import "./App.css";
 import logoImg from "./assets/topologicStudio-white-logo400x400.png";
 
@@ -25,6 +26,12 @@ export default function App() {
   const [wireframe, setWireframe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [fitRequest, setFitRequest] = useState(0);
+  const [viewerMode, setViewerMode] = useState("topology");
+  const [ifcFile, setIfcFile] = useState(null);
+  const ifcUpAxis = "y";
+  const ifcInvertOrbit = false;
+  const ifcFlipY = false;
+  const ifcFlipZ = true;
 
   const fireTimerRef = useRef(null);
   const fireSseRef = useRef(null);
@@ -122,6 +129,7 @@ export default function App() {
     resetSimulationState();
     setSelection(null);
     setTopology(null);
+    setViewerMode("topology");
     setShowFaces(false);
     setFileName(file.name);
 
@@ -183,6 +191,18 @@ export default function App() {
     setPickMode(null);
   };
 
+  const handleIfcPick = (mode, point) => {
+    if (!mode || !point || point.length < 3) return;
+    if (mode === "start") {
+      setStartPoint(point);
+      setStartId(null);
+    } else if (mode === "exit") {
+      setExitPoint(point);
+      setExitId(null);
+    }
+    setPickMode(null);
+  };
+
   async function handleIfcUpload(event, includePath = false) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -190,6 +210,8 @@ export default function App() {
     setLastIfcFile(file);
     setLastIncludePath(includePath);
     setShowFaces(!includePath);
+    setIfcFile(file);
+    setViewerMode(includePath ? "topology" : "ifc");
     await uploadIfc(file, includePath);
   }
 
@@ -586,6 +608,25 @@ export default function App() {
           )}
         </div>
         <div className="app-header-right">
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span className="sidebar-label" style={{ marginBottom: 0 }}>
+              Viewer
+            </span>
+            <select
+              value={viewerMode}
+              onChange={(e) => setViewerMode(e.target.value)}
+              style={{
+                padding: "4px 8px",
+                borderRadius: "8px",
+                border: "1px solid rgba(148, 163, 184, 0.4)",
+                background: "rgba(15, 23, 42, 0.85)",
+                color: "#e5e7eb",
+              }}
+            >
+              <option value="topology">Topology</option>
+              <option value="ifc">IFC (Fragments)</option>
+            </select>
+          </div>
           <label className="file-upload-button">
             <input
               type="file"
@@ -697,7 +738,19 @@ export default function App() {
       {/* Main content */}
       <div className="app-main">
         <div className="viewer-panel" style={{ position: "relative" }}>
-          {topology ? (
+          {viewerMode === "ifc" ? (
+            <IFCViewer
+              file={ifcFile}
+              pickMode={pickMode}
+              onPick={handleIfcPick}
+              startPoint={startPoint}
+              exitPoint={exitPoint}
+              upAxis={ifcUpAxis}
+              invertOrbit={ifcInvertOrbit}
+              flipY={ifcFlipY}
+              flipZ={ifcFlipZ}
+            />
+          ) : topology ? (
             <TopologyViewer
               data={displayTopology || topology}
               selection={selection}
