@@ -28,6 +28,17 @@ export default function App() {
   const [fitRequest, setFitRequest] = useState(0);
   const [viewerMode, setViewerMode] = useState("topology");
   const [ifcFile, setIfcFile] = useState(null);
+  const [ifcEgress, setIfcEgress] = useState(null);
+  const [ifcGraphStats, setIfcGraphStats] = useState(null);
+  const [ifcGraphEdges, setIfcGraphEdges] = useState(null);
+  const [ifcGraphLoading, setIfcGraphLoading] = useState(false);
+  const [ifcGraphPending, setIfcGraphPending] = useState(false);
+  const [ifcEgressRequestId, setIfcEgressRequestId] = useState(0);
+  const [ifcPathPoints, setIfcPathPoints] = useState(null);
+  const [ifcPathLoading, setIfcPathLoading] = useState(false);
+  const [ifcMeshVisible, setIfcMeshVisible] = useState(true);
+  const [ifcFloorEdge, setIfcFloorEdge] = useState(2.25);  // base_spacing * 1.5 = 1.5 * 1.5
+  const [ifcStairEdge, setIfcStairEdge] = useState(0.4);  // ~2x tread height
   const ifcUpAxis = "y";
   const ifcInvertOrbit = false;
   const ifcFlipY = false;
@@ -82,6 +93,12 @@ export default function App() {
     setStartId(null);
     setExitId(null);
     setPickMode(null);
+    setIfcEgress(null);
+    setIfcGraphStats(null);
+    setIfcPathPoints(null);
+    setIfcGraphLoading(false);
+    setIfcPathLoading(false);
+    setIfcGraphPending(false);
   };
 
   async function uploadIfc(file, includePath) {
@@ -196,9 +213,11 @@ export default function App() {
     if (mode === "start") {
       setStartPoint(point);
       setStartId(null);
+      setIfcPathPoints(null);
     } else if (mode === "exit") {
       setExitPoint(point);
       setExitId(null);
+      setIfcPathPoints(null);
     }
     setPickMode(null);
   };
@@ -231,7 +250,112 @@ export default function App() {
     setStartId(null);
     setExitId(null);
     setPickMode(null);
+    setIfcPathPoints(null);
   };
+
+  const postIfcEgressGraph = (floors, stairs) => {
+    setIfcGraphLoading(true);
+    setIfcGraphPending(false);
+    return axios
+      .post(`${API_BASE}/ifc-egress-graph`, {
+        floors: floors || [],
+        stairs: stairs || [],
+        agent_height: 0.75,
+        base_spacing: 0.5,
+        stair_multiplier: 0.5,
+        max_edge_length: 1.5,
+        max_edge_floor: ifcFloorEdge,
+        max_edge_stair: ifcStairEdge,
+        up_axis: ifcUpAxis,
+        max_points: 20000,
+      })
+      .then((res) => {
+        setIfcGraphStats(res.data || null);
+        setIfcGraphEdges(res.data?.edges || null);
+        if (startPoint && exitPoint) {
+          computeIfcEgressPath(true);
+        }
+      })
+      .catch((apiErr) => {
+        setError(
+          apiErr.response?.data?.detail || apiErr.message || "IFC egress graph failed."
+        );
+      })
+      .finally(() => {
+        setIfcGraphLoading(false);
+        setIfcGraphPending(false);
+      });
+  };
+
+  const handleIfcEgressData = (data) => {
+    if (!data) {
+      setIfcEgress(null);
+      setIfcGraphStats(null);
+      setIfcPathPoints(null);
+      return;
+    }
+    setIfcEgress((prev) => ({ ...(prev || {}), ...data }));
+    // Verbose IFC egress IDs logging removed to reduce console spam
+    if (data?.egressError && ifcGraphPending) {
+      setError(data.egressError);
+      setIfcGraphLoading(false);
+      setIfcGraphPending(false);
+      return;
+    }
+    if ((data?.floors?.length || data?.stairs?.length) && ifcGraphPending) {
+      postIfcEgressGraph(data.floors, data.stairs);
+    }
+  };
+
+  const buildIfcEgressGraph = async () => {
+    if (!ifcEgress?.ids) {
+      setError("Load IFC and wait for floor/stair IDs first.");
+      return;
+    }
+    setError(null);
+    setIfcGraphStats(null);
+    setIfcGraphEdges(null);
+    setIfcPathPoints(null);
+    if (ifcEgress?.floors?.length || ifcEgress?.stairs?.length) {
+      await postIfcEgressGraph(ifcEgress.floors, ifcEgress.stairs);
+      return;
+    }
+    setIfcGraphLoading(true);
+    setIfcGraphPending(true);
+    setIfcEgressRequestId((v) => v + 1);
+  };
+
+  async function computeIfcEgressPath(force = false) {
+    if (!force && !ifcGraphStats) {
+      setError("Build the IFC egress graph first.");
+      return;
+    }
+    if (!startPoint || !exitPoint) {
+      setError("Pick start and exit points first.");
+      return;
+    }
+    setIfcPathLoading(true);
+    setError(null);
+    setIfcPathPoints(null);
+    try {
+      const res = await axios.post(`${API_BASE}/ifc-egress-path`, {
+        start_point: startPoint,
+        end_point: exitPoint,
+      });
+      const payload = res.data || {};
+      if (!payload.points || payload.points.length < 2) {
+        setError("IFC egress path not found.");
+        return;
+      }
+      setIfcPathPoints(payload.points);
+    } catch (apiErr) {
+      setError(
+        apiErr.response?.data?.detail || apiErr.message || "IFC egress path failed."
+      );
+    } finally {
+      setIfcPathLoading(false);
+    }
+  }
 
   const stopFireSimulation = () => {
     stopFire();
@@ -743,12 +867,17 @@ export default function App() {
               file={ifcFile}
               pickMode={pickMode}
               onPick={handleIfcPick}
+              onEgressDataExtracted={handleIfcEgressData}
+              pathPoints={ifcPathPoints}
+              graphEdges={ifcGraphEdges}
+              egressRequestId={ifcEgressRequestId}
               startPoint={startPoint}
               exitPoint={exitPoint}
               upAxis={ifcUpAxis}
               invertOrbit={ifcInvertOrbit}
               flipY={ifcFlipY}
               flipZ={ifcFlipZ}
+              meshVisible={ifcMeshVisible}
             />
           ) : topology ? (
             <TopologyViewer
@@ -899,6 +1028,79 @@ export default function App() {
                     {exitId || formatPoint(exitPoint)}
                   </span>
                 </div>
+                {ifcEgress?.ids && (
+                  <div>
+                    <span className="sidebar-label">IFC floors / stairs</span>
+                    <span className="sidebar-value sidebar-value-mono">
+                      {ifcEgress.ids.slabs.length} / {ifcEgress.ids.stairs.length}
+                    </span>
+                  </div>
+                )}
+                {viewerMode === "ifc" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div className="slider-panel">
+                      <label>
+                        Floor connectivity (m)
+                        <input
+                          type="range"
+                        min="1.5"
+                        max="20"
+                        step="0.25"
+                          value={ifcFloorEdge}
+                          onChange={(e) => setIfcFloorEdge(Number(e.target.value))}
+                        />
+                        <span className="slider-value">
+                          {ifcFloorEdge.toFixed(2)}
+                        </span>
+                      </label>
+                      <label>
+                        Stair connectivity (m)
+                        <input
+                          type="range"
+                        min="0.2"
+                        max="3"
+                        step="0.1"
+                          value={ifcStairEdge}
+                          onChange={(e) => setIfcStairEdge(Number(e.target.value))}
+                        />
+                        <span className="slider-value">
+                          {ifcStairEdge.toFixed(2)}
+                        </span>
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      className="file-upload-button"
+                      onClick={() => setIfcMeshVisible((v) => !v)}
+                      style={{ justifyContent: "center" }}
+                    >
+                      {ifcMeshVisible ? "Hide IFC mesh" : "Show IFC mesh"}
+                    </button>
+                    <button
+                      type="button"
+                      className="file-upload-button"
+                      onClick={buildIfcEgressGraph}
+                      disabled={ifcGraphLoading || !ifcEgress}
+                      style={{ justifyContent: "center" }}
+                    >
+                      {ifcGraphLoading ? "Building IFC graph..." : "Build IFC egress graph"}
+                    </button>
+                    <button
+                      type="button"
+                      className="file-upload-button"
+                      onClick={computeIfcEgressPath}
+                      disabled={ifcPathLoading || !ifcGraphStats}
+                      style={{ justifyContent: "center" }}
+                    >
+                      {ifcPathLoading ? "Computing IFC path..." : "Compute IFC egress path"}
+                    </button>
+                    {ifcGraphStats?.stats && (
+                      <div className="sidebar-value sidebar-value-mono">
+                        Graph: {ifcGraphStats.stats.nodes} nodes / {ifcGraphStats.stats.edges} edges
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>

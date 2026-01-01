@@ -64,7 +64,7 @@ app.add_middleware(
 async def health():
     return {"status": "ok"}
 
-LAST_GRAPHS = {"wire": None, "cell": None}
+LAST_GRAPHS = {"wire": None, "cell": None, "ifc": None}
 
 def _vertex_coord_map(vertices):
     coords = {}
@@ -154,6 +154,225 @@ def _estimate_step_size(coords, adjacency=None):
         if min_dist:
             return min_dist
     return 1.0
+
+
+def _axis_index(up_axis: str) -> int:
+    if up_axis == "y":
+        return 1
+    if up_axis == "x":
+        return 0
+    return 2
+
+
+def _triangle_normal(v1, v2, v3):
+    ax, ay, az = v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]
+    bx, by, bz = v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]
+    nx = ay * bz - az * by
+    ny = az * bx - ax * bz
+    nz = ax * by - ay * bx
+    mag = (nx * nx + ny * ny + nz * nz) ** 0.5
+    if mag == 0:
+        return 0.0, 0.0, 0.0
+    return nx / mag, ny / mag, nz / mag
+
+
+def _sample_walkable_points(vertices, indices, normals, spacing, max_slope_deg, up_axis="z", max_points=20000):
+    if not vertices or not indices:
+        return []
+    up_idx = _axis_index(up_axis)
+    min_up = math.cos(math.radians(90 - max_slope_deg))
+    points = []
+    for i in range(0, len(indices), 3):
+        i1 = indices[i] * 3
+        i2 = indices[i + 1] * 3
+        i3 = indices[i + 2] * 3
+        if i3 + 2 >= len(vertices):
+            continue
+        v1 = [vertices[i1], vertices[i1 + 1], vertices[i1 + 2]]
+        v2 = [vertices[i2], vertices[i2 + 1], vertices[i2 + 2]]
+        v3 = [vertices[i3], vertices[i3 + 1], vertices[i3 + 2]]
+        if normals and i1 + 2 < len(normals):
+            n = [normals[i1], normals[i1 + 1], normals[i1 + 2]]
+        else:
+            n = _triangle_normal(v1, v2, v3)
+        if n[up_idx] < min_up:
+            continue
+        ax, ay, az = v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]
+        bx, by, bz = v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]
+        cx = ay * bz - az * by
+        cy = az * bx - ax * bz
+        cz = ax * by - ay * bx
+        area = 0.5 * (cx * cx + cy * cy + cz * cz) ** 0.5
+        if area <= 1e-6:
+            continue
+        samples = max(1, int(math.ceil((area ** 0.5) / max(spacing, 1e-3))))
+        for u in range(samples + 1):
+            for v in range(samples + 1 - u):
+                alpha = u / samples
+                beta = v / samples
+                gamma = 1 - alpha - beta
+                if gamma < 0:
+                    continue
+                px = alpha * v1[0] + beta * v2[0] + gamma * v3[0]
+                py = alpha * v1[1] + beta * v2[1] + gamma * v3[1]
+                pz = alpha * v1[2] + beta * v2[2] + gamma * v3[2]
+                points.append([px, py, pz])
+                if len(points) >= max_points:
+                    return points
+    return points
+
+
+def _build_point_adjacency(points, max_dist):
+    if not points:
+        return {}, {}
+    inv = 1.0 / max_dist if max_dist > 0 else 1.0
+    buckets = defaultdict(list)
+    for idx, p in enumerate(points):
+        key = (int(p[0] * inv), int(p[1] * inv), int(p[2] * inv))
+        buckets[key].append(idx)
+    adjacency = {idx: [] for idx in range(len(points))}
+    for idx, p in enumerate(points):
+        bx, by, bz = int(p[0] * inv), int(p[1] * inv), int(p[2] * inv)
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    for j in buckets.get((bx + dx, by + dy, bz + dz), []):
+                        if j <= idx:
+                            continue
+                        q = points[j]
+                        d = ((q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 + (q[2] - p[2]) ** 2) ** 0.5
+                        if d <= max_dist:
+                            adjacency[idx].append(j)
+                            adjacency[j].append(idx)
+    coords = {f"ifc_{i}": points[i] for i in range(len(points))}
+    adj_named = {f"ifc_{i}": [f"ifc_{j}" for j in nbrs] for i, nbrs in adjacency.items()}
+    return coords, adj_named
+
+
+def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_dist_floor):
+    """
+    Build adjacency with different max distances for stair points vs floor points.
+    First num_stair_points are stair points, rest are floor points.
+    Stair-to-stair connections use max_dist_stair (short for tread-to-tread).
+    Floor-to-floor connections use max_dist_floor (longer for open spaces).
+    Stair-to-floor connections use max(max_dist_stair, max_dist_floor) for transitions.
+    """
+    if not points:
+        return {}, {}
+
+    # Use the larger distance for spatial hashing to capture all potential connections
+    inv = 1.0 / max(max_dist_stair, max_dist_floor) if max(max_dist_stair, max_dist_floor) > 0 else 1.0
+    buckets = defaultdict(list)
+    for idx, p in enumerate(points):
+        key = (int(p[0] * inv), int(p[1] * inv), int(p[2] * inv))
+        buckets[key].append(idx)
+
+    adjacency = {idx: [] for idx in range(len(points))}
+    for idx, p in enumerate(points):
+        is_stair_i = idx < num_stair_points
+        bx, by, bz = int(p[0] * inv), int(p[1] * inv), int(p[2] * inv)
+
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    for j in buckets.get((bx + dx, by + dy, bz + dz), []):
+                        if j <= idx:
+                            continue
+
+                        is_stair_j = j < num_stair_points
+                        q = points[j]
+                        d = ((q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 + (q[2] - p[2]) ** 2) ** 0.5
+
+                        # Determine max distance based on point types
+                        if is_stair_i and is_stair_j:
+                            # Stair-to-stair: use short distance for tread-to-tread
+                            max_d = max_dist_stair
+                        elif not is_stair_i and not is_stair_j:
+                            # Floor-to-floor: use longer distance
+                            max_d = max_dist_floor
+                        else:
+                            # Stair-to-floor transition: use longer distance to allow connection
+                            max_d = max(max_dist_stair, max_dist_floor)
+
+                        if d <= max_d:
+                            adjacency[idx].append(j)
+                            adjacency[j].append(idx)
+
+    coords = {f"ifc_{i}": points[i] for i in range(len(points))}
+    adj_named = {f"ifc_{i}": [f"ifc_{j}" for j in nbrs] for i, nbrs in adjacency.items()}
+
+    # Force-connect stairs to floors: find stair endpoints and connect to nearest floor points
+    # This ensures floors and stairs form a connected graph even if spatial hashing misses connections
+    if num_stair_points > 0 and num_stair_points < len(points):
+        stair_indices = list(range(num_stair_points))
+        floor_indices = list(range(num_stair_points, len(points)))
+
+        # Find stair points at top and bottom (extreme Z values)
+        stair_z_vals = [(i, points[i][2]) for i in stair_indices]
+        stair_z_vals.sort(key=lambda x: x[1])
+
+        # Bottom 10% and top 10% of stair points are likely endpoints
+        num_endpoints = max(2, len(stair_indices) // 10)
+        bottom_stairs = [idx for idx, _ in stair_z_vals[:num_endpoints]]
+        top_stairs = [idx for idx, _ in stair_z_vals[-num_endpoints:]]
+
+        # Connect each stair endpoint to nearest 3 floor points within 3 meters
+        for stair_idx in bottom_stairs + top_stairs:
+            sx, sy, sz = points[stair_idx]
+            distances = []
+            for floor_idx in floor_indices:
+                fx, fy, fz = points[floor_idx]
+                d = ((fx - sx) ** 2 + (fy - sy) ** 2 + (fz - sz) ** 2) ** 0.5
+                if d <= 3.0:  # Within 3 meters
+                    distances.append((d, floor_idx))
+
+            # Connect to 3 nearest floor points
+            distances.sort()
+            for _, floor_idx in distances[:3]:
+                stair_uid = f"ifc_{stair_idx}"
+                floor_uid = f"ifc_{floor_idx}"
+                if floor_uid not in adj_named.get(stair_uid, []):
+                    adj_named.setdefault(stair_uid, []).append(floor_uid)
+                    adj_named.setdefault(floor_uid, []).append(stair_uid)
+
+    return coords, adj_named
+
+
+def _shortest_path_ids(adjacency, coords, start_id, end_id):
+    if start_id not in adjacency or end_id not in adjacency:
+        return []
+    import heapq
+    dist = {start_id: 0.0}
+    prev = {}
+    heap = [(0.0, start_id)]
+    while heap:
+        d, node = heapq.heappop(heap)
+        if node == end_id:
+            break
+        if d != dist.get(node, 0.0):
+            continue
+        for nbr in adjacency.get(node, []):
+            if nbr not in coords:
+                continue
+            x0, y0, z0 = coords[node]
+            x1, y1, z1 = coords[nbr]
+            w = ((x1 - x0) ** 2 + (y1 - y0) ** 2 + (z1 - z0) ** 2) ** 0.5
+            nd = d + w
+            if nd < dist.get(nbr, 1e18):
+                dist[nbr] = nd
+                prev[nbr] = node
+                heapq.heappush(heap, (nd, nbr))
+    if end_id not in dist:
+        return []
+    path = [end_id]
+    cur = end_id
+    while cur != start_id:
+        cur = prev.get(cur)
+        if cur is None:
+            break
+        path.append(cur)
+    path.reverse()
+    return path
 
 
 def _compute_radial_timeline(coords, start_id, end_id=None, max_steps=60, step_size=None, allowed=None):
@@ -356,6 +575,154 @@ class RLRequest(BaseModel):
     episodes: int = 200
     max_steps: int = 200
     use_fire: bool = True
+
+
+class IfcGeometry(BaseModel):
+    expressID: int
+    vertices: List[float]
+    indices: List[int]
+    normals: Optional[List[float]] = None
+
+
+class IfcEgressRequest(BaseModel):
+    floors: List[IfcGeometry] = []
+    stairs: List[IfcGeometry] = []
+    agent_height: float = 0.75
+    base_spacing: float = 0.5
+    stair_multiplier: float = 0.5
+    max_edge_length: float = 1.5
+    max_edge_floor: Optional[float] = None
+    max_edge_stair: Optional[float] = None
+    up_axis: str = "z"
+    max_points: int = 20000
+
+
+class IfcEgressPathRequest(BaseModel):
+    start_point: Optional[List[float]] = None
+    end_point: Optional[List[float]] = None
+
+
+@app.post("/ifc-egress-graph")
+def ifc_egress_graph(req: IfcEgressRequest):
+    """Build navigation graph using simplified point sampling with strict limits"""
+    floors = req.floors or []
+    stairs = req.stairs or []
+    if not floors and not stairs:
+        raise HTTPException(status_code=400, detail="No IFC floor/stair geometry provided.")
+
+    # Use simple point sampling with STRICT limits
+    base_spacing = max(req.base_spacing, 1.5)  # Minimum 1.5m spacing
+    stair_spacing = max(base_spacing * 0.3, 0.3)  # VERY dense spacing for stairs (0.3m)
+
+    # Use slider values if provided, otherwise use calculated defaults
+    max_edge_floor = (
+        req.max_edge_floor if req.max_edge_floor is not None else base_spacing * 1.5
+    )  # Default 2.25m or slider value
+    max_edge_stair = (
+        req.max_edge_stair if req.max_edge_stair is not None else 0.4
+    )  # Default 0.4m or slider value
+    max_total_points = 3000  # Increased limit to accommodate both dense stair sampling AND floor grid
+
+    print(f"Processing {len(floors)} floors, {len(stairs)} stairs (spacing={base_spacing}m, stair_spacing={stair_spacing}m, max_edge_floor={max_edge_floor}m, max_edge_stair={max_edge_stair}m, max={max_total_points} points)")
+
+    stair_points = []
+    floor_points = []
+
+    # Sample stairs FIRST (prioritize connectivity between floors)
+    for geom in stairs:
+        if len(stair_points) >= max_total_points:
+            break
+        pts = _sample_walkable_points(
+            geom.vertices,
+            geom.indices,
+            geom.normals,
+            stair_spacing,
+            45,  # Higher angle for stairs
+            up_axis=req.up_axis,
+            max_points=300,  # MUCH higher limit per stair (300 points) for multi-level connectivity
+        )
+        stair_points.extend(pts[:300])
+
+    # Sample floors with remaining budget
+    remaining_budget = max_total_points - len(stair_points)
+    points_per_floor = max(100, remaining_budget // max(1, len(floors)))  # Minimum 100 points per floor for visibility
+
+    for geom in floors:
+        if len(floor_points) >= remaining_budget:
+            break
+        pts = _sample_walkable_points(
+            geom.vertices,
+            geom.indices,
+            geom.normals,
+            base_spacing,
+            10,  # Low angle tolerance
+            up_axis=req.up_axis,
+            max_points=points_per_floor,
+        )
+        floor_points.extend(pts[:points_per_floor])
+
+    # Combine all points
+    all_points = stair_points + floor_points
+    all_points = all_points[:max_total_points]
+
+    if not all_points:
+        raise HTTPException(status_code=400, detail="No walkable points extracted.")
+
+    num_stair_points = min(len(stair_points), len(all_points))
+    print(f"Sampled {len(all_points)} points total ({num_stair_points} stair points, {len(all_points) - num_stair_points} floor points)")
+
+    # Add agent height
+    all_points = [[p[0], p[1], p[2] + req.agent_height] for p in all_points]
+
+    # Build adjacency with SEPARATE edge limits for stairs vs floors
+    coords, adjacency = _build_point_adjacency_hybrid(all_points, num_stair_points, max_edge_stair, max_edge_floor)
+
+    LAST_GRAPHS["ifc"] = {
+        "coords": coords,
+        "adjacency": adjacency,
+        "step": _estimate_step_size(coords, adjacency),
+    }
+
+    # Build edge list for visualization
+    edge_list = []
+    for node_id, neighbors in adjacency.items():
+        for neighbor_id in neighbors:
+            if node_id < neighbor_id:
+                edge_list.append([coords[node_id], coords[neighbor_id]])
+
+    print(f"Graph: {len(coords)} nodes, {len(edge_list)} edges")
+
+    return {
+        "mode": "ifc",
+        "stats": {
+            "nodes": len(coords),
+            "edges": len(edge_list),
+        },
+        "edges": edge_list,
+    }
+
+
+@app.post("/ifc-egress-path")
+def ifc_egress_path(req: IfcEgressPathRequest):
+    graph = LAST_GRAPHS.get("ifc") if LAST_GRAPHS else None
+    if not graph or not graph.get("adjacency"):
+        raise HTTPException(status_code=400, detail="No IFC egress graph available. Build it first.")
+    start_id = _resolve_start_id(graph, None, req.start_point)
+    end_id = _resolve_start_id(graph, None, req.end_point)
+    if not start_id or not end_id:
+        raise HTTPException(status_code=400, detail="Invalid start or end point.")
+
+    path_ids = _shortest_path_ids(graph["adjacency"], graph["coords"], start_id, end_id)
+    if not path_ids:
+        # Debug info for disconnected graph
+        start_neighbors = len(graph["adjacency"].get(start_id, []))
+        end_neighbors = len(graph["adjacency"].get(end_id, []))
+        raise HTTPException(status_code=404, detail=f"No path found. Start node has {start_neighbors} neighbors, end node has {end_neighbors} neighbors. Graph may be disconnected.")
+    points = [graph["coords"][pid] for pid in path_ids if pid in graph["coords"]]
+    return {
+        "mode": "ifc",
+        "points": points,
+    }
 
 @app.post("/fire-sim")
 def fire_sim(req: FireSimRequest):

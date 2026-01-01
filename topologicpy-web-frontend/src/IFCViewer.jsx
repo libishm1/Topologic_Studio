@@ -2,6 +2,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import {
+  IFCSLAB,
+  IFCSLABSTANDARDCASE,
+  IFCSLABELEMENTEDCASE,
+  IFCSTAIR,
+  IFCSTAIRFLIGHT,
+  IFCCOVERING,
+  IFCDOOR,
+  IFCSPACE,
+  IFCWALL,
+  IFCBUILDINGSTOREY,
+} from "web-ifc";
+import {
   Components,
   Worlds,
   SimpleScene,
@@ -9,6 +21,7 @@ import {
   SimpleRenderer,
   FragmentsManager,
   IfcLoader,
+  Raycasters,
 } from "@thatopen/components";
 
 const DEFAULT_WASM_PATH = "https://unpkg.com/web-ifc@0.0.73/";
@@ -98,6 +111,140 @@ const forceDoubleSide = (object) => {
   });
 };
 
+const vectorToArray = (vector) => {
+  if (!vector || typeof vector.size !== "function") return [];
+  const result = [];
+  for (let i = 0; i < vector.size(); i += 1) {
+    result.push(vector.get(i));
+  }
+  return result;
+};
+
+const uniqueIds = (ids) => Array.from(new Set(ids));
+
+const isValidIfcModelId = (modelId) =>
+  Number.isInteger(modelId) && modelId >= 0;
+
+const collectIfcIds = (ifcApi, modelId) => {
+  const slabTypes = [IFCSLAB, IFCSLABSTANDARDCASE, IFCSLABELEMENTEDCASE];
+  const stairTypes = [IFCSTAIR, IFCSTAIRFLIGHT];
+  const coveringTypes = [IFCCOVERING];
+
+  const slabIds = slabTypes.flatMap((typeId) =>
+    vectorToArray(ifcApi.GetLineIDsWithType(modelId, typeId, true))
+  );
+  const stairIds = stairTypes.flatMap((typeId) =>
+    vectorToArray(ifcApi.GetLineIDsWithType(modelId, typeId, true))
+  );
+  const coveringIds = coveringTypes.flatMap((typeId) =>
+    vectorToArray(ifcApi.GetLineIDsWithType(modelId, typeId, true))
+  );
+  const doorIds = vectorToArray(
+    ifcApi.GetLineIDsWithType(modelId, IFCDOOR, true)
+  );
+  const spaceIds = vectorToArray(
+    ifcApi.GetLineIDsWithType(modelId, IFCSPACE, true)
+  );
+  const wallIds = vectorToArray(
+    ifcApi.GetLineIDsWithType(modelId, IFCWALL, true)
+  );
+  const storeyIds = vectorToArray(
+    ifcApi.GetLineIDsWithType(modelId, IFCBUILDINGSTOREY, true)
+  );
+
+  return {
+    slabs: uniqueIds(slabIds),
+    stairs: uniqueIds(stairIds),
+    coverings: uniqueIds(coveringIds),
+    doors: uniqueIds(doorIds),
+    spaces: uniqueIds(spaceIds),
+    walls: uniqueIds(wallIds),
+    storeys: uniqueIds(storeyIds),
+  };
+};
+
+const mergeMeshData = (meshDataList, extraTransform = null) => {
+  const positions = [];
+  const indices = [];
+  const normals = [];
+  let indexOffset = 0;
+
+  meshDataList.forEach((meshData) => {
+    if (!meshData?.positions || !meshData?.indices) return;
+    const baseMatrix = meshData.transform || new THREE.Matrix4();
+    const matrix = extraTransform
+      ? extraTransform.clone().multiply(baseMatrix)
+      : baseMatrix;
+    const normalMatrix = new THREE.Matrix3().getNormalMatrix(matrix);
+    const pos = meshData.positions;
+    const idx = meshData.indices;
+    const meshNormals = meshData.normals || null;
+
+    for (let i = 0; i < pos.length; i += 3) {
+      const v = new THREE.Vector3(pos[i], pos[i + 1], pos[i + 2]);
+      v.applyMatrix4(matrix);
+      positions.push(v.x, v.y, v.z);
+
+      if (meshNormals) {
+        const rawX = meshNormals[i];
+        const rawY = meshNormals[i + 1];
+        const rawZ = meshNormals[i + 2];
+        const n = new THREE.Vector3(rawX, rawY, rawZ);
+        if (meshNormals instanceof Int16Array) {
+          n.divideScalar(32767);
+        }
+        n.applyMatrix3(normalMatrix).normalize();
+        normals.push(n.x, n.y, n.z);
+      }
+    }
+
+    for (let i = 0; i < idx.length; i += 1) {
+      indices.push(idx[i] + indexOffset);
+    }
+    indexOffset += pos.length / 3;
+  });
+
+  return {
+    vertices: positions,
+    indices,
+    normals: normals.length ? normals : null,
+  };
+};
+
+const buildGeometryPayload = async (model, localIds, extraTransform = null) => {
+  if (!model || !localIds || !localIds.length) return [];
+  if (typeof model.getItemsGeometry !== "function") {
+    console.warn("Model does not support getItemsGeometry.");
+    return [];
+  }
+  try {
+    const geometrySets = await model.getItemsGeometry(localIds);
+    if (!geometrySets || !Array.isArray(geometrySets)) {
+      console.warn("Invalid geometry sets returned.");
+      return [];
+    }
+
+    return localIds
+      .map((id, index) => {
+        const meshDataList = geometrySets[index] || [];
+        const merged = mergeMeshData(meshDataList, extraTransform);
+        if (!merged.vertices || merged.vertices.length === 0) {
+          return null;
+        }
+        return {
+          expressID: id,
+          vertices: merged.vertices,
+          indices: merged.indices,
+          normals: merged.normals,
+        };
+      })
+      .filter(Boolean);
+  } catch (error) {
+    console.error("Error in buildGeometryPayload:", error);
+    return [];
+  }
+};
+
 const waitForModelReady = async (model, fragments, maxMs = 8000) => {
   if (!model) return;
   const start = performance.now();
@@ -111,20 +258,32 @@ export default function IFCViewer({
   file,
   pickMode,
   onPick,
+  onEgressDataExtracted,
+  pathPoints,
+  graphEdges,
+  egressRequestId = 0,
   startPoint,
   exitPoint,
   upAxis = "auto",
   invertOrbit = false,
   flipY = false,
   flipZ = false,
+  meshVisible = true,
 }) {
   const containerRef = useRef(null);
   const componentsRef = useRef(null);
   const worldRef = useRef(null);
   const modelRef = useRef(null);
+  const ifcModelRef = useRef(null);
   const modelIdRef = useRef(null);
+  const raycasterRef = useRef(null);
   const startMarkerRef = useRef(null);
   const exitMarkerRef = useRef(null);
+  const pathLineRef = useRef(null);
+  const graphLinesRef = useRef(null);
+  const sceneReadyRef = useRef(false);
+  const egressIdsRef = useRef(null);
+  const egressModelIdRef = useRef(null);
   const pickModeRef = useRef(pickMode);
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState("idle");
@@ -133,6 +292,164 @@ export default function IFCViewer({
   useEffect(() => {
     pickModeRef.current = pickMode;
   }, [pickMode]);
+
+  useEffect(() => {
+    if (!egressRequestId || !onEgressDataExtracted) return;
+    const model = ifcModelRef.current;
+    const ids = egressIdsRef.current;
+    if (!model || !ids) return;
+
+    const run = async () => {
+      try {
+        const extraTransform = model.matrixWorld?.clone() || null;
+        const allFloorGeometry = await buildGeometryPayload(
+          model,
+          ids.slabs || [],
+          extraTransform
+        );
+        // NOTE: Filtering disabled - IFC IFCSLAB elements include vertical shear walls
+        // that appear as slabs in the IFC schema but have vertical normals (avgNz < 0.4)
+        // The backend point sampling will handle filtering based on actual walkability
+        const floorGeometry = allFloorGeometry;
+
+        const stairGeometry = await buildGeometryPayload(
+          model,
+          ids.stairs || [],
+          extraTransform
+        );
+        onEgressDataExtracted({
+          modelId: egressModelIdRef.current,
+          ids,
+          floors: floorGeometry,
+          stairs: stairGeometry,
+        });
+      } catch (egressErr) {
+        console.warn("IFC egress extraction failed.", egressErr);
+        onEgressDataExtracted({
+          modelId: egressModelIdRef.current,
+          ids,
+          floors: [],
+          stairs: [],
+          egressError: egressErr?.message || "IFC egress extraction failed.",
+        });
+      }
+    };
+
+    run();
+  }, [egressRequestId, onEgressDataExtracted]);
+
+  useEffect(() => {
+    if (!ready || !sceneReadyRef.current) return;
+    const world = worldRef.current;
+    if (!world) return;
+    let scene;
+    try {
+      scene = world.scene?.three;
+    } catch {
+      return;
+    }
+    if (!scene) return;
+
+    if (pathLineRef.current) {
+      scene.remove(pathLineRef.current);
+      if (pathLineRef.current.geometry) {
+        pathLineRef.current.geometry.dispose();
+      }
+      if (pathLineRef.current.material) {
+        pathLineRef.current.material.dispose();
+      }
+      pathLineRef.current = null;
+    }
+
+    if (!pathPoints || pathPoints.length < 2) {
+      return;
+    }
+
+    const points = pathPoints
+      .filter((p) => pathPoints && p && p.length >= 3)
+      .map((p) => new THREE.Vector3(p[0], p[1], p[2]));
+    if (points.length < 2) return;
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+      color: 0xef4444,
+      linewidth: 3,
+      transparent: true,
+      opacity: 0.9,
+    });
+    const line = new THREE.Line(geometry, material);
+    line.userData.pickIgnore = true;
+
+    // Apply the same transformations as the IFC model (upAxis, flipY, flipZ)
+    const axis = resolveUpAxis(null, upAxis);
+    if (axis) {
+      applyUpAxis(line, axis, flipY, flipZ);
+    }
+
+    scene.add(line);
+    pathLineRef.current = line;
+  }, [pathPoints, ready, upAxis, flipY, flipZ]);
+
+  useEffect(() => {
+    if (!ready || !sceneReadyRef.current) return;
+    const world = worldRef.current;
+    if (!world) return;
+    let scene;
+    try {
+      scene = world.scene?.three;
+    } catch {
+      return;
+    }
+    if (!scene) return;
+
+    if (graphLinesRef.current) {
+      scene.remove(graphLinesRef.current);
+      if (graphLinesRef.current.geometry) {
+        graphLinesRef.current.geometry.dispose();
+      }
+      if (graphLinesRef.current.material) {
+        graphLinesRef.current.material.dispose();
+      }
+      graphLinesRef.current = null;
+    }
+
+    if (!graphEdges || !Array.isArray(graphEdges) || graphEdges.length === 0) {
+      return;
+    }
+
+    const positions = [];
+    graphEdges.forEach((edge) => {
+      if (edge && edge.length === 2) {
+        const [p1, p2] = edge;
+        if (p1 && p1.length >= 3 && p2 && p2.length >= 3) {
+          positions.push(p1[0], p1[1], p1[2]);
+          positions.push(p2[0], p2[1], p2[2]);
+        }
+      }
+    });
+
+    if (positions.length === 0) return;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const material = new THREE.LineBasicMaterial({
+      color: 0x3b82f6,
+      transparent: true,
+      opacity: 0.3,
+      linewidth: 1,
+    });
+    const lineSegments = new THREE.LineSegments(geometry, material);
+    lineSegments.userData.pickIgnore = true;
+
+    // Apply the same transformations as the IFC model (upAxis, flipY, flipZ)
+    const axis = resolveUpAxis(null, upAxis);
+    if (axis) {
+      applyUpAxis(lineSegments, axis, flipY, flipZ);
+    }
+
+    scene.add(lineSegments);
+    graphLinesRef.current = lineSegments;
+  }, [graphEdges, ready, upAxis, flipY, flipZ]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -147,6 +464,10 @@ export default function IFCViewer({
     world.renderer = new SimpleRenderer(components, container);
     world.camera = new SimpleCamera(components);
     worldRef.current = world;
+
+    const raycasters = components.get(Raycasters);
+    const raycaster = raycasters.get(world);
+    raycasterRef.current = raycaster;
 
     world.scene.three.up.set(0, 1, 0);
     const threeCamera = world.camera.three;
@@ -169,11 +490,13 @@ export default function IFCViewer({
       new THREE.MeshBasicMaterial({ color: 0x22c55e })
     );
     startMarker.visible = false;
+    startMarker.userData.isPickMarker = true;
     const exitMarker = new THREE.Mesh(
       new THREE.SphereGeometry(0.12, 16, 16),
       new THREE.MeshBasicMaterial({ color: 0xf97316 })
     );
     exitMarker.visible = false;
+    exitMarker.userData.isPickMarker = true;
     world.scene.three.add(startMarker);
     world.scene.three.add(exitMarker);
     startMarkerRef.current = startMarker;
@@ -191,6 +514,7 @@ export default function IFCViewer({
     }
 
     components.init();
+    sceneReadyRef.current = true;
 
     let active = true;
     const initIfc = async () => {
@@ -211,8 +535,8 @@ export default function IFCViewer({
           wasm: { path: wasmPath, absolute },
         });
         ifcLoader.settings.webIfc.COORDINATE_TO_ORIGIN = false;
-        ifcLoader.settings.webIfc.USE_FAST_BOOLS = false;
-        ifcLoader.settings.webIfc.OPTIMIZE_PROFILES = false;
+        ifcLoader.settings.webIfc.USE_FAST_BOOLS = true;
+        ifcLoader.settings.webIfc.OPTIMIZE_PROFILES = true;
 
         if (active) {
           setReady(true);
@@ -227,8 +551,14 @@ export default function IFCViewer({
 
     return () => {
       active = false;
+      sceneReadyRef.current = false;
       components.dispose();
       componentsRef.current = null;
+      worldRef.current = null;
+      modelRef.current = null;
+      ifcModelRef.current = null;
+      modelIdRef.current = null;
+      raycasterRef.current = null;
     };
   }, []);
 
@@ -238,6 +568,12 @@ export default function IFCViewer({
     world.camera.controls.azimuthRotateSpeed = invertOrbit ? -1 : 1;
     world.camera.controls.update();
   }, [invertOrbit]);
+
+  useEffect(() => {
+    const model = modelRef.current;
+    if (!model) return;
+    model.visible = meshVisible;
+  }, [meshVisible]);
 
   useEffect(() => {
     const startMarker = startMarkerRef.current;
@@ -282,22 +618,12 @@ export default function IFCViewer({
         const ifcLoader = components.get(IfcLoader);
         const fragments = components.get(FragmentsManager);
 
-        if (modelIdRef.current) {
-          try {
-            await fragments.core.disposeModel(modelIdRef.current);
-          } catch (disposeErr) {
-            console.warn("Failed to dispose previous IFC model.", disposeErr);
-          }
-          modelIdRef.current = null;
-        }
-
         if (modelRef.current) {
           world.scene.three.remove(modelRef.current);
-          if (typeof modelRef.current.dispose === "function") {
-            modelRef.current.dispose();
-          }
           modelRef.current = null;
         }
+        ifcModelRef.current = null;
+        modelIdRef.current = null;
 
         const model = await ifcLoader.load(
           new Uint8Array(buffer),
@@ -333,18 +659,66 @@ export default function IFCViewer({
           resolvedModel.useCamera(threeCamera);
         }
         modelRef.current = object;
+        ifcModelRef.current = resolvedModel;
         if (resolvedModel.modelId) {
           modelIdRef.current = resolvedModel.modelId;
         }
         world.scene.three.add(object);
         await fragments.core.update(true);
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => resolve());
-        });
-        await fragments.core.update(true);
-        await waitForModelReady(resolvedModel, fragments);
         fitCameraToModel(world, resolvedModel, object);
         setStatus("ready");
+
+        if (onEgressDataExtracted) {
+          setTimeout(async () => {
+            if (cancelled) return;
+            try {
+              const ifcApi = ifcLoader.webIfc;
+              const collectIds = (modelId) => {
+                if (!ifcApi || !isValidIfcModelId(modelId)) return null;
+                try {
+                  return collectIfcIds(ifcApi, modelId);
+                } catch {
+                  return null;
+                }
+              };
+              let ifcModelId =
+                resolvedModel?.modelId ??
+                resolvedModel?.modelID ??
+                modelIdRef.current ??
+                null;
+              let shouldClose = false;
+              let ids = collectIds(ifcModelId);
+
+              if (!ids) {
+                ifcModelId = await ifcLoader.readIfcFile(new Uint8Array(buffer));
+                shouldClose = true;
+                ids = collectIds(ifcModelId);
+              }
+
+              if (!ids) {
+                throw new Error("IFC egress ID extraction failed.");
+              }
+
+              egressModelIdRef.current = ifcModelId;
+              egressIdsRef.current = ids;
+              onEgressDataExtracted({
+                modelId: ifcModelId,
+                ids,
+              });
+              if (shouldClose && ifcApi?.CloseModel) {
+                ifcApi.CloseModel(ifcModelId);
+              }
+            } catch (egressErr) {
+              console.warn("IFC egress id extraction failed.", egressErr);
+              onEgressDataExtracted?.({
+                modelId: egressModelIdRef.current,
+                ids: null,
+                egressError:
+                  egressErr?.message || "IFC egress id extraction failed.",
+              });
+            }
+          }, 0);
+        }
       } catch (err) {
         if (cancelled) return;
         setError(err?.message || "Failed to load IFC.");
@@ -362,44 +736,45 @@ export default function IFCViewer({
     const container = containerRef.current;
     if (!container) return;
 
-    const handlePointerDown = (event) => {
-      if (!pickModeRef.current) return;
-      const world = worldRef.current;
-      const model = modelRef.current;
-      if (!world || !model) return;
-
-      const camera =
-        world.camera?.three || world.camera?.camera || world.camera;
-      const renderer =
-        world.renderer?.three || world.renderer?.renderer || world.renderer;
-      if (!camera || !renderer) return;
-
-      const rect = container.getBoundingClientRect();
-      const pointer = new THREE.Vector2();
-      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObject(model, true);
-      if (!hits.length) return;
-
-      const hit = hits[0];
-      const point = [hit.point.x, hit.point.y, hit.point.z];
-      if (pickModeRef.current === "start") {
-        const marker = startMarkerRef.current;
-        if (marker) {
-          marker.position.set(point[0], point[1], point[2]);
-          marker.visible = true;
-        }
-      } else if (pickModeRef.current === "exit") {
-        const marker = exitMarkerRef.current;
-        if (marker) {
-          marker.position.set(point[0], point[1], point[2]);
-          marker.visible = true;
-        }
+    const handlePointerDown = async () => {
+      if (!pickModeRef.current) {
+        return; // Not in picking mode
       }
-      onPick?.(pickModeRef.current, point, hit);
+
+      const raycaster = raycasterRef.current;
+      if (!raycaster) {
+        return;
+      }
+
+      try {
+        const result = await raycaster.castRay();
+
+        if (!result || !result.point) {
+          return; // No hit
+        }
+
+        const point = [result.point.x, result.point.y, result.point.z];
+
+        if (pickModeRef.current === "start") {
+          const marker = startMarkerRef.current;
+          if (marker) {
+            marker.position.set(point[0], point[1], point[2]);
+            marker.visible = true;
+          }
+        } else if (pickModeRef.current === "exit") {
+          const marker = exitMarkerRef.current;
+          if (marker) {
+            marker.position.set(point[0], point[1], point[2]);
+            marker.visible = true;
+          }
+        }
+
+        if (onPick) {
+          onPick(pickModeRef.current, point, result);
+        }
+      } catch (err) {
+        console.error("Raycast failed:", err);
+      }
     };
 
     container.addEventListener("pointerdown", handlePointerDown);
