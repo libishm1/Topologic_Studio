@@ -30,6 +30,7 @@ export default function App() {
   const [ifcFile, setIfcFile] = useState(null);
   const [ifcEgress, setIfcEgress] = useState(null);
   const [ifcGraphStats, setIfcGraphStats] = useState(null);
+  const [ifcGraphCoords, setIfcGraphCoords] = useState(null);
   const [ifcGraphEdges, setIfcGraphEdges] = useState(null);
   const [ifcGraphLoading, setIfcGraphLoading] = useState(false);
   const [ifcGraphPending, setIfcGraphPending] = useState(false);
@@ -97,6 +98,7 @@ export default function App() {
     setPickMode(null);
     setIfcEgress(null);
     setIfcGraphStats(null);
+    setIfcGraphCoords(null);
     setIfcPathPoints(null);
     setIfcGraphLoading(false);
     setIfcPathLoading(false);
@@ -272,8 +274,12 @@ export default function App() {
         max_points: 20000,
       })
       .then((res) => {
+        console.log('[App] Graph API response:', res.data);
+        console.log('[App] Graph response keys:', Object.keys(res.data || {}));
         setIfcGraphStats(res.data || null);
         setIfcGraphEdges(res.data?.edges || null);
+        setIfcGraphCoords(res.data?.coords || null);
+        console.log('[App] Graph built with coords:', Object.keys(res.data?.coords || {}).length, 'nodes');
         if (startPoint && exitPoint) {
           computeIfcEgressPath(true);
         }
@@ -293,6 +299,7 @@ export default function App() {
     if (!data) {
       setIfcEgress(null);
       setIfcGraphStats(null);
+      setIfcGraphCoords(null);
       setIfcPathPoints(null);
       return;
     }
@@ -317,6 +324,7 @@ export default function App() {
     setError(null);
     setIfcGraphStats(null);
     setIfcGraphEdges(null);
+    setIfcGraphCoords(null);
     setIfcPathPoints(null);
     if (ifcEgress?.floors?.length || ifcEgress?.stairs?.length) {
       await postIfcEgressGraph(ifcEgress.floors, ifcEgress.stairs);
@@ -426,12 +434,14 @@ export default function App() {
     }
 
     const params = new URLSearchParams();
-    params.set("mode", graphMode);
+    // Use "ifc" mode when working with IFC files, otherwise use graphMode
+    const effectiveMode = viewerMode === "ifc" ? "ifc" : graphMode;
+    params.set("mode", effectiveMode);
     params.set("max_steps", String(fireMaxSteps));
     params.set("precompute", "false");
     params.set("radial", "true");
     params.set("delay_ms", String(fireDelayMs));
-    params.set("use_temperature", String(fireUseTemperature && graphMode === "ifc"));
+    params.set("use_temperature", String(fireUseTemperature && viewerMode === "ifc"));
     if (startId) params.set("start_id", startId);
     if (exitId) params.set("end_id", exitId);
     if (startPoint && startPoint.length >= 3) {
@@ -445,15 +455,19 @@ export default function App() {
       params.set("end_z", exitPoint[2]);
     }
     const url = `${API_BASE}/fire-sim/stream?${params.toString()}`;
+    console.log('[App] Starting fire simulation with URL:', url);
+    console.log('[App] Temperature mode enabled:', fireUseTemperature, 'ViewerMode:', viewerMode);
     const es = new EventSource(url);
     fireSseRef.current = es;
     es.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
+        console.log('[App] Fire SSE event received:', msg.type, msg);
         if (msg.type === "meta") {
           setFireCellBboxes(msg.cell_bboxes || []);
         } else if (msg.type === "temperature_step") {
           // Handle temperature-based fire spread
+          console.log('[App] Temperature step - temperatures count:', Object.keys(msg.temperatures || {}).length);
           setFireStep(msg.step ?? 0);
           setFireTemperatures(msg.temperatures || {});
           // Extract nodes with significant temperature for visualization
@@ -461,6 +475,7 @@ export default function App() {
             .filter(([_, temp]) => temp > 30) // Above 30°C
             .map(([nodeId, _]) => nodeId);
           setFireNodes(hotNodes);
+          console.log('[App] Set fireTemperatures with', Object.keys(msg.temperatures || {}).length, 'nodes');
         } else if (msg.type === "step") {
           setFireStep(msg.step ?? 0);
           setFireNodes(msg.nodes || []);
@@ -887,6 +902,7 @@ export default function App() {
               onEgressDataExtracted={handleIfcEgressData}
               pathPoints={ifcPathPoints}
               graphEdges={ifcGraphEdges}
+              graphCoords={ifcGraphCoords}
               egressRequestId={ifcEgressRequestId}
               startPoint={startPoint}
               exitPoint={exitPoint}
@@ -895,6 +911,9 @@ export default function App() {
               flipY={ifcFlipY}
               flipZ={ifcFlipZ}
               meshVisible={ifcMeshVisible}
+              fireNodes={fireNodes}
+              fireTemperatures={fireTemperatures}
+              fireUseTemperature={fireUseTemperature}
             />
           ) : topology ? (
             <TopologyViewer
@@ -1128,7 +1147,7 @@ export default function App() {
                     />
                     <span className="sidebar-value">Precompute timeline</span>
                   </label>
-                  {graphMode === "ifc" && (
+                  {viewerMode === "ifc" && (
                     <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <input
                         type="checkbox"

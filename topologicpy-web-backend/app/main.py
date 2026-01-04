@@ -99,14 +99,14 @@ def _nearest_node_id(coords_map, point, allowed=None):
     best_d = 1e18
     allowed_set = set(allowed) if allowed is not None else None
 
-    # First pass: try to find nodes on the same floor (within 0.2m Y-distance)
-    # Y is the vertical axis in this IFC model
+    # First pass: prefer nodes on the same floor (within 1.5m Y-distance)
+    # Y is the vertical axis - this ensures we pick the right floor in multi-story buildings
     for uid, coord in coords_map.items():
         if allowed_set is not None and uid not in allowed_set:
             continue
         x, y, z = coord
         y_diff = abs(y - py)
-        if y_diff <= 0.2:  # Same floor level (tighter tolerance for better accuracy)
+        if y_diff <= 1.5:  # Same floor level (generous tolerance for IFC precision)
             xz_d = (x - px) ** 2 + (z - pz) ** 2
             if xz_d < best_d:
                 best = uid
@@ -116,7 +116,7 @@ def _nearest_node_id(coords_map, point, allowed=None):
     if best is not None:
         return best
 
-    # Second pass: if no nodes on same floor, find nearest in 3D space
+    # Second pass: if no nodes on same floor, find nearest in 3D space as fallback
     for uid, coord in coords_map.items():
         if allowed_set is not None and uid not in allowed_set:
             continue
@@ -125,6 +125,7 @@ def _nearest_node_id(coords_map, point, allowed=None):
         if d < best_d:
             best = uid
             best_d = d
+
     return best
 
 def _resolve_start_id(graph, start_id=None, start_point=None):
@@ -310,8 +311,8 @@ def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_
                             # Floor-to-floor: use longer distance
                             max_d = max_dist_floor
                         else:
-                            # Stair-to-floor transition: use longer distance to allow connection
-                            max_d = max(max_dist_stair, max_dist_floor)
+                            # Stair-to-floor transition: SKIP - only connect at endpoints (forced connections below)
+                            continue
 
                         if d <= max_d:
                             adjacency[idx].append(j)

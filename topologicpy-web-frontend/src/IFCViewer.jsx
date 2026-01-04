@@ -125,6 +125,29 @@ const uniqueIds = (ids) => Array.from(new Set(ids));
 const isValidIfcModelId = (modelId) =>
   Number.isInteger(modelId) && modelId >= 0;
 
+const temperatureToColor = (temp, minTemp = 20, maxTemp = 120) => {
+  // Map temperature to color gradient: blue (cold) -> green -> yellow -> orange -> red (hot)
+  const normalized = Math.max(0, Math.min(1, (temp - minTemp) / (maxTemp - minTemp)));
+
+  if (normalized < 0.25) {
+    // Blue to Cyan (20-45°C)
+    const t = normalized / 0.25;
+    return new THREE.Color(0, t, 1);
+  } else if (normalized < 0.5) {
+    // Cyan to Green (45-70°C)
+    const t = (normalized - 0.25) / 0.25;
+    return new THREE.Color(0, 1, 1 - t);
+  } else if (normalized < 0.75) {
+    // Green to Yellow (70-95°C)
+    const t = (normalized - 0.5) / 0.25;
+    return new THREE.Color(t, 1, 0);
+  } else {
+    // Yellow to Red (95-120°C)
+    const t = (normalized - 0.75) / 0.25;
+    return new THREE.Color(1, 1 - t, 0);
+  }
+};
+
 const collectIfcIds = (ifcApi, modelId) => {
   const slabTypes = [IFCSLAB, IFCSLABSTANDARDCASE, IFCSLABELEMENTEDCASE];
   const stairTypes = [IFCSTAIR, IFCSTAIRFLIGHT];
@@ -261,6 +284,7 @@ export default function IFCViewer({
   onEgressDataExtracted,
   pathPoints,
   graphEdges,
+  graphCoords,
   egressRequestId = 0,
   startPoint,
   exitPoint,
@@ -269,6 +293,9 @@ export default function IFCViewer({
   flipY = false,
   flipZ = false,
   meshVisible = true,
+  fireNodes = [],
+  fireTemperatures = {},
+  fireUseTemperature = false,
 }) {
   const containerRef = useRef(null);
   const componentsRef = useRef(null);
@@ -281,6 +308,7 @@ export default function IFCViewer({
   const exitMarkerRef = useRef(null);
   const pathLineRef = useRef(null);
   const graphLinesRef = useRef(null);
+  const nodeSpheresRef = useRef(null);
   const sceneReadyRef = useRef(false);
   const egressIdsRef = useRef(null);
   const egressModelIdRef = useRef(null);
@@ -450,6 +478,95 @@ export default function IFCViewer({
     scene.add(lineSegments);
     graphLinesRef.current = lineSegments;
   }, [graphEdges, ready, upAxis, flipY, flipZ]);
+
+  useEffect(() => {
+    if (!ready || !sceneReadyRef.current) return;
+    if (!fireUseTemperature || !fireTemperatures || Object.keys(fireTemperatures).length === 0) {
+      // Clean up existing node spheres if temperature mode is disabled
+      if (nodeSpheresRef.current) {
+        const world = worldRef.current;
+        if (world?.scene?.three) {
+          nodeSpheresRef.current.forEach((sphere) => {
+            world.scene.three.remove(sphere);
+            if (sphere.geometry) sphere.geometry.dispose();
+            if (sphere.material) sphere.material.dispose();
+          });
+        }
+        nodeSpheresRef.current = null;
+      }
+      return;
+    }
+
+    const world = worldRef.current;
+    if (!world) return;
+    let scene;
+    try {
+      scene = world.scene?.three;
+    } catch {
+      return;
+    }
+    if (!scene) return;
+
+    // Clean up existing spheres
+    if (nodeSpheresRef.current) {
+      nodeSpheresRef.current.forEach((sphere) => {
+        scene.remove(sphere);
+        if (sphere.geometry) sphere.geometry.dispose();
+        if (sphere.material) sphere.material.dispose();
+      });
+    }
+
+    // Use graphCoords to map node IDs to positions
+    if (!graphCoords || Object.keys(graphCoords).length === 0) {
+      console.log('[IFCViewer] No graph coords available for temperature visualization');
+      return;
+    }
+
+    console.log('[IFCViewer] Temperature visualization debug:', {
+      fireUseTemperature,
+      temperatureCount: Object.keys(fireTemperatures).length,
+      sampleNodeIds: Object.keys(fireTemperatures).slice(0, 3),
+      sampleTemperatures: Object.entries(fireTemperatures).slice(0, 3),
+      graphCoordsCount: Object.keys(graphCoords).length,
+      sampleCoordKeys: Object.keys(graphCoords).slice(0, 3)
+    });
+
+    // Create temperature visualization spheres
+    const spheres = [];
+    Object.entries(fireTemperatures).forEach(([nodeId, temp]) => {
+      // Look up node position from graphCoords
+      const pos = graphCoords[nodeId];
+      if (!pos || !Array.isArray(pos) || pos.length < 3) {
+        console.log('[IFCViewer] No position found for nodeId:', nodeId);
+        return;
+      }
+
+      const color = temperatureToColor(temp);
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 16, 16),
+        new THREE.MeshBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 0.8
+        })
+      );
+      sphere.position.set(pos[0], pos[1], pos[2]);
+      sphere.userData.pickIgnore = true;
+      sphere.userData.temperature = temp;
+
+      // Apply the same transformations as the IFC model
+      const axis = resolveUpAxis(null, upAxis);
+      if (axis) {
+        applyUpAxis(sphere, axis, flipY, flipZ);
+      }
+
+      scene.add(sphere);
+      spheres.push(sphere);
+    });
+
+    console.log(`[IFCViewer] Created ${spheres.length} temperature spheres`);
+    nodeSpheresRef.current = spheres;
+  }, [fireTemperatures, fireUseTemperature, graphCoords, ready, upAxis, flipY, flipZ]);
 
   useEffect(() => {
     const container = containerRef.current;
