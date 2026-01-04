@@ -838,6 +838,7 @@ def fire_sim_stream(
     precompute: bool = True,
     radial: bool = True,
     delay_ms: int = 200,
+    use_temperature: bool = False,
 ):
     graph = LAST_GRAPHS.get(mode) if LAST_GRAPHS else None
     if not graph or not graph.get("adjacency"):
@@ -858,7 +859,24 @@ def fire_sim_stream(
     def gen():
         if mode == "cell" and graph.get("bboxes"):
             yield _sse_event({"type": "meta", "cell_bboxes": graph.get("bboxes", [])})
-        if precompute:
+
+        # Temperature-based fire spread simulation (for IFC mode)
+        if use_temperature and mode == "ifc":
+            temp_timeline = _compute_temperature_fire_spread(
+                graph["adjacency"],
+                graph.get("coords"),
+                start_id,
+                max_steps=max_steps
+            )
+            for step_idx, temperatures in enumerate(temp_timeline):
+                # Send temperature data for each node
+                yield _sse_event({
+                    "type": "temperature_step",
+                    "step": step_idx,
+                    "temperatures": temperatures
+                })
+                time.sleep(max(delay_ms, 0) / 1000.0)
+        elif precompute:
             step_size = graph.get("step") or _estimate_step_size(graph.get("coords"), graph.get("adjacency"))
             timeline, _ = _compute_fire_timeline(graph["adjacency"], graph.get("coords"), start_id, max_steps, radial, end_id, step_size)
             for step, nodes in enumerate(timeline):

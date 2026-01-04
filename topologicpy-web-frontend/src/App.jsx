@@ -61,6 +61,8 @@ export default function App() {
   const [fireMaxSteps, setFireMaxSteps] = useState(60);
   const [fireCellBboxes, setFireCellBboxes] = useState([]);
   const [cellDisplayNodes, setCellDisplayNodes] = useState([]);
+  const [fireUseTemperature, setFireUseTemperature] = useState(false);
+  const [fireTemperatures, setFireTemperatures] = useState({});
   const [rlEpisodes, setRlEpisodes] = useState(200);
   const [rlMaxSteps, setRlMaxSteps] = useState(200);
   const [rlUseFire, setRlUseFire] = useState(true);
@@ -338,17 +340,22 @@ export default function App() {
     setError(null);
     setIfcPathPoints(null);
     try {
+      console.log("DEBUG: Calling path API with start:", startPoint, "exit:", exitPoint);
       const res = await axios.post(`${API_BASE}/ifc-egress-path`, {
         start_point: startPoint,
         end_point: exitPoint,
       });
+      console.log("DEBUG: Path API response:", res.data);
       const payload = res.data || {};
       if (!payload.points || payload.points.length < 2) {
+        console.log("DEBUG: Insufficient points in path:", payload.points?.length);
         setError("IFC egress path not found.");
         return;
       }
+      console.log("DEBUG: Setting path points - count:", payload.points.length);
       setIfcPathPoints(payload.points);
     } catch (apiErr) {
+      console.error("DEBUG: Path API error:", apiErr.response?.data || apiErr);
       setError(
         apiErr.response?.data?.detail || apiErr.message || "IFC egress path failed."
       );
@@ -424,6 +431,7 @@ export default function App() {
     params.set("precompute", "false");
     params.set("radial", "true");
     params.set("delay_ms", String(fireDelayMs));
+    params.set("use_temperature", String(fireUseTemperature && graphMode === "ifc"));
     if (startId) params.set("start_id", startId);
     if (exitId) params.set("end_id", exitId);
     if (startPoint && startPoint.length >= 3) {
@@ -444,6 +452,15 @@ export default function App() {
         const msg = JSON.parse(event.data);
         if (msg.type === "meta") {
           setFireCellBboxes(msg.cell_bboxes || []);
+        } else if (msg.type === "temperature_step") {
+          // Handle temperature-based fire spread
+          setFireStep(msg.step ?? 0);
+          setFireTemperatures(msg.temperatures || {});
+          // Extract nodes with significant temperature for visualization
+          const hotNodes = Object.entries(msg.temperatures || {})
+            .filter(([_, temp]) => temp > 30) // Above 30°C
+            .map(([nodeId, _]) => nodeId);
+          setFireNodes(hotNodes);
         } else if (msg.type === "step") {
           setFireStep(msg.step ?? 0);
           setFireNodes(msg.nodes || []);
@@ -950,7 +967,7 @@ export default function App() {
                     animation: "spin 0.9s linear infinite",
                   }}
                 />
-                <span>Loading?</span>
+                <span>Loading</span>
               </div>
             </div>
           )}
@@ -1111,6 +1128,16 @@ export default function App() {
                     />
                     <span className="sidebar-value">Precompute timeline</span>
                   </label>
+                  {graphMode === "ifc" && (
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <input
+                        type="checkbox"
+                        checked={fireUseTemperature}
+                        onChange={(e) => setFireUseTemperature(e.target.checked)}
+                      />
+                      <span className="sidebar-value">Temperature model</span>
+                    </label>
+                  )}
                   <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                     <input
                       type="checkbox"
