@@ -98,6 +98,25 @@ def _nearest_node_id(coords_map, point, allowed=None):
     best = None
     best_d = 1e18
     allowed_set = set(allowed) if allowed is not None else None
+
+    # First pass: try to find nodes on the same floor (within 0.2m Y-distance)
+    # Y is the vertical axis in this IFC model
+    for uid, coord in coords_map.items():
+        if allowed_set is not None and uid not in allowed_set:
+            continue
+        x, y, z = coord
+        y_diff = abs(y - py)
+        if y_diff <= 0.2:  # Same floor level (tighter tolerance for better accuracy)
+            xz_d = (x - px) ** 2 + (z - pz) ** 2
+            if xz_d < best_d:
+                best = uid
+                best_d = xz_d
+
+    # If we found a node on the same floor, return it
+    if best is not None:
+        return best
+
+    # Second pass: if no nodes on same floor, find nearest in 3D space
     for uid, coord in coords_map.items():
         if allowed_set is not None and uid not in allowed_set:
             continue
@@ -303,27 +322,32 @@ def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_
 
     # Force-connect stairs to floors: find stair endpoints and connect to nearest floor points
     # This ensures floors and stairs form a connected graph even if spatial hashing misses connections
+    forced_connections = 0
     if num_stair_points > 0 and num_stair_points < len(points):
         stair_indices = list(range(num_stair_points))
         floor_indices = list(range(num_stair_points, len(points)))
 
-        # Find stair points at top and bottom (extreme Z values)
-        stair_z_vals = [(i, points[i][2]) for i in stair_indices]
-        stair_z_vals.sort(key=lambda x: x[1])
+        # Find stair points at top and bottom (extreme Y values - vertical axis)
+        stair_y_vals = [(i, points[i][1]) for i in stair_indices]
+        stair_y_vals.sort(key=lambda x: x[1])
 
         # Bottom 10% and top 10% of stair points are likely endpoints
         num_endpoints = max(2, len(stair_indices) // 10)
-        bottom_stairs = [idx for idx, _ in stair_z_vals[:num_endpoints]]
-        top_stairs = [idx for idx, _ in stair_z_vals[-num_endpoints:]]
+        bottom_stairs = [idx for idx, _ in stair_y_vals[:num_endpoints]]
+        top_stairs = [idx for idx, _ in stair_y_vals[-num_endpoints:]]
 
-        # Connect each stair endpoint to nearest 3 floor points within 3 meters
+        # Connect each stair endpoint to nearest 3 floor points within 2.0 meters
         for stair_idx in bottom_stairs + top_stairs:
             sx, sy, sz = points[stair_idx]
             distances = []
             for floor_idx in floor_indices:
                 fx, fy, fz = points[floor_idx]
+                # Only consider floor points within reasonable Y distance (same level)
+                y_diff = abs(fy - sy)
+                if y_diff > 1.0:  # Different floor level, skip
+                    continue
                 d = ((fx - sx) ** 2 + (fy - sy) ** 2 + (fz - sz) ** 2) ** 0.5
-                if d <= 3.0:  # Within 3 meters
+                if d <= 2.0:  # Within 2.0 meters
                     distances.append((d, floor_idx))
 
             # Connect to 3 nearest floor points
@@ -334,6 +358,7 @@ def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_
                 if floor_uid not in adj_named.get(stair_uid, []):
                     adj_named.setdefault(stair_uid, []).append(floor_uid)
                     adj_named.setdefault(floor_uid, []).append(stair_uid)
+                    forced_connections += 1
 
     return coords, adj_named
 
@@ -440,6 +465,68 @@ def _compute_fire_timeline(adjacency, coords, start_id, max_steps=60, radial=Fal
         for n in nodes:
             ignite_time[n] = step
     return timeline, ignite_time
+
+
+def _compute_temperature_fire_spread(adjacency, coords, start_id, max_steps=60,
+                                     ambient_temp=20.0, fire_temp=120.0, heat_transfer_rate=1.20):
+    """
+    Compute fire spread using temperature-based model (based on eCAADe 2019 paper).
+    Each cell has a temperature that increases based on adjacent cells' temperatures.
+
+    Args:
+        adjacency: Graph adjacency dict
+        coords: Node coordinates dict
+        start_id: Starting fire node
+        max_steps: Maximum simulation steps
+        ambient_temp: Initial ambient temperature (°C)
+        fire_temp: Initial fire source temperature (°C)
+        heat_transfer_rate: Heat transfer coefficient
+
+    Returns:
+        List of temperature dictionaries for each timestep
+    """
+    if not adjacency or start_id not in adjacency:
+        return []
+
+    # Initialize all cells with ambient temperature
+    all_nodes = list(adjacency.keys())
+    temperatures = {node: ambient_temp for node in all_nodes}
+    temperatures[start_id] = fire_temp  # Set fire source
+
+    # Store temperature history for visualization
+    temp_timeline = []
+
+    for step in range(max_steps):
+        # Record current temperatures
+        temp_timeline.append(temperatures.copy())
+
+        # Calculate new temperatures for next step
+        new_temperatures = temperatures.copy()
+
+        for node in all_nodes:
+            if node == start_id:
+                # Fire source maintains high temperature
+                new_temperatures[node] = fire_temp
+                continue
+
+            # Get adjacent cells
+            neighbors = adjacency.get(node, [])
+            if not neighbors:
+                continue
+
+            # Calculate heat transfer from neighbors
+            neighbor_temps = [temperatures[nbr] for nbr in neighbors]
+            avg_neighbor_temp = sum(neighbor_temps) / len(neighbor_temps)
+
+            # Heat transfer formula: increase temperature based on neighbor average
+            temp_diff = avg_neighbor_temp - temperatures[node]
+            if temp_diff > 0:
+                # Only increase temperature, not decrease (simplified model)
+                new_temperatures[node] += temp_diff * heat_transfer_rate / len(neighbors)
+
+        temperatures = new_temperatures
+
+    return temp_timeline
 
 
 def _build_cell_grid(bounds, cell_size=1.0, max_cells=2000):
@@ -623,8 +710,6 @@ def ifc_egress_graph(req: IfcEgressRequest):
     )  # Default 0.4m or slider value
     max_total_points = 3000  # Increased limit to accommodate both dense stair sampling AND floor grid
 
-    print(f"Processing {len(floors)} floors, {len(stairs)} stairs (spacing={base_spacing}m, stair_spacing={stair_spacing}m, max_edge_floor={max_edge_floor}m, max_edge_stair={max_edge_stair}m, max={max_total_points} points)")
-
     stair_points = []
     floor_points = []
 
@@ -669,7 +754,6 @@ def ifc_egress_graph(req: IfcEgressRequest):
         raise HTTPException(status_code=400, detail="No walkable points extracted.")
 
     num_stair_points = min(len(stair_points), len(all_points))
-    print(f"Sampled {len(all_points)} points total ({num_stair_points} stair points, {len(all_points) - num_stair_points} floor points)")
 
     # Add agent height
     all_points = [[p[0], p[1], p[2] + req.agent_height] for p in all_points]
@@ -689,8 +773,6 @@ def ifc_egress_graph(req: IfcEgressRequest):
         for neighbor_id in neighbors:
             if node_id < neighbor_id:
                 edge_list.append([coords[node_id], coords[neighbor_id]])
-
-    print(f"Graph: {len(coords)} nodes, {len(edge_list)} edges")
 
     return {
         "mode": "ifc",
@@ -714,10 +796,7 @@ def ifc_egress_path(req: IfcEgressPathRequest):
 
     path_ids = _shortest_path_ids(graph["adjacency"], graph["coords"], start_id, end_id)
     if not path_ids:
-        # Debug info for disconnected graph
-        start_neighbors = len(graph["adjacency"].get(start_id, []))
-        end_neighbors = len(graph["adjacency"].get(end_id, []))
-        raise HTTPException(status_code=404, detail=f"No path found. Start node has {start_neighbors} neighbors, end node has {end_neighbors} neighbors. Graph may be disconnected.")
+        raise HTTPException(status_code=404, detail="No path found between start and end points.")
     points = [graph["coords"][pid] for pid in path_ids if pid in graph["coords"]]
     return {
         "mode": "ifc",
