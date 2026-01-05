@@ -196,7 +196,13 @@ def _triangle_normal(v1, v2, v3):
     return nx / mag, ny / mag, nz / mag
 
 
-def _sample_walkable_points(vertices, indices, normals, spacing, max_slope_deg, up_axis="z", max_points=20000):
+def _sample_walkable_points(vertices, indices, normals, spacing, max_slope_deg, up_axis="z", max_points=20000, exclude_roof_threshold=None):
+    """
+    Sample walkable points from geometry triangles.
+
+    Args:
+        exclude_roof_threshold: If provided, skip triangles where all vertices are above this Y-coordinate (roofs)
+    """
     if not vertices or not indices:
         return []
     up_idx = _axis_index(up_axis)
@@ -211,6 +217,12 @@ def _sample_walkable_points(vertices, indices, normals, spacing, max_slope_deg, 
         v1 = [vertices[i1], vertices[i1 + 1], vertices[i1 + 2]]
         v2 = [vertices[i2], vertices[i2 + 1], vertices[i2 + 2]]
         v3 = [vertices[i3], vertices[i3 + 1], vertices[i3 + 2]]
+
+        # Exclude roof surfaces (triangles where all vertices are near maximum height)
+        if exclude_roof_threshold is not None:
+            if v1[up_idx] >= exclude_roof_threshold and v2[up_idx] >= exclude_roof_threshold and v3[up_idx] >= exclude_roof_threshold:
+                continue
+
         if normals and i1 + 2 < len(normals):
             n = [normals[i1], normals[i1 + 1], normals[i1 + 2]]
         else:
@@ -711,6 +723,19 @@ def ifc_egress_graph(req: IfcEgressRequest):
     )  # Default 0.4m or slider value
     max_total_points = 3000  # Increased limit to accommodate both dense stair sampling AND floor grid
 
+    # Calculate maximum height from all geometry to identify roof surfaces
+    up_idx = _axis_index(req.up_axis)
+    max_height = float('-inf')
+    for geom in floors + stairs:
+        if geom.vertices:
+            for i in range(up_idx, len(geom.vertices), 3):
+                if i < len(geom.vertices):
+                    max_height = max(max_height, geom.vertices[i])
+
+    # Exclude surfaces within 1.0m of maximum height (roofs)
+    # This prevents roof slabs/coverings from being treated as walkable floors
+    exclude_roof_threshold = max_height - 1.0 if max_height > float('-inf') else None
+
     stair_points = []
     floor_points = []
 
@@ -726,6 +751,7 @@ def ifc_egress_graph(req: IfcEgressRequest):
             45,  # Higher angle for stairs
             up_axis=req.up_axis,
             max_points=300,  # MUCH higher limit per stair (300 points) for multi-level connectivity
+            exclude_roof_threshold=exclude_roof_threshold,  # Exclude roof surfaces
         )
         stair_points.extend(pts[:300])
 
@@ -744,6 +770,7 @@ def ifc_egress_graph(req: IfcEgressRequest):
             10,  # Low angle tolerance
             up_axis=req.up_axis,
             max_points=points_per_floor,
+            exclude_roof_threshold=exclude_roof_threshold,  # Exclude roof surfaces
         )
         floor_points.extend(pts[:points_per_floor])
 
