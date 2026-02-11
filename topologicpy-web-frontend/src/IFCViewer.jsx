@@ -9,7 +9,7 @@ import {
   IFCSTAIRFLIGHT,
   IFCCOVERING,
   IFCDOOR,
-  IFCSPACE,
+  IFCSPACE, 
   IFCWALL,
   IFCBUILDINGSTOREY,
 } from "web-ifc";
@@ -296,6 +296,7 @@ export default function IFCViewer({
   fireNodes = [],
   fireTemperatures = {},
   fireUseTemperature = false,
+  dynamicPath = null,
 }) {
   const containerRef = useRef(null);
   const componentsRef = useRef(null);
@@ -307,6 +308,7 @@ export default function IFCViewer({
   const startMarkerRef = useRef(null);
   const exitMarkerRef = useRef(null);
   const pathLineRef = useRef(null);
+  const dynamicPathLineRef = useRef(null);
   const graphLinesRef = useRef(null);
   const nodeSpheresRef = useRef(null);
   const sceneReadyRef = useRef(false);
@@ -417,6 +419,61 @@ export default function IFCViewer({
     scene.add(line);
     pathLineRef.current = line;
   }, [pathPoints, ready, upAxis, flipY, flipZ]);
+
+  // Dynamic path rendering (magenta line for hazard-weighted rerouting)
+  useEffect(() => {
+    if (!ready || !sceneReadyRef.current) return;
+    const world = worldRef.current;
+    if (!world) return;
+    let scene;
+    try {
+      scene = world.scene?.three;
+    } catch {
+      return;
+    }
+    if (!scene) return;
+
+    // Clean up existing dynamic path
+    if (dynamicPathLineRef.current) {
+      scene.remove(dynamicPathLineRef.current);
+      if (dynamicPathLineRef.current.geometry) {
+        dynamicPathLineRef.current.geometry.dispose();
+      }
+      if (dynamicPathLineRef.current.material) {
+        dynamicPathLineRef.current.material.dispose();
+      }
+      dynamicPathLineRef.current = null;
+    }
+
+    if (!dynamicPath || dynamicPath.length < 2) {
+      return;
+    }
+
+    // Create dynamic path line (magenta, distinct from static red path)
+    const points = dynamicPath
+      .filter((p) => p && p.length >= 3)
+      .map((p) => new THREE.Vector3(p[0], p[1], p[2]));
+    if (points.length < 2) return;
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+      color: 0xff00ff, // Magenta
+      linewidth: 5,
+      transparent: true,
+      opacity: 0.95,
+    });
+    const line = new THREE.Line(geometry, material);
+    line.userData.pickIgnore = true;
+
+    // Apply transformations
+    const axis = resolveUpAxis(null, upAxis);
+    if (axis) {
+      applyUpAxis(line, axis, flipY, flipZ);
+    }
+
+    scene.add(line);
+    dynamicPathLineRef.current = line;
+  }, [dynamicPath, ready, upAxis, flipY, flipZ]);
 
   useEffect(() => {
     if (!ready || !sceneReadyRef.current) return;

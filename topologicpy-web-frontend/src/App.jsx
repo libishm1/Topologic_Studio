@@ -40,6 +40,8 @@ export default function App() {
   const [ifcMeshVisible, setIfcMeshVisible] = useState(true);
   const [ifcFloorEdge, setIfcFloorEdge] = useState(2.25);  // base_spacing * 1.5 = 1.5 * 1.5
   const [ifcStairEdge, setIfcStairEdge] = useState(0.4);  // ~2x tread height
+  const [ifcGridSnap, setIfcGridSnap] = useState(false);
+  const [ifcGridCellSize, setIfcGridCellSize] = useState(1.5);
   const ifcUpAxis = "y";
   const ifcInvertOrbit = false;
   const ifcFlipY = false;
@@ -64,6 +66,14 @@ export default function App() {
   const [cellDisplayNodes, setCellDisplayNodes] = useState([]);
   const [fireUseTemperature, setFireUseTemperature] = useState(false);
   const [fireTemperatures, setFireTemperatures] = useState({});
+  // Dynamic path rerouting state
+  const [dynamicPath, setDynamicPath] = useState(null);
+  const [dynamicPathCost, setDynamicPathCost] = useState(0.0);
+  const [dynamicPathChanged, setDynamicPathChanged] = useState(false);
+  const [pathAlpha, setPathAlpha] = useState(0.5);
+  const [pathRecomputeInterval, setPathRecomputeInterval] = useState(5);
+  const [pathLethalityThreshold, setPathLethalityThreshold] = useState(null);
+  const [streamPath, setStreamPath] = useState(false);
   const [rlEpisodes, setRlEpisodes] = useState(200);
   const [rlMaxSteps, setRlMaxSteps] = useState(200);
   const [rlUseFire, setRlUseFire] = useState(true);
@@ -272,6 +282,9 @@ export default function App() {
         max_edge_stair: ifcStairEdge,
         up_axis: ifcUpAxis,
         max_points: 20000,
+        rectilinear: !ifcGridSnap,
+        grid_snap: ifcGridSnap,
+        grid_cell_size: ifcGridSnap ? ifcGridCellSize : undefined,
       })
       .then((res) => {
         console.log('[App] Graph API response:', res.data);
@@ -454,6 +467,18 @@ export default function App() {
       params.set("end_y", exitPoint[1]);
       params.set("end_z", exitPoint[2]);
     }
+
+    // Add dynamic path rerouting parameters
+    if (streamPath && fireUseTemperature && viewerMode === "ifc" && startPoint && exitPoint) {
+      params.set("stream_path", "true");
+      params.set("path_start_id", startId || "");
+      params.set("path_end_id", exitId || "");
+      params.set("path_recompute_interval", String(pathRecomputeInterval));
+      params.set("path_alpha", String(pathAlpha));
+      if (pathLethalityThreshold !== null) {
+        params.set("path_lethality_threshold", String(pathLethalityThreshold));
+      }
+    }
     const url = `${API_BASE}/fire-sim/stream?${params.toString()}`;
     console.log('[App] Starting fire simulation with URL:', url);
     console.log('[App] Temperature mode enabled:', fireUseTemperature, 'ViewerMode:', viewerMode);
@@ -476,6 +501,12 @@ export default function App() {
             .map(([nodeId, _]) => nodeId);
           setFireNodes(hotNodes);
           console.log('[App] Set fireTemperatures with', Object.keys(msg.temperatures || {}).length, 'nodes');
+        } else if (msg.type === "path_update") {
+          // Handle dynamic path rerouting updates
+          console.log('[App] Path update received:', msg);
+          setDynamicPath(msg.path || null);
+          setDynamicPathCost(msg.cost || 0.0);
+          setDynamicPathChanged(msg.changed || false);
         } else if (msg.type === "step") {
           setFireStep(msg.step ?? 0);
           setFireNodes(msg.nodes || []);
@@ -914,6 +945,7 @@ export default function App() {
               fireNodes={fireNodes}
               fireTemperatures={fireTemperatures}
               fireUseTemperature={fireUseTemperature}
+              dynamicPath={dynamicPath}
             />
           ) : topology ? (
             <TopologyViewer
@@ -1103,6 +1135,30 @@ export default function App() {
                           {ifcStairEdge.toFixed(2)}
                         </span>
                       </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                        <input
+                          type="checkbox"
+                          checked={ifcGridSnap}
+                          onChange={(e) => setIfcGridSnap(e.target.checked)}
+                        />
+                        Grid-snap (rectilinear)
+                      </label>
+                      {ifcGridSnap && (
+                        <label>
+                          Grid cell size (m)
+                          <input
+                            type="range"
+                            min="0.3"
+                            max="3.0"
+                            step="0.1"
+                            value={ifcGridCellSize}
+                            onChange={(e) => setIfcGridCellSize(Number(e.target.value))}
+                          />
+                          <span className="slider-value">
+                            {ifcGridCellSize.toFixed(1)}
+                          </span>
+                        </label>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -1157,6 +1213,69 @@ export default function App() {
                       <span className="sidebar-value">Temperature model</span>
                     </label>
                   )}
+
+                  {viewerMode === "ifc" && fireUseTemperature && (
+                    <>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <input
+                          type="checkbox"
+                          checked={streamPath}
+                          onChange={(e) => setStreamPath(e.target.checked)}
+                        />
+                        <span className="sidebar-value">Dynamic path rerouting</span>
+                      </label>
+
+                      {streamPath && (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "8px", marginLeft: "20px" }}>
+                          <label>
+                            <span className="sidebar-label">Hazard weight (α)</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="2"
+                              step="0.1"
+                              value={pathAlpha}
+                              onChange={(e) => setPathAlpha(Number(e.target.value))}
+                              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #444" }}
+                            />
+                          </label>
+                          <label>
+                            <span className="sidebar-label">Recompute interval</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="20"
+                              step="1"
+                              value={pathRecomputeInterval}
+                              onChange={(e) => setPathRecomputeInterval(Number(e.target.value))}
+                              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #444" }}
+                            />
+                          </label>
+                          <label style={{ gridColumn: "1 / -1" }}>
+                            <span className="sidebar-label">Lethality threshold (°C)</span>
+                            <input
+                              type="number"
+                              min="60"
+                              max="150"
+                              step="5"
+                              value={pathLethalityThreshold || ""}
+                              onChange={(e) => setPathLethalityThreshold(e.target.value ? Number(e.target.value) : null)}
+                              placeholder="None"
+                              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #444" }}
+                            />
+                          </label>
+                        </div>
+                      )}
+
+                      {streamPath && dynamicPath && (
+                        <div className="sidebar-value" style={{ opacity: 0.8, marginTop: "8px", fontSize: "0.9em" }}>
+                          Dynamic path cost: {dynamicPathCost.toFixed(2)}m
+                          {dynamicPathChanged && <span style={{ color: "#ef4444", marginLeft: "8px" }}>● Path changed!</span>}
+                        </div>
+                      )}
+                    </>
+                  )}
+
                   <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                     <input
                       type="checkbox"

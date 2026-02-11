@@ -281,13 +281,15 @@ def _build_point_adjacency(points, max_dist):
     return coords, adj_named
 
 
-def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_dist_floor):
+def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_dist_floor, rectilinear=False, up_axis="z"):
     """
     Build adjacency with different max distances for stair points vs floor points.
     First num_stair_points are stair points, rest are floor points.
     Stair-to-stair connections use max_dist_stair (short for tread-to-tread).
     Floor-to-floor connections use max_dist_floor (longer for open spaces).
     Stair-to-floor connections use max(max_dist_stair, max_dist_floor) for transitions.
+    If rectilinear=True, floor-to-floor connections are restricted to axis-aligned only
+    (no diagonals in the horizontal plane). Stair connections are unaffected.
     """
     if not points:
         return {}, {}
@@ -322,6 +324,23 @@ def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_
                         elif not is_stair_i and not is_stair_j:
                             # Floor-to-floor: use longer distance
                             max_d = max_dist_floor
+                            # Rectilinear filter: reject diagonal connections on the floor plane
+                            if rectilinear:
+                                ax = abs(q[0] - p[0])
+                                ay = abs(q[1] - p[1])
+                                az = abs(q[2] - p[2])
+                                # Determine horizontal axes based on up_axis
+                                if up_axis == "y":
+                                    h0, h1 = ax, az
+                                elif up_axis == "x":
+                                    h0, h1 = ay, az
+                                else:
+                                    h0, h1 = ax, ay
+                                # Ratio check: minor axis must be < 25% of major axis
+                                major = max(h0, h1)
+                                minor = min(h0, h1)
+                                if major > 0.01 and minor > 0.25 * major:
+                                    continue
                         else:
                             # Stair-to-floor transition: SKIP - only connect at endpoints (forced connections below)
                             continue
@@ -376,6 +395,86 @@ def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_
     return coords, adj_named
 
 
+def _build_point_adjacency_rectilinear(points, cell_size, up_axis="y",
+                                       vertical_cell_size=None, max_gap=5):
+    """
+    Snap sampled points to a regular grid, fill gaps between occupied cells,
+    and connect only cardinal neighbours.  Produces a fully connected
+    rectilinear graph with no diagonal edges.
+
+    Args:
+        points: List of [x, y, z] coordinates (stair + floor, already height-adjusted)
+        cell_size: Horizontal grid cell size in metres
+        up_axis: Which axis is vertical ("x", "y", or "z")
+        vertical_cell_size: Grid cell size for the vertical axis (default = cell_size).
+                            Use a small value (e.g. 0.15) so stair treads get their own cells.
+        max_gap: Maximum number of empty cells to bridge between two occupied cells
+                 on the same axis-aligned line.
+    Returns:
+        (coords, adjacency) in the same dict format as the hybrid builder
+    """
+    if not points:
+        return {}, {}
+
+    up_idx = {"x": 0, "y": 1, "z": 2}.get(up_axis, 1)
+    v_cell = vertical_cell_size if vertical_cell_size is not None else cell_size
+
+    # Per-axis cell sizes and inverse scales
+    cs = [cell_size, cell_size, cell_size]
+    cs[up_idx] = v_cell
+    inv = [1.0 / c if c > 0 else 1.0 for c in cs]
+
+    # ── Step 1: Snap each sampled point to its grid cell ──
+    occupied = set()
+    for p in points:
+        key = (round(p[0] * inv[0]), round(p[1] * inv[1]), round(p[2] * inv[2]))
+        occupied.add(key)
+
+    # ── Step 2: Fill gaps between occupied cells along each axis ──
+    # For each axis, group cells that share the same position on the other
+    # two axes (same "column"), sort them, and fill intermediate cells
+    # when the gap is ≤ max_gap.
+    filled = set(occupied)
+    for axis in range(3):
+        columns = defaultdict(list)
+        for cell in occupied:
+            col_key = tuple(cell[i] for i in range(3) if i != axis)
+            columns[col_key].append(cell[axis])
+
+        for col_key, positions in columns.items():
+            positions.sort()
+            for i in range(len(positions) - 1):
+                gap = positions[i + 1] - positions[i]
+                if 1 < gap <= max_gap:
+                    for g in range(positions[i] + 1, positions[i + 1]):
+                        new_cell = list(col_key)
+                        new_cell.insert(axis, g)
+                        filled.add(tuple(new_cell))
+
+    # ── Step 3: Build coords and adjacency from all (occupied + filled) cells ──
+    cell_to_uid = {}
+    coords = {}
+    adjacency = {}
+
+    for idx, cell in enumerate(sorted(filled)):
+        uid = f"ifc_{idx}"
+        coords[uid] = [cell[0] * cs[0], cell[1] * cs[1], cell[2] * cs[2]]
+        adjacency[uid] = []
+        cell_to_uid[cell] = uid
+
+    # 6 cardinal directions only — no diagonals
+    for cell, uid in cell_to_uid.items():
+        ix, iy, iz = cell
+        for dix, diy, diz in [(-1, 0, 0), (1, 0, 0),
+                               (0, -1, 0), (0, 1, 0),
+                               (0, 0, -1), (0, 0, 1)]:
+            neighbor = (ix + dix, iy + diy, iz + diz)
+            if neighbor in cell_to_uid:
+                adjacency[uid].append(cell_to_uid[neighbor])
+
+    return coords, adjacency
+
+
 def _shortest_path_ids(adjacency, coords, start_id, end_id):
     if start_id not in adjacency or end_id not in adjacency:
         return []
@@ -411,6 +510,193 @@ def _shortest_path_ids(adjacency, coords, start_id, end_id):
         path.append(cur)
     path.reverse()
     return path
+
+
+def _dict_graph_to_topologic_graph(coords, adjacency, temperatures=None, alpha=0.0, lethality_threshold=None):
+    """
+    Convert dict-based graph to TopologicPy Graph with hazard-weighted edges.
+
+    Args:
+        coords: Dict mapping node_id -> [x, y, z] coordinates
+        adjacency: Dict mapping node_id -> list of neighbor node IDs
+        temperatures: Optional dict mapping node_id -> temperature (°C)
+        alpha: Hazard weight coefficient (0.0 = ignore temperature, higher = stronger penalty)
+        lethality_threshold: Optional temperature cutoff (°C) - edges above this are blocked
+
+    Returns:
+        Tuple of (TopologicPy Graph object, dict mapping node_id -> Vertex object)
+    """
+    if not coords or not adjacency:
+        return None, {}
+
+    # Create vertices with temperature metadata
+    vertex_map = {}
+    for node_id, coord in coords.items():
+        v = Vertex.ByCoordinates(coord[0], coord[1], coord[2])
+        temp = temperatures.get(node_id, 20.0) if temperatures else 20.0
+
+        # Attach metadata to vertex
+        d = Dictionary.ByKeysValues(["node_id", "temperature"], [node_id, temp])
+        v = Topology.SetDictionary(v, d)
+        vertex_map[node_id] = v
+
+    # Create edges with hazard-weighted costs
+    edges = []
+    processed_pairs = set()  # Track processed pairs to avoid duplicates
+
+    for node_id, neighbors in adjacency.items():
+        if node_id not in vertex_map:
+            continue
+
+        v1 = vertex_map[node_id]
+        c1 = coords[node_id]
+        temp1 = temperatures.get(node_id, 20.0) if temperatures else 20.0
+
+        for neighbor_id in neighbors:
+            if neighbor_id not in vertex_map:
+                continue
+
+            # Skip if we've already processed this edge pair (undirected graph)
+            pair = tuple(sorted([node_id, neighbor_id]))
+            if pair in processed_pairs:
+                continue
+            processed_pairs.add(pair)
+
+            v2 = vertex_map[neighbor_id]
+            c2 = coords[neighbor_id]
+            temp2 = temperatures.get(neighbor_id, 20.0) if temperatures else 20.0
+
+            # Calculate Euclidean length
+            length = math.sqrt(sum((c1[i] - c2[i])**2 for i in range(3)))
+
+            # Calculate average temperature of endpoints
+            avg_temp = (temp1 + temp2) / 2.0
+
+            # Normalize temperature: 20°C=0.0 (safe), 120°C=1.0 (extreme)
+            normalized_hazard = max(0.0, (avg_temp - 20.0) / 100.0)
+
+            # Apply lethality threshold - skip edge if too dangerous
+            if lethality_threshold is not None and avg_temp > lethality_threshold:
+                continue
+
+            # Cost formula: length × (1 + α × H_avg)
+            # This implements linear hazard weighting from FDS+Evac and Zverovich research
+            cost = length * (1.0 + alpha * normalized_hazard)
+
+            # Create edge with cost metadata
+            edge = Edge.ByVertices([v1, v2])
+            edge_dict = Dictionary.ByKeysValues(
+                ["length", "cost", "avg_temperature", "hazard"],
+                [length, cost, avg_temp, normalized_hazard]
+            )
+            edge = Topology.SetDictionary(edge, edge_dict)
+            edges.append(edge)
+
+    if not edges:
+        return None, vertex_map
+
+    # Build TopologicPy Graph
+    try:
+        graph = Graph.ByVerticesEdges(list(vertex_map.values()), edges)
+        return graph, vertex_map
+    except Exception as e:
+        import logging
+        logging.warning(f"Failed to create TopologicPy Graph: {e}")
+        return None, vertex_map
+
+
+def _shortest_path_topologic_hazard(graph, vertex_map, coords, start_id, end_id, cost_key="cost"):
+    """
+    Compute shortest path using TopologicPy Graph.ShortestPath() with hazard-weighted edge costs.
+
+    Args:
+        graph: TopologicPy Graph object with edge costs
+        vertex_map: Dict mapping node_id -> Vertex object
+        coords: Dict mapping node_id -> [x, y, z] (for fallback distance calculation)
+        start_id: Starting node ID
+        end_id: Ending node ID
+        cost_key: Dictionary key for edge cost (default "cost")
+
+    Returns:
+        Tuple of (path as list of node IDs, total path cost)
+        Returns ([], float('inf')) if no path exists
+    """
+    if not graph or not vertex_map:
+        return [], float('inf')
+
+    if start_id not in vertex_map or end_id not in vertex_map:
+        return [], float('inf')
+
+    start_vertex = vertex_map[start_id]
+    end_vertex = vertex_map[end_id]
+
+    try:
+        # Use TopologicPy Graph.ShortestPath with edge cost key
+        path_wire = Graph.ShortestPath(
+            graph,
+            start_vertex,
+            end_vertex,
+            edgeKey=cost_key,
+            tolerance=0.001
+        )
+
+        if not path_wire:
+            return [], float('inf')
+
+        # Extract vertices from path Wire
+        path_vertices = Wire.Vertices(path_wire)
+
+        # Create reverse mapping from Vertex object ID to node_id
+        reverse_map = {}
+        for node_id, v in vertex_map.items():
+            # Use vertex coordinates as key since object identity may not persist
+            v_coords = Vertex.Coordinates(v)
+            coord_key = tuple(round(c, 6) for c in v_coords)
+            reverse_map[coord_key] = node_id
+
+        # Convert vertices to node IDs
+        path_ids = []
+        for v in path_vertices:
+            v_coords = Vertex.Coordinates(v)
+            coord_key = tuple(round(c, 6) for c in v_coords)
+            node_id = reverse_map.get(coord_key)
+            if node_id:
+                path_ids.append(node_id)
+
+        # Calculate total cost by looking up edges
+        total_cost = 0.0
+        edges = Graph.Edges(graph)
+
+        for i in range(len(path_ids) - 1):
+            # Find edge between consecutive path nodes
+            v1 = vertex_map[path_ids[i]]
+            v2 = vertex_map[path_ids[i + 1]]
+
+            # Look for matching edge and extract cost
+            for edge in edges:
+                edge_verts = Edge.Vertices(edge)
+                if len(edge_verts) >= 2:
+                    ev1_coords = tuple(round(c, 6) for c in Vertex.Coordinates(edge_verts[0]))
+                    ev2_coords = tuple(round(c, 6) for c in Vertex.Coordinates(edge_verts[1]))
+                    v1_coords = tuple(round(c, 6) for c in Vertex.Coordinates(v1))
+                    v2_coords = tuple(round(c, 6) for c in Vertex.Coordinates(v2))
+
+                    # Check if this edge matches (bidirectional)
+                    if ((ev1_coords == v1_coords and ev2_coords == v2_coords) or
+                        (ev1_coords == v2_coords and ev2_coords == v1_coords)):
+                        edge_dict = Topology.Dictionary(edge)
+                        if edge_dict:
+                            cost = Dictionary.ValueAtKey(edge_dict, cost_key)
+                            if cost is not None:
+                                total_cost += cost
+                        break
+
+        return path_ids, total_cost
+
+    except Exception as e:
+        import logging
+        logging.warning(f"TopologicPy pathfinding failed: {e}")
+        return [], float('inf')
 
 
 def _compute_radial_timeline(coords, start_id, end_id=None, max_steps=60, step_size=None, allowed=None):
@@ -540,6 +826,115 @@ def _compute_temperature_fire_spread(adjacency, coords, start_id, max_steps=60,
         temperatures = new_temperatures
 
     return temp_timeline
+
+
+class DynamicPathState:
+    """Tracks state for dynamic path recomputation during fire simulation."""
+
+    def __init__(self, start_id, end_id, recompute_interval=5, alpha=0.5, lethality_threshold=None):
+        self.start_id = start_id
+        self.end_id = end_id
+        self.recompute_interval = recompute_interval  # Recompute every N steps
+        self.alpha = alpha  # Hazard weight coefficient
+        self.lethality_threshold = lethality_threshold  # Temperature cutoff (°C)
+        self.last_path = []  # List of node IDs
+        self.last_cost = 0.0
+        self.last_recompute_step = -1
+        self.path_history = []  # List of (step, path, cost) tuples for debugging
+
+
+def _recompute_path_with_hazards(graph_dict, temperatures, path_state, current_step):
+    """
+    Recompute evacuation path with current temperature hazards.
+
+    Args:
+        graph_dict: Dict-based graph {"coords": ..., "adjacency": ...}
+        temperatures: Current node temperatures {node_id: temp}
+        path_state: DynamicPathState object tracking path history
+        current_step: Current simulation step
+
+    Returns:
+        Dict with {"path_ids": [...], "path_coords": [[x,y,z], ...], "cost": float, "changed": bool}
+        Returns None if recomputation not needed this step
+    """
+    # Check if recomputation is needed
+    if (current_step - path_state.last_recompute_step) < path_state.recompute_interval:
+        return None
+
+    coords = graph_dict.get("coords", {})
+    adjacency = graph_dict.get("adjacency", {})
+
+    if not coords or not adjacency:
+        return None
+
+    # Build FULL graph once (no lethality threshold)
+    topo_graph_full, vertex_map_full = _dict_graph_to_topologic_graph(
+        coords,
+        adjacency,
+        temperatures=temperatures,
+        alpha=path_state.alpha,
+        lethality_threshold=None
+    )
+
+    new_path_ids, new_cost = [], float('inf')
+
+    # Attempt 1: If user set a threshold, try filtered graph
+    if path_state.lethality_threshold and topo_graph_full:
+        topo_graph_filtered, vertex_map_filtered = _dict_graph_to_topologic_graph(
+            coords,
+            adjacency,
+            temperatures=temperatures,
+            alpha=path_state.alpha,
+            lethality_threshold=path_state.lethality_threshold
+        )
+        if topo_graph_filtered:
+            new_path_ids, new_cost = _shortest_path_topologic_hazard(
+                topo_graph_filtered, vertex_map_filtered, coords,
+                path_state.start_id, path_state.end_id
+            )
+
+    # Attempt 2: Use full graph (no threshold)
+    if (not new_path_ids or new_cost == float('inf')) and topo_graph_full:
+        if path_state.lethality_threshold:
+            import logging
+            logging.warning(
+                f"No safe path found with lethality threshold {path_state.lethality_threshold}??C, trying without threshold"
+            )
+        new_path_ids, new_cost = _shortest_path_topologic_hazard(
+            topo_graph_full, vertex_map_full, coords,
+            path_state.start_id, path_state.end_id
+        )
+
+    # If still no path, try original Dijkstra as ultimate fallback
+    if not new_path_ids or new_cost == float('inf'):
+        import logging
+        logging.warning("TopologicPy pathfinding failed, falling back to custom Dijkstra")
+        new_path_ids = _shortest_path_ids(adjacency, coords, path_state.start_id, path_state.end_id)
+        # Calculate cost using Euclidean distance
+        new_cost = 0.0
+        for i in range(len(new_path_ids) - 1):
+            if new_path_ids[i] in coords and new_path_ids[i+1] in coords:
+                c1 = coords[new_path_ids[i]]
+                c2 = coords[new_path_ids[i+1]]
+                new_cost += math.sqrt(sum((c1[j] - c2[j])**2 for j in range(3)))
+
+    # Detect path change
+    changed = (new_path_ids != path_state.last_path)
+    path_state.last_path = new_path_ids
+    path_state.last_cost = new_cost
+    path_state.last_recompute_step = current_step
+    path_state.path_history.append((current_step, new_path_ids.copy(), new_cost))
+
+    # Convert to coordinates for frontend
+    path_coords = [coords[pid] for pid in new_path_ids if pid in coords]
+
+    return {
+        "path_ids": new_path_ids,
+        "path_coords": path_coords,
+        "cost": new_cost,
+        "changed": changed,
+        "step": current_step
+    }
 
 
 def _build_cell_grid(bounds, cell_size=1.0, max_cells=2000):
@@ -695,6 +1090,9 @@ class IfcEgressRequest(BaseModel):
     max_edge_stair: Optional[float] = None
     up_axis: str = "z"
     max_points: int = 20000
+    rectilinear: bool = False
+    grid_snap: bool = False
+    grid_cell_size: Optional[float] = None
 
 
 class IfcEgressPathRequest(BaseModel):
@@ -786,8 +1184,19 @@ def ifc_egress_graph(req: IfcEgressRequest):
     # Add agent height
     all_points = [[p[0], p[1], p[2] + req.agent_height] for p in all_points]
 
-    # Build adjacency with SEPARATE edge limits for stairs vs floors
-    coords, adjacency = _build_point_adjacency_hybrid(all_points, num_stair_points, max_edge_stair, max_edge_floor)
+    # Build adjacency — grid-snap (Approach A) or distance-based hybrid
+    if req.grid_snap:
+        cell_size = req.grid_cell_size if req.grid_cell_size is not None else base_spacing
+        # Bridge gaps caused by sampling being sparser than cell size
+        max_gap = max(2, int(math.ceil(base_spacing / cell_size)) + 1)
+        coords, adjacency = _build_point_adjacency_rectilinear(
+            all_points, cell_size,
+            up_axis=req.up_axis,
+            vertical_cell_size=min(cell_size, 0.15),  # ~stair tread rise
+            max_gap=max_gap,
+        )
+    else:
+        coords, adjacency = _build_point_adjacency_hybrid(all_points, num_stair_points, max_edge_stair, max_edge_floor, rectilinear=req.rectilinear, up_axis=req.up_axis)
 
     LAST_GRAPHS["ifc"] = {
         "coords": coords,
@@ -867,6 +1276,13 @@ def fire_sim_stream(
     radial: bool = True,
     delay_ms: int = 200,
     use_temperature: bool = False,
+    # NEW: Dynamic path rerouting parameters
+    stream_path: bool = False,
+    path_start_id: Optional[str] = None,
+    path_end_id: Optional[str] = None,
+    path_recompute_interval: int = 5,
+    path_alpha: float = 0.5,
+    path_lethality_threshold: Optional[float] = None,
 ):
     graph = LAST_GRAPHS.get(mode) if LAST_GRAPHS else None
     if not graph or not graph.get("adjacency"):
@@ -888,6 +1304,22 @@ def fire_sim_stream(
         if mode == "cell" and graph.get("bboxes"):
             yield _sse_event({"type": "meta", "cell_bboxes": graph.get("bboxes", [])})
 
+        # Initialize dynamic path state if path streaming is enabled
+        path_state = None
+        if stream_path and use_temperature and mode == "ifc":
+            # Resolve path start/end IDs (use fire start/end as defaults)
+            resolved_path_start = path_start_id or start_id
+            resolved_path_end = path_end_id or end_id
+
+            if resolved_path_start and resolved_path_end:
+                path_state = DynamicPathState(
+                    start_id=resolved_path_start,
+                    end_id=resolved_path_end,
+                    recompute_interval=path_recompute_interval,
+                    alpha=path_alpha,
+                    lethality_threshold=path_lethality_threshold
+                )
+
         # Temperature-based fire spread simulation (for IFC mode)
         if use_temperature and mode == "ifc":
             temp_timeline = _compute_temperature_fire_spread(
@@ -903,6 +1335,21 @@ def fire_sim_stream(
                     "step": step_idx,
                     "temperatures": temperatures
                 })
+
+                # Recompute path with current hazards if path streaming enabled
+                if path_state:
+                    path_update = _recompute_path_with_hazards(
+                        graph, temperatures, path_state, step_idx
+                    )
+                    if path_update:
+                        yield _sse_event({
+                            "type": "path_update",
+                            "step": step_idx,
+                            "path": path_update["path_coords"],
+                            "cost": path_update["cost"],
+                            "changed": path_update["changed"]
+                        })
+
                 time.sleep(max(delay_ms, 0) / 1000.0)
         elif precompute:
             step_size = graph.get("step") or _estimate_step_size(graph.get("coords"), graph.get("adjacency"))
