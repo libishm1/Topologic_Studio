@@ -32,25 +32,28 @@ Import any IFC file into the browser-based 3D viewer.
 ### 2 — Build Egress Graph
 Generate a spatial navigation graph from the IFC model. Topologic converts rooms, doors, stairs, and corridors into graph nodes and edges.
 
-![Egress graph generated](screenshots/02_graph_generated.png)
+![2](https://github.com/user-attachments/assets/24184ffb-fb93-41b9-9c83-640becd1aa73)
+
 
 *Graph: 1,866 nodes / 1,552 edges · 14 doors · 57 walls · 21 floors / 4 stairs*
 
 ### 3 — Set Start and Exit Points
 Click to define the fire origin (orange) and egress exit (green) directly on the 3D model.
 
-![Start and exit points defined](screenshots/03_start_exit.png)
-![Start and exit — wireframe view](screenshots/04_start_exit_wire.png)
+![3](https://github.com/user-attachments/assets/7caa0561-e433-44fc-952a-6839715c4410)
+![4](https://github.com/user-attachments/assets/9cf129d2-078f-446a-a221-dd835f3d4348)
+
 
 ### 4 — Compute Egress Path
 Run shortest-path computation. The path is highlighted in red through the building graph.
 
-![Egress path computed](screenshots/05_path_computed.png)
+![5](https://github.com/user-attachments/assets/f4b4c2ac-d848-442f-96d8-25d60687571f)
+
 
 ### 5 — Wall Obstacles (WIP)
 Toggle IFC walls as navigation obstacles for more spatially accurate routing.
 
-![Wall obstacles active](screenshots/06_wall_obstacles.png)
+![6](https://github.com/user-attachments/assets/014f5c03-d366-4844-a2ac-c65ca91b7b28)
 
 ---
 
