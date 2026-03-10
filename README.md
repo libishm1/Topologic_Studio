@@ -4,6 +4,10 @@ A browser-based research tool for IFC building model analysis, spatial navigatio
 
 **Live demo:** https://libishm1.github.io/Topologic_Studio
 
+> **Screenshot** — rectilinear grid-snap graph (1866 nodes / 1552 edges), 14 door waypoints, 57 wall segments, temperature fire simulation at step 49 with dynamic path rerouting (cost 27.48 m), all rendered simultaneously in the browser:
+>
+> ![Topologic Studio — fire egress simulation screenshot](docs/screenshot.png)
+
 ---
 
 ## Image Series
@@ -56,7 +60,7 @@ Toggle IFC walls as navigation obstacles for more spatially accurate routing.
 2. [What This Project Does](#what-this-project-does)
 3. [Tech Stack](#tech-stack)
 4. [Architecture](#architecture)
-5. [Installation](#installation)
+5. [Installation & Detailed Local Deployment (Windows)](#installation--detailed-local-deployment-windows)
 6. [Configuration](#configuration)
 7. [Usage Workflow](#usage-workflow)
 8. [Algorithms](#algorithms)
@@ -65,10 +69,9 @@ Toggle IFC walls as navigation obstacles for more spatially accurate routing.
 11. [Feature Status](#feature-status)
 12. [Known Limitations](#known-limitations)
 13. [Troubleshooting](#troubleshooting)
-14. [Detailed Local Deployment](#detailed-local-deployment)
-15. [Research Context](#research-context)
-16. [References](#references)
-17. [License](#license)
+14. [Research Context](#research-context)
+15. [References](#references)
+16. [License](#license)
 
 ---
 
@@ -204,57 +207,83 @@ REST is used for graph and path requests (synchronous, JSON). [Server-Sent Event
 
 ---
 
-## Installation
+## Installation & Detailed Local Deployment (Windows)
 
-### Prerequisites
+This section covers first-time setup and local launch.
 
-- Python 3.10 or later
-- Node.js 18 or later + npm
+### System Requirements
+- Windows 10/11
+- Python 3.10+
+- Node.js 18+ (or bundled Node runtime in this repo)
 - Git
+- PowerShell
 
-### 1. Clone the repository
+### Expected Project Layout
+```text
+TopologicStudio/
+├── topologicpy-web-backend/
+├── topologicpy-web-frontend/
+└── node-v24.11.1-win-x64/   # optional bundled Node runtime
+```
 
-```bash
+### 1. Clone
+```powershell
 git clone [https://github.com/libishm1/Topologic_Studio.git](https://github.com/libishm1/Topologic_Studio.git)
 cd Topologic_Studio
 ```
 
-### 2. Backend setup
-
+### 2. Backend Setup
 ```powershell
 cd topologicpy-web-backend
-
-# Create virtual environment
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-
-# Install Python dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 
-# Install TopologicPy (not on PyPI — install from wheel)
-# Download the appropriate wheel from:
-# [https://github.com/wassimj/topologicpy/releases](https://github.com/wassimj/topologicpy/releases)
-pip install <topologicpy_wheel_file>.whl
+# Install TopologicPy wheel (required for this project):
+# Download from: [https://github.com/wassimj/topologicpy/releases](https://github.com/wassimj/topologicpy/releases)
+pip install path\to\TopologicPy-<version>-<pyver>-<platform>.whl
 ```
 
-> **Note:** TopologicPy is not published on PyPI. Download the wheel matching your Python version and OS from the [TopologicPy releases page](https://github.com/wassimj/topologicpy/releases).
-
-### 3. Frontend setup
-
+### 3. Frontend Setup
+Open a new PowerShell terminal:
 ```powershell
-cd ../topologicpy-web-frontend
+cd topologicpy-web-frontend
+```
+
+**Option A: System Node**
+```powershell
 npm install
 ```
 
-### 4. Start the servers
-
-**Backend (PowerShell):**
+**Option B: Bundled Node**
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+$nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
+$env:Path = "$nodeDir;$env:Path"
+& "$nodeDir\npm.cmd" install
 ```
 
-**Frontend (PowerShell — bundled Node in this repo):**
+### 4. Frontend API Configuration
+Create `topologicpy-web-frontend/.env`:
+```env
+VITE_API_BASE=http://localhost:8000
+VITE_WEBIFC_WASM_PATH=/wasm/
+```
+
+### 5. Run Backend
+```powershell
+cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 6. Run Frontend
+**Option A: System Node**
+```powershell
+cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
+npm run dev -- --host 0.0.0.0 --port 5173
+```
+
+**Option B: Bundled Node**
 ```powershell
 cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
 $nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
@@ -262,7 +291,27 @@ $env:Path = "$nodeDir;$env:Path"
 & "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173
 ```
 
-Open `http://localhost:5173` in your browser.
+### 7. Open
+* **Frontend:** http://localhost:5173
+* **Backend:** http://localhost:8000
+* **Backend docs:** http://localhost:8000/docs
+
+### 8. Verify End-to-End
+1. Load an IFC file
+2. Build IFC egress graph
+3. Pick start and exit points
+4. Compute IFC egress path
+5. Start fire simulation
+
+### Common Issues
+* **`.\.venv\Scripts\python.exe` not found:** Run `python -m venv .venv` first to create the virtual environment.
+* **`npm` not recognized:** Use the bundled Node commands above, or install Node.js LTS globally.
+* **Port 8000 already in use:**
+  ```powershell
+  netstat -ano | findstr :8000
+  taskkill /PID <PID> /F
+  ```
+* **Frontend cannot reach backend:** Confirm the backend is running on `http://localhost:8000` and confirm your `.env` has `VITE_API_BASE=http://localhost:8000`.
 
 ---
 
@@ -277,18 +326,6 @@ Open `http://localhost:5173` in your browser.
 The backend always allows `http://localhost:5173` and `http://127.0.0.1:5173` by default.
 
 ### Frontend — `.env` file
-
-Create `topologicpy-web-frontend/.env`:
-
-```env
-VITE_API_BASE=http://localhost:8000
-VITE_WEBIFC_WASM_PATH=/wasm/
-```
-
-| Variable | Description |
-|---|---|
-| `VITE_API_BASE` | URL of the FastAPI backend |
-| `VITE_WEBIFC_WASM_PATH` | Path to web-ifc WASM files (relative or absolute URL) |
 
 For production: set `VITE_API_BASE` to your deployed backend URL and add that URL to `CORS_ORIGINS`.
 
@@ -515,29 +552,6 @@ T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) − T(n, t))
 
 ---
 
-## Detailed Local Deployment
-
-### Backend (FastAPI)
-Open a terminal and run the following commands:
-```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-### Frontend (Vite)
-If using the bundled Node in this repo, open a *new* terminal and run:
-```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
-$nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
-$env:Path = "$nodeDir;$env:Path"
-& "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173
-```
-
-**Open Application:**
-* **Frontend:** http://localhost:5173
-
----
-
 ## Research Context
 
 This project applies topological spatial reasoning to building fire egress analysis, following the cell complex model introduced by Jabi et al. (2019). Key contributions in this implementation:
@@ -618,4 +632,27 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+### Third-Party Acknowledgements
+
+This project builds directly on the following open-source works. Their respective licenses govern their use and distribution:
+
+- **TopologicPy** — © Wassim Jabi and contributors. Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](https://github.com/wassimj/topologicpy/blob/main/LICENSE). Source: https://github.com/wassimj/topologicpy
+- **@thatopen/components** — © That Open Company. Licensed under the [MIT License](https://github.com/ThatOpenCompany/engine_components/blob/master/LICENSE). Source: https://github.com/ThatOpenCompany/engine_components
+- **web-ifc** — © That Open Company. Licensed under the [MIT License](https://github.com/ThatOpenCompany/web-ifc/blob/main/LICENSE). Source: https://github.com/ThatOpenCompany/web-ifc
+- **Three.js** — © Ricardo Cabello and contributors. Licensed under the [MIT License](https://github.com/mrdoob/three.js/blob/dev/LICENSE). Source: https://github.com/mrdoob/three.js
+- **FastAPI** — © Sebastián Ramírez. Licensed under the [MIT License](https://github.com/fastapi/fastapi/blob/master/LICENSE). Source: https://github.com/fastapi/fastapi
+- **React** — © Meta Platforms, Inc. Licensed under the [MIT License](https://github.com/facebook/react/blob/main/LICENSE). Source: https://github.com/facebook/react
+
+> **Note on TopologicPy licensing:** TopologicPy is distributed under AGPL-3.0. If you deploy this application as a network service, the AGPL requires that you make your complete modified source code available to users of that service. Review the [AGPL-3.0 terms](https://www.gnu.org/licenses/agpl-3.0.html) before deploying in a commercial or closed-source context.
+
+---
+
+**Author:** Libish Murugesan
+Researcher and Lecturer in Computational Architecture and Robotics for Architecture
+Alfaisal University, Riyadh, Saudi Arabia
+GitHub: [@libishm1](https://github.com/libishm1)
+
+The fire spread model and egress graph methodology were first presented at:
+> Murugesan, Libish, and Wassim Jabi. 2019. "Spatial Graph-Based Fire Spread Simulation for Building Evacuation." In *Proceedings of eCAADe 37*, Porto, Portugal.
