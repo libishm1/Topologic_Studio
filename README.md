@@ -10,6 +10,50 @@ A browser-based research tool for IFC building model analysis, spatial navigatio
 
 ---
 
+## Image Series
+
+### 0. Full Workflow View
+
+Overall browser view showing IFC model loading, graph overlay, fire simulation, and egress pathing in one interface.
+
+![hero](https://github.com/user-attachments/assets/9401488b-7b58-4a80-9db7-c6614dc8cab9)
+
+### 1. Load IFC
+
+Import any IFC file into the browser-based 3D viewer.
+
+![preview](https://github.com/user-attachments/assets/cb098eef-8260-4154-838c-c8c28f7e4edc)
+
+### 2. Build Egress Graph
+
+Generate a spatial navigation graph from the IFC model. Topologic converts rooms, doors, stairs, and corridors into graph nodes and edges.
+
+![2](https://github.com/user-attachments/assets/24184ffb-fb93-41b9-9c83-640becd1aa73)
+
+*Graph: 1,866 nodes / 1,552 edges · 14 doors · 57 walls · 21 floors / 4 stairs*
+
+### 3. Set Start and Exit Points
+
+Click to define the fire origin and egress exit directly on the 3D model.
+
+![3](https://github.com/user-attachments/assets/7caa0561-e433-44fc-952a-6839715c4410)
+
+![4](https://github.com/user-attachments/assets/9cf129d2-078f-446a-a221-dd835f3d4348)
+
+### 4. Compute Egress Path
+
+Run shortest-path computation. The path is highlighted in red through the building graph.
+
+![5](https://github.com/user-attachments/assets/f4b4c2ac-d848-442f-96d8-25d60687571f)
+
+### 5. Wall Obstacles (WIP)
+
+Toggle IFC walls as navigation obstacles for more spatially accurate routing.
+
+![6](https://github.com/user-attachments/assets/014f5c03-d366-4844-a2ac-c65ca91b7b28)
+
+---
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -25,9 +69,10 @@ A browser-based research tool for IFC building model analysis, spatial navigatio
 11. [Feature Status](#feature-status)
 12. [Known Limitations](#known-limitations)
 13. [Troubleshooting](#troubleshooting)
-14. [Research Context](#research-context)
-15. [References](#references)
-16. [License](#license)
+14. [Detailed Local Deployment](#detailed-local-deployment)
+15. [Research Context](#research-context)
+16. [References](#references)
+17. [License](#license)
 
 ---
 
@@ -86,7 +131,7 @@ Two models are supported:
 
 **Temperature diffusion model:** Each node holds a temperature value T. At every step, heat transfers from hot neighbours:
 
-```
+```text
 T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) − T(n, t))
 ```
 
@@ -96,7 +141,7 @@ where `k` is the heat transfer coefficient (default 1.20), adapted from Murugesa
 
 During temperature-mode fire simulation, the evacuation path is recomputed every N steps using hazard-weighted shortest-path via TopologicPy's `Graph.ShortestPath`. Edge weights are:
 
-```
+```text
 w = distance × (1 + α × max(T_a, T_b) / T_ref)
 ```
 
@@ -137,7 +182,7 @@ A tabular Q-learning agent (Watkins and Dayan 1992) is trained on-server to navi
 
 ## Architecture
 
-```
+```text
 Browser (React + Vite)
 │
 ├── IFCViewer.jsx     — Three.js scene, IFC fragment loader, navigation graph
@@ -174,7 +219,7 @@ REST is used for graph and path requests (synchronous, JSON). [Server-Sent Event
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/libishm1/Topologic_Studio.git
+git clone [https://github.com/libishm1/Topologic_Studio.git](https://github.com/libishm1/Topologic_Studio.git)
 cd Topologic_Studio
 ```
 
@@ -192,7 +237,7 @@ pip install -r requirements.txt
 
 # Install TopologicPy (not on PyPI — install from wheel)
 # Download the appropriate wheel from:
-# https://github.com/wassimj/topologicpy/releases
+# [https://github.com/wassimj/topologicpy/releases](https://github.com/wassimj/topologicpy/releases)
 pip install <topologicpy_wheel_file>.whl
 ```
 
@@ -209,20 +254,14 @@ npm install
 
 **Backend (PowerShell):**
 ```powershell
-cd topologicpy-web-backend
-.\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-**Frontend (PowerShell — system Node):**
-```powershell
-cd topologicpy-web-frontend
-npm run dev -- --host 0.0.0.0 --port 5173
+cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Frontend (PowerShell — bundled Node in this repo):**
 ```powershell
-cd topologicpy-web-frontend
-$nodeDir = "C:\path\to\Topologic_Studio\node-v24.11.1-win-x64"
+cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
+$nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
 $env:Path = "$nodeDir;$env:Path"
 & "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173
 ```
@@ -305,7 +344,7 @@ Door-adjacent edges are always kept. The stored graph adjacency is never modifie
 Standard Dijkstra with Euclidean edge weights (Dijkstra 1959). Wall checking is performed lazily during edge relaxation, keeping graph build and display free of wall logic.
 
 **Hazard-weighted (fire mode):**
-```
+```text
 w(u, v) = dist(u, v) × (1 + α × max(T_u, T_v) / 120)
 ```
 Implemented via TopologicPy `Graph.ShortestPath` (Jabi et al. 2019).
@@ -313,7 +352,7 @@ Implemented via TopologicPy `Graph.ShortestPath` (Jabi et al. 2019).
 ### Fire spread — temperature diffusion
 
 Discrete heat-diffusion, adapted from Murugesan and Jabi (2019):
-```
+```text
 T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) − T(n, t))
 ```
 `k = 1.20`, ambient `T₀ = 20 °C`, ignition `T_fire = 120 °C`. The ignition node is held at `T_fire` every step. Temperature is mapped to RGB colour using a five-band gradient: blue (20 °C) → cyan (45 °C) → green (70 °C) → yellow (95 °C) → red (120 °C+).
@@ -480,6 +519,29 @@ T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) − T(n, t))
 
 ---
 
+## Detailed Local Deployment
+
+### Backend (FastAPI)
+Open a terminal and run the following commands:
+```powershell
+cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### Frontend (Vite)
+If using the bundled Node in this repo, open a *new* terminal and run:
+```powershell
+cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
+$nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
+$env:Path = "$nodeDir;$env:Path"
+& "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173
+```
+
+**Open Application:**
+* **Frontend:** http://localhost:5173
+
+---
+
 ## Research Context
 
 This project applies topological spatial reasoning to building fire egress analysis, following the cell complex model introduced by Jabi et al. (2019). Key contributions in this implementation:
@@ -491,26 +553,6 @@ This project applies topological spatial reasoning to building fire egress analy
 - **GraphML-compatible graph output** (node/edge coordinate and ID features) — suitable for downstream GNN-based evacuation research
 
 This tool builds on prior work applying spatial graphs and topological representations to evacuation modelling in architecture and urban design (Hillier and Hanson 1984; Turner and Penn 2002; Pan et al. 2006).
-
----
-
-## Local Launch (Quick Reference)
-
-### Backend
-
-```powershell
-cd topologicpy-web-backend
-.\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-### Frontend
-
-```powershell
-cd topologicpy-web-frontend
-npm run dev -- --host 0.0.0.0 --port 5173
-```
-
-Open `http://localhost:5173` · Backend API: `http://localhost:8000`
 
 ---
 
@@ -580,27 +622,4 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-### Third-Party Acknowledgements
-
-This project builds directly on the following open-source works. Their respective licenses govern their use and distribution:
-
-- **TopologicPy** — © Wassim Jabi and contributors. Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](https://github.com/wassimj/topologicpy/blob/main/LICENSE). Source: https://github.com/wassimj/topologicpy
-- **@thatopen/components** — © That Open Company. Licensed under the [MIT License](https://github.com/ThatOpenCompany/engine_components/blob/master/LICENSE). Source: https://github.com/ThatOpenCompany/engine_components
-- **web-ifc** — © That Open Company. Licensed under the [MIT License](https://github.com/ThatOpenCompany/web-ifc/blob/main/LICENSE). Source: https://github.com/ThatOpenCompany/web-ifc
-- **Three.js** — © Ricardo Cabello and contributors. Licensed under the [MIT License](https://github.com/mrdoob/three.js/blob/dev/LICENSE). Source: https://github.com/mrdoob/three.js
-- **FastAPI** — © Sebastián Ramírez. Licensed under the [MIT License](https://github.com/fastapi/fastapi/blob/master/LICENSE). Source: https://github.com/fastapi/fastapi
-- **React** — © Meta Platforms, Inc. Licensed under the [MIT License](https://github.com/facebook/react/blob/main/LICENSE). Source: https://github.com/facebook/react
-
-> **Note on TopologicPy licensing:** TopologicPy is distributed under AGPL-3.0. If you deploy this application as a network service, the AGPL requires that you make your complete modified source code available to users of that service. Review the [AGPL-3.0 terms](https://www.gnu.org/licenses/agpl-3.0.html) before deploying in a commercial or closed-source context.
-
----
-
-**Author:** Libish Murugesan
-Researcher and Lecturer in Computational Architecture and Robotics for Architecture
-Alfaisal University, Riyadh, Saudi Arabia
-GitHub: [@libishm1](https://github.com/libishm1)
-
-The fire spread model and egress graph methodology were first presented at:
-> Murugesan, Libish, and Wassim Jabi. 2019. "Spatial Graph-Based Fire Spread Simulation for Building Evacuation." In *Proceedings of eCAADe 37*, Porto, Portugal.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
