@@ -73,6 +73,13 @@ All computation runs in a Python/FastAPI backend; visualisation runs in a React/
 
 ---
 
+## Research Contribution
+* **Browser-Native Topological Parsing:** Converts IFC elements into navigable spatial graphs directly in the browser without server-side IFC processing.
+* **Dynamic Hazard-Aware Routing:** Implementation of hazard-weighted shortest path algorithms that adapt in real-time to an evolving thermal field.
+* **Integrated Software Stack:** Bridges architectural BIM data and graph-based reinforcement learning for interactive egress research.
+
+---
+
 ## What This Project Does
 
 ### IFC Loading and Parsing
