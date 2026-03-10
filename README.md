@@ -26,7 +26,8 @@ The upstream TopologicStudio handles general topology and graph operations. This
 ### 1 — Load IFC
 Import any IFC file into the browser-based 3D viewer.
 
-![IFC loaded in viewer](screenshots/01_ifc_loaded.png)
+![preview](https://github.com/user-attachments/assets/cb098eef-8260-4154-838c-c8c28f7e4edc)
+
 
 ### 2 — Build Egress Graph
 Generate a spatial navigation graph from the IFC model. Topologic converts rooms, doors, stairs, and corridors into graph nodes and edges.
