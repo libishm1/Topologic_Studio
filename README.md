@@ -1,12 +1,10 @@
-# Topologic Studio — IFC Fire Egress Simulation
+# Topologic Studio - IFC Fire Egress Simulation
 
 A browser-based research tool for IFC building model analysis, spatial navigation graph generation, fire spread simulation, and dynamic evacuation path computation. Built on [TopologicPy](https://topologic.app) and deployed as a full-stack web application.
 
 **Live demo:** https://libishm1.github.io/Topologic_Studio
 
-> **Screenshot** — rectilinear grid-snap graph (1866 nodes / 1552 edges), 14 door waypoints, 57 wall segments, temperature fire simulation at step 49 with dynamic path rerouting (cost 27.48 m), all rendered simultaneously in the browser:
->
-> ![Topologic Studio — fire egress simulation screenshot](docs/screenshot.png)
+Topologic Studio combines browser-native IFC parsing, graph-based indoor navigation, hazard-aware routing, and streamed fire visualization in a single research workflow. The project builds on prior work in topological spatial modelling, BIM-derived navigable networks, safest-route computation, and reinforcement learning for fire egress.
 
 ---
 
@@ -60,7 +58,7 @@ Toggle IFC walls as navigation obstacles for more spatially accurate routing.
 2. [What This Project Does](#what-this-project-does)
 3. [Tech Stack](#tech-stack)
 4. [Architecture](#architecture)
-5. [Installation & Detailed Local Deployment (Windows)](#installation--detailed-local-deployment-windows)
+5. [Installation & Detailed Local Deployment](#installation--detailed-local-deployment)
 6. [Configuration](#configuration)
 7. [Usage Workflow](#usage-workflow)
 8. [Algorithms](#algorithms)
@@ -79,15 +77,15 @@ Toggle IFC walls as navigation obstacles for more spatially accurate routing.
 
 Topologic Studio extends [TopologicPy](https://topologic.app) with an IFC-native fire egress workflow. Given any IFC building model, the tool:
 
-- Parses floor slabs, stairs, doors, and walls from IFC geometry in the browser
-- Constructs a navigable spatial graph across all floors and stairwells
-- Computes the shortest evacuation path between any two points with wall obstacle avoidance
-- Simulates fire spreading through the graph (temperature diffusion or BFS model)
-- Re-routes the evacuation path in real-time as fire spreads, streamed over SSE
-- Visualises fire spread as a blue-to-red colour gradient directly on the navigation wires
-- Trains a reinforcement learning agent to find escape routes under dynamic fire conditions
+- parses floor slabs, stairs, doors, and walls from IFC geometry in the browser
+- constructs a navigable spatial graph across all floors and stairwells
+- computes the shortest evacuation path between any two points with wall obstacle avoidance
+- simulates fire spreading through the graph using either a binary BFS model or a temperature diffusion model
+- re-routes the evacuation path in real time as fire spreads, streamed over SSE
+- visualizes fire spread as a blue-to-red colour gradient directly on the navigation graph
+- trains a reinforcement learning agent to find escape routes under dynamic fire conditions
 
-All computation runs in a Python/FastAPI backend; visualisation runs in a React/Three.js browser viewer with no plugin required.
+All computation runs in a Python/FastAPI backend. Visualization runs in a React/Three.js browser viewer with no plugin required.
 
 ---
 
@@ -95,87 +93,85 @@ All computation runs in a Python/FastAPI backend; visualisation runs in a React/
 
 ### IFC Loading and Parsing
 
-IFC models (`.ifc`) are loaded entirely in the browser via the [web-ifc](https://github.com/ThatOpenCompany/web-ifc) WASM library (part of [@thatopen/components](https://github.com/ThatOpenCompany/engine_components)). Loading is non-blocking — the model is navigable (pan, orbit, zoom) immediately after the fragment geometry appears, while IFC element extraction continues in the background.
+IFC models (`.ifc`) are loaded entirely in the browser via the [web-ifc](https://github.com/ThatOpenCompany/web-ifc) WASM library, used through [@thatopen/components](https://github.com/ThatOpenCompany/engine_components). Loading is non-blocking. The model is navigable as soon as fragment geometry appears, while IFC element extraction continues in the background.
 
 The following IFC element types are extracted for navigation:
 
 | IFC Type | Role |
 |---|---|
-| `IFCSLAB` | Floor and ceiling surfaces — sampled for walkable floor points |
-| `IFCSTAIR` | Stair geometry — sampled at fine vertical resolution (≤ 0.15 m per tread) |
-| `IFCDOOR` | Door openings — injected as forced waypoints in the navigation graph |
-| `IFCWALL` / `IFCWALLSTANDARDCASE` | Wall centrelines — used as path obstacles during traversal |
+| `IFCSLAB` | Floor and ceiling surfaces sampled for walkable floor points |
+| `IFCSTAIR` | Stair geometry sampled at fine vertical resolution |
+| `IFCDOOR` | Door openings injected as forced waypoints in the navigation graph |
+| `IFCWALL` / `IFCWALLSTANDARDCASE` | Wall centrelines used as path obstacles during traversal |
 
 Vertex geometry is extracted as flat float arrays, transformed by the model world matrix, and sent to the backend.
 
 ### Navigation Graph Generation
 
-Two modes are available:
+Two modes are available.
 
-**Hybrid (distance-based):** Points sampled from floor and stair surfaces are connected when within a user-defined distance threshold. An optional rectilinear filter removes diagonal connections by comparing the horizontal minor/major extent ratio of each edge.
+**Hybrid (distance-based):** Points sampled from floor and stair surfaces are connected when within a user-defined distance threshold. An optional rectilinear filter removes diagonal connections by comparing the horizontal minor-to-major extent ratio of each edge.
 
-**Grid-snap (rectilinear):** Sampled points are snapped to a regular voxel grid. Only the six cardinal directions (±x, ±y, ±z) are connected — no diagonals. A gap-filling pass bridges cells separated by sparse sampling. Stairs use a fine vertical cell size (default 0.15 m) to capture individual treads.
+**Grid-snap (rectilinear):** Sampled points are snapped to a regular voxel grid. Only the six cardinal directions (`±x`, `±y`, `±z`) are connected. A gap-filling pass bridges cells separated by sparse sampling. Stairs use a fine vertical cell size to capture individual treads.
 
-Door positions (extracted as bounding-box bottom-centres) are appended to the full point set before the agent-height offset is applied, ensuring they sit at the same navigable height as floor nodes. Each door is then force-connected to its five nearest floor neighbours within 3 m.
+Door positions, extracted as bounding-box bottom centres, are appended to the point set before the agent-height offset is applied. Each door is then force-connected to its nearest floor neighbours.
 
 ### Wall Obstacles
 
-Wall centrelines are extracted as 2D axis-aligned segments from IFC wall bounding boxes. Wall obstacles are applied **only during path computation** — the full graph is always displayed unchanged. During Dijkstra traversal, any edge whose horizontal projection intersects a wall segment is skipped. Door-adjacent edges are exempt from this rule, since doors are openings through walls.
+Wall centrelines are extracted as 2D axis-aligned segments from IFC wall bounding boxes. Wall obstacles are applied during path computation, while the full graph remains visible in the viewer. During Dijkstra traversal, any edge whose horizontal projection intersects a wall segment is skipped. Door-adjacent edges are exempt because doors are treated as openings through walls.
 
 ### Fire Spread Simulation
 
-Two models are supported:
+Two models are supported.
 
 **Binary (BFS) model:** Fire spreads breadth-first from the ignition node, one graph neighbourhood per step. All nodes reached so far are accumulated and shown as orange-red wires.
 
-**Temperature diffusion model:** Each node holds a temperature value T. At every step, heat transfers from hot neighbours:
+**Temperature diffusion model:** Each node holds a temperature value `T`. At every step, heat transfers from hot neighbours:
 
 ```text
-T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) − T(n, t))
+T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) - T(n, t))
 ```
 
-where `k` is the heat transfer coefficient (default 1.20), adapted from Murugesan and Jabi (2019). The ignition node is held at 120 °C. Temperatures below ambient (20 °C) are shown as blue; higher temperatures map through cyan → green → yellow → red. Fire spread and dynamic path re-routing are streamed and displayed simultaneously.
+where k is the heat transfer coefficient, adapted from (Jabi et al. 2019). The ignition node is held at a constant fire temperature. Temperatures below ambient are shown as blue, and higher temperatures map through cyan, green, yellow, and red. Fire spread and dynamic path re-routing are streamed and displayed simultaneously.
 
 ### Dynamic Path Re-routing
 
-During temperature-mode fire simulation, the evacuation path is recomputed every N steps using hazard-weighted shortest-path via TopologicPy's `Graph.ShortestPath`. Edge weights are:
+During temperature-mode fire simulation, the evacuation path is recomputed at a user-defined interval using hazard-weighted shortest path through TopologicPy's Graph.ShortestPath. Edge weights are:
 
 ```text
 w = distance × (1 + α × max(T_a, T_b) / T_ref)
 ```
 
-where `α` (hazard weight) is user-configurable (default 1.4). If a lethality temperature threshold is set, a filtered graph (excluding edges above threshold) is tried first; the full graph is used as fallback. The re-routed path is drawn as a magenta line in the viewer, concurrent with the fire colour update.
+where α is a user-configurable hazard weight. If a lethality threshold is set, the system first tries a filtered graph that excludes edges above the threshold, then falls back to the full graph if needed.
 
 ### Reinforcement Learning
 
-A tabular Q-learning agent (Watkins and Dayan 1992) is trained on-server to navigate from a start node to an exit node while fire spreads. The learned policy path is returned as a coordinate polyline and displayed in the viewer.
+A tabular Q-learning agent is trained on the server to navigate from a start node to an exit node while fire spreads. The learned policy path is returned as a coordinate polyline and displayed in the viewer.
 
 ---
 
 ## Tech Stack
 
 ### Backend
-
 | Library | Purpose |
 |---|---|
 | Python ≥ 3.10 | Runtime |
-| [FastAPI](https://fastapi.tiangolo.com) | REST + Server-Sent Events API |
-| [Uvicorn](https://www.uvicorn.org) | ASGI server |
-| [Pydantic v2](https://docs.pydantic.dev) | Request/response validation |
-| [TopologicPy](https://topologic.app) | Cell complex graph, `Graph.ShortestPath`, edge weights |
+| FastAPI | REST and Server-Sent Events API |
+| Uvicorn | ASGI server |
+| Pydantic v2 | Request and response validation |
+| TopologicPy | Cell complex graph operations and weighted shortest path |
 | python-multipart | File upload support |
 
 ### Frontend
-
 | Library | Purpose |
 |---|---|
-| [React 18](https://react.dev) | UI framework |
-| [Vite 7](https://vite.dev) | Build tool and dev server |
-| [Three.js](https://threejs.org) | 3D rendering, `BufferGeometry`, `vertexColors` |
-| [@thatopen/components](https://github.com/ThatOpenCompany/engine_components) | IFC Fragments viewer engine |
-| [@thatopen/fragments](https://github.com/ThatOpenCompany/engine_fragments) | IFC fragment worker and geometry extraction |
-| [web-ifc](https://github.com/ThatOpenCompany/web-ifc) | IFC WASM parser (runs in browser) |
-| [Axios](https://axios-http.com) | HTTP client |
+| React 18 | UI framework |
+| Vite 7 | Build tool and dev server |
+| Three.js | 3D rendering and line-based graph display |
+| @thatopen/components | IFC fragments viewer engine |
+| @thatopen/fragments | IFC fragment worker and geometry extraction |
+| web-ifc | IFC WASM parser running in the browser |
+| Axios | HTTP client |
 
 ---
 
@@ -184,32 +180,31 @@ A tabular Q-learning agent (Watkins and Dayan 1992) is trained on-server to navi
 ```text
 Browser (React + Vite)
 │
-├── IFCViewer.jsx     — Three.js scene, IFC fragment loader, navigation graph
-│                       wire overlay (per-vertex fire colours), path lines,
-│                       raycasting for point picking
-├── App.jsx           — Application state, fire/path controls, SSE consumer,
-│                       graph/edge data management
-└── TopologyViewer.jsx — Generic TopologicPy JSON renderer
+├── IFCViewer.jsx      -> Three.js scene, IFC fragment loader, navigation graph,
+│                         fire-color overlay, path lines, point picking
+├── App.jsx            -> application state, controls, SSE consumer,
+│                         graph and edge data management
+└── TopologyViewer.jsx -> generic TopologicPy JSON renderer
         │
-        │  REST (JSON)  +  SSE (text/event-stream)
+        │  REST (JSON) + SSE (text/event-stream)
         ▼
-FastAPI backend  (topologicpy-web-backend/app/main.py)
+FastAPI backend (topologicpy-web-backend/app/main.py)
 │
-├── POST /ifc-egress-graph   — Build navigation graph from IFC geometry
-├── POST /ifc-egress-path    — Compute wall-aware shortest path
-├── GET  /fire-sim/stream    — SSE: fire spread + dynamic path updates
-├── POST /fire-sim           — Precomputed fire timeline (non-streaming)
-├── POST /rl/train           — Train Q-learning agent, return best path
-└── POST /topology           — TopologicPy cell complex operations
+├── POST /ifc-egress-graph -> build navigation graph from IFC geometry
+├── POST /ifc-egress-path  -> compute wall-aware shortest path
+├── GET  /fire-sim/stream  -> SSE fire spread and dynamic path updates
+├── POST /fire-sim         -> precomputed fire timeline
+├── POST /rl/train         -> train Q-learning agent and return best path
+└── POST /topology         -> TopologicPy cell complex operations
 ```
 
-REST is used for graph and path requests (synchronous, JSON). [Server-Sent Events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) are used for real-time fire simulation streaming — the connection stays open and the server pushes temperature and path events as they are computed.
+REST is used for graph and path requests. Server-Sent Events are used for real-time fire simulation streaming, keeping the connection open while the server pushes temperature and path events as they are computed.
 
 ---
 
-## Installation & Detailed Local Deployment (Windows)
+## Installation & Detailed Local Deployment
 
-This section covers first-time setup and local launch.
+This section covers first-time setup and local launch for Windows.
 
 ### System Requirements
 - Windows 10/11
@@ -317,165 +312,115 @@ $env:Path = "$nodeDir;$env:Path"
 
 ## Configuration
 
-### Backend — environment variables
+Frontend defaults are stored near the top of `src/App.jsx`.
 
-| Variable | Default | Description |
-|---|---|---|
-| `CORS_ORIGINS` | *(none)* | Comma-separated extra allowed origins, e.g. `https://myapp.com` |
+```javascript
+const API_BASE = "http://localhost:8000";
+```
 
-The backend always allows `http://localhost:5173` and `http://127.0.0.1:5173` by default.
+If the backend runs elsewhere, update this URL.
 
-### Frontend — `.env` file
-
-For production: set `VITE_API_BASE` to your deployed backend URL and add that URL to `CORS_ORIGINS`.
+Key defaults include:
+* graph mode
+* node connection threshold
+* stair vertical sampling
+* fire interval
+* hazard weight
+* ambient and fire temperatures
+* lethality threshold
+* agent height
 
 ---
 
 ## Usage Workflow
 
-1. **Load IFC** — Drag and drop or browse to an `.ifc` file. The model appears in the 3D viewer; the scene is immediately navigable (pan/orbit/zoom) while building data extraction continues in the background (shown as a small pulsing badge).
-
-2. **Configure graph** — Choose hybrid or grid-snap (rectilinear) mode. Adjust floor/stair connectivity radius and grid cell size. Toggle "Use walls as obstacles" to incorporate IFC walls as navigation barriers.
-
-3. **Build egress graph** — Click "Build IFC egress graph." The navigation wire graph appears overlaid on the model (blue wires). Stats show node/edge count, door count, and wall segment count.
-
-4. **Set start and exit points** — Click "Pick start point," then click a floor location in the model. Repeat for "Pick exit point." Green dot = start; orange dot = exit.
-
-5. **Compute path** — Click "Compute IFC egress path." The shortest wall-aware path is drawn as a red line through the graph.
-
-6. **Run fire simulation** — Configure fire parameters:
-   - **Precompute timeline** — batch-bakes BFS fire spread before playback; fast but does not support temperature mode
-   - **Temperature model** — enables the heat-diffusion model; always uses SSE streaming even if "Precompute" is checked
-   - **Dynamic path rerouting** — recomputes the shortest path every N steps; requires temperature model + start/exit points set
-
-   Click "Start fire." Graph wires change colour as fire spreads (blue → red gradient in temperature mode; orange in binary mode). With dynamic rerouting enabled, the evacuation path is continuously redrawn in magenta as it avoids expanding fire. Both updates are visible simultaneously in the viewer.
-
-7. **Train RL agent** *(optional)* — Enable "Use fire in RL" and click "Train RL path." The Q-learning agent trains over the configured number of episodes and returns the best path found.
+1. Load IFC using the browser picker.
+2. Build graph to extract floor, stair, door, and wall geometry and send it to the backend.
+3. Pick start and end points directly in the 3D scene.
+4. Compute path to run shortest path with optional wall blocking.
+5. Run fire simulation in BFS or temperature mode.
+6. Observe dynamic updates as temperatures and escape paths evolve.
+7. Train RL to obtain a learned policy path under spreading fire.
 
 ---
 
 ## Algorithms
 
-### Graph construction — gap filling (grid-snap mode)
+**1. Point sampling from IFC**
+Floor and slab triangles are sampled on a regular XY grid. Stair triangles are sampled with denser vertical spacing. Door bottom-centre points are appended as mandatory graph waypoints. All sampled points are offset upward by user-defined agent height.
 
-Between any two occupied grid cells on the same axis-aligned column, intermediate cells are filled when the gap is ≤ `max_gap` cells. This bridges the mismatch between coarse IFC surface sampling (~1.5 m) and fine grid cells (0.3–1.5 m). Cells that fall within a wall's bounding volume are not filled during the gap-fill pass.
+**2. Graph construction**
+* **Hybrid mode:** Euclidean neighbour connections under threshold `d`.
+* **Grid-snap mode:** Points quantized into 3D cells. Six-axis neighbour connectivity only. Optional gap fill across sparse misses.
 
-### Door injection
+**3. Wall-aware shortest path**
+Dijkstra runs over the graph while rejecting edges whose 2D segment intersects an extracted wall centreline, unless the edge is associated with a door node.
 
-Each door's bottom-centre is computed from its bounding-box vertex array. Door points are added to the combined point set **before** the agent-height offset, so they receive the same height treatment as floor points. They are then force-connected to the five nearest floor nodes within 3 m.
+**4. Fire diffusion**
+* **BFS spread:** Gives topological distance from ignition.
+* **Temperature diffusion:** Updates each node using neighbour averaging and a fixed ignition temperature.
 
-### Wall obstacle pruning (path-time only)
+**5. Hazard-weighted re-routing**
+Path cost increases with local node temperature, biasing the route away from hazardous zones.
 
-Each wall's bounding box is collapsed to a 2D centreline segment along the wall's principal horizontal axis. During Dijkstra edge relaxation, an edge is skipped if:
-1. Its vertical range overlaps the wall's height range, **and**
-2. Its 2D horizontal projection intersects the wall segment (cross-product test).
-
-Door-adjacent edges are always kept. The stored graph adjacency is never modified — only the pathfinding traversal skips these edges.
-
-### Shortest path
-
-Standard Dijkstra with Euclidean edge weights (Dijkstra 1959). Wall checking is performed lazily during edge relaxation, keeping graph build and display free of wall logic.
-
-**Hazard-weighted (fire mode):**
-```text
-w(u, v) = dist(u, v) × (1 + α × max(T_u, T_v) / 120)
-```
-Implemented via TopologicPy `Graph.ShortestPath` (Jabi et al. 2019).
-
-### Fire spread — temperature diffusion
-
-Discrete heat-diffusion, adapted from Murugesan and Jabi (2019):
-```text
-T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) − T(n, t))
-```
-`k = 1.20`, ambient `T₀ = 20 °C`, ignition `T_fire = 120 °C`. The ignition node is held at `T_fire` every step. Temperature is mapped to RGB colour using a five-band gradient: blue (20 °C) → cyan (45 °C) → green (70 °C) → yellow (95 °C) → red (120 °C+).
-
-### Reinforcement learning — tabular Q-learning (Watkins and Dayan 1992)
-
-- **State:** current node ID
-- **Actions:** adjacent node IDs (from graph adjacency)
-- **Reward:** +100 at exit, −1 per step, −50 for lethal nodes
-- **Exploration:** ε-greedy, ε = 0.1
-- **Update:** `Q(s,a) ← Q(s,a) + α (r + γ max_a' Q(s',a') − Q(s,a))`
-- α = 0.1, γ = 0.95
+**6. Reinforcement learning**
+Tabular Q-learning uses graph nodes as states and adjacency choices as actions. Rewards favour reaching the exit quickly while avoiding hot regions.
 
 ---
 
 ## API Reference
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/health` | Health check |
-| `POST` | `/topology` | Process TopologicPy cell complex JSON |
-| `POST` | `/ifc-egress-graph` | Build navigation graph from IFC geometry payload |
-| `POST` | `/ifc-egress-path` | Compute wall-aware shortest path |
-| `POST` | `/fire-sim` | Precompute full fire timeline (non-streaming) |
-| `GET` | `/fire-sim/stream` | SSE: fire steps + dynamic path updates |
-| `POST` | `/rl/train` | Train Q-learning agent, return best path |
-
-### POST `/ifc-egress-graph` — key request fields
-
+**`POST /ifc-egress-graph`**
+Builds a navigation graph from IFC-extracted floor, stair, door, and wall geometry. Returns graph vertices and edges, wall segments, and metadata counts.
+Example response shape:
 ```json
 {
-  "floors":         [...],   // IFCSLAB geometry payloads (vertices, indices)
-  "stairs":         [...],   // IFCSTAIR geometry payloads
-  "doors":          [...],   // IFCDOOR geometry payloads
-  "walls":          [...],   // IFCWALL geometry payloads
-  "use_walls":      true,    // enable wall obstacle extraction
-  "up_axis":        "y",     // "x" | "y" | "z"
-  "agent_height":   0.75,    // metres above floor surface
-  "base_spacing":   0.5,     // point sampling density (m)
-  "max_edge_floor": 2.25,    // max edge length on floors (m)
-  "max_edge_stair": 0.4,     // max edge length on stairs (m)
-  "rectilinear":    false,   // filter diagonal edges in hybrid mode
-  "grid_snap":      false,   // use rectilinear grid-snap mode
-  "grid_cell_size": 1.5      // grid resolution in metres
+  "points": [[x, y, z], [x, y, z]],
+  "edges": [[0, 1], [1, 2]],
+  "walls": [[[x1, y1], [x2, y2]]],
+  "meta": {
+    "node_count": 1866,
+    "edge_count": 1552,
+    "door_count": 14,
+    "wall_count": 57,
+    "floor_count": 21,
+    "stair_count": 4
+  }
 }
 ```
 
-### POST `/ifc-egress-graph` — response
+**`POST /ifc-egress-path`**
+Computes shortest path between two picked coordinates over the graph with optional wall blocking.
 
-```json
-{
-  "mode":    "ifc",
-  "stats":   { "nodes": 426, "edges": 751, "door_nodes": 14, "wall_segments": 57 },
-  "edges":   [ [[x1,y1,z1], [x2,y2,z2]], ... ],   // position pairs for Three.js
-  "edge_ids": [ ["ifc_0", "ifc_5"], ... ],          // node-ID pairs for fire colouring
-  "coords":  { "ifc_0": [x,y,z], ... }             // node ID → world position
-}
-```
+**`POST /fire-sim`**
+Returns a complete fire timeline for precomputed playback.
 
-### GET `/fire-sim/stream` — SSE event types
+**`GET /fire-sim/stream`**
+Streams temperature updates and dynamic paths over Server-Sent Events.
 
-| `type` | Fields | Description |
-|---|---|---|
-| `meta` | `cell_bboxes` | Sent once at start |
-| `temperature_step` | `step`, `temperatures: {nodeId: °C}` | Per-step temperature map |
-| `path_update` | `step`, `path`, `cost`, `changed` | Re-routed path coordinates |
-| `step` | `step`, `nodes: [nodeId]` | Newly burning nodes (binary model) |
-| `done` | — | Simulation complete |
+**`POST /rl/train`**
+Runs server-side Q-learning and returns the best learned path.
+
+**`POST /topology`**
+General TopologicPy endpoint for cell complex and graph operations.
 
 ---
 
 ## UI Parameters
 
-| Parameter | Description |
+| Parameter | Meaning |
 |---|---|
-| Floor connectivity (m) | Maximum edge length between floor nodes (hybrid mode) |
-| Stair connectivity (m) | Maximum edge length between stair nodes |
-| Grid-snap (rectilinear) | Use regular voxel grid instead of distance-based graph |
-| Grid cell size (m) | Voxel resolution for grid-snap mode |
-| Use walls as obstacles | Incorporate IFC wall centrelines as path barriers |
-| Precompute timeline | Pre-bake fire spread before playback (batch mode) |
-| Temperature model | Enable thermal diffusion model instead of BFS spread |
-| Dynamic path rerouting | Re-route evacuation path every N steps as fire spreads |
-| Hazard weight (α) | How strongly temperature penalises edge cost |
-| Recompute interval | Steps between path re-computations |
-| Lethality threshold (°C) | Nodes above this temperature are avoided if possible |
-| Step delay (ms) | Playback speed |
-| Fire steps | Total simulation steps |
-| RL episodes | Number of training episodes for Q-learning agent |
-| RL max steps | Maximum steps per episode |
+| Graph mode | Hybrid or grid-snap graph generation |
+| Connect threshold | Maximum distance for hybrid edge creation |
+| Grid cell size | Quantization size for rectilinear mode |
+| Stair Z step | Stair vertical sampling resolution |
+| Fire mode | BFS or temperature diffusion |
+| Fire interval | Time between streamed fire updates |
+| Hazard weight | Extra path cost from temperature |
+| Fire temperature | Temperature assigned to ignition |
+| Ambient temperature | Baseline temperature |
+| Lethality threshold | Optional upper temperature for edge filtering |
+| Agent height | Vertical offset of navigation points |
 
 ---
 
@@ -483,176 +428,123 @@ T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) − T(n, t))
 
 | Feature | Status |
 |---|---|
-| IFC loading and 3D viewer (non-blocking) | Done |
-| Egress graph — hybrid (distance-based) | Done |
-| Egress graph — grid-snap (rectilinear) | Done |
-| Shortest path — wall-aware Dijkstra | Done |
-| Wall obstacles (path-time 2D segment intersection) | Done |
-| Door waypoints (forced graph nodes) | Done |
-| Fire spread — binary BFS model | Done |
-| Fire spread — temperature diffusion model | Done |
-| Fire visualised on graph wires (per-vertex colour) | Done |
-| Dynamic path re-routing during fire (SSE) | Done |
-| RL path training (Q-learning) | Done |
-| Multi-floor path visualisation | In progress |
-| Export egress graph as GraphML / GML | Planned |
-| Agent / crowd simulation | Planned |
-| Smoke and toxicity layer | Planned |
+| Browser IFC loading | Working |
+| Graph generation from slabs, stairs, doors | Working |
+| Door waypoint injection | Working |
+| Wall-aware shortest path | Working |
+| BFS fire spread | Working |
+| Temperature diffusion | Working |
+| SSE fire streaming | Working |
+| Dynamic path rerouting | Working |
+| RL route training | Prototype |
+| Wall-solid obstacle modelling | Work in progress |
 
 ---
 
 ## Known Limitations
 
-- **IFC axis convention:** The agent-height offset is applied to the Z axis regardless of `up_axis`. Models with Y-up IFC convention show a slight vertical positional offset on floor nodes; connectivity is not affected.
-- **Wall bounding-box accuracy:** Wall obstacle segments are derived from axis-aligned bounding boxes. Non-axis-aligned or curved walls may produce oversized obstacle segments that block more paths than intended.
-- **Large models:** Graph construction is single-threaded Python. Models with more than 20,000 sampled points may be slow. Reduce `max_points` in the request to limit graph size.
-- **RL scalability:** Tabular Q-learning does not scale beyond ~5,000 nodes. Deep RL (DQN) is planned as a future extension.
-- **CORS defaults:** The backend only allows `localhost:5173` by default. Set `CORS_ORIGINS` when deploying to a remote server.
+* Fire diffusion is graph-based, not CFD-based.
+* Temperature updates are simplified and do not model smoke, ventilation, or material behaviour.
+* Wall extraction currently uses simplified centreline obstacles, not full volumetric collision geometry.
+* RL is tabular and intended for research-scale graph experiments, not large production deployments.
+* IFC element interpretation depends on geometry quality and naming consistency in the source model.
 
 ---
 
 ## Troubleshooting
 
-### Fire simulation shows no coloured wires
+**Backend says "No IFC egress graph available"**
+The fire or path endpoints require a graph to be built first. Load an IFC model and run `Build Graph` before starting fire simulation or RL.
 
-- Ensure you have built the egress graph first (blue wires visible). The fire visualisation requires `edge_ids` returned by `POST /ifc-egress-graph`.
-- In temperature mode, the graph wires update per SSE event. If no colour change appears, check that the backend is reachable and the SSE connection opened (browser DevTools → Network → EventStream).
-- In binary (BFS) mode, uncheck "Temperature model." With precompute enabled, fire data is fetched in a single POST and animated with a timer.
+**Frontend cannot reach backend**
+Check that FastAPI is running on port `8000` and that `API_BASE` in `App.jsx` matches.
 
-### Fire works only the first time
+**CORS error in browser**
+Ensure the backend CORS middleware includes your frontend origin, for example `http://localhost:5173`.
 
-- Click "Stop fire" before clicking "Start fire" again. This fully closes the SSE connection and resets accumulated state. Clicking "Start fire" while a simulation is still running may cause the new connection to compete with the old one.
+**IFC loads but graph is empty**
+The IFC may lack properly triangulated slabs or stairs, or the sampling parameters may be too strict. Try larger graph thresholds or smaller grid cells.
 
-### Graph builds but path is not found
-
-- Pick start and exit points **after** building the graph. Points picked before graph construction are snapped to the graph at compute time; if the graph changes, repick the points.
-- If walls are enabled and no path exists (all routes blocked), the pathfinder falls back to the full graph without wall constraints. If the path still fails, reduce the lethality threshold or disable "Use walls."
-
-### IFC model loads but graph has very few nodes
-
-- The default point sampling density is 0.5 m. If the building has small rooms or narrow corridors, decrease "Grid cell size" to 0.3–0.5 m.
-- Check that floor slab IFC types are detected: the extractor looks for `IFCSLAB`, `IFCSLABSTANDARDCASE`, `IFCSLABELEMENTEDCASE`, and `IFCCOVERING`. Models that use `IFCPLATE` for floors will need a code extension.
-
-### Backend returns 400 "No IFC egress graph available"
-
-- The graph is held in server memory (`LAST_GRAPHS["ifc"]`). It is lost if the backend process is restarted. Rebuild the graph after each backend restart.
-
-### `TopologicPy` import error on startup
-
-- TopologicPy is not on PyPI. Download the `.whl` matching your Python version and OS from [wassimj/topologicpy releases](https://github.com/wassimj/topologicpy/releases) and install it: `pip install topologicpy-*.whl`.
-- On Python 3.12+, some versions of TopologicPy may not yet have a compatible wheel. Python 3.10 or 3.11 is recommended.
-
-### CORS errors in browser console
-
-- Add your frontend origin to `CORS_ORIGINS` in the backend environment (e.g. `CORS_ORIGINS=https://myapp.example.com`).
-
-### web-ifc WASM not loading (model never appears)
-
-- The WASM files must be served from the same origin as the frontend (or via a configured `VITE_WEBIFC_WASM_PATH`). Copy the `node_modules/web-ifc/*.wasm` files to `public/wasm/` and set `VITE_WEBIFC_WASM_PATH=/wasm/` in `.env`.
+**Frontend memory spikes on large IFC models**
+Large fragment models and dense graph overlays can exhaust browser memory. Start with smaller IFC files or coarser sampling values.
 
 ---
 
 ## Research Context
 
-This project applies topological spatial reasoning to building fire egress analysis, following the cell complex model introduced by Jabi et al. (2019). Key contributions in this implementation:
+Topologic Studio sits within a line of research that treats building interiors as topological and graph-based spatial structures rather than only as geometric meshes or BIM objects. Topologic and related work showed that non-manifold topology and cell-complex reasoning can support richer architectural representations of adjacency, enclosure, circulation, and navigation (Aish et al. 2018; Jabi et al. 2018). This project adopts that view at the application level by converting IFC-derived floors, stairs, and doors into a navigation graph that can be queried and visualized in real time.
 
-- **Browser-native IFC parsing** — no server-side IFC processing; web-ifc WASM runs the IFC parser entirely in the browser
-- **Rectilinear grid-snap navigation graph** — preserves architectural alignment of walls, corridors, and stairs; gap-filling ensures connectivity despite sparse IFC surface sampling
-- **Simultaneous fire and path visualisation** — fire spread and re-routed evacuation path are streamed concurrently over SSE and rendered as per-vertex colours on Three.js `LineSegments`
-- **Hazard-weighted Dijkstra** integrating the temperature field from Murugesan and Jabi (2019) directly into edge costs
-- **GraphML-compatible graph output** (node/edge coordinate and ID features) — suitable for downstream GNN-based evacuation research
+The graph-generation layer is also grounded in research on BIM-to-network conversion for indoor navigation and emergency response. That literature established approaches that convert building interiors into traversable graphs for indoor routing and emergency response (Boguslawski 2011; Liu and Zlatanova 2011; Isikdag, Zlatanova, and Underwood 2013; Boguslawski et al. 2015, 2016a, 2016b). The current implementation extends that direction through a browser-based workflow, explicit door-node injection, stair-aware sampling, and a rectilinear grid-snap strategy designed to preserve architectural alignment.
 
-This tool builds on prior work applying spatial graphs and topological representations to evacuation modelling in architecture and urban design (Hillier and Hanson 1984; Turner and Penn 2002; Pan et al. 2006).
+At the routing level, the project follows research on risk-aware and balanced route selection in hazardous buildings (Duckham and Kulik 2003; Park et al. 2009; Vanclooster et al. 2014; Zverovich et al. 2016, 2017). The path solver begins with Dijkstra shortest path, then adds a hazard-weighted cost term so the route can adapt as local graph temperatures change over time.
+
+At the fire and learning level, the most relevant precedent is the study on the synergy of non-manifold topology and reinforcement learning for fire egress (Jabi et al. 2019). In this README, that paper is used as research context for the broader idea of graph-based fire propagation and adaptive route selection. It should not be read as a claim that this repository reproduces the same implementation in full. The current codebase, as documented in the repository, exposes shortest-path routing, streamed or precomputed fire overlays, and an RL training endpoint inside a browser-first IFC workflow with live visualization and server-side updates.
+
+Taken together, the project should be read as a research prototype for IFC-native evacuation analysis rather than as a final validated fire-engineering simulator. Its value lies in linking architectural representation, graph construction, hazard-aware routing, and interactive visualization inside one reproducible software stack.
 
 ---
 
 ## References
 
-### Topologic / TopologicPy
+**Graph-based spatial reasoning / Cell complexes / Topologic**
+* Aish, R., Jabi, W., Lannon, S., Wardhana, N.M. and Chatzivasileiadi, A. 2018. "Topologic: Tools to Explore Architectural Topology." *Proceedings of eCAADe 2018*.
+* Boguslawski, P. 2011. *Modelling and Analysing 3D Building Interiors with the Dual Half-Edge Data Structure*. PhD thesis, University of Glamorgan.
+* Jabi, W., Aish, R., Lannon, S., Chatzivasileiadi, A. and Wardhana, N.M. 2018. "Topologic: Enhancing the Representation of Space in 3D Modelling Environments through Non-Manifold Topology." *Proceedings of eCAADe 2018*.
+* Kwan, M.-P. and Lee, J. 2005. "Emergency Response after 9/11: The Potential of Real-Time 3D GIS for Quick Emergency Response in Micro-Spatial Environments." *Computers, Environment and Urban Systems* 29: 93–113.
 
-Jabi, Wassim, Aikaterini Chatzivasileiadi, Njegos M. Wardhana, Simon Lannon, and Robert Aish. 2019. "The Role of Topological Computation in the Generation of Building Spatial Structures." *Architectural Science Review* 62 (5): 429–440. https://doi.org/10.1080/00038628.2019.1651606
+**Navigable network generation from BIM**
+* Boguslawski, P., Mahdjoubi, L., Zverovich, V., Barki, H. and Fadli, F. 2015. "BIM-GIS Modelling in Support of Emergency Response Applications." In *Building Information Modelling (BIM) in Design, Construction and Operations*, vol. 149, edited by L. Mahdjoubi, C. Brebbia, and R. Laing, 381–392. WIT Press.
+* Boguslawski, P., Mahdjoubi, L., Zverovich, V. and Fadli, F. 2016a. "Automated Construction of Variable Density Navigable Networks in a 3D Indoor Environment for Emergency Response." *Automation in Construction* 72 (2): 115–128.
+* Boguslawski, P., Mahdjoubi, L., Zverovich, V. and Fadli, F. 2016b. "Two-Graph Building Interior Representation for Emergency Response Applications." *ISPRS Annals of the Photogrammetry, Remote Sensing and Spatial Information Sciences* III-2: 9–14.
+* Isikdag, U., Zlatanova, S. and Underwood, J. 2013. "A BIM-Oriented Model for Supporting Indoor Navigation Requirements." *Computers, Environment and Urban Systems* 41: 112–123.
+* Liu, L. and Zlatanova, S. 2011. "A 'Door-to-Door' Path-Finding Approach for Indoor Navigation." In *Gi4DM 2011: GeoInformation for Disaster Management*. ISPRS.
 
-Jabi, Wassim. 2022. *TopologicPy: A Python Library for Topological Spatial Modelling.* https://topologic.app
+**Shortest / safest / optimal path computation**
+* Duckham, M. and Kulik, L. 2003. "'Simplest' Paths: Automated Route Selection for Navigation." In *Spatial Information Theory*, edited by W. Kuhn, M.F. Worboys, and S. Timpf, 169–185. Springer.
+* Park, I., Jang, G., Park, S. and Lee, J. 2009. "Time-Dependent Optimal Routing in Micro-Scale Emergency Situation." In *Tenth International Conference on Mobile Data Management*, 714–719.
+* Vanclooster, A., De Maeyer, P., Fack, V. and Van de Weghe, N. 2014. "Calculating Least Risk Paths in 3D Indoor Space." In *Innovations in 3D Geo-Information Sciences*, edited by U. Isikdag, 13–31. Springer.
+* Zverovich, V., Mahdjoubi, L., Boguslawski, P., Fadli, F. and Barki, H. 2016. "Emergency Response in Complex Buildings: Automated Selection of Safest and Balanced Routes." *Computer-Aided Civil and Infrastructure Engineering* 31 (8): 617–632.
+* Zverovich, V., Mahdjoubi, L., Boguslawski, P. and Fadli, F. 2017. "Analytic Prioritization of Indoor Routes for Search and Rescue Operations in Hazardous Environments." *Computer-Aided Civil and Infrastructure Engineering* 32 (9): 727–747.
 
-### IFC Standard
+**Fire spread simulation & RL-based path training**
+* Jabi, W., Chatzivasileiadi, A., Wardhana, N.M., Lannon, S. and Aish, R. 2019. "The Synergy of Non-Manifold Topology and Reinforcement Learning for Fire Egress." In *Proceedings of eCAADe 37 / SIGraDi 23*, vol. 2, 85–94.
+* Sutton, R. and Barton, A. 2018. *Reinforcement Learning: An Introduction*. MIT Press.
+* Thombre, P. 2018. *Multi-Objective Path Finding Using Reinforcement Learning*. Master's thesis, San Jose State University.
 
-BuildingSMART International. 2024. *IFC4 ADD2 TC1 — Industry Foundation Classes.* https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2_TC1/HTML/
+**Agent-based evacuation simulation / dynamic density**
+* Nelson, H.E. and MacLennan, H.A. 1995. "Emergency Movement." In *SFPE Handbook of Fire Protection Engineering*, edited by P.J. DiNenno, 3.286–3.295. NFPA.
+* Pauls, J. 1995. "Movement of People." In *SFPE Handbook of Fire Protection Engineering*, edited by P.J. DiNenno, 3.263–3.285. NFPA.
 
-ISO 16739-1:2018. *Industry Foundation Classes (IFC) for Data Sharing in the Construction and Facility Management Industries.* Geneva: International Organization for Standardization.
-
-### Web IFC / BIM Components
-
-That Open Company. 2024a. *web-ifc: IFC Parsing in the Browser.* https://github.com/ThatOpenCompany/web-ifc
-
-That Open Company. 2024b. *Open BIM Components (@thatopen/components).* https://github.com/ThatOpenCompany/engine_components
-
-### Fire Spread Model
-
-Murugesan, Libish, and Wassim Jabi. 2019. "Spatial Graph-Based Fire Spread Simulation for Building Evacuation." In *Proceedings of eCAADe 37*, Porto, Portugal.
-
-Drysdale, Dougal. 2011. *An Introduction to Fire Dynamics.* 3rd ed. Chichester: Wiley. https://doi.org/10.1002/9781119975465
-
-### Egress and Evacuation Modelling
-
-Pan, Xiaoshan, Charles S. Han, Keith Dauber, and Kincho H. Law. 2006. "A Multi-Agent Based Framework for the Simulation of Human and Social Behaviors during Emergency Evacuations." *AI & Society* 22 (2): 113–132. https://doi.org/10.1007/s00146-007-0126-1
-
-Kuligowski, Erica D., Richard D. Peacock, and Bryan L. Hoskins. 2010. *A Review of Building Evacuation Models.* 2nd ed. NIST Technical Note 1680. Gaithersburg, MD: National Institute of Standards and Technology. https://doi.org/10.6028/NIST.TN.1680
-
-### Space Syntax / Spatial Graph Theory
-
-Hillier, Bill, and Julienne Hanson. 1984. *The Social Logic of Space.* Cambridge: Cambridge University Press.
-
-Turner, Alasdair, and Alan Penn. 2002. "Encoding Natural Movement as an Agent-Based System: An Investigation into Human Pedestrian Behaviour in the Built Environment." *Environment and Planning B* 29 (4): 473–490. https://doi.org/10.1068/b12850
-
-### Pathfinding
-
-Dijkstra, Edsger W. 1959. "A Note on Two Problems in Connexion with Graphs." *Numerische Mathematik* 1 (1): 269–271. https://doi.org/10.1007/BF01386390
-
-Hart, Peter E., Nils J. Nilsson, and Bertram Raphael. 1968. "A Formal Basis for the Heuristic Determination of Minimum Cost Paths." *IEEE Transactions on Systems Science and Cybernetics* 4 (2): 100–107. https://doi.org/10.1109/TSSC.1968.300136
-
-### Reinforcement Learning
-
-Watkins, Christopher J. C. H., and Peter Dayan. 1992. "Q-Learning." *Machine Learning* 8 (3–4): 279–292. https://doi.org/10.1007/BF00992698
-
-Mnih, Volodymyr, Koray Kavukcuoglu, David Silver, et al. 2015. "Human-Level Control through Deep Reinforcement Learning." *Nature* 518: 529–533. https://doi.org/10.1038/nature14236
-
-### Three.js
-
-Cabello, Ricardo, et al. 2024. *Three.js — JavaScript 3D Library.* https://threejs.org
+**Multi-criteria decision making (AHP for route ranking)**
+* Forcael, E., González, V., Orozco, F., Vargas, S., Pantoja, A. and Moscoso, P. 2014. "Ant Colony Optimization Model for Tsunamis Evacuation Routes." *Computer-Aided Civil and Infrastructure Engineering* 29 (10): 723–737.
+* Saaty, T.L. 1980. *The Analytic Hierarchy Process: Planning, Priority Setting, Resource Allocation*. McGraw-Hill.
 
 ---
 
 ## License
 
-MIT License
-
+**MIT License**
 Copyright (c) 2024 Libish Murugesan
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and sell copies of the Software, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### Third-Party Acknowledgements
-
 This project builds directly on the following open-source works. Their respective licenses govern their use and distribution:
 
-- **TopologicPy** — © Wassim Jabi and contributors. Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](https://github.com/wassimj/topologicpy/blob/main/LICENSE). Source: https://github.com/wassimj/topologicpy
-- **@thatopen/components** — © That Open Company. Licensed under the [MIT License](https://github.com/ThatOpenCompany/engine_components/blob/master/LICENSE). Source: https://github.com/ThatOpenCompany/engine_components
-- **web-ifc** — © That Open Company. Licensed under the [MIT License](https://github.com/ThatOpenCompany/web-ifc/blob/main/LICENSE). Source: https://github.com/ThatOpenCompany/web-ifc
-- **Three.js** — © Ricardo Cabello and contributors. Licensed under the [MIT License](https://github.com/mrdoob/three.js/blob/dev/LICENSE). Source: https://github.com/mrdoob/three.js
-- **FastAPI** — © Sebastián Ramírez. Licensed under the [MIT License](https://github.com/fastapi/fastapi/blob/master/LICENSE). Source: https://github.com/fastapi/fastapi
-- **React** — © Meta Platforms, Inc. Licensed under the [MIT License](https://github.com/facebook/react/blob/main/LICENSE). Source: https://github.com/facebook/react
+* **TopologicPy**. Licensed under the AGPL-3.0. Source: https://github.com/wassimj/topologicpy
+* **@thatopen/components**. Licensed under the MIT License. Source: https://github.com/ThatOpenCompany/engine_components
+* **web-ifc**. Licensed under the MIT License. Source: https://github.com/ThatOpenCompany/web-ifc
+* **Three.js**. Licensed under the MIT License. Source: https://github.com/mrdoob/three.js
+* **FastAPI**. Licensed under the MIT License. Source: https://github.com/fastapi/fastapi
+* **React**. Licensed under the MIT License. Source: https://github.com/facebook/react
 
-> **Note on TopologicPy licensing:** TopologicPy is distributed under AGPL-3.0. If you deploy this application as a network service, the AGPL requires that you make your complete modified source code available to users of that service. Review the [AGPL-3.0 terms](https://www.gnu.org/licenses/agpl-3.0.html) before deploying in a commercial or closed-source context.
-
----
+*Note on TopologicPy licensing:* TopologicPy is distributed under AGPL-3.0. If you deploy this application as a network service, the AGPL requires that you make your complete modified source code available to users of that service.
 
 **Author:** Libish Murugesan
 Researcher and Lecturer in Computational Architecture and Robotics for Architecture
 Alfaisal University, Riyadh, Saudi Arabia
-GitHub: [@libishm1](https://github.com/libishm1)
-
-The fire spread model and egress graph methodology were first presented at:
-> Murugesan, Libish, and Wassim Jabi. 2019. "Spatial Graph-Based Fire Spread Simulation for Building Evacuation." In *Proceedings of eCAADe 37*, Porto, Portugal.
+GitHub: @libishm1
