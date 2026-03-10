@@ -4,10 +4,6 @@ A browser-based research tool for IFC building model analysis, spatial navigatio
 
 **Live demo:** https://libishm1.github.io/Topologic_Studio
 
-> **Screenshot** — rectilinear grid-snap graph (1866 nodes / 1552 edges), 14 door waypoints, 57 wall segments, temperature fire simulation at step 49 with dynamic path rerouting (cost 27.48 m), all rendered simultaneously in the browser:
->
-> ![Topologic Studio — fire egress simulation screenshot](docs/screenshot.png)
-
 ---
 
 ## Image Series
