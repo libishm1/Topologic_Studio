@@ -55,6 +55,8 @@ Toggle IFC walls as navigation obstacles for more spatially accurate routing.
 
 ![6](https://github.com/user-attachments/assets/014f5c03-d366-4844-a2ac-c65ca91b7b28)
 
+<img width="1919" height="986" alt="image" src="https://github.com/user-attachments/assets/9401488b-7b58-4a80-9db7-c6614dc8cab9" />
+
 ---
 
 ## Fire + Egress Panel
