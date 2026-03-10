@@ -540,6 +540,6 @@ If you deploy network-accessible services with AGPL components (like TopologicPy
 ---
 
 **Author:** Libish Murugesan  
-Researcher and Lecturer in Computational Architecture and Robotics for Architecture  
+Researcher in Computational Architecture and Robotics for Architecture  
 Alfaisal University, Riyadh, Saudi Arabia  
 GitHub: [@libishm1](https://github.com/libishm1)
