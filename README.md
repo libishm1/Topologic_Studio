@@ -91,7 +91,7 @@ The following IFC element types are extracted for navigation:
 | IFC Type | Role |
 |---|---|
 | `IFCSLAB` | Floor and ceiling surfaces — sampled for walkable floor points |
-| `IFCSTAIR` | Stair geometry — sampled at fine vertical resolution (≤ 0.15 m per tread) |
+| `IFCSTAIR` | Stair geometry — sampled at fine vertical resolution (<= 0.15 m per tread) |
 | `IFCDOOR` | Door openings — injected as forced waypoints in the navigation graph |
 | `IFCWALL` / `IFCWALLSTANDARDCASE` | Wall centrelines — used as path obstacles during traversal |
 
@@ -103,7 +103,7 @@ Two modes are available:
 
 **Hybrid (distance-based):** Points sampled from floor and stair surfaces are connected when within a user-defined distance threshold. An optional rectilinear filter removes diagonal connections by comparing the horizontal minor/major extent ratio of each edge.
 
-**Grid-snap (rectilinear):** Sampled points are snapped to a regular voxel grid. Only the six cardinal directions (±x, ±y, ±z) are connected — no diagonals. A gap-filling pass bridges cells separated by sparse sampling. Stairs use a fine vertical cell size (default 0.15 m) to capture individual treads.
+**Grid-snap (rectilinear):** Sampled points are snapped to a regular voxel grid. Only the six cardinal directions (+/-x, +/-y, +/-z) are connected — no diagonals. A gap-filling pass bridges cells separated by sparse sampling. Stairs use a fine vertical cell size (default 0.15 m) to capture individual treads.
 
 Door positions (extracted as bounding-box bottom-centres) are appended to the full point set before the agent-height offset is applied, ensuring they sit at the same navigable height as floor nodes. Each door is then force-connected to its five nearest floor neighbours within 3 m.
 
@@ -120,20 +120,20 @@ Two models are supported:
 **Temperature diffusion model:** Each node holds a temperature value T. At every step, heat transfers from hot neighbours:
 
 ```text
-T(n, t+1) = T(n, t) + k × (mean(T(neighbours, t)) − T(n, t))
+T(n, t+1) = T(n, t) + k * (mean(T(neighbours, t)) - T(n, t))
 ```
 
-where `k` is the heat transfer coefficient (default 1.20), adapted from (Murugesan and Jabi 2019). The ignition node is held at 120 °C. Temperatures below ambient (20 °C) are shown as blue; higher temperatures map through cyan → green → yellow → red. Fire spread and dynamic path re-routing are streamed and displayed simultaneously.
+where `k` is the heat transfer coefficient (default 1.20), adapted from (Murugesan and Jabi 2019). The ignition node is held at 120 degC. Temperatures below ambient (20 degC) are shown as blue; higher temperatures map through cyan -> green -> yellow -> red. Fire spread and dynamic path re-routing are streamed and displayed simultaneously.
 
 ### Dynamic Path Re-routing
 
 During temperature-mode fire simulation, the evacuation path is recomputed every N steps using hazard-weighted shortest-path via TopologicPy's `Graph.ShortestPath`. Edge weights are:
 
 ```text
-w = distance × (1 + α × max(T_a, T_b) / T_ref)
+w = distance * (1 + alpha * max(T_a, T_b) / T_ref)
 ```
 
-where `α` (hazard weight) is user-configurable (default 1.4). If a lethality temperature threshold is set, a filtered graph (excluding edges above threshold) is tried first; the full graph is used as fallback. The re-routed path is drawn as a magenta line in the viewer, concurrent with the fire colour update.
+where `alpha` (hazard weight) is user-configurable (default 1.4). If a lethality temperature threshold is set, a filtered graph (excluding edges above threshold) is tried first; the full graph is used as fallback. The re-routed path is drawn as a magenta line in the viewer, concurrent with the fire colour update.
 
 ### Reinforcement Learning
 
@@ -172,24 +172,26 @@ A tabular Q-learning agent (Watkins and Dayan 1992) is trained on-server to navi
 
 ```text
 Browser (React + Vite)
-│
-├── IFCViewer.jsx     — Three.js scene, IFC fragment loader, navigation graph
-│                       wire overlay (per-vertex fire colours), path lines,
-│                       raycasting for point picking
-├── App.jsx           — Application state, fire/path controls, SSE consumer,
-│                       graph/edge data management
-└── TopologyViewer.jsx — Generic TopologicPy JSON renderer
-        │
-        │  REST (JSON)  +  SSE (text/event-stream)
-        ▼
+|
++-- IFCViewer.jsx      Three.js scene, IFC fragment loader, navigation graph
+|                      wire overlay (per-vertex fire colours), path lines,
+|                      raycasting for point picking
++-- App.jsx            Application state, fire/path controls, SSE consumer,
+|                      graph/edge data management
++-- TopologyViewer.jsx Generic TopologicPy JSON renderer
+        |
+        |  REST (JSON)  +  SSE (text/event-stream)
+        v
 FastAPI backend  (topologicpy-web-backend/app/main.py)
-│
-├── POST /ifc-egress-graph   — Build navigation graph from IFC geometry
-├── POST /ifc-egress-path    — Compute wall-aware shortest path
-├── GET  /fire-sim/stream    — SSE: fire spread + dynamic path updates
-├── POST /fire-sim           — Precomputed fire timeline (non-streaming)
-├── POST /rl/train           — Train Q-learning agent, return best path
-└── POST /topology           — TopologicPy cell complex operations
+|
++-- POST /ifc-egress-graph   Build navigation graph from IFC geometry
++-- POST /ifc-egress-path    Compute wall-aware shortest path
++-- GET  /fire-sim/stream    SSE: fire spread + dynamic path updates
++-- POST /fire-sim           Precomputed fire timeline (non-streaming)
++-- POST /rl/train           Train Q-learning agent, return best path
++-- POST /upload-topology    TopologicPy cell complex operations
++-- POST /upload-ifc         Upload and parse IFC file
++-- GET  /graph-meta         Return stored graph metadata
 ```
 
 REST is used for graph and path requests (synchronous, JSON). [Server-Sent Events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) are used for real-time fire simulation streaming — the connection stays open and the server pushes temperature and path events as they are computed.
@@ -210,14 +212,14 @@ This section covers first-time setup and local launch.
 ### Expected Project Layout
 ```text
 TopologicStudio/
-├── topologicpy-web-backend/
-├── topologicpy-web-frontend/
-└── node-v24.11.1-win-x64/   # optional bundled Node runtime
++-- topologicpy-web-backend/
++-- topologicpy-web-frontend/
++-- node-v24.11.1-win-x64/   # optional bundled Node runtime
 ```
 
 ### 1) Clone
 ```powershell
-git clone [https://github.com/libishm1/Topologic_Studio.git](https://github.com/libishm1/Topologic_Studio.git)
+git clone https://github.com/libishm1/Topologic_Studio.git
 cd Topologic_Studio
 ```
 
@@ -228,10 +230,18 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install --upgrade pip
 pip install -r requirements.txt
+```
 
-# Install TopologicPy wheel (required for this project):
-# Download from: [https://github.com/wassimj/topologicpy/releases](https://github.com/wassimj/topologicpy/releases)
-pip install path\to\TopologicPy-<version>-<pyver>-<platform>.whl
+`requirements.txt` includes `topologicpy` — it installs automatically via pip from PyPI.
+
+> **TopologicPy licensing note:** TopologicPy is licensed under **AGPL-3.0**. Review the [AGPL-3.0 terms](https://www.gnu.org/licenses/agpl-3.0.html) before deploying publicly as a network service.
+
+**If pip install fails** (Python version mismatch), install a platform wheel as a fallback:
+
+```powershell
+# Download the matching wheel from:
+# https://github.com/wassimj/topologicpy/releases
+pip install path\to\TopologicPy-<version>-cp<pyver>-<platform>.whl
 ```
 
 ### 3) Frontend Setup
@@ -245,32 +255,36 @@ cd topologicpy-web-frontend
 npm install
 ```
 
-**Option B: Bundled Node**
+**Option B: Bundled Node** (replace `<repo-root>` with your clone path)
 ```powershell
-$nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
+$nodeDir = "<repo-root>\node-v24.11.1-win-x64"
 $env:Path = "$nodeDir;$env:Path"
 & "$nodeDir\npm.cmd" install
+# Alfaisal lab: $nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
 ```
 
 ### 4) Run Backend
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
+cd topologicpy-web-backend
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Alfaisal lab: cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
 ```
 
 ### 5) Run Frontend
 **Option A: System Node**
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
+cd topologicpy-web-frontend
 npm run dev -- --host 0.0.0.0 --port 5173
+# Alfaisal lab: cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
 ```
 
-**Option B: Bundled Node**
+**Option B: Bundled Node** (replace `<repo-root>` with your clone path)
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
-$nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
+cd topologicpy-web-frontend
+$nodeDir = "<repo-root>\node-v24.11.1-win-x64"
 $env:Path = "$nodeDir;$env:Path"
 & "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173
+# Alfaisal lab: $nodeDir = "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\node-v24.11.1-win-x64"
 ```
 
 ### 6) Open
@@ -297,7 +311,7 @@ VITE_WEBIFC_WASM_PATH=/wasm/
 ### Backend CORS
 `app/main.py` allows localhost frontend origins by default (`http://localhost:5173`, `http://127.0.0.1:5173`). You can add more via environment variables:
 ```env
-CORS_ORIGINS=[https://your-frontend.example.com](https://your-frontend.example.com)
+CORS_ORIGINS=https://your-frontend.example.com
 ```
 
 ---
@@ -317,7 +331,7 @@ CORS_ORIGINS=[https://your-frontend.example.com](https://your-frontend.example.c
 ## Algorithms
 
 ### Graph construction — gap filling (grid-snap mode)
-Between any two occupied grid cells on the same axis-aligned column, intermediate cells are filled when the gap is ≤ `max_gap` cells. This bridges the mismatch between coarse IFC surface sampling (~1.5 m) and fine grid cells (0.3–1.5 m). 
+Between any two occupied grid cells on the same axis-aligned column, intermediate cells are filled when the gap is <= `max_gap` cells. This bridges the mismatch between coarse IFC surface sampling (~1.5 m) and fine grid cells (0.3–1.5 m). 
 
 ### Door injection
 Each door's bottom-centre is computed from its bounding-box vertex array. Door points are added to the combined point set **before** the agent-height offset, so they receive the same height treatment as floor points. They are then force-connected to the five nearest floor nodes within 3 m.
@@ -330,23 +344,23 @@ Discrete heat-diffusion, adapted from (Jabi et al. 2019):
 ```text
 T(n, t+1) = T(n, t) + k * (mean(T(neighbours, t)) - T(n, t))
 ```
-where `k = 1.20`, ambient `T_0 = 20°C`, and ignition `T_fire = 120°C`. Temperature maps to RGB color via a five-band gradient (blue to red).
+where `k = 1.20`, ambient `T_0 = 20degC`, and ignition `T_fire = 120degC`. Temperature maps to RGB color via a five-band gradient (blue to red).
 
 ### Dynamic Path Re-routing
 Standard Dijkstra is augmented with hazard-weighted edge costs during temperature-mode fire simulation:
 ```text
-w = distance * (1 + α * max(T_a, T_b) / T_ref)
+w = distance * (1 + alpha * max(T_a, T_b) / T_ref)
 ```
-where `α` is a user-configurable hazard weight.
+where `alpha` is a user-configurable hazard weight.
 
 ### Reinforcement learning — tabular Q-learning
 - **State:** current node ID
 - **Actions:** adjacent node IDs
-- **Reward:** +100 at exit, −1 per step, −50 for lethal nodes
-- **Exploration:** ε-greedy, ε = 0.1
+- **Reward:** +100 at exit, -1 per step, -50 for lethal nodes
+- **Exploration:** epsilon-greedy, epsilon = 0.1
 - **Update:**
 ```text
-Q(s,a) = Q(s,a) + α(r + γ * max(Q(s',a')) - Q(s,a))
+Q(s,a) = Q(s,a) + lr * (r + gamma * max(Q(s',a')) - Q(s,a))
 ```
 
 ---
@@ -356,8 +370,9 @@ Q(s,a) = Q(s,a) + α(r + γ * max(Q(s',a')) - Q(s,a))
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Health check |
-| `POST` | `/topology` | Process TopologicPy cell complex JSON |
-| `POST` | `/upload-ifc` | Parses IFC for viewer graph/topology data upload flow |
+| `POST` | `/upload-topology` | Process TopologicPy cell complex JSON |
+| `POST` | `/upload-ifc` | Upload and parse IFC file |
+| `GET`  | `/graph-meta` | Return metadata for the current stored graph |
 | `POST` | `/ifc-egress-graph` | Build navigation graph from IFC geometry payload |
 | `POST` | `/ifc-egress-path` | Compute wall-aware shortest path |
 | `POST` | `/fire-sim` | Precompute full fire timeline (non-streaming) |
@@ -398,7 +413,7 @@ Q(s,a) = Q(s,a) + α(r + γ * max(Q(s',a')) - Q(s,a))
 | `type` | Fields | Description |
 |---|---|---|
 | `meta` | `cell_bboxes` | Sent once at start |
-| `temperature_step` | `step`, `temperatures: {nodeId: °C}` | Per-step temperature map |
+| `temperature_step` | `step`, `temperatures: {nodeId: degC}` | Per-step temperature map |
 | `path_update` | `step`, `path`, `cost`, `changed` | Re-routed path coordinates |
 | `step` | `step`, `nodes: [nodeId]` | Newly burning nodes (binary model) |
 | `done` | — | Simulation complete |
@@ -417,8 +432,8 @@ Q(s,a) = Q(s,a) + α(r + γ * max(Q(s',a')) - Q(s,a))
 | Precompute timeline | Pre-bake fire spread before playback (batch mode) |
 | Temperature model | Enable thermal diffusion model instead of BFS spread |
 | Dynamic path rerouting | Re-route evacuation path every N steps as fire spreads |
-| Hazard weight (α) | How strongly temperature penalises edge cost |
-| Lethality threshold (°C) | Nodes above this temperature are avoided if possible |
+| Hazard weight (alpha) | How strongly temperature penalises edge cost |
+| Lethality threshold (degC) | Nodes above this temperature are avoided if possible |
 | Step delay (ms) | Playback speed |
 
 ---
