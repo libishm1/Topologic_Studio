@@ -43,17 +43,18 @@ Toggle IFC walls as navigation obstacles for more spatially accurate routing.
 3. [Tech Stack](#tech-stack)
 4. [Architecture](#architecture)
 5. [Installation & Detailed Local Deployment (Windows)](#installation--detailed-local-deployment-windows)
-6. [Configuration](#configuration)
-7. [Usage Workflow](#usage-workflow)
-8. [Algorithms](#algorithms)
-9. [API Reference](#api-reference)
-10. [UI Parameters](#ui-parameters)
-11. [Feature Status](#feature-status)
-12. [Known Limitations](#known-limitations)
-13. [Troubleshooting](#troubleshooting)
-14. [Research Context](#research-context)
-15. [References](#references)
-16. [License](#license)
+6. [Web Deployment (GitHub Pages + Render)](#web-deployment-github-pages--render)
+7. [Configuration](#configuration)
+8. [Usage Workflow](#usage-workflow)
+9. [Algorithms](#algorithms)
+10. [API Reference](#api-reference)
+11. [UI Parameters](#ui-parameters)
+12. [Feature Status](#feature-status)
+13. [Known Limitations](#known-limitations)
+14. [Troubleshooting](#troubleshooting)
+15. [Research Context](#research-context)
+16. [References](#references)
+17. [License](#license)
 
 ---
 
@@ -291,6 +292,52 @@ $env:Path = "$nodeDir;$env:Path"
 * **Frontend:** http://localhost:5173
 * **Backend:** http://localhost:8000
 * **Backend docs:** http://localhost:8000/docs
+
+---
+
+## Web Deployment (GitHub Pages + Render)
+
+This project is set up for:
+- **Frontend:** GitHub Pages (via GitHub Actions)
+- **Backend:** Render (Docker web service)
+
+### 1) Deploy backend on Render
+
+1. Push this repository to GitHub.
+2. In Render, create a new **Web Service** from this repo.
+3. Use these service settings:
+   - Runtime: `Docker`
+   - Root Directory: `topologicpy-web-backend`
+   - Health Check Path: `/health`
+4. Add environment variable:
+   - `CORS_ORIGINS=https://<your-github-username>.github.io`
+5. Deploy and copy the backend URL (example: `https://topologicstudio-backend.onrender.com`).
+
+### 2) Configure frontend deploy URL
+
+1. In GitHub repository settings, go to **Settings > Secrets and variables > Actions > Variables**.
+2. Add repository variable:
+   - `VITE_API_BASE=https://<your-render-service>.onrender.com`
+
+The workflow at `.github/workflows/deploy-frontend.yml` uses this variable during build.
+
+### 3) Deploy frontend to GitHub Pages
+
+1. In GitHub, enable Pages with **Source: GitHub Actions**.
+2. Push changes to `main` that include frontend/workflow updates.
+3. The `Deploy Frontend` workflow builds Vite and publishes `dist` to Pages.
+4. Frontend URL pattern:
+   - `https://<your-github-username>.github.io/<repo-name>/`
+
+### 4) Verify production
+
+1. Open backend health URL: `https://<your-render-service>.onrender.com/health`
+2. Open frontend Pages URL.
+3. Upload IFC and run:
+   - Build IFC egress graph
+   - Compute IFC egress path
+   - Start fire simulation
+4. If API calls fail in browser console, re-check `CORS_ORIGINS` and `VITE_API_BASE`.
 
 ---
 

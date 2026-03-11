@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: topologicstudio-backend
+    runtime: docker
+    rootDir: topologicpy-web-backend
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: CORS_ORIGINS
+        value: https://libishm1.github.io
