@@ -1,0 +1,57 @@
+{
+  "generated_on": "2026-05-06",
+  "purpose": "Chunked implementation wiki for fast agent and human inference",
+  "entrypoints": {
+    "agents": "agent-index.md",
+    "humans": "human-index.md",
+    "graph": "knowledge-graph/system-graph.md",
+    "verification": "verification/README.md",
+    "codex": "CODEX.md",
+    "claude": "CLAUDE.md",
+    "browser_testing": "testing/agent-instructions-codex-claude.md"
+  },
+  "ignore_for_context": [
+    "verification/frontend-dist/**",
+    "../node-v24.11.1-win-x64/**",
+    "../node-v24.11.1-win-x64-2/**",
+    "../*.zip",
+    "../*.log"
+  ],
+  "intent_map": {
+    "ifc_graph": [
+      "backend/ifc-egress-graph.md",
+      "api/ifc-egress.md",
+      "frontend/ifc-viewer.md"
+    ],
+    "fire_dynamic_routing": [
+      "backend/fire-routing-rl.md",
+      "api/fire-rl.md",
+      "frontend/app-orchestration.md"
+    ],
+    "upload_contracts": [
+      "backend/topology-ifc-upload.md",
+      "api/upload-contracts.md"
+    ],
+    "deployment": [
+      "deployment/vite-github-pages.md",
+      "deployment/render-backend.md",
+      "deployment/onedrive-windows.md"
+    ],
+    "browser_console_testing": [
+      "testing/agent-instructions-codex-claude.md",
+      "testing/headless-browser-console-testing.md",
+      "testing/playwright-console-harness.md",
+      "testing/browser-test-matrix.md",
+      "testing/bug-log-template.md"
+    ],
+    "human_in_the_loop": [
+      "testing/human-in-the-loop-principles.md",
+      "issues/open-risks.md",
+      "issues/known-bugs-fixed.md"
+    ],
+    "ifc_lite_future": [
+      "roadmap/ifc-lite-profile.md",
+      "sources/external-references.md"
+    ]
+  }
+}

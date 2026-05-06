@@ -1,0 +1,6 @@
+{
+  "see": "knowledge-graph/graph.json",
+  "entrypoint": "knowledge-graph/system-graph.md",
+  "note": "Root pointer kept for agents that search for knowledge_graph.json at wiki root."
+}
+
