@@ -1,0 +1,39 @@
+{
+  "nodes": [
+    {"id": "react-app", "label": "React App", "type": "frontend", "doc": "../frontend/app-orchestration.md"},
+    {"id": "ifc-viewer", "label": "IFC Viewer", "type": "frontend", "doc": "../frontend/ifc-viewer.md"},
+    {"id": "topology-viewer", "label": "Topology Viewer", "type": "frontend", "doc": "../frontend/topology-viewer.md"},
+    {"id": "fastapi-backend", "label": "FastAPI Backend", "type": "backend", "doc": "../backend/overview.md"},
+    {"id": "ifc-egress-graph", "label": "IFC Egress Graph", "type": "model", "doc": "../backend/ifc-egress-graph.md"},
+    {"id": "fire-routing-rl", "label": "Fire Routing And RL", "type": "model", "doc": "../backend/fire-routing-rl.md"},
+    {"id": "upload-contracts", "label": "Upload Contracts", "type": "api", "doc": "../api/upload-contracts.md"},
+    {"id": "topologicpy", "label": "TopologicPy", "type": "library", "doc": "../sources/dependencies.md"},
+    {"id": "threejs", "label": "Three.js", "type": "library", "doc": "../references/context7-api-notes.md"},
+    {"id": "thatopen", "label": "That Open Components", "type": "library", "doc": "../sources/external-references.md"},
+    {"id": "web-ifc", "label": "web-ifc", "type": "library", "doc": "../sources/dependencies.md"},
+    {"id": "vite", "label": "Vite", "type": "tooling", "doc": "../deployment/vite-github-pages.md"},
+    {"id": "github-pages", "label": "GitHub Pages", "type": "deployment", "doc": "../deployment/vite-github-pages.md"},
+    {"id": "render", "label": "Render", "type": "deployment", "doc": "../deployment/render-backend.md"},
+    {"id": "onedrive", "label": "OneDrive Windows Dev", "type": "environment", "doc": "../deployment/onedrive-windows.md"},
+    {"id": "openkb-method", "label": "OpenKB Method", "type": "documentation", "doc": "../references/openkb-method.md"}
+  ],
+  "edges": [
+    {"from": "react-app", "to": "fastapi-backend", "relation": "calls_routes"},
+    {"from": "react-app", "to": "ifc-viewer", "relation": "renders_when_viewer_mode_ifc"},
+    {"from": "react-app", "to": "topology-viewer", "relation": "renders_when_viewer_mode_topology"},
+    {"from": "ifc-viewer", "to": "thatopen", "relation": "uses"},
+    {"from": "ifc-viewer", "to": "web-ifc", "relation": "extracts_ifc_ids_with"},
+    {"from": "ifc-viewer", "to": "threejs", "relation": "renders_overlays_with"},
+    {"from": "ifc-viewer", "to": "ifc-egress-graph", "relation": "supplies_geometry"},
+    {"from": "fastapi-backend", "to": "ifc-egress-graph", "relation": "builds_and_stores"},
+    {"from": "ifc-egress-graph", "to": "fire-routing-rl", "relation": "feeds"},
+    {"from": "fire-routing-rl", "to": "topologicpy", "relation": "uses_graph_shortest_path"},
+    {"from": "topology-viewer", "to": "threejs", "relation": "uses"},
+    {"from": "vite", "to": "github-pages", "relation": "builds_for"},
+    {"from": "render", "to": "fastapi-backend", "relation": "hosts"},
+    {"from": "onedrive", "to": "vite", "relation": "affects_local_commands"},
+    {"from": "openkb-method", "to": "react-app", "relation": "documents"},
+    {"from": "openkb-method", "to": "fastapi-backend", "relation": "documents"}
+  ]
+}
+
