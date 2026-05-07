@@ -124,7 +124,7 @@ Two models are supported:
 T(n, t+1) = T(n, t) + k * (mean(T(neighbours, t)) - T(n, t))
 ```
 
-where `k` is the heat transfer coefficient (default 1.20), adapted from (Murugesan and Jabi 2019). The ignition node is held at 120 degC. Temperatures below ambient (20 degC) are shown as blue; higher temperatures map through cyan -> green -> yellow -> red. Fire spread and dynamic path re-routing are streamed and displayed simultaneously.
+where `k` is the heat transfer coefficient (default 1.20), adapted from (Jabi et al. 2019). The ignition node is held at 120 degC. Temperatures below ambient (20 degC) are shown as blue; higher temperatures map through cyan -> green -> yellow -> red. Fire spread and dynamic path re-routing are streamed and displayed simultaneously.
 
 ### Dynamic Path Re-routing
 
@@ -159,12 +159,12 @@ A tabular Q-learning agent (Watkins and Dayan 1992) is trained on-server to navi
 
 | Library | Purpose |
 |---|---|
-| [React 18](https://react.dev) | UI framework |
+| [React 19](https://react.dev) | UI framework |
 | [Vite 7](https://vite.dev) | Build tool and dev server |
 | [Three.js](https://threejs.org) | 3D rendering, `BufferGeometry`, `vertexColors` |
-| [@thatopen/components](https://github.com/ThatOpenCompany/engine_components) | IFC Fragments viewer engine |
-| [@thatopen/fragments](https://github.com/ThatOpenCompany/engine_fragments) | IFC fragment worker and geometry extraction |
-| [web-ifc](https://github.com/ThatOpenCompany/web-ifc) | IFC WASM parser (runs in browser) |
+| [@thatopen/components](https://github.com/ThatOpen/engine_components) | IFC Fragments viewer engine |
+| [@thatopen/fragments](https://github.com/ThatOpen/engine_fragments) | IFC fragment worker and geometry extraction |
+| [web-ifc](https://github.com/ThatOpen/web-ifc) | IFC WASM parser (runs in browser) |
 | [Axios](https://axios-http.com) | HTTP client |
 
 ---
@@ -579,7 +579,7 @@ Taken together, the project should be read as a research prototype for IFC-nativ
 
 **Fire spread simulation & RL-based path training**
 * Jabi, W., Chatzivasileiadi, A., Wardhana, N.M., Lannon, S. and Aish, R. 2019. "The Synergy of Non-Manifold Topology and Reinforcement Learning for Fire Egress." In *Proceedings of eCAADe 37 / SIGraDi 23*, vol. 2, 85–94.
-* Sutton, R. and Barton, A. 2018. *Reinforcement Learning: An Introduction*. MIT Press.
+* Sutton, R.S. and Barto, A.G. 2018. *Reinforcement Learning: An Introduction*. 2nd ed. MIT Press.
 * Thombre, P. 2018. *Multi-Objective Path Finding Using Reinforcement Learning*. Master's thesis, San Jose State University.
 
 **Agent-based evacuation simulation / dynamic density**
