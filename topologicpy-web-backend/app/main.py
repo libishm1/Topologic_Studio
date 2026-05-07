@@ -44,6 +44,15 @@ app = FastAPI(
     version="0.1.0",
 )
 
+PERF_LOG = os.getenv("PERF_LOG", "0").lower() in ("1", "true", "yes")
+
+
+def _perf(route: str, **timings):
+    if not PERF_LOG:
+        return
+    parts = [f"{k}={v:.3f}s" if isinstance(v, float) else f"{k}={v}" for k, v in timings.items()]
+    print(f"IFC_TIMING route={route} " + " ".join(parts), flush=True)
+
 cors_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -396,7 +405,8 @@ def _build_point_adjacency_hybrid(points, num_stair_points, max_dist_stair, max_
 
 
 def _build_point_adjacency_rectilinear(points, cell_size, up_axis="y",
-                                       vertical_cell_size=None, max_gap=5):
+                                       vertical_cell_size=None, max_gap=5,
+                                       blocked_cells=None):
     """
     Snap sampled points to a regular grid, fill gaps between occupied cells,
     and connect only cardinal neighbours.  Produces a fully connected
@@ -410,6 +420,8 @@ def _build_point_adjacency_rectilinear(points, cell_size, up_axis="y",
                             Use a small value (e.g. 0.15) so stair treads get their own cells.
         max_gap: Maximum number of empty cells to bridge between two occupied cells
                  on the same axis-aligned line.
+        blocked_cells: Optional set of grid cell tuples blocked by walls.
+                       These cells are removed from occupied and never filled.
     Returns:
         (coords, adjacency) in the same dict format as the hybrid builder
     """
@@ -430,6 +442,10 @@ def _build_point_adjacency_rectilinear(points, cell_size, up_axis="y",
         key = (round(p[0] * inv[0]), round(p[1] * inv[1]), round(p[2] * inv[2]))
         occupied.add(key)
 
+    # Remove wall-blocked cells (door cells already exempted by caller)
+    if blocked_cells:
+        occupied -= blocked_cells
+
     # ── Step 2: Fill gaps between occupied cells along each axis ──
     # For each axis, group cells that share the same position on the other
     # two axes (same "column"), sort them, and fill intermediate cells
@@ -449,7 +465,10 @@ def _build_point_adjacency_rectilinear(points, cell_size, up_axis="y",
                     for g in range(positions[i] + 1, positions[i + 1]):
                         new_cell = list(col_key)
                         new_cell.insert(axis, g)
-                        filled.add(tuple(new_cell))
+                        new_cell_t = tuple(new_cell)
+                        if blocked_cells and new_cell_t in blocked_cells:
+                            continue  # don't fill through walls
+                        filled.add(new_cell_t)
 
     # ── Step 3: Build coords and adjacency from all (occupied + filled) cells ──
     cell_to_uid = {}
@@ -475,10 +494,186 @@ def _build_point_adjacency_rectilinear(points, cell_size, up_axis="y",
     return coords, adjacency
 
 
-def _shortest_path_ids(adjacency, coords, start_id, end_id):
+def _extract_door_positions(door_geometries, up_axis="y"):
+    """
+    Extract bottom-center positions from door geometry.
+    Each door yields one waypoint at floor-level center of the door opening.
+    Returns RAW positions — caller applies agent_height uniformly with floor/stair points.
+    """
+    up_idx = _axis_index(up_axis)
+    positions = []
+    for geom in door_geometries:
+        verts = geom.vertices
+        if not verts or len(verts) < 9:
+            continue
+        # Collect per-axis values from flat vertex array
+        axis_vals = [[], [], []]
+        for i in range(0, len(verts), 3):
+            if i + 2 < len(verts):
+                axis_vals[0].append(verts[i])
+                axis_vals[1].append(verts[i + 1])
+                axis_vals[2].append(verts[i + 2])
+        if not axis_vals[0]:
+            continue
+        # Bottom-center: mean of horizontal axes, min of vertical (raw, no offset)
+        coord = [0.0, 0.0, 0.0]
+        for a in range(3):
+            if a == up_idx:
+                coord[a] = min(axis_vals[a])
+            else:
+                coord[a] = sum(axis_vals[a]) / len(axis_vals[a])
+        positions.append(coord)
+    return positions
+
+
+def _extract_wall_segments_2d(wall_geometries, up_axis="y"):
+    """
+    Extract 2D wall centerline segments for obstacle testing.
+    Each wall is reduced to its centerline on the horizontal plane.
+    """
+    up_idx = _axis_index(up_axis)
+    h_axes = [i for i in range(3) if i != up_idx]
+    segments = []
+    for geom in wall_geometries:
+        verts = geom.vertices
+        if not verts or len(verts) < 9:
+            continue
+        h0_vals, h1_vals, up_vals = [], [], []
+        for i in range(0, len(verts), 3):
+            if i + 2 < len(verts):
+                coords = [verts[i], verts[i + 1], verts[i + 2]]
+                h0_vals.append(coords[h_axes[0]])
+                h1_vals.append(coords[h_axes[1]])
+                up_vals.append(coords[up_idx])
+        if not h0_vals:
+            continue
+        h0_min, h0_max = min(h0_vals), max(h0_vals)
+        h1_min, h1_max = min(h1_vals), max(h1_vals)
+        h0_span = h0_max - h0_min
+        h1_span = h1_max - h1_min
+        h0_mid = (h0_min + h0_max) / 2.0
+        h1_mid = (h1_min + h1_max) / 2.0
+        # Centerline along the longer horizontal span
+        if h0_span >= h1_span:
+            seg = ((h0_min, h1_mid), (h0_max, h1_mid))
+            thickness = h1_span
+        else:
+            seg = ((h0_mid, h1_min), (h0_mid, h1_max))
+            thickness = h0_span
+        segments.append({
+            "segment": seg,
+            "thickness": thickness,
+            "y_min": min(up_vals),
+            "y_max": max(up_vals),
+        })
+    return segments
+
+
+def _segments_intersect_2d(p1, p2, p3, p4):
+    """Test if 2D segment (p1,p2) intersects segment (p3,p4) using cross products."""
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    d1 = cross(p3, p4, p1)
+    d2 = cross(p3, p4, p2)
+    d3 = cross(p1, p2, p3)
+    d4 = cross(p1, p2, p4)
+    if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and \
+       ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)):
+        return True
+    return False
+
+
+def _prune_edges_through_walls(coords, adjacency, wall_segments, up_axis="y", door_node_ids=None):
+    """
+    Remove edges from adjacency that cross through wall segments.
+    Edges connected to door nodes are never pruned (doors are openings in walls).
+    """
+    up_idx = _axis_index(up_axis)
+    h_axes = [i for i in range(3) if i != up_idx]
+    door_set = set(door_node_ids) if door_node_ids else set()
+    pruned = 0
+    new_adj = {}
+    for node_id, neighbors in adjacency.items():
+        kept = []
+        p = coords.get(node_id)
+        if not p:
+            new_adj[node_id] = neighbors
+            continue
+        for nbr_id in neighbors:
+            q = coords.get(nbr_id)
+            if not q:
+                kept.append(nbr_id)
+                continue
+            # Never prune edges touching door nodes
+            if node_id in door_set or nbr_id in door_set:
+                kept.append(nbr_id)
+                continue
+            edge_2d = ((p[h_axes[0]], p[h_axes[1]]), (q[h_axes[0]], q[h_axes[1]]))
+            edge_y_min = min(p[up_idx], q[up_idx])
+            edge_y_max = max(p[up_idx], q[up_idx])
+            blocked = False
+            for wall in wall_segments:
+                if edge_y_max < wall["y_min"] or edge_y_min > wall["y_max"]:
+                    continue
+                if _segments_intersect_2d(edge_2d[0], edge_2d[1],
+                                          wall["segment"][0], wall["segment"][1]):
+                    blocked = True
+                    break
+            if blocked:
+                pruned += 1
+            else:
+                kept.append(nbr_id)
+        new_adj[node_id] = kept
+    return new_adj, pruned
+
+
+def _compute_wall_blocked_cells(wall_geometries, cell_sizes, inv_scales, up_axis="y"):
+    """
+    Compute set of grid cells blocked by wall geometry (for grid-snap mode).
+    Rasterizes each wall's bounding box onto the grid.
+    """
+    up_idx = _axis_index(up_axis)
+    blocked = set()
+    for geom in wall_geometries:
+        verts = geom.vertices
+        if not verts or len(verts) < 9:
+            continue
+        axis_min = [float('inf')] * 3
+        axis_max = [float('-inf')] * 3
+        for i in range(0, len(verts), 3):
+            if i + 2 < len(verts):
+                for a in range(3):
+                    axis_min[a] = min(axis_min[a], verts[i + a])
+                    axis_max[a] = max(axis_max[a], verts[i + a])
+        # Snap bounding box to grid cells
+        cell_min = [int(round(axis_min[a] * inv_scales[a])) for a in range(3)]
+        cell_max = [int(round(axis_max[a] * inv_scales[a])) for a in range(3)]
+        # Mark all cells in bounding box
+        for ix in range(cell_min[0], cell_max[0] + 1):
+            for iy in range(cell_min[1], cell_max[1] + 1):
+                for iz in range(cell_min[2], cell_max[2] + 1):
+                    blocked.add((ix, iy, iz))
+    return blocked
+
+
+def _shortest_path_ids(adjacency, coords, start_id, end_id,
+                       wall_segments=None, door_node_ids=None, up_axis="y"):
+    """
+    Dijkstra shortest path.  When *wall_segments* is supplied, edges that
+    cross a wall (unless touching a door node) are skipped so the path
+    routes around obstacles — while the displayed graph stays intact.
+    """
     if start_id not in adjacency or end_id not in adjacency:
         return []
     import heapq
+
+    # Pre-compute helpers for wall check
+    use_walls = bool(wall_segments)
+    if use_walls:
+        up_idx = _axis_index(up_axis)
+        h_axes = [i for i in range(3) if i != up_idx]
+        door_set = set(door_node_ids) if door_node_ids else set()
+
     dist = {start_id: 0.0}
     prev = {}
     heap = [(0.0, start_id)]
@@ -488,12 +683,31 @@ def _shortest_path_ids(adjacency, coords, start_id, end_id):
             break
         if d != dist.get(node, 0.0):
             continue
+        p = coords.get(node)
+        if not p:
+            continue
         for nbr in adjacency.get(node, []):
-            if nbr not in coords:
+            q = coords.get(nbr)
+            if not q:
                 continue
-            x0, y0, z0 = coords[node]
-            x1, y1, z1 = coords[nbr]
-            w = ((x1 - x0) ** 2 + (y1 - y0) ** 2 + (z1 - z0) ** 2) ** 0.5
+            # Wall check — skip edges that cross a wall (door edges exempt)
+            if use_walls and node not in door_set and nbr not in door_set:
+                edge_2d = ((p[h_axes[0]], p[h_axes[1]]),
+                           (q[h_axes[0]], q[h_axes[1]]))
+                edge_y_min = min(p[up_idx], q[up_idx])
+                edge_y_max = max(p[up_idx], q[up_idx])
+                blocked = False
+                for wall in wall_segments:
+                    if edge_y_max < wall["y_min"] or edge_y_min > wall["y_max"]:
+                        continue
+                    if _segments_intersect_2d(edge_2d[0], edge_2d[1],
+                                              wall["segment"][0], wall["segment"][1]):
+                        blocked = True
+                        break
+                if blocked:
+                    continue
+
+            w = ((q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 + (q[2] - p[2]) ** 2) ** 0.5
             nd = d + w
             if nd < dist.get(nbr, 1e18):
                 dist[nbr] = nd
@@ -1082,6 +1296,9 @@ class IfcGeometry(BaseModel):
 class IfcEgressRequest(BaseModel):
     floors: List[IfcGeometry] = []
     stairs: List[IfcGeometry] = []
+    doors: List[IfcGeometry] = []
+    walls: List[IfcGeometry] = []
+    use_walls: bool = True
     agent_height: float = 0.75
     base_spacing: float = 0.5
     stair_multiplier: float = 0.5
@@ -1103,6 +1320,7 @@ class IfcEgressPathRequest(BaseModel):
 @app.post("/ifc-egress-graph")
 def ifc_egress_graph(req: IfcEgressRequest):
     """Build navigation graph using simplified point sampling with strict limits"""
+    t0 = time.perf_counter()
     floors = req.floors or []
     stairs = req.stairs or []
     if not floors and not stairs:
@@ -1137,6 +1355,7 @@ def ifc_egress_graph(req: IfcEgressRequest):
     stair_points = []
     floor_points = []
 
+    t_sample_start = time.perf_counter()
     # Sample stairs FIRST (prioritize connectivity between floors)
     for geom in stairs:
         if len(stair_points) >= max_total_points:
@@ -1172,6 +1391,8 @@ def ifc_egress_graph(req: IfcEgressRequest):
         )
         floor_points.extend(pts[:points_per_floor])
 
+    t_sample_end = time.perf_counter()
+
     # Combine all points
     all_points = stair_points + floor_points
     all_points = all_points[:max_total_points]
@@ -1181,60 +1402,166 @@ def ifc_egress_graph(req: IfcEgressRequest):
 
     num_stair_points = min(len(stair_points), len(all_points))
 
-    # Add agent height
+    # Extract door waypoints BEFORE agent height so all points get uniform offset
+    door_positions = _extract_door_positions(req.doors, req.up_axis) if req.doors else []
+    door_start_idx = len(all_points)
+    all_points.extend(door_positions)
+    door_node_ids = set()
+    for i in range(len(door_positions)):
+        door_node_ids.add(f"ifc_{door_start_idx + i}")
+
+    # Add agent height uniformly to ALL points (floor + stair + door)
     all_points = [[p[0], p[1], p[2] + req.agent_height] for p in all_points]
 
+    up_idx = _axis_index(req.up_axis)
+
+    t_adj_start = time.perf_counter()
     # Build adjacency — grid-snap (Approach A) or distance-based hybrid
     if req.grid_snap:
         cell_size = req.grid_cell_size if req.grid_cell_size is not None else base_spacing
         # Bridge gaps caused by sampling being sparser than cell size
         max_gap = max(2, int(math.ceil(base_spacing / cell_size)) + 1)
+
         coords, adjacency = _build_point_adjacency_rectilinear(
             all_points, cell_size,
             up_axis=req.up_axis,
             vertical_cell_size=min(cell_size, 0.15),  # ~stair tread rise
             max_gap=max_gap,
         )
+        # In grid-snap mode the builder re-indexes UIDs from ifc_0, so the
+        # original door_node_ids (based on input-array index) no longer exist.
+        # Resolve door positions to their actual grid UIDs for wall exemption.
+        v_cell = min(cell_size, 0.15)
+        gs = [cell_size, cell_size, cell_size]
+        gs[up_idx] = v_cell
+        inv_gs = [1.0 / c if c > 0 else 1.0 for c in gs]
+        # Build reverse lookup: grid cell → uid
+        cell_to_uid_map = {}
+        for uid, c in coords.items():
+            rc = (round(c[0] * inv_gs[0]), round(c[1] * inv_gs[1]), round(c[2] * inv_gs[2]))
+            cell_to_uid_map[rc] = uid
+        grid_door_ids = set()
+        for dp in all_points[door_start_idx:door_start_idx + len(door_positions)]:
+            cell_key = (round(dp[0] * inv_gs[0]), round(dp[1] * inv_gs[1]), round(dp[2] * inv_gs[2]))
+            if cell_key in cell_to_uid_map:
+                grid_door_ids.add(cell_to_uid_map[cell_key])
+        door_node_ids = grid_door_ids
     else:
         coords, adjacency = _build_point_adjacency_hybrid(all_points, num_stair_points, max_edge_stair, max_edge_floor, rectilinear=req.rectilinear, up_axis=req.up_axis)
+    t_adj_end = time.perf_counter()
+
+    t_walls_start = time.perf_counter()
+    # Extract wall segments for pathfinding (not for display pruning).
+    # The full grid is always displayed; walls only block the shortest-path search.
+    wall_segments = []
+    if req.use_walls and req.walls:
+        wall_segments = _extract_wall_segments_2d(req.walls, req.up_axis)
+    t_walls_end = time.perf_counter()
+
+    t_doors_start = time.perf_counter()
+    # Force-connect each door node to nearest floor nodes
+    door_connections = 0
+    for door_uid in door_node_ids:
+        if door_uid not in coords:
+            continue
+        dp = coords[door_uid]
+        distances = []
+        for uid, coord in coords.items():
+            if uid in door_node_ids:
+                continue
+            y_diff = abs(coord[up_idx] - dp[up_idx])
+            if y_diff > 1.5:
+                continue
+            d = sum((coord[j] - dp[j]) ** 2 for j in range(3)) ** 0.5
+            if d <= 3.0:
+                distances.append((d, uid))
+        distances.sort()
+        for _, floor_uid in distances[:5]:
+            if floor_uid not in adjacency.get(door_uid, []):
+                adjacency.setdefault(door_uid, []).append(floor_uid)
+                adjacency.setdefault(floor_uid, []).append(door_uid)
+                door_connections += 1
+
+    t_doors_end = time.perf_counter()
 
     LAST_GRAPHS["ifc"] = {
         "coords": coords,
         "adjacency": adjacency,
         "step": _estimate_step_size(coords, adjacency),
+        "wall_segments": wall_segments,
+        "door_node_ids": door_node_ids,
+        "up_axis": req.up_axis,
     }
 
-    # Build edge list for visualization
+    # Build edge list for visualization (position pairs + node-ID pairs)
     edge_list = []
+    edge_ids = []
     for node_id, neighbors in adjacency.items():
         for neighbor_id in neighbors:
             if node_id < neighbor_id:
                 edge_list.append([coords[node_id], coords[neighbor_id]])
+                edge_ids.append([node_id, neighbor_id])
+
+    _perf(
+        "ifc-egress-graph",
+        sample=t_sample_end - t_sample_start,
+        adjacency=t_adj_end - t_adj_start,
+        walls=t_walls_end - t_walls_start,
+        doors=t_doors_end - t_doors_start,
+        total=time.perf_counter() - t0,
+        nodes=len(coords),
+        edges=len(edge_list),
+        door_nodes=len(door_positions),
+        wall_segments=len(wall_segments),
+        door_connections=door_connections,
+    )
 
     return {
         "mode": "ifc",
         "stats": {
             "nodes": len(coords),
             "edges": len(edge_list),
+            "door_nodes": len(door_positions),
+            "wall_segments": len(wall_segments),
         },
         "edges": edge_list,
+        "edge_ids": edge_ids,
+        "coords": coords,
     }
 
 
 @app.post("/ifc-egress-path")
 def ifc_egress_path(req: IfcEgressPathRequest):
+    t0 = time.perf_counter()
     graph = LAST_GRAPHS.get("ifc") if LAST_GRAPHS else None
     if not graph or not graph.get("adjacency"):
         raise HTTPException(status_code=400, detail="No IFC egress graph available. Build it first.")
+    t_resolve_start = time.perf_counter()
     start_id = _resolve_start_id(graph, None, req.start_point)
     end_id = _resolve_start_id(graph, None, req.end_point)
+    t_resolve_end = time.perf_counter()
     if not start_id or not end_id:
         raise HTTPException(status_code=400, detail="Invalid start or end point.")
 
-    path_ids = _shortest_path_ids(graph["adjacency"], graph["coords"], start_id, end_id)
+    t_path_start = time.perf_counter()
+    path_ids = _shortest_path_ids(
+        graph["adjacency"], graph["coords"], start_id, end_id,
+        wall_segments=graph.get("wall_segments"),
+        door_node_ids=graph.get("door_node_ids"),
+        up_axis=graph.get("up_axis", "y"),
+    )
+    t_path_end = time.perf_counter()
     if not path_ids:
         raise HTTPException(status_code=404, detail="No path found between start and end points.")
     points = [graph["coords"][pid] for pid in path_ids if pid in graph["coords"]]
+    _perf(
+        "ifc-egress-path",
+        resolve=t_resolve_end - t_resolve_start,
+        shortest_path=t_path_end - t_path_start,
+        total=time.perf_counter() - t0,
+        points=len(points),
+        graph_nodes=len(graph["coords"]),
+    )
     return {
         "mode": "ifc",
         "points": points,

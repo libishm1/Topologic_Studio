@@ -7,6 +7,17 @@ import "./App.css";
 import logoImg from "./assets/topologicStudio-white-logo400x400.png";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000"; // FastAPI backend
+const PERF_LOG = (import.meta.env.VITE_PERF_LOG ?? (import.meta.env.DEV ? "1" : "")) === "1";
+
+const perfMark = (label) => {
+  if (!PERF_LOG) return () => {};
+  const t0 = performance.now();
+  return (extra) => {
+    const ms = performance.now() - t0;
+    if (extra) console.log(`PERF ${label} ${ms.toFixed(1)}ms`, extra);
+    else console.log(`PERF ${label} ${ms.toFixed(1)}ms`);
+  };
+};
 
 export default function App() {
   const spinnerStyle = { __html: `@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }` };
@@ -32,6 +43,7 @@ export default function App() {
   const [ifcGraphStats, setIfcGraphStats] = useState(null);
   const [ifcGraphCoords, setIfcGraphCoords] = useState(null);
   const [ifcGraphEdges, setIfcGraphEdges] = useState(null);
+  const [ifcGraphEdgeIds, setIfcGraphEdgeIds] = useState(null);
   const [ifcGraphLoading, setIfcGraphLoading] = useState(false);
   const [ifcGraphPending, setIfcGraphPending] = useState(false);
   const [ifcEgressRequestId, setIfcEgressRequestId] = useState(0);
@@ -42,6 +54,7 @@ export default function App() {
   const [ifcStairEdge, setIfcStairEdge] = useState(0.4);  // ~2x tread height
   const [ifcGridSnap, setIfcGridSnap] = useState(false);
   const [ifcGridCellSize, setIfcGridCellSize] = useState(1.5);
+  const [ifcUseWalls, setIfcUseWalls] = useState(true);
   const ifcUpAxis = "y";
   const ifcInvertOrbit = false;
   const ifcFlipY = false;
@@ -49,6 +62,7 @@ export default function App() {
 
   const fireTimerRef = useRef(null);
   const fireSseRef = useRef(null);
+  const fireAccumRef = useRef(new Set());
   const [graphMode, setGraphMode] = useState("cell");
   const [pickMode, setPickMode] = useState(null);
   const [startPoint, setStartPoint] = useState(null);
@@ -108,6 +122,8 @@ export default function App() {
     setPickMode(null);
     setIfcEgress(null);
     setIfcGraphStats(null);
+    setIfcGraphEdges(null);
+    setIfcGraphEdgeIds(null);
     setIfcGraphCoords(null);
     setIfcPathPoints(null);
     setIfcGraphLoading(false);
@@ -131,9 +147,11 @@ export default function App() {
       : `include_path=false`;
 
     try {
+      const done = perfMark(`POST /upload-ifc (${file.name}, ${file.size} bytes)`);
       const res = await axios.post(`${API_BASE}/upload-ifc?${query}`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      done();
       const payload = res.data;
       if (!payload?.vertices || !payload?.faces) {
         setError("Unexpected response format from IFC upload.");
@@ -267,13 +285,19 @@ export default function App() {
     setIfcPathPoints(null);
   };
 
-  const postIfcEgressGraph = (floors, stairs) => {
+  const postIfcEgressGraph = (floors, stairs, doors, walls) => {
     setIfcGraphLoading(true);
     setIfcGraphPending(false);
+    const done = perfMark(
+      `POST /ifc-egress-graph (floors=${floors?.length || 0}, stairs=${stairs?.length || 0}, doors=${doors?.length || 0}, walls=${walls?.length || 0})`
+    );
     return axios
       .post(`${API_BASE}/ifc-egress-graph`, {
         floors: floors || [],
         stairs: stairs || [],
+        doors: doors || [],
+        walls: walls || [],
+        use_walls: ifcUseWalls,
         agent_height: 0.75,
         base_spacing: 0.5,
         stair_multiplier: 0.5,
@@ -287,17 +311,17 @@ export default function App() {
         grid_cell_size: ifcGridSnap ? ifcGridCellSize : undefined,
       })
       .then((res) => {
-        console.log('[App] Graph API response:', res.data);
-        console.log('[App] Graph response keys:', Object.keys(res.data || {}));
+        done({ nodes: res.data?.stats?.nodes, edges: res.data?.stats?.edges });
         setIfcGraphStats(res.data || null);
         setIfcGraphEdges(res.data?.edges || null);
+        setIfcGraphEdgeIds(res.data?.edge_ids || null);
         setIfcGraphCoords(res.data?.coords || null);
-        console.log('[App] Graph built with coords:', Object.keys(res.data?.coords || {}).length, 'nodes');
         if (startPoint && exitPoint) {
           computeIfcEgressPath(true);
         }
       })
       .catch((apiErr) => {
+        done({ error: apiErr.message });
         setError(
           apiErr.response?.data?.detail || apiErr.message || "IFC egress graph failed."
         );
@@ -312,6 +336,8 @@ export default function App() {
     if (!data) {
       setIfcEgress(null);
       setIfcGraphStats(null);
+      setIfcGraphEdges(null);
+      setIfcGraphEdgeIds(null);
       setIfcGraphCoords(null);
       setIfcPathPoints(null);
       return;
@@ -325,7 +351,7 @@ export default function App() {
       return;
     }
     if ((data?.floors?.length || data?.stairs?.length) && ifcGraphPending) {
-      postIfcEgressGraph(data.floors, data.stairs);
+      postIfcEgressGraph(data.floors, data.stairs, data.doors, data.walls);
     }
   };
 
@@ -337,10 +363,11 @@ export default function App() {
     setError(null);
     setIfcGraphStats(null);
     setIfcGraphEdges(null);
+    setIfcGraphEdgeIds(null);
     setIfcGraphCoords(null);
     setIfcPathPoints(null);
     if (ifcEgress?.floors?.length || ifcEgress?.stairs?.length) {
-      await postIfcEgressGraph(ifcEgress.floors, ifcEgress.stairs);
+      await postIfcEgressGraph(ifcEgress.floors, ifcEgress.stairs, ifcEgress.doors, ifcEgress.walls);
       return;
     }
     setIfcGraphLoading(true);
@@ -360,23 +387,21 @@ export default function App() {
     setIfcPathLoading(true);
     setError(null);
     setIfcPathPoints(null);
+    const donePath = perfMark("POST /ifc-egress-path");
     try {
-      console.log("DEBUG: Calling path API with start:", startPoint, "exit:", exitPoint);
       const res = await axios.post(`${API_BASE}/ifc-egress-path`, {
         start_point: startPoint,
         end_point: exitPoint,
       });
-      console.log("DEBUG: Path API response:", res.data);
+      donePath({ points: res.data?.points?.length });
       const payload = res.data || {};
       if (!payload.points || payload.points.length < 2) {
-        console.log("DEBUG: Insufficient points in path:", payload.points?.length);
         setError("IFC egress path not found.");
         return;
       }
-      console.log("DEBUG: Setting path points - count:", payload.points.length);
       setIfcPathPoints(payload.points);
     } catch (apiErr) {
-      console.error("DEBUG: Path API error:", apiErr.response?.data || apiErr);
+      console.error("Path API error:", apiErr.response?.data || apiErr);
       setError(
         apiErr.response?.data?.detail || apiErr.message || "IFC egress path failed."
       );
@@ -388,22 +413,33 @@ export default function App() {
   const stopFireSimulation = () => {
     stopFire();
     setFireNodes([]);
+    setFireTemperatures({});
     setFireTimeline([]);
     setFireStep(0);
+    fireAccumRef.current = new Set();
   };
 
   const startFireSimulation = async () => {
     stopFire();
     setError(null);
     setFireNodes([]);
+    setFireTemperatures({});
     setFireTimeline([]);
     setFireStep(0);
     setFireRunning(true);
+    setDynamicPath(null);
+    setDynamicPathCost(0.0);
+    setDynamicPathChanged(false);
+    fireAccumRef.current = new Set();
 
-    if (fireUsePrecompute) {
+    const effectiveFireMode = viewerMode === "ifc" ? "ifc" : graphMode;
+    // Temperature mode requires SSE streaming — skip precompute path for IFC + temperature
+    const usePrecompute = fireUsePrecompute && !(viewerMode === "ifc" && fireUseTemperature);
+
+    if (usePrecompute) {
       try {
         const res = await axios.post(`${API_BASE}/fire-sim`, {
-          mode: graphMode,
+          mode: effectiveFireMode,
           start_id: startId,
           end_id: exitId,
           start_point: startPoint,
@@ -425,6 +461,7 @@ export default function App() {
         setFireStep(0);
         setFireNodes(timeline[0] || []);
         if (timeline.length > 1) {
+          let accumulated = new Set(timeline[0] || []);
           fireTimerRef.current = setInterval(() => {
             idx += 1;
             if (idx >= timeline.length) {
@@ -432,7 +469,8 @@ export default function App() {
               return;
             }
             setFireStep(idx);
-            setFireNodes(timeline[idx] || []);
+            (timeline[idx] || []).forEach((n) => accumulated.add(n));
+            setFireNodes(Array.from(accumulated));
           }, Math.max(50, fireDelayMs));
         } else {
           setFireRunning(false);
@@ -447,9 +485,7 @@ export default function App() {
     }
 
     const params = new URLSearchParams();
-    // Use "ifc" mode when working with IFC files, otherwise use graphMode
-    const effectiveMode = viewerMode === "ifc" ? "ifc" : graphMode;
-    params.set("mode", effectiveMode);
+    params.set("mode", effectiveFireMode);
     params.set("max_steps", String(fireMaxSteps));
     params.set("precompute", "false");
     params.set("radial", "true");
@@ -480,36 +516,35 @@ export default function App() {
       }
     }
     const url = `${API_BASE}/fire-sim/stream?${params.toString()}`;
-    console.log('[App] Starting fire simulation with URL:', url);
-    console.log('[App] Temperature mode enabled:', fireUseTemperature, 'ViewerMode:', viewerMode);
+    const doneStream = perfMark(`GET /fire-sim/stream startup (${effectiveFireMode})`);
+    let firstNonMetaSeen = false;
     const es = new EventSource(url);
     fireSseRef.current = es;
     es.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        console.log('[App] Fire SSE event received:', msg.type, msg);
+        if (!firstNonMetaSeen && msg.type !== "meta") {
+          firstNonMetaSeen = true;
+          doneStream({ firstEvent: msg.type });
+        }
         if (msg.type === "meta") {
           setFireCellBboxes(msg.cell_bboxes || []);
         } else if (msg.type === "temperature_step") {
-          // Handle temperature-based fire spread
-          console.log('[App] Temperature step - temperatures count:', Object.keys(msg.temperatures || {}).length);
           setFireStep(msg.step ?? 0);
           setFireTemperatures(msg.temperatures || {});
           // Extract nodes with significant temperature for visualization
           const hotNodes = Object.entries(msg.temperatures || {})
-            .filter(([_, temp]) => temp > 30) // Above 30°C
+            .filter(([_, temp]) => temp > 30)
             .map(([nodeId, _]) => nodeId);
           setFireNodes(hotNodes);
-          console.log('[App] Set fireTemperatures with', Object.keys(msg.temperatures || {}).length, 'nodes');
         } else if (msg.type === "path_update") {
-          // Handle dynamic path rerouting updates
-          console.log('[App] Path update received:', msg);
           setDynamicPath(msg.path || null);
           setDynamicPathCost(msg.cost || 0.0);
           setDynamicPathChanged(msg.changed || false);
         } else if (msg.type === "step") {
           setFireStep(msg.step ?? 0);
-          setFireNodes(msg.nodes || []);
+          (msg.nodes || []).forEach((n) => fireAccumRef.current.add(n));
+          setFireNodes(Array.from(fireAccumRef.current));
         } else if (msg.type === "done") {
           stopFire();
         }
@@ -933,6 +968,7 @@ export default function App() {
               onEgressDataExtracted={handleIfcEgressData}
               pathPoints={ifcPathPoints}
               graphEdges={ifcGraphEdges}
+              graphEdgeIds={ifcGraphEdgeIds}
               graphCoords={ifcGraphCoords}
               egressRequestId={ifcEgressRequestId}
               startPoint={startPoint}
@@ -1160,6 +1196,14 @@ export default function App() {
                         </label>
                       )}
                     </div>
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <input
+                        type="checkbox"
+                        checked={ifcUseWalls}
+                        onChange={(e) => setIfcUseWalls(e.target.checked)}
+                      />
+                      <span className="sidebar-value">Use walls as obstacles</span>
+                    </label>
                     <button
                       type="button"
                       className="file-upload-button"
@@ -1189,6 +1233,8 @@ export default function App() {
                     {ifcGraphStats?.stats && (
                       <div className="sidebar-value sidebar-value-mono">
                         Graph: {ifcGraphStats.stats.nodes} nodes / {ifcGraphStats.stats.edges} edges
+                        {ifcGraphStats.stats.door_nodes > 0 && ` (${ifcGraphStats.stats.door_nodes} doors)`}
+                        {ifcGraphStats.stats.wall_segments > 0 && ` (${ifcGraphStats.stats.wall_segments} walls)`}
                       </div>
                     )}
                   </div>
@@ -1375,7 +1421,7 @@ export default function App() {
               <p>Click on a face, edge, or vertex to inspect its metadata.</p>
               <p className="sidebar-empty-hint">
                 Repeated clicks on the same location will cycle through the
-                hierarchy (CellComplex -> Cell -> Shell -> Face -> Edge -> Vertex).
+                {"hierarchy (CellComplex -> Cell -> Shell -> Face -> Edge -> Vertex)."}
               </p>
             </div>
           )}

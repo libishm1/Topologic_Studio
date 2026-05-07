@@ -26,6 +26,29 @@ import {
 
 const DEFAULT_WASM_PATH = "https://unpkg.com/web-ifc@0.0.73/";
 
+const PERF_LOG = (import.meta.env.VITE_PERF_LOG ?? (import.meta.env.DEV ? "1" : "")) === "1";
+
+const perfMark = (label) => {
+  if (!PERF_LOG) return () => {};
+  const t0 = performance.now();
+  return (extra) => {
+    const ms = performance.now() - t0;
+    if (extra) console.log(`PERF ${label} ${ms.toFixed(1)}ms`, extra);
+    else console.log(`PERF ${label} ${ms.toFixed(1)}ms`);
+  };
+};
+
+const payloadByteSize = (geometryArray) => {
+  if (!Array.isArray(geometryArray)) return 0;
+  let bytes = 0;
+  for (const g of geometryArray) {
+    if (g?.vertices?.length) bytes += g.vertices.length * 4;
+    if (g?.indices?.length) bytes += g.indices.length * 4;
+    if (g?.normals?.length) bytes += g.normals.length * 4;
+  }
+  return bytes;
+};
+
 const fitCameraToModel = (world, model, object) => {
   const camera = world.camera?.three;
   if (!camera) return;
@@ -284,7 +307,7 @@ export default function IFCViewer({
   onEgressDataExtracted,
   pathPoints,
   graphEdges,
-  graphCoords,
+  graphEdgeIds,
   egressRequestId = 0,
   startPoint,
   exitPoint,
@@ -310,7 +333,6 @@ export default function IFCViewer({
   const pathLineRef = useRef(null);
   const dynamicPathLineRef = useRef(null);
   const graphLinesRef = useRef(null);
-  const nodeSpheresRef = useRef(null);
   const sceneReadyRef = useRef(false);
   const egressIdsRef = useRef(null);
   const egressModelIdRef = useRef(null);
@@ -330,28 +352,51 @@ export default function IFCViewer({
     if (!model || !ids) return;
 
     const run = async () => {
+      // Helper: yield to the browser between heavy tasks so the scene stays navigable
+      const yieldFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+
       try {
         const extraTransform = model.matrixWorld?.clone() || null;
+        const doneFloors = perfMark(`getItemsGeometry floors (n=${ids.slabs?.length || 0})`);
         const allFloorGeometry = await buildGeometryPayload(
           model,
           ids.slabs || [],
           extraTransform
         );
-        // NOTE: Filtering disabled - IFC IFCSLAB elements include vertical shear walls
-        // that appear as slabs in the IFC schema but have vertical normals (avgNz < 0.4)
-        // The backend point sampling will handle filtering based on actual walkability
+        doneFloors({ items: allFloorGeometry.length, bytes: payloadByteSize(allFloorGeometry) });
+        await yieldFrame();
         const floorGeometry = allFloorGeometry;
 
+        const doneStairs = perfMark(`getItemsGeometry stairs (n=${ids.stairs?.length || 0})`);
         const stairGeometry = await buildGeometryPayload(
           model,
           ids.stairs || [],
           extraTransform
         );
+        doneStairs({ items: stairGeometry.length, bytes: payloadByteSize(stairGeometry) });
+        await yieldFrame();
+        const doneDoors = perfMark(`getItemsGeometry doors (n=${ids.doors?.length || 0})`);
+        const doorGeometry = await buildGeometryPayload(
+          model,
+          ids.doors || [],
+          extraTransform
+        );
+        doneDoors({ items: doorGeometry.length, bytes: payloadByteSize(doorGeometry) });
+        await yieldFrame();
+        const doneWalls = perfMark(`getItemsGeometry walls (n=${ids.walls?.length || 0})`);
+        const wallGeometry = await buildGeometryPayload(
+          model,
+          ids.walls || [],
+          extraTransform
+        );
+        doneWalls({ items: wallGeometry.length, bytes: payloadByteSize(wallGeometry) });
         onEgressDataExtracted({
           modelId: egressModelIdRef.current,
           ids,
           floors: floorGeometry,
           stairs: stairGeometry,
+          doors: doorGeometry,
+          walls: wallGeometry,
         });
       } catch (egressErr) {
         console.warn("IFC egress extraction failed.", egressErr);
@@ -360,6 +405,8 @@ export default function IFCViewer({
           ids,
           floors: [],
           stairs: [],
+          doors: [],
+          walls: [],
           egressError: egressErr?.message || "IFC egress extraction failed.",
         });
       }
@@ -475,6 +522,7 @@ export default function IFCViewer({
     dynamicPathLineRef.current = line;
   }, [dynamicPath, ready, upAxis, flipY, flipZ]);
 
+  // Build / rebuild graph wire mesh when edges change
   useEffect(() => {
     if (!ready || !sceneReadyRef.current) return;
     const world = worldRef.current;
@@ -503,12 +551,17 @@ export default function IFCViewer({
     }
 
     const positions = [];
+    const colors = [];
+    const defaultColor = new THREE.Color(0x3b82f6);
     graphEdges.forEach((edge) => {
       if (edge && edge.length === 2) {
         const [p1, p2] = edge;
         if (p1 && p1.length >= 3 && p2 && p2.length >= 3) {
           positions.push(p1[0], p1[1], p1[2]);
           positions.push(p2[0], p2[1], p2[2]);
+          // Two vertices per edge segment — both start with default color
+          colors.push(defaultColor.r, defaultColor.g, defaultColor.b);
+          colors.push(defaultColor.r, defaultColor.g, defaultColor.b);
         }
       }
     });
@@ -517,16 +570,16 @@ export default function IFCViewer({
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     const material = new THREE.LineBasicMaterial({
-      color: 0x3b82f6,
+      vertexColors: true,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.4,
       linewidth: 1,
     });
     const lineSegments = new THREE.LineSegments(geometry, material);
     lineSegments.userData.pickIgnore = true;
 
-    // Apply the same transformations as the IFC model (upAxis, flipY, flipZ)
     const axis = resolveUpAxis(null, upAxis);
     if (axis) {
       applyUpAxis(lineSegments, axis, flipY, flipZ);
@@ -536,94 +589,77 @@ export default function IFCViewer({
     graphLinesRef.current = lineSegments;
   }, [graphEdges, ready, upAxis, flipY, flipZ]);
 
+  // Update graph wire colors when fire state changes (temperature or node-based)
   useEffect(() => {
-    if (!ready || !sceneReadyRef.current) return;
-    if (!fireUseTemperature || !fireTemperatures || Object.keys(fireTemperatures).length === 0) {
-      // Clean up existing node spheres if temperature mode is disabled
-      if (nodeSpheresRef.current) {
-        const world = worldRef.current;
-        if (world?.scene?.three) {
-          nodeSpheresRef.current.forEach((sphere) => {
-            world.scene.three.remove(sphere);
-            if (sphere.geometry) sphere.geometry.dispose();
-            if (sphere.material) sphere.material.dispose();
-          });
-        }
-        nodeSpheresRef.current = null;
+    const lines = graphLinesRef.current;
+    if (!lines) return;
+    const geom = lines.geometry;
+    let colorAttr = geom.getAttribute('color');
+
+    // If color attribute doesn't exist yet (edge rebuild happened), create it
+    const posAttr = geom.getAttribute('position');
+    if (!posAttr) return;
+    const vertCount = posAttr.count;
+    if (!colorAttr || colorAttr.count !== vertCount) {
+      const arr = new Float32Array(vertCount * 3);
+      colorAttr = new THREE.Float32BufferAttribute(arr, 3);
+      geom.setAttribute('color', colorAttr);
+    }
+
+    const hasEdgeIds = graphEdgeIds && Array.isArray(graphEdgeIds);
+    const defaultColor = new THREE.Color(0x3b82f6);
+    const tempKeys = fireTemperatures ? Object.keys(fireTemperatures).length : 0;
+    const hasTemps = fireUseTemperature && tempKeys > 0;
+    const hasNodes = fireNodes && fireNodes.length > 0;
+
+    if ((!hasTemps && !hasNodes) || !hasEdgeIds) {
+      // Reset all edges to default blue
+      for (let i = 0; i < vertCount; i++) {
+        colorAttr.setXYZ(i, defaultColor.r, defaultColor.g, defaultColor.b);
       }
+      colorAttr.needsUpdate = true;
+      lines.material.opacity = 0.4;
+      lines.material.needsUpdate = true;
       return;
     }
 
-    const world = worldRef.current;
-    if (!world) return;
-    let scene;
-    try {
-      scene = world.scene?.three;
-    } catch {
-      return;
-    }
-    if (!scene) return;
+    // Clamp loop to whichever is smaller — edge_ids or vertex pairs available
+    const maxEdges = Math.min(graphEdgeIds.length, Math.floor(vertCount / 2));
 
-    // Clean up existing spheres
-    if (nodeSpheresRef.current) {
-      nodeSpheresRef.current.forEach((sphere) => {
-        scene.remove(sphere);
-        if (sphere.geometry) sphere.geometry.dispose();
-        if (sphere.material) sphere.material.dispose();
-      });
-    }
-
-    // Use graphCoords to map node IDs to positions
-    if (!graphCoords || Object.keys(graphCoords).length === 0) {
-      console.log('[IFCViewer] No graph coords available for temperature visualization');
-      return;
-    }
-
-    console.log('[IFCViewer] Temperature visualization debug:', {
-      fireUseTemperature,
-      temperatureCount: Object.keys(fireTemperatures).length,
-      sampleNodeIds: Object.keys(fireTemperatures).slice(0, 3),
-      sampleTemperatures: Object.entries(fireTemperatures).slice(0, 3),
-      graphCoordsCount: Object.keys(graphCoords).length,
-      sampleCoordKeys: Object.keys(graphCoords).slice(0, 3)
-    });
-
-    // Create temperature visualization spheres
-    const spheres = [];
-    Object.entries(fireTemperatures).forEach(([nodeId, temp]) => {
-      // Look up node position from graphCoords
-      const pos = graphCoords[nodeId];
-      if (!pos || !Array.isArray(pos) || pos.length < 3) {
-        console.log('[IFCViewer] No position found for nodeId:', nodeId);
-        return;
+    if (hasTemps) {
+      // Temperature mode: gradient coloring per-vertex
+      const ambientTemp = 20;
+      let vertIdx = 0;
+      for (let i = 0; i < maxEdges; i++) {
+        const [idA, idB] = graphEdgeIds[i];
+        const tA = fireTemperatures[idA] ?? ambientTemp;
+        const tB = fireTemperatures[idB] ?? ambientTemp;
+        const cA = tA > ambientTemp + 1 ? temperatureToColor(tA) : defaultColor;
+        const cB = tB > ambientTemp + 1 ? temperatureToColor(tB) : defaultColor;
+        colorAttr.setXYZ(vertIdx, cA.r, cA.g, cA.b);
+        colorAttr.setXYZ(vertIdx + 1, cB.r, cB.g, cB.b);
+        vertIdx += 2;
       }
-
-      const color = temperatureToColor(temp);
-      const sphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15, 16, 16),
-        new THREE.MeshBasicMaterial({
-          color: color,
-          transparent: true,
-          opacity: 0.8
-        })
-      );
-      sphere.position.set(pos[0], pos[1], pos[2]);
-      sphere.userData.pickIgnore = true;
-      sphere.userData.temperature = temp;
-
-      // Apply the same transformations as the IFC model
-      const axis = resolveUpAxis(null, upAxis);
-      if (axis) {
-        applyUpAxis(sphere, axis, flipY, flipZ);
+    } else {
+      // Node-based mode: edges with burning endpoints turn orange/red
+      const burningSet = new Set(fireNodes);
+      const fireColor = new THREE.Color(0xff4500); // orange-red
+      let vertIdx = 0;
+      for (let i = 0; i < maxEdges; i++) {
+        const [idA, idB] = graphEdgeIds[i];
+        const aFire = burningSet.has(idA);
+        const bFire = burningSet.has(idB);
+        const cA = aFire ? fireColor : defaultColor;
+        const cB = bFire ? fireColor : defaultColor;
+        colorAttr.setXYZ(vertIdx, cA.r, cA.g, cA.b);
+        colorAttr.setXYZ(vertIdx + 1, cB.r, cB.g, cB.b);
+        vertIdx += 2;
       }
-
-      scene.add(sphere);
-      spheres.push(sphere);
-    });
-
-    console.log(`[IFCViewer] Created ${spheres.length} temperature spheres`);
-    nodeSpheresRef.current = spheres;
-  }, [fireTemperatures, fireUseTemperature, graphCoords, ready, upAxis, flipY, flipZ]);
+    }
+    colorAttr.needsUpdate = true;
+    lines.material.opacity = 0.7;
+    lines.material.needsUpdate = true;
+  }, [fireTemperatures, fireUseTemperature, fireNodes, graphEdgeIds]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -784,7 +820,9 @@ export default function IFCViewer({
       setStatus("loading");
       setError(null);
       try {
+        const doneRead = perfMark(`file.arrayBuffer (${file.name}, ${file.size} bytes)`);
         const buffer = await file.arrayBuffer();
+        doneRead();
         if (cancelled) return;
         const components = componentsRef.current;
         const world = worldRef.current;
@@ -799,11 +837,13 @@ export default function IFCViewer({
         ifcModelRef.current = null;
         modelIdRef.current = null;
 
+        const doneLoad = perfMark(`ifcLoader.load (${file.name})`);
         const model = await ifcLoader.load(
           new Uint8Array(buffer),
           false,
           file.name
         );
+        doneLoad();
         if (cancelled) return;
         const resolvedModel = model || Array.from(fragments.list.values()).pop();
         if (!resolvedModel) {
@@ -838,60 +878,78 @@ export default function IFCViewer({
           modelIdRef.current = resolvedModel.modelId;
         }
         world.scene.three.add(object);
+        const doneFirstFrame = perfMark("model visible (fragments update + fit)");
         await fragments.core.update(true);
         fitCameraToModel(world, resolvedModel, object);
-        setStatus("ready");
+        doneFirstFrame();
+        // Model is visible and navigable immediately
+        setStatus(onEgressDataExtracted ? "processing" : "ready");
 
         if (onEgressDataExtracted) {
-          setTimeout(async () => {
-            if (cancelled) return;
-            try {
-              const ifcApi = ifcLoader.webIfc;
-              const collectIds = (modelId) => {
-                if (!ifcApi || !isValidIfcModelId(modelId)) return null;
-                try {
-                  return collectIfcIds(ifcApi, modelId);
-                } catch {
-                  return null;
+          // Use requestAnimationFrame + setTimeout to let the browser
+          // render the scene and register pointer events before heavy work
+          requestAnimationFrame(() => {
+            setTimeout(async () => {
+              if (cancelled) return;
+              try {
+                const doneIds = perfMark("collectIfcIds");
+                const ifcApi = ifcLoader.webIfc;
+                const collectIds = (modelId) => {
+                  if (!ifcApi || !isValidIfcModelId(modelId)) return null;
+                  try {
+                    return collectIfcIds(ifcApi, modelId);
+                  } catch {
+                    return null;
+                  }
+                };
+                let ifcModelId =
+                  resolvedModel?.modelId ??
+                  resolvedModel?.modelID ??
+                  modelIdRef.current ??
+                  null;
+                let shouldClose = false;
+                let ids = collectIds(ifcModelId);
+
+                if (!ids) {
+                  ifcModelId = await ifcLoader.readIfcFile(new Uint8Array(buffer));
+                  shouldClose = true;
+                  ids = collectIds(ifcModelId);
                 }
-              };
-              let ifcModelId =
-                resolvedModel?.modelId ??
-                resolvedModel?.modelID ??
-                modelIdRef.current ??
-                null;
-              let shouldClose = false;
-              let ids = collectIds(ifcModelId);
 
-              if (!ids) {
-                ifcModelId = await ifcLoader.readIfcFile(new Uint8Array(buffer));
-                shouldClose = true;
-                ids = collectIds(ifcModelId);
-              }
+                if (!ids) {
+                  throw new Error("IFC egress ID extraction failed.");
+                }
+                doneIds({
+                  slabs: ids.slabs?.length,
+                  stairs: ids.stairs?.length,
+                  doors: ids.doors?.length,
+                  walls: ids.walls?.length,
+                  spaces: ids.spaces?.length,
+                  storeys: ids.storeys?.length,
+                });
 
-              if (!ids) {
-                throw new Error("IFC egress ID extraction failed.");
+                egressModelIdRef.current = ifcModelId;
+                egressIdsRef.current = ids;
+                onEgressDataExtracted({
+                  modelId: ifcModelId,
+                  ids,
+                });
+                if (shouldClose && ifcApi?.CloseModel) {
+                  ifcApi.CloseModel(ifcModelId);
+                }
+              } catch (egressErr) {
+                console.warn("IFC egress id extraction failed.", egressErr);
+                onEgressDataExtracted?.({
+                  modelId: egressModelIdRef.current,
+                  ids: null,
+                  egressError:
+                    egressErr?.message || "IFC egress id extraction failed.",
+                });
+              } finally {
+                setStatus("ready");
               }
-
-              egressModelIdRef.current = ifcModelId;
-              egressIdsRef.current = ids;
-              onEgressDataExtracted({
-                modelId: ifcModelId,
-                ids,
-              });
-              if (shouldClose && ifcApi?.CloseModel) {
-                ifcApi.CloseModel(ifcModelId);
-              }
-            } catch (egressErr) {
-              console.warn("IFC egress id extraction failed.", egressErr);
-              onEgressDataExtracted?.({
-                modelId: egressModelIdRef.current,
-                ids: null,
-                egressError:
-                  egressErr?.message || "IFC egress id extraction failed.",
-              });
-            }
-          }, 0);
+            }, 50);
+          });
         }
       } catch (err) {
         if (cancelled) return;
@@ -971,6 +1029,11 @@ export default function IFCViewer({
       {status === "loading" && (
         <div className="viewer-overlay">
           <span>Loading IFC...</span>
+        </div>
+      )}
+      {status === "processing" && (
+        <div className="viewer-processing-badge">
+          Extracting building data...
         </div>
       )}
       {error && <div className="error-banner">{error}</div>}
