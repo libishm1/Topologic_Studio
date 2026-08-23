@@ -1,22 +1,24 @@
 {
-  "name": "topologicpy-web-frontend",
+  "name": "topologic-studio-next-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync-wasm": "node scripts/sync-wasm.mjs",
+    "postinstall": "node scripts/sync-wasm.mjs"
   },
   "dependencies": {
-    "@thatopen/components": "^3.2.6",
-    "@thatopen/fragments": "^3.2.13",
-    "axios": "^1.13.2",
+    "@thatopen/components": "^3.4.8",
+    "@thatopen/fragments": "~3.4.7",
+    "camera-controls": "^3.1.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "three": "^0.181.2",
-    "web-ifc": "^0.0.73"
+    "three": "^0.185.1",
+    "web-ifc": "0.0.77"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

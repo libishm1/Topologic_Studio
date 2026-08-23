@@ -1,0 +1,187 @@
+/* Design tokens.
+ *
+ * One scale for everything: surfaces step from 0 (page) upward, text steps
+ * from primary down, and every accent has a matching soft/onward pair so a
+ * component never has to invent a colour. Light is the base definition and
+ * dark overrides only the tokens that change, which keeps the two themes from
+ * drifting apart.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --surface-0: #f4f6fa;
+  --surface-1: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #eef2f7;
+  --surface-sunken: #e8edf4;
+  --surface-overlay: rgba(255, 255, 255, 0.86);
+  --surface-scrim: rgba(15, 23, 42, 0.42);
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #7c8798;
+  --text-inverse: #f8fafc;
+
+  /* Lines */
+  --border: #dde4ee;
+  --border-strong: #c3cddd;
+  --border-focus: #2563eb;
+
+  /* Accents */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #e5edff;
+  --accent-text: #ffffff;
+
+  --success: #0f9d58;
+  --success-soft: #e2f6ec;
+  --warning: #c2760a;
+  --warning-soft: #fdf1dc;
+  --danger: #dc2626;
+  --danger-soft: #fdeaea;
+
+  /* Domain colours - shared by the 3D scene and the legend, so a swatch in
+   * the panel is always literally the colour drawn in the viewport. */
+  --viz-start: #16a34a;
+  --viz-exit: #ea580c;
+  --viz-path: #dc2626;
+  --viz-path-dynamic: #c026d3;
+  --viz-graph: #3b82f6;
+  --viz-stair: #8b5cf6;
+  --viz-door: #f59e0b;
+  --viz-fire: #ff4500;
+  --viz-scene-bg: #eef2f7;
+  --viz-grid: #cbd5e1;
+
+  /* Shape and depth */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow: 0 4px 16px rgba(15, 23, 42, 0.09);
+  --shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.18);
+
+  /* Rhythm */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --header-height: 52px;
+  --panel-width: 340px;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono",
+    Consolas, "Liberation Mono", monospace;
+
+  --transition: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  /* Default to dark when the OS asks for it and no explicit choice is stored. */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --surface-0: #0b1017;
+    --surface-1: #121822;
+    --surface-2: #172030;
+    --surface-3: #1e293b;
+    --surface-sunken: #080c12;
+    --surface-overlay: rgba(18, 24, 34, 0.88);
+    --surface-scrim: rgba(2, 6, 12, 0.6);
+
+    --text-primary: #e8eefb;
+    --text-secondary: #9fb0c9;
+    --text-tertiary: #6b7d96;
+    --text-inverse: #0b1017;
+
+    --border: #253044;
+    --border-strong: #35435c;
+    --border-focus: #60a5fa;
+
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --accent-soft: #17263f;
+    --accent-text: #ffffff;
+
+    --success: #34d399;
+    --success-soft: #10251f;
+    --warning: #fbbf24;
+    --warning-soft: #2a2113;
+    --danger: #f87171;
+    --danger-soft: #2c1618;
+
+    --viz-start: #22c55e;
+    --viz-exit: #fb923c;
+    --viz-path: #ef4444;
+    --viz-path-dynamic: #e879f9;
+    --viz-graph: #60a5fa;
+    --viz-stair: #a78bfa;
+    --viz-door: #fbbf24;
+    --viz-fire: #ff6a2b;
+    --viz-scene-bg: #0d1219;
+    --viz-grid: #223049;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-0: #0b1017;
+  --surface-1: #121822;
+  --surface-2: #172030;
+  --surface-3: #1e293b;
+  --surface-sunken: #080c12;
+  --surface-overlay: rgba(18, 24, 34, 0.88);
+  --surface-scrim: rgba(2, 6, 12, 0.6);
+
+  --text-primary: #e8eefb;
+  --text-secondary: #9fb0c9;
+  --text-tertiary: #6b7d96;
+  --text-inverse: #0b1017;
+
+  --border: #253044;
+  --border-strong: #35435c;
+  --border-focus: #60a5fa;
+
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-soft: #17263f;
+  --accent-text: #ffffff;
+
+  --success: #34d399;
+  --success-soft: #10251f;
+  --warning: #fbbf24;
+  --warning-soft: #2a2113;
+  --danger: #f87171;
+  --danger-soft: #2c1618;
+
+  --viz-start: #22c55e;
+  --viz-exit: #fb923c;
+  --viz-path: #ef4444;
+  --viz-path-dynamic: #e879f9;
+  --viz-graph: #60a5fa;
+  --viz-stair: #a78bfa;
+  --viz-door: #fbbf24;
+  --viz-fire: #ff6a2b;
+  --viz-scene-bg: #0d1219;
+  --viz-grid: #223049;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+}

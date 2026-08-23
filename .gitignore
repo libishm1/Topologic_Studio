@@ -1,0 +1,10 @@
+
+# --- Next line ---
+.venv-next/
+node_modules/
+dist/
+topologicpy-web-frontend/public/wasm/
+*.log
+__pycache__/
+.pytest_cache/
+.env

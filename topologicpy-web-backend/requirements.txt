@@ -1,4 +1,21 @@
-fastapi
-uvicorn[standard]
-pydantic
-python-multipart
+# Topologic Studio Next - backend runtime.
+#
+# Pinned deliberately. TopologicPy 0.9 split its native backend into a separate
+# `topologic-core` distribution: installing topologicpy alone imports fine and
+# then fails at the first geometry call, so both must be declared here.
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30
+pydantic>=2.7,<3.0
+python-multipart>=0.0.9
+
+# numpy/scipy carry the sampling, adjacency and fire maths.
+numpy>=1.26
+scipy>=1.11
+
+topologicpy==0.9.64
+topologic-core==8.0.4
+
+# Server-side IFC parsing for the legacy /upload-ifc route. Present in the
+# Classic Dockerfile but missing from its requirements.txt, so local and
+# deployed environments disagreed. Declared in one place now.
+ifcopenshell>=0.8.4

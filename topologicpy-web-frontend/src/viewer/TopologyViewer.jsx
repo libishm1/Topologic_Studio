@@ -101,7 +101,22 @@ function extractAlphaFromColorSpec(spec) {
   return null;
 }
 
-export default function TopologyViewer({ data, selection, onSelectionChange, showFaces = true, showVerts = false, wireframe = true, fitRequest = 0, fireVertices = [], fireEdges = [], pathEdges = [], pathVertices = [], extraVertices = [], extraVerticesVisible = false }) {
+export default function TopologyViewer({
+  data,
+  selection,
+  onSelectionChange,
+  showFaces = true,
+  showVerts = false,
+  wireframe = true,
+  fitRequest = 0,
+  theme = "dark",
+  fireVertices = [],
+  fireEdges = [],
+  pathEdges = [],
+  pathVertices = [],
+  extraVertices = [],
+  extraVerticesVisible = false,
+}) {
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -132,10 +147,19 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
   });
 
   const selectionRef = useRef(null);
+  const themeRef = useRef(theme);
 
   useEffect(() => {
     dataRef.current = data;
   }, [data]);
+
+  useEffect(() => {
+    themeRef.current = theme;
+    const scene = sceneRef.current;
+    if (scene) {
+      scene.background = new THREE.Color(theme === "dark" ? 0x0d1219 : 0xffffff);
+    }
+  }, [theme]);
 
   useEffect(() => {
     selectionRef.current = selection;
@@ -154,7 +178,9 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
     const height = mount.clientHeight || mount.offsetHeight || 600;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
+    // Theme is read from a ref so a theme switch recolours the scene
+    // instead of tearing the renderer down and rebuilding it.
+    scene.background = new THREE.Color(themeRef.current === "dark" ? 0x0d1219 : 0xffffff);
     scene.up.set(0, 0, 1); // Z-up
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -393,8 +419,6 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
     const edgesGroup = edgesGroupRef.current;
     const vertsGroup = vertsGroupRef.current;
     const extraVertsGroup = extraVertsGroupRef.current;
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
     const faceMeshById = faceMeshByIdRef.current;
     const edgeMeshById = edgeMeshByIdRef.current;
     const vertMeshById = vertMeshByIdRef.current;
@@ -435,9 +459,10 @@ export default function TopologyViewer({ data, selection, onSelectionChange, sho
       extraVertsGroup.visible = extraVerticesVisible;
     }
 
-    const baseFaceColor = new THREE.Color(0xcccccc);
-    const baseEdgeColor = new THREE.Color(0x222222);
-    const baseVertColor = new THREE.Color(0x000000);
+    const dark = themeRef.current === "dark";
+    const baseFaceColor = new THREE.Color(dark ? 0x93a4bd : 0xcccccc);
+    const baseEdgeColor = new THREE.Color(dark ? 0xdbe5f5 : 0x222222);
+    const baseVertColor = new THREE.Color(dark ? 0xffffff : 0x000000);
 
     // --- 1. Build vertex lookup ---
     const vertexById = new Map();

@@ -1,1493 +1,994 @@
-// src/App.jsx
-import React, { useState, useMemo, useEffect, useRef } from "react";
-import axios from "axios";
-import TopologyViewer from "./TopologyViewer.jsx";
-import IFCViewer from "./IFCViewer.jsx";
-import "./App.css";
-import logoImg from "./assets/topologicStudio-white-logo400x400.png";
+/**
+ * Application shell and workflow orchestration.
+ *
+ * The pipeline, end to end:
+ *
+ *   IFC file
+ *     -> hash + fragment cache lookup        (lib/fragmentCache)
+ *     -> convert or load fragments           (viewer/ViewerManager)
+ *     -> category ids from the fragments     (viewer/categories)
+ *     -> geometry extract + walkable sample  (workers/sampler.worker)
+ *     -> point cloud upload                  (lib/api)
+ *     -> navigation graph + routing          (backend)
+ *
+ * The expensive middle is off the main thread, and only the sampled points
+ * cross the network - not the triangles.
+ */
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000"; // FastAPI backend
-const PERF_LOG = (import.meta.env.VITE_PERF_LOG ?? (import.meta.env.DEV ? "1" : "")) === "1";
+import { api, legacyApi, openFireStream } from "./lib/api.js";
+import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
+import { useStudio } from "./state/useStudio.js";
+import { AboutPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
+import { TopologyPanel } from "./ui/TopologyPanel.jsx";
+import { Viewport } from "./ui/Viewport.jsx";
 
-const perfMark = (label) => {
-  if (!PERF_LOG) return () => {};
-  const t0 = performance.now();
-  return (extra) => {
-    const ms = performance.now() - t0;
-    if (extra) console.log(`PERF ${label} ${ms.toFixed(1)}ms`, extra);
-    else console.log(`PERF ${label} ${ms.toFixed(1)}ms`);
-  };
+import { Badge, Button, FileButton, Segmented } from "./ui/primitives.jsx";
+import logo from "./assets/topologicStudio-white-logo400x400.png";
+
+// Three plus OrbitControls only matter in this mode, so the chunk is loaded
+// on demand rather than shipped to everyone who opens the IFC viewer.
+const TopologyViewer = lazy(() => import("./viewer/TopologyViewer.jsx"));
+
+const IFC_TABS = [
+  { id: "model", label: "Model" },
+  { id: "route", label: "Route" },
+  { id: "simulate", label: "Simulate" },
+  { id: "about", label: "About" },
+];
+
+const TOPOLOGY_TABS = [
+  { id: "topology", label: "Topology" },
+  { id: "about", label: "About" },
+];
+
+const MODES = [
+  { value: "ifc", label: "IFC", hint: "Fragment viewer, egress graph and fire simulation" },
+  {
+    value: "topology",
+    label: "Topology JSON",
+    hint: "TopologicPy JSON contract viewer (legacy workflow)",
+  },
+];
+
+const DEFAULT_TOPOLOGY_OPTIONS = {
+  showFaces: true,
+  showVerts: false,
+  wireframe: true,
+  translucent: true,
+  tiltMin: 0.3,
+  maxZSpan: 1.0,
+  minFloorArea: 9,
 };
 
 export default function App() {
-  const spinnerStyle = { __html: `@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }` };
+  const studio = useStudio();
+  const viewerRef = useRef(null);
+  const workerRef = useRef(null);
+  const geometryRef = useRef(null);
+  // Fire accumulators live in refs: they are written from SSE callbacks that
+  // outlive any single render, and must not be re-created when the callback
+  // identity changes mid-simulation.
+  const burningRef = useRef(new Set());
+  const temperatureRef = useRef(new Map());
+  const [tab, setTab] = useState("model");
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [lastSample, setLastSample] = useState(null);
 
+  // Legacy TopologicPy JSON-contract workflow.
+  const [mode, setMode] = useState("ifc");
   const [topology, setTopology] = useState(null);
-  const [selection, setSelection] = useState(null);
-  const [error, setError] = useState(null);
-  const [fileName, setFileName] = useState("");
-  const [translucent, setTranslucent] = useState(true);
-  const [floorTilt, setFloorTilt] = useState(0.3);
-  const [floorMaxZ, setFloorMaxZ] = useState(1.0);
-  const [floorMinArea, setFloorMinArea] = useState(9);
-  const [lastIfcFile, setLastIfcFile] = useState(null);
-  const [lastIncludePath, setLastIncludePath] = useState(false);
-  const [showFaces, setShowFaces] = useState(false);
-  const [showVerts, setShowVerts] = useState(false);
-  const [wireframe, setWireframe] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [topologySelection, setTopologySelection] = useState(null);
+  const [topologyBusy, setTopologyBusy] = useState(false);
+  const [topologySource, setTopologySource] = useState(null);
+  const [topologyOptions, setTopologyOptionsState] = useState(DEFAULT_TOPOLOGY_OPTIONS);
   const [fitRequest, setFitRequest] = useState(0);
-  const [viewerMode, setViewerMode] = useState("topology");
-  const [ifcFile, setIfcFile] = useState(null);
-  const [ifcEgress, setIfcEgress] = useState(null);
-  const [ifcGraphStats, setIfcGraphStats] = useState(null);
-  const [ifcGraphCoords, setIfcGraphCoords] = useState(null);
-  const [ifcGraphEdges, setIfcGraphEdges] = useState(null);
-  const [ifcGraphEdgeIds, setIfcGraphEdgeIds] = useState(null);
-  const [ifcGraphLoading, setIfcGraphLoading] = useState(false);
-  const [ifcGraphPending, setIfcGraphPending] = useState(false);
-  const [ifcEgressRequestId, setIfcEgressRequestId] = useState(0);
-  const [ifcPathPoints, setIfcPathPoints] = useState(null);
-  const [ifcPathLoading, setIfcPathLoading] = useState(false);
-  const [ifcMeshVisible, setIfcMeshVisible] = useState(true);
-  const [ifcFloorEdge, setIfcFloorEdge] = useState(2.25);  // base_spacing * 1.5 = 1.5 * 1.5
-  const [ifcStairEdge, setIfcStairEdge] = useState(0.4);  // ~2x tread height
-  const [ifcGridSnap, setIfcGridSnap] = useState(false);
-  const [ifcGridCellSize, setIfcGridCellSize] = useState(1.5);
-  const [ifcUseWalls, setIfcUseWalls] = useState(true);
-  const ifcUpAxis = "y";
-  const ifcInvertOrbit = false;
-  const ifcFlipY = false;
-  const ifcFlipZ = true;
 
-  const fireTimerRef = useRef(null);
-  const fireSseRef = useRef(null);
-  const fireAccumRef = useRef(new Set());
-  const [graphMode, setGraphMode] = useState("cell");
-  const [pickMode, setPickMode] = useState(null);
-  const [startPoint, setStartPoint] = useState(null);
-  const [exitPoint, setExitPoint] = useState(null);
-  const [startId, setStartId] = useState(null);
-  const [exitId, setExitId] = useState(null);
-  const [fireRunning, setFireRunning] = useState(false);
-  const [fireTimeline, setFireTimeline] = useState([]);
-  const [fireStep, setFireStep] = useState(0);
-  const [fireNodes, setFireNodes] = useState([]);
-  const [fireUsePrecompute, setFireUsePrecompute] = useState(true);
-  const [fireDelayMs, setFireDelayMs] = useState(200);
-  const [fireMaxSteps, setFireMaxSteps] = useState(60);
-  const [fireCellBboxes, setFireCellBboxes] = useState([]);
-  const [cellDisplayNodes, setCellDisplayNodes] = useState([]);
-  const [fireUseTemperature, setFireUseTemperature] = useState(false);
-  const [fireTemperatures, setFireTemperatures] = useState({});
-  // Dynamic path rerouting state
-  const [dynamicPath, setDynamicPath] = useState(null);
-  const [dynamicPathCost, setDynamicPathCost] = useState(0.0);
-  const [dynamicPathChanged, setDynamicPathChanged] = useState(false);
-  const [pathAlpha, setPathAlpha] = useState(0.5);
-  const [pathRecomputeInterval, setPathRecomputeInterval] = useState(5);
-  const [pathLethalityThreshold, setPathLethalityThreshold] = useState(null);
-  const [streamPath, setStreamPath] = useState(false);
-  const [rlEpisodes, setRlEpisodes] = useState(200);
-  const [rlMaxSteps, setRlMaxSteps] = useState(200);
-  const [rlUseFire, setRlUseFire] = useState(true);
-  const [rlPath, setRlPath] = useState([]);
-  const [rlLoading, setRlLoading] = useState(false);
-  const emptyExtras = useMemo(() => [], []);
+  const {
+    settings,
+    setSettings,
+    theme,
+    toggleTheme,
+    file,
+    modelInfo,
+    graph,
+    points,
+    pickMode,
+    fire,
+    path,
+    dynamicPath,
+    toast,
+    reportError,
+  } = studio;
 
+  // ------------------------------------------------------------- the worker
 
-  const stopFire = () => {
-    if (fireTimerRef.current) {
-      clearInterval(fireTimerRef.current);
-      fireTimerRef.current = null;
-    }
-    if (fireSseRef.current) {
-      fireSseRef.current.close();
-      fireSseRef.current = null;
-    }
-    setFireRunning(false);
-  };
-
-  const resetSimulationState = () => {
-    stopFire();
-    setFireTimeline([]);
-    setFireNodes([]);
-    setFireStep(0);
-    setFireCellBboxes([]);
-    setRlPath([]);
-    setStartPoint(null);
-    setExitPoint(null);
-    setStartId(null);
-    setExitId(null);
-    setPickMode(null);
-    setIfcEgress(null);
-    setIfcGraphStats(null);
-    setIfcGraphEdges(null);
-    setIfcGraphEdgeIds(null);
-    setIfcGraphCoords(null);
-    setIfcPathPoints(null);
-    setIfcGraphLoading(false);
-    setIfcPathLoading(false);
-    setIfcGraphPending(false);
-  };
-
-  async function uploadIfc(file, includePath) {
-    setLoading(true);
-    setError(null);
-    resetSimulationState();
-    setSelection(null);
-    setTopology(null);
-    setFileName(includePath ? `${file.name} (path)` : file.name);
-
-    const form = new FormData();
-    form.append("file", file);
-
-    const query = includePath
-      ? `include_path=true&tilt_min=${floorTilt}&max_z_span=${floorMaxZ}&min_floor_area=${floorMinArea}`
-      : `include_path=false`;
-
-    try {
-      const done = perfMark(`POST /upload-ifc (${file.name}, ${file.size} bytes)`);
-      const res = await axios.post(`${API_BASE}/upload-ifc?${query}`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      done();
-      const payload = res.data;
-      if (!payload?.vertices || !payload?.faces) {
-        setError("Unexpected response format from IFC upload.");
-        return;
-      }
-      if (!payload.edges) payload.edges = [];
-      if (!payload.raw) payload.raw = [];
-      setTopology(payload);
-    } catch (apiErr) {
-      setError(
-        apiErr.response?.data?.detail || apiErr.message || "IFC upload failed"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleFileChange(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setLoading(true);
-    setError(null);
-    resetSimulationState();
-    setSelection(null);
-    setTopology(null);
-    setViewerMode("topology");
-    setShowFaces(false);
-    setFileName(file.name);
-
-    try {
-      const text = await file.text();
-      let originalJson;
-      try {
-        originalJson = JSON.parse(text);
-      } catch (parseErr) {
-        console.error("JSON parse error:", parseErr);
-        setError("JSON parse error: is this a valid JSON file?");
-        return;
-      }
-
-      let res;
-      try {
-        res = await axios.post(`${API_BASE}/upload-topology`, originalJson);
-      } catch (apiErr) {
-        console.error("API error:", apiErr);
-        if (apiErr.response) {
-          setError(
-            `API error ${apiErr.response.status}: ` +
-              JSON.stringify(apiErr.response.data)
-          );
-        } else {
-          setError(
-            `Network error: ${apiErr.code || apiErr.message || "unknown"}`
-          );
-        }
-        return;
-      }
-
-      const payload = res.data;
-      if (!payload.vertices || !payload.faces) {
-        setError("Unexpected response format from backend.");
-        return;
-      }
-      if (!payload.edges) payload.edges = [];
-      if (!payload.raw) payload.raw = [];
-      setTopology(payload);
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      setError("Unexpected error while loading topology.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const handleSelectionChange = (nextSelection) => {
-    setSelection(nextSelection);
-    if (!pickMode || !nextSelection?.point) return;
-    if (pickMode === "start") {
-      setStartPoint(nextSelection.point);
-      setStartId(nextSelection.level === "Vertex" ? nextSelection.uid : null);
-    } else if (pickMode === "exit") {
-      setExitPoint(nextSelection.point);
-      setExitId(nextSelection.level === "Vertex" ? nextSelection.uid : null);
-    }
-    setPickMode(null);
-  };
-
-  const handleIfcPick = (mode, point) => {
-    if (!mode || !point || point.length < 3) return;
-    if (mode === "start") {
-      setStartPoint(point);
-      setStartId(null);
-      setIfcPathPoints(null);
-    } else if (mode === "exit") {
-      setExitPoint(point);
-      setExitId(null);
-      setIfcPathPoints(null);
-    }
-    setPickMode(null);
-  };
-
-  async function handleIfcUpload(event, includePath = false) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    event.target.value = null;
-    setLastIfcFile(file);
-    setLastIncludePath(includePath);
-    setShowFaces(!includePath);
-    setIfcFile(file);
-    setViewerMode(includePath ? "topology" : "ifc");
-    await uploadIfc(file, includePath);
-  }
-
-  const handlePickStart = () => {
-    setPickMode("start");
-    setError(null);
-  };
-
-  const handlePickExit = () => {
-    setPickMode("exit");
-    setError(null);
-  };
-
-  const clearStartExit = () => {
-    setStartPoint(null);
-    setExitPoint(null);
-    setStartId(null);
-    setExitId(null);
-    setPickMode(null);
-    setIfcPathPoints(null);
-  };
-
-  const postIfcEgressGraph = (floors, stairs, doors, walls) => {
-    setIfcGraphLoading(true);
-    setIfcGraphPending(false);
-    const done = perfMark(
-      `POST /ifc-egress-graph (floors=${floors?.length || 0}, stairs=${stairs?.length || 0}, doors=${doors?.length || 0}, walls=${walls?.length || 0})`
-    );
-    return axios
-      .post(`${API_BASE}/ifc-egress-graph`, {
-        floors: floors || [],
-        stairs: stairs || [],
-        doors: doors || [],
-        walls: walls || [],
-        use_walls: ifcUseWalls,
-        agent_height: 0.75,
-        base_spacing: 0.5,
-        stair_multiplier: 0.5,
-        max_edge_length: 1.5,
-        max_edge_floor: ifcFloorEdge,
-        max_edge_stair: ifcStairEdge,
-        up_axis: ifcUpAxis,
-        max_points: 20000,
-        rectilinear: !ifcGridSnap,
-        grid_snap: ifcGridSnap,
-        grid_cell_size: ifcGridSnap ? ifcGridCellSize : undefined,
-      })
-      .then((res) => {
-        done({ nodes: res.data?.stats?.nodes, edges: res.data?.stats?.edges });
-        setIfcGraphStats(res.data || null);
-        setIfcGraphEdges(res.data?.edges || null);
-        setIfcGraphEdgeIds(res.data?.edge_ids || null);
-        setIfcGraphCoords(res.data?.coords || null);
-        if (startPoint && exitPoint) {
-          computeIfcEgressPath(true);
-        }
-      })
-      .catch((apiErr) => {
-        done({ error: apiErr.message });
-        setError(
-          apiErr.response?.data?.detail || apiErr.message || "IFC egress graph failed."
-        );
-      })
-      .finally(() => {
-        setIfcGraphLoading(false);
-        setIfcGraphPending(false);
-      });
-  };
-
-  const handleIfcEgressData = (data) => {
-    if (!data) {
-      setIfcEgress(null);
-      setIfcGraphStats(null);
-      setIfcGraphEdges(null);
-      setIfcGraphEdgeIds(null);
-      setIfcGraphCoords(null);
-      setIfcPathPoints(null);
-      return;
-    }
-    setIfcEgress((prev) => ({ ...(prev || {}), ...data }));
-    // Verbose IFC egress IDs logging removed to reduce console spam
-    if (data?.egressError && ifcGraphPending) {
-      setError(data.egressError);
-      setIfcGraphLoading(false);
-      setIfcGraphPending(false);
-      return;
-    }
-    if ((data?.floors?.length || data?.stairs?.length) && ifcGraphPending) {
-      postIfcEgressGraph(data.floors, data.stairs, data.doors, data.walls);
-    }
-  };
-
-  const buildIfcEgressGraph = async () => {
-    if (!ifcEgress?.ids) {
-      setError("Load IFC and wait for floor/stair IDs first.");
-      return;
-    }
-    setError(null);
-    setIfcGraphStats(null);
-    setIfcGraphEdges(null);
-    setIfcGraphEdgeIds(null);
-    setIfcGraphCoords(null);
-    setIfcPathPoints(null);
-    if (ifcEgress?.floors?.length || ifcEgress?.stairs?.length) {
-      await postIfcEgressGraph(ifcEgress.floors, ifcEgress.stairs, ifcEgress.doors, ifcEgress.walls);
-      return;
-    }
-    setIfcGraphLoading(true);
-    setIfcGraphPending(true);
-    setIfcEgressRequestId((v) => v + 1);
-  };
-
-  async function computeIfcEgressPath(force = false) {
-    if (!force && !ifcGraphStats) {
-      setError("Build the IFC egress graph first.");
-      return;
-    }
-    if (!startPoint || !exitPoint) {
-      setError("Pick start and exit points first.");
-      return;
-    }
-    setIfcPathLoading(true);
-    setError(null);
-    setIfcPathPoints(null);
-    const donePath = perfMark("POST /ifc-egress-path");
-    try {
-      const res = await axios.post(`${API_BASE}/ifc-egress-path`, {
-        start_point: startPoint,
-        end_point: exitPoint,
-      });
-      donePath({ points: res.data?.points?.length });
-      const payload = res.data || {};
-      if (!payload.points || payload.points.length < 2) {
-        setError("IFC egress path not found.");
-        return;
-      }
-      setIfcPathPoints(payload.points);
-    } catch (apiErr) {
-      console.error("Path API error:", apiErr.response?.data || apiErr);
-      setError(
-        apiErr.response?.data?.detail || apiErr.message || "IFC egress path failed."
-      );
-    } finally {
-      setIfcPathLoading(false);
-    }
-  }
-
-  const stopFireSimulation = () => {
-    stopFire();
-    setFireNodes([]);
-    setFireTemperatures({});
-    setFireTimeline([]);
-    setFireStep(0);
-    fireAccumRef.current = new Set();
-  };
-
-  const startFireSimulation = async () => {
-    stopFire();
-    setError(null);
-    setFireNodes([]);
-    setFireTemperatures({});
-    setFireTimeline([]);
-    setFireStep(0);
-    setFireRunning(true);
-    setDynamicPath(null);
-    setDynamicPathCost(0.0);
-    setDynamicPathChanged(false);
-    fireAccumRef.current = new Set();
-
-    const effectiveFireMode = viewerMode === "ifc" ? "ifc" : graphMode;
-    // Temperature mode requires SSE streaming — skip precompute path for IFC + temperature
-    const usePrecompute = fireUsePrecompute && !(viewerMode === "ifc" && fireUseTemperature);
-
-    if (usePrecompute) {
-      try {
-        const res = await axios.post(`${API_BASE}/fire-sim`, {
-          mode: effectiveFireMode,
-          start_id: startId,
-          end_id: exitId,
-          start_point: startPoint,
-          end_point: exitPoint,
-          max_steps: fireMaxSteps,
-          precompute: true,
-          radial: true,
-          delay_ms: fireDelayMs,
-        });
-        const payload = res.data || {};
-        const timeline = payload.timeline || [];
-        setFireCellBboxes(payload.cell_bboxes || []);
-        setFireTimeline(timeline);
-        if (timeline.length === 0) {
-          setFireRunning(false);
-          return;
-        }
-        let idx = 0;
-        setFireStep(0);
-        setFireNodes(timeline[0] || []);
-        if (timeline.length > 1) {
-          let accumulated = new Set(timeline[0] || []);
-          fireTimerRef.current = setInterval(() => {
-            idx += 1;
-            if (idx >= timeline.length) {
-              stopFire();
-              return;
-            }
-            setFireStep(idx);
-            (timeline[idx] || []).forEach((n) => accumulated.add(n));
-            setFireNodes(Array.from(accumulated));
-          }, Math.max(50, fireDelayMs));
-        } else {
-          setFireRunning(false);
-        }
-      } catch (apiErr) {
-        setFireRunning(false);
-        setError(
-          apiErr.response?.data?.detail || apiErr.message || "Fire simulation failed."
-        );
-      }
-      return;
-    }
-
-    const params = new URLSearchParams();
-    params.set("mode", effectiveFireMode);
-    params.set("max_steps", String(fireMaxSteps));
-    params.set("precompute", "false");
-    params.set("radial", "true");
-    params.set("delay_ms", String(fireDelayMs));
-    params.set("use_temperature", String(fireUseTemperature && viewerMode === "ifc"));
-    if (startId) params.set("start_id", startId);
-    if (exitId) params.set("end_id", exitId);
-    if (startPoint && startPoint.length >= 3) {
-      params.set("start_x", startPoint[0]);
-      params.set("start_y", startPoint[1]);
-      params.set("start_z", startPoint[2]);
-    }
-    if (exitPoint && exitPoint.length >= 3) {
-      params.set("end_x", exitPoint[0]);
-      params.set("end_y", exitPoint[1]);
-      params.set("end_z", exitPoint[2]);
-    }
-
-    // Add dynamic path rerouting parameters
-    if (streamPath && fireUseTemperature && viewerMode === "ifc" && startPoint && exitPoint) {
-      params.set("stream_path", "true");
-      params.set("path_start_id", startId || "");
-      params.set("path_end_id", exitId || "");
-      params.set("path_recompute_interval", String(pathRecomputeInterval));
-      params.set("path_alpha", String(pathAlpha));
-      if (pathLethalityThreshold !== null) {
-        params.set("path_lethality_threshold", String(pathLethalityThreshold));
-      }
-    }
-    const url = `${API_BASE}/fire-sim/stream?${params.toString()}`;
-    const doneStream = perfMark(`GET /fire-sim/stream startup (${effectiveFireMode})`);
-    let firstNonMetaSeen = false;
-    const es = new EventSource(url);
-    fireSseRef.current = es;
-    es.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (!firstNonMetaSeen && msg.type !== "meta") {
-          firstNonMetaSeen = true;
-          doneStream({ firstEvent: msg.type });
-        }
-        if (msg.type === "meta") {
-          setFireCellBboxes(msg.cell_bboxes || []);
-        } else if (msg.type === "temperature_step") {
-          setFireStep(msg.step ?? 0);
-          setFireTemperatures(msg.temperatures || {});
-          // Extract nodes with significant temperature for visualization
-          const hotNodes = Object.entries(msg.temperatures || {})
-            .filter(([_, temp]) => temp > 30)
-            .map(([nodeId, _]) => nodeId);
-          setFireNodes(hotNodes);
-        } else if (msg.type === "path_update") {
-          setDynamicPath(msg.path || null);
-          setDynamicPathCost(msg.cost || 0.0);
-          setDynamicPathChanged(msg.changed || false);
-        } else if (msg.type === "step") {
-          setFireStep(msg.step ?? 0);
-          (msg.nodes || []).forEach((n) => fireAccumRef.current.add(n));
-          setFireNodes(Array.from(fireAccumRef.current));
-        } else if (msg.type === "done") {
-          stopFire();
-        }
-      } catch {
-        // ignore parse errors
-      }
-    };
-    es.onerror = () => {
-      stopFire();
-      setError("Fire stream error.");
-    };
-  };
-
-  const trainRlPath = async () => {
-    if (!startPoint && !startId) {
-      setError("Pick a start point first.");
-      return;
-    }
-    if (!exitPoint && !exitId) {
-      setError("Pick an exit point first.");
-      return;
-    }
-    setError(null);
-    setRlLoading(true);
-    setRlPath([]);
-    try {
-      const res = await axios.post(`${API_BASE}/rl/train`, {
-        mode: graphMode,
-        start_id: startId,
-        exit_id: exitId,
-        start_point: startPoint,
-        exit_point: exitPoint,
-        episodes: rlEpisodes,
-        max_steps: rlMaxSteps,
-        use_fire: rlUseFire,
-      });
-      const payload = res.data || {};
-      setRlPath(payload.path || []);
-      if (payload.cell_bboxes) {
-        setFireCellBboxes(payload.cell_bboxes || []);
-      }
-    } catch (apiErr) {
-      setError(
-        apiErr.response?.data?.detail || apiErr.message || "RL training failed."
-      );
-    } finally {
-      setRlLoading(false);
-    }
-  };
-
-  const rawById = useMemo(() => {
-    if (!topology || !topology.raw) return new Map();
-    const map = new Map();
-    topology.raw.forEach((e) => {
-      const id = e.uid ?? e.uuid;
-      if (!id) return;
-      map.set(id, e);
-    });
-    return map;
-  }, [topology]);
-
-  const selectedEntity = useMemo(() => {
-    if (!selection || !rawById.size) return null;
-    return rawById.get(selection.uid) || null;
-  }, [selection, rawById]);
-
-  const summary = useMemo(() => {
-    if (!topology) return null;
-    return {
-      numVertices: topology.vertices?.length || 0,
-      numEdges: topology.edges?.length || 0,
-      numFaces: topology.faces?.length || 0,
-    };
-  }, [topology]);
-
-  const vertexList = useMemo(() => {
-    if (!topology || !Array.isArray(topology.vertices)) return [];
-    return topology.vertices
-      .map((v) => {
-        const id = v.uid ?? v.uuid;
-        const coord = v.coordinates || v.Coordinates;
-        if (!id || !Array.isArray(coord) || coord.length < 3) return null;
-        return { id, coord: coord.slice(0, 3) };
-      })
-      .filter(Boolean);
-  }, [topology]);
-
-  const edgeList = useMemo(() => {
-    if (!topology) return [];
-    if (Array.isArray(topology.edges) && topology.edges.length > 0) {
-      return topology.edges;
-    }
-    if (Array.isArray(topology.raw)) {
-      return topology.raw.filter(
-        (e) => e.type === "Edge" && Array.isArray(e.vertices)
+  const getWorker = useCallback(() => {
+    if (!workerRef.current) {
+      workerRef.current = new Worker(
+        new URL("./workers/sampler.worker.js", import.meta.url),
+        { type: "module" },
       );
     }
-    return [];
-  }, [topology]);
-
-  const edgeByKey = useMemo(() => {
-    const map = new Map();
-    edgeList.forEach((e) => {
-      const verts = e.vertices || [];
-      if (verts.length < 2) return;
-      const a = verts[0];
-      const b = verts[1];
-      const key = a < b ? `${a}|${b}` : `${b}|${a}`;
-      const id = e.uid ?? e.uuid;
-      if (id && !map.has(key)) {
-        map.set(key, id);
-      }
-    });
-    return map;
-  }, [edgeList]);
-
-
-  const cellDisplayVertices = useMemo(() => {
-    if (!cellDisplayNodes.length) return [];
-    return cellDisplayNodes.map((cell) => {
-      const center =
-        cell.center || [
-          0.5 * (cell.minx + cell.maxx),
-          0.5 * (cell.miny + cell.maxy),
-          cell.z ?? cell.z_min ?? 0,
-        ];
-      return {
-        id: cell.id,
-        coord: center,
-        color: "#22d3ee",
-      };
-    });
-  }, [cellDisplayNodes]);
-
-  const fireVertexIds = useMemo(() => {
-    if (!fireNodes.length) return [];
-    return fireNodes;
-  }, [fireNodes]);
-
-  const fireEdgeIds = useMemo(() => {
-    if (graphMode !== "wire" || !edgeList.length || !fireVertexIds.length) {
-      return [];
-    }
-    const fireSet = new Set(fireVertexIds);
-    return edgeList
-      .filter((e) => {
-        const verts = e.vertices || [];
-        return verts.length >= 2 && fireSet.has(verts[0]) && fireSet.has(verts[1]);
-      })
-      .map((e) => e.uid ?? e.uuid)
-      .filter(Boolean);
-  }, [edgeList, fireVertexIds, graphMode]);
-
-  const pathVertexIds = useMemo(() => {
-    if (!rlPath.length) return [];
-    return rlPath;
-  }, [rlPath]);
-
-  const pathEdgeIds = useMemo(() => {
-    if (pathVertexIds.length < 2) return [];
-    const ids = [];
-    for (let i = 0; i < pathVertexIds.length - 1; i += 1) {
-      const a = pathVertexIds[i];
-      const b = pathVertexIds[i + 1];
-      const key = a < b ? `${a}|${b}` : `${b}|${a}`;
-      const edgeId = edgeByKey.get(key);
-      if (edgeId) ids.push(edgeId);
-    }
-    return ids;
-  }, [pathVertexIds, edgeByKey]);
-
-  const displayTopology = useMemo(() => {
-    if (!topology) return null;
-    if (!translucent) return topology;
-    const faces = (topology.faces || []).map((f) => {
-      const opacity = 0.25;
-      return { ...f, opacity, dictionary: { ...(f.dictionary || {}), opacity } };
-    });
-    return { ...topology, faces };
-  }, [topology, translucent]);
-
-
-
-
-  useEffect(() => {
-    return () => {
-      stopFire();
-    };
+    return workerRef.current;
   }, []);
 
-  useEffect(() => {
-    stopFireSimulation();
-    setRlPath([]);
-    setFireCellBboxes([]);
-    if (graphMode !== "cell") {
-      setCellDisplayNodes([]);
+  useEffect(() => () => workerRef.current?.terminate(), []);
+
+  const sample = useCallback(
+    (payload, transfers) =>
+      new Promise((resolve, reject) => {
+        const worker = getWorker();
+        const id = Math.random().toString(36).slice(2);
+        const onMessage = (event) => {
+          if (event.data?.id !== id) return;
+          worker.removeEventListener("message", onMessage);
+          if (event.data.ok) resolve(event.data.result);
+          else reject(new Error(event.data.error || "Sampling failed."));
+        };
+        worker.addEventListener("message", onMessage);
+        worker.postMessage({ id, payload }, transfers);
+      }),
+    [getWorker],
+  );
+
+  // --------------------------------------------------------------- IFC load
+
+  const handleFile = useCallback(
+    async (nextFile) => {
+      if (!nextFile) return;
+      if (!nextFile.name.toLowerCase().endsWith(".ifc")) {
+        toast("Only .ifc files can be opened in the viewer.", {
+          title: "Unsupported file",
+          variant: "warning",
+        });
+        return;
+      }
+      const viewer = viewerRef.current;
+      if (!viewer?.ready) {
+        toast("The 3D viewer is still starting. Try again in a moment.", {
+          variant: "warning",
+        });
+        return;
+      }
+
+      studio.beginLoad(nextFile);
+      geometryRef.current = null;
+      setLastSample(null);
+      studio.setLoadState({ busy: true, stage: "reading", detail: nextFile.name });
+
+      try {
+        const result = await viewer.loadIfc(nextFile, {
+          onProgress: ({ stage, detail }) => {
+            const percent =
+              typeof detail === "number"
+                ? Math.max(0, Math.min(100, detail * 100))
+                : undefined;
+            studio.setLoadState({
+              busy: true,
+              stage,
+              detail: typeof detail === "string" ? detail : undefined,
+              percent,
+            });
+          },
+        });
+
+        studio.setModelInfo(result);
+        viewer.setModelVisible(settings.showModel);
+        setTab("model");
+
+        void studio.refreshCacheInfo();
+
+        toast(
+          result.cached
+            ? `Loaded from cache in ${formatMs(result.totalMs)}.`
+            : `Converted and cached in ${formatMs(result.totalMs)}.`,
+          { title: nextFile.name, variant: "success", ttl: 5000 },
+        );
+      } catch (error) {
+        if (error?.message !== "cancelled") {
+          reportError(error, "Could not load the IFC file");
+        }
+      } finally {
+        studio.setLoadState({ busy: false, stage: null, detail: null });
+      }
+    },
+    [reportError, settings.showModel, studio, toast],
+  );
+
+  // ------------------------------------------------------------ graph build
+
+  const buildGraph = useCallback(async () => {
+    const viewer = viewerRef.current;
+    if (!viewer?.model) {
+      toast("Load an IFC model first.", { variant: "warning" });
       return;
     }
-    if (!topology) return;
 
-    let active = true;
-    axios
-      .get(`${API_BASE}/graph-meta?mode=cell`)
-      .then((res) => {
-        if (!active) return;
-        const nodes = res.data?.cell_bboxes || [];
-        setCellDisplayNodes(nodes);
-        if (nodes.length) {
-          setFireCellBboxes(nodes);
-        } else {
-          setError("Cell model not available. Load IFC with wires first.");
+    studio.setGraphBusy(true);
+    studio.setLoadState({ busy: true, stage: "extracting", detail: null });
+    const timer = new PhaseTimer("graph.build");
+
+    try {
+      // Geometry extraction is the expensive part, so it is cached against the
+      // loaded model: changing a slider re-samples but does not re-extract.
+      if (!geometryRef.current) {
+        geometryRef.current = await timer.run("extract", () =>
+          viewer.extractEgressGeometry(),
+        );
+      }
+      const geometry = geometryRef.current;
+
+      studio.setLoadState({ busy: true, stage: "sampling", detail: null });
+
+      // The worker receives copies so the cached geometry survives transfer.
+      const clone = (meshes) =>
+        meshes.map((mesh) => ({
+          positions: mesh.positions.slice(),
+          indices: mesh.indices.slice(),
+        }));
+      const payload = {
+        floors: clone(geometry.floors),
+        stairs: clone(geometry.stairs),
+        doors: clone(geometry.doors),
+        walls: clone(geometry.walls),
+        upAxis: settings.upAxis,
+        floorSpacing: settings.floorSpacing,
+        maxPoints: settings.maxPoints,
+      };
+      const transfers = [];
+      for (const key of ["floors", "stairs", "doors", "walls"]) {
+        for (const mesh of payload[key]) {
+          transfers.push(mesh.positions.buffer, mesh.indices.buffer);
         }
-      })
-      .catch((err) => {
-        if (!active) return;
-        setError(err.response?.data?.detail || err.message || "Cell model load failed.");
-      });
+      }
 
-    return () => {
-      active = false;
-    };
-  }, [graphMode, topology]);
+      const sampled = await timer.run("sample", () => sample(payload, transfers));
+      setLastSample(sampled.stats);
+
+      studio.setLoadState({ busy: true, stage: "building", detail: null });
+
+      const toTriples = (flat) => {
+        const out = [];
+        for (let i = 0; i < flat.length; i += 3) {
+          out.push([flat[i], flat[i + 1], flat[i + 2]]);
+        }
+        return out;
+      };
+
+      const response = await timer.run("upload", () =>
+        api.buildGraph({
+          floor_points: toTriples(sampled.floorPoints),
+          stair_points: toTriples(sampled.stairPoints),
+          door_points: sampled.doorPoints,
+          walls: sampled.walls,
+          options: {
+            up_axis: settings.upAxis,
+            agent_height: settings.agentHeight,
+            max_edge_floor: settings.maxEdgeFloor,
+            max_edge_stair: settings.maxEdgeStair,
+            max_degree: settings.maxDegree,
+            use_walls: settings.useWalls,
+            rectilinear: settings.rectilinear,
+            grid_snap: settings.gridSnap,
+            grid_cell_size: settings.gridSnap ? settings.gridCellSize : null,
+            max_points: settings.maxPoints,
+          },
+        }),
+      );
+
+      studio.setGraph(response);
+      studio.setPath(null);
+      studio.setDynamicPath(null);
+
+      viewer.setGraph(response.nodes, response.edges, response.kinds);
+      viewer.setGraphVisible(settings.showGraph);
+
+      timer.finish({ nodes: response.stats.nodes, edges: response.stats.edges });
+
+      if (response.stats.components > 1) {
+        toast(
+          `Graph built with ${response.stats.components} disconnected pieces. ` +
+            "Routing uses the largest one.",
+          { title: "Graph is fragmented", variant: "warning", ttl: 9000 },
+        );
+      } else {
+        toast(
+          `${response.stats.nodes.toLocaleString()} nodes, ` +
+            `${response.stats.edges.toLocaleString()} edges.`,
+          { title: "Graph ready", variant: "success", ttl: 4000 },
+        );
+      }
+      setTab("route");
+    } catch (error) {
+      reportError(error, "Could not build the navigation graph");
+    } finally {
+      studio.setGraphBusy(false);
+      studio.setLoadState({ busy: false, stage: null, detail: null });
+    }
+  }, [reportError, sample, settings, studio, toast]);
+
+  // -------------------------------------------------------------- picking
+
+  const handlePick = useCallback(
+    (mode, point) => {
+      studio.setPoints((current) => ({ ...current, [mode]: point }));
+      viewerRef.current?.setMarker(mode, point);
+      studio.setPickMode(null);
+      if (mode !== "fire") {
+        studio.setPath(null);
+        viewerRef.current?.setPath(null);
+      }
+    },
+    [studio],
+  );
+
+  const requestPick = useCallback(
+    (mode) => {
+      studio.setPickMode((current) => (current === mode ? null : mode));
+    },
+    [studio],
+  );
+
+  const clearPoints = useCallback(() => {
+    studio.setPoints({ start: null, exit: null, fire: null });
+    ["start", "exit", "fire"].forEach((name) => viewerRef.current?.setMarker(name, null));
+    studio.setPath(null);
+    studio.setDynamicPath(null);
+    viewerRef.current?.setPath(null);
+    viewerRef.current?.setPath(null, { dynamic: true });
+  }, [studio]);
+
+  // ------------------------------------------------------------- find path
+
+  const findPath = useCallback(async () => {
+    if (!graph || !points.start || !points.exit) return;
+    studio.setPathBusy(true);
+    studio.setComparison(null);
+    try {
+      const result = await api.findPath({
+        graph_id: graph.graphId,
+        start_point: points.start,
+        end_point: points.exit,
+        engine: studio.effectiveEngine,
+        use_walls: settings.useWalls,
+      });
+      studio.setPath(result);
+      viewerRef.current?.setPath(result.points);
+      if (!result.found) {
+        toast(result.note || "No route exists between those two points.", {
+          title: "No route",
+          variant: "warning",
+        });
+      }
+    } catch (error) {
+      reportError(error, "Could not compute a route");
+    } finally {
+      studio.setPathBusy(false);
+    }
+  }, [graph, points, reportError, settings.useWalls, studio, toast]);
+
+  const comparePath = useCallback(async () => {
+    if (!graph || !points.start || !points.exit) return;
+    studio.setPathBusy(true);
+    try {
+      const result = await api.comparePath({
+        graph_id: graph.graphId,
+        start_point: points.start,
+        end_point: points.exit,
+        use_walls: settings.useWalls,
+      });
+      studio.setComparison(result);
+      studio.setPath(result.fast);
+      viewerRef.current?.setPath(result.fast.points);
+      toast(
+        result.same_route
+          ? "Both engines returned the same route."
+          : `Routes differ; cost delta ${result.cost_delta.toFixed(3)}.`,
+        {
+          title: "Engine comparison",
+          variant: result.same_route ? "success" : "warning",
+        },
+      );
+    } catch (error) {
+      reportError(error, "Engine comparison failed");
+    } finally {
+      studio.setPathBusy(false);
+    }
+  }, [graph, points, reportError, settings.useWalls, studio, toast]);
+
+  // ------------------------------------------------------------------- fire
+
+  const startFire = useCallback(() => {
+    if (!graph || !points.fire) return;
+    studio.stopFire();
+    studio.setDynamicPath(null);
+    viewerRef.current?.setPath(null, { dynamic: true });
+
+    burningRef.current = new Set();
+    temperatureRef.current = new Map();
+    studio.setFire({ running: true, step: 0, model: settings.fireModel });
+
+    const wantsReroute =
+      settings.reroute &&
+      settings.fireModel === "temperature" &&
+      Boolean(points.start && points.exit);
+
+    const handle = openFireStream(
+      {
+        graph_id: graph.graphId,
+        model: settings.fireModel,
+        max_steps: settings.fireMaxSteps,
+        delay_ms: settings.fireDelayMs,
+        use_walls: settings.useWalls,
+        start_x: points.fire[0],
+        start_y: points.fire[1],
+        start_z: points.fire[2],
+        ...(points.exit
+          ? { end_x: points.exit[0], end_y: points.exit[1], end_z: points.exit[2] }
+          : {}),
+        ...(wantsReroute
+          ? {
+              stream_path: true,
+              path_start_x: points.start[0],
+              path_start_y: points.start[1],
+              path_start_z: points.start[2],
+              path_recompute_interval: settings.rerouteInterval,
+              path_alpha: settings.hazardAlpha,
+              path_engine: studio.effectiveEngine,
+              ...(settings.lethalityThreshold
+                ? { path_lethality_threshold: settings.lethalityThreshold }
+                : {}),
+            }
+          : {}),
+      },
+      {
+        onMessage: (message) => {
+          const viewer = viewerRef.current;
+          if (message.type === "step") {
+            const burning = burningRef.current;
+            (message.nodes || []).forEach((n) => burning.add(n));
+            studio.setFire((current) => ({ ...current, step: message.step }));
+            viewer?.setBurningNodes(burning);
+          } else if (message.type === "temperature_step") {
+            const temperatures = temperatureRef.current;
+            temperatures.clear();
+            for (const [key, value] of Object.entries(message.temperatures || {})) {
+              temperatures.set(Number(key), value);
+            }
+            studio.setFire((current) => ({ ...current, step: message.step }));
+            viewer?.setTemperatures(temperatures);
+          } else if (message.type === "path_update") {
+            studio.setDynamicPath(message);
+            viewer?.setPath(message.path, { color: 0xc026d3, dynamic: true, width: 5 });
+          }
+        },
+        onDone: () => {
+          studio.setFire((current) => ({ ...current, running: false }));
+          toast("Fire simulation finished.", { variant: "info", ttl: 3500 });
+        },
+        onError: (error) => {
+          studio.setFire((current) => ({ ...current, running: false }));
+          reportError(error, "Fire simulation");
+        },
+      },
+    );
+    studio.setFireHandle(handle);
+  }, [graph, points, reportError, settings, studio, toast]);
+
+  const stopFire = useCallback(() => {
+    studio.stopFire();
+    viewerRef.current?.setTemperatures(null);
+    viewerRef.current?.setBurningNodes(null);
+  }, [studio]);
+
+  // --------------------------------------------------------------------- RL
+
+  const trainRl = useCallback(async () => {
+    if (!graph || !points.start || !points.exit) return;
+    studio.setRl({ busy: true, path: null, reachedExit: false });
+    try {
+      const result = await api.trainRl({
+        graph_id: graph.graphId,
+        start_point: points.start,
+        exit_point: points.exit,
+        episodes: settings.rlEpisodes,
+        max_steps: settings.rlMaxSteps,
+        use_fire: settings.rlUseFire,
+      });
+      studio.setRl({ busy: false, path: result.path, reachedExit: result.reached_exit });
+      viewerRef.current?.setPath(result.points, { color: 0x14b8a6, dynamic: true, width: 3 });
+      if (!result.reached_exit) {
+        toast("The policy did not reach the exit. Try more episodes.", {
+          title: "RL training",
+          variant: "warning",
+        });
+      }
+    } catch (error) {
+      studio.setRl({ busy: false, path: null, reachedExit: false });
+      reportError(error, "RL training failed");
+    }
+  }, [graph, points, reportError, settings, studio, toast]);
+
+  // --------------------------------------------------------- reactive push
 
   useEffect(() => {
-    let timer;
-    if (lastIncludePath && lastIfcFile) {
-      timer = setTimeout(() => {
-        uploadIfc(lastIfcFile, true);
-      }, 400);
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
+    viewerRef.current?.setGraphVisible(settings.showGraph);
+  }, [settings.showGraph, graph]);
+
+  useEffect(() => {
+    viewerRef.current?.setModelVisible(settings.showModel);
+  }, [settings.showModel, modelInfo]);
+
+  // ---------------------------------------------------------------- hotkeys
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "SELECT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      switch (event.key.toLowerCase()) {
+        case "escape":
+          studio.setPickMode(null);
+          break;
+        case "s":
+          if (graph) requestPick("start");
+          break;
+        case "e":
+          if (graph) requestPick("exit");
+          break;
+        case "f":
+          if (graph) requestPick("fire");
+          break;
+        case "g":
+          setSettings((s) => ({ ...s, showGraph: !s.showGraph }));
+          break;
+        case "m":
+          setSettings((s) => ({ ...s, showModel: !s.showModel }));
+          break;
+        case "b":
+          if (modelInfo) void buildGraph();
+          break;
+        case "enter":
+          if (graph && points.start && points.exit) void findPath();
+          break;
+        default:
+          break;
+      }
     };
-  }, [floorTilt, floorMaxZ, floorMinArea, lastIncludePath, lastIfcFile]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [buildGraph, findPath, graph, modelInfo, points, requestPick, setSettings, studio]);
 
+  // ------------------------------------------------- legacy topology mode
 
-  const formatPoint = (point) => {
-    if (!point || point.length < 3) return "not set";
-    return point.map((v) => Number(v).toFixed(2)).join(", ");
-  };
+  const setTopologyOptions = useCallback((patch) => {
+    setTopologyOptionsState((current) => ({ ...current, ...patch }));
+  }, []);
 
-  const formatDictValue = (value) => {
-    if (value === null || value === undefined) return "null";
-    if (typeof value === "boolean") return value ? "true" : "false";
-    if (typeof value === "number") return value;
-    if (typeof value === "string") return value;
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
+  const loadTopologyJson = useCallback(
+    async (jsonFile) => {
+      setTopologyBusy(true);
+      setTopology(null);
+      setTopologySelection(null);
+      setTopologySource(null);
+      try {
+        const text = await jsonFile.text();
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          throw new Error("That file is not valid JSON.");
+        }
+        const payload = await legacyApi.uploadTopology(parsed);
+        if (!payload?.vertices || !payload?.faces) {
+          throw new Error("The backend returned an unexpected topology shape.");
+        }
+        payload.edges ||= [];
+        payload.raw ||= [];
+        setTopology(payload);
+        setFitRequest((v) => v + 1);
+        toast(`${jsonFile.name} loaded.`, { variant: "success", ttl: 4000 });
+      } catch (error) {
+        reportError(error, "Could not load the topology JSON");
+      } finally {
+        setTopologyBusy(false);
+      }
+    },
+    [reportError, toast],
+  );
+
+  const processIfcOnServer = useCallback(
+    async (ifcFile, includePath) => {
+      setTopologyBusy(true);
+      setTopologySelection(null);
+      try {
+        const payload = await legacyApi.uploadIfc(ifcFile, {
+          includePath,
+          tiltMin: topologyOptions.tiltMin,
+          maxZSpan: topologyOptions.maxZSpan,
+          minFloorArea: topologyOptions.minFloorArea,
+        });
+        if (!payload?.vertices || !payload?.faces) {
+          throw new Error("The backend returned an unexpected topology shape.");
+        }
+        payload.edges ||= [];
+        payload.raw ||= [];
+        setTopology(payload);
+        setTopologySource({ file: ifcFile, includePath });
+        setFitRequest((v) => v + 1);
+        toast(
+          includePath
+            ? "Floors extracted and shortest path computed."
+            : `${ifcFile.name} processed on the server.`,
+          { variant: "success", ttl: 4000 },
+        );
+      } catch (error) {
+        reportError(error, "Server-side IFC processing failed");
+      } finally {
+        setTopologyBusy(false);
+      }
+    },
+    [reportError, toast, topologyOptions],
+  );
+
+  const reprocessTopology = useCallback(() => {
+    if (!topologySource?.file) return;
+    void processIfcOnServer(topologySource.file, true);
+  }, [processIfcOnServer, topologySource]);
+
+  const topologySummary = useMemo(() => {
+    if (!topology) return null;
+    return {
+      vertices: topology.vertices?.length || 0,
+      edges: topology.edges?.length || 0,
+      faces: topology.faces?.length || 0,
+      raw: topology.raw?.length || 0,
+    };
+  }, [topology]);
+
+  const topologyEntityById = useMemo(() => {
+    const map = new Map();
+    for (const entity of topology?.raw || []) {
+      const id = entity.uid ?? entity.uuid;
+      if (id) map.set(id, entity);
     }
-  };
+    return map;
+  }, [topology]);
+
+  const selectedTopologyEntity = useMemo(
+    () => (topologySelection ? topologyEntityById.get(topologySelection.uid) || null : null),
+    [topologySelection, topologyEntityById],
+  );
+
+  // Translucency is applied to a derived copy so toggling it never mutates the
+  // payload the inspector reads from.
+  const displayTopology = useMemo(() => {
+    if (!topology) return null;
+    if (!topologyOptions.translucent) return topology;
+    const faces = (topology.faces || []).map((face) => ({
+      ...face,
+      opacity: 0.25,
+      dictionary: { ...(face.dictionary || {}), opacity: 0.25 },
+    }));
+    return { ...topology, faces };
+  }, [topology, topologyOptions.translucent]);
+
+  // Keep the active tab valid when the viewer mode changes.
+  const tabs = mode === "ifc" ? IFC_TABS : TOPOLOGY_TABS;
+  const activeTab = tabs.some((t) => t.id === tab) ? tab : tabs[0].id;
+
+  // ----------------------------------------------------------------- legend
+
+  const legend = useMemo(() => {
+    const items = [];
+    if (graph) {
+      items.push({ label: "Walkable graph", color: "var(--viz-graph)" });
+      if (graph.stats.stair_nodes) {
+        items.push({ label: "Stairs", color: "var(--viz-stair)" });
+      }
+      if (graph.stats.door_nodes) {
+        items.push({ label: "Doors", color: "var(--viz-door)" });
+      }
+    }
+    if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
+    if (points.exit) items.push({ label: "Exit", color: "var(--viz-exit)", dot: true });
+    if (points.fire) items.push({ label: "Fire origin", color: "var(--viz-fire)", dot: true });
+    if (path?.found) items.push({ label: "Egress route", color: "var(--viz-path)" });
+    if (dynamicPath) {
+      items.push({ label: "Hazard-aware route", color: "var(--viz-path-dynamic)" });
+    }
+    return items;
+  }, [graph, points, path, dynamicPath]);
+
+  // ------------------------------------------------------------------ render
 
   return (
-    <div className="app-root">
-      <style dangerouslySetInnerHTML={spinnerStyle} />
-      {/* Top bar */}
-      <header className="app-header">
-        <div className="app-header-left">
-          <div className="app-logo-circle">
-            <img src={logoImg} alt="TopologicStudio logo" className="app-logo-image" />
-          </div>
-          <div className="app-title-block">
-            <h1 className="app-title">TopologicStudio</h1>
-            <span className="app-subtitle">
-              Interactive topology + graph viewer
-            </span>
-          </div>
+    <div className="app">
+      <header className="header">
+        <div className="brand">
+          <img src={logo} alt="" className="brand__mark" />
+          <span className="brand__name">Topologic Studio</span>
+          <span className="brand__tag">Next</span>
         </div>
-        <div className="app-header-middle">
-          {summary ? (
-            <span className="app-summary">
-              <span>{summary.numVertices} vertices</span>
-              <span className="app-summary-dot" />
-              <span>{summary.numEdges} edges</span>
-              <span className="app-summary-dot" />
-              <span>{summary.numFaces} faces</span>
-            </span>
+
+        <div className="header__divider" />
+
+        <Segmented
+          value={mode}
+          onChange={setMode}
+          options={MODES}
+          label="Viewer mode"
+        />
+
+        <div className="header__divider" />
+
+        <div className="header__group">
+          {mode === "ifc" ? (
+            <>
+              <FileButton accept=".ifc" onFile={handleFile} variant="primary">
+                Open IFC
+              </FileButton>
+              {file && (
+                <span className="badge" title={file.name}>
+                  {file.name.length > 24 ? `${file.name.slice(0, 22)}...` : file.name}
+                </span>
+              )}
+            </>
           ) : (
-            <span className="app-summary app-summary-faded">
-              No topology loaded
-            </span>
+            <>
+              <FileButton
+                accept=".json"
+                onFile={loadTopologyJson}
+                variant="primary"
+                disabled={topologyBusy}
+              >
+                Open JSON
+              </FileButton>
+              <FileButton
+                accept=".ifc"
+                onFile={(f) => processIfcOnServer(f, false)}
+                disabled={topologyBusy}
+              >
+                Process IFC on server
+              </FileButton>
+              <FileButton
+                accept=".ifc"
+                onFile={(f) => processIfcOnServer(f, true)}
+                disabled={topologyBusy}
+              >
+                Extract floors + path
+              </FileButton>
+            </>
           )}
         </div>
-        <div className="app-header-right">
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span className="sidebar-label" style={{ marginBottom: 0 }}>
-              Viewer
-            </span>
-            <select
-              value={viewerMode}
-              onChange={(e) => setViewerMode(e.target.value)}
-              style={{
-                padding: "4px 8px",
-                borderRadius: "8px",
-                border: "1px solid rgba(148, 163, 184, 0.4)",
-                background: "rgba(15, 23, 42, 0.85)",
-                color: "#e5e7eb",
-              }}
-            >
-              <option value="topology">Topology</option>
-              <option value="ifc">IFC (Fragments)</option>
-            </select>
-          </div>
-          <label className="file-upload-button">
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleFileChange}
-              className="file-upload-input"
-            />
-            <span>Load JSON</span>
-          </label>
-          <label className="file-upload-button">
-            <input
-              type="file"
-              accept=".ifc"
-              onChange={(e) => handleIfcUpload(e, false)}
-              className="file-upload-input"
-            />
-            <span>Load IFC</span>
-          </label>
-          <label className="file-upload-button">
-            <input
-              type="file"
-              accept=".ifc"
-              onChange={(e) => handleIfcUpload(e, true)}
-              className="file-upload-input"
-            />
-            <span>Load IFC, generate wires, and calculate shortest path</span>
-          </label>
-          <button
-            type="button"
-            className="file-upload-button"
-            onClick={() => setTranslucent((v) => !v)}
-          >
-            {translucent ? "Show opaque" : "Make translucent"}
-          </button>
-          <button
-            type="button"
-            className="file-upload-button"
-            onClick={() => setShowFaces((v) => !v)}
-          >
-            {showFaces ? "Hide meshes" : "Show meshes"}
-          </button>
-          <button
-            type="button"
-            className="file-upload-button"
-            onClick={() => setShowVerts((v) => !v)}
-          >
-            {showVerts ? "Hide vertices" : "Show vertices"}
-          </button>
-          <button
-            type="button"
-            className="file-upload-button"
-            onClick={() => setWireframe((v) => !v)}
-          >
-            {wireframe ? "Disable wireframe" : "Enable wireframe"}
-          </button>
-          <button
-            type="button"
-            className="file-upload-button"
-            onClick={() => setFitRequest((v) => v + 1)}
-          >
-            Fit view
-          </button>
-          {fileName && (
-            <span className="file-chip" title={fileName}>
-              {fileName}
-            </span>
+
+        <div className="header__spacer" />
+
+        <div className="header__group header__group--wide">
+          {studio.serverStatus !== "online" && (
+            <Badge variant="danger">Backend offline</Badge>
           )}
-          <div className="slider-panel">
-            <label>
-              Tilt min
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={floorTilt}
-                onChange={(e) => setFloorTilt(Number(e.target.value))}
-              />
-              <span className="slider-value">{floorTilt.toFixed(2)}</span>
-            </label>
-            <label>
-              Max z-span (m)
-              <input
-                type="range"
-                min="0"
-                max="3"
-                step="0.1"
-                value={floorMaxZ}
-                onChange={(e) => setFloorMaxZ(Number(e.target.value))}
-              />
-              <span className="slider-value">{floorMaxZ.toFixed(2)}</span>
-            </label>
-            <label>
-              Min area (m?)
-              <input
-                type="range"
-                min="1"
-                max="50"
-                step="1"
-                value={floorMinArea}
-                onChange={(e) => setFloorMinArea(Number(e.target.value))}
-              />
-              <span className="slider-value">{floorMinArea.toFixed(0)}</span>
-            </label>
-          </div>
+          {modelInfo?.cached && <Badge variant="success">cached</Badge>}
+          {fire.running && (
+            <Badge variant="danger" pulse>
+              fire step {fire.step}
+            </Badge>
+          )}
+        </div>
+
+        <div className="header__group">
+          <Button
+            icon
+            variant="ghost"
+            onClick={toggleTheme}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            aria-label="Toggle colour theme"
+          >
+            {theme === "dark" ? "☀" : "☾"}
+          </Button>
+          <Button
+            icon
+            variant="ghost"
+            onClick={() => setPanelOpen((v) => !v)}
+            title={panelOpen ? "Hide inspector" : "Show inspector"}
+            aria-label="Toggle inspector panel"
+          >
+            {panelOpen ? "▸" : "◂"}
+          </Button>
         </div>
       </header>
 
-      {/* Main content */}
-      <div className="app-main">
-        <div className="viewer-panel" style={{ position: "relative" }}>
-          {viewerMode === "ifc" ? (
-            <IFCViewer
-              file={ifcFile}
-              pickMode={pickMode}
-              onPick={handleIfcPick}
-              onEgressDataExtracted={handleIfcEgressData}
-              pathPoints={ifcPathPoints}
-              graphEdges={ifcGraphEdges}
-              graphEdgeIds={ifcGraphEdgeIds}
-              graphCoords={ifcGraphCoords}
-              egressRequestId={ifcEgressRequestId}
-              startPoint={startPoint}
-              exitPoint={exitPoint}
-              upAxis={ifcUpAxis}
-              invertOrbit={ifcInvertOrbit}
-              flipY={ifcFlipY}
-              flipZ={ifcFlipZ}
-              meshVisible={ifcMeshVisible}
-              fireNodes={fireNodes}
-              fireTemperatures={fireTemperatures}
-              fireUseTemperature={fireUseTemperature}
-              dynamicPath={dynamicPath}
-            />
-          ) : topology ? (
-            <TopologyViewer
-              data={displayTopology || topology}
-              selection={selection}
-              onSelectionChange={handleSelectionChange}
-              showFaces={showFaces}
-              showVerts={showVerts}
-              wireframe={wireframe}
-              fitRequest={fitRequest}
-              fireVertices={fireVertexIds}
-              fireEdges={fireEdgeIds}
-              pathEdges={pathEdgeIds}
-              pathVertices={pathVertexIds}
-              extraVertices={graphMode === "cell" ? cellDisplayVertices : emptyExtras}
-              extraVerticesVisible={graphMode === "cell"}
-            />
-          ) : (
-            <div className="viewer-placeholder">
-              <div className="viewer-placeholder-card">
-                <h2>Welcome to TopologicStudio</h2>
-                <p>
-                  IFC viewer and fire egress calculator for TopologicPy models.
-                </p>
-                <p>
-                  Load a TopologicPy JSON export to explore cells, shells,
-                  faces, and their graphs in an interactive 3D view.
-                </p>
-                <p className="viewer-placeholder-hint">
-                  Use the button in the top right to load a file.
-                </p>
-              </div>
-            </div>
-          )}
-          {loading && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: "rgba(10,12,24,0.55)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 15,
-                backdropFilter: "blur(2px)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "12px",
-                  color: "#fff",
-                  fontWeight: 600,
-                }}
+      <div className="app-body" data-panel-collapsed={!panelOpen}>
+        {mode === "ifc" ? (
+          <Viewport
+            viewerRef={viewerRef}
+            onPick={handlePick}
+            onFile={handleFile}
+            theme={theme}
+            pickMode={pickMode}
+            hasModel={Boolean(modelInfo)}
+            loadState={studio.loadState}
+            graphStats={graph?.stats}
+            fire={fire}
+            legend={legend}
+          />
+        ) : (
+          <div className="viewport">
+            {topology ? (
+              <Suspense
+                fallback={
+                  <div className="placeholder">
+                    <div className="placeholder__card">
+                      <div
+                        className="btn__spinner"
+                        style={{ color: "var(--accent)", width: 22, height: 22 }}
+                      />
+                      <p>Loading the topology viewer...</p>
+                    </div>
+                  </div>
+                }
               >
-                <img
-                  src={logoImg}
-                  alt="Loading"
-                  style={{ width: "64px", height: "64px", opacity: 0.9 }}
+                <TopologyViewer
+                  data={displayTopology || topology}
+                  selection={topologySelection}
+                  onSelectionChange={setTopologySelection}
+                  showFaces={topologyOptions.showFaces}
+                  showVerts={topologyOptions.showVerts}
+                  wireframe={topologyOptions.wireframe}
+                  fitRequest={fitRequest}
+                  theme={theme}
                 />
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    border: "4px solid rgba(255,255,255,0.35)",
-                    borderTopColor: "#7ad7ff",
-                    animation: "spin 0.9s linear infinite",
-                  }}
-                />
-                <span>Loading</span>
+              </Suspense>
+            ) : (
+              <div className="placeholder">
+                <div className="placeholder__card">
+                  <img src={logo} alt="" className="placeholder__logo" />
+                  <h2>Topology JSON viewer</h2>
+                  <p>
+                    Inspect a TopologicPy JSON export, or have the server extract a
+                    topology from an IFC file. Click any face, edge or vertex to walk
+                    up its hierarchy and read its dictionary.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-          {error && <div className="error-banner">{error}</div>}
-        </div>
-
-        {/* Sidebar / Inspector */}
-        <aside className="sidebar">
-          <div className="sidebar-header">
-            <span className="sidebar-title">Properties</span>
-            {selection && (
-              <span className="sidebar-pill">{selection.level}</span>
+            )}
+            {topologyBusy && (
+              <div className="overlay overlay--top-left">
+                <div className="card progress">
+                  <div className="progress__row">
+                    <span className="progress__label">Processing on the server</span>
+                  </div>
+                  <div className="progress__track">
+                    <div className="progress__fill progress__fill--indeterminate" />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
+        )}
 
-          <div className="sidebar-section">
-            <div className="sidebar-section-header">Fire + egress</div>
-            <div className="sidebar-section-body">
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div>
-                  <span className="sidebar-label">Graph mode</span>
-                  <select
-                    value={graphMode}
-                    onChange={(e) => setGraphMode(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      borderRadius: "8px",
-                      border: "1px solid rgba(148, 163, 184, 0.4)",
-                      background: "rgba(15, 23, 42, 0.85)",
-                      color: "#e5e7eb",
-                    }}
-                  >
-                    <option value="wire">Wire grid (detailed)</option>
-                    <option value="cell">Cell model (simple)</option>
-                  </select>
-                </div>
-
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    className="file-upload-button"
-                    onClick={handlePickStart}
-                    style={{ flex: "1 1 120px", justifyContent: "center" }}
-                  >
-                    {pickMode === "start" ? "Click in viewer..." : "Set start"}
-                  </button>
-                  <button
-                    type="button"
-                    className="file-upload-button"
-                    onClick={handlePickExit}
-                    style={{ flex: "1 1 120px", justifyContent: "center" }}
-                  >
-                    {pickMode === "exit" ? "Click in viewer..." : "Set exit"}
-                  </button>
-                  <button
-                    type="button"
-                    className="file-upload-button"
-                    onClick={clearStartExit}
-                    style={{ flex: "1 1 120px", justifyContent: "center" }}
-                  >
-                    Clear points
-                  </button>
-                </div>
-
-                <div>
-                  <span className="sidebar-label">Start</span>
-                  <span className="sidebar-value sidebar-value-mono">
-                    {startId || formatPoint(startPoint)}
-                  </span>
-                </div>
-                <div>
-                  <span className="sidebar-label">Exit</span>
-                  <span className="sidebar-value sidebar-value-mono">
-                    {exitId || formatPoint(exitPoint)}
-                  </span>
-                </div>
-                {ifcEgress?.ids && (
-                  <div>
-                    <span className="sidebar-label">IFC floors / stairs</span>
-                    <span className="sidebar-value sidebar-value-mono">
-                      {ifcEgress.ids.slabs.length} / {ifcEgress.ids.stairs.length}
-                    </span>
-                  </div>
-                )}
-                {viewerMode === "ifc" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <div className="slider-panel">
-                      <label>
-                        Floor connectivity (m)
-                        <input
-                          type="range"
-                        min="1.5"
-                        max="20"
-                        step="0.25"
-                          value={ifcFloorEdge}
-                          onChange={(e) => setIfcFloorEdge(Number(e.target.value))}
-                        />
-                        <span className="slider-value">
-                          {ifcFloorEdge.toFixed(2)}
-                        </span>
-                      </label>
-                      <label>
-                        Stair connectivity (m)
-                        <input
-                          type="range"
-                        min="0.2"
-                        max="3"
-                        step="0.1"
-                          value={ifcStairEdge}
-                          onChange={(e) => setIfcStairEdge(Number(e.target.value))}
-                        />
-                        <span className="slider-value">
-                          {ifcStairEdge.toFixed(2)}
-                        </span>
-                      </label>
-                      <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                        <input
-                          type="checkbox"
-                          checked={ifcGridSnap}
-                          onChange={(e) => setIfcGridSnap(e.target.checked)}
-                        />
-                        Grid-snap (rectilinear)
-                      </label>
-                      {ifcGridSnap && (
-                        <label>
-                          Grid cell size (m)
-                          <input
-                            type="range"
-                            min="0.3"
-                            max="3.0"
-                            step="0.1"
-                            value={ifcGridCellSize}
-                            onChange={(e) => setIfcGridCellSize(Number(e.target.value))}
-                          />
-                          <span className="slider-value">
-                            {ifcGridCellSize.toFixed(1)}
-                          </span>
-                        </label>
-                      )}
-                    </div>
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <input
-                        type="checkbox"
-                        checked={ifcUseWalls}
-                        onChange={(e) => setIfcUseWalls(e.target.checked)}
-                      />
-                      <span className="sidebar-value">Use walls as obstacles</span>
-                    </label>
-                    <button
-                      type="button"
-                      className="file-upload-button"
-                      onClick={() => setIfcMeshVisible((v) => !v)}
-                      style={{ justifyContent: "center" }}
-                    >
-                      {ifcMeshVisible ? "Hide IFC mesh" : "Show IFC mesh"}
-                    </button>
-                    <button
-                      type="button"
-                      className="file-upload-button"
-                      onClick={buildIfcEgressGraph}
-                      disabled={ifcGraphLoading || !ifcEgress}
-                      style={{ justifyContent: "center" }}
-                    >
-                      {ifcGraphLoading ? "Building IFC graph..." : "Build IFC egress graph"}
-                    </button>
-                    <button
-                      type="button"
-                      className="file-upload-button"
-                      onClick={computeIfcEgressPath}
-                      disabled={ifcPathLoading || !ifcGraphStats}
-                      style={{ justifyContent: "center" }}
-                    >
-                      {ifcPathLoading ? "Computing IFC path..." : "Compute IFC egress path"}
-                    </button>
-                    {ifcGraphStats?.stats && (
-                      <div className="sidebar-value sidebar-value-mono">
-                        Graph: {ifcGraphStats.stats.nodes} nodes / {ifcGraphStats.stats.edges} edges
-                        {ifcGraphStats.stats.door_nodes > 0 && ` (${ifcGraphStats.stats.door_nodes} doors)`}
-                        {ifcGraphStats.stats.wall_segments > 0 && ` (${ifcGraphStats.stats.wall_segments} walls)`}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <input
-                      type="checkbox"
-                      checked={fireUsePrecompute}
-                      onChange={(e) => setFireUsePrecompute(e.target.checked)}
-                    />
-                    <span className="sidebar-value">Precompute timeline</span>
-                  </label>
-                  {viewerMode === "ifc" && (
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <input
-                        type="checkbox"
-                        checked={fireUseTemperature}
-                        onChange={(e) => setFireUseTemperature(e.target.checked)}
-                      />
-                      <span className="sidebar-value">Temperature model</span>
-                    </label>
-                  )}
-
-                  {viewerMode === "ifc" && fireUseTemperature && (
-                    <>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <input
-                          type="checkbox"
-                          checked={streamPath}
-                          onChange={(e) => setStreamPath(e.target.checked)}
-                        />
-                        <span className="sidebar-value">Dynamic path rerouting</span>
-                      </label>
-
-                      {streamPath && (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "8px", marginLeft: "20px" }}>
-                          <label>
-                            <span className="sidebar-label">Hazard weight (α)</span>
-                            <input
-                              type="number"
-                              min="0"
-                              max="2"
-                              step="0.1"
-                              value={pathAlpha}
-                              onChange={(e) => setPathAlpha(Number(e.target.value))}
-                              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #444" }}
-                            />
-                          </label>
-                          <label>
-                            <span className="sidebar-label">Recompute interval</span>
-                            <input
-                              type="number"
-                              min="1"
-                              max="20"
-                              step="1"
-                              value={pathRecomputeInterval}
-                              onChange={(e) => setPathRecomputeInterval(Number(e.target.value))}
-                              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #444" }}
-                            />
-                          </label>
-                          <label style={{ gridColumn: "1 / -1" }}>
-                            <span className="sidebar-label">Lethality threshold (°C)</span>
-                            <input
-                              type="number"
-                              min="60"
-                              max="150"
-                              step="5"
-                              value={pathLethalityThreshold || ""}
-                              onChange={(e) => setPathLethalityThreshold(e.target.value ? Number(e.target.value) : null)}
-                              placeholder="None"
-                              style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #444" }}
-                            />
-                          </label>
-                        </div>
-                      )}
-
-                      {streamPath && dynamicPath && (
-                        <div className="sidebar-value" style={{ opacity: 0.8, marginTop: "8px", fontSize: "0.9em" }}>
-                          Dynamic path cost: {dynamicPathCost.toFixed(2)}m
-                          {dynamicPathChanged && <span style={{ color: "#ef4444", marginLeft: "8px" }}>● Path changed!</span>}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <input
-                      type="checkbox"
-                      checked={rlUseFire}
-                      onChange={(e) => setRlUseFire(e.target.checked)}
-                    />
-                    <span className="sidebar-value">Use fire in RL</span>
-                  </label>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                  <label>
-                    <span className="sidebar-label">Step delay (ms)</span>
-                    <input
-                      type="number"
-                      min="50"
-                      step="50"
-                      value={fireDelayMs}
-                      onChange={(e) => setFireDelayMs(Number(e.target.value))}
-                      style={{ width: "100%", padding: "6px", borderRadius: "6px" }}
-                    />
-                  </label>
-                  <label>
-                    <span className="sidebar-label">Fire steps</span>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={fireMaxSteps}
-                      onChange={(e) => setFireMaxSteps(Number(e.target.value))}
-                      style={{ width: "100%", padding: "6px", borderRadius: "6px" }}
-                    />
-                  </label>
-                  <label>
-                    <span className="sidebar-label">RL episodes</span>
-                    <input
-                      type="number"
-                      min="10"
-                      step="10"
-                      value={rlEpisodes}
-                      onChange={(e) => setRlEpisodes(Number(e.target.value))}
-                      style={{ width: "100%", padding: "6px", borderRadius: "6px" }}
-                    />
-                  </label>
-                  <label>
-                    <span className="sidebar-label">RL max steps</span>
-                    <input
-                      type="number"
-                      min="10"
-                      step="10"
-                      value={rlMaxSteps}
-                      onChange={(e) => setRlMaxSteps(Number(e.target.value))}
-                      style={{ width: "100%", padding: "6px", borderRadius: "6px" }}
-                    />
-                  </label>
-                </div>
-
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    className="file-upload-button"
-                    onClick={startFireSimulation}
-                    disabled={fireRunning}
-                    style={{ flex: "1 1 120px", justifyContent: "center" }}
-                  >
-                    {fireRunning ? "Fire running" : "Start fire"}
-                  </button>
-                  <button
-                    type="button"
-                    className="file-upload-button"
-                    onClick={stopFireSimulation}
-                    disabled={!fireRunning}
-                    style={{ flex: "1 1 120px", justifyContent: "center" }}
-                  >
-                    Stop fire
-                  </button>
-                  <button
-                    type="button"
-                    className="file-upload-button"
-                    onClick={trainRlPath}
-                    disabled={rlLoading}
-                    style={{ flex: "1 1 120px", justifyContent: "center" }}
-                  >
-                    {rlLoading ? "Training..." : "Train RL path"}
-                  </button>
-                </div>
-
-                <div className="sidebar-value" style={{ opacity: 0.8 }}>
-                  Fire step: {fireStep} {fireRunning ? (fireUsePrecompute ? "(precomputed)" : "(streaming)") : ""}
-                </div>
-              </div>
+        {panelOpen && (
+          <aside className="panel">
+            <div className="panel__tabs" role="tablist">
+              {tabs.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  role="tab"
+                  className="panel__tab"
+                  aria-selected={activeTab === entry.id}
+                  onClick={() => setTab(entry.id)}
+                >
+                  {entry.label}
+                </button>
+              ))}
             </div>
+
+            <div className="panel__scroll">
+              {activeTab === "topology" && (
+                <TopologyPanel
+                  topology={topology}
+                  summary={topologySummary}
+                  selection={topologySelection}
+                  selectedEntity={selectedTopologyEntity}
+                  options={topologyOptions}
+                  setOptions={setTopologyOptions}
+                  busy={topologyBusy}
+                  onReprocess={reprocessTopology}
+                  canReprocess={Boolean(topologySource?.file)}
+                  onFit={() => setFitRequest((v) => v + 1)}
+                />
+              )}
+              {activeTab === "model" && (
+                <ModelPanel
+                  studio={studio}
+                  onBuildGraph={buildGraph}
+                  onClearCache={studio.purgeCache}
+                />
+              )}
+              {activeTab === "route" && (
+                <RoutePanel
+                  studio={studio}
+                  onPick={requestPick}
+                  onClearPoints={clearPoints}
+                  onFindPath={findPath}
+                  onCompare={comparePath}
+                />
+              )}
+              {activeTab === "simulate" && (
+                <SimulatePanel
+                  studio={studio}
+                  onStartFire={startFire}
+                  onStopFire={stopFire}
+                  onTrainRl={trainRl}
+                />
+              )}
+              {activeTab === "about" && <AboutPanel studio={studio} />}
+            </div>
+
+            <div className="statusbar">
+              <span className="statusbar__item">
+                <span
+                  className="badge__dot"
+                  style={{
+                    background:
+                      studio.serverStatus === "online"
+                        ? "var(--success)"
+                        : "var(--danger)",
+                  }}
+                />
+                {studio.serverStatus === "online" ? "backend up" : "backend down"}
+              </span>
+              {lastSample && (
+                <>
+                  <span className="statusbar__sep" />
+                  <span className="statusbar__item">
+                    sampled {(lastSample.floorPoints + lastSample.stairPoints).toLocaleString()} pts
+                    in {Math.round(lastSample.ms)} ms
+                  </span>
+                </>
+              )}
+              {studio.cacheInfo.bytes > 0 && (
+                <>
+                  <span className="statusbar__sep" />
+                  <span className="statusbar__item">
+                    cache {formatBytes(studio.cacheInfo.bytes)}
+                  </span>
+                </>
+              )}
+            </div>
+          </aside>
+        )}
+      </div>
+
+      <div className="toasts" role="status" aria-live="polite">
+        {studio.toasts.map((entry) => (
+          <div key={entry.id} className={`toast toast--${entry.variant}`}>
+            <div className="toast__body">
+              {entry.title && <div className="toast__title">{entry.title}</div>}
+              <div className="toast__message">{entry.message}</div>
+            </div>
+            <button
+              type="button"
+              className="toast__close"
+              onClick={() => studio.dismissToast(entry.id)}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
           </div>
-
-          {!selection && (
-            <div className="sidebar-empty">
-              <p>Click on a face, edge, or vertex to inspect its metadata.</p>
-              <p className="sidebar-empty-hint">
-                Repeated clicks on the same location will cycle through the
-                {"hierarchy (CellComplex -> Cell -> Shell -> Face -> Edge -> Vertex)."}
-              </p>
-            </div>
-          )}
-
-          {selection && (
-            <>
-              <div className="sidebar-section">
-                <div className="sidebar-section-header">Selection</div>
-                <div className="sidebar-section-body sidebar-selection-body">
-                  <div>
-                    <span className="sidebar-label">Type</span>
-                    <span className="sidebar-value">{selection.level}</span>
-                  </div>
-                  <div>
-                    <span className="sidebar-label">UID</span>
-                    <span className="sidebar-value sidebar-value-mono">
-                      {selection.uid}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="sidebar-section">
-                <div className="sidebar-section-header">Dictionary</div>
-                <div className="sidebar-section-body">
-                  {selectedEntity ? (
-                    (() => {
-                      const dict = selectedEntity.dictionary || {};
-                      const entries = Object.entries(dict).sort(([a], [b]) =>
-                        a.localeCompare(b)
-                      );
-
-                      if (entries.length === 0) {
-                        return (
-                          <p className="sidebar-empty-hint">
-                            No dictionary entries for this entity.
-                          </p>
-                        );
-                      }
-
-                      return (
-                        <div className="sidebar-dict-container">
-                          {entries.map(([key, value]) => (
-                            <div className="sidebar-dict-row" key={key}>
-                              <div className="sidebar-dict-key">{key}</div>
-                              <div className="sidebar-dict-value">
-                                {formatDictValue(value)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <p className="sidebar-empty-hint">
-                      No dictionary found for this entity.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </aside>
+        ))}
       </div>
     </div>
   );
 }
-
-

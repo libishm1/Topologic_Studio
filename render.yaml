@@ -1,0 +1,19 @@
+# Render blueprint for the Topologic Studio Next backend.
+# Deployed separately from the Classic service so the two lines never share a
+# process, an environment or a rollback.
+services:
+  - type: web
+    name: topologicstudio-next-backend
+    runtime: docker
+    rootDir: topologicpy-web-backend
+    autoDeploy: false
+    healthCheckPath: /health
+    envVars:
+      - key: CORS_ORIGINS
+        value: https://libishm1.github.io
+      - key: PERF_LOG
+        value: "0"
+      - key: GRAPH_CACHE_SIZE
+        value: "8"
+      - key: GRAPH_TTL_SECONDS
+        value: "3600"
