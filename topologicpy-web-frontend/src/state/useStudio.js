@@ -21,6 +21,10 @@ export const DEFAULT_SETTINGS = {
   floorSpacing: 0.5,
   maxEdgeFloor: 2.25,
   maxEdgeStair: 0.4,
+  // Keeps the floor mesh flat: a floor link may not span more height than
+  // this, and a vertical column of samples collapses onto one surface.
+  maxEdgeRise: 0.35,
+  columnGap: 0.9,
   maxDegree: 12,
   useWalls: true,
   rectilinear: false,

@@ -27,6 +27,12 @@ class GraphOptions(BaseModel):
     agent_height: float = Field(0.75, ge=0.0, le=3.0)
     max_edge_floor: float = Field(2.25, gt=0.0, le=50.0)
     max_edge_stair: float = Field(0.4, gt=0.0, le=10.0)
+    #: Largest height difference a floor-to-floor link may span. Keeps the floor
+    #: mesh flat instead of bracing nearby surfaces into a space-frame truss.
+    max_edge_rise: float = Field(0.35, gt=0.0, le=5.0)
+    #: Height difference still treated as the same slab when collapsing a
+    #: vertical column down to its walking surface.
+    column_gap: float = Field(0.9, gt=0.0, le=5.0)
     use_walls: bool = True
     rectilinear: bool = False
     grid_snap: bool = False

@@ -46,6 +46,7 @@ def build_adjacency(
     stair_link_radius: float = 2.0,
     door_link_radius: float = 3.0,
     max_degree: int = DEFAULT_MAX_DEGREE,
+    max_edge_rise: float = 0.35,
 ) -> np.ndarray:
     """Return an ``(M, 2)`` int32 array of undirected edges with ``i < j``."""
     if points is None or len(points) < 2:
@@ -67,8 +68,15 @@ def build_adjacency(
         stair_stair = (ka == KIND_STAIR) & (kb == KIND_STAIR)
         floor_floor = (ka != KIND_STAIR) & (kb != KIND_STAIR)
 
+        # A floor link must be close in plan AND nearly level. Without the
+        # vertical limit the neighbourhood search braces every pair of nearby
+        # surfaces together, and the floor mesh comes out as a space-frame
+        # truss rather than something you could walk on. The allowance covers a
+        # threshold or a shallow ramp, not a storey.
+        up = axis_index(up_axis)
+        rise = np.abs(delta[:, up])
         keep = (stair_stair & (dist <= max_edge_stair)) | (
-            floor_floor & (dist <= max_edge_floor)
+            floor_floor & (dist <= max_edge_floor) & (rise <= max_edge_rise)
         )
 
         if rectilinear:

@@ -22,7 +22,7 @@ from app.geometry.obstacles import (
     segments_intersect_2d,
     wall_segments_from_geometry,
 )
-from app.geometry.sampling import decimate, sample_walkable_points
+from app.geometry.sampling import collapse_columns, decimate, sample_walkable_points
 
 
 class TestAxes:
@@ -79,11 +79,53 @@ class TestSampling:
         assert len(sample_walkable_points([0, 0, 0, 1, 0, 0, 1, 1, 0], [0, 1, 99])) == 0
 
     def test_up_axis_y(self):
-        # Slab lying in the xz plane, y up.
+        # Slab lying in the xz plane, y up. Wound so the normal points +y;
+        # sampling only accepts upward-facing surfaces.
         verts = [0, 0, 0, 4, 0, 0, 4, 0, 4, 0, 0, 4]
-        indices = [0, 1, 2, 0, 2, 3]
-        assert len(sample_walkable_points(verts, indices, spacing=1.0, up_axis="y")) > 0
-        assert len(sample_walkable_points(verts, indices, spacing=1.0, up_axis="z")) == 0
+        up_wound = [0, 2, 1, 0, 3, 2]
+        assert len(sample_walkable_points(verts, up_wound, spacing=1.0, up_axis="y")) > 0
+        # The same slab is a wall when z is treated as up.
+        assert len(sample_walkable_points(verts, up_wound, spacing=1.0, up_axis="z")) == 0
+        # Reversing the winding makes it a soffit, which is not walkable.
+        down_wound = [0, 1, 2, 0, 2, 3]
+        assert len(sample_walkable_points(verts, down_wound, spacing=1.0, up_axis="y")) == 0
+
+    def test_collapse_columns_keeps_the_walking_surface(self):
+        """A slab is sampled top and underside; only the top is walkable."""
+        pts = np.array(
+            [
+                [0.0, 0.0, 0.00],  # slab underside
+                [0.0, 0.0, 0.15],  # slab top  <- keep
+                [1.0, 0.0, 0.00],
+                [1.0, 0.0, 0.15],  # <- keep
+            ],
+            dtype=np.float32,
+        )
+        out = collapse_columns(pts, cell=0.5, up_axis="z", gap=0.9)
+        assert len(out) == 2
+        assert np.allclose(sorted(out[:, 2]), [0.15, 0.15])
+
+    def test_collapse_columns_keeps_separate_storeys(self):
+        pts = np.array(
+            [
+                [0.0, 0.0, 0.00],
+                [0.0, 0.0, 0.15],
+                [0.0, 0.0, 3.00],  # storey above
+                [0.0, 0.0, 3.15],
+            ],
+            dtype=np.float32,
+        )
+        out = collapse_columns(pts, cell=0.5, up_axis="z", gap=0.9)
+        assert len(out) == 2
+        assert np.allclose(sorted(out[:, 2]), [0.15, 3.15])
+
+    def test_collapse_columns_respects_up_axis(self):
+        pts = np.array(
+            [[0.0, 0.0, 0.0], [0.0, 0.15, 0.0]], dtype=np.float32
+        )
+        out = collapse_columns(pts, cell=0.5, up_axis="y", gap=0.9)
+        assert len(out) == 1
+        assert out[0][1] == pytest.approx(0.15)
 
     def test_decimate_removes_duplicates(self):
         pts = np.array([[0, 0, 0], [0.01, 0, 0], [5, 5, 5]], dtype=np.float32)
@@ -100,6 +142,27 @@ class TestAdjacency:
         # 4x4 grid: 12 horizontal + 12 vertical links, no diagonals at r=1.01.
         assert len(edges) == 24
         assert (edges[:, 0] < edges[:, 1]).all()
+
+    def test_floor_links_stay_level(self):
+        """Two stacked sheets must not brace into a space-frame truss."""
+        lower = [[x * 0.5, y * 0.5, 0.0] for x in range(5) for y in range(5)]
+        upper = [[x * 0.5, y * 0.5, 0.15] for x in range(5) for y in range(5)]
+        pts = np.asarray(lower + upper, dtype=np.float32)
+        kinds = np.zeros(len(pts), dtype=np.int8)
+
+        braced = build_adjacency(
+            pts, kinds, max_edge_floor=1.0, max_edge_stair=0.4, max_edge_rise=5.0
+        )
+        flat = build_adjacency(
+            pts, kinds, max_edge_floor=1.0, max_edge_stair=0.4, max_edge_rise=0.05
+        )
+
+        def rises(edges):
+            return np.abs(pts[edges[:, 1], 2] - pts[edges[:, 0], 2])
+
+        assert (rises(braced) > 0.05).any(), "control: bracing exists without the limit"
+        assert not (rises(flat) > 0.05).any(), "no sloped floor links survive"
+        assert len(flat) < len(braced)
 
     def test_rectilinear_rejects_diagonals(self):
         pts = np.array(
@@ -214,3 +277,28 @@ class TestObstacles:
         )
         assert edge_block_mask(pts, edges, walls).tolist() == [True]
         assert edge_block_mask(pts, edges, walls, exempt=np.array([0])).tolist() == [False]
+
+
+class TestFaceOrientation:
+    """A slab's underside and a ceiling are horizontal but not walkable."""
+
+    #: A unit square in the xy plane, wound counter-clockwise so its normal is +z.
+    UP_FACING = ([0, 0, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0], [0, 1, 2, 0, 2, 3])
+    #: The same square wound the other way: normal is -z.
+    DOWN_FACING = ([0, 0, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0], [0, 2, 1, 0, 3, 2])
+
+    def test_upward_face_is_walkable(self):
+        verts, indices = self.UP_FACING
+        assert len(sample_walkable_points(verts, indices, spacing=1.0, up_axis="z")) > 0
+
+    def test_downward_face_is_rejected(self):
+        verts, indices = self.DOWN_FACING
+        pts = sample_walkable_points(verts, indices, spacing=1.0, up_axis="z")
+        assert len(pts) == 0, "a ceiling or slab underside must not be walkable"
+
+    def test_fallback_accepts_either_winding(self):
+        verts, indices = self.DOWN_FACING
+        pts = sample_walkable_points(
+            verts, indices, spacing=1.0, up_axis="z", require_upward=False
+        )
+        assert len(pts) > 0

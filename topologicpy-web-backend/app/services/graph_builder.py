@@ -19,7 +19,7 @@ from ..config import settings
 from ..geometry import adjacency as adj
 from ..geometry import obstacles
 from ..geometry.common import axis_index
-from ..geometry.sampling import decimate, sample_walkable_points
+from ..geometry.sampling import collapse_columns, decimate, sample_walkable_points
 from ..models import GraphOptions, GraphStats, IfcEgressRequest, PointCloudRequest
 from ..perf import Timer
 from ..store import NavGraph, store
@@ -103,6 +103,7 @@ def build_from_points(
                 up_axis=options.up_axis,
                 rectilinear=options.rectilinear,
                 max_degree=options.max_degree,
+                max_edge_rise=options.max_edge_rise,
             )
 
     if len(points) > settings.max_graph_nodes:
@@ -188,6 +189,13 @@ def build_from_ifc_geometry(
         floor_points = _sample_group(
             floors, base_spacing, 10.0, up_axis, req.max_points, exclude_above
         )
+        # Sampling accepts a slab's underside as readily as its top face, so
+        # collapse each column onto the surface that is actually walked on.
+        # Stairs are left alone; their treads are meant to differ in height.
+        if len(floor_points):
+            floor_points = collapse_columns(
+                floor_points, base_spacing, up_axis=up_axis, gap=0.9
+            )
 
     with _phase(timer, "obstacles"):
         door_points = obstacles.door_positions_from_geometry(req.doors, up_axis)
@@ -295,30 +303,40 @@ def _sample_group(
     budget: int,
     exclude_above: Optional[float],
 ) -> np.ndarray:
+    """Sample a category, preferring upward-facing surfaces.
+
+    If insisting on upward normals yields nothing the model's face winding
+    cannot be trusted, so retry accepting either orientation rather than
+    returning an empty graph.
+    """
     if not geometries:
         return np.zeros((0, 3), dtype=np.float32)
-    per_item = max(64, budget // max(1, len(geometries)))
-    chunks = []
-    total = 0
-    for geom in geometries:
-        if total >= budget:
-            break
-        pts = sample_walkable_points(
-            geom.vertices,
-            geom.indices,
-            geom.normals,
-            spacing=spacing,
-            max_slope_deg=max_slope,
-            up_axis=up_axis,
-            max_points=min(per_item, budget - total),
-            exclude_above=exclude_above,
-        )
-        if len(pts):
-            chunks.append(pts)
-            total += len(pts)
-    if not chunks:
-        return np.zeros((0, 3), dtype=np.float32)
-    return np.concatenate(chunks)
+
+    for require_upward in (True, False):
+        per_item = max(64, budget // max(1, len(geometries)))
+        chunks = []
+        total = 0
+        for geom in geometries:
+            if total >= budget:
+                break
+            pts = sample_walkable_points(
+                geom.vertices,
+                geom.indices,
+                geom.normals,
+                spacing=spacing,
+                max_slope_deg=max_slope,
+                up_axis=up_axis,
+                max_points=min(per_item, budget - total),
+                exclude_above=exclude_above,
+                require_upward=require_upward,
+            )
+            if len(pts):
+                chunks.append(pts)
+                total += len(pts)
+        if chunks:
+            return np.concatenate(chunks)
+
+    return np.zeros((0, 3), dtype=np.float32)
 
 
 def _decimate_index(points: np.ndarray, cell: float) -> np.ndarray:

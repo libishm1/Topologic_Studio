@@ -238,6 +238,7 @@ export default function App() {
         upAxis: settings.upAxis,
         floorSpacing: settings.floorSpacing,
         maxPoints: settings.maxPoints,
+        columnGap: settings.columnGap,
       };
       const transfers = [];
       for (const key of ["floors", "stairs", "doors", "walls"]) {
@@ -270,6 +271,8 @@ export default function App() {
             agent_height: settings.agentHeight,
             max_edge_floor: settings.maxEdgeFloor,
             max_edge_stair: settings.maxEdgeStair,
+            max_edge_rise: settings.maxEdgeRise,
+            column_gap: settings.columnGap,
             max_degree: settings.maxDegree,
             use_walls: settings.useWalls,
             rectilinear: settings.rectilinear,
@@ -296,11 +299,14 @@ export default function App() {
 
       timer.finish({ nodes: response.stats.nodes, edges: response.stats.edges });
 
-      if (response.stats.components > 1) {
+      const reachable = response.stats.nodes
+        ? Math.round((response.stats.largest_component / response.stats.nodes) * 100)
+        : 0;
+      if (response.stats.components > 1 && reachable < 98) {
         toast(
-          `Graph built with ${response.stats.components} disconnected pieces. ` +
-            "Routing uses the largest one.",
-          { title: "Graph is fragmented", variant: "warning", ttl: 9000 },
+          `${reachable}% of the walkable area is one connected network. ` +
+            `The rest is isolated and has no route out.`,
+          { title: "Some floor area is unreachable", variant: "warning", ttl: 9000 },
         );
       } else {
         toast(

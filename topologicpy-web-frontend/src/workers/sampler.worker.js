@@ -68,7 +68,12 @@ function sampleMesh(mesh, options, out) {
     const mag = Math.hypot(nx, ny, nz);
     if (mag <= 2e-6) continue;
 
-    const upComponent = Math.abs((up === 0 ? nx : up === 1 ? ny : nz) / mag);
+    // Signed, not absolute. You stand on an upward-facing surface; a slab's
+    // underside and a ceiling are just as "horizontal" but are not walkable.
+    // Treating them as walkable produced a second point sheet under every
+    // storey, which the neighbour search then braced into a space-frame truss.
+    const signedUp = (up === 0 ? nx : up === 1 ? ny : nz) / mag;
+    const upComponent = options.requireUpward ? signedUp : Math.abs(signedUp);
     if (upComponent < minUp) continue;
 
     const area = 0.5 * mag;
@@ -136,6 +141,69 @@ function createSink(capacity) {
       return out.slice(0, kept * 3);
     },
   };
+}
+
+/**
+ * Collapse each vertical column of points down to its walking surface.
+ *
+ * A slab is a solid: sampling accepts both its top face and its underside,
+ * because a downward-facing normal is just as "horizontal" as an upward one and
+ * IFC winding is not reliable enough to tell them apart. That produced two
+ * parallel sheets about a slab-thickness apart, and the neighbour search then
+ * braced them together into a space-frame truss instead of a flat floor mesh.
+ * Ceilings (IFCCOVERING) add further phantom sheets.
+ *
+ * For each horizontal cell the points are sorted by height and split into
+ * clusters wherever the gap exceeds `gap`; each cluster keeps only its topmost
+ * point. A slab's top and underside fall in one cluster and collapse to the
+ * top - the surface you actually stand on - while separate storeys stay
+ * separate because they are far more than `gap` apart.
+ */
+function collapseColumns(flat, cellSize, upAxis, gap) {
+  const count = Math.floor(flat.length / 3);
+  if (count === 0) return flat;
+
+  const up = axisIndex(upAxis);
+  const [h0, h1] = horizontalAxes(upAxis);
+  const inv = 1 / Math.max(cellSize, 1e-3);
+
+  const columns = new Map();
+  for (let i = 0; i < count; i += 1) {
+    const o = i * 3;
+    const key = `${Math.round(flat[o + h0] * inv)},${Math.round(flat[o + h1] * inv)}`;
+    let bucket = columns.get(key);
+    if (!bucket) {
+      bucket = [];
+      columns.set(key, bucket);
+    }
+    bucket.push(i);
+  }
+
+  const out = new Float32Array(count * 3);
+  let kept = 0;
+  const emit = (index) => {
+    const o = index * 3;
+    const k = kept * 3;
+    out[k] = flat[o];
+    out[k + 1] = flat[o + 1];
+    out[k + 2] = flat[o + 2];
+    kept += 1;
+  };
+
+  for (const bucket of columns.values()) {
+    bucket.sort((a, b) => flat[a * 3 + up] - flat[b * 3 + up]);
+    let top = bucket[0];
+    for (let n = 1; n < bucket.length; n += 1) {
+      const current = bucket[n];
+      if (flat[current * 3 + up] - flat[top * 3 + up] > gap) {
+        emit(top); // previous cluster ended; keep its highest point
+      }
+      top = current;
+    }
+    emit(top);
+  }
+
+  return out.slice(0, kept * 3);
 }
 
 /**
@@ -250,6 +318,9 @@ self.onmessage = (event) => {
       floorSpacing = 0.5,
       maxPoints = 40000,
       decimateCell = 0,
+      // Height difference that still counts as the same slab. Comfortably
+      // above a slab thickness or floor build-up, comfortably below a storey.
+      columnGap = 0.9,
     } = payload || {};
 
     const t0 = performance.now();
@@ -262,39 +333,56 @@ self.onmessage = (event) => {
     const stairSpacing = Math.max(floorSpacing * 0.3, 0.15);
     const stairBudget = Math.floor(maxPoints * 0.4);
 
-    const stairSink = createSink(4096);
-    for (const mesh of stairs) {
-      sampleMesh(
-        mesh,
-        {
-          upAxis,
-          spacing: stairSpacing,
-          maxSlopeDeg: 45,
-          maxPoints: stairBudget,
-          excludeAbove,
-        },
-        stairSink,
-      );
-    }
+    /**
+     * Sample a group, preferring upward-facing surfaces.
+     *
+     * Some exporters wind their faces inconsistently. If insisting on upward
+     * normals yields nothing at all, the model's winding cannot be trusted, so
+     * fall back to accepting either orientation rather than returning an empty
+     * graph. The fallback is reported so the caller knows the result is coarser.
+     */
+    const sampleGroup = (meshes, options, capacity) => {
+      let sink = createSink(capacity);
+      for (const mesh of meshes) {
+        sampleMesh(mesh, { ...options, requireUpward: true }, sink);
+      }
+      if (sink.count === 0 && meshes.length > 0) {
+        sink = createSink(capacity);
+        for (const mesh of meshes) {
+          sampleMesh(mesh, { ...options, requireUpward: false }, sink);
+        }
+        return { sink, windingFallback: sink.count > 0 };
+      }
+      return { sink, windingFallback: false };
+    };
 
-    const floorSink = createSink(16384);
-    const floorBudget = maxPoints - stairSink.count;
-    for (const mesh of floors) {
-      sampleMesh(
-        mesh,
-        {
-          upAxis,
-          spacing: floorSpacing,
-          maxSlopeDeg: 10,
-          maxPoints: floorBudget,
-          excludeAbove,
-        },
-        floorSink,
-      );
-    }
+    const stairResult = sampleGroup(
+      stairs,
+      { upAxis, spacing: stairSpacing, maxSlopeDeg: 45, maxPoints: stairBudget, excludeAbove },
+      4096,
+    );
+    const stairSink = stairResult.sink;
+
+    const floorResult = sampleGroup(
+      floors,
+      {
+        upAxis,
+        spacing: floorSpacing,
+        maxSlopeDeg: 10,
+        maxPoints: maxPoints - stairSink.count,
+        excludeAbove,
+      },
+      16384,
+    );
+    const floorSink = floorResult.sink;
 
     const cell = decimateCell > 0 ? decimateCell : floorSpacing * 0.8;
-    const floorPoints = floorSink.decimate(cell);
+
+    // Collapse floors to one sheet per storey. Stairs are left alone: their
+    // treads are meant to sit at different heights, and merging them would
+    // flatten the flight.
+    const floorRaw = floorSink.decimate(cell);
+    const floorPoints = collapseColumns(floorRaw, cell, upAxis, columnGap);
     const stairPoints = stairSink.decimate(Math.min(cell, stairSpacing));
 
     const result = {
@@ -307,6 +395,8 @@ self.onmessage = (event) => {
         stairSamples: stairSink.count,
         floorPoints: floorPoints.length / 3,
         stairPoints: stairPoints.length / 3,
+        collapsedAway: (floorRaw.length - floorPoints.length) / 3,
+        windingFallback: floorResult.windingFallback || stairResult.windingFallback,
         ms: performance.now() - t0,
       },
     };

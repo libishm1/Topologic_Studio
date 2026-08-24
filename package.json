@@ -6,7 +6,8 @@
   "description": "Repo-level dev tooling for the Next line (browser tests, benchmarks). The app itself lives in topologicpy-web-frontend.",
   "scripts": {
     "test:browser": "node tools/browser-test.mjs",
-    "test:pipeline": "node tools/smoke-pipeline.mjs"
+    "test:pipeline": "node tools/smoke-pipeline.mjs",
+    "inspect:graph": "node tools/inspect-graph.mjs"
   },
   "devDependencies": {
     "playwright-core": "^1.57.0"

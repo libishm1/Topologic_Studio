@@ -85,3 +85,18 @@ The local PDF has zero extractable text. Research documentation from it requires
   already includes `IfcWallStandardCase`. Affects the benchmark payload only —
   both backends receive identical input, so the Classic-vs-Next comparison
   stands.
+
+## Upward-Only Surface Sampling (Next Line, 2026-08-24)
+
+Walkable sampling now requires an upward-facing normal, which is what removed
+the space-frame truss from the navigation graph. It assumes the model's face
+winding is trustworthy.
+
+- If a model has **no** upward-facing horizontal surfaces, sampling falls back
+  to accepting either orientation and flags `windingFallback`.
+- If a model has **partly** inverted winding, there is no fallback: those
+  surfaces are silently dropped and that floor area disappears from the graph.
+  The Reachable % stat is the signal to watch.
+- Isolated walkable surfaces are kept, not pruned, because unreachable floor
+  area is meaningful egress information. On the Duplex this leaves 94.2% of
+  nodes in the main network.

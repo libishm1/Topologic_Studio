@@ -25,6 +25,8 @@ import {
 
 const fmt = (n) => (n === null || n === undefined ? "-" : n.toLocaleString());
 const coord = (p) => (p ? p.map((v) => v.toFixed(2)).join(", ") : "not set");
+const reachablePct = (stats) =>
+  stats?.nodes ? Math.round((stats.largest_component / stats.nodes) * 100) : 0;
 
 // -------------------------------------------------------------------- model
 
@@ -133,6 +135,17 @@ export function ModelPanel({ studio, onBuildGraph, onClearCache }) {
         />
 
         <Slider
+          label="Max vertical step"
+          value={settings.maxEdgeRise}
+          min={0.05}
+          max={1.5}
+          step={0.05}
+          onChange={(maxEdgeRise) => setSettings({ maxEdgeRise })}
+          format={(v) => `${v.toFixed(2)} m`}
+          hint="How much height a floor-to-floor link may span. Low keeps each storey a flat mesh; raise it only for ramps or split levels."
+        />
+
+        <Slider
           label="Neighbours per node"
           value={settings.maxDegree}
           min={4}
@@ -204,16 +217,20 @@ export function ModelPanel({ studio, onBuildGraph, onClearCache }) {
               <Stat label="Edges" value={fmt(graph.stats.edges)} />
               <Stat label="Doors" value={fmt(graph.stats.door_nodes)} />
               <Stat
-                label="Blocked"
-                value={fmt(graph.stats.blocked_edges)}
-                warn={graph.stats.blocked_edges > graph.stats.edges * 0.5}
+                label="Reachable"
+                value={`${reachablePct(graph.stats)}%`}
+                warn={reachablePct(graph.stats) < 90}
               />
             </div>
             {graph.stats.components > 1 && (
-              <p className="field__hint" style={{ color: "var(--warning)" }}>
-                The graph has {graph.stats.components} disconnected pieces; the largest holds{" "}
-                {fmt(graph.stats.largest_component)} of {fmt(graph.stats.nodes)} nodes. Picks
-                snap to the largest piece. Raise floor connectivity to merge them.
+              <p className="field__hint">
+                {fmt(graph.stats.largest_component)} of {fmt(graph.stats.nodes)} nodes form one
+                connected network; the rest sit in {graph.stats.components - 1} isolated
+                {graph.stats.components === 2 ? " pocket" : " pockets"}. Isolated floor area has
+                no route out, which is worth knowing — but it can also mean a level change the
+                model does not bridge with stairs or a ramp. Raise{" "}
+                <strong>Max vertical step</strong> to link surfaces at slightly different
+                heights.
               </p>
             )}
             <Toggle

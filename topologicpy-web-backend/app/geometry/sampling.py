@@ -19,7 +19,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from .common import axis_index
+from .common import axis_index, horizontal_axes
 
 _EMPTY = np.zeros((0, 3), dtype=np.float32)
 
@@ -33,8 +33,16 @@ def sample_walkable_points(
     up_axis: str = "z",
     max_points: int = 20000,
     exclude_above: Optional[float] = None,
+    require_upward: bool = True,
 ) -> np.ndarray:
-    """Return an ``(N, 3)`` float32 array of walkable sample points."""
+    """Return an ``(N, 3)`` float32 array of walkable sample points.
+
+    ``require_upward`` keeps only surfaces whose normal points up. You stand on
+    the top of a slab, not its underside, and not on a ceiling; accepting either
+    orientation produces a second point sheet beneath every storey which the
+    neighbour search then braces into a space-frame truss. Set it False only
+    when a model's face winding cannot be trusted.
+    """
     if vertices is None or indices is None:
         return _EMPTY
     verts = np.asarray(vertices, dtype=np.float64)
@@ -105,10 +113,10 @@ def sample_walkable_points(
             except (IndexError, ValueError):
                 pass
 
-    # A surface is walkable when its normal points up (either winding) within
-    # the slope tolerance.
     min_up = math.cos(math.radians(max(0.0, min(89.0, max_slope_deg))))
-    walkable = np.abs(face_normal_up) >= min_up
+    walkable = (
+        face_normal_up >= min_up if require_upward else np.abs(face_normal_up) >= min_up
+    )
     v1, v2, v3 = v1[walkable], v2[walkable], v3[walkable]
     twice_area = twice_area[walkable]
     if len(v1) == 0:
@@ -184,3 +192,58 @@ def decimate(points: np.ndarray, cell: float) -> np.ndarray:
     _, first = np.unique(keys, axis=0, return_index=True)
     first.sort()
     return points[first]
+
+
+def collapse_columns(
+    points: np.ndarray,
+    cell: float,
+    up_axis: str = "z",
+    gap: float = 0.9,
+) -> np.ndarray:
+    """Reduce each vertical column of points to its walking surface.
+
+    A slab is a solid, so sampling accepts both its top face and its underside:
+    a downward-facing normal is just as horizontal as an upward one, and IFC
+    winding is not dependable enough to separate them. The result is two
+    parallel sheets a slab-thickness apart which the neighbour search then
+    braces into a truss. Ceilings (IFCCOVERING) add more phantom sheets.
+
+    Points are bucketed by horizontal cell, sorted by height, and split wherever
+    the vertical gap exceeds ``gap``. Each run keeps only its highest point, so a
+    slab's two faces collapse onto the top one while separate storeys survive.
+    """
+    if points is None or len(points) == 0:
+        return points if points is not None else _EMPTY
+
+    up = axis_index(up_axis)
+    h0, h1 = horizontal_axes(up_axis)
+    inv = 1.0 / max(float(cell), 1e-3)
+
+    keys = np.stack(
+        [
+            np.round(points[:, h0] * inv).astype(np.int64),
+            np.round(points[:, h1] * inv).astype(np.int64),
+        ],
+        axis=1,
+    )
+    # Sort by (column, height) so each column is a contiguous ascending run.
+    order = np.lexsort((points[:, up], keys[:, 1], keys[:, 0]))
+    sorted_keys = keys[order]
+    sorted_up = points[order, up]
+
+    new_column = np.empty(len(order), dtype=bool)
+    new_column[0] = True
+    new_column[1:] = np.any(sorted_keys[1:] != sorted_keys[:-1], axis=1)
+
+    jump = np.empty(len(order), dtype=bool)
+    jump[0] = True
+    jump[1:] = (sorted_up[1:] - sorted_up[:-1]) > gap
+
+    starts_run = new_column | jump
+    # The last row of every run is its highest point, i.e. the row just before
+    # the next run starts.
+    ends_run = np.empty(len(order), dtype=bool)
+    ends_run[:-1] = starts_run[1:]
+    ends_run[-1] = True
+
+    return points[order[ends_run]]

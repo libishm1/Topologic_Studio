@@ -255,9 +255,114 @@ hue and remain distinguishable without colour vision.
 
 ---
 
+## Bug 5 — Navigation graph was a space-frame truss, not a floor mesh
+
+- Date: 2026-08-24
+- Reporter: human (screenshot), diagnosed by agent
+- Workflow: graph build
+- Severity: **research-validity**
+- Status: fixed
+
+### Evidence
+
+`tools/inspect-graph.mjs` on the Duplex, before the fix:
+
+```
+2577 nodes, height bands (5 cm buckets):
+    y=-2.65  529      <- ground slab TOP
+    y=-2.50  284      <- ground slab UNDERSIDE
+    y= 0.15  401      <- first floor ceiling / slab
+    y= 0.30  307      <- first floor slab
+    y= 0.60  553      <- first floor finish
+
+17211 edges | level (<=5cm) 7620 | sloped (5-35cm) 7490 | steep (>35cm) 2101
+```
+
+56% of edges were non-level, bracing two parallel sheets into a lattice.
+
+### Expected
+
+One flat walkable mesh per storey, joined between storeys only by stairs.
+
+### Actual
+
+Every slab produced two point sheets a slab-thickness apart, and the
+neighbourhood search wired them together with diagonals, so the graph rendered
+as a 3D space-frame truss. Routes could also cut through a slab.
+
+### Suspected cause
+
+Sampling accepted a surface whose normal was *near-horizontal in either
+direction*:
+
+```js
+const upComponent = Math.abs(signedUp);   // worker
+walkable = np.abs(face_normal_up) >= min_up   # backend
+```
+
+The absolute value was deliberate (IFC winding is not always trustworthy) but it
+makes a slab's underside and a ceiling as walkable as a floor.
+
+Measurement showed winding *is* reliable in the fragments output for this
+model: floors split 158 up-facing / 226 down-facing at distinct heights, and
+stairs split exactly 184 / 184 (treads vs soffit).
+
+### Fix
+
+Three layers, from most to least specific:
+
+1. **Only sample upward-facing surfaces.** The absolute value is gone from both
+   the browser worker and the Python sampler. If insisting on upward normals
+   yields nothing at all, the model's winding cannot be trusted and sampling
+   retries accepting either orientation, flagged as `windingFallback`.
+2. **Collapse each vertical column onto its walking surface.** A safety net for
+   coincident or duplicated surfaces: points in a horizontal cell are clustered
+   by height and only the topmost of each cluster survives (`column_gap`,
+   default 0.9 m).
+3. **Floor links must stay near-level.** A floor-to-floor edge may span at most
+   `max_edge_rise` (default 0.35 m), exposed in the UI as *Max vertical step*.
+   Stair links are unaffected.
+
+### Verification
+
+```
+1765 nodes | 10441 edges | level 9148 | sloped 1241 | steep 52
+
+by node kind      level   sloped    steep
+  floor-floor      7921        0        0     <- was 6098 / 2623 / 0
+  stair-stair      1041     1093        0     <- stairs are meant to climb
+  floor-stair         8      148       48     <- landings
+```
+
+**Zero non-level floor-to-floor edges.** Routes still cross storeys via the
+stairs (verified start y=-1.93 to exit y=+0.61).
+
+### Follow-on: connectivity dropped from 100% to 94.2%
+
+The largest component now holds 1,663 of 1,765 nodes and spans both storeys.
+The 12 orphans are one up-facing surface 0.5 m below the first floor, in
+fragments of 57/25/4/3/3/2/2/2/1/1/1/1 nodes.
+
+This is not a regression in substance: the previous 100% was manufactured by
+the truss gluing together surfaces a person cannot walk between. Isolated floor
+area with no route out is exactly what an egress tool should surface, so the
+graph is not pruned. The panel now reports a **Reachable %** stat and explains
+that raising *Max vertical step* will bridge surfaces at slightly different
+heights.
+
+> **Human decision needed.** Whether that isolated surface at 0.5 m below the
+> first floor is real walkable area the model fails to connect with a step, or
+> geometry that should not be walkable at all, is a model-interpretation call.
+
+---
+
 ## Residual risks
 
 Recorded in [open-risks.md](open-risks.md):
+
+- Upward-only sampling relies on trustworthy face winding. The fallback
+  catches a model with no upward faces at all, but not one with *partly*
+  inverted winding, which would silently lose walkable area.
 
 - One model, one browser, one machine. Not a cross-browser or cross-model suite.
 - Not wired into CI.

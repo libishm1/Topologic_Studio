@@ -22,7 +22,9 @@ const argOf = (name, fallback) => {
   const i = args.indexOf(name);
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
-const URL_BASE = argOf("--url", "http://127.0.0.1:5173");
+// Vite binds to "localhost", which on this machine resolves to ::1 only;
+// hard-coding 127.0.0.1 gets connection-refused.
+const URL_BASE = argOf("--url", "http://localhost:5173");
 const IFC = argOf("--ifc", path.resolve(HERE, "../../Ifc2x3_Duplex_Architecture.ifc"));
 const HEADED = args.includes("--headed");
 const CHROME =
