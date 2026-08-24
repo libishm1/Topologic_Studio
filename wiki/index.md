@@ -32,3 +32,8 @@ Use this page as the stable entry point.
 - [sources/](sources/dependencies.md) - local and external source inventory.
 - [references/](references/context7-api-notes.md) - library notes and OpenKB method.
 - [knowledge-graph/](knowledge-graph/system-graph.md) - graph view and machine map.
+
+## Next Line
+
+- [Browser test session 2026-08-24](issues/browser-session-2026-08-24.md)
+- [Next line status vs the handoff plan](roadmap/next-line-status-2026-08-23.md)

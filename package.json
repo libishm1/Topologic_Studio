@@ -1,0 +1,14 @@
+{
+  "name": "topologic-studio-next-tools",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Repo-level dev tooling for the Next line (browser tests, benchmarks). The app itself lives in topologicpy-web-frontend.",
+  "scripts": {
+    "test:browser": "node tools/browser-test.mjs",
+    "test:pipeline": "node tools/smoke-pipeline.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.57.0"
+  }
+}

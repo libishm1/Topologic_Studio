@@ -56,6 +56,9 @@ export function Viewport({
         if (cancelled) return;
         manager = new ViewerManager();
         viewerRef.current = manager;
+        // Dev-only handle so the browser test harness (and a human with the
+        // console open) can inspect the live scene.
+        if (import.meta.env.DEV) window.__viewer = manager;
         await manager.init(container, { theme, onPick });
         if (cancelled) {
           manager.dispose();

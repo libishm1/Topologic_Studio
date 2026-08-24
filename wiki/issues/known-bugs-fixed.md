@@ -72,3 +72,25 @@ Current mitigation:
 Why it matters:
 
 - Project Pages deploys under a nested path, so absolute `/assets/...` links would otherwise break.
+
+## Browser Session 2026-08-24 (Next Line)
+
+Four bugs found by driving the app in real Chrome and fixed. Full logs,
+evidence and screenshots in
+[browser-session-2026-08-24.md](browser-session-2026-08-24.md).
+
+- **fatal** — Cross-origin isolation headers on the Vite dev server made
+  web-ifc select its pthread build, which spawned workers with an undefined
+  script URL. IFC loading never completed. Headers removed.
+- **environment** — `FragmentsManager.getWorker()` fetched the fragments worker
+  from unpkg.com on every boot. Now self-hosted from `public/fragments/` by
+  `scripts/sync-assets.mjs`, CDN kept only as a fallback.
+- **functional** — An IFC door produced one navigation node per mesh rather
+  than per door, so 14 doors became 44 nodes. Meshes now carry `itemId` and the
+  sampler aggregates by it.
+- **environment** — Missing favicon, a 404 on every page load.
+
+Four visual/UX defects also fixed: graph invisible behind solid geometry
+(added Solid/Ghost/Hidden), route drawn as a 1px line (now a tube),
+picks landing on walls (now snap to the graph), and exit vs fire origin
+sharing a hue (fire is now a distinct shape).

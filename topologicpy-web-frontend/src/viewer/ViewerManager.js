@@ -24,8 +24,10 @@ import { hashFile, readCached, writeCached } from "../lib/fragmentCache.js";
 import { PhaseTimer, mark } from "../lib/perf.js";
 import { collectCategoryIds, extractMeshes } from "./categories.js";
 
-/** Self-hosted by default; `npm run sync-wasm` keeps it matching web-ifc. */
+/** Self-hosted by default; `npm run sync-assets` keeps these matching the
+ *  installed package versions. Both are served from public/. */
 const WASM_PATH = import.meta.env.VITE_WEBIFC_WASM_PATH || "/wasm/";
+const WORKER_PATH = import.meta.env.VITE_FRAGMENTS_WORKER || "/fragments/worker.mjs";
 
 const OVERLAY = {
   path: "path",
@@ -98,10 +100,7 @@ export class ViewerManager {
     this.applyTheme(theme);
 
     const fragments = components.get(FragmentsManager);
-    // getWorker() hands back a blob URL for the worker matching the installed
-    // @thatopen/fragments build. Classic pointed at the package's internal
-    // dist path with `new URL(...)`, which 3.4 no longer exports at all.
-    fragments.init(await FragmentsManager.getWorker());
+    fragments.init(await resolveWorkerUrl());
     this.fragments = fragments;
 
     const ifcLoader = components.get(IfcLoader);
@@ -167,12 +166,39 @@ export class ViewerManager {
   }
 
   _buildMarkers(scene) {
-    const make = (color) => {
+    // Exit and fire origin sit close together in hue, so they are also
+    // distinguished by shape: a sphere for the two egress endpoints, a spiked
+    // octahedron for the ignition point. Colour alone would not separate them
+    // for a colour-blind viewer either.
+    const make = (color, shape = "sphere") => {
+      const geometry =
+        shape === "spike"
+          ? new THREE.OctahedronGeometry(0.3, 0)
+          : new THREE.SphereGeometry(0.22, 20, 20);
       const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.16, 20, 20),
-        new THREE.MeshBasicMaterial({ color, depthTest: false }),
+        geometry,
+        new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false }),
       );
+      // A white outline keeps the marker legible against the graph, which is
+      // itself a dense field of saturated colour. BackSide means only the far
+      // hemisphere draws, so it reads as a rim rather than a veil over the
+      // marker's own colour.
+      const halo = new THREE.Mesh(
+        shape === "spike"
+          ? new THREE.OctahedronGeometry(0.38, 0)
+          : new THREE.SphereGeometry(0.3, 20, 20),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          side: THREE.BackSide,
+          transparent: true,
+          opacity: 0.85,
+          depthTest: false,
+          depthWrite: false,
+        }),
+      );
+      mesh.add(halo);
       mesh.renderOrder = 999;
+      halo.renderOrder = 998;
       mesh.visible = false;
       mesh.userData.pickIgnore = true;
       scene.add(mesh);
@@ -180,7 +206,7 @@ export class ViewerManager {
     };
     this.markers.start = make(0x22c55e);
     this.markers.exit = make(0xf97316);
-    this.markers.fire = make(0xff4500);
+    this.markers.fire = make(0xff2d00, "spike");
   }
 
   applyTheme(theme) {
@@ -423,30 +449,71 @@ export class ViewerManager {
     this.overlays.clear();
   }
 
-  setPath(points, { color = 0xdc2626, width = 4, dynamic = false } = {}) {
+  /**
+   * Draw an egress route.
+   *
+   * Built as a tube, not a line. `LineBasicMaterial.linewidth` is ignored by
+   * every major browser (it is capped at 1px by the WebGL spec on most
+   * platforms), so a route drawn with THREE.Line renders as a hairline thread
+   * lost among thousands of graph edges - which defeats the point of showing
+   * it. A tube has real geometric thickness that scales with the model.
+   */
+  setPath(points, { color = 0xdc2626, radius = null, dynamic = false } = {}) {
     const name = dynamic ? OVERLAY.dynamicPath : OVERLAY.path;
     if (!points || points.length < 2) {
       this._setOverlay(name, null);
+      this._updateGraphEmphasis();
       return;
     }
+
     const vectors = points
       .filter((p) => p && p.length >= 3)
       .map((p) => new THREE.Vector3(p[0], p[1], p[2]));
     if (vectors.length < 2) {
       this._setOverlay(name, null);
+      this._updateGraphEmphasis();
       return;
     }
-    const geometry = new THREE.BufferGeometry().setFromPoints(vectors);
-    const material = new THREE.LineBasicMaterial({
+
+    // Scale the tube to the model so it reads on a corridor and on a campus.
+    let tubeRadius = radius;
+    if (tubeRadius === null) {
+      const box = this._modelBox();
+      const extent = box
+        ? Math.max(...box.getSize(new THREE.Vector3()).toArray())
+        : 20;
+      tubeRadius = Math.max(0.04, Math.min(0.35, extent * 0.006));
+    }
+
+    const curve = new THREE.CatmullRomCurve3(vectors, false, "catmullrom", 0.15);
+    const segments = Math.min(1200, Math.max(vectors.length * 4, 24));
+    const geometry = new THREE.TubeGeometry(curve, segments, tubeRadius, 8, false);
+    const material = new THREE.MeshBasicMaterial({
       color,
-      linewidth: width,
       transparent: true,
       opacity: 0.95,
       depthTest: false,
+      depthWrite: false,
     });
-    const line = new THREE.Line(geometry, material);
-    line.renderOrder = 900;
-    this._setOverlay(name, line);
+    const tube = new THREE.Mesh(geometry, material);
+    tube.renderOrder = dynamic ? 902 : 901;
+    this._setOverlay(name, tube);
+    this._updateGraphEmphasis();
+  }
+
+  /**
+   * Fade the graph back when a route is on screen.
+   *
+   * 17k edges at full strength drown out the one line the user actually asked
+   * for, so the graph steps aside while a route is displayed.
+   */
+  _updateGraphEmphasis() {
+    const segments = this.overlays.get(OVERLAY.graph);
+    if (!segments) return;
+    const hasPath =
+      this.overlays.has(OVERLAY.path) || this.overlays.has(OVERLAY.dynamicPath);
+    segments.material.opacity = hasPath ? 0.16 : 0.45;
+    segments.material.needsUpdate = true;
   }
 
   /**
@@ -598,6 +665,52 @@ export class ViewerManager {
     if (this.modelObject) this.modelObject.visible = visible;
   }
 
+  /**
+   * How the IFC geometry is drawn: "solid", "ghost" or "hidden".
+   *
+   * Ghost mode exists because of a plain usability problem: the navigation
+   * graph lives inside the building, so with solid geometry the user builds a
+   * graph and sees nothing change - the roof and walls hide all of it. Ghosting
+   * keeps the building as context while letting the graph read through.
+   */
+  setModelAppearance(mode) {
+    const object = this.modelObject;
+    if (!object) return;
+
+    if (mode === "hidden") {
+      object.visible = false;
+      return;
+    }
+    object.visible = true;
+
+    const ghost = mode === "ghost";
+    object.traverse((child) => {
+      if (!child.isMesh && !child.isLineSegments) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) {
+        if (!material) continue;
+        // Remember the material's own settings once, so leaving ghost mode
+        // restores exactly what the loader configured rather than a guess.
+        if (material.userData.__originalOpacity === undefined) {
+          material.userData.__originalOpacity = material.opacity;
+          material.userData.__originalTransparent = material.transparent;
+          material.userData.__originalDepthWrite = material.depthWrite;
+        }
+        if (ghost) {
+          material.transparent = true;
+          material.opacity = 0.18;
+          // Without this the ghosted shell still occludes the graph behind it.
+          material.depthWrite = false;
+        } else {
+          material.opacity = material.userData.__originalOpacity;
+          material.transparent = material.userData.__originalTransparent;
+          material.depthWrite = material.userData.__originalDepthWrite;
+        }
+        material.needsUpdate = true;
+      }
+    });
+  }
+
   setMarker(name, point) {
     const marker = this.markers[name];
     if (!marker) return;
@@ -698,6 +811,44 @@ export class ViewerManager {
       this.world.camera.three.lookAt(center);
     }
   }
+}
+
+/**
+ * Resolve the fragments worker URL, preferring the self-hosted copy.
+ *
+ * `FragmentsManager.getWorker()` fetches the worker from
+ * `unpkg.com/@thatopen/fragments@<version>/dist/worker/worker.mjs` at runtime.
+ * That makes booting the viewer depend on a third-party CDN, breaks offline and
+ * air-gapped use, and when the fetch fails the symptom is a bare
+ * `Uncaught SyntaxError: Unexpected token '<'` from the worker — because the
+ * failed request resolved to an HTML error page.
+ *
+ * `npm run sync-assets` copies the matching worker into public/, so the normal
+ * path is a same-origin fetch. The CDN call is kept only as a last resort.
+ */
+async function resolveWorkerUrl() {
+  try {
+    const response = await fetch(WORKER_PATH, { method: "HEAD" });
+    const type = response.headers.get("content-type") || "";
+    if (response.ok && !type.includes("text/html")) {
+      return new URL(WORKER_PATH, window.location.href).href;
+    }
+    console.warn(
+      `[viewer] ${WORKER_PATH} is missing or is not a script. ` +
+        "Run `npm run sync-assets`. Falling back to the CDN copy.",
+    );
+  } catch (error) {
+    console.warn(`[viewer] Could not reach ${WORKER_PATH}:`, error);
+  }
+
+  const fallback = await FragmentsManager.getWorker();
+  if (typeof fallback !== "string" || !fallback) {
+    throw new Error(
+      "Could not obtain the fragments worker. Run `npm run sync-assets` in " +
+        "topologicpy-web-frontend so it is served from /fragments/worker.mjs.",
+    );
+  }
+  return fallback;
 }
 
 /** Blue -> cyan -> green -> yellow -> red across the temperature range. */

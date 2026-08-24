@@ -8,8 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "sync-wasm": "node scripts/sync-wasm.mjs",
-    "postinstall": "node scripts/sync-wasm.mjs"
+    "postinstall": "node scripts/sync-assets.mjs",
+    "sync-assets": "node scripts/sync-assets.mjs"
   },
   "dependencies": {
     "@thatopen/components": "^3.4.8",

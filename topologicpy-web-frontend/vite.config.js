@@ -33,12 +33,15 @@ export default defineConfig({
     },
   },
 
-  server: {
-    // SharedArrayBuffer headers let the multi-threaded web-ifc build engage
-    // where the browser supports it.
-    headers: {
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "credentialless",
-    },
-  },
+  // No Cross-Origin-Opener-Policy / Cross-Origin-Embedder-Policy here, on
+  // purpose. Setting them makes the page cross-origin isolated, which gives it
+  // SharedArrayBuffer, which makes web-ifc select its multi-threaded pthread
+  // build. That build then spawns workers with an undefined script URL
+  // (allocateUnusedWorker -> initMainThread -> IfcAPI2.Init), every worker
+  // fetches "/undefined", receives index.html, and dies with
+  // "Uncaught SyntaxError: Unexpected token '<'". IFC loading never completes.
+  //
+  // The single-threaded build is what production runs anyway, since static
+  // hosts do not send these headers. Keeping dev and production on the same
+  // code path is worth more here than speculative threading.
 });

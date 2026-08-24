@@ -138,26 +138,49 @@ function createSink(capacity) {
   };
 }
 
-/** Bottom-centre of each door opening: one navigation waypoint per door. */
+/**
+ * Bottom-centre of each door opening: one navigation waypoint per door.
+ *
+ * Meshes are aggregated by `itemId` first. An IFC door is typically several
+ * meshes (frame, leaf, glazing); treating each as its own waypoint produced
+ * three or four nodes per opening, which inflated the door count and clustered
+ * redundant nodes in the doorway.
+ */
 function doorWaypoints(meshes, upAxis) {
   const up = axisIndex(upAxis);
-  const out = [];
+  const byItem = new Map();
+
   for (const mesh of meshes) {
     const p = mesh.positions;
     if (!p || p.length < 9) continue;
-    let sx = 0, sy = 0, sz = 0;
-    let minUp = Infinity;
+    // Fall back to a per-mesh key when the caller did not tag the item.
+    const key = mesh.itemId ?? `mesh:${byItem.size}`;
+    let acc = byItem.get(key);
+    if (!acc) {
+      acc = { sum: [0, 0, 0], count: 0, minUp: Infinity };
+      byItem.set(key, acc);
+    }
     const n = Math.floor(p.length / 3);
     for (let i = 0; i < n; i += 1) {
       const o = i * 3;
-      sx += p[o];
-      sy += p[o + 1];
-      sz += p[o + 2];
+      acc.sum[0] += p[o];
+      acc.sum[1] += p[o + 1];
+      acc.sum[2] += p[o + 2];
       const u = p[o + up];
-      if (u < minUp) minUp = u;
+      if (u < acc.minUp) acc.minUp = u;
     }
-    const coord = [sx / n, sy / n, sz / n];
-    coord[up] = minUp;
+    acc.count += n;
+  }
+
+  const out = [];
+  for (const acc of byItem.values()) {
+    if (!acc.count) continue;
+    const coord = [
+      acc.sum[0] / acc.count,
+      acc.sum[1] / acc.count,
+      acc.sum[2] / acc.count,
+    ];
+    coord[up] = acc.minUp;
     out.push(coord);
   }
   return out;

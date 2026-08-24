@@ -67,3 +67,21 @@ Future mitigation: add `ifcopenshell` to backend requirements if server-side IFC
 ## Scanned PDF
 
 The local PDF has zero extractable text. Research documentation from it requires OCR before semantic parsing.
+
+## Browser Testing Coverage (Next Line, 2026-08-24)
+
+- The browser suite (`npm run test:browser`) covers **one** model
+  (`Ifc2x3_Duplex_Architecture.ifc`), **one** browser (Chrome 151) and one
+  machine. It is a smoke test, not a cross-browser or cross-model matrix, and
+  it is not wired into CI.
+- Ghost mode mutates `opacity` / `depthWrite` directly on the fragments model's
+  materials. If That Open reassigns materials during LOD transitions the ghost
+  may not persist. Not observed in this session; not proven absent.
+- Picks snap silently to the nearest graph node. A click far from any walkable
+  surface moves the marker somewhere the user did not click, with no warning.
+  Needs a human decision on whether to warn or refuse above a distance
+  threshold.
+- `tools/bench_egress.py` double-counts walls on IFC2X3: `by_type("IfcWall")`
+  already includes `IfcWallStandardCase`. Affects the benchmark payload only —
+  both backends receive identical input, so the Classic-vs-Next comparison
+  stands.

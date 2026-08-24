@@ -42,7 +42,7 @@ export const DEFAULT_SETTINGS = {
   rlUseFire: true,
 
   showGraph: true,
-  showModel: true,
+  modelAppearance: "solid",
 };
 
 function loadSettings() {

@@ -76,7 +76,11 @@ reweighted per query.
 
 - `optimizeDeps.exclude: ["web-ifc", "@thatopen/fragments"]`
 - `React.StrictMode` removed around the viewer bootstrap
-- web-ifc WASM self-hosted from `public/wasm/` (no `unpkg.com` CDN)
+- web-ifc WASM **and** the fragments worker self-hosted from `public/`
+  (`FragmentsManager.getWorker()` otherwise fetches the worker from unpkg.com
+  on every boot)
+- no COOP/COEP headers: cross-origin isolation makes web-ifc pick its pthread
+  build, which spawns workers with an undefined URL and breaks IFC loading
 - the engine is a lazy chunk, so the shell paints before ~6 MB of Three + That Open arrives
 - an imperative `ViewerManager` owns the 3D lifecycle; React never re-creates the WebGL context
 
@@ -154,7 +158,7 @@ curl http://localhost:8000/api/capabilities
 
 ```bash
 cd TopologicStudio-Next/topologicpy-web-frontend
-npm install          # postinstall copies the web-ifc WASM into public/wasm/
+npm install          # postinstall copies the WASM and fragments worker into public/
 npm run dev
 ```
 
@@ -171,7 +175,15 @@ cd topologicpy-web-frontend && npm run lint && npm run build
 
 # end-to-end against a running backend
 node tools/smoke-pipeline.mjs /tmp/duplex.json
+
+# real Chrome, driving the actual UI (needs both servers running)
+npm install            # once, at the repo root: installs playwright-core
+npm run test:browser   # add --headed to watch it
 ```
+
+`tools/browser-test.mjs` uses the Chrome already installed on the machine, so
+there is no browser download. It fails on any console error, uncaught
+exception or failed request, and writes screenshots to `tools/shots/`.
 
 ---
 
@@ -258,6 +270,14 @@ is what makes an A/B comparison on one machine possible.
 
 ---
 
+## Verified in a browser
+
+`npm run test:browser` drives Chrome through the full workflow (load, build,
+pick, route, simulate) and passes with no console errors, uncaught exceptions
+or failed requests. See
+[wiki/roadmap/next-line-status-2026-08-23.md](wiki/roadmap/next-line-status-2026-08-23.md)
+for the bugs that pass turned up.
+
 ## Known limitations
 
 - `Graph.ShortestPath` does not scale to graphs of this size; the fast engine is
@@ -270,6 +290,12 @@ is what makes an A/B comparison on one machine possible.
   re-profiled.
 - Grid-snap mode re-issues node indices, so a graph built with it cannot be
   compared node-for-node against one built without.
+- The browser test covers one model on one machine. It is a smoke test, not a
+  cross-browser or cross-model suite, and it is not wired into CI.
+- `tools/bench_egress.py` counts walls twice on IFC2X3, because
+  `by_type("IfcWall")` already includes `IfcWallStandardCase`. That inflates
+  the wall count in the benchmark payload only; both backends receive the same
+  input, so the comparison stands.
 
 ## Merging back
 

@@ -63,8 +63,13 @@ export async function extractMeshes(model, localIds, worldMatrix = null) {
   const geometrySets = await model.getItemsGeometry(localIds);
   const meshes = [];
 
-  for (const set of geometrySets || []) {
-    for (const mesh of set || []) {
+  for (let index = 0; index < (geometrySets || []).length; index += 1) {
+    const set = geometrySets[index] || [];
+    // One IFC item can be several meshes (a door is a frame plus panels).
+    // Carrying the item id lets consumers aggregate per element rather than
+    // per mesh - otherwise one door yields several navigation waypoints.
+    const itemId = localIds[index];
+    for (const mesh of set) {
       if (!mesh?.positions?.length || !mesh?.indices?.length) continue;
 
       const source = mesh.positions;
@@ -97,6 +102,7 @@ export async function extractMeshes(model, localIds, worldMatrix = null) {
       }
 
       meshes.push({
+        itemId,
         positions,
         indices:
           mesh.indices instanceof Uint32Array

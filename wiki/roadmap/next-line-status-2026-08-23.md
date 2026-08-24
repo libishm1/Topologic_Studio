@@ -135,7 +135,7 @@ against deepening server-side use.
 | D. Geometry extracted twice | Extracted once from fragments; the second IFC parse is gone. |
 | E. StrictMode around viewer bootstrap | Removed. |
 | F. `web-ifc` not excluded from Vite optimizer | Excluded, along with `@thatopen/fragments`. |
-| G. Remote WASM CDN | Self-hosted via `scripts/sync-wasm.mjs` on postinstall. |
+| G. Remote WASM CDN | Self-hosted via `scripts/sync-assets.mjs` on postinstall — this also covers the fragments worker, which That Open fetches from unpkg.com by default. |
 | H. Dependency split | One `requirements.txt`, Docker installs only from it. |
 | I. Partial axis handling | All geometry goes through `geometry/common.py`. Fixed a real bug: agent height was added to index 2 unconditionally, which displaced points sideways on the y-up models the frontend actually defaulted to. |
 | J. `main.py` too large | Split into the module tree in the README. |
@@ -184,12 +184,64 @@ against deepening server-side use.
 - Frontend: ESLint clean (including the React compiler rules), production build
   clean, dev-server module graph crawled and fully resolvable.
 
+## Browser verification (2026-08-24)
+
+Driven through real Chrome 151 with `tools/browser-test.mjs` (playwright-core
+against the installed browser, no bundled download). 21 checks: app boot, WebGL
+context, IFC load, category counts, 3D render, graph build, click-picking,
+routing, fire streaming, theme, every panel tab, and the topology mode. All
+pass with **zero console errors, zero uncaught exceptions and zero failed
+requests**.
+
+Measured in-browser on the Duplex model: IFC load 0.7 s, graph build 0.6 s
+(2,577 nodes / 17,211 edges), worker sampling 2,563 points in 4 ms, route
+5.7 m across two storeys via the stairs.
+
+### Bugs the browser found that headless testing had not
+
+1. **Cross-origin isolation broke IFC loading entirely.** The dev server set
+   COOP/COEP headers so the multi-threaded web-ifc build could engage. That
+   made the page cross-origin isolated, so web-ifc selected its pthread build,
+   which spawned workers with an undefined script URL. Every worker fetched
+   `/undefined`, got `index.html` back, and died on
+   `Uncaught SyntaxError: Unexpected token '<'`. Headers removed; dev and
+   production now run the same single-threaded path.
+2. **The fragments worker was fetched from unpkg.com at runtime.**
+   `FragmentsManager.getWorker()` downloads
+   `unpkg.com/@thatopen/fragments@<version>/dist/worker/worker.mjs` on boot,
+   the same CDN dependency already removed for the WASM. It is now copied into
+   `public/fragments/` by `scripts/sync-assets.mjs`, with the CDN kept only as
+   a fallback.
+3. **A door produced one navigation node per mesh, not per door.** An IFC door
+   is several meshes (frame, leaf, glazing), so 14 doors became 44 door nodes.
+   Meshes now carry their `itemId` and the worker aggregates by it. The clone
+   step in `buildGraph` was dropping the id, which is what kept the first
+   attempt at this fix from taking effect.
+4. **Missing favicon**, a 404 on every page load.
+
+### UX problems the screenshots exposed
+
+1. **Building a graph appeared to do nothing.** The navigation graph is inside
+   the building, so solid walls and a roof hid all of it; the top view showed
+   blue only where floor slabs overhang the walls. Added a Solid / Ghost /
+   Hidden control for the IFC geometry, and the first graph build switches to
+   Ghost automatically.
+2. **The egress route was a one-pixel thread.** `LineBasicMaterial.linewidth`
+   is ignored by every major browser, so the thing the app exists to show was
+   lost among 17,000 graph edges. Routes are now tubes with real thickness,
+   scaled to the model, and the graph fades while a route is displayed.
+3. **Picks landed on walls and roofs.** A ray into the model hits whatever
+   surface faces the camera. Routing snapped to the nearest node anyway, so the
+   marker showed a point the walker could never stand on. Picks now snap to the
+   graph, so the marker shows where the route will actually begin.
+4. **Exit and fire origin were near-identical oranges.** The fire origin is now
+   a spiked octahedron rather than a sphere, so the two differ in shape as well
+   as hue.
+
 ## Not done
 
-- No browser-automation test. The viewer has been verified by module-graph
-  crawl and by exercising the worker and API paths headlessly, but nobody has
-  clicked through the UI in a real browser yet. **This is the main thing to
-  check before trusting the line.**
+- The browser test covers one model on one machine. It is a smoke test, not a
+  cross-browser or cross-model suite, and it is not wired into CI.
 - `/upload-ifc` and `/upload-topology` are carried over verbatim and unprofiled.
 - The `thatopen` chunk is still 5.4 MB; lazy-loaded but not slimmed.
 - No CI wiring for the new test suites.

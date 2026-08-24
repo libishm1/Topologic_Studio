@@ -15,8 +15,9 @@ import {
   Empty,
   KeyValue,
   NumberField,
-  SelectField,
   Section,
+  Segmented,
+  SelectField,
   Slider,
   Stat,
   Toggle,
@@ -64,11 +65,25 @@ export function ModelPanel({ studio, onBuildGraph, onClearCache }) {
           </>
         )}
 
-        <Toggle
-          label="Show IFC geometry"
-          checked={settings.showModel}
-          onChange={(showModel) => setSettings({ showModel })}
-        />
+        <div className="field">
+          <div className="field__label">
+            <span>IFC geometry</span>
+          </div>
+          <Segmented
+            value={settings.modelAppearance}
+            onChange={(modelAppearance) => setSettings({ modelAppearance })}
+            label="IFC geometry display"
+            options={[
+              { value: "solid", label: "Solid" },
+              { value: "ghost", label: "Ghost" },
+              { value: "hidden", label: "Hidden" },
+            ]}
+          />
+          <p className="field__hint">
+            The navigation graph sits inside the building, so solid geometry hides it.
+            Ghost keeps the building as context while letting the graph show through.
+          </p>
+        </div>
       </Section>
 
       <Section title="Navigation graph" badge={graph ? `${fmt(graph.stats.nodes)} nodes` : null}>

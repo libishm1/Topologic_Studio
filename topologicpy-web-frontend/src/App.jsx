@@ -174,7 +174,7 @@ export default function App() {
         });
 
         studio.setModelInfo(result);
-        viewer.setModelVisible(settings.showModel);
+        viewer.setModelAppearance(settings.modelAppearance);
         setTab("model");
 
         void studio.refreshCacheInfo();
@@ -193,7 +193,7 @@ export default function App() {
         studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, settings.showModel, studio, toast],
+    [reportError, settings.modelAppearance, studio, toast],
   );
 
   // ------------------------------------------------------------ graph build
@@ -224,6 +224,9 @@ export default function App() {
       // The worker receives copies so the cached geometry survives transfer.
       const clone = (meshes) =>
         meshes.map((mesh) => ({
+          // itemId must survive: the worker groups door meshes by it, and
+          // without it a single door yields a waypoint per sub-mesh.
+          itemId: mesh.itemId,
           positions: mesh.positions.slice(),
           indices: mesh.indices.slice(),
         }));
@@ -284,6 +287,13 @@ export default function App() {
       viewer.setGraph(response.nodes, response.edges, response.kinds);
       viewer.setGraphVisible(settings.showGraph);
 
+      // A freshly built graph is completely hidden behind solid walls and a
+      // roof, so the build reads as "nothing happened". Ghost the shell once,
+      // the first time, and leave the choice with the user afterwards.
+      if (settings.modelAppearance === "solid") {
+        setSettings({ modelAppearance: "ghost" });
+      }
+
       timer.finish({ nodes: response.stats.nodes, edges: response.stats.edges });
 
       if (response.stats.components > 1) {
@@ -306,12 +316,43 @@ export default function App() {
       studio.setGraphBusy(false);
       studio.setLoadState({ busy: false, stage: null, detail: null });
     }
-  }, [reportError, sample, settings, studio, toast]);
+  }, [reportError, sample, setSettings, settings, studio, toast]);
 
   // -------------------------------------------------------------- picking
 
+  /**
+   * Nearest navigation node to an arbitrary 3D point.
+   *
+   * A ray cast into the model hits whatever surface is in front - typically an
+   * exterior wall or the roof, not a floor. Routing snaps to the nearest node
+   * anyway, so snapping here too means the marker shows the point the route
+   * will actually use instead of a spot the walker could never stand on.
+   */
+  const snapToGraph = useCallback(
+    (point) => {
+      const nodes = graph?.nodes;
+      if (!nodes?.length || !point) return point;
+      let best = -1;
+      let bestDist = Infinity;
+      for (let i = 0; i < nodes.length; i += 3) {
+        const dx = nodes[i] - point[0];
+        const dy = nodes[i + 1] - point[1];
+        const dz = nodes[i + 2] - point[2];
+        const d = dx * dx + dy * dy + dz * dz;
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+      if (best < 0) return point;
+      return [nodes[best], nodes[best + 1], nodes[best + 2]];
+    },
+    [graph],
+  );
+
   const handlePick = useCallback(
-    (mode, point) => {
+    (mode, rawPoint) => {
+      const point = snapToGraph(rawPoint);
       studio.setPoints((current) => ({ ...current, [mode]: point }));
       viewerRef.current?.setMarker(mode, point);
       studio.setPickMode(null);
@@ -320,7 +361,7 @@ export default function App() {
         viewerRef.current?.setPath(null);
       }
     },
-    [studio],
+    [snapToGraph, studio],
   );
 
   const requestPick = useCallback(
@@ -460,7 +501,7 @@ export default function App() {
             viewer?.setTemperatures(temperatures);
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
-            viewer?.setPath(message.path, { color: 0xc026d3, dynamic: true, width: 5 });
+            viewer?.setPath(message.path, { color: 0xc026d3, dynamic: true });
           }
         },
         onDone: () => {
@@ -497,7 +538,7 @@ export default function App() {
         use_fire: settings.rlUseFire,
       });
       studio.setRl({ busy: false, path: result.path, reachedExit: result.reached_exit });
-      viewerRef.current?.setPath(result.points, { color: 0x14b8a6, dynamic: true, width: 3 });
+      viewerRef.current?.setPath(result.points, { color: 0x14b8a6, dynamic: true });
       if (!result.reached_exit) {
         toast("The policy did not reach the exit. Try more episodes.", {
           title: "RL training",
@@ -517,8 +558,8 @@ export default function App() {
   }, [settings.showGraph, graph]);
 
   useEffect(() => {
-    viewerRef.current?.setModelVisible(settings.showModel);
-  }, [settings.showModel, modelInfo]);
+    viewerRef.current?.setModelAppearance(settings.modelAppearance);
+  }, [settings.modelAppearance, modelInfo]);
 
   // ---------------------------------------------------------------- hotkeys
 
@@ -553,7 +594,16 @@ export default function App() {
           setSettings((s) => ({ ...s, showGraph: !s.showGraph }));
           break;
         case "m":
-          setSettings((s) => ({ ...s, showModel: !s.showModel }));
+          // Cycle solid -> ghost -> hidden -> solid.
+          setSettings((s) => ({
+            ...s,
+            modelAppearance:
+              s.modelAppearance === "solid"
+                ? "ghost"
+                : s.modelAppearance === "ghost"
+                  ? "hidden"
+                  : "solid",
+          }));
           break;
         case "b":
           if (modelInfo) void buildGraph();
@@ -702,7 +752,7 @@ export default function App() {
     }
     if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
     if (points.exit) items.push({ label: "Exit", color: "var(--viz-exit)", dot: true });
-    if (points.fire) items.push({ label: "Fire origin", color: "var(--viz-fire)", dot: true });
+    if (points.fire) items.push({ label: "Fire origin (spike)", color: "var(--viz-fire)", dot: true });
     if (path?.found) items.push({ label: "Egress route", color: "var(--viz-path)" });
     if (dynamicPath) {
       items.push({ label: "Hazard-aware route", color: "var(--viz-path-dynamic)" });

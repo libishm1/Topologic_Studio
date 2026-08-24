@@ -3,8 +3,12 @@
 .venv-next/
 node_modules/
 dist/
+# Runtime assets copied out of node_modules by scripts/sync-assets.mjs
+# on postinstall. Generated, version-locked to the installed packages.
 topologicpy-web-frontend/public/wasm/
+topologicpy-web-frontend/public/fragments/
 *.log
 __pycache__/
 .pytest_cache/
 .env
+tools/shots/
