@@ -13,6 +13,9 @@ topologic_webapp/
 └── TopologicStudio-Next/   # this line, branch next/studio-2
 ```
 
+**Picking this up cold?** Start with
+[wiki/roadmap/handoff-2026-08-24.md](wiki/roadmap/handoff-2026-08-24.md).
+
 ---
 
 ## What changed and why

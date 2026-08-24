@@ -35,5 +35,7 @@ Use this page as the stable entry point.
 
 ## Next Line
 
+- [Handoff 2026-08-24](roadmap/handoff-2026-08-24.md) — start here
+
 - [Browser test session 2026-08-24](issues/browser-session-2026-08-24.md)
 - [Next line status vs the handoff plan](roadmap/next-line-status-2026-08-23.md)
