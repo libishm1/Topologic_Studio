@@ -140,6 +140,19 @@ node tools/smoke-pipeline.mjs /tmp/duplex.json
 
 ## Running locally
 
+### Quickest
+
+```
+studio          start backend + frontend and open the browser
+studio stop     stop both
+studio status   show what is running
+studio test     run the browser suite against the running app
+```
+
+`studio.cmd` lives at the repo root; a one-line shim in
+`%LOCALAPPDATA%\Microsoft\WindowsApps` (already on PATH) makes `studio`
+work from any terminal. Each service gets its own window.
+
 ### Backend
 
 ```bash

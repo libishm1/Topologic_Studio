@@ -124,9 +124,29 @@ export function useStudio() {
         error instanceof ApiError
           ? error.message
           : error?.message || "Something went wrong.";
+
+      // A server that has gone away must flip the indicator immediately.
+      // Previously the status was only sampled at mount, so the status bar
+      // could read "backend up" while every request was failing.
+      if (error instanceof ApiError && error.kind === "network") {
+        setServerStatus("offline");
+      }
+
+      // The graph store is in-memory, so restarting the backend orphans the
+      // graph id the client is holding. Say what to do about it.
+      const graphGone =
+        error instanceof ApiError &&
+        error.status === 400 &&
+        /no (navigation )?graph/i.test(String(error.detail ?? error.message));
+
       // Log the full object; the toast only carries what a user can act on.
       console.error(title || "Error", error);
-      toast(message, { title, variant: "error", ttl: 9000 });
+      toast(
+        graphGone
+          ? "The server no longer has this graph - it restarts empty. Build the egress graph again."
+          : message,
+        { title: graphGone ? "Graph no longer on the server" : title, variant: "error", ttl: 9000 },
+      );
     },
     [toast],
   );
@@ -186,6 +206,16 @@ export function useStudio() {
       alive = false;
     };
   }, [refreshCapabilities]);
+
+  // While the server is unreachable, keep checking so the indicator recovers
+  // on its own instead of stranding the user on a stale "offline".
+  useEffect(() => {
+    if (serverStatus !== "offline") return undefined;
+    const timer = setInterval(() => {
+      void refreshCapabilities();
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [serverStatus, refreshCapabilities]);
 
   // The engine the server can actually serve. Derived rather than corrected in
   // an effect: writing the preference back would fight the user's own choice

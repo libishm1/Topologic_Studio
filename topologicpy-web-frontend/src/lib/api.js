@@ -12,12 +12,19 @@ export const API_BASE = (
 ).replace(/\/$/, "");
 
 export class ApiError extends Error {
-  constructor(message, { status = 0, detail = null, url = "" } = {}) {
+  /**
+   * @param kind "network" when the server could not be reached at all,
+   *             "http" when it answered with an error status. The UI needs the
+   *             difference: an unreachable server should flip the status
+   *             indicator, a 404 should not.
+   */
+  constructor(message, { status = 0, detail = null, url = "", kind = "http" } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
     this.url = url;
+    this.kind = kind;
   }
 }
 
@@ -40,11 +47,11 @@ async function request(path, { method = "GET", body, signal, timeout = 120000 } 
     });
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new ApiError("Request cancelled or timed out.", { url });
+      throw new ApiError("Request cancelled or timed out.", { url, kind: "network" });
     }
     throw new ApiError(
       `Cannot reach the backend at ${API_BASE}. Is it running?`,
-      { url },
+      { url, kind: "network" },
     );
   } finally {
     if (timer) clearTimeout(timer);
@@ -62,7 +69,7 @@ async function request(path, { method = "GET", body, signal, timeout = 120000 } 
       typeof detail === "string" && detail
         ? detail
         : `Request failed with status ${response.status}.`;
-    throw new ApiError(message, { status: response.status, detail, url });
+    throw new ApiError(message, { status: response.status, detail, url, kind: "http" });
   }
 
   if (response.status === 204) return null;

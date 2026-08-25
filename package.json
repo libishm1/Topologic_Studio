@@ -7,7 +7,8 @@
   "scripts": {
     "test:browser": "node tools/browser-test.mjs",
     "test:pipeline": "node tools/smoke-pipeline.mjs",
-    "inspect:graph": "node tools/inspect-graph.mjs"
+    "inspect:graph": "node tools/inspect-graph.mjs",
+    "test:offline": "node tools/offline-test.mjs"
   },
   "devDependencies": {
     "playwright-core": "^1.57.0"
