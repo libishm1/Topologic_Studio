@@ -35,6 +35,8 @@ Use this page as the stable entry point.
 
 ## Next Line
 
+- [GitHub Pages deployment options 2026-09-21](roadmap/pages-deployment-options-2026-09-21.md) — decision pending
+
 - [Handoff 2026-08-24](roadmap/handoff-2026-08-24.md) — start here
 
 - [Browser test session 2026-08-24](issues/browser-session-2026-08-24.md)
