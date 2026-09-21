@@ -270,3 +270,61 @@ class TestTopologicParity:
     def test_falls_back_to_fast_when_asked(self, grid_graph):
         result = pathfinding.shortest_path(grid_graph, 0, 0, engine="topologicpy")
         assert result.found
+
+
+@pytest.mark.skipif(not topologic_available(), reason="topologicpy backend unavailable")
+class TestTopologicUsesRealLengths:
+    """Guard against the engine silently counting hops instead of distance.
+
+    `TGraph.ByEdgeIndexPairs` builds a topological graph whose edgeDictionaries
+    ShortestPath ignores, so `edgeKey="Length"` degenerates into hop counting.
+    On a unit-spaced grid that is invisible, because hop count and distance are
+    equal - which is exactly how it nearly shipped. These fixtures make the two
+    disagree.
+    """
+
+    @staticmethod
+    def _graph():
+        # Two routes from 0 to 3:
+        #   via 1: two long legs   (hops 2, distance 2 * sqrt(125) = 22.36)
+        #   via 2: two short legs  (hops 2, distance 10)
+        # Equal hop counts, very different distances.
+        points = np.array(
+            [[0, 0, 0], [5, 0, 10], [5, 0, 0], [10, 0, 0]], dtype=np.float32
+        )
+        edges = np.array([[0, 1], [1, 3], [0, 2], [2, 3]], dtype=np.int32)
+        return NavGraph(
+            points=points, edges=edges, kinds=np.zeros(4, dtype=np.int8), up_axis="y"
+        )
+
+    def test_cost_is_distance_not_hop_count(self):
+        graph = self._graph()
+        result = pathfinding.shortest_path(
+            graph, 0, 3, engine="topologicpy", allow_fallback=False
+        )
+        assert result.found
+        assert result.cost == pytest.approx(10.0, rel=1e-6), (
+            "cost 2.0 would mean ShortestPath counted hops instead of length"
+        )
+        assert result.node_ids == [0, 2, 3], "should take the geometrically shorter route"
+
+    def test_matches_the_fast_engine_on_uneven_geometry(self):
+        graph = self._graph()
+        fast = pathfinding.shortest_path(graph, 0, 3, engine="fast")
+        topo = pathfinding.shortest_path(
+            graph, 0, 3, engine="topologicpy", allow_fallback=False
+        )
+        assert fast.found and topo.found
+        assert topo.node_ids == fast.node_ids
+        assert topo.cost == pytest.approx(fast.cost, rel=1e-6)
+
+    def test_blocking_forces_the_long_route(self):
+        graph = self._graph()
+        blocked = np.zeros(graph.edge_count, dtype=bool)
+        blocked[2] = True  # edge 0->2, the short way in
+        result = pathfinding.shortest_path(
+            graph, 0, 3, engine="topologicpy", blocked=blocked, allow_fallback=False
+        )
+        assert result.found
+        assert result.node_ids == [0, 1, 3]
+        assert result.cost == pytest.approx(2 * math.sqrt(125), rel=1e-6)

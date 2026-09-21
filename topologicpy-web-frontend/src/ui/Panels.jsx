@@ -328,15 +328,15 @@ export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompar
           ]}
           hint={
             engines.includes("topologicpy")
-              ? "Both return the same optimum route. Measured on a 2,650-node model: built-in 14 ms, TopologicPy 1.4 s per query plus a one-off graph build. Use TopologicPy when you need its semantics, not for interactive work."
+              ? "Both return the same optimum route. Measured on a 2,600-node model: built-in 5.8 ms, TopologicPy 9.3 ms per query plus a one-off graph build. Either is fine interactively."
               : "The server could not load topologicpy, so only the built-in engine is offered."
           }
         />
 
         {settings.engine === "topologicpy" && (
-          <p className="field__hint" style={{ color: "var(--warning)" }}>
-            The TopologicPy engine is roughly 100x slower per query on graphs this
-            size, and live rerouting during a fire will lag noticeably.
+          <p className="field__hint">
+            Uses TopologicPy&apos;s <code>TGraph.ShortestPath</code>. Around 1.6x the
+            cost of the built-in engine, so live rerouting during a fire keeps up.
           </p>
         )}
 

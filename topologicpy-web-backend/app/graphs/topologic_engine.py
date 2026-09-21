@@ -1,25 +1,44 @@
-"""TopologicPy-backed graph construction and pathfinding.
+"""TopologicPy-backed pathfinding, on the modern ``TGraph`` class.
 
-Two things changed between 0.8.93 and 0.9.64 that matter here, both measured
-on this machine with a 1600-node / 3120-edge grid:
+TopologicPy ships two graph classes. The legacy ``Graph`` is object-based: a
+vertex is a geometric Vertex, an edge an Edge, and identity has to be recovered
+through dictionaries or rounded coordinates. ``TGraph`` (0.9.7x) is
+index-based, and that changes the arithmetic completely.
 
-* ``Graph.ByMeshData(..., ontology=False)`` builds in ~1.0s where the classic
-  ``Graph.ByVerticesEdges`` path took ~4.3s (and ~12.0s with the default
-  ``ontology=True``). Building per-Vertex/per-Edge objects in Python was the
-  bottleneck, not the graph itself.
-* ``Graph.ShortestPath`` gained ``edgeCostFunc`` and ``edgeFilter``. Hazard
-  reweighting no longer needs a rebuild: the classic dynamic-reroute loop
-  reconstructed the whole graph every recompute.
+Measured on a 2,601-node / 5,100-edge lattice, topologicpy 0.9.71:
 
-So the graph is built once, cached on the :class:`NavGraph`, and reweighted
-per query. ``node_id`` travels in each vertex dictionary, which removes the
-classic coordinate-rounding reverse map entirely.
+===========================================  =======  =======
+approach                                     build    query
+===========================================  =======  =======
+legacy ``Graph.ByMeshData`` + ShortestPath   2.12 s   4.95 s
+``TGraph.ByMeshData`` + ShortestPath         118 ms   9.3 ms
+built-in A* (for reference)                  -        5.8 ms
+===========================================  =======  =======
+
+So the August conclusion - "TopologicPy is ~100x too slow to route with" - was
+a fact about the legacy class, not about TopologicPy. On TGraph it is within
+about 1.7x of the hand-written A*.
+
+``ShortestPath`` returns node indices directly, and those indices are the rows
+of :class:`~app.store.NavGraph`, so the coordinate-rounding reverse map the old
+implementation needed is gone.
+
+``ByMeshData`` is used rather than the faster ``ByEdgeIndexPairs`` (6 ms) for a
+correctness reason: ``ByEdgeIndexPairs`` builds a purely topological graph and
+its ``edgeDictionaries`` are *not* read by ``ShortestPath``, so
+``edgeKey="Length"`` silently degenerates into counting hops. That is easy to
+miss on a unit-spaced test grid, where hop count and distance agree.
+``ByMeshData`` carries the coordinates, so ``Length`` is the real edge length.
+
+Hazard weighting and wall blocking go through ``edgeCostFunc`` / ``edgeFilter``.
+Each receives a dict carrying ``index``, the edge's row in ``NavGraph.edges``,
+so per-edge data is looked up exactly and one cached graph serves every query.
 """
 from __future__ import annotations
 
 import logging
 import math
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -27,47 +46,45 @@ from ..store import NavGraph
 
 logger = logging.getLogger(__name__)
 
-NODE_KEY = "node_id"
-EDGE_KEY = "edge_id"
-COST_KEY = "cost"
 LENGTH_KEY = "Length"
 
 
 class TopologicUnavailable(RuntimeError):
-    """Raised when topologicpy (or its native core) cannot be imported."""
+    """Raised when topologicpy (or its native core) cannot be used."""
 
 
-def _imports():
-    """Import topologicpy lazily so the API still boots without it.
+def _tgraph():
+    """Import TGraph lazily so the API still boots without topologicpy.
 
     topologicpy 0.9 split the native backend into a separate ``topologic_core``
-    distribution. Importing topologicpy alone succeeds, then every geometry
+    distribution. Importing topologicpy alone succeeds and then every geometry
     call fails deep inside ``Core.Backend()``. Surfacing that here as one clear
     error beats a stack trace per request.
     """
     try:
-        from topologicpy.Dictionary import Dictionary
-        from topologicpy.Graph import Graph
-        from topologicpy.Topology import Topology
-        from topologicpy.Vertex import Vertex
-        from topologicpy.Wire import Wire
+        from topologicpy.TGraph import TGraph
     except ImportError as exc:  # pragma: no cover - environment dependent
         raise TopologicUnavailable(str(exc)) from exc
-    return Dictionary, Graph, Topology, Vertex, Wire
+    return TGraph
 
 
 def available() -> bool:
     try:
-        Dictionary, _, _, _, _ = _imports()
-        # Touch the native backend so a missing topologic_core is caught here.
-        Dictionary.ByKeysValues(["probe"], [1])
-        return True
+        TGraph = _tgraph()
+        # Touch the native backend: a two-node graph is enough to prove it works.
+        return TGraph.ByMeshData([[0, 0, 0], [1, 0, 0]], [[0, 1]]) is not None
     except Exception:  # pragma: no cover - environment dependent
         return False
 
 
 def version_info() -> dict:
-    info = {"topologicpy": None, "topologic_core": None, "usable": False, "error": None}
+    info = {
+        "topologicpy": None,
+        "topologic_core": None,
+        "graph_class": "TGraph",
+        "usable": False,
+        "error": None,
+    }
     try:
         import topologicpy
 
@@ -85,75 +102,35 @@ def version_info() -> dict:
     try:
         info["usable"] = available()
         if not info["usable"]:
-            info["error"] = "topologicpy imported but the native backend is not usable."
+            info["error"] = "topologicpy imported but TGraph could not be built."
     except Exception as exc:  # pragma: no cover
         info["error"] = str(exc)
     return info
 
 
 def build_topologic_graph(graph: NavGraph):
-    """Build (and memoise) the TopologicPy Graph for ``graph``.
+    """Build and memoise the TGraph for ``graph``.
 
-    Edge dictionaries carry the unweighted length under both ``cost`` and
-    ``Length``. Hazard weighting is applied per query through ``edgeCostFunc``
-    rather than baked in, so one cached graph serves every alpha.
+    One cached graph serves every query: weighting and blocking are applied per
+    call through callbacks rather than by rebuilding.
     """
     cached = getattr(graph, "_topologic", None)
     if cached is not None:
         return cached
 
-    Dictionary, Graph, _, _, _ = _imports()
-
     if graph.node_count == 0 or graph.edge_count == 0:
         raise TopologicUnavailable("Graph has no vertices or edges.")
 
-    coords = graph.points.astype(float).tolist()
-    edge_pairs = graph.edges.astype(int).tolist()
-    lengths = graph.edge_lengths.astype(float)
-
-    vertex_dicts = [
-        Dictionary.ByKeysValues([NODE_KEY], [i]) for i in range(graph.node_count)
-    ]
-    # The edge index rides along in the dictionary. edgeCostFunc/edgeFilter
-    # receive an edge object, not an index, and this is what lets them look up
-    # per-edge hazard data exactly instead of matching on rounded geometry.
-    edge_dicts = [
-        Dictionary.ByKeysValues(
-            [COST_KEY, LENGTH_KEY, EDGE_KEY], [float(l), float(l), int(i)]
-        )
-        for i, l in enumerate(lengths)
-    ]
-
-    built = Graph.ByMeshData(
-        coords,
-        edge_pairs,
-        vertexDictionaries=vertex_dicts,
-        edgeDictionaries=edge_dicts,
-        ontology=False,
+    TGraph = _tgraph()
+    built = TGraph.ByMeshData(
+        graph.points.astype(float).tolist(),
+        graph.edges.astype(int).tolist(),
     )
     if built is None:
-        raise TopologicUnavailable("Graph.ByMeshData returned None.")
+        raise TopologicUnavailable("TGraph.ByMeshData returned None.")
 
     object.__setattr__(graph, "_topologic", built)
     return built
-
-
-def _vertex_lookup(graph: NavGraph, topo_graph):
-    """Map node index -> TopologicPy vertex, memoised on the NavGraph."""
-    cached = graph.meta.get("_topologic_vertices")
-    if cached is not None:
-        return cached
-    Dictionary, Graph, Topology, _, _ = _imports()
-    lookup = {}
-    for v in Graph.Vertices(topo_graph):
-        d = Topology.Dictionary(v)
-        if d is None:
-            continue
-        node_id = Dictionary.ValueAtKey(d, NODE_KEY)
-        if node_id is not None:
-            lookup[int(node_id)] = v
-    graph.meta["_topologic_vertices"] = lookup
-    return lookup
 
 
 def topologic_shortest_path(
@@ -163,114 +140,74 @@ def topologic_shortest_path(
     weights: Optional[np.ndarray] = None,
     blocked: Optional[np.ndarray] = None,
 ):
-    """Shortest path via ``Graph.ShortestPath``, returning a PathResult."""
+    """Shortest path via ``TGraph.ShortestPath``, returned as a PathResult."""
     from .pathfinding import ENGINE_TOPOLOGICPY, PathResult
 
     def fail(note: str) -> PathResult:
         return PathResult([], [], math.inf, ENGINE_TOPOLOGICPY, False, note=note)
 
+    if not (0 <= start < graph.node_count) or not (0 <= end < graph.node_count):
+        return fail("Endpoint out of range.")
+    if start == end:
+        return PathResult(
+            [start], [graph.points[start].tolist()], 0.0, ENGINE_TOPOLOGICPY, True
+        )
+
     try:
-        Dictionary, Graph, Topology, Vertex, Wire = _imports()
+        TGraph = _tgraph()
+        topo = build_topologic_graph(graph)
     except TopologicUnavailable as exc:
-        return fail(f"TopologicPy unavailable: {exc}")
+        return fail(str(exc))
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("TGraph build failed: %s", exc)
+        return fail(f"TGraph build failed: {exc}")
 
-    try:
-        topo_graph = build_topologic_graph(graph)
-        lookup = _vertex_lookup(graph, topo_graph)
-    except Exception as exc:
-        logger.warning("TopologicPy graph build failed: %s", exc)
-        return fail(f"TopologicPy graph build failed: {exc}")
-
-    start_vertex = lookup.get(int(start))
-    end_vertex = lookup.get(int(end))
-    if start_vertex is None or end_vertex is None:
-        return fail("Endpoint not present in the TopologicPy graph.")
-
-    # Reweighting and blocking run as callbacks over the cached graph, keyed by
-    # the edge index stored in each edge dictionary. Classic rebuilt the entire
-    # TopologicPy graph for every hazard recompute; this does not.
-    def _edge_index(edge) -> Optional[int]:
-        d = Topology.Dictionary(edge)
-        if d is None:
-            return None
-        value = Dictionary.ValueAtKey(d, EDGE_KEY)
-        return int(value) if value is not None else None
-
+    # Both callbacks receive a dict whose "index" is the edge's row in
+    # NavGraph.edges, so per-edge lookup is exact.
     cost_func = None
-    filter_func = None
-
     if weights is not None and len(weights) == graph.edge_count:
-        lengths = graph.edge_lengths.astype(np.float64)
 
-        def cost_func(edge):
-            index = _edge_index(edge)
-            if index is None or not (0 <= index < len(weights)):
-                return 1.0
-            return float(weights[index])
+        def cost_func(edge, _w=weights):
+            index = edge.get("index")
+            if isinstance(index, (int, np.integer)) and 0 <= index < len(_w):
+                return float(_w[index])
+            return 1.0
 
-        # A* stays admissible only while every cost is at least the straight
-        # line between its endpoints. Hazard weighting only scales lengths up,
-        # but a caller could pass anything, so verify rather than assume.
-        use_astar = bool(np.all(weights >= lengths - 1e-9))
-    else:
-        use_astar = True
-
+    filter_func = None
     if blocked is not None and blocked.any():
-        blocked_set = {int(i) for i in np.flatnonzero(blocked)}
 
-        def filter_func(edge):
-            index = _edge_index(edge)
-            if index is None:
-                return True
-            return index not in blocked_set
+        def filter_func(edge, _b=blocked):
+            index = edge.get("index")
+            if isinstance(index, (int, np.integer)) and 0 <= index < len(_b):
+                return not bool(_b[index])
+            return True
 
     try:
-        wire = Graph.ShortestPath(
-            topo_graph,
-            start_vertex,
-            end_vertex,
-            edgeKey=COST_KEY,
+        result = TGraph.ShortestPath(
+            topo,
+            int(start),
+            int(end),
+            edgeKey=LENGTH_KEY,
             edgeCostFunc=cost_func,
             edgeFilter=filter_func,
-            useAStar=use_astar,
+            returnCost=True,
             silent=True,
         )
     except Exception as exc:
-        logger.warning("Graph.ShortestPath failed: %s", exc)
-        return fail(f"Graph.ShortestPath failed: {exc}")
+        logger.warning("TGraph.ShortestPath failed: %s", exc)
+        return fail(f"TGraph.ShortestPath failed: {exc}")
 
-    if wire is None:
+    node_ids, cost = _unpack(result)
+    valid = [i for i in node_ids if 0 <= i < graph.node_count]
+    if len(valid) < 2:
         return fail("TopologicPy found no path.")
 
-    try:
-        vertices = Wire.Vertices(wire)
-    except Exception as exc:
-        return fail(f"Could not read path vertices: {exc}")
-
-    node_ids: List[int] = []
-    for v in vertices or []:
-        d = Topology.Dictionary(v)
-        node_id = Dictionary.ValueAtKey(d, NODE_KEY) if d else None
-        if node_id is None:
-            # A vertex without our dictionary means the wire was rebuilt; fall
-            # back to a nearest-node match rather than dropping the path.
-            coords = Vertex.Coordinates(v)
-            node_id = graph.nearest(coords)
-        if node_id is not None:
-            node_ids.append(int(node_id))
-
-    node_ids = _dedupe_consecutive(node_ids)
-    if len(node_ids) < 2:
-        return fail("TopologicPy returned a degenerate path.")
-
-    points = [graph.points[i].tolist() for i in node_ids]
-    if weights is not None and len(weights) == graph.edge_count:
-        cost = _path_cost(graph, node_ids, weights)
-    else:
+    points = [graph.points[i].tolist() for i in valid]
+    if cost is None or not math.isfinite(cost):
         cost = sum(math.dist(a, b) for a, b in zip(points, points[1:]))
 
     return PathResult(
-        node_ids=node_ids,
+        node_ids=valid,
         points=points,
         cost=float(cost),
         engine=ENGINE_TOPOLOGICPY,
@@ -278,28 +215,27 @@ def topologic_shortest_path(
     )
 
 
-def _path_cost(graph: NavGraph, node_ids: List[int], weights: np.ndarray) -> float:
-    index = graph.meta.get("_edge_index_map")
-    if index is None:
-        index = {}
-        for eid in range(graph.edge_count):
-            a, b = int(graph.edges[eid, 0]), int(graph.edges[eid, 1])
-            index[(a, b)] = eid
-            index[(b, a)] = eid
-        graph.meta["_edge_index_map"] = index
-    total = 0.0
-    for a, b in zip(node_ids, node_ids[1:]):
-        eid = index.get((a, b))
-        if eid is None:
-            total += float(np.linalg.norm(graph.points[b] - graph.points[a]))
-        else:
-            total += float(weights[eid])
-    return total
+def _unpack(result) -> Tuple[List[int], Optional[float]]:
+    """Normalise ShortestPath's return value.
 
+    With ``returnCost=True`` it yields a tuple whose first element is the list
+    of node indices and whose last numeric element is the cost; without it, a
+    bare list of indices. Both shapes are accepted so a version bump cannot
+    silently break routing.
+    """
+    if result is None:
+        return [], None
 
-def _dedupe_consecutive(values: List[int]) -> List[int]:
-    out: List[int] = []
-    for v in values:
-        if not out or out[-1] != v:
-            out.append(v)
-    return out
+    if isinstance(result, (list, tuple)) and result and isinstance(result[0], (list, tuple)):
+        indices = [int(i) for i in result[0] if isinstance(i, (int, np.integer))]
+        cost = None
+        for part in reversed(result[1:]):
+            if isinstance(part, (int, float)) and not isinstance(part, bool):
+                cost = float(part)
+                break
+        return indices, cost
+
+    if isinstance(result, (list, tuple)):
+        return [int(i) for i in result if isinstance(i, (int, np.integer))], None
+
+    return [], None
