@@ -136,7 +136,9 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
   let timer = null;
 
   const pointsOf = (nodes) => nodes.map((i) => [graph.nodes[i * 3], graph.nodes[i * 3 + 1], graph.nodes[i * 3 + 2]]);
-  const rerouteNow = (step, weights, blocked) => {
+  // `avoid` marks the nodes a straightened drawing of the route must keep
+  // clear of (src/core/straighten.js): burning, or above ambient.
+  const rerouteNow = (step, weights, blocked, avoid) => {
     let result = astar(graph, walker, exit, { weights, blocked });
     let found = Boolean(result);
     let note = null;
@@ -154,6 +156,8 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
       step,
       found,
       path: result ? pointsOf(result.nodes) : [],
+      node_ids: result ? result.nodes : [],
+      avoid,
       cost: result ? Math.round(result.cost * 1000) / 1000 : null,
       changed,
       engine: "browser",
@@ -192,7 +196,9 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
             if ((value[graph.edges[e * 2]] + value[graph.edges[e * 2 + 1]]) / 2 > lethality) blocked[e] = 1;
           }
         }
-        rerouteNow(step, hazardWeights(graph, value, alpha), blocked);
+        const heated = new Uint8Array(value.length);
+        for (let i = 0; i < value.length; i += 1) if (value[i] > AMBIENT + 0.5) heated[i] = 1;
+        rerouteNow(step, hazardWeights(graph, value, alpha), blocked, heated);
       }
     } else {
       for (const node of value) burning[node] = 1;
@@ -203,7 +209,7 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
         for (let e = 0; e < m; e += 1) {
           if (burning[graph.edges[e * 2]] || burning[graph.edges[e * 2 + 1]]) blocked[e] = 1;
         }
-        rerouteNow(step, null, blocked);
+        rerouteNow(step, null, blocked, Uint8Array.from(burning));
       }
     }
     step += 1;

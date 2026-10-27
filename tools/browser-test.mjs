@@ -409,6 +409,13 @@ if (gotStart && gotExit) {
       "route spans a meaningful distance",
       r.Length,
     );
+    // Straightened by default (src/core/straighten.js): never longer than
+    // the lattice route it came from.
+    record(
+      r["On the grid"] !== undefined && parseFloat(r.Length) <= parseFloat(r["On the grid"]) + 0.05,
+      "route is drawn straightened, no longer than on the grid",
+      `${r.Length} vs ${r["On the grid"]}`,
+    );
   }
 }
 await shot(page, "route");

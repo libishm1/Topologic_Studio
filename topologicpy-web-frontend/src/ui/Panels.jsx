@@ -395,6 +395,13 @@ export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompar
           </p>
         )}
 
+        <Toggle
+          label="Straighten routes"
+          checked={settings.straightenRoutes}
+          onChange={(straightenRoutes) => setSettings({ straightenRoutes })}
+          hint="Draws each route as straight runs that stay on the floor and clear of walls, as TopologicPy's Wire.Straighten does. Doors and stairs stay on the route. Applies to the next route you find."
+        />
+
         <Button
           variant="primary"
           block
@@ -418,8 +425,15 @@ export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompar
           <>
             <div className="stats">
               <Stat label="Found" value={path.found ? "yes" : "no"} warn={!path.found} />
-              <Stat label="Length" value={`${path.length.toFixed(1)} m`} />
-              <Stat label="Waypoints" value={fmt(path.points.length)} />
+              {path.straight_length != null ? (
+                <>
+                  <Stat label="Length" value={`${path.straight_length.toFixed(1)} m`} />
+                  <Stat label="On the grid" value={`${path.length.toFixed(1)} m`} />
+                </>
+              ) : (
+                <Stat label="Length" value={`${path.length.toFixed(1)} m`} />
+              )}
+              <Stat label="Waypoints" value={fmt((path.straight_points || path.points).length)} />
               <Stat label="Engine" value={path.engine} />
             </div>
             {path.fallback_from && (
@@ -490,7 +504,7 @@ export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompar
                   Route {route.rank}
                 </div>
                 <div className="kv__v">
-                  {route.length.toFixed(1)} m
+                  {(route.straight_length ?? route.length).toFixed(1)} m
                   {route.rank === 1
                     ? " · shortest"
                     : ` · +${Math.round((route.stretch - 1) * 100)}% · ${Math.round(route.overlap * 100)}% shared`}

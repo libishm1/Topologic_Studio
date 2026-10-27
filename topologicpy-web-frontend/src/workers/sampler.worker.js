@@ -41,6 +41,8 @@ self.onmessage = (event) => {
       blocked: graph.blocked,
       angle: graph.angle,
       spacing: graph.spacing,
+      sections: graph.sections,
+      sectionHeight: graph.sectionHeight,
       stats: { ...graph.stats, walls: graph.walls.length },
     };
     self.postMessage({ id, ok: true, result }, [
@@ -48,6 +50,7 @@ self.onmessage = (event) => {
       result.edges.buffer,
       result.kinds.buffer,
       result.blocked.buffer,
+      ...result.sections.map((section) => section.segs.buffer),
     ]);
   } catch (error) {
     self.postMessage({ id, ok: false, error: error?.message || String(error) });

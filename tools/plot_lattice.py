@@ -2,6 +2,9 @@
 
     python tools/plot_lattice.py graph.json out.png
 
+A dump from tools/straighten-check.mjs also carries the wall sections (dark
+lines) and a few routes: the lattice route dotted, the straightened one solid.
+
 Nodes are coloured by connected component (walls on), so a building that has
 fallen apart shows as several colours. Walls are grey lines, blocked edges
 red, doors black squares. Y is up in the dump (web-ifc's frame), so plan is
@@ -72,6 +75,19 @@ for ax, (lo, hi) in zip(axes[0], panels):
     for d in data["doors"]:
         if lo - 1 <= d["sill"] + 0.75 <= hi + 1:
             ax.plot(d["x"], d["y"], "ks", ms=4, zorder=5)
+    for sec in data.get("sections", []):
+        # A section is cut 0.75 m above its floor, the height nodes sit at.
+        if lo - 0.1 <= sec["height"] <= hi + 0.1:
+            s4 = np.array(sec["segs"]).reshape(-1, 4)
+            for x0, z0, x1, z1 in s4:
+                ax.plot([x0, x1], [z0, z1], color="0.25", lw=0.7, zorder=2)
+    for k, route in enumerate(data.get("routes", [])):
+        grid, straight = np.array(route["grid"]), np.array(route["straight"])
+        if not (lo - 0.5 <= grid[0, 1] <= hi + 0.5):
+            continue
+        colour = plt.get_cmap("Dark2")(k % 8)
+        ax.plot(grid[:, 0], grid[:, 2], ":", color=colour, lw=1.0, zorder=6)
+        ax.plot(straight[:, 0], straight[:, 2], "-", color=colour, lw=2.0, zorder=7)
     ax.set_title(f"{data['file']}  y {lo:.1f}..{hi:.1f}  ({sel.sum()} nodes)", fontsize=9)
     ax.set_aspect("equal")
     ax.invert_yaxis()

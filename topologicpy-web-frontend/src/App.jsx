@@ -21,6 +21,7 @@ import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphStats } from "./core/graph.js";
 import { findRoute } from "./core/route.js";
+import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
 import { trainRl as trainRlPolicy } from "./core/rl.js";
@@ -31,6 +32,9 @@ import { Viewport } from "./ui/Viewport.jsx";
 
 import { Badge, Button, FileButton, Segmented } from "./ui/primitives.jsx";
 import logo from "./assets/topologicStudio-white-logo400x400.png";
+
+/** The points a route is drawn with: straightened when it has been. */
+const drawn = (route) => route?.straight_points || route?.points || null;
 
 // Three plus OrbitControls only matter in this mode, so the chunk is loaded
 // on demand rather than shipped to everyone who opens the IFC viewer.
@@ -324,6 +328,11 @@ export default function App() {
         edges: local.edges,
         kinds: local.kinds,
         blocked: local.blocked,
+        // For drawing routes straight against the same walls (straighten.js).
+        sections: built.sections,
+        sectionHeight: built.sectionHeight,
+        agentHeight: settings.agentHeight,
+        spacing: built.spacing,
         lattice: { angleDeg: built.stats.angleDeg, spacing: built.spacing, ms: built.stats.ms },
       };
 
@@ -463,6 +472,14 @@ export default function App() {
 
   // ------------------------------------------------------------- find path
 
+  // Routes are drawn straight, as Wire.Straighten draws them (straighten.js);
+  // the lattice route stays in the result for its length and node ids.
+  const straighten = useCallback(
+    (route) =>
+      graph && settings.straightenRoutes ? withStraight(graph, route, { useWalls: settings.useWalls }) : route,
+    [graph, settings.straightenRoutes, settings.useWalls],
+  );
+
   const findPath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
     // The built-in engine runs here, with no round trip; only the TopologicPy
@@ -483,8 +500,9 @@ export default function App() {
             use_walls: settings.useWalls,
           })
         : findRoute(graph, points.start, points.exit, { useWalls: settings.useWalls });
-      studio.setPath(result);
-      viewerRef.current?.setPath(result.points);
+      const shown = straighten(result);
+      studio.setPath(shown);
+      viewerRef.current?.setPath(drawn(shown));
       if (!result.found) {
         toast(result.note || "No route exists between those two points.", {
           title: "No route",
@@ -496,7 +514,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten]);
 
   const comparePath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
@@ -510,8 +528,9 @@ export default function App() {
         use_walls: settings.useWalls,
       });
       studio.setComparison(result);
-      studio.setPath(result.fast);
-      viewerRef.current?.setPath(result.fast.points);
+      const shown = straighten(result.fast);
+      studio.setPath(shown);
+      viewerRef.current?.setPath(drawn(shown));
       toast(
         result.same_route
           ? "Both engines returned the same route."
@@ -526,7 +545,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten]);
 
   const findAlternatives = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
@@ -537,7 +556,7 @@ export default function App() {
     studio.setPathBusy(true);
     studio.setComparison(null);
     try {
-      const result = onServer
+      const raw = onServer
         ? await api.alternatives({
             graph_id: graph.graphId,
             start_point: points.start,
@@ -552,13 +571,14 @@ export default function App() {
             method: settings.altMethod,
             useWalls: settings.useWalls,
           });
+      const result = { ...raw, routes: raw.routes.map(straighten) };
       studio.setAlternatives(result);
       // The best alternative is the route, so it takes the route's place
       // rather than being drawn twice.
       studio.setPath(result.routes[0] || null);
       viewerRef.current?.setPath(null);
       viewerRef.current?.setRoutes(
-        result.routes.map((route, i) => ({ points: route.points, color: hexToInt(routeColor(i)) })),
+        result.routes.map((route, i) => ({ points: drawn(route), color: hexToInt(routeColor(i)) })),
       );
       // "Only N of k" is shown in the panel next to the list it explains.
       if (!result.routes.length) {
@@ -572,7 +592,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings, studio, toast, needsServerGraph]);
+  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, straighten]);
 
   // ------------------------------------------------- Navigation cross-check
 
@@ -665,7 +685,12 @@ export default function App() {
             viewer?.setTemperatures(temperatures);
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
-            viewer?.setPath(message.path, { color: 0xc026d3, dynamic: true });
+            // Straight runs keep clear of burning or heated nodes.
+            const shown =
+              settings.straightenRoutes && message.node_ids?.length > 2
+                ? straightenRoute(graph, message.node_ids, { useWalls: settings.useWalls, avoid: message.avoid }).points
+                : message.path;
+            viewer?.setPath(shown, { color: 0xc026d3, dynamic: true });
           }
         },
         onDone: () => {
@@ -697,7 +722,7 @@ export default function App() {
       // potential and horizon corrections. Yield a frame first so the busy
       // state paints before the training loop holds the thread.
       await new Promise((resolve) => requestAnimationFrame(() => resolve()));
-      const result = trainRlPolicy(graph, {
+      const trained = trainRlPolicy(graph, {
         startPoint: points.start,
         exitPoint: points.exit,
         // The fire starts at the picked origin, not at the evacuee.
@@ -708,13 +733,14 @@ export default function App() {
         fireSpeed: settings.rlFireSpeed,
         useWalls: settings.useWalls,
       });
+      const result = straighten(trained);
       studio.setRl({
         busy: false,
         path: result.path,
         reachedExit: result.reached_exit,
         result,
       });
-      viewerRef.current?.setPath(result.points, { color: 0x14b8a6, dynamic: true });
+      viewerRef.current?.setPath(drawn(result), { color: 0x14b8a6, dynamic: true });
       if (!result.reached_exit || result.note) {
         // The server says *why*: no escape exists, the step limit is too low,
         // or the policy needs more episodes. Those call for different actions.
@@ -727,7 +753,7 @@ export default function App() {
       studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
       reportError(error, "RL training failed");
     }
-  }, [graph, points, reportError, settings, studio, toast]);
+  }, [graph, points, reportError, settings, studio, toast, straighten]);
 
   // --------------------------------------------------------- reactive push
 

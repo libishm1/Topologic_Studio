@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS = {
   maxDegree: 12,
   useWalls: true,
   rectilinear: false,
+  straightenRoutes: true,
   gridSnap: false,
   gridCellSize: 1.5,
   maxPoints: 40000,

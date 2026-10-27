@@ -257,7 +257,7 @@ function sectionAt(meshes, height, up, h0, h1) {
 }
 
 /** A uniform grid over plan segments, for edge and point queries. */
-class SegmentIndex {
+export class SegmentIndex {
   constructor(segs, cell = 1.0) {
     this.segs = segs;
     this.cell = cell;
@@ -744,6 +744,10 @@ export function buildLatticeGraph({
     kinds: kinds.slice(0, total),
     blocked: outBlocked,
     walls: wallList,
+    // The wall sections the links were blocked with, keyed by 10 cm of
+    // section height, so routes can be straightened against the same walls.
+    sections: [...sections].map(([key, index]) => ({ key, segs: index.segs })),
+    sectionHeight,
     doorPoints,
     doorReport,
     angle,
