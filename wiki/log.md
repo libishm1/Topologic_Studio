@@ -37,3 +37,5 @@
     aligned exactly by That Open's coordination matrix. Duplex: 99% / 91%
     coverage; Level 2 has edge bands 0.54-0.60 m apart.
   - Corrected the review: `KShortestPaths` is 0.9.87, not 0.9.86.
+- Lean: proved L3, L4, L8, L12, L13 and L14 (11 theorems) in
+  `formal/fireegress`; standard axioms only. Research note section 8.5.

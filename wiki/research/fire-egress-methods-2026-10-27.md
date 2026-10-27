@@ -503,6 +503,28 @@ theorem zone_pressure_dims : W / m3 = Pa / s := by decide
 | Weidmann exponent $\gamma(1/\rho-1/\rho_{max})$ | m$^{-2}$ times m$^2$, dimensionless. |
 | t-squared, $\dot Q=\alpha t^2$ | $\alpha$ in kW s$^{-2}$. |
 
+### 8.5 Proved so far (2026-10-27)
+
+The first batch is in [formal/fireegress](../../formal/fireegress/README.md),
+built against Lean v4.34.1 and Mathlib v4.34.1. Eleven theorems, no `sorry`,
+and `#print axioms` lists only `propext`, `Classical.choice` and `Quot.sound`
+for each.
+
+| ID | Lean name | Scope as proved |
+| --- | --- | --- |
+| L3 | `Temperature.classic_overshoots` | The concrete instance: degree 1, 20 °C beside 120 °C goes to 140 °C. |
+| L4 | `step_between`, `capped_coefficient_unit`, `cap_inactive_from_degree_two`, `step_bounded` | One step, any finite neighbour set; the bound is the neighbourhood range, so the clip is redundant. |
+| L8 | `Heuristic.consistent`, `Heuristic.admissible`, `hazard_weight_ge_length` | Any metric space; admissibility by induction along an indexed path, not yet over `SimpleGraph.Walk`. |
+| L12 | `Shaping.shaped_eq` | Any trajectory and horizon. |
+| L13 | `Shaping.shaping_preserves_order` | Two deterministic trajectories from one start, terminal potential 0. |
+| L14 | `Shaping.nonzero_terminal_flips_order` | A one-step counterexample. |
+
+The fixes these support are in both engines: W1 (capped coefficient), W5
+(zero terminal potential, horizon terminal) and W4 (no route through fire
+reported as found). Next in the core set: L7 (earliest-escape BFS), L10a/b and
+L11 (FIFO and replanning), and L16 (dimensions), which wait on the metric
+clock of section 10, step 3.
+
 ---
 
 ## 9. Model map
