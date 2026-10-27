@@ -10,11 +10,19 @@
  */
 
 export const CATEGORY_PATTERNS = {
-  floors: /^IFC(SLAB|SLABSTANDARDCASE|SLABELEMENTEDCASE|COVERING|PLATE)$/i,
+  floors: /^IFC(SLAB|SLABSTANDARDCASE|SLABELEMENTEDCASE|PLATE)$/i,
+  // Floors only when typed FLOORING; ceilings are coverings too (Office A's
+  // were the only "floors" at 2.55 m above each storey). Filtered on extraction.
+  coverings: /^IFCCOVERING$/i,
   stairs: /^IFC(STAIR|STAIRFLIGHT|RAMP|RAMPFLIGHT)$/i,
   doors: /^IFC(DOOR|DOORSTANDARDCASE)$/i,
   walls: /^IFC(WALL|WALLSTANDARDCASE|WALLELEMENTEDCASE)$/i,
+  // Room volumes: their bottoms are the floor inside the walls.
   spaces: /^IFCSPACE$/i,
+  // Solid at walking height besides walls, cut with them (src/core/lattice.js).
+  // Plates appear here and in floors: horizontal plates are floor, vertical
+  // ones (curtain-wall glass) are obstacles, and each use ignores the other.
+  obstacles: /^IFC(WINDOW|WINDOWSTANDARDCASE|RAILING|COLUMN|COLUMNSTANDARDCASE|CURTAINWALL|MEMBER|MEMBERSTANDARDCASE|PLATE)$/i,
   storeys: /^IFCBUILDINGSTOREY$/i,
 };
 
@@ -34,13 +42,10 @@ export async function collectCategoryIds(model) {
   for (const key of keys) result[key] = [];
 
   // The result is keyed by the concrete IFC category name, so map each one
-  // back to the bucket whose pattern matched it.
+  // back to every bucket whose pattern matches it (IfcPlate is in two).
   for (const [category, ids] of Object.entries(found || {})) {
     for (const key of keys) {
-      if (CATEGORY_PATTERNS[key].test(category)) {
-        result[key].push(...(ids || []));
-        break;
-      }
+      if (CATEGORY_PATTERNS[key].test(category)) result[key].push(...(ids || []));
     }
   }
 
@@ -113,6 +118,20 @@ export async function extractMeshes(model, localIds, worldMatrix = null) {
   }
 
   return meshes;
+}
+
+/** The ids among `localIds` whose IFC PredefinedType is `wanted`. */
+export async function withPredefinedType(model, localIds, wanted) {
+  if (!localIds?.length || !model?.getItemsData) return [];
+  const data = await model.getItemsData(localIds, {
+    attributesDefault: false,
+    attributes: ["PredefinedType"],
+  });
+  return localIds.filter((_, i) => {
+    const attr = data?.[i]?.PredefinedType;
+    const value = attr && typeof attr === "object" && "value" in attr ? attr.value : attr;
+    return String(value ?? "").toUpperCase() === wanted;
+  });
 }
 
 /** Buffers to hand to `postMessage` as transferables. */

@@ -64,6 +64,25 @@ class PointCloudRequest(BaseModel):
     graph_id: Optional[str] = None
 
 
+class GraphImportRequest(BaseModel):
+    """A graph the browser already built (src/core/lattice.js), for the
+    features that still run here. Arrays are base64, as in GraphResponse."""
+
+    #: float32, 3 per node.
+    nodes_b64: str
+    #: uint32, 2 per edge.
+    edges_b64: str
+    #: uint8, one kind per node (0 floor, 1 stair, 2 door).
+    kinds_b64: str
+    #: uint8, one per edge: 1 where a wall blocks it.
+    blocked_b64: Optional[str] = None
+    up_axis: UpAxis = "y"
+    agent_height: float = Field(0.75, ge=0.0, le=3.0)
+    spacing: Optional[float] = None
+    angle_deg: Optional[float] = None
+    wall_segments: int = 0
+
+
 class IfcGeometry(BaseModel):
     expressID: int = 0
     vertices: List[float] = []

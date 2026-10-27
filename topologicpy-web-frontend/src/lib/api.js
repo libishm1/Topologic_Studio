@@ -87,6 +87,17 @@ function decodeBase64(b64, TypedArray) {
   return new TypedArray(bytes.buffer);
 }
 
+/** Encode a typed array's bytes as base64, in chunks so large graphs do not
+ *  overflow the argument limit of String.fromCharCode. */
+export function encodeBase64(typed) {
+  const bytes = new Uint8Array(typed.buffer, typed.byteOffset, typed.byteLength);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
 /**
  * Turn a graph response into typed arrays.
  *
@@ -115,6 +126,25 @@ export const api = {
 
   buildGraph: (payload, signal) =>
     request("/api/ifc/graph", { method: "POST", body: payload, signal }).then(decodeGraph),
+
+  /** Upload a graph the browser built, for the features that still run on
+   *  the server. Returns its id and the server's statistics. */
+  importGraph: (graph, signal) =>
+    request("/api/ifc/graph/import", {
+      method: "POST",
+      body: {
+        nodes_b64: encodeBase64(graph.points),
+        edges_b64: encodeBase64(graph.edges),
+        kinds_b64: encodeBase64(graph.kinds),
+        blocked_b64: encodeBase64(graph.blocked),
+        up_axis: graph.upAxis,
+        agent_height: graph.agentHeight,
+        spacing: graph.spacing,
+        angle_deg: (graph.angle * 180) / Math.PI,
+        wall_segments: graph.stats.walls,
+      },
+      signal,
+    }),
 
   getGraph: (graphId, signal) =>
     request(`/api/ifc/graph/${graphId}`, { signal }).then(decodeGraph),

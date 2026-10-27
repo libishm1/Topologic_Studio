@@ -29,7 +29,7 @@ def _require_graph(graph_id: Optional[str], mode: str) -> NavGraph:
 
 
 def _seed(graph: NavGraph, req) -> int:
-    component = pathfinding.largest_component(graph)
+    component = pathfinding.routable_mask(graph)
     start = pathfinding.resolve_endpoint(
         graph, getattr(req, "start_point", None), getattr(req, "start_id", None), component
     )
@@ -95,7 +95,7 @@ def fire_stream(
 
     start_point = _point(start_x, start_y, start_z)
     end_point = _point(end_x, end_y, end_z)
-    component = pathfinding.largest_component(graph)
+    component = pathfinding.routable_mask(graph)
     seed = pathfinding.resolve_endpoint(graph, start_point, start_id, component)
     if seed is None:
         raise HTTPException(status_code=400, detail="Could not resolve the fire start point.")
@@ -224,7 +224,7 @@ def fire_stream(
 @router.post("/api/rl/train", response_model=RLResponse, tags=["simulation"])
 def rl_train(req: RLRequest) -> RLResponse:
     graph = _require_graph(req.graph_id, req.mode)
-    component = pathfinding.largest_component(graph)
+    component = pathfinding.routable_mask(graph)
     start = pathfinding.resolve_endpoint(graph, req.start_point, req.start_id, component)
     exit_node = pathfinding.resolve_endpoint(graph, req.exit_point, req.exit_id, component)
     if start is None or exit_node is None:

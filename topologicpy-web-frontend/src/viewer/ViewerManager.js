@@ -22,7 +22,7 @@ import {
 
 import { hashFile, readCached, writeCached } from "../lib/fragmentCache.js";
 import { PhaseTimer, mark } from "../lib/perf.js";
-import { collectCategoryIds, extractMeshes } from "./categories.js";
+import { collectCategoryIds, extractMeshes, withPredefinedType } from "./categories.js";
 
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
  *  installed package versions. Both are served from public/. */
@@ -408,11 +408,19 @@ export class ViewerManager {
     const world = this.modelObject?.matrixWorld?.clone() || null;
     const ids = this.categoryIds;
 
-    const [floors, stairs, doors, walls] = await Promise.all([
-      extractMeshes(this.model, ids.floors, world),
+    // Coverings join the floors only when typed FLOORING; a failed attribute
+    // query just drops them rather than letting ceilings in.
+    const flooring = await withPredefinedType(this.model, ids.coverings || [], "FLOORING").catch(
+      () => [],
+    );
+
+    const [floors, stairs, doors, walls, spaces, obstacles] = await Promise.all([
+      extractMeshes(this.model, [...ids.floors, ...flooring], world),
       extractMeshes(this.model, ids.stairs, world),
       extractMeshes(this.model, ids.doors, world),
       extractMeshes(this.model, ids.walls, world),
+      extractMeshes(this.model, ids.spaces || [], world),
+      extractMeshes(this.model, ids.obstacles || [], world),
     ]);
 
     done({
@@ -420,8 +428,10 @@ export class ViewerManager {
       stairs: stairs.length,
       doors: doors.length,
       walls: walls.length,
+      spaces: spaces.length,
+      obstacles: obstacles.length,
     });
-    return { floors, stairs, doors, walls };
+    return { floors, stairs, doors, walls, spaces, obstacles };
   }
 
   // --------------------------------------------------------------- overlays

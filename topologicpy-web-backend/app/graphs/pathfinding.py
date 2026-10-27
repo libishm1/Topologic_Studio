@@ -229,6 +229,28 @@ def largest_component(graph: NavGraph) -> np.ndarray:
     return graph.components()[2]
 
 
+def routable_mask(graph: NavGraph, min_nodes: int = 20, min_share: float = 0.01) -> np.ndarray:
+    """Nodes in any component big enough to be a real part of the building.
+
+    Snapping only into the largest component was right while k-nearest links
+    joined almost everything. The lattice keeps separate dwellings separate
+    (the Duplex is two equal halves), and snapping a pick in the second
+    dwelling into the first put start and exit side by side: a 0.5 m "route".
+    Fragments are still avoided.
+    """
+    count, labels, largest = graph.components()
+    if count <= 1:
+        return largest
+    sizes = np.bincount(labels, minlength=count)
+    big = sizes >= max(min_nodes, int(min_share * graph.node_count))
+    return big[labels] if big.any() else largest
+
+
+def same_part(graph: NavGraph, a: int, b: int) -> bool:
+    _, labels, _ = graph.components()
+    return bool(labels[a] == labels[b])
+
+
 def resolve_endpoint(
     graph: NavGraph,
     point: Optional[Sequence[float]],

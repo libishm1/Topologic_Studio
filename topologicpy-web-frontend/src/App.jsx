@@ -19,6 +19,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 import { api, legacyApi, openFireStream } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
+import { graphStats } from "./core/graph.js";
 import { useStudio } from "./state/useStudio.js";
 import { AboutPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
@@ -238,53 +239,57 @@ export default function App() {
         stairs: clone(geometry.stairs),
         doors: clone(geometry.doors),
         walls: clone(geometry.walls),
+        spaces: clone(geometry.spaces || []),
+        obstacles: clone(geometry.obstacles || []),
         upAxis: settings.upAxis,
         floorSpacing: settings.floorSpacing,
+        agentHeight: settings.agentHeight,
+        maxEdgeRise: settings.maxEdgeRise,
+        rectilinear: settings.rectilinear,
         maxPoints: settings.maxPoints,
         columnGap: settings.columnGap,
       };
       const transfers = [];
-      for (const key of ["floors", "stairs", "doors", "walls"]) {
+      for (const key of ["floors", "stairs", "doors", "walls", "spaces", "obstacles"]) {
         for (const mesh of payload[key]) {
           transfers.push(mesh.positions.buffer, mesh.indices.buffer);
         }
       }
 
-      const sampled = await timer.run("sample", () => sample(payload, transfers));
-      setLastSample(sampled.stats);
-
-      studio.setLoadState({ busy: true, stage: "building", detail: null });
-
-      const toTriples = (flat) => {
-        const out = [];
-        for (let i = 0; i < flat.length; i += 3) {
-          out.push([flat[i], flat[i + 1], flat[i + 2]]);
-        }
-        return out;
+      // The whole graph is built in the worker (src/core/lattice.js).
+      const built = await timer.run("lattice", () => sample(payload, transfers));
+      setLastSample({ nodes: built.stats.nodes, ms: built.stats.ms });
+      const local = {
+        ...built,
+        upAxis: settings.upAxis,
+        agentHeight: settings.agentHeight,
       };
 
-      const response = await timer.run("upload", () =>
-        api.buildGraph({
-          floor_points: toTriples(sampled.floorPoints),
-          stair_points: toTriples(sampled.stairPoints),
-          door_points: sampled.doorPoints,
-          walls: sampled.walls,
-          options: {
-            up_axis: settings.upAxis,
-            agent_height: settings.agentHeight,
-            max_edge_floor: settings.maxEdgeFloor,
-            max_edge_stair: settings.maxEdgeStair,
-            max_edge_rise: settings.maxEdgeRise,
-            column_gap: settings.columnGap,
-            max_degree: settings.maxDegree,
-            use_walls: settings.useWalls,
-            rectilinear: settings.rectilinear,
-            grid_snap: settings.gridSnap,
-            grid_cell_size: settings.gridSnap ? settings.gridCellSize : null,
-            max_points: settings.maxPoints,
-          },
-        }),
-      );
+      // Server features (fire, RL, alternatives, the TopologicPy checks) need
+      // the graph there too, until they move into the browser as well.
+      let server = null;
+      if (studio.serverStatus === "online") {
+        studio.setLoadState({ busy: true, stage: "uploading", detail: null });
+        server = await timer
+          .run("upload", () => api.importGraph(local))
+          .catch((error) => {
+            console.warn("Graph upload failed; continuing in the browser only.", error);
+            return null;
+          });
+      }
+
+      const response = {
+        graphId: server?.graph_id ?? null,
+        stats: server?.stats ?? graphStats(local),
+        upAxis: settings.upAxis,
+        bounds: server?.bounds ?? [],
+        timings: server?.timings ?? {},
+        nodes: local.points,
+        edges: local.edges,
+        kinds: local.kinds,
+        blocked: local.blocked,
+        lattice: { angleDeg: built.stats.angleDeg, spacing: built.spacing, ms: built.stats.ms },
+      };
 
       studio.setGraph(response);
       studio.setPath(null);
@@ -309,10 +314,17 @@ export default function App() {
         ? Math.round((response.stats.largest_component / response.stats.nodes) * 100)
         : 0;
       if (response.stats.components > 1 && reachable < 98) {
+        // Separate parts are not necessarily a fault: the Duplex is two
+        // dwellings, each with its own front door, and splits 51/49.
         toast(
-          `${reachable}% of the walkable area is one connected network. ` +
-            `The rest is isolated and has no route out.`,
-          { title: "Some floor area is unreachable", variant: "warning", ttl: 9000 },
+          `The largest part holds ${reachable}% of the walkable area. Separate dwellings, ` +
+            `or rooms whose doors are not in the model, show up as separate parts, and a ` +
+            `route can only join two points in the same part.`,
+          {
+            title: `The graph is in ${response.stats.components} parts`,
+            variant: "warning",
+            ttl: 9000,
+          },
         );
       } else {
         toast(
@@ -329,6 +341,23 @@ export default function App() {
       studio.setLoadState({ busy: false, stage: null, detail: null });
     }
   }, [reportError, sample, setSettings, settings, studio, toast]);
+
+  /**
+   * Server-backed actions need this graph on the server. Without an id the
+   * server would fall back to whatever graph it built last, which may be a
+   * different model, so refuse plainly instead.
+   */
+  const needsServerGraph = useCallback(
+    (what) => {
+      if (graph?.graphId) return false;
+      toast(
+        `${what} still runs on the backend, which is not connected. The graph itself was built in your browser.`,
+        { title: "Backend needed", variant: "warning", ttl: 8000 },
+      );
+      return true;
+    },
+    [graph, toast],
+  );
 
   // -------------------------------------------------------------- picking
 
@@ -400,6 +429,7 @@ export default function App() {
 
   const findPath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
+    if (needsServerGraph("Routing")) return;
     studio.setPathBusy(true);
     studio.setComparison(null);
     studio.setAlternatives(null);
@@ -425,10 +455,11 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph]);
 
   const comparePath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
+    if (needsServerGraph("Engine comparison")) return;
     studio.setPathBusy(true);
     try {
       const result = await api.comparePath({
@@ -454,10 +485,11 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph]);
 
   const findAlternatives = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
+    if (needsServerGraph("Alternative routes")) return;
     studio.setPathBusy(true);
     studio.setComparison(null);
     try {
@@ -490,13 +522,14 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings, studio, toast]);
+  }, [graph, points, reportError, settings, studio, toast, needsServerGraph]);
 
   // ------------------------------------------------- Navigation cross-check
 
   const runNavigationCheck = useCallback(async () => {
     const viewer = viewerRef.current;
     if (!graph || !file || !viewer) return;
+    if (needsServerGraph("The TopologicPy cross-check")) return;
     studio.setNavBusy(true);
     try {
       const result = await api.navigationCheck(file, {
@@ -519,7 +552,7 @@ export default function App() {
     } finally {
       studio.setNavBusy(false);
     }
-  }, [file, graph, points, reportError, settings, studio, toast]);
+  }, [file, graph, points, reportError, settings, studio, toast, needsServerGraph]);
 
   // TopologicPy's graph and route are drawn from state, so hiding and showing
   // them is a toggle rather than another server round trip.
@@ -535,6 +568,7 @@ export default function App() {
 
   const startFire = useCallback(() => {
     if (!graph || !points.fire) return;
+    if (needsServerGraph("Fire simulation")) return;
     studio.stopFire();
     studio.setDynamicPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
@@ -607,7 +641,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast]);
+  }, [graph, points, reportError, settings, studio, toast, needsServerGraph]);
 
   const stopFire = useCallback(() => {
     studio.stopFire();
@@ -619,6 +653,7 @@ export default function App() {
 
   const trainRl = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
+    if (needsServerGraph("RL training")) return;
     studio.setRl({ busy: true, path: null, reachedExit: false, result: null });
     try {
       const result = await api.trainRl({
@@ -653,7 +688,7 @@ export default function App() {
       studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
       reportError(error, "RL training failed");
     }
-  }, [graph, points, reportError, settings, studio, toast]);
+  }, [graph, points, reportError, settings, studio, toast, needsServerGraph]);
 
   // --------------------------------------------------------- reactive push
 
@@ -1129,8 +1164,7 @@ export default function App() {
                 <>
                   <span className="statusbar__sep" />
                   <span className="statusbar__item">
-                    sampled {(lastSample.floorPoints + lastSample.stairPoints).toLocaleString()} pts
-                    in {Math.round(lastSample.ms)} ms
+                    graph {lastSample.nodes.toLocaleString()} nodes in {Math.round(lastSample.ms)} ms
                   </span>
                 </>
               )}

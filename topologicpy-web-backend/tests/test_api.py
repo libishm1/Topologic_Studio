@@ -19,6 +19,108 @@ def slab_points(z=0.0, n=8, step=0.75):
     return [[x * step, y * step, z] for x in range(n) for y in range(n)]
 
 
+class TestGraphImport:
+    """The browser builds the lattice; the server stores it for its features."""
+
+    def _payload(self, **overrides):
+        # A 3 x 3 lattice, 0.5 m apart, z up, with the middle row's links blocked.
+        pts = np.array([[i * 0.5, j * 0.5, 0.0] for j in range(3) for i in range(3)], np.float32)
+        edges, blocked = [], []
+        for j in range(3):
+            for i in range(3):
+                n = j * 3 + i
+                if i < 2:
+                    edges.append([n, n + 1])
+                    blocked.append(1 if j == 1 else 0)
+                if j < 2:
+                    edges.append([n, n + 3])
+                    blocked.append(0)
+        enc = lambda a: base64.b64encode(np.ascontiguousarray(a).tobytes()).decode()
+        payload = {
+            "nodes_b64": enc(pts),
+            "edges_b64": enc(np.array(edges, np.uint32)),
+            "kinds_b64": enc(np.zeros(9, np.uint8)),
+            "blocked_b64": enc(np.array(blocked, np.uint8)),
+            "up_axis": "z",
+            "agent_height": 0.0,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_import_then_route(self, client):
+        res = client.post("/api/ifc/graph/import", json=self._payload())
+        assert res.status_code == 200, res.text
+        body = res.json()
+        assert body["stats"]["nodes"] == 9 and body["stats"]["edges"] == 12
+        assert body["stats"]["blocked_edges"] == 2
+        assert body["nodes_b64"] is None, "the browser already has the arrays"
+        route = client.post(
+            "/api/ifc/path",
+            json={"graph_id": body["graph_id"], "start_id": "3", "end_id": "5", "use_walls": True},
+        ).json()
+        assert route["found"]
+        assert route["node_ids"] != [3, 4, 5], "the blocked middle row is avoided"
+        assert route["length"] == pytest.approx(2.0)
+
+    def _two_halves(self, client):
+        """Two equal 6 x 6 lattices 10 m apart, like the Duplex's two dwellings."""
+        pts, edges = [], []
+        for ox in (0.0, 10.0):
+            base = len(pts)
+            for j in range(6):
+                for i in range(6):
+                    pts.append([ox + i * 0.5, j * 0.5, 0.0])
+            for j in range(6):
+                for i in range(6):
+                    n = base + j * 6 + i
+                    if i < 5:
+                        edges.append([n, n + 1])
+                    if j < 5:
+                        edges.append([n, n + 6])
+        enc = lambda a: base64.b64encode(np.ascontiguousarray(a).tobytes()).decode()
+        body = client.post(
+            "/api/ifc/graph/import",
+            json={
+                "nodes_b64": enc(np.array(pts, np.float32)),
+                "edges_b64": enc(np.array(edges, np.uint32)),
+                "kinds_b64": enc(np.zeros(len(pts), np.uint8)),
+                "up_axis": "z",
+                "agent_height": 0.0,
+            },
+        ).json()
+        return body["graph_id"]
+
+    def test_picks_in_the_second_half_stay_there(self, client):
+        gid = self._two_halves(client)
+        route = client.post(
+            "/api/ifc/path",
+            json={"graph_id": gid, "start_point": [10.0, 0.0, 0.0], "end_point": [12.5, 2.5, 0.0]},
+        ).json()
+        assert route["found"]
+        assert route["points"][0][0] >= 10.0 and route["points"][-1][0] >= 10.0
+        assert route["length"] > 3.0, "not snapped into the other half"
+
+    def test_a_route_between_halves_says_why_there_is_none(self, client):
+        gid = self._two_halves(client)
+        route = client.post(
+            "/api/ifc/path",
+            json={"graph_id": gid, "start_point": [0.0, 0.0, 0.0], "end_point": [12.5, 2.5, 0.0]},
+        ).json()
+        assert not route["found"]
+        assert "separate parts" in route["note"]
+
+    def test_rejects_an_edge_to_a_missing_node(self, client):
+        bad = base64.b64encode(np.array([[0, 99]], np.uint32).tobytes()).decode()
+        res = client.post("/api/ifc/graph/import", json=self._payload(edges_b64=bad, blocked_b64=None))
+        assert res.status_code == 400
+        assert "does not exist" in res.json()["detail"]
+
+    def test_rejects_mismatched_kinds(self, client):
+        short = base64.b64encode(np.zeros(4, np.uint8).tobytes()).decode()
+        res = client.post("/api/ifc/graph/import", json=self._payload(kinds_b64=short))
+        assert res.status_code == 400
+
+
 class TestMeta:
     def test_health(self, client):
         body = client.get("/health").json()

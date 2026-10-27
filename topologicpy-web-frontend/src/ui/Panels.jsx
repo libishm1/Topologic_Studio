@@ -103,36 +103,14 @@ export function ModelPanel({ studio, onBuildGraph, onClearCache, onNavigationChe
         />
 
         <Slider
-          label="Sampling spacing"
+          label="Grid spacing"
           value={settings.floorSpacing}
           min={0.2}
           max={2}
           step={0.05}
           onChange={(floorSpacing) => setSettings({ floorSpacing })}
           format={(v) => `${v.toFixed(2)} m`}
-          hint="Distance between walkable sample points. Smaller is more faithful and slower."
-        />
-
-        <Slider
-          label="Floor connectivity"
-          value={settings.maxEdgeFloor}
-          min={0.5}
-          max={8}
-          step={0.25}
-          onChange={(maxEdgeFloor) => setSettings({ maxEdgeFloor })}
-          format={(v) => `${v.toFixed(2)} m`}
-          hint="Longest edge allowed between two floor points."
-        />
-
-        <Slider
-          label="Stair connectivity"
-          value={settings.maxEdgeStair}
-          min={0.15}
-          max={2}
-          step={0.05}
-          onChange={(maxEdgeStair) => setSettings({ maxEdgeStair })}
-          format={(v) => `${v.toFixed(2)} m`}
-          hint="Longest edge between stair treads. Around twice the tread rise works well."
+          hint="One grid for the whole building, turned to its walls. Smaller follows narrow passages better and makes a bigger graph."
         />
 
         <Slider
@@ -144,17 +122,6 @@ export function ModelPanel({ studio, onBuildGraph, onClearCache, onNavigationChe
           onChange={(maxEdgeRise) => setSettings({ maxEdgeRise })}
           format={(v) => `${v.toFixed(2)} m`}
           hint="How much height a floor-to-floor link may span. Low keeps each storey a flat mesh; raise it only for ramps or split levels."
-        />
-
-        <Slider
-          label="Neighbours per node"
-          value={settings.maxDegree}
-          min={4}
-          max={32}
-          step={1}
-          onChange={(maxDegree) => setSettings({ maxDegree })}
-          format={(v) => `${v}`}
-          hint="Caps graph density. Dense sampling with a high cap makes very large graphs for no routing benefit."
         />
 
         <Slider
@@ -176,30 +143,11 @@ export function ModelPanel({ studio, onBuildGraph, onClearCache, onNavigationChe
         />
 
         <Toggle
-          label="Rectilinear edges only"
+          label="No diagonal links"
           checked={settings.rectilinear}
           onChange={(rectilinear) => setSettings({ rectilinear })}
-          hint="Drops diagonal links so routes follow corridors."
+          hint="Links only along the building's grid. Routes then follow corridors exactly, but a route across an open room can be up to 41% longer than walking straight."
         />
-
-        <Toggle
-          label="Snap to grid"
-          checked={settings.gridSnap}
-          onChange={(gridSnap) => setSettings({ gridSnap })}
-          hint="Rebuilds the graph on a regular lattice. Cleaner, but coarser."
-        />
-
-        {settings.gridSnap && (
-          <Slider
-            label="Grid cell size"
-            value={settings.gridCellSize}
-            min={0.3}
-            max={3}
-            step={0.1}
-            onChange={(gridCellSize) => setSettings({ gridCellSize })}
-            format={(v) => `${v.toFixed(1)} m`}
-          />
-        )}
 
         <Button
           variant="primary"

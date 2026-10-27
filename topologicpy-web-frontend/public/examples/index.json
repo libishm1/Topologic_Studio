@@ -1,0 +1,26 @@
+[
+  {
+    "id": "office-two-storey",
+    "name": "Office, two storeys",
+    "file": "office-two-storey.ifc",
+    "description": "Two storeys, a corridor with ten rooms per floor, a stair and an exit at each end.",
+    "bytes": 183741,
+    "licence": "CC0-1.0",
+    "walls": 50,
+    "doors": 22,
+    "slabs": 8,
+    "stairs": 2
+  },
+  {
+    "id": "courtyard-ring",
+    "name": "Courtyard ring",
+    "file": "courtyard-ring.ifc",
+    "description": "A corridor round a closed core with one exit: every start has two ways out. Rotated 30 degrees.",
+    "bytes": 17389,
+    "licence": "CC0-1.0",
+    "walls": 9,
+    "doors": 1,
+    "slabs": 4,
+    "stairs": 0
+  }
+]

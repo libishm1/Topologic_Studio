@@ -253,10 +253,15 @@ record(await buildBtn.count() > 0, "build button present");
 if (await buildBtn.count()) {
   const t1 = Date.now();
   await buildBtn.first().click();
+  // Done means the app has moved to the Route tab, its last step. Waiting for
+  // "nodes" to appear raced it: the status bar shows the node count as soon as
+  // the worker finishes, before the upload returns and the tab switches.
   const built = await page
-    .waitForFunction(() => document.body.innerText.toLowerCase().includes("nodes"), null, {
-      timeout: 180000,
-    })
+    .waitForFunction(
+      () => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.trim() === "Route",
+      null,
+      { timeout: 180000 },
+    )
     .then(() => true)
     .catch(() => false);
   record(built, "graph built", `${((Date.now() - t1) / 1000).toFixed(1)}s`);

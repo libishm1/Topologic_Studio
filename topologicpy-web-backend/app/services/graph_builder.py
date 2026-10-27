@@ -234,6 +234,54 @@ def build_from_ifc_geometry(
     )
 
 
+def import_graph(req, timer: Optional[Timer] = None) -> Tuple[NavGraph, str]:
+    """Store a graph the browser built, after checking it is well formed."""
+    with _phase(timer, "decode"):
+        try:
+            points = np.frombuffer(base64.b64decode(req.nodes_b64), dtype=np.float32)
+            edges = np.frombuffer(base64.b64decode(req.edges_b64), dtype=np.uint32)
+            kinds = np.frombuffer(base64.b64decode(req.kinds_b64), dtype=np.uint8)
+            blocked = (
+                np.frombuffer(base64.b64decode(req.blocked_b64), dtype=np.uint8)
+                if req.blocked_b64
+                else None
+            )
+        except (ValueError, TypeError) as exc:
+            raise BuildError(f"Could not decode the graph: {exc}") from exc
+    if len(points) % 3 or len(edges) % 2:
+        raise BuildError("Node and edge arrays have the wrong length.")
+    n = len(points) // 3
+    if n == 0:
+        raise BuildError("The graph has no nodes.")
+    if n > settings.max_graph_nodes:
+        raise BuildError(f"Graph has {n} nodes, above the {settings.max_graph_nodes} limit.")
+    if len(kinds) != n:
+        raise BuildError("There must be one kind per node.")
+    edges = edges.reshape(-1, 2)
+    if len(edges) and int(edges.max()) >= n:
+        raise BuildError("An edge refers to a node that does not exist.")
+    if blocked is not None and len(blocked) != len(edges):
+        raise BuildError("There must be one blocked flag per edge.")
+    if not np.all(np.isfinite(points)):
+        raise BuildError("Node coordinates must be finite.")
+
+    graph = NavGraph(
+        points=np.ascontiguousarray(points.reshape(-1, 3), dtype=np.float32),
+        edges=np.ascontiguousarray(edges, dtype=np.int32),
+        kinds=np.ascontiguousarray(kinds, dtype=np.int8),
+        up_axis=req.up_axis,
+        blocked=blocked.astype(bool) if blocked is not None and blocked.any() else None,
+        meta={
+            "agent_height": float(req.agent_height),
+            "spacing": req.spacing,
+            "angle_deg": req.angle_deg,
+            "wall_segments": int(req.wall_segments),
+            "source": "browser-lattice",
+        },
+    )
+    return graph, store.put(graph)
+
+
 def graph_stats(graph: NavGraph) -> GraphStats:
     count, _, component = graph.components()
     return GraphStats(
@@ -242,7 +290,7 @@ def graph_stats(graph: NavGraph) -> GraphStats:
         floor_nodes=int((graph.kinds == adj.KIND_FLOOR).sum()),
         stair_nodes=int((graph.kinds == adj.KIND_STAIR).sum()),
         door_nodes=int((graph.kinds == adj.KIND_DOOR).sum()),
-        wall_segments=len(graph.walls) if graph.walls else 0,
+        wall_segments=len(graph.walls) if graph.walls else int(graph.meta.get("wall_segments", 0)),
         blocked_edges=int(graph.blocked.sum()) if graph.blocked is not None else 0,
         components=count,
         largest_component=int(component.sum()),

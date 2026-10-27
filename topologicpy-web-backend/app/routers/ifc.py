@@ -22,6 +22,7 @@ from ..models import (
     AlternativesRequest,
     AlternativesResponse,
     ComparePathResponse,
+    GraphImportRequest,
     GraphResponse,
     IfcEgressPathRequest,
     IfcEgressRequest,
@@ -53,6 +54,28 @@ def build_graph_from_points(req: PointCloudRequest) -> GraphResponse:
     response = _graph_response(graph, graph_id, timer)
     timer.emit(nodes=graph.node_count, edges=graph.edge_count)
     return response
+
+
+@router.post("/api/ifc/graph/import", response_model=GraphResponse, tags=["ifc"])
+def import_graph(req: GraphImportRequest) -> GraphResponse:
+    """Store a graph the browser built, so server-side features can use it.
+
+    The browser keeps the arrays, so only the id and statistics come back.
+    """
+    timer = Timer("api/ifc/graph/import")
+    try:
+        graph, graph_id = graph_builder.import_graph(req, timer)
+    except graph_builder.BuildError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    timer.emit(nodes=graph.node_count, edges=graph.edge_count)
+    return GraphResponse(
+        graph_id=graph_id,
+        mode=graph.mode,
+        stats=graph_builder.graph_stats(graph),
+        up_axis=graph.up_axis,
+        bounds=graph.bounds(),
+        timings={k: round(v, 4) for k, v in timer.phases.items()},
+    )
 
 
 @router.post("/ifc-egress-graph", tags=["legacy"])
@@ -112,22 +135,39 @@ def compute_path(req: PathRequest) -> PathResponse:
         graph, req.use_walls, temperatures, req.lethality_threshold
     )
 
+    if not pathfinding.same_part(graph, start, end):
+        # Separate dwellings, or a room reached only through a door the model
+        # does not contain. Searching would only confirm it more slowly.
+        result = pathfinding.PathResult(
+            [], [], float("inf"), req.engine, False,
+            note="The start and exit are in separate parts of the building (for "
+            "example two dwellings, or a room whose door is not in the model), "
+            "so no route joins them.",
+        )
+        timer.emit(found=False, engine=req.engine, points=0)
+        return _path_response(result, req.graph_id)
+
     with timer.phase("search"):
         result = pathfinding.shortest_path(
             graph, start, end, engine=req.engine, weights=weights, blocked=blocked
         )
 
-    if not result.found and blocked is not None and blocked.any():
-        # A lethality threshold that isolates the exit is a common own-goal.
-        # Retry unblocked rather than reporting a flat "no path".
-        with timer.phase("retry_unblocked"):
+    walls_only = pathfinding.blocked_mask(graph, req.use_walls)
+    lethal = blocked is not None and (walls_only is None or (blocked != walls_only).any())
+    if not result.found and lethal:
+        # Relax only the lethality threshold, never the walls: on the lattice a
+        # wall is exactly its blocked links, and dropping them routed through
+        # walls. A route that needs lethal conditions is shown as the least-bad
+        # option but not reported as found (review 2026-10-27, finding W4).
+        with timer.phase("retry_without_threshold"):
             retry = pathfinding.shortest_path(
-                graph, start, end, engine=req.engine, weights=weights, blocked=None
+                graph, start, end, engine=req.engine, weights=weights, blocked=walls_only
             )
         if retry.found:
+            retry.found = False
             retry.note = (
-                "No route avoids every blocked edge; this path ignores the "
-                "lethality threshold and/or wall blocking."
+                "Every route passes through conditions above the lethality "
+                "threshold. The least-hazard one is drawn, but it is not a safe route."
             )
             result = retry
 
@@ -299,7 +339,7 @@ def _navigation_check(graph, graph_id, data, spacing, start, end, use_walls, mat
 
     studio_route = None
     if start is not None and end is not None:
-        component = pathfinding.largest_component(graph)
+        component = pathfinding.routable_mask(graph)
         a = pathfinding.resolve_endpoint(graph, start, restrict=component)
         b = pathfinding.resolve_endpoint(graph, end, restrict=component)
         if a is not None and b is not None:
@@ -350,7 +390,7 @@ def legacy_egress_path(
     graph = _require_graph(req.graph_id, "ifc")
     chosen = engine or req.engine or pathfinding.ENGINE_FAST
 
-    component = pathfinding.largest_component(graph)
+    component = pathfinding.routable_mask(graph)
     start = pathfinding.resolve_endpoint(graph, req.start_point, restrict=component)
     end = pathfinding.resolve_endpoint(graph, req.end_point, restrict=component)
     if start is None or end is None:
@@ -383,7 +423,7 @@ def _require_graph(graph_id: Optional[str], mode: str = "ifc") -> NavGraph:
 
 
 def _resolve_endpoints(graph: NavGraph, req: PathRequest):
-    component = pathfinding.largest_component(graph)
+    component = pathfinding.routable_mask(graph)
     start = pathfinding.resolve_endpoint(graph, req.start_point, req.start_id, component)
     end = pathfinding.resolve_endpoint(graph, req.end_point, req.end_id, component)
     if start is None:
