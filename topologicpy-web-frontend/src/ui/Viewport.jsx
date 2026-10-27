@@ -63,7 +63,11 @@ export function Viewport({
         viewerRef.current = manager;
         // Dev-only handle so the browser test harness (and a human with the
         // console open) can inspect the live scene.
-        if (import.meta.env.DEV) window.__viewer = manager;
+        // ?debug exposes it in a production build too, so tools/browser-test.mjs
+        // can aim picks at graph nodes on the deployed site.
+        if (import.meta.env.DEV || new URLSearchParams(window.location.search).has("debug")) {
+          window.__viewer = manager;
+        }
         await manager.init(container, { theme, onPick });
         if (cancelled) {
           manager.dispose();
@@ -221,7 +225,7 @@ export function Viewport({
             <p>{initError}</p>
             <p style={{ fontSize: 12 }}>
               This usually means WebGL is unavailable or the web-ifc WASM files are
-              missing from <code>/wasm/</code>. Run <code>npm run sync-wasm</code>.
+              missing from <code>public/wasm/</code>. Run <code>npm run sync-assets</code>.
             </p>
           </div>
         </div>

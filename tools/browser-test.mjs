@@ -123,7 +123,9 @@ page.on("requestfinished", (req) => {
 
 console.log("[1] Loading the app");
 const tBoot = Date.now();
-await page.goto(URL_BASE, { waitUntil: "domcontentloaded", timeout: 60000 });
+// ?debug exposes window.__viewer in a production build as well (Viewport.jsx),
+// so the same picks work against a deployed site.
+await page.goto(`${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`, { waitUntil: "domcontentloaded", timeout: 60000 });
 
 record(
   (await page.title()).length > 0,

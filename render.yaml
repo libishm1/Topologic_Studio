@@ -1,6 +1,10 @@
-# Render blueprint for the Topologic Studio Next backend.
-# Deployed separately from the Classic service so the two lines never share a
-# process, an environment or a rollback.
+# Render blueprint for the Topologic Studio backend.
+#
+# Since 2026-10-27 the Next line is on main, so the existing service,
+# topologicstudio-backend (created with Classic, default region Oregon), runs
+# it and redeploys on every push to main, together with the Pages frontend
+# (.github/workflows/deploy-frontend.yml). Classic is tagged
+# classic-2026-10-27 for a rollback: push that tag to main.
 #
 # Speed, in order of how much each one matters. Measured 2026-10-27 from the
 # lab network against the live Classic service (free plan, default region):
@@ -16,12 +20,10 @@
 #      when the service is created and cannot be changed afterwards.
 services:
   - type: web
-    name: topologicstudio-next-backend
+    name: topologicstudio-backend
     runtime: docker
     rootDir: topologicpy-web-backend
-    region: frankfurt
-    plan: free
-    autoDeploy: false
+    autoDeploy: true
     healthCheckPath: /health
     envVars:
       - key: CORS_ORIGINS
@@ -32,3 +34,17 @@ services:
         value: "8"
       - key: GRAPH_TTL_SECONDS
         value: "3600"
+
+# A faster home, when wanted: a second service in Frankfurt (about 150 ms less
+# per request from the lab than Oregon). Region is fixed at creation, so it
+# is a new service, created from the dashboard; point the repository variable
+# VITE_API_BASE at it and the next Pages build uses it.
+#
+#  - type: web
+#    name: topologicstudio-next-backend
+#    runtime: docker
+#    rootDir: topologicpy-web-backend
+#    region: frankfurt
+#    plan: free
+#    autoDeploy: true
+#    healthCheckPath: /health

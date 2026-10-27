@@ -25,9 +25,15 @@ import { PhaseTimer, mark } from "../lib/perf.js";
 import { collectCategoryIds, extractMeshes, withPredefinedType } from "./categories.js";
 
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
- *  installed package versions. Both are served from public/. */
-const WASM_PATH = import.meta.env.VITE_WEBIFC_WASM_PATH || "/wasm/";
-const WORKER_PATH = import.meta.env.VITE_FRAGMENTS_WORKER || "/fragments/worker.mjs";
+ *  installed package versions. Both are served from public/, under the
+ *  site's base path: GitHub Pages serves the app from /Topologic_Studio/,
+ *  where the root-relative "/wasm/" was a 404 and no IFC would open. The
+ *  WASM path is made a full URL so web-ifc takes it as absolute. */
+const BASE = import.meta.env.BASE_URL || "/";
+const WASM_PATH =
+  import.meta.env.VITE_WEBIFC_WASM_PATH ||
+  (typeof window !== "undefined" ? new URL(`${BASE}wasm/`, window.location.href).href : `${BASE}wasm/`);
+const WORKER_PATH = import.meta.env.VITE_FRAGMENTS_WORKER || `${BASE}fragments/worker.mjs`;
 
 const OVERLAY = {
   path: "path",

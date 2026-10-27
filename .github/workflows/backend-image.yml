@@ -8,7 +8,7 @@ name: Backend image
 
 on:
   push:
-    branches: [next/studio-2]
+    branches: [main, next/studio-2, next/browser-core]
     paths:
       - 'topologicpy-web-backend/**'
       - '.github/workflows/backend-image.yml'
