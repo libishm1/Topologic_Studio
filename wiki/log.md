@@ -52,4 +52,11 @@
   reflow at 200% zoom, focus on the file button, landmarks, and a keyboard
   way to place start, exit and fire. 0 axe violations over 10 states. Heat
   is drawn on a sequential ramp instead of a rainbow.
+- Multi-agent equation review: 90 equations extracted, checked against read
+  sources (71 confirmed, 11 corrected, 8 unverifiable;
+  research/fire-equations-verified-2026-10-27.json) and formalised in Lean
+  (FireDynamics, Tenability, GraphNumerics; 175 axiom checks, standard axioms
+  only). Found: L2's boundary clause and R3's prefix claim false (counter-
+  examples proved), SFPE speed non-monotone at its 0.54 switch, density 3.8
+  past jam, MQH 740 vs 6.85 off by 4%, FED kelvin trap.
 
