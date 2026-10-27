@@ -65,3 +65,41 @@ test("a seed reproduces a run", () => {
   assert.deepEqual(a.path, b.path);
   assert.deepEqual(a.curve, b.curve);
 });
+
+test("the exact optimum bounds the policy and matches brute force on small graphs (LG6)", async () => {
+  const { qLearningPath } = await import("./rl.js");
+  // A 4 x 3 lattice, exit in a corner, fire spreading from the far corner.
+  const w = 4, h = 3, nodes = [], edges = [];
+  for (let j = 0; j < h; j += 1) for (let i = 0; i < w; i += 1) nodes.push(i, 0, j);
+  for (let j = 0; j < h; j += 1) {
+    for (let i = 0; i < w; i += 1) {
+      const v = j * w + i;
+      if (i < w - 1) edges.push(v, v + 1);
+      if (j < h - 1) edges.push(v, v + w);
+    }
+  }
+  const g = { nodes: Float32Array.from(nodes), edges: Uint32Array.from(edges), blocked: new Uint8Array(edges.length / 2) };
+  const exit = 0, start = w * h - 2, gamma = 0.99, maxSteps = 6;
+  for (const ignite of [null, new Map([[w * h - 1, 0], [w * h - 2, 2], [w * h - 3, 3], [w * h - 1 - w, 2]])]) {
+    const r = qLearningPath(g, start, exit, { ignite, episodes: 300, maxSteps, seed: 3, gamma });
+    assert.ok(r.policyReturn <= r.optimalReturn + 1e-9);
+    // Brute force: every walk of at most maxSteps moves.
+    const adj = Array.from({ length: w * h }, () => []);
+    for (let e = 0; e < edges.length; e += 2) {
+      adj[edges[e]].push(edges[e + 1]);
+      adj[edges[e + 1]].push(edges[e]);
+    }
+    const burns = (v) => (ignite ? ignite.get(v) ?? Infinity : Infinity);
+    const best = (u, t) => {
+      if (t === maxSteps) return 0;
+      let b = -Infinity;
+      for (const v of adj[u]) {
+        const len = Math.hypot(nodes[v * 3] - nodes[u * 3], nodes[v * 3 + 2] - nodes[u * 3 + 2]);
+        const value = t >= burns(v) ? -10 : v === exit ? 10 : -0.1 * len + gamma * best(v, t + 1);
+        if (value > b) b = value;
+      }
+      return b;
+    };
+    assert.ok(Math.abs(best(start, 0) - r.optimalReturn) < 1e-9, `${best(start, 0)} vs ${r.optimalReturn}`);
+  }
+});

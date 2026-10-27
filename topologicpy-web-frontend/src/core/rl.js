@@ -176,6 +176,8 @@ export function qLearningPath(graph, start, exit, {
   const visited = new Set([start]);
   let state = start;
   let reachedExit = false, burned = false, total = 0;
+  // The rollout's discounted return, to compare with the exact optimum below.
+  let policyReturn = 0, discount = 1;
   for (let t = 0; t < maxSteps; t += 1) {
     const k = greedy(state, t, visited);
     if (k < 0) break;
@@ -185,16 +187,42 @@ export function qLearningPath(graph, start, exit, {
     if (t >= burnsAt(next)) {
       burned = true;
       total += BURN_REWARD;
+      policyReturn += discount * BURN_REWARD;
       break;
     }
     if (next === exit) {
       reachedExit = true;
       total += EXIT_REWARD;
+      policyReturn += discount * EXIT_REWARD;
       break;
     }
     total -= slotCost[k];
+    policyReturn -= discount * slotCost[k];
+    discount *= gamma;
     state = next;
   }
+
+  // The exact optimum of the same problem, unshaped: backward induction over
+  // the step limit, V_t(u) = max over moves of the reward plus gamma V_{t+1}
+  // after a non-terminal move, V at the limit 0 (QLearning.lean,
+  // dag_value_iteration_exact). RL evacuation papers report success rates, not
+  // this gap (gap analysis 2026-10-27, LG6).
+  const burnTime = new Float64Array(n);
+  for (let u = 0; u < n; u += 1) burnTime[u] = burnsAt(u);
+  let ahead = new Float64Array(n), here = new Float64Array(n);
+  for (let t = maxSteps - 1; t >= 0; t -= 1) {
+    for (let u = 0; u < n; u += 1) {
+      let best = slots[u].length ? -Infinity : 0;
+      for (const k of slots[u]) {
+        const v = neighbours[k];
+        const value = t >= burnTime[v] ? BURN_REWARD : v === exit ? EXIT_REWARD : -slotCost[k] + gamma * ahead[v];
+        if (value > best) best = value;
+      }
+      here[u] = best;
+    }
+    [here, ahead] = [ahead, here];
+  }
+  const optimalReturn = ahead[start];
 
   const P = graph.nodes;
   let length = 0;
@@ -226,6 +254,8 @@ export function qLearningPath(graph, start, exit, {
     curve,
     escapeSteps,
     note,
+    policyReturn,
+    optimalReturn,
   };
 }
 
@@ -263,6 +293,9 @@ export function trainRl(graph, { startPoint, exitPoint, firePoint = null, episod
     success_rate: r.successRate,
     curve: r.curve,
     escape_steps: r.escapeSteps,
+    // Discounted, unshaped: the policy's rollout and the exact optimum.
+    policy_return: r.policyReturn ?? null,
+    optimal_return: r.optimalReturn ?? null,
     fire_start_id: fireStart,
     train_ms: Math.round(performance.now() - t0),
     note: notes.join(" ") || null,

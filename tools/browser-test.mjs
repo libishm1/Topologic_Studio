@@ -658,6 +658,11 @@ if (await trainBtn.isEnabled()) {
       "RL reports whether an escape exists",
       r["Escape possible"],
     );
+    record(
+      r["Return vs exact best"] !== undefined,
+      "RL reports its return against the exact optimum (backward induction)",
+      r["Return vs exact best"],
+    );
   }
   await shot(page, "rl-trained");
 } else {

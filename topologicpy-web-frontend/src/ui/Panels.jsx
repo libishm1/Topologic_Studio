@@ -1052,6 +1052,13 @@ export function SimulatePanel({ studio, onPick, onPlace, onStartFire, onStopFire
               />
             )}
             <Stat label="Late-training success" value={`${Math.round((rl.result?.success_rate ?? 0) * 100)}%`} />
+            {rl.result?.optimal_return != null && (
+              <Stat
+                label="Return vs exact best"
+                value={`${rl.result.policy_return.toFixed(2)} / ${rl.result.optimal_return.toFixed(2)}`}
+                warn={rl.result.policy_return < rl.result.optimal_return - 1e-6}
+              />
+            )}
             {settings.rlUseFire && rl.result?.fire_start_id != null && (
               <Stat
                 label="Escape possible"
