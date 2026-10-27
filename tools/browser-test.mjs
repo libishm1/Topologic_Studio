@@ -692,15 +692,37 @@ record(
   "arrow keys move between workflow steps",
 );
 
-// Methods: a modal page that Escape closes, returning focus.
+// Methods: a modal page that Escape closes, returning focus. It loads lazily,
+// with KaTeX, which typesets the proved statements.
 await page.getByRole("button", { name: /^Methods$/ }).click();
-await page.waitForTimeout(300);
-const methodsShown = await page.getByRole("dialog", { name: "Methods and verification" }).isVisible().catch(() => false);
+const methodsShown = await page
+  .getByRole("dialog", { name: "Methods and verification" })
+  .waitFor({ timeout: 20000 })
+  .then(() => true, () => false);
 record(methodsShown, "Methods page opens");
 record(
   await page.getByRole("dialog").getByText(/proved in Lean 4/).isVisible().catch(() => false),
   "Methods page lists the Lean-proved properties",
 );
+await page.waitForFunction(() => document.querySelectorAll(".equation .katex").length > 0, null, { timeout: 20000 }).catch(() => {});
+await page.evaluate(() => document.fonts.ready);
+const maths = await page.evaluate(() => {
+  const eqs = [...document.querySelectorAll('[role="dialog"] .equation')];
+  return {
+    count: eqs.length,
+    typeset: eqs.filter((e) => e.querySelector(".katex .katex-html") && e.querySelector(".katex-mathml math")).length,
+    errors: document.querySelectorAll('[role="dialog"] .katex-error').length,
+    fonts: document.fonts.check("16px KaTeX_Main") && document.fonts.check("16px KaTeX_Math"),
+    wide: eqs.filter((e) => e.scrollWidth > e.clientWidth + 1).length,
+    pageWide: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+  };
+});
+record(
+  maths.count > 20 && maths.typeset === maths.count && maths.errors === 0,
+  `every proved statement is typeset with KaTeX, with MathML for screen readers (${maths.typeset}/${maths.count}, ${maths.errors} errors)`,
+);
+record(maths.fonts, "KaTeX's fonts load from the site's own assets");
+record(!maths.wide && !maths.pageWide, `no equation needs sideways scrolling (${maths.wide} wide)`);
 await shot(page, "methods");
 await page.keyboard.press("Escape");
 await page.waitForTimeout(200);

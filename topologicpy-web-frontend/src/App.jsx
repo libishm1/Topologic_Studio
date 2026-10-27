@@ -28,7 +28,6 @@ import { runFire } from "./core/fire.js";
 import { trainRl as trainRlPolicy } from "./core/rl.js";
 import { useStudio } from "./state/useStudio.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
-import { MethodsDialog } from "./ui/MethodsDialog.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
@@ -43,6 +42,9 @@ const drawn = (route) => route?.straight_points || route?.points || null;
 // Three plus OrbitControls only matter in this mode, so the chunk is loaded
 // on demand rather than shipped to everyone who opens the IFC viewer.
 const TopologyViewer = lazy(() => import("./viewer/TopologyViewer.jsx"));
+// The Methods page brings KaTeX (about 270 KB and its fonts); it loads only
+// when someone opens the page.
+const MethodsDialog = lazy(() => import("./ui/MethodsDialog.jsx").then((m) => ({ default: m.MethodsDialog })));
 
 // The inspector is the workflow, one step per panel (src/ui/Panels.jsx).
 // Methods (what was proved, the limits, the server) opens from the header.
@@ -1359,7 +1361,11 @@ export default function App() {
         ))}
       </div>
 
-      <MethodsDialog open={methodsOpen} onClose={closeMethods} studio={studio} />
+      {methodsOpen && (
+        <Suspense fallback={null}>
+          <MethodsDialog open onClose={closeMethods} studio={studio} />
+        </Suspense>
+      )}
     </div>
   );
 }

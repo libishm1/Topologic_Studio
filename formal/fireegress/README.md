@@ -76,6 +76,14 @@ warnings; 294 axiom results, standard axioms only ([axioms-all-2026-10-27.txt](a
 | Lattice.lean | Octile distance is attained and is a lower bound for any 8-connected path; Euclidean <= octile <= sqrt(4 - 2 sqrt 2) Euclidean (8.2%); no corner cutting. | The code now blocks a diagonal when both of its axis detours are blocked, matching `diagonal_detour` (fired on 2 diagonals across 16 models; connectivity unchanged). |
 | Frames.lean | (x, y, z) -> (x, z, -y) is a proper rotation; rigid motions preserve polyline lengths; That Open's matrix can never be a reflection. | For a model rotated in plan, That Open rounds the rotation to about 1e-3, so lengths are exact only for unrotated models. Docstrings corrected. |
 
+## Fourth batch: routing while the fire changes (2026-10-27)
+
+| File | What is proved | What it means for Studio |
+|---|---|---|
+| Yen.lean | Yen's algorithm returns k shortest loopless paths: every list it returns, at any length it reaches, has no loopless path left out that is cheaper than its last one (`yen_kshortest`). | The "next cheapest" alternative routes are exact. The different-space mode is a bounded heuristic and is described as one: it may stop before finding every route. |
+| TimeDependent.lean | Time-dependent Dijkstra (Dreyfus label setting) gives the exact earliest arrival when every link is FIFO (leaving later never arrives earlier) and travel never takes negative time; a link closed by the fire is an arrival of top (`td_dijkstra_correct`, `td_dijkstra_EA_withTop`). Waiting never helps; replanning from the evacuee's current node and time keeps the plan's arrival (`replan_consistent`). FIFO is necessary (`fifo_necessary_every_run`). | The specification the forecast router must meet. |
+| MinDose.lean | Backward induction on the time-expanded graph gives the least fractional effective dose of any schedule reaching an exit by the horizon (`dp_exact`); a schedule below a dose limit exists iff the value is below it (`safe_iff`); if every move dose is non-decreasing in the departure step and waiting doses are non-negative, some optimal schedule never waits (`no_holdover`), discharged for convective heat with a non-decreasing temperature (`no_holdover_convective`). | The specification the least-dose router must meet. |
+
 ## Building
 
 Lake caches are gigabytes, so build outside OneDrive. The working copy is at

@@ -8,8 +8,12 @@
  *    at terminal states; the server used the burn node's own potential, which
  *    adds gamma^T * Phi(s_T) to the return and can change which failure is
  *    "least bad" - or, when no escape exists, the optimum itself.
- * 2. The last allowed step is terminal (value 0), instead of bootstrapping from
- *    untrained prior values beyond the horizon.
+ * 2. With fire, the clock is part of the state and the last allowed step is
+ *    terminal (value 0, potential 0), instead of bootstrapping from untrained
+ *    prior values beyond the horizon. Without fire the state has no clock, so
+ *    the step limit only cuts an episode short and the update still
+ *    bootstraps (Pardo et al. 2018): otherwise one state would get two
+ *    different targets and Q* would not be a fixed point (QLearning.lean).
  *
  * Everything else matches the server: time-indexed state when there is fire,
  * shaping by minus the remaining distance, untried actions initialised to their
@@ -104,9 +108,6 @@ export function qLearningPath(graph, start, exit, {
   const burnsAt = (v) => (ignite ? ignite.get(v) ?? Infinity : Infinity);
   const timed = Boolean(ignite && ignite.size);
   const horizon = maxSteps + 1;
-  // A transition into a terminal (burning or exit) node is shaped as if the
-  // terminal had zero potential (W5).
-  const isTerminal = (v, t) => v === exit || t >= burnsAt(v);
   const prior = new Float64Array(neighbours.length);
   for (let k = 0; k < neighbours.length; k += 1) {
     const v = neighbours[k];
@@ -150,8 +151,12 @@ export function qLearningPath(graph, start, exit, {
         done = true;
         reached = 1;
       }
-      const last = t === maxSteps - 1;
-      const phiNext = done || isTerminal(next, t) ? 0 : potential[next];
+      // A transition into a terminal state (burning, the exit, or with fire the
+      // horizon) is shaped as if the terminal had zero potential (W5); with a
+      // non-zero potential at the horizon the shaped optimum can prefer burning
+      // on the last step (QLearning.horizon_potential_prefers_fire).
+      const last = timed && t === maxSteps - 1;
+      const phiNext = done || last ? 0 : potential[next];
       const shaped = reward + gamma * phiNext - potential[state];
       let target = shaped;
       if (!done && !last) {

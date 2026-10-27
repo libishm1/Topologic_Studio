@@ -10,3 +10,6 @@ import FireEgress.Straighten
 import FireEgress.Segments
 import FireEgress.Lattice
 import FireEgress.Frames
+import FireEgress.Yen
+import FireEgress.TimeDependent
+import FireEgress.MinDose

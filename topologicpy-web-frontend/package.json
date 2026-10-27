@@ -16,6 +16,7 @@
     "@thatopen/components": "^3.4.8",
     "@thatopen/fragments": "~3.4.7",
     "camera-controls": "^3.1.2",
+    "katex": "0.18.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "^0.185.1",
