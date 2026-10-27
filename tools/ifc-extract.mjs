@@ -27,7 +27,43 @@ const isWalkableCovering = (api, model, id) => {
   return value === "FLOORING";
 };
 
-export async function extract(ifcPath) {
+/**
+ * Exit flags per door, from Pset_DoorCommon (IsExternal, FireExit), on the
+ * door or its type. Exporters fill these inconsistently, so both are read
+ * and a missing value stays undefined.
+ */
+async function doorFlags(api, model) {
+  const flags = new Map();
+  const yes = (v) => v === true || v === "T" || v === ".T." || v === "TRUE" || v === 1;
+  const read = (sets, entry) => {
+    for (const set of sets || []) {
+      for (const prop of set?.HasProperties || []) {
+        const name = prop?.Name?.value;
+        const value = prop?.NominalValue?.value;
+        // Pset_DoorCommon's IsExternal and FireExit, and Revit's own IsFireExit.
+        if (name === "IsExternal" && /DoorCommon/i.test(set.Name?.value || "")) entry.IsExternal ||= yes(value);
+        if (name === "FireExit" || name === "IsFireExit") entry.FireExit ||= yes(value);
+      }
+    }
+  };
+  const ids = api.GetLineIDsWithType(model, WebIFC.IFCDOOR);
+  for (let i = 0; i < ids.size(); i += 1) {
+    const id = ids.get(i);
+    const entry = {};
+    try {
+      // Instance sets. (Passing includeTypeProperties here makes web-ifc
+      // 0.0.77 return the type objects instead, so types are read apart.)
+      read(await api.properties.getPropertySets(model, id, true), entry);
+      for (const type of (await api.properties.getTypeProperties(model, id, true)) || []) read(type?.HasPropertySets, entry);
+    } catch {
+      // A malformed property set leaves the door unflagged.
+    }
+    flags.set(id, entry);
+  }
+  return flags;
+}
+
+export async function extract(ifcPath, { withDoorFlags = false } = {}) {
   const api = new WebIFC.IfcAPI();
   api.SetWasmPath(path.join(HERE, "../topologicpy-web-frontend/node_modules/web-ifc/"), true);
   await api.Init();
@@ -65,6 +101,7 @@ export async function extract(ifcPath) {
     });
     out[group] = meshes;
   }
+  if (withDoorFlags) out.doorFlags = await doorFlags(api, model);
   api.CloseModel(model);
   return out;
 }

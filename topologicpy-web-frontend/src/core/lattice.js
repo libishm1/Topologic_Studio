@@ -625,8 +625,8 @@ export function buildLatticeGraph({
   const pairKey = (a, b) => (a < b ? a * 4294967296 + b : b * 4294967296 + a);
   const linked = new Set();
   for (let e = 0; e < edges.length; e += 2) linked.add(pairKey(edges[e], edges[e + 1]));
-  for (const [dx, dy, dlow, ux, uy, width] of doorPoints) {
-    const report = { x: dx, y: dy, sill: dlow, width, node: -1, added: false, sides: [0, 0] };
+  for (const [dx, dy, dlow, ux, uy, width, itemId] of doorPoints) {
+    const report = { x: dx, y: dy, sill: dlow, width, itemId: itemId ?? null, node: -1, added: false, sides: [0, 0] };
     doorReport.push(report);
     const nx = -uy, ny = ux;
     const half = Math.max(width / 2, s / 2) + 1e-6;
@@ -812,8 +812,9 @@ export function buildLatticeGraph({
 }
 
 /**
- * Each door item as [x, y, bottom, ux, uy, width]: plan centre, sill height,
- * the unit direction across the opening, and its width. Several meshes of one
+ * Each door item as [x, y, bottom, ux, uy, width, itemId]: plan centre, sill
+ * height, the unit direction across the opening, its width, and its IFC id
+ * (null when the mesh carries none). Several meshes of one
  * door (frame, leaf, glazing) share an itemId and are pooled. The direction is
  * the principal axis of the door's plan vertices, as for walls.
  */
@@ -826,7 +827,7 @@ export function doorWaypoints(meshes, upAxis) {
     if (!p || p.length < 9) continue;
     const k = mesh.itemId ?? `mesh:${byItem.size}`;
     let acc = byItem.get(k);
-    if (!acc) byItem.set(k, (acc = { xs: [], ys: [], low: Infinity }));
+    if (!acc) byItem.set(k, (acc = { xs: [], ys: [], low: Infinity, itemId: mesh.itemId ?? null }));
     for (let i = 0; i + 2 < p.length; i += 3) {
       acc.xs.push(p[i + h0]);
       acc.ys.push(p[i + h1]);
@@ -834,7 +835,7 @@ export function doorWaypoints(meshes, upAxis) {
     }
   }
   const out = [];
-  for (const { xs, ys, low } of byItem.values()) {
+  for (const { xs, ys, low, itemId } of byItem.values()) {
     const n = xs.length;
     if (!n) continue;
     let mx = 0, my = 0;
@@ -860,7 +861,8 @@ export function doorWaypoints(meshes, upAxis) {
     }
     // Centre on the opening, not the vertex mean, which a swing leaf skews.
     const shift = (lo + hi) / 2;
-    out.push([mx + ux * shift, my + uy * shift, low, ux, uy, hi - lo]);
+    // The IFC id last, so exits can be matched to the door's property sets.
+    out.push([mx + ux * shift, my + uy * shift, low, ux, uy, hi - lo, itemId]);
   }
   return out;
 }

@@ -91,7 +91,7 @@ export function snap(graph, point) {
 }
 
 /** A binary min-heap of [priority, node]. */
-class Heap {
+export class Heap {
   constructor() {
     this.p = [];
     this.v = [];
