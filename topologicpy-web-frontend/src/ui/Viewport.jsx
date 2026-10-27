@@ -33,6 +33,9 @@ export function Viewport({
   loadState,
   graphStats,
   fire,
+  levels,
+  section,
+  onSection,
   fireSteps,
   heatLegend,
   onStopFire,
@@ -345,6 +348,24 @@ export function Viewport({
               </div>
             )}
             <div className="card">
+              {levels?.length > 1 && (
+                <div className="section-cut">
+                  <label htmlFor="section-cut">Show</label>
+                  <select
+                    id="section-cut"
+                    value={section === null ? "" : String(section)}
+                    onChange={(event) => onSection(event.target.value === "" ? null : Number(event.target.value))}
+                  >
+                    <option value="">Whole building</option>
+                    {levels.map((height, i) => (
+                      <option key={height} value={i}>
+                        Cut at level {i + 1} ({height - levels[0] >= 0 ? "+" : ""}
+                        {(height - levels[0]).toFixed(1)} m)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="viewcube">
                 <Button size="sm" onClick={() => setView("top")} title="Top view">
                   Top

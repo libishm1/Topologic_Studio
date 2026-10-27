@@ -3,15 +3,26 @@
 The modernisation line of Topologic Studio. IFC viewer, egress navigation
 graph, fire simulation and hazard-aware rerouting.
 
+**Live site: <https://libishm1.github.io/Topologic_Studio/>.** Open an IFC
+file or one of the example buildings. The model stays in your browser, and
+routing, alternative routes, fire spread and RL all run there.
+
+| | Address | Notes |
+| --- | --- | --- |
+| Website (GitHub Pages) | <https://libishm1.github.io/Topologic_Studio/> | Built from `main` by `.github/workflows/deploy-frontend.yml`. |
+| Backend API (Render) | <https://topologicstudio-backend.onrender.com> | TopologicPy features: the TGraph route engine, the Navigation cross-check, Topology JSON. Free plan: the first request after about 15 idle minutes takes 30 to 50 s. Health: [`/health`](https://topologicstudio-backend.onrender.com/health), features: [`/api/capabilities`](https://topologicstudio-backend.onrender.com/api/capabilities). |
+| Classic version | tag `classic-2026-10-27` | What the site ran before 2026-10-27. |
+
 > The project README from `main` (overview, research contribution, image
 > series, Windows install, GitHub Pages + Render deployment guide, references
 > and licences) is kept in full at [docs/README-classic.md](docs/README-classic.md).
 > It describes the Classic line; where the two disagree, this file describes
 > the code on this branch.
 
-This lives on branch **`next/studio-2`** in a git worktree beside the Classic
-checkout. Classic (`claude/ifc-port-baseline`, tagged `demo-safe-2026-08-24`)
-is untouched and still runs from its own folder.
+Since 2026-10-27 this line is on `main` and deployed. It is developed on
+branch **`next/browser-core`** (which contains `next/studio-2`) in a git
+worktree beside the Classic checkout; Classic (`claude/ifc-port-baseline`,
+tagged `demo-safe-2026-08-24`) still runs from its own folder.
 
 ```
 topologic_webapp/

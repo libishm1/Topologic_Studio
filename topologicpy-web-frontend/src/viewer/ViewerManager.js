@@ -42,7 +42,13 @@ const OVERLAY = {
   rlPath: "rlPath",
   navGraph: "navGraph",
   navRoute: "navRoute",
+  outlines: "outlines",
 };
+
+/** Overlays the section cut also clips; routes and markers stay whole. */
+const CLIPPED = new Set([OVERLAY.outlines, OVERLAY.graph, OVERLAY.navGraph]);
+
+
 
 /** Alternative routes are drawn as overlays alt0, alt1, ... */
 const ALT_PREFIX = "alt";
@@ -229,6 +235,93 @@ export class ViewerManager {
       this.grid.material.color = new THREE.Color(dark ? 0x223049 : 0xcbd5e1);
       this.grid.material.needsUpdate = true;
     }
+    const outlines = this.overlays.get(OVERLAY.outlines);
+    if (outlines) outlines.material.color = new THREE.Color(this._outlineColor());
+  }
+
+  _outlineColor() {
+    return this._theme === "dark" ? 0xcbd5e1 : 0x334155;
+  }
+
+  // ------------------------------------------------------ outlines, section
+
+  /**
+   * The building's edges as lines. Ghosted, the model was flat translucent
+   * faces with no shading, which read as a 2D diagram, especially on a phone;
+   * outlining walls, slabs, stairs, doors and openings makes the 3D form read
+   * in every appearance. Built from the meshes extracted for the graph, so
+   * they sit exactly on it; faces meeting at under 30 degrees are merged.
+   */
+  setOutlines(meshes) {
+    if (!this.world) return;
+    const chunks = [];
+    let total = 0;
+    for (const mesh of meshes || []) {
+      if (!mesh?.positions?.length || !mesh.indices?.length) continue;
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(mesh.positions, 3));
+      geometry.setIndex(new THREE.BufferAttribute(mesh.indices, 1));
+      const edges = new THREE.EdgesGeometry(geometry, 30);
+      const array = edges.getAttribute("position").array;
+      chunks.push(array);
+      total += array.length;
+      geometry.dispose();
+      edges.dispose();
+    }
+    if (!total) {
+      this._setOverlay(OVERLAY.outlines, null);
+      return;
+    }
+    const merged = new Float32Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(merged, 3));
+    const material = new THREE.LineBasicMaterial({
+      color: this._outlineColor(),
+      transparent: true,
+      opacity: 0.6,
+    });
+    const lines = new THREE.LineSegments(geometry, material);
+    lines.renderOrder = 2;
+    this._setOverlay(OVERLAY.outlines, lines);
+  }
+
+  /**
+   * Cut the building above `height` (scene units, up is +y), as a plan view
+   * does, or show it whole with null. The model, its outlines and the graph
+   * are clipped; routes and markers are not.
+   */
+  setSectionHeight(height) {
+    this._section = Number.isFinite(height) ? new THREE.Plane(new THREE.Vector3(0, -1, 0), height) : null;
+    if (this.modelObject) this._applyClip(this.modelObject);
+    for (const name of CLIPPED) {
+      const object = this.overlays.get(name);
+      if (object) this._applyClip(object);
+    }
+    // A cut seen from eye level is just a facade: look from above at an
+    // angle unless the view already looks down by more than 20 degrees.
+    const camera = this.world?.camera?.three;
+    const target = this.world?.camera?.controls?.getTarget?.(new THREE.Vector3());
+    if (this._section && camera && target) {
+      const dir = camera.position.clone().sub(target).normalize();
+      if (dir.y < Math.sin(THREE.MathUtils.degToRad(20))) this.setStandardView("iso");
+    }
+  }
+
+  _applyClip(object) {
+    const planes = this._section ? [this._section] : [];
+    object.traverse((child) => {
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) {
+        if (!material) continue;
+        material.clippingPlanes = planes;
+        material.needsUpdate = true;
+      }
+    });
   }
 
   // ------------------------------------------------------------------ input
@@ -386,6 +479,18 @@ export class ViewerManager {
       collectCategoryIds(this.model),
     );
 
+    // IfcSpace volumes are rooms, not built fabric: drawn, they wrap the
+    // building in tinted boxes (the Duplex had one above its roof). Hidden
+    // from view only; the graph still reads their floors.
+    if (this.categoryIds.spaces?.length && this.model.setVisible) {
+      try {
+        await this.model.setVisible(this.categoryIds.spaces, false);
+        await this.fragments.core.update(true);
+      } catch (error) {
+        console.warn("[viewer] Could not hide IfcSpace volumes:", error);
+      }
+    }
+
     const phases = timer.finish({
       cached,
       file: file.name,
@@ -496,6 +601,7 @@ export class ViewerManager {
     if (previous) this._destroyObject(previous);
     if (object) {
       object.userData.pickIgnore = true;
+      if (CLIPPED.has(name)) this._applyClip(object);
       this.world.scene.three.add(object);
       this.overlays.set(name, object);
     } else {
@@ -849,6 +955,7 @@ export class ViewerManager {
         material.needsUpdate = true;
       }
     });
+    if (this._section) this._applyClip(object);
   }
 
   setMarker(name, point) {
@@ -911,13 +1018,52 @@ export class ViewerManager {
       this.grid.position.set(center.x, box.min.y - 0.05, center.z);
     }
 
-    if (controls?.fitToBox) {
-      controls.fitToBox(box, true, { paddingTop: 1, paddingBottom: 1 });
-      return;
+    // Keep the current direction (the iso one on first load).
+    const dir = camera.position.clone().sub(controls?.getTarget?.(new THREE.Vector3()) || center);
+    if (dir.lengthSq() < 1e-9) dir.set(1, 0.8, 1);
+    this._fitAlong(box, dir);
+  }
+
+  /**
+   * Look at the box from `dir` (towards the camera), close enough that every
+   * corner is in view. camera-controls' fitToBox snaps the camera to the
+   * nearest axis, which turned the iso view into a flat elevation; this keeps
+   * the direction and solves the distance from the field of view instead.
+   */
+  _fitAlong(box, dir) {
+    const controls = this.world?.camera?.controls;
+    const camera = this.world?.camera?.three;
+    if (!camera) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const back = dir.clone().normalize();
+    const forward = back.clone().negate();
+    const worldUp = Math.abs(back.y) > 0.999 ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3().crossVectors(forward, worldUp).normalize();
+    const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+    const vHalf = THREE.MathUtils.degToRad(camera.fov || 50) / 2;
+    const hHalf = Math.atan(Math.tan(vHalf) * (camera.aspect || 1));
+    let distance = 0;
+    for (const x of [box.min.x, box.max.x]) {
+      for (const y of [box.min.y, box.max.y]) {
+        for (const z of [box.min.z, box.max.z]) {
+          const v = new THREE.Vector3(x, y, z).sub(center);
+          const toward = v.dot(back);
+          distance = Math.max(
+            distance,
+            Math.abs(v.dot(right)) / Math.tan(hHalf) + toward,
+            Math.abs(v.dot(up)) / Math.tan(vHalf) + toward,
+          );
+        }
+      }
     }
-    const offset = new THREE.Vector3(1, 0.8, 1).normalize().multiplyScalar(extent * 1.7);
-    camera.position.copy(center.clone().add(offset));
-    camera.lookAt(center);
+    distance = Math.max(distance * 1.06, 1);
+    const eye = center.clone().addScaledVector(back, distance);
+    if (controls?.setLookAt) {
+      controls.setLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, true);
+    } else {
+      camera.position.copy(eye);
+      camera.lookAt(center);
+    }
   }
 
   /** Snap to an axis view. `which` is one of top/front/back/left/right/iso. */
@@ -930,7 +1076,6 @@ export class ViewerManager {
     const size = new THREE.Vector3();
     box.getCenter(center);
     box.getSize(size);
-    const distance = (Math.max(size.x, size.y, size.z) || 10) * 1.8;
 
     const directions = {
       top: [0, 1, 0.0001],
@@ -941,15 +1086,7 @@ export class ViewerManager {
       iso: [1, 0.8, 1],
     };
     const dir = directions[which] || directions.iso;
-    const eye = new THREE.Vector3(...dir).normalize().multiplyScalar(distance).add(center);
-
-    const controls = this.world?.camera?.controls;
-    if (controls?.setLookAt) {
-      controls.setLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, true);
-    } else if (this.world?.camera?.three) {
-      this.world.camera.three.position.copy(eye);
-      this.world.camera.three.lookAt(center);
-    }
+    this._fitAlong(box, new THREE.Vector3(...dir));
   }
 }
 

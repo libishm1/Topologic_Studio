@@ -787,3 +787,20 @@
     display: none;
   }
 }
+
+/* The storey cut, above the view buttons. */
+.section-cut {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--space-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.section-cut select {
+  min-height: 36px;
+  font-size: 13px;
+}
+

@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { KIND_DOOR, KIND_STAIR, buildLatticeGraph, dominantAngle, wallSegments } from "./lattice.js";
+import { KIND_DOOR, KIND_STAIR, buildLatticeGraph, dominantAngle, floorLevels, wallSegments } from "./lattice.js";
 
 /** A horizontal rectangle at height z, as two triangles (z up). */
 function rect(x0, y0, x1, y1, z, rotate = 0) {
@@ -179,3 +179,13 @@ test("a stair joins two floors into one connected graph", () => {
   const ground = [...Array(g.stats.nodes).keys()].find((n) => g.points[n * 3 + 2] < 0.1);
   assert.equal(find(upper), find(ground), "the upper floor is reachable from the ground by the stair");
 });
+
+test("storey levels are the floor heights, not landings or slab undersides", () => {
+  // Two 10 x 6 m storeys at 0 and 3 m, a 1 x 1 m landing at 1.5 m, and the
+  // upper slab's underside (facing down) at 2.8 m.
+  const under = rect(0, 0, 10, 6, 2.8);
+  under.indices = Uint32Array.from([0, 2, 1, 0, 3, 2]);
+  const levels = floorLevels([rect(0, 0, 10, 6, 0), rect(0, 0, 10, 6, 3), rect(4, 4, 5, 5, 1.5), under], "z");
+  assert.deepEqual(levels.map((h) => Math.round(h * 100) / 100), [0, 3]);
+});
+

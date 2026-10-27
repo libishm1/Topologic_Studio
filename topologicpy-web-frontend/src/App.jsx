@@ -21,6 +21,7 @@ import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats } from "./core/graph.js";
 import { findRoute } from "./core/route.js";
+import { floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
@@ -28,6 +29,7 @@ import { trainRl as trainRlPolicy } from "./core/rl.js";
 import { useStudio } from "./state/useStudio.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { MethodsDialog } from "./ui/MethodsDialog.jsx";
+import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
 import { Viewport } from "./ui/Viewport.jsx";
@@ -85,6 +87,10 @@ export default function App() {
   const [tab, setTab] = useState("model");
   const [panelOpen, setPanelOpen] = useState(true);
   const [methodsOpen, setMethodsOpen] = useState(false);
+  // Storey heights for the section cut, and the chosen one (null = whole).
+  const [levels, setLevels] = useState([]);
+  const [section, setSection] = useState(null);
+  const geometryPromiseRef = useRef(null);
   const closeMethods = useCallback(() => setMethodsOpen(false), []);
   const [lastSample, setLastSample] = useState(null);
 
@@ -193,6 +199,31 @@ export default function App() {
         viewer.setModelAppearance(settings.modelAppearance);
         setTab("graph");
 
+        // Extract the egress geometry now rather than at the first build:
+        // the outlines and the storey cut need it, and the build then skips it.
+        setLevels([]);
+        setSection(null);
+        viewer.setSectionHeight(null);
+        geometryPromiseRef.current = viewer
+          .extractEgressGeometry()
+          .then((geometry) => {
+            geometryRef.current = geometry;
+            viewer.setOutlines([
+              ...geometry.walls,
+              ...geometry.floors,
+              ...geometry.stairs,
+              ...geometry.doors,
+              ...(geometry.obstacles || []),
+            ]);
+            setLevels(floorLevels(geometry.floors, settings.upAxis));
+            return geometry;
+          })
+          .catch((error) => {
+            console.warn("Geometry extraction failed; it will be retried at build.", error);
+            geometryPromiseRef.current = null;
+            return null;
+          });
+
         void studio.refreshCacheInfo();
 
         toast(
@@ -209,7 +240,7 @@ export default function App() {
         studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, settings.modelAppearance, studio, toast],
+    [reportError, settings.modelAppearance, settings.upAxis, studio, toast],
   );
 
   // --------------------------------------------------------------- examples
@@ -261,8 +292,9 @@ export default function App() {
       // Geometry extraction is the expensive part, so it is cached against the
       // loaded model: changing a slider re-samples but does not re-extract.
       if (!geometryRef.current) {
-        geometryRef.current = await timer.run("extract", () =>
-          viewer.extractEgressGeometry(),
+        geometryRef.current = await timer.run(
+          "extract",
+          async () => (await geometryPromiseRef.current) || viewer.extractEgressGeometry(),
         );
       }
       const geometry = geometryRef.current;
@@ -1114,6 +1146,15 @@ export default function App() {
             loadState={studio.loadState}
             graphStats={graph?.stats}
             fire={fire}
+            levels={levels}
+            section={section}
+            onSection={(index) => {
+              setSection(index);
+              const viewer = viewerRef.current;
+              viewer?.setSectionHeight(index === null ? null : levels[index] + SECTION_ABOVE_FLOOR);
+              // A cut is read in solid: ghosted, the cut walls show no section.
+              if (index !== null && settings.modelAppearance !== "solid") setSettings({ modelAppearance: "solid" });
+            }}
             fireSteps={settings.fireMaxSteps}
             heatLegend={fire.running && settings.fireModel === "temperature"}
             onStopFire={stopFire}

@@ -824,3 +824,46 @@ export function doorWaypoints(meshes, upAxis) {
   }
   return out;
 }
+
+/**
+ * Storey levels: heights of upward-facing floor surfaces. Surfaces are
+ * grouped within `step` of each other and weighted by area; groups under
+ * `minArea` square metres (landings, steps) are dropped before groups within
+ * `gap` are merged, so a landing half way up cannot chain two storeys into
+ * one. Ascending.
+ */
+export function floorLevels(meshes, upAxis = "y", { gap = 1.5, step = 0.3, minArea = 4 } = {}) {
+  const up = axisIndex(upAxis);
+  const samples = [];
+  for (const mesh of meshes || []) {
+    const p = mesh.positions, idx = mesh.indices;
+    if (!p || !idx) continue;
+    for (let t = 0; t + 2 < idx.length; t += 3) {
+      const a = idx[t] * 3, b = idx[t + 1] * 3, c = idx[t + 2] * 3;
+      const ux = p[b] - p[a], uy = p[b + 1] - p[a + 1], uz = p[b + 2] - p[a + 2];
+      const vx = p[c] - p[a], vy = p[c + 1] - p[a + 1], vz = p[c + 2] - p[a + 2];
+      const n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+      const twice = Math.hypot(n[0], n[1], n[2]);
+      if (!twice || n[up] / twice < 0.9) continue;
+      samples.push([(p[a + up] + p[b + up] + p[c + up]) / 3, twice / 2]);
+    }
+  }
+  samples.sort((x, y) => x[0] - y[0]);
+  // Group by height, then keep the groups big enough to be floors.
+  const group = (items, within) => {
+    const out = [];
+    for (const [h, w] of items) {
+      const g = out[out.length - 1];
+      if (g && h - g.top <= within) {
+        g.sum += h * w;
+        g.area += w;
+        g.top = h;
+      } else {
+        out.push({ sum: h * w, area: w, top: h });
+      }
+    }
+    return out.map((g) => [g.sum / g.area, g.area]);
+  };
+  const floors = group(samples, step).filter(([, area]) => area >= minArea);
+  return group(floors, gap).map(([h]) => h);
+}
