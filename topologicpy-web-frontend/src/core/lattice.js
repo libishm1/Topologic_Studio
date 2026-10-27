@@ -231,29 +231,56 @@ function collapse(samples, gap) {
  * every triangle that straddles the plane contributes one segment. A
  * watertight wall gives closed loops; a door void gives a gap, whether or not
  * the exporter put an IfcDoor in it.
+ *
+ * `ranges` (from heightRanges) lets a cut skip the triangles the plane misses
+ * without reading their vertices: a model with many floor heights is cut many
+ * times, and each cut used to visit every triangle (5 of 8 s on a 70 MB model).
  */
-function sectionAt(meshes, height, up, h0, h1) {
+function sectionAt(meshes, height, up, h0, h1, ranges = null) {
   const segs = [];
-  const cross = (p, a, b) => {
-    const t = (height - p[a + up]) / (p[b + up] - p[a + up]);
-    return [p[a + h0] + t * (p[b + h0] - p[a + h0]), p[a + h1] + t * (p[b + h1] - p[a + h1])];
-  };
+  let k = 0;
   for (const { positions: p, indices: ix } of meshes) {
     if (!p || !ix) continue;
-    for (let t = 0; t + 2 < ix.length; t += 3) {
-      const v = [ix[t] * 3, ix[t + 1] * 3, ix[t + 2] * 3];
-      const above = v.map((o) => p[o + up] > height);
-      const n = above.filter(Boolean).length;
+    for (let t = 0; t + 2 < ix.length; t += 3, k += 1) {
+      if (ranges && (ranges.lo[k] > height || ranges.hi[k] <= height)) continue;
+      const va = ix[t] * 3, vb = ix[t + 1] * 3, vc = ix[t + 2] * 3;
+      const aa = p[va + up] > height, ab = p[vb + up] > height, ac = p[vc + up] > height;
+      const n = aa + ab + ac;
       if (n === 0 || n === 3) continue;
-      // The lone vertex on one side, and the two edges leaving it.
-      const lone = above.findIndex((x) => (n === 1 ? x : !x));
-      const a = v[lone], b = v[(lone + 1) % 3], c = v[(lone + 2) % 3];
-      const [x0, y0] = cross(p, a, b);
-      const [x1, y1] = cross(p, a, c);
-      segs.push(x0, y0, x1, y1);
+      // The lone vertex on one side, and the two edges leaving it, in the
+      // vertex order of the triangle.
+      let a, b, c;
+      if (n === 1 ? aa : !aa) [a, b, c] = [va, vb, vc];
+      else if (n === 1 ? ab : !ab) [a, b, c] = [vb, vc, va];
+      else [a, b, c] = [vc, va, vb];
+      const s = (height - p[a + up]) / (p[b + up] - p[a + up]);
+      const r = (height - p[a + up]) / (p[c + up] - p[a + up]);
+      segs.push(
+        p[a + h0] + s * (p[b + h0] - p[a + h0]),
+        p[a + h1] + s * (p[b + h1] - p[a + h1]),
+        p[a + h0] + r * (p[c + h0] - p[a + h0]),
+        p[a + h1] + r * (p[c + h1] - p[a + h1]),
+      );
     }
   }
   return Float64Array.from(segs);
+}
+
+/** Each triangle's lowest and highest vertex along `up`, in sectionAt's order. */
+function heightRanges(meshes, up) {
+  let count = 0;
+  for (const { positions: p, indices: ix } of meshes) if (p && ix) count += Math.max(0, Math.floor(ix.length / 3));
+  const lo = new Float64Array(count), hi = new Float64Array(count);
+  let k = 0;
+  for (const { positions: p, indices: ix } of meshes) {
+    if (!p || !ix) continue;
+    for (let t = 0; t + 2 < ix.length; t += 3, k += 1) {
+      const a = p[ix[t] * 3 + up], b = p[ix[t + 1] * 3 + up], c = p[ix[t + 2] * 3 + up];
+      lo[k] = Math.min(a, b, c);
+      hi[k] = Math.max(a, b, c);
+    }
+  }
+  return { lo, hi };
 }
 
 /** A uniform grid over plan segments, for edge and point queries. */
@@ -423,10 +450,14 @@ export function buildLatticeGraph({
   // 10 cm of floor height.
   const solid = [...walls, ...obstacles];
   const sections = new Map();
+  let ranges = null;
   const sectionFor = (floorHeight) => {
     const k = Math.round((floorHeight + sectionHeight) * 10);
     let index = sections.get(k);
-    if (!index) sections.set(k, (index = new SegmentIndex(sectionAt(solid, k / 10, up, h0, h1))));
+    if (!index) {
+      ranges ||= heightRanges(solid, up);
+      sections.set(k, (index = new SegmentIndex(sectionAt(solid, k / 10, up, h0, h1, ranges))));
+    }
     return index;
   };
 
