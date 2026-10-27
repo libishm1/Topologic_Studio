@@ -35,6 +35,8 @@ Use this page as the stable entry point.
 
 ## Next Line
 
+- [Review: fire egress, simulation, RL, speed 2026-10-27](roadmap/review-2026-10-27.md) — start here; five decisions pending
+
 - [GitHub Pages deployment options 2026-09-21](roadmap/pages-deployment-options-2026-09-21.md) — decision pending
 
 - [Handoff 2026-08-24](roadmap/handoff-2026-08-24.md) — start here

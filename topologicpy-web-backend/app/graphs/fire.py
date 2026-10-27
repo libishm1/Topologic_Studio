@@ -98,9 +98,15 @@ def temperature_steps(
 ) -> Iterator[np.ndarray]:
     """Yield the node temperature field, one array per step.
 
-    Vectorised over CSR: neighbour means come from ``np.add.reduceat`` on the
-    sorted neighbour list, so a step costs one pass over the edges rather than
-    a Python loop per node.
+    Vectorised over CSR: neighbour sums come from ``np.bincount`` keyed by each
+    entry's row, so a step costs one pass over the edges rather than a Python
+    loop per node.
+
+    This used ``np.add.reduceat`` with isolated nodes' offsets zeroed. reduceat
+    treats a non-increasing offset as "take one element", so any node followed
+    by an isolated node summed only its *first* neighbour - on a 4-node test it
+    heated twice as fast as Classic's formula. Graphs built from real models
+    always contain a few isolated samples, so this was not hypothetical.
     """
     n = graph.node_count
     if n == 0 or not (0 <= start < n):
@@ -109,33 +115,27 @@ def temperature_steps(
     indptr, neighbours, edge_ids = graph.csr()
     degree = np.diff(indptr)
     has_neighbours = degree > 0
-
-    # reduceat needs a start offset per node; nodes with no neighbours are
-    # masked out afterwards rather than special-cased inside the loop.
-    offsets = indptr[:-1].copy()
-    offsets[~has_neighbours] = 0
+    rows = np.repeat(np.arange(n), degree)
 
     active = np.ones(len(neighbours), dtype=bool)
     if options.blocked is not None and len(neighbours):
         active = ~options.blocked[edge_ids]
+    counts = np.bincount(rows, weights=active.astype(np.float64), minlength=n)
+    counts = np.where(counts > 0, counts, 1.0)
 
     temps = np.full(n, float(options.ambient), dtype=np.float64)
     temps[start] = float(options.fire)
 
+    # Classic's formula divides the gain by the node's degree. Blocked edges
+    # still count toward it here, so a wall slows heating on its far side
+    # rather than concentrating it onto the remaining neighbours.
     safe_degree = np.where(has_neighbours, degree, 1).astype(np.float64)
 
     for _ in range(max(1, options.max_steps)):
         yield temps.copy()
 
         gathered = np.where(active, temps[neighbours], 0.0)
-        if len(gathered):
-            sums = np.add.reduceat(gathered, offsets)
-            counts = np.add.reduceat(active.astype(np.float64), offsets)
-        else:
-            sums = np.zeros(n, dtype=np.float64)
-            counts = np.zeros(n, dtype=np.float64)
-        sums = np.where(has_neighbours, sums, 0.0)
-        counts = np.where(counts > 0, counts, 1.0)
+        sums = np.bincount(rows, weights=gathered, minlength=n)
 
         neighbour_mean = sums / counts
         delta = neighbour_mean - temps

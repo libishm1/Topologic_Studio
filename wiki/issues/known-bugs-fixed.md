@@ -94,3 +94,24 @@ Four visual/UX defects also fixed: graph invisible behind solid geometry
 (added Solid/Ghost/Hidden), route drawn as a 1px line (now a tube),
 picks landing on walls (now snap to the graph), and exit vs fire origin
 sharing a hue (fire is now a distinct shape).
+
+## Next line, 2026-10-27 review
+
+Full evidence, measurements and tests: [review-2026-10-27.md](../roadmap/review-2026-10-27.md).
+
+- **Temperature fire heated some nodes twice as fast.** `np.add.reduceat` with
+  zeroed offsets summed only the first neighbour of any node stored before an
+  isolated node. Now `np.bincount`; tested against Classic's loop.
+- **RL could not reach the exit on a real model.** The fire was seeded at the
+  evacuee's start; gamma 0.9 hid the exit; terminal transitions bootstrapped;
+  walls were ignored; the state ignored time; the "reward" was a sum of
+  Q-values. All fixed; 20/20 vs 0/20 on a tight fire race.
+- **Flood and radial fires never rerouted.** Now they do, with burning nodes
+  impassable.
+- **Per-request connected-components BFS** cost 11 of 14 ms per route query.
+  Cached.
+- **Wall blocking was a per-edge Python loop.** Vectorised, bit-identical.
+- **`ifcopenshell` was unbounded**, so the Linux image would have run 0.9.0
+  against a suite tested on 0.8.5. Capped `<0.9`.
+- **A cold-starting hosted backend was reported "offline"** after 8 s. The
+  UI now shows "Waking backend…" and waits up to 90 s.

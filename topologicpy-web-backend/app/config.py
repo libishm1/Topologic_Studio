@@ -50,7 +50,7 @@ DEFAULT_ORIGINS = [
 @dataclass(frozen=True)
 class Settings:
     title: str = "Topologic Studio Next API"
-    version: str = "0.2.0"
+    version: str = "0.3.0"
 
     perf_log: bool = field(default_factory=lambda: _env_bool("PERF_LOG", False))
 

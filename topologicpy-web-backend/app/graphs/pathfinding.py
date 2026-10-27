@@ -8,10 +8,10 @@ Two engines, one contract:
     true optimum, not an approximation. Milliseconds on graphs of this size.
 
 ``topologicpy``
-    Delegates to ``Graph.ShortestPath``. Kept because it is the semantics the
-    research side of this project reasons about, and because 0.9 gained
-    ``edgeCostFunc`` / ``edgeFilter``, which let hazard reweighting reuse a
-    cached graph instead of rebuilding one per recompute.
+    Delegates to ``TGraph.ShortestPath`` (see ``topologic_engine``). Kept
+    because it is the semantics the research side of this project reasons
+    about, and because ``edgeCostFunc`` / ``edgeFilter`` let hazard
+    reweighting reuse a cached graph instead of rebuilding one per recompute.
 
 Wall blocking is a precomputed per-edge boolean on the graph, so neither
 engine pays for geometry tests during the search.
@@ -224,31 +224,9 @@ def largest_component(graph: NavGraph) -> np.ndarray:
     Sampling noise routinely leaves a handful of orphan points floating off
     the model. Snapping a pick to one of those is the classic "no path found"
     complaint, so endpoint resolution restricts itself to this component.
+    Cached on the graph; see :meth:`NavGraph.components`.
     """
-    n = graph.node_count
-    best = np.zeros(n, dtype=bool)
-    if n == 0:
-        return best
-    unvisited = np.ones(n, dtype=bool)
-    indptr, neighbours, _ = graph.csr()
-    while unvisited.any():
-        seed = int(np.argmax(unvisited))
-        component = np.zeros(n, dtype=bool)
-        component[seed] = True
-        frontier = [seed]
-        while frontier:
-            nxt: List[int] = []
-            for node in frontier:
-                for k in range(indptr[node], indptr[node + 1]):
-                    nbr = int(neighbours[k])
-                    if not component[nbr]:
-                        component[nbr] = True
-                        nxt.append(nbr)
-            frontier = nxt
-        unvisited &= ~component
-        if component.sum() > best.sum():
-            best = component
-    return best
+    return graph.components()[2]
 
 
 def resolve_endpoint(

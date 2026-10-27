@@ -232,9 +232,7 @@ def build_from_ifc_geometry(
 
 
 def graph_stats(graph: NavGraph) -> GraphStats:
-    from ..graphs.pathfinding import largest_component
-
-    component = largest_component(graph)
+    count, _, component = graph.components()
     return GraphStats(
         nodes=graph.node_count,
         edges=graph.edge_count,
@@ -243,7 +241,7 @@ def graph_stats(graph: NavGraph) -> GraphStats:
         door_nodes=int((graph.kinds == adj.KIND_DOOR).sum()),
         wall_segments=len(graph.walls) if graph.walls else 0,
         blocked_edges=int(graph.blocked.sum()) if graph.blocked is not None else 0,
-        components=_component_count(graph),
+        components=count,
         largest_component=int(component.sum()),
     )
 
@@ -370,31 +368,6 @@ def _blocked_cells_from_segments(segments, sizes, up_axis):
                 cell[up] = iz
                 blocked.add(tuple(cell))
     return blocked
-
-
-def _component_count(graph: NavGraph) -> int:
-    n = graph.node_count
-    if n == 0:
-        return 0
-    indptr, neighbours, _ = graph.csr()
-    seen = np.zeros(n, dtype=bool)
-    count = 0
-    for seed in range(n):
-        if seen[seed]:
-            continue
-        count += 1
-        seen[seed] = True
-        frontier = [seed]
-        while frontier:
-            nxt = []
-            for node in frontier:
-                for k in range(indptr[node], indptr[node + 1]):
-                    nbr = int(neighbours[k])
-                    if not seen[nbr]:
-                        seen[nbr] = True
-                        nxt.append(nbr)
-            frontier = nxt
-    return count
 
 
 class _NullPhase:

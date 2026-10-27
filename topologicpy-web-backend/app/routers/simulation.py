@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from typing import Dict, Generator, List, Optional
 
@@ -125,12 +126,43 @@ def fire_stream(
             }
         )
 
+        routing = stream_path and exit_node is not None
+        last_path: List[int] = []
+        last_recompute = -10**9
+
+        def reroute(step: int, weights, blocked, fallback_note: str) -> str:
+            """Re-solve the walker's route and emit it as a ``path_update``."""
+            nonlocal last_path
+            result = pathfinding.shortest_path(
+                graph, walker_start, exit_node,
+                engine=path_engine, weights=weights, blocked=blocked,
+            )
+            if not result.found and blocked is not None:
+                result = pathfinding.shortest_path(
+                    graph, walker_start, exit_node,
+                    engine=path_engine, weights=weights, blocked=blocked_walls,
+                )
+                if result.found:
+                    result.note = fallback_note
+            changed = result.node_ids != last_path
+            last_path = result.node_ids
+            return _sse(
+                {
+                    "type": "path_update",
+                    "step": step,
+                    "found": result.found,
+                    "path": result.points,
+                    "cost": None if not np.isfinite(result.cost) else round(result.cost, 3),
+                    "changed": bool(changed),
+                    "engine": result.engine,
+                    "note": result.note,
+                }
+            )
+
         if model == "temperature":
             options = fire_model.FireOptions(
                 model="temperature", max_steps=max_steps, blocked=blocked_walls
             )
-            last_path: List[int] = []
-            last_recompute = -10**9
             for step, temps in enumerate(fire_model.temperature_steps(graph, seed, options)):
                 yield _sse(
                     {
@@ -140,40 +172,15 @@ def fire_stream(
                     }
                 )
 
-                if (
-                    stream_path
-                    and exit_node is not None
-                    and step - last_recompute >= path_recompute_interval
-                ):
+                if routing and step - last_recompute >= path_recompute_interval:
                     last_recompute = step
-                    weights = pathfinding.hazard_weights(graph, temps, path_alpha)
-                    blocked = pathfinding.blocked_mask(
-                        graph, use_walls, temps, path_lethality_threshold
-                    )
-                    result = pathfinding.shortest_path(
-                        graph, walker_start, exit_node,
-                        engine=path_engine, weights=weights, blocked=blocked,
-                    )
-                    if not result.found and blocked is not None:
-                        result = pathfinding.shortest_path(
-                            graph, walker_start, exit_node,
-                            engine=path_engine, weights=weights, blocked=blocked_walls,
-                        )
-                        if result.found:
-                            result.note = "Ignoring the lethality threshold; no safe route remained."
-                    changed = result.node_ids != last_path
-                    last_path = result.node_ids
-                    yield _sse(
-                        {
-                            "type": "path_update",
-                            "step": step,
-                            "found": result.found,
-                            "path": result.points,
-                            "cost": None if not np.isfinite(result.cost) else round(result.cost, 3),
-                            "changed": bool(changed),
-                            "engine": result.engine,
-                            "note": result.note,
-                        }
+                    yield reroute(
+                        step,
+                        pathfinding.hazard_weights(graph, temps, path_alpha),
+                        pathfinding.blocked_mask(
+                            graph, use_walls, temps, path_lethality_threshold
+                        ),
+                        "Ignoring the lethality threshold; no safe route remained.",
                     )
 
                 if delay:
@@ -184,8 +191,24 @@ def fire_stream(
                 if model == "flood"
                 else fire_model.radial_timeline(graph, seed, max_steps)
             )
+            # The step models carry no temperature, so a burning node is simply
+            # impassable. Rerouting used to be temperature-only, which left the
+            # one model whose front walls actually shape without it.
+            burning = np.zeros(graph.node_count, dtype=bool)
             for step, nodes in enumerate(timeline):
                 yield _sse({"type": "step", "step": step, "nodes": nodes})
+                if nodes:
+                    burning[nodes] = True
+
+                if routing and step - last_recompute >= path_recompute_interval:
+                    last_recompute = step
+                    on_fire = burning[graph.edges[:, 0]] | burning[graph.edges[:, 1]]
+                    blocked = on_fire if blocked_walls is None else (on_fire | blocked_walls)
+                    yield reroute(
+                        step, None, blocked,
+                        "The fire has cut every route; this one passes through it.",
+                    )
+
                 if delay:
                     time.sleep(delay)
 
@@ -207,13 +230,30 @@ def rl_train(req: RLRequest) -> RLResponse:
     if start is None or exit_node is None:
         raise HTTPException(status_code=400, detail="Invalid start or exit point.")
 
-    ignite = None
-    if req.use_fire:
-        timeline = fire_model.flood_timeline(
-            graph, start, req.max_steps, pathfinding.blocked_mask(graph, True)
-        )
-        ignite = fire_model.ignition_times(timeline)
+    blocked = pathfinding.blocked_mask(graph, req.use_walls)
+    notes: List[str] = []
 
+    # The fire used to be seeded at ``start``: the evacuee began inside it, and
+    # a flood front moving one hop per step ended any episode that took a
+    # single exploratory move. It now starts where the user put it.
+    ignite = None
+    fire_start = None
+    if req.use_fire:
+        fire_start = pathfinding.resolve_endpoint(
+            graph, req.fire_point, req.fire_id, component
+        )
+        if fire_start is None:
+            notes.append("No fire origin was given, so the policy was trained without fire.")
+        else:
+            fire_steps = int(math.ceil(req.max_steps * req.fire_speed)) + 1
+            timeline = fire_model.flood_timeline(graph, fire_start, fire_steps, blocked)
+            # Ignition step -> the agent move at which that node is alight.
+            ignite = {
+                node: step / req.fire_speed
+                for node, step in fire_model.ignition_times(timeline).items()
+            }
+
+    t0 = time.perf_counter()
     result = q_learning_path(
         graph,
         start,
@@ -221,8 +261,17 @@ def rl_train(req: RLRequest) -> RLResponse:
         ignite_time=ignite,
         episodes=req.episodes,
         max_steps=req.max_steps,
+        epsilon=req.epsilon,
+        alpha=req.alpha,
+        gamma=req.gamma,
         seed=req.seed,
+        blocked=blocked,
+        shaping=req.shaping,
     )
+    train_ms = (time.perf_counter() - t0) * 1000.0
+    if result.note:
+        notes.append(result.note)
+
     return RLResponse(
         graph_id=req.graph_id,
         mode=req.mode,
@@ -230,6 +279,20 @@ def rl_train(req: RLRequest) -> RLResponse:
         points=[graph.points[i].tolist() for i in result.path],
         reached_exit=result.reached_exit,
         episodes=result.episodes,
+        burned=result.burned,
+        reward=result.reward,
+        length=round(result.length, 4),
+        optimal_length=(
+            round(result.optimal_length, 4)
+            if result.optimal_length is not None and np.isfinite(result.optimal_length)
+            else None
+        ),
+        success_rate=round(result.success_rate, 4),
+        curve=result.curve,
+        escape_steps=result.escape_steps,
+        fire_start_id=fire_start,
+        train_ms=round(train_ms, 1),
+        note=" ".join(notes) or None,
     )
 
 

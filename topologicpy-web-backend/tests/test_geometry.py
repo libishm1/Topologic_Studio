@@ -278,6 +278,48 @@ class TestObstacles:
         assert edge_block_mask(pts, edges, walls).tolist() == [True]
         assert edge_block_mask(pts, edges, walls, exempt=np.array([0])).tolist() == [False]
 
+    @pytest.mark.parametrize("up_axis", ["z", "y"])
+    def test_vectorised_mask_matches_per_edge_test(self, up_axis):
+        """The batched mask must equal ``WallField.blocks`` edge by edge,
+        across storeys, wall heights, door exemptions and an up axis that is
+        not z."""
+        rng = np.random.default_rng(11)
+        up = {"z": 2, "y": 1}[up_axis]
+        h = [i for i in range(3) if i != up]
+        pts = np.zeros((900, 3), dtype=np.float32)
+        pts[:, h] = rng.random((900, 2)) * 20.0
+        pts[:, up] = rng.choice([0.0, 3.0, 6.0], 900)
+        a = rng.integers(0, 900, 4000)
+        b = np.clip(a + rng.integers(1, 30, 4000), 0, 899)
+        edges = np.column_stack([a, b]).astype(np.int32)
+        edges = edges[edges[:, 0] != edges[:, 1]]
+        segments = []
+        for _ in range(60):
+            x0, y0 = rng.random(2) * 20.0
+            dx, dy = (rng.random(2) - 0.5) * 8.0
+            base = float(rng.choice([0.0, 3.0]))
+            segments.append(
+                {
+                    "segment": ((x0, y0), (x0 + dx, y0 + dy)),
+                    "thickness": 0.1,
+                    "up_min": base - 0.1,
+                    "up_max": base + 2.8,
+                }
+            )
+        walls = WallField(segments, up_axis=up_axis)
+        exempt = rng.choice(900, 40, replace=False)
+        expected = np.array(
+            [
+                False
+                if (e0 in set(exempt.tolist()) or e1 in set(exempt.tolist()))
+                else walls.blocks(pts[e0], pts[e1])
+                for e0, e1 in edges.tolist()
+            ]
+        )
+        got = edge_block_mask(pts, edges, walls, exempt=exempt)
+        assert expected.any() and (~expected).any()
+        assert got.tolist() == expected.tolist()
+
 
 class TestFaceOrientation:
     """A slab's underside and a ceiling are horizontal but not walkable."""

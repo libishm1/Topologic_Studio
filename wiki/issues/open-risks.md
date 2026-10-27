@@ -100,3 +100,17 @@ winding is trustworthy.
 - Isolated walkable surfaces are kept, not pruned, because unreachable floor
   area is meaningful egress information. On the Duplex this leaves 94.2% of
   nodes in the main network.
+
+## Simulation time model (2026-10-27)
+
+Fire and evacuee both advance one graph hop per step, while edges range from
+0.5 to 2.25 m and RL optimises metres. Tight fire races are therefore judged
+by hop count, not distance. Default fire speed (1.0, Classic) left no escape
+from any of three fire origins on a 30 × 25 m floor. The evacuee also stands
+still during live rerouting. Research decisions, not bugs; see section 5 of
+[review-2026-10-27.md](../roadmap/review-2026-10-27.md).
+
+## TopologicPy 0.9.87 removes `Graph`
+
+`legacy/contract.py` imports `topologicpy.Graph`. Pinned at 0.9.86 until it is
+ported to `TGraph`; a bump without the port silently drops `/upload-topology`.

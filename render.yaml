@@ -1,11 +1,26 @@
 # Render blueprint for the Topologic Studio Next backend.
 # Deployed separately from the Classic service so the two lines never share a
 # process, an environment or a rollback.
+#
+# Speed, in order of how much each one matters. Measured 2026-10-27 from the
+# lab network against the live Classic service (free plan, default region):
+#   1. plan - first request after idling: 33.1 s, because the free plan sleeps
+#      after 15 idle minutes. A route query computes in ~7 ms; the wake is
+#      four orders of magnitude longer. `starter` never sleeps.
+#      The free plan's 750 instance-hours are per workspace: keeping both
+#      Classic and Next awake with an uptime pinger needs ~1,490 h a month and
+#      runs out mid-month.
+#   2. region - warm /health took 0.31 s against Render's default region
+#      (Oregon). TCP round trip to Oregon measured 225-290 ms, to Frankfurt
+#      ~90 ms, and that difference lands on every request. Region is fixed
+#      when the service is created and cannot be changed afterwards.
 services:
   - type: web
     name: topologicstudio-next-backend
     runtime: docker
     rootDir: topologicpy-web-backend
+    region: frankfurt
+    plan: free
     autoDeploy: false
     healthCheckPath: /health
     envVars:

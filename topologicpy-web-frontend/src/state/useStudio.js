@@ -44,6 +44,7 @@ export const DEFAULT_SETTINGS = {
   rlEpisodes: 400,
   rlMaxSteps: 200,
   rlUseFire: true,
+  rlFireSpeed: 1,
 
   showGraph: true,
   modelAppearance: "solid",
@@ -93,7 +94,7 @@ export function useStudio() {
 
   const [fire, setFire] = useState({ running: false, step: 0, model: null });
   const [dynamicPath, setDynamicPath] = useState(null);
-  const [rl, setRl] = useState({ busy: false, path: null, reachedExit: false });
+  const [rl, setRl] = useState({ busy: false, path: null, reachedExit: false, result: null });
 
   const [toasts, setToasts] = useState([]);
   const [cacheInfo, setCacheInfo] = useState({ count: 0, bytes: 0 });
@@ -182,9 +183,9 @@ export function useStudio() {
 
   // ------------------------------------------------------------ server ping
 
-  const refreshCapabilities = useCallback(async () => {
+  const refreshCapabilities = useCallback(async (timeout) => {
     try {
-      const info = await api.capabilities();
+      const info = await api.capabilities(undefined, timeout);
       setCapabilities(info);
       setServerStatus("online");
       return info;
@@ -195,15 +196,25 @@ export function useStudio() {
     }
   }, []);
 
+  // The first contact gets a long timeout. A free-tier Render service asleep
+  // after 15 idle minutes took 33 s to answer (measured 2026-10-27); with the
+  // old 8 s timeout the UI declared it offline while it was still waking, and
+  // the user saw a red badge for a server that was fine. Render holds the
+  // request until the instance is up, so one patient request is enough.
   useEffect(() => {
     let alive = true;
+    const waking = setTimeout(() => {
+      if (alive) setServerStatus((s) => (s === "checking" ? "waking" : s));
+    }, 2500);
     (async () => {
-      await refreshCapabilities();
+      await refreshCapabilities(90000);
+      clearTimeout(waking);
       const info = await cacheSize();
       if (alive) setCacheInfo(info);
     })();
     return () => {
       alive = false;
+      clearTimeout(waking);
     };
   }, [refreshCapabilities]);
 
@@ -233,7 +244,7 @@ export function useStudio() {
     setPath(null);
     setComparison(null);
     setDynamicPath(null);
-    setRl({ busy: false, path: null, reachedExit: false });
+    setRl({ busy: false, path: null, reachedExit: false, result: null });
     setFire({ running: false, step: 0, model: null });
     fireHandle.current?.close();
     fireHandle.current = null;

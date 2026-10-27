@@ -178,9 +178,21 @@ class RLRequest(BaseModel):
     exit_id: Optional[str] = None
     start_point: Optional[List[float]] = None
     exit_point: Optional[List[float]] = None
+    #: Where the fire starts. Classic (and Next until 2026-10) seeded it at the
+    #: evacuee's own start node; without an origin the policy trains fire-free.
+    fire_id: Optional[str] = None
+    fire_point: Optional[List[float]] = None
     episodes: int = Field(200, ge=1, le=20000)
     max_steps: int = Field(200, ge=2, le=5000)
     use_fire: bool = True
+    #: Fire hops per evacuee move. 1.0 is Classic: the front moves exactly as
+    #: fast as the agent, which on a real floor plan usually leaves no escape.
+    fire_speed: float = Field(1.0, gt=0.0, le=10.0)
+    use_walls: bool = True
+    epsilon: float = Field(0.2, ge=0.0, le=1.0)
+    alpha: float = Field(0.5, gt=0.0, le=1.0)
+    gamma: float = Field(0.99, gt=0.0, le=1.0)
+    shaping: bool = True
     seed: Optional[int] = None
 
 
@@ -191,6 +203,16 @@ class RLResponse(BaseModel):
     points: List[List[float]] = []
     reached_exit: bool = False
     episodes: int = 0
+    burned: bool = False
+    reward: float = 0.0
+    length: float = 0.0
+    optimal_length: Optional[float] = None
+    success_rate: float = 0.0
+    curve: List[float] = []
+    escape_steps: Optional[int] = None
+    fire_start_id: Optional[int] = None
+    train_ms: float = 0.0
+    note: Optional[str] = None
 
 
 class IfcEgressPathRequest(BaseModel):

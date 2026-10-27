@@ -456,10 +456,9 @@ export default function App() {
     temperatureRef.current = new Map();
     studio.setFire({ running: true, step: 0, model: settings.fireModel });
 
-    const wantsReroute =
-      settings.reroute &&
-      settings.fireModel === "temperature" &&
-      Boolean(points.start && points.exit);
+    // Every model reroutes now: temperature by hazard cost, flood and radial by
+    // treating burning nodes as impassable.
+    const wantsReroute = settings.reroute && Boolean(points.start && points.exit);
 
     const handle = openFireStream(
       {
@@ -533,26 +532,38 @@ export default function App() {
 
   const trainRl = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
-    studio.setRl({ busy: true, path: null, reachedExit: false });
+    studio.setRl({ busy: true, path: null, reachedExit: false, result: null });
     try {
       const result = await api.trainRl({
         graph_id: graph.graphId,
         start_point: points.start,
         exit_point: points.exit,
+        // The fire used to be seeded at the start point, so the evacuee began
+        // inside it. It starts at the picked fire origin now.
+        ...(points.fire ? { fire_point: points.fire } : {}),
         episodes: settings.rlEpisodes,
         max_steps: settings.rlMaxSteps,
         use_fire: settings.rlUseFire,
+        fire_speed: settings.rlFireSpeed,
+        use_walls: settings.useWalls,
       });
-      studio.setRl({ busy: false, path: result.path, reachedExit: result.reached_exit });
+      studio.setRl({
+        busy: false,
+        path: result.path,
+        reachedExit: result.reached_exit,
+        result,
+      });
       viewerRef.current?.setPath(result.points, { color: 0x14b8a6, dynamic: true });
-      if (!result.reached_exit) {
-        toast("The policy did not reach the exit. Try more episodes.", {
+      if (!result.reached_exit || result.note) {
+        // The server says *why*: no escape exists, the step limit is too low,
+        // or the policy needs more episodes. Those call for different actions.
+        toast(result.note || "The policy did not reach the exit.", {
           title: "RL training",
-          variant: "warning",
+          variant: result.reached_exit ? "info" : "warning",
         });
       }
     } catch (error) {
-      studio.setRl({ busy: false, path: null, reachedExit: false });
+      studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
       reportError(error, "RL training failed");
     }
   }, [graph, points, reportError, settings, studio, toast]);
@@ -831,7 +842,12 @@ export default function App() {
         <div className="header__spacer" />
 
         <div className="header__group header__group--wide">
-          {studio.serverStatus !== "online" && (
+          {studio.serverStatus === "waking" && (
+            <Badge variant="warning" pulse>
+              Waking backend…
+            </Badge>
+          )}
+          {studio.serverStatus === "offline" && (
             <Badge variant="danger">Backend offline</Badge>
           )}
           {modelInfo?.cached && <Badge variant="success">cached</Badge>}
@@ -1000,10 +1016,16 @@ export default function App() {
                     background:
                       studio.serverStatus === "online"
                         ? "var(--success)"
-                        : "var(--danger)",
+                        : studio.serverStatus === "offline"
+                          ? "var(--danger)"
+                          : "var(--warning)",
                   }}
                 />
-                {studio.serverStatus === "online" ? "backend up" : "backend down"}
+                {studio.serverStatus === "online"
+                  ? "backend up"
+                  : studio.serverStatus === "offline"
+                    ? "backend down"
+                    : "backend waking"}
               </span>
               {lastSample && (
                 <>

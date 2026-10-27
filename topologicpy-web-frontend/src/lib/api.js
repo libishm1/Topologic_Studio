@@ -108,7 +108,8 @@ export function decodeGraph(payload) {
 
 export const api = {
   health: (signal) => request("/health", { signal, timeout: 8000 }),
-  capabilities: (signal) => request("/api/capabilities", { signal, timeout: 8000 }),
+  capabilities: (signal, timeout = 8000) =>
+    request("/api/capabilities", { signal, timeout }),
 
   buildGraph: (payload, signal) =>
     request("/api/ifc/graph", { method: "POST", body: payload, signal }).then(decodeGraph),

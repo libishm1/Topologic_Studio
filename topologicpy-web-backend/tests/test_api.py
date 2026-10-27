@@ -290,6 +290,41 @@ class TestSimulation:
         ).json()
         assert body["path"]
         assert len(body["points"]) == len(body["path"])
+        # use_fire defaults on, but with no origin the fire is not invented.
+        assert body["fire_start_id"] is None
+        assert "without fire" in body["note"]
+
+    def test_rl_fire_starts_where_the_user_put_it(self, client, graph_id):
+        body = client.post(
+            "/api/rl/train",
+            json={
+                "graph_id": graph_id,
+                "start_point": [0, 0, 0],
+                "exit_point": [5.25, 0, 0],
+                "fire_point": [2.25, 5.25, 0],
+                "episodes": 300,
+                "max_steps": 60,
+                "seed": 3,
+            },
+        ).json()
+        start = body["path"][0]
+        assert body["fire_start_id"] is not None and body["fire_start_id"] != start
+        assert body["reached_exit"] and not body["burned"]
+        assert body["length"] == pytest.approx(body["optimal_length"], rel=1e-3)
+        assert body["curve"] and body["train_ms"] >= 0
+
+    def test_flood_stream_reroutes_around_burning_nodes(self, client, graph_id):
+        url = (
+            f"/api/fire/stream?graph_id={graph_id}&model=flood&max_steps=12"
+            "&delay_ms=0&start_x=2.25&start_y=2.25&start_z=0"
+            "&end_x=5.25&end_y=5.25&end_z=0"
+            "&path_start_x=0&path_start_y=5.25&path_start_z=0"
+            "&stream_path=true&path_recompute_interval=2"
+        )
+        with client.stream("GET", url) as response:
+            text = "".join(response.iter_text())
+        assert '"type": "step"' in text
+        assert '"type": "path_update"' in text
 
     def test_missing_graph_is_a_400(self, client):
         res = client.post(

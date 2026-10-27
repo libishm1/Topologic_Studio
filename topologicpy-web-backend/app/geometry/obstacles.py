@@ -184,18 +184,69 @@ def edge_block_mask(
 
     Computed once at graph-build time. Edges touching an exempt node (doors)
     are never blocked, since a door is precisely a hole in a wall.
+
+    Vectorised. This was a Python loop calling :meth:`WallField.blocks` per
+    edge - 38k calls and most of a graph build on a 6k-node model. Candidate
+    pairs now come from one KD-tree query for all walls at once: an edge that
+    crosses a wall has its midpoint within half its own length plus half the
+    wall's length of the wall's midpoint, so the query cannot miss one. The
+    exact test is the same strict crossing test, on the same float64 values,
+    so the mask is identical to the per-edge version.
     """
+    from scipy.spatial import cKDTree
+
     count = len(edges)
     mask = np.zeros(count, dtype=bool)
     if not walls or not len(walls) or count == 0:
         return mask
-    exempt_set = set(exempt.tolist()) if exempt is not None and len(exempt) else set()
-    for i in range(count):
-        a, b = int(edges[i, 0]), int(edges[i, 1])
-        if a in exempt_set or b in exempt_set:
-            continue
-        if walls.blocks(points[a], points[b]):
-            mask[i] = True
+
+    up = axis_index(walls.up_axis)
+    h0, h1 = horizontal_axes(walls.up_axis)
+    p = points[edges[:, 0]].astype(np.float64)
+    q = points[edges[:, 1]].astype(np.float64)
+    a2, b2 = p[:, [h0, h1]], q[:, [h0, h1]]
+    edge_lo = np.minimum(p[:, up], q[:, up])
+    edge_hi = np.maximum(p[:, up], q[:, up])
+
+    live = np.ones(count, dtype=bool)
+    if exempt is not None and len(exempt):
+        live &= ~(np.isin(edges[:, 0], exempt) | np.isin(edges[:, 1], exempt))
+
+    seg = np.asarray([w["segment"] for w in walls.segments], dtype=np.float64).reshape(-1, 2, 2)
+    # A bare segment means "full height", as WallSegment's defaults do.
+    w_min = np.asarray([w.get("up_min", -np.inf) for w in walls.segments], dtype=np.float64)
+    w_max = np.asarray([w.get("up_max", np.inf) for w in walls.segments], dtype=np.float64)
+
+    half_edge = 0.5 * float(np.linalg.norm(b2 - a2, axis=1).max())
+    centres = seg.mean(axis=1)
+    radii = 0.5 * np.linalg.norm(seg[:, 1] - seg[:, 0], axis=1) + half_edge + 1e-9
+    hits = cKDTree(0.5 * (a2 + b2)).query_ball_point(centres, radii)
+
+    lengths = np.fromiter((len(h) for h in hits), dtype=np.int64, count=len(hits))
+    if not lengths.sum():
+        return mask
+    wall_idx = np.repeat(np.arange(len(hits)), lengths)
+    edge_idx = np.fromiter(
+        (e for h in hits for e in h), dtype=np.int64, count=int(lengths.sum())
+    )
+
+    keep = live[edge_idx] & (edge_hi[edge_idx] >= w_min[wall_idx]) & (
+        edge_lo[edge_idx] <= w_max[wall_idx]
+    )
+    wall_idx, edge_idx = wall_idx[keep], edge_idx[keep]
+
+    p1, p2 = a2[edge_idx], b2[edge_idx]
+    p3, p4 = seg[wall_idx, 0], seg[wall_idx, 1]
+
+    def cross(o, s, t):
+        return (s[:, 0] - o[:, 0]) * (t[:, 1] - o[:, 1]) - (s[:, 1] - o[:, 1]) * (t[:, 0] - o[:, 0])
+
+    d1, d2 = cross(p3, p4, p1), cross(p3, p4, p2)
+    d3, d4 = cross(p1, p2, p3), cross(p1, p2, p4)
+    crossing = (((d1 > 0) & (d2 < 0)) | ((d1 < 0) & (d2 > 0))) & (
+        ((d3 > 0) & (d4 < 0)) | ((d3 < 0) & (d4 > 0))
+    )
+    mask[edge_idx[crossing]] = True
     return mask
 
 

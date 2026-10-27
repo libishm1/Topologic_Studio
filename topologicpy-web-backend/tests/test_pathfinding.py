@@ -95,6 +95,22 @@ class TestMasksAndComponents:
         component = pathfinding.largest_component(graph)
         assert component.tolist() == [True, True, True, False]
 
+    def test_components_are_counted_and_cached(self):
+        graph = NavGraph(
+            points=np.array(
+                [[0, 0, 0], [1, 0, 0], [5, 0, 0], [6, 0, 0], [9, 9, 9]], dtype=np.float32
+            ),
+            edges=np.array([[0, 1], [2, 3]], dtype=np.int32),
+            kinds=np.zeros(5, dtype=np.int8),
+        )
+        count, labels, largest = graph.components()
+        assert count == 3
+        assert labels[0] == labels[1] != labels[2] == labels[3] != labels[4]
+        # Equal sizes: the component holding the lowest node index wins, as the
+        # per-request BFS this replaced did.
+        assert largest.tolist() == [True, True, False, False, False]
+        assert graph.components() is graph.components()
+
     def test_endpoint_snapping_skips_orphan_nodes(self):
         """A pick near a floating sample must not strand the search."""
         graph = NavGraph(
@@ -167,6 +183,49 @@ class TestFire:
         # Only the ignition node is above ambient on step 0.
         assert list(payload) == ["0"]
 
+    def test_temperature_matches_classic_with_isolated_nodes(self):
+        """Regression: ``reduceat`` summed one neighbour for any node followed by
+        an isolated one. Compare against Classic's per-node loop, verbatim
+        apart from the clip Next has always applied."""
+        rng = np.random.default_rng(5)
+        n = 40
+        points = rng.random((n, 3)).astype(np.float32)
+        isolated = {3, 4, 11, 25, 39}
+        pairs = set()
+        while len(pairs) < 70:
+            a, b = (int(v) for v in rng.integers(0, n, 2))
+            if a != b and a not in isolated and b not in isolated:
+                pairs.add((min(a, b), max(a, b)))
+        graph = NavGraph(
+            points=points,
+            edges=np.array(sorted(pairs), dtype=np.int32),
+            kinds=np.zeros(n, dtype=np.int8),
+        )
+        adjacency = {i: [] for i in range(n)}
+        for a, b in pairs:
+            adjacency[a].append(b)
+            adjacency[b].append(a)
+
+        start = 0
+        temps = {i: 20.0 for i in range(n)}
+        temps[start] = 120.0
+        expected = []
+        for _ in range(12):
+            expected.append([temps[i] for i in range(n)])
+            new = dict(temps)
+            for node in range(n):
+                nbrs = adjacency[node]
+                if node == start or not nbrs:
+                    continue
+                diff = sum(temps[j] for j in nbrs) / len(nbrs) - temps[node]
+                if diff > 0:
+                    new[node] = min(120.0, temps[node] + diff * 1.2 / len(nbrs))
+            temps = new
+
+        options = fire_model.FireOptions(model="temperature", max_steps=12)
+        got = list(fire_model.temperature_steps(graph, start, options))
+        np.testing.assert_allclose(np.array(got), np.array(expected), atol=1e-9)
+
     def test_ignition_times_are_first_touch(self):
         assert fire_model.ignition_times([[0], [1, 2], [2, 3]]) == {0: 0, 1: 1, 2: 1, 3: 2}
 
@@ -178,9 +237,91 @@ class TestRL:
             grid_graph, index[(0, 0)], index[(2, 2)], episodes=600, max_steps=60, seed=7
         )
         assert result.path[0] == index[(0, 0)]
-        # Whether it converges is stochastic; the contract is that it never
-        # emits a repeated node, which Classic's rollout did.
+        # Classic's rollout could emit a repeated node.
         assert len(set(result.path)) == len(result.path)
+        assert result.reached_exit
+
+    def test_learns_a_long_route_in_few_episodes(self, grid_graph):
+        """Corner to corner is 22 hops. With gamma 0.9 and no shaping the exit
+        reward is ~0.1 by then and the old agent rarely found it."""
+        index = grid_graph.meta["index"]
+        result = q_learning_path(
+            grid_graph, index[(0, 0)], index[(11, 11)], episodes=150, max_steps=120, seed=1
+        )
+        assert result.reached_exit and not result.burned
+        assert result.optimal_length == pytest.approx(22.0)
+        assert result.length == pytest.approx(22.0)
+        # The return is the environment's, not a sum of Q-values: +10 at the
+        # exit, minus 0.1 per unit edge for the 21 steps before it.
+        assert result.reward == pytest.approx(10.0 - 21 * 0.1)
+        assert result.success_rate > 0.5
+        assert 0 < len(result.curve) <= 50
+
+    def test_never_crosses_a_blocked_edge(self, grid_graph):
+        """A wall down x = 5.5 with one gap at y = 11. Classic's agent ignored
+        blocking entirely, so its path went straight through."""
+        index = grid_graph.meta["index"]
+        blocked = np.zeros(grid_graph.edge_count, dtype=bool)
+        for k, (a, b) in enumerate(grid_graph.edges.tolist()):
+            pa, pb = grid_graph.points[a], grid_graph.points[b]
+            crosses = {pa[0], pb[0]} == {5.0, 6.0} and pa[1] == pb[1]
+            if crosses and pa[1] != 11.0:
+                blocked[k] = True
+        result = q_learning_path(
+            grid_graph, index[(0, 0)], index[(11, 0)],
+            episodes=300, max_steps=120, seed=3, blocked=blocked,
+        )
+        assert result.reached_exit
+        lookup = {tuple(sorted(e)): k for k, e in enumerate(grid_graph.edges.tolist())}
+        used = [lookup[tuple(sorted(p))] for p in zip(result.path, result.path[1:])]
+        assert not blocked[used].any()
+        assert result.optimal_length == pytest.approx(11 + 22)
+
+    def test_routes_around_a_fire_that_does_not_start_on_the_agent(self, grid_graph):
+        index = grid_graph.meta["index"]
+        # Fire seeded mid-grid, spreading one hop per step.
+        timeline = fire_model.flood_timeline(grid_graph, index[(6, 6)], 120)
+        ignite = fire_model.ignition_times(timeline)
+        result = q_learning_path(
+            grid_graph, index[(0, 0)], index[(11, 0)],
+            ignite_time=ignite, episodes=300, max_steps=120, seed=4,
+        )
+        assert result.reached_exit and not result.burned
+
+    def test_reports_a_burned_rollout(self, grid_graph):
+        index = grid_graph.meta["index"]
+        # Every node except the start is alight from step 0.
+        ignite = {i: 0 for i in range(grid_graph.node_count) if i != index[(0, 0)]}
+        result = q_learning_path(
+            grid_graph, index[(0, 0)], index[(3, 3)],
+            ignite_time=ignite, episodes=20, max_steps=30, seed=2,
+        )
+        assert result.burned and not result.reached_exit
+        assert result.reward == pytest.approx(-10.0)
+        # Nothing to learn: the diagnostic says so instead of "train longer".
+        assert result.escape_steps is None and "No route escapes" in result.note
+
+    def test_escape_feasibility_is_exact_on_a_race(self, grid_graph):
+        """Fire at (6, 6), exit (11, 0): the straight run along y = 0 stays one
+        step ahead of the front, so the fewest-move escape is 11 moves."""
+        from app.graphs.rl import earliest_escape
+
+        index = grid_graph.meta["index"]
+        ignite = fire_model.ignition_times(
+            fire_model.flood_timeline(grid_graph, index[(6, 6)], 120)
+        )
+        start, exit_node = index[(0, 0)], index[(11, 0)]
+        assert earliest_escape(grid_graph, start, exit_node, ignite, 120) == 11
+        # Exit at (11, 6) is five hops from the fire and eleven-plus from the start.
+        assert earliest_escape(grid_graph, start, index[(11, 6)], ignite, 120) is None
+
+    def test_unreachable_exit_is_reported(self, grid_graph):
+        index = grid_graph.meta["index"]
+        blocked = np.ones(grid_graph.edge_count, dtype=bool)
+        result = q_learning_path(
+            grid_graph, index[(0, 0)], index[(3, 3)], episodes=5, blocked=blocked
+        )
+        assert not result.reached_exit and result.note
 
     def test_is_reproducible_under_a_seed(self, grid_graph):
         index = grid_graph.meta["index"]

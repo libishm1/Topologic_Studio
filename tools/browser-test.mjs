@@ -369,6 +369,63 @@ if (gotFire && (await startFire.isEnabled())) {
   record(false, "fire start button was enabled", "needs a fire origin");
 }
 
+// ---- 5b. reinforcement learning ---------------------------------------------
+//
+// Added 2026-10-27. RL used to seed the fire at the evacuee's own start point
+// and never reached the exit on a real model; nothing exercised it here.
+
+console.log("\n[5b] Reinforcement learning");
+await page.getByRole("button", { name: /Reinforcement learning/ }).click();
+await page.waitForTimeout(300);
+const trainBtn = page.getByRole("button", { name: /^Train policy$/ });
+if (await trainBtn.isEnabled()) {
+  const sent = page.waitForRequest((req) => req.url().includes("/api/rl/train"), {
+    timeout: 30000,
+  });
+  await trainBtn.click();
+  const body = await sent.then((req) => JSON.parse(req.postData() || "{}")).catch(() => ({}));
+  record(
+    Array.isArray(body.fire_point) && body.fire_point.length === 3,
+    "RL request carries the picked fire origin",
+    JSON.stringify(body.fire_point),
+  );
+  // innerText applies the stat labels' text-transform: uppercase, so match
+  // case-insensitively.
+  const trained = await page
+    .waitForFunction(() => /late-training success/i.test(document.body.innerText), null, {
+      timeout: 120000,
+    })
+    .then(() => true)
+    .catch(() => false);
+  record(trained, "RL training returned and rendered its stats");
+  if (trained) {
+    await page
+      .locator(".stat", { hasText: /late-training success/i })
+      .scrollIntoViewIfNeeded()
+      .catch(() => {});
+    const r = await page.evaluate(() => {
+      const out = {};
+      document.querySelectorAll(".stat").forEach((el) => {
+        const k = el.querySelector(".stat__label")?.textContent?.trim();
+        const v = el.querySelector(".stat__value")?.textContent?.trim();
+        if (k) out[k] = v;
+      });
+      return out;
+    });
+    console.log(`    rl: ${JSON.stringify(r)}`);
+    // Whether an escape exists depends on where the fire was clicked, so the
+    // contract is that the UI states it, not that the agent always escapes.
+    record(
+      r["Escape possible"] !== undefined,
+      "RL reports whether an escape exists",
+      r["Escape possible"],
+    );
+  }
+  await shot(page, "rl-trained");
+} else {
+  record(false, "Train policy was enabled", "needs start and exit");
+}
+
 // ---- 6. theme, panels, topology mode ----------------------------------------
 
 console.log("\n[6] UI surfaces");

@@ -62,14 +62,16 @@ stores graphs in an LRU + TTL store.
 Classic used a hand-rolled Dijkstra for the normal route and TopologicPy for
 hazard rerouting — two stacks, no parity check. Next has one interface:
 
-| Engine | Use | Measured (2,651-node graph) |
+| Engine | Use | Measured (3,111-node / 19,121-edge floor, 2026-10-27) |
 | --- | --- | --- |
-| `fast` | default; A* over CSR with a Euclidean heuristic | **14 ms** per query |
-| `topologicpy` | `Graph.ShortestPath`, for TopologicPy semantics | 1.44 s warm, 56.7 s cold |
+| `fast` | default; A* over CSR with a Euclidean heuristic | **3.1 ms** search |
+| `topologicpy` | `TGraph.ShortestPath` (topologicpy 0.9.86), for TopologicPy semantics | 27-34 ms |
 
-Both return **identical** routes and costs (verified in tests and by
-`POST /api/ifc/path/compare`). The fast engine is the default because
-TopologicPy is ~100x slower per query at this scale.
+Both return **identical** costs (verified in tests and by
+`POST /api/ifc/path/compare`; on a grid, equal-cost ties may pick different
+cells). The August figures - 1.44 s warm, 56.7 s cold, "~100x slower" - were
+for the legacy `Graph` class and no longer apply; see
+[the 2026-10-27 review](wiki/roadmap/review-2026-10-27.md).
 
 Hazard reweighting no longer rebuilds the TopologicPy graph. 0.9 added
 `edgeCostFunc` / `edgeFilter`, so the graph is built once, cached, and
@@ -122,9 +124,9 @@ node tools/smoke-pipeline.mjs /tmp/duplex.json
 | `@thatopen/fragments` | 3.2.13 | 3.4.7 |
 | `web-ifc` | 0.0.73 | 0.0.77 |
 | `three` | 0.181.2 | 0.185.1 |
-| `topologicpy` | 0.8.93 | 0.9.64 |
+| `topologicpy` | 0.8.93 | 0.9.86 (not 0.9.87, which removes `Graph`) |
 | `topologic-core` | (bundled) | **8.0.4, now separate** |
-| `ifcopenshell` | Dockerfile only | 0.8.5, in `requirements.txt` |
+| `ifcopenshell` | Dockerfile only | 0.8.5, in `requirements.txt`, capped `<0.9` |
 
 > **Packaging trap.** TopologicPy 0.9 split its native backend into a separate
 > `topologic-core` distribution. Installing `topologicpy` alone imports fine and

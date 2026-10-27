@@ -17,7 +17,12 @@ built-in A* (for reference)                  -        5.8 ms
 
 So the August conclusion - "TopologicPy is ~100x too slow to route with" - was
 a fact about the legacy class, not about TopologicPy. On TGraph it is within
-about 1.7x of the hand-written A*.
+about 1.7x of the hand-written A* *on that lattice*.
+
+That lattice has degree 4. A navigation graph runs at degree ~12, and there
+the gap widens: on a 3,111-node / 19,121-edge floor (0.9.86, 2026-10-27)
+``TGraph.ShortestPath`` took 27 ms bare and 34 ms with both callbacks, against
+3.1 ms for A*, identical cost. Still interactive; no longer "about the same".
 
 ``ShortestPath`` returns node indices directly, and those indices are the rows
 of :class:`~app.store.NavGraph`, so the coordinate-rounding reverse map the old

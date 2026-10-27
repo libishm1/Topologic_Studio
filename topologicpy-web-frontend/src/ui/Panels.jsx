@@ -335,8 +335,9 @@ export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompar
 
         {settings.engine === "topologicpy" && (
           <p className="field__hint">
-            Uses TopologicPy&apos;s <code>TGraph.ShortestPath</code>. Around 1.6x the
-            cost of the built-in engine, so live rerouting during a fire keeps up.
+            Uses TopologicPy&apos;s <code>TGraph.ShortestPath</code>. About 30 ms on a
+            3,000-node floor against 3 ms for the built-in engine, so live rerouting during a
+            fire still keeps up.
           </p>
         )}
 
@@ -475,11 +476,10 @@ export function SimulatePanel({ studio, onStartFire, onStopFire, onTrainRl }) {
           label="Recompute the route as the fire grows"
           checked={settings.reroute}
           onChange={(reroute) => setSettings({ reroute })}
-          disabled={settings.fireModel !== "temperature"}
           hint={
-            settings.fireModel !== "temperature"
-              ? "Needs the temperature model, which is what supplies the hazard field."
-              : "The route is re-solved against current temperatures while the fire spreads."
+            settings.fireModel === "temperature"
+              ? "The route is re-solved against current temperatures while the fire spreads."
+              : "The route is re-solved with burning nodes treated as impassable."
           }
         />
 
@@ -491,8 +491,8 @@ export function SimulatePanel({ studio, onStartFire, onStopFire, onTrainRl }) {
           step={0.1}
           onChange={(hazardAlpha) => setSettings({ hazardAlpha })}
           format={(v) => v.toFixed(1)}
-          disabled={!settings.reroute}
-          hint="Edge cost is length x (1 + weight x hazard). Zero ignores the fire entirely."
+          disabled={!settings.reroute || settings.fireModel !== "temperature"}
+          hint="Temperature model only. Edge cost is length x (1 + weight x hazard); zero ignores the fire."
         />
 
         <Slider
@@ -531,8 +531,8 @@ export function SimulatePanel({ studio, onStartFire, onStopFire, onTrainRl }) {
 
       <Section title="Reinforcement learning" defaultOpen={false}>
         <p className="field__hint">
-          Tabular Q-learning over the same graph, with ignition times as a penalty. Exploratory
-          rather than a production route solver.
+          Tabular Q-learning over the same graph, with the flood fire's ignition times as a
+          penalty. Exploratory rather than a production route solver.
         </p>
         <div className="grid-2">
           <NumberField
@@ -554,6 +554,21 @@ export function SimulatePanel({ studio, onStartFire, onStopFire, onTrainRl }) {
           label="Penalise reaching burning nodes"
           checked={settings.rlUseFire}
           onChange={(rlUseFire) => setSettings({ rlUseFire })}
+          hint={
+            settings.rlUseFire && !points.fire
+              ? "Set a fire origin (F); without one the policy trains without fire."
+              : undefined
+          }
+        />
+        <NumberField
+          label="Fire speed (hops per move)"
+          value={settings.rlFireSpeed}
+          min={0.05}
+          max={10}
+          step={0.05}
+          disabled={!settings.rlUseFire}
+          onChange={(rlFireSpeed) => setSettings({ rlFireSpeed: rlFireSpeed ?? 1 })}
+          hint="1 = the front moves exactly as fast as the evacuee (Classic). On a real plan that often leaves no escape; the result says when."
         />
         <Button
           block
@@ -565,12 +580,31 @@ export function SimulatePanel({ studio, onStartFire, onStopFire, onTrainRl }) {
         </Button>
         {rl.path && (
           <div className="stats">
-            <Stat label="Steps" value={fmt(rl.path.length)} />
+            <Stat label="Steps" value={fmt(rl.path.length - 1)} />
             <Stat
               label="Reached exit"
-              value={rl.reachedExit ? "yes" : "no"}
+              value={rl.reachedExit ? "yes" : rl.result?.burned ? "burned" : "no"}
               warn={!rl.reachedExit}
             />
+            {rl.result?.optimal_length != null && (
+              <Stat
+                label="Length vs shortest"
+                value={`${rl.result.length.toFixed(1)} / ${rl.result.optimal_length.toFixed(1)} m`}
+              />
+            )}
+            <Stat
+              label="Late-training success"
+              value={`${Math.round((rl.result?.success_rate ?? 0) * 100)}%`}
+            />
+            {settings.rlUseFire && rl.result?.fire_start_id != null && (
+              <Stat
+                label="Escape possible"
+                value={
+                  rl.result.escape_steps == null ? "no" : `yes, ${rl.result.escape_steps} moves`
+                }
+                warn={rl.result.escape_steps == null}
+              />
+            )}
           </div>
         )}
       </Section>
@@ -588,8 +622,22 @@ export function AboutPanel({ studio }) {
     <>
       <Section title="Backend">
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Badge variant={serverStatus === "online" ? "success" : "danger"}>
-            {serverStatus === "online" ? "Connected" : "Unreachable"}
+          <Badge
+            variant={
+              serverStatus === "online"
+                ? "success"
+                : serverStatus === "waking" || serverStatus === "checking"
+                  ? "warning"
+                  : "danger"
+            }
+          >
+            {serverStatus === "online"
+              ? "Connected"
+              : serverStatus === "waking"
+                ? "Waking up"
+                : serverStatus === "checking"
+                  ? "Checking"
+                  : "Unreachable"}
           </Badge>
           {capabilities?.version && <span className="mono">v{capabilities.version}</span>}
         </div>
@@ -609,7 +657,13 @@ export function AboutPanel({ studio }) {
             {topo.error}
           </p>
         )}
-        {serverStatus !== "online" && (
+        {serverStatus === "waking" && (
+          <p className="field__hint">
+            A hosted backend on a free plan sleeps when idle and takes up to a minute to wake.
+            Requests made now will wait for it.
+          </p>
+        )}
+        {serverStatus === "offline" && (
           <p className="field__hint">
             Start the API with <code>uvicorn app.main:app --port 8000</code> from the backend
             folder, then reload.
