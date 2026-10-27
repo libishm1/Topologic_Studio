@@ -12,7 +12,17 @@ from app.graphs.navigation_check import NavigationGraph, align, compare, covered
 from app.graphs.topologic_engine import available as topologic_available
 from app.store import NavGraph
 
-DUPLEX = Path(__file__).resolve().parents[3] / "Ifc2x3_Duplex_Architecture.ifc"
+# Searched upward rather than at a fixed depth: inside the Docker image the
+# tests sit at /app/tests, which has only three parents, and parents[3] raised
+# IndexError at collection.
+DUPLEX = next(
+    (
+        parent / "Ifc2x3_Duplex_Architecture.ifc"
+        for parent in Path(__file__).resolve().parents
+        if (parent / "Ifc2x3_Duplex_Architecture.ifc").exists()
+    ),
+    Path("Ifc2x3_Duplex_Architecture.ifc.missing"),
+)
 needs_navigation = pytest.mark.skipif(
     not (topologic_available() and navigation_check.available()),
     reason="topologicpy.Navigation not usable",

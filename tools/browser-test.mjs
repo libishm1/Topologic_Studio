@@ -104,9 +104,25 @@ page.on("response", (res) => {
   }
 });
 
+// ---- timing -----------------------------------------------------------------
+//
+// Stage stopwatches (click to result, as a user sees it) plus the duration of
+// every backend call. The fire stream is long-lived by design and left out.
+
+const timings = [];
+const timing = (label, ms) => timings.push({ label, ms: Math.round(ms) });
+const apiCalls = [];
+page.on("requestfinished", (req) => {
+  const url = new URL(req.url());
+  if (url.port !== "8000" || url.pathname.startsWith("/api/fire/stream")) return;
+  const t = req.timing();
+  if (t.responseEnd > 0) apiCalls.push({ call: `${req.method()} ${url.pathname}`, ms: t.responseEnd });
+});
+
 // ---- 1. boot ----------------------------------------------------------------
 
 console.log("[1] Loading the app");
+const tBoot = Date.now();
 await page.goto(URL_BASE, { waitUntil: "domcontentloaded", timeout: 60000 });
 
 record(
@@ -127,6 +143,20 @@ const engineReady = await page
   .then(() => true)
   .catch(() => false);
 record(engineReady, "3D engine finished booting");
+timing("Open page to 3D engine ready", Date.now() - tBoot);
+
+await page.waitForLoadState("load").catch(() => {});
+const pageLoad = await page.evaluate(() => {
+  const nav = performance.getEntriesByType("navigation")[0];
+  const fcp = performance.getEntriesByName("first-contentful-paint")[0];
+  const bytes = performance
+    .getEntriesByType("resource")
+    .reduce((sum, r) => sum + (r.transferSize || 0), nav?.transferSize || 0);
+  return { fcp: fcp?.startTime, dcl: nav?.domContentLoadedEventEnd, load: nav?.loadEventEnd, bytes };
+});
+if (pageLoad.fcp) timing("First contentful paint", pageLoad.fcp);
+if (pageLoad.load) timing("Page load event", pageLoad.load);
+console.log(`    page transferred: ${(pageLoad.bytes / 1024 / 1024).toFixed(1)} MiB`);
 
 const webglOk = await page.evaluate(() => {
   const canvas = document.querySelector(".viewport__canvas canvas");
@@ -172,6 +202,7 @@ const modelLoaded = await page
   .then(() => true)
   .catch(() => false);
 record(modelLoaded, "IFC model loaded", `${((Date.now() - t0) / 1000).toFixed(1)}s`);
+timing("Open IFC, first time (convert + cache)", Date.now() - t0);
 
 if (modelLoaded) {
   const stats = await page.evaluate(() => {
@@ -229,6 +260,7 @@ if (await buildBtn.count()) {
     .then(() => true)
     .catch(() => false);
   record(built, "graph built", `${((Date.now() - t1) / 1000).toFixed(1)}s`);
+  timing("Build egress graph (sample in browser + server)", Date.now() - t1);
 
   if (built) {
     // buildGraph() advances the panel to the Route tab; the graph stats live
@@ -311,6 +343,7 @@ await shot(page, "points-picked");
 
 if (gotStart && gotExit) {
   const routeBtn = page.getByRole("button", { name: /Find egress route/ });
+  const tRoute = Date.now();
   await routeBtn.click();
   const routed = await page
     .waitForFunction(() => document.body.innerText.toLowerCase().includes("waypoints"), null, {
@@ -319,6 +352,7 @@ if (gotStart && gotExit) {
     .then(() => true)
     .catch(() => false);
   record(routed, "route computed");
+  if (routed) timing("Find egress route (click to drawn)", Date.now() - tRoute);
 
   if (routed) {
     const r = await page.evaluate(() => {
@@ -363,8 +397,10 @@ if (gotStart && gotExit && (await altBtn.isEnabled())) {
     (res) => res.url().includes("/api/ifc/path/alternatives"),
     { timeout: 60000 },
   );
+  const tAlt = Date.now();
   await altBtn.click();
   const alt = await altResponse.then((res) => res.json()).catch(() => null);
+  if (alt) timing("Alternative routes (click to answer)", Date.now() - tAlt);
   record(Boolean(alt?.routes?.length), "alternative routes returned", alt ? `${alt.routes.length} route(s), ${alt.ms} ms` : "no response");
   if (alt?.routes?.length) {
     console.log(
@@ -412,6 +448,12 @@ if (await navBtn.isEnabled()) {
     .catch((e) => ({ error: String(e) }));
   record(!nav.error, "Navigation cross-check returned", nav.error || `${((Date.now() - t1) / 1000).toFixed(1)}s`);
   if (!nav.error) {
+    timing(
+      `TopologicPy Navigation cross-check${nav.cached ? " (server cache)" : ""}`,
+      Date.now() - t1,
+    );
+  }
+  if (!nav.error) {
     console.log(
       `    navigation: ${nav.navigation_nodes} nodes, ${nav.navigation_components} parts; ` +
         `alignment ${nav.alignment} (median ${nav.residual_median} m); ` +
@@ -449,6 +491,7 @@ await page.waitForTimeout(300);
 
 const startFire = page.getByRole("button", { name: /^Start fire$/ });
 if (gotFire && (await startFire.isEnabled())) {
+  const tFire = Date.now();
   await startFire.click();
   const ran = await page
     .waitForFunction(() => /fire step \d+/i.test(document.body.innerText), null, {
@@ -457,6 +500,7 @@ if (gotFire && (await startFire.isEnabled())) {
     .then(() => true)
     .catch(() => false);
   record(ran, "fire simulation started streaming");
+  if (ran) timing("Start fire (click to first step on screen)", Date.now() - tFire);
   await page.waitForTimeout(4000);
   await shot(page, "fire-running");
   await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
@@ -477,6 +521,7 @@ if (await trainBtn.isEnabled()) {
   const sent = page.waitForRequest((req) => req.url().includes("/api/rl/train"), {
     timeout: 30000,
   });
+  const tRl = Date.now();
   await trainBtn.click();
   const body = await sent.then((req) => JSON.parse(req.postData() || "{}")).catch(() => ({}));
   record(
@@ -493,6 +538,7 @@ if (await trainBtn.isEnabled()) {
     .then(() => true)
     .catch(() => false);
   record(trained, "RL training returned and rendered its stats");
+  if (trained) timing("Train RL policy (click to stats)", Date.now() - tRl);
   if (trained) {
     await page
       .locator(".stat", { hasText: /late-training success/i })
@@ -551,7 +597,45 @@ await shot(page, "topology-mode");
 await page.getByRole("button", { name: /^IFC$/ }).click();
 await page.waitForTimeout(500);
 
+// ---- 7. reload and reopen: the fragment cache --------------------------------
+//
+// A returning visitor: same browser, same model. The first open converted the
+// IFC and cached the fragments in IndexedDB; this one should skip the parse.
+
+console.log("\n[7] Reload and reopen the same IFC");
+const tReload = Date.now();
+await page.reload({ waitUntil: "domcontentloaded" });
+await page
+  .waitForFunction(() => window.__viewer?.ready || !document.body.innerText.includes("Starting the 3D engine"), null, {
+    timeout: 90000,
+  })
+  .catch(() => {});
+timing("Reload page to 3D engine ready", Date.now() - tReload);
+const tCached = Date.now();
+await page.setInputFiles('input[type="file"][accept=".ifc"]', IFC);
+const fromCache = await page
+  .waitForFunction(() => /loaded from cache|local fragment cache/i.test(document.body.innerText), null, {
+    timeout: 120000,
+  })
+  .then(() => true)
+  .catch(() => false);
+record(fromCache, "second open used the fragment cache", `${((Date.now() - tCached) / 1000).toFixed(1)}s`);
+if (fromCache) timing("Open IFC, second time (from cache)", Date.now() - tCached);
+
 // ---- report -----------------------------------------------------------------
+
+console.log("\n=== Timing (as a user sees it) ===");
+for (const { label, ms } of timings) {
+  console.log(`  ${label.padEnd(50)} ${ms >= 1000 ? `${(ms / 1000).toFixed(2)} s` : `${ms} ms`}`);
+}
+const byCall = new Map();
+for (const { call, ms } of apiCalls) byCall.set(call, [...(byCall.get(call) || []), ms]);
+console.log("\n=== Backend calls (request to last byte) ===");
+for (const [call, list] of byCall) {
+  const sorted = [...list].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  console.log(`  ${call.padEnd(42)} n=${String(list.length).padEnd(3)} median ${Math.round(median)} ms`);
+}
 
 console.log("\n=== Chrome diagnostics ===");
 console.log(`  console errors : ${consoleErrors.length}`);
@@ -566,7 +650,7 @@ badResponses.slice(0, 12).forEach((e) => console.log(`    - ${e.slice(0, 220)}`)
 await writeFile(
   path.join(SHOTS, "report.json"),
   JSON.stringify(
-    { steps, consoleErrors, pageErrors, failedRequests, badResponses },
+    { steps, timings, apiCalls, pageLoad, consoleErrors, pageErrors, failedRequests, badResponses },
     null,
     2,
   ),
