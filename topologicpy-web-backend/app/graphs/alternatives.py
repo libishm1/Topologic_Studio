@@ -110,9 +110,10 @@ def alternative_routes(
 
     if method == "distinct" and len(out) < k:
         notes.append(
-            f"Only {len(out)} of {k} routes use substantially different space "
-            f"(at most {round(max_overlap * 100)}% within {separation:g} m of another) "
-            f"within {max_stretch:g}x the shortest cost."
+            f"Found {len(out)} of {k} routes that use substantially different space "
+            f"(at most {round(max_overlap * 100)}% within {separation:g} m of a route found before) "
+            f"within {max_stretch:g}x the shortest cost. The search stopped there; it does not prove "
+            f"that no other such route exists. Yen lists the next cheapest routes exactly."
         )
     return out, notes
 

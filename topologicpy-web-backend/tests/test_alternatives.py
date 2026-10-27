@@ -161,7 +161,7 @@ class TestDistinct:
             corridor, index[(0, 1)], index[(19, 1)], k=3, method="distinct"
         )
         assert len(routes) == 1
-        assert any("Only 1 of 3" in n for n in notes)
+        assert any("Found 1 of 3" in n for n in notes)
 
     def test_stretch_limit_is_respected(self, ring):
         index = ring.meta["index"]
@@ -230,7 +230,7 @@ class TestEndpoint:
         assert [r["rank"] for r in body["routes"]] == [1, 2]
         assert [r["length"] for r in body["routes"]] == pytest.approx([15.0, 17.0])
         assert body["routes"][1]["overlap"] <= 0.5
-        assert "Only 2 of 3" in body["note"]
+        assert "Found 2 of 3" in body["note"]
 
     def test_yen_method(self, client):
         body = client.post(

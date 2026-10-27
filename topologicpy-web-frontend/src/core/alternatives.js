@@ -97,7 +97,9 @@ function pathCost(graph, nodes, weights) {
 }
 
 function distinct(graph, start, end, k, base, blocked, { maxOverlap, maxStretch, separation, penalty }) {
-  const first = astar(graph, start, end, { weights: base, blocked });
+  // useWalls must follow blocked: astar() falls back to graph.blocked when
+  // given none, which made "walls off" a no-op here (found by Yen.lean's review).
+  const first = astar(graph, start, end, { weights: base, blocked, useWalls: Boolean(blocked) });
   if (!first) return { routes: [], notes: ["No route between the two points."] };
   const best = pathCost(graph, first.nodes, base).cost;
   const routes = [{ nodes: first.nodes, cost: best }];
@@ -138,7 +140,7 @@ function distinct(graph, start, end, k, base, blocked, { maxOverlap, maxStretch,
     }
     if (!hit.size) break;
     for (const e of hit) penalised[e] *= 1 + penalty;
-    const next = astar(graph, start, end, { weights: penalised, blocked });
+    const next = astar(graph, start, end, { weights: penalised, blocked, useWalls: Boolean(blocked) });
     if (!next) break;
     const cost = pathCost(graph, next.nodes, base).cost;
     // Penalties only rise, so past the stretch limit nothing more is found.
@@ -257,8 +259,10 @@ export function alternativeRoutes(graph, startPoint, endPoint, {
   });
   if (method === "distinct" && routes.length && routes.length < k) {
     notes.push(
-      `Only ${routes.length} of ${k} routes use substantially different space (at most ` +
-        `${Math.round(maxOverlap * 100)}% within ${separation} m of another) within ${maxStretch}x the shortest cost.`,
+      `Found ${routes.length} of ${k} routes that use substantially different space (at most ` +
+        `${Math.round(maxOverlap * 100)}% within ${separation} m of a route found before) within ${maxStretch}x the ` +
+        `shortest cost. The search stopped there; it does not prove that no other such route exists. Yen lists the ` +
+        `next cheapest routes exactly.`,
     );
   }
   response.note = notes.join(" ") || null;

@@ -31,7 +31,8 @@ test("distinct finds both ways round the block, and no third in the same corrido
   const r = alternativeRoutes(ring(), [0, 4, 0], [11, 4, 0], { k: 3 });
   assert.deepEqual(r.routes.map((x) => x.cost), [15, 17]);
   assert.ok(r.routes[1].overlap <= 0.5);
-  assert.match(r.note, /Only 2 of 3/);
+  assert.match(r.note, /Found 2 of 3/);
+  assert.match(r.note, /does not prove that no other such route exists/);
 });
 
 test("a single corridor has one way through", () => {
@@ -58,4 +59,20 @@ test("on a corridor Yen's runners-up tie and overlap the best route", () => {
   const r = alternativeRoutes(corridor(), [0, 1, 0], [19, 1, 0], { k: 4, method: "yen" });
   assert.equal(r.routes.length, 4);
   for (const route of r.routes.slice(1)) assert.ok(route.overlap > 0.9);
+});
+
+test("different-space mode honours walls off, as Yen does", async () => {
+  const { alternativeRoutes } = await import("./alternatives.js");
+  // 0 - 1 - 2 on a line with the middle link blocked.
+  const g = {
+    nodes: Float32Array.from([0, 0, 0, 1, 0, 0, 2, 0, 0]),
+    edges: Uint32Array.from([0, 1, 1, 2]),
+    blocked: Uint8Array.from([0, 1]),
+  };
+  for (const method of ["distinct", "yen"]) {
+    const off = alternativeRoutes(g, [0, 0, 0], [2, 0, 0], { k: 2, method, useWalls: false });
+    assert.equal(off.routes.length >= 1, true, `${method} with walls off`);
+    const on = alternativeRoutes(g, [0, 0, 0], [2, 0, 0], { k: 2, method, useWalls: true });
+    assert.equal(on.routes.length, 0, `${method} with walls on`);
+  }
 });

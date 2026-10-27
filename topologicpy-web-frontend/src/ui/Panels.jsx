@@ -533,9 +533,10 @@ export function RoutePanel({ studio, onPick, onPlace, doors, onClearPoints, onFi
       <Section title="Alternative routes" badge={alternatives ? `${alternatives.routes.length} found` : null}>
         <p className="field__hint">
           Is there a second way out? <strong>Different space</strong> keeps a route only if at most half of it
-          runs within 1.5 m of a better one, up to 1.5 times the shortest. <strong>Yen</strong> is
-          TopologicPy&apos;s <code>KShortestPaths</code>: the next cheapest paths, usually the best route with
-          a step moved.
+          runs within 1.5 m of a route found before it, up to 1.5 times the shortest; it can stop before
+          finding every such route. <strong>Yen</strong>, the method of TopologicPy&apos;s{" "}
+          <code>KShortestPaths</code>, lists the next cheapest loopless routes exactly (proved), which are
+          usually the best route with a step moved.
         </p>
         <div className="grid-2">
           <NumberField
