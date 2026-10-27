@@ -34,7 +34,12 @@ const OVERLAY = {
   dynamicPath: "dynamicPath",
   graph: "graph",
   rlPath: "rlPath",
+  navGraph: "navGraph",
+  navRoute: "navRoute",
 };
+
+/** Alternative routes are drawn as overlays alt0, alt1, ... */
+const ALT_PREFIX = "alt";
 
 export class ViewerManager {
   constructor() {
@@ -458,8 +463,8 @@ export class ViewerManager {
    * lost among thousands of graph edges - which defeats the point of showing
    * it. A tube has real geometric thickness that scales with the model.
    */
-  setPath(points, { color = 0xdc2626, radius = null, dynamic = false } = {}) {
-    const name = dynamic ? OVERLAY.dynamicPath : OVERLAY.path;
+  setPath(points, { color = 0xdc2626, radius = null, dynamic = false, name = null } = {}) {
+    name = name ?? (dynamic ? OVERLAY.dynamicPath : OVERLAY.path);
     if (!points || points.length < 2) {
       this._setOverlay(name, null);
       this._updateGraphEmphasis();
@@ -502,6 +507,79 @@ export class ViewerManager {
   }
 
   /**
+   * Draw alternative routes, replacing any drawn before.
+   *
+   * @param routes [{ points, color }], best first. The best is drawn thickest
+   *               so the ranking reads without a legend.
+   */
+  setRoutes(routes) {
+    for (const name of [...this.overlays.keys()]) {
+      if (name.startsWith(ALT_PREFIX)) this._setOverlay(name, null);
+    }
+    const box = this._modelBox();
+    const extent = box ? Math.max(...box.getSize(new THREE.Vector3()).toArray()) : 20;
+    const base = Math.max(0.04, Math.min(0.35, extent * 0.006));
+    (routes || []).forEach((route, i) => {
+      this.setPath(route.points, {
+        color: route.color,
+        name: `${ALT_PREFIX}${i}`,
+        radius: i === 0 ? base : base * 0.7,
+      });
+    });
+    this._updateGraphEmphasis();
+  }
+
+  /**
+   * Draw another graph over ours - TopologicPy's Navigation graph - so the two
+   * estimates of the walkable space can be compared by eye.
+   */
+  setReferenceGraph(nodes, edges, { color = 0x84cc16 } = {}) {
+    if (!nodes?.length || !edges?.length) {
+      this._setOverlay(OVERLAY.navGraph, null);
+      return;
+    }
+    const positions = new Float32Array(edges.length * 3);
+    for (let i = 0; i < edges.length; i += 1) {
+      const n = edges[i] * 3;
+      positions[i * 3] = nodes[n];
+      positions[i * 3 + 1] = nodes[n + 1];
+      positions[i * 3 + 2] = nodes[n + 2];
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.6,
+      depthTest: false,
+    });
+    const segments = new THREE.LineSegments(geometry, material);
+    segments.renderOrder = 900;
+    this._setOverlay(OVERLAY.navGraph, segments);
+  }
+
+  /** Navigation's route, drawn like ours in its own overlay. */
+  setReferenceRoute(points, { color = 0x65a30d } = {}) {
+    this.setPath(points, { color, name: OVERLAY.navRoute });
+  }
+
+  /**
+   * The loaded model's coordination matrix, as 16 numbers (column-major).
+   *
+   * web-ifc moves the model near the origin (COORDINATE_TO_ORIGIN) and That
+   * Open records the move. The server needs it to put TopologicPy's graph,
+   * which lives in IFC world coordinates, into this frame exactly.
+   */
+  async getCoordinationMatrix() {
+    try {
+      const matrix = await this.model?.getCoordinationMatrix?.();
+      return matrix?.elements ? Array.from(matrix.elements) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Fade the graph back when a route is on screen.
    *
    * 17k edges at full strength drown out the one line the user actually asked
@@ -510,8 +588,13 @@ export class ViewerManager {
   _updateGraphEmphasis() {
     const segments = this.overlays.get(OVERLAY.graph);
     if (!segments) return;
-    const hasPath =
-      this.overlays.has(OVERLAY.path) || this.overlays.has(OVERLAY.dynamicPath);
+    const hasPath = [...this.overlays.keys()].some(
+      (name) =>
+        name === OVERLAY.path ||
+        name === OVERLAY.dynamicPath ||
+        name === OVERLAY.navRoute ||
+        name.startsWith(ALT_PREFIX),
+    );
     segments.material.opacity = hasPath ? 0.16 : 0.45;
     segments.material.needsUpdate = true;
   }

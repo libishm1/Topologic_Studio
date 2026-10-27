@@ -28,3 +28,12 @@
 - Measured the live Classic backend: 33.1 s cold start, 0.31 s warm.
 - Backend 95/95, lint clean, build clean, browser suite 30/30 with 0 console
   errors. Docker image not built (no Docker on this machine); nothing deployed.
+- Adopted two TopologicPy additions (review section 7):
+  - `/api/ifc/path/alternatives`: Yen (TGraph.KShortestPaths' semantics,
+    delegated to it on topologicpy >= 0.9.87, which was verified in a throwaway
+    venv) plus a default "distinct" mode, because Yen's runners-up tie on a
+    lattice.
+  - `/api/ifc/navigation-check`: TopologicPy's `Navigation` graph against ours,
+    aligned exactly by That Open's coordination matrix. Duplex: 99% / 91%
+    coverage; Level 2 has edge bands 0.54-0.60 m apart.
+  - Corrected the review: `KShortestPaths` is 0.9.87, not 0.9.86.

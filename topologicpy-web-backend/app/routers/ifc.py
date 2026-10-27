@@ -7,18 +7,25 @@ comparison on one machine possible.
 """
 from __future__ import annotations
 
+import json
 import time
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from starlette.concurrency import run_in_threadpool
 
-from ..graphs import pathfinding
+from ..config import settings
+from ..graphs import alternatives, navigation_check, pathfinding
 from ..models import (
+    AlternativeRoute,
+    AlternativesRequest,
+    AlternativesResponse,
     ComparePathResponse,
     GraphResponse,
     IfcEgressPathRequest,
     IfcEgressRequest,
+    NavigationCheckResponse,
     PathRequest,
     PathResponse,
     PointCloudRequest,
@@ -178,6 +185,160 @@ def compare_engines(req: PathRequest) -> ComparePathResponse:
         fast_ms=round(fast_ms, 3),
         topologicpy_ms=round(topo_ms, 3),
     )
+
+
+@router.post("/api/ifc/path/alternatives", response_model=AlternativesResponse, tags=["ifc"])
+def alternative_paths(req: AlternativesRequest) -> AlternativesResponse:
+    """Up to ``k`` routes, best first. ``distinct`` by default; see graphs/alternatives."""
+    graph = _require_graph(req.graph_id, req.mode)
+    timer = Timer("api/ifc/path/alternatives")
+    start, end = _resolve_endpoints(graph, req)
+    temperatures = _temperature_array(graph, req.temperatures)
+    weights = pathfinding.hazard_weights(graph, temperatures, req.alpha)
+    blocked = pathfinding.blocked_mask(
+        graph, req.use_walls, temperatures, req.lethality_threshold
+    )
+
+    t0 = time.perf_counter()
+    with timer.phase("search"):
+        found, notes = alternatives.alternative_routes(
+            graph,
+            start,
+            end,
+            k=req.k,
+            method=req.method,
+            engine=req.engine,
+            weights=weights,
+            blocked=blocked,
+            max_overlap=req.max_overlap,
+            max_stretch=req.max_stretch,
+            separation=req.separation,
+        )
+    ms = (time.perf_counter() - t0) * 1000.0
+
+    routes: List[AlternativeRoute] = []
+    for rank, alt in enumerate(found, start=1):
+        base = _path_response(alt.path, req.graph_id)
+        routes.append(
+            AlternativeRoute(
+                **base.model_dump(exclude={"cost"}),
+                cost=round(alt.cost, 4),
+                rank=rank,
+                stretch=round(alt.stretch, 4),
+                overlap=round(alt.overlap, 4),
+            )
+        )
+    timer.emit(method=req.method, routes=len(routes), requested=req.k)
+    return AlternativesResponse(
+        graph_id=req.graph_id,
+        method=req.method,
+        engine=routes[0].engine if routes else req.engine,
+        requested=req.k,
+        routes=routes,
+        ms=round(ms, 2),
+        note=" ".join(notes) or None,
+    )
+
+
+@router.post("/api/ifc/navigation-check", response_model=NavigationCheckResponse, tags=["ifc"])
+async def navigation_check_route(
+    file: UploadFile = File(...),
+    graph_id: Optional[str] = Form(None),
+    spacing: float = Form(0.5, ge=0.25, le=5.0),
+    start_point: Optional[str] = Form(None, description="JSON [x, y, z] in the viewer frame"),
+    end_point: Optional[str] = Form(None, description="JSON [x, y, z] in the viewer frame"),
+    use_walls: bool = Form(True),
+    coordination: Optional[str] = Form(
+        None, description="JSON, the model's 16-number coordination matrix (column-major)"
+    ),
+) -> NavigationCheckResponse:
+    """Build TopologicPy's ``Navigation`` graph of the IFC and compare it with ours.
+
+    The IFC has to travel: Studio's graph is built from points the browser
+    sampled, so the server has never seen the file. See graphs/navigation_check.
+    """
+    graph = _require_graph(graph_id)
+    if not (file.filename or "").lower().endswith(".ifc"):
+        raise HTTPException(status_code=400, detail="Only .ifc files can be checked.")
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file provided.")
+    if len(data) > settings.max_upload_mib * 1024 * 1024:
+        raise HTTPException(
+            status_code=413, detail=f"IFC larger than {settings.max_upload_mib} MiB."
+        )
+    start = _parse_point(start_point, "start_point")
+    end = _parse_point(end_point, "end_point")
+    matrix = None
+    if coordination:
+        try:
+            matrix = [float(v) for v in json.loads(coordination)]
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(
+                status_code=400, detail="coordination must be a JSON list of 16 numbers."
+            ) from exc
+
+    return await run_in_threadpool(
+        _navigation_check, graph, graph_id, data, spacing, start, end, use_walls, matrix
+    )
+
+
+def _navigation_check(graph, graph_id, data, spacing, start, end, use_walls, matrix):
+    timer = Timer("api/ifc/navigation-check")
+    try:
+        with timer.phase("navigation"):
+            nav, cached = navigation_check.navigation_graph(data, spacing)
+    except navigation_check.NavigationUnavailable as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422, detail=f"TopologicPy could not build a navigation graph: {exc}"
+        ) from exc
+    if len(nav.points) == 0:
+        raise HTTPException(status_code=422, detail="TopologicPy found no walkable surfaces.")
+
+    studio_route = None
+    if start is not None and end is not None:
+        component = pathfinding.largest_component(graph)
+        a = pathfinding.resolve_endpoint(graph, start, restrict=component)
+        b = pathfinding.resolve_endpoint(graph, end, restrict=component)
+        if a is not None and b is not None:
+            result = pathfinding.shortest_path(
+                graph, a, b, blocked=pathfinding.blocked_mask(graph, use_walls)
+            )
+            studio_route = result.points if result.found else None
+
+    try:
+        with timer.phase("compare"):
+            report = navigation_check.compare(
+                graph, nav, spacing, studio_route, start, end, coordination=matrix
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    view = report.pop("view_points")
+    timer.emit(nodes=report["navigation_nodes"], cached=cached)
+    return NavigationCheckResponse(
+        graph_id=graph_id,
+        spacing=spacing,
+        cached=cached,
+        nodes_b64=graph_builder._b64(view.astype(np.float32)),
+        edges_b64=graph_builder._b64(nav.edges.astype(np.uint32)),
+        **report,
+    )
+
+
+def _parse_point(raw: Optional[str], name: str) -> Optional[List[float]]:
+    if raw is None or raw == "":
+        return None
+    try:
+        value = json.loads(raw)
+        point = [float(v) for v in value[:3]]
+    except (ValueError, TypeError, IndexError) as exc:
+        raise HTTPException(status_code=400, detail=f"{name} must be a JSON [x, y, z].") from exc
+    if len(point) != 3 or not all(np.isfinite(point)):
+        raise HTTPException(status_code=400, detail=f"{name} must be a JSON [x, y, z].")
+    return point
 
 
 @router.post("/ifc-egress-path", tags=["legacy"])

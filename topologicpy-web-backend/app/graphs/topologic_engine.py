@@ -167,34 +167,14 @@ def topologic_shortest_path(
         logger.warning("TGraph build failed: %s", exc)
         return fail(f"TGraph build failed: {exc}")
 
-    # Both callbacks receive a dict whose "index" is the edge's row in
-    # NavGraph.edges, so per-edge lookup is exact.
-    cost_func = None
-    if weights is not None and len(weights) == graph.edge_count:
-
-        def cost_func(edge, _w=weights):
-            index = edge.get("index")
-            if isinstance(index, (int, np.integer)) and 0 <= index < len(_w):
-                return float(_w[index])
-            return 1.0
-
-    filter_func = None
-    if blocked is not None and blocked.any():
-
-        def filter_func(edge, _b=blocked):
-            index = edge.get("index")
-            if isinstance(index, (int, np.integer)) and 0 <= index < len(_b):
-                return not bool(_b[index])
-            return True
-
     try:
         result = TGraph.ShortestPath(
             topo,
             int(start),
             int(end),
             edgeKey=LENGTH_KEY,
-            edgeCostFunc=cost_func,
-            edgeFilter=filter_func,
+            edgeCostFunc=_cost_func(graph, weights),
+            edgeFilter=_filter_func(graph, blocked),
             returnCost=True,
             silent=True,
         )
@@ -218,6 +198,95 @@ def topologic_shortest_path(
         engine=ENGINE_TOPOLOGICPY,
         found=True,
     )
+
+
+def has_k_shortest_paths() -> bool:
+    """Whether the installed TGraph has ``KShortestPaths`` (topologicpy >= 0.9.87)."""
+    try:
+        return callable(getattr(_tgraph(), "KShortestPaths", None))
+    except TopologicUnavailable:
+        return False
+
+
+def topologic_k_shortest_paths(
+    graph: NavGraph,
+    start: int,
+    end: int,
+    k: int,
+    weights: Optional[np.ndarray] = None,
+    blocked: Optional[np.ndarray] = None,
+    time_limit: Optional[float] = None,
+):
+    """``TGraph.KShortestPaths`` as a list of PathResults, or None if it fails.
+
+    Same callbacks as :func:`topologic_shortest_path`, so hazard weighting and
+    wall blocking carry over. A time-limited result is a sorted prefix.
+    """
+    from .pathfinding import ENGINE_TOPOLOGICPY, PathResult
+
+    try:
+        TGraph = _tgraph()
+        topo = build_topologic_graph(graph)
+        result = TGraph.KShortestPaths(
+            topo,
+            int(start),
+            int(end),
+            k=int(k),
+            edgeKey=LENGTH_KEY,
+            edgeCostFunc=_cost_func(graph, weights),
+            edgeFilter=_filter_func(graph, blocked),
+            timeLimit=time_limit,
+            returnCost=True,
+            silent=True,
+        )
+    except Exception as exc:
+        logger.warning("TGraph.KShortestPaths failed: %s", exc)
+        return None
+
+    paths = []
+    for entry in result or []:
+        node_ids, cost = _unpack(entry)
+        valid = [i for i in node_ids if 0 <= i < graph.node_count]
+        if len(valid) < 2:
+            continue
+        paths.append(
+            PathResult(
+                node_ids=valid,
+                points=[graph.points[i].tolist() for i in valid],
+                cost=float(cost) if cost is not None else math.nan,
+                engine=ENGINE_TOPOLOGICPY,
+                found=True,
+            )
+        )
+    return paths
+
+
+def _cost_func(graph: NavGraph, weights: Optional[np.ndarray]):
+    # Both callbacks receive a dict whose "index" is the edge's row in
+    # NavGraph.edges, so per-edge lookup is exact.
+    if weights is None or len(weights) != graph.edge_count:
+        return None
+
+    def cost_func(edge, _w=weights):
+        index = edge.get("index")
+        if isinstance(index, (int, np.integer)) and 0 <= index < len(_w):
+            return float(_w[index])
+        return 1.0
+
+    return cost_func
+
+
+def _filter_func(graph: NavGraph, blocked: Optional[np.ndarray]):
+    if blocked is None or not blocked.any():
+        return None
+
+    def filter_func(edge, _b=blocked):
+        index = edge.get("index")
+        if isinstance(index, (int, np.integer)) and 0 <= index < len(_b):
+            return not bool(_b[index])
+        return True
+
+    return filter_func
 
 
 def _unpack(result) -> Tuple[List[int], Optional[float]]:

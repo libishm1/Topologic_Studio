@@ -129,6 +129,9 @@ def build_from_points(
         walls=walls,
         blocked=blocked,
         mode=mode,
+        # The lift moves every node off the slab; the Navigation cross-check
+        # has to undo it to put the two graphs in one frame.
+        meta={"agent_height": float(options.agent_height or 0.0)},
     )
     graph_id = store.put(graph)
     return graph, graph_id

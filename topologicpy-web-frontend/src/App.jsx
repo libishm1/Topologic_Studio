@@ -18,6 +18,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 
 import { api, legacyApi, openFireStream } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
+import { NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { useStudio } from "./state/useStudio.js";
 import { AboutPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
@@ -97,6 +98,8 @@ export default function App() {
     fire,
     path,
     dynamicPath,
+    alternatives,
+    navCheck,
     toast,
     reportError,
   } = studio;
@@ -286,6 +289,9 @@ export default function App() {
       studio.setGraph(response);
       studio.setPath(null);
       studio.setDynamicPath(null);
+      studio.setAlternatives(null);
+      studio.setNavCheck(null);
+      viewer.setRoutes(null);
 
       viewer.setGraph(response.nodes, response.edges, response.kinds);
       viewer.setGraphVisible(settings.showGraph);
@@ -364,7 +370,9 @@ export default function App() {
       studio.setPickMode(null);
       if (mode !== "fire") {
         studio.setPath(null);
+        studio.setAlternatives(null);
         viewerRef.current?.setPath(null);
+        viewerRef.current?.setRoutes(null);
       }
     },
     [snapToGraph, studio],
@@ -382,8 +390,10 @@ export default function App() {
     ["start", "exit", "fire"].forEach((name) => viewerRef.current?.setMarker(name, null));
     studio.setPath(null);
     studio.setDynamicPath(null);
+    studio.setAlternatives(null);
     viewerRef.current?.setPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
+    viewerRef.current?.setRoutes(null);
   }, [studio]);
 
   // ------------------------------------------------------------- find path
@@ -392,6 +402,8 @@ export default function App() {
     if (!graph || !points.start || !points.exit) return;
     studio.setPathBusy(true);
     studio.setComparison(null);
+    studio.setAlternatives(null);
+    viewerRef.current?.setRoutes(null);
     try {
       const result = await api.findPath({
         graph_id: graph.graphId,
@@ -443,6 +455,81 @@ export default function App() {
       studio.setPathBusy(false);
     }
   }, [graph, points, reportError, settings.useWalls, studio, toast]);
+
+  const findAlternatives = useCallback(async () => {
+    if (!graph || !points.start || !points.exit) return;
+    studio.setPathBusy(true);
+    studio.setComparison(null);
+    try {
+      const result = await api.alternatives({
+        graph_id: graph.graphId,
+        start_point: points.start,
+        end_point: points.exit,
+        engine: studio.effectiveEngine,
+        use_walls: settings.useWalls,
+        k: settings.altCount,
+        method: settings.altMethod,
+      });
+      studio.setAlternatives(result);
+      // The best alternative is the route, so it takes the route's place
+      // rather than being drawn twice.
+      studio.setPath(result.routes[0] || null);
+      viewerRef.current?.setPath(null);
+      viewerRef.current?.setRoutes(
+        result.routes.map((route, i) => ({ points: route.points, color: hexToInt(routeColor(i)) })),
+      );
+      // "Only N of k" is shown in the panel next to the list it explains.
+      if (!result.routes.length) {
+        toast(result.note || "No route exists between those two points.", {
+          title: "No route",
+          variant: "warning",
+        });
+      }
+    } catch (error) {
+      reportError(error, "Could not compute alternative routes");
+    } finally {
+      studio.setPathBusy(false);
+    }
+  }, [graph, points, reportError, settings, studio, toast]);
+
+  // ------------------------------------------------- Navigation cross-check
+
+  const runNavigationCheck = useCallback(async () => {
+    const viewer = viewerRef.current;
+    if (!graph || !file || !viewer) return;
+    studio.setNavBusy(true);
+    try {
+      const result = await api.navigationCheck(file, {
+        graphId: graph.graphId,
+        spacing: settings.navSpacing,
+        startPoint: points.start,
+        endPoint: points.exit,
+        useWalls: settings.useWalls,
+        coordination: await viewer.getCoordinationMatrix(),
+      });
+      studio.setNavCheck(result);
+      const pct = (v) => `${Math.round(v * 100)}%`;
+      toast(
+        `Navigation covers ${pct(result.studio_covered)} of our nodes; ` +
+          `we cover ${pct(result.navigation_covered)} of its.`,
+        { title: "TopologicPy cross-check", variant: "success", ttl: 7000 },
+      );
+    } catch (error) {
+      reportError(error, "Navigation cross-check failed");
+    } finally {
+      studio.setNavBusy(false);
+    }
+  }, [file, graph, points, reportError, settings, studio, toast]);
+
+  // TopologicPy's graph and route are drawn from state, so hiding and showing
+  // them is a toggle rather than another server round trip.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const show = Boolean(navCheck && settings.showNavGraph);
+    viewer.setReferenceGraph(show ? navCheck.nodes : null, show ? navCheck.edges : null);
+    viewer.setReferenceRoute(show && navCheck.route?.found ? navCheck.route.points : null);
+  }, [navCheck, settings.showNavGraph]);
 
   // ------------------------------------------------------------------- fire
 
@@ -770,12 +857,21 @@ export default function App() {
     if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
     if (points.exit) items.push({ label: "Exit", color: "var(--viz-exit)", dot: true });
     if (points.fire) items.push({ label: "Fire origin (spike)", color: "var(--viz-fire)", dot: true });
-    if (path?.found) items.push({ label: "Egress route", color: "var(--viz-path)" });
+    if (alternatives?.routes.length > 1) {
+      alternatives.routes.forEach((route, i) =>
+        items.push({ label: `Route ${route.rank} (${route.length.toFixed(1)} m)`, color: routeColor(i) }),
+      );
+    } else if (path?.found) {
+      items.push({ label: "Egress route", color: "var(--viz-path)" });
+    }
     if (dynamicPath) {
       items.push({ label: "Hazard-aware route", color: "var(--viz-path-dynamic)" });
     }
+    if (navCheck && settings.showNavGraph) {
+      items.push({ label: "TopologicPy Navigation", color: NAV_COLOR });
+    }
     return items;
-  }, [graph, points, path, dynamicPath]);
+  }, [graph, points, path, dynamicPath, alternatives, navCheck, settings.showNavGraph]);
 
   // ------------------------------------------------------------------ render
 
@@ -986,6 +1082,7 @@ export default function App() {
                   studio={studio}
                   onBuildGraph={buildGraph}
                   onClearCache={studio.purgeCache}
+                  onNavigationCheck={runNavigationCheck}
                 />
               )}
               {activeTab === "route" && (
@@ -995,6 +1092,7 @@ export default function App() {
                   onClearPoints={clearPoints}
                   onFindPath={findPath}
                   onCompare={comparePath}
+                  onAlternatives={findAlternatives}
                 />
               )}
               {activeTab === "simulate" && (

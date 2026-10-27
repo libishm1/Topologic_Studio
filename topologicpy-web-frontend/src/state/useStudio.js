@@ -32,6 +32,10 @@ export const DEFAULT_SETTINGS = {
   gridCellSize: 1.5,
   maxPoints: 40000,
   engine: "fast",
+  altCount: 3,
+  altMethod: "distinct",
+  navSpacing: 0.5,
+  showNavGraph: true,
 
   fireModel: "temperature",
   fireMaxSteps: 60,
@@ -91,6 +95,9 @@ export function useStudio() {
   const [path, setPath] = useState(null);
   const [pathBusy, setPathBusy] = useState(false);
   const [comparison, setComparison] = useState(null);
+  const [alternatives, setAlternatives] = useState(null);
+  const [navCheck, setNavCheck] = useState(null);
+  const [navBusy, setNavBusy] = useState(false);
 
   const [fire, setFire] = useState({ running: false, step: 0, model: null });
   const [dynamicPath, setDynamicPath] = useState(null);
@@ -243,6 +250,8 @@ export function useStudio() {
     setGraph(null);
     setPath(null);
     setComparison(null);
+    setAlternatives(null);
+    setNavCheck(null);
     setDynamicPath(null);
     setRl({ busy: false, path: null, reachedExit: false, result: null });
     setFire({ running: false, step: 0, model: null });
@@ -303,6 +312,9 @@ export function useStudio() {
       path,
       pathBusy,
       comparison,
+      alternatives,
+      navCheck,
+      navBusy,
       fire,
       dynamicPath,
       rl,
@@ -319,6 +331,9 @@ export function useStudio() {
       setPath,
       setPathBusy,
       setComparison,
+      setAlternatives,
+      setNavCheck,
+      setNavBusy,
       setFire,
       setDynamicPath,
       setRl,
@@ -355,6 +370,9 @@ export function useStudio() {
       path,
       pathBusy,
       comparison,
+      alternatives,
+      navCheck,
+      navBusy,
       fire,
       dynamicPath,
       rl,

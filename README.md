@@ -245,7 +245,9 @@ app/
 │   └── obstacles.py           walls, doors, edge blocking
 ├── graphs/
 │   ├── pathfinding.py         A*, hazard weights, components
-│   ├── topologic_engine.py    Graph.ByMeshData + Graph.ShortestPath
+│   ├── alternatives.py        distinct routes, Yen k-shortest
+│   ├── navigation_check.py    TopologicPy Navigation graph vs ours
+│   ├── topologic_engine.py    TGraph.ByMeshData + ShortestPath / KShortestPaths
 │   ├── fire.py                radial / flood / temperature
 │   └── rl.py                  tabular Q-learning
 ├── routers/
@@ -270,6 +272,8 @@ app/
 | `GET` | `/api/graphs` | Store contents |
 | `POST` | `/api/ifc/path` | Route, optionally hazard-weighted |
 | `POST` | `/api/ifc/path/compare` | Run both engines and report agreement |
+| `POST` | `/api/ifc/path/alternatives` | Up to k routes: through different space (default) or Yen k-shortest |
+| `POST` | `/api/ifc/navigation-check` | Multipart IFC upload; compare our graph with TopologicPy's `Navigation` graph |
 | `POST` | `/api/fire/timeline` | Precomputed ignition timeline |
 | `GET` | `/api/fire/stream` | SSE: fire front, temperatures, live rerouting |
 | `POST` | `/api/rl/train` | Q-learning policy |

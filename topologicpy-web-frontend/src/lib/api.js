@@ -37,12 +37,14 @@ async function request(path, { method = "GET", body, signal, timeout = 120000 } 
     else signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
 
+  // FormData goes as multipart; fetch sets the boundary header itself.
+  const form = body instanceof FormData;
   let response;
   try {
     response = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
+      headers: body && !form ? { "Content-Type": "application/json" } : undefined,
+      body: body ? (form ? body : JSON.stringify(body)) : undefined,
       signal: controller.signal,
     });
   } catch (error) {
@@ -125,6 +127,37 @@ export const api = {
 
   comparePath: (payload, signal) =>
     request("/api/ifc/path/compare", { method: "POST", body: payload, signal }),
+
+  alternatives: (payload, signal) =>
+    request("/api/ifc/path/alternatives", { method: "POST", body: payload, signal }),
+
+  /**
+   * Build TopologicPy's Navigation graph of `file` on the server and compare it
+   * with the graph `graph_id`. Uploads the IFC, and the server parses it from
+   * scratch, so this is seconds locally and can be a minute on a small host.
+   */
+  navigationCheck: (file, { graphId, spacing, startPoint, endPoint, useWalls, coordination }, signal) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("graph_id", graphId);
+    form.append("spacing", String(spacing));
+    form.append("use_walls", String(useWalls));
+    if (startPoint && endPoint) {
+      form.append("start_point", JSON.stringify(startPoint));
+      form.append("end_point", JSON.stringify(endPoint));
+    }
+    if (coordination) form.append("coordination", JSON.stringify(coordination));
+    return request("/api/ifc/navigation-check", {
+      method: "POST",
+      body: form,
+      signal,
+      timeout: 300000,
+    }).then((payload) => ({
+      ...payload,
+      nodes: decodeBase64(payload.nodes_b64, Float32Array),
+      edges: decodeBase64(payload.edges_b64, Uint32Array),
+    }));
+  },
 
   fireTimeline: (payload, signal) =>
     request("/api/fire/timeline", { method: "POST", body: payload, signal }),

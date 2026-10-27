@@ -158,6 +158,95 @@ class ComparePathResponse(BaseModel):
     topologicpy_ms: float
 
 
+class AlternativesRequest(PathRequest):
+    """Several routes between one start and exit. See ``graphs/alternatives``."""
+
+    k: int = Field(3, ge=1, le=8)
+    #: ``distinct``: routes through different space. ``yen``: the k shortest
+    #: loopless paths, TGraph.KShortestPaths' semantics.
+    method: Literal["distinct", "yen"] = "distinct"
+    #: Largest share of a route that may run within ``separation`` of a route
+    #: already kept (distinct only).
+    max_overlap: float = Field(0.5, ge=0.0, le=1.0)
+    #: Longest route kept, as a multiple of the shortest cost (distinct only).
+    max_stretch: float = Field(1.5, ge=1.0, le=10.0)
+    #: Metres within which two routes count as sharing space.
+    separation: float = Field(1.5, gt=0.0, le=20.0)
+
+
+class AlternativeRoute(PathResponse):
+    rank: int = 1
+    #: Cost over the best route's cost.
+    stretch: float = 1.0
+    #: Share of the length within ``separation`` of an earlier route.
+    overlap: float = 0.0
+
+
+class AlternativesResponse(BaseModel):
+    graph_id: Optional[str] = None
+    method: str
+    engine: str
+    requested: int
+    routes: List[AlternativeRoute] = []
+    ms: float = 0.0
+    note: Optional[str] = None
+
+
+class NavigationStorey(BaseModel):
+    id: str
+    name: str
+    elevation: float
+    navigation_nodes: int
+    studio_nodes: int
+    navigation_covered: Optional[float] = None
+    studio_covered: Optional[float] = None
+
+
+class NavigationRoute(BaseModel):
+    found: bool
+    studio_length: Optional[float] = None
+    navigation_length: Optional[float] = None
+    #: Navigation's route length over Studio's.
+    ratio: Optional[float] = None
+    points: List[List[float]] = []
+    ms: float = 0.0
+    note: Optional[str] = None
+
+
+class NavigationCheckResponse(BaseModel):
+    """Studio's graph against TopologicPy's ``Navigation`` graph of the same IFC."""
+
+    graph_id: Optional[str] = None
+    spacing: float
+    #: Distance within which a node counts as covered by the other graph.
+    radius: float
+    navigation_nodes: int
+    navigation_edges: int
+    navigation_components: int
+    navigation_kinds: Dict[str, int] = {}
+    studio_nodes: int
+    studio_edges: int
+    #: "coordination": the viewer's own matrix, exact. "fitted": ICP fallback.
+    alignment: str = "fitted"
+    #: Translation carrying Navigation's turned points onto Studio's.
+    offset: List[float]
+    residual_median: float
+    residual_p90: float
+    #: Share of Navigation's nodes with a Studio node within ``radius``.
+    navigation_covered: float
+    #: Share of Studio's nodes with a Navigation node within ``radius``.
+    studio_covered: float
+    studio_covered_by_kind: Dict[str, float] = {}
+    storeys: List[NavigationStorey] = []
+    route: Optional[NavigationRoute] = None
+    #: Navigation's graph in the viewer frame, encoded like GraphResponse.
+    nodes_b64: Optional[str] = None
+    edges_b64: Optional[str] = None
+    timings: Dict[str, float] = {}
+    cached: bool = False
+    notes: List[str] = []
+
+
 class FireSimRequest(BaseModel):
     graph_id: Optional[str] = None
     mode: str = "ifc"

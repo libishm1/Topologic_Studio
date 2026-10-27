@@ -341,6 +341,101 @@ if (gotStart && gotExit) {
 }
 await shot(page, "route");
 
+// ---- 4b. alternative routes -------------------------------------------------
+//
+// Added 2026-10-27 with /api/ifc/path/alternatives.
+
+const readStats = () =>
+  page.evaluate(() => {
+    const out = {};
+    document.querySelectorAll(".stat").forEach((el) => {
+      const k = el.querySelector(".stat__label")?.textContent?.trim();
+      const v = el.querySelector(".stat__value")?.textContent?.trim();
+      if (k) out[k] = v;
+    });
+    return out;
+  });
+
+console.log("\n[4b] Alternative routes");
+const altBtn = page.getByRole("button", { name: /^Find alternative routes$/ });
+if (gotStart && gotExit && (await altBtn.isEnabled())) {
+  const altResponse = page.waitForResponse(
+    (res) => res.url().includes("/api/ifc/path/alternatives"),
+    { timeout: 60000 },
+  );
+  await altBtn.click();
+  const alt = await altResponse.then((res) => res.json()).catch(() => null);
+  record(Boolean(alt?.routes?.length), "alternative routes returned", alt ? `${alt.routes.length} route(s), ${alt.ms} ms` : "no response");
+  if (alt?.routes?.length) {
+    console.log(
+      `    alternatives: ${alt.routes.map((r) => `${r.length.toFixed(2)} m (${Math.round(r.overlap * 100)}% shared)`).join(", ")}`,
+    );
+    if (alt.note) console.log(`    note: ${alt.note}`);
+    const listed = await page
+      .waitForFunction(() => /route 1/i.test(document.body.innerText), null, { timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+    record(listed, "alternative routes listed in the panel");
+    const costs = alt.routes.map((r) => r.cost);
+    record(
+      costs.every((c, i) => i === 0 || c >= costs[i - 1] - 1e-6),
+      "alternatives are ranked by cost",
+      costs.map((c) => c.toFixed(2)).join(" <= "),
+    );
+  }
+  await page.locator(".kv", { hasText: /route 1/i }).scrollIntoViewIfNeeded().catch(() => {});
+  await shot(page, "alternatives");
+} else {
+  record(false, "Find alternative routes was enabled", "needs start and exit");
+}
+
+// ---- 4c. TopologicPy Navigation cross-check ---------------------------------
+
+console.log("\n[4c] TopologicPy Navigation cross-check");
+await page.getByRole("tab", { name: "Model" }).click();
+await page.waitForTimeout(300);
+await page.getByRole("button", { name: /Cross-check with TopologicPy/ }).click();
+await page.waitForTimeout(300);
+const navBtn = page.getByRole("button", { name: /^Run Navigation cross-check$/ });
+if (await navBtn.isEnabled()) {
+  // Playwright exposes no body for a multipart request holding a Blob, so
+  // whether the coordination matrix was sent is read from the server's answer
+  // (alignment === "coordination") instead of from the request.
+  const navResponse = page.waitForResponse(
+    (res) => res.url().includes("/api/ifc/navigation-check"),
+    { timeout: 240000 },
+  );
+  const t1 = Date.now();
+  await navBtn.click();
+  const nav = await navResponse
+    .then(async (res) => (res.ok() ? res.json() : { error: `${res.status()} ${await res.text()}` }))
+    .catch((e) => ({ error: String(e) }));
+  record(!nav.error, "Navigation cross-check returned", nav.error || `${((Date.now() - t1) / 1000).toFixed(1)}s`);
+  if (!nav.error) {
+    console.log(
+      `    navigation: ${nav.navigation_nodes} nodes, ${nav.navigation_components} parts; ` +
+        `alignment ${nav.alignment} (median ${nav.residual_median} m); ` +
+        `its covered by ours ${nav.navigation_covered}, ours covered by it ${nav.studio_covered}`,
+    );
+    nav.storeys.forEach((s) => console.log(`    storey ${s.name}: ${JSON.stringify(s)}`));
+    if (nav.route) console.log(`    route: ${JSON.stringify({ ...nav.route, points: nav.route.points.length })}`);
+    record(
+      nav.alignment === "coordination",
+      "viewer sent its coordination matrix; graphs aligned exactly, not fitted",
+    );
+    record(nav.navigation_covered > 0.8, "our graph covers most of Navigation's", String(nav.navigation_covered));
+    const shown = await page
+      .waitForFunction(() => /our nodes it covers/i.test(document.body.innerText), null, { timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+    record(shown, "cross-check stats rendered");
+    await page.locator(".stat", { hasText: /our nodes it covers/i }).scrollIntoViewIfNeeded().catch(() => {});
+  }
+  await shot(page, "navigation-check");
+} else {
+  record(false, "Run Navigation cross-check was enabled", "needs a graph, the file and server support");
+}
+
 // ---- 5. fire simulation -----------------------------------------------------
 
 console.log("\n[5] Fire simulation");

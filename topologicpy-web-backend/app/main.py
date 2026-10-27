@@ -91,6 +91,15 @@ def create_app() -> FastAPI:
             "legacy_topology": bool(getattr(app.state, "legacy_available", False)),
             "legacy_error": getattr(app.state, "legacy_error", None),
             "server_side_ifc": _ifcopenshell_version() is not None,
+            "alternatives": ["distinct", "yen"],
+            # TGraph.KShortestPaths arrives in topologicpy 0.9.87; without it,
+            # "yen" runs on the built-in engine for both engine choices.
+            "tgraph_k_shortest_paths": _has_k_shortest_paths(),
+            "navigation_check": bool(
+                topo.get("usable")
+                and _navigation_available()
+                and _ifcopenshell_version() is not None
+            ),
             "limits": {
                 "max_graph_nodes": settings.max_graph_nodes,
                 "max_upload_mib": settings.max_upload_mib,
@@ -109,6 +118,24 @@ def _topologicpy_info() -> Dict[str, Any]:
         return version_info()
     except Exception as exc:  # pragma: no cover
         return {"usable": False, "error": str(exc)}
+
+
+def _has_k_shortest_paths() -> bool:
+    try:
+        from .graphs.topologic_engine import has_k_shortest_paths
+
+        return has_k_shortest_paths()
+    except Exception:  # pragma: no cover
+        return False
+
+
+def _navigation_available() -> bool:
+    try:
+        from .graphs.navigation_check import available
+
+        return available()
+    except Exception:  # pragma: no cover
+        return False
 
 
 def _ifcopenshell_version():

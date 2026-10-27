@@ -9,6 +9,7 @@
 import React from "react";
 
 import { formatBytes, formatMs } from "../lib/perf.js";
+import { routeColor } from "../lib/routeColors.js";
 import {
   Badge,
   Button,
@@ -30,7 +31,7 @@ const reachablePct = (stats) =>
 
 // -------------------------------------------------------------------- model
 
-export function ModelPanel({ studio, onBuildGraph, onClearCache }) {
+export function ModelPanel({ studio, onBuildGraph, onClearCache, onNavigationCheck }) {
   const { modelInfo, file, graph, graphBusy, settings, setSettings, cacheInfo } = studio;
 
   return (
@@ -242,6 +243,8 @@ export function ModelPanel({ studio, onBuildGraph, onClearCache }) {
         )}
       </Section>
 
+      <NavigationCheckSection studio={studio} onRun={onNavigationCheck} />
+
       <Section title="Local cache" defaultOpen={false} badge={formatBytes(cacheInfo.bytes)}>
         <p className="field__hint">
           Converted models are stored in this browser so repeat loads skip IFC parsing.
@@ -255,9 +258,111 @@ export function ModelPanel({ studio, onBuildGraph, onClearCache }) {
   );
 }
 
+/**
+ * TopologicPy builds its own walkable graph from the same IFC; this compares
+ * the two. Lives under Model because it checks the graph, not a route.
+ */
+function NavigationCheckSection({ studio, onRun }) {
+  const { graph, file, navCheck, navBusy, settings, setSettings, capabilities, points } = studio;
+  const available = Boolean(capabilities?.navigation_check);
+  const pct = (v) => (v === null || v === undefined ? "-" : `${Math.round(v * 100)}%`);
+  const route = navCheck?.route;
+
+  return (
+    <Section title="Cross-check with TopologicPy" defaultOpen={false} badge={navCheck ? pct(navCheck.studio_covered) : null}>
+      <p className="field__hint">
+        TopologicPy&apos;s <code>Navigation</code> class builds its own walkable graph from the IFC:
+        walkable faces, obstacles cut out at walking height, stairs as connectors. It is an
+        independent estimate of the same space, so where the two disagree, one of them is wrong
+        about the building. The IFC is uploaded and parsed on the server: seconds here, up to a
+        minute on a small host.
+      </p>
+      <NumberField
+        label="Grid spacing (m)"
+        value={settings.navSpacing}
+        min={0.25}
+        max={5}
+        step={0.25}
+        onChange={(navSpacing) => setSettings({ navSpacing: navSpacing ?? 0.5 })}
+        hint="Match the graph's sampling spacing for a fair comparison. Also the coverage radius."
+      />
+      <Button
+        block
+        busy={navBusy}
+        disabled={!available || !graph || !file}
+        onClick={onRun}
+        title={available ? undefined : "The server's topologicpy has no Navigation class"}
+      >
+        {navBusy ? "Building TopologicPy's graph" : "Run Navigation cross-check"}
+      </Button>
+      {!available && (
+        <p className="field__hint">The server cannot run this: it needs topologicpy 0.9.86+ and IfcOpenShell.</p>
+      )}
+      {available && graph && !(points.start && points.exit) && !navCheck && (
+        <p className="field__hint">Set a start and exit first to compare a route on each graph as well.</p>
+      )}
+
+      {navCheck && (
+        <>
+          <div className="stats">
+            <Stat label="Its nodes we cover" value={pct(navCheck.navigation_covered)} warn={navCheck.navigation_covered < 0.9} />
+            <Stat label="Our nodes it covers" value={pct(navCheck.studio_covered)} warn={navCheck.studio_covered < 0.9} />
+            <Stat label="Its nodes" value={fmt(navCheck.navigation_nodes)} />
+            <Stat label="Its parts" value={fmt(navCheck.navigation_components)} warn={navCheck.navigation_components > 1} />
+          </div>
+          <KeyValue
+            entries={[
+              ...navCheck.storeys.map((s) => [
+                s.name,
+                `ours ${fmt(s.studio_nodes)} · its ${fmt(s.navigation_nodes)} · ${pct(s.navigation_covered)} / ${pct(s.studio_covered)}`,
+              ]),
+              ...Object.entries(navCheck.studio_covered_by_kind).map(([kind, v]) => [
+                `Our ${kind} nodes covered`,
+                pct(v),
+              ]),
+              ...(route
+                ? [
+                    [
+                      "Route length",
+                      route.found
+                        ? `ours ${route.studio_length?.toFixed(1)} m · its ${route.navigation_length.toFixed(1)} m (${route.ratio?.toFixed(2)}x)`
+                        : "no route on its graph",
+                    ],
+                  ]
+                : []),
+              ["Alignment", `${navCheck.alignment}, median gap ${navCheck.residual_median.toFixed(2)} m`],
+              [
+                "Time",
+                navCheck.cached
+                  ? `${formatMs(navCheck.timings.align_ms)} (graph cached)`
+                  : `${formatMs(navCheck.timings.parse_ms + navCheck.timings.graph_ms)} to build`,
+              ],
+            ]}
+          />
+          {route?.note && <p className="field__hint">{route.note}</p>}
+          {navCheck.notes.map((note) => (
+            <p key={note} className="field__hint" style={{ color: "var(--warning)" }}>
+              {note}
+            </p>
+          ))}
+          <p className="field__hint">
+            Per storey: ours / its node counts, then the share of its nodes we cover and of ours it
+            covers, within {navCheck.radius} m.
+          </p>
+          <Toggle
+            label="Show TopologicPy's graph"
+            checked={settings.showNavGraph}
+            onChange={(showNavGraph) => setSettings({ showNavGraph })}
+          />
+        </>
+      )}
+    </Section>
+  );
+}
+
 // --------------------------------------------------------------- pathfinding
 
-export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompare }) {
+export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompare, onAlternatives }) {
   const {
     graph,
     points,
@@ -265,6 +370,7 @@ export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompar
     path,
     pathBusy,
     comparison,
+    alternatives,
     settings,
     setSettings,
     capabilities,
@@ -321,14 +427,14 @@ export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompar
             {
               value: "topologicpy",
               label: engines.includes("topologicpy")
-                ? "TopologicPy Graph.ShortestPath"
+                ? "TopologicPy TGraph.ShortestPath"
                 : "TopologicPy (unavailable)",
               disabled: !engines.includes("topologicpy"),
             },
           ]}
           hint={
             engines.includes("topologicpy")
-              ? "Both return the same optimum route. Measured on a 2,600-node model: built-in 5.8 ms, TopologicPy 9.3 ms per query plus a one-off graph build. Either is fine interactively."
+              ? "Both return the same optimum route. Either is fine interactively."
               : "The server could not load topologicpy, so only the built-in engine is offered."
           }
         />
@@ -386,6 +492,71 @@ export function RoutePanel({ studio, onPick, onClearPoints, onFindPath, onCompar
               ["TopologicPy", `${comparison.topologicpy_ms.toFixed(1)} ms`],
             ]}
           />
+        )}
+      </Section>
+
+      <Section
+        title="Alternative routes"
+        badge={alternatives ? `${alternatives.routes.length} found` : null}
+      >
+        <p className="field__hint">
+          Is there a second way out? <strong>Different space</strong> keeps a route only if at most
+          half of it runs within 1.5 m of a better one, up to 1.5x the shortest length; fewer
+          routes than asked means the building offers no more. <strong>Yen</strong> is
+          TopologicPy&apos;s <code>KShortestPaths</code>: the next cheapest paths, which on a dense
+          graph are usually the best route with a step moved.
+        </p>
+        <div className="grid-2">
+          <NumberField
+            label="Routes"
+            value={settings.altCount}
+            min={2}
+            max={8}
+            step={1}
+            onChange={(altCount) => setSettings({ altCount: altCount ?? 3 })}
+          />
+          <SelectField
+            label="Method"
+            value={settings.altMethod}
+            onChange={(altMethod) => setSettings({ altMethod })}
+            options={[
+              { value: "distinct", label: "Different space" },
+              { value: "yen", label: "Yen k-shortest" },
+            ]}
+          />
+        </div>
+        <Button
+          block
+          busy={pathBusy}
+          disabled={!ready || !points.start || !points.exit}
+          onClick={onAlternatives}
+        >
+          Find alternative routes
+        </Button>
+        {alternatives?.routes.length > 0 && (
+          <div className="kv">
+            {alternatives.routes.map((route, i) => (
+              <React.Fragment key={route.rank}>
+                <div className="kv__k" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span className="picker__dot" style={{ background: routeColor(i) }} />
+                  Route {route.rank}
+                </div>
+                <div className="kv__v">
+                  {route.length.toFixed(1)} m
+                  {route.rank === 1
+                    ? " · shortest"
+                    : ` · +${Math.round((route.stretch - 1) * 100)}% · ${Math.round(route.overlap * 100)}% shared`}
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+        {alternatives && (
+          <p className="field__hint">
+            {alternatives.note ? `${alternatives.note} ` : ""}
+            {alternatives.method === "yen" ? "Yen" : "Different space"}, {alternatives.engine} engine,{" "}
+            {alternatives.ms.toFixed(0)} ms.
+          </p>
         )}
       </Section>
     </>
