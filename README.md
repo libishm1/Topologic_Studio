@@ -293,8 +293,13 @@ parse on the main thread.
 
 `/ifc-egress-graph`, `/ifc-egress-path`, `/graph-meta`, `/upload-topology` and
 `/upload-ifc` keep their original request and response shapes, served by the
-new machinery. The Classic frontend can point at this backend unchanged, which
-is what makes an A/B comparison on one machine possible.
+new machinery, which is what makes an A/B comparison on one machine possible.
+
+Not served: Classic's fire stream, `/fire-sim/stream` (Next uses
+`/api/fire/stream`). So the Classic frontend can route against this backend but
+cannot run a fire simulation on it, and the live Classic service must not be
+switched to this backend while Pages still serves the Classic frontend: deploy
+the two lines' frontend and backend together.
 
 ---
 
