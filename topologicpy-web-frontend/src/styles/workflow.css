@@ -1,0 +1,789 @@
+/* The 2026-10 redesign (Claude Design canvas "Topologic Studio redesign").
+ *
+ * The inspector is a four-step workflow - Model, Graph, Route, Simulate -
+ * with each step's one primary action first, its result right under it, and
+ * settings folded away. Explanations sit beside the result they explain
+ * instead of in toasts. Loaded after app.css, so these rules win ties.
+ */
+
+/* --------------------------------------------------------------- stepper */
+
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.stepper__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 58px;
+  padding: 6px 2px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 550;
+  transition: background var(--transition), color var(--transition);
+}
+
+.stepper__step:hover {
+  background: var(--surface-3);
+}
+
+.stepper__marker {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1.5px solid var(--border-control);
+}
+
+.stepper__step[data-status="done"] {
+  color: var(--success);
+}
+
+.stepper__step[data-status="done"] .stepper__marker {
+  background: var(--success-soft);
+  border-color: transparent;
+}
+
+.stepper__step[data-status="warning"] {
+  color: var(--warning);
+}
+
+.stepper__step[data-status="warning"] .stepper__marker {
+  background: var(--warning-soft);
+  border-color: transparent;
+}
+
+.stepper__step[aria-selected="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.stepper__step[aria-selected="true"] .stepper__marker {
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+  color: var(--accent-text);
+}
+
+.step-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+.step-heading__count {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--accent);
+}
+
+.step-heading__title {
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.step-heading__lead {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+/* The step's own controls, before any collapsible section. */
+.step-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-5) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------------------------------------------------------------- notice */
+
+.notice {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.notice > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.notice--warning {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.notice--neutral {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.notice--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.linklike {
+  display: inline;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- result */
+
+.result {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+
+.result__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 650;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.result__title[data-tone="ok"] svg {
+  color: var(--success);
+}
+
+.result__title[data-tone="warn"] svg {
+  color: var(--warning);
+}
+
+.result__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  padding: 14px;
+  margin: 0;
+}
+
+.result__label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.result__value {
+  margin: 0;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.result__value--lead {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.result__value--muted {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.result__note {
+  padding: 0 14px 12px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------- choices, details */
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choices__legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.choice {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-control);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  padding: 9px 11px;
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.choice input {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  flex-shrink: 0;
+  accent-color: var(--accent-solid);
+}
+
+.choice__title {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.choice__desc {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.7px solid currentColor;
+  border-bottom: 1.7px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--transition);
+}
+
+.disclosure[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.disclosure__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+}
+
+/* The graph, summarised at the top of later steps. */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 13.5px;
+}
+
+.summary__row .linklike {
+  color: var(--accent);
+}
+
+/* --------------------------------------------------------------- welcome */
+
+.placeholder {
+  overflow: auto;
+}
+
+.welcome {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: 32px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.welcome__title {
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.welcome__lead {
+  margin-top: 8px;
+  max-width: 62ch;
+  font-size: 14.5px;
+  color: var(--text-secondary);
+}
+
+.welcome .dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  border: 2px dashed var(--border-control);
+  color: var(--text-secondary);
+}
+
+.welcome .dropzone > svg {
+  color: var(--accent);
+}
+
+.welcome__subtitle {
+  font-size: 15px;
+  font-weight: 650;
+  margin-bottom: var(--space-3);
+}
+
+.example-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.example {
+  height: 100%;
+  gap: 4px;
+  padding: 14px 16px;
+  border-color: var(--border-control);
+  border-radius: 10px;
+}
+
+.example__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.example__size {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.example__desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.example__credit {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* The examples in the Model step, once a model is open. */
+.example-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------ playback, legend */
+
+.overlay--bottom-center {
+  bottom: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.playback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  width: min(560px, calc(100vw - 48px));
+}
+
+.playback__info {
+  flex: 1 1 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.playback__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.playback__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.playback__fill {
+  height: 100%;
+  background: var(--accent-solid);
+  transition: width 120ms linear;
+}
+
+/* The same stops as heatColor() in ViewerManager.js. */
+.legend__ramp {
+  height: 8px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #facc15, #f97316, #dc2626, #7f1d1d);
+}
+
+.legend__scale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.legend__note {
+  max-width: 220px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend__title {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+/* --------------------------------------------------------------- methods */
+
+.methods {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-5);
+  background: var(--surface-scrim);
+}
+
+.methods__sheet {
+  width: 100%;
+  max-width: 1080px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-0);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+}
+
+.methods__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.methods__body {
+  overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-5);
+}
+
+.methods__toc {
+  flex: 1 1 180px;
+  max-width: 220px;
+}
+
+.methods__toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.methods__toc a {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.methods__toc a:hover {
+  background: var(--surface-3);
+}
+
+.methods__article {
+  flex: 999 1 520px;
+  max-width: 720px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.methods__article h2 {
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.methods__article h3 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-3);
+}
+
+.methods__article p,
+.methods__article li {
+  color: var(--text-secondary);
+}
+
+.methods__article strong {
+  color: var(--text-primary);
+}
+
+.methods__article ul {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.methods__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.methods__card {
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.methods__card dt {
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.methods__card dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.methods__table {
+  overflow-x: auto;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.methods__table table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.methods__table th,
+.methods__table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.methods__table thead th {
+  background: var(--surface-2);
+  font-weight: 650;
+}
+
+.methods__table tbody th {
+  font-weight: 550;
+}
+
+.methods__table td {
+  color: var(--text-secondary);
+}
+
+.pill {
+  display: inline-flex;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.pill--ok {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.pill--plan {
+  background: var(--surface-3);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .methods {
+    padding: 0;
+  }
+
+  .methods__sheet {
+    border-radius: 0;
+  }
+
+  .welcome {
+    padding: var(--space-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playback__fill,
+  .stepper__step,
+  .disclosure > summary::before {
+    transition: none;
+  }
+}
+
+/* Toasts drop from under the header: the bottom of the viewport holds the
+   legend, the fire playback bar and the view buttons. */
+.toasts {
+  top: calc(var(--header-height) + var(--space-3));
+  bottom: auto;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------- accessibility audit */
+
+/* The file input is invisible over its label, so the label shows focus. */
+.file-btn:focus-within {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* Targets of at least 24 px (WCAG 2.5.8). */
+.summary__row .linklike {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.toast__close {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 6px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* Reflow at 200% zoom and on phones: the header wraps instead of pushing
+   the page sideways (WCAG 1.4.10). */
+.app {
+  grid-template-rows: auto 1fr;
+}
+
+.header {
+  min-height: var(--header-height);
+}
+
+@media (max-width: 760px) {
+  .header {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+    padding-block: var(--space-2);
+  }
+
+  .header__divider,
+  .brand__name,
+  .brand__tag {
+    display: none;
+  }
+}
+
+/* Phones: the header wraps to several rows, so toasts come up from the
+   bottom instead, and the node count gives the small viewport back. */
+@media (max-width: 760px) {
+  .toasts {
+    top: auto;
+    bottom: var(--space-4);
+  }
+
+  .overlay--bottom-right > .card:not(:last-child),
+  .header .badge {
+    display: none;
+  }
+}

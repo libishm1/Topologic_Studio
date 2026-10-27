@@ -187,15 +187,14 @@ const emptyShot = await page.locator(".viewport__canvas").screenshot();
 
 console.log("\n[2] Loading the IFC model");
 const t0 = Date.now();
-await page.setInputFiles('input[type="file"][accept=".ifc"]', IFC);
+await page.locator('input[type="file"][accept=".ifc"]').first().setInputFiles(IFC);
 
 const modelLoaded = await page
   .waitForFunction(
-    () => {
-      // innerText reflects CSS text-transform, so match case-insensitively.
-      const text = document.body.innerText.toLowerCase();
-      return text.includes("floors") && !text.includes("no model loaded");
-    },
+    () =>
+      [...document.querySelectorAll("button")].some(
+        (b) => /Build egress graph|Rebuild graph/.test(b.textContent) && !b.disabled,
+      ),
     null,
     { timeout: 180000 },
   )
@@ -205,6 +204,9 @@ record(modelLoaded, "IFC model loaded", `${((Date.now() - t0) / 1000).toFixed(1)
 timing("Open IFC, first time (convert + cache)", Date.now() - t0);
 
 if (modelLoaded) {
+  // Opening a model moves on to the Graph step; the counts are on Model.
+  await page.getByRole("tab", { name: /^Model/ }).click();
+  await page.waitForTimeout(300);
   const stats = await page.evaluate(() => {
     const out = {};
     document.querySelectorAll(".stat").forEach((el) => {
@@ -247,6 +249,8 @@ await shot(page, "model-loaded");
 // ---- 3. build the graph -----------------------------------------------------
 
 console.log("\n[3] Building the navigation graph");
+await page.getByRole("tab", { name: /^Graph/ }).click();
+await page.waitForTimeout(200);
 const buildBtn = page.getByRole("button", { name: /Build egress graph|Rebuild graph/ });
 record(await buildBtn.count() > 0, "build button present");
 
@@ -258,7 +262,7 @@ if (await buildBtn.count()) {
   // the worker finishes, before the upload returns and the tab switches.
   const built = await page
     .waitForFunction(
-      () => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.trim() === "Route",
+      () => document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.step === "route",
       null,
       { timeout: 180000 },
     )
@@ -268,9 +272,9 @@ if (await buildBtn.count()) {
   timing("Build egress graph (sample in browser + server)", Date.now() - t1);
 
   if (built) {
-    // buildGraph() advances the panel to the Route tab; the graph stats live
-    // on the Model tab, so come back before scraping them.
-    await page.getByRole("tab", { name: "Model" }).click();
+    // buildGraph() advances to the Route step; the graph stats live on the
+    // Graph step, so come back before scraping them.
+    await page.getByRole("tab", { name: /^Graph/ }).click();
     await page.waitForTimeout(400);
     const g = await page.evaluate(() => {
       const out = {};
@@ -283,7 +287,7 @@ if (await buildBtn.count()) {
     });
     console.log(`    graph: ${JSON.stringify(g)}`);
     record(Number(g.Nodes?.replace(/,/g, "")) > 100, "graph has a sane node count", `${g.Nodes}`);
-    record(Number(g.Edges?.replace(/,/g, "")) > 100, "graph has edges", `${g.Edges}`);
+    record(Number(g.Links?.replace(/,/g, "")) > 100, "graph has edges", `${g.Links}`);
   }
 }
 await shot(page, "graph-built");
@@ -296,7 +300,7 @@ console.log("\n[4] Picking points and routing");
 // then switch to the Route tab, where the pickers live.
 await page.getByRole("button", { name: "Fit", exact: true }).click();
 await page.waitForTimeout(1300);
-await page.getByRole("tab", { name: "Route" }).click();
+await page.getByRole("tab", { name: /^Route/ }).click();
 await page.waitForTimeout(400);
 
 const box = await page.locator(".viewport__canvas").boundingBox();
@@ -384,7 +388,7 @@ if (gotStart && gotExit) {
   const tRoute = Date.now();
   await routeBtn.click();
   const routed = await page
-    .waitForFunction(() => document.body.innerText.toLowerCase().includes("waypoints"), null, {
+    .waitForFunction(() => /route found|no route/i.test(document.querySelector(".result__title")?.textContent || ""), null, {
       timeout: 60000,
     })
     .then(() => true)
@@ -394,10 +398,11 @@ if (gotStart && gotExit) {
 
   if (routed) {
     const r = await page.evaluate(() => {
-      const out = {};
-      document.querySelectorAll(".stat").forEach((el) => {
-        const k = el.querySelector(".stat__label")?.textContent?.trim();
-        const v = el.querySelector(".stat__value")?.textContent?.trim();
+      const card = document.querySelector(".result");
+      const out = { Found: /route found/i.test(card?.querySelector(".result__title")?.textContent || "") ? "yes" : "no" };
+      card?.querySelectorAll(".result__item").forEach((el) => {
+        const k = el.querySelector(".result__label")?.textContent?.trim();
+        const v = el.querySelector(".result__value")?.textContent?.trim();
         if (k) out[k] = v;
       });
       return out;
@@ -472,7 +477,7 @@ if (gotStart && gotExit && (await altBtn.isEnabled())) {
 // ---- 4c. TopologicPy Navigation cross-check ---------------------------------
 
 console.log("\n[4c] TopologicPy Navigation cross-check");
-await page.getByRole("tab", { name: "Model" }).click();
+await page.getByRole("tab", { name: /^Graph/ }).click();
 await page.waitForTimeout(300);
 await page.getByRole("button", { name: /Cross-check with TopologicPy/ }).click();
 await page.waitForTimeout(300);
@@ -525,13 +530,10 @@ if (await navBtn.isEnabled()) {
 // ---- 5. fire simulation -----------------------------------------------------
 
 console.log("\n[5] Fire simulation");
-await page.getByRole("tab", { name: "Route" }).click();
+await page.getByRole("tab", { name: /^Simulate/ }).click();
 await page.waitForTimeout(300);
 const gotFire = await pickAt("Fire", 0.50, 0.50);
 record(gotFire, "fire origin placed");
-
-await page.getByRole("tab", { name: "Simulate" }).click();
-await page.waitForTimeout(300);
 
 const startFire = page.getByRole("button", { name: /^Start fire$/ });
 if (gotFire && (await startFire.isEnabled())) {
@@ -558,7 +560,7 @@ if (gotFire && (await startFire.isEnabled())) {
 // and never reached the exit on a real model; nothing exercised it here.
 
 console.log("\n[5b] Reinforcement learning");
-await page.getByRole("button", { name: /Reinforcement learning/ }).click();
+await page.getByRole("button", { name: /Train an agent against this fire/ }).click();
 await page.waitForTimeout(300);
 const trainBtn = page.getByRole("button", { name: /^Train policy$/ });
 if (await trainBtn.isEnabled()) {
@@ -616,13 +618,35 @@ await shot(page, "theme-light");
 await page.getByRole("button", { name: "Toggle colour theme" }).click();
 await page.waitForTimeout(300);
 
-for (const tab of ["Model", "Route", "Simulate", "About"]) {
-  await page.getByRole("tab", { name: tab }).click();
+for (const tab of ["Model", "Graph", "Route", "Simulate"]) {
+  await page.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
   await page.waitForTimeout(200);
   const visible = await page.locator(".panel__scroll").isVisible();
-  record(visible, `panel tab "${tab}" renders`);
+  record(visible, `workflow step "${tab}" renders`);
 }
-await shot(page, "about-tab");
+
+// Arrow keys move between steps (the tab pattern).
+await page.getByRole("tab", { name: /^Simulate/ }).focus();
+await page.keyboard.press("ArrowLeft");
+await page.waitForTimeout(150);
+record(
+  await page.evaluate(() => document.activeElement?.dataset.step === "route"),
+  "arrow keys move between workflow steps",
+);
+
+// Methods: a modal page that Escape closes, returning focus.
+await page.getByRole("button", { name: /^Methods$/ }).click();
+await page.waitForTimeout(300);
+const methodsShown = await page.getByRole("dialog", { name: "Methods and verification" }).isVisible().catch(() => false);
+record(methodsShown, "Methods page opens");
+record(
+  await page.getByRole("dialog").getByText(/proved in Lean 4/).isVisible().catch(() => false),
+  "Methods page lists the Lean-proved properties",
+);
+await shot(page, "methods");
+await page.keyboard.press("Escape");
+await page.waitForTimeout(200);
+record(await page.getByRole("dialog").count() === 0, "Escape closes the Methods page");
 
 await page.getByRole("button", { name: "Topology JSON" }).click();
 await page.waitForTimeout(1200);
@@ -649,7 +673,7 @@ await page
   .catch(() => {});
 timing("Reload page to 3D engine ready", Date.now() - tReload);
 const tCached = Date.now();
-await page.setInputFiles('input[type="file"][accept=".ifc"]', IFC);
+await page.locator('input[type="file"][accept=".ifc"]').first().setInputFiles(IFC);
 const fromCache = await page
   .waitForFunction(() => /loaded from cache|local fragment cache/i.test(document.body.innerText), null, {
     timeout: 120000,
@@ -668,7 +692,7 @@ if (fromCache) timing("Open IFC, second time (from cache)", Date.now() - tCached
 console.log("\n[8] Example models");
 for (const name of ["Courtyard ring", "Office, two storeys"]) {
   await page.reload({ waitUntil: "domcontentloaded" });
-  const button = page.getByRole("button", { name: new RegExp(`^${name}`) });
+  const button = page.locator(".welcome").getByRole("button", { name: new RegExp(`^${name}`) });
   const offered = await button
     .waitFor({ timeout: 60000 })
     .then(() => true)
@@ -678,9 +702,14 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
   const tEx = Date.now();
   await button.click();
   const opened = await page
-    .waitForFunction(() => /floors/i.test(document.body.innerText) && !/no model loaded/i.test(document.body.innerText), null, {
-      timeout: 120000,
-    })
+    .waitForFunction(
+      () =>
+        [...document.querySelectorAll("button")].some(
+          (b) => /Build egress graph|Rebuild graph/.test(b.textContent) && !b.disabled,
+        ),
+      null,
+      { timeout: 120000 },
+    )
     .then(() => true)
     .catch(() => false);
   record(opened, `example "${name}" opened`, `${((Date.now() - tEx) / 1000).toFixed(1)}s`);
@@ -688,12 +717,12 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
   await page.getByRole("button", { name: /Build egress graph|Rebuild graph/ }).first().click();
   await page
     .waitForFunction(
-      () => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.trim() === "Route",
+      () => document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.step === "route",
       null,
       { timeout: 120000 },
     )
     .catch(() => {});
-  await page.getByRole("tab", { name: "Model" }).click();
+  await page.getByRole("tab", { name: /^Graph/ }).click();
   await page.waitForTimeout(300);
   const stats = await readStats();
   console.log(`    ${name}: ${JSON.stringify(stats)}`);

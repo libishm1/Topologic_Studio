@@ -19,18 +19,20 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
-import { graphStats } from "./core/graph.js";
+import { graphIsSplit, graphStats } from "./core/graph.js";
 import { findRoute } from "./core/route.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
 import { trainRl as trainRlPolicy } from "./core/rl.js";
 import { useStudio } from "./state/useStudio.js";
-import { AboutPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
+import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
+import { MethodsDialog } from "./ui/MethodsDialog.jsx";
+import { Stepper } from "./ui/Stepper.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
 import { Viewport } from "./ui/Viewport.jsx";
 
-import { Badge, Button, FileButton, Segmented } from "./ui/primitives.jsx";
+import { Badge, Button, FileButton, Icon, Segmented } from "./ui/primitives.jsx";
 import logo from "./assets/topologicStudio-white-logo400x400.png";
 
 /** The points a route is drawn with: straightened when it has been. */
@@ -40,17 +42,16 @@ const drawn = (route) => route?.straight_points || route?.points || null;
 // on demand rather than shipped to everyone who opens the IFC viewer.
 const TopologyViewer = lazy(() => import("./viewer/TopologyViewer.jsx"));
 
+// The inspector is the workflow, one step per panel (src/ui/Panels.jsx).
+// Methods (what was proved, the limits, the server) opens from the header.
 const IFC_TABS = [
   { id: "model", label: "Model" },
+  { id: "graph", label: "Graph" },
   { id: "route", label: "Route" },
   { id: "simulate", label: "Simulate" },
-  { id: "about", label: "About" },
 ];
 
-const TOPOLOGY_TABS = [
-  { id: "topology", label: "Topology" },
-  { id: "about", label: "About" },
-];
+const TOPOLOGY_TABS = [{ id: "topology", label: "Topology" }];
 
 const MODES = [
   { value: "ifc", label: "IFC", hint: "Fragment viewer, egress graph and fire simulation" },
@@ -83,6 +84,8 @@ export default function App() {
   const temperatureRef = useRef(new Map());
   const [tab, setTab] = useState("model");
   const [panelOpen, setPanelOpen] = useState(true);
+  const [methodsOpen, setMethodsOpen] = useState(false);
+  const closeMethods = useCallback(() => setMethodsOpen(false), []);
   const [lastSample, setLastSample] = useState(null);
 
   // Legacy TopologicPy JSON-contract workflow.
@@ -109,6 +112,7 @@ export default function App() {
     dynamicPath,
     alternatives,
     navCheck,
+    rl,
     toast,
     reportError,
   } = studio;
@@ -187,7 +191,7 @@ export default function App() {
 
         studio.setModelInfo(result);
         viewer.setModelAppearance(settings.modelAppearance);
-        setTab("model");
+        setTab("graph");
 
         void studio.refreshCacheInfo();
 
@@ -355,23 +359,9 @@ export default function App() {
 
       timer.finish({ nodes: response.stats.nodes, edges: response.stats.edges });
 
-      const reachable = response.stats.nodes
-        ? Math.round((response.stats.largest_component / response.stats.nodes) * 100)
-        : 0;
-      if (response.stats.components > 1 && reachable < 98) {
-        // Separate parts are not necessarily a fault: the Duplex is two
-        // dwellings, each with its own front door, and splits 51/49.
-        toast(
-          `The largest part holds ${reachable}% of the walkable area. Separate dwellings, ` +
-            `or rooms whose doors are not in the model, show up as separate parts, and a ` +
-            `route can only join two points in the same part.`,
-          {
-            title: `The graph is in ${response.stats.components} parts`,
-            variant: "warning",
-            ttl: 9000,
-          },
-        );
-      } else {
+      // A graph in several parts is explained beside the graph (Panels.jsx,
+      // PartsNotice) and flagged on the stepper; a toast would vanish.
+      if (!graphIsSplit(response.stats)) {
         toast(
           `${response.stats.nodes.toLocaleString()} nodes, ` +
             `${response.stats.edges.toLocaleString()} edges.`,
@@ -455,6 +445,9 @@ export default function App() {
   const requestPick = useCallback(
     (mode) => {
       studio.setPickMode((current) => (current === mode ? null : mode));
+      // Show the row being set: start and exit live in Route, the fire in
+      // Simulate (a shortcut can arm either from any step).
+      setTab(mode === "fire" ? "simulate" : "route");
     },
     [studio],
   );
@@ -941,6 +934,38 @@ export default function App() {
   const tabs = mode === "ifc" ? IFC_TABS : TOPOLOGY_TABS;
   const activeTab = tabs.some((t) => t.id === tab) ? tab : tabs[0].id;
 
+  // ------------------------------------------------------- doors, by storey
+
+  // Exits are usually doors, so the Route step offers them as a list: also
+  // the way to set an exit without a mouse.
+  const doorList = useMemo(() => {
+    if (!graph?.kinds) return [];
+    const up = graph.upAxis === "z" ? 2 : graph.upAxis === "x" ? 0 : 1;
+    const out = [];
+    for (let i = 0; i < graph.kinds.length; i += 1) {
+      if (graph.kinds[i] !== 2) continue;
+      const point = [graph.nodes[i * 3], graph.nodes[i * 3 + 1], graph.nodes[i * 3 + 2]];
+      out.push({ id: i, point });
+    }
+    out.sort((a, b) => a.point[up] - b.point[up] || a.point[0] - b.point[0]);
+    return out.map((door, k) => ({
+      ...door,
+      label: `Door ${k + 1}: ${door.point.map((v) => v.toFixed(1)).join(", ")}`,
+    }));
+  }, [graph]);
+
+  // ------------------------------------------------------------ step status
+
+  const stepStatus = useMemo(
+    () => ({
+      model: modelInfo ? "done" : "todo",
+      graph: graph ? (graphIsSplit(graph.stats) ? "warning" : "done") : "todo",
+      route: path?.found ? "done" : "todo",
+      simulate: fire.step > 0 || rl.result ? "done" : "todo",
+    }),
+    [modelInfo, graph, path, fire.step, rl.result],
+  );
+
   // ----------------------------------------------------------------- legend
 
   const legend = useMemo(() => {
@@ -1001,26 +1026,6 @@ export default function App() {
               <FileButton accept=".ifc" onFile={handleFile} variant="primary">
                 Open IFC
               </FileButton>
-              {examples.length > 0 && (
-                <select
-                  className="header__select"
-                  aria-label="Open an example model"
-                  value=""
-                  onChange={(event) => {
-                    const entry = examples.find((x) => x.id === event.target.value);
-                    if (entry) void openExample(entry);
-                  }}
-                >
-                  <option value="" disabled>
-                    Examples…
-                  </option>
-                  {examples.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.name}
-                    </option>
-                  ))}
-                </select>
-              )}
               {file && (
                 <span className="badge" title={file.name}>
                   {file.name.length > 24 ? `${file.name.slice(0, 22)}...` : file.name}
@@ -1067,31 +1072,32 @@ export default function App() {
             <Badge variant="danger">Backend offline</Badge>
           )}
           {modelInfo?.cached && <Badge variant="success">cached</Badge>}
-          {fire.running && (
-            <Badge variant="danger" pulse>
-              fire step {fire.step}
-            </Badge>
-          )}
         </div>
 
         <div className="header__group">
+          <Button variant="ghost" onClick={() => setMethodsOpen(true)} aria-haspopup="dialog">
+            <Icon name="book" size={18} />
+            Methods
+          </Button>
           <Button
             icon
             variant="ghost"
             onClick={toggleTheme}
             title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             aria-label="Toggle colour theme"
+            aria-pressed={theme === "dark"}
           >
-            {theme === "dark" ? "☀" : "☾"}
+            <Icon name={theme === "dark" ? "sun" : "moon"} size={18} />
           </Button>
           <Button
             icon
             variant="ghost"
             onClick={() => setPanelOpen((v) => !v)}
-            title={panelOpen ? "Hide inspector" : "Show inspector"}
-            aria-label="Toggle inspector panel"
+            title={panelOpen ? "Hide the workflow panel" : "Show the workflow panel"}
+            aria-label="Show the workflow panel"
+            aria-pressed={panelOpen}
           >
-            {panelOpen ? "▸" : "◂"}
+            <Icon name="panel" size={18} />
           </Button>
         </div>
       </header>
@@ -1108,6 +1114,9 @@ export default function App() {
             loadState={studio.loadState}
             graphStats={graph?.stats}
             fire={fire}
+            fireSteps={settings.fireMaxSteps}
+            heatLegend={fire.running && settings.fireModel === "temperature"}
+            onStopFire={stopFire}
             legend={legend}
             examples={examples}
             onExample={openExample}
@@ -1168,23 +1177,30 @@ export default function App() {
         )}
 
         {panelOpen && (
-          <aside className="panel">
-            <div className="panel__tabs" role="tablist">
-              {tabs.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  role="tab"
-                  className="panel__tab"
-                  aria-selected={activeTab === entry.id}
-                  onClick={() => setTab(entry.id)}
-                >
-                  {entry.label}
-                </button>
-              ))}
-            </div>
+          <aside className="panel" aria-label="Workflow">
+            {mode === "ifc" ? (
+              <Stepper steps={tabs} active={activeTab} status={stepStatus} onSelect={setTab} />
+            ) : (
+              <div className="panel__tabs" role="tablist" aria-label="Panels">
+                {tabs.map((entry) => (
+                  <button
+                    key={entry.id}
+                    id={`step-${entry.id}`}
+                    type="button"
+                    role="tab"
+                    className="panel__tab"
+                    aria-selected={activeTab === entry.id}
+                    aria-controls="workflow-panel"
+                    data-step={entry.id}
+                    onClick={() => setTab(entry.id)}
+                  >
+                    {entry.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <div className="panel__scroll">
+            <div className="panel__scroll" id="workflow-panel" role="tabpanel" aria-labelledby={`step-${activeTab}`}>
               {activeTab === "topology" && (
                 <TopologyPanel
                   topology={topology}
@@ -1202,10 +1218,13 @@ export default function App() {
               {activeTab === "model" && (
                 <ModelPanel
                   studio={studio}
-                  onBuildGraph={buildGraph}
+                  examples={examples}
+                  onExample={openExample}
                   onClearCache={studio.purgeCache}
-                  onNavigationCheck={runNavigationCheck}
                 />
+              )}
+              {activeTab === "graph" && (
+                <GraphPanel studio={studio} onBuildGraph={buildGraph} onNavigationCheck={runNavigationCheck} />
               )}
               {activeTab === "route" && (
                 <RoutePanel
@@ -1215,17 +1234,22 @@ export default function App() {
                   onFindPath={findPath}
                   onCompare={comparePath}
                   onAlternatives={findAlternatives}
+                  onPlace={handlePick}
+                  doors={doorList}
+                  onGoTo={setTab}
                 />
               )}
               {activeTab === "simulate" && (
                 <SimulatePanel
                   studio={studio}
+                  onPick={requestPick}
+                  onPlace={handlePick}
                   onStartFire={startFire}
                   onStopFire={stopFire}
                   onTrainRl={trainRl}
+                  onGoTo={setTab}
                 />
               )}
-              {activeTab === "about" && <AboutPanel studio={studio} />}
             </div>
 
             <div className="statusbar">
@@ -1286,6 +1310,8 @@ export default function App() {
           </div>
         ))}
       </div>
+
+      <MethodsDialog open={methodsOpen} onClose={closeMethods} studio={studio} />
     </div>
   );
 }

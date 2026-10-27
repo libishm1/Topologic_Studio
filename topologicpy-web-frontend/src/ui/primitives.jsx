@@ -228,3 +228,143 @@ export function KeyValue({ entries }) {
 export function Empty({ children }) {
   return <p className="empty">{children}</p>;
 }
+
+// ------------------------------------------------------------- redesign
+
+/**
+ * Stroke icons, drawn inline so they take the text colour. Decorative unless
+ * a label is given; icon-only buttons carry their own aria-label instead.
+ */
+const ICON_PATHS = {
+  check: <path d="M4 10.5 8 14.5 16 6" />,
+  alert: (
+    <>
+      <path d="M10 3 18 17H2Z" />
+      <path d="M10 8.5v4" />
+      <circle cx="10" cy="14.8" r="0.5" fill="currentColor" />
+    </>
+  ),
+  info: (
+    <>
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M10 9v5" />
+      <circle cx="10" cy="6.5" r="0.5" fill="currentColor" />
+    </>
+  ),
+  help: (
+    <>
+      <circle cx="10" cy="10" r="8" />
+      <path d="M7.6 7.6a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2-2.4 3.5" />
+      <circle cx="10" cy="14.6" r="0.5" fill="currentColor" />
+    </>
+  ),
+  sun: (
+    <>
+      <circle cx="10" cy="10" r="3.5" />
+      <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4" />
+    </>
+  ),
+  moon: <path d="M16 12.5A6.5 6.5 0 0 1 7.5 4a6.5 6.5 0 1 0 8.5 8.5Z" />,
+  panel: (
+    <>
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
+      <path d="M12.5 3.5v13" />
+    </>
+  ),
+  upload: (
+    <>
+      <path d="M10 13V3M6 7l4-4 4 4" />
+      <path d="M3 13v2.5A1.5 1.5 0 0 0 4.5 17h11a1.5 1.5 0 0 0 1.5-1.5V13" />
+    </>
+  ),
+  close: <path d="M5 5l10 10M15 5 5 15" />,
+  book: (
+    <>
+      <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3H9v14H4.5A1.5 1.5 0 0 1 3 15.5Z" />
+      <path d="M17 4.5A1.5 1.5 0 0 0 15.5 3H11v14h4.5a1.5 1.5 0 0 0 1.5-1.5Z" />
+    </>
+  ),
+};
+
+export function Icon({ name, size = 18, label, className }) {
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : "true"}
+      focusable="false"
+    >
+      {ICON_PATHS[name]}
+    </svg>
+  );
+}
+
+/**
+ * A message that explains a result, kept beside it rather than in a toast:
+ * toasts vanish and cover the model, and these need reading.
+ */
+export function Notice({ tone = "neutral", children, live = false }) {
+  const icon = tone === "warning" ? "alert" : tone === "success" ? "check" : "info";
+  return (
+    <div className={`notice notice--${tone}`} role={live ? "status" : undefined}>
+      <Icon name={icon} size={18} />
+      <div>{children}</div>
+    </div>
+  );
+}
+
+/** "Step 2 of 4" over the step's name and one line on what it is for. */
+export function StepHeading({ step, of = 4, title, lead }) {
+  return (
+    <div className="step-heading">
+      <p className="step-heading__count">
+        Step {step} of {of}
+      </p>
+      <h2 className="step-heading__title">{title}</h2>
+      {lead && <p className="step-heading__lead">{lead}</p>}
+    </div>
+  );
+}
+
+/** Radio buttons as cards, each with a line saying what the choice does. */
+export function Choices({ legend, name, value, onChange, options, disabled }) {
+  return (
+    <fieldset className="choices" disabled={disabled}>
+      <legend className="choices__legend">{legend}</legend>
+      {options.map((option) => (
+        <label className="choice" key={option.value}>
+          <input
+            type="radio"
+            name={name}
+            value={option.value}
+            checked={value === option.value}
+            onChange={() => onChange(option.value)}
+          />
+          <span>
+            <span className="choice__title">{option.label}</span>
+            {option.description && <span className="choice__desc">{option.description}</span>}
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** Settings that most people leave alone, folded under one line. */
+export function Disclosure({ summary, children, defaultOpen = false }) {
+  return (
+    <details className="disclosure" open={defaultOpen || undefined}>
+      <summary>{summary}</summary>
+      <div className="disclosure__body">{children}</div>
+    </details>
+  );
+}

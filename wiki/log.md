@@ -39,3 +39,17 @@
   - Corrected the review: `KShortestPaths` is 0.9.87, not 0.9.86.
 - Lean: proved L3, L4, L8, L12, L13 and L14 (11 theorems) in
   `formal/fireegress`; standard axioms only. Research note section 8.5.
+- Routes drawn straight (src/core/straighten.js), Wire.Straighten's rule with
+  doors and stairs kept and 0.25 m wall clearance; 600 routes on three
+  examples, none through a wall (tools/straighten-check.mjs).
+- Redesign from the Claude Design canvas "Topologic Studio redesign": the
+  inspector is a four-step workflow (Model, Graph, Route, Simulate), a
+  welcome screen with the examples, result cards, notices instead of toasts
+  for a split graph, a fire playback bar, and a Methods page with the
+  Lean-proved properties and the models' limits (W2-W4).
+- UI/UX pass (tools/a11y-audit.mjs, axe-core 4.10, WCAG 2.1 A/AA): fixed
+  text, status and control-border contrast in both themes, 24 px+ targets,
+  reflow at 200% zoom, focus on the file button, landmarks, and a keyboard
+  way to place start, exit and fire. 0 axe violations over 10 states. Heat
+  is drawn on a sequential ramp instead of a rainbow.
+

@@ -51,3 +51,13 @@ export function graphStats({ points, edges, kinds, blocked, stats = {} }) {
     largest_component: largest,
   };
 }
+
+/** Share of nodes, in percent, in the largest part. */
+export const reachablePct = (stats) =>
+  stats?.nodes ? Math.round((stats.largest_component / stats.nodes) * 100) : 0;
+
+/**
+ * Whether a graph's split into parts is worth a warning: more than one part
+ * and the largest under 98%. A few stray nodes past an outside wall are not.
+ */
+export const graphIsSplit = (stats) => Boolean(stats && stats.components > 1 && reachablePct(stats) < 98);

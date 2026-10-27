@@ -985,11 +985,17 @@ async function resolveWorkerUrl() {
   return fallback;
 }
 
-/** Blue -> cyan -> green -> yellow -> red across the temperature range. */
+/**
+ * Yellow -> orange -> red -> dark red across the temperature range: the stops
+ * of .legend__ramp (styles/workflow.css), so the legend is literally what is
+ * drawn. Lightness falls all the way, so heat reads in order for colour-blind
+ * viewers too, which the rainbow this replaced did not.
+ */
+const HEAT_STOPS = [0xfacc15, 0xf97316, 0xdc2626, 0x7f1d1d].map((hex) => new THREE.Color(hex));
+
 function heatColor(target, temp, min, max) {
   const t = Math.max(0, Math.min(1, (temp - min) / Math.max(1e-6, max - min)));
-  if (t < 0.25) return target.setRGB(0, t / 0.25, 1);
-  if (t < 0.5) return target.setRGB(0, 1, 1 - (t - 0.25) / 0.25);
-  if (t < 0.75) return target.setRGB((t - 0.5) / 0.25, 1, 0);
-  return target.setRGB(1, 1 - (t - 0.75) / 0.25, 0);
+  const x = t * (HEAT_STOPS.length - 1);
+  const i = Math.min(HEAT_STOPS.length - 2, Math.floor(x));
+  return target.copy(HEAT_STOPS[i]).lerp(HEAT_STOPS[i + 1], x - i);
 }

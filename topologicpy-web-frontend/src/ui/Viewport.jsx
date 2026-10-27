@@ -7,8 +7,8 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { Badge, Button } from "./primitives.jsx";
-import logo from "../assets/topologicStudio-white-logo400x400.png";
+import { formatBytes } from "../lib/perf.js";
+import { Badge, Button, FileButton, Icon } from "./primitives.jsx";
 
 const STAGE_LABELS = {
   reading: "Reading file",
@@ -33,6 +33,9 @@ export function Viewport({
   loadState,
   graphStats,
   fire,
+  fireSteps,
+  heatLegend,
+  onStopFire,
   legend,
   examples,
   onExample,
@@ -119,8 +122,9 @@ export function Viewport({
   const fitView = useCallback(() => viewerRef.current?.fitToModel(), [viewerRef]);
 
   return (
-    <div
+    <main
       className="viewport"
+      aria-label="Model view"
       data-picking={pickMode ? "true" : "false"}
       onDragOver={(event) => {
         event.preventDefault();
@@ -142,56 +146,71 @@ export function Viewport({
 
       {!booting && !hasModel && !loadState.busy && (
         <div className="placeholder">
-          <div className="placeholder__card">
-            <img src={logo} alt="" className="placeholder__logo" />
-            <h2>Topologic Studio</h2>
-            <p>
-              Load an IFC model to explore it in 3D, build an egress navigation
-              graph, and simulate fire spread with live rerouting.
-            </p>
-            <div className="dropzone" data-over={dragOver}>
-              <p style={{ marginBottom: 8, fontWeight: 600, color: "var(--text-primary)" }}>
-                Drop an .ifc file here
-              </p>
-              <p style={{ fontSize: 12 }}>
-                or use <strong>Open IFC</strong> above. Models are converted once and
-                cached locally, so opening the same file again is near-instant.
+          <section className="welcome" aria-labelledby="welcome-title">
+            <div>
+              <h1 id="welcome-title" className="welcome__title">
+                Open a building model to find its way out
+              </h1>
+              <p className="welcome__lead">
+                Studio turns an IFC model into a walkable graph, then finds egress routes, alternatives, and
+                how a spreading fire changes them. The model stays in your browser unless you run the
+                TopologicPy cross-check.
               </p>
             </div>
+
+            <div className="dropzone" data-over={dragOver}>
+              <Icon name="upload" size={32} />
+              <p style={{ fontWeight: 650, color: "var(--text-primary)" }}>Drop an .ifc file here</p>
+              <p style={{ fontSize: 13 }}>
+                IFC 2x3 or IFC4. Converted once and cached in this browser, so the same file opens faster
+                the second time.
+              </p>
+              <FileButton accept=".ifc" onFile={onFile}>
+                Choose a file
+              </FileButton>
+            </div>
+
             {examples?.length > 0 && (
-              <div className="examples">
-                <p className="examples__title">Or open an example</p>
-                {examples.map((entry) => (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    className="example"
-                    onClick={() => onExample(entry)}
-                  >
-                    <span className="example__name">{entry.name}</span>
-                    <span className="example__desc">{entry.description}</span>
-                  </button>
-                ))}
-                <p className="examples__credit">
+              <div>
+                <h2 className="welcome__subtitle">Or start from an example</h2>
+                <ul className="example-grid">
+                  {examples.map((entry) => (
+                    <li key={entry.id}>
+                      <button
+                        type="button"
+                        className="example"
+                        onClick={() => onExample(entry)}
+                        aria-label={entry.bytes ? `${entry.name}, ${formatBytes(entry.bytes)}` : entry.name}
+                        aria-describedby={`welcome-example-${entry.id}`}
+                      >
+                        <span className="example__head">
+                          <span className="example__name">{entry.name}</span>
+                          {entry.bytes ? <span className="example__size">{formatBytes(entry.bytes)}</span> : null}
+                        </span>
+                        <span className="example__desc" id={`welcome-example-${entry.id}`}>
+                          {entry.description}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="examples__credit" style={{ marginTop: 12 }}>
                   {examples
                     .filter((entry) => entry.source)
                     .map((entry, i) => (
                       <React.Fragment key={entry.id}>
                         {i > 0 && " "}
-                        {entry.name}: <a href={entry.source} target="_blank" rel="noreferrer">{entry.credit}</a>
+                        {entry.name}:{" "}
+                        <a href={entry.source} target="_blank" rel="noreferrer">
+                          {entry.credit}
+                        </a>
                       </React.Fragment>
                     ))}{" "}
                   The other examples are generated for Studio and are CC0.
                 </p>
               </div>
             )}
-            <p style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-              <span className="kbd">S</span> set start &nbsp;
-              <span className="kbd">E</span> set exit &nbsp;
-              <span className="kbd">F</span> set fire &nbsp;
-              <span className="kbd">G</span> toggle graph
-            </p>
-          </div>
+          </section>
         </div>
       )}
 
@@ -254,14 +273,31 @@ export function Viewport({
       )}
 
       {fire?.running && (
-        <div className="overlay overlay--top-right" style={{ top: pickMode ? 62 : undefined }}>
-          <div className="card" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Badge variant="danger" pulse>
-              Fire
-            </Badge>
-            <span style={{ fontSize: 12 }}>
-              step <strong className="mono">{fire.step}</strong>
-            </span>
+        <div className="overlay overlay--bottom-center">
+          <div className="card playback" role="group" aria-label="Fire simulation">
+            <div className="playback__info">
+              <div className="playback__row">
+                <strong>
+                  Fire step <span className="mono">{fire.step}</span>
+                  {fireSteps ? ` of ${fireSteps}` : ""}
+                </strong>
+              </div>
+              {fireSteps ? (
+                <div
+                  className="playback__track"
+                  role="progressbar"
+                  aria-label="Fire simulation progress"
+                  aria-valuemin={0}
+                  aria-valuemax={fireSteps}
+                  aria-valuenow={Math.min(fire.step, fireSteps)}
+                >
+                  <div className="playback__fill" style={{ width: `${Math.min(100, (fire.step / fireSteps) * 100)}%` }} />
+                </div>
+              ) : null}
+            </div>
+            <Button variant="danger" onClick={onStopFire}>
+              Stop fire
+            </Button>
           </div>
         </div>
       )}
@@ -269,8 +305,20 @@ export function Viewport({
       {hasModel && (
         <>
           <div className="overlay overlay--bottom-left">
-            {legend?.length > 0 && (
+            {(legend?.length > 0 || heatLegend) && (
               <div className="card legend">
+                {heatLegend && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 6 }}>
+                    <span className="legend__title">Model temperature</span>
+                    <span className="legend__ramp" aria-hidden="true" />
+                    <span className="legend__scale">
+                      <span>20</span>
+                      <span>70</span>
+                      <span>120</span>
+                    </span>
+                    <span className="legend__note">An index scaled to read in °C, not a measured temperature.</span>
+                  </div>
+                )}
                 {legend.map((item) => (
                   <div className="legend__row" key={item.label}>
                     <span
@@ -321,6 +369,6 @@ export function Viewport({
           </div>
         </>
       )}
-    </div>
+    </main>
   );
 }

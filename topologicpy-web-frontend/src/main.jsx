@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/app.css";
+import "./styles/workflow.css";
 
 // No StrictMode. It double-invokes effects in development, which for a WebGL
 // context plus a fragments worker means the engine is created, torn down and
