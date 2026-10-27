@@ -47,6 +47,11 @@ export function Viewport({
   const [dragOver, setDragOver] = useState(false);
   const [initError, setInitError] = useState(null);
   const [booting, setBooting] = useState(true);
+  // Open on a wide screen; on a phone the legend would cover most of the
+  // model, so it starts folded to one line.
+  const [legendOpen, setLegendOpen] = useState(
+    () => typeof window === "undefined" || window.matchMedia("(min-width: 761px)").matches,
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -313,7 +318,12 @@ export function Viewport({
         <>
           <div className="overlay overlay--bottom-left">
             {(legend?.length > 0 || heatLegend) && (
-              <div className="card legend">
+              <details
+                className="card legend"
+                open={legendOpen}
+                onToggle={(event) => setLegendOpen(event.currentTarget.open)}
+              >
+                <summary className="legend__summary">Legend</summary>
                 {heatLegend && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 6 }}>
                     <span className="legend__title">Model temperature</span>
@@ -335,7 +345,7 @@ export function Viewport({
                     <span>{item.label}</span>
                   </div>
                 ))}
-              </div>
+              </details>
             )}
           </div>
 
@@ -367,19 +377,19 @@ export function Viewport({
                 </div>
               )}
               <div className="viewcube">
-                <Button size="sm" onClick={() => setView("top")} title="Top view">
+                <Button size="sm" onClick={() => setView("top")} title="Top view" data-secondary="true">
                   Top
                 </Button>
-                <Button size="sm" onClick={() => setView("front")} title="Front view">
+                <Button size="sm" onClick={() => setView("front")} title="Front view" data-secondary="true">
                   Front
                 </Button>
-                <Button size="sm" onClick={() => setView("right")} title="Right view">
+                <Button size="sm" onClick={() => setView("right")} title="Right view" data-secondary="true">
                   Right
                 </Button>
                 <Button size="sm" onClick={() => setView("iso")} title="Isometric view">
                   Iso
                 </Button>
-                <Button size="sm" onClick={() => setView("left")} title="Left view">
+                <Button size="sm" onClick={() => setView("left")} title="Left view" data-secondary="true">
                   Left
                 </Button>
                 <Button

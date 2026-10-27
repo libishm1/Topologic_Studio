@@ -114,7 +114,12 @@ export function useStudio() {
 
   const toast = useCallback((message, { title, variant = "info", ttl = 6000 } = {}) => {
     const id = ++toastSeq;
-    setToasts((current) => [...current.slice(-3), { id, message, title, variant }]);
+    // The same message again replaces the old one rather than stacking a
+    // copy: three tries in a row used to leave three identical toasts.
+    setToasts((current) => [
+      ...current.filter((t) => t.message !== message || t.title !== title).slice(-3),
+      { id, message, title, variant },
+    ]);
     if (ttl) {
       setTimeout(() => {
         setToasts((current) => current.filter((t) => t.id !== id));
@@ -227,13 +232,38 @@ export function useStudio() {
   }, [refreshCapabilities]);
 
   // While the server is unreachable, keep checking so the indicator recovers
-  // on its own instead of stranding the user on a stale "offline".
+  // on its own, backing off 4 s, 8 s, 16 s ... to a minute, and not at all
+  // while the tab is hidden. Every 4 s for good was 19 failed requests in one
+  // session on a site with no server (GitHub Pages alone), and needless radio
+  // wake-ups on a phone.
   useEffect(() => {
     if (serverStatus !== "offline") return undefined;
-    const timer = setInterval(() => {
-      void refreshCapabilities();
-    }, 4000);
-    return () => clearInterval(timer);
+    let delay = 4000;
+    let timer = null;
+    let alive = true;
+    const tick = async () => {
+      if (!alive) return;
+      if (document.visibilityState === "visible") {
+        const info = await refreshCapabilities();
+        if (info || !alive) return;
+        delay = Math.min(delay * 2, 60000);
+      }
+      timer = setTimeout(tick, delay);
+    };
+    timer = setTimeout(tick, delay);
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && alive) {
+        clearTimeout(timer);
+        delay = 4000;
+        timer = setTimeout(tick, 0);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [serverStatus, refreshCapabilities]);
 
   // The engine the server can actually serve. Derived rather than corrected in

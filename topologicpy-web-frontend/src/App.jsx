@@ -341,25 +341,16 @@ export default function App() {
         agentHeight: settings.agentHeight,
       };
 
-      // Server features (fire, RL, alternatives, the TopologicPy checks) need
-      // the graph there too, until they move into the browser as well.
-      let server = null;
-      if (studio.serverStatus === "online") {
-        studio.setLoadState({ busy: true, stage: "uploading", detail: null });
-        server = await timer
-          .run("upload", () => api.importGraph(local))
-          .catch((error) => {
-            console.warn("Graph upload failed; continuing in the browser only.", error);
-            return null;
-          });
-      }
-
+      // Only the TopologicPy features need the graph on the server, so it is
+      // uploaded in the background: the graph is usable at once, and on mobile
+      // data the build no longer waits for the upload. Its id is filled in
+      // when the server answers (below).
       const response = {
-        graphId: server?.graph_id ?? null,
-        stats: server?.stats ?? graphStats(local),
+        graphId: null,
+        stats: graphStats(local),
         upAxis: settings.upAxis,
-        bounds: server?.bounds ?? [],
-        timings: server?.timings ?? {},
+        bounds: [],
+        timings: {},
         nodes: local.points,
         edges: local.edges,
         kinds: local.kinds,
@@ -390,6 +381,20 @@ export default function App() {
       }
 
       timer.finish({ nodes: response.stats.nodes, edges: response.stats.edges });
+
+      if (studio.serverStatus === "online") {
+        api
+          .importGraph(local)
+          .then((uploaded) => {
+            // Only if this is still the graph on screen.
+            studio.setGraph((current) =>
+              current && current.nodes === response.nodes
+                ? { ...current, graphId: uploaded.graph_id, bounds: uploaded.bounds ?? [] }
+                : current,
+            );
+          })
+          .catch((error) => console.warn("Graph upload failed; continuing in the browser only.", error));
+      }
 
       // A graph in several parts is explained beside the graph (Panels.jsx,
       // PartsNotice) and flagged on the stepper; a toast would vanish.
@@ -1043,12 +1048,14 @@ export default function App() {
 
         <div className="header__divider" />
 
-        <Segmented
-          value={mode}
-          onChange={setMode}
-          options={MODES}
-          label="Viewer mode"
-        />
+        <div className="header__mode">
+          <Segmented
+            value={mode}
+            onChange={setMode}
+            options={MODES}
+            label="Viewer mode"
+          />
+        </div>
 
         <div className="header__divider" />
 
@@ -1107,9 +1114,9 @@ export default function App() {
         </div>
 
         <div className="header__group">
-          <Button variant="ghost" onClick={() => setMethodsOpen(true)} aria-haspopup="dialog">
+          <Button variant="ghost" onClick={() => setMethodsOpen(true)} aria-haspopup="dialog" aria-label="Methods">
             <Icon name="book" size={18} />
-            Methods
+            <span className="header__label">Methods</span>
           </Button>
           <Button
             icon

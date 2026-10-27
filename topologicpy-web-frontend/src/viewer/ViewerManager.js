@@ -107,6 +107,13 @@ export class ViewerManager {
 
     components.init();
 
+    // Phones report a device pixel ratio of 3 and more; the engine caps it at
+    // 2, which on a touch screen still shades 4x the pixels of 1x for little
+    // visible gain. 1.5 keeps edges crisp and frames fast.
+    if (window.matchMedia?.("(pointer: coarse)").matches) {
+      world.renderer.three?.setPixelRatio?.(Math.min(window.devicePixelRatio || 1, 1.5));
+    }
+
     this.raycaster = components.get(Raycasters).get(world);
 
     world.camera.controls?.setLookAt(12, 10, 12, 0, 0, 0);

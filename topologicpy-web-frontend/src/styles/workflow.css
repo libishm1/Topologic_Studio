@@ -774,12 +774,28 @@
   }
 }
 
-/* Phones: the header wraps to several rows, so toasts come up from the
-   bottom instead, and the node count gives the small viewport back. */
+/* Phones: the node count gives the small viewport back. Toasts stay under
+   the header, which is one row on a phone: at the bottom they covered the
+   workflow panel and blocked its buttons until they expired. */
 @media (max-width: 760px) {
+  /* One toast at a time, the newest: a phone's view is too small for a stack. */
+  .toasts .toast:not(:last-child) {
+    display: none;
+  }
+
   .toasts {
-    top: auto;
-    bottom: var(--space-4);
+    width: calc(100vw - 24px);
+  }
+
+  /* The fire's playback bar moves to the top, clear of the legend and the
+     view card at the bottom corners. */
+  .overlay--bottom-center {
+    top: var(--space-2);
+    bottom: auto;
+  }
+
+  .playback {
+    width: calc(100vw - 32px);
   }
 
   .overlay--bottom-right > .card:not(:last-child),
@@ -802,5 +818,102 @@
 .section-cut select {
   min-height: 36px;
   font-size: 13px;
+}
+
+/* ----------------------------------------------------------------- legend */
+
+.legend__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-primary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.legend__summary::-webkit-details-marker {
+  display: none;
+}
+
+.legend__summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--transition);
+}
+
+details.legend[open] > .legend__summary::before {
+  transform: rotate(45deg);
+}
+
+details.legend[open] > .legend__summary {
+  margin-bottom: 4px;
+}
+
+/* ------------------------------------------------------------------ phone
+
+   One header row; the 3D view gets more of the screen; the legend starts
+   folded; the view card keeps Iso, Fit and the storey cut. */
+@media (max-width: 760px) {
+  .header__mode,
+  .header__label {
+    display: none;
+  }
+
+  .header {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+  }
+
+  .app-body {
+    grid-template-rows: minmax(46vh, 1fr) auto;
+  }
+
+  .panel {
+    max-height: 50vh;
+  }
+
+  .viewcube {
+    grid-template-columns: repeat(2, 48px);
+  }
+
+  .viewcube [data-secondary="true"] {
+    display: none;
+  }
+
+  .overlay--bottom-left,
+  .overlay--bottom-right {
+    bottom: var(--space-2);
+  }
+
+  .overlay--bottom-left {
+    left: var(--space-2);
+  }
+
+  .overlay--bottom-right {
+    right: var(--space-2);
+  }
+
+  .section-cut select {
+    max-width: 150px;
+  }
+
+  .stepper {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .stepper__step {
+    min-height: 50px;
+  }
+
+  .step-heading {
+    padding-top: var(--space-4);
+  }
 }
 

@@ -64,11 +64,28 @@ const browser = await chromium.launch({
   args: ["--enable-unsafe-swiftshader", "--use-gl=angle", "--ignore-gpu-blocklist"],
 });
 
-const context = await browser.newContext({
-  viewport: { width: 1600, height: 950 },
-  deviceScaleFactor: 1,
-});
+// --mobile: a phone (390 x 844, DPR 3, touch) with the CPU slowed 4x, about
+// a mid-range handset, to measure what a phone user waits for.
+const MOBILE = args.includes("--mobile");
+const context = await browser.newContext(
+  MOBILE
+    ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }
+    : { viewport: { width: 1600, height: 950 }, deviceScaleFactor: 1 },
+);
 const page = await context.newPage();
+if (MOBILE) {
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  console.log("Mobile: 390 x 844, DPR 3, touch, CPU 4x slower\n");
+}
+
+// --block-backend: abort every request to the API, which is what a site
+// served from GitHub Pages alone is. Shows what runs without a server.
+const BLOCK_BACKEND = args.includes("--block-backend");
+if (BLOCK_BACKEND) {
+  await page.route(/onrender\.com|localhost:8000|127\.0\.0\.1:8000/, (route) => route.abort());
+  console.log("Backend: blocked (GitHub-only run)\n");
+}
 
 // ---- capture everything Chrome reports -------------------------------------
 
@@ -179,7 +196,7 @@ const backendUp = await page
   })
   .then(() => true)
   .catch(() => false);
-record(backendUp, "backend reported online");
+record(BLOCK_BACKEND ? !backendUp : backendUp, BLOCK_BACKEND ? "backend reported offline (blocked)" : "backend reported online");
 
 await shot(page, "boot");
 // Baseline for the render check after the model loads.
@@ -231,7 +248,12 @@ if (modelLoaded) {
 // two standard views and compare the pixels. A blank canvas renders
 // identically from every angle; a real model does not.
 async function viewShot(which) {
-  await page.getByRole("button", { name: which, exact: true }).click();
+  // A phone shows only Iso and Fit; set the others through the viewer.
+  if (MOBILE && !["Iso", "Fit"].includes(which)) {
+    await page.evaluate((view) => window.__viewer?.setStandardView(view), which.toLowerCase());
+  } else {
+    await page.getByRole("button", { name: which, exact: true }).click();
+  }
   await page.waitForTimeout(1400);
   return page.locator(".viewport__canvas").screenshot();
 }
@@ -406,6 +428,23 @@ search: for (const [sx, sy] of [[null, null], [0.6, 0.45], [0.55, 0.62], [0.38, 
     routed = await findRoute();
     if (!tRoute && routed) tRoute = Date.now() - t;
     if (routed && (await routeFound())) break search;
+  }
+}
+// On a phone-sized canvas every click can land in the other dwelling. Then
+// keep the clicked start and take the exit at each door in turn (the
+// keyboard path), as a user would pick an exit door.
+if (gotStart && !(await routeFound())) {
+  await page.getByText("Place without the mouse").first().click().catch(() => {});
+  const doorSelect = page.getByLabel("Exit at a door");
+  const doors = await doorSelect.locator("option").count().catch(() => 0);
+  for (let i = 1; i < doors; i += 1) {
+    await doorSelect.selectOption({ index: i });
+    routed = await findRoute();
+    if (routed && (await routeFound())) {
+      console.log(`    exit taken at door ${i} after the clicked exits were in the other part`);
+      gotExit = true;
+      break;
+    }
   }
 }
 record(gotExit, "exit point placed by clicking the model");
@@ -667,15 +706,18 @@ await page.keyboard.press("Escape");
 await page.waitForTimeout(200);
 record(await page.getByRole("dialog").count() === 0, "Escape closes the Methods page");
 
-await page.getByRole("button", { name: "Topology JSON" }).click();
-await page.waitForTimeout(1200);
-record(
-  await page.locator("text=Topology JSON viewer").count() > 0,
-  "topology mode renders its placeholder",
-);
-await shot(page, "topology-mode");
-await page.getByRole("button", { name: /^IFC$/ }).click();
-await page.waitForTimeout(500);
+// The legacy Topology JSON mode is not offered on a phone.
+if (!MOBILE) {
+  await page.getByRole("button", { name: "Topology JSON" }).click();
+  await page.waitForTimeout(1200);
+  record(
+    await page.locator("text=Topology JSON viewer").count() > 0,
+    "topology mode renders its placeholder",
+  );
+  await shot(page, "topology-mode");
+  await page.getByRole("button", { name: /^IFC$/ }).click();
+  await page.waitForTimeout(500);
+}
 
 // ---- 7. reload and reopen: the fragment cache --------------------------------
 //
