@@ -3,6 +3,12 @@
 The modernisation line of Topologic Studio. IFC viewer, egress navigation
 graph, fire simulation and hazard-aware rerouting.
 
+> The project README from `main` (overview, research contribution, image
+> series, Windows install, GitHub Pages + Render deployment guide, references
+> and licences) is kept in full at [docs/README-classic.md](docs/README-classic.md).
+> It describes the Classic line; where the two disagree, this file describes
+> the code on this branch.
+
 This lives on branch **`next/studio-2`** in a git worktree beside the Classic
 checkout. Classic (`claude/ifc-port-baseline`, tagged `demo-safe-2026-08-24`)
 is untouched and still runs from its own folder.
