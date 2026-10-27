@@ -34,6 +34,8 @@ export function Viewport({
   graphStats,
   fire,
   legend,
+  examples,
+  onExample,
 }) {
   const containerRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
@@ -156,6 +158,33 @@ export function Viewport({
                 cached locally, so opening the same file again is near-instant.
               </p>
             </div>
+            {examples?.length > 0 && (
+              <div className="examples">
+                <p className="examples__title">Or open an example</p>
+                {examples.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className="example"
+                    onClick={() => onExample(entry)}
+                  >
+                    <span className="example__name">{entry.name}</span>
+                    <span className="example__desc">{entry.description}</span>
+                  </button>
+                ))}
+                <p className="examples__credit">
+                  {examples
+                    .filter((entry) => entry.source)
+                    .map((entry, i) => (
+                      <React.Fragment key={entry.id}>
+                        {i > 0 && " "}
+                        {entry.name}: <a href={entry.source} target="_blank" rel="noreferrer">{entry.credit}</a>
+                      </React.Fragment>
+                    ))}{" "}
+                  The other examples are generated for Studio and are CC0.
+                </p>
+              </div>
+            )}
             <p style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
               <span className="kbd">S</span> set start &nbsp;
               <span className="kbd">E</span> set exit &nbsp;

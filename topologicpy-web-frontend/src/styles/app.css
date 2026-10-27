@@ -737,6 +737,64 @@ select:focus {
   background: var(--accent-soft);
 }
 
+/* Example models, offered on the empty viewport. */
+.examples {
+  width: 100%;
+  display: grid;
+  gap: var(--space-2);
+  text-align: left;
+}
+
+.examples__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.example {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.example:hover,
+.example:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.example__name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.example__desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.examples__credit {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.examples__credit a {
+  color: inherit;
+}
+
+.header__select {
+  width: auto;
+  max-width: 190px;
+}
+
 .kbd {
   display: inline-block;
   min-width: 18px;

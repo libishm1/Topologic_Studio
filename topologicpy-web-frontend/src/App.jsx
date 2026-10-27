@@ -200,6 +200,38 @@ export default function App() {
     [reportError, settings.modelAppearance, studio, toast],
   );
 
+  // --------------------------------------------------------------- examples
+
+  // Shipped with the site (public/examples, written by
+  // tools/make_example_ifcs.py), so anyone can try Studio without a model.
+  const [examples, setExamples] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    fetch(`${import.meta.env.BASE_URL}examples/index.json`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list) => alive && setExamples(Array.isArray(list) ? list : []))
+      .catch(() => alive && setExamples([]));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const openExample = useCallback(
+    async (entry) => {
+      try {
+        studio.setLoadState({ busy: true, stage: "downloading", detail: entry.name });
+        const res = await fetch(`${import.meta.env.BASE_URL}examples/${entry.file}`);
+        if (!res.ok) throw new Error(`Could not download ${entry.name} (${res.status}).`);
+        const blob = await res.blob();
+        await handleFile(new File([blob], entry.file, { type: "application/octet-stream" }));
+      } catch (error) {
+        studio.setLoadState({ busy: false, stage: null, detail: null });
+        reportError(error, "Could not open the example");
+      }
+    },
+    [handleFile, reportError, studio],
+  );
+
   // ------------------------------------------------------------ graph build
 
   const buildGraph = useCallback(async () => {
@@ -936,6 +968,26 @@ export default function App() {
               <FileButton accept=".ifc" onFile={handleFile} variant="primary">
                 Open IFC
               </FileButton>
+              {examples.length > 0 && (
+                <select
+                  className="header__select"
+                  aria-label="Open an example model"
+                  value=""
+                  onChange={(event) => {
+                    const entry = examples.find((x) => x.id === event.target.value);
+                    if (entry) void openExample(entry);
+                  }}
+                >
+                  <option value="" disabled>
+                    Examples…
+                  </option>
+                  {examples.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </select>
+              )}
               {file && (
                 <span className="badge" title={file.name}>
                   {file.name.length > 24 ? `${file.name.slice(0, 22)}...` : file.name}
@@ -1024,6 +1076,8 @@ export default function App() {
             graphStats={graph?.stats}
             fire={fire}
             legend={legend}
+            examples={examples}
+            onExample={openExample}
           />
         ) : (
           <div className="viewport">

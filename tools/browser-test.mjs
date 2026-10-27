@@ -627,6 +627,48 @@ const fromCache = await page
 record(fromCache, "second open used the fragment cache", `${((Date.now() - tCached) / 1000).toFixed(1)}s`);
 if (fromCache) timing("Open IFC, second time (from cache)", Date.now() - tCached);
 
+// ---- 8. example models shipped with the site ------------------------------
+//
+// public/examples, offered on the empty viewport. Each must open, build a
+// graph and come out as one connected piece (the CC0 examples are designed
+// that way; see tools/make_example_ifcs.py).
+
+console.log("\n[8] Example models");
+for (const name of ["Courtyard ring", "Office, two storeys"]) {
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const button = page.getByRole("button", { name: new RegExp(`^${name}`) });
+  const offered = await button
+    .waitFor({ timeout: 60000 })
+    .then(() => true)
+    .catch(() => false);
+  record(offered, `example "${name}" is offered`);
+  if (!offered) continue;
+  const tEx = Date.now();
+  await button.click();
+  const opened = await page
+    .waitForFunction(() => /floors/i.test(document.body.innerText) && !/no model loaded/i.test(document.body.innerText), null, {
+      timeout: 120000,
+    })
+    .then(() => true)
+    .catch(() => false);
+  record(opened, `example "${name}" opened`, `${((Date.now() - tEx) / 1000).toFixed(1)}s`);
+  if (!opened) continue;
+  await page.getByRole("button", { name: /Build egress graph|Rebuild graph/ }).first().click();
+  await page
+    .waitForFunction(
+      () => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.trim() === "Route",
+      null,
+      { timeout: 120000 },
+    )
+    .catch(() => {});
+  await page.getByRole("tab", { name: "Model" }).click();
+  await page.waitForTimeout(300);
+  const stats = await readStats();
+  console.log(`    ${name}: ${JSON.stringify(stats)}`);
+  record(stats.Reachable === "100%", `example "${name}" is one connected graph`, stats.Reachable);
+  await shot(page, `example-${name.toLowerCase().replace(/[^a-z]+/g, "-")}`);
+}
+
 // ---- report -----------------------------------------------------------------
 
 console.log("\n=== Timing (as a user sees it) ===");

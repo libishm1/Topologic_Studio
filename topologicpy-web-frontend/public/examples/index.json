@@ -1,10 +1,31 @@
 [
   {
+    "id": "duplex-apartment",
+    "name": "Duplex apartment",
+    "file": "duplex-apartment.ifc",
+    "description": "Two mirror-image dwellings over two storeys, each with its own stair and front door.",
+    "credit": "Duplex Apartment, Common Building Information Model Files, National Institute of Building Sciences (NIBS) buildingSMART alliance and U.S. Army ERDC, 2011.",
+    "source": "https://www.wbdg.org/bim/cobie/common-bim-files",
+    "licence": "Publisher states no licence; shown with credit.",
+    "bytes": 2380763
+  },
+  {
+    "id": "buildingsmart-sample-scene",
+    "name": "buildingSMART sample scene",
+    "file": "buildingsmart-sample-scene.ifc",
+    "description": "buildingSMART's small IFC4 sample building: three slabs, four walls, two spaces.",
+    "credit": "\"ifc silly sample scene\", buildingSMART International, Sample-Test-Files (PCERT sample scene).",
+    "source": "https://github.com/buildingSMART/Sample-Test-Files",
+    "licence": "No licence file in the repository; shown with credit.",
+    "bytes": 229022
+  },
+  {
     "id": "office-two-storey",
     "name": "Office, two storeys",
     "file": "office-two-storey.ifc",
     "description": "Two storeys, a corridor with ten rooms per floor, a stair and an exit at each end.",
     "bytes": 183741,
+    "credit": "Generated for Topologic Studio by tools/make_example_ifcs.py.",
     "licence": "CC0-1.0",
     "walls": 50,
     "doors": 22,
@@ -17,6 +38,7 @@
     "file": "courtyard-ring.ifc",
     "description": "A corridor round a closed core with one exit: every start has two ways out. Rotated 30 degrees.",
     "bytes": 17389,
+    "credit": "Generated for Topologic Studio by tools/make_example_ifcs.py.",
     "licence": "CC0-1.0",
     "walls": 9,
     "doors": 1,

@@ -270,9 +270,38 @@ MODELS = {
 }
 
 
+# Third-party models shipped alongside ours, by the user's decision
+# (2026-10-27), with their sources credited. Listed only if the file is present.
+EXTERNAL = [
+    {
+        "id": "duplex-apartment",
+        "name": "Duplex apartment",
+        "file": "duplex-apartment.ifc",
+        "description": "Two mirror-image dwellings over two storeys, each with its own stair and front door.",
+        "credit": "Duplex Apartment, Common Building Information Model Files, National Institute of "
+        "Building Sciences (NIBS) buildingSMART alliance and U.S. Army ERDC, 2011.",
+        "source": "https://wbdg.org/node/9165",
+        "licence": "Publisher states no licence; shown with credit.",
+    },
+    {
+        "id": "buildingsmart-sample-scene",
+        "name": "buildingSMART sample scene",
+        "file": "buildingsmart-sample-scene.ifc",
+        "description": "buildingSMART's small IFC4 sample building: three slabs, four walls, two spaces.",
+        "credit": "\"ifc silly sample scene\", buildingSMART International, Sample-Test-Files (PCERT sample scene).",
+        "source": "https://github.com/buildingSMART/Sample-Test-Files",
+        "licence": "No licence file in the repository; shown with credit.",
+    },
+]
+
+
 def main(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     index = []
+    for entry in EXTERNAL:
+        path = out_dir / entry["file"]
+        if path.exists():
+            index.append({**entry, "bytes": path.stat().st_size})
     for slug, (make, description) in MODELS.items():
         model = make()
         path = out_dir / f"{slug}.ifc"
@@ -284,6 +313,7 @@ def main(out_dir: Path) -> None:
                 "file": path.name,
                 "description": description,
                 "bytes": path.stat().st_size,
+                "credit": "Generated for Topologic Studio by tools/make_example_ifcs.py.",
                 "licence": "CC0-1.0",
                 **model.counts,
             }
