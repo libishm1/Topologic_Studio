@@ -1,0 +1,1733 @@
+{
+  "title": "Topologic Studio research-gap matrix",
+  "date": "2026-10-27",
+  "scope": "Classification of the 118 entries of fire-egress-methods.bib into themes, with methods, data, assumptions, year range and gaps relative to Studio's problem: IFC-native, real-time in a browser, time-dependent hazard, tenability, verified.",
+  "inputs": [
+    "wiki/research/fire-egress-methods.bib (118 entries)",
+    "wiki/research/fire-egress-methods-2026-10-27.md (sections 0 to 2, 9, 10 used most)",
+    "wiki/research/fire-equations-verified-2026-10-27.json (90 equations)",
+    "Studio implementation summary in the task brief; file list of topologicpy-web-frontend/src/core",
+    "recent-papers.json and queries.json in this folder"
+  ],
+  "gap_type_definitions": {
+    "literature": "Not found in the searched literature: the 118-entry bibliography plus 17 OpenAlex queries (articles and reviews from 2021-01-01, relevance-ranked, first 100 or 50 records screened). Absence from this corpus is evidence, not proof, that no one has done it.",
+    "studio": "Done or available elsewhere, or derivable from the cited literature, but not yet in Studio."
+  },
+  "facets": {
+    "ifc_native": "Works directly from IFC building models.",
+    "realtime_browser": "Runs at interactive speed on the client.",
+    "time_dependent_hazard": "Hazard varies in time and is read at the right time.",
+    "tenability": "Physical hazard and dose with occupant criteria.",
+    "verified": "Correctness stated and checked, ideally machine-checked."
+  },
+  "caveats": [
+    "OpenAlex 'search' matches title, abstract and full text, so hit counts are inflated; only the top-ranked records were screened.",
+    "The type filter (article or review) excludes preprints, so arXiv-only RL and GNN work is under-represented.",
+    "Ten relevant 2022 to 2026 papers, mostly Elsevier, have no abstract in OpenAlex or Crossref; one abstract was recovered from Semantic Scholar. Papers without an abstract are cited only at title level and marked as unassessed.",
+    "Constants and claims taken from the report or the equations file carry the status recorded there."
+  ],
+  "classification_summary": {
+    "T01": {
+      "name": "Fire dynamics correlations, design fires and handbooks",
+      "n_references": 16
+    },
+    "T02": {
+      "name": "Zone and CFD fire models",
+      "n_references": 6
+    },
+    "T03": {
+      "name": "Room-scale fire-spread networks",
+      "n_references": 4
+    },
+    "T04": {
+      "name": "Fronts, eikonal and level-set methods",
+      "n_references": 9
+    },
+    "T05": {
+      "name": "Static shortest paths and geodesics",
+      "n_references": 3
+    },
+    "T06": {
+      "name": "Graph diffusion, spectral graph theory and numerical integration",
+      "n_references": 9
+    },
+    "T07": {
+      "name": "Tenability, fractional effective dose and ASET/RSET",
+      "n_references": 8
+    },
+    "T08": {
+      "name": "Egress movement data and hydraulic models",
+      "n_references": 8
+    },
+    "T09": {
+      "name": "Evacuation models and crowd dynamics",
+      "n_references": 8
+    },
+    "T10": {
+      "name": "Network flows over time and evacuation optimisation",
+      "n_references": 8
+    },
+    "T11": {
+      "name": "Time-dependent shortest paths",
+      "n_references": 6
+    },
+    "T12": {
+      "name": "Reinforcement learning, MDPs and reward shaping",
+      "n_references": 9
+    },
+    "T13": {
+      "name": "Graphics and procedural fire simulation",
+      "n_references": 8
+    },
+    "T14": {
+      "name": "Formal methods, proof assistants and units of measure",
+      "n_references": 9
+    },
+    "T15": {
+      "name": "BIM, topology and building layout",
+      "n_references": 7
+    },
+    "T16": {
+      "name": "Any-angle paths, route post-processing and alternative routes",
+      "n_references": 0
+    },
+    "T17": {
+      "name": "Machine-learning and graph-neural-network surrogates for fire and smoke",
+      "n_references": 0
+    },
+    "T18": {
+      "name": "Sensor-driven guidance and digital twins",
+      "n_references": 0
+    },
+    "T19": {
+      "name": "Web and browser-based BIM analysis",
+      "n_references": 0
+    },
+    "T20": {
+      "name": "Automated egress code-compliance checking",
+      "n_references": 0
+    }
+  },
+  "themes": [
+    {
+      "id": "T01",
+      "name": "Fire dynamics correlations, design fires and handbooks",
+      "references": [
+        {
+          "key": "sfpe2016handbook",
+          "year": 2016,
+          "title": "{SFPE} Handbook of Fire Protection Engineering"
+        },
+        {
+          "key": "sfpe2026handbook",
+          "year": 2026,
+          "title": "{SFPE} Handbook of Fire Protection Engineering"
+        },
+        {
+          "key": "heskestad2016plumes",
+          "year": 2016,
+          "title": "Fire Plumes, Flame Height, and Air Entrainment"
+        },
+        {
+          "key": "alpert2016ceiling",
+          "year": 2016,
+          "title": "Ceiling Jet Flows"
+        },
+        {
+          "key": "alpert1972",
+          "year": 1972,
+          "title": "Calculation of Response Time of Ceiling-Mounted Fire Detectors"
+        },
+        {
+          "key": "mccaffrey1981estimating",
+          "year": 1981,
+          "title": "Estimating Room Temperatures and the Likelihood of Flashover Using Fire Test Data Correlations"
+        },
+        {
+          "key": "babrauskas1980flashover",
+          "year": 1980,
+          "title": "Estimating Room Flashover Potential"
+        },
+        {
+          "key": "zukoski1981entrainment",
+          "year": 1981,
+          "title": "Entrainment in Fire Plumes"
+        },
+        {
+          "key": "heskestad1983luminous",
+          "year": 1983,
+          "title": "Luminous Heights of Turbulent Diffusion Flames"
+        },
+        {
+          "key": "heskestad1983virtual",
+          "year": 1983,
+          "title": "Virtual Origins of Fire Plumes"
+        },
+        {
+          "key": "heskestad1984engineering",
+          "year": 1984,
+          "title": "Engineering Relations for Fire Plumes"
+        },
+        {
+          "key": "heskestad1979initial",
+          "year": 1979,
+          "title": "The Initial Convective Flow in Fire"
+        },
+        {
+          "key": "drysdale2011introduction",
+          "year": 2011,
+          "title": "An Introduction to Fire Dynamics"
+        },
+        {
+          "key": "karlsson2022enclosure",
+          "year": 2022,
+          "title": "Enclosure Fire Dynamics"
+        },
+        {
+          "key": "quintiere2006fundamentals",
+          "year": 2006,
+          "title": "Fundamentals of Fire Phenomena"
+        },
+        {
+          "key": "nfpa72",
+          "year": null,
+          "title": "{NFPA} 72: National Fire Alarm and Signaling Code (Annex on engineering guide for detector spacing, t-squared fire growth classes)"
+        }
+      ],
+      "methods": "Empirical and semi-empirical correlations for a single enclosure: t-squared heat release growth classes; flashover heat release rate (Babrauskas; MQH-based forms); plume flame height, virtual origin and entrainment (Heskestad; Zukoski, Kubota and Cetegen); ceiling-jet maximum excess temperature and velocity (Alpert); pre-flashover hot-layer temperature (McCaffrey, Quintiere and Harkleroad). Textbooks and the SFPE Handbook (5th and 6th editions) collect and qualify them.",
+      "data_required": "Heat release rate or growth class; fuel diameter and convective fraction; opening area and height; ceiling height and radial distance from the plume axis; enclosing surface area; wall conductivity, density, specific heat and thickness.",
+      "assumptions": "One compartment; quasi-steady, axisymmetric fire; smooth unconfined ceiling and no hot layer for the ceiling-jet relations; pre-flashover regime for MQH; constants are dimensional and hold only in the fitted units and test ranges (for Alpert, ceilings of at least 4.6 m and fires of about 0.6 MW or more, per FD-13 in the verified equations file).",
+      "studio_status": "Not used by the app. The equations are among about 90 fire and tenability equations whose dimensional consistency is proved in Lean. The app's temperature field is an arrival-order index, not a temperature (report W2).",
+      "gaps": [
+        {
+          "id": "T01-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard",
+            "tenability"
+          ],
+          "gap": "The app has no heat-release source term and counts time in steps, so none of these correlations can be evaluated in it.",
+          "evidence": "Report sections 2.3 (W2) and 3.2 to 3.3; equations FD-01 to FD-18 are marked confirmed in fire-equations-verified-2026-10-27.json."
+        },
+        {
+          "id": "T01-G2",
+          "gap_type": "studio",
+          "facets": [
+            "verified"
+          ],
+          "gap": "Constants were taken from the SFPE Handbook 5th edition; the 6th edition (2026) is in the bibliography, but the constants have not been re-checked against it.",
+          "evidence": "Bibliography note on sfpe2026handbook; report section 3.4."
+        },
+        {
+          "id": "T01-G3",
+          "gap_type": "literature",
+          "facets": [
+            "tenability"
+          ],
+          "confidence": "medium",
+          "gap": "Ceiling-jet behaviour near the plume axis for low ceilings (2.5 to 3.5 m) and small fires (50 to 500 kW), the typical case in IFC models of dwellings and offices, is poorly constrained: Alpert's experimental basis is ceilings of at least 4.6 m, and the CFD study recorded in the equations file (Zeng 2023, not in the bibliography and not checked here) supports only the far-field relation.",
+          "evidence": "fire-equations-verified-2026-10-27.json, FD-13 validity and notes. The 2021 to 2026 search did not return a newer study on this point.",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 16,
+      "years": {
+        "min": 1972,
+        "max": 2026,
+        "undated": [
+          "nfpa72"
+        ]
+      }
+    },
+    {
+      "id": "T02",
+      "name": "Zone and CFD fire models",
+      "references": [
+        {
+          "key": "tanaka2016vent",
+          "year": 2016,
+          "title": "Vent Flows"
+        },
+        {
+          "key": "walton2016zone",
+          "year": 2016,
+          "title": "Zone Computer Fire Models for Enclosures"
+        },
+        {
+          "key": "peacock2015cfast",
+          "year": 2015,
+          "title": "{CFAST} -- Consolidated Model of Fire Growth and Smoke Transport (Version 7), Volume 1: Technical Reference Guide"
+        },
+        {
+          "key": "forney1994zone",
+          "year": 1994,
+          "title": "Analyzing and Exploiting Numerical Characteristics of Zone Fire Models"
+        },
+        {
+          "key": "jones1985multicompartment",
+          "year": 1985,
+          "title": "A Multicompartment Model for the Spread of Fire, Smoke and Toxic Gases"
+        },
+        {
+          "key": "mcgrattan2013fds",
+          "year": 2013,
+          "title": "Fire Dynamics Simulator Technical Reference Guide, Volume 1: Mathematical Model"
+        }
+      ],
+      "methods": "Two-zone models solve, for each room, differential or differential-algebraic equations for pressure, upper-layer volume and layer temperatures, with plume entrainment and orifice-law vent flows driven by hydrostatic pressure differences (CFAST; Jones; Forney and Moss on the stiffness of the system; Walton et al. as a survey). CFD (FDS) solves low-Mach large-eddy simulation on a structured mesh.",
+      "data_required": "Room volumes and floor areas, vent geometry and opening schedules, wall thermal properties, heat release curve and species yields; for FDS also a mesh and material properties.",
+      "assumptions": "Two well-mixed layers per room at uniform pressure; a stated entrainment law; stiff pressure dynamics that need implicit solvers. For FDS, a mesh fine enough for the fire's characteristic diameter and run times far from real time for whole buildings.",
+      "studio_status": "None. The report recommends a two-zone model on a room graph, solved implicitly and compared with CFAST (sections 3.4 and 10, step 5).",
+      "gaps": [
+        {
+          "id": "T02-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard",
+            "tenability"
+          ],
+          "gap": "No zone model, no room graph and no species, so no hazard quantity in physical units reaches the routing layer.",
+          "evidence": "Known limits in the task brief; report section 3.6."
+        },
+        {
+          "id": "T02-G2",
+          "gap_type": "literature",
+          "facets": [
+            "ifc_native",
+            "realtime_browser",
+            "time_dependent_hazard"
+          ],
+          "confidence": "medium",
+          "gap": "No method was found that generates zone-model input (rooms, vents, wall properties) automatically from IFC and maps per-room layer states onto a walkable graph for routing at interactive speed. Coupling in recent work runs FDS or PyroSim and passes fields one way into an agent tool; lighter models exist but are configured by hand or not tied to routing.",
+          "evidence": "Cheong et al. 2021 couple FDS to MassMotion one way and call the coupling computationally complex, multi-step and not uniform across industry (10.1177/03611981211032636). Jang et al. 2023 propose CFAST as a cheaper alternative to FDS for coupling and show that its computational domain must be configured with care (10.3390/app132413161). Wan et al. 2024 report a transient network smoke model faster than FDS, without IFC input or routing (10.1016/j.csite.2024.105269). Q05 (1,044 hits) top 100 are FDS, PyroSim and Pathfinder case studies.",
+          "narrowed_by": [
+            "10.1016/j.csite.2024.105269",
+            "10.3390/app132413161",
+            "10.1177/03611981211032636"
+          ]
+        }
+      ],
+      "n_references": 6,
+      "years": {
+        "min": 1985,
+        "max": 2016,
+        "undated": []
+      }
+    },
+    {
+      "id": "T03",
+      "name": "Room-scale fire-spread networks",
+      "references": [
+        {
+          "key": "elms1984modeling",
+          "year": 1984,
+          "title": "Modeling Fire Spread in Buildings"
+        },
+        {
+          "key": "ling1985network",
+          "year": 1985,
+          "title": "Modeling of Fire Spread through Probabilistic Networks"
+        },
+        {
+          "key": "platt1994probabilistic",
+          "year": 1994,
+          "title": "A Probabilistic Model of Fire Spread with Time Effects"
+        },
+        {
+          "key": "cheng2011dynamic",
+          "year": 2011,
+          "title": "Dynamic Modeling of Fire Spread in Building"
+        }
+      ],
+      "methods": "Rooms as nodes and barriers or openings as edges, with spread delays (time to flashover, barrier failure) or breach probabilities on edges; deterministic shortest-path or probabilistic network solutions for the fire arrival time in each room.",
+      "data_required": "Room fire loads and ventilation, barrier fire-resistance ratings, ignition and breach probabilities, pre- and post-flashover room states.",
+      "assumptions": "Room-level homogeneity; known or sampled barrier failure times; independent or Markov breach events.",
+      "studio_status": "None. Fire spreads on the lattice (radial distance bands, BFS flood or graph diffusion). FD-25 in the equations file records that the report's deterministic min-plus room-graph equation is a simplification of the cited probabilistic models.",
+      "gaps": [
+        {
+          "id": "T03-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "gap": "No room graph and no room-scale spread with flashover and barrier delays.",
+          "evidence": "Report sections 3.1 and 3.6."
+        },
+        {
+          "id": "T03-G2",
+          "gap_type": "studio",
+          "facets": [
+            "verified"
+          ],
+          "gap": "The deterministic room-graph spread equation should be labelled as a simplification of the probabilistic network models it cites.",
+          "evidence": "fire-equations-verified-2026-10-27.json, FD-25 notes."
+        },
+        {
+          "id": "T03-G3",
+          "gap_type": "literature",
+          "facets": [
+            "ifc_native",
+            "time_dependent_hazard"
+          ],
+          "confidence": "low to medium",
+          "gap": "No recent work was found that builds a fire-spread network (rooms, barrier fire ratings, openings) automatically from IFC property sets and uses it to drive time-dependent egress routing.",
+          "evidence": "Q12 (3,259 hits) top 100 are CFD case studies, Bayesian-network risk indices and statistical models of fire evolution from accident records, not topological spread networks. No query targeted IFC fire-rating property sets directly, so confidence is limited.",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 4,
+      "years": {
+        "min": 1984,
+        "max": 2011,
+        "undated": []
+      }
+    },
+    {
+      "id": "T04",
+      "name": "Fronts, eikonal and level-set methods",
+      "references": [
+        {
+          "key": "osher1988fronts",
+          "year": 1988,
+          "title": "Fronts Propagating with Curvature-Dependent Speed: Algorithms Based on {Hamilton-Jacobi} Formulations"
+        },
+        {
+          "key": "sethian1996fast",
+          "year": 1996,
+          "title": "A Fast Marching Level Set Method for Monotonically Advancing Fronts"
+        },
+        {
+          "key": "tsitsiklis1995efficient",
+          "year": 1995,
+          "title": "Efficient Algorithms for Globally Optimal Trajectories"
+        },
+        {
+          "key": "sethian2003ordered",
+          "year": 2003,
+          "title": "Ordered Upwind Methods for Static {Hamilton--Jacobi} Equations: Theory and Algorithms"
+        },
+        {
+          "key": "crandall1983viscosity",
+          "year": 1983,
+          "title": "Viscosity Solutions of {Hamilton-Jacobi} Equations"
+        },
+        {
+          "key": "barles1991convergence",
+          "year": 1991,
+          "title": "Convergence of Approximation Schemes for Fully Nonlinear Second Order Equations"
+        },
+        {
+          "key": "finney2002fire",
+          "year": 2002,
+          "title": "Fire Growth Using Minimum Travel Time Methods"
+        },
+        {
+          "key": "richards1990elliptical",
+          "year": 1990,
+          "title": "An Elliptical Growth Model of Forest Fire Fronts and Its Numerical Solution"
+        },
+        {
+          "key": "rothermel1972",
+          "year": 1972,
+          "title": "A Mathematical Model for Predicting Fire Spread in Wildland Fuels"
+        }
+      ],
+      "methods": "First-arrival time as the viscosity solution of an eikonal equation; level sets; fast marching and ordered upwind methods; Dijkstra-like one-pass solvers; minimum travel time and elliptical Huygens growth for wildland fire; convergence of monotone, stable and consistent schemes.",
+      "data_required": "Spread-rate field (for wildland, from fuel, wind and slope via Rothermel), ignition set, grid or graph.",
+      "assumptions": "Monotone advancing front with a local, possibly anisotropic speed in a continuum. Inside buildings walls are boundaries and flame spread proceeds by item ignition, flashover and barrier failure rather than as a material-speed front.",
+      "studio_status": "The radial model is the free-space eikonal solution with uniform speed per tick (report C4). The BFS flood is a hop metric with a square-root-of-two anisotropy (W3). Dijkstra on edge length over speed is recommended but not implemented.",
+      "gaps": [
+        {
+          "id": "T04-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "gap": "No metric fire front: the flood fire advances 1.0 m per step along a lattice axis and 0.71 m per step along a diagonal, has no time unit and depends on the sampling orientation.",
+          "evidence": "Report section 2.3 (W3), measured on the unmodified code."
+        },
+        {
+          "id": "T04-G2",
+          "gap_type": "literature",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "confidence": "medium",
+          "gap": "No validated front-speed law for smoke or flame inside buildings, usable in an eikonal or graph arrival-time model, was found. Eikonal fire models in the bibliography are for wildland fuels, and recent evacuation work applies fast marching to pedestrian floor fields, not to fire fronts in buildings.",
+          "evidence": "rothermel1972, richards1990elliptical and finney2002fire are wildland models. Galán et al. 2021 extend the fast marching method to pedestrian evacuation in heterogeneous media (10.1080/08839514.2021.1972252). Q03, Q06 and Q12 returned no eikonal model of smoke or flame fronts in buildings.",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 9,
+      "years": {
+        "min": 1972,
+        "max": 2003,
+        "undated": []
+      }
+    },
+    {
+      "id": "T05",
+      "name": "Static shortest paths and geodesics",
+      "references": [
+        {
+          "key": "dijkstra1959note",
+          "year": 1959,
+          "title": "A Note on Two Problems in Connexion with Graphs"
+        },
+        {
+          "key": "hart1968formal",
+          "year": 1968,
+          "title": "A Formal Basis for the Heuristic Determination of Minimum Cost Paths"
+        },
+        {
+          "key": "mitchell1987discrete",
+          "year": 1987,
+          "title": "The Discrete Geodesic Problem"
+        }
+      ],
+      "methods": "Label-setting shortest paths; A* with admissible or consistent heuristics; exact geodesics on polyhedral surfaces.",
+      "data_required": "A graph with static non-negative weights; node coordinates for the heuristic.",
+      "assumptions": "Static weights; a consistent heuristic for closed-set A* without reopening.",
+      "studio_status": "A* with a Euclidean heuristic, proved optimal in Lean; consistency of the heuristic under hazard weights is proved (L8).",
+      "gaps": [
+        {
+          "id": "T05-G1",
+          "gap_type": "studio",
+          "facets": [
+            "verified"
+          ],
+          "gap": "The Lean proofs are at specification level; refinement to the JavaScript implementation is not established, and float32 edge lengths against a float64 heuristic make consistency hold only up to about 1e-7 relative.",
+          "evidence": "Report section 2.3, precision note; section 8.5."
+        }
+      ],
+      "n_references": 3,
+      "years": {
+        "min": 1959,
+        "max": 1987,
+        "undated": []
+      }
+    },
+    {
+      "id": "T06",
+      "name": "Graph diffusion, spectral graph theory and numerical integration",
+      "references": [
+        {
+          "key": "chung1997spectral",
+          "year": 1996,
+          "title": "Spectral Graph Theory"
+        },
+        {
+          "key": "anderson1985eigenvalues",
+          "year": 1985,
+          "title": "Eigenvalues of the {Laplacian} of a Graph"
+        },
+        {
+          "key": "leveque2007finite",
+          "year": 2007,
+          "title": "Finite Difference Methods for Ordinary and Partial Differential Equations: Steady-State and Time-Dependent Problems"
+        },
+        {
+          "key": "hochbruck2010exponential",
+          "year": 2010,
+          "title": "Exponential Integrators"
+        },
+        {
+          "key": "berman1994nonnegative",
+          "year": 1994,
+          "title": "Nonnegative Matrices in the Mathematical Sciences"
+        },
+        {
+          "key": "patankar1980",
+          "year": 2018,
+          "title": "Numerical Heat Transfer and Fluid Flow"
+        },
+        {
+          "key": "michels2014exponential",
+          "year": 2014,
+          "title": "Exponential Integrators for Stiff Elastodynamic Problems"
+        },
+        {
+          "key": "michels2017stiffly",
+          "year": 2017,
+          "title": "A Stiffly Accurate Integrator for Elastodynamic Problems"
+        },
+        {
+          "key": "shao2022multigrid",
+          "year": 2022,
+          "title": "A Fast Unsmoothed Aggregation Algebraic Multigrid Framework for the Large-Scale Simulation of Incompressible Flow"
+        }
+      ],
+      "methods": "Graph Laplacians and their spectra; non-negative matrices and M-matrices; explicit, implicit and exponential time integration with stability and maximum-principle conditions; finite-volume heat transfer; stiffly accurate integrators and algebraic multigrid from graphics.",
+      "data_required": "Conductances, capacities and losses derived from geometry; a time step chosen from the stability condition.",
+      "assumptions": "Linear diffusion with symmetric conductances. Diffusion is not the dominant transport of heat and smoke in buildings, where buoyant plumes, ceiling jets and layer filling dominate.",
+      "studio_status": "Explicit-Euler 'temperature' index on the lattice. The degree-1 overshoot (W1) is fixed by capping the coefficient and proved in Lean (L3, L4). The field remains an arrival-order index without units (W2).",
+      "gaps": [
+        {
+          "id": "T06-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard",
+            "tenability"
+          ],
+          "gap": "The diffusion has no conductances, capacities, loss to ambient or time step; its only steady state on the source's component is the source value, so it cannot be read as a temperature or compared with a lethality threshold in degrees Celsius.",
+          "evidence": "Report sections 2.3 (W2) and 3.5."
+        },
+        {
+          "id": "T06-G2",
+          "gap_type": "literature",
+          "facets": [
+            "time_dependent_hazard",
+            "verified"
+          ],
+          "confidence": "low to medium",
+          "gap": "Graph or cellular smoke spreading coupled to evacuation is common, but stated stability or positivity conditions, physical time units and calibration against a reference solver are rare in the recent work found.",
+          "evidence": "Sadvakassov et al. 2026 report evacuation and smoke growth in simulation steps (smoke cells growing from 5 to over 120 within 100 steps), the same step-time limitation as Studio (10.37943/cpju3187). Wan et al. 2024 write an energy-conservation equation per region and compare with FDS, which narrows the gap at region scale but not on a navigation lattice (10.1016/j.csite.2024.105269).",
+          "narrowed_by": [
+            "10.1016/j.csite.2024.105269"
+          ]
+        }
+      ],
+      "n_references": 9,
+      "years": {
+        "min": 1985,
+        "max": 2022,
+        "undated": []
+      }
+    },
+    {
+      "id": "T07",
+      "name": "Tenability, fractional effective dose and ASET/RSET",
+      "references": [
+        {
+          "key": "purser2016hazards",
+          "year": 2016,
+          "title": "Assessment of Hazards to Occupants from Smoke, Toxic Gases, and Heat"
+        },
+        {
+          "key": "purser2026hazards",
+          "year": 2026,
+          "title": "Assessment of Hazards to Occupants from Smoke, Toxic Gases, and Heat"
+        },
+        {
+          "key": "babrauskas2010rset",
+          "year": 2010,
+          "title": "{RSET/ASET}, a Flawed Concept for Fire Safety Assessment"
+        },
+        {
+          "key": "purser2001quantification",
+          "year": 2001,
+          "title": "Quantification of Behaviour for Engineering Design Standards and Escape Time Calculations"
+        },
+        {
+          "key": "purser2016developments",
+          "year": 2016,
+          "title": "Developments in Tenability and Escape Time Assessment for Evacuation Modelling Simulations"
+        },
+        {
+          "key": "bsi2019pd79746",
+          "year": 2019,
+          "title": "{PD} 7974-6: Application of Fire Safety Engineering Principles to the Design of Buildings. Human Factors. Life Safety Strategies. Occupant Evacuation, Behaviour and Condition (Sub-system 6)"
+        },
+        {
+          "key": "iso13571",
+          "year": 2012,
+          "title": "{ISO} 13571:2012 Life-Threatening Components of Fire. Guidelines for the Estimation of Time to Compromised Tenability in Fires"
+        },
+        {
+          "key": "isotr16738",
+          "year": 2009,
+          "title": "{ISO/TR} 16738:2009 Fire-Safety Engineering. Technical Information on Methods for Evaluating Behaviour and Movement of People"
+        }
+      ],
+      "methods": "Fractional effective dose accumulated from heat, asphyxiant and irritant exposure; available and required safe escape time; pre-movement distributions; critique of deterministic ASET/RSET.",
+      "data_required": "Gas temperature, radiant flux, CO, HCN, CO2 and O2 concentrations, optical density or visibility, exposure times; occupant characteristics and pre-movement data.",
+      "assumptions": "Additive doses with incapacitation thresholds from human and animal data; a design threshold (X_crit = 0.3) for susceptible people; heat correlations fitted in degrees Celsius; ASET/RSET used deterministically unless distributions are propagated.",
+      "studio_status": "A lethality threshold blocks edges whose index exceeds a value in degrees Celsius; no FED, no ASET map and no species.",
+      "gaps": [
+        {
+          "id": "T07-G1",
+          "gap_type": "studio",
+          "facets": [
+            "tenability"
+          ],
+          "gap": "No FED or ASET per node; the threshold is applied to an index, not to a temperature or dose.",
+          "evidence": "Report sections 2.3 (W2), 4.1 to 4.3; equations T1 to T17 in the verified file are not implemented in the app."
+        },
+        {
+          "id": "T07-G2",
+          "gap_type": "literature",
+          "facets": [
+            "tenability",
+            "time_dependent_hazard",
+            "verified"
+          ],
+          "confidence": "medium",
+          "gap": "Tenability is used in routing as a per-location threshold, a predicted ASET or a weighted risk index evaluated on the current field, or is applied to agents in simulation. No method was found that minimises FED, or finds the earliest arrival subject to an FED limit, along the evacuee's own time-indexed path with a stated optimality guarantee.",
+          "evidence": "Darkhanbat et al. 2021 choose the route with the longest ASET margin using an ANN trained on FDS output (10.3390/app11146337). Cheong et al. 2021 apply FED and visibility to agent movement in a one-way FDS-MassMotion coupling, for evaluation rather than route optimisation (10.1177/03611981211032636). Bai et al. 2025 fold harm thresholds for temperature, visibility and toxic gas into an A* cost and heuristic (10.3390/buildings15101715). Wang et al. 2026 minimise cumulative dynamic risk with a metaheuristic and state that the results are not calibrated real-fire validation (10.3390/buildings16193863). Fang et al. 2026 report a tenability-based RL path planner, but no abstract was available, so its content is unassessed (10.1016/j.jobe.2025.115132).",
+          "narrowed_by": [
+            "10.3390/app11146337",
+            "10.1177/03611981211032636",
+            "10.3390/buildings15101715",
+            "10.3390/buildings16193863"
+          ]
+        },
+        {
+          "id": "T07-G3",
+          "gap_type": "literature",
+          "facets": [
+            "tenability"
+          ],
+          "confidence": "medium",
+          "gap": "Incident analysis identifies the probability of evacuating through irritant smoke as high-consequence and in need of more consideration; routing models found do not represent it.",
+          "evidence": "Purser 2023, Fire Safety Journal (10.1016/j.firesaf.2023.103938), abstract findings list.",
+          "narrowed_by": []
+        },
+        {
+          "id": "T07-G4",
+          "gap_type": "literature",
+          "facets": [
+            "tenability",
+            "time_dependent_hazard"
+          ],
+          "confidence": "low to medium",
+          "gap": "Babrauskas et al. (2010) argue that ASET/RSET should be used distributionally. Routing work found uses single deterministic thresholds or risk indices; propagating occupant and scenario distributions into route choice was not found.",
+          "evidence": "babrauskas2010rset; the routing papers cited under T07-G2 use deterministic thresholds or indices in their abstracts.",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 8,
+      "years": {
+        "min": 2001,
+        "max": 2026,
+        "undated": []
+      }
+    },
+    {
+      "id": "T08",
+      "name": "Egress movement data and hydraulic models",
+      "references": [
+        {
+          "key": "seyfried2005fundamental",
+          "year": 2005,
+          "title": "The Fundamental Diagram of Pedestrian Movement Revisited"
+        },
+        {
+          "key": "weidmann1993transporttechnik",
+          "year": 1993,
+          "title": "Transporttechnik der Fussg{\\\"a}nger: Transporttechnische Eigenschaften des Fussg{\\\"a}ngerverkehrs, Literaturauswertung"
+        },
+        {
+          "key": "fruin1971pedestrian",
+          "year": 1971,
+          "title": "Pedestrian Planning and Design"
+        },
+        {
+          "key": "nelson2002emergency",
+          "year": 2002,
+          "title": "Emergency Movement"
+        },
+        {
+          "key": "peacock2012movement",
+          "year": 2012,
+          "title": "Overall and Local Movement Speeds during Fire Drill Evacuations in Buildings up to 31 Stories"
+        },
+        {
+          "key": "peacock2017stairs",
+          "year": 2017,
+          "title": "Movement on Stairs during Building Evacuations"
+        },
+        {
+          "key": "gwynne2016hydraulic",
+          "year": 2016,
+          "title": "Employing the Hydraulic Model in Assessing Emergency Movement"
+        },
+        {
+          "key": "gwynne2026hydraulic",
+          "year": 2026,
+          "title": "Employing the Hydraulic Model to Assess Emergency Movement"
+        }
+      ],
+      "methods": "Speed-density relations (fundamental diagrams), the SFPE hydraulic model of specific flow and effective width, and measured speeds from fire drills, including stairs.",
+      "data_required": "Occupant density, effective widths, stair riser and tread, drill observations, pre-movement data.",
+      "assumptions": "Steady or quasi-steady flow; homogeneous populations; speed independent of smoke unless a separate smoke-speed relation is added.",
+      "studio_status": "Time is counted in hops; walking speed, stair speed and pre-movement are not modelled; the evacuee waits while the fire grows.",
+      "gaps": [
+        {
+          "id": "T08-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "gap": "No metric clock (edge time equal to length over speed), no stair speeds by geometry and no pre-movement distribution.",
+          "evidence": "Report sections 6.1 and 10, step 3."
+        },
+        {
+          "id": "T08-G2",
+          "gap_type": "literature",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "confidence": "medium",
+          "gap": "Incident evidence names pre-warning delay as a neglected, high-consequence parameter; it is absent from the routing literature found, which starts the evacuee at alarm or at the fire's start.",
+          "evidence": "Purser 2023 (10.1016/j.firesaf.2023.103938), abstract findings list.",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 8,
+      "years": {
+        "min": 1971,
+        "max": 2026,
+        "undated": []
+      }
+    },
+    {
+      "id": "T09",
+      "name": "Evacuation models and crowd dynamics",
+      "references": [
+        {
+          "key": "kuligowski2010review",
+          "year": 2010,
+          "title": "A Review of Building Evacuation Models, 2nd Edition"
+        },
+        {
+          "key": "kuligowski2016computer",
+          "year": 2016,
+          "title": "Computer Evacuation Models for Buildings"
+        },
+        {
+          "key": "helbing1995social",
+          "year": 1995,
+          "title": "Social Force Model for Pedestrian Dynamics"
+        },
+        {
+          "key": "helbing2000panic",
+          "year": 2000,
+          "title": "Simulating Dynamical Features of Escape Panic"
+        },
+        {
+          "key": "hughes2002continuum",
+          "year": 2002,
+          "title": "A Continuum Theory for the Flow of Pedestrians"
+        },
+        {
+          "key": "owen1996exodus",
+          "year": 1996,
+          "title": "The {EXODUS} Evacuation Model Applied to Building Evacuation Scenarios"
+        },
+        {
+          "key": "korhonen2010fdsevac",
+          "year": 2010,
+          "title": "{FDS+Evac}: An Agent Based Fire Evacuation Model"
+        },
+        {
+          "key": "treuille2006continuum",
+          "year": 2006,
+          "title": "Continuum Crowds"
+        }
+      ],
+      "methods": "Social-force and agent-based models, continuum crowds driven by an eikonal potential, the EXODUS model, and FDS+Evac coupled to the FDS fire solver; reviews of building evacuation tools.",
+      "data_required": "Geometry (usually imported or hand-built), occupant profiles and behaviour parameters, and for coupled tools the fire fields.",
+      "assumptions": "Calibrated behaviour parameters; scenario-based desktop runs of minutes to hours; continuum models assume high density.",
+      "studio_status": "Single evacuee; no congestion or flow.",
+      "gaps": [
+        {
+          "id": "T09-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "gap": "Single evacuee only; congestion and capacity are not represented.",
+          "evidence": "Known limits in the task brief; report section 6.2."
+        },
+        {
+          "id": "T09-G2",
+          "gap_type": "literature",
+          "facets": [
+            "realtime_browser",
+            "ifc_native",
+            "time_dependent_hazard"
+          ],
+          "confidence": "medium",
+          "gap": "Real-time crowd evacuation coupled to a time-dependent hazard and computed from IFC on the client was not found. Agent tools run desktop scenarios; real-time estimation is approached through surrogates of RSET rather than by running the model.",
+          "evidence": "Uhlík et al. 2026 train gradient-boosting and MLP surrogates on 50,910 Pathfinder runs to predict tunnel RSET, citing the cost of microscopic models as the barrier to real-time use (10.1016/j.ssci.2026.107348). Yakhou et al. 2023 link Revit and Pathfinder both ways, without a fire model (10.1016/j.jobe.2022.105557). Q16 (2,777 hits) top 50 contain web serious games and training tools, not hazard-coupled crowd models.",
+          "narrowed_by": [
+            "10.1016/j.ssci.2026.107348",
+            "10.1016/j.jobe.2022.105557"
+          ]
+        },
+        {
+          "id": "T09-G3",
+          "gap_type": "literature",
+          "facets": [
+            "tenability"
+          ],
+          "confidence": "medium",
+          "gap": "A 2026 systematic review of 53 model-based evacuation studies reports gaps in human-centred detailing, vulnerable populations and hazards beyond fire.",
+          "evidence": "Ostwald et al. 2026 (10.1186/s40410-026-00321-y).",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 8,
+      "years": {
+        "min": 1995,
+        "max": 2016,
+        "undated": []
+      }
+    },
+    {
+      "id": "T10",
+      "name": "Network flows over time and evacuation optimisation",
+      "references": [
+        {
+          "key": "ford1958dynamic",
+          "year": 1958,
+          "title": "Constructing Maximal Dynamic Flows from Static Flows"
+        },
+        {
+          "key": "gale1959transient",
+          "year": 1959,
+          "title": "Transient Flows in Networks"
+        },
+        {
+          "key": "chalmet1982network",
+          "year": 1982,
+          "title": "Network Models for Building Evacuation"
+        },
+        {
+          "key": "jarvis1982equivalent",
+          "year": 1982,
+          "title": "Some Equivalent Objectives for Dynamic Network Flow Problems"
+        },
+        {
+          "key": "burkard1993quickest",
+          "year": 1993,
+          "title": "The Quickest Flow Problem"
+        },
+        {
+          "key": "hoppe2000quickest",
+          "year": 2000,
+          "title": "The Quickest Transshipment Problem"
+        },
+        {
+          "key": "skutella2009flows",
+          "year": 2009,
+          "title": "An Introduction to Network Flows over Time"
+        },
+        {
+          "key": "lu2005ccrp",
+          "year": 2005,
+          "title": "Capacity Constrained Routing Algorithms for Evacuation Planning: A Summary of Results"
+        }
+      ],
+      "methods": "Time-expanded networks, maximum dynamic flows, earliest-arrival flows, quickest flow and quickest transshipment, network models of building evacuation and capacity-constrained route planning heuristics.",
+      "data_required": "Arc capacities and transit times, node storage, supplies and a time horizon.",
+      "assumptions": "Transit times independent of flow; a fixed network whose arcs do not close during the horizon; no hazard or dose terms.",
+      "studio_status": "None (single evacuee).",
+      "gaps": [
+        {
+          "id": "T10-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "gap": "No flow model on a room graph.",
+          "evidence": "Report sections 6.2 and 9."
+        },
+        {
+          "id": "T10-G2",
+          "gap_type": "literature",
+          "facets": [
+            "ifc_native",
+            "time_dependent_hazard",
+            "tenability"
+          ],
+          "confidence": "low to medium",
+          "gap": "Flows over time whose arcs close at deadlines taken from a fire forecast, with dose constraints, on a room graph derived from IFC, were not found. A timed flow network with real-time arc removal for industrial facilities narrows the gap.",
+          "evidence": "Cerrone et al. 2026 model evacuation as a timed flow network with re-routing when areas become inaccessible (10.3390/math14040632). Cabrera et al. 2022 assign people to paths by column generation without a hazard model (10.1016/j.ejtl.2022.100089). Q15 (118 hits) top 50 are maritime, urban, flood and tsunami models.",
+          "narrowed_by": [
+            "10.3390/math14040632"
+          ]
+        }
+      ],
+      "n_references": 8,
+      "years": {
+        "min": 1958,
+        "max": 2009,
+        "undated": []
+      }
+    },
+    {
+      "id": "T11",
+      "name": "Time-dependent shortest paths",
+      "references": [
+        {
+          "key": "cooke1966shortest",
+          "year": 1966,
+          "title": "The Shortest Route through a Network with Time-Dependent Internodal Transit Times"
+        },
+        {
+          "key": "dreyfus1969appraisal",
+          "year": 1969,
+          "title": "An Appraisal of Some Shortest-Path Algorithms"
+        },
+        {
+          "key": "orda1990shortest",
+          "year": 1990,
+          "title": "Shortest-Path and Minimum-Delay Algorithms in Networks with Time-Dependent Edge-Length"
+        },
+        {
+          "key": "kaufman1993fastest",
+          "year": 1993,
+          "title": "Fastest Paths in Time-Dependent Networks for Intelligent Vehicle-Highway Systems Application"
+        },
+        {
+          "key": "chabini1998discrete",
+          "year": 1998,
+          "title": "Discrete Dynamic Shortest Path Problems in Transportation Applications: Complexity and Algorithms with Optimal Run Time"
+        },
+        {
+          "key": "foschini2014complexity",
+          "year": 2014,
+          "title": "On the Complexity of Time-Dependent Shortest Paths"
+        }
+      ],
+      "methods": "Label-setting on earliest-arrival times under the FIFO (non-overtaking) condition, waiting policies, discrete-time dynamic programming and the complexity of arrival functions.",
+      "data_required": "Time-dependent edge delays or arrival functions, that is, a forecast.",
+      "assumptions": "FIFO for exactness of label-setting; a known, deterministic forecast; non-FIFO cases need waiting or time expansion.",
+      "studio_status": "Live rerouting re-solves from the original start with a snapshot of the current step (W4, reporting fixed in the browser engine). The earliest-escape BFS is exact under the hop model (C1). FIFO lemmas are proved in Lean; time-dependent Dijkstra with metric time is not implemented.",
+      "gaps": [
+        {
+          "id": "T11-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "gap": "Hazard on an edge is read at the current simulation step rather than at the evacuee's arrival time, and replanning starts from the original position.",
+          "evidence": "Report sections 2.3 (W4) and 5.3; the equations file notes the server reroute still reports routes through fire as found."
+        },
+        {
+          "id": "T11-G2",
+          "gap_type": "literature",
+          "facets": [
+            "time_dependent_hazard",
+            "verified"
+          ],
+          "confidence": "medium to high",
+          "gap": "Fire-evacuation routing recomputes shortest paths on the current hazard state at intervals. No building-fire routing method was found that reads a hazard forecast at the evacuee's own arrival time on each edge and uses the FIFO time-dependent shortest-path theory (exact label-setting, replanning consistency) that has existed since the 1990s.",
+          "evidence": "Kim et al. 2026 find that guidance based only on current information can be suboptimal under dynamic smoke and call for predictive systems (10.3390/fire9010032). Rajavel and Partheeban 2026 convert sensor readings into a time-dependent hazard index and recalculate shortest paths (10.54216/ijbes.120207). Jindal et al. 2022 re-solve after every fixed interval (10.1109/jiot.2021.3123189). Bai et al. 2025 update A* paths as risk evolves (10.3390/buildings15101715). Deng et al. 2022 use an FDS prediction of fire diffusion with an improved A* on a cruise ship; the abstract does not state arrival-time indexing or exactness (10.3390/math10173146). Alghamdi et al. 2025 drive a router from a short-term hazard surrogate but state no optimality property (10.3390/su18010133). Q15 (118 hits) returned no building-fire time-dependent shortest-path work.",
+          "narrowed_by": [
+            "10.3390/math10173146",
+            "10.3390/su18010133",
+            "10.3390/buildings16193863"
+          ]
+        }
+      ],
+      "n_references": 6,
+      "years": {
+        "min": 1966,
+        "max": 2014,
+        "undated": []
+      }
+    },
+    {
+      "id": "T12",
+      "name": "Reinforcement learning, MDPs and reward shaping",
+      "references": [
+        {
+          "key": "ng1999policy",
+          "year": 1999,
+          "title": "Policy Invariance under Reward Transformations: Theory and Application to Reward Shaping"
+        },
+        {
+          "key": "wiewiora2003potential",
+          "year": 2003,
+          "title": "Potential-Based Shaping and {Q}-Value Initialization are Equivalent"
+        },
+        {
+          "key": "grzes2017episodic",
+          "year": 2017,
+          "title": "Reward Shaping in Episodic Reinforcement Learning"
+        },
+        {
+          "key": "devlin2012dynamic",
+          "year": 2012,
+          "title": "Dynamic Potential-Based Reward Shaping"
+        },
+        {
+          "key": "watkins1992qlearning",
+          "year": 1992,
+          "title": "{Q}-Learning"
+        },
+        {
+          "key": "tsitsiklis1994asynchronous",
+          "year": 1994,
+          "title": "Asynchronous Stochastic Approximation and {Q}-Learning"
+        },
+        {
+          "key": "jaakkola1994convergence",
+          "year": 1994,
+          "title": "On the Convergence of Stochastic Iterative Dynamic Programming Algorithms"
+        },
+        {
+          "key": "puterman1994mdp",
+          "year": 1994,
+          "title": "Markov Decision Processes: Discrete Stochastic Dynamic Programming"
+        },
+        {
+          "key": "pardo2018timelimits",
+          "year": 2017,
+          "title": "Time Limits in Reinforcement Learning"
+        }
+      ],
+      "methods": "Tabular Q-learning and its convergence; potential-based reward shaping and its policy-invariance conditions (including episodic and dynamic potentials); finite-horizon MDPs and time limits; backward induction.",
+      "data_required": "An MDP specification: states, actions, transitions, rewards, horizon and discount.",
+      "assumptions": "Infinite visitation and decaying step sizes for convergence; zero terminal potential for invariance in episodic tasks; time in the state for finite horizons.",
+      "studio_status": "Tabular Q-learning on (node, time) with potential-based shaping; zero terminal potential and terminal horizon fixed (W5); shaping lemmas proved in Lean (L12 to L14).",
+      "gaps": [
+        {
+          "id": "T12-G1",
+          "gap_type": "studio",
+          "facets": [
+            "verified"
+          ],
+          "gap": "No exact baseline: backward induction on the time-expanded graph is not yet computed, so RL results cannot be reported as a gap to the optimum; success rates are empirical.",
+          "evidence": "Report sections 7.2 to 7.4 and 10, step 2."
+        },
+        {
+          "id": "T12-G2",
+          "gap_type": "literature",
+          "facets": [
+            "verified",
+            "time_dependent_hazard"
+          ],
+          "confidence": "medium",
+          "gap": "RL evacuation studies report convergence speed, success rate or comparison with other heuristics and learners, not the gap to the exact optimum, although for a known deterministic fire the optimum is computable in polynomial time by backward induction.",
+          "evidence": "Xu et al. 2022 compare convergence with classic Q-learning and SARSA (10.3390/ijgi11010066). Rosa et al. 2023 report 100 percent route accuracy with transfer learning (10.3390/s23218892). Wu and Mu 2025 solve an evacuation MINLP with GNN and PPO without a reported optimality gap (10.3390/su172210387). Wang et al. 2026 compare a metaheuristic with DDPG (10.3390/buildings16193863). puterman1994mdp gives the exact method.",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 9,
+      "years": {
+        "min": 1992,
+        "max": 2017,
+        "undated": []
+      }
+    },
+    {
+      "id": "T13",
+      "name": "Graphics and procedural fire simulation",
+      "references": [
+        {
+          "key": "hadrich2021fire",
+          "year": 2021,
+          "title": "Fire in Paradise: Mesoscale Simulation of Wildfires"
+        },
+        {
+          "key": "pirk2017wood",
+          "year": 2017,
+          "title": "Interactive Wood Combustion for Botanical Tree Models"
+        },
+        {
+          "key": "hadrich2020stormscapes",
+          "year": 2020,
+          "title": "Stormscapes: Simulating Cloud Dynamics in the Now"
+        },
+        {
+          "key": "kokosza2024scintilla",
+          "year": 2024,
+          "title": "Scintilla: Simulating Combustible Vegetation for Wildfires"
+        },
+        {
+          "key": "liu2025flameforge",
+          "year": 2025,
+          "title": "{FLAMEFORGE}: Combustion Simulation of Wooden Structures"
+        },
+        {
+          "key": "wrede2025firex",
+          "year": 2025,
+          "title": "{Fire-X}: Extinguishing Fire with Stoichiometric Heat Release"
+        },
+        {
+          "key": "stam1999stable",
+          "year": 1999,
+          "title": "Stable Fluids"
+        },
+        {
+          "key": "nguyen2002fire",
+          "year": 2002,
+          "title": "Physically Based Modeling and Animation of Fire"
+        }
+      ],
+      "methods": "Physically based combustion and atmospheric simulation at interactive rates: heat transfer, char insulation and mass loss, multi-species heat release, suppression and detectors, voxel and particle discretisations, stable fluids and level-set flame fronts.",
+      "data_required": "Geometry as voxels or particles, material and fuel properties, and measurements for comparison (wood samples, sub-surface temperatures, wildfire records).",
+      "assumptions": "Resolved or semi-resolved flow on GPU; visual plausibility as a goal, with quantitative comparison to measurements where reported.",
+      "studio_status": "Not used and not a goal; the report advises sampling resolved fields from a solver instead of turning the lattice into a CFD mesh.",
+      "gaps": [
+        {
+          "id": "T13-G1",
+          "gap_type": "literature",
+          "facets": [
+            "tenability",
+            "ifc_native"
+          ],
+          "confidence": "low to medium",
+          "gap": "Interactive physically based indoor fire from graphics (Fire-X: indoor scenarios with detectors and suppression; FLAMEFORGE: wooden structures) is, per the abstracts, not coupled to occupant tenability or egress and not driven by IFC building models.",
+          "evidence": "Report section 1.1 summary of the abstracts of wrede2025firex and liu2025flameforge. No query targeted graphics fire coupled to egress, and Q05 and Q06 surfaced none.",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 8,
+      "years": {
+        "min": 1999,
+        "max": 2025,
+        "undated": []
+      }
+    },
+    {
+      "id": "T14",
+      "name": "Formal methods, proof assistants and units of measure",
+      "references": [
+        {
+          "key": "mathlib2020",
+          "year": 2020,
+          "title": "The Lean Mathematical Library"
+        },
+        {
+          "key": "moura2021lean4",
+          "year": 2021,
+          "title": "The {Lean 4} Theorem Prover and Programming Language"
+        },
+        {
+          "key": "limperg2023aesop",
+          "year": 2023,
+          "title": "Aesop: White-Box Best-First Proof Search for {Lean}"
+        },
+        {
+          "key": "toobysmith2025heplean",
+          "year": 2025,
+          "title": "{HepLean}: Digitalising High Energy Physics"
+        },
+        {
+          "key": "kennedy1997units",
+          "year": 1997,
+          "title": "Relational Parametricity and Units of Measure"
+        },
+        {
+          "key": "mathlib4repo",
+          "year": null,
+          "title": "mathlib4: The Math Library of {Lean 4}"
+        },
+        {
+          "key": "plausiblerepo",
+          "year": null,
+          "title": "Plausible: Property-Based Testing for {Lean 4}"
+        },
+        {
+          "key": "leansearchclientrepo",
+          "year": null,
+          "title": "{LeanSearchClient}: Natural-Language Search Syntax for {Lean}"
+        },
+        {
+          "key": "physlibrepo",
+          "year": null,
+          "title": "{PhysLib}: A Project to Digitalise Results from Physics into {Lean}"
+        }
+      ],
+      "methods": "Lean 4 and Mathlib, proof search (Aesop), property-based testing (Plausible), physics formalisation (HepLean, PhysLib) and units-of-measure typing.",
+      "data_required": "Formal statements of the algorithms and equations.",
+      "assumptions": "Proofs hold for the formal model; links to executable code and to empirical constants are separate obligations.",
+      "studio_status": "Lean 4 proofs of A* and Dijkstra correctness, FIFO lemmas, shaping lemmas, the corrected diffusion step, and dimensional consistency of about 90 fire and tenability equations.",
+      "gaps": [
+        {
+          "id": "T14-G1",
+          "gap_type": "studio",
+          "facets": [
+            "verified"
+          ],
+          "gap": "Proofs are at specification level: no refinement from the Lean statements to the JavaScript implementation; L7 (layered BFS), L10c (time-dependent Dijkstra) and L15 (stochastic shaping) are open; dimensional checks do not establish the numerical constants.",
+          "evidence": "Report sections 8.2 and 8.5; equations file notes on constants."
+        },
+        {
+          "id": "T14-G2",
+          "gap_type": "literature",
+          "facets": [
+            "verified"
+          ],
+          "confidence": "medium to high",
+          "gap": "No machine-checked (proof-assistant) results were found for fire-safety engineering equations, evacuation routing algorithms or egress rules. Formal methods appear in other emergency domains and as executable logic for compliance, not as proofs about fire or egress models.",
+          "evidence": "Q10 (858 hits) and Q14 (4,703 hits) top results: Rehman et al. 2021 use coloured Petri nets and Event-B for a flood warning system (10.1155/2021/6685978); constraint logic programming and constraint ASP for BIM compliance (10.1017/s1471068422000138); a 2026 review of building-code interpretation covering rule-based, ontology, NLP, ML and LLM methods, without theorem proving in its abstract (10.1080/09613218.2026.2637965). Verified shortest-path developments in general proof libraries were not searched, so the claim is limited to the fire, egress and building-code literature.",
+          "narrowed_by": [
+            "10.1017/s1471068422000138"
+          ]
+        }
+      ],
+      "n_references": 9,
+      "years": {
+        "min": 1997,
+        "max": 2025,
+        "undated": [
+          "mathlib4repo",
+          "plausiblerepo",
+          "leansearchclientrepo",
+          "physlibrepo"
+        ]
+      }
+    },
+    {
+      "id": "T15",
+      "name": "BIM, topology and building layout",
+      "references": [
+        {
+          "key": "bao2013layouts",
+          "year": 2013,
+          "title": "Generating and Exploring Good Building Layouts"
+        },
+        {
+          "key": "peng2014templates",
+          "year": 2014,
+          "title": "Computing Layouts with Deformable Templates"
+        },
+        {
+          "key": "peng2016network",
+          "year": 2016,
+          "title": "Computational Network Design from Functional Specifications"
+        },
+        {
+          "key": "wu2018miqp",
+          "year": 2018,
+          "title": "{MIQP}-based Layout Design for Building Interiors"
+        },
+        {
+          "key": "para2021constraint",
+          "year": 2021,
+          "title": "Generative Layout Modeling using Constraint Graphs"
+        },
+        {
+          "key": "wu2019interior",
+          "year": 2019,
+          "title": "Data-driven Interior Plan Generation for Residential Buildings"
+        },
+        {
+          "key": "jabi2019synergy",
+          "year": 2019,
+          "title": "The Synergy of Non-Manifold Topology and Reinforcement Learning for Fire Egress"
+        }
+      ],
+      "methods": "Generation and optimisation of building layouts (analytic characterisation, deformable templates, integer programming, constraint graphs, data-driven plans), network design from functional specifications, and non-manifold topology with RL for fire egress (Jabi et al.).",
+      "data_required": "Layout constraints, floor-plan datasets, non-manifold topological models.",
+      "assumptions": "Design-time, mostly two-dimensional plans; no IFC parsing; no fire dynamics.",
+      "studio_status": "IFC-native lattice built in the browser (one grid aligned to the walls, walls cut 0.75 m above each floor, doors bridged, stairs on a half-step grid, IfcSpace floors walkable); cross-check against TopologicPy's Navigation graph.",
+      "gaps": [
+        {
+          "id": "T15-G1",
+          "gap_type": "studio",
+          "facets": [
+            "ifc_native"
+          ],
+          "gap": "The bibliography has one entry on building models and egress (jabi2019synergy) and cites no IFC-to-navigation-graph work, although such work exists and should be compared with Studio's lattice.",
+          "evidence": "Recent papers R01 to R07 in recent-papers.json."
+        },
+        {
+          "id": "T15-G2",
+          "gap_type": "studio",
+          "facets": [
+            "ifc_native",
+            "time_dependent_hazard"
+          ],
+          "gap": "No room graph from IfcSpace adjacency alongside the lattice, which zone, spread and flow models need; the route-length difference of about 8 percent against TopologicPy's Navigation graph is unexplained beyond the stencil bound.",
+          "evidence": "Report sections 3.1, 3.6 and 6.2."
+        },
+        {
+          "id": "T15-G3",
+          "gap_type": "literature",
+          "facets": [
+            "ifc_native",
+            "verified"
+          ],
+          "confidence": "medium",
+          "gap": "There is no shared benchmark or error metric for navigation graphs generated from IFC. Each method is shown on its authors' own buildings, and accuracy against a metric ground truth (geodesic distance, connectivity on imperfect real IFC files) is not reported.",
+          "evidence": "Zhu et al. 2025 add a custom IfcRelConnectsSpace for vertical connectivity (10.1016/j.autcon.2025.106019). Zhang et al. 2023 avoid space definitions and test three buildings (10.3390/ijgi12060231). Qi et al. 2025 report timing only (10.1080/17452007.2025.2451817). Napps et al. 2026 note that IFC defines no escape-route entity (10.1016/j.autcon.2026.106883). Mohammadi et al. 2026 needed semantic and topological readiness and found travel distance only partially checkable (10.3390/su18168023). Rahman et al. 2021 compare their lattice-topology paths with medial-axis paths on one campus building (10.1093/jcde/qwab059).",
+          "narrowed_by": [
+            "10.1016/j.autcon.2025.106019",
+            "10.3390/ijgi12060231",
+            "10.5194/isprs-archives-xliii-b4-2022-295-2022",
+            "10.1080/17452007.2025.2451817"
+          ]
+        },
+        {
+          "id": "T15-G4",
+          "gap_type": "literature",
+          "facets": [
+            "tenability"
+          ],
+          "confidence": "low",
+          "gap": "Layout generation and network design from functional specifications do not, per the abstracts summarised in the report, include egress-under-fire or tenability objectives.",
+          "evidence": "Report section 1.1 on peng2016network and the Wonka-group layout papers; not searched directly in 2021 to 2026.",
+          "narrowed_by": []
+        }
+      ],
+      "n_references": 7,
+      "years": {
+        "min": 2013,
+        "max": 2021,
+        "undated": []
+      }
+    },
+    {
+      "id": "T16",
+      "name": "Any-angle paths, route post-processing and alternative routes",
+      "references": [],
+      "origin": "Added from the OpenAlex search. No bibliography entry covers this theme, although Studio uses route straightening, a penalty method and Yen's k-shortest paths.",
+      "methods": "Any-angle search (Theta* variants), string pulling and smoothing, k-shortest and penalty-based alternative routes.",
+      "data_required": "Grid or graph with line-of-sight tests; edge or cell costs.",
+      "assumptions": "Uniform costs for the classical any-angle guarantees; static costs.",
+      "studio_status": "Straightening like TopologicPy's Wire.Straighten; alternatives by penalty and Yen's k-shortest paths; no formal statements for these.",
+      "gaps": [
+        {
+          "id": "T16-G1",
+          "gap_type": "studio",
+          "facets": [
+            "verified"
+          ],
+          "gap": "Straightening and alternative-route methods have no citations in the bibliography and no stated properties (cost of a straightened route under hazard weights, diversity of alternatives with respect to the fire).",
+          "evidence": "fire-egress-methods.bib has no entry on Yen, penalty methods or any-angle search."
+        },
+        {
+          "id": "T16-G2",
+          "gap_type": "literature",
+          "facets": [
+            "time_dependent_hazard",
+            "verified"
+          ],
+          "confidence": "medium",
+          "gap": "Any-angle planning with non-uniform (hazard) or time-dependent costs lacks optimality guarantees; no time-dependent any-angle method for evacuation was found.",
+          "evidence": "Kis et al. 2026 show that path length and path cost diverge on weighted grids and propose generalising Basic Theta* (10.15588/1607-3274-2026-1-12). Q09 (1,988 hits) top 100 are mobile-robot planners.",
+          "narrowed_by": [
+            "10.15588/1607-3274-2026-1-12"
+          ]
+        }
+      ],
+      "n_references": 0,
+      "years": {
+        "min": null,
+        "max": null,
+        "undated": []
+      }
+    },
+    {
+      "id": "T17",
+      "name": "Machine-learning and graph-neural-network surrogates for fire and smoke",
+      "references": [],
+      "origin": "Added from the OpenAlex search; no bibliography entries.",
+      "methods": "Neural, tree-ensemble and graph-neural-network surrogates trained on simulations or experiments to forecast temperature, flashover, ASET or RSET.",
+      "data_required": "Simulation databases (FDS, Pathfinder) or sensor time series from experiments.",
+      "assumptions": "Training distribution covers the deployment case; outputs are point forecasts without stated error bounds in most abstracts.",
+      "studio_status": "None; the fire is precomputed and deterministic.",
+      "gaps": [
+        {
+          "id": "T17-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "gap": "No surrogate and no forecast uncertainty.",
+          "evidence": "Task brief; report section 5.3."
+        },
+        {
+          "id": "T17-G2",
+          "gap_type": "literature",
+          "facets": [
+            "time_dependent_hazard",
+            "tenability",
+            "verified",
+            "ifc_native"
+          ],
+          "confidence": "medium",
+          "gap": "Surrogates predict scalar or room-level targets (temperature, flashover, ASET, RSET). None found outputs per-node, time-dependent hazard or dose fields in the form a router needs (arrival-time functions) with error bounds that carry through to route feasibility.",
+          "evidence": "Zhang et al. 2022 forecast temperature 30 s ahead with under 10 percent error and flashover 20 s ahead in a 1/5-scale compartment (10.1016/j.firesaf.2022.103579). Tam et al. 2022 predict flashover in arbitrary floor plans with a spatio-temporal GNN; abstract unavailable (10.1016/j.engappai.2022.105258). Uhlík et al. 2026 predict tunnel RSET (10.1016/j.ssci.2026.107348). Darkhanbat et al. 2021 predict ASET with an ANN (10.3390/app11146337). Alghamdi et al. 2025 use a physics-based hazard surrogate in a digital-twin controller without stated bounds (10.3390/su18010133).",
+          "narrowed_by": [
+            "10.1016/j.firesaf.2022.103579",
+            "10.1016/j.engappai.2022.105258",
+            "10.3390/su18010133"
+          ]
+        }
+      ],
+      "n_references": 0,
+      "years": {
+        "min": null,
+        "max": null,
+        "undated": []
+      }
+    },
+    {
+      "id": "T18",
+      "name": "Sensor-driven guidance and digital twins",
+      "references": [],
+      "origin": "Added from the OpenAlex search; no bibliography entries.",
+      "methods": "IoT and wireless sensor networks feeding hazard estimates to route guidance, dynamic signage, knowledge graphs and digital-twin controllers.",
+      "data_required": "Sensor streams (temperature, smoke, gas, occupancy), building graph, communication infrastructure.",
+      "assumptions": "Readings reflect current hazard; routes recomputed at intervals; reliability of sensors and links.",
+      "studio_status": "None; with a deterministic precomputed fire, live rerouting adds no information (report section 5.3).",
+      "gaps": [
+        {
+          "id": "T18-G1",
+          "gap_type": "studio",
+          "facets": [
+            "time_dependent_hazard"
+          ],
+          "gap": "No ingestion of observed data and no forecast update, so receding-horizon replanning cannot be demonstrated.",
+          "evidence": "Report section 5.3."
+        },
+        {
+          "id": "T18-G2",
+          "gap_type": "literature",
+          "facets": [
+            "time_dependent_hazard",
+            "verified"
+          ],
+          "confidence": "medium",
+          "gap": "Guidance systems recompute on current readings at fixed intervals and state no replanning-consistency or feasibility property under forecast error (part of LG1).",
+          "evidence": "Jindal et al. 2022 (10.1109/jiot.2021.3123189); Rajavel and Partheeban 2026 (10.54216/ijbes.120207); Kim et al. 2026 (10.3390/fire9010032).",
+          "narrowed_by": [
+            "10.3390/su18010133"
+          ]
+        }
+      ],
+      "n_references": 0,
+      "years": {
+        "min": null,
+        "max": null,
+        "undated": []
+      }
+    },
+    {
+      "id": "T19",
+      "name": "Web and browser-based BIM analysis",
+      "references": [],
+      "origin": "Added from the OpenAlex search; no bibliography entries.",
+      "methods": "Web viewers and services for IFC (Three.js and WebGL visualisation, cloud facility-management tools), web-based path planning and web serious games.",
+      "data_required": "IFC models streamed to a client or processed on a server.",
+      "assumptions": "Analysis often runs on a server, with the browser as viewer; client resources are limited.",
+      "studio_status": "IFC parsing, lattice construction, routing, fire spread and RL run in the browser.",
+      "gaps": [
+        {
+          "id": "T19-G1",
+          "gap_type": "literature",
+          "facets": [
+            "realtime_browser",
+            "ifc_native",
+            "time_dependent_hazard"
+          ],
+          "confidence": "medium",
+          "gap": "No client-side pipeline was found that goes from IFC geometry to a walkable graph, a time-dependent hazard and hazard-aware routing in the browser. Web-based BIM work found does path planning without hazard, visualisation, facility management or training.",
+          "evidence": "Liu et al. 2021 plan paths on local grid maps of BIM buildings with a lightweight web-based approach in about 2 s, without hazard (10.1002/cav.2014). Yang et al. 2021 build a web serious game for fire drills (10.3390/app112311284). Deng et al. 2022 build an IFC duct-pressure viewer on Three.js (10.1080/13467581.2022.2085715). Q11 (6,983 hits) and Q16 (2,777 hits) top results contain no browser-side hazard routing.",
+          "narrowed_by": [
+            "10.1002/cav.2014"
+          ]
+        },
+        {
+          "id": "T19-G2",
+          "gap_type": "studio",
+          "facets": [
+            "realtime_browser"
+          ],
+          "gap": "Browser timings (graph build, routing latency, memory on large IFC files) were not stated in the inputs read for this study; they are needed to support a real-time claim against, for example, the 0.4 s and 2 s figures reported in R04 and R05.",
+          "evidence": "Inputs read for this study; recent-papers R04 and R05."
+        }
+      ],
+      "n_references": 0,
+      "years": {
+        "min": null,
+        "max": null,
+        "undated": []
+      }
+    },
+    {
+      "id": "T20",
+      "name": "Automated egress code-compliance checking",
+      "references": [],
+      "origin": "Added from the OpenAlex search; no bibliography entries.",
+      "methods": "Rule-based checking of IFC models (Solibri and custom rule sets), graph-based semantic reasoning, logic programming, NLP and LLM interpretation of codes.",
+      "data_required": "IFC models with consistent classifications, exit designations and spatial relationships; machine-readable rules.",
+      "assumptions": "Static geometry; rules evaluated without fire dynamics; route measurement conventions defined by each code.",
+      "studio_status": "Computes metric routes on the lattice but does not report code travel distances.",
+      "gaps": [
+        {
+          "id": "T20-G1",
+          "gap_type": "literature",
+          "facets": [
+            "ifc_native",
+            "verified"
+          ],
+          "confidence": "medium",
+          "gap": "Travel distance, route origin and measurement logic remain only partially checkable from IFC, and spatial reasoning across storeys is hard to automate; reviews call for benchmark datasets and transparent methods.",
+          "evidence": "Mohammadi et al. 2026 (10.3390/su18168023); Napps et al. 2026 (10.1016/j.autcon.2026.106883); Hartmann et al. 2026, a review of 16 studies (10.1108/jsfe-11-2025-0054); Mirhosseini et al. 2026 (10.1080/09613218.2026.2637965).",
+          "narrowed_by": [
+            "10.1016/j.autcon.2026.106883"
+          ]
+        },
+        {
+          "id": "T20-G2",
+          "gap_type": "studio",
+          "facets": [
+            "ifc_native",
+            "verified"
+          ],
+          "gap": "Studio does not output travel distances with the stencil error bound (at most 8.2 percent for an 8-direction stencil, report section 3.1), which would turn its lattice into a measurable compliance aid.",
+          "evidence": "Report section 3.1."
+        }
+      ],
+      "n_references": 0,
+      "years": {
+        "min": null,
+        "max": null,
+        "undated": []
+      }
+    }
+  ],
+  "top_literature_gaps": [
+    {
+      "rank": 1,
+      "id": "LG1",
+      "title": "Forecast-indexed, exact time-dependent routing in building fires",
+      "theme_gaps": [
+        "T11-G2",
+        "T18-G2"
+      ],
+      "statement": "Building-fire routing recomputes shortest paths on the current hazard snapshot at intervals. No method was found that reads a hazard forecast at the evacuee's own arrival time on each edge and applies FIFO time-dependent shortest-path theory, with its exactness and replanning-consistency properties.",
+      "where_papers_stop": [
+        "Kim et al. 2026 (10.3390/fire9010032): compare Dijkstra and A* under dynamic smoke and conclude that current-information guidance can be suboptimal; stop at calling for prediction.",
+        "Rajavel and Partheeban 2026 (10.54216/ijbes.120207): time-dependent hazard index from sensors modifies edge costs; stop at recalculating shortest paths on the current index.",
+        "Jindal et al. 2022 (10.1109/jiot.2021.3123189): BFS safety layers re-solved after every fixed interval; no forecast.",
+        "Deng et al. 2022 (10.3390/math10173146): use an FDS prediction with improved A* on a ship; the abstract states neither arrival-time indexing nor exactness.",
+        "Wang et al. 2026 (10.3390/buildings16193863): time-varying network solved by a metaheuristic in under 0.15 s; no optimality claim and no calibrated validation.",
+        "Classical theory (kaufman1993fastest, orda1990shortest, chabini1998discrete) is not applied in any of these."
+      ],
+      "confidence": "medium to high within the searched corpus",
+      "studio_position": "Has FIFO lemmas in Lean and an exact hop-time escape BFS; lacks the metric clock and time-dependent Dijkstra."
+    },
+    {
+      "rank": 2,
+      "id": "LG2",
+      "title": "Fractional effective dose as an exact route objective or constraint",
+      "theme_gaps": [
+        "T07-G2"
+      ],
+      "statement": "Tenability enters routing as a threshold, a predicted ASET or a risk index on the current field, or is applied to agents in simulation. Minimum-dose routes and earliest arrival under a dose limit, accumulated along the evacuee's time-indexed path with an optimality guarantee, were not found.",
+      "where_papers_stop": [
+        "Darkhanbat et al. 2021 (10.3390/app11146337): ANN-predicted ASET; route with the longest margin.",
+        "Cheong et al. 2021 (10.1177/03611981211032636): FED slows agents in a one-way FDS coupling; evaluation, not optimisation.",
+        "Bai et al. 2025 (10.3390/buildings15101715): harm thresholds turned into risk values inside A*.",
+        "Wang et al. 2026 (10.3390/buildings16193863): cumulative risk minimised by a metaheuristic.",
+        "Fang et al. 2026 (10.1016/j.jobe.2025.115132): tenability-based RL path planning; abstract unavailable, content unassessed."
+      ],
+      "confidence": "medium",
+      "studio_position": "Report section 4.3 gives the time-expanded DP; the FED equations are verified (T1 to T17) and dimension-checked in Lean; not implemented."
+    },
+    {
+      "rank": 3,
+      "id": "LG3",
+      "title": "Machine-checked proofs in fire-safety and egress engineering",
+      "theme_gaps": [
+        "T14-G2"
+      ],
+      "statement": "No proof-assistant results were found for fire-dynamics or tenability equations, evacuation routing algorithms or egress rules.",
+      "where_papers_stop": [
+        "Arias et al. 2022 (10.1017/s1471068422000138): executable constraint logic programming and ASP for BIM compliance, a preliminary reasoner; not proofs about algorithms or equations.",
+        "Rehman et al. 2021 verify a flood warning system with coloured Petri nets and Event-B (10.1155/2021/6685978), outside fire and egress.",
+        "Mirhosseini et al. 2026 (10.1080/09613218.2026.2637965): code-interpretation review covers rule-based, ontology, NLP, ML and LLM methods; theorem proving is absent from the abstract.",
+        "Q14 (4,703 hits), aimed at Coq, Isabelle, Lean and machine-checked proofs, returned no fire, egress or building-code item in its top 50."
+      ],
+      "confidence": "medium to high for fire, egress and building codes; general verified shortest-path libraries were not searched",
+      "studio_position": "Has Lean proofs (A*, Dijkstra, FIFO, shaping, about 90 dimensional checks); this is Studio's most distinctive contribution."
+    },
+    {
+      "rank": 4,
+      "id": "LG4",
+      "title": "Client-side IFC-to-hazard-routing pipeline",
+      "theme_gaps": [
+        "T19-G1",
+        "T09-G2"
+      ],
+      "statement": "No browser-side pipeline was found that goes from IFC geometry to a walkable graph, a time-dependent hazard and hazard-aware routing.",
+      "where_papers_stop": [
+        "Liu et al. 2021 (10.1002/cav.2014): lightweight web-based BIM path planning in about 2 s; no hazard.",
+        "Yakhou et al. 2023 (10.1016/j.jobe.2022.105557): Revit and Pathfinder exchange data both ways on the desktop; no fire model.",
+        "Yang et al. 2021 (10.3390/app112311284): web serious game for fire-drill training, not analysis.",
+        "Uhlík et al. 2026 (10.1016/j.ssci.2026.107348): real time reached through an RSET surrogate, not by running the model."
+      ],
+      "confidence": "medium",
+      "studio_position": "Has the pipeline; lacks published timings and a physical hazard."
+    },
+    {
+      "rank": 5,
+      "id": "LG5",
+      "title": "Benchmarks and error metrics for IFC-derived navigation graphs",
+      "theme_gaps": [
+        "T15-G3",
+        "T20-G1"
+      ],
+      "statement": "Navigation graphs from IFC are shown on each author's own buildings. No shared benchmark set, metric accuracy against geodesic ground truth, or robustness test on imperfect IFC was found, and compliance tools still check travel distance only partially.",
+      "where_papers_stop": [
+        "Zhu et al. 2025 (10.1016/j.autcon.2025.106019): extend IFC with IfcRelConnectsSpace for vertical links; qualitative validation.",
+        "Zhang et al. 2023 (10.3390/ijgi12060231): three buildings, eight component types; no distance error.",
+        "Qi et al. 2025 (10.1080/17452007.2025.2451817): timing only.",
+        "Mohammadi et al. 2026 (10.3390/su18168023): travel distance and route measurement only partially checkable; bounded feasibility.",
+        "Napps et al. 2026 (10.1016/j.autcon.2026.106883): escape routes must be derived because IFC has no such entity."
+      ],
+      "confidence": "medium",
+      "studio_position": "Has a metrication bound (report section 3.1) and a TopologicPy cross-check; could publish both as a benchmark."
+    },
+    {
+      "rank": 6,
+      "id": "LG6",
+      "title": "RL evacuation results without an exact-optimum baseline",
+      "theme_gaps": [
+        "T12-G2"
+      ],
+      "statement": "RL evacuation papers report convergence or success rates against other learners or heuristics, not the gap to the exact optimum, which backward induction gives in polynomial time for a known deterministic fire.",
+      "where_papers_stop": [
+        "Xu et al. 2022 (10.3390/ijgi11010066): convergence about five times faster than classic Q-learning on a grid.",
+        "Rosa et al. 2023 (10.3390/s23218892): 100 percent route accuracy with transfer learning; reference for accuracy not stated in the abstract.",
+        "Wu and Mu 2025 (10.3390/su172210387): GNN and PPO for an MINLP; no optimality gap reported.",
+        "Wang et al. 2026 (10.3390/buildings16193863): metaheuristic against DDPG."
+      ],
+      "confidence": "medium",
+      "studio_position": "Has a time-indexed MDP and shaping proofs; the exact baseline is planned (report section 10, step 2)."
+    },
+    {
+      "rank": 7,
+      "id": "LG7",
+      "title": "Routing-ready surrogates with error bounds",
+      "theme_gaps": [
+        "T17-G2"
+      ],
+      "statement": "Fire and egress surrogates predict scalars or room-level quantities. None found outputs per-node time-dependent hazard or dose fields for a router, or ties surrogate error to route feasibility.",
+      "where_papers_stop": [
+        "Zhang et al. 2022 (10.1016/j.firesaf.2022.103579): 30 s temperature and 20 s flashover forecasts in one reduced-scale compartment.",
+        "Tam et al. 2022 (10.1016/j.engappai.2022.105258): GNN flashover prediction on floor plans; abstract unavailable.",
+        "Uhlík et al. 2026 (10.1016/j.ssci.2026.107348): RSET only, tunnels.",
+        "Alghamdi et al. 2025 (10.3390/su18010133): hazard surrogate drives a router with exposure caps; no bounds stated."
+      ],
+      "confidence": "medium",
+      "studio_position": "Has none; FIFO theory would let a monotone surrogate forecast be used exactly."
+    },
+    {
+      "rank": 8,
+      "id": "LG8",
+      "title": "IFC-generated lightweight fire models coupled to routing",
+      "theme_gaps": [
+        "T02-G2",
+        "T03-G3"
+      ],
+      "statement": "No method was found that generates a zone or network fire model from IFC and couples its per-room state to a walkable graph at interactive speed. Coupling is done by running FDS or PyroSim and passing fields one way to an agent tool.",
+      "where_papers_stop": [
+        "Cheong et al. 2021 (10.1177/03611981211032636): coupling is computationally complex, multi-step and not uniform across industry.",
+        "Jang et al. 2023 (10.3390/app132413161): CFAST as a cheaper alternative, hand-configured.",
+        "Wan et al. 2024 (10.1016/j.csite.2024.105269): network smoke model faster than FDS; no IFC input and no routing."
+      ],
+      "confidence": "medium",
+      "studio_position": "The report designs the room-graph two-zone model (section 3.4); not implemented."
+    }
+  ]
+}

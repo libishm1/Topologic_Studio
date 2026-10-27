@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { departureSafe, escapeDeadlines, frontArrival } from "./deadline.js";
+import { departureSafe, doseDeadline, doseDeadlineMap, escapeDeadlines, frontArrival } from "./deadline.js";
+import { buildForecast, doseFront } from "./forecast.js";
 
 /** A w x h unit lattice (4-neighbour), z = 0. */
 function lattice(w, h) {
@@ -74,4 +75,42 @@ test("deadlines agree with the forward check on random graphs and fires", () => 
     }
   }
   assert.ok(checked > 200, `only ${checked} finite deadlines checked`);
+});
+
+test("dose deadlines: the map never says later than the exact deadline, and is close to it", () => {
+  const rand = mulberry32(11);
+  let compared = 0, worstGap = 0, unlimited = 0;
+  for (let c = 0; c < 25; c += 1) {
+    const g = lattice(4 + Math.floor(rand() * 6), 3 + Math.floor(rand() * 4));
+    for (let e = 0; e < g.blocked.length; e += 1) if (rand() < 0.1) g.blocked[e] = 1;
+    const n = g.nodes.length / 3;
+    const exits = [Math.floor(rand() * n)];
+    const model = ["temperature", "flood", "radial"][c % 3];
+    const forecast = buildForecast(g, { model, seed: Math.floor(rand() * n), steps: 30, dt: 1 + rand() * 3, threshold: 60 + rand() * 60, blocked: g.blocked });
+    const speed = 0.6 + rand();
+    const limit = [1e-3, 1e-2, 0.1, Infinity][c % 4];
+    const opts = { exits, forecast, limit, speed, blocked: g.blocked };
+    const { deadline, step } = doseDeadlineMap(g, opts);
+    for (let v = 0; v < n; v += 1) {
+      const exact = doseDeadline(g, v, { ...opts, tolerance: 1e-4 });
+      if (deadline[v] === -Infinity) continue;
+      // The map's departure works in the exact model.
+      const { front } = doseFront(g, v, { exits, forecast, depart: deadline[v], speed, blocked: g.blocked });
+      assert.ok(front.length && front[front.length - 1].dose <= limit, `map deadline at ${v} does not work`);
+      assert.ok(exact !== null && deadline[v] <= exact.bad + 1e-9, `map is later than exact at ${v}`);
+      worstGap = Math.max(worstGap, exact.good - deadline[v]);
+      compared += 1;
+      if (limit === Infinity) {
+        // Without a dose limit the exact deadline is the hard one.
+        const L = escapeDeadlines(g, { exits, untenable: forecast.closes, speed, blocked: g.blocked })[v];
+        if (Number.isFinite(L)) {
+          assert.ok(exact.good < L && exact.bad >= L - 1e-4 - 1e-9, `node ${v}: ${exact.good}..${exact.bad} vs ${L}`);
+          unlimited += 1;
+        }
+      }
+    }
+    void step;
+  }
+  console.log(JSON.stringify({ compared, unlimited, worstGap: +worstGap.toFixed(3) }));
+  assert.ok(compared > 300 && unlimited > 50);
 });

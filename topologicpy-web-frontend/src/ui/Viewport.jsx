@@ -38,6 +38,7 @@ export function Viewport({
   onSection,
   fireSteps,
   heatLegend,
+  deadlineLegend,
   onStopFire,
   legend,
   examples,
@@ -317,7 +318,7 @@ export function Viewport({
       {hasModel && (
         <>
           <div className="overlay overlay--bottom-left">
-            {(legend?.length > 0 || heatLegend) && (
+            {(legend?.length > 0 || heatLegend || deadlineLegend) && (
               <details
                 className="card legend"
                 open={legendOpen}
@@ -334,6 +335,20 @@ export function Viewport({
                       <span>120</span>
                     </span>
                     <span className="legend__note">An index scaled to read in °C, not a measured temperature.</span>
+                  </div>
+                )}
+                {deadlineLegend && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 6 }}>
+                    <span className="legend__title">Escape deadline</span>
+                    <span className="legend__ramp legend__ramp--reverse" aria-hidden="true" />
+                    <span className="legend__scale">
+                      <span>0 s</span>
+                      <span>{Math.round(deadlineLegend.max / 2)} s</span>
+                      <span>{Math.round(deadlineLegend.max)} s</span>
+                    </span>
+                    <span className="legend__note">
+                      Latest time to leave and still get out within the dose limit. Grey: no safe departure.
+                    </span>
                   </div>
                 )}
                 {legend.map((item) => (

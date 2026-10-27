@@ -51,6 +51,15 @@ export const DEFAULT_SETTINGS = {
   rlUseFire: true,
   rlFireSpeed: 1,
 
+  // Planning with the fire forecast (src/core/forecast.js). The fire models
+  // count steps, so a step's length in seconds is the user's modelling choice.
+  forecastSecondsPerStep: 5,
+  walkSpeed: 1.2,
+  untenableAbove: 80,
+  doseLimit: 0.3,
+  departAfter: 0,
+  showDeadlineMap: true,
+
   showGraph: true,
   modelAppearance: "solid",
 };
@@ -103,6 +112,7 @@ export function useStudio() {
   const [fire, setFire] = useState({ running: false, step: 0, model: null });
   const [dynamicPath, setDynamicPath] = useState(null);
   const [rl, setRl] = useState({ busy: false, path: null, reachedExit: false, result: null });
+  const [forecastPlan, setForecastPlan] = useState({ busy: false, result: null });
 
   const [toasts, setToasts] = useState([]);
   const [cacheInfo, setCacheInfo] = useState({ count: 0, bytes: 0 });
@@ -285,6 +295,7 @@ export function useStudio() {
     setNavCheck(null);
     setDynamicPath(null);
     setRl({ busy: false, path: null, reachedExit: false, result: null });
+    setForecastPlan({ busy: false, result: null });
     setFire({ running: false, step: 0, model: null });
     fireHandle.current?.close();
     fireHandle.current = null;
@@ -349,6 +360,7 @@ export function useStudio() {
       fire,
       dynamicPath,
       rl,
+      forecastPlan,
       toasts,
       cacheInfo,
 
@@ -368,6 +380,7 @@ export function useStudio() {
       setFire,
       setDynamicPath,
       setRl,
+      setForecastPlan,
       setCacheInfo,
       setFireHandle,
       abortRef,
@@ -407,6 +420,7 @@ export function useStudio() {
       fire,
       dynamicPath,
       rl,
+      forecastPlan,
       toasts,
       cacheInfo,
       setSettings,

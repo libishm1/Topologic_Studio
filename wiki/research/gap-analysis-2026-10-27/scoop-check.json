@@ -1,0 +1,5842 @@
+{
+ "title": "Novelty (scoop) check of candidate methods for Topologic Studio",
+ "date": "2026-10-27",
+ "context_documents": [
+  "wiki/research/fire-egress-methods-2026-10-27.md (sections 4, 5, 9, 10)",
+  "wiki/research/fire-egress-methods.bib"
+ ],
+ "method": {
+  "sources": {
+   "openalex": "https://api.openalex.org/works?search=<query> (title, abstract and full-text search where indexed); top 25 saved; no key, no email sent",
+   "semantic_scholar": "https://api.semanticscholar.org/graph/v1/paper/search (fields title, year, venue, externalIds, abstract); exponential back-off on HTTP 429; no key",
+   "crossref": "https://api.crossref.org/works?query=<query>; top 20 saved. Crossref total-results counts every record matching any query term and is not a measure of topical overlap",
+   "forward_citations": "OpenAlex filter=cites:<work id>, all citers listed and screened by title, then abstracts read for relevant ones",
+   "doi_verification": "Crossref /works/<doi>: title similarity >= 0.85 after normalisation and year equal to a Crossref date; failures marked"
+  },
+  "screening": "Queries were over-inclusive per candidate. Hits were pooled, de-duplicated by DOI or normalised title, screened by title, then by abstract (OpenAlex inverted index). Papers without an available abstract are described from title and metadata only and are marked as such.",
+  "limitations": [
+   "Semantic Scholar (no API key) returned HTTP 429 for most requests even after exponential back-off. A 22-query subset was planned; 8 were attempted (1 succeeded), 4 key queries were retried with 45 s pauses (1 more succeeded), and the remaining 14 were not attempted. Only the 's2' records with a hit_count succeeded; neither returned a new precedent. Results rest mainly on OpenAlex and Crossref; the 's2' queries should be rerun with an API key before submission.",
+   "OpenAlex rejects '*' in search strings (HTTP 400); those queries were re-run with 'A star' and 'Theta star'.",
+   "Several Elsevier abstracts are not available in OpenAlex or Crossref; ScienceDirect returned HTTP 403. Their descriptions are limited to titles.",
+   "No full texts were read except the abstract of the Zenodo preprint of Schroeder, Arnold and Seyfried.",
+   "Dashes and curly quotes in titles were normalised to ASCII."
+  ]
+ },
+ "candidates": [
+  {
+   "id": "C1",
+   "name": "Escape-deadline maps",
+   "statement_as_given": "For every node of the building graph, the latest time an occupant can still leave and reach an exit with accumulated FED below the incapacitation threshold, under a growing fire; computed exactly by a reverse (latest-departure) time-dependent label-setting or profile search over FIFO arrival functions combined with the dose DP, from IFC in real time, with machine-checked correctness. Output: a time-left-to-leave field over the building.",
+   "refined_statement": "Define T*(v) = sup{t : some walk leaving v at t, waiting allowed, reaches an exit with X_FED <= X_crit and enters no node after its untenability time}. With a monotone hazard (local dose rate non-decreasing in time) and non-decreasing edge traversal times, a walk left earlier is never worse, so feasibility is downward closed in t and T*(v) is well defined. On the time-expanded graph, one backward induction over layers gives D(v,k), the least dose to an exit when leaving v at layer k, for all (v,k) in O(K|E|); then T*(v) = max{k : D(v,k) <= X_crit}. The field T*(v), and the margin T*(v) - RSET(v), is the deliverable. Under hard tenability windows only (no dose), T* reduces to a classical latest-departure query, which is not new; the dose constraint, the all-nodes field, the monotonicity theorem and the machine-checked proof are the contribution."
+  },
+  {
+   "id": "C2",
+   "name": "Pareto time-dose egress routing",
+   "statement_as_given": "Bi-criteria (arrival time, FED) label-correcting search on a time-dependent network, returning the non-dominated routes.",
+   "refined_statement": "Exact non-dominated (arrival time, FED) routes from one origin on the time-expanded graph; with integer time layers the time criterion is explicit in the layer, so the Pareto set at each node is the lower envelope of D(v,k) over k."
+  },
+  {
+   "id": "C3",
+   "name": "Two-zone fire model on the IFC room graph coupled online to lattice routing in the browser",
+   "statement_as_given": "A two-zone fire model (CFAST-style) on the IFC room graph, coupled online to lattice routing in the browser.",
+   "refined_statement": "Zone ODEs per room (upper-layer temperature, layer height, species) integrated in the browser, mapped to lattice nodes as time-dependent tenability, consumed by the routing layer."
+  },
+  {
+   "id": "C4",
+   "name": "Hierarchical routing from non-manifold topology",
+   "statement_as_given": "A room/aperture graph from non-manifold topology (TopologicPy cells and apertures) over the fine lattice, with a consistent heuristic for exact search.",
+   "refined_statement": "Use exact room-graph distances (lower bounds on lattice distances) as a consistent abstraction heuristic for A* on the lattice."
+  },
+  {
+   "id": "C5",
+   "name": "Machine-checked verification of fire-engineering correlations and egress algorithms",
+   "statement_as_given": "Machine-checked (proof assistant) verification of fire-engineering correlations and egress algorithms as a methodology.",
+   "refined_statement": "Lean 4 + Mathlib proofs of dimensional homogeneity for about 90 fire and tenability equations, and correctness of the egress algorithms (A*/Dijkstra, FIFO time-dependent Dijkstra, time-expanded dose DP), reported as a methodology for fire safety engineering."
+  },
+  {
+   "id": "C6",
+   "name": "Any-angle egress paths with certified wall clearance",
+   "statement_as_given": "Any-angle egress paths with certified wall clearance on IFC-derived graphs.",
+   "refined_statement": "Theta*-style any-angle search on the IFC lattice with a guaranteed minimum clearance from walls."
+  }
+ ],
+ "query_summary": {
+  "C1": {
+   "crossref": {
+    "queries": 57,
+    "succeeded": 57,
+    "failed": 0
+   },
+   "openalex": {
+    "queries": 57,
+    "succeeded": 57,
+    "failed": 0
+   },
+   "s2": {
+    "queries": 7,
+    "succeeded": 2,
+    "failed": 5
+   }
+  },
+  "C2": {
+   "crossref": {
+    "queries": 23,
+    "succeeded": 23,
+    "failed": 0
+   },
+   "openalex": {
+    "queries": 23,
+    "succeeded": 23,
+    "failed": 0
+   },
+   "s2": {
+    "queries": 1,
+    "succeeded": 0,
+    "failed": 1
+   }
+  },
+  "C3": {
+   "crossref": {
+    "queries": 20,
+    "succeeded": 20,
+    "failed": 0
+   },
+   "openalex": {
+    "queries": 20,
+    "succeeded": 20,
+    "failed": 0
+   }
+  },
+  "C4": {
+   "crossref": {
+    "queries": 16,
+    "succeeded": 16,
+    "failed": 0
+   },
+   "openalex": {
+    "queries": 16,
+    "succeeded": 14,
+    "failed": 2
+   }
+  },
+  "C5": {
+   "crossref": {
+    "queries": 41,
+    "succeeded": 41,
+    "failed": 0
+   },
+   "openalex": {
+    "queries": 41,
+    "succeeded": 40,
+    "failed": 1
+   }
+  },
+  "C6": {
+   "crossref": {
+    "queries": 25,
+    "succeeded": 25,
+    "failed": 0
+   },
+   "openalex": {
+    "queries": 25,
+    "succeeded": 23,
+    "failed": 2
+   }
+  }
+ },
+ "queries": [
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "ASET map",
+   "hit_count": 211790,
+   "error": null,
+   "time_local": "2026-10-27T21:15:30",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "Hamilton-Jacobi reachability evacuation fire",
+   "hit_count": 362360,
+   "error": null,
+   "time_local": "2026-10-27T21:23:43",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "all-to-one time-dependent shortest path exit evacuation",
+   "hit_count": 4219642,
+   "error": null,
+   "time_local": "2026-10-27T21:17:59",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "anisotropic path distance evacuation potential map",
+   "hit_count": 1835428,
+   "error": null,
+   "time_local": "2026-10-27T21:15:21",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "available safe egress time map building",
+   "hit_count": 2908719,
+   "error": null,
+   "time_local": "2026-10-27T21:13:57",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "backward reachability evacuation fire hazard",
+   "hit_count": 311257,
+   "error": null,
+   "time_local": "2026-10-27T21:14:12",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "backward reachable set safe evacuation dynamic hazard",
+   "hit_count": 1385022,
+   "error": null,
+   "time_local": "2026-10-27T21:23:45",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "coupling fire and traffic simulation wildfire evacuation triggers",
+   "hit_count": 1771721,
+   "error": null,
+   "time_local": "2026-10-27T21:17:45",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "deadline for evacuation from each room fire tenability",
+   "hit_count": 9580971,
+   "error": null,
+   "time_local": "2026-10-27T21:14:11",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "dose minimizing evacuation route toxic gas release",
+   "hit_count": 1688174,
+   "error": null,
+   "time_local": "2026-10-27T21:17:53",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "dynamic evacuation route fire growth time-dependent network",
+   "hit_count": 6330644,
+   "error": null,
+   "time_local": "2026-10-27T21:14:16",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "dynamic risk field evacuation fire path planning",
+   "hit_count": 5081644,
+   "error": null,
+   "time_local": "2026-10-27T21:17:51",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "earliest arrival latest departure evacuation network",
+   "hit_count": 1527449,
+   "error": null,
+   "time_local": "2026-10-27T21:15:35",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "earliest arrival path time-varying network evacuation",
+   "hit_count": 3606001,
+   "error": null,
+   "time_local": "2026-10-27T21:17:43",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "escape route fire time-varying network Dijkstra building",
+   "hit_count": 4248029,
+   "error": null,
+   "time_local": "2026-10-27T21:17:58",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "escape time map fire building occupants",
+   "hit_count": 2883228,
+   "error": null,
+   "time_local": "2026-10-27T21:14:18",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "escape time window evacuation hazard spread",
+   "hit_count": 2125067,
+   "error": null,
+   "time_local": "2026-10-27T21:23:38",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "evacuation deadline time-dependent network",
+   "hit_count": 3774804,
+   "error": null,
+   "time_local": "2026-10-27T21:18:02",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "evacuation route planning fractional effective dose FDS",
+   "hit_count": 1881686,
+   "error": null,
+   "time_local": "2026-10-27T21:15:28",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "evacuation safety margin map ASET RSET spatial",
+   "hit_count": 1760839,
+   "error": null,
+   "time_local": "2026-10-27T21:17:49",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "evacuation time budget map fire tenability route",
+   "hit_count": 2434106,
+   "error": null,
+   "time_local": "2026-10-27T21:23:46",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "evacuation time window tenability shortest path",
+   "hit_count": 2200064,
+   "error": null,
+   "time_local": "2026-10-27T21:14:15",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "evacuation trigger buffer reverse fire spread",
+   "hit_count": 480329,
+   "error": null,
+   "time_local": "2026-10-27T21:15:18",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "fractional effective dose evacuation route",
+   "hit_count": 1060145,
+   "error": null,
+   "time_local": "2026-10-27T21:14:05",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "fractional effective dose path planning fire evacuation",
+   "hit_count": 2185001,
+   "error": null,
+   "time_local": "2026-10-27T21:14:08",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "latest departure route evacuation time-varying network",
+   "hit_count": 3480574,
+   "error": null,
+   "time_local": "2026-10-27T21:17:41",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "latest departure time evacuation fire",
+   "hit_count": 2103363,
+   "error": null,
+   "time_local": "2026-10-27T21:13:50",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "latest departure time query",
+   "hit_count": 1937190,
+   "error": null,
+   "time_local": "2026-10-27T21:15:32",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "latest departure time-dependent shortest path",
+   "hit_count": 2685616,
+   "error": null,
+   "time_local": "2026-10-27T21:13:52",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "latest evacuation time each location hazard arrival",
+   "hit_count": 2250922,
+   "error": null,
+   "time_local": "2026-10-27T21:23:40",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "latest safe evacuation start time fire",
+   "hit_count": 2326021,
+   "error": null,
+   "time_local": "2026-10-27T21:14:09",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "maximum safe waiting time before evacuation fire",
+   "hit_count": 2566827,
+   "error": null,
+   "time_local": "2026-10-27T21:18:03",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "minimum dose path planning radiation",
+   "hit_count": 2137564,
+   "error": null,
+   "time_local": "2026-10-27T21:15:23",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "minimum exposure path planning hazard field",
+   "hit_count": 2887223,
+   "error": null,
+   "time_local": "2026-10-27T21:15:24",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "minimum risk evacuation path toxic gas dispersion time-varying",
+   "hit_count": 5034414,
+   "error": null,
+   "time_local": "2026-10-27T21:17:54",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "nuclear power plant evacuation route radiation dose minimum",
+   "hit_count": 5287012,
+   "error": null,
+   "time_local": "2026-10-27T21:17:56",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "occupant tenability time-varying route building fire dynamic routing",
+   "hit_count": 3778446,
+   "error": null,
+   "time_local": "2026-10-27T21:15:38",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "pedestrian evacuation time map tsunami arrival",
+   "hit_count": 2137674,
+   "error": null,
+   "time_local": "2026-10-27T21:15:20",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "profile search time-dependent network evacuation",
+   "hit_count": 4388555,
+   "error": null,
+   "time_local": "2026-10-27T21:13:53",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "remaining safe time evacuation fire location",
+   "hit_count": 2377990,
+   "error": null,
+   "time_local": "2026-10-27T21:14:02",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "required departure time map hazard evacuation",
+   "hit_count": 2251296,
+   "error": null,
+   "time_local": "2026-10-27T21:23:48",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "reverse search latest departure arrival function FIFO",
+   "hit_count": 1531946,
+   "error": null,
+   "time_local": "2026-10-27T21:14:13",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "safe egress time field building graph",
+   "hit_count": 4047113,
+   "error": null,
+   "time_local": "2026-10-27T21:14:03",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "safe evacuation time each room building fire network model",
+   "hit_count": 7382471,
+   "error": null,
+   "time_local": "2026-10-27T21:15:37",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "spatial distribution ASET RSET building fire",
+   "hit_count": 2306455,
+   "error": null,
+   "time_local": "2026-10-27T21:13:58",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "spatial distribution available safe egress time rooms",
+   "hit_count": 3578915,
+   "error": null,
+   "time_local": "2026-10-27T21:17:46",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "time available for escape building fire spatial",
+   "hit_count": 3334762,
+   "error": null,
+   "time_local": "2026-10-27T21:15:29",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "time margin to escape map building",
+   "hit_count": 2756087,
+   "error": null,
+   "time_local": "2026-10-27T21:23:41",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "time to untenability map building fire",
+   "hit_count": 2845314,
+   "error": null,
+   "time_local": "2026-10-27T21:14:01",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "time-dependent A star fire evacuation",
+   "hit_count": 2730434,
+   "error": null,
+   "time_local": "2026-10-27T21:17:52",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "time-dependent hazard routing building fire exposure dose",
+   "hit_count": 4024294,
+   "error": null,
+   "time_local": "2026-10-27T21:14:19",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "time-dependent route planning profile query arrival time functions",
+   "hit_count": 4103708,
+   "error": null,
+   "time_local": "2026-10-27T21:15:33",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "time-dependent shortest path building evacuation fire spread",
+   "hit_count": 3523181,
+   "error": null,
+   "time_local": "2026-10-27T21:13:55",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "time-dependent shortest path fire evacuation Dijkstra FIFO",
+   "hit_count": 2856307,
+   "error": null,
+   "time_local": "2026-10-27T21:15:26",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "toxic dose constrained evacuation route",
+   "hit_count": 647481,
+   "error": null,
+   "time_local": "2026-10-27T21:14:20",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "untenable time map smoke building",
+   "hit_count": 2718575,
+   "error": null,
+   "time_local": "2026-10-27T21:17:48",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "crossref",
+   "query": "wildfire evacuation trigger points fire spread modeling",
+   "hit_count": 1613999,
+   "error": null,
+   "time_local": "2026-10-27T21:15:17",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "ASET map",
+   "hit_count": 15948,
+   "error": null,
+   "time_local": "2026-10-27T21:15:30",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "Hamilton-Jacobi reachability evacuation fire",
+   "hit_count": 62,
+   "error": null,
+   "time_local": "2026-10-27T21:23:43",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "all-to-one time-dependent shortest path exit evacuation",
+   "hit_count": 2246,
+   "error": null,
+   "time_local": "2026-10-27T21:18:05",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "anisotropic path distance evacuation potential map",
+   "hit_count": 2322,
+   "error": null,
+   "time_local": "2026-10-27T21:15:21",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "available safe egress time map building",
+   "hit_count": 6272,
+   "error": null,
+   "time_local": "2026-10-27T21:13:55",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "backward reachability evacuation fire hazard",
+   "hit_count": 1772,
+   "error": null,
+   "time_local": "2026-10-27T21:14:07",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "backward reachable set safe evacuation dynamic hazard",
+   "hit_count": 1699,
+   "error": null,
+   "time_local": "2026-10-27T21:23:44",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "coupling fire and traffic simulation wildfire evacuation triggers",
+   "hit_count": 210,
+   "error": null,
+   "time_local": "2026-10-27T21:17:52",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "deadline for evacuation from each room fire tenability",
+   "hit_count": 31,
+   "error": null,
+   "time_local": "2026-10-27T21:14:05",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "dose minimizing evacuation route toxic gas release",
+   "hit_count": 2622,
+   "error": null,
+   "time_local": "2026-10-27T21:18:00",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "dynamic evacuation route fire growth time-dependent network",
+   "hit_count": 5532,
+   "error": null,
+   "time_local": "2026-10-27T21:14:10",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "dynamic risk field evacuation fire path planning",
+   "hit_count": 13832,
+   "error": null,
+   "time_local": "2026-10-27T21:17:57",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "earliest arrival latest departure evacuation network",
+   "hit_count": 957,
+   "error": null,
+   "time_local": "2026-10-27T21:15:33",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "earliest arrival path time-varying network evacuation",
+   "hit_count": 2513,
+   "error": null,
+   "time_local": "2026-10-27T21:17:51",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "escape route fire time-varying network Dijkstra building",
+   "hit_count": 379,
+   "error": null,
+   "time_local": "2026-10-27T21:18:04",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "escape time map fire building occupants",
+   "hit_count": 8588,
+   "error": null,
+   "time_local": "2026-10-27T21:14:11",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "escape time window evacuation hazard spread",
+   "hit_count": 4445,
+   "error": null,
+   "time_local": "2026-10-27T21:23:38",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "evacuation deadline time-dependent network",
+   "hit_count": 2970,
+   "error": null,
+   "time_local": "2026-10-27T21:18:06",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "evacuation route planning fractional effective dose FDS",
+   "hit_count": 74,
+   "error": null,
+   "time_local": "2026-10-27T21:15:27",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "evacuation safety margin map ASET RSET spatial",
+   "hit_count": 37,
+   "error": null,
+   "time_local": "2026-10-27T21:17:56",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "evacuation time budget map fire tenability route",
+   "hit_count": 95,
+   "error": null,
+   "time_local": "2026-10-27T21:23:46",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "evacuation time window tenability shortest path",
+   "hit_count": 70,
+   "error": null,
+   "time_local": "2026-10-27T21:14:09",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "evacuation trigger buffer reverse fire spread",
+   "hit_count": 1038,
+   "error": null,
+   "time_local": "2026-10-27T21:15:19",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "fractional effective dose evacuation route",
+   "hit_count": 910,
+   "error": null,
+   "time_local": "2026-10-27T21:14:02",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "fractional effective dose path planning fire evacuation",
+   "hit_count": 330,
+   "error": null,
+   "time_local": "2026-10-27T21:14:03",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "latest departure route evacuation time-varying network",
+   "hit_count": 2148,
+   "error": null,
+   "time_local": "2026-10-27T21:17:50",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "latest departure time evacuation fire",
+   "hit_count": 4437,
+   "error": null,
+   "time_local": "2026-10-27T21:13:50",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "latest departure time query",
+   "hit_count": 16493,
+   "error": null,
+   "time_local": "2026-10-27T21:15:31",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "latest departure time-dependent shortest path",
+   "hit_count": 4852,
+   "error": null,
+   "time_local": "2026-10-27T21:13:52",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "latest evacuation time each location hazard arrival",
+   "hit_count": 2587,
+   "error": null,
+   "time_local": "2026-10-27T21:23:39",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "latest safe evacuation start time fire",
+   "hit_count": 11571,
+   "error": null,
+   "time_local": "2026-10-27T21:14:04",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "maximum safe waiting time before evacuation fire",
+   "hit_count": 9063,
+   "error": null,
+   "time_local": "2026-10-27T21:18:08",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "minimum dose path planning radiation",
+   "hit_count": 30149,
+   "error": null,
+   "time_local": "2026-10-27T21:15:23",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "minimum exposure path planning hazard field",
+   "hit_count": 48580,
+   "error": null,
+   "time_local": "2026-10-27T21:15:24",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "minimum risk evacuation path toxic gas dispersion time-varying",
+   "hit_count": 1683,
+   "error": null,
+   "time_local": "2026-10-27T21:18:01",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "nuclear power plant evacuation route radiation dose minimum",
+   "hit_count": 1347,
+   "error": null,
+   "time_local": "2026-10-27T21:18:03",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "occupant tenability time-varying route building fire dynamic routing",
+   "hit_count": 268,
+   "error": null,
+   "time_local": "2026-10-27T21:15:36",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "pedestrian evacuation time map tsunami arrival",
+   "hit_count": 447,
+   "error": null,
+   "time_local": "2026-10-27T21:15:20",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "profile search time-dependent network evacuation",
+   "hit_count": 16355,
+   "error": null,
+   "time_local": "2026-10-27T21:13:53",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "remaining safe time evacuation fire location",
+   "hit_count": 33635,
+   "error": null,
+   "time_local": "2026-10-27T21:13:59",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "required departure time map hazard evacuation",
+   "hit_count": 3836,
+   "error": null,
+   "time_local": "2026-10-27T21:23:48",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "reverse search latest departure arrival function FIFO",
+   "hit_count": 181,
+   "error": null,
+   "time_local": "2026-10-27T21:14:08",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "safe egress time field building graph",
+   "hit_count": 2497,
+   "error": null,
+   "time_local": "2026-10-27T21:14:00",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "safe evacuation time each room building fire network model",
+   "hit_count": 12331,
+   "error": null,
+   "time_local": "2026-10-27T21:15:34",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "spatial distribution ASET RSET building fire",
+   "hit_count": 170,
+   "error": null,
+   "time_local": "2026-10-27T21:13:56",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "spatial distribution available safe egress time rooms",
+   "hit_count": 1003,
+   "error": null,
+   "time_local": "2026-10-27T21:17:53",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "time available for escape building fire spatial",
+   "hit_count": 52345,
+   "error": null,
+   "time_local": "2026-10-27T21:15:28",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "time margin to escape map building",
+   "hit_count": 57911,
+   "error": null,
+   "time_local": "2026-10-27T21:23:41",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "time to untenability map building fire",
+   "hit_count": 6847,
+   "error": null,
+   "time_local": "2026-10-27T21:13:58",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "time-dependent A star fire evacuation",
+   "hit_count": 5765,
+   "error": null,
+   "time_local": "2026-10-27T21:17:59",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "time-dependent hazard routing building fire exposure dose",
+   "hit_count": 5410,
+   "error": null,
+   "time_local": "2026-10-27T21:14:13",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "time-dependent route planning profile query arrival time functions",
+   "hit_count": 7429,
+   "error": null,
+   "time_local": "2026-10-27T21:15:32",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "time-dependent shortest path building evacuation fire spread",
+   "hit_count": 1267,
+   "error": null,
+   "time_local": "2026-10-27T21:13:54",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "time-dependent shortest path fire evacuation Dijkstra FIFO",
+   "hit_count": 18,
+   "error": null,
+   "time_local": "2026-10-27T21:15:26",
+   "top_hits_saved": 18
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "toxic dose constrained evacuation route",
+   "hit_count": 727,
+   "error": null,
+   "time_local": "2026-10-27T21:14:14",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "untenable time map smoke building",
+   "hit_count": 1781,
+   "error": null,
+   "time_local": "2026-10-27T21:17:54",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "openalex",
+   "query": "wildfire evacuation trigger points fire spread modeling",
+   "hit_count": 1747,
+   "error": null,
+   "time_local": "2026-10-27T21:15:17",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "s2",
+   "query": "available safe egress time map building",
+   "hit_count": null,
+   "error": "HTTP 429",
+   "time_local": "2026-10-27T21:30:20",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C1",
+   "source": "s2",
+   "query": "fractional effective dose evacuation route",
+   "hit_count": 123,
+   "error": null,
+   "time_local": "2026-10-27T21:52:25",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "s2",
+   "query": "latest departure time evacuation fire",
+   "hit_count": null,
+   "error": "HTTP 429",
+   "time_local": "2026-10-27T21:19:54",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C1",
+   "source": "s2",
+   "query": "minimum dose path planning radiation",
+   "hit_count": null,
+   "error": "HTTP 429",
+   "time_local": "2026-10-27T21:37:55",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C1",
+   "source": "s2",
+   "query": "pedestrian evacuation time map tsunami arrival",
+   "hit_count": 565,
+   "error": null,
+   "time_local": "2026-10-27T21:34:33",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C1",
+   "source": "s2",
+   "query": "time-dependent shortest path building evacuation fire spread",
+   "hit_count": null,
+   "error": "HTTP 429",
+   "time_local": "2026-10-27T21:26:49",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C1",
+   "source": "s2",
+   "query": "wildfire evacuation trigger points fire spread modeling",
+   "hit_count": null,
+   "error": "HTTP 429",
+   "time_local": "2026-10-27T21:33:52",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "Pareto evacuation tunnel fire safety travel time",
+   "hit_count": 3160929,
+   "error": null,
+   "time_local": "2026-10-27T21:23:49",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "Pareto front evacuation path risk time building",
+   "hit_count": 5818952,
+   "error": null,
+   "time_local": "2026-10-27T21:14:33",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "Pareto optimal evacuation routes fire smoke",
+   "hit_count": 747785,
+   "error": null,
+   "time_local": "2026-10-27T21:14:24",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "bi-objective evacuation route fire exposure time",
+   "hit_count": 2948813,
+   "error": null,
+   "time_local": "2026-10-27T21:14:22",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "bi-objective route fire evacuation FED travel time Pareto",
+   "hit_count": 2799131,
+   "error": null,
+   "time_local": "2026-10-27T21:23:50",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "bi-objective shortest path minimum dose",
+   "hit_count": 1081834,
+   "error": null,
+   "time_local": "2026-10-27T21:15:42",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "bicriteria dynamic network evacuation",
+   "hit_count": 2296020,
+   "error": null,
+   "time_local": "2026-10-27T21:18:07",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "bicriteria time-dependent shortest path label correcting",
+   "hit_count": 2762090,
+   "error": null,
+   "time_local": "2026-10-27T21:14:26",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "constrained shortest path fire evacuation dose",
+   "hit_count": 896230,
+   "error": null,
+   "time_local": "2026-10-27T21:14:29",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "evacuation route risk travel time trade-off fire building",
+   "hit_count": 5225807,
+   "error": null,
+   "time_local": "2026-10-27T21:15:49",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "label-setting multiobjective shortest path evacuation building",
+   "hit_count": 1234834,
+   "error": null,
+   "time_local": "2026-10-27T21:23:51",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "minimum exposure path evacuation fire",
+   "hit_count": 973096,
+   "error": null,
+   "time_local": "2026-10-27T21:14:27",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "multi-criteria evacuation route toxicity smoke travel time",
+   "hit_count": 3792219,
+   "error": null,
+   "time_local": "2026-10-27T21:14:31",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "multi-label correcting evacuation fire risk time",
+   "hit_count": 5157611,
+   "error": null,
+   "time_local": "2026-10-27T21:18:10",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "multi-objective evacuation path toxic gas exposure",
+   "hit_count": 2985318,
+   "error": null,
+   "time_local": "2026-10-27T21:18:08",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "multi-objective path planning radiation dose time",
+   "hit_count": 5188889,
+   "error": null,
+   "time_local": "2026-10-27T21:15:40",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "multi-objective shortest path evacuation hazard exposure",
+   "hit_count": 2158711,
+   "error": null,
+   "time_local": "2026-10-27T21:14:23",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "multiobjective adaptive paths stochastic time-varying networks",
+   "hit_count": 4031617,
+   "error": null,
+   "time_local": "2026-10-27T21:15:43",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "multiobjective path finding stochastic dynamic networks hazardous materials",
+   "hit_count": 6456596,
+   "error": null,
+   "time_local": "2026-10-27T21:18:04",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "resource constrained shortest path evacuation",
+   "hit_count": 842462,
+   "error": null,
+   "time_local": "2026-10-27T21:14:28",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "safest escape problem",
+   "hit_count": 714884,
+   "error": null,
+   "time_local": "2026-10-27T21:15:48",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "time-dependent bicriteria shortest path algorithms",
+   "hit_count": 2986087,
+   "error": null,
+   "time_local": "2026-10-27T21:18:06",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "crossref",
+   "query": "time-dependent multi-objective shortest path hazardous",
+   "hit_count": 4070870,
+   "error": null,
+   "time_local": "2026-10-27T21:14:34",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "Pareto evacuation tunnel fire safety travel time",
+   "hit_count": 57,
+   "error": null,
+   "time_local": "2026-10-27T21:23:49",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "Pareto front evacuation path risk time building",
+   "hit_count": 561,
+   "error": null,
+   "time_local": "2026-10-27T21:14:24",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "Pareto optimal evacuation routes fire smoke",
+   "hit_count": 90,
+   "error": null,
+   "time_local": "2026-10-27T21:14:17",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "bi-objective evacuation route fire exposure time",
+   "hit_count": 1541,
+   "error": null,
+   "time_local": "2026-10-27T21:14:15",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "bi-objective route fire evacuation FED travel time Pareto",
+   "hit_count": 20,
+   "error": null,
+   "time_local": "2026-10-27T21:23:51",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "bi-objective shortest path minimum dose",
+   "hit_count": 1347,
+   "error": null,
+   "time_local": "2026-10-27T21:15:38",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "bicriteria dynamic network evacuation",
+   "hit_count": 69,
+   "error": null,
+   "time_local": "2026-10-27T21:18:12",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "bicriteria time-dependent shortest path label correcting",
+   "hit_count": 153,
+   "error": null,
+   "time_local": "2026-10-27T21:14:19",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "constrained shortest path fire evacuation dose",
+   "hit_count": 105,
+   "error": null,
+   "time_local": "2026-10-27T21:14:22",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "evacuation route risk travel time trade-off fire building",
+   "hit_count": 6724,
+   "error": null,
+   "time_local": "2026-10-27T21:15:42",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "label-setting multiobjective shortest path evacuation building",
+   "hit_count": 125,
+   "error": null,
+   "time_local": "2026-10-27T21:23:52",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "minimum exposure path evacuation fire",
+   "hit_count": 9520,
+   "error": null,
+   "time_local": "2026-10-27T21:14:20",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "multi-criteria evacuation route toxicity smoke travel time",
+   "hit_count": 760,
+   "error": null,
+   "time_local": "2026-10-27T21:14:23",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "multi-label correcting evacuation fire risk time",
+   "hit_count": 6749,
+   "error": null,
+   "time_local": "2026-10-27T21:18:14",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "multi-objective evacuation path toxic gas exposure",
+   "hit_count": 3669,
+   "error": null,
+   "time_local": "2026-10-27T21:18:13",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "multi-objective path planning radiation dose time",
+   "hit_count": 20799,
+   "error": null,
+   "time_local": "2026-10-27T21:15:37",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "multi-objective shortest path evacuation hazard exposure",
+   "hit_count": 964,
+   "error": null,
+   "time_local": "2026-10-27T21:14:16",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "multiobjective adaptive paths stochastic time-varying networks",
+   "hit_count": 11562,
+   "error": null,
+   "time_local": "2026-10-27T21:15:39",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "multiobjective path finding stochastic dynamic networks hazardous materials",
+   "hit_count": 734,
+   "error": null,
+   "time_local": "2026-10-27T21:18:09",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "resource constrained shortest path evacuation",
+   "hit_count": 1528,
+   "error": null,
+   "time_local": "2026-10-27T21:14:21",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "safest escape problem",
+   "hit_count": 15847,
+   "error": null,
+   "time_local": "2026-10-27T21:15:41",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "time-dependent bicriteria shortest path algorithms",
+   "hit_count": 509,
+   "error": null,
+   "time_local": "2026-10-27T21:18:10",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "openalex",
+   "query": "time-dependent multi-objective shortest path hazardous",
+   "hit_count": 5083,
+   "error": null,
+   "time_local": "2026-10-27T21:14:25",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C2",
+   "source": "s2",
+   "query": "bi-objective evacuation route fire exposure time",
+   "hit_count": null,
+   "error": "HTTP 429",
+   "time_local": "2026-10-27T21:41:26",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "B-RISK egress model",
+   "hit_count": 4863267,
+   "error": null,
+   "time_local": "2026-10-27T21:14:42",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "B-RISK fire model FED",
+   "hit_count": 5162599,
+   "error": null,
+   "time_local": "2026-10-27T21:18:14",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "BIM fire simulation evacuation integration",
+   "hit_count": 1768570,
+   "error": null,
+   "time_local": "2026-10-27T21:14:50",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "CFAST Pathfinder coupling",
+   "hit_count": 343089,
+   "error": null,
+   "time_local": "2026-10-27T21:14:45",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "CFAST egress ASET RSET calculation",
+   "hit_count": 187541,
+   "error": null,
+   "time_local": "2026-10-27T21:15:55",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "CFAST evacuation model coupled",
+   "hit_count": 3472353,
+   "error": null,
+   "time_local": "2026-10-27T21:14:40",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "CRISP fire risk evacuation zone model",
+   "hit_count": 5287940,
+   "error": null,
+   "time_local": "2026-10-27T21:15:51",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "EXODUS fire hazard zone model CFAST link",
+   "hit_count": 3823810,
+   "error": null,
+   "time_local": "2026-10-27T21:18:13",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "FDS+Evac coupled fire evacuation",
+   "hit_count": 503466,
+   "error": null,
+   "time_local": "2026-10-27T21:15:02",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "IFC fire simulation evacuation",
+   "hit_count": 1320293,
+   "error": null,
+   "time_local": "2026-10-27T21:14:51",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "buildingEXODUS CFAST fire hazard",
+   "hit_count": 261199,
+   "error": null,
+   "time_local": "2026-10-27T21:15:03",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "fire and evacuation coupled simulation building",
+   "hit_count": 2076977,
+   "error": null,
+   "time_local": "2026-10-27T21:15:53",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "real-time fire evacuation guidance zone model",
+   "hit_count": 5941691,
+   "error": null,
+   "time_local": "2026-10-27T21:14:48",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "two-zone fire model evacuation route",
+   "hit_count": 5405772,
+   "error": null,
+   "time_local": "2026-10-27T21:14:44",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "web-based fire evacuation simulation browser",
+   "hit_count": 8225335,
+   "error": null,
+   "time_local": "2026-10-27T21:15:01",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "zone fire model network evacuation optimization",
+   "hit_count": 5883626,
+   "error": null,
+   "time_local": "2026-10-27T21:14:47",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "zone model coupled egress model fire risk assessment",
+   "hit_count": 6947918,
+   "error": null,
+   "time_local": "2026-10-27T21:18:11",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "zone model evacuation coupling",
+   "hit_count": 3749423,
+   "error": null,
+   "time_local": "2026-10-27T21:14:37",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "zone model fire spread room graph egress simulation",
+   "hit_count": 4919376,
+   "error": null,
+   "time_local": "2026-10-27T21:15:05",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "crossref",
+   "query": "zone model smoke filling egress analysis",
+   "hit_count": 9886952,
+   "error": null,
+   "time_local": "2026-10-27T21:15:54",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "B-RISK egress model",
+   "hit_count": 34777,
+   "error": null,
+   "time_local": "2026-10-27T21:14:29",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "B-RISK fire model FED",
+   "hit_count": 120621,
+   "error": null,
+   "time_local": "2026-10-27T21:18:18",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "BIM fire simulation evacuation integration",
+   "hit_count": 2000,
+   "error": null,
+   "time_local": "2026-10-27T21:14:35",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "CFAST Pathfinder coupling",
+   "hit_count": 10,
+   "error": null,
+   "time_local": "2026-10-27T21:14:32",
+   "top_hits_saved": 10
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "CFAST egress ASET RSET calculation",
+   "hit_count": 58,
+   "error": null,
+   "time_local": "2026-10-27T21:15:47",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "CFAST evacuation model coupled",
+   "hit_count": 130,
+   "error": null,
+   "time_local": "2026-10-27T21:14:28",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "CRISP fire risk evacuation zone model",
+   "hit_count": 619,
+   "error": null,
+   "time_local": "2026-10-27T21:15:43",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "EXODUS fire hazard zone model CFAST link",
+   "hit_count": 9,
+   "error": null,
+   "time_local": "2026-10-27T21:18:17",
+   "top_hits_saved": 9
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "FDS+Evac coupled fire evacuation",
+   "hit_count": 104,
+   "error": null,
+   "time_local": "2026-10-27T21:14:39",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "IFC fire simulation evacuation",
+   "hit_count": 809,
+   "error": null,
+   "time_local": "2026-10-27T21:14:36",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "buildingEXODUS CFAST fire hazard",
+   "hit_count": 11,
+   "error": null,
+   "time_local": "2026-10-27T21:14:40",
+   "top_hits_saved": 11
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "fire and evacuation coupled simulation building",
+   "hit_count": 9724,
+   "error": null,
+   "time_local": "2026-10-27T21:15:44",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "real-time fire evacuation guidance zone model",
+   "hit_count": 11195,
+   "error": null,
+   "time_local": "2026-10-27T21:14:34",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "two-zone fire model evacuation route",
+   "hit_count": 18100,
+   "error": null,
+   "time_local": "2026-10-27T21:14:31",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "web-based fire evacuation simulation browser",
+   "hit_count": 980,
+   "error": null,
+   "time_local": "2026-10-27T21:14:38",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "zone fire model network evacuation optimization",
+   "hit_count": 9871,
+   "error": null,
+   "time_local": "2026-10-27T21:14:33",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "zone model coupled egress model fire risk assessment",
+   "hit_count": 1416,
+   "error": null,
+   "time_local": "2026-10-27T21:18:16",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "zone model evacuation coupling",
+   "hit_count": 20514,
+   "error": null,
+   "time_local": "2026-10-27T21:14:27",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "zone model fire spread room graph egress simulation",
+   "hit_count": 390,
+   "error": null,
+   "time_local": "2026-10-27T21:14:41",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C3",
+   "source": "openalex",
+   "query": "zone model smoke filling egress analysis",
+   "hit_count": 477,
+   "error": null,
+   "time_local": "2026-10-27T21:15:45",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "IFC navigation graph hierarchical",
+   "hit_count": 659972,
+   "error": null,
+   "time_local": "2026-10-27T21:15:08",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "IndoorGML hierarchical navigation",
+   "hit_count": 311837,
+   "error": null,
+   "time_local": "2026-10-27T21:15:06",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "Topologic non-manifold topology dual graph",
+   "hit_count": 2627144,
+   "error": null,
+   "time_local": "2026-10-27T21:15:22",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "TopologicPy cells apertures graph",
+   "hit_count": 2136748,
+   "error": null,
+   "time_local": "2026-10-27T21:15:14",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "automatic indoor navigation network generation IFC",
+   "hit_count": 2812565,
+   "error": null,
+   "time_local": "2026-10-27T21:15:16",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "dual graph navigation building IFC topology",
+   "hit_count": 1729567,
+   "error": null,
+   "time_local": "2026-10-27T21:15:59",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "hierarchical A star indoor navigation",
+   "hit_count": 570909,
+   "error": null,
+   "time_local": "2026-10-27T21:16:52",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "hierarchical A* indoor navigation",
+   "hit_count": 416022,
+   "error": null,
+   "time_local": "2026-10-27T21:15:17",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "hierarchical indoor path planning BIM",
+   "hit_count": 1358570,
+   "error": null,
+   "time_local": "2026-10-27T21:15:11",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "hierarchical pathfinding abstraction grid HPA*",
+   "hit_count": 442362,
+   "error": null,
+   "time_local": "2026-10-27T21:15:57",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "hierarchical routing room graph grid graph building evacuation",
+   "hit_count": 1532635,
+   "error": null,
+   "time_local": "2026-10-27T21:15:19",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "indoor navigation graph from BIM evacuation",
+   "hit_count": 9682643,
+   "error": null,
+   "time_local": "2026-10-27T21:15:20",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "indoor navigation network IFC rooms doors",
+   "hit_count": 1824593,
+   "error": null,
+   "time_local": "2026-10-27T21:16:01",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "multi-level indoor routing graph room door",
+   "hit_count": 2732024,
+   "error": null,
+   "time_local": "2026-10-27T21:15:13",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "non-manifold topology navigation graph building",
+   "hit_count": 2909324,
+   "error": null,
+   "time_local": "2026-10-27T21:15:09",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "crossref",
+   "query": "room door graph and grid graph combined indoor navigation",
+   "hit_count": 1370876,
+   "error": null,
+   "time_local": "2026-10-27T21:15:58",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "IFC navigation graph hierarchical",
+   "hit_count": 913,
+   "error": null,
+   "time_local": "2026-10-27T21:14:43",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "IndoorGML hierarchical navigation",
+   "hit_count": 250,
+   "error": null,
+   "time_local": "2026-10-27T21:14:42",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "Topologic non-manifold topology dual graph",
+   "hit_count": 20702,
+   "error": null,
+   "time_local": "2026-10-27T21:14:54",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "TopologicPy cells apertures graph",
+   "hit_count": 4,
+   "error": null,
+   "time_local": "2026-10-27T21:14:48",
+   "top_hits_saved": 4
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "automatic indoor navigation network generation IFC",
+   "hit_count": 705,
+   "error": null,
+   "time_local": "2026-10-27T21:14:49",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "dual graph navigation building IFC topology",
+   "hit_count": 198,
+   "error": null,
+   "time_local": "2026-10-27T21:15:50",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "hierarchical A star indoor navigation",
+   "hit_count": 2699,
+   "error": null,
+   "time_local": "2026-10-27T21:16:53",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "hierarchical A* indoor navigation",
+   "hit_count": null,
+   "error": "HTTP 400",
+   "time_local": "2026-10-27T21:14:50",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "hierarchical indoor path planning BIM",
+   "hit_count": 2445,
+   "error": null,
+   "time_local": "2026-10-27T21:14:46",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "hierarchical pathfinding abstraction grid HPA*",
+   "hit_count": null,
+   "error": "HTTP 400",
+   "time_local": "2026-10-27T21:15:48",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "hierarchical routing room graph grid graph building evacuation",
+   "hit_count": 939,
+   "error": null,
+   "time_local": "2026-10-27T21:14:51",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "indoor navigation graph from BIM evacuation",
+   "hit_count": 527,
+   "error": null,
+   "time_local": "2026-10-27T21:14:52",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "indoor navigation network IFC rooms doors",
+   "hit_count": 400,
+   "error": null,
+   "time_local": "2026-10-27T21:15:52",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "multi-level indoor routing graph room door",
+   "hit_count": 4412,
+   "error": null,
+   "time_local": "2026-10-27T21:14:47",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "non-manifold topology navigation graph building",
+   "hit_count": 2113,
+   "error": null,
+   "time_local": "2026-10-27T21:14:44",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C4",
+   "source": "openalex",
+   "query": "room door graph and grid graph combined indoor navigation",
+   "hit_count": 2143,
+   "error": null,
+   "time_local": "2026-10-27T21:15:49",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Coq Isabelle structural engineering verification",
+   "hit_count": 7679457,
+   "error": null,
+   "time_local": "2026-10-27T21:18:15",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Coq building code compliance",
+   "hit_count": 951457,
+   "error": null,
+   "time_local": "2026-10-27T21:15:25",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Coq formalization engineering",
+   "hit_count": 6477041,
+   "error": null,
+   "time_local": "2026-10-27T21:16:10",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Coq graph algorithms verified shortest path",
+   "hit_count": 855891,
+   "error": null,
+   "time_local": "2026-10-27T21:18:23",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "HOL Light formal analysis engineering systems",
+   "hit_count": 17290841,
+   "error": null,
+   "time_local": "2026-10-27T21:16:02",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "HOL formalization beam structural analysis",
+   "hit_count": 7915123,
+   "error": null,
+   "time_local": "2026-10-27T21:25:43",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Isabelle Dijkstra formalization",
+   "hit_count": 174149,
+   "error": null,
+   "time_local": "2026-10-27T21:18:22",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Isabelle civil engineering formalization",
+   "hit_count": 6951410,
+   "error": null,
+   "time_local": "2026-10-27T21:15:29",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Isabelle formalization Dijkstra shortest path algorithm refinement",
+   "hit_count": 1233331,
+   "error": null,
+   "time_local": "2026-10-27T21:25:51",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Lean 4 formalization physics",
+   "hit_count": 3513513,
+   "error": null,
+   "time_local": "2026-10-27T21:16:08",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Lean Mathlib formalization graph algorithm shortest path",
+   "hit_count": 1296380,
+   "error": null,
+   "time_local": "2026-10-27T21:25:44",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "Lean theorem prover engineering equations",
+   "hit_count": 6986302,
+   "error": null,
+   "time_local": "2026-10-27T21:15:30",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "dimensional analysis formal verification proof assistant",
+   "hit_count": 7580823,
+   "error": null,
+   "time_local": "2026-10-27T21:16:07",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal methods fire safety",
+   "hit_count": 3003195,
+   "error": null,
+   "time_local": "2026-10-27T21:15:44",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal proof building regulations compliance logic",
+   "hit_count": 1220869,
+   "error": null,
+   "time_local": "2026-10-27T21:18:18",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal verification A star search algorithm",
+   "hit_count": 1446144,
+   "error": null,
+   "time_local": "2026-10-27T21:16:54",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal verification A* search algorithm",
+   "hit_count": 1293199,
+   "error": null,
+   "time_local": "2026-10-27T21:16:24",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal verification building code",
+   "hit_count": 1065975,
+   "error": null,
+   "time_local": "2026-10-27T21:15:27",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal verification building information modelling",
+   "hit_count": 5075186,
+   "error": null,
+   "time_local": "2026-10-27T21:16:09",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal verification evacuation algorithm",
+   "hit_count": 1019276,
+   "error": null,
+   "time_local": "2026-10-27T21:15:43",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal verification smoke control fire protection system theorem proving",
+   "hit_count": 7431670,
+   "error": null,
+   "time_local": "2026-10-27T21:25:48",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formal verification time-dependent shortest path",
+   "hit_count": 2868215,
+   "error": null,
+   "time_local": "2026-10-27T21:18:21",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formalization evacuation",
+   "hit_count": 26564,
+   "error": null,
+   "time_local": "2026-10-27T21:16:14",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formalized mathematics engineering standards",
+   "hit_count": 7828709,
+   "error": null,
+   "time_local": "2026-10-27T21:18:19",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "formally verified fire",
+   "hit_count": 197355,
+   "error": null,
+   "time_local": "2026-10-27T21:16:13",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "interactive theorem prover civil engineering",
+   "hit_count": 7083332,
+   "error": null,
+   "time_local": "2026-10-27T21:18:17",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "interactive theorem proving engineering design",
+   "hit_count": 8977222,
+   "error": null,
+   "time_local": "2026-10-27T21:15:42",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "machine-checked proof structural engineering",
+   "hit_count": 8266339,
+   "error": null,
+   "time_local": "2026-10-27T21:16:29",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "mechanized proof numerical scheme wave equation C program",
+   "hit_count": 4163218,
+   "error": null,
+   "time_local": "2026-10-27T21:25:39",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "mechanized proof shortest path algorithm",
+   "hit_count": 1097595,
+   "error": null,
+   "time_local": "2026-10-27T21:16:12",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "model checking building evacuation",
+   "hit_count": 3812406,
+   "error": null,
+   "time_local": "2026-10-27T21:16:27",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "physical units Isabelle",
+   "hit_count": 2792522,
+   "error": null,
+   "time_local": "2026-10-27T21:16:05",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "proof assistant dimensional analysis physical units type system",
+   "hit_count": 14424064,
+   "error": null,
+   "time_local": "2026-10-27T21:25:46",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "proof assistant fire safety engineering",
+   "hit_count": 7603801,
+   "error": null,
+   "time_local": "2026-10-27T21:15:24",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "theorem prover physics formalisation dimensional",
+   "hit_count": 4137180,
+   "error": null,
+   "time_local": "2026-10-27T21:16:26",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "theorem proving formal analysis civil engineering structures",
+   "hit_count": 13855950,
+   "error": null,
+   "time_local": "2026-10-27T21:25:41",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "theorem proving reliability analysis",
+   "hit_count": 7020439,
+   "error": null,
+   "time_local": "2026-10-27T21:16:03",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "units of measure dimensional analysis theorem prover",
+   "hit_count": 7604658,
+   "error": null,
+   "time_local": "2026-10-27T21:15:46",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "verified Dijkstra algorithm Coq",
+   "hit_count": 789378,
+   "error": null,
+   "time_local": "2026-10-27T21:16:23",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "verified computation engineering correlation proof assistant",
+   "hit_count": 7269725,
+   "error": null,
+   "time_local": "2026-10-27T21:25:49",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "crossref",
+   "query": "verified shortest path algorithm Isabelle",
+   "hit_count": 1175618,
+   "error": null,
+   "time_local": "2026-10-27T21:15:47",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Coq Isabelle structural engineering verification",
+   "hit_count": 870,
+   "error": null,
+   "time_local": "2026-10-27T21:18:19",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Coq building code compliance",
+   "hit_count": 797,
+   "error": null,
+   "time_local": "2026-10-27T21:14:56",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Coq formalization engineering",
+   "hit_count": 3121,
+   "error": null,
+   "time_local": "2026-10-27T21:16:00",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Coq graph algorithms verified shortest path",
+   "hit_count": 286,
+   "error": null,
+   "time_local": "2026-10-27T21:18:27",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "HOL Light formal analysis engineering systems",
+   "hit_count": 7188,
+   "error": null,
+   "time_local": "2026-10-27T21:15:53",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "HOL formalization beam structural analysis",
+   "hit_count": 193,
+   "error": null,
+   "time_local": "2026-10-27T21:25:41",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Isabelle Dijkstra formalization",
+   "hit_count": 360,
+   "error": null,
+   "time_local": "2026-10-27T21:18:26",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Isabelle civil engineering formalization",
+   "hit_count": 765,
+   "error": null,
+   "time_local": "2026-10-27T21:14:58",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Isabelle formalization Dijkstra shortest path algorithm refinement",
+   "hit_count": 27,
+   "error": null,
+   "time_local": "2026-10-27T21:25:50",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Lean 4 formalization physics",
+   "hit_count": 6066,
+   "error": null,
+   "time_local": "2026-10-27T21:15:58",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Lean Mathlib formalization graph algorithm shortest path",
+   "hit_count": 38,
+   "error": null,
+   "time_local": "2026-10-27T21:25:43",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "Lean theorem prover engineering equations",
+   "hit_count": 4458,
+   "error": null,
+   "time_local": "2026-10-27T21:14:59",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "dimensional analysis formal verification proof assistant",
+   "hit_count": 22580,
+   "error": null,
+   "time_local": "2026-10-27T21:15:57",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal methods fire safety",
+   "hit_count": 240695,
+   "error": null,
+   "time_local": "2026-10-27T21:15:03",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal proof building regulations compliance logic",
+   "hit_count": 31287,
+   "error": null,
+   "time_local": "2026-10-27T21:18:22",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal verification A star search algorithm",
+   "hit_count": 33208,
+   "error": null,
+   "time_local": "2026-10-27T21:16:55",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal verification A* search algorithm",
+   "hit_count": null,
+   "error": "HTTP 400",
+   "time_local": "2026-10-27T21:15:08",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal verification building code",
+   "hit_count": 471151,
+   "error": null,
+   "time_local": "2026-10-27T21:14:57",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal verification building information modelling",
+   "hit_count": 686992,
+   "error": null,
+   "time_local": "2026-10-27T21:15:59",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal verification evacuation algorithm",
+   "hit_count": 10307,
+   "error": null,
+   "time_local": "2026-10-27T21:15:02",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal verification smoke control fire protection system theorem proving",
+   "hit_count": 275,
+   "error": null,
+   "time_local": "2026-10-27T21:25:46",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formal verification time-dependent shortest path",
+   "hit_count": 30936,
+   "error": null,
+   "time_local": "2026-10-27T21:18:24",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formalization evacuation",
+   "hit_count": 13899,
+   "error": null,
+   "time_local": "2026-10-27T21:16:04",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formalized mathematics engineering standards",
+   "hit_count": 115958,
+   "error": null,
+   "time_local": "2026-10-27T21:18:23",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "formally verified fire",
+   "hit_count": 205138,
+   "error": null,
+   "time_local": "2026-10-27T21:16:03",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "interactive theorem prover civil engineering",
+   "hit_count": 7402,
+   "error": null,
+   "time_local": "2026-10-27T21:18:21",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "interactive theorem proving engineering design",
+   "hit_count": 71710,
+   "error": null,
+   "time_local": "2026-10-27T21:15:01",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "machine-checked proof structural engineering",
+   "hit_count": 28700,
+   "error": null,
+   "time_local": "2026-10-27T21:15:12",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "mechanized proof numerical scheme wave equation C program",
+   "hit_count": 504,
+   "error": null,
+   "time_local": "2026-10-27T21:25:38",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "mechanized proof shortest path algorithm",
+   "hit_count": 629,
+   "error": null,
+   "time_local": "2026-10-27T21:16:02",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "model checking building evacuation",
+   "hit_count": 48075,
+   "error": null,
+   "time_local": "2026-10-27T21:15:10",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "physical units Isabelle",
+   "hit_count": 22111,
+   "error": null,
+   "time_local": "2026-10-27T21:15:55",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "proof assistant dimensional analysis physical units type system",
+   "hit_count": 31266,
+   "error": null,
+   "time_local": "2026-10-27T21:25:44",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "proof assistant fire safety engineering",
+   "hit_count": 12615,
+   "error": null,
+   "time_local": "2026-10-27T21:14:55",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "theorem prover physics formalisation dimensional",
+   "hit_count": 4780,
+   "error": null,
+   "time_local": "2026-10-27T21:15:09",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "theorem proving formal analysis civil engineering structures",
+   "hit_count": 7542,
+   "error": null,
+   "time_local": "2026-10-27T21:25:40",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "theorem proving reliability analysis",
+   "hit_count": 97681,
+   "error": null,
+   "time_local": "2026-10-27T21:15:54",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "units of measure dimensional analysis theorem prover",
+   "hit_count": 226755,
+   "error": null,
+   "time_local": "2026-10-27T21:15:05",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "verified Dijkstra algorithm Coq",
+   "hit_count": 538,
+   "error": null,
+   "time_local": "2026-10-27T21:15:07",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "verified computation engineering correlation proof assistant",
+   "hit_count": 9990,
+   "error": null,
+   "time_local": "2026-10-27T21:25:48",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C5",
+   "source": "openalex",
+   "query": "verified shortest path algorithm Isabelle",
+   "hit_count": 821,
+   "error": null,
+   "time_local": "2026-10-27T21:15:06",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "Theta star indoor navigation",
+   "hit_count": 432641,
+   "error": null,
+   "time_local": "2026-10-27T21:16:55",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "Theta star path planning building",
+   "hit_count": 1849742,
+   "error": null,
+   "time_local": "2026-10-27T21:25:53",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "Theta* any-angle path planning grids",
+   "hit_count": 1359128,
+   "error": null,
+   "time_local": "2026-10-27T21:16:15",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "Theta* indoor navigation",
+   "hit_count": 277410,
+   "error": null,
+   "time_local": "2026-10-27T21:16:34",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "any angle path planning indoor building information model",
+   "hit_count": 8632386,
+   "error": null,
+   "time_local": "2026-10-27T21:25:52",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "any-angle evacuation path",
+   "hit_count": 513516,
+   "error": null,
+   "time_local": "2026-10-27T21:16:43",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "any-angle path planning 3D building",
+   "hit_count": 2430578,
+   "error": null,
+   "time_local": "2026-10-27T21:16:19",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "any-angle path planning BIM",
+   "hit_count": 1323407,
+   "error": null,
+   "time_local": "2026-10-27T21:16:39",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "any-angle path planning building",
+   "hit_count": 1903392,
+   "error": null,
+   "time_local": "2026-10-27T21:16:32",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "any-angle path planning clearance guarantee",
+   "hit_count": 1356163,
+   "error": null,
+   "time_local": "2026-10-27T21:16:50",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "any-angle path planning grid survey",
+   "hit_count": 2299914,
+   "error": null,
+   "time_local": "2026-10-27T21:25:55",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "certified clearance path planning",
+   "hit_count": 1132502,
+   "error": null,
+   "time_local": "2026-10-27T21:18:27",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "clearance path planning indoor wall distance",
+   "hit_count": 1692789,
+   "error": null,
+   "time_local": "2026-10-27T21:16:41",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "evacuation path wall clearance grid",
+   "hit_count": 860936,
+   "error": null,
+   "time_local": "2026-10-27T21:16:51",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "explicit corridor map clearance navigation",
+   "hit_count": 465211,
+   "error": null,
+   "time_local": "2026-10-27T21:16:16",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "lazy Theta star any-angle",
+   "hit_count": 405194,
+   "error": null,
+   "time_local": "2026-10-27T21:16:58",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "medial axis indoor navigation clearance",
+   "hit_count": 514482,
+   "error": null,
+   "time_local": "2026-10-27T21:16:46",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "navigation mesh IFC building",
+   "hit_count": 993823,
+   "error": null,
+   "time_local": "2026-10-27T21:16:48",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "navigation mesh clearance crowd simulation building",
+   "hit_count": 1899684,
+   "error": null,
+   "time_local": "2026-10-27T21:25:56",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "navigation mesh multi-layered environment",
+   "hit_count": 3005375,
+   "error": null,
+   "time_local": "2026-10-27T21:16:18",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "path planning BIM grid A star clearance wall",
+   "hit_count": 1820171,
+   "error": null,
+   "time_local": "2026-10-27T21:18:24",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "path planning minimum clearance obstacles shortest path guarantee",
+   "hit_count": 1263736,
+   "error": null,
+   "time_local": "2026-10-27T21:25:58",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "shortest path clearance indoor obstacles",
+   "hit_count": 456659,
+   "error": null,
+   "time_local": "2026-10-27T21:16:21",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "smooth evacuation path indoor any angle",
+   "hit_count": 727071,
+   "error": null,
+   "time_local": "2026-10-27T21:18:26",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "crossref",
+   "query": "visibility graph evacuation building path",
+   "hit_count": 1150308,
+   "error": null,
+   "time_local": "2026-10-27T21:16:45",
+   "top_hits_saved": 20
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "Theta star indoor navigation",
+   "hit_count": 236,
+   "error": null,
+   "time_local": "2026-10-27T21:16:56",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "Theta star path planning building",
+   "hit_count": 2327,
+   "error": null,
+   "time_local": "2026-10-27T21:25:53",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "Theta* any-angle path planning grids",
+   "hit_count": null,
+   "error": "HTTP 400",
+   "time_local": "2026-10-27T21:16:05",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "Theta* indoor navigation",
+   "hit_count": null,
+   "error": "HTTP 400",
+   "time_local": "2026-10-27T21:15:14",
+   "top_hits_saved": 0
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "any angle path planning indoor building information model",
+   "hit_count": 25984,
+   "error": null,
+   "time_local": "2026-10-27T21:25:52",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "any-angle evacuation path",
+   "hit_count": 37731,
+   "error": null,
+   "time_local": "2026-10-27T21:15:18",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "any-angle path planning 3D building",
+   "hit_count": 72498,
+   "error": null,
+   "time_local": "2026-10-27T21:16:09",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "any-angle path planning BIM",
+   "hit_count": 4783,
+   "error": null,
+   "time_local": "2026-10-27T21:15:16",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "any-angle path planning building",
+   "hit_count": 228905,
+   "error": null,
+   "time_local": "2026-10-27T21:15:13",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "any-angle path planning clearance guarantee",
+   "hit_count": 9825,
+   "error": null,
+   "time_local": "2026-10-27T21:15:23",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "any-angle path planning grid survey",
+   "hit_count": 62314,
+   "error": null,
+   "time_local": "2026-10-27T21:25:55",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "certified clearance path planning",
+   "hit_count": 12593,
+   "error": null,
+   "time_local": "2026-10-27T21:18:31",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "clearance path planning indoor wall distance",
+   "hit_count": 2974,
+   "error": null,
+   "time_local": "2026-10-27T21:15:17",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "evacuation path wall clearance grid",
+   "hit_count": 1338,
+   "error": null,
+   "time_local": "2026-10-27T21:15:24",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "explicit corridor map clearance navigation",
+   "hit_count": 1880,
+   "error": null,
+   "time_local": "2026-10-27T21:16:06",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "lazy Theta star any-angle",
+   "hit_count": 183,
+   "error": null,
+   "time_local": "2026-10-27T21:16:57",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "medial axis indoor navigation clearance",
+   "hit_count": 115,
+   "error": null,
+   "time_local": "2026-10-27T21:15:20",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "navigation mesh IFC building",
+   "hit_count": 712,
+   "error": null,
+   "time_local": "2026-10-27T21:15:22",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "navigation mesh clearance crowd simulation building",
+   "hit_count": 169,
+   "error": null,
+   "time_local": "2026-10-27T21:25:57",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "navigation mesh multi-layered environment",
+   "hit_count": 22684,
+   "error": null,
+   "time_local": "2026-10-27T21:16:08",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "path planning BIM grid A star clearance wall",
+   "hit_count": 45,
+   "error": null,
+   "time_local": "2026-10-27T21:18:28",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "path planning minimum clearance obstacles shortest path guarantee",
+   "hit_count": 2438,
+   "error": null,
+   "time_local": "2026-10-27T21:25:59",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "shortest path clearance indoor obstacles",
+   "hit_count": 901,
+   "error": null,
+   "time_local": "2026-10-27T21:16:10",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "smooth evacuation path indoor any angle",
+   "hit_count": 1660,
+   "error": null,
+   "time_local": "2026-10-27T21:18:29",
+   "top_hits_saved": 25
+  },
+  {
+   "candidate": "C6",
+   "source": "openalex",
+   "query": "visibility graph evacuation building path",
+   "hit_count": 3093,
+   "error": null,
+   "time_local": "2026-10-27T21:15:19",
+   "top_hits_saved": 25
+  }
+ ],
+ "forward_citation_traces": [
+  {
+   "antecedent_doi": "10.1016/j.firesaf.2020.103154",
+   "openalex_id": "W3034493621",
+   "citing_works_openalex": 48,
+   "screening": "all citing titles screened; abstracts read for the relevant ones",
+   "relevant_found": [
+    {
+     "doi": "10.1016/j.ress.2023.109571",
+     "note": null,
+     "title": "Mapping the fire risk in buildings: A hybrid method of ASET-RSET concept and FED concept",
+     "year": 2023,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1061/jccee5.cpeng-6783",
+     "note": null,
+     "title": "Building Fire Evacuation Risk Assessment and Mapping Considering Safety and Travel Delays",
+     "year": 2026,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.ijdrr.2025.105259",
+     "note": null,
+     "title": "Assessing safety in buildings and of evacuees considering fire impacts",
+     "year": 2025,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1080/17452007.2024.2401565",
+     "note": null,
+     "title": "Development of a framework to track life safety levels of occupants in the event of a fire in buildings",
+     "year": 2024,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.tust.2025.106950",
+     "note": null,
+     "title": "Multi-scale Spatial-Temporal principles of global evacuation safety based on Pareto Frontiers: A demonstration in tunnel",
+     "year": 2025,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.2139/ssrn.7593822",
+     "note": "SSRN preprint, title only",
+     "title": "Dynamic spatio-temporal framework for hierarchical fire hazard assessment during evacuation: Validation with metro tunnel fire",
+     "year": 2026,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.eswa.2026.132898",
+     "note": "title only",
+     "title": "EvacuNet: an intelligent decision support framework for real-time evacuation assessment in complex buildings",
+     "year": 2026,
+     "doi_verification": "verified"
+    }
+   ],
+   "finding": "No citing work with an available abstract computes a route-based latest departure or a dose-constrained deadline per location."
+  },
+  {
+   "antecedent_doi": "10.1016/j.ress.2023.109571",
+   "openalex_id": "W4385786395",
+   "citing_works_openalex": 28,
+   "screening": "all citing titles screened",
+   "relevant_found": [
+    {
+     "doi": "10.1016/j.ress.2025.110914",
+     "note": "no abstract",
+     "title": "A fire navigation model: Considering travel time, impact of fire, and congestion severity",
+     "year": 2025,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.jobe.2025.115132",
+     "note": "no abstract",
+     "title": "Development of a tenability-based path planning model for building fire evacuations using reinforcement learning",
+     "year": 2026,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.ijdrr.2025.105259",
+     "note": null,
+     "title": "Assessing safety in buildings and of evacuees considering fire impacts",
+     "year": 2025,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1061/jccee5.cpeng-6783",
+     "note": null,
+     "title": "Building Fire Evacuation Risk Assessment and Mapping Considering Safety and Travel Delays",
+     "year": 2026,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.2139/ssrn.7287100",
+     "note": "title only",
+     "title": "Hierarchical fire hazard assessment framework integrating spatio-temporal fire dynamics and occupant evacuation dynamics: A metro fire case study",
+     "year": 2026,
+     "doi_verification": "verified"
+    }
+   ],
+   "finding": "Fire navigation and tenability-based path planning appear among citers; none of the available abstracts describes a per-node deadline."
+  },
+  {
+   "antecedent_doi": "10.1111/j.1467-9671.2005.00237.x",
+   "openalex_id": "W2160663789",
+   "citing_works_openalex": 116,
+   "screening": "titles filtered by keyword (building, indoor, graph, network, shortest, latest, deadline, time-dependent, dynamic, map, trigger) and read",
+   "relevant_found": [
+    {
+     "doi": "10.1007/s11069-006-9032-y",
+     "note": "WUIVAC",
+     "title": "WUIVAC: a wildland-urban interface evacuation trigger model applied in strategic wildfire scenarios",
+     "year": 2006,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.compenvurbsys.2015.05.008",
+     "note": null,
+     "title": "A household-level approach to staging wildfire evacuation warnings using trigger modeling",
+     "year": 2015,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1007/s10694-018-0771-6",
+     "note": null,
+     "title": "Setting Wildfire Evacuation Triggers by Coupling Fire and Traffic Simulation Models: A Spatiotemporal GIS Approach",
+     "year": 2018,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.ssci.2022.105914",
+     "note": null,
+     "title": "Integrating wildfire spread and evacuation times to design safe triggers: Application to two rural communities using PERIL model",
+     "year": 2023,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.firesaf.2023.103854",
+     "note": null,
+     "title": "Design of stochastic trigger boundaries for rural communities evacuating from a wildfire",
+     "year": 2023,
+     "doi_verification": "verified"
+    }
+   ],
+   "finding": "All trigger-buffer work found is outdoor, community or household scale, with no dose."
+  },
+  {
+   "antecedent_doi": "10.1007/s10694-018-0771-6",
+   "openalex_id": "W2891242247",
+   "citing_works_openalex": 77,
+   "screening": "keyword filter as above",
+   "relevant_found": [],
+   "finding": "No indoor or dose-based extension found."
+  },
+  {
+   "antecedent_doi": "10.1016/j.ssci.2022.105914",
+   "openalex_id": "W4297510894",
+   "citing_works_openalex": 24,
+   "screening": "keyword filter as above",
+   "relevant_found": [],
+   "finding": "No indoor or dose-based extension found."
+  },
+  {
+   "antecedent_doi": "10.1007/s11069-015-2011-4",
+   "openalex_id": "W1761767831",
+   "citing_works_openalex": 43,
+   "screening": "all citing titles screened",
+   "relevant_found": [],
+   "finding": "Tsunami evacuation only."
+  },
+  {
+   "antecedent_doi": "10.1002/cpe.6125",
+   "openalex_id": "W3111842439",
+   "citing_works_openalex": 4,
+   "screening": "all citing titles screened; references also traced (25)",
+   "relevant_found": [
+    {
+     "doi": "10.1016/j.ssci.2020.104836",
+     "note": "reference",
+     "title": "Finding the earliest arrival path through a time-varying network for evacuation planning of mine water inrush",
+     "year": 2020,
+     "doi_verification": "verified"
+    }
+   ],
+   "finding": "No dose-based or building extension of the latest-departure route algorithm."
+  },
+  {
+   "antecedent_doi": "10.1016/j.ssci.2020.104836",
+   "openalex_id": "W3037218697",
+   "citing_works_openalex": 16,
+   "screening": "all citing titles screened",
+   "relevant_found": [
+    {
+     "doi": "10.3390/pr13113666",
+     "note": null,
+     "title": "Dynamic Escape Path Optimization Model Study Based on Spatio-Temporal Evolution of Coal Mine Water Inrush",
+     "year": 2025,
+     "doi_verification": "verified"
+    }
+   ],
+   "finding": "Mine flooding only."
+  },
+  {
+   "antecedent_doi": "10.1109/ispdc.2009.33",
+   "openalex_id": "W2137172277",
+   "citing_works_openalex": 58,
+   "screening": "all citing titles screened; references traced (21)",
+   "relevant_found": [
+    {
+     "doi": "10.1016/j.procs.2015.05.425",
+     "note": null,
+     "title": "Fire Hazard Safety Optimization",
+     "year": 2015,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1109/lcn.2007.48",
+     "note": "reference",
+     "title": "Emergency Evacuation using Wireless Sensor Networks",
+     "year": 2007,
+     "doi_verification": "verified"
+    }
+   ],
+   "finding": "Citers are sensor-network guidance systems; none adds dose or proof."
+  },
+  {
+   "antecedent_doi": "10.1016/j.procs.2015.05.425",
+   "openalex_id": "W1951806316",
+   "citing_works_openalex": 7,
+   "screening": "all citing titles screened; references traced (15)",
+   "relevant_found": [],
+   "finding": "No follow-up found."
+  },
+  {
+   "antecedent_doi": "classic time-dependent shortest path papers",
+   "openalex_id": null,
+   "citing_works_openalex": null,
+   "screening": "OpenAlex filter=cites:<id> combined with search=evacuation, fire, hazard",
+   "counts": [
+    {
+     "paper": "cooke1966",
+     "openalex_id": "W1986652726",
+     "cited_by": 413,
+     "search_term": "evacuation",
+     "citing_matches": 19
+    },
+    {
+     "paper": "cooke1966",
+     "openalex_id": "W1986652726",
+     "cited_by": 413,
+     "search_term": "fire",
+     "citing_matches": 13
+    },
+    {
+     "paper": "cooke1966",
+     "openalex_id": "W1986652726",
+     "cited_by": 413,
+     "search_term": "hazard",
+     "citing_matches": 4
+    },
+    {
+     "paper": "dreyfus1969",
+     "openalex_id": "W2144050074",
+     "cited_by": 1003,
+     "search_term": "evacuation",
+     "citing_matches": 14
+    },
+    {
+     "paper": "dreyfus1969",
+     "openalex_id": "W2144050074",
+     "cited_by": 1003,
+     "search_term": "fire",
+     "citing_matches": 20
+    },
+    {
+     "paper": "dreyfus1969",
+     "openalex_id": "W2144050074",
+     "cited_by": 1003,
+     "search_term": "hazard",
+     "citing_matches": 12
+    },
+    {
+     "paper": "orda1990",
+     "openalex_id": "W2089338760",
+     "cited_by": 484,
+     "search_term": "evacuation",
+     "citing_matches": 13
+    },
+    {
+     "paper": "orda1990",
+     "openalex_id": "W2089338760",
+     "cited_by": 484,
+     "search_term": "fire",
+     "citing_matches": 3
+    },
+    {
+     "paper": "orda1990",
+     "openalex_id": "W2089338760",
+     "cited_by": 484,
+     "search_term": "hazard",
+     "citing_matches": 7
+    },
+    {
+     "paper": "kaufman1993",
+     "openalex_id": "W1985327268",
+     "cited_by": 222,
+     "search_term": "evacuation",
+     "citing_matches": 4
+    },
+    {
+     "paper": "kaufman1993",
+     "openalex_id": "W1985327268",
+     "cited_by": 222,
+     "search_term": "fire",
+     "citing_matches": 4
+    },
+    {
+     "paper": "kaufman1993",
+     "openalex_id": "W1985327268",
+     "cited_by": 222,
+     "search_term": "hazard",
+     "citing_matches": 1
+    },
+    {
+     "paper": "chabini1998",
+     "openalex_id": "W2166236009",
+     "cited_by": 334,
+     "search_term": "evacuation",
+     "citing_matches": 16
+    },
+    {
+     "paper": "chabini1998",
+     "openalex_id": "W2166236009",
+     "cited_by": 334,
+     "search_term": "fire",
+     "citing_matches": 8
+    },
+    {
+     "paper": "chabini1998",
+     "openalex_id": "W2166236009",
+     "cited_by": 334,
+     "search_term": "hazard",
+     "citing_matches": 3
+    },
+    {
+     "paper": "daganzo2002",
+     "openalex_id": "W2098882935",
+     "cited_by": 30,
+     "search_term": "evacuation",
+     "citing_matches": 2
+    },
+    {
+     "paper": "daganzo2002",
+     "openalex_id": "W2098882935",
+     "cited_by": 30,
+     "search_term": "fire",
+     "citing_matches": 1
+    },
+    {
+     "paper": "daganzo2002",
+     "openalex_id": "W2098882935",
+     "cited_by": 30,
+     "search_term": "hazard",
+     "citing_matches": 0
+    },
+    {
+     "paper": "foschini2014",
+     "openalex_id": "W3043093646",
+     "cited_by": 88,
+     "search_term": "evacuation",
+     "citing_matches": 0
+    },
+    {
+     "paper": "foschini2014",
+     "openalex_id": "W3043093646",
+     "cited_by": 88,
+     "search_term": "fire",
+     "citing_matches": 1
+    },
+    {
+     "paper": "foschini2014",
+     "openalex_id": "W3043093646",
+     "cited_by": 88,
+     "search_term": "hazard",
+     "citing_matches": 2
+    }
+   ],
+   "relevant_found": [
+    {
+     "doi": "10.3801/iafss.fss.3-805",
+     "note": null,
+     "title": "Optimization Models In Fire Egress Analysis For Residential Buildings",
+     "year": 1991,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.procs.2015.05.425",
+     "note": null,
+     "title": "Fire Hazard Safety Optimization",
+     "year": 2015,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1109/ispdc.2009.33",
+     "note": null,
+     "title": "A Dynamic Model for Fire Emergency Evacuation Based on Wireless Sensor Networks",
+     "year": 2009,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.ssci.2020.104836",
+     "note": null,
+     "title": "Finding the earliest arrival path through a time-varying network for evacuation planning of mine water inrush",
+     "year": 2020,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1016/j.ejor.2004.12.003",
+     "note": null,
+     "title": "Multicriteria adaptive paths in stochastic, time-varying networks",
+     "year": 2006,
+     "doi_verification": "verified"
+    },
+    {
+     "doi": "10.1023/b:jmma.0000026708.57419.6d",
+     "note": "title only",
+     "title": "On Solving Quickest Time Problems in Time-Dependent, Dynamic Networks",
+     "year": 2004,
+     "doi_verification": "verified"
+    }
+   ],
+   "finding": "Fire-egress uses of time-dependent shortest paths exist since 1991; none computes a dose-constrained deadline field."
+  }
+ ],
+ "precedents": {
+  "C1": [
+   {
+    "title": "A map representation of the ASET-RSET concept",
+    "year": 2020,
+    "venue": "Fire Safety Journal",
+    "authors": [
+     "Benjamin Schröder",
+     "Lukas Arnold",
+     "Armin Seyfried"
+    ],
+    "doi": "10.1016/j.firesaf.2020.103154",
+    "openalex_id": "W3034493621",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "A map representation of the ASET-RSET concept",
+     "year": 2020,
+     "container": "Fire Safety Journal",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Abstract of the authors' preprint on Zenodo (record 3949625); journal full text not read (closed access).",
+    "what_it_does": "Introduces ASET and RSET maps generated by a spatial evaluation of the quantities used to determine ASET and RSET from fire and evacuation model output, a difference map of the safety margin over the whole domain, and a reduction of the map to one scalar consequence measure.",
+    "where_it_stops": "The abstract describes a spatial post-processing of simulation output. It does not describe a route-dependent latest departure from each location, dose accumulated along the escape route, an exactness guarantee, or a machine-checked proof.",
+    "closeness": "closest (concept of a spatial safety-margin map)"
+   },
+   {
+    "title": "Mapping the fire risk in buildings: A hybrid method of ASET-RSET concept and FED concept",
+    "year": 2023,
+    "venue": "Reliability Engineering & System Safety",
+    "authors": [
+     "Junfeng Chen",
+     "Zhong Maohua",
+     "Peiyun Qiu",
+     "Long Zeng",
+     "Jiacheng Chen"
+    ],
+    "doi": "10.1016/j.ress.2023.109571",
+    "openalex_id": "W4385786395",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Mapping the fire risk in buildings: A hybrid method of ASET-RSET concept and FED concept",
+     "year": 2023,
+     "container": "Reliability Engineering & System Safety",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and bibliographic metadata only; no abstract in OpenAlex or Crossref, full text not read.",
+    "what_it_does": "Per its title, maps fire risk in buildings by combining the ASET-RSET concept with the FED concept.",
+    "where_it_stops": "Cannot be determined without the full text. This is the highest-priority paper to read before any novelty claim is made, because it combines spatial mapping with FED.",
+    "closeness": "closest (spatial map plus FED); unresolved"
+   },
+   {
+    "title": "Fire Hazard Safety Optimization",
+    "year": 2015,
+    "venue": "Procedia Computer Science",
+    "authors": [
+     "Sabin Tabirca",
+     "Laurence Tianruo Yang",
+     "Tatiana Tabirca"
+    ],
+    "doi": "10.1016/j.procs.2015.05.425",
+    "openalex_id": "W1951806316",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Fire Hazard Safety Optimization",
+     "year": 2015,
+     "container": "Procedia Computer Science",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract; full text not read (publisher returned HTTP 403).",
+    "what_it_does": "Assumes navigation costs and hazard spread are deterministic over time, defines a dynamic safety recursively and gives an algorithm computing dynamic safety and successor matrices for a building navigation graph.",
+    "where_it_stops": "Per the abstract: no toxic or thermal dose accumulation, no link to ASET/RSET or to BIM/IFC, no proof of correctness in a proof assistant. Whether its dynamic safety equals a hard-window latest departure could not be checked; if it does, the hard-window part of C1 is anticipated here.",
+    "closeness": "closest algorithmic antecedent (per-node, time-dependent safety under deterministic hazard)"
+   },
+   {
+    "title": "A Dynamic Model for Fire Emergency Evacuation Based on Wireless Sensor Networks",
+    "year": 2009,
+    "venue": "2009 Eighth International Symposium on Parallel and Distributed Computing",
+    "authors": [
+     "Tatiana Tabirca",
+     "Kenneth N. Brown",
+     "Cormac J. Sreenan"
+    ],
+    "doi": "10.1109/ispdc.2009.33",
+    "openalex_id": "W2137172277",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "A Dynamic Model for Fire Emergency Evacuation Based on Wireless Sensor Networks",
+     "year": 2009,
+     "container": "2009 Eighth International Symposium on Parallel and Distributed Computing",
+     "type": "proceedings-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Extends the node safety concept of Barnes et al. to a navigation graph that changes over time, for fire evacuation guided by a wireless sensor network.",
+    "where_it_stops": "Sensor-network guidance; no dose, no tenability model, no proof.",
+    "closeness": "close"
+   },
+   {
+    "title": "Emergency Evacuation using Wireless Sensor Networks",
+    "year": 2007,
+    "venue": "32nd IEEE Conference on Local Computer Networks (LCN 2007)",
+    "authors": [
+     "Matthew Barnes",
+     "Hugh Leather",
+     "D. K. Arvind"
+    ],
+    "doi": "10.1109/lcn.2007.48",
+    "openalex_id": "W2128832674",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Emergency Evacuation using Wireless Sensor Networks",
+     "year": 2007,
+     "container": "32nd IEEE Conference on Local Computer Networks (LCN 2007)",
+     "type": "proceedings-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Distributed algorithm that directs evacuees to exits along the safest paths, taking into account predictions of the relative movements of hazards and evacuees; demonstrated on a 64-node sensor network.",
+    "where_it_stops": "Safety from relative movement of hazard and evacuee; no dose, no deadline map, no proof.",
+    "closeness": "close"
+   },
+   {
+    "title": "Setting Wildfire Evacuation Trigger Points Using Fire Spread Modeling and GIS",
+    "year": 2005,
+    "venue": "Transactions in GIS",
+    "authors": [
+     "Thomas J. Cova",
+     "Philip E. Dennison",
+     "Tae Hyong Kim",
+     "Max A. Moritz"
+    ],
+    "doi": "10.1111/j.1467-9671.2005.00237.x",
+    "openalex_id": "W2160663789",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Setting Wildfire Evacuation Trigger Points Using Fire Spread Modeling and GIS",
+     "year": 2005,
+     "container": "Transactions in GIS",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Wildfire evacuation trigger buffers: using fire spread modelling and an estimated evacuation time, computes a buffer around a community such that evacuation is recommended when the fire crosses it. This is a reverse, latest-time-to-leave computation.",
+    "where_it_stops": "Community scale, outdoors; evacuation time is a given scalar; the hazard is fire arrival, not dose; no per-location indoor field.",
+    "closeness": "close (same reverse logic, different scale)"
+   },
+   {
+    "title": "Setting Wildfire Evacuation Triggers by Coupling Fire and Traffic Simulation Models: A Spatiotemporal GIS Approach",
+    "year": 2018,
+    "venue": "Fire Technology",
+    "authors": [
+     "Dapeng Li",
+     "Thomas J. Cova",
+     "Philip E. Dennison"
+    ],
+    "doi": "10.1007/s10694-018-0771-6",
+    "openalex_id": "W2891242247",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Setting Wildfire Evacuation Triggers by Coupling Fire and Traffic Simulation Models: A Spatiotemporal GIS Approach",
+     "year": 2018,
+     "container": "Fire Technology",
+     "type": "journal-article",
+     "other_crossref_years": [
+      2019
+     ]
+    },
+    "evidence_basis": "Title and metadata (no abstract in OpenAlex).",
+    "what_it_does": "Sets wildfire evacuation triggers by coupling fire and traffic simulation models in a spatiotemporal GIS approach.",
+    "where_it_stops": "Community and road-network scale; no dose; no indoor graph.",
+    "closeness": "close"
+   },
+   {
+    "title": "Integrating wildfire spread and evacuation times to design safe triggers: Application to two rural communities using PERIL model",
+    "year": 2023,
+    "venue": "Safety Science",
+    "authors": [
+     "Harry Mitchell",
+     "S. Gwynne",
+     "Enrico Ronchi",
+     "Nikolaos Kalogeropoulos",
+     "Guillermo Rein"
+    ],
+    "doi": "10.1016/j.ssci.2022.105914",
+    "openalex_id": "W4297510894",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Integrating wildfire spread and evacuation times to design safe triggers: Application to two rural communities using PERIL model",
+     "year": 2023,
+     "container": "Safety Science",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2022."
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "PERIL: generates trigger perimeters around a community by coupling FARSITE fire spread with evacuation times and a safety factor; open source.",
+    "where_it_stops": "Rural communities; evacuation time per community; no dose; no per-node field inside buildings.",
+    "closeness": "close"
+   },
+   {
+    "title": "Beat-the-wave evacuation mapping for tsunami hazards in Seaside, Oregon, USA",
+    "year": 2015,
+    "venue": "Natural Hazards",
+    "authors": [
+     "George R. Priest",
+     "Laura L. Stimely",
+     "Nathan Wood",
+     "Ian P. Madin",
+     "Rudie J. Watzig"
+    ],
+    "doi": "10.1007/s11069-015-2011-4",
+    "openalex_id": "W1761767831",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Beat-the-wave evacuation mapping for tsunami hazards in Seaside, Oregon, USA",
+     "year": 2015,
+     "container": "Natural Hazards",
+     "type": "journal-article",
+     "other_crossref_years": [
+      2016
+     ]
+    },
+    "evidence_basis": "Title and metadata (no abstract in OpenAlex).",
+    "what_it_does": "Per its title, beat-the-wave evacuation mapping for tsunami hazards: maps of whether pedestrians can reach safety before wave arrival.",
+    "where_it_stops": "Outdoor, one hazard arrival time per location; no time-dependent tenability along the route; no dose.",
+    "closeness": "analogous concept in another hazard"
+   },
+   {
+    "title": "Anisotropic path modeling to assess pedestrian-evacuation potential from Cascadia-related tsunamis in the US Pacific Northwest",
+    "year": 2011,
+    "venue": "Natural Hazards",
+    "authors": [
+     "Nathan Wood",
+     "Mathew C. Schmidtlein"
+    ],
+    "doi": "10.1007/s11069-011-9994-2",
+    "openalex_id": "W2068875301",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Anisotropic path modeling to assess pedestrian-evacuation potential from Cascadia-related tsunamis in the US Pacific Northwest",
+     "year": 2011,
+     "container": "Natural Hazards",
+     "type": "journal-article",
+     "other_crossref_years": [
+      2012
+     ]
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Per its title, anisotropic path modelling to assess pedestrian evacuation potential from Cascadia-related tsunamis.",
+    "where_it_stops": "Static hazard arrival; outdoor; no dose.",
+    "closeness": "analogous concept in another hazard"
+   },
+   {
+    "title": "A cloud-based service for emergency evacuation of mine water inrush accidents",
+    "year": 2020,
+    "venue": "Concurrency and Computation: Practice and Experience",
+    "authors": [
+     "Yuanze Du",
+     "Qiang Wu",
+     "Yi Yao",
+     "Yingwang Zhao",
+     "Xiaoyan Zhang",
+     "Zhichao Hao",
+     "Hua Xu",
+     "Zhili Du"
+    ],
+    "doi": "10.1002/cpe.6125",
+    "openalex_id": "W3111842439",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "A cloud-based service for emergency evacuation of mine water inrush accidents",
+     "year": 2020,
+     "container": "Concurrency and Computation: Practice and Experience",
+     "type": "journal-article",
+     "other_crossref_years": [
+      2021
+     ]
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Cloud service for mine water inrush evacuation that builds a time-varying network of the accident evolution, proposes a latest departure route algorithm and runs a time-varying earliest arrival algorithm in parallel.",
+    "where_it_stops": "Mine flooding; no dose; an all-nodes deadline map is not described; no proof. Shows that latest-departure routing in an evacuation network is not itself new.",
+    "closeness": "close (latest-departure routing in evacuation)"
+   },
+   {
+    "title": "Finding the earliest arrival path through a time-varying network for evacuation planning of mine water inrush",
+    "year": 2020,
+    "venue": "Safety Science",
+    "authors": [
+     "Qiang Wu",
+     "Yuanze Du",
+     "Hua Xu",
+     "Yingwang Zhao",
+     "Xiaoyan Zhang",
+     "Yi Yao"
+    ],
+    "doi": "10.1016/j.ssci.2020.104836",
+    "openalex_id": "W3037218697",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Finding the earliest arrival path through a time-varying network for evacuation planning of mine water inrush",
+     "year": 2020,
+     "container": "Safety Science",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Earliest arrival path through a time-varying network for evacuation planning of mine water inrush.",
+    "where_it_stops": "Earliest arrival from an origin; mine flooding; no dose.",
+    "closeness": "context"
+   },
+   {
+    "title": "Time-Aware and Temperature-Aware Fire Evacuation Path Algorithm in IoT-Enabled Multi-Story Multi-Exit Buildings",
+    "year": 2020,
+    "venue": "Sensors",
+    "authors": [
+     "Hong-Hsu Yen",
+     "Cheng-Han Lin",
+     "Hung-Wei Tsao"
+    ],
+    "doi": "10.3390/s21010111",
+    "openalex_id": "W3114544591",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Time-Aware and Temperature-Aware Fire Evacuation Path Algorithm in IoT-Enabled Multi-Story Multi-Exit Buildings",
+     "year": 2020,
+     "container": "Sensors",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Time-aware and temperature-aware evacuation paths over time slots in multi-storey, multi-exit buildings, with a human temperature limit constraint; six heuristic algorithms compared on the Taipei 101 mall.",
+    "where_it_stops": "Temperature cap rather than cumulative dose; one path per evacuee; no deadline field; no exactness proof.",
+    "closeness": "close (time-dependent, tenability-constrained building routing)"
+   },
+   {
+    "title": "Optimization Models In Fire Egress Analysis For Residential Buildings",
+    "year": 1991,
+    "venue": "Fire Safety Science",
+    "authors": [
+     "Michael M. Kostreva",
+     "Margaret M. Wiecek",
+     "Teodros Getachew"
+    ],
+    "doi": "10.3801/iafss.fss.3-805",
+    "openalex_id": "W1966824962",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Optimization Models In Fire Egress Analysis For Residential Buildings",
+     "year": 1991,
+     "container": "Fire Safety Science",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Dynamic-programming functional equations for fire egress paths in residential buildings with single- and two-attribute, constant and time-varying link costs.",
+    "where_it_stops": "Optimal paths per occupant; no tenability dose model; no latest-departure field.",
+    "closeness": "early antecedent (time-varying DP egress in buildings)"
+   },
+   {
+    "title": "Assessing safety in buildings and of evacuees considering fire impacts",
+    "year": 2025,
+    "venue": "International Journal of Disaster Risk Reduction",
+    "authors": [
+     "Feze Golshani",
+     "Liping Fang"
+    ],
+    "doi": "10.1016/j.ijdrr.2025.105259",
+    "openalex_id": "W4406942994",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Assessing safety in buildings and of evacuees considering fire impacts",
+     "year": 2025,
+     "container": "International Journal of Disaster Risk Reduction",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Integrates FDS, navigation graph generation, fuzzy exit choice and agent-based simulation; defines edge and path capability deterioration indices to assess safety spatiotemporally; shows the shortest path is not always the safest.",
+    "where_it_stops": "Simulation-based indices; no latest-departure field; no exactness or proof.",
+    "closeness": "close (spatiotemporal safety indices on a navigation graph)"
+   },
+   {
+    "title": "Building Fire Evacuation Risk Assessment and Mapping Considering Safety and Travel Delays",
+    "year": 2026,
+    "venue": "Journal of Computing in Civil Engineering",
+    "authors": [
+     "Song Yiquan"
+    ],
+    "doi": "10.1061/jccee5.cpeng-6783",
+    "openalex_id": "W4416422576",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Building Fire Evacuation Risk Assessment and Mapping Considering Safety and Travel Delays",
+     "year": 2026,
+     "container": "Journal of Computing in Civil Engineering",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2025."
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Fire evacuation risk assessment integrating IFC data, with spatial maps of risk indices including travel delays derived from occupant trajectories of an evacuation simulation.",
+    "where_it_stops": "Indices from simulated trajectories; no route-integrated dose deadline; no proof.",
+    "closeness": "close (IFC-based spatial risk map)"
+   },
+   {
+    "title": "Development of a framework to track life safety levels of occupants in the event of a fire in buildings",
+    "year": 2024,
+    "venue": "Architectural Engineering and Design Management",
+    "authors": [
+     "Massimo Lemma",
+     "Martina Tarsi",
+     "Alessandro Carbonari"
+    ],
+    "doi": "10.1080/17452007.2024.2401565",
+    "openalex_id": "W4402485961",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Development of a framework to track life safety levels of occupants in the event of a fire in buildings",
+     "year": 2024,
+     "container": "Architectural Engineering and Design Management",
+     "type": "journal-article",
+     "other_crossref_years": [
+      2025
+     ]
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "BIM-compliant framework that evaluates one life-safety KPI for fire scenarios and shows it on a grid over the building layout, at every point of the building, inside the BIM model.",
+    "where_it_stops": "KPI from scenario simulations; not a latest-departure computation; no proof.",
+    "closeness": "close (per-point life-safety map in BIM)"
+   },
+   {
+    "title": "Multi-Objective Real-Time Planning of Evacuation Routes for Underground Mine Fires",
+    "year": 2024,
+    "venue": "Applied Sciences",
+    "authors": [
+     "Lin Bi",
+     "Yulong Liu",
+     "Deyun Zhong",
+     "Lixue Wen"
+    ],
+    "doi": "10.3390/app14177521",
+    "openalex_id": "W4401894917",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Multi-Objective Real-Time Planning of Evacuation Routes for Underground Mine Fires",
+     "year": 2024,
+     "container": "Applied Sciences",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Labelling DP for Pareto-optimal mine-fire escape routes with the constraint that time spent in smoke does not exceed the rated protection time of the self-rescuer.",
+    "where_it_stops": "Single origin; exposure measured as time in smoke, not FED; mine, not building; no deadline field.",
+    "closeness": "close (exposure-constrained exact labels)"
+   },
+   {
+    "title": "Dynamic Dose-Based Emergency Evacuation Model for Enhancing Nuclear Power Plant Emergency Response Strategies",
+    "year": 2023,
+    "venue": "Energies",
+    "authors": [
+     "Huifang Miao",
+     "Guoming Zhang",
+     "Peizhao Yu",
+     "Chunsen Shi",
+     "Jianxiang Zheng"
+    ],
+    "doi": "10.3390/en16176338",
+    "openalex_id": "W4386332381",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Dynamic Dose-Based Emergency Evacuation Model for Enhancing Nuclear Power Plant Emergency Response Strategies",
+     "year": 2023,
+     "container": "Energies",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Dynamic dose-based evacuation model for a nuclear power plant using an improved A* over a time-varying radiological dose field.",
+    "where_it_stops": "Outdoor radiological routing from origins; no deadline field; no proof.",
+    "closeness": "analogous (dynamic dose routing)"
+   },
+   {
+    "title": "Dynamic Escape Path Optimization Model Study Based on Spatio-Temporal Evolution of Coal Mine Water Inrush",
+    "year": 2025,
+    "venue": "Processes",
+    "authors": [
+     "Lin An",
+     "Zaibing Liu",
+     "Xinmiao Wang",
+     "Wenming Liu",
+     "Shaolong Wang",
+     "Liang Ma",
+     "Tao Fan",
+     "Weiming Chen",
+     "et al."
+    ],
+    "doi": "10.3390/pr13113666",
+    "openalex_id": "W4416167075",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Dynamic Escape Path Optimization Model Study Based on Spatio-Temporal Evolution of Coal Mine Water Inrush",
+     "year": 2025,
+     "container": "Processes",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Dynamic escape-path optimisation for coal mine water inrush using a lattice Boltzmann flood model on a roadway graph; defines a window escape time indicator and uses dynamic programming.",
+    "where_it_stops": "Mine flooding; indicator per escape path; no dose.",
+    "closeness": "analogous (escape window indicator)"
+   },
+   {
+    "title": "Reversibility of the time-dependent shortest path problem",
+    "year": 2002,
+    "venue": "Transportation Research Part B: Methodological",
+    "authors": [
+     "Carlos F. Daganzo"
+    ],
+    "doi": "10.1016/s0191-2615(01)00012-1",
+    "openalex_id": "W2098882935",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Reversibility of the time-dependent shortest path problem",
+     "year": 2002,
+     "container": "Transportation Research Part B: Methodological",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Per its title, reversibility of the time-dependent shortest path problem; relevant to reverse (latest-departure) queries.",
+    "where_it_stops": "Generic network theory; no hazard or dose.",
+    "closeness": "algorithmic background"
+   },
+   {
+    "title": "FASTEST PATHS IN TIME-DEPENDENT NETWORKS FOR INTELLIGENT VEHICLE-HIGHWAY SYSTEMS APPLICATION∗",
+    "year": 1993,
+    "venue": "I V H S Journal",
+    "authors": [
+     "David E. Kaufman",
+     "Robert Longworth Smith"
+    ],
+    "doi": "10.1080/10248079308903779",
+    "openalex_id": "W1985327268",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "FASTEST PATHS IN TIME-DEPENDENT NETWORKS FOR INTELLIGENT VEHICLE-HIGHWAY SYSTEMS APPLICATION∗",
+     "year": 1993,
+     "container": "I V H S Journal",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Already verified in fire-egress-methods.bib.",
+    "what_it_does": "Consistency (FIFO) condition under which time-dependent fastest paths are computed like static ones.",
+    "where_it_stops": "Generic; no hazard.",
+    "closeness": "algorithmic background"
+   },
+   {
+    "title": "RSET/ASET, a flawed concept for fire safety assessment",
+    "year": 2010,
+    "venue": "Fire and Materials",
+    "authors": [
+     "Vytenis Babrauskas",
+     "Joseph M. Fleming",
+     "B. Russell"
+    ],
+    "doi": "10.1002/fam.1025",
+    "openalex_id": "W2024674255",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "RSET/ASET, a flawed concept for fire safety assessment",
+     "year": 2010,
+     "container": "Fire and Materials",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Already verified in fire-egress-methods.bib.",
+    "what_it_does": "Critique of the deterministic ASET/RSET concept.",
+    "where_it_stops": "Framing; motivates a distributional, route-aware margin.",
+    "closeness": "framing"
+   }
+  ],
+  "C2": [
+   {
+    "title": "Optimization Models In Fire Egress Analysis For Residential Buildings",
+    "year": 1991,
+    "venue": "Fire Safety Science",
+    "authors": [
+     "Michael M. Kostreva",
+     "Margaret M. Wiecek",
+     "Teodros Getachew"
+    ],
+    "doi": "10.3801/iafss.fss.3-805",
+    "openalex_id": "W1966824962",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Optimization Models In Fire Egress Analysis For Residential Buildings",
+     "year": 1991,
+     "container": "Fire Safety Science",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Two-attribute, time-varying link costs for fire egress in residential buildings, with DP functional equations and a multi-attribute evaluation of designs.",
+    "where_it_stops": "Small examples; no FED; no time-dependent label-correcting implementation at lattice scale.",
+    "closeness": "closest (bi-attribute time-varying fire egress, 1991)"
+   },
+   {
+    "title": "Multi-Objective Real-Time Planning of Evacuation Routes for Underground Mine Fires",
+    "year": 2024,
+    "venue": "Applied Sciences",
+    "authors": [
+     "Lin Bi",
+     "Yulong Liu",
+     "Deyun Zhong",
+     "Lixue Wen"
+    ],
+    "doi": "10.3390/app14177521",
+    "openalex_id": "W4401894917",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Multi-Objective Real-Time Planning of Evacuation Routes for Underground Mine Fires",
+     "year": 2024,
+     "container": "Applied Sciences",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Pareto-optimal escape routes by a labelling DP, minimising equivalent length and time walked through smoke, with an exposure constraint.",
+    "where_it_stops": "Mine ventilation network; exposure as time in smoke, not FED.",
+    "closeness": "closest (exact Pareto labels with exposure)"
+   },
+   {
+    "title": "Emergency evacuation paths for tank farm fires based on bi-objective dynamic planning",
+    "year": 2025,
+    "venue": "Scientific Reports",
+    "authors": [
+     "Guanbo Chou",
+     "Yili Duo",
+     "Jie Liu",
+     "Lin Sun",
+     "Yuyuan Zhang",
+     "Tie Sun"
+    ],
+    "doi": "10.1038/s41598-025-93567-4",
+    "openalex_id": "W4408448253",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Emergency evacuation paths for tank farm fires based on bi-objective dynamic planning",
+     "year": 2025,
+     "container": "Scientific Reports",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Bi-objective dynamic planning that minimises evacuation time and thermal radiation dose for tank farm fires on a hexagonal grid, scalarised by linear weighting and solved by an improved Dijkstra.",
+    "where_it_stops": "Weighted sum, so only supported Pareto points; outdoor; radiation dose only.",
+    "closeness": "close"
+   },
+   {
+    "title": "Algorithms for time-dependent bicriteria shortest path problems",
+    "year": 2006,
+    "venue": "Discrete Optimization",
+    "authors": [
+     "Horst W. Hamacher",
+     "Stefan Ruzika",
+     "Stevanus A. Tjandra"
+    ],
+    "doi": "10.1016/j.disopt.2006.05.006",
+    "openalex_id": "W2020257725",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Algorithms for time-dependent bicriteria shortest path problems",
+     "year": 2006,
+     "container": "Discrete Optimization",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Algorithms for time-dependent bicriteria shortest path problems.",
+    "where_it_stops": "Generic; no tenability model.",
+    "closeness": "algorithmic precedent"
+   },
+   {
+    "title": "Multiobjective Path Finding in Stochastic Dynamic Networks, with Application to Routing Hazardous Materials Shipments",
+    "year": 2005,
+    "venue": "Transportation Science",
+    "authors": [
+     "Tsung-Sheng Chang",
+     "Linda K. Nozick",
+     "Mark A. Turnquist"
+    ],
+    "doi": "10.1287/trsc.1040.0094",
+    "openalex_id": "W2115623096",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Multiobjective Path Finding in Stochastic Dynamic Networks, with Application to Routing Hazardous Materials Shipments",
+     "year": 2005,
+     "container": "Transportation Science",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Non-dominated paths for multiple objectives in stochastic, time-of-day dependent networks, applied to hazardous materials routing.",
+    "where_it_stops": "Road hazmat routing; approximate stochastic dominance.",
+    "closeness": "algorithmic precedent"
+   },
+   {
+    "title": "Multicriteria adaptive paths in stochastic, time-varying networks",
+    "year": 2006,
+    "venue": "European Journal of Operational Research",
+    "authors": [
+     "Sathaporn Opasanon",
+     "Elise D. Miller-Hooks"
+    ],
+    "doi": "10.1016/j.ejor.2004.12.003",
+    "openalex_id": "W2049753970",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Multicriteria adaptive paths in stochastic, time-varying networks",
+     "year": 2006,
+     "container": "European Journal of Operational Research",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2005."
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Multicriteria adaptive paths in stochastic, time-varying networks.",
+    "where_it_stops": "Generic; no tenability.",
+    "closeness": "algorithmic precedent"
+   },
+   {
+    "title": "The Safest Escape problem",
+    "year": 2009,
+    "venue": "Journal of the Operational Research Society",
+    "authors": [
+     "Sathaporn Opasanon",
+     "Elise D. Miller-Hooks"
+    ],
+    "doi": "10.1057/jors.2008.122",
+    "openalex_id": "W1984357344",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "The Safest Escape problem",
+     "year": 2009,
+     "container": "Journal of the Operational Research Society",
+     "type": "journal-article",
+     "other_crossref_years": [
+      2017
+     ],
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2008."
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Safest Escape problem: paths and flows that maximise the minimum probability of reaching an exit in a dynamic, time-varying network; exact algorithm.",
+    "where_it_stops": "Probability of arrival, not dose.",
+    "closeness": "close (risk-aware evacuation in time-varying networks)"
+   },
+   {
+    "title": "Label Correcting Algorithms for the Multiobjective Temporal Shortest Path Problem",
+    "year": 2026,
+    "venue": "LIPIcs (Schloss Dagstuhl)",
+    "authors": [
+     "Marica, Edina",
+     "Thielen, Clemens",
+     "Wittmann, Alina"
+    ],
+    "doi": "10.4230/lipics.sand.2026.17",
+    "openalex_id": "W7165746419",
+    "doi_verification": {
+     "crossref": "FAILED: DOI not found on Crossref (registered with DataCite)",
+     "datacite_check": "title and year match on DataCite",
+     "title": "Label Correcting Algorithms for the Multiobjective Temporal Shortest Path Problem",
+     "year": 2026
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Label-correcting algorithms for the multiobjective temporal shortest path problem without monotonicity or isotonicity assumptions.",
+    "where_it_stops": "Generic theory.",
+    "closeness": "algorithmic precedent"
+   },
+   {
+    "title": "Bi-objective evacuation problem in ships or buildings",
+    "year": 2022,
+    "venue": "International Journal of Shipping and Transport Logistics",
+    "authors": [
+     "Chi To Ng",
+     "C.L. Johnny Wan",
+     "Xiaofan Lai"
+    ],
+    "doi": "10.1504/ijstl.2022.10041162",
+    "openalex_id": "W3201534106",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Bi-objective evacuation problem in ships or buildings",
+     "year": 2022,
+     "container": "International Journal of Shipping and Transport Logistics",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2021."
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Bi-objective evacuation of ships or buildings as a multicommodity flow on a time-expanded network.",
+    "where_it_stops": "Flow objectives in time and space; no dose.",
+    "closeness": "context"
+   },
+   {
+    "title": "Multi-scale Spatial-Temporal principles of global evacuation safety based on Pareto Frontiers: A demonstration in tunnel",
+    "year": 2025,
+    "venue": "Tunnelling and Underground Space Technology",
+    "authors": [
+     "Yuxin Zhang",
+     "Yuxin Zhang",
+     "Yifei Ding",
+     "Xinyan Huang",
+     "Xinyan Huang"
+    ],
+    "doi": "10.1016/j.tust.2025.106950",
+    "openalex_id": "W4413143123",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Multi-scale Spatial-Temporal principles of global evacuation safety based on Pareto Frontiers: A demonstration in tunnel",
+     "year": 2025,
+     "container": "Tunnelling and Underground Space Technology",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Per its title, spatial-temporal principles of evacuation safety based on Pareto frontiers, demonstrated in a tunnel.",
+    "where_it_stops": "Not determinable without full text.",
+    "closeness": "context; read before submission"
+   }
+  ],
+  "C3": [
+   {
+    "title": "Software user's guide for the HAZARD I fire hazard assessment method",
+    "year": 1989,
+    "venue": null,
+    "authors": [
+     "Richard W. Bukowski",
+     "Richard D. Peacock",
+     "Walter W. Jones",
+     "C Lynn Forney"
+    ],
+    "doi": "10.6028/nist.hb.146v1",
+    "openalex_id": "W2795091257",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Software user's guide for the HAZARD I fire hazard assessment method",
+     "year": 1989,
+     "container": null,
+     "type": "report"
+    },
+    "evidence_basis": "Partial front-matter text in OpenAlex naming the components FAST, EXITT and TENAB.",
+    "what_it_does": "HAZARD I: a fire hazard assessment method whose software components include FAST (the NIST zone fire model), EXITT (evacuation) and TENAB (tenability), with tenability criteria for heat flux, temperature, smoke obscuration and toxic gases.",
+    "where_it_stops": "Desktop software of 1989; not coupled to exact graph routing or BIM.",
+    "closeness": "closest (zone model plus egress plus tenability, 1989)"
+   },
+   {
+    "title": "An Object-oriented Simulation (crisp 11) For Fire Risk Assessment",
+    "year": 1994,
+    "venue": "Fire Safety Science",
+    "authors": [
+     "Jeremy Fraser-Mitchell"
+    ],
+    "doi": "10.3801/iafss.fss.4-793",
+    "openalex_id": "W2051175353",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "An Object-oriented Simulation (crisp 11) For Fire Risk Assessment",
+     "year": 1994,
+     "container": "Fire Safety Science",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "CRISP II: object-oriented zone model of the whole fire system with occupants whose actions are abandoned when rooms become untenable; Monte Carlo risk.",
+    "where_it_stops": "Rule-based occupants; no exact routing.",
+    "closeness": "closest"
+   },
+   {
+    "title": "Coupled Fire/Evacuation Analysis of the Station Nightclub Fire",
+    "year": 2008,
+    "venue": "Fire Safety Science",
+    "authors": [
+     "Edwin Richard Galea",
+     "Zhaozhi Wang",
+     "Anand Veeraswamy",
+     "F. Jia",
+     "Peter J Lawrence",
+     "J. Ewer"
+    ],
+    "doi": "10.3801/iafss.fss.9-465",
+    "openalex_id": "W2124247730",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Coupled Fire/Evacuation Analysis of the Station Nightclub Fire",
+     "year": 2008,
+     "container": "Fire Safety Science",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Coupled fire and evacuation simulation of the Station nightclub fire; argues that uncoupled ASET/RSET can be over-optimistic.",
+    "where_it_stops": "CFD with agent model; not zone model in a browser.",
+    "closeness": "close"
+   },
+   {
+    "title": "Coupled hybrid modelling in fire safety engineering; a literature review",
+    "year": 2018,
+    "venue": "Fire Safety Journal",
+    "authors": [
+     "Benjamin Ralph",
+     "Ricky Carvel"
+    ],
+    "doi": "10.1016/j.firesaf.2018.08.008",
+    "openalex_id": "W2887247793",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Coupled hybrid modelling in fire safety engineering; a literature review",
+     "year": 2018,
+     "container": "Fire Safety Journal",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Review of coupled hybrid fire modelling (sub-models of different cost); notes limited validation.",
+    "where_it_stops": "Review.",
+    "closeness": "context"
+   },
+   {
+    "title": "Sensor-steered fire simulation",
+    "year": 2010,
+    "venue": "Fire Safety Journal",
+    "authors": [
+     "Sung-Han Koo",
+     "Jeremy Fraser-Mitchell",
+     "Stephen Welch"
+    ],
+    "doi": "10.1016/j.firesaf.2010.02.003",
+    "openalex_id": "W2150500052",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Sensor-steered fire simulation",
+     "year": 2010,
+     "container": "Fire Safety Journal",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Per its title, fire simulation steered by sensor data.",
+    "where_it_stops": "Not coupled to exact routing (from title only).",
+    "closeness": "context (sensor-steered simulation)"
+   },
+   {
+    "title": "IFC-centric performance-based evaluation of building evacuations using fire dynamics simulation and agent-based modeling",
+    "year": 2019,
+    "venue": "Automation in Construction",
+    "authors": [
+     "Farid Mirahadi",
+     "Brenda Y. McCabe",
+     "Arash Shahi"
+    ],
+    "doi": "10.1016/j.autcon.2019.01.007",
+    "openalex_id": "W2912322784",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "IFC-centric performance-based evaluation of building evacuations using fire dynamics simulation and agent-based modeling",
+     "year": 2019,
+     "container": "Automation in Construction",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "IFC-centric performance-based evaluation of building evacuations using fire dynamics simulation and agent-based modelling.",
+    "where_it_stops": "CFD, offline.",
+    "closeness": "close (IFC to fire plus evacuation)"
+   },
+   {
+    "title": "Lightweight Web3D Twinning Fire Evacuation Simulation of Metro Station",
+    "year": 2024,
+    "venue": "Proceedings of the 29th International ACM Conference on 3D Web Technology",
+    "authors": [
+     "John Li",
+     "Nanxi Chen",
+     "Jinyuan Jia"
+    ],
+    "doi": "10.1145/3665318.3677153",
+    "openalex_id": "W4401946327",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Lightweight Web3D Twinning Fire Evacuation Simulation of Metro Station",
+     "year": 2024,
+     "container": "Proceedings of the 29th International ACM Conference on 3D Web Technology",
+     "type": "proceedings-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Lightweight Web3D digital twin of fire evacuation in a metro station with a simplified smoke model and crowd algorithm, visualised in real time in the browser.",
+    "where_it_stops": "Simplified smoke model; no zone ODEs or exact routing stated.",
+    "closeness": "close (browser fire and evacuation)"
+   },
+   {
+    "title": "FDS+Evac: An Agent Based Fire Evacuation Model",
+    "year": 2009,
+    "venue": "Pedestrian and Evacuation Dynamics 2008",
+    "authors": [
+     "Timo Korhonen",
+     "Simo Hostikka",
+     "Simo Heliövaara",
+     "Harri Ehtamo"
+    ],
+    "doi": "10.1007/978-3-642-04504-2_8",
+    "openalex_id": "W2182629811",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "FDS+Evac: An Agent Based Fire Evacuation Model",
+     "year": 2009,
+     "container": "Pedestrian and Evacuation Dynamics 2008",
+     "type": "book-chapter",
+     "other_crossref_years": [
+      2010
+     ]
+    },
+    "evidence_basis": "Already verified in fire-egress-methods.bib.",
+    "what_it_does": "FDS+Evac, evacuation coupled to the FDS fire solver.",
+    "where_it_stops": "CFD, offline.",
+    "closeness": "context"
+   }
+  ],
+  "C4": [
+   {
+    "title": "A Standard Indoor Spatial Data Model-OGC IndoorGML and Implementation Approaches",
+    "year": 2017,
+    "venue": "ISPRS International Journal of Geo-Information",
+    "authors": [
+     "Hae-Kyong Kang",
+     "Ki-Joune Li"
+    ],
+    "doi": "10.3390/ijgi6040116",
+    "openalex_id": "W2606342776",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "A Standard Indoor Spatial Data Model-OGC IndoorGML and Implementation Approaches",
+     "year": 2017,
+     "container": "ISPRS International Journal of Geo-Information",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "OGC IndoorGML cellular space model, its implementation issues, subspacing and hierarchy of indoor spaces.",
+    "where_it_stops": "Data model; no exact search guarantee.",
+    "closeness": "closest (standard for hierarchical indoor navigation)"
+   },
+   {
+    "title": "The IFC-based path planning for 3D indoor spaces",
+    "year": 2013,
+    "venue": "Advanced Engineering Informatics",
+    "authors": [
+     "Ya-Hong Lin",
+     "Yu-Shen Liu",
+     "Ge Gao",
+     "Xiaoguang Han",
+     "Chengyuan Lai",
+     "Ming Gu"
+    ],
+    "doi": "10.1016/j.aei.2012.10.001",
+    "openalex_id": "W2084669237",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "The IFC-based path planning for 3D indoor spaces",
+     "year": 2013,
+     "container": "Advanced Engineering Informatics",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "IFC-based path planning for 3D indoor spaces.",
+    "where_it_stops": "Not determinable from metadata whether a consistent heuristic is used.",
+    "closeness": "close"
+   },
+   {
+    "title": "Modeling of Macroscopic Building Evacuation Using IFC Data",
+    "year": 2018,
+    "venue": "ISPRS International Journal of Geo-Information",
+    "authors": [
+     "Zhenhao Zhu",
+     "Liangchen Zhou",
+     "Chi Zhang",
+     "Bingxian Lin",
+     "Ying Cui",
+     "Mingliang Che"
+    ],
+    "doi": "10.3390/ijgi7080302",
+    "openalex_id": "W2883315423",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Modeling of Macroscopic Building Evacuation Using IFC Data",
+     "year": 2018,
+     "container": "ISPRS International Journal of Geo-Information",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Automatic mapping of IFC entities to a macroscopic evacuation network (rooms and doors as nodes and arcs) for EVACNET4.",
+    "where_it_stops": "Coarse network only; no lattice; no heuristic.",
+    "closeness": "close (IFC room-door graph)"
+   },
+   {
+    "title": "Generating straight skeleton-based navigation networks with Industry Foundation Classes for indoor way-finding",
+    "year": 2020,
+    "venue": "Automation in Construction",
+    "authors": [
+     "Meiqing Fu",
+     "Rui Liu",
+     "Bing Qi",
+     "Raja R. A. Issa"
+    ],
+    "doi": "10.1016/j.autcon.2019.103057",
+    "openalex_id": "W3003362203",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Generating straight skeleton-based navigation networks with Industry Foundation Classes for indoor way-finding",
+     "year": 2020,
+     "container": "Automation in Construction",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Straight-skeleton navigation networks generated from IFC for indoor way-finding.",
+    "where_it_stops": "Network generation.",
+    "closeness": "context"
+   },
+   {
+    "title": "MULTI-LEVEL INDOOR PATH PLANNING METHOD",
+    "year": 2015,
+    "venue": "The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences",
+    "authors": [
+     "Q. Xiong",
+     "Qing Zhu",
+     "Sisi Zlatanova B",
+     "Zhiqiang Du",
+     "Yun Zhang",
+     "L. Zeng"
+    ],
+    "doi": "10.5194/isprsarchives-xl-4-w5-19-2015",
+    "openalex_id": "W2157529961",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "MULTI-LEVEL INDOOR PATH PLANNING METHOD",
+     "year": 2015,
+     "container": "The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Multi-level indoor path planning combining geometric and semantic information of building components.",
+    "where_it_stops": "No exactness argument across levels.",
+    "closeness": "close"
+   },
+   {
+    "title": "Topological BIM for building performance management",
+    "year": 2024,
+    "venue": "Automation in Construction",
+    "authors": [
+     "Angelo Massafra",
+     "Wassim Jabi",
+     "Riccardo Gulli"
+    ],
+    "doi": "10.1016/j.autcon.2024.105628",
+    "openalex_id": "W4400614767",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Topological BIM for building performance management",
+     "year": 2024,
+     "container": "Automation in Construction",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Topological BIM: space-oriented, non-manifold topological models for building performance simulation.",
+    "where_it_stops": "Not routing.",
+    "closeness": "context (same toolchain)"
+   },
+   {
+    "title": "The synergy of non-manifold topology and reinforcement learning for fire egress",
+    "year": 2019,
+    "venue": "Blucher Design Proceedings",
+    "authors": [
+     "Wassim Jabi",
+     "Aikaterini Chatzivasileiadi",
+     "Nicholas Mario Wardhana",
+     "Simon Lannon",
+     "Robert Aish"
+    ],
+    "doi": "10.5151/proceedings-ecaadesigradi2019_671",
+    "openalex_id": "W2974334984",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "The synergy of non-manifold topology and reinforcement learning for fire egress",
+     "year": 2019,
+     "container": "Blucher Design Proceedings",
+     "type": "proceedings-article"
+    },
+    "evidence_basis": "Already verified in fire-egress-methods.bib.",
+    "what_it_does": "Non-manifold topology with reinforcement learning for fire egress.",
+    "where_it_stops": "RL on a topological graph; no hierarchical exact search.",
+    "closeness": "close (same toolchain)"
+   },
+   {
+    "title": "Three-Dimensional Indoor Fire Evacuation Routing",
+    "year": 2020,
+    "venue": "ISPRS International Journal of Geo-Information",
+    "authors": [
+     "Yan Jie Zhou",
+     "Yuling Pang",
+     "Chen Fen",
+     "Yeting Zhang"
+    ],
+    "doi": "10.3390/ijgi9100558",
+    "openalex_id": "W3088237454",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Three-Dimensional Indoor Fire Evacuation Routing",
+     "year": 2020,
+     "container": "ISPRS International Journal of Geo-Information",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Multi-semantic constrained 3D indoor fire evacuation routing on an IndoorGML extension, A*-based.",
+    "where_it_stops": "No hierarchical consistency argument.",
+    "closeness": "context"
+   },
+   {
+    "reference": "Holte, Perez, Zimmer and MacDonald (1996), Hierarchical A*: searching abstraction hierarchies efficiently (OpenAlex W128952136; venue not given in OpenAlex)",
+    "doi": null,
+    "doi_verification": "no DOI found; not cited by DOI",
+    "evidence_basis": "OpenAlex record without DOI (cited 138 times in OpenAlex); content from title only.",
+    "what_it_does": "Per its title, A* search that uses abstraction hierarchies.",
+    "where_it_stops": "Generic search; indicates that heuristics from abstractions are an established idea.",
+    "closeness": "algorithmic precedent (no DOI)"
+   },
+   {
+    "reference": "Botea, Mueller and Schaeffer (2004), Near optimal hierarchical path-finding (OpenAlex W3022683862; venue not given in OpenAlex)",
+    "doi": null,
+    "doi_verification": "no DOI found; not cited by DOI",
+    "evidence_basis": "OpenAlex record without DOI (cited 330 times in OpenAlex); content from title only.",
+    "what_it_does": "Per its title, hierarchical path-finding that is near optimal.",
+    "where_it_stops": "Near optimal by its title, so not an exactness result.",
+    "closeness": "algorithmic precedent (no DOI)"
+   }
+  ],
+  "C5": [
+   {
+    "title": "Automated Reasoning for Physical Quantities, Units, and Measurements in Isabelle/HOL",
+    "year": 2023,
+    "venue": "2023 27th International Conference on Engineering of Complex Computer Systems (ICECCS)",
+    "authors": [
+     "Simon Foster",
+     "Burkhart Wolff"
+    ],
+    "doi": "10.1109/iceccs59891.2023.00025",
+    "openalex_id": "W4388893990",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Automated Reasoning for Physical Quantities, Units, and Measurements in Isabelle/HOL",
+     "year": 2023,
+     "container": "2023 27th International Conference on Engineering of Complex Computer Systems (ICECCS)",
+     "type": "proceedings-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Automated reasoning for physical quantities, units and measurements in Isabelle/HOL.",
+    "where_it_stops": "General units library; no fire-engineering correlations.",
+    "closeness": "closest (dimensional checking in a proof assistant)"
+   },
+   {
+    "title": "Formalizing chemical physics using the Lean theorem prover",
+    "year": 2024,
+    "venue": "Digital Discovery",
+    "authors": [
+     "Max Bobbin",
+     "Samiha Sharlin",
+     "Parivash Feyzishendi",
+     "An Hong Dang",
+     "Catherine M. Wraback",
+     "Tyler R. Josephson"
+    ],
+    "doi": "10.1039/d3dd00077j",
+    "openalex_id": "W4388722935",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Formalizing chemical physics using the Lean theorem prover",
+     "year": 2024,
+     "container": "Digital Discovery",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2023."
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Formalises chemical physics in the Lean theorem prover.",
+    "where_it_stops": "Chemistry and physics, not fire safety engineering.",
+    "closeness": "close (Lean for physical-science equations)"
+   },
+   {
+    "title": "HepLean: Digitalising high energy physics",
+    "year": 2025,
+    "venue": "Computer Physics Communications",
+    "authors": [
+     "Joseph Tooby-Smith"
+    ],
+    "doi": "10.1016/j.cpc.2024.109457",
+    "openalex_id": "W4404875022",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "HepLean: Digitalising high energy physics",
+     "year": 2025,
+     "container": "Computer Physics Communications",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Already verified in fire-egress-methods.bib.",
+    "what_it_does": "HepLean: digitalising high-energy physics in Lean.",
+    "where_it_stops": "Physics, not engineering correlations.",
+    "closeness": "close"
+   },
+   {
+    "title": "Wave Equation Numerical Resolution: A Comprehensive Mechanized Proof of a C Program",
+    "year": 2012,
+    "venue": "Journal of Automated Reasoning",
+    "authors": [
+     "Sylvie Boldo",
+     "François Clément",
+     "Jean-Christophe Filliâtre",
+     "Micaela Mayero",
+     "Guillaume Melquiond",
+     "Pierre Weis"
+    ],
+    "doi": "10.1007/s10817-012-9255-4",
+    "openalex_id": "W2147177731",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Wave Equation Numerical Resolution: A Comprehensive Mechanized Proof of a C Program",
+     "year": 2012,
+     "container": "Journal of Automated Reasoning",
+     "type": "journal-article",
+     "other_crossref_years": [
+      2013
+     ]
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Per its title, a comprehensive mechanised proof of a C program for the numerical resolution of the wave equation.",
+    "where_it_stops": "One PDE scheme; not fire engineering.",
+    "closeness": "close (machine-checked numerical scheme)"
+   },
+   {
+    "title": "Formal Reliability Analysis Using Theorem Proving",
+    "year": 2010,
+    "venue": "IEEE Transactions on Computers",
+    "authors": [
+     "Osman Hasan",
+     "Sofiène Tahar",
+     "Naeem Abbasi"
+    ],
+    "doi": "10.1109/tc.2009.165",
+    "openalex_id": "W2058949335",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Formal Reliability Analysis Using Theorem Proving",
+     "year": 2010,
+     "container": "IEEE Transactions on Computers",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2009."
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Formal reliability analysis inside a higher-order-logic theorem prover (HOL), with a formalisation of reliability theory concepts for engineering systems.",
+    "where_it_stops": "Reliability engineering; not fire dynamics or egress.",
+    "closeness": "close (theorem proving applied to engineering analysis)"
+   },
+   {
+    "title": "Event Tree Reliability Analysis of Safety-Critical Systems Using Theorem Proving",
+    "year": 2022,
+    "venue": "IEEE Systems Journal",
+    "authors": [
+     "Mohamed Abdelghany",
+     "Waqar Ahmad",
+     "Sofiène Tahar"
+    ],
+    "doi": "10.1109/jsyst.2021.3077558",
+    "openalex_id": "W3167034277",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Event Tree Reliability Analysis of Safety-Critical Systems Using Theorem Proving",
+     "year": 2022,
+     "container": "IEEE Systems Journal",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2021."
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Event tree reliability analysis of safety-critical systems using theorem proving.",
+    "where_it_stops": "Not fire engineering.",
+    "closeness": "context"
+   },
+   {
+    "title": "On the Formalization of the Heat Conduction Problem in HOL",
+    "year": 2022,
+    "venue": "Lecture Notes in Computer Science",
+    "authors": [
+     "Elif Deniz",
+     "Adnan Rashid",
+     "Osman Hasan",
+     "Sofiène Tahar"
+    ],
+    "doi": "10.1007/978-3-031-16681-5_2",
+    "openalex_id": "W4296050254",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "On the Formalization of the Heat Conduction Problem in HOL",
+     "year": 2022,
+     "container": "Lecture Notes in Computer Science",
+     "type": "book-chapter"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Formalisation of the heat conduction problem in HOL.",
+    "where_it_stops": "Heat conduction PDE; no fire correlations or egress.",
+    "closeness": "close (heat transfer in a proof assistant)"
+   },
+   {
+    "title": "Functional Correctness of C Implementations of Dijkstra's, Kruskal's, and Prim's Algorithms",
+    "year": 2021,
+    "venue": "Lecture Notes in Computer Science",
+    "authors": [
+     "Anshuman Mohan",
+     "Wei Xiang Leow",
+     "Aquinas Hobor"
+    ],
+    "doi": "10.1007/978-3-030-81688-9_37",
+    "openalex_id": "W3185067705",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Functional Correctness of C Implementations of Dijkstra's, Kruskal's, and Prim's Algorithms",
+     "year": 2021,
+     "container": "Lecture Notes in Computer Science",
+     "type": "book-chapter"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Functional correctness of C implementations of Dijkstra, Kruskal and Prim.",
+    "where_it_stops": "Static Dijkstra; no time-dependent or dose variants.",
+    "closeness": "close (verified Dijkstra)"
+   },
+   {
+    "title": "Proof Pearl: Purely Functional, Simple and Efficient Priority Search Trees and Applications to Prim and Dijkstra",
+    "year": 2019,
+    "venue": "LIPIcs (Schloss Dagstuhl)",
+    "authors": [
+     "Lammich, Peter",
+     "Nipkow, Tobias"
+    ],
+    "doi": "10.4230/lipics.itp.2019.23",
+    "openalex_id": "W2979271225",
+    "doi_verification": {
+     "crossref": "FAILED: DOI not found on Crossref (registered with DataCite)",
+     "datacite_check": "title and year match on DataCite",
+     "title": "Proof Pearl: Purely Functional, Simple and Efficient Priority Search Trees and Applications to Prim and Dijkstra",
+     "year": 2019
+    },
+    "evidence_basis": "DataCite record (not on Crossref).",
+    "what_it_does": "Per its title, purely functional priority search trees with applications to Prim and Dijkstra (a proof pearl).",
+    "where_it_stops": "Static Dijkstra.",
+    "closeness": "close (verified Dijkstra)"
+   },
+   {
+    "title": "Scalable context-dependent analysis of emergency egress models",
+    "year": 2012,
+    "venue": "Formal Aspects of Computing",
+    "authors": [
+     "Mieke Massink",
+     "Diego Latella",
+     "Andrea Bracciali",
+     "Michael D. Harrison",
+     "Jane Elizabeth Hillston"
+    ],
+    "doi": "10.1007/s00165-011-0188-1",
+    "openalex_id": "W2045518213",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Scalable context-dependent analysis of emergency egress models",
+     "year": 2012,
+     "container": "Formal Aspects of Computing",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2011."
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Per its title and venue (Formal Aspects of Computing), formal analysis of emergency egress models; the same searches returned related 2010 titles on process-algebraic fluid-flow models of egress.",
+    "where_it_stops": "Formal analysis of egress models, not a proof assistant applied to egress algorithms or fire correlations (from title and venue only).",
+    "closeness": "close (formal methods applied to egress)"
+   },
+   {
+    "title": "The Wireless Fire Alarm System: Ensuring Conformance to Industrial Standards through Formal Verification",
+    "year": 2014,
+    "venue": "Lecture Notes in Computer Science",
+    "authors": [
+     "Sergio Feo-Arenis",
+     "Bernd Westphal",
+     "Daniel Dietsch",
+     "Marco Mũniz",
+     "Ahmad Siyar Andisha"
+    ],
+    "doi": "10.1007/978-3-319-06410-9_44",
+    "openalex_id": "W22784387",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "The Wireless Fire Alarm System: Ensuring Conformance to Industrial Standards through Formal Verification",
+     "year": 2014,
+     "container": "Lecture Notes in Computer Science",
+     "type": "book-chapter"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Per its title, formal verification of a wireless fire alarm system for conformance to industrial standards.",
+    "where_it_stops": "Alarm protocol, not fire physics or egress.",
+    "closeness": "context"
+   },
+   {
+    "title": "Formal Verification of a Topological Spatial Relations Model for Geographic Information Systems in Coq",
+    "year": 2023,
+    "venue": "Mathematics",
+    "authors": [
+     "Sheng Yan",
+     "Wensheng Yu"
+    ],
+    "doi": "10.3390/math11051079",
+    "openalex_id": "W4321497549",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Formal Verification of a Topological Spatial Relations Model for Geographic Information Systems in Coq",
+     "year": 2023,
+     "container": "Mathematics",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Formal verification of a topological spatial relations model for GIS in Coq.",
+    "where_it_stops": "Spatial relations, not building egress.",
+    "closeness": "context (proof assistant in geo-spatial modelling)"
+   },
+   {
+    "title": "Relational parametricity and units of measure",
+    "year": 1997,
+    "venue": "Proceedings of the 24th ACM SIGPLAN-SIGACT symposium on Principles of programming languages - POPL '97",
+    "authors": [
+     "Andrew John Kennedy"
+    ],
+    "doi": "10.1145/263699.263761",
+    "openalex_id": "W2131867629",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Relational parametricity and units of measure",
+     "year": 1997,
+     "container": "Proceedings of the 24th ACM SIGPLAN-SIGACT symposium on Principles of programming languages - POPL '97",
+     "type": "proceedings-article"
+    },
+    "evidence_basis": "Already verified in fire-egress-methods.bib.",
+    "what_it_does": "Units of measure in type systems.",
+    "where_it_stops": "Programming languages.",
+    "closeness": "background"
+   }
+  ],
+  "C6": [
+   {
+    "title": "Theta*: Any-Angle Path Planning on Grids",
+    "year": 2010,
+    "venue": "Journal of Artificial Intelligence Research",
+    "authors": [
+     "K. Daniel",
+     "A. Nash",
+     "S. Koenig",
+     "A. Felner"
+    ],
+    "doi": "10.1613/jair.2994",
+    "openalex_id": "W1935926926",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Theta*: Any-Angle Path Planning on Grids",
+     "year": 2010,
+     "container": "Journal of Artificial Intelligence Research",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Theta*: any-angle path planning on grids (Basic and Angle-Propagation Theta*).",
+    "where_it_stops": "No clearance; Basic Theta* not guaranteed shortest.",
+    "closeness": "closest (any-angle)"
+   },
+   {
+    "title": "Optimal any-angle path planning in static and dynamic environments",
+    "year": 2026,
+    "venue": "Artificial Intelligence",
+    "authors": [
+     "Yiyuan Zou",
+     "Clark Borst"
+    ],
+    "doi": "10.1016/j.artint.2026.104642",
+    "openalex_id": "W7167063149",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Optimal any-angle path planning in static and dynamic environments",
+     "year": 2026,
+     "container": "Artificial Intelligence",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Optimal any-angle path planning on grids in static and dynamic environments.",
+    "where_it_stops": "No wall clearance or buildings.",
+    "closeness": "close"
+   },
+   {
+    "title": "The Medial Axis of a Multi-Layered Environment and Its Application as a Navigation Mesh",
+    "year": 2018,
+    "venue": "ACM Transactions on Spatial Algorithms and Systems",
+    "authors": [
+     "Wouter van Toll",
+     "Atlas F. Cook",
+     "Marc J. van Kreveld",
+     "Roland Gerærts"
+    ],
+    "doi": "10.1145/3204456",
+    "openalex_id": "W2740800637",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "The Medial Axis of a Multi-Layered Environment and Its Application as a Navigation Mesh",
+     "year": 2018,
+     "container": "ACM Transactions on Spatial Algorithms and Systems",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Extends the medial axis to multi-layered walkable environments; annotated with nearest-obstacle information it gives the Explicit Corridor Map, which supports path planning for disk-shaped characters of any radius; O(n log n log k) construction.",
+    "where_it_stops": "Clearance is exact by construction; not an IFC lattice; no proof assistant.",
+    "closeness": "closest (clearance in multi-layered buildings)"
+   },
+   {
+    "title": "A Generalized Exact Arbitrary Clearance Technique for Navigation Meshes",
+    "year": 2013,
+    "venue": "Proceedings of Motion on Games",
+    "authors": [
+     "Ramon Oliva",
+     "Nuria Pelechano"
+    ],
+    "doi": "10.1145/2522628.2522900",
+    "openalex_id": "W2010038463",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "A Generalized Exact Arbitrary Clearance Technique for Navigation Meshes",
+     "year": 2013,
+     "container": "Proceedings of Motion on Games",
+     "type": "proceedings-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Exact arbitrary clearance for navigation meshes, guaranteeing collision-free paths for agents of a given radius.",
+    "where_it_stops": "Navigation meshes, not IFC graphs.",
+    "closeness": "closest (certified clearance)"
+   },
+   {
+    "title": "Clearance for diversity of agents' sizes in navigation meshes",
+    "year": 2015,
+    "venue": "Computers & Graphics",
+    "authors": [
+     "Ramon Oliva",
+     "Nuria Pelechano"
+    ],
+    "doi": "10.1016/j.cag.2014.11.004",
+    "openalex_id": "W2154691678",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Clearance for diversity of agents' sizes in navigation meshes",
+     "year": 2015,
+     "container": "Computers & Graphics",
+     "type": "journal-article",
+     "note": "Year shown is the Crossref issued year; OpenAlex lists 2014."
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Clearance for diversity of agent sizes in navigation meshes.",
+    "where_it_stops": "Same as above.",
+    "closeness": "close"
+   },
+   {
+    "title": "Multi-Level Indoor Path Planning and Clearance-Based Path Optimization for Search and Rescue Operations",
+    "year": 2023,
+    "venue": "IEEE Access",
+    "authors": [
+     "Jihoon Lee",
+     "Heein Park",
+     "Youdan Kim",
+     "Chan Gook Park",
+     "Jae Hong Lee"
+    ],
+    "doi": "10.1109/access.2023.3269981",
+    "openalex_id": "W4366966656",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Multi-Level Indoor Path Planning and Clearance-Based Path Optimization for Search and Rescue Operations",
+     "year": 2023,
+     "container": "IEEE Access",
+     "type": "journal-article"
+    },
+    "evidence_basis": "OpenAlex abstract.",
+    "what_it_does": "Multi-level indoor path planning with clearance conditions for search and rescue in multi-storey buildings.",
+    "where_it_stops": "No certification or proof.",
+    "closeness": "close"
+   },
+   {
+    "title": "Any-Angle Path Planning",
+    "year": 2013,
+    "venue": "AI Magazine",
+    "authors": [
+     "Alex Nash",
+     "Sven Koenig"
+    ],
+    "doi": "10.1609/aimag.v34i4.2512",
+    "openalex_id": "W2152679156",
+    "doi_verification": {
+     "crossref": "verified",
+     "title": "Any-Angle Path Planning",
+     "year": 2013,
+     "container": "AI Magazine",
+     "type": "journal-article"
+    },
+    "evidence_basis": "Title and metadata.",
+    "what_it_does": "Survey of any-angle path planning.",
+    "where_it_stops": "Survey.",
+    "closeness": "context"
+   }
+  ]
+ },
+ "scoring_scale": {
+  "novelty": "5 = no precedent found for the core contribution; 1 = done before",
+  "feasibility": "5 = days to two weeks in Studio reusing existing components; 1 = months",
+  "research_value": "5 = clear contribution for a strong journal; 1 = engineering only",
+  "user_value": "5 = changes decisions of designers and fire engineers directly; 1 = cosmetic"
+ },
+ "scores": [
+  {
+   "candidate": "C1",
+   "novelty": 4,
+   "feasibility": 4,
+   "research_value": 4,
+   "user_value": 5,
+   "rationale": {
+    "novelty": "Every ingredient has a precedent (spatial ASET maps, reverse trigger computations, node safety under deterministic hazard, latest-departure routing, exposure-constrained labels), but no record found combines an all-nodes latest-departure field with a cumulative FED constraint, an exactness argument and a machine-checked proof. Two papers could not be read in full (Chen et al. 2023; Tabirca et al. 2015) and may narrow it further.",
+    "feasibility": "One backward induction on the time-expanded graph, about 4.6e7 relaxations at Studio sizes (estimate from section 4.3 of the methods study, not measured). Reuses the IFC lattice, the FED equations, the time-expanded DP and the FIFO lemmas L10a, L10b, L11; new Lean work is a monotonicity lemma and DP correctness on a DAG, days to two weeks. Depends on the metric clock and FED heat model (steps 3 and 4 of section 10).",
+    "research_value": "A route-aware, dose-based ASET map with a stated guarantee answers the open issue raised by map-based ASET/RSET work and the ASET/RSET critique; fits Fire Safety Journal, Fire Technology or Automation in Construction.",
+    "user_value": "A time-left-to-leave field is directly readable by designers and fire engineers, compares with RSET at every location, and shows where a layout change buys time."
+   },
+   "total_of_20": 17
+  },
+  {
+   "candidate": "C2",
+   "novelty": 2,
+   "feasibility": 3,
+   "research_value": 2,
+   "user_value": 2,
+   "rationale": {
+    "novelty": "Bi-attribute time-varying fire egress DP (1991), exact Pareto labels with an exposure constraint (2024), time-and-dose bi-objective fire routing (2025) and generic time-dependent bicriteria algorithms (2005, 2006, 2026) exist. Only the FED criterion on an IFC lattice remains.",
+    "feasibility": "Pareto label sets on a 38,000-edge lattice over 600 layers can grow large; the time-expanded form keeps it tractable but needs care.",
+    "research_value": "Incremental over the precedents.",
+    "user_value": "Designers rarely act on a Pareto set; one deadline or one route is easier to use."
+   },
+   "total_of_20": 9
+  },
+  {
+   "candidate": "C3",
+   "novelty": 1,
+   "feasibility": 2,
+   "research_value": 2,
+   "user_value": 4,
+   "rationale": {
+    "novelty": "Zone model plus egress plus tenability coupling dates to HAZARD I (1989) and CRISP (1994); IFC-to-fire-and-evacuation and browser fire-evacuation twins exist. Novelty is in packaging only.",
+    "feasibility": "Six to twelve weeks with a CFAST comparison (section 9 of the methods study).",
+    "research_value": "Publishable only with validation against CFAST or experiments.",
+    "user_value": "High: physical fire behaviour per room is what fire engineers expect."
+   },
+   "total_of_20": 9
+  },
+  {
+   "candidate": "C4",
+   "novelty": 1,
+   "feasibility": 3,
+   "research_value": 2,
+   "user_value": 3,
+   "rationale": {
+    "novelty": "IndoorGML hierarchy, IFC room-door graphs and abstraction heuristics for exact A* (Holte et al. 1996) are established; the TopologicPy source of the room graph is the only new element.",
+    "feasibility": "Needs the room graph (planned) and a lower-bound proof linking room and lattice distances.",
+    "research_value": "Engineering contribution.",
+    "user_value": "Speed and a readable room-level route; useful but not decisive."
+   },
+   "total_of_20": 9
+  },
+  {
+   "candidate": "C5",
+   "novelty": 3,
+   "feasibility": 4,
+   "research_value": 3,
+   "user_value": 2,
+   "rationale": {
+    "novelty": "No record found of a proof assistant applied to fire-engineering correlations, tenability or egress algorithms; neighbouring work exists for units (Isabelle/HOL), chemical physics and high-energy physics (Lean), a numerical wave-equation program (mechanised proof), reliability analysis and heat conduction (HOL) and static Dijkstra implementations. It is a transfer of method into a new domain.",
+    "feasibility": "Already under way (eleven theorems proved; core set planned).",
+    "research_value": "Moderate alone; stronger as the verification layer of a method paper.",
+    "user_value": "Indirect: confidence for reviewers and regulators rather than a design output."
+   },
+   "total_of_20": 12
+  },
+  {
+   "candidate": "C6",
+   "novelty": 1,
+   "feasibility": 3,
+   "research_value": 1,
+   "user_value": 2,
+   "rationale": {
+    "novelty": "Theta*, optimal any-angle planning, the Explicit Corridor Map and exact-clearance navigation meshes cover it.",
+    "feasibility": "Straightforward on the lattice.",
+    "research_value": "Low.",
+    "user_value": "Smoother lines on screen; little effect on egress decisions."
+   },
+   "total_of_20": 7
+  }
+ ],
+ "recommendation": {
+  "candidate": "C1",
+  "combine_with": "C5, as the verification layer of C1 rather than a separate paper.",
+  "method": "Escape-deadline field T*(v) on the IFC lattice: backward induction on the time-expanded graph gives D(v,k), the least FED to an exit when leaving v at layer k, for all nodes and layers; T*(v) = max{k : D(v,k) <= X_crit}. Report T*(v), the margin T*(v) - RSET(v) with pre-movement as a distribution, and the route that attains it.",
+  "theorems_to_prove": [
+   "Monotone hazard and non-decreasing traversal times imply that D(v,k) is non-decreasing in k, so the feasible departure times from v form a down-set and T*(v) is well defined.",
+   "Backward induction on the layered DAG equals the minimum dose over all walks with waiting (DP correctness).",
+   "Deadline extraction is correct: T*(v) is feasible and every later layer is infeasible.",
+   "Hard-window special case: T*(v) equals the latest departure of the FIFO network (links to L10a, L10b, L11).",
+   "Dimensional homogeneity of the FED increments used (L16)."
+  ],
+  "narrowed_novelty_claim": "Searches of OpenAlex and Crossref (Semantic Scholar was rate-limited for most queries) on 2026-10-27 found no work that computes, for every location of a building navigation graph, the latest time an occupant can still leave and reach an exit with accumulated FED below a criterion under a time-varying fire, with an exactness guarantee and a machine-checked proof. Others stopped short of this: map-based ASET/RSET evaluates tenability quantities spatially from simulation output (Schroeder et al. 2020); trigger buffers and beat-the-wave maps compute a latest time to leave at community scale against a fire or wave arrival, without dose (Cova et al. 2005; Li et al. 2018; Mitchell et al. 2023; Priest et al. 2015); node safety under deterministic hazard spread was computed for sensor-network guidance without dose or proof (Barnes et al. 2007; Tabirca et al. 2009, 2015); latest-departure routing in a time-varying evacuation network exists for mine flooding without dose (Du et al. 2020); exposure- or temperature-constrained routes exist for single origins (Yen et al. 2020; Bi et al. 2024). The claim is the combination, not any single ingredient, and it is conditional on reading Chen et al. (2023) and Tabirca et al. (2015) in full.",
+  "must_position_against": [
+   {
+    "doi": "10.1016/j.firesaf.2020.103154",
+    "why": "Defines the map form of ASET/RSET that C1 makes route-aware and dose-based.",
+    "title": "A map representation of the ASET-RSET concept",
+    "year": 2020,
+    "venue": "Fire Safety Journal",
+    "doi_verification": "verified"
+   },
+   {
+    "doi": "10.1016/j.ress.2023.109571",
+    "why": "Combines ASET/RSET mapping with FED; full text must be read to confirm it does not compute a route-based deadline.",
+    "title": "Mapping the fire risk in buildings: A hybrid method of ASET-RSET concept and FED concept",
+    "year": 2023,
+    "venue": "Reliability Engineering & System Safety",
+    "doi_verification": "verified"
+   },
+   {
+    "doi": "10.1016/j.procs.2015.05.425",
+    "why": "Per-node dynamic safety under deterministic hazard spread on a building graph; the nearest algorithmic antecedent (read with Tabirca et al. 2009, 10.1109/ispdc.2009.33).",
+    "title": "Fire Hazard Safety Optimization",
+    "year": 2015,
+    "venue": "Procedia Computer Science",
+    "doi_verification": "verified"
+   },
+   {
+    "doi": "10.1111/j.1467-9671.2005.00237.x",
+    "why": "Origin of reverse, latest-time-to-leave computation against fire spread (trigger buffers); cite with Mitchell et al. 10.1016/j.ssci.2022.105914 for the coupled modern form.",
+    "title": "Setting Wildfire Evacuation Trigger Points Using Fire Spread Modeling and GIS",
+    "year": 2005,
+    "venue": "Transactions in GIS",
+    "doi_verification": "verified"
+   },
+   {
+    "doi": "10.1002/cpe.6125",
+    "why": "Latest-departure route algorithm in a time-varying evacuation network; shows latest departure alone is not new (cite with Bi et al. 10.3390/app14177521 for exposure-constrained labels).",
+    "title": "A cloud-based service for emergency evacuation of mine water inrush accidents",
+    "year": 2020,
+    "venue": "Concurrency and Computation: Practice and Experience",
+    "doi_verification": "verified"
+   }
+  ],
+  "risks_to_claim": [
+   "Chen et al. (2023) may already compute route-integrated FED maps; read before writing.",
+   "Tabirca et al. (2015) dynamic safety may equal the hard-window deadline; then the novelty rests on the dose constraint, the monotonicity theorem and the proof.",
+   "Semantic Scholar returned HTTP 429 for most queries; rerun the key queries with an API key before submission.",
+   "Validity of a deterministic deadline is subject to the ASET/RSET critique (Babrauskas et al. 2010); report deadlines over fire scenarios and pre-movement distributions."
+  ],
+  "next_checks": [
+   "Obtain full texts of Chen et al. 2023 (RESS), Tabirca et al. 2015 (Procedia CS, open access diamond), Barnes et al. 2007 (LCN), Golshani and Fang 2025 (RESS, 10.1016/j.ress.2025.110914) and Fang et al. 2026 (JOBE, 10.1016/j.jobe.2025.115132).",
+   "Rerun Semantic Scholar queries listed under 'queries' with source s2 and status 429.",
+   "Search Google Scholar manually for 'latest departure' AND 'fractional effective dose', and for 'escape deadline' building fire."
+  ]
+ },
+ "doi_verification_summary": {
+  "dois_cited": 67,
+  "verified_on_crossref": 65,
+  "failed_on_crossref": [
+   {
+    "doi": "10.4230/lipics.itp.2019.23",
+    "reason": "FAILED: DOI not found on Crossref (registered with DataCite)",
+    "datacite": "title and year match on DataCite"
+   },
+   {
+    "doi": "10.4230/lipics.sand.2026.17",
+    "reason": "FAILED: DOI not found on Crossref (registered with DataCite)",
+    "datacite": "title and year match on DataCite"
+   }
+  ],
+  "issued_year_differs_from_openalex": [
+   {
+    "doi": "10.1007/s00165-011-0188-1",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2011."
+   },
+   {
+    "doi": "10.1016/j.cag.2014.11.004",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2014."
+   },
+   {
+    "doi": "10.1016/j.ejor.2004.12.003",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2005."
+   },
+   {
+    "doi": "10.1016/j.ssci.2022.105914",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2022."
+   },
+   {
+    "doi": "10.1039/d3dd00077j",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2023."
+   },
+   {
+    "doi": "10.1057/jors.2008.122",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2008."
+   },
+   {
+    "doi": "10.1061/jccee5.cpeng-6783",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2025."
+   },
+   {
+    "doi": "10.1109/jsyst.2021.3077558",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2021."
+   },
+   {
+    "doi": "10.1109/tc.2009.165",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2009."
+   },
+   {
+    "doi": "10.1504/ijstl.2022.10041162",
+    "note": "Year shown is the Crossref issued year; OpenAlex lists 2021."
+   }
+  ],
+  "no_doi": [
+   "Holte, Perez, Zimmer and MacDonald (1996), Hierarchical A*: searching abstraction hierarchies efficiently (OpenAlex W128952136; venue not given in OpenAlex)",
+   "Botea, Mueller and Schaeffer (2004), Near optimal hierarchical path-finding (OpenAlex W3022683862; venue not given in OpenAlex)"
+  ]
+ }
+}

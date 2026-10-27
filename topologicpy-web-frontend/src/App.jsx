@@ -18,9 +18,9 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 
 import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
-import { NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
+import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats } from "./core/graph.js";
-import { findRoute } from "./core/route.js";
+import { findRoute, snap } from "./core/route.js";
 import { floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
@@ -80,6 +80,7 @@ export default function App() {
   const studio = useStudio();
   const viewerRef = useRef(null);
   const workerRef = useRef(null);
+  const forecastWorkerRef = useRef(null);
   const geometryRef = useRef(null);
   // Fire accumulators live in refs: they are written from SSE callbacks that
   // outlive any single render, and must not be re-created when the callback
@@ -121,6 +122,7 @@ export default function App() {
     alternatives,
     navCheck,
     rl,
+    forecastPlan,
     toast,
     reportError,
   } = studio;
@@ -138,6 +140,31 @@ export default function App() {
   }, []);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
+  useEffect(() => () => forecastWorkerRef.current?.terminate(), []);
+
+  // Planning with the forecast has its own worker: its deadline map takes a
+  // few seconds on a large graph and must not hold up a graph rebuild.
+  const forecastJob = useCallback(
+    (payload) =>
+      new Promise((resolve, reject) => {
+        if (!forecastWorkerRef.current) {
+          forecastWorkerRef.current = new Worker(new URL("./workers/forecast.worker.js", import.meta.url), {
+            type: "module",
+          });
+        }
+        const worker = forecastWorkerRef.current;
+        const id = Math.random().toString(36).slice(2);
+        const onMessage = (event) => {
+          if (event.data?.id !== id) return;
+          worker.removeEventListener("message", onMessage);
+          if (event.data.ok) resolve(event.data.result);
+          else reject(new Error(event.data.error || "Planning with the forecast failed."));
+        };
+        worker.addEventListener("message", onMessage);
+        worker.postMessage({ id, payload });
+      }),
+    [],
+  );
 
   const sample = useCallback(
     (payload, transfers) =>
@@ -787,6 +814,68 @@ export default function App() {
     }
   }, [graph, points, reportError, settings, studio, toast, straighten]);
 
+  // ------------------------------------------------- plan with the forecast
+
+  const pointsOf = useCallback(
+    (nodes) => (nodes || []).map((i) => [graph.nodes[i * 3], graph.nodes[i * 3 + 1], graph.nodes[i * 3 + 2]]),
+    [graph],
+  );
+
+  const planForecast = useCallback(async () => {
+    if (!graph || !points.start || !points.exit || !points.fire) return;
+    studio.setForecastPlan((current) => ({ ...current, busy: true }));
+    try {
+      const result = await forecastJob({
+        graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
+        start: snap(graph, points.start),
+        exits: [snap(graph, points.exit)],
+        seed: snap(graph, points.fire),
+        model: settings.fireModel,
+        steps: settings.fireMaxSteps,
+        secondsPerStep: settings.forecastSecondsPerStep,
+        threshold: settings.untenableAbove,
+        speed: settings.walkSpeed,
+        depart: settings.departAfter,
+        limit: settings.doseLimit,
+        useWalls: settings.useWalls,
+        withMap: true,
+      });
+      studio.setForecastPlan({ busy: false, result });
+      const viewer = viewerRef.current;
+      viewer?.setPath(null);
+      viewer?.setPath(null, { dynamic: true });
+      const routes = [];
+      if (result.earliest) routes.push({ points: pointsOf(result.earliest.nodes), color: hexToInt(FORECAST_COLORS.earliest) });
+      if (result.leastDose && result.front.length > 1) {
+        routes.push({ points: pointsOf(result.leastDose.nodes), color: hexToInt(FORECAST_COLORS.leastDose) });
+      }
+      if (result.snapshot && !result.snapshot.safe && !result.snapshot.beyondForecast) {
+        routes.push({ points: pointsOf(result.snapshot.nodes), color: hexToInt(FORECAST_COLORS.snapshot) });
+      }
+      viewer?.setRoutes(routes);
+      if (!result.earliest) {
+        toast("No route reaches the exit before the fire closes it, within the forecast.", {
+          title: "No safe route",
+          variant: "warning",
+        });
+      }
+    } catch (error) {
+      studio.setForecastPlan({ busy: false, result: null });
+      reportError(error, "Planning with the forecast failed");
+    }
+  }, [graph, points, settings, studio, forecastJob, pointsOf, toast, reportError]);
+
+  // The deadline map is drawn on the graph while it is wanted and no fire is
+  // colouring the graph.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || fire.running) return;
+    const result = forecastPlan.result;
+    viewer.setDeadlines(settings.showDeadlineMap && result?.deadlines ? result.deadlines : null, {
+      max: result?.horizon ?? 300,
+    });
+  }, [forecastPlan.result, settings.showDeadlineMap, fire.running, graph]);
+
   // --------------------------------------------------------- reactive push
 
   useEffect(() => {
@@ -1034,8 +1123,14 @@ export default function App() {
     if (navCheck && settings.showNavGraph) {
       items.push({ label: "TopologicPy Navigation", color: NAV_COLOR });
     }
+    const plan = forecastPlan.result;
+    if (plan?.earliest) items.push({ label: "Earliest safe route (forecast)", color: FORECAST_COLORS.earliest });
+    if (plan?.leastDose && plan.front.length > 1) items.push({ label: "Least-dose route", color: FORECAST_COLORS.leastDose });
+    if (plan?.snapshot && !plan.snapshot.safe && !plan.snapshot.beyondForecast) {
+      items.push({ label: "Planned on the fire now: unsafe", color: FORECAST_COLORS.snapshot });
+    }
     return items;
-  }, [graph, points, path, dynamicPath, alternatives, navCheck, settings.showNavGraph]);
+  }, [graph, points, path, dynamicPath, alternatives, navCheck, settings.showNavGraph, forecastPlan.result]);
 
   // ------------------------------------------------------------------ render
 
@@ -1166,6 +1261,11 @@ export default function App() {
             }}
             fireSteps={settings.fireMaxSteps}
             heatLegend={fire.running && settings.fireModel === "temperature"}
+            deadlineLegend={
+              !fire.running && settings.showDeadlineMap && forecastPlan.result?.deadlines
+                ? { max: forecastPlan.result.horizon }
+                : null
+            }
             onStopFire={stopFire}
             legend={legend}
             examples={examples}
@@ -1297,6 +1397,7 @@ export default function App() {
                   onStartFire={startFire}
                   onStopFire={stopFire}
                   onTrainRl={trainRl}
+                  onPlanForecast={planForecast}
                   onGoTo={setTab}
                 />
               )}

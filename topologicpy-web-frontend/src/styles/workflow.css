@@ -485,6 +485,11 @@
   background: linear-gradient(90deg, #facc15, #f97316, #dc2626, #7f1d1d);
 }
 
+/* The deadline map: little time left reads as hot. */
+.legend__ramp--reverse {
+  background: linear-gradient(90deg, #7f1d1d, #dc2626, #f97316, #facc15);
+}
+
 .legend__scale {
   display: flex;
   justify-content: space-between;
@@ -1001,3 +1006,16 @@ details.legend[open] > .legend__summary {
   }
 }
 
+/* --------------------------------------------------------------- forecast */
+
+.forecast__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend__swatch--inline {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}

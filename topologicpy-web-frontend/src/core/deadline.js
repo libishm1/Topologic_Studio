@@ -19,8 +19,26 @@
  * `departureSafe` is an independent forward check (earliest-arrival search
  * from one node at one departure time), used to verify the labels: leaving
  * just before L(v) must reach an exit, leaving at or after it must not.
+ *
+ * With a dose limit (the method the scoop check recommends, C1:
+ * wiki/research/gap-analysis-2026-10-27/scoop-check.json) a departure is good
+ * if some safe route reaches an exit with a fractional effective dose at or
+ * below the limit. Under a forecast whose heat never falls, leaving earlier is
+ * never worse (the same route, walked earlier, arrives earlier everywhere and
+ * accrues no more dose), so the good departures form an interval from 0.
+ *   doseDeadline     the start's deadline, bracketed by bisection with the
+ *                    exact least-dose search (forecast.doseFront) as the test.
+ *   doseDeadlineMap  every node's deadline from one backward pass over the
+ *                    time-expanded graph (MinDose's recursion without waiting):
+ *                    V_j(v) = min over links of d_e(j) + V_{j + tau_e}(w), and
+ *                    the deadline is the last grid time j with V_j(v) <= limit.
+ *                    Link times are rounded up to the grid, so it is never
+ *                    later than the exact deadline: a walker who arrives early
+ *                    can wait for the grid, accruing no more than the model
+ *                    charged for the rounded-up link.
  */
 import { Heap, csr, distancesFrom, edgeLengths } from "./route.js";
+import { doseFront, linkDose } from "./forecast.js";
 
 /** Untenability times from a fire front spreading along the graph at `speed` m/s. */
 export function frontArrival(graph, origin, { speed = 0.1, blocked = null } = {}) {
@@ -69,6 +87,117 @@ export function escapeDeadlines(graph, { exits, untenable = null, speed = 1.2, b
     }
   }
   return L;
+}
+
+/**
+ * The latest departure from `start` with a safe route to an exit whose dose is
+ * at most `limit`, bracketed to within `tolerance` seconds.
+ *
+ * @returns {{good: number, bad: number, searches: number} | null}  leaving at
+ *          `good` works and at `bad` does not; null when even leaving at once
+ *          does not.
+ */
+export function doseDeadline(graph, start, { exits, forecast, limit = 1, speed = 1.2, blocked = null, tolerance = 0.05 }) {
+  let searches = 0;
+  const works = (t) => {
+    searches += 1;
+    const { front } = doseFront(graph, start, { exits, forecast, depart: t, speed, blocked });
+    return front.length > 0 && front[front.length - 1].dose <= limit;
+  };
+  if (!works(0)) return null;
+  // Leaving at or after the deadline without a dose limit is never safe.
+  let good = 0;
+  let bad = escapeDeadlines(graph, { exits, untenable: forecast.closes, speed, blocked })[start];
+  while (bad - good > tolerance) {
+    const mid = (good + bad) / 2;
+    if (works(mid)) good = mid;
+    else bad = mid;
+  }
+  return { good, bad, searches };
+}
+
+/**
+ * Every node's dose-limited deadline on a time grid (conservative; see the
+ * header). The grid step defaults to a quarter of the shortest link time and
+ * is widened, if needed, to keep the work under `maxWork` link updates.
+ *
+ * @returns {{deadline: Float64Array, step: number, layers: number}}  deadline
+ *          per node in seconds; -Infinity when no grid departure works.
+ */
+export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2, blocked = null, step = null, maxWork = 1.5e8 }) {
+  const { indptr, neighbours, edgeIds, n, m } = csr(graph);
+  const len = edgeLengths(graph);
+  const closes = forecast.closes;
+  const times = [];
+  let slots = 0;
+  for (let k = 0; k < neighbours.length; k += 1) {
+    if (blocked?.[edgeIds[k]]) continue;
+    slots += 1;
+    if (len[edgeIds[k]] > 0) times.push(len[edgeIds[k]] / speed);
+  }
+  times.sort((a, b) => a - b);
+  // A whole fraction of the typical (median) link time, so a typical (axis)
+  // link takes a whole number of steps. A quarter or a half: either rounds a
+  // diagonal (sqrt 2 times as long) up by 6%, where a whole link time would
+  // round it up by 41%. Shorter links (door bridges) take one step, which is
+  // still rounding up. A whole link time only on very large graphs.
+  const typical = times.length ? times[times.length >> 1] : forecast.horizon;
+  const work = (d) => (forecast.horizon / d) * (slots + n);
+  let delta = step;
+  if (!delta) {
+    const q = work(typical / 4) <= maxWork ? 4 : work(typical / 2) <= 8 * maxWork ? 2 : 1;
+    delta = typical / q;
+  }
+  const J = Math.floor(forecast.horizon / delta);
+  const tau = new Int32Array(m);
+  let longest = 1;
+  for (let e = 0; e < m; e += 1) {
+    // Up, never down; the epsilon keeps an exact multiple from gaining a step.
+    tau[e] = Math.max(1, Math.ceil(len[e] / speed / delta - 1e-9));
+    if (!blocked?.[e] && tau[e] > longest) longest = tau[e];
+  }
+  const isExit = new Uint8Array(n);
+  for (const x of exits) if (x >= 0 && x < n) isExit[x] = 1;
+  const R = longest + 1;
+  const ring = new Float64Array(R * n).fill(Infinity);
+  const deadline = new Float64Array(n).fill(-Infinity);
+  const { rate, frameSeconds, K } = forecast;
+  for (let j = J; j >= 0; j -= 1) {
+    const t = j * delta;
+    const row = (j % R) * n;
+    // Most links start and end inside one forecast frame: then the dose is
+    // the hotter end's rate times the time (linkDose's single-frame case).
+    const frame = Math.min(K - 1, Math.floor(t / frameSeconds));
+    const frameEnd = (frame + 1) * frameSeconds;
+    const base = frame * n;
+    for (let v = 0; v < n; v += 1) {
+      let value = Infinity;
+      if (t < closes[v]) {
+        if (isExit[v]) value = 0;
+        else {
+          for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
+            const e = edgeIds[k];
+            if (blocked?.[e]) continue;
+            const jj = j + tau[e];
+            if (jj > J) continue;
+            const w = neighbours[k];
+            const ahead = ring[(jj % R) * n + w];
+            if (ahead === Infinity) continue;
+            const t2 = jj * delta;
+            if (!(t2 < closes[w])) continue;
+            const dose =
+              t2 <= frameEnd ? (t2 - t) * Math.max(rate[base + v], rate[base + w]) : linkDose(forecast, v, w, t, t2);
+            const total = ahead + dose;
+            if (total < value) value = total;
+          }
+        }
+      }
+      ring[row + v] = value;
+      // Finite first: with no limit (Infinity), "no route" must not count as within it.
+      if (deadline[v] === -Infinity && value < Infinity && value <= limit) deadline[v] = t;
+    }
+  }
+  return { deadline, step: delta, layers: J + 1 };
 }
 
 /** Whether leaving `start` at `depart` reaches an exit safely (forward check). */

@@ -664,6 +664,46 @@ if (await trainBtn.isEnabled()) {
   record(false, "Train policy was enabled", "needs start and exit");
 }
 
+// ---- 5c. planning with the fire forecast -------------------------------------
+//
+// Added 2026-10-27: the forecast routers and the escape-deadline map
+// (src/core/forecast.js, src/core/deadline.js) run in their own worker.
+
+console.log("\n[5c] Plan with the forecast");
+const planBtn = page.getByRole("button", { name: /^Plan with the forecast$/ });
+if (await planBtn.isEnabled().catch(() => false)) {
+  const tPlan = Date.now();
+  await planBtn.click();
+  const planned = await page
+    .waitForFunction(
+      () => /safe route: out in|no safe route within the forecast/i.test(document.querySelector('[aria-label="Plan with the forecast"]')?.innerText || ""),
+      null,
+      { timeout: 120000 },
+    )
+    .then(() => true)
+    .catch(() => false);
+  record(planned, "planning with the forecast returned and rendered its result");
+  if (planned) {
+    timing("Plan with the forecast + deadline map (click to result)", Date.now() - tPlan);
+    const card = await page.evaluate(() => {
+      const el = document.querySelector('[aria-label="Plan with the forecast"]');
+      const out = { title: el?.querySelector(".result__title")?.textContent?.trim() };
+      el?.querySelectorAll(".result__item").forEach((item) => {
+        out[item.querySelector(".result__label")?.textContent?.trim()] = item.querySelector(".result__value")?.textContent?.trim();
+      });
+      return out;
+    });
+    console.log(`    forecast: ${JSON.stringify(card)}`);
+    record(Boolean(card["Leave within"]) && Boolean(card["Forecast"]), "the plan states how long one can wait and the forecast's length");
+    const legendShown = await page.getByText("Escape deadline", { exact: true }).isVisible().catch(() => false);
+    record(legendShown || MOBILE, "the escape-deadline map has a legend", MOBILE ? "legend folded on a phone" : undefined);
+    await page.locator('[aria-label="Plan with the forecast"]').scrollIntoViewIfNeeded().catch(() => {});
+    await shot(page, "forecast-plan");
+  }
+} else {
+  record(false, "Plan with the forecast was enabled", "needs start, exit and fire origin");
+}
+
 // ---- 6. theme, panels, topology mode ----------------------------------------
 
 console.log("\n[6] UI surfaces");

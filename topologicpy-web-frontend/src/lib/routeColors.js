@@ -23,3 +23,7 @@ export const NAV_COLOR = "#84cc16";
 export const routeColor = (index) => ROUTE_COLORS[index % ROUTE_COLORS.length];
 
 export const hexToInt = (hex) => parseInt(hex.slice(1), 16);
+
+/** Planning with the fire forecast: the earliest safe route, the least-dose
+ *  route, and a route planned on the fire at departure that walks into it. */
+export const FORECAST_COLORS = { earliest: "#0891b2", leastDose: "#4f46e5", snapshot: "#db2777" };

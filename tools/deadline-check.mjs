@@ -20,6 +20,7 @@ import path from "node:path";
 import { buildLatticeGraph } from "../topologicpy-web-frontend/src/core/lattice.js";
 import { componentLabels } from "../topologicpy-web-frontend/src/core/route.js";
 import { departureSafe, escapeDeadlines, frontArrival } from "../topologicpy-web-frontend/src/core/deadline.js";
+import { findExits } from "./exits.mjs";
 import { extract } from "./ifc-extract.mjs";
 
 const args = process.argv.slice(2);
@@ -57,58 +58,10 @@ for (const file of files) {
     }
 
     // Exits.
-    const flagged = new Set();
-    let flagSource = null;
-    for (const [id, f] of geo.doorFlags || []) {
-      if (f.FireExit) {
-        flagged.add(id);
-        flagSource = "FireExit";
-      } else if (f.IsExternal) {
-        flagged.add(id);
-        flagSource = flagSource || "IsExternal";
-      }
-    }
-    row.doorsFlagged = flagged.size;
-    let exits = built.doorReport.filter((d) => d.node >= 0 && flagged.has(d.itemId)).map((d) => d.node);
-    row.exitSource = exits.length ? `Pset_DoorCommon.${flagSource}` : null;
-    if (!exits.length) {
-      exits = built.doorReport.filter((d) => d.node >= 0 && (d.sides[0] === 0 || d.sides[1] === 0)).map((d) => d.node);
-      if (exits.length) row.exitSource = "one-sided door (fallback)";
-    }
-    if (!exits.length && geo.spaces?.length) {
-      // Last resort: a door with a room (IfcSpace) on exactly one side. Weaker
-      // than the one-sided rule: in a block of flats it picks flat entrances
-      // that open onto an unroomed stair hall.
-      const tris = [];
-      for (const m of geo.spaces) {
-        const P = m.positions, I = m.indices;
-        for (let t = 0; t + 2 < I.length; t += 3) {
-          const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
-          tris.push([P[a], P[a + 2], P[b], P[b + 2], P[c], P[c + 2], Math.min(P[a + 1], P[b + 1], P[c + 1]), Math.max(P[a + 1], P[b + 1], P[c + 1])]);
-        }
-      }
-      const inside = (x, z, sill) =>
-        tris.some(([ax, az, bx, bz, cx, cz, lo, hi]) => {
-          if (sill < lo - 0.5 || sill > hi + 0.5) return false;
-          const d1 = (x - bx) * (az - bz) - (ax - bx) * (z - bz);
-          const d2 = (x - cx) * (bz - cz) - (bx - cx) * (z - cz);
-          const d3 = (x - ax) * (cz - az) - (cx - ax) * (z - az);
-          const neg = d1 < 0 || d2 < 0 || d3 < 0, pos = d1 > 0 || d2 > 0 || d3 > 0;
-          return !(neg && pos);
-        });
-      const doorAt = new Map(built.doorPoints.map((d) => [d[6], d]));
-      exits = built.doorReport
-        .filter((d) => {
-          const w = doorAt.get(d.itemId);
-          if (d.node < 0 || !w) return false;
-          const [dx, dz, sill, ux, uz] = w;
-          const nx = -uz, nz = ux;
-          return inside(dx + 0.6 * nx, dz + 0.6 * nz, sill) !== inside(dx - 0.6 * nx, dz - 0.6 * nz, sill);
-        })
-        .map((d) => d.node);
-      if (exits.length) row.exitSource = "room on one side (IfcSpace)";
-    }
-    if (!exits.length) row.exitSource = "none found";
+    const found = findExits(geo, built);
+    const exits = found.exits;
+    row.doorsFlagged = found.flagged;
+    row.exitSource = found.source ?? "none found";
     row.exits = new Set(exits).size;
     if (!exits.length) {
       row.status = "no exits";

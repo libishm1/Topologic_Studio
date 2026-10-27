@@ -11,7 +11,7 @@ import React, { useId, useState } from "react";
 
 import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
-import { routeColor } from "../lib/routeColors.js";
+import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import {
   Button,
   Choices,
@@ -711,7 +711,173 @@ function RerouteResult({ dynamicPath, step }) {
   );
 }
 
-export function SimulatePanel({ studio, onPick, onPlace, onStartFire, onStopFire, onTrainRl, onGoTo }) {
+/** Seconds, as "42.0 s" or "3 min 5 s". */
+function secs(s) {
+  if (s === null || s === undefined || Number.isNaN(s)) return "-";
+  if (s === Infinity) return "never";
+  if (s < 90) return `${s.toFixed(1)} s`;
+  return `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`;
+}
+
+/** A fractional effective dose: small ones in scientific notation. */
+function fed(d) {
+  if (d === null || d === undefined) return "-";
+  return d > 0 && d < 0.001 ? d.toExponential(1) : d.toFixed(3);
+}
+
+function Swatch({ color }) {
+  return <span className="legend__swatch legend__swatch--inline" style={{ background: color }} aria-hidden="true" />;
+}
+
+function ForecastResult({ result, settings }) {
+  const { earliest, leastDose, leaveBy, snapshot, front, truncated, coarsened, mapStep } = result;
+  const depart = settings.departAfter || 0;
+  const tradeoff = front.length > 1;
+  const unsafePlan = snapshot && !snapshot.safe && !snapshot.beyondForecast;
+  return (
+    <section className="result" aria-live="polite" aria-label="Plan with the forecast">
+      <h3 className="result__title" data-tone={earliest ? "ok" : "warn"}>
+        <Icon name={earliest ? "check" : "alert"} size={16} />
+        {earliest ? `Safe route: out in ${secs(earliest.arrival - depart)}` : "No safe route within the forecast"}
+      </h3>
+      <dl className="result__grid">
+        <div className="result__item">
+          <dt className="result__label">Leave within</dt>
+          <dd className="result__value result__value--lead">{leaveBy ? secs(leaveBy.good) : "too late"}</dd>
+        </div>
+        <div className="result__item">
+          <dt className="result__label">Closest call</dt>
+          <dd className="result__value">
+            {!earliest ? "-" : earliest.slack === Infinity ? "fire never near" : `${secs(earliest.slack)} ahead`}
+          </dd>
+        </div>
+        <div className="result__item">
+          <dt className="result__label">Least dose (FED)</dt>
+          <dd className="result__value">{fed(leastDose?.dose)}</dd>
+        </div>
+        <div className="result__item">
+          <dt className="result__label">Forecast</dt>
+          <dd className="result__value">{secs(result.horizon)}</dd>
+        </div>
+      </dl>
+      <div className="result__note forecast__notes">
+        {earliest && (
+          <span>
+            <Swatch color={FORECAST_COLORS.earliest} />
+            {earliest.slack === Infinity
+              ? "The earliest safe route never passes a point the fire reaches within the forecast."
+              : `The earliest safe route reaches every point before the fire makes it untenable; at its closest it is ${secs(earliest.slack)} ahead.`}
+          </span>
+        )}
+        {leaveBy && (
+          <span>
+            Leaving within {secs(leaveBy.good)} still gets out with a dose of at most {settings.doseLimit}; leaving at{" "}
+            {secs(leaveBy.bad)} does not.
+          </span>
+        )}
+        {earliest && !leaveBy && <span>A safe route exists, but every one accrues more than the dose limit.</span>}
+        {tradeoff && leastDose && earliest && (
+          <span>
+            <Swatch color={FORECAST_COLORS.leastDose} />
+            The least-dose route takes {secs(leastDose.arrival - earliest.arrival)} longer and accrues{" "}
+            {Math.round((1 - leastDose.dose / front[0].dose) * 100)}% less dose; {front.length} routes trade time against
+            dose.
+          </span>
+        )}
+        {unsafePlan && (
+          <span>
+            <Swatch color={FORECAST_COLORS.snapshot} />
+            A route planned on the fire as it is at departure reaches a point {secs(snapshot.lateBy)} after it becomes
+            untenable. The forecast route avoids it.
+          </span>
+        )}
+        {mapStep && settings.showDeadlineMap && (
+          <span>
+            The graph is coloured by escape deadline: the latest time each point can leave and still get out within the
+            dose limit, to the nearest {mapStep.toFixed(2)} s and never later than the exact time.
+          </span>
+        )}
+        {truncated && <span>The dose search hit its label budget, so the least dose shown may not be the least.</span>}
+        {coarsened && (
+          <span>The forecast was stored every {secs(coarsened)} to fit in memory, which only makes it more cautious.</span>
+        )}
+        <span className="field__hint">
+          Times run on the clock you set ({settings.forecastSecondsPerStep} s per fire step). The heat is the model&apos;s
+          index, so the dose ranks routes under the model; it is not a measured dose.
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function ForecastSection({ studio, onPlan }) {
+  const { graph, points, settings, setSettings, forecastPlan, fire } = studio;
+  const ready = Boolean(graph && points.start && points.exit && points.fire);
+  return (
+    <Section title="Escape deadlines and forecast routes" badge={forecastPlan.result?.earliest ? "planned" : null}>
+      <p className="field__hint">
+        Runs the fire to its last step first, then routes with the state each point will be in when you would reach it,
+        and works out how long you can wait before leaving.
+      </p>
+      <Disclosure summary="Clock, speed and limits">
+        <div className="grid-2">
+          <NumberField
+            label="Seconds per fire step"
+            value={settings.forecastSecondsPerStep}
+            min={0.5}
+            max={60}
+            step={0.5}
+            onChange={(v) => setSettings({ forecastSecondsPerStep: v ?? 5 })}
+          />
+          <NumberField
+            label="Walking speed (m/s)"
+            value={settings.walkSpeed}
+            min={0.2}
+            max={3}
+            step={0.1}
+            onChange={(v) => setSettings({ walkSpeed: v ?? 1.2 })}
+          />
+          <NumberField
+            label="Untenable from (model °C)"
+            value={settings.untenableAbove}
+            min={25}
+            max={120}
+            step={5}
+            onChange={(v) => setSettings({ untenableAbove: v ?? 80 })}
+          />
+          <NumberField
+            label="Dose limit (FED)"
+            value={settings.doseLimit}
+            min={0.01}
+            max={1}
+            step={0.05}
+            onChange={(v) => setSettings({ doseLimit: v ?? 0.3 })}
+          />
+        </div>
+        <NumberField
+          label="Leave after (s)"
+          value={settings.departAfter}
+          min={0}
+          step={5}
+          onChange={(v) => setSettings({ departAfter: v ?? 0 })}
+          hint="ISO 13571 uses an FED of 0.3 to protect most occupants and 1 for the average adult. The fire models count steps, so the seconds per step set the clock."
+        />
+        <Toggle
+          label="Colour the graph by escape deadline"
+          checked={settings.showDeadlineMap}
+          onChange={(showDeadlineMap) => setSettings({ showDeadlineMap })}
+        />
+      </Disclosure>
+      <Button block busy={forecastPlan.busy} disabled={!ready || fire.running} onClick={onPlan}>
+        Plan with the forecast
+      </Button>
+      {!ready && graph && <p className="field__hint">Needs a start and an exit (Route step) and a fire origin.</p>}
+      {forecastPlan.result && <ForecastResult result={forecastPlan.result} settings={settings} />}
+    </Section>
+  );
+}
+
+export function SimulatePanel({ studio, onPick, onPlace, onStartFire, onStopFire, onTrainRl, onPlanForecast, onGoTo }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl } = studio;
   const ready = Boolean(graph);
 
@@ -824,6 +990,8 @@ export function SimulatePanel({ studio, onPick, onPlace, onStartFire, onStopFire
           </div>
         </Disclosure>
       </div>
+
+      <ForecastSection studio={studio} onPlan={onPlanForecast} />
 
       <Section title="Train an agent against this fire" defaultOpen={false}>
         <p className="field__hint">

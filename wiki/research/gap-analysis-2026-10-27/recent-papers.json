@@ -1,0 +1,1423 @@
+{
+  "title": "Recent papers (2021 to 2026) relevant to Topologic Studio",
+  "date": "2026-10-27",
+  "selection": "From 17 OpenAlex queries (see queries.json), 1278 unique works were pooled; candidates were pre-scored by keyword relevance to Studio's facets, 93 abstracts were read, and 32 papers were selected for relevance to an IFC-native, browser-based, time-dependent, tenability-aware and verified egress tool. Papers without an available abstract are included only where the title alone shows high relevance, and are marked unassessed.",
+  "verification": {
+    "method": "Each DOI was resolved at https://api.crossref.org/works/<doi> without any mailto or email parameter. Titles were compared after lower-casing and removing punctuation (similarity of at least 0.90 required); years were compared with Crossref's issued, print and online years. Where the OpenAlex year (online first) differed from Crossref's issued year, the Crossref year is listed and the difference noted.",
+    "dois_checked": 56,
+    "doi_resolution_failures": [],
+    "title_mismatches": [],
+    "year_differences_resolved_to_crossref": [
+      {
+        "doi": "10.1016/j.jobe.2022.105557",
+        "openalex_year": 2022,
+        "crossref_issued_year": 2023
+      },
+      {
+        "doi": "10.1016/j.jobe.2025.115132",
+        "openalex_year": 2025,
+        "crossref_issued_year": 2026
+      },
+      {
+        "doi": "10.1109/jiot.2021.3123189",
+        "openalex_year": 2021,
+        "crossref_issued_year": 2022
+      },
+      {
+        "doi": "10.1016/j.ress.2023.109917",
+        "openalex_year": 2023,
+        "crossref_issued_year": 2024
+      },
+      {
+        "doi": "10.1016/j.jnlssr.2022.09.006",
+        "openalex_year": 2022,
+        "crossref_issued_year": 2023
+      }
+    ],
+    "abstract_sources": "OpenAlex abstract_inverted_index; the Crossref abstract field (none of the missing ones had it); the Semantic Scholar Graph API for the ten missing (one recovered)."
+  },
+  "fields": {
+    "method": "What the paper does, paraphrased from its abstract.",
+    "data": "Data or cases used, from the abstract.",
+    "stated_limitations_future_work": "Limitations or future work stated in the abstract; otherwise it says that none is stated.",
+    "narrows_gaps": "Gap identifiers from gap-matrix.json that the paper narrows.",
+    "leaves_open": "What the paper leaves open relative to Studio's problem (analyst's reading).",
+    "analyst_note": "Observations that are the analyst's, not the paper's."
+  },
+  "papers": [
+    {
+      "id": "R01",
+      "title": "Semantics-based connectivity graph for indoor pathfinding powered by IFC-Graph",
+      "year": 2025,
+      "venue": "Automation in Construction",
+      "doi": "10.1016/j.autcon.2025.106019",
+      "first_author": "Junxiang Zhu",
+      "openalex_id": "https://openalex.org/W4407073707",
+      "found_by_queries": [
+        "Q02_indoor_navigation_graph_building_model"
+      ],
+      "themes": [
+        "T15"
+      ],
+      "method": "Builds a navigable indoor connectivity graph from IFC semantics (IFC-Graph, a graph form of IFC from a prior study) instead of geometry processing; supports space-to-space, space-to-exit and space-to-facility pathfinding; adds a custom entity, IfcRelConnectsSpace, for vertical connectivity.",
+      "data": "Real-world IFC building models.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T15-G3 (partly: IFC-native graph generation)"
+      ],
+      "leaves_open": [
+        "No metric walkable geometry or distance error; no hazard or time; no shared benchmark (LG5)."
+      ],
+      "analyst_note": "The need for a custom IFC entity for vertical links shows that standard IFC relationships were not sufficient for the authors' purpose.",
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2025,
+      "openalex_year": 2025,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R02",
+      "title": "Automatic Generation of 3D Indoor Navigation Networks from Building Information Modeling Data Using Image Thinning",
+      "year": 2023,
+      "venue": "ISPRS International Journal of Geo-Information",
+      "doi": "10.3390/ijgi12060231",
+      "first_author": "Weisong Zhang",
+      "openalex_id": "https://openalex.org/W4379519649",
+      "found_by_queries": [
+        "Q01_bim_ifc_evacuation_graph",
+        "Q02_indoor_navigation_graph_building_model",
+        "Q17_grid_voxel_navigation_from_bim_ifc"
+      ],
+      "themes": [
+        "T15"
+      ],
+      "method": "GINIT: extracts grid-based floor maps from BIM using only slabs and doors, projects cross-floor components to 2D images, applies image thinning, and restores 3D routes.",
+      "data": "Three real-world multi-floor buildings; eight types of cross-layer architectural component.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T15-G3 (partly: space-independent, grid-based generation, close to Studio's lattice)"
+      ],
+      "leaves_open": [
+        "Thinned skeleton rather than a dense walkable lattice; no distance-error metric; no hazard (LG5)."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2023,
+      "openalex_year": 2023,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R03",
+      "title": "IFC2INDOORGML: AN OPEN-SOURCE TOOL FOR GENERATING INDOORGML FROM IFC",
+      "year": 2022,
+      "venue": "The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences",
+      "doi": "10.5194/isprs-archives-xliii-b4-2022-295-2022",
+      "first_author": "A. A. Diakite",
+      "openalex_id": "https://openalex.org/W4281768287",
+      "found_by_queries": [
+        "Q02_indoor_navigation_graph_building_model",
+        "Q17_grid_voxel_navigation_from_bim_ifc"
+      ],
+      "themes": [
+        "T15"
+      ],
+      "method": "Open-source tool, ifc2indoorgml, that converts IFC to IndoorGML (geometric, topological and semantic indoor description).",
+      "data": "IFC models.",
+      "stated_limitations_future_work": "States that IndoorGML lacks practical tools and remains hard to produce; no limitation of the tool itself is stated.",
+      "narrows_gaps": [
+        "T15-G3 (partly: open tooling with a standard output)"
+      ],
+      "leaves_open": [
+        "Quality of the resulting navigation network is not evaluated in the abstract; no hazard or time."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2022,
+      "openalex_year": 2022,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R04",
+      "title": "Toward efficient and agent-scalable indoor pathfinding: intelligent navigation-ability-driven indoor map generation using building information model",
+      "year": 2025,
+      "venue": "Architectural Engineering and Design Management",
+      "doi": "10.1080/17452007.2025.2451817",
+      "first_author": "Tonghua Qi",
+      "openalex_id": "https://openalex.org/W4407227683",
+      "found_by_queries": [
+        "Q17_grid_voxel_navigation_from_bim_ifc"
+      ],
+      "themes": [
+        "T15",
+        "T19"
+      ],
+      "method": "Agent navigation-ability model; voxel-based passable areas and continuous span areas computed from BIM, simplified to polygon outlines and a triangular map; a pathfinding scheme on that map.",
+      "data": "Several BIM models and agent types; a one-floor shopping plaza of over 40,000 m2 (average shortest-path time 0.4 s).",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T15-G3 (partly: voxel-based passable space, the closest method found to Studio's lattice)"
+      ],
+      "leaves_open": [
+        "No hazard, time dependence or tenability; platform (desktop or browser) not stated; timing is the only reported metric (LG5)."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2025,
+      "openalex_year": 2025,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R05",
+      "title": "Building information modeling indoor path planning: A lightweight approach for complex BIM building",
+      "year": 2021,
+      "venue": "Computer Animation and Virtual Worlds",
+      "doi": "10.1002/cav.2014",
+      "first_author": "Xiaojun Liu",
+      "openalex_id": "https://openalex.org/W3166625864",
+      "found_by_queries": [
+        "Q17_grid_voxel_navigation_from_bim_ifc"
+      ],
+      "themes": [
+        "T15",
+        "T19"
+      ],
+      "method": "Lightweight web-based indoor path planning for complex BIM buildings: automatic partition into local interior spaces with local grid maps in a multilayered network; heuristics-optimised A* for local searches.",
+      "data": "Complex BIM buildings; average online computation about 2 s.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T19-G1 (partly: web-based BIM path planning)",
+        "T15-G3 (partly)"
+      ],
+      "leaves_open": [
+        "No hazard or time-dependent routing; whether IFC processing runs on the client is not stated (LG4)."
+      ],
+      "analyst_note": "The 2 s online figure is a useful comparison point for Studio's browser timings (T19-G2).",
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2021,
+      "openalex_year": 2021,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R06",
+      "title": "Digitalizing workplace safety regulations for rule-based validation of escape routes and movement areas in BIM",
+      "year": 2026,
+      "venue": "Automation in Construction",
+      "doi": "10.1016/j.autcon.2026.106883",
+      "first_author": "Daniel Napps",
+      "openalex_id": "https://openalex.org/W7139986316",
+      "found_by_queries": [
+        "Q01_bim_ifc_evacuation_graph",
+        "Q13_egress_code_compliance_checking"
+      ],
+      "themes": [
+        "T20",
+        "T15"
+      ],
+      "method": "Digitises workplace safety regulations into machine-readable rule sets and validates escape routes and movement areas in IFC models by deriving a navigable graph from spatial and door elements.",
+      "data": "Real-world as-designed BIM models.",
+      "stated_limitations_future_work": "States that the IFC schema does not explicitly define escape routes, so they must be derived algorithmically.",
+      "narrows_gaps": [
+        "T20-G1 (partly)",
+        "T15-G3 (partly)"
+      ],
+      "leaves_open": [
+        "No metric accuracy statement for derived routes; no hazard; rules are checked, not proved (LG3, LG5)."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R07",
+      "title": "BIM-Based Automated Means-of-Egress Compliance Checking Using IFC for Socially Sustainable and Resilient Buildings: A Saudi Arabian Case Study",
+      "year": 2026,
+      "venue": "Sustainability",
+      "doi": "10.3390/su18168023",
+      "first_author": "Bismillah Mohammadi",
+      "openalex_id": "https://openalex.org/W7201875975",
+      "found_by_queries": [
+        "Q01_bim_ifc_evacuation_graph",
+        "Q13_egress_code_compliance_checking"
+      ],
+      "themes": [
+        "T20"
+      ],
+      "method": "Feasibility study of IFC-based means-of-egress checking in Solibri against SBC 201-CR-2024: clauses decomposed into computable variables, model validated for semantic and topological readiness, checked with the SOL/179 Escape Route Analysis template.",
+      "data": "One Revit model of a three-storey hotel exported to IFC; nine rule instances in the final run.",
+      "stated_limitations_future_work": "Required route count, travel distance, route-origin and measurement logic, egress height, exit-passageway width and clear door width were only partially checkable; credible execution required consistent classifications, explicit exit designations, complete spatial relationships and continuous routes; applicability, sprinkler qualification, capacity, exceptions and route validity still required professional judgment; the workflow shows bounded feasibility, not validated detection performance or proof of compliance.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "T20-G1 and LG5: travel-distance measurement from IFC remains partial; LG3: no proof of compliance."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R08",
+      "title": "BIM and Computer Vision-Based Framework for Fire Emergency Evacuation Considering Local Safety Performance",
+      "year": 2021,
+      "venue": "Sensors",
+      "doi": "10.3390/s21113851",
+      "first_author": "Hui Deng",
+      "openalex_id": "https://openalex.org/W3166675766",
+      "found_by_queries": [
+        "Q01_bim_ifc_evacuation_graph",
+        "Q02_indoor_navigation_graph_building_model",
+        "Q03_dynamic_evacuation_routing_fire"
+      ],
+      "themes": [
+        "T15",
+        "T11",
+        "T07"
+      ],
+      "method": "Constructs a geometric network model automatically from IFC, uses computer vision for indoor positioning, and adjusts the rescue route with a back-propagation neural network according to the available local egress time (ALET).",
+      "data": "One campus building; real-time images.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "LG1 and LG2 (partly: local egress time enters routing on an IFC-derived network)"
+      ],
+      "leaves_open": [
+        "Hazard is not read at the evacuee's arrival time; no physical fire model or dose; no optimality statement."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2021,
+      "openalex_year": 2021,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R09",
+      "title": "Dynamic Evacuation Routing Using IoT Fire Sensors and Semantic BIM Graphs",
+      "year": 2026,
+      "venue": "International Journal of BIM and Engineering Science",
+      "doi": "10.54216/ijbes.120207",
+      "first_author": "Rajkumar Rajavel",
+      "openalex_id": "https://openalex.org/W7163353810",
+      "found_by_queries": [
+        "Q01_bim_ifc_evacuation_graph",
+        "Q03_dynamic_evacuation_routing_fire",
+        "Q08_sensor_digital_twin_guidance"
+      ],
+      "themes": [
+        "T18",
+        "T11"
+      ],
+      "method": "Semantic BIM graph of rooms, corridors, doors, stairs and exits; IoT fire-sensor readings turned into a time-dependent hazard index that changes edge costs; congestion-aware weights; dynamic shortest-path recalculation.",
+      "data": "A controlled simulation.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "LG1: recalculation on the current index, not a forecast at arrival time; LG2: index, not dose."
+      ],
+      "analyst_note": "Crossref lists no authors for this DOI; authors are taken from OpenAlex.",
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R10",
+      "title": "The integration of building information modelling and fire evacuation models",
+      "year": 2023,
+      "venue": "Journal of Building Engineering",
+      "doi": "10.1016/j.jobe.2022.105557",
+      "first_author": "Nazim Yakhou",
+      "openalex_id": "https://openalex.org/W4309569340",
+      "found_by_queries": [
+        "Q01_bim_ifc_evacuation_graph",
+        "Q03_dynamic_evacuation_routing_fire",
+        "Q13_egress_code_compliance_checking"
+      ],
+      "themes": [
+        "T09",
+        "T15"
+      ],
+      "method": "Framework and open-source prototype (Evac4BIM) for two-way data exchange between Revit and the Pathfinder evacuation simulator.",
+      "data": "Building design models; systematic tests of the prototype.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T09-G2 (partly: BIM-evacuation integration)"
+      ],
+      "leaves_open": [
+        "Revit-based, not IFC-native; desktop; no fire model coupling stated (LG4, LG8)."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2023,
+      "openalex_year": 2022,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised). OpenAlex gives 2022 (online first, matching the Crossref deposit date); Crossref issued and print year is 2023, which is the year listed here."
+    },
+    {
+      "id": "R11",
+      "title": "Algorithmic Evaluation of Fire Evacuation Efficiency Under Dynamic Crowd and Smoke Conditions",
+      "year": 2026,
+      "venue": "Fire",
+      "doi": "10.3390/fire9010032",
+      "first_author": "Hyunseok Kim",
+      "openalex_id": "https://openalex.org/W7119470212",
+      "found_by_queries": [
+        "Q03_dynamic_evacuation_routing_fire",
+        "Q06_ml_gnn_fire_smoke_surrogate",
+        "Q10_formal_verification_fire_building_codes",
+        "Q15_time_expanded_earliest_arrival_evacuation_hazard"
+      ],
+      "themes": [
+        "T11",
+        "T09"
+      ],
+      "method": "Fire evacuation simulation of a six-level underground station comparing Dijkstra and A* under static conditions and with real-time congestion and smoke-induced visibility reduction, across eight fire scenarios.",
+      "data": "Station model; eight fire scenarios.",
+      "stated_limitations_future_work": "Under dynamic conditions, maximum evacuation times varied irregularly between the algorithms, suggesting that guidance based only on current information rather than predictive modelling may be suboptimal; the authors call for a predictive system that forecasts fire and smoke propagation and for centralised control that distributes evacuees.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "LG1: identifies the need for forecast-based routing but does not provide it."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R12",
+      "title": "Optimal Emergency Evacuation Route Planning Model Based on Fire Prediction Data",
+      "year": 2022,
+      "venue": "Mathematics",
+      "doi": "10.3390/math10173146",
+      "first_author": "Kunxiang Deng",
+      "openalex_id": "https://openalex.org/W4294176884",
+      "found_by_queries": [
+        "Q03_dynamic_evacuation_routing_fire",
+        "Q04_fed_tenability_routing",
+        "Q05_fire_model_evacuation_coupling"
+      ],
+      "themes": [
+        "T11",
+        "T02"
+      ],
+      "method": "A priori evacuation network from A* paths between every node and the exits; at the incident, FDS simulates fire diffusion from preliminary information to estimate its effect on each node; improved A* with breadth-first search re-plans from the current node.",
+      "data": "Open-source cruise-ship structure; FDS.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "LG1 (partly: routing uses a fire prediction, not only the current state)"
+      ],
+      "leaves_open": [
+        "Arrival-time indexing, exactness and FDS run time against the decision time are not stated; ship, not building; no IFC."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2022,
+      "openalex_year": 2022,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R13",
+      "title": "Evacuation Route Determination in Indoor Architectural Environments Based on Dynamic Fire Risk Assessment",
+      "year": 2025,
+      "venue": "Buildings",
+      "doi": "10.3390/buildings15101715",
+      "first_author": "Jiaojiao Bai",
+      "openalex_id": "https://openalex.org/W4410503211",
+      "found_by_queries": [
+        "Q03_dynamic_evacuation_routing_fire",
+        "Q04_fed_tenability_routing"
+      ],
+      "themes": [
+        "T07",
+        "T11"
+      ],
+      "method": "Dynamic fire-risk model built from temperature, visibility and toxic-gas concentration with harm thresholds, quantified in discrete space; A* modified with risk values and an initial-direction constraint in its heuristic and update strategy.",
+      "data": "Subway station fire case; about 70 percent reduction in individual path risk reported.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "LG2 (partly: harm thresholds in the route cost)"
+      ],
+      "leaves_open": [
+        "LG1: paths updated as risk evolves, not read at arrival time; dose is not accumulated."
+      ],
+      "analyst_note": "The abstract does not discuss whether the risk-modified heuristic preserves A* optimality.",
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2025,
+      "openalex_year": 2025,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R14",
+      "title": "Dynamic Fire-Evacuation Route Optimization in Complex Buildings Using Safe-Corridor-Guided RA-SSA",
+      "year": 2026,
+      "venue": "Buildings",
+      "doi": "10.3390/buildings16193863",
+      "first_author": "Xin Wang",
+      "openalex_id": "https://openalex.org/W7214674085",
+      "found_by_queries": [
+        "Q04_fed_tenability_routing"
+      ],
+      "themes": [
+        "T11",
+        "T07",
+        "T12"
+      ],
+      "method": "Safe-corridor-guided, risk-aware sparrow search algorithm (a metaheuristic) on a time-varying evacuation network with building topology, vertical links, fire-risk variables, passage states and congestion; compared with GWO and DDPG; tested in an independent FDS 6.11.1 field.",
+      "data": "Ten paired planar trials, four multistorey tests and an FDS field; mean route time 54.0 s; algorithm P95 latency 142.8 ms.",
+      "stated_limitations_future_work": "The results support the method as a decision layer but do not constitute calibrated real-fire validation or prediction of actual occupant evacuation time.",
+      "narrows_gaps": [
+        "LG1 and LG2 (partly: time-varying network, cumulative risk, real-time latency)"
+      ],
+      "leaves_open": [
+        "No optimality guarantee (metaheuristic); IFC input not stated; risk index, not FED."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R15",
+      "title": "Mathematical Programming for Optimal Evacuation in Industrial Facilities",
+      "year": 2026,
+      "venue": "Mathematics",
+      "doi": "10.3390/math14040632",
+      "first_author": "Carmine Cerrone",
+      "openalex_id": "https://openalex.org/W7128718102",
+      "found_by_queries": [
+        "Q15_time_expanded_earliest_arrival_evacuation_hazard"
+      ],
+      "themes": [
+        "T10"
+      ],
+      "method": "Optimisation model of evacuation from industrial facilities as a timed flow network that captures layout and the temporal evolution of emergency conditions, with real-time updates and re-routing when areas or connections become inaccessible.",
+      "data": "Large-scale computational instances.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T10-G2 (partly: flows over time with arc closures)"
+      ],
+      "leaves_open": [
+        "No coupling to a fire forecast or dose; industrial facilities, not IFC buildings."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R16",
+      "title": "Real-Time Egress Model for Multiplex Buildings under Fire Based on Artificial Neural Network",
+      "year": 2021,
+      "venue": "Applied Sciences",
+      "doi": "10.3390/app11146337",
+      "first_author": "Khaliunaa Darkhanbat",
+      "openalex_id": "https://openalex.org/W3178043752",
+      "found_by_queries": [
+        "Q04_fed_tenability_routing",
+        "Q06_ml_gnn_fire_smoke_surrogate"
+      ],
+      "themes": [
+        "T07",
+        "T17"
+      ],
+      "method": "Fire simulation of a multiplex building relating temperature to visibility and toxic gas; an ANN trained on the resulting database predicts ASET; an egress model selects the route with the longest safety margin given ASET and movement time.",
+      "data": "FDS simulations of one multiplex building.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "LG2 (partly)",
+        "LG7 (partly: ANN surrogate for ASET)"
+      ],
+      "leaves_open": [
+        "Dose along the evacuee's time-indexed path is not accumulated; generalisation beyond the trained building is not stated."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2021,
+      "openalex_year": 2021,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R17",
+      "title": "One-Way Coupling of Fire and Egress Modeling for Realistic Evaluation of Evacuation Process",
+      "year": 2021,
+      "venue": "Transportation Research Record: Journal of the Transportation Research Board",
+      "doi": "10.1177/03611981211032636",
+      "first_author": "He-in Cheong",
+      "openalex_id": "https://openalex.org/W3206530932",
+      "found_by_queries": [
+        "Q04_fed_tenability_routing",
+        "Q05_fire_model_evacuation_coupling"
+      ],
+      "themes": [
+        "T02",
+        "T07",
+        "T09"
+      ],
+      "method": "One-way coupling of FDS and Oasys MassMotion through the MassMotion SDK, so that FED and smoke-reduced visibility affect each evacuee's movement.",
+      "data": "An open-plan room and a floor with six rooms and a corridor.",
+      "stated_limitations_future_work": "Motivation states that coupling ASET and RSET is computationally complex, multi-step and time-consuming, that results are limited to the modelled scenario, and that the procedure is not uniform across the industry; the coupling is one way.",
+      "narrows_gaps": [
+        "LG8 (partly: a simplified, modular coupling)",
+        "LG2 (partly: FED acts on agents)"
+      ],
+      "leaves_open": [
+        "No route optimisation on FED; not real time; no IFC."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2021,
+      "openalex_year": 2021,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R18",
+      "title": "A waypoint based approach to visibility in performance based fire safety design",
+      "year": 2024,
+      "venue": "Fire Safety Journal",
+      "doi": "10.1016/j.firesaf.2024.104269",
+      "first_author": "Kristian Börger",
+      "openalex_id": "https://openalex.org/W4403147923",
+      "found_by_queries": [
+        "Q05_fire_model_evacuation_coupling"
+      ],
+      "themes": [
+        "T07"
+      ],
+      "method": "Visibility maps from post-processed fire simulation data: available visibility is integrated from the extinction coefficient along the line of sight to the nearest exit sign (Jin's relation) and compared with the required visibility; view angle and obstructions are included.",
+      "data": "Fire simulation output (FDS-type).",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T07 (line-of-sight visibility as a tenability criterion)"
+      ],
+      "leaves_open": [
+        "Not used as a route cost; not real time."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2024,
+      "openalex_year": 2024,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R19",
+      "title": "Development of a tenability-based path planning model for building fire evacuations using reinforcement learning",
+      "year": 2026,
+      "venue": "Journal of Building Engineering",
+      "doi": "10.1016/j.jobe.2025.115132",
+      "first_author": "Hongqiang Fang",
+      "openalex_id": "https://openalex.org/W7117558908",
+      "found_by_queries": [
+        "Q04_fed_tenability_routing",
+        "Q07_rl_evacuation"
+      ],
+      "themes": [
+        "T07",
+        "T12"
+      ],
+      "method": "Not assessable: no abstract in OpenAlex, Crossref or Semantic Scholar.",
+      "data": "Not assessable: no abstract in OpenAlex, Crossref or Semantic Scholar.",
+      "stated_limitations_future_work": "Not assessable: no abstract in OpenAlex, Crossref or Semantic Scholar.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "Content unassessed; listed because the title reports tenability-based path planning with reinforcement learning, the combination in LG2 and LG6."
+      ],
+      "analyst_note": "OpenAlex gives 2025 (online); Crossref issued year is 2026.",
+      "abstract_source": "none",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2025,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised). OpenAlex gives 2025 (online first, matching the Crossref deposit date); Crossref issued and print year is 2026, which is the year listed here."
+    },
+    {
+      "id": "R20",
+      "title": "A transient network model for cross-regional layered fire smoke diffusion in high-rise buildings",
+      "year": 2024,
+      "venue": "Case Studies in Thermal Engineering",
+      "doi": "10.1016/j.csite.2024.105269",
+      "first_author": "Shanshan Wan",
+      "openalex_id": "https://openalex.org/W4403332933",
+      "found_by_queries": [
+        "Q12_fire_smoke_spread_network_building"
+      ],
+      "themes": [
+        "T02",
+        "T06"
+      ],
+      "method": "Transient network model (CLDTN) of cross-regional layered smoke diffusion in high-rise buildings: smoke stratification on the fire floor and vertical stratification in shafts under the stack effect, with energy-conservation differential equations over multiple layers; compared with FDS.",
+      "data": "A high-rise building case with furniture materials and door and window ventilation conditions.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T02-G2 and T06-G2 (partly: a network smoke model checked against FDS)"
+      ],
+      "leaves_open": [
+        "Not derived from IFC; not coupled to routing (LG8)."
+      ],
+      "analyst_note": "The abstract claims the model is both more efficient and more accurate than FDS in the comparison.",
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2024,
+      "openalex_year": 2024,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R21",
+      "title": "A spatial temporal graph neural network model for predicting flashover in arbitrary building floorplans",
+      "year": 2022,
+      "venue": "Engineering Applications of Artificial Intelligence",
+      "doi": "10.1016/j.engappai.2022.105258",
+      "first_author": "Wai Cheong Tam",
+      "openalex_id": "https://openalex.org/W4290078566",
+      "found_by_queries": [
+        "Q06_ml_gnn_fire_smoke_surrogate"
+      ],
+      "themes": [
+        "T17"
+      ],
+      "method": "Not assessable: no abstract in OpenAlex, Crossref or Semantic Scholar.",
+      "data": "Not assessable: no abstract in OpenAlex, Crossref or Semantic Scholar.",
+      "stated_limitations_future_work": "Not assessable: no abstract in OpenAlex, Crossref or Semantic Scholar.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "Content unassessed; the title reports a spatio-temporal GNN predicting flashover in arbitrary building floor plans (LG7)."
+      ],
+      "analyst_note": null,
+      "abstract_source": "none",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2022,
+      "openalex_year": 2022,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R22",
+      "title": "Real-time forecast of compartment fire and flashover based on deep learning",
+      "year": 2022,
+      "venue": "Fire Safety Journal",
+      "doi": "10.1016/j.firesaf.2022.103579",
+      "first_author": "Tianhang Zhang",
+      "openalex_id": "https://openalex.org/W4224315079",
+      "found_by_queries": [
+        "Q06_ml_gnn_fire_smoke_surrogate"
+      ],
+      "themes": [
+        "T17",
+        "T18"
+      ],
+      "method": "Deep-learning forecast of compartment fire development and flashover from a temperature-sensor network.",
+      "data": "21 reduced-scale (1/5) compartment tests with various ventilation and fuel loads; temperature predicted 30 s ahead with relative error under 10 percent; flashover predicted with a 20 s lead.",
+      "stated_limitations_future_work": "Forecast capacity and accuracy can be improved with more training data; application to wider fire scenarios is described as a potential.",
+      "narrows_gaps": [
+        "LG7 (partly: real-time forecast from sensors)"
+      ],
+      "leaves_open": [
+        "Single compartment; no per-node fields for routing; no error-to-route guarantee."
+      ],
+      "analyst_note": "Abstract taken from Semantic Scholar; OpenAlex and Crossref have none.",
+      "abstract_source": "semantic_scholar",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2022,
+      "openalex_year": 2022,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R23",
+      "title": "Real-time prediction of tunnel evacuation time using machine-learning surrogate models",
+      "year": 2026,
+      "venue": "Safety Science",
+      "doi": "10.1016/j.ssci.2026.107348",
+      "first_author": "Ondřej Uhlík",
+      "openalex_id": "https://openalex.org/W7166711702",
+      "found_by_queries": [
+        "Q06_ml_gnn_fire_smoke_surrogate"
+      ],
+      "themes": [
+        "T17",
+        "T09"
+      ],
+      "method": "Machine-learning surrogates (extreme gradient boosting and a multilayer perceptron) of tunnel RSET from the Pathfinder simulator, trained with nested cross-validation and validated against full-scale experiments.",
+      "data": "50,910 procedurally generated Pathfinder simulations; 10 full-scale tunnel evacuation experiments in three countries; XGBoost R2 0.99, MAE 9.2 s; MLP R2 0.91, MAE 32.1 s.",
+      "stated_limitations_future_work": "States that the computational cost of microscopic models is the barrier to real-time use; the MLP showed reduced robustness under experimental conditions.",
+      "narrows_gaps": [
+        "T09-G2 and LG7 (partly: a validated real-time surrogate)"
+      ],
+      "leaves_open": [
+        "Predicts RSET only, for tunnels; no hazard coupling or per-route output."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R24",
+      "title": "Hazard- and Fairness-Aware Evacuation with Grid-Interactive Energy Management: A Digital-Twin Controller for Life Safety and Sustainability",
+      "year": 2025,
+      "venue": "Sustainability",
+      "doi": "10.3390/su18010133",
+      "first_author": "Mansoor Alghamdi",
+      "openalex_id": "https://openalex.org/W7116650528",
+      "found_by_queries": [
+        "Q15_time_expanded_earliest_arrival_evacuation_hazard"
+      ],
+      "themes": [
+        "T18",
+        "T17",
+        "T11"
+      ],
+      "method": "Real-time digital-twin controller with a physics-based hazard surrogate for short-term smoke and temperature fields from sensors, a router that updates individual paths while controlling exposure and congestion, and an emergency energy-management module.",
+      "data": "Co-simulation across several building layouts and feeder constraints.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "LG1 and LG7 (partly: forecast-driven routing with exposure caps)"
+      ],
+      "leaves_open": [
+        "No optimality or exactness statement for routing; no error bounds for the surrogate; no IFC."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2025,
+      "openalex_year": 2025,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R25",
+      "title": "Indoor Emergency Path Planning Based on the Q-Learning Optimization Algorithm",
+      "year": 2022,
+      "venue": "ISPRS International Journal of Geo-Information",
+      "doi": "10.3390/ijgi11010066",
+      "first_author": "Shenghua Xu",
+      "openalex_id": "https://openalex.org/W4205770567",
+      "found_by_queries": [
+        "Q07_rl_evacuation"
+      ],
+      "themes": [
+        "T12"
+      ],
+      "method": "Q-learning with a dynamically adjusted epsilon-greedy exploration factor for indoor emergency path planning on a grid; compared with classic Q-learning and SARSA.",
+      "data": "Simulated data and real indoor environment data; convergence after about 500 rounds, about five times faster than classic Q-learning.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "LG6: no comparison with an exact optimum; no fire dynamics in the abstract."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2022,
+      "openalex_year": 2022,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R26",
+      "title": "EvacuAI: An Analysis of Escape Routes in Indoor Environments with the Aid of Reinforcement Learning",
+      "year": 2023,
+      "venue": "Sensors",
+      "doi": "10.3390/s23218892",
+      "first_author": "Anna Carolina Rosa",
+      "openalex_id": "https://openalex.org/W4388140103",
+      "found_by_queries": [
+        "Q07_rl_evacuation"
+      ],
+      "themes": [
+        "T12"
+      ],
+      "method": "Deep reinforcement learning for escape routes, with random initialisation of the replay buffer and transfer learning.",
+      "data": "Three school projects of different sizes; training under 1 min; 100 percent route accuracy reported.",
+      "stated_limitations_future_work": "States that the study raised challenges to be faced in future work, without listing them in the abstract.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "LG6: the reference for 'accuracy' is not stated; no fire dynamics in the abstract."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2023,
+      "openalex_year": 2023,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R27",
+      "title": "Toward Sustainable and Inclusive Cities: Graph Neural Network-Enhanced Optimization for Disability-Inclusive Emergency Evacuation in High-Rise Buildings",
+      "year": 2025,
+      "venue": "Sustainability",
+      "doi": "10.3390/su172210387",
+      "first_author": "Shunen Wu",
+      "openalex_id": "https://openalex.org/W4416400935",
+      "found_by_queries": [
+        "Q06_ml_gnn_fire_smoke_surrogate",
+        "Q07_rl_evacuation"
+      ],
+      "themes": [
+        "T12",
+        "T17",
+        "T09"
+      ],
+      "method": "Multi-objective mixed-integer nonlinear model of disability-inclusive evacuation with dynamic fire spread, congestion-aware routing, accessibility constraints and elevator priority, solved with a graph neural network and proximal policy optimisation.",
+      "data": "A representative high-rise building scenario.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T09 (vulnerable populations)"
+      ],
+      "leaves_open": [
+        "LG6: no optimality gap to the MINLP reported; no verification."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2025,
+      "openalex_year": 2025,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R28",
+      "title": "Emergency Evacuation System for Clogging-Free and Shortest-Safe Path Navigation With IoT-Enabled WSNs",
+      "year": 2022,
+      "venue": "IEEE Internet of Things Journal",
+      "doi": "10.1109/jiot.2021.3123189",
+      "first_author": "Anshul Jindal",
+      "openalex_id": "https://openalex.org/W3210600121",
+      "found_by_queries": [
+        "Q08_sensor_digital_twin_guidance"
+      ],
+      "themes": [
+        "T18",
+        "T11"
+      ],
+      "method": "Emergency evacuation with IoT wireless sensor networks: hazards detected, safety layers built around dangerous zones by multisource breadth-first search, clogging-free shortest-safe paths, re-solved after every fixed time interval.",
+      "data": "Comparison with prior algorithms on execution time, average path stretch and navigation overhead.",
+      "stated_limitations_future_work": "No limitation or future work is stated in the abstract.",
+      "narrows_gaps": [
+        "T09 (congestion in guidance)"
+      ],
+      "leaves_open": [
+        "LG1: fixed-interval recomputation on current readings, with hop-layer BFS safety zones similar to Studio's flood model."
+      ],
+      "analyst_note": "OpenAlex gives 2021 (online); Crossref issued year is 2022.",
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2022,
+      "openalex_year": 2021,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised). OpenAlex gives 2021 (online first, matching the Crossref deposit date); Crossref issued and print year is 2022, which is the year listed here."
+    },
+    {
+      "id": "R29",
+      "title": "A STUDY OF THE PERFORMANCE OF ANY-ANGLE THETA* ALGORITHMS ON WEIGHTED GRID MAPS FOR ROUTE PLANNING",
+      "year": 2026,
+      "venue": "Radio Electronics, Computer Science, Control",
+      "doi": "10.15588/1607-3274-2026-1-12",
+      "first_author": "Y. Kis",
+      "openalex_id": "https://openalex.org/W7147293239",
+      "found_by_queries": [
+        "Q09_any_angle_path_planning_buildings"
+      ],
+      "themes": [
+        "T16"
+      ],
+      "method": "Compares Basic, Lazy and Strict Theta* with A* on uniform and weighted square grids, with path smoothing; proposes a generalisation of Basic Theta* for weighted grids.",
+      "data": "Uniform and weighted grid maps for a logistics case; visualised in Unity.",
+      "stated_limitations_future_work": "The effectiveness of any-angle algorithms in weighted environments depends on careful adaptation of cost functions; path length and path cost may differ substantially on weighted grids.",
+      "narrows_gaps": [
+        "T16-G2 (partly)"
+      ],
+      "leaves_open": [
+        "No optimality guarantee on weighted or time-dependent costs; not buildings."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R30",
+      "title": "Building Information Modeling Using Constraint Logic Programming",
+      "year": 2022,
+      "venue": "Theory and Practice of Logic Programming",
+      "doi": "10.1017/s1471068422000138",
+      "first_author": "JOAQUÍN ARIAS",
+      "openalex_id": "https://openalex.org/W4285494057",
+      "found_by_queries": [
+        "Q01_bim_ifc_evacuation_graph",
+        "Q13_egress_code_compliance_checking"
+      ],
+      "themes": [
+        "T14",
+        "T20"
+      ],
+      "method": "Logic-based executable formalisms (constraint logic programming over reals and rationals, and constraint answer set programming) coupled to BIM models for compliance reasoning; a preliminary reasoner.",
+      "data": "Several BIM models.",
+      "stated_limitations_future_work": "Notes that the current BIM exchange format needs separate ad hoc pre-processing to determine evacuation routes; the reasoner is preliminary.",
+      "narrows_gaps": [
+        "LG3 (partly: declarative, executable semantics for compliance)"
+      ],
+      "leaves_open": [
+        "No machine-checked proofs about algorithms or equations; no fire dynamics."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2022,
+      "openalex_year": 2022,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R31",
+      "title": "A systematic review of methods for interpreting building code regulations in automated compliance systems",
+      "year": 2026,
+      "venue": "Building Research & Information",
+      "doi": "10.1080/09613218.2026.2637965",
+      "first_author": "Nikoo Mirhosseini",
+      "openalex_id": "https://openalex.org/W7134043261",
+      "found_by_queries": [
+        "Q10_formal_verification_fire_building_codes",
+        "Q13_egress_code_compliance_checking",
+        "Q14_proof_assistant_fire_egress_codes"
+      ],
+      "themes": [
+        "T14",
+        "T20"
+      ],
+      "method": "Systematic review of computational approaches to interpreting building codes: rule-based reasoning, ontologies, NLP, machine learning and large language models.",
+      "data": "Published literature.",
+      "stated_limitations_future_work": "Rule-based and ontology systems give deterministic logic and legal traceability but lack scalability; ML and transformer models adapt better but face interpretability and cross-jurisdiction problems; the agenda calls for standardised benchmark datasets, cross-jurisdictional ontology alignment and explainable frameworks.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "LG3: theorem proving is absent from the approaches named in the abstract."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    },
+    {
+      "id": "R32",
+      "title": "Model-based approaches to emergency evacuation in buildings: a systematic literature review in the context of architectural practice and design",
+      "year": 2026,
+      "venue": "City, Territory and Architecture",
+      "doi": "10.1186/s40410-026-00321-y",
+      "first_author": "Michael J. Ostwald",
+      "openalex_id": "https://openalex.org/W7202258889",
+      "found_by_queries": [
+        "Q07_rl_evacuation"
+      ],
+      "themes": [
+        "T09"
+      ],
+      "method": "PRISMA and PECO review of 53 peer-reviewed studies (2015 to 2025) on model-based evacuation in buildings: agent-based models, social force, cellular automata, multi-agent systems and SFPE engineering models.",
+      "data": "Published literature.",
+      "stated_limitations_future_work": "Gaps remain in modelling human-centred detailing, vulnerable populations and hazards beyond fire; integration with BIM and hazard simulators trends toward digital twins.",
+      "narrows_gaps": [],
+      "leaves_open": [
+        "T09-G3."
+      ],
+      "analyst_note": null,
+      "abstract_source": "openalex",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "crossref_title_similarity": 1.0,
+      "crossref_year": 2026,
+      "openalex_year": 2026,
+      "verification_note": "DOI resolves in Crossref; title matches (normalised); year matches."
+    }
+  ],
+  "additional_verified_records": [
+    {
+      "title": "Assessment of pre-warning, pre-travel and travel behavior interactions with smoke and toxic gases during fire incidents",
+      "year": 2023,
+      "venue": "Fire Safety Journal",
+      "doi": "10.1016/j.firesaf.2023.103938",
+      "first_author": "David A. Purser",
+      "role": "Cited as evidence (T07-G3, T08-G2): incident analysis listing pre-warning delay and irritant-smoke evacuation as high-consequence parameters.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2023,
+      "crossref_year": 2023,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Configuration Approaches of CFAST for Prediction of Smoke and Heat Detector Activation Times in Corridor Fires",
+      "year": 2023,
+      "venue": "Applied Sciences",
+      "doi": "10.3390/app132413161",
+      "first_author": "Hyo-Yeon Jang",
+      "role": "Cited as evidence (T02-G2, LG8): CFAST proposed as a cheaper alternative to FDS for coupling; configuration of computational regions matters.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2023,
+      "crossref_year": 2023,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "MULTI-AGENT EVACUATION SIMULATION WITH FIRE AND SMOKE DYNAMICS: A REPRODUCIBLE BASELINE SINGLE-FLOOR STUDY",
+      "year": 2026,
+      "venue": "Scientific Journal of Astana IT University",
+      "doi": "10.37943/cpju3187",
+      "first_author": "Ramazan Sadvakassov",
+      "role": "Cited as evidence (T06-G2): agent and smoke simulation reported in simulation steps.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2026,
+      "crossref_year": 2026,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Comparative Evaluation of the Fast Marching Method and the Fast Evacuation Method for Heterogeneous Media",
+      "year": 2021,
+      "venue": "Applied Artificial Intelligence",
+      "doi": "10.1080/08839514.2021.1972252",
+      "first_author": "Severino F. Galán",
+      "role": "Cited as evidence (T04-G2): fast marching applied to pedestrian floor fields in heterogeneous media.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2021,
+      "crossref_year": 2021,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Pedestrian evacuation planning: Unveiling evacuation routes via column generation",
+      "year": 2022,
+      "venue": "EURO Journal on Transportation and Logistics",
+      "doi": "10.1016/j.ejtl.2022.100089",
+      "first_author": "Nicolás Cabrera",
+      "role": "Cited as evidence (T10-G2): column-generation evacuation paths without a hazard model.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2022,
+      "crossref_year": 2022,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "A systematic review of BIM-based approaches for fire safety and automated code compliance checking",
+      "year": 2026,
+      "venue": "Journal of Structural Fire Engineering",
+      "doi": "10.1108/jsfe-11-2025-0054",
+      "first_author": "Sabine Hartmann",
+      "role": "Cited as evidence (T20-G1): review of 16 studies on automated fire-safety compliance checking.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2026,
+      "crossref_year": 2026,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Virtual Fire Evacuation Drills through a Web-Based Serious Game",
+      "year": 2021,
+      "venue": "Applied Sciences",
+      "doi": "10.3390/app112311284",
+      "first_author": "Yajun Yang",
+      "role": "Cited as evidence (T19-G1, LG4): web serious game for fire-drill training.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2021,
+      "crossref_year": 2021,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Formal Modeling, Proving, and Model Checking of a Flood Warning, Monitoring, and Rescue System-of-Systems",
+      "year": 2021,
+      "venue": "Scientific Programming",
+      "doi": "10.1155/2021/6685978",
+      "first_author": "Abdul Rehman",
+      "role": "Cited as evidence (T14-G2, LG3): formal modelling and model checking in a flood-warning system.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2021,
+      "crossref_year": 2021,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Web-based approach for systematic analysis and interactive visualization of the industry foundation classes data: a case study in duct design",
+      "year": 2022,
+      "venue": "Journal of Asian Architecture and Building Engineering",
+      "doi": "10.1080/13467581.2022.2085715",
+      "first_author": "Hongxia Deng",
+      "role": "Cited as evidence (T19-G1): web-based IFC visualisation with Three.js for duct design.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2022,
+      "crossref_year": 2022,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Manifestation of lattice topology data model for indoor navigation path based on the 3D building environment",
+      "year": 2021,
+      "venue": "Journal of Computational Design and Engineering",
+      "doi": "10.1093/jcde/qwab059",
+      "first_author": "Syed Ahmad Fadhli Syed Abdul Rahman",
+      "role": "Cited as evidence (T15-G3): lattice topology data model for indoor paths, compared with medial-axis paths on one building.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2021,
+      "crossref_year": 2021,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Assessment of Life Safety Risk in Building Fires With an Integrated Fire and Evacuation Model",
+      "year": 2026,
+      "venue": "Discrete Dynamics in Nature and Society",
+      "doi": "10.1155/ddns/6659044",
+      "first_author": "Roberto Bellas",
+      "role": "Relevant: integrated FDS and Pathfinder tenability assessment with stochastic occupant parameters.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2026,
+      "crossref_year": 2026,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "A Semantic Approach to Dynamic Path Planning for Fire Evacuation through BIM and IoT Data Integration",
+      "year": 2024,
+      "venue": "Advances in Civil Engineering",
+      "doi": "10.1155/2024/8839865",
+      "first_author": "Bo Pang",
+      "role": "Relevant: fire-evacuation ontology and dynamic knowledge graph from BIM and IoT data.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2024,
+      "crossref_year": 2024,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Intelligent Evacuation Sign Control Mechanism in IoT-Enabled Multi-Floor Multi-Exit Buildings",
+      "year": 2024,
+      "venue": "Sensors",
+      "doi": "10.3390/s24041115",
+      "first_author": "Hong-Hsu Yen",
+      "role": "Relevant: dynamic evacuation-sign control from smoke and temperature sensors, tested with FDS.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2024,
+      "crossref_year": 2024,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Dynamic building model for interactive hazard and crowd evacuation simulations",
+      "year": 2025,
+      "venue": "Journal of Information Technology in Construction",
+      "doi": "10.36680/j.itcon.2025.042",
+      "first_author": "Nidhal Al-Sadoon",
+      "role": "Relevant: dynamic multi-model container (ISO 21597 extension) so that building-model values can change during simulation.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2025,
+      "crossref_year": 2025,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "3D Indoor Environment Abstraction for Crowd Simulations in Complex Buildings",
+      "year": 2021,
+      "venue": "Buildings",
+      "doi": "10.3390/buildings11100445",
+      "first_author": "Mitko Aleksandrov",
+      "role": "Relevant: automatic navigation-mesh abstraction of buildings for pedestrian simulation, including stair classification.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2021,
+      "crossref_year": 2021,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Development of an agent-based indoor evacuation model for local fire risks analysis",
+      "year": 2023,
+      "venue": "Journal of Safety Science and Resilience",
+      "doi": "10.1016/j.jnlssr.2022.09.006",
+      "first_author": "Rui Feng Cao",
+      "role": "Relevant: agent-based indoor evacuation model with local fire-risk and stress evaluation along egress paths.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2022,
+      "crossref_year": 2023,
+      "verification_note": "Title matches; the year listed is the Crossref issued year (OpenAlex gives 2022, online first)."
+    },
+    {
+      "title": "A Metaverse-Based Teaching Building Evacuation Training System With Deep Reinforcement Learning",
+      "year": 2023,
+      "venue": "IEEE Transactions on Systems, Man, and Cybernetics: Systems",
+      "doi": "10.1109/tsmc.2022.3231299",
+      "first_author": "Jinlei Gu",
+      "role": "Relevant: deep-RL evacuation guidance in a metaverse training system.",
+      "abstract_available": true,
+      "crossref_verified": true,
+      "openalex_year": 2023,
+      "crossref_year": 2023,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "An IFC-based framework for semantic integration of BIM and mobile crowd sensing in real-time evacuation routing",
+      "year": 2026,
+      "venue": "Advanced Engineering Informatics",
+      "doi": "10.1016/j.aei.2026.104500",
+      "first_author": "Mohsen Rashidian",
+      "role": "Relevant, abstract unavailable: IFC-based semantic integration of BIM and mobile crowd sensing for real-time evacuation routing.",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "openalex_year": 2026,
+      "crossref_year": 2026,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Reinforcement learning-based dynamic evacuation guidance for fire emergencies: Toward safety digital twins",
+      "year": 2026,
+      "venue": "Advanced Engineering Informatics",
+      "doi": "10.1016/j.aei.2026.105085",
+      "first_author": "Kunchan Kim",
+      "role": "Relevant, abstract unavailable: RL-based dynamic evacuation guidance toward safety digital twins.",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "openalex_year": 2026,
+      "crossref_year": 2026,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "A building information modeling-based fire emergency evacuation simulation system for large infrastructures",
+      "year": 2024,
+      "venue": "Reliability Engineering & System Safety",
+      "doi": "10.1016/j.ress.2023.109917",
+      "first_author": "Zhikun Ding",
+      "role": "Relevant, abstract unavailable: BIM-based fire evacuation simulation system for large infrastructures.",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "openalex_year": 2023,
+      "crossref_year": 2024,
+      "verification_note": "Title matches; the year listed is the Crossref issued year (OpenAlex gives 2023, online first)."
+    },
+    {
+      "title": "Multi-agent simulation of population evacuation during dynamic fire using reinforcement learning based on integration of geographic information systems and building information modeling",
+      "year": 2025,
+      "venue": "Journal of Building Engineering",
+      "doi": "10.1016/j.jobe.2025.113035",
+      "first_author": "Shaqayeq Omidbeyk",
+      "role": "Relevant, abstract unavailable: multi-agent RL evacuation during dynamic fire with GIS and BIM.",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "openalex_year": 2025,
+      "crossref_year": 2025,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "An ontology-based approach to dynamic indoor fire emergency evacuation path planning with BIM integration",
+      "year": 2025,
+      "venue": "Journal of Building Engineering",
+      "doi": "10.1016/j.jobe.2025.112562",
+      "first_author": "Hui Deng",
+      "role": "Relevant, abstract unavailable: ontology-based dynamic indoor fire evacuation path planning with BIM.",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "openalex_year": 2025,
+      "crossref_year": 2025,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Dynamic Evacuation Path Planning for Multi-Exit Building Fire: Bi-Objective Model and Algorithm",
+      "year": 2023,
+      "venue": "Fire Technology",
+      "doi": "10.1007/s10694-023-01448-x",
+      "first_author": "Wenling Guan",
+      "role": "Relevant, abstract unavailable (Semantic Scholar has only a machine-generated summary, not used): bi-objective dynamic evacuation path planning for multi-exit building fires.",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "openalex_year": 2023,
+      "crossref_year": 2023,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    },
+    {
+      "title": "Indoor navigation and information sharing for collaborative fire emergency response with BIM and multi-user networking",
+      "year": 2023,
+      "venue": "Automation in Construction",
+      "doi": "10.1016/j.autcon.2023.104781",
+      "first_author": "Mun On Wong",
+      "role": "Relevant, abstract unavailable: indoor navigation and information sharing for collaborative fire emergency response with BIM.",
+      "abstract_available": false,
+      "crossref_verified": true,
+      "openalex_year": 2023,
+      "crossref_year": 2023,
+      "verification_note": "Title matches; the year listed is the Crossref issued year."
+    }
+  ]
+}

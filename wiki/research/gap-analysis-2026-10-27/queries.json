@@ -1,0 +1,309 @@
+{
+  "title": "OpenAlex queries for the Topologic Studio gap analysis",
+  "date_run": "2026-10-27",
+  "endpoint": "https://api.openalex.org/works?search=<search>&filter=<filter>&per-page=50&page=<n>&select=<fields>",
+  "access": "No API key and no mailto or email parameter. The API's response notice suggested registering a key by e-mail; it was treated as data and not acted on.",
+  "search_semantics": "OpenAlex 'search' matches title, abstract and full text; Boolean AND, OR and quoted phrases were used; results are ranked by relevance. Hit counts therefore include incidental full-text matches.",
+  "design": "Q01 to Q11 cover the topics requested; Q12 and Q13 add fire-spread networks and egress code checking; Q14 to Q17 are single-page checks run before claiming literature gaps.",
+  "pooling": {
+    "unique_works": 1278,
+    "with_abstract": 1160,
+    "screened_abstracts": 93,
+    "selected_papers": 32,
+    "dois_crossref_checked": 56
+  },
+  "queries": [
+    {
+      "id": "Q01_bim_ifc_evacuation_graph",
+      "topic": "BIM/IFC-based evacuation and egress graph generation",
+      "role": "primary",
+      "search": "(BIM OR IFC OR \"building information model\" OR \"building information modeling\") AND (evacuation OR egress) AND (graph OR network OR route OR path)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 3200,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R02",
+        "R06",
+        "R07",
+        "R08",
+        "R09",
+        "R10",
+        "R30"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q02_indoor_navigation_graph_building_model",
+      "topic": "Indoor navigation graphs from building models",
+      "role": "primary",
+      "search": "\"indoor navigation\" AND (graph OR network) AND (BIM OR IFC OR CityGML OR IndoorGML OR \"building model\")",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 657,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R01",
+        "R02",
+        "R03",
+        "R08"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q03_dynamic_evacuation_routing_fire",
+      "topic": "Dynamic or time-dependent evacuation routing under fire",
+      "role": "primary",
+      "search": "(\"dynamic evacuation\" OR \"time-dependent\" OR \"dynamic route\" OR \"dynamic path\") AND evacuation AND fire AND building",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 1055,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R08",
+        "R09",
+        "R10",
+        "R11",
+        "R12",
+        "R13"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q04_fed_tenability_routing",
+      "topic": "FED or tenability-aware routing",
+      "role": "primary",
+      "search": "(\"fractional effective dose\" OR tenability OR \"toxic gas\" OR \"smoke exposure\") AND (evacuation OR egress) AND (route OR routing OR path)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 1734,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R12",
+        "R13",
+        "R14",
+        "R16",
+        "R17",
+        "R19"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q05_fire_model_evacuation_coupling",
+      "topic": "Coupling fire models (CFAST, FDS, zone) with evacuation",
+      "role": "primary",
+      "search": "(CFAST OR \"fire dynamics simulator\" OR FDS OR \"zone model\") AND (evacuation OR egress) AND (coupled OR coupling OR integrated)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 1044,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R12",
+        "R17",
+        "R18"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q06_ml_gnn_fire_smoke_surrogate",
+      "topic": "Machine-learning or GNN surrogates for fire and smoke",
+      "role": "primary",
+      "search": "(\"graph neural network\" OR \"deep learning\" OR \"machine learning\" OR surrogate OR \"neural network\") AND (\"smoke spread\" OR \"fire spread\" OR \"smoke movement\" OR \"fire development\" OR \"smoke temperature\") AND (building OR indoor OR compartment)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 2246,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R11",
+        "R16",
+        "R21",
+        "R22",
+        "R23",
+        "R27"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q07_rl_evacuation",
+      "topic": "Reinforcement learning for evacuation",
+      "role": "primary",
+      "search": "\"reinforcement learning\" AND evacuation AND (fire OR building OR indoor)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 2131,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R19",
+        "R25",
+        "R26",
+        "R27",
+        "R32"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q08_sensor_digital_twin_guidance",
+      "topic": "Real-time sensor-driven evacuation guidance and digital twins",
+      "role": "primary",
+      "search": "(\"digital twin\" OR \"real-time\" OR sensor OR \"Internet of Things\" OR IoT) AND evacuation AND (guidance OR wayfinding OR routing) AND fire",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 7768,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R09",
+        "R28"
+      ],
+      "notes": "Broad: 'real-time', 'sensor' and 'IoT' match many detection-only papers."
+    },
+    {
+      "id": "Q09_any_angle_path_planning_buildings",
+      "topic": "Any-angle path planning in buildings",
+      "role": "primary",
+      "search": "(\"any-angle\" OR \"visibility graph\" OR \"path smoothing\" OR \"navigation mesh\") AND (indoor OR building) AND (\"path planning\" OR pathfinding OR navigation)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 1988,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R29"
+      ],
+      "notes": "Top 100 dominated by mobile-robot and vehicle planners; one weighted Theta* study selected."
+    },
+    {
+      "id": "Q10_formal_verification_fire_building_codes",
+      "topic": "Formal verification or proof assistants in fire safety or building codes",
+      "role": "primary",
+      "search": "(\"formal verification\" OR \"theorem prover\" OR \"proof assistant\" OR \"formal methods\" OR \"model checking\" OR \"formal semantics\") AND (\"fire safety\" OR \"building code\" OR \"building regulation\" OR evacuation OR egress)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 858,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R11",
+        "R31"
+      ],
+      "notes": "Top 100 mostly formal methods in other domains and compliance-checking papers; no fire or egress proofs."
+    },
+    {
+      "id": "Q11_web_browser_bim_analysis",
+      "topic": "Web or browser-based BIM analysis",
+      "role": "primary",
+      "search": "(\"web-based\" OR browser OR WebGL OR \"web application\" OR WebAssembly) AND (BIM OR IFC) AND (analysis OR simulation OR \"code checking\" OR evacuation)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 6983,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [],
+      "notes": "Broad: many visualisation, facility-management and interoperability papers."
+    },
+    {
+      "id": "Q12_fire_smoke_spread_network_building",
+      "topic": "Fire and smoke spread networks in buildings (added)",
+      "role": "primary",
+      "search": "(\"fire spread\" OR \"smoke spread\" OR \"fire propagation\") AND (network OR graph) AND building AND (model OR simulation)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 3259,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R20"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q13_egress_code_compliance_checking",
+      "topic": "Automated egress code-compliance checking with BIM/IFC (added)",
+      "role": "primary",
+      "search": "(\"automated code compliance\" OR \"automated compliance checking\" OR \"rule checking\" OR \"code checking\") AND (egress OR evacuation OR \"travel distance\" OR \"fire safety\") AND (BIM OR IFC)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 292,
+      "per_page": 50,
+      "pages_retrieved": 2,
+      "records_retrieved": 100,
+      "selected_papers": [
+        "R06",
+        "R07",
+        "R10",
+        "R30",
+        "R31"
+      ],
+      "notes": null
+    },
+    {
+      "id": "Q14_proof_assistant_fire_egress_codes",
+      "topic": "Gap check: proof assistants applied to fire, egress or building codes",
+      "role": "gap-check",
+      "search": "(Coq OR Isabelle OR \"Lean theorem prover\" OR \"interactive theorem proving\" OR \"mechanized proof\" OR \"machine-checked\" OR \"theorem proving\") AND (fire OR evacuation OR egress OR \"building code\" OR \"building regulation\")",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 4703,
+      "per_page": 50,
+      "pages_retrieved": 1,
+      "records_retrieved": 50,
+      "selected_papers": [
+        "R31"
+      ],
+      "notes": "Bare terms Coq, Isabelle and Lean match personal names and unrelated text; the top 50 contained proof-assistant papers in other domains, unrelated humanities items and one relevant review (10.1080/09613218.2026.2637965); no fire, egress or building-code proofs."
+    },
+    {
+      "id": "Q15_time_expanded_earliest_arrival_evacuation_hazard",
+      "topic": "Gap check: time-expanded or earliest-arrival evacuation under hazard",
+      "role": "gap-check",
+      "search": "(\"time-expanded\" OR \"time-dependent shortest path\" OR \"earliest arrival\" OR \"quickest path\") AND evacuation AND (fire OR smoke OR hazard)",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 118,
+      "per_page": 50,
+      "pages_retrieved": 1,
+      "records_retrieved": 50,
+      "selected_papers": [
+        "R11",
+        "R15",
+        "R24"
+      ],
+      "notes": "Top 50 are maritime, urban, flood and tsunami evacuation and network models; none is a building-fire time-dependent shortest path."
+    },
+    {
+      "id": "Q16_browser_web_evacuation_simulation",
+      "topic": "Gap check: browser or web-based evacuation simulation and routing",
+      "role": "gap-check",
+      "search": "(browser OR WebGL OR \"web-based\" OR WebAssembly OR \"client-side\") AND (evacuation OR egress) AND (fire OR building) AND (simulation OR routing OR \"path planning\")",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 2777,
+      "per_page": 50,
+      "pages_retrieved": 1,
+      "records_retrieved": 50,
+      "selected_papers": [],
+      "notes": "Top 50 are training games, smartphone and AR guidance, reviews and server-side tools; no browser-side hazard routing."
+    },
+    {
+      "id": "Q17_grid_voxel_navigation_from_bim_ifc",
+      "topic": "Gap check: grid, voxel or navigation-mesh navigation from BIM/IFC",
+      "role": "gap-check",
+      "search": "(grid OR lattice OR voxel OR \"navigation mesh\" OR \"walkable\") AND (IFC OR BIM OR \"building information\") AND (navigation OR evacuation OR pathfinding OR \"path planning\")",
+      "filter": "from_publication_date:2021-01-01,type:article|review",
+      "hit_count": 3937,
+      "per_page": 50,
+      "pages_retrieved": 1,
+      "records_retrieved": 50,
+      "selected_papers": [
+        "R02",
+        "R03",
+        "R04",
+        "R05"
+      ],
+      "notes": null
+    }
+  ]
+}

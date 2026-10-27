@@ -874,6 +874,41 @@ export class ViewerManager {
     segments.material.opacity = 0.75;
   }
 
+  /**
+   * Recolour graph edges by each node's escape deadline (seconds): the heat
+   * ramp reversed, so little time left reads as hot. -Infinity (no safe
+   * departure at all) is drawn in a neutral dark grey; null restores the
+   * graph's own colours.
+   */
+  setDeadlines(deadlines, { max = 300 } = {}) {
+    const segments = this.overlays.get(OVERLAY.graph);
+    if (!segments || !this._graphEdges) return;
+    const attribute = segments.geometry.getAttribute("color");
+    if (!attribute) return;
+    const colors = attribute.array;
+    if (!deadlines) {
+      colors.set(this._baseColors);
+      attribute.needsUpdate = true;
+      segments.material.opacity = 0.45;
+      return;
+    }
+    const none = new THREE.Color(0x52525b);
+    const scratch = new THREE.Color();
+    const edgeCount = this._graphEdges.length / 2;
+    for (let e = 0; e < edgeCount; e += 1) {
+      for (let side = 0; side < 2; side += 1) {
+        const value = deadlines[this._graphEdges[e * 2 + side]];
+        const offset = e * 6 + side * 3;
+        const c = value === -Infinity ? none : heatColor(scratch, max - Math.max(0, value), 0, max);
+        colors[offset] = c.r;
+        colors[offset + 1] = c.g;
+        colors[offset + 2] = c.b;
+      }
+    }
+    attribute.needsUpdate = true;
+    segments.material.opacity = 0.8;
+  }
+
   /** Recolour graph edges from a set of burning node indices. */
   setBurningNodes(burning) {
     const segments = this.overlays.get(OVERLAY.graph);
