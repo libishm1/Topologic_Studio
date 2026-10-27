@@ -141,6 +141,24 @@ test("a wall with a door void is open at the void, closed elsewhere", () => {
   }
 });
 
+test("grid lines run up to the wall face", () => {
+  // A wall face at x = 4.35 falls between lattice lines (4.0 and 4.5): the
+  // line from x = 4.0 must be extended to the face, as a trimmed cell's would.
+  const floors = [rect(0, 0.25, 10, 9.75, 0)];
+  const walls = [box(4.35, 0, 0, 4.65, 10, 3)];
+  const g = buildLatticeGraph({ ...base, floors, walls });
+  assert.ok(g.stats.wallFaceNodes > 0);
+  let nearest = Infinity;
+  for (let n = 0; n < g.stats.nodes; n += 1) {
+    const x = g.points[n * 3];
+    if (x < 4.35) nearest = Math.min(nearest, 4.35 - x);
+  }
+  assert.ok(nearest <= 0.03, `closest node is ${nearest.toFixed(3)} m from the wall face`);
+  const off = buildLatticeGraph({ ...base, floors, walls, hugWalls: false });
+  assert.equal(off.stats.wallFaceNodes, 0);
+  assert.equal(crossesAt(g, 4.5), false, "hugging the wall does not cross it");
+});
+
 test("a stair joins two floors into one connected graph", () => {
   // Ground 0..10 x 0..4 at z 0; upper floor 6..10 at z 3; a flight from
   // x = 1 to x = 5.75 in 16 risers of 0.1875 m with 0.25 m goings... use 19

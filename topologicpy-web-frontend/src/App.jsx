@@ -20,6 +20,7 @@ import { api, legacyApi, openFireStream } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphStats } from "./core/graph.js";
+import { findRoute } from "./core/route.js";
 import { useStudio } from "./state/useStudio.js";
 import { AboutPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
@@ -461,19 +462,24 @@ export default function App() {
 
   const findPath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
-    if (needsServerGraph("Routing")) return;
+    // The built-in engine runs here, with no round trip; only the TopologicPy
+    // engine needs the server.
+    const onServer = studio.effectiveEngine === "topologicpy";
+    if (onServer && needsServerGraph("The TopologicPy route engine")) return;
     studio.setPathBusy(true);
     studio.setComparison(null);
     studio.setAlternatives(null);
     viewerRef.current?.setRoutes(null);
     try {
-      const result = await api.findPath({
-        graph_id: graph.graphId,
-        start_point: points.start,
-        end_point: points.exit,
-        engine: studio.effectiveEngine,
-        use_walls: settings.useWalls,
-      });
+      const result = onServer
+        ? await api.findPath({
+            graph_id: graph.graphId,
+            start_point: points.start,
+            end_point: points.exit,
+            engine: studio.effectiveEngine,
+            use_walls: settings.useWalls,
+          })
+        : findRoute(graph, points.start, points.exit, { useWalls: settings.useWalls });
       studio.setPath(result);
       viewerRef.current?.setPath(result.points);
       if (!result.found) {

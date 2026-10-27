@@ -310,6 +310,23 @@ class SegmentIndex {
     return hit;
   }
 
+  /** Fraction along a-b of the first outline crossing, or Infinity. */
+  firstHit(ax, ay, bx, by) {
+    let best = Infinity;
+    const g = this.segs;
+    const rx = bx - ax, ry = by - ay;
+    this.near(Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by), (s) => {
+      const cx = g[s * 4], cy = g[s * 4 + 1];
+      const sx = g[s * 4 + 2] - cx, sy = g[s * 4 + 3] - cy;
+      const den = rx * sy - ry * sx;
+      if (Math.abs(den) < 1e-12) return;
+      const t = ((cx - ax) * sy - (cy - ay) * sx) / den;
+      const u = ((cx - ax) * ry - (cy - ay) * rx) / den;
+      if (t > 1e-9 && t <= 1 && u >= -1e-9 && u <= 1 + 1e-9 && t < best) best = t;
+    });
+    return best;
+  }
+
   /**
    * Whether (x, y) is inside a closed outline: parity of crossings on a ray
    * along +x. Only trusted within `reach` of an outline segment, so an open
@@ -367,6 +384,11 @@ export function buildLatticeGraph({
   spaces = [],
   obstacles = [],
   sectionHeight = 0.75,
+  hugWalls = true,
+  // Wall-face nodes sit this far off the face, and are only added when the
+  // grid line falls at least minHug short of the wall.
+  wallInset = 0.02,
+  minHug = 0.05,
   upAxis = "y",
   spacing = 0.5,
   agentHeight = 0.75,
@@ -457,8 +479,9 @@ export function buildLatticeGraph({
   });
 
   const count = kept.length;
-  // Room for one extra node per door (see the doorway step below).
-  const capacity = count + doorPoints.length;
+  // Room for up to four wall-face nodes per lattice node and one per door
+  // (see the wall-hugging and doorway steps below).
+  const capacity = count * 5 + doorPoints.length;
   const points = new Float32Array(capacity * 3);
   const kinds = new Uint8Array(capacity);
   const heights = new Float64Array(capacity);
@@ -533,6 +556,46 @@ export function buildLatticeGraph({
     }
   }
 
+  // Hug the walls. Where a grid line stops short of a wall - the next lattice
+  // point is inside the wall, or the link to it crosses one - extend it to the
+  // wall face with a node there, as TopologicPy's trimmed-cell recipe does
+  // (Shell.Rectangle cut by the walls with Topology.Difference, so boundary
+  // cells are trimmed and their lines reach the wall; ForNeha.ipynb). Linked
+  // along the grid line only, never along the wall, matching that recipe's
+  // use of interior edges.
+  let total = count;
+  let hugged = 0;
+  if (hugWalls) {
+    const axes = [[2, 0], [-2, 0], [0, 2], [0, -2]];
+    for (let a = 0; a < count; a += 1) {
+      if (kinds[a] !== KIND_FLOOR) continue;
+      const [i, j] = lattice[a];
+      const [ax, ay] = plan(i, j);
+      const index = sectionFor(heights[a]);
+      for (const [di, dj] of axes) {
+        const b = best(a, di, dj, KIND_FLOOR);
+        if (b >= 0) {
+          const bx = points[b * 3 + h0], by = points[b * 3 + h1];
+          if (!index.crosses(ax, ay, bx, by)) continue; // an open link: nothing to hug
+        }
+        const [tx, ty] = plan(i + di, j + dj);
+        const t = index.firstHit(ax, ay, tx, ty);
+        if (!Number.isFinite(t)) continue; // the floor ends here, not a wall
+        const reach = t * s - wallInset;
+        if (reach < minHug) continue;
+        const ux = (tx - ax) / s, uy = (ty - ay) / s;
+        const n = total++;
+        points[n * 3 + h0] = ax + ux * reach;
+        points[n * 3 + h1] = ay + uy * reach;
+        points[n * 3 + up] = heights[a] + agentHeight;
+        heights[n] = heights[a];
+        kinds[n] = KIND_FLOOR;
+        edges.push(a, n);
+        hugged += 1;
+      }
+    }
+  }
+
   // Doorways. Exporters often stop the slab at the wall face, so a doorway has
   // no floor under it and the lattice alone leaves the rooms either side apart
   // (on the Duplex, separate pieces at ground level). The old 2.25 m
@@ -541,7 +604,6 @@ export function buildLatticeGraph({
   // that, a node is added in the opening and linked to the nearest floor nodes
   // on each side within a metre. Those links are never blocked by walls. They
   // are the only links off the lattice, and each one is a real doorway.
-  let total = count;
   const doorEdge = new Set();
   const doorReport = [];
   const pairKey = (a, b) => (a < b ? a * 4294967296 + b : b * 4294967296 + a);
@@ -690,6 +752,7 @@ export function buildLatticeGraph({
       nodes: total,
       edges: outEdges.length / 2,
       prunedNodes: pruned,
+      wallFaceNodes: hugged,
       stairNodes,
       doorNodes,
       blockedEdges: blockedCount,

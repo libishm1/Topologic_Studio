@@ -243,6 +243,14 @@ export class ViewerManager {
       downAt = null;
       if (moved > 5 || elapsed > 600) return;
 
+      // With a graph built, picks land on the graph only: a ray into the model
+      // hits a wall or the roof as often as a floor, and the point then has to
+      // be snapped to the graph anyway.
+      if (this._graphNodes?.length) {
+        const point = this._pickGraphNode(event);
+        if (point) this._onPick?.(this._pickMode, point, null);
+        return;
+      }
       try {
         const hit = await this.raycaster?.castRay();
         if (!hit?.point) return;
@@ -255,6 +263,36 @@ export class ViewerManager {
 
     container.addEventListener("pointerdown", this._pointerStart);
     container.addEventListener("pointerup", this._pointerDown);
+  }
+
+  /**
+   * The graph node under the pointer: among nodes within 12 px of it on
+   * screen, the one nearest the camera, which is the one you see. Screen space
+   * rather than a world-space radius, so picking feels the same at any zoom.
+   */
+  _pickGraphNode(event, tolerancePx = 12) {
+    const nodes = this._graphNodes;
+    const camera = this.world?.camera?.three;
+    if (!nodes || !camera || !this._container) return null;
+    const rect = this._container.getBoundingClientRect();
+    const px = event.clientX - rect.left;
+    const py = event.clientY - rect.top;
+    const v = new THREE.Vector3();
+    const tol2 = tolerancePx * tolerancePx;
+    let best = -1;
+    let bestDepth = Infinity;
+    for (let i = 0; i < nodes.length; i += 3) {
+      v.set(nodes[i], nodes[i + 1], nodes[i + 2]).project(camera);
+      if (v.z < -1 || v.z > 1) continue; // behind the camera or past the far plane
+      const sx = ((v.x + 1) / 2) * rect.width;
+      const sy = ((1 - v.y) / 2) * rect.height;
+      const d2 = (sx - px) * (sx - px) + (sy - py) * (sy - py);
+      if (d2 <= tol2 && v.z < bestDepth) {
+        bestDepth = v.z;
+        best = i;
+      }
+    }
+    return best < 0 ? null : [nodes[best], nodes[best + 1], nodes[best + 2]];
   }
 
   _attachResize(container) {
@@ -462,6 +500,9 @@ export class ViewerManager {
   clearOverlays() {
     this.overlays.forEach((object) => this._destroyObject(object));
     this.overlays.clear();
+    // Picking reads these; a new model must not be picked against the old graph.
+    this._graphNodes = null;
+    this._graphEdges = null;
   }
 
   /**

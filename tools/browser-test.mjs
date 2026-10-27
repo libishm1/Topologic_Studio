@@ -324,10 +324,43 @@ async function pickAt(kind, fx, fy) {
   const armed = await picker.locator(".picker__coord").first().textContent();
   console.log(`    [pick:${kind}] after arming: "${armed?.trim()}"`);
 
+  // Picks land on the graph only, so aim at the graph node whose screen
+  // position is nearest the target, as a user would. Needs the dev build's
+  // window.__viewer; a production build falls back to the plain target.
+  const aim = await page.evaluate(
+    ([tx, ty]) => {
+      const v = window.__viewer;
+      const nodes = v?._graphNodes;
+      const cam = v?.world?.camera?.three;
+      const el = v?._container;
+      if (!nodes || !cam || !el) return null;
+      const r = el.getBoundingClientRect();
+      const V = cam.matrixWorldInverse.elements;
+      const P = cam.projectionMatrix.elements;
+      const mul = (m, x, y, z, w) => [
+        m[0] * x + m[4] * y + m[8] * z + m[12] * w,
+        m[1] * x + m[5] * y + m[9] * z + m[13] * w,
+        m[2] * x + m[6] * y + m[10] * z + m[14] * w,
+        m[3] * x + m[7] * y + m[11] * z + m[15] * w,
+      ];
+      let best = null;
+      for (let i = 0; i < nodes.length; i += 3) {
+        const [cx, cy, cz, cw] = mul(P, ...mul(V, nodes[i], nodes[i + 1], nodes[i + 2], 1));
+        if (cw <= 0) continue;
+        const sx = ((cx / cw + 1) / 2) * r.width;
+        const sy = ((1 - cy / cw) / 2) * r.height;
+        if (sx < 0 || sy < 0 || sx > r.width || sy > r.height) continue;
+        const d = (sx - r.width * tx) ** 2 + (sy - r.height * ty) ** 2;
+        if (!best || d < best.d) best = { d, x: r.left + sx, y: r.top + sy, z: cz / cw };
+      }
+      return best;
+    },
+    [fx, fy],
+  );
   // Move first, then click: the engine's raycaster tracks pointer position
   // from move events.
-  const x = box.x + box.width * fx;
-  const y = box.y + box.height * fy;
+  const x = aim ? aim.x : box.x + box.width * fx;
+  const y = aim ? aim.y : box.y + box.height * fy;
   await page.mouse.move(x, y);
   await page.waitForTimeout(120);
   await page.mouse.click(x, y);
