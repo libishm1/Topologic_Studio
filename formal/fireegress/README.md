@@ -60,6 +60,22 @@ Not formalised in this batch (each with a reason in the agents' reports):
 full Dijkstra/A* correctness, the time-expanded minimum-dose DP, the eikonal
 PDE, probabilistic pre-movement models, and some worked numbers.
 
+## Third batch: the route and geometry claims (2026-10-27)
+
+What a user sees in a route, each with a JavaScript property test in
+`topologicpy-web-frontend/src/core/*.property.test.mjs` that checks the same
+statement against the real functions, and an adversarial review of every
+statement against the code and the app's wording. All 12 modules build with no
+warnings; 294 axiom results, standard axioms only ([axioms-all-2026-10-27.txt](axioms-all-2026-10-27.txt)).
+
+| File | Proved | Scope and limits |
+| --- | --- | --- |
+| AStar.lean | Reduced costs are non-negative under a consistent heuristic; walk costs telescope; Dijkstra's label-setting invariant; every A* run is a Dijkstra run on reduced costs; `astar_correct`, `astar_straight_line_correct` (L9). | Least cost on the walkable graph between the snapped nodes, for the browser engine. Not the heap's lazy deletion, not floating point, not TGraph (checked in tests). Needs every weight >= the link's length; fire.js now never produces a NaN weight. |
+| Straighten.lean | A subsequence polyline with the same ends is never longer; shortcut clearance bound. | "0.25 m off walls" is not guaranteed: at s = 0.5 a run whose ends are 0.25 m clear keeps about 0.24 m between samples, and near doorways only as much as its ends. App wording corrected. |
+| Segments.lean | `crossTest_iff`: the orientation test is true exactly when the closed segments meet and no endpoint lies on the other; soundness and completeness for proper crossings. | Touching, T-junctions and collinear overlap return false; the three inside samples catch most, not all. Exact arithmetic; the code now compares signs instead of multiplying (no underflow). |
+| Lattice.lean | Octile distance is attained and is a lower bound for any 8-connected path; Euclidean <= octile <= sqrt(4 - 2 sqrt 2) Euclidean (8.2%); no corner cutting. | The code now blocks a diagonal when both of its axis detours are blocked, matching `diagonal_detour` (fired on 2 diagonals across 16 models; connectivity unchanged). |
+| Frames.lean | (x, y, z) -> (x, z, -y) is a proper rotation; rigid motions preserve polyline lengths; That Open's matrix can never be a reflection. | For a model rotated in plan, That Open rounds the rotation to about 1e-3, so lengths are exact only for unrotated models. Docstrings corrected. |
+
 ## Building
 
 Lake caches are gigabytes, so build outside OneDrive. The working copy is at

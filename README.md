@@ -328,8 +328,10 @@ for the bugs that pass turned up.
   the default and TopologicPy is opt-in with a warning in the UI.
 - The `thatopen` bundle chunk is 5.4 MB (911 KB gzipped). It is lazy-loaded, but
   it is still a large first-visit download.
-- Wall blocking uses 2D centrelines with a vertical extent, not true solids.
-  Curved and non-orthogonal walls are approximated by their bounding centreline.
+- Wall blocking uses the plan outline of the wall solids cut 0.75 m above each
+  floor, not the full 3-D solids. A link is blocked when it properly crosses an
+  outline or a sample along it lies inside one; links that only touch an
+  outline (at a corner or along a face) are not blocked.
 - `/upload-ifc` (server-side IFC) is carried over unchanged and has not been
   re-profiled.
 - Grid-snap mode re-issues node indices, so a graph built with it cannot be

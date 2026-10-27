@@ -228,13 +228,13 @@ export function GraphPanel({ studio, onBuildGraph, onNavigationCheck }) {
           label="Walls block routes"
           checked={settings.useWalls}
           onChange={(useWalls) => setSettings({ useWalls })}
-          hint="Links crossing a wall are left out of routing. Doors stay open."
+          hint="Links that cross a wall 0.75 m above the floor are left out of routing. Links that only touch a wall stay in. Door links always stay open."
         />
         <Toggle
           label="No diagonal links"
           checked={settings.rectilinear}
           onChange={(rectilinear) => setSettings({ rectilinear })}
-          hint="Routes then follow corridors exactly, but a route across an open room can be up to 41% longer."
+          hint="Routes then use only grid-aligned links. On an open floor the grid route can be up to 41% (the square root of 2) longer than with diagonals; drawing routes straight recovers much of that."
         />
         <SelectField
           label="Up axis"
@@ -450,7 +450,7 @@ export function RoutePanel({ studio, onPick, onPlace, doors, onClearPoints, onFi
 
   return (
     <>
-      <StepHeading step={3} title="Route" lead="The shortest way out, drawn straight, and any real alternatives." />
+      <StepHeading step={3} title="Route" lead="The shortest route on the walkable graph to the exit you pick, drawn straight, and any real alternatives." />
       <GraphSummary graph={graph} onGoTo={onGoTo} />
       <div className="step-body" style={graph ? { paddingTop: "var(--space-4)" } : undefined}>
         {!ready && <Empty>Build the walkable graph first (step 2).</Empty>}
@@ -511,7 +511,7 @@ export function RoutePanel({ studio, onPick, onPlace, doors, onClearPoints, onFi
             ]}
             hint={
               engines.includes("topologicpy")
-                ? "Both return the same optimum route. TopologicPy's TGraph.ShortestPath runs on the server, about 30 ms against 3 ms."
+                ? "Both return a route of the same optimum cost (proved for the built-in A*, checked in tests for TGraph); where routes tie they may draw different ones. TopologicPy's TGraph.ShortestPath runs on the server, about 30 ms against 3 ms."
                 : "The server could not load topologicpy, so only the built-in engine is offered."
             }
           />
@@ -519,7 +519,7 @@ export function RoutePanel({ studio, onPick, onPlace, doors, onClearPoints, onFi
             label="Draw routes straight"
             checked={settings.straightenRoutes}
             onChange={(straightenRoutes) => setSettings({ straightenRoutes })}
-            hint="Straight runs that stay on the floor and 0.25 m off walls, as TopologicPy's Wire.Straighten draws them. Doors and stairs stay on the route. Applies to the next route."
+            hint="Straight runs, as TopologicPy's Wire.Straighten draws them, never longer than the grid route. A run whose ends both stand 0.25 m clear keeps about 0.24 m from walls at the 0.5 m grid (less on a coarser grid). Doors and stairs stay on the route. Applies to the next route."
           />
           <Button block disabled={!canRoute || engines.length < 2} onClick={onCompare}>
             Compare both engines
@@ -570,7 +570,7 @@ export function RoutePanel({ studio, onPick, onPlace, doors, onClearPoints, onFi
                 <div className="kv__v">
                   {(route.straight_length ?? route.length).toFixed(1)} m
                   {route.rank === 1
-                    ? " · shortest"
+                    ? " · shortest on the grid"
                     : ` · +${Math.round((route.stretch - 1) * 100)}% · ${Math.round(route.overlap * 100)}% shared`}
                 </div>
               </React.Fragment>

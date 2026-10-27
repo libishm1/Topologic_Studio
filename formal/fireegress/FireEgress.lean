@@ -5,3 +5,8 @@ import FireEgress.Dim
 import FireEgress.FireDynamics
 import FireEgress.Tenability
 import FireEgress.GraphNumerics
+import FireEgress.AStar
+import FireEgress.Straighten
+import FireEgress.Segments
+import FireEgress.Lattice
+import FireEgress.Frames

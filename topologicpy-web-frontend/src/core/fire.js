@@ -101,7 +101,10 @@ export function hazardWeights(graph, temps, alpha, ambient = AMBIENT, span = 100
   const out = new Float64Array(m);
   for (let e = 0; e < m; e += 1) {
     const avg = (temps[graph.edges[e * 2]] + temps[graph.edges[e * 2 + 1]]) / 2;
-    out[e] = base[e] * (1 + alpha * Math.max(0, (avg - ambient) / span));
+    // A non-finite temperature adds no cost rather than a NaN one: A* is
+    // exact only while every weight is at least the link's length (AStar.lean).
+    const h = (avg - ambient) / span;
+    out[e] = base[e] * (1 + alpha * (Number.isFinite(h) ? Math.max(0, h) : 0));
   }
   return out;
 }

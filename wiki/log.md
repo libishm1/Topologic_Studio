@@ -59,4 +59,11 @@
   only). Found: L2's boundary clause and R3's prefix claim false (counter-
   examples proved), SFPE speed non-monotone at its 0.54 switch, density 3.8
   past jam, MQH 740 vs 6.85 off by 4%, FED kelvin trap.
+- Route and geometry claims in Lean (AStar with full Dijkstra invariant,
+  Straighten, Segments, Lattice, Frames; 294 axiom results across 12 modules)
+  with matching JS property tests. The review corrected the app's wording
+  (A* exact by consistency, not admissibility; clearance about 0.24 m not
+  0.25 m; TGraph parity measured, not proved; lengths exact only for
+  unrotated models) and three code points: sign test in segmentsCross,
+  diagonal blocked when both axis detours are, NaN-safe hazard weights.
 

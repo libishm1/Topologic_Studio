@@ -354,12 +354,20 @@ export class SegmentIndex {
 
 // ---------------------------------------------------------------- linking
 
+/**
+ * Whether segments ab and cd cross at a point strictly inside both. Exactly
+ * that, in exact arithmetic (formal/fireegress Segments.lean, crossTest_iff):
+ * touching at an endpoint, a T-junction and collinear overlap all return
+ * false. Signs are compared rather than multiplied, so tiny or huge
+ * determinants cannot underflow or overflow the product.
+ */
 function segmentsCross(ax, ay, bx, by, cx, cy, dx, dy) {
   const d1 = (dx - cx) * (ay - cy) - (dy - cy) * (ax - cx);
   const d2 = (dx - cx) * (by - cy) - (dy - cy) * (bx - cx);
   const d3 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
   const d4 = (bx - ax) * (dy - ay) - (by - ay) * (dx - ax);
-  return d1 * d2 < 0 && d3 * d4 < 0;
+  const opposite = (u, v) => (u > 0 && v < 0) || (u < 0 && v > 0);
+  return opposite(d1, d2) && opposite(d3, d4);
 }
 
 function distanceToSegment(px, py, [[x0, y0], [x1, y1]]) {
@@ -533,6 +541,9 @@ export function buildLatticeGraph({
   // visited once: both kinds look the same four directions, floors look for
   // stairs only at half steps, and floors never share a half-step cell.
   const edges = [];
+  // Each floor diagonal with its two axis detours (a -> c -> b), checked once
+  // the walls are known (below).
+  const diagonals = [];
   const fullSteps = rectilinear ? [[2, 0], [0, 2]] : [[2, 0], [0, 2], [2, 2], [2, -2]];
   const halfSteps = rectilinear ? [[1, 0], [0, 1]] : [[1, 0], [0, 1], [1, 1], [1, -1]];
   for (let a = 0; a < count; a += 1) {
@@ -541,7 +552,12 @@ export function buildLatticeGraph({
         const b = best(a, di, dj, KIND_FLOOR);
         if (b < 0) continue;
         // No corner cutting: both axis neighbours must be walkable too.
-        if (di !== 0 && dj !== 0 && (best(a, di, 0, KIND_FLOOR) < 0 || best(a, 0, dj, KIND_FLOOR) < 0)) continue;
+        if (di !== 0 && dj !== 0) {
+          const c1 = best(a, di, 0, KIND_FLOOR);
+          const c2 = best(a, 0, dj, KIND_FLOOR);
+          if (c1 < 0 || c2 < 0) continue;
+          diagonals.push([edges.length / 2, a, c1, c2, b]);
+        }
         edges.push(a, b);
       }
       for (const [di, dj] of halfSteps) {
@@ -665,9 +681,10 @@ export function buildLatticeGraph({
     const ax = points[a * 3 + h0], ay = points[a * 3 + h1];
     const bx = points[b * 3 + h0], by = points[b * 3 + h1];
     const index = sectionFor(Math.min(heights[a], heights[b]));
-    // Blocked if it crosses an outline, or passes through solid (which also
-    // catches a crossing exactly at an outline vertex, where the strict
-    // crossing test says no).
+    // Blocked if it crosses an outline strictly, or if a sample at 1/4, 1/2 or
+    // 3/4 lies in solid. The samples catch a link through an outline vertex
+    // (where the strict test says no) only when one lands in the solid; a
+    // short chord between two vertices can slip between them.
     if (
       index.crosses(ax, ay, bx, by) ||
       index.inside(ax + (bx - ax) * 0.25, ay + (by - ay) * 0.25) ||
@@ -675,6 +692,28 @@ export function buildLatticeGraph({
       index.inside(ax + (bx - ax) * 0.75, ay + (by - ay) * 0.75)
     ) {
       blocked[e] = 1;
+    }
+  }
+
+  // A diagonal is kept only if one of its two axis detours is open, so it
+  // never squeezes between two walls that block both. This makes the
+  // no-corner-cutting rule hold with walls as well as missing floor
+  // (formal/fireegress Lattice.lean, diagonal_detour); before, only the
+  // axis neighbours' existence was checked.
+  let cornerBlocked = 0;
+  if (diagonals.length) {
+    const edgeOf = new Map();
+    for (let e = 0; e < edgeCount; e += 1) edgeOf.set(pairKey(edges[e * 2], edges[e * 2 + 1]), e);
+    const open = (u, v) => {
+      const e = edgeOf.get(pairKey(u, v));
+      return e !== undefined && !blocked[e];
+    };
+    for (const [e, a, c1, c2, b] of diagonals) {
+      if (blocked[e]) continue;
+      if (!(open(a, c1) && open(c1, b)) && !(open(a, c2) && open(c2, b))) {
+        blocked[e] = 1;
+        cornerBlocked += 1;
+      }
     }
   }
 
@@ -760,6 +799,7 @@ export function buildLatticeGraph({
       stairNodes,
       doorNodes,
       blockedEdges: blockedCount,
+      cornerBlocked,
       walls: wallList.length,
       angleDeg: (angle * 180) / Math.PI,
       spacing: s,

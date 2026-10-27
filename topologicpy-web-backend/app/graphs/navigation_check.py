@@ -13,7 +13,10 @@ loads with web-ifc's ``COORDINATE_TO_ORIGIN`` and Y up, so its points are the
 IFC points turned by ``(x, y, z) -> (x, z, -y)`` and then moved by the model's
 coordination matrix, which That Open reports (``model.getCoordinationMatrix``).
 Studio then lifts every node by the agent height. With the matrix the frame
-change is exact: on the Duplex it is a pure translation (-2.514, -3.262,
+change is a rigid motion, so it preserves route lengths exactly provided the
+matrix's 3x3 block is orthogonal (formal/fireegress Frames.lean). That holds for
+an unrotated model; for a rotated one, That Open's 1e-3 rounding of the block
+perturbs lengths by up to about 1e-3. On the Duplex it is a pure translation (-2.514, -3.262,
 -11.635), and with the 0.75 m lift added the two graphs sit within a median
 0.21 m of each other at 0.5 m spacing.
 

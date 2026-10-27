@@ -738,7 +738,9 @@ export class ViewerManager {
    *
    * web-ifc moves the model near the origin (COORDINATE_TO_ORIGIN) and That
    * Open records the move. The server needs it to put TopologicPy's graph,
-   * which lives in IFC world coordinates, into this frame exactly.
+   * which lives in IFC world coordinates, into this frame: exactly for an
+   * unrotated model, to about 1e-3 for a rotated one, since That Open rounds
+   * the rotation (formal/fireegress Frames.lean).
    */
   async getCoordinationMatrix() {
     try {
