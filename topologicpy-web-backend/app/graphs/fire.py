@@ -139,8 +139,12 @@ def temperature_steps(
 
         neighbour_mean = sums / counts
         delta = neighbour_mean - temps
-        # Heat only flows into a cooler cell in this simplified model.
-        gain = np.where(delta > 0, delta * options.heat_transfer / safe_degree, 0.0)
+        # Heat only flows into a cooler cell in this simplified model. The
+        # coefficient is capped at 1 (literature review, finding W1): Classic's
+        # 1.2 / degree is 1.2 for a dead end, which pushed it past its hotter
+        # neighbour. For degree 2 and up the two are identical.
+        coefficient = np.minimum(1.0, options.heat_transfer / safe_degree)
+        gain = np.where(delta > 0, delta * coefficient, 0.0)
         temps = temps + np.where(has_neighbours, gain, 0.0)
         temps[start] = float(options.fire)
         np.clip(temps, options.ambient, options.fire, out=temps)

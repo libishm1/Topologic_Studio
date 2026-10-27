@@ -183,10 +183,25 @@ class TestFire:
         # Only the ignition node is above ambient on step 0.
         assert list(payload) == ["0"]
 
+    def test_temperature_never_overshoots_a_dead_end(self):
+        """W1: a degree-1 node must never pass its hotter neighbour. Classic's
+        1.2 / degree did (0 - 1 - 2 - 3, seeded at 3, node 0 is the dead end)."""
+        graph = NavGraph(
+            points=np.array([[i, 0, 0] for i in range(4)], dtype=np.float32),
+            edges=np.array([[0, 1], [1, 2], [2, 3]], dtype=np.int32),
+            kinds=np.zeros(4, dtype=np.int8),
+        )
+        previous = None
+        for temps in fire_model.temperature_steps(graph, 3, fire_model.FireOptions(max_steps=40)):
+            if previous is not None:
+                assert temps[0] <= max(previous[0], previous[1]) + 1e-9
+            previous = temps
+
     def test_temperature_matches_classic_with_isolated_nodes(self):
         """Regression: ``reduceat`` summed one neighbour for any node followed by
         an isolated one. Compare against Classic's per-node loop, verbatim
-        apart from the clip Next has always applied."""
+        apart from the clip Next has always applied and the W1 cap
+        (``min(1, 1.2 / degree)``), which only changes degree-1 nodes."""
         rng = np.random.default_rng(5)
         n = 40
         points = rng.random((n, 3)).astype(np.float32)
@@ -219,7 +234,7 @@ class TestFire:
                     continue
                 diff = sum(temps[j] for j in nbrs) / len(nbrs) - temps[node]
                 if diff > 0:
-                    new[node] = min(120.0, temps[node] + diff * 1.2 / len(nbrs))
+                    new[node] = min(120.0, temps[node] + diff * min(1.0, 1.2 / len(nbrs)))
             temps = new
 
         options = fire_model.FireOptions(model="temperature", max_steps=12)

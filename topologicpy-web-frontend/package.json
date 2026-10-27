@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test \"src/core/*.test.mjs\"",
     "preview": "vite preview",
     "postinstall": "node scripts/sync-assets.mjs",
     "sync-assets": "node scripts/sync-assets.mjs"

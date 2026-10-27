@@ -431,30 +431,29 @@ const readStats = () =>
 console.log("\n[4b] Alternative routes");
 const altBtn = page.getByRole("button", { name: /^Find alternative routes$/ });
 if (gotStart && gotExit && (await altBtn.isEnabled())) {
-  const altResponse = page.waitForResponse(
-    (res) => res.url().includes("/api/ifc/path/alternatives"),
-    { timeout: 60000 },
-  );
+  // Computed in the browser now, so read the result off the panel rather than
+  // waiting for a request that no longer happens.
   const tAlt = Date.now();
   await altBtn.click();
-  const alt = await altResponse.then((res) => res.json()).catch(() => null);
-  if (alt) timing("Alternative routes (click to answer)", Date.now() - tAlt);
-  record(Boolean(alt?.routes?.length), "alternative routes returned", alt ? `${alt.routes.length} route(s), ${alt.ms} ms` : "no response");
-  if (alt?.routes?.length) {
-    console.log(
-      `    alternatives: ${alt.routes.map((r) => `${r.length.toFixed(2)} m (${Math.round(r.overlap * 100)}% shared)`).join(", ")}`,
+  const listed = await page
+    .waitForFunction(() => /route 1/i.test(document.body.innerText), null, { timeout: 60000 })
+    .then(() => true)
+    .catch(() => false);
+  if (listed) timing("Alternative routes (click to answer)", Date.now() - tAlt);
+  record(listed, "alternative routes listed in the panel");
+  if (listed) {
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll(".kv .kv__v")]
+        .map((el) => el.textContent.trim())
+        .filter((t) => /^\d+(\.\d+)? m/.test(t)),
     );
-    if (alt.note) console.log(`    note: ${alt.note}`);
-    const listed = await page
-      .waitForFunction(() => /route 1/i.test(document.body.innerText), null, { timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
-    record(listed, "alternative routes listed in the panel");
-    const costs = alt.routes.map((r) => r.cost);
+    console.log(`    alternatives: ${rows.join(" | ")}`);
+    const lengths = rows.map((t) => parseFloat(t));
+    record(lengths.length > 0, "alternative routes returned", `${lengths.length} route(s)`);
     record(
-      costs.every((c, i) => i === 0 || c >= costs[i - 1] - 1e-6),
-      "alternatives are ranked by cost",
-      costs.map((c) => c.toFixed(2)).join(" <= "),
+      lengths.every((c, i) => i === 0 || c >= lengths[i - 1] - 0.05),
+      "alternatives are ranked by length",
+      lengths.join(" <= "),
     );
   }
   await page.locator(".kv", { hasText: /route 1/i }).scrollIntoViewIfNeeded().catch(() => {});
@@ -556,17 +555,10 @@ await page.getByRole("button", { name: /Reinforcement learning/ }).click();
 await page.waitForTimeout(300);
 const trainBtn = page.getByRole("button", { name: /^Train policy$/ });
 if (await trainBtn.isEnabled()) {
-  const sent = page.waitForRequest((req) => req.url().includes("/api/rl/train"), {
-    timeout: 30000,
-  });
+  // RL trains in the browser now. That it used the picked fire origin shows
+  // as the "Escape possible" stat, which appears only when a fire was seeded.
   const tRl = Date.now();
   await trainBtn.click();
-  const body = await sent.then((req) => JSON.parse(req.postData() || "{}")).catch(() => ({}));
-  record(
-    Array.isArray(body.fire_point) && body.fire_point.length === 3,
-    "RL request carries the picked fire origin",
-    JSON.stringify(body.fire_point),
-  );
   // innerText applies the stat labels' text-transform: uppercase, so match
   // case-insensitively.
   const trained = await page

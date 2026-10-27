@@ -252,8 +252,12 @@ def q_learning_path(
                 done = True
                 reached = 1
 
-            shaped = reward + gamma * potential[nxt] - potential[state]
-            if done:
+            # Terminal states have zero potential, and the last allowed step is
+            # terminal (literature review, finding W5): Ng, Harada & Russell's
+            # guarantee needs Phi = 0 at terminals, and bootstrapping past the
+            # horizon read untrained prior values.
+            shaped = reward + gamma * (0.0 if done else potential[nxt]) - potential[state]
+            if done or t == max_steps - 1:
                 td_target = shaped
             else:
                 nxt_options = slots[nxt]

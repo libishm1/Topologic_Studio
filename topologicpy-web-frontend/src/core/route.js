@@ -202,6 +202,32 @@ export function astar(graph, start, end, { weights, useWalls = true, blocked } =
   return { nodes, cost: dist[end] };
 }
 
+/** Shortest distance from `source` to every node over open links (Dijkstra). */
+export function distancesFrom(graph, source, { blocked = null } = {}) {
+  const { indptr, neighbours, edgeIds, n } = csr(graph);
+  const w = edgeLengths(graph);
+  const dist = new Float64Array(n).fill(Infinity);
+  dist[source] = 0;
+  const heap = new Heap();
+  heap.push(0, source);
+  const done = new Uint8Array(n);
+  while (heap.size) {
+    const u = heap.pop();
+    if (done[u]) continue;
+    done[u] = 1;
+    for (let k = indptr[u]; k < indptr[u + 1]; k += 1) {
+      if (blocked?.[edgeIds[k]]) continue;
+      const v = neighbours[k];
+      const nd = dist[u] + w[edgeIds[k]];
+      if (nd < dist[v]) {
+        dist[v] = nd;
+        heap.push(nd, v);
+      }
+    }
+  }
+  return dist;
+}
+
 /**
  * A route between two picked points, in the server's PathResponse shape so
  * the UI does not care which side computed it.

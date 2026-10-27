@@ -16,11 +16,14 @@
  */
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { api, legacyApi, openFireStream } from "./lib/api.js";
+import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphStats } from "./core/graph.js";
 import { findRoute } from "./core/route.js";
+import { alternativeRoutes } from "./core/alternatives.js";
+import { runFire } from "./core/fire.js";
+import { trainRl as trainRlPolicy } from "./core/rl.js";
 import { useStudio } from "./state/useStudio.js";
 import { AboutPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
@@ -527,19 +530,28 @@ export default function App() {
 
   const findAlternatives = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
-    if (needsServerGraph("Alternative routes")) return;
+    // In the browser unless the TopologicPy engine is chosen (its Yen is
+    // TGraph.KShortestPaths on the server).
+    const onServer = studio.effectiveEngine === "topologicpy";
+    if (onServer && needsServerGraph("Alternative routes on the TopologicPy engine")) return;
     studio.setPathBusy(true);
     studio.setComparison(null);
     try {
-      const result = await api.alternatives({
-        graph_id: graph.graphId,
-        start_point: points.start,
-        end_point: points.exit,
-        engine: studio.effectiveEngine,
-        use_walls: settings.useWalls,
-        k: settings.altCount,
-        method: settings.altMethod,
-      });
+      const result = onServer
+        ? await api.alternatives({
+            graph_id: graph.graphId,
+            start_point: points.start,
+            end_point: points.exit,
+            engine: studio.effectiveEngine,
+            use_walls: settings.useWalls,
+            k: settings.altCount,
+            method: settings.altMethod,
+          })
+        : alternativeRoutes(graph, points.start, points.exit, {
+            k: settings.altCount,
+            method: settings.altMethod,
+            useWalls: settings.useWalls,
+          });
       studio.setAlternatives(result);
       // The best alternative is the route, so it takes the route's place
       // rather than being drawn twice.
@@ -606,7 +618,6 @@ export default function App() {
 
   const startFire = useCallback(() => {
     if (!graph || !points.fire) return;
-    if (needsServerGraph("Fire simulation")) return;
     studio.stopFire();
     studio.setDynamicPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
@@ -619,33 +630,22 @@ export default function App() {
     // treating burning nodes as impassable.
     const wantsReroute = settings.reroute && Boolean(points.start && points.exit);
 
-    const handle = openFireStream(
+    // Runs in the browser (src/core/fire.js), emitting the messages the
+    // server's stream did, so no round trip per step and no backend needed.
+    const handle = runFire(
+      graph,
       {
-        graph_id: graph.graphId,
         model: settings.fireModel,
-        max_steps: settings.fireMaxSteps,
-        delay_ms: settings.fireDelayMs,
-        use_walls: settings.useWalls,
-        start_x: points.fire[0],
-        start_y: points.fire[1],
-        start_z: points.fire[2],
-        ...(points.exit
-          ? { end_x: points.exit[0], end_y: points.exit[1], end_z: points.exit[2] }
-          : {}),
-        ...(wantsReroute
-          ? {
-              stream_path: true,
-              path_start_x: points.start[0],
-              path_start_y: points.start[1],
-              path_start_z: points.start[2],
-              path_recompute_interval: settings.rerouteInterval,
-              path_alpha: settings.hazardAlpha,
-              path_engine: studio.effectiveEngine,
-              ...(settings.lethalityThreshold
-                ? { path_lethality_threshold: settings.lethalityThreshold }
-                : {}),
-            }
-          : {}),
+        firePoint: points.fire,
+        startPoint: points.start,
+        exitPoint: points.exit,
+        maxSteps: settings.fireMaxSteps,
+        delayMs: settings.fireDelayMs,
+        useWalls: settings.useWalls,
+        reroute: wantsReroute,
+        interval: settings.rerouteInterval,
+        alpha: settings.hazardAlpha,
+        lethality: settings.lethalityThreshold || null,
       },
       {
         onMessage: (message) => {
@@ -679,7 +679,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast, needsServerGraph]);
+  }, [graph, points, reportError, settings, studio, toast]);
 
   const stopFire = useCallback(() => {
     studio.stopFire();
@@ -691,21 +691,22 @@ export default function App() {
 
   const trainRl = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
-    if (needsServerGraph("RL training")) return;
     studio.setRl({ busy: true, path: null, reachedExit: false, result: null });
     try {
-      const result = await api.trainRl({
-        graph_id: graph.graphId,
-        start_point: points.start,
-        exit_point: points.exit,
-        // The fire used to be seeded at the start point, so the evacuee began
-        // inside it. It starts at the picked fire origin now.
-        ...(points.fire ? { fire_point: points.fire } : {}),
+      // Trains in the browser (src/core/rl.js), with the review's terminal-
+      // potential and horizon corrections. Yield a frame first so the busy
+      // state paints before the training loop holds the thread.
+      await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      const result = trainRlPolicy(graph, {
+        startPoint: points.start,
+        exitPoint: points.exit,
+        // The fire starts at the picked origin, not at the evacuee.
+        firePoint: points.fire,
         episodes: settings.rlEpisodes,
-        max_steps: settings.rlMaxSteps,
-        use_fire: settings.rlUseFire,
-        fire_speed: settings.rlFireSpeed,
-        use_walls: settings.useWalls,
+        maxSteps: settings.rlMaxSteps,
+        useFire: settings.rlUseFire,
+        fireSpeed: settings.rlFireSpeed,
+        useWalls: settings.useWalls,
       });
       studio.setRl({
         busy: false,
@@ -726,7 +727,7 @@ export default function App() {
       studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
       reportError(error, "RL training failed");
     }
-  }, [graph, points, reportError, settings, studio, toast, needsServerGraph]);
+  }, [graph, points, reportError, settings, studio, toast]);
 
   // --------------------------------------------------------- reactive push
 
