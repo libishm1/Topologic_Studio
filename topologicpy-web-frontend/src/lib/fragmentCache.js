@@ -11,6 +11,18 @@
  * multi-second parse into a fetch from disk.
  */
 
+import pkg from "../../package.json";
+
+/**
+ * What produced a cached buffer. The key was the IFC's hash alone, so a model
+ * converted by an older fragments or web-ifc, or with other importer
+ * settings, was served again after an upgrade
+ * (wiki/research/ifc-handling-survey-2026-10-27.md, item 4). Bump
+ * IMPORT_SETTINGS when ViewerManager's importer settings change.
+ */
+const IMPORT_SETTINGS = 1;
+export const CONVERTER = `fragments ${pkg.dependencies["@thatopen/fragments"]}; web-ifc ${pkg.dependencies["web-ifc"]}; settings ${IMPORT_SETTINGS}`;
+
 const DB_NAME = "topologic-studio";
 const DB_VERSION = 1;
 const STORE = "fragments";
@@ -72,12 +84,12 @@ export async function hashFile(file) {
       for (let i = 0; i < bytes.length; i += 1) {
         hex += bytes[i].toString(16).padStart(2, "0");
       }
-      return { key: hex, buffer };
+      return { key: `${hex}|${CONVERTER}`, buffer };
     }
   } catch {
     /* fall through */
   }
-  const fallback = `${file.name}:${file.size}:${file.lastModified}`;
+  const fallback = `${file.name}:${file.size}:${file.lastModified}|${CONVERTER}`;
   return { key: fallback, buffer };
 }
 
@@ -110,6 +122,9 @@ export async function writeCached(key, buffer, meta = {}) {
       transaction.onabort = () => reject(transaction.error);
     });
     void evict(db).catch(() => {});
+    // Ask the browser not to clear the cache under storage pressure; it may
+    // say no, which changes nothing.
+    void globalThis.navigator?.storage?.persist?.().catch(() => {});
     return true;
   } catch {
     // A quota error just means no cache for this model; loading still works.

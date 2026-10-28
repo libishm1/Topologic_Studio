@@ -116,14 +116,14 @@ export const PROOFS = [
   {
     property: "Earliest arrival while the fire changes the routes",
     meaning:
-      "When each link's arrival time never overtakes (leaving later never arrives earlier) and travel never takes negative time, label setting gives the exact earliest arrival everywhere, and waiting never helps. Both conditions are needed: a counterexample without the first is proved.",
+      "When each link's arrival time never overtakes (leaving later never arrives earlier) and travel never takes negative time, label setting gives the exact earliest arrival everywhere, and waiting never helps. Both conditions are needed: a counterexample without the first is proved. Studio's forecast router walks each link at constant speed and closes a point once the forecast makes it untenable, which meets both, so its route reaches an exit as early as any safe route can. A route planned once on the fire as it is at departure can walk into it; a proved example shows this.",
     tex: [
       String.raw`s \le t \Rightarrow A_e(s) \le A_e(t), \qquad t \le A_e(t)`,
       String.raw`\Longrightarrow\ \mathrm{label}(v) = \mathrm{EA}(v)`,
       String.raw`\mathrm{EA}(v) = \min_{s = v_0 \to \dots \to v_k = v} \bigl(A_{e_k} \circ \dots \circ A_{e_1}\bigr)(t_0)`,
     ],
-    files: ["TimeDependent"],
-    status: "Proved (for the planned router)",
+    files: ["TimeDependent", "Forecast"],
+    status: "Proved, and met by the forecast router",
   },
   {
     property: "Least heat dose on the way out",
@@ -135,8 +135,21 @@ export const PROOFS = [
       String.raw`d_e(t) \le d_e(t+1), \; w_v(t) \ge 0 \;\Rightarrow`,
       String.raw`\text{some optimal route never waits}`,
     ],
-    files: ["MinDose"],
-    status: "Proved (for a planned feature)",
+    files: ["MinDose", "Forecast"],
+    status: "Proved",
+  },
+  {
+    property: "The time-dose trade-off is exact",
+    meaning:
+      "The forecast keeps each point's heat as its running maximum, so heat never falls, a link's dose never falls with the time it is entered, and waiting never helps. A route that is no later and no more dosed then stays so along every continuation, so the search's routes to the exits are exactly the trade-off between arriving early and accruing little dose: the first is the earliest safe route, the last the least-dose one, and none is beaten on both. The dose is the convective-heat FED of the model's heat index, so it ranks routes under the model; it is not a measured dose.",
+    tex: [
+      String.raw`r(T) = \frac{T^{3.4}}{5 \times 10^{7} \cdot 60}\ \mathrm{s}^{-1}`,
+      String.raw`d_e(t) = \int_{t}^{t + \tau_e} \max\bigl(r_u(s), r_w(s)\bigr)\, ds`,
+      String.raw`t_1 \le t_2,\ D_1 \le D_2 \;\Rightarrow`,
+      String.raw`D_1 + d_e(t_1) \le D_2 + d_e(t_2)`,
+    ],
+    files: ["Forecast", "Tenability"],
+    status: "Proved; a tie bug it found is fixed",
   },
   {
     property: "Yen's alternative routes are the next cheapest",
@@ -161,6 +174,46 @@ export const PROOFS = [
       String.raw`\tilde R(\tau_1) \le \tilde R(\tau_2) \iff R(\tau_1) \le R(\tau_2)`,
     ],
     files: ["Shaping"],
+    status: "Proved",
+  },
+  {
+    property: "Q-learning converges to the best table",
+    meaning:
+      "For Studio's deterministic problem the Bellman operator is a contraction, and tabular Q-learning with any constant step between 0 and 1 converges to the optimal table on every state updated infinitely often; with fire and a step limit the optimum is exact backward induction. This says nothing about a finite run, so the panel shows the policy's return beside that exact optimum. Shaping keeps the optimal policy only if the step limit, too, has zero potential; Studio now sets it so.",
+    tex: [
+      String.raw`\lVert TQ - TQ' \rVert_\infty \le \gamma\, \lVert Q - Q' \rVert_\infty`,
+      String.raw`\alpha_n \in [\alpha_{\min}, 1] \;\Rightarrow\; Q_n \to Q^{\ast}`,
+      String.raw`Q^{\ast}_{\Phi} = Q^{\ast} - \Phi`,
+      String.raw`\text{if } \Phi = 0 \text{ at every end}`,
+    ],
+    files: ["QLearning"],
+    status: "Proved (deterministic, asymptotic)",
+  },
+  {
+    property: "How the graph's fire front relates to the real one",
+    meaning:
+      "A front spreading at speed F from one point arrives at distance over F, the eikonal solution away from the source. Along the graph it is never earlier than the front that must go round walls, and on open floor at most 8.2% later; with walls only 'never early' holds, and refining the grid does not remove the 8.2%. The distance-band fire is never later than the walled front; the spread-along-links fire is a hop count, not this front.",
+    tex: [
+      String.raw`T(x) = \lVert x - x_0 \rVert / F`,
+      String.raw`\lVert \nabla T(x) \rVert = 1/F \quad (x \ne x_0)`,
+      String.raw`\lVert x - x_0 \rVert \le d_{\Omega}(x_0, x) \le F\, T_h(x)`,
+      String.raw`F\, T_h(x) \le 1.0824\, \lVert x - x_0 \rVert`,
+      String.raw`\text{on open floor}`,
+    ],
+    files: ["Eikonal"],
+    status: "Proved",
+  },
+  {
+    property: "Rounding cannot change a wall test or a route",
+    meaning:
+      "In double precision the wall-crossing test can disagree with exact arithmetic only for a point within about 1e-13 m of a wall's line, and A* in doubles stays within about 1e-9 m of the optimum on a 10,000-link route. The largest effect is storing node coordinates in single precision: at most 1.2e-5 m per link.",
+    tex: [
+      String.raw`|\tilde o - o| \le \bigl((1+u)^{4} - 1\bigr)\bigl(|X| + |Y|\bigr)`,
+      String.raw`|\tilde o| > (4 + 16u)\,u\,\bigl(|\tilde l| + |\tilde r|\bigr)`,
+      String.raw`\Rightarrow\ \operatorname{sgn} \tilde o = \operatorname{sgn} o`,
+      String.raw`u = 2^{-53}, \qquad 2\,u_{32}\,M \approx 1.2 \times 10^{-5}\ \mathrm{m}`,
+    ],
+    files: ["FloatError"],
     status: "Proved",
   },
   {
