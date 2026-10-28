@@ -240,6 +240,7 @@ const separate = (g, p, q) => {
   return { ok: r.detail === "separate parts", detail: r.detail };
 };
 const endsLinked = (want) => (g) => ({ ok: g.stats.stairEnds === want && g.stats.stairEndsLinked === want, detail: `${g.stats.stairEndsLinked} of ${g.stats.stairEnds} ends linked` });
+const allEndsLinked = (g) => ({ ok: g.stats.stairEnds > 0 && g.stats.stairEndsLinked === g.stats.stairEnds, detail: `${g.stats.stairEndsLinked} of ${g.stats.stairEnds} ends linked` });
 const staircases = (g) => {
   const find = (() => {
     const n = g.points.length / 3;
@@ -276,7 +277,7 @@ const GEOMETRY = [
       for (let k = 1; k <= 8; k += 1) stairs.push(rect(3, 1 + (k - 1) * 0.25, 4, 1 + k * 0.25, 1.5 + 0.1875 * k));
       return { floors: [rect(-3, -1, 1, 2, 0), rect(2, 3, 6, 6, 3)], stairs, walls: [box(2, 6, 3, 6, 6.2, 5.8)] };
     },
-    expect: { "both ends linked, once each": endsLinked(2), "ground joins upper floor": (g) => linked(g, [-2, 0, 0], [5, 5, 3]) },
+    expect: { "every end linked, once each (a landing walked as floor splits the stair)": allEndsLinked, "ground joins upper floor": (g) => linked(g, [-2, 0, 0], [5, 5, 3]) },
   },
   {
     id: "stair-L-landing-slab",
@@ -298,7 +299,7 @@ const GEOMETRY = [
       for (let k = 1; k <= 8; k += 1) stairs.push(rect(3 - k * 0.25, 1, 3 - (k - 1) * 0.25, 2, 1.5 + 0.1875 * k));
       return { floors: [rect(-3, 0, 1, 1, 0), rect(-3, 1, 1, 2, 3)], stairs, walls: [box(-3, 2, 3, 1, 2.2, 5.8)] };
     },
-    expect: { "both ends linked, once each": endsLinked(2), "ground joins upper floor": (g) => linked(g, [-2, 0.5, 0], [-2, 1.5, 3]) },
+    expect: { "every end linked, once each (a landing walked as floor splits the stair)": allEndsLinked, "ground joins upper floor": (g) => linked(g, [-2, 0.5, 0], [-2, 1.5, 3]) },
   },
   {
     id: "stair-U-landing-slab",

@@ -250,9 +250,17 @@ export class FreePlane {
     if (len2 < 1e-18) return true;
     const len = Math.sqrt(len2);
     const touches = [0, 1];
+    // Corners are outline end points merged to 10 micrometres, so a segment
+    // to a corner can end a hair past the outline segments meeting there; a
+    // crossing within END of either end of a-b is such a hair and ignored.
+    const END = 1e-4;
     for (let z = 0; z < k; z += 1) {
       const s = this.near[z] * 4;
-      if (properCross(ax, ay, bx, by, g[s], g[s + 1], g[s + 2], g[s + 3])) return false;
+      if (properCross(ax, ay, bx, by, g[s], g[s + 1], g[s + 2], g[s + 3])) {
+        const sx = g[s + 2] - g[s], sy = g[s + 3] - g[s + 1];
+        const t = ((g[s] - ax) * sy - (g[s + 1] - ay) * sx) / (rx * sy - ry * sx);
+        if (t * len > END && (1 - t) * len > END) return false;
+      }
       for (let end = 0; end < 4; end += 2) {
         const ex = g[s + end] - ax, ey = g[s + end + 1] - ay;
         if (Math.abs(rx * ey - ry * ex) / len > 1e-7) continue;

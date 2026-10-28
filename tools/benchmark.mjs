@@ -862,7 +862,10 @@ export function summarize(results) {
       ["  of which through a door link that is not free", String(geoRows.filter((p) => p.gridViolation?.doorLinks).length)],
       ["  of which through a lattice link that clips solid", String(geoRows.filter((p) => p.gridViolation?.latticeLinks).length)],
       ["  of which by under 1e-5 m with every link free (rounding)", String(geoRows.filter((p) => p.gridViolation && !p.gridViolation.doorLinks && !p.gridViolation.latticeLinks && p.gridViolation.shortBy < 1e-5).length)],
+      ["  of which by more with every link free (a geodesic search error)", String(geoRows.filter((p) => p.gridViolation && !p.gridViolation.doorLinks && !p.gridViolation.latticeLinks && !(p.gridViolation.shortBy < 1e-5)).length)],
       ["Straightened routes shorter than the geodesic", String(geoRows.filter((p) => p.straightViolation).length)],
+      ["  of which through a door link that is not free", String(geoRows.filter((p) => p.straightViolation?.doorLinks).length)],
+      ["  of which through a segment that clips solid", String(geoRows.filter((p) => p.straightViolation?.latticeLinks).length)],
     ],
   );
   lines.push("Per model (pairs; grid stretch median and max; straightened median; violations):", "");
