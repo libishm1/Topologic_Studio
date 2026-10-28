@@ -28,7 +28,7 @@ import { floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
-import { trainRl as trainRlPolicy } from "./core/rl.js";
+import { RL_MAX_STEPS } from "./core/rl.js";
 import { useStudio } from "./state/useStudio.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
@@ -101,6 +101,7 @@ export default function App() {
   const samplerRef = useRef(null);
   const forecastRef = useRef(null);
   const semanticsRef = useRef(null);
+  const rlRef = useRef(null);
   const geometryRef = useRef(null);
   // Counts file loads, so only the latest one updates the page.
   const loadSeqRef = useRef(0);
@@ -158,6 +159,7 @@ export default function App() {
       samplerRef.current?.cancel();
       forecastRef.current?.cancel();
       semanticsRef.current?.cancel();
+      rlRef.current?.cancel();
     },
     [],
   );
@@ -230,6 +232,7 @@ export default function App() {
       const seq = ++loadSeqRef.current;
       const latest = () => seq === loadSeqRef.current;
 
+      rlRef.current?.cancel();
       studio.beginLoad(nextFile);
       geometryRef.current = null;
       setLastSample(null);
@@ -376,6 +379,8 @@ export default function App() {
 
     studio.setGraphBusy(true);
     studio.setLoadState({ busy: true, stage: "extracting", detail: null });
+    // A policy still training is for the graph being replaced.
+    rlRef.current?.cancel();
     const timer = new PhaseTimer("graph.build");
 
     try {
@@ -843,25 +848,37 @@ export default function App() {
 
   // --------------------------------------------------------------------- RL
 
+  // Training and the exact optimum it is scored against run in a worker
+  // (src/workers/rl.worker.js): the optimum alone held the page for over a
+  // second on a large graph with a long step limit.
+  const rlJob = useCallback((graphData, options) => {
+    rlRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/rl.worker.js", import.meta.url), { type: "module" }),
+      { failure: "RL training stopped: its worker did not load or ran out of memory. Reload the page and try again." },
+    );
+    return rlRef.current.run({ graph: graphData, options });
+  }, []);
+
   const trainRl = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
     studio.setRl({ busy: true, path: null, reachedExit: false, result: null });
     try {
-      // Trains in the browser (src/core/rl.js), with the review's terminal-
-      // potential and horizon corrections. Yield a frame first so the busy
-      // state paints before the training loop holds the thread.
-      await new Promise((resolve) => requestAnimationFrame(() => resolve()));
-      const trained = trainRlPolicy(graph, {
-        startPoint: points.start,
-        exitPoint: points.exit,
-        // The fire starts at the picked origin, not at the evacuee.
-        firePoint: points.fire,
-        episodes: settings.rlEpisodes,
-        maxSteps: settings.rlMaxSteps,
-        useFire: settings.rlUseFire,
-        fireSpeed: settings.rlFireSpeed,
-        useWalls: settings.useWalls,
-      });
+      // In the browser (src/core/rl.js), with the review's terminal-potential
+      // and horizon corrections.
+      const trained = await rlJob(
+        { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked, graphId: graph.graphId ?? null },
+        {
+          startPoint: points.start,
+          exitPoint: points.exit,
+          // The fire starts at the picked origin, not at the evacuee.
+          firePoint: points.fire,
+          episodes: settings.rlEpisodes,
+          maxSteps: Math.min(settings.rlMaxSteps, RL_MAX_STEPS),
+          useFire: settings.rlUseFire,
+          fireSpeed: settings.rlFireSpeed,
+          useWalls: settings.useWalls,
+        },
+      );
       const result = straighten(trained);
       studio.setRl({
         busy: false,
@@ -880,9 +897,10 @@ export default function App() {
       }
     } catch (error) {
       studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
-      reportError(error, "RL training failed");
+      // Cancelled when the model or the graph changed under it.
+      if (!isCancelled(error)) reportError(error, "RL training failed");
     }
-  }, [graph, points, reportError, settings, studio, toast, straighten]);
+  }, [graph, points, reportError, settings, studio, toast, straighten, rlJob]);
 
   // -------------------------------------------------------------- exit doors
 

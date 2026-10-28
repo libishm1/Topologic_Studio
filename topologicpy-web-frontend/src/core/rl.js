@@ -26,6 +26,9 @@ import { floodTimeline } from "./fire.js";
 export const EXIT_REWARD = 10;
 export const BURN_REWARD = -10;
 export const STEP_COST = 0.1;
+/** The step limit the page offers: the exact optimum's backward induction
+ *  costs steps x open moves, 1.6 s at 1,000 steps on a 34,000-node graph. */
+export const RL_MAX_STEPS = 1000;
 const CURVE_POINTS = 50;
 
 /** A small seeded generator (mulberry32), so a seed reproduces a run. */
@@ -235,15 +238,30 @@ export function qLearningPath(graph, start, exit, {
   // after a non-terminal move, V at the limit 0 (QLearning.lean,
   // dag_value_iteration_exact). RL evacuation papers report success rates, not
   // this gap (gap analysis 2026-10-27, LG6).
+  // It touches every open move at every step, so the moves are laid out flat
+  // (CSR over the open slots, with each move's head and cost): the arrays of
+  // arrays above made it several times slower.
   const burnTime = new Float64Array(n);
   for (let u = 0; u < n; u += 1) burnTime[u] = burnsAt(u);
+  const openStart = new Int32Array(n + 1);
+  for (let u = 0; u < n; u += 1) openStart[u + 1] = openStart[u] + slots[u].length;
+  const moveHead = new Int32Array(openStart[n]);
+  const moveCost = new Float64Array(openStart[n]);
+  for (let u = 0, i = 0; u < n; u += 1) {
+    for (const k of slots[u]) {
+      moveHead[i] = neighbours[k];
+      moveCost[i] = slotCost[k];
+      i += 1;
+    }
+  }
   let ahead = new Float64Array(n), here = new Float64Array(n);
   for (let t = maxSteps - 1; t >= 0; t -= 1) {
     for (let u = 0; u < n; u += 1) {
-      let best = slots[u].length ? -Infinity : 0;
-      for (const k of slots[u]) {
-        const v = neighbours[k];
-        const value = t >= burnTime[v] ? BURN_REWARD : v === exit ? EXIT_REWARD : -slotCost[k] + gamma * ahead[v];
+      const a = openStart[u], b = openStart[u + 1];
+      let best = a < b ? -Infinity : 0;
+      for (let i = a; i < b; i += 1) {
+        const v = moveHead[i];
+        const value = t >= burnTime[v] ? BURN_REWARD : v === exit ? EXIT_REWARD : -moveCost[i] + gamma * ahead[v];
         if (value > best) best = value;
       }
       here[u] = best;

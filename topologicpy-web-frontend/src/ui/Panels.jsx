@@ -10,6 +10,7 @@
 import React, { useId, useState } from "react";
 
 import { graphIsSplit, reachablePct } from "../core/graph.js";
+import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import {
@@ -1106,6 +1107,7 @@ export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onS
             label="Max steps"
             value={settings.rlMaxSteps}
             min={10}
+            max={RL_MAX_STEPS}
             step={25}
             onChange={(rlMaxSteps) => setSettings({ rlMaxSteps: rlMaxSteps ?? 200 })}
           />
