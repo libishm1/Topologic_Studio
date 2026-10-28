@@ -207,11 +207,37 @@ export function qLearningPath(graph, start, exit, {
   // after a non-terminal move, V at the limit 0 (QLearning.lean,
   // dag_value_iteration_exact). RL evacuation papers report success rates, not
   // this gap (gap analysis 2026-10-27, LG6).
+  // Only the start's value is wanted, and after t moves the agent is at most
+  // t links from the start; so step t updates only the nodes that close, a
+  // prefix of the breadth-first order from the start, instead of every node
+  // (most of a graph on a large model). Each value updated is computed as
+  // before, from values updated the step before (tools/output-hash.mjs:
+  // identical optimal returns on the benchmark corpus).
   const burnTime = new Float64Array(n);
   for (let u = 0; u < n; u += 1) burnTime[u] = burnsAt(u);
+  const order = new Int32Array(n);
+  const hops = new Int32Array(n).fill(-1);
+  let reached = 1;
+  order[0] = start;
+  hops[start] = 0;
+  for (let i = 0; i < reached; i += 1) {
+    const u = order[i];
+    if (hops[u] + 1 >= maxSteps) continue;
+    for (const k of slots[u]) {
+      const v = neighbours[k];
+      if (hops[v] >= 0) continue;
+      hops[v] = hops[u] + 1;
+      order[reached++] = v;
+    }
+  }
+  // within[t]: how many nodes are at most t links from the start.
+  const within = new Int32Array(Math.max(1, maxSteps));
+  for (let i = 0; i < reached; i += 1) within[hops[order[i]]] = i + 1;
+  for (let t = 1; t < within.length; t += 1) within[t] = Math.max(within[t], within[t - 1]);
   let ahead = new Float64Array(n), here = new Float64Array(n);
   for (let t = maxSteps - 1; t >= 0; t -= 1) {
-    for (let u = 0; u < n; u += 1) {
+    for (let i = 0; i < within[t]; i += 1) {
+      const u = order[i];
       let best = slots[u].length ? -Infinity : 0;
       for (const k of slots[u]) {
         const v = neighbours[k];
