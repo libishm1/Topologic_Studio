@@ -27,8 +27,9 @@ import { floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
+import { zoneNodeFrames } from "./core/zone.js";
 import { trainRl as trainRlPolicy } from "./core/rl.js";
-import { useStudio } from "./state/useStudio.js";
+import { fireModelIn, useStudio } from "./state/useStudio.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -40,6 +41,9 @@ import logo from "./assets/topologicStudio-white-logo400x400.png";
 
 /** The points a route is drawn with: straightened when it has been. */
 const drawn = (route) => route?.straight_points || route?.points || null;
+
+/** The two-zone model's gas temperatures are coloured from 20 to this many degrees C. */
+const ZONE_COLOUR_PEAK = 600;
 
 /** Lowest and highest point of the egress geometry along the up axis. */
 function heightRange(geometry, upAxis) {
@@ -145,6 +149,8 @@ export default function App() {
     toast,
     reportError,
   } = studio;
+  // The two-zone model only where the model has IfcSpace rooms (useStudio.js).
+  const fireModel = fireModelIn(settings, modelInfo);
 
   // ------------------------------------------------------------- the worker
 
@@ -191,7 +197,7 @@ export default function App() {
   // Planning with the forecast has its own worker: its deadline map takes a
   // few seconds on a large graph and must not hold up a graph rebuild.
   const forecastJob = useCallback(
-    (payload) =>
+    (payload, transfers = []) =>
       new Promise((resolve, reject) => {
         if (!forecastWorkerRef.current) {
           forecastWorkerRef.current = new Worker(new URL("./workers/forecast.worker.js", import.meta.url), {
@@ -207,7 +213,7 @@ export default function App() {
           else reject(new Error(event.data.error || "Planning with the forecast failed."));
         };
         worker.addEventListener("message", onMessage);
-        worker.postMessage({ id, payload });
+        worker.postMessage({ id, payload }, transfers);
       }),
     [],
   );
@@ -414,6 +420,10 @@ export default function App() {
         walls: clone(geometry.walls),
         spaces: clone(geometry.spaces || []),
         obstacles: clone(geometry.obstacles || []),
+        // Lifts, escalators and stair cores (src/core/cores.js).
+        coreMeshes: clone(geometry.coreMeshes || []),
+        cores: geometry.cores || [],
+        useLifts: settings.useLifts,
         upAxis: settings.upAxis,
         floorSpacing: settings.floorSpacing,
         agentHeight: settings.agentHeight,
@@ -423,7 +433,7 @@ export default function App() {
         columnGap: settings.columnGap,
       };
       const transfers = [];
-      for (const key of ["floors", "stairs", "doors", "walls", "spaces", "obstacles"]) {
+      for (const key of ["floors", "stairs", "doors", "walls", "spaces", "obstacles", "coreMeshes"]) {
         for (const mesh of payload[key]) {
           transfers.push(mesh.positions.buffer, mesh.indices.buffer);
         }
@@ -460,6 +470,8 @@ export default function App() {
         lattice: { angleDeg: built.stats.angleDeg, spacing: built.spacing, ms: built.stats.ms },
         doors: built.doors || [],
         roofs: geometry.roofs || 0,
+        cores: built.cores || [],
+        useLifts: settings.useLifts,
       };
 
       studio.setGraph(response);
@@ -772,15 +784,67 @@ export default function App() {
 
   // ------------------------------------------------------------------- fire
 
-  const startFire = useCallback(() => {
+  // What the two-zone model needs besides the graph (src/core/rooms.js): the
+  // IfcSpace meshes (copied, then handed to the worker), the graph's doors with
+  // their directions, the IFC's door sizes and exit flags, and the fire.
+  const zoneInputs = useCallback(() => {
+    const spaces = (geometryRef.current?.spaces || []).map((mesh) => ({
+      itemId: mesh.itemId,
+      positions: mesh.positions.slice(),
+      indices: mesh.indices.slice(),
+    }));
+    if (!spaces.length) throw new Error("The two-zone model needs the model's IfcSpace rooms, and none were extracted.");
+    return {
+      zone: {
+        spaces,
+        doors: graph.doors || [],
+        declaredDoors: (studio.semantics?.doors || []).map(({ id, widthM, heightM, exit }) => ({ id, widthM, heightM, exit })),
+        upAxis: graph.upAxis,
+        agentHeight: graph.agentHeight,
+        growth: settings.zoneGrowth,
+        peak: settings.zonePeakKw,
+        smoke: settings.zoneSmoke,
+        horizon: settings.zoneHorizon,
+        untenableC: settings.zoneUntenableC,
+      },
+      transfers: spaces.flatMap((mesh) => [mesh.positions.buffer, mesh.indices.buffer]),
+    };
+  }, [graph, settings, studio.semantics]);
+
+  const startFire = useCallback(async () => {
     if (!graph || !points.fire) return;
     studio.stopFire();
     studio.setDynamicPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
 
+    // The two-zone model is run first, in the forecast worker; the simulation
+    // then plays its node temperatures, one frame per step over its horizon.
+    let zoneFrames = null;
+    if (fireModel === "zone") {
+      try {
+        const frames = Math.max(1, settings.fireMaxSteps);
+        const { zone, transfers } = zoneInputs();
+        const table = await forecastJob(
+          {
+            kind: "zoneFrames",
+            graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
+            seed: snap(graph, points.fire),
+            zone,
+            frames,
+            frameSeconds: settings.zoneHorizon / frames,
+          },
+          transfers,
+        );
+        zoneFrames = zoneNodeFrames(table.nodeRoom, table.table, table.rooms, table.frames);
+      } catch (error) {
+        reportError(error, "The two-zone fire model");
+        return;
+      }
+    }
+
     burningRef.current = new Set();
     temperatureRef.current = new Map();
-    studio.setFire({ running: true, step: 0, model: settings.fireModel });
+    studio.setFire({ running: true, step: 0, model: fireModel });
 
     // Every model reroutes now: temperature by hazard cost, flood and radial by
     // treating burning nodes as impassable.
@@ -791,7 +855,8 @@ export default function App() {
     const handle = runFire(
       graph,
       {
-        model: settings.fireModel,
+        model: fireModel,
+        zoneFrames,
         firePoint: points.fire,
         startPoint: points.start,
         exitPoint: points.exit,
@@ -818,7 +883,8 @@ export default function App() {
               temperatures.set(Number(key), value);
             }
             studio.setFire((current) => ({ ...current, step: message.step }));
-            viewer?.setTemperatures(temperatures);
+            // Gas temperatures run far past heat diffusion's 120-degree index.
+            viewer?.setTemperatures(temperatures, fireModel === "zone" ? { peak: ZONE_COLOUR_PEAK } : undefined);
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
             // Straight runs keep clear of burning or heated nodes.
@@ -840,7 +906,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast]);
+  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob]);
 
   const stopFire = useCallback(() => {
     studio.stopFire();
@@ -929,21 +995,28 @@ export default function App() {
     if (!graph || !points.start || !points.fire || !exitNodes.length) return;
     studio.setForecastPlan((current) => ({ ...current, busy: true }));
     try {
-      const result = await forecastJob({
-        graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
-        start: snap(graph, points.start),
-        exits: exitNodes,
-        seed: snap(graph, points.fire),
-        model: settings.fireModel,
-        steps: settings.fireMaxSteps,
-        secondsPerStep: settings.forecastSecondsPerStep,
-        threshold: settings.untenableAbove,
-        speed: settings.walkSpeed,
-        depart: settings.departAfter,
-        limit: settings.doseLimit,
-        useWalls: settings.useWalls,
-        withMap: true,
-      });
+      // The two-zone model brings its rooms and fire, and is untenable from a
+      // gas temperature; the graph models from a model-degree threshold.
+      const zone = fireModel === "zone" ? zoneInputs() : null;
+      const result = await forecastJob(
+        {
+          graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
+          start: snap(graph, points.start),
+          exits: exitNodes,
+          seed: snap(graph, points.fire),
+          model: fireModel,
+          steps: settings.fireMaxSteps,
+          secondsPerStep: settings.forecastSecondsPerStep,
+          threshold: zone ? settings.zoneUntenableC : settings.untenableAbove,
+          speed: settings.walkSpeed,
+          depart: settings.departAfter,
+          limit: settings.doseLimit,
+          useWalls: settings.useWalls,
+          withMap: true,
+          zone: zone?.zone,
+        },
+        zone?.transfers,
+      );
       studio.setForecastPlan({ busy: false, result });
       const viewer = viewerRef.current;
       viewer?.setPath(null);
@@ -967,7 +1040,7 @@ export default function App() {
       studio.setForecastPlan({ busy: false, result: null });
       reportError(error, "Planning with the forecast failed");
     }
-  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError]);
+  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, fireModel, zoneInputs]);
 
   // The deadline map is drawn on the graph while it is wanted and no fire is
   // colouring the graph.
@@ -1210,6 +1283,9 @@ export default function App() {
       if (graph.stats.door_nodes) {
         items.push({ label: "Doors", color: "var(--viz-door)" });
       }
+      if (graph.stats.lift_nodes) {
+        items.push({ label: "Lifts", color: "var(--viz-lift)" });
+      }
     }
     if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
     if (points.exit) items.push({ label: "Exit", color: "var(--viz-exit)", dot: true });
@@ -1364,7 +1440,16 @@ export default function App() {
               if (index !== null && settings.modelAppearance !== "solid") setSettings({ modelAppearance: "solid" });
             }}
             fireSteps={settings.fireMaxSteps}
-            heatLegend={fire.running && settings.fireModel === "temperature"}
+            heatLegend={
+              fire.running &&
+              (fire.model === "zone"
+                ? {
+                    title: "Gas temperature (°C)",
+                    max: ZONE_COLOUR_PEAK,
+                    note: "Two-zone model: the smoke layer's temperature where it is at or below head height; ambient elsewhere.",
+                  }
+                : fire.model === "temperature")
+            }
             deadlineLegend={
               !fire.running && settings.showDeadlineMap && forecastPlan.result?.deadlines
                 ? { max: forecastPlan.result.horizon }

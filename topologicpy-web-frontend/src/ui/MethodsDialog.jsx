@@ -126,7 +126,13 @@ export function MethodsDialog({ open, onClose, studio }) {
                     One grid per building, turned to its walls, 0.5 m apart by default. Walls are cut 0.75 m
                     above each floor. A link is blocked where it crosses a wall outline, or where a point a
                     quarter, half or three quarters along it lies inside a wall; door links are never blocked.
-                    Stairs and doors join the floors.
+                    A diagonal is blocked when both of its axis detours are. Each stair is its walking line, a
+                    node per tread on the flight's centre line, joined to the floor once at each end; doors
+                    join the rooms. A stair is read with the parts aggregated into it. A stair whose treads are
+                    not in the model (an IfcStair with no steps, or a room named as a stair) is walked along an
+                    assumed dog-leg line inside its footprint, with 175 mm risers and 280 mm goings. Lifts and
+                    escalators (IfcTransportElement, or rooms and objects named as lifts) join the floors beside
+                    them only when turned on in the graph settings.
                   </dd>
                 </div>
                 <div className="methods__card">
@@ -134,21 +140,23 @@ export function MethodsDialog({ open, onClose, studio }) {
                   <dd>
                     A* with the straight-line distance as its guide, then drawn straight as TopologicPy&apos;s
                     Wire.Straighten does, never longer than the grid route and checked against the walls at
-                    points 1/8 of a grid step apart.
+                    points at most a quarter of a grid step apart.
                   </dd>
                 </div>
                 <div className="methods__card">
                   <dt>Fire spread</dt>
                   <dd>
-                    Heat diffusion on the graph, a front along links, or distance bands. Routes are reweighted
-                    by heat and recomputed as it grows.
+                    A heat index that relaxes toward its neighbours, a spread one link per step, or distance
+                    bands. In the live simulation routes are reweighted by heat and recomputed as it grows; the
+                    forecast runs the model to its end first and routes on the state each point will be in when
+                    it is reached.
                   </dd>
                 </div>
                 <div className="methods__card">
                   <dt>Learned escape</dt>
                   <dd>
                     Tabular Q-learning with distance-based reward shaping, compared against the earliest escape
-                    found by search.
+                    found by search and against the best return within the step limit.
                   </dd>
                 </div>
               </dl>
@@ -157,8 +165,8 @@ export function MethodsDialog({ open, onClose, studio }) {
             <section id="methods-proved" aria-labelledby="h-proved">
               <h3 id="h-proved">What has been proved</h3>
               <p style={{ marginBottom: 12 }}>
-                These statements are proved in Lean 4 with Mathlib, 838 machine-checked results in all,
-                each resting only on Lean&apos;s standard axioms. The proofs are about idealised models in exact
+                These statements are proved in Lean 4 with Mathlib, 863 machine-checked theorems in all,
+                each resting only on Lean&apos;s standard axioms or none. The proofs are about idealised models in exact
                 arithmetic: they do not cover floating-point rounding unless a statement says so, and each file
                 lists what it leaves out. Sources: <code>formal/fireegress</code> in the repository; each
                 statement links to its Lean file.
@@ -197,19 +205,28 @@ export function MethodsDialog({ open, onClose, studio }) {
               <ul>
                 <li>
                   <strong>The temperature is an index.</strong> It is scaled to read 20 to 120 °C, but it is not
-                  a temperature a sensor would measure, so do not read it against tenability limits.
+                  a temperature a sensor would measure. The forecast applies ISO 13571&apos;s convective dose law
+                  to this index, so its doses rank routes under the model and the ISO limits do not carry over.
                 </li>
                 <li>
-                  <strong>Time is counted in steps, not seconds.</strong> A step is one link of spread; walking
-                  speed and fire growth are not yet in physical units.
+                  <strong>Fire time is counted in steps.</strong> The fire models count steps; the forecast
+                  converts them to seconds with a factor you set and walks at a set speed. Fire growth is not
+                  calibrated.
                 </li>
                 <li>
-                  <strong>The evacuee waits while the fire grows.</strong> Each reroute starts from the original
-                  start. A route that has to pass through fire is drawn but reported as not safe.
+                  <strong>In the live simulation the evacuee waits while the fire grows.</strong> Each reroute
+                  starts from the original start. A route that has to pass through fire is drawn but reported as not safe.
                 </li>
                 <li>
                   <strong>A route stays within one part of the graph.</strong> Separate dwellings, or a room whose
                   door is missing from the model, are separate parts; the Duplex is two homes, so it has two.
+                </li>
+                <li>
+                  <strong>Assumed stairs and lifts are approximate.</strong> An assumed stair has no known width
+                  or landing, so its line can be longer or shorter than the real stair. On five models with their
+                  treads removed, routes to another floor through assumed stairs averaged 1.0 to 1.4 times the
+                  length of routes through the real ones. A lift ride counts as walking its rise, with no
+                  wait for the car, and a lift is taken to stop at every floor beside it.
                 </li>
               </ul>
             </section>

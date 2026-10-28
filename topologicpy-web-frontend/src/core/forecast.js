@@ -54,7 +54,7 @@ export function convectiveDoseRate(T) {
 }
 
 /** Above this many node-steps the forecast is coarsened in time (conservatively). */
-const MAX_CELLS = 16_000_000;
+export const MAX_CELLS = 16_000_000;
 
 /**
  * Run the fire model to its horizon and keep, per step and node, the FED rate

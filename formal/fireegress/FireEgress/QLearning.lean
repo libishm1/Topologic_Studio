@@ -17,7 +17,9 @@ Q-learning on the navigation graph. Read from the code:
 * **Transitions** are deterministic: slot `k` at step `t` leads to `(neighbours[k], t + 1)`.
 * **Rewards:** `-slotCost[k]` (`0.1` per median link length), `+10` on entering the exit,
   `-10` on entering a node with `t ≥ ignite(next)`; both end the episode (`done`).
-* **Horizon:** at `t = maxSteps - 1` the target is not bootstrapped (`last`), in both modes.
+* **Horizon:** at `t = maxSteps - 1` the target is not bootstrapped (`last`) and the
+  potential of the next state is 0, with fire only. Before 2026-10-28 `rl.js` applied the rule
+  without fire too and kept the next state's potential at the horizon; both are fixed.
 * **Update:** `Q ← Q + α (target - Q)` with constant `α = 0.5`, `γ = 0.99`, target
   `shaped + γ max_j Q(j, t + 1)` (no bootstrap if `done` or `last`; the max over an empty slot
   list is `0`). `shaped = reward + γ Φ_next - Φ(state)`, `Φ(v) = -0.1 d(v, exit) / unit`, and
@@ -64,7 +66,7 @@ textbook `S × A` form alike. Arithmetic is over `ℝ`; the code's IEEE doubles 
    bonus problem pays an extra `γ ψ p` on terminal pairs.
 5. *Counterexamples* (`nonzero_terminal_flips_qstar`, `horizon_potential_prefers_fire`,
    `untimed_horizon_breaks_fixed_point`). L14 lifted to `Q*`: a non-zero terminal potential
-   flips the greedy action. Studio still keeps `Φ(next) ≠ 0` at the horizon: at the last step,
+   flips the greedy action. Before 2026-10-28 Studio kept `Φ(next) ≠ 0` at the horizon: at the last step,
    with a burning neighbour and a safe neighbour 150 median links from the exit, the shaped
    `Q*` prefers walking into the fire to surviving (the same arithmetic holds whenever the safe
    neighbour is more than 100 median links away, i.e. `Φ < -10`). Without fire the state has no
@@ -759,7 +761,7 @@ theorem nonzero_terminal_flips_qstar :
 /-- Studio's last step (`t = maxSteps - 1`): pair `false` enters a burning node (reward `-10`,
 `done`, so `rl.js` uses potential `0`); pair `true` takes a median-length link (reward `-0.1`)
 to a safe node 150 median links from the exit, where the horizon ends the episode but `rl.js`
-keeps `Φ(next) = -0.1 · 150 = -15`. -/
+kept (before 2026-10-28) `Φ(next) = -0.1 · 150 = -15`. -/
 noncomputable def horizonMDP : DetMDP Unit Bool where
   st := fun _ => ()
   r := fun b => if b then -1 / 10 else -10

@@ -24,6 +24,10 @@ export const CATEGORY_PATTERNS = {
   // ones (curtain-wall glass) are obstacles, and each use ignores the other.
   obstacles: /^IFC(WINDOW|WINDOWSTANDARDCASE|RAILING|COLUMN|COLUMNSTANDARDCASE|CURTAINWALL|MEMBER|MEMBERSTANDARDCASE|PLATE)$/i,
   storeys: /^IFCBUILDINGSTOREY$/i,
+  // Lifts and escalators, and generic objects that may be one by name
+  // (src/core/cores.js): "Aufzug-Kabine", "M_Electric Lift-4 person".
+  transport: /^IFCTRANSPORTELEMENT$/i,
+  proxies: /^IFCBUILDINGELEMENTPROXY$/i,
 };
 
 /**
@@ -131,6 +135,49 @@ export async function withPredefinedType(model, localIds, wanted) {
     const attr = data?.[i]?.PredefinedType;
     const value = attr && typeof attr === "object" && "value" in attr ? attr.value : attr;
     return String(value ?? "").toUpperCase() === wanted;
+  });
+}
+
+/**
+ * The parts aggregated into each item (IfcRelAggregates), two levels down:
+ * IfcStair, its IfcStairFlights, and their parts. S_Office's stairs have no
+ * geometry of their own; their flights and landings are proxies aggregated
+ * into them. Returns Map id -> part ids.
+ */
+export async function aggregatedParts(model, localIds) {
+  const parts = new Map();
+  if (!localIds?.length || !model?.getItemsChildren) return parts;
+  await Promise.all(
+    localIds.map(async (id) => {
+      const children = (await model.getItemsChildren([id]).catch(() => [])) || [];
+      const grandchildren = children.length ? (await model.getItemsChildren(children).catch(() => [])) || [] : [];
+      const all = [...new Set([...children, ...grandchildren])].filter((c) => c !== id);
+      if (all.length) parts.set(id, all);
+    }),
+  );
+  return parts;
+}
+
+/**
+ * Element records for core detection (src/core/cores.js): {itemId, type,
+ * name, predefined}, the name joining Name, LongName and ObjectType.
+ * getItemsData with no ids answers with every item, so none are asked for.
+ */
+export async function elementRecords(model, localIds) {
+  if (!localIds?.length || !model?.getItemsData) return [];
+  const data = await model.getItemsData(localIds, {
+    attributesDefault: false,
+    attributes: ["Name", "LongName", "ObjectType", "PredefinedType", "OperationType"],
+  });
+  const value = (attr) => (attr && typeof attr === "object" && "value" in attr ? attr.value : attr);
+  return localIds.map((itemId, i) => {
+    const d = data?.[i] || {};
+    return {
+      itemId,
+      type: value(d._category) || "",
+      name: [value(d.Name), value(d.LongName), value(d.ObjectType)].filter(Boolean).join(" "),
+      predefined: value(d.PredefinedType) || value(d.OperationType) || "",
+    };
   });
 }
 

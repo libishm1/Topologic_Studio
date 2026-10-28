@@ -16,6 +16,10 @@
  * stairs follow their turns. Each end of a staircase then links to the floor
  * once, at the floor node nearest the point one going beyond the end along
  * the walking line, on the outward side and at the right level.
+ *
+ * Ramps are walked anywhere across their width, so their sloping surfaces
+ * (walkable triangles that are not level) are returned as a mesh for the
+ * lattice to sample like a floor: even a 1:8 ramp rises only 6 cm per 0.5 m.
  */
 
 /**
@@ -26,10 +30,14 @@
  *                        patch's slope; heightTol: triangles this close in
  *                        height and sharing a vertex form one patch; minArea
  *                        and minWidth drop slivers (nosings, handrail tops).
- * @returns {Array<{x: number, y: number, h: number, area: number, pts: number[][], tris: number[][]}>}
+ * @returns {{patches: Array<{x: number, y: number, h: number, area: number, pts: number[][], tris: number[][]}>,
+ *            ramp: {positions: Float32Array, indices: Uint32Array}}}  patches:
+ *          level surfaces (treads, landings); ramp: the sloping walkable
+ *          triangles, to be sampled as floor.
  */
-export function stairPatches(meshes, { up, h0, h1, minUp = Math.cos((15 * Math.PI) / 180), heightTol = 0.03, minArea = 0.03, minWidth = 0.12 }) {
+export function stairPatches(meshes, { up, h0, h1, minUp = Math.cos((15 * Math.PI) / 180), heightTol = 0.03, minArea = 0.03, minWidth = 0.12, maxTread = 0.6, level = 0.02 }) {
   const tris = [];
+  const sloped = [];
   for (const { positions: p, indices: ix } of meshes || []) {
     if (!p || !ix) continue;
     for (let t = 0; t + 2 < ix.length; t += 3) {
@@ -39,10 +47,17 @@ export function stairPatches(meshes, { up, h0, h1, minUp = Math.cos((15 * Math.P
       const n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
       const len = Math.hypot(n[0], n[1], n[2]);
       if (!len || n[up] / len < minUp) continue;
+      // Not level: part of a ramp, sampled with the floors.
+      if (Math.max(p[a + up], p[b + up], p[c + up]) - Math.min(p[a + up], p[b + up], p[c + up]) > level) {
+        for (const o of [a, b, c]) sloped.push(p[o], p[o + 1], p[o + 2]);
+        continue;
+      }
       tris.push({
         h: (p[a + up] + p[b + up] + p[c + up]) / 3,
         area: len / 2,
         v: [[p[a + h0], p[a + h1]], [p[b + h0], p[b + h1]], [p[c + h0], p[c + h1]]],
+        // The 3-D vertices, for a landing resampled as floor.
+        v3: [[p[a], p[a + 1], p[a + 2]], [p[b], p[b + 1], p[b + 2]], [p[c], p[c + 1], p[c + 2]]],
       });
     }
   }
@@ -106,10 +121,19 @@ export function stairPatches(meshes, { up, h0, h1, minUp = Math.cos((15 * Math.P
       lo2 = Math.min(lo2, r);
       hi2 = Math.max(hi2, r);
     }
-    if (Math.min(hi1 - lo1, hi2 - lo2) < minWidth) continue;
+    const narrow = Math.min(hi1 - lo1, hi2 - lo2);
+    if (narrow < minWidth) continue;
+    // A tread is narrow (a going of 0.2 to 0.5 m). Anything wider both ways
+    // is a landing or a level part of a ramp, walked anywhere across: it is
+    // sampled with the floors, and the flights' ends join it as a floor.
+    if (narrow > maxTread) {
+      for (const t of g) for (const v of t.v3) sloped.push(...v);
+      continue;
+    }
     patches.push({ x, y, h: sh / area, area, pts, tris: g.map((t) => t.v) });
   }
-  return patches;
+  const ramp = { positions: Float32Array.from(sloped), indices: Uint32Array.from(sloped.map((_, i) => i).filter((i) => i % 3 === 0), (i) => i / 3) };
+  return { patches, ramp };
 }
 
 /** Plan distance from point (px, py) to triangle [[ax,ay],[bx,by],[cx,cy]]. */

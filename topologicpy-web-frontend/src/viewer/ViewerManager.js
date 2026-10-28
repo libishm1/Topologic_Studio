@@ -22,7 +22,8 @@ import {
 
 import { hashFile, readCached, writeCached } from "../lib/fragmentCache.js";
 import { PhaseTimer, mark } from "../lib/perf.js";
-import { collectCategoryIds, extractMeshes, withPredefinedType } from "./categories.js";
+import { aggregatedParts, collectCategoryIds, elementRecords, extractMeshes, withPredefinedType } from "./categories.js";
+import { coreItems } from "../core/cores.js";
 
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
  *  installed package versions. Both are served from public/, under the
@@ -753,13 +754,36 @@ export class ViewerManager {
     const roofs = new Set(await withPredefinedType(this.model, ids.floors, "ROOF").catch(() => []));
     const floorIds = roofs.size ? ids.floors.filter((id) => !roofs.has(id)) : ids.floors;
 
-    const [floors, stairs, doors, walls, spaces, obstacles] = await Promise.all([
+    // Parts aggregated into stairs and ramps (IfcRelAggregates) are stair
+    // geometry: S_Office's IfcStairs have none of their own, only proxies for
+    // flights and landings. Slabs, walls and doors among the parts stay in
+    // their own groups.
+    const partsOf = await aggregatedParts(this.model, ids.stairs).catch(() => new Map());
+    const own = new Set([...ids.floors, ...(ids.coverings || []), ...ids.walls, ...ids.doors, ...ids.stairs]);
+    const stairPartIds = [...new Set([...partsOf.values()].flat())].filter((id) => !own.has(id));
+
+    // Vertical cores (src/core/cores.js): stairs, lifts and escalators by type,
+    // and rooms or proxies by name. Stair and room meshes are extracted
+    // anyway; the others are extracted for their footprint.
+    const records = await elementRecords(this.model, [
+      ...ids.stairs,
+      ...(ids.spaces || []),
+      ...(ids.transport || []),
+      ...(ids.proxies || []),
+    ]).catch(() => []);
+    for (const record of records) record.parts = partsOf.get(record.itemId) || [];
+    const cores = coreItems(records);
+    const extracted = new Set([...ids.stairs, ...stairPartIds, ...(ids.spaces || [])]);
+    const coreMeshIds = cores.map((core) => core.itemId).filter((id) => !extracted.has(id));
+
+    const [floors, stairs, doors, walls, spaces, obstacles, coreMeshes] = await Promise.all([
       extractMeshes(this.model, [...floorIds, ...flooring], world),
-      extractMeshes(this.model, ids.stairs, world),
+      extractMeshes(this.model, [...ids.stairs, ...stairPartIds], world),
       extractMeshes(this.model, ids.doors, world),
       extractMeshes(this.model, ids.walls, world),
       extractMeshes(this.model, ids.spaces || [], world),
       extractMeshes(this.model, ids.obstacles || [], world),
+      extractMeshes(this.model, coreMeshIds, world),
     ]);
 
     done({
@@ -770,8 +794,10 @@ export class ViewerManager {
       spaces: spaces.length,
       obstacles: obstacles.length,
       roofs: roofs.size,
+      stairParts: stairPartIds.length,
+      cores: cores.length,
     });
-    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size };
+    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size, cores, coreMeshes };
   }
 
   // --------------------------------------------------------------- overlays
@@ -976,7 +1002,8 @@ export class ViewerManager {
     const base = new THREE.Color(0x3b82f6);
     const stair = new THREE.Color(0x8b5cf6);
     const door = new THREE.Color(0xf59e0b);
-    const pick = (kind) => (kind === 1 ? stair : kind === 2 ? door : base);
+    const lift = new THREE.Color(0x14b8a6);
+    const pick = (kind) => (kind === 1 ? stair : kind === 2 ? door : kind === 3 ? lift : base);
 
     for (let e = 0; e < edgeCount; e += 1) {
       const a = edges[e * 2];

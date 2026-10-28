@@ -2,7 +2,7 @@
  * Graph statistics computed in the browser, in the shape the server returns
  * (GraphStats), so the UI reads them the same way with or without a backend.
  */
-import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "./lattice.js";
+import { KIND_DOOR, KIND_FLOOR, KIND_LIFT, KIND_STAIR } from "./lattice.js";
 
 /** Connected components by union-find: count, and the largest one's size. */
 export function components(nodeCount, edges) {
@@ -32,11 +32,12 @@ export function components(nodeCount, edges) {
 export function graphStats({ points, edges, kinds, blocked, stats = {} }) {
   const nodes = points.length / 3;
   const { count, largest } = components(nodes, edges);
-  let floor = 0, stair = 0, door = 0, blockedEdges = 0;
+  let floor = 0, stair = 0, door = 0, lift = 0, blockedEdges = 0;
   for (const k of kinds) {
     if (k === KIND_FLOOR) floor += 1;
     else if (k === KIND_STAIR) stair += 1;
     else if (k === KIND_DOOR) door += 1;
+    else if (k === KIND_LIFT) lift += 1;
   }
   for (const b of blocked || []) blockedEdges += b;
   return {
@@ -45,6 +46,7 @@ export function graphStats({ points, edges, kinds, blocked, stats = {} }) {
     floor_nodes: floor,
     stair_nodes: stair,
     door_nodes: door,
+    lift_nodes: lift,
     wall_segments: stats.walls ?? 0,
     blocked_edges: blockedEdges,
     components: count,

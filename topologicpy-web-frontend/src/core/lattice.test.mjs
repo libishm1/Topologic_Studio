@@ -231,7 +231,10 @@ test("a U-shaped stair with a separate landing joins both floors", () => {
   const ground = [...Array(g.stats.nodes).keys()].find((n) => g.kinds[n] !== KIND_STAIR && g.points[n * 3 + 2] < 0.1);
   assert.ok(upper !== undefined && ground !== undefined);
   assert.equal(find(upper), find(ground), "the U-stair joins the floors through its landing");
-  assert.equal(g.stats.stairEndsLinked, 2);
+  // The landing is wider than a tread both ways, so it is walked as floor and
+  // each flight joins floors at both its ends: four links.
+  assert.equal(g.stats.stairEnds, 4);
+  assert.equal(g.stats.stairEndsLinked, 4);
 });
 
 test("storey levels are the floor heights, not landings or slab undersides", () => {

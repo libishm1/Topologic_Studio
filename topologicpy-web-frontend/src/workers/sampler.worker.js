@@ -26,6 +26,9 @@ self.onmessage = (event) => {
       walls: payload.walls || [],
       spaces: payload.spaces || [],
       obstacles: payload.obstacles || [],
+      cores: payload.cores || [],
+      coreMeshes: payload.coreMeshes || [],
+      useLifts: Boolean(payload.useLifts),
       upAxis: payload.upAxis ?? "y",
       spacing: payload.floorSpacing ?? 0.5,
       agentHeight: payload.agentHeight ?? 0.75,
@@ -44,8 +47,23 @@ self.onmessage = (event) => {
       sections: graph.sections,
       sectionHeight: graph.sectionHeight,
       stats: { ...graph.stats, walls: graph.walls.length },
-      // Doors as the graph sees them, to join with the IFC's exit flags.
-      doors: graph.doorReport.map((d) => ({ itemId: d.itemId, node: d.node, sides: d.sides })),
+      // Vertical cores and what became of each (src/core/cores.js).
+      cores: graph.cores,
+      // Doors as the graph sees them, to join with the IFC's exit flags. The
+      // plan centre, direction across the opening (doorPoints, in the same
+      // order) and measured width tell the two-zone fire model which room
+      // lies on each side (src/core/rooms.js).
+      doors: graph.doorReport.map((d, i) => ({
+        itemId: d.itemId,
+        node: d.node,
+        sides: d.sides,
+        x: d.x,
+        y: d.y,
+        sill: d.sill,
+        width: d.width,
+        ux: graph.doorPoints[i]?.[3] ?? null,
+        uy: graph.doorPoints[i]?.[4] ?? null,
+      })),
     };
     self.postMessage({ id, ok: true, result }, [
       result.points.buffer,
