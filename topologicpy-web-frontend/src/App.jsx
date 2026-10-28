@@ -207,6 +207,38 @@ export default function App() {
     return samplerRef.current.run({ payload }, transfers);
   }, []);
 
+  // ------------------------------------------------------- forecast plan state
+
+  // Counts plan requests and the changes that make a plan stale; a reply to
+  // an older one is dropped (review M3).
+  const planGenRef = useRef(0);
+
+  // Whether the alternative-route overlays hold the plan's routes rather than
+  // the alternatives: a ref for the handlers, state for the legend.
+  const planRoutesRef = useRef(false);
+  const [planRoutesShown, setPlanRoutesShown] = useState(false);
+  const showPlanRoutes = useCallback((shown) => {
+    planRoutesRef.current = shown;
+    setPlanRoutesShown(shown);
+  }, []);
+
+  /**
+   * A plan holds for the model, graph, start, exit and fire it was made with.
+   * When any of them changes the plan is dropped in one step: its card, the
+   * routes it drew, its deadline colours (they follow the state) and any plan
+   * still running (review M1, M3). A map left on a rebuilt graph, indexed by
+   * the new graph's nodes, read past its end and took the page down (C1).
+   */
+  const dropPlan = useCallback(() => {
+    planGenRef.current += 1;
+    if (forecastRef.current?.busy) forecastRef.current.cancel();
+    studio.setForecastPlan(NO_PLAN);
+    if (planRoutesRef.current) {
+      viewerRef.current?.setRoutes(null);
+      showPlanRoutes(false);
+    }
+  }, [studio, showPlanRoutes]);
+
   // --------------------------------------------------------------- IFC load
 
   const handleFile = useCallback(
@@ -235,6 +267,7 @@ export default function App() {
       const latest = () => seq === loadSeqRef.current;
 
       rlRef.current?.cancel();
+      dropPlan();
       studio.beginLoad(nextFile);
       geometryRef.current = null;
       setLastSample(null);
@@ -266,6 +299,8 @@ export default function App() {
           .then(async (semantics) => {
             if (!latest()) return;
             studio.setSemantics(semantics);
+            // The exit doors can change with them.
+            dropPlan();
             // Declared storeys, moved into the viewer frame by the model's
             // coordination shift, where the slab geometry collapses to one
             // level (dental clinic, Office A, example.ifc: survey strategy 5).
@@ -331,7 +366,7 @@ export default function App() {
         if (latest()) studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast],
+    [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan],
   );
 
   // --------------------------------------------------------------- examples
@@ -369,18 +404,6 @@ export default function App() {
     },
     [handleFile, reportError, studio],
   );
-
-  // ------------------------------------------------------- forecast plan state
-
-  /**
-   * A plan holds for the graph it was made on. When that is replaced the plan
-   * is dropped, with any plan still running: its deadline map, indexed by the
-   * new graph's nodes, read past its end and took the page down (review C1).
-   */
-  const dropPlan = useCallback(() => {
-    if (forecastRef.current?.busy) forecastRef.current.cancel();
-    studio.setForecastPlan(NO_PLAN);
-  }, [studio]);
 
   // ------------------------------------------------------------ graph build
 
@@ -592,6 +615,8 @@ export default function App() {
       studio.setPoints((current) => ({ ...current, [mode]: point }));
       viewerRef.current?.setMarker(mode, point);
       studio.setPickMode(null);
+      // A plan is for one start, exit and fire: moving any of them drops it.
+      dropPlan();
       if (mode !== "fire") {
         studio.setPath(null);
         studio.setAlternatives(null);
@@ -599,7 +624,7 @@ export default function App() {
         viewerRef.current?.setRoutes(null);
       }
     },
-    [snapToGraph, studio],
+    [snapToGraph, studio, dropPlan],
   );
 
   const requestPick = useCallback(
@@ -615,13 +640,14 @@ export default function App() {
   const clearPoints = useCallback(() => {
     studio.setPoints({ start: null, exit: null, fire: null });
     ["start", "exit", "fire"].forEach((name) => viewerRef.current?.setMarker(name, null));
+    dropPlan();
     studio.setPath(null);
     studio.setDynamicPath(null);
     studio.setAlternatives(null);
     viewerRef.current?.setPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
     viewerRef.current?.setRoutes(null);
-  }, [studio]);
+  }, [studio, dropPlan]);
 
   // ------------------------------------------------------------- find path
 
@@ -642,7 +668,9 @@ export default function App() {
     studio.setPathBusy(true);
     studio.setComparison(null);
     studio.setAlternatives(null);
+    // The route overlays held the alternatives or the plan's routes.
     viewerRef.current?.setRoutes(null);
+    showPlanRoutes(false);
     try {
       const result = onServer
         ? await api.findPath({
@@ -667,7 +695,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten, showPlanRoutes]);
 
   const comparePath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
@@ -733,6 +761,7 @@ export default function App() {
       viewerRef.current?.setRoutes(
         result.routes.map((route, i) => ({ points: drawn(route), color: hexToInt(routeColor(i)) })),
       );
+      showPlanRoutes(false);
       // "Only N of k" is shown in the panel next to the list it explains.
       if (!result.routes.length) {
         toast(result.note || "No route exists between those two points.", {
@@ -745,7 +774,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, straighten]);
+  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, straighten, showPlanRoutes]);
 
   // ------------------------------------------------- Navigation cross-check
 
@@ -791,6 +820,8 @@ export default function App() {
 
   const startFire = useCallback(() => {
     if (!graph || !points.fire) return;
+    // A plan still running would land mid-fire and clear its route.
+    if (forecastRef.current?.busy) dropPlan();
     studio.stopFire();
     studio.setDynamicPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
@@ -857,7 +888,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast]);
+  }, [graph, points, reportError, settings, studio, toast, dropPlan]);
 
   const stopFire = useCallback(() => {
     studio.stopFire();
@@ -905,6 +936,8 @@ export default function App() {
         reachedExit: result.reached_exit,
         result,
       });
+      // Drawn where the hazard-aware route was, which goes with its drawing.
+      studio.setDynamicPath(null);
       viewerRef.current?.setPath(drawn(result), { color: 0x14b8a6, dynamic: true });
       if (!result.reached_exit || result.note) {
         // The server says *why*: no escape exists, the step limit is too low,
@@ -960,6 +993,7 @@ export default function App() {
     // A plan still running is for older inputs: end its worker rather than
     // queue behind a deadline map that can take seconds.
     if (forecastRef.current?.busy) forecastRef.current.cancel();
+    const gen = ++planGenRef.current;
     studio.setForecastPlan((current) => ({ ...current, busy: true }));
     try {
       const result = await forecastJob({
@@ -978,9 +1012,17 @@ export default function App() {
         // The map is the slow part; it is made only when it will be drawn.
         withMap: settings.showDeadlineMap,
       });
+      // Inputs changed (or another plan began) while it ran: not this one's.
+      if (gen !== planGenRef.current) return;
       // Tagged with the graph it was made on: it is drawn only on that graph.
       studio.setForecastPlan({ busy: false, result, nodes: graph.nodes });
+      // The plan's routes take the place of the others on screen, and their
+      // results go with their drawings, so the legend lists what is drawn.
       const viewer = viewerRef.current;
+      studio.setPath(null);
+      studio.setComparison(null);
+      studio.setAlternatives(null);
+      studio.setDynamicPath(null);
       viewer?.setPath(null);
       viewer?.setPath(null, { dynamic: true });
       const routes = [];
@@ -992,6 +1034,7 @@ export default function App() {
         routes.push({ points: pointsOf(result.snapshot.nodes), color: hexToInt(FORECAST_COLORS.snapshot) });
       }
       viewer?.setRoutes(routes);
+      showPlanRoutes(routes.length > 0);
       if (!result.earliest) {
         toast("No route reaches the exit before the fire closes it, within the forecast.", {
           title: "No safe route",
@@ -999,12 +1042,12 @@ export default function App() {
         });
       }
     } catch (error) {
-      // Cancelled: a newer request took over, and owns the state now.
-      if (isCancelled(error)) return;
-      studio.setForecastPlan({ busy: false, result: null });
+      // Cancelled, or overtaken: a newer request or a change owns the state.
+      if (isCancelled(error) || gen !== planGenRef.current) return;
+      studio.setForecastPlan(NO_PLAN);
       reportError(error, "Planning with the forecast failed");
     }
-  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError]);
+  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes]);
 
   // The plan's deadline map, when it was made on the graph on screen.
   const deadlines = forecastPlan.result && forecastPlan.nodes === graph?.nodes ? forecastPlan.result.deadlines : null;
@@ -1266,14 +1309,15 @@ export default function App() {
     if (navCheck && settings.showNavGraph) {
       items.push({ label: "TopologicPy Navigation", color: NAV_COLOR });
     }
-    const plan = forecastPlan.result;
+    // The plan's routes, while they are the ones drawn.
+    const plan = planRoutesShown ? forecastPlan.result : null;
     if (plan?.earliest) items.push({ label: "Earliest safe route (forecast)", color: FORECAST_COLORS.earliest });
     if (plan?.leastDose && plan.front.length > 1) items.push({ label: "Least-dose route", color: FORECAST_COLORS.leastDose });
     if (plan?.snapshot && !plan.snapshot.safe && !plan.snapshot.beyondForecast) {
       items.push({ label: "Planned on the fire now: unsafe", color: FORECAST_COLORS.snapshot });
     }
     return items;
-  }, [graph, points, path, dynamicPath, alternatives, navCheck, settings.showNavGraph, forecastPlan.result]);
+  }, [graph, points, path, dynamicPath, alternatives, navCheck, settings.showNavGraph, forecastPlan.result, planRoutesShown]);
 
   // ------------------------------------------------------------------ render
 
