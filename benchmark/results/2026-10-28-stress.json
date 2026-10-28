@@ -1,0 +1,6396 @@
+{
+ "suite": "stress",
+ "date": "2026-10-28",
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14700",
+  "logicalCores": 28,
+  "memoryGB": 31.7,
+  "os": "Windows_NT 10.0.26100 (x64)",
+  "node": "v24.21.0"
+ },
+ "commit": "2bfd1caf8995792f612ac50f56e50a50a2b601c1",
+ "coreRev": null,
+ "cases": [
+  {
+   "id": "geo:stair-straight",
+   "group": "geometry",
+   "title": "Straight flight between two floors",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 58,
+   "wallMs": 157,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "both ends linked, once each",
+     "ok": true,
+     "detail": "2 of 2 ends linked"
+    },
+    {
+     "name": "one staircase",
+     "ok": true
+    },
+    {
+     "name": "ground joins upper floor",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "11 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 186,
+    "edges": 569,
+    "stairNodes": 15,
+    "stairEnds": 2,
+    "stairEndsLinked": 2,
+    "spacing": 0.5,
+    "latticeMs": 11
+   }
+  },
+  {
+   "id": "geo:stair-L-landing-stair",
+   "group": "geometry",
+   "title": "L-stair with its landing modelled as a stair element",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 42,
+   "wallMs": 126,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "every end linked, once each (a landing walked as floor splits the stair)",
+     "ok": true,
+     "detail": "4 of 4 ends linked"
+    },
+    {
+     "name": "ground joins upper floor",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "8 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 151,
+    "edges": 426,
+    "stairNodes": 15,
+    "stairEnds": 4,
+    "stairEndsLinked": 4,
+    "spacing": 0.5,
+    "latticeMs": 8
+   }
+  },
+  {
+   "id": "geo:stair-L-landing-slab",
+   "group": "geometry",
+   "title": "L-stair with a separate landing slab (IfcSlab between two flights)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 34,
+   "wallMs": 105,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "every end linked, once each",
+     "ok": true,
+     "detail": "4 of 4 ends linked"
+    },
+    {
+     "name": "two staircases",
+     "ok": true
+    },
+    {
+     "name": "ground joins upper floor through the landing",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "7 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 150,
+    "edges": 425,
+    "stairNodes": 14,
+    "stairEnds": 4,
+    "stairEndsLinked": 4,
+    "spacing": 0.5,
+    "latticeMs": 7
+   }
+  },
+  {
+   "id": "geo:stair-U-landing-stair",
+   "group": "geometry",
+   "title": "U-stair with its landing modelled as a stair element",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 35,
+   "wallMs": 107,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "every end linked, once each (a landing walked as floor splits the stair)",
+     "ok": true,
+     "detail": "4 of 4 ends linked"
+    },
+    {
+     "name": "ground joins upper floor",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "7 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 85,
+    "edges": 180,
+    "stairNodes": 15,
+    "stairEnds": 4,
+    "stairEndsLinked": 4,
+    "spacing": 0.5,
+    "latticeMs": 7
+   }
+  },
+  {
+   "id": "geo:stair-U-landing-slab",
+   "group": "geometry",
+   "title": "U-stair with a separate landing slab",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 32,
+   "wallMs": 104,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "every end linked, once each",
+     "ok": true,
+     "detail": "4 of 4 ends linked"
+    },
+    {
+     "name": "two staircases",
+     "ok": true
+    },
+    {
+     "name": "ground joins upper floor through the landing",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "6 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 83,
+    "edges": 178,
+    "stairNodes": 14,
+    "stairEnds": 4,
+    "stairEndsLinked": 4,
+    "spacing": 0.5,
+    "latticeMs": 6
+   }
+  },
+  {
+   "id": "geo:stair-spiral",
+   "group": "geometry",
+   "title": "Spiral stair: 16 wedge treads through 337.5 degrees round a post",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 69,
+   "wallMs": 138,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "both ends linked, once each",
+     "ok": true,
+     "detail": "2 of 2 ends linked"
+    },
+    {
+     "name": "ground joins upper floor",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "13 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 667,
+    "edges": 2379,
+    "stairNodes": 15,
+    "stairEnds": 2,
+    "stairEndsLinked": 2,
+    "spacing": 0.5,
+    "latticeMs": 13
+   }
+  },
+  {
+   "id": "geo:stair-winders",
+   "group": "geometry",
+   "title": "Quarter-turn stair with three winder treads",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 41,
+   "wallMs": 106,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "both ends linked, once each",
+     "ok": true,
+     "detail": "2 of 2 ends linked"
+    },
+    {
+     "name": "ground joins upper floor",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "7 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 167,
+    "edges": 490,
+    "stairNodes": 15,
+    "stairEnds": 2,
+    "stairEndsLinked": 2,
+    "spacing": 0.5,
+    "latticeMs": 7
+   }
+  },
+  {
+   "id": "geo:ramp-terraced",
+   "group": "geometry",
+   "title": "Terraced ramp: 20 level slabs 2.5 cm apart",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 52,
+   "wallMs": 118,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "bottom joins top",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "no stair nodes",
+     "ok": true
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "8 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 287,
+    "edges": 1006,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 8
+   }
+  },
+  {
+   "id": "geo:ramp-1in12",
+   "group": "geometry",
+   "title": "Sloped ramp at 1:12",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 54,
+   "wallMs": 117,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "bottom joins top",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "10 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 231,
+    "edges": 806,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 10
+   }
+  },
+  {
+   "id": "geo:ramp-1in8",
+   "group": "geometry",
+   "title": "Sloped ramp at 1:8",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 40,
+   "wallMs": 101,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "bottom joins top",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "6 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 203,
+    "edges": 706,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 6
+   }
+  },
+  {
+   "id": "geo:stair-gap-riser",
+   "group": "geometry",
+   "title": "Flight whose bottom tread is a full riser (0.2 m) above the floor, top a riser below the landing",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 35,
+   "wallMs": 96,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "both ends linked, once each",
+     "ok": true,
+     "detail": "2 of 2 ends linked"
+    },
+    {
+     "name": "ground joins upper floor",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "6 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 108,
+    "edges": 311,
+    "stairNodes": 11,
+    "stairEnds": 2,
+    "stairEndsLinked": 2,
+    "spacing": 0.5,
+    "latticeMs": 6
+   }
+  },
+  {
+   "id": "geo:stair-gap-too-tall",
+   "group": "geometry",
+   "title": "Flight starting 0.45 m above the floor (beyond the riser limit): the bottom end stays unlinked",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 34,
+   "wallMs": 97,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the bottom end is reported unlinked",
+     "ok": true,
+     "detail": "1 of 2"
+    },
+    {
+     "name": "ground does not join upper floor",
+     "ok": true,
+     "detail": "separate parts"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "7 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 108,
+    "edges": 310,
+    "stairNodes": 11,
+    "stairEnds": 2,
+    "stairEndsLinked": 1,
+    "spacing": 0.5,
+    "latticeMs": 7
+   }
+  },
+  {
+   "id": "geo:stair-to-door",
+   "group": "geometry",
+   "title": "Flight ending at a door in a wall; the upper slab stops at the wall face",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 51,
+   "wallMs": 119,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "both ends linked, once each",
+     "ok": true,
+     "detail": "2 of 2 ends linked"
+    },
+    {
+     "name": "ground joins upper floor through the door",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "10 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 245,
+    "edges": 787,
+    "stairNodes": 14,
+    "stairEnds": 2,
+    "stairEndsLinked": 2,
+    "spacing": 0.5,
+    "latticeMs": 10
+   }
+  },
+  {
+   "id": "geo:stair-to-nowhere",
+   "group": "geometry",
+   "title": "Flight ending at an outside door with no floor beyond",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 42,
+   "wallMs": 108,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "one end linked, the other reported unlinked",
+     "ok": true,
+     "detail": "1 of 2"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "7 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 132,
+    "edges": 419,
+    "stairNodes": 14,
+    "stairEnds": 2,
+    "stairEndsLinked": 1,
+    "spacing": 0.5,
+    "latticeMs": 7
+   }
+  },
+  {
+   "id": "geo:split-level-2-steps",
+   "group": "geometry",
+   "title": "Split levels 0.36 m apart joined by two steps",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 69,
+   "wallMs": 154,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "both ends linked, once each",
+     "ok": true,
+     "detail": "2 of 2 ends linked"
+    },
+    {
+     "name": "lower level joins upper level",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "15 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 192,
+    "edges": 635,
+    "stairNodes": 2,
+    "stairEnds": 2,
+    "stairEndsLinked": 2,
+    "spacing": 0.5,
+    "latticeMs": 15
+   }
+  },
+  {
+   "id": "geo:split-level-3-steps",
+   "group": "geometry",
+   "title": "Split levels 0.54 m apart joined by three steps",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 37,
+   "wallMs": 104,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "both ends linked, once each",
+     "ok": true,
+     "detail": "2 of 2 ends linked"
+    },
+    {
+     "name": "lower level joins upper level",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "8 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 186,
+    "edges": 605,
+    "stairNodes": 2,
+    "stairEnds": 2,
+    "stairEndsLinked": 2,
+    "spacing": 0.5,
+    "latticeMs": 8
+   }
+  },
+  {
+   "id": "geo:mezzanine",
+   "group": "geometry",
+   "title": "Mezzanine at 2.8 m over part of a floor, reached by a flight",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 68,
+   "wallMs": 134,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "floor kept under the mezzanine",
+     "ok": true
+    },
+    {
+     "name": "mezzanine has nodes",
+     "ok": true
+    },
+    {
+     "name": "no floor link between the two levels",
+     "ok": true
+    },
+    {
+     "name": "ground joins mezzanine by the stair",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "16 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 766,
+    "edges": 2709,
+    "stairNodes": 14,
+    "stairEnds": 2,
+    "stairEndsLinked": 2,
+    "spacing": 0.5,
+    "latticeMs": 16
+   }
+  },
+  {
+   "id": "geo:thin-wall-closed",
+   "group": "geometry",
+   "title": "A 5 cm wall between two rooms, no opening",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 47,
+   "wallMs": 111,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the wall keeps the rooms apart",
+     "ok": true,
+     "detail": "separate parts"
+    },
+    {
+     "name": "no link through the wall",
+     "ok": true
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "11 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 437,
+    "edges": 1516,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 11
+   }
+  },
+  {
+   "id": "geo:thin-wall-door",
+   "group": "geometry",
+   "title": "A 5 cm wall between two rooms, with a door",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 55,
+   "wallMs": 122,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the door joins the rooms",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "open only at the door",
+     "ok": true
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "11 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 437,
+    "edges": 1519,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 11
+   }
+  },
+  {
+   "id": "geo:rotated-30-closed",
+   "group": "geometry",
+   "title": "Building turned 30 degrees, dividing wall",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 45,
+   "wallMs": 112,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "lattice follows the walls",
+     "ok": true,
+     "detail": "30.00 deg"
+    },
+    {
+     "name": "the wall keeps the rooms apart",
+     "ok": true,
+     "detail": "separate parts"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "11 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 419,
+    "edges": 1389,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 11
+   }
+  },
+  {
+   "id": "geo:rotated-30-door",
+   "group": "geometry",
+   "title": "Building turned 30 degrees, dividing wall with a door",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 56,
+   "wallMs": 125,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "lattice follows the walls",
+     "ok": true,
+     "detail": "30.00 deg"
+    },
+    {
+     "name": "the door joins the rooms",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "12 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 420,
+    "edges": 1394,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 12
+   }
+  },
+  {
+   "id": "geo:curved-wall-closed",
+   "group": "geometry",
+   "title": "Round room of 48 wall segments in a hall, closed",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 89,
+   "wallMs": 159,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the round wall keeps inside and outside apart",
+     "ok": true,
+     "detail": "separate parts"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "21 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 861,
+    "edges": 2864,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 21
+   }
+  },
+  {
+   "id": "geo:curved-wall-door",
+   "group": "geometry",
+   "title": "Round room of 48 wall segments in a hall, with a doorway",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 91,
+   "wallMs": 162,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the doorway joins inside and outside",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "22 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 833,
+    "edges": 2709,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 22
+   }
+  },
+  {
+   "id": "geo:door-no-slab",
+   "group": "geometry",
+   "title": "Doorway with no slab under the door (both slabs stop at the wall faces)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 62,
+   "wallMs": 130,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the door joins the rooms",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "one door node",
+     "ok": true
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "13 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 459,
+    "edges": 1552,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 13
+   }
+  },
+  {
+   "id": "geo:corridor-45cm",
+   "group": "geometry",
+   "title": "Corridor 0.45 m wide (grid spacing 0.5 m) between two rooms",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 59,
+   "wallMs": 130,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "no link through the corridor walls",
+     "ok": true
+    },
+    {
+     "name": "rooms joined (reported; a corridor below the spacing may be lost)",
+     "ok": true,
+     "detail": "separate parts"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "12 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 585,
+    "edges": 1924,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 12
+   }
+  },
+  {
+   "id": "geo:corridor-70cm",
+   "group": "geometry",
+   "title": "Corridor 0.7 m wide (grid spacing 0.5 m) between two rooms",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 56,
+   "wallMs": 121,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the corridor joins the rooms",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "no link through the corridor walls",
+     "ok": true
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "12 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 615,
+    "edges": 2024,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 12
+   }
+  },
+  {
+   "id": "geo:floor-200m",
+   "group": "geometry",
+   "title": "A 200 x 200 m floor: the grid coarsens to the 40,000-point budget",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 621,
+   "wallMs": 708,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "coarsened",
+     "ok": true
+    },
+    {
+     "name": "within the point budget",
+     "ok": true,
+     "detail": "36481 nodes at 1.05 m"
+    },
+    {
+     "name": "one part",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 15000 ms",
+     "ok": true,
+     "detail": "265 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 36481,
+    "edges": 144780,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 1.052625,
+    "latticeMs": 265
+   }
+  },
+  {
+   "id": "geo:degenerate-triangles",
+   "group": "geometry",
+   "title": "Zero-area and repeated-vertex triangles beside a clean floor",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 50,
+   "wallMs": 112,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "same nodes as the clean floor",
+     "ok": true,
+     "detail": "441 nodes (clean: 441)"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "9 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 441,
+    "edges": 1640,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 9
+   }
+  },
+  {
+   "id": "geo:nan-vertex",
+   "group": "geometry",
+   "title": "A floor triangle with a NaN vertex beside a clean floor",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 49,
+   "wallMs": 111,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "same nodes as without it",
+     "ok": true,
+     "detail": "448 nodes"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "11 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 448,
+    "edges": 1606,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 11
+   }
+  },
+  {
+   "id": "geo:infinite-vertex",
+   "group": "geometry",
+   "title": "A floor triangle with an infinite vertex beside a clean floor",
+   "expectFail": null,
+   "open": "lattice.js samples a triangle with a non-finite vertex over an unbounded range (not fixed here)",
+   "status": "open",
+   "ms": null,
+   "wallMs": 20016,
+   "checks": [
+    {
+     "name": "case finished",
+     "ok": false,
+     "detail": "no result within 20 s (killed)"
+    }
+   ]
+  },
+  {
+   "id": "geo:infinite-wall-vertex",
+   "group": "geometry",
+   "title": "A wall mesh with an infinite vertex",
+   "expectFail": null,
+   "open": "a non-finite wall vertex makes the dominant angle NaN (lattice.js, not fixed here)",
+   "status": "open",
+   "ms": 12,
+   "wallMs": 114,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the good wall still separates",
+     "ok": false,
+     "detail": "a probe found no floor node"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "4 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": ""
+    }
+   ],
+   "metrics": {
+    "nodes": 0,
+    "edges": 0,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 4
+   }
+  },
+  {
+   "id": "geo:inverted-winding",
+   "group": "geometry",
+   "title": "A floor whose triangles all face down",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 61,
+   "wallMs": 165,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "winding fallback used",
+     "ok": true
+    },
+    {
+     "name": "same nodes as facing up",
+     "ok": true,
+     "detail": "441"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "11 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 441,
+    "edges": 1640,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 11
+   }
+  },
+  {
+   "id": "geo:offset-500km-closed",
+   "group": "geometry",
+   "title": "Rooms and a wall, 500 km from the origin (float32 positions)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 54,
+   "wallMs": 151,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the wall keeps the rooms apart",
+     "ok": true,
+     "detail": "separate parts"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "15 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 437,
+    "edges": 1516,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 15
+   }
+  },
+  {
+   "id": "geo:offset-500km-door",
+   "group": "geometry",
+   "title": "Rooms and a wall with a door, 500 km from the origin (float32 positions)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 60,
+   "wallMs": 136,
+   "checks": [
+    {
+     "name": "graph sound (finite points, valid edges)",
+     "ok": true
+    },
+    {
+     "name": "the door joins the rooms",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "built within 2000 ms",
+     "ok": true,
+     "detail": "13 ms"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "nodes": 437,
+    "edges": 1519,
+    "stairNodes": 0,
+    "stairEnds": 0,
+    "stairEndsLinked": 0,
+    "spacing": 0.5,
+    "latticeMs": 13
+   }
+  },
+  {
+   "id": "geo:millimetres",
+   "group": "geometry",
+   "title": "The door scene in millimetres (units not converted): no crash, within budget",
+   "expectFail": null,
+   "open": "lattice.js samples the full grid before coarsening, 4e8 samples here (not fixed here)",
+   "status": "open",
+   "ms": null,
+   "wallMs": 12254,
+   "checks": [
+    {
+     "name": "case ran",
+     "ok": false,
+     "detail": "threw: RangeError: Invalid array length\n    at Array.push (<anonymous>)\n    at sampleTriangles (file:///C:/Users/lmurugesan/OneDrive%20-%20Alfaisal%20University/CM-iTAD/topologic_webapp/TopologicStudio/.claude/worktrees/agent-ab4f7303ef3afd806/topologicpy-web-frontend/src/core/lattice.js:185:17)\n    at sampleGroup (file:///C:/Users/lmurugesan/OneDrive%20-%20Alfaisal%20University/CM-iTAD/topologic_webapp/TopologicStudio/.claude/worktrees/agent-ab4f7303ef3afd806/topologicpy-web-frontend/src/core/lattice.js:201:7)\n    at buildLatticeGraph (file:///C:/Users/lmurugesan/OneDrive%20-%20Alfaisal%20University"
+    }
+   ]
+  },
+  {
+   "id": "ifc:fixture binary/ifc2x3-block.ifc",
+   "group": "ifc",
+   "title": "fixture binary/ifc2x3-block.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 246,
+   "wallMs": 330,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1230,
+    "extractMs": 87,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture binary/pixel-texture.ifc",
+   "group": "ifc",
+   "title": "fixture binary/pixel-texture.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 163,
+   "wallMs": 238,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1352,
+    "extractMs": 28,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture binary/strings-base.ifc",
+   "group": "ifc",
+   "title": "fixture binary/strings-base.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 201,
+   "wallMs": 291,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1296,
+    "extractMs": 44,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 4,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/misaligned-opening-brep.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/misaligned-opening-brep.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 196,
+   "wallMs": 288,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 6376,
+    "extractMs": 40,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/misaligned-opening-extruded.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/misaligned-opening-extruded.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 193,
+   "wallMs": 270,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 2727,
+    "extractMs": 39,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/misaligned-opening-skin.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/misaligned-opening-skin.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 184,
+   "wallMs": 272,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 6376,
+    "extractMs": 40,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/noisy-face-opening.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/noisy-face-opening.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 167,
+   "wallMs": 234,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 9089,
+    "extractMs": 40,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-1170.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-1170.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 177,
+   "wallMs": 258,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 7608,
+    "extractMs": 42,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-2374.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-2374.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 187,
+   "wallMs": 277,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 8951,
+    "extractMs": 54,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 4,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-2675.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-2675.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 187,
+   "wallMs": 282,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 8151,
+    "extractMs": 39,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 4,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-2825.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-2825.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 165,
+   "wallMs": 234,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 4934,
+    "extractMs": 35,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-2892.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-2892.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 189,
+   "wallMs": 268,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 7627,
+    "extractMs": 44,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-3154.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-3154.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 182,
+   "wallMs": 273,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 8764,
+    "extractMs": 51,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-3396.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-3396.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 178,
+   "wallMs": 262,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 6052,
+    "extractMs": 39,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-3926.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-3926.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 189,
+   "wallMs": 283,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 9075,
+    "extractMs": 47,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-655.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-655.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 190,
+   "wallMs": 270,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 5363,
+    "extractMs": 49,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture boolean-robustness/wall-openings-895.ifc",
+   "group": "ifc",
+   "title": "fixture boolean-robustness/wall-openings-895.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 185,
+   "wallMs": 307,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 13151,
+    "extractMs": 50,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 1,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc2x3-circle.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc2x3-circle.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 168,
+   "wallMs": 243,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1358,
+    "extractMs": 27,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc2x3-ellipse.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc2x3-ellipse.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 164,
+   "wallMs": 235,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1362,
+    "extractMs": 29,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc2x3-hollow-circle.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc2x3-hollow-circle.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 195,
+   "wallMs": 268,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1368,
+    "extractMs": 32,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4-circle.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4-circle.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 178,
+   "wallMs": 268,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1290,
+    "extractMs": 28,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4-cylinder.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4-cylinder.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 167,
+   "wallMs": 258,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1212,
+    "extractMs": 25,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4-ellipse.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4-ellipse.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 161,
+   "wallMs": 244,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1294,
+    "extractMs": 29,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 4,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4-hollow-circle.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4-hollow-circle.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 180,
+   "wallMs": 280,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1300,
+    "extractMs": 34,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4-sphere.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4-sphere.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 158,
+   "wallMs": 248,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1194,
+    "extractMs": 26,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4x3_add2-circle.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4x3_add2-circle.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 180,
+   "wallMs": 258,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1297,
+    "extractMs": 35,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4x3_add2-cylinder.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4x3_add2-cylinder.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 163,
+   "wallMs": 249,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1219,
+    "extractMs": 25,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4x3_add2-ellipse.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4x3_add2-ellipse.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 163,
+   "wallMs": 232,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1301,
+    "extractMs": 27,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4x3_add2-hollow-circle.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4x3_add2-hollow-circle.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 155,
+   "wallMs": 225,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1307,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture circular-seams-and-sphere/ifc4x3_add2-sphere.ifc",
+   "group": "ifc",
+   "title": "fixture circular-seams-and-sphere/ifc4x3_add2-sphere.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 162,
+   "wallMs": 239,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1201,
+    "extractMs": 28,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/arc-only.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/arc-only.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 155,
+   "wallMs": 260,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1554,
+    "extractMs": 25,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/end-rounding.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/end-rounding.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 160,
+   "wallMs": 236,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1568,
+    "extractMs": 29,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/full-range.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/full-range.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 178,
+   "wallMs": 251,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1554,
+    "extractMs": 29,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/indexed-polycurve-arc-full.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/indexed-polycurve-arc-full.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 167,
+   "wallMs": 264,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 951,
+    "extractMs": 27,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/indexed-polycurve-arc-half.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/indexed-polycurve-arc-half.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 161,
+   "wallMs": 254,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 936,
+    "extractMs": 25,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/indexed-polycurve-end-rounding.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/indexed-polycurve-end-rounding.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 158,
+   "wallMs": 229,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 859,
+    "extractMs": 28,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/partial.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/partial.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 180,
+   "wallMs": 247,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1555,
+    "extractMs": 27,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/polyline-end-rounding.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/polyline-end-rounding.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 223,
+   "wallMs": 305,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 893,
+    "extractMs": 38,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture composite-curve-params/polyline-partial.ifc",
+   "group": "ifc",
+   "title": "fixture composite-curve-params/polyline-partial.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 165,
+   "wallMs": 240,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 879,
+    "extractMs": 21,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture derived-profile/ifc4-derived-hole.ifc",
+   "group": "ifc",
+   "title": "fixture derived-profile/ifc4-derived-hole.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 158,
+   "wallMs": 233,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1852,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture face-surface/ifc4-surface-bspline.ifc",
+   "group": "ifc",
+   "title": "fixture face-surface/ifc4-surface-bspline.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 169,
+   "wallMs": 253,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1683,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture fixed-reference-swept/fixed_reference_swept_ifc4.ifc",
+   "group": "ifc",
+   "title": "fixture fixed-reference-swept/fixed_reference_swept_ifc4.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 168,
+   "wallMs": 244,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1688,
+    "extractMs": 27,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture fixed-reference-swept/fixed_reference_swept_ifc4x3.ifc",
+   "group": "ifc",
+   "title": "fixture fixed-reference-swept/fixed_reference_swept_ifc4x3.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 164,
+   "wallMs": 240,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1735,
+    "extractMs": 26,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture hollow-rectangle/ifc4-rectangle-hollow.ifc",
+   "group": "ifc",
+   "title": "fixture hollow-rectangle/ifc4-rectangle-hollow.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 156,
+   "wallMs": 225,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1310,
+    "extractMs": 26,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture integers/strings-base.ifc",
+   "group": "ifc",
+   "title": "fixture integers/strings-base.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 153,
+   "wallMs": 228,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1296,
+    "extractMs": 21,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture intersection/ifc4-boolean-intersection.ifc",
+   "group": "ifc",
+   "title": "fixture intersection/ifc4-boolean-intersection.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 161,
+   "wallMs": 234,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1522,
+    "extractMs": 23,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture malformed-input/cyclic-placement.ifc",
+   "group": "ifc",
+   "title": "fixture malformed-input/cyclic-placement.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 163,
+   "wallMs": 235,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1298,
+    "extractMs": 29,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture malformed-input/invalid-index.ifc",
+   "group": "ifc",
+   "title": "fixture malformed-input/invalid-index.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 163,
+   "wallMs": 238,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1228,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture malformed-input/missing-placement.ifc",
+   "group": "ifc",
+   "title": "fixture malformed-input/missing-placement.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 158,
+   "wallMs": 232,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1300,
+    "extractMs": 23,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture malformed-input/unterminated-comment.ifc",
+   "group": "ifc",
+   "title": "fixture malformed-input/unterminated-comment.ifc",
+   "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)",
+   "status": "open",
+   "ms": 556,
+   "wallMs": 630,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "error: memory access out of bounds"
+    },
+    {
+     "name": "the error is readable (not a raw WebAssembly trap)",
+     "ok": false,
+     "detail": "memory access out of bounds",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    },
+    {
+     "name": "a small file fails within 5 s",
+     "ok": true,
+     "detail": "412 ms",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    }
+   ],
+   "metrics": {
+    "bytes": 13,
+    "extractMs": 412,
+    "outcome": "extraction error"
+   }
+  },
+  {
+   "id": "ifc:fixture malformed-input/unterminated-string.ifc",
+   "group": "ifc",
+   "title": "fixture malformed-input/unterminated-string.ifc",
+   "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)",
+   "status": "open",
+   "ms": 16683,
+   "wallMs": 16879,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "error: memory access out of bounds"
+    },
+    {
+     "name": "the error is readable (not a raw WebAssembly trap)",
+     "ok": false,
+     "detail": "memory access out of bounds",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    },
+    {
+     "name": "a small file fails within 5 s",
+     "ok": false,
+     "detail": "16550 ms",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    }
+   ],
+   "metrics": {
+    "bytes": 23,
+    "extractMs": 16550,
+    "outcome": "extraction error"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc2x3-block.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc2x3-block.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 151,
+   "wallMs": 220,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1230,
+    "extractMs": 23,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc2x3-brep-void.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc2x3-brep-void.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 159,
+   "wallMs": 226,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 2855,
+    "extractMs": 30,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc2x3-cone.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc2x3-cone.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 159,
+   "wallMs": 230,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1239,
+    "extractMs": 29,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc2x3-pyramid.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc2x3-pyramid.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 188,
+   "wallMs": 259,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1243,
+    "extractMs": 40,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4-block.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4-block.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 153,
+   "wallMs": 222,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1199,
+    "extractMs": 22,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4-brep-void.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4-brep-void.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 153,
+   "wallMs": 220,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 2853,
+    "extractMs": 23,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4-circle.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4-circle.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 150,
+   "wallMs": 217,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1290,
+    "extractMs": 22,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4-cone.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4-cone.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 151,
+   "wallMs": 222,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1208,
+    "extractMs": 25,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4-pyramid.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4-pyramid.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 148,
+   "wallMs": 215,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1212,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4x3_add2-block.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4x3_add2-block.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 149,
+   "wallMs": 219,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1206,
+    "extractMs": 21,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4x3_add2-brep-void.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4x3_add2-brep-void.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 146,
+   "wallMs": 213,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 2860,
+    "extractMs": 21,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4x3_add2-cone.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4x3_add2-cone.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 161,
+   "wallMs": 226,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1215,
+    "extractMs": 28,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture primitives-and-voids/ifc4x3_add2-pyramid.ifc",
+   "group": "ifc",
+   "title": "fixture primitives-and-voids/ifc4x3_add2-pyramid.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 152,
+   "wallMs": 218,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1219,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture revolved-solids/ifc4-revolve-1.57.ifc",
+   "group": "ifc",
+   "title": "fixture revolved-solids/ifc4-revolve-1.57.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 171,
+   "wallMs": 264,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1445,
+    "extractMs": 30,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture revolved-solids/ifc4-revolve-6.28.ifc",
+   "group": "ifc",
+   "title": "fixture revolved-solids/ifc4-revolve-6.28.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 150,
+   "wallMs": 217,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1445,
+    "extractMs": 27,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture schema-aliases/strings-base.ifc",
+   "group": "ifc",
+   "title": "fixture schema-aliases/strings-base.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 151,
+   "wallMs": 215,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1296,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture sectioned-solid/ifc4x3_add2-sectioned-horizontal.ifc",
+   "group": "ifc",
+   "title": "fixture sectioned-solid/ifc4x3_add2-sectioned-horizontal.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 155,
+   "wallMs": 228,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1582,
+    "extractMs": 28,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture step-text/strings-base.ifc",
+   "group": "ifc",
+   "title": "fixture step-text/strings-base.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 152,
+   "wallMs": 223,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1296,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture surface-curve-swept/surface_curve_swept_ifc4.ifc",
+   "group": "ifc",
+   "title": "fixture surface-curve-swept/surface_curve_swept_ifc4.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 156,
+   "wallMs": 221,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1684,
+    "extractMs": 28,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture surface-curve-swept/surface_curve_swept_ifc4x3.ifc",
+   "group": "ifc",
+   "title": "fixture surface-curve-swept/surface_curve_swept_ifc4x3.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 155,
+   "wallMs": 222,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1731,
+    "extractMs": 23,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture swept-disk/ifc4-swept-disk-hollow.ifc",
+   "group": "ifc",
+   "title": "fixture swept-disk/ifc4-swept-disk-hollow.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 166,
+   "wallMs": 228,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1256,
+    "extractMs": 24,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture t-profile/ifc4-t-profile.ifc",
+   "group": "ifc",
+   "title": "fixture t-profile/ifc4-t-profile.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 162,
+   "wallMs": 231,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1310,
+    "extractMs": 29,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture tapered-extrusion/ifc4-tapered-hole.ifc",
+   "group": "ifc",
+   "title": "fixture tapered-extrusion/ifc4-tapered-hole.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 153,
+   "wallMs": 223,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1871,
+    "extractMs": 26,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:fixture tapered-extrusion/ifc4-tapered.ifc",
+   "group": "ifc",
+   "title": "fixture tapered-extrusion/ifc4-tapered.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 161,
+   "wallMs": 229,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1361,
+    "extractMs": 25,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:made empty.ifc",
+   "group": "ifc",
+   "title": "made empty.ifc",
+   "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)",
+   "status": "open",
+   "ms": 145,
+   "wallMs": 211,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "error: memory access out of bounds"
+    },
+    {
+     "name": "the error is readable (not a raw WebAssembly trap)",
+     "ok": false,
+     "detail": "memory access out of bounds",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    },
+    {
+     "name": "a small file fails within 5 s",
+     "ok": true,
+     "detail": "14 ms",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    }
+   ],
+   "metrics": {
+    "bytes": 0,
+    "extractMs": 14,
+    "outcome": "extraction error"
+   }
+  },
+  {
+   "id": "ifc:made truncated-40pc.ifc",
+   "group": "ifc",
+   "title": "made truncated-40pc.ifc",
+   "open": null,
+   "status": "pass",
+   "ms": 329,
+   "wallMs": 403,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "281 nodes, 801 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 1028321,
+    "extractMs": 135,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 17,
+     "doors": 52,
+     "walls": 15,
+     "spaces": 3,
+     "obstacles": 56
+    },
+    "latticeMs": 17,
+    "nodes": 281,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:made truncated-header.ifc",
+   "group": "ifc",
+   "title": "made truncated-header.ifc",
+   "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)",
+   "status": "open",
+   "ms": 5868,
+   "wallMs": 6035,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "error: Aborted(). Build with -sASSERTIONS for more info."
+    },
+    {
+     "name": "the error is readable (not a raw WebAssembly trap)",
+     "ok": false,
+     "detail": "Aborted(). Build with -sASSERTIONS for more info.",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    },
+    {
+     "name": "a small file fails within 5 s",
+     "ok": false,
+     "detail": "5738 ms",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    }
+   ],
+   "metrics": {
+    "bytes": 200,
+    "extractMs": 5738,
+    "outcome": "extraction error"
+   }
+  },
+  {
+   "id": "ifc:made not-ifc-json.ifc",
+   "group": "ifc",
+   "title": "made not-ifc-json.ifc",
+   "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)",
+   "status": "open",
+   "ms": 164,
+   "wallMs": 234,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "error: Cannot read properties of undefined (reading 'arguments')"
+    },
+    {
+     "name": "the error is readable (not a raw WebAssembly trap)",
+     "ok": false,
+     "detail": "Cannot read properties of undefined (reading 'arguments')",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    },
+    {
+     "name": "a small file fails within 5 s",
+     "ok": true,
+     "detail": "20 ms",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    }
+   ],
+   "metrics": {
+    "bytes": 42,
+    "extractMs": 20,
+    "outcome": "extraction error"
+   }
+  },
+  {
+   "id": "ifc:made not-ifc-binary.ifc",
+   "group": "ifc",
+   "title": "made not-ifc-binary.ifc",
+   "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)",
+   "status": "open",
+   "ms": 15000,
+   "wallMs": 15239,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "error: Aborted(). Build with -sASSERTIONS for more info."
+    },
+    {
+     "name": "the error is readable (not a raw WebAssembly trap)",
+     "ok": false,
+     "detail": "Aborted(). Build with -sASSERTIONS for more info.",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    },
+    {
+     "name": "a small file fails within 5 s",
+     "ok": false,
+     "detail": "14867 ms",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    }
+   ],
+   "metrics": {
+    "bytes": 4096,
+    "extractMs": 14867,
+    "outcome": "extraction error"
+   }
+  },
+  {
+   "id": "ifc:made ifc-xml.ifc",
+   "group": "ifc",
+   "title": "made ifc-xml.ifc",
+   "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)",
+   "status": "open",
+   "ms": 162,
+   "wallMs": 244,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "error: Cannot read properties of undefined (reading 'arguments')"
+    },
+    {
+     "name": "the error is readable (not a raw WebAssembly trap)",
+     "ok": false,
+     "detail": "Cannot read properties of undefined (reading 'arguments')",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    },
+    {
+     "name": "a small file fails within 5 s",
+     "ok": true,
+     "detail": "15 ms",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    }
+   ],
+   "metrics": {
+    "bytes": 181,
+    "extractMs": 15,
+    "outcome": "extraction error"
+   }
+  },
+  {
+   "id": "ifc:made zipped.ifc",
+   "group": "ifc",
+   "title": "made zipped.ifc",
+   "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)",
+   "status": "open",
+   "ms": 1009,
+   "wallMs": 1084,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "error: memory access out of bounds"
+    },
+    {
+     "name": "the error is readable (not a raw WebAssembly trap)",
+     "ok": false,
+     "detail": "memory access out of bounds",
+     "open": "the extraction passes the file to web-ifc unchecked (tools/ifc-extract.mjs; not changed here)"
+    }
+   ],
+   "metrics": {
+    "bytes": 2570919,
+    "extractMs": 891,
+    "outcome": "extraction error"
+   }
+  },
+  {
+   "id": "ifc:corpus AC20-FZK-Haus",
+   "group": "ifc",
+   "title": "corpus AC20-FZK-Haus",
+   "open": null,
+   "status": "pass",
+   "ms": 485,
+   "wallMs": 552,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "1092 nodes, 3346 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 2570803,
+    "extractMs": 262,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 2,
+     "stairs": 17,
+     "doors": 52,
+     "walls": 21,
+     "spaces": 7,
+     "obstacles": 151
+    },
+    "latticeMs": 35,
+    "nodes": 1092,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus C20-Institute-Var-2",
+   "group": "ifc",
+   "title": "corpus C20-Institute-Var-2",
+   "open": null,
+   "status": "pass",
+   "ms": 1502,
+   "wallMs": 1573,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "12461 nodes, 37045 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 10934237,
+    "extractMs": 1036,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 5,
+     "stairs": 596,
+     "doors": 165,
+     "walls": 166,
+     "spaces": 82,
+     "obstacles": 838
+    },
+    "latticeMs": 210,
+    "nodes": 12461,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus dental_clinic",
+   "group": "ifc",
+   "title": "corpus dental_clinic",
+   "open": null,
+   "status": "pass",
+   "ms": 2581,
+   "wallMs": 2672,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "33654 nodes, 107529 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 13003205,
+    "extractMs": 1551,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 175,
+     "stairs": 673,
+     "doors": 756,
+     "walls": 1289,
+     "spaces": 269,
+     "obstacles": 1581
+    },
+    "latticeMs": 637,
+    "nodes": 33654,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus example",
+   "group": "ifc",
+   "title": "corpus example",
+   "open": null,
+   "status": "pass",
+   "ms": 295,
+   "wallMs": 363,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "759 nodes, 2573 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 413972,
+    "extractMs": 62,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 11,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 17,
+     "spaces": 1,
+     "obstacles": 42
+    },
+    "latticeMs": 33,
+    "nodes": 759,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus FM_ARC_DigitalHub",
+   "group": "ifc",
+   "title": "corpus FM_ARC_DigitalHub",
+   "open": null,
+   "status": "pass",
+   "ms": 2807,
+   "wallMs": 2893,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "21359 nodes, 72165 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 14322717,
+    "extractMs": 2022,
+    "webIfcMessages": 605,
+    "meshes": {
+     "floors": 56,
+     "stairs": 875,
+     "doors": 680,
+     "walls": 235,
+     "spaces": 64,
+     "obstacles": 2045
+    },
+    "latticeMs": 475,
+    "nodes": 21359,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus IfcOpenHouse_IFC4",
+   "group": "ifc",
+   "title": "corpus IfcOpenHouse_IFC4",
+   "open": null,
+   "status": "pass",
+   "ms": 193,
+   "wallMs": 280,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "3 nodes, 3 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 113264,
+    "extractMs": 54,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 5,
+     "stairs": 1,
+     "doors": 4,
+     "walls": 7,
+     "spaces": 0,
+     "obstacles": 25
+    },
+    "latticeMs": 5,
+    "nodes": 3,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ISSUE_005_haus",
+   "group": "ifc",
+   "title": "corpus ISSUE_005_haus",
+   "open": null,
+   "status": "pass",
+   "ms": 467,
+   "wallMs": 540,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "1092 nodes, 3346 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 2526544,
+    "extractMs": 247,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 2,
+     "stairs": 17,
+     "doors": 52,
+     "walls": 21,
+     "spaces": 7,
+     "obstacles": 151
+    },
+    "latticeMs": 37,
+    "nodes": 1092,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ISSUE_021_Mini Project",
+   "group": "ifc",
+   "title": "corpus ISSUE_021_Mini Project",
+   "open": null,
+   "status": "pass",
+   "ms": 301,
+   "wallMs": 391,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 3355844,
+    "extractMs": 161,
+    "webIfcMessages": 20,
+    "meshes": {
+     "floors": 24,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 254
+    },
+    "latticeMs": 12,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ISSUE_034_HouseZ",
+   "group": "ifc",
+   "title": "corpus ISSUE_034_HouseZ",
+   "open": null,
+   "status": "pass",
+   "ms": 544,
+   "wallMs": 615,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "2437 nodes, 6601 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 5154603,
+    "extractMs": 243,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 26,
+     "stairs": 54,
+     "doors": 45,
+     "walls": 344,
+     "spaces": 5,
+     "obstacles": 2008
+    },
+    "latticeMs": 108,
+    "nodes": 2437,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ISSUE_159_kleine_Wohnung_R22",
+   "group": "ifc",
+   "title": "corpus ISSUE_159_kleine_Wohnung_R22",
+   "open": null,
+   "status": "pass",
+   "ms": 1849,
+   "wallMs": 1931,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "5106 nodes, 13789 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 10199477,
+    "extractMs": 1520,
+    "webIfcMessages": 435,
+    "meshes": {
+     "floors": 53,
+     "stairs": 64,
+     "doors": 470,
+     "walls": 281,
+     "spaces": 28,
+     "obstacles": 967
+    },
+    "latticeMs": 141,
+    "nodes": 5106,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus Office_A_20110811",
+   "group": "ifc",
+   "title": "corpus Office_A_20110811",
+   "open": null,
+   "status": "pass",
+   "ms": 1118,
+   "wallMs": 1193,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "17470 nodes, 55900 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 4099307,
+    "extractMs": 490,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 2,
+     "stairs": 208,
+     "doors": 294,
+     "walls": 548,
+     "spaces": 99,
+     "obstacles": 423
+    },
+    "latticeMs": 356,
+    "nodes": 17470,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus tested_sample_project",
+   "group": "ifc",
+   "title": "corpus tested_sample_project",
+   "open": null,
+   "status": "pass",
+   "ms": 310,
+   "wallMs": 380,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "555 nodes, 1804 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 710108,
+    "extractMs": 116,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 14,
+     "stairs": 0,
+     "doors": 7,
+     "walls": 5,
+     "spaces": 0,
+     "obstacles": 79
+    },
+    "latticeMs": 26,
+    "nodes": 555,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ISSUE_068_ARK_NUS_skolebygg",
+   "group": "ifc",
+   "title": "corpus ISSUE_068_ARK_NUS_skolebygg",
+   "open": null,
+   "status": "pass",
+   "ms": 8404,
+   "wallMs": 8501,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "41816 nodes, 136378 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 57304675,
+    "extractMs": 6900,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 332,
+     "stairs": 449,
+     "doors": 3172,
+     "walls": 1418,
+     "spaces": 307,
+     "obstacles": 2561
+    },
+    "latticeMs": 932,
+    "nodes": 41816,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ISSUE_098_R8_F1_MAB_AR_M3_XX_XXX_MO_7000",
+   "group": "ifc",
+   "title": "corpus ISSUE_098_R8_F1_MAB_AR_M3_XX_XXX_MO_7000",
+   "open": null,
+   "status": "pass",
+   "ms": 38918,
+   "wallMs": 39032,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "67834 nodes, 139141 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 72882778,
+    "extractMs": 35399,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 886,
+     "stairs": 4107,
+     "doors": 8353,
+     "walls": 8219,
+     "spaces": 0,
+     "obstacles": 8070
+    },
+    "latticeMs": 2939,
+    "nodes": 67834,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ISSUE_126_model",
+   "group": "ifc",
+   "title": "corpus ISSUE_126_model",
+   "open": null,
+   "status": "pass",
+   "ms": 394,
+   "wallMs": 457,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "1337 nodes, 3916 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 4528523,
+    "extractMs": 173,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 30,
+     "stairs": 0,
+     "doors": 91,
+     "walls": 81,
+     "spaces": 0,
+     "obstacles": 91
+    },
+    "latticeMs": 33,
+    "nodes": 1337,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ISSUE_129_N1540_17_EXE_MOD_448200_02_09_11SMC_IGC_V17",
+   "group": "ifc",
+   "title": "corpus ISSUE_129_N1540_17_EXE_MOD_448200_02_09_11SMC_IGC_V17",
+   "open": null,
+   "status": "pass",
+   "ms": 1531,
+   "wallMs": 1609,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "39313 nodes, 123822 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 12233375,
+    "extractMs": 604,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 142,
+     "stairs": 9,
+     "doors": 0,
+     "walls": 396,
+     "spaces": 0,
+     "obstacles": 333
+    },
+    "latticeMs": 529,
+    "nodes": 39313,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus S_Office_Integrated Design Archi",
+   "group": "ifc",
+   "title": "corpus S_Office_Integrated Design Archi",
+   "open": null,
+   "status": "pass",
+   "ms": 1120,
+   "wallMs": 1189,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "7606 nodes, 25729 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 31057999,
+    "extractMs": 741,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 16,
+     "stairs": 400,
+     "doors": 341,
+     "walls": 235,
+     "spaces": 0,
+     "obstacles": 236
+    },
+    "latticeMs": 152,
+    "nodes": 7606,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus advanced_model",
+   "group": "ifc",
+   "title": "corpus advanced_model",
+   "open": null,
+   "status": "pass",
+   "ms": 3634,
+   "wallMs": 3727,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "27101 nodes, 85432 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 35309937,
+    "extractMs": 2594,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 712,
+     "stairs": 447,
+     "doors": 757,
+     "walls": 184,
+     "spaces": 0,
+     "obstacles": 2471
+    },
+    "latticeMs": 682,
+    "nodes": 27101,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus schependomlaan",
+   "group": "ifc",
+   "title": "corpus schependomlaan",
+   "open": null,
+   "status": "pass",
+   "ms": 2272,
+   "wallMs": 2348,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "7113 nodes, 20320 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 49286967,
+    "extractMs": 1785,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 251,
+     "stairs": 9,
+     "doors": 1678,
+     "walls": 1251,
+     "spaces": 6,
+     "obstacles": 962
+    },
+    "latticeMs": 268,
+    "nodes": 7113,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus Ifc4_Revit_ARC",
+   "group": "ifc",
+   "title": "corpus Ifc4_Revit_ARC",
+   "open": null,
+   "status": "pass",
+   "ms": 597,
+   "wallMs": 664,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "4384 nodes, 13247 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 13646137,
+    "extractMs": 274,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 79,
+     "stairs": 91,
+     "doors": 55,
+     "walls": 64,
+     "spaces": 0,
+     "obstacles": 442
+    },
+    "latticeMs": 99,
+    "nodes": 4384,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus Ifc4_Revit_ARC_FireRatingAdded",
+   "group": "ifc",
+   "title": "corpus Ifc4_Revit_ARC_FireRatingAdded",
+   "open": null,
+   "status": "pass",
+   "ms": 590,
+   "wallMs": 660,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "4384 nodes, 13247 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 13650061,
+    "extractMs": 265,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 79,
+     "stairs": 91,
+     "doors": 55,
+     "walls": 64,
+     "spaces": 0,
+     "obstacles": 442
+    },
+    "latticeMs": 102,
+    "nodes": 4384,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus Ifc4_SampleHouse",
+   "group": "ifc",
+   "title": "corpus Ifc4_SampleHouse",
+   "open": null,
+   "status": "pass",
+   "ms": 420,
+   "wallMs": 486,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "700 nodes, 2121 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 2273870,
+    "extractMs": 218,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 8,
+     "stairs": 0,
+     "doors": 30,
+     "walls": 8,
+     "spaces": 4,
+     "obstacles": 42
+    },
+    "latticeMs": 22,
+    "nodes": 700,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus bsi-ifc4-Building-Architecture",
+   "group": "ifc",
+   "title": "corpus bsi-ifc4-Building-Architecture",
+   "open": null,
+   "status": "pass",
+   "ms": 210,
+   "wallMs": 278,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "112 nodes, 330 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 142325,
+    "extractMs": 35,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 3,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 4,
+     "spaces": 2,
+     "obstacles": 0
+    },
+    "latticeMs": 8,
+    "nodes": 112,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus bsi-ifc4x3-Building-Architecture",
+   "group": "ifc",
+   "title": "corpus bsi-ifc4x3-Building-Architecture",
+   "open": null,
+   "status": "pass",
+   "ms": 220,
+   "wallMs": 284,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "112 nodes, 330 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 141965,
+    "extractMs": 42,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 3,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 4,
+     "spaces": 2,
+     "obstacles": 0
+    },
+    "latticeMs": 6,
+    "nodes": 112,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus AdvancedProject",
+   "group": "ifc",
+   "title": "corpus AdvancedProject",
+   "open": null,
+   "status": "pass",
+   "ms": 4058,
+   "wallMs": 4148,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "41578 nodes, 133337 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 44337371,
+    "extractMs": 2504,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 43,
+     "stairs": 1034,
+     "doors": 736,
+     "walls": 529,
+     "spaces": 8,
+     "obstacles": 4886
+    },
+    "latticeMs": 1087,
+    "nodes": 41578,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus BasicHouse",
+   "group": "ifc",
+   "title": "corpus BasicHouse",
+   "open": null,
+   "status": "pass",
+   "ms": 1401,
+   "wallMs": 1475,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "957 nodes, 2821 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 52702577,
+    "extractMs": 1022,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 3,
+     "stairs": 0,
+     "doors": 72,
+     "walls": 21,
+     "spaces": 0,
+     "obstacles": 111
+    },
+    "latticeMs": 150,
+    "nodes": 957,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus LargeBuilding",
+   "group": "ifc",
+   "title": "corpus LargeBuilding",
+   "open": null,
+   "status": "pass",
+   "ms": 484,
+   "wallMs": 554,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "2883 nodes, 9603 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 1292595,
+    "extractMs": 248,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 4,
+     "stairs": 0,
+     "doors": 126,
+     "walls": 33,
+     "spaces": 8,
+     "obstacles": 168
+    },
+    "latticeMs": 56,
+    "nodes": 2883,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus ManySimpleWalls",
+   "group": "ifc",
+   "title": "corpus ManySimpleWalls",
+   "open": null,
+   "status": "pass",
+   "ms": 277,
+   "wallMs": 344,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 584056,
+    "extractMs": 145,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 78,
+     "walls": 6,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 4,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:corpus TallBuilding",
+   "group": "ifc",
+   "title": "corpus TallBuilding",
+   "open": null,
+   "status": "pass",
+   "ms": 351,
+   "wallMs": 417,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "1258 nodes, 3453 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 616509,
+    "extractMs": 155,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 5,
+     "stairs": 0,
+     "doors": 51,
+     "walls": 36,
+     "spaces": 3,
+     "obstacles": 84
+    },
+    "latticeMs": 34,
+    "nodes": 1258,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus House",
+   "group": "ifc",
+   "title": "corpus House",
+   "open": null,
+   "status": "pass",
+   "ms": 407,
+   "wallMs": 470,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "1383 nodes, 3726 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 1426789,
+    "extractMs": 167,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 13,
+     "stairs": 5,
+     "doors": 19,
+     "walls": 72,
+     "spaces": 13,
+     "obstacles": 73
+    },
+    "latticeMs": 47,
+    "nodes": 1383,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus SampleHouse4",
+   "group": "ifc",
+   "title": "corpus SampleHouse4",
+   "open": null,
+   "status": "pass",
+   "ms": 436,
+   "wallMs": 502,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "700 nodes, 2121 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 2322454,
+    "extractMs": 227,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 8,
+     "stairs": 0,
+     "doors": 30,
+     "walls": 8,
+     "spaces": 4,
+     "obstacles": 42
+    },
+    "latticeMs": 27,
+    "nodes": 700,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus LargeTriangulatedCoordinates",
+   "group": "ifc",
+   "title": "corpus LargeTriangulatedCoordinates",
+   "open": null,
+   "status": "pass",
+   "ms": 170,
+   "wallMs": 238,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 795966,
+    "extractMs": 45,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 3,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:corpus Axis2PlacementError",
+   "group": "ifc",
+   "title": "corpus Axis2PlacementError",
+   "open": null,
+   "status": "pass",
+   "ms": 164,
+   "wallMs": 233,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1211444,
+    "extractMs": 42,
+    "webIfcMessages": 1,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:corpus IFC4x3-test2",
+   "group": "ifc",
+   "title": "corpus IFC4x3-test2",
+   "open": null,
+   "status": "pass",
+   "ms": 178,
+   "wallMs": 245,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "0 nodes, 0 edges"
+    }
+   ],
+   "metrics": {
+    "bytes": 1748737,
+    "extractMs": 53,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 0,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 0,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 2,
+    "nodes": 0,
+    "outcome": "empty graph"
+   }
+  },
+  {
+   "id": "ifc:corpus duplex-apartment",
+   "group": "ifc",
+   "title": "corpus duplex-apartment",
+   "open": null,
+   "status": "pass",
+   "ms": 381,
+   "wallMs": 453,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "1540 nodes, 4361 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 2419670,
+    "extractMs": 165,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 20,
+     "stairs": 196,
+     "doors": 44,
+     "walls": 75,
+     "spaces": 21,
+     "obstacles": 228
+    },
+    "latticeMs": 43,
+    "nodes": 1540,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus buildingsmart-sample-scene",
+   "group": "ifc",
+   "title": "corpus buildingsmart-sample-scene",
+   "open": null,
+   "status": "pass",
+   "ms": 202,
+   "wallMs": 267,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "112 nodes, 330 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 229547,
+    "extractMs": 40,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 3,
+     "stairs": 0,
+     "doors": 0,
+     "walls": 4,
+     "spaces": 2,
+     "obstacles": 0
+    },
+    "latticeMs": 7,
+    "nodes": 112,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus office-two-storey",
+   "group": "ifc",
+   "title": "corpus office-two-storey",
+   "open": null,
+   "status": "pass",
+   "ms": 360,
+   "wallMs": 430,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "3374 nodes, 8782 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 183741,
+    "extractMs": 68,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 8,
+     "stairs": 30,
+     "doors": 176,
+     "walls": 50,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 76,
+    "nodes": 3374,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "ifc:corpus courtyard-ring",
+   "group": "ifc",
+   "title": "corpus courtyard-ring",
+   "open": null,
+   "status": "pass",
+   "ms": 222,
+   "wallMs": 301,
+   "checks": [
+    {
+     "name": "extraction: an error or geometry, no crash",
+     "ok": true,
+     "detail": "geometry"
+    },
+    {
+     "name": "graph: sound or a clear error",
+     "ok": true,
+     "detail": "650 nodes, 1623 edges"
+    },
+    {
+     "name": "pipeline without NaN",
+     "ok": true,
+     "detail": "route, straighten, temperature, flood"
+    }
+   ],
+   "metrics": {
+    "bytes": 17389,
+    "extractMs": 33,
+    "webIfcMessages": 0,
+    "meshes": {
+     "floors": 4,
+     "stairs": 0,
+     "doors": 8,
+     "walls": 9,
+     "spaces": 0,
+     "obstacles": 0
+    },
+    "latticeMs": 17,
+    "nodes": 650,
+    "outcome": "graph"
+   }
+  },
+  {
+   "id": "reg:reg-stair-one-floor",
+   "group": "regression",
+   "title": "A staircase joins both floors it spans, also when its treads miss the floor grid",
+   "cite": "ac2fe81 (Duplex second dwelling in the browser, Revit ARC main stair)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 11,
+   "wallMs": 75,
+   "checks": [
+    {
+     "name": "ground joins upper floor",
+     "ok": true,
+     "detail": "connected"
+    },
+    {
+     "name": "both ends linked",
+     "ok": true,
+     "detail": "2 of 2"
+    }
+   ],
+   "metrics": {
+    "latticeMs": 7
+   }
+  },
+  {
+   "id": "reg:reg-front-tie",
+   "group": "regression",
+   "title": "The dose front keeps no two points tied in arrival time; the fastest route has the least dose of its tie",
+   "cite": "a42e75e (Forecast.tie_counterexample)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 3,
+   "wallMs": 67,
+   "checks": [
+    {
+     "name": "arrivals strictly increase",
+     "ok": true,
+     "detail": "[[2,0]]"
+    },
+    {
+     "name": "fastest route has dose 0",
+     "ok": true,
+     "detail": "dose 0"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-negative-departure",
+   "group": "regression",
+   "title": "A departure before time 0 gives finite doses",
+   "cite": "a42e75e (linkDose read a frame that does not exist)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 3,
+   "wallMs": 67,
+   "checks": [
+    {
+     "name": "front found",
+     "ok": true
+    },
+    {
+     "name": "doses finite",
+     "ok": true,
+     "detail": "[0]"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-map-rounds-down",
+   "group": "regression",
+   "title": "The deadline map never rounds a link down to a whole grid step",
+   "cite": "2f31fa9 (Deadline.epsilon_rounds_down)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 4,
+   "wallMs": 76,
+   "checks": [
+    {
+     "name": "no grid deadline where no departure works",
+     "ok": true,
+     "detail": "deadline -Infinity"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-leave-at-L",
+   "group": "regression",
+   "title": "doseDeadline's bad end is bad even where leaving at exactly L passes in doubles",
+   "cite": "2f31fa9 (the bisection's end is checked)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 3,
+   "wallMs": 89,
+   "checks": [
+    {
+     "name": "leaving at the bad end finds no route",
+     "ok": true,
+     "detail": "bad 0.7000000009999999, routes 0"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-rl-horizon-potential",
+   "group": "regression",
+   "title": "With one step left, the policy does not walk into the fire for the shaping's sake",
+   "cite": "ebc307d (QLearning.horizon_potential_prefers_fire)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 4,
+   "wallMs": 62,
+   "checks": [
+    {
+     "name": "not burned",
+     "ok": true,
+     "detail": "path [150,149]"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-rl-policy-above-optimum",
+   "group": "regression",
+   "title": "The policy's reported return never exceeds the exact optimum",
+   "cite": "review K1, 178cea6",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 4,
+   "wallMs": 66,
+   "checks": [
+    {
+     "name": "policy return <= optimal return",
+     "ok": true,
+     "detail": "policy -9.9005, optimum -9.9005"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-map-work-cap",
+   "group": "regression",
+   "title": "doseDeadlineMap keeps its work under maxWork",
+   "cite": "review K2, cefecf8",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 7,
+   "wallMs": 68,
+   "checks": [
+    {
+     "name": "layers x (links + nodes) <= maxWork",
+     "ok": true,
+     "detail": "97920 for maxWork 100000"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-pset-unset-occurrence",
+   "group": "regression",
+   "title": "An unset Pset_DoorCommon value on the door does not hide its type's IsExternal",
+   "cite": "review m12, 9343f1a",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 138,
+   "wallMs": 229,
+   "checks": [
+    {
+     "name": "door read as external from its type",
+     "ok": true,
+     "detail": "exit Pset_DoorCommon.IsExternal"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-nested-units",
+   "group": "regression",
+   "title": "A unit defined through another conversion-based unit (inch via foot) scales correctly",
+   "cite": "review m12, 9343f1a",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 158,
+   "wallMs": 230,
+   "checks": [
+    {
+     "name": "120 inches is 3.048 m",
+     "ok": true,
+     "detail": "elevation 3.047999999999999 m"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-roof-slabs",
+   "group": "regression",
+   "title": "Roof slabs are read from the IFC and never taken as floors (C20, kleine Wohnung)",
+   "cite": "cd7558d",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 2378,
+   "wallMs": 2461,
+   "checks": [
+    {
+     "name": "C20-Institute-Var-2.ifc: roof slabs found",
+     "ok": true,
+     "detail": "21"
+    },
+    {
+     "name": "C20-Institute-Var-2.ifc: none taken as floor",
+     "ok": true,
+     "detail": "0 roof meshes among floors"
+    },
+    {
+     "name": "ISSUE_159_kleine_Wohnung_R22.ifc: roof slabs found",
+     "ok": true,
+     "detail": "3"
+    },
+    {
+     "name": "ISSUE_159_kleine_Wohnung_R22.ifc: none taken as floor",
+     "ok": true,
+     "detail": "0 roof meshes among floors"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-exits-from-flags",
+   "group": "regression",
+   "title": "Exits come from the IFC's flags before the one-sided-door rule",
+   "cite": "cd7558d",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 2,
+   "wallMs": 61,
+   "checks": [
+    {
+     "name": "the flagged door, not the one-sided one",
+     "ok": true,
+     "detail": "[7] from Pset_DoorCommon.FireExit"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-core-stair-parts",
+   "group": "regression",
+   "title": "Stair parts aggregated as proxies are read, so S_Office's storeys join (lifts off)",
+   "cite": "63925b7 (vertical cores; tools/core-check.mjs)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 709,
+   "wallMs": 777,
+   "checks": [
+    {
+     "name": "at least 5 storey levels joined",
+     "ok": true,
+     "detail": "5 of 6"
+    },
+    {
+     "name": "at least 99% of floor in multi-level parts",
+     "ok": true,
+     "detail": "99.4%"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-stairs-without-treads",
+   "group": "regression",
+   "title": "With every stair mesh removed, rooms named as stairs still join the storeys (FM_ARC, C20)",
+   "cite": "63925b7 (vertical cores; tools/core-check.mjs)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 2325,
+   "wallMs": 2404,
+   "checks": [
+    {
+     "name": "FM_ARC_DigitalHub: at least 65% of floor in multi-level parts",
+     "ok": true,
+     "detail": "65.8% with 6 stair rooms, 0% without"
+    },
+    {
+     "name": "C20-Institute-Var-2: at least 84% of floor in multi-level parts",
+     "ok": true,
+     "detail": "84.3% with 4 stair rooms, 0% without"
+    }
+   ]
+  },
+  {
+   "id": "reg:reg-sections-per-height",
+   "group": "regression",
+   "title": "Wall sections are cut only where the plane meets a triangle: 250 storeys with 198,000 solid triangles build within 2 s",
+   "cite": "de8dfcf (byte-identical output, 2.5x faster on large models)",
+   "expectFail": null,
+   "open": null,
+   "status": "pass",
+   "ms": 852,
+   "wallMs": 929,
+   "checks": [
+    {
+     "name": "built within 2 s",
+     "ok": true,
+     "detail": "817 ms, 42250 nodes, 499 sections"
+    }
+   ],
+   "metrics": {
+    "latticeMs": 817
+   }
+  }
+ ],
+ "totals": {
+  "cases": 170,
+  "pass": 159,
+  "fail": 0,
+  "open": 11,
+  "expectedFail": 0,
+  "unexpectedPass": 0,
+  "skipped": 0
+ }
+}
