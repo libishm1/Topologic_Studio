@@ -18,6 +18,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 
 import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
+import { workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
@@ -97,9 +98,9 @@ const DEFAULT_TOPOLOGY_OPTIONS = {
 export default function App() {
   const studio = useStudio();
   const viewerRef = useRef(null);
-  const workerRef = useRef(null);
-  const forecastWorkerRef = useRef(null);
-  const semanticsWorkerRef = useRef(null);
+  const samplerRef = useRef(null);
+  const forecastRef = useRef(null);
+  const semanticsRef = useRef(null);
   const geometryRef = useRef(null);
   // Fire accumulators live in refs: they are written from SSE callbacks that
   // outlive any single render, and must not be re-created when the callback
@@ -146,88 +147,48 @@ export default function App() {
     reportError,
   } = studio;
 
-  // ------------------------------------------------------------- the worker
+  // ------------------------------------------------------------ the workers
 
-  const getWorker = useCallback(() => {
-    if (!workerRef.current) {
-      workerRef.current = new Worker(
-        new URL("./workers/sampler.worker.js", import.meta.url),
-        { type: "module" },
-      );
-    }
-    return workerRef.current;
-  }, []);
-
-  useEffect(() => () => workerRef.current?.terminate(), []);
-  useEffect(() => () => forecastWorkerRef.current?.terminate(), []);
-  useEffect(() => () => semanticsWorkerRef.current?.terminate(), []);
+  // Each job is a promise that also settles when its worker fails to load or
+  // dies (lib/workerJob.js); a failed worker is replaced at the next job.
+  useEffect(
+    () => () => {
+      samplerRef.current?.cancel();
+      forecastRef.current?.cancel();
+      semanticsRef.current?.cancel();
+    },
+    [],
+  );
 
   // Exit flags and roof slabs from the IFC itself, read by a second, small
   // web-ifc in a worker while the geometry converts (core/ifcSemantics.js).
-  const semanticsJob = useCallback(
-    (bytes) =>
-      new Promise((resolve, reject) => {
-        if (!semanticsWorkerRef.current) {
-          semanticsWorkerRef.current = new Worker(new URL("./workers/semantics.worker.js", import.meta.url), {
-            type: "module",
-          });
-        }
-        const worker = semanticsWorkerRef.current;
-        const id = Math.random().toString(36).slice(2);
-        const onMessage = (event) => {
-          if (event.data?.id !== id) return;
-          worker.removeEventListener("message", onMessage);
-          if (event.data.ok) resolve(event.data.result);
-          else reject(new Error(event.data.error || "Could not read the model's exit flags."));
-        };
-        worker.addEventListener("message", onMessage);
-        const wasmPath =
-          import.meta.env.VITE_WEBIFC_WASM_PATH || new URL(`${import.meta.env.BASE_URL}wasm/`, window.location.href).href;
-        worker.postMessage({ id, bytes, wasmPath }, [bytes]);
-      }),
-    [],
-  );
+  const semanticsJob = useCallback((bytes) => {
+    semanticsRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/semantics.worker.js", import.meta.url), { type: "module" }),
+      { failure: "Could not read the model's exit flags." },
+    );
+    const wasmPath =
+      import.meta.env.VITE_WEBIFC_WASM_PATH || new URL(`${import.meta.env.BASE_URL}wasm/`, window.location.href).href;
+    return semanticsRef.current.run({ bytes, wasmPath }, [bytes]);
+  }, []);
 
   // Planning with the forecast has its own worker: its deadline map takes a
   // few seconds on a large graph and must not hold up a graph rebuild.
-  const forecastJob = useCallback(
-    (payload) =>
-      new Promise((resolve, reject) => {
-        if (!forecastWorkerRef.current) {
-          forecastWorkerRef.current = new Worker(new URL("./workers/forecast.worker.js", import.meta.url), {
-            type: "module",
-          });
-        }
-        const worker = forecastWorkerRef.current;
-        const id = Math.random().toString(36).slice(2);
-        const onMessage = (event) => {
-          if (event.data?.id !== id) return;
-          worker.removeEventListener("message", onMessage);
-          if (event.data.ok) resolve(event.data.result);
-          else reject(new Error(event.data.error || "Planning with the forecast failed."));
-        };
-        worker.addEventListener("message", onMessage);
-        worker.postMessage({ id, payload });
-      }),
-    [],
-  );
+  const forecastJob = useCallback((payload) => {
+    forecastRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/forecast.worker.js", import.meta.url), { type: "module" }),
+      { failure: "Planning with the forecast stopped: its worker did not load or ran out of memory. Reload the page and try again." },
+    );
+    return forecastRef.current.run({ payload });
+  }, []);
 
-  const sample = useCallback(
-    (payload, transfers) =>
-      new Promise((resolve, reject) => {
-        const worker = getWorker();
-        const id = Math.random().toString(36).slice(2);
-        const onMessage = (event) => {
-          if (event.data?.id !== id) return;
-          worker.removeEventListener("message", onMessage);
-          if (event.data.ok) resolve(event.data.result);
-          else reject(new Error(event.data.error || "Sampling failed."));
-        };
-        worker.addEventListener("message", onMessage);
-        worker.postMessage({ id, payload }, transfers);
-      }),
-    [getWorker],
-  );
+  const sample = useCallback((payload, transfers) => {
+    samplerRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/sampler.worker.js", import.meta.url), { type: "module" }),
+      { failure: "The graph builder stopped, usually because the browser ran out of memory. Reload the page and try again." },
+    );
+    return samplerRef.current.run({ payload }, transfers);
+  }, []);
 
   // --------------------------------------------------------------- IFC load
 
