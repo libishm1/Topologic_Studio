@@ -42,20 +42,25 @@ export function ifcSemantics(api, modelID, W) {
     const rel = line(r);
     for (const o of rel.RelatedObjects || []) typeOf.set(val(o), val(rel.RelatingType));
   }
+  // An unset value ($, null) says nothing, so it does not hide the type's
+  // value: a door whose own FireExit was unset over a type set TRUE read as
+  // no exit (review m12).
   const prop = (setIds, name) => {
     for (const p of setIds) {
       const set = line(p);
       if (!/DoorCommon/i.test(String(val(set?.Name) ?? ""))) continue;
       for (const h of set.HasProperties || []) {
         const property = line(val(h));
-        if (val(property?.Name) === name) return val(property.NominalValue);
+        if (val(property?.Name) !== name) continue;
+        const value = val(property.NominalValue);
+        if (value != null) return value;
       }
     }
     return undefined;
   };
   const doorProp = (door, name) => {
     const own = prop(ownSets.get(door) || [], name);
-    if (own !== undefined) return own;
+    if (own != null) return own;
     const type = typeOf.get(door);
     return type ? prop((line(type)?.HasPropertySets || []).map(val), name) : undefined;
   };
@@ -89,19 +94,25 @@ export function ifcSemantics(api, modelID, W) {
  *  conversion-based units such as the foot. */
 function lengthScale(api, modelID, W, ids, line) {
   const prefixes = { EXA: 1e18, PETA: 1e15, TERA: 1e12, GIGA: 1e9, MEGA: 1e6, KILO: 1e3, HECTO: 1e2, DECA: 10, DECI: 1e-1, CENTI: 1e-2, MILLI: 1e-3, MICRO: 1e-6, NANO: 1e-9 };
+  // Metres per one `unit`: an SI unit by its prefix, a conversion-based unit
+  // by its factor times the scale of the unit the factor is given in, which
+  // can itself be conversion-based (an inch defined as 1/12 foot read as
+  // 1/12 m, review m12).
+  const scaleOf = (unit, depth = 0) => {
+    if (!unit || depth > 8) return 1;
+    const prefix = val(unit.Prefix);
+    if (prefix !== undefined && prefix !== null) return prefixes[prefix] ?? 1;
+    const factor = unit.ConversionFactor ? line(val(unit.ConversionFactor)) : null;
+    const value = val(factor?.ValueComponent);
+    if (typeof value === "number" && value > 0) {
+      return value * (factor.UnitComponent ? scaleOf(line(val(factor.UnitComponent)), depth + 1) : 1);
+    }
+    return 1;
+  };
   for (const a of ids(W.IFCUNITASSIGNMENT)) {
     for (const ref of line(a).Units || []) {
       const unit = line(val(ref));
-      if (val(unit?.UnitType) !== "LENGTHUNIT") continue;
-      const prefix = val(unit.Prefix);
-      if (prefix !== undefined && prefix !== null) return prefixes[prefix] ?? 1;
-      const factor = unit.ConversionFactor ? line(val(unit.ConversionFactor)) : null;
-      const value = val(factor?.ValueComponent);
-      if (typeof value === "number" && value > 0) {
-        const base = factor.UnitComponent ? line(val(factor.UnitComponent)) : null;
-        return value * (base && val(base.Prefix) ? prefixes[val(base.Prefix)] ?? 1 : 1);
-      }
-      return 1;
+      if (val(unit?.UnitType) === "LENGTHUNIT") return scaleOf(unit);
     }
   }
   return 1;
