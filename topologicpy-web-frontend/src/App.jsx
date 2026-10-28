@@ -938,6 +938,9 @@ export default function App() {
           ? [snap(graph, points.exit)]
           : [];
     if (!graph || !points.start || !points.fire || !exitNodes.length) return;
+    // A plan still running is for older inputs: end its worker rather than
+    // queue behind a deadline map that can take seconds.
+    if (forecastRef.current?.busy) forecastRef.current.cancel();
     studio.setForecastPlan((current) => ({ ...current, busy: true }));
     try {
       const result = await forecastJob({
@@ -953,7 +956,8 @@ export default function App() {
         depart: settings.departAfter,
         limit: settings.doseLimit,
         useWalls: settings.useWalls,
-        withMap: true,
+        // The map is the slow part; it is made only when it will be drawn.
+        withMap: settings.showDeadlineMap,
       });
       studio.setForecastPlan({ busy: false, result });
       const viewer = viewerRef.current;
@@ -975,6 +979,8 @@ export default function App() {
         });
       }
     } catch (error) {
+      // Cancelled: a newer request took over, and owns the state now.
+      if (isCancelled(error)) return;
       studio.setForecastPlan({ busy: false, result: null });
       reportError(error, "Planning with the forecast failed");
     }

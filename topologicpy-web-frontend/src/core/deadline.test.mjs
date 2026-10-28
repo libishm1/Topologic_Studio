@@ -114,3 +114,29 @@ test("dose deadlines: the map never says later than the exact deadline, and is c
   console.log(JSON.stringify({ compared, unlimited, worstGap: +worstGap.toFixed(3) }));
   assert.ok(compared > 300 && unlimited > 50);
 });
+
+test("the deadline map's work stays under its cap for long horizons (review K2)", () => {
+  // 2,000 fire steps of 5 s: at a quarter of the link time a 30 x 30 lattice
+  // would take 48,000 layers, 2e8 link updates.
+  const g = lattice(30, 30);
+  const n = g.nodes.length / 3;
+  const exits = [0, n - 1];
+  const speed = 1.2, limit = 0.3;
+  // Per layer: both ends of every (open) link, and every node.
+  const perLayer = g.edges.length + n;
+  for (const model of ["temperature", "flood"]) {
+    const forecast = buildForecast(g, { model, seed: 465, steps: 2000, dt: 5, threshold: 60 });
+    for (const maxWork of [2e5, 1e6, 5e6]) {
+      const map = doseDeadlineMap(g, { exits, forecast, limit, speed, maxWork });
+      const work = map.layers * perLayer;
+      assert.ok(work <= maxWork, `${model}: ${work} link updates against a cap of ${maxWork}`);
+      assert.equal(map.work, work);
+      // A wider step is still never later than the exact deadline.
+      for (const v of [31, 200, 450, 700]) {
+        if (map.deadline[v] === -Infinity) continue;
+        const exact = doseDeadline(g, v, { exits, forecast, limit, speed, tolerance: 1e-3 });
+        assert.ok(exact && map.deadline[v] <= exact.bad + 1e-9, `${model}: map later than exact at ${v}`);
+      }
+    }
+  }
+});
