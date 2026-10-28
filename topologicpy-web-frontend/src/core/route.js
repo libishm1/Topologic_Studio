@@ -90,7 +90,14 @@ export function snap(graph, point) {
   return best >= 0 ? best : fallback;
 }
 
-/** A binary min-heap of [priority, node]. */
+/**
+ * A binary min-heap of [priority, node]. Entries are sifted by moving the
+ * others into a hole and placing the moving entry once at the end, rather
+ * than swapping at every level (destructuring swaps took four fifths of
+ * pop's time in V8): the same comparisons, in the same order, leave the same
+ * arrays, so every search pops in the same order as before
+ * (tools/output-hash.mjs: byte-identical outputs on the benchmark corpus).
+ */
 export class Heap {
   constructor() {
     this.p = [];
@@ -106,30 +113,36 @@ export class Heap {
     v.push(value);
     while (i > 0) {
       const parent = (i - 1) >> 1;
-      if (p[parent] <= p[i]) break;
-      [p[parent], p[i]] = [p[i], p[parent]];
-      [v[parent], v[i]] = [v[i], v[parent]];
+      if (p[parent] <= priority) break;
+      p[i] = p[parent];
+      v[i] = v[parent];
       i = parent;
     }
+    p[i] = priority;
+    v[i] = value;
   }
   pop() {
     const p = this.p, v = this.v;
     const top = v[0];
     const lastP = p.pop(), lastV = v.pop();
-    if (p.length) {
-      p[0] = lastP;
-      v[0] = lastV;
+    const length = p.length;
+    if (length) {
       let i = 0;
       for (;;) {
         const l = 2 * i + 1, r = l + 1;
-        let m = i;
-        if (l < p.length && p[l] < p[m]) m = l;
-        if (r < p.length && p[r] < p[m]) m = r;
+        let m = i, least = lastP;
+        if (l < length && p[l] < least) {
+          m = l;
+          least = p[l];
+        }
+        if (r < length && p[r] < least) m = r;
         if (m === i) break;
-        [p[m], p[i]] = [p[i], p[m]];
-        [v[m], v[i]] = [v[i], v[m]];
+        p[i] = p[m];
+        v[i] = v[m];
         i = m;
       }
+      p[i] = lastP;
+      v[i] = lastV;
     }
     return top;
   }
