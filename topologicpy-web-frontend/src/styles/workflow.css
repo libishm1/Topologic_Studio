@@ -530,6 +530,12 @@
   color: var(--text-primary);
 }
 
+/* An open legend is being read: on a phone it reaches under the view
+   controls, so it goes above them, and folds out of their way. */
+.overlay--bottom-left:has(> .legend[open]) {
+  z-index: 7;
+}
+
 /* --------------------------------------------------------------- methods */
 
 .methods {
