@@ -37,6 +37,7 @@ import { TopologyPanel } from "./ui/TopologyPanel.jsx";
 import { Viewport } from "./ui/Viewport.jsx";
 
 import { Badge, Button, FileButton, Icon, Segmented } from "./ui/primitives.jsx";
+import { ErrorBoundary } from "./ui/ErrorBoundary.jsx";
 import logo from "./assets/topologicStudio-white-logo400x400.png";
 
 /** The points a route is drawn with: straightened when it has been. */
@@ -62,8 +63,9 @@ function heightRange(geometry, upAxis) {
 // on demand rather than shipped to everyone who opens the IFC viewer.
 const TopologyViewer = lazy(() => import("./viewer/TopologyViewer.jsx"));
 // The Methods page brings KaTeX (about 270 KB and its fonts); it loads only
-// when someone opens the page.
-const MethodsDialog = lazy(() => import("./ui/MethodsDialog.jsx").then((m) => ({ default: m.MethodsDialog })));
+// when someone opens the page. A failed load is kept by React.lazy, so a
+// retry needs a new one.
+const loadMethods = () => lazy(() => import("./ui/MethodsDialog.jsx").then((m) => ({ default: m.MethodsDialog })));
 
 // The inspector is the workflow, one step per panel (src/ui/Panels.jsx).
 // Methods (what was proved, the limits, the server) opens from the header.
@@ -137,11 +139,26 @@ export default function App() {
   const [tab, setTab] = useState("model");
   const [panelOpen, setPanelOpen] = useState(true);
   const [methodsOpen, setMethodsOpen] = useState(false);
+  const [MethodsDialog, setMethodsDialog] = useState(loadMethods);
   // Storey heights for the section cut, and the chosen one (null = whole).
   const [levels, setLevels] = useState([]);
   const [section, setSection] = useState(null);
   const geometryPromiseRef = useRef(null);
   const closeMethods = useCallback(() => setMethodsOpen(false), []);
+  // Its chunk failed to load (offline, or a deploy replaced it): say so, close
+  // it, and load afresh at the next opening. Unhandled, this unmounted the app.
+  const methodsFailed = useCallback(
+    (error) => {
+      console.warn("The Methods page could not load.", error);
+      setMethodsOpen(false);
+      setMethodsDialog(() => loadMethods());
+      studio.toast("The Methods page could not load. Check the connection and open it again.", {
+        title: "Methods",
+        variant: "warning",
+      });
+    },
+    [studio],
+  );
   const [lastSample, setLastSample] = useState(null);
 
   // Legacy TopologicPy JSON-contract workflow.
@@ -1718,9 +1735,20 @@ export default function App() {
       </div>
 
       {methodsOpen && (
-        <Suspense fallback={null}>
-          <MethodsDialog open onClose={closeMethods} studio={studio} />
-        </Suspense>
+        <ErrorBoundary onError={methodsFailed}>
+          <Suspense
+            fallback={
+              <div className="methods-loading" role="status">
+                <div className="card">
+                  <div className="btn__spinner" aria-hidden="true" />
+                  <span>Loading the Methods page...</span>
+                </div>
+              </div>
+            }
+          >
+            <MethodsDialog open onClose={closeMethods} studio={studio} />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );

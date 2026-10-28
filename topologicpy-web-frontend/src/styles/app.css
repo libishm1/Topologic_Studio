@@ -738,6 +738,23 @@ select:focus {
   overflow-wrap: anywhere;
 }
 
+/* While the Methods page loads (App.jsx). */
+.methods-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.methods-loading .card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 13px;
+}
+
 .dropzone {
   width: 100%;
   padding: var(--space-5);
