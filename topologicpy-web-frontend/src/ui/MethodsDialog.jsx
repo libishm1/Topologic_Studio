@@ -128,7 +128,11 @@ export function MethodsDialog({ open, onClose, studio }) {
                     quarter, half or three quarters along it lies inside a wall; door links are never blocked.
                     A diagonal is blocked when both of its axis detours are. Each stair is its walking line, a
                     node per tread on the flight's centre line, joined to the floor once at each end; doors
-                    join the rooms.
+                    join the rooms. A stair is read with the parts aggregated into it. A stair whose treads are
+                    not in the model (an IfcStair with no steps, or a room named as a stair) is walked along an
+                    assumed dog-leg line inside its footprint, with 175 mm risers and 280 mm goings. Lifts and
+                    escalators (IfcTransportElement, or rooms and objects named as lifts) join the floors beside
+                    them only when turned on in the graph settings.
                   </dd>
                 </div>
                 <div className="methods__card">
@@ -216,6 +220,13 @@ export function MethodsDialog({ open, onClose, studio }) {
                 <li>
                   <strong>A route stays within one part of the graph.</strong> Separate dwellings, or a room whose
                   door is missing from the model, are separate parts; the Duplex is two homes, so it has two.
+                </li>
+                <li>
+                  <strong>Assumed stairs and lifts are approximate.</strong> An assumed stair has no known width
+                  or landing, so its line can be longer or shorter than the real stair. On five models with their
+                  treads removed, routes to another floor through assumed stairs averaged 1.0 to 1.4 times the
+                  length of routes through the real ones. A lift ride counts as walking its rise, with no
+                  wait for the car, and a lift is taken to stop at every floor beside it.
                 </li>
               </ul>
             </section>

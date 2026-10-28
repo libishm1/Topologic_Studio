@@ -15,11 +15,15 @@
  * worker and node's test runner can both import it.
  */
 
+import { CORE_LIFT, CORE_NAMES, CORE_STAIR, coreStacks, levelsOf, walkingLine } from "./cores.js";
 import { stairLinks, stairPatches } from "./stairs.js";
 
 export const KIND_FLOOR = 0;
 export const KIND_STAIR = 1;
 export const KIND_DOOR = 2;
+// A lift or escalator stop: a node on the core's centre line at each floor it
+// serves (cores.js). Assumed stair lines are KIND_STAIR.
+export const KIND_LIFT = 3;
 
 const AXIS = { x: 0, y: 1, z: 2 };
 const KEY_OFFSET = 1 << 20;
@@ -420,6 +424,13 @@ export function buildLatticeGraph({
   walls = [],
   spaces = [],
   obstacles = [],
+  // Vertical cores (cores.js): items {itemId, kind, name, source, parts},
+  // with their meshes found among stairs, spaces and coreMeshes. Lifts and
+  // escalators are linked only when useLifts; a fire evacuation does not use
+  // them unless they are evacuation lifts.
+  cores = [],
+  coreMeshes = [],
+  useLifts = false,
   sectionHeight = 0.75,
   hugWalls = true,
   // Wall-face nodes sit this far off the face, and are only added when the
@@ -487,6 +498,7 @@ export function buildLatticeGraph({
     Number.isFinite(modelTop) && modelTop - floorLow >= 2.0 ? modelTop - 1.0 : null;
 
   const stairParts = stairPatches(stairs, { up, h0, h1 });
+  const stacks = cores.length ? coreStacks(cores, [...stairs, ...spaces, ...coreMeshes], { up, h0, h1, cos, sin }) : [];
 
   // Coarsen until the lattice fits the point budget.
   let s = Math.max(spacing, 0.05);
@@ -526,8 +538,12 @@ export function buildLatticeGraph({
   const maxRise = stairRiser + 0.06;
   const walk = stairLinks(patches, { maxRise });
   // Room for up to four wall-face nodes per lattice node, one per door and one
-  // per stair tread or landing (see the steps below).
-  const capacity = count * 5 + doorPoints.length + patches.length;
+  // per stair tread or landing (see the steps below), and for each core a
+  // walking line or a stop per storey over the model's whole height.
+  const coreStep = Math.min(s, 0.5);
+  const modelRise = Number.isFinite(modelTop - floorLow) ? Math.max(modelTop - floorLow, 0) : 0;
+  const perCore = Math.ceil(((modelRise + 4) * 2.2) / coreStep) + 16 * Math.ceil(modelRise / 2 + 2);
+  const capacity = count * 5 + doorPoints.length + patches.length + stacks.length * perCore;
   const points = new Float32Array(capacity * 3);
   const kinds = new Uint8Array(capacity);
   const heights = new Float64Array(capacity);
@@ -778,6 +794,173 @@ export function buildLatticeGraph({
     }
   }
 
+  // Vertical cores (cores.js). The floor levels beside a core are the heights
+  // of floor nodes within a metre of its footprint (two for a lift, whose
+  // landing lies outside the shaft), split where they jump by more than a
+  // metre. A stair or escalator core serves the levels within its own height
+  // range; a lift serves every level beside it, since exporters often draw
+  // only the car. Between two consecutive levels 1 to 8 m apart:
+  // - a stair core is skipped where a modelled tread or landing stands in its
+  //   footprint between them (the treads already join them); otherwise it gets
+  //   an assumed walking line (walkingLine), linked at its foot and head to
+  //   the nearest floor node of each level in or beside the footprint, not
+  //   through a wall, in the reflection of the line whose ends lie nearest
+  //   those floor nodes;
+  // - an escalator is walked the same way, when useLifts;
+  // - a lift gets a stop at its footprint's centre on each level, linked to
+  //   the nearest floor node there (through the shaft wall if it must, as a
+  //   lift door is often not cut in it) and to the stops above and below,
+  //   when useLifts. Lift links cost their length like any other, so a route
+  //   using one counts the ride as a walk of the same rise: no waiting.
+  // Core links, like stair links, are not blocked by walls afterwards.
+  const coreReport = [];
+  const lattice2uv = (n) => {
+    const x = points[n * 3 + h0], y = points[n * 3 + h1];
+    return [x * cos + y * sin, -x * sin + y * cos];
+  };
+  const fromUV = (u, v) => [u * cos - v * sin, u * sin + v * cos];
+  const addNode = (u, v, h, kind) => {
+    const n = total++;
+    const [x, y] = fromUV(u, v);
+    points[n * 3 + h0] = x;
+    points[n * 3 + h1] = y;
+    points[n * 3 + up] = h + agentHeight;
+    heights[n] = h;
+    kinds[n] = kind;
+    return n;
+  };
+  const link = (a, b) => {
+    stairEdge.add(edges.length / 2);
+    edges.push(a, b);
+  };
+  for (const core of stacks) {
+    const report = {
+      kind: CORE_NAMES[core.kind],
+      names: core.names.slice(0, 4),
+      sources: core.sources,
+      itemIds: core.itemIds.slice(0, 16),
+      levels: 0,
+      linked: 0,
+      modelled: 0,
+      reason: null,
+    };
+    coreReport.push(report);
+    const lift = core.kind === CORE_LIFT;
+    const ring = lift ? 2.0 : 1.0;
+    const within = (u, v, pad) => u >= core.u0 - pad && u <= core.u1 + pad && v >= core.v0 - pad && v <= core.v1 + pad;
+    const beside = [];
+    for (let n = 0; n < stairBase; n += 1) {
+      if (kinds[n] !== KIND_FLOOR) continue;
+      const [u, v] = lattice2uv(n);
+      if (within(u, v, ring)) beside.push(n);
+    }
+    let levels = levelsOf(beside.map((n) => heights[n]));
+    if (!lift) levels = levels.filter((h) => h >= core.lo - 0.6 && h <= core.hi + 0.6);
+    report.levels = levels.length;
+    const footprint = (core.u1 - core.u0) * (core.v1 - core.v0);
+    if (core.kind !== CORE_STAIR && !useLifts) {
+      report.reason = "lifts and escalators are off";
+      continue;
+    }
+    if (footprint > 400) {
+      report.reason = "footprint over 400 m2";
+      continue;
+    }
+    if (levels.length < 2) {
+      report.reason = "fewer than two floor levels beside it";
+      continue;
+    }
+    // The nearest floor node at height h within `radius` of (u, v), not
+    // through a wall; failing that, through one if `throughWall`. Returns
+    // [node, plan distance], node -1 if none.
+    const anchor = (u, v, h, radius, throughWall = false) => {
+      const [x, y] = fromUV(u, v);
+      let pick = -1, score = Infinity, crossPick = -1, crossScore = Infinity;
+      for (const m of beside) {
+        if (Math.abs(heights[m] - h) > maxRise) continue;
+        const mx = points[m * 3 + h0], my = points[m * 3 + h1];
+        const d = Math.hypot(mx - x, my - y);
+        if (d > radius || d >= score) continue;
+        if (sectionFor(heights[m]).crosses(x, y, mx, my)) {
+          if (d < crossScore) {
+            crossPick = m;
+            crossScore = d;
+          }
+          continue;
+        }
+        pick = m;
+        score = d;
+      }
+      if (pick >= 0) return [pick, score];
+      return throughWall && crossPick >= 0 ? [crossPick, crossScore] : [-1, Infinity];
+    };
+    // Anywhere in the footprint or the ring around it (the nodes `beside`).
+    const reachIn = Math.hypot(core.u1 - core.u0, core.v1 - core.v0) + ring;
+    if (lift) {
+      const uc = (core.u0 + core.u1) / 2, vc = (core.v0 + core.v1) / 2;
+      const radius = Math.hypot(core.u1 - core.u0, core.v1 - core.v0) / 2 + ring;
+      let below = -1, belowH = -Infinity;
+      for (const h of levels) {
+        const [m] = anchor(uc, vc, h, radius, true);
+        if (m < 0 || total + 1 > capacity) continue;
+        const stop = addNode(uc, vc, heights[m], KIND_LIFT);
+        link(stop, m);
+        if (below >= 0 && heights[m] - belowH <= 12) {
+          link(below, stop);
+          report.linked += 1;
+        }
+        below = stop;
+        belowH = heights[m];
+      }
+      if (!report.linked) report.reason = "no landing beside it on two levels";
+      continue;
+    }
+    for (let k = 0; k + 1 < levels.length; k += 1) {
+      const ha = levels[k], hb = levels[k + 1];
+      if (hb - ha < 1.0 || hb - ha > 8.0) continue;
+      let modelled = false;
+      for (let n = stairBase; n < stairBase + patches.length && !modelled; n += 1) {
+        const [u, v] = lattice2uv(n);
+        modelled = within(u, v, 0.5) && heights[n] > ha + 0.3 && heights[n] < hb - 0.3;
+      }
+      if (modelled) {
+        report.modelled += 1;
+        continue;
+      }
+      // The line in whichever of its four reflections starts and ends nearest
+      // the floors: in a double-height stair hall the upper floor is a
+      // landing along one side, not under the line's end.
+      let line = null, a = -1, b = -1, best = Infinity;
+      for (const mirrorAlong of [false, true]) {
+        for (const mirrorAcross of [false, true]) {
+          const candidate = walkingLine(core, ha, hb, { step: coreStep, mirrorAlong, mirrorAcross });
+          const first = candidate[0], last = candidate[candidate.length - 1];
+          const [foot, df] = anchor(first[0], first[1], ha, reachIn);
+          const [head, dh] = anchor(last[0], last[1], hb, reachIn);
+          if (foot < 0 || head < 0 || df + dh >= best) continue;
+          [line, a, b, best] = [candidate, foot, head, df + dh];
+        }
+      }
+      if (!line) {
+        report.reason ||= "no floor at the foot or head of the assumed stair";
+        continue;
+      }
+      if (total + line.length > capacity) {
+        report.reason ||= "node budget reached";
+        break;
+      }
+      let prev = a;
+      for (const [u, v, h] of line) {
+        const n = addNode(u, v, h, KIND_STAIR);
+        link(prev, n);
+        prev = n;
+      }
+      link(prev, b);
+      report.linked += 1;
+    }
+    if (!report.linked && !report.reason) report.reason = report.modelled ? "modelled stair" : "no two levels 1 to 8 m apart";
+  }
+
   const edgeCount = edges.length / 2;
   const blocked = new Uint8Array(edgeCount);
   for (let e = 0; e < edgeCount; e += 1) {
@@ -876,10 +1059,11 @@ export function buildLatticeGraph({
   }
 
   const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
-  let stairNodes = 0, doorNodes = 0, blockedCount = 0;
+  let stairNodes = 0, doorNodes = 0, liftNodes = 0, blockedCount = 0;
   for (let n = 0; n < total; n += 1) {
     if (kinds[n] === KIND_STAIR) stairNodes += 1;
     else if (kinds[n] === KIND_DOOR) doorNodes += 1;
+    else if (kinds[n] === KIND_LIFT) liftNodes += 1;
   }
   for (const b of outBlocked) blockedCount += b;
   return {
@@ -894,6 +1078,10 @@ export function buildLatticeGraph({
     sectionHeight,
     doorPoints,
     doorReport,
+    // One entry per vertical core: kind, names, sources, levels beside it,
+    // links made (storeys joined), storeys skipped for a modelled stair, and
+    // why it was not linked.
+    cores: coreReport,
     angle,
     spacing: s,
     stats: {
@@ -905,6 +1093,10 @@ export function buildLatticeGraph({
       stairEnds,
       stairEndsLinked,
       doorNodes,
+      liftNodes,
+      cores: coreReport.length,
+      coreStairsAssumed: coreReport.filter((c) => c.kind === "stair").reduce((sum, c) => sum + c.linked, 0),
+      liftLinks: coreReport.filter((c) => c.kind !== "stair").reduce((sum, c) => sum + c.linked, 0),
       blockedEdges: blockedCount,
       cornerBlocked,
       walls: wallList.length,

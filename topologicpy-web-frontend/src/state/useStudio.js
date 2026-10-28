@@ -28,6 +28,9 @@ export const DEFAULT_SETTINGS = {
   maxDegree: 12,
   useWalls: true,
   rectilinear: false,
+  // Lifts and escalators join floors only when on: a fire evacuation does not
+  // use them unless they are evacuation lifts (src/core/cores.js).
+  useLifts: false,
   straightenRoutes: true,
   gridSnap: false,
   gridCellSize: 1.5,

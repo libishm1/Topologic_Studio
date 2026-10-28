@@ -59,6 +59,57 @@ function PartsNotice({ stats }) {
   );
 }
 
+/**
+ * Vertical cores found in the model (core/cores.js): stairs joined along an
+ * assumed walking line because their treads are not modelled, and lifts and
+ * escalators, which join floors only when the setting allows them. Warns when
+ * a model has several storeys and nothing joins them.
+ */
+function CoresNotice({ cores, stats, storeys, useLifts }) {
+  const list = cores || [];
+  const assumed = list.filter((c) => c.kind === "stair" && c.linked > 0);
+  const lifts = list.filter((c) => c.kind !== "stair");
+  const name = (c) => c.names?.[0] || c.sources?.[0] || c.kind;
+  const joined = (stats?.stair_nodes ?? 0) > 0 || (stats?.lift_nodes ?? 0) > 0;
+  const rows = [];
+  if (assumed.length) {
+    rows.push([
+      "Stairs without treads",
+      `${assumed.length}, walked along an assumed line (${assumed.slice(0, 3).map(name).join(", ")}${assumed.length > 3 ? ", ..." : ""})`,
+    ]);
+  }
+  if (lifts.length) {
+    const used = lifts.filter((c) => c.linked > 0);
+    rows.push([
+      "Lifts and escalators",
+      `${lifts.length} (${lifts.slice(0, 3).map(name).join(", ")}${lifts.length > 3 ? ", ..." : ""}): ${useLifts ? `${used.length} joining floors` : "not used"}`,
+    ]);
+  }
+  return (
+    <>
+      {rows.length > 0 && <KeyValue entries={rows} />}
+      {assumed.length > 0 && (
+        <p className="field__hint">
+          A stair whose treads are not in the model is walked along an assumed dog-leg line inside its footprint, with 175 mm risers and 280 mm goings, so a
+          route through it is about as long as the stair. Its width and landings are not known.
+        </p>
+      )}
+      {lifts.length > 0 && !useLifts && (
+        <p className="field__hint">Lifts are not used in a fire unless they are evacuation lifts. Turn them on in the graph settings to route through them.</p>
+      )}
+      {storeys > 1 && !joined && (
+        <Notice tone="warning">
+          <strong>Nothing joins the {storeys} storeys.</strong>{" "}
+          {lifts.length && !useLifts
+            ? "The model has no stair, ramp or stair core the graph could use, and its lifts are off,"
+            : "The model has no stair, ramp, lift or stair core the graph could use,"}{" "}
+          so a route cannot change floor. Each floor can only be left at its own level.
+        </Notice>
+      )}
+    </>
+  );
+}
+
 // -------------------------------------------------------------------- model
 
 /**
@@ -222,6 +273,7 @@ export function GraphPanel({ studio, onBuildGraph, onNavigationCheck }) {
               <Stat label="Reachable" value={`${reachablePct(graph.stats)}%`} warn={reachablePct(graph.stats) < 90} />
             </div>
             <PartsNotice stats={graph.stats} />
+            <CoresNotice cores={graph.cores} stats={graph.stats} storeys={modelInfo?.stats?.storeys ?? 0} useLifts={graph.useLifts} />
             <Toggle
               label="Show the graph"
               checked={settings.showGraph}
@@ -274,6 +326,12 @@ export function GraphPanel({ studio, onBuildGraph, onNavigationCheck }) {
           checked={settings.rectilinear}
           onChange={(rectilinear) => setSettings({ rectilinear })}
           hint="Routes then use only grid-aligned links. On an open floor the grid route can be up to 41% (the square root of 2) longer than with diagonals; drawing routes straight recovers much of that."
+        />
+        <Toggle
+          label="Use lifts and escalators"
+          checked={settings.useLifts}
+          onChange={(useLifts) => setSettings({ useLifts })}
+          hint="Off by default: in a fire, lifts are not used unless they are evacuation lifts. When on, a lift joins every floor beside it, and a ride counts as walking its rise, with no waiting for the car."
         />
         <SelectField
           label="Up axis"

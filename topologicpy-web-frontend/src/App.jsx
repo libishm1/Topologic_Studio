@@ -420,6 +420,10 @@ export default function App() {
         walls: clone(geometry.walls),
         spaces: clone(geometry.spaces || []),
         obstacles: clone(geometry.obstacles || []),
+        // Lifts, escalators and stair cores (src/core/cores.js).
+        coreMeshes: clone(geometry.coreMeshes || []),
+        cores: geometry.cores || [],
+        useLifts: settings.useLifts,
         upAxis: settings.upAxis,
         floorSpacing: settings.floorSpacing,
         agentHeight: settings.agentHeight,
@@ -429,7 +433,7 @@ export default function App() {
         columnGap: settings.columnGap,
       };
       const transfers = [];
-      for (const key of ["floors", "stairs", "doors", "walls", "spaces", "obstacles"]) {
+      for (const key of ["floors", "stairs", "doors", "walls", "spaces", "obstacles", "coreMeshes"]) {
         for (const mesh of payload[key]) {
           transfers.push(mesh.positions.buffer, mesh.indices.buffer);
         }
@@ -466,6 +470,8 @@ export default function App() {
         lattice: { angleDeg: built.stats.angleDeg, spacing: built.spacing, ms: built.stats.ms },
         doors: built.doors || [],
         roofs: geometry.roofs || 0,
+        cores: built.cores || [],
+        useLifts: settings.useLifts,
       };
 
       studio.setGraph(response);
@@ -1276,6 +1282,9 @@ export default function App() {
       }
       if (graph.stats.door_nodes) {
         items.push({ label: "Doors", color: "var(--viz-door)" });
+      }
+      if (graph.stats.lift_nodes) {
+        items.push({ label: "Lifts", color: "var(--viz-lift)" });
       }
     }
     if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
