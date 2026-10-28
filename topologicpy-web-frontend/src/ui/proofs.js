@@ -250,4 +250,41 @@ export const PROOFS = [
     files: ["FireDynamics", "Tenability"],
     status: "Proved",
   },
+  {
+    property: "A forecast close to another gives deadlines close to its deadlines",
+    meaning:
+      "If a cheaper fire model's closing times are within e of a reference model's at every node, every escape deadline moves by at most e. Shifting the cheaper times e earlier makes them conservative: never later than the reference deadline and within 2e of it. On the same open links the spread-along-links fire is at every step at least as hot as the heat-index fire, so it closes no node later and its deadlines and routes are conservative. Exact arithmetic; a surrogate that also changes dose rates is shown only to keep the deadline monotone.",
+    tex: [
+      String.raw`\lvert L_{c}(v) - L_{c'}(v) \rvert \le \lVert c - c' \rVert_{\infty}`,
+      String.raw`\lVert \hat c - c \rVert_{\infty} \le \varepsilon \;\Rightarrow`,
+      String.raw`L_{c}(v) - 2\varepsilon \le L_{\hat c - \varepsilon}(v) \le L_{c}(v)`,
+    ],
+    files: ["Surrogate", "Deadline"],
+    status: "Proved",
+  },
+  {
+    property: "The two-zone room model only gets worse with time",
+    meaning:
+      "Heat release never falls, the hot layer's interface never rises, a room's gas temperature never falls, and a node that becomes untenable stays untenable. These are the conditions the forecast routers' proofs ask of a fire forecast. Proved in exact arithmetic; that each floating-point operation keeps them is tested, and the accuracy of the Euler time step is tested numerically, not proved.",
+    tex: [
+      String.raw`t \le t' \;\Rightarrow\; \dot Q(t) \le \dot Q(t')`,
+      String.raw`z_i(t') \le z_i(t), \qquad T_i(t) \le T_i(t')`,
+      String.raw`T_i(t) \ge T_{\mathrm{crit}} \;\Rightarrow\; T_i(t') \ge T_{\mathrm{crit}}`,
+    ],
+    files: ["Zone", "FireDynamics"],
+    status: "Proved",
+  },
+  {
+    property: "An assumed stair is at least as long as the stair it stands for",
+    meaning:
+      "Where a stair's treads are not modelled, its assumed line rises from one floor to the next in flights whose plan length is the rise over the riser times the going, and its height never falls along it. So it is at least about 1.89 times the rise long with 175 mm risers and 280 mm goings, as a real stair of those steps would be. Separately, with the per-part exit rule, every part of the graph at or above the size threshold that holds a fallback door has an exit that every node in it can reach.",
+    tex: [
+      String.raw`P = \frac{h_b - h_a}{r}\, g`,
+      String.raw`\ell \ge \sqrt{P^{2} + (h_b - h_a)^{2}}`,
+      String.raw`\quad = (h_b - h_a)\,\frac{\sqrt{g^{2} + r^{2}}}{r}`,
+      String.raw`\ell \ge 1.886\,(h_b - h_a) \quad (r = 0.175,\ g = 0.28)`,
+    ],
+    files: ["Cores"],
+    status: "Proved",
+  },
 ];

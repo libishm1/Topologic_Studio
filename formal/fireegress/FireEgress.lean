@@ -18,3 +18,6 @@ import FireEgress.Eikonal
 import FireEgress.FloatError
 import FireEgress.Forecast
 import FireEgress.Deadline
+import FireEgress.Surrogate
+import FireEgress.Zone
+import FireEgress.Cores

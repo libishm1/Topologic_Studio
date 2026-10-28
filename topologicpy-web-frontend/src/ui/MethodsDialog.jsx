@@ -165,7 +165,7 @@ export function MethodsDialog({ open, onClose, studio }) {
             <section id="methods-proved" aria-labelledby="h-proved">
               <h3 id="h-proved">What has been proved</h3>
               <p style={{ marginBottom: 12 }}>
-                These statements are proved in Lean 4 with Mathlib, 863 machine-checked theorems in all,
+                These statements are proved in Lean 4 with Mathlib, more than 990 machine-checked theorems and lemmas in 23 modules,
                 each resting only on Lean&apos;s standard axioms or none. The proofs are about idealised models in exact
                 arithmetic: they do not cover floating-point rounding unless a statement says so, and each file
                 lists what it leaves out. Sources: <code>formal/fireegress</code> in the repository; each

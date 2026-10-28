@@ -1,25 +1,28 @@
-# Handoff: Topologic Studio Next (2026-10-28)
+# Handoff: Topologic Studio Next (2026-10-28, evening)
 
 ## State
 
-- Live: https://libishm1.github.io/Topologic_Studio/ is `main` (see `git log origin/main`; deployed 2026-10-28 after the gates below). Work happens on `next/browser-core` in the `TopologicStudio-Next` worktree; `main` is fast-forwarded to it only after the gates below pass. The Render backend (`topologicstudio-backend`) is deployed by hand from its dashboard; it had no changes in this round.
-- Gates before any deploy: `npm test` (126 tests), `npx eslint src`, a Pages build (`BASE_PATH=/Topologic_Studio/`), and `node tools/browser-test.mjs` desktop and `--mobile` against `vite preview` on the sub-path, all with 0 failed steps.
+- Live: https://libishm1.github.io/Topologic_Studio/ is `main` at 74c1b28 (deployed 2026-10-28 after the gates below; live bundle, Methods chunk and sampler worker checked). Work happens on `next/browser-core` in the `TopologicStudio-Next` worktree; `main` is fast-forwarded to it only after the gates pass. The Render backend (`topologicstudio-backend`) is deployed by hand from its dashboard; it had no changes in this round.
+- Gates before any deploy: `npm test` (163 tests), `npx eslint src`, a Pages build (`BASE_PATH=/Topologic_Studio/`), and `node tools/browser-test.mjs` desktop and `--mobile` against `vite preview` on the sub-path, all with 0 failed steps.
 - Live check after the deploy: every step passes except the TopologicPy Navigation cross-check, which times out at 240 s on Render's free tier (known; not a regression).
 
 ## What this round added
 
-- Gap analysis, scoop check and impact ranking: `wiki/research/gap-analysis-2026-10-27/README.md` and its data files.
-- Forecast planning (gaps LG1, LG2) and escape-deadline maps (the recommended method C1): `src/core/forecast.js`, `src/core/deadline.js`, `src/workers/forecast.worker.js`, the Simulate step's "Escape deadlines and forecast routes".
-- RL's return against the exact optimum (LG6): `src/core/rl.js`.
-- IFC handling from `wiki/research/ifc-handling-survey-2026-10-27.md`, items 1 to 5: exits from Pset_DoorCommon and EXTERNAL space boundaries (`src/core/ifcSemantics.js`, `src/workers/semantics.worker.js`), roof slabs excluded, a model egress check, a versioned fragments cache, storey levels where slab geometry collapses.
-- Speed: wall sections cut only where the plane meets a triangle (graph build 2.5 times faster on large models, byte-identical output by `tools/graph-hash.mjs`).
-- Lean: 20 modules, 863 theorems, all on standard axioms or none (`formal/fireegress`, README fifth batch). The proofs and their property tests found, and the code now fixes: an RL horizon potential and its clock rule, a tie in the dose front, a negative-time read, a map rounding fault and a bisection end in doubles.
-- Cross-model harnesses: `tools/forecast-check.mjs`, `tools/deadline-check.mjs`, `tools/exits.mjs`, `tools/profile-graph.mjs`, over the local corpus in `C:\Users\lmurugesan\ifc-samples` and `ifc-samples\more` (local testing only; never publish those files).
+- Two-zone fire model on the IfcSpace room graph (gap LG8): `src/core/rooms.js`, `src/core/zone.js`, `tools/zone-check.mjs`, offered in Simulate when a model has rooms.
+- Surrogates with error bounds (LG7): `src/core/surrogate.js`.
+- Vertical cores: `src/core/cores.js` and the lattice. Stair parts aggregated into IfcStair are read (S_Office); a stair without treads (an IfcStair with no steps, a room named as a stair) is walked along an assumed dog-leg line; a core is linked wherever its two floors are not already joined there (Smiley West's treads join neither floor); lifts and escalators (IfcTransportElement, rooms and proxies named as lifts) join floors only with "Use lifts and escalators" on. `tools/core-check.mjs` reproduces the comparisons, including a treads-removed experiment.
+- Exits in every large part of the graph (`exitsPerPart` in `src/core/ifcSemantics.js`): AdvancedProject 1 exit to 18, canLeave 0.005 to 0.149.
+- Review fixes C1, M1 to M11, K1, K2, m1 to m12, w1 to w4 (error boundary, plan staleness and cancellation, worker failure handling, RL in a worker, capped deadline-map work, colour ownership, accessibility).
+- Lean: 23 modules, more than 990 theorems and lemmas, standard axioms only; new Surrogate.lean, Zone.lean, Cores.lean (README sixth batch). The Methods dialog renders 21 properties (84 TeX lines, all render in KaTeX).
+- Research: `wiki/research/open-source-evacuation-study-2026-10-28.md` (JuPedSim, Vadere, FDS+Evac, CFAST, Menge, MomenTUM from source; Pathfinder and buildingEXODUS from documents only), ranked gaps G1 to G9 and which RiMEA and NIST TN 1822 tests the model can run today.
+- Test corpus: 11 openly licensed models in `C:\Users\lmurugesan\ifc-samples\more2\` with `SOURCES.md` (local testing only; HHS Office is no-derivatives).
 
 ## Open
 
-1. IFC conversion runs in a worker (survey item 7, merged 2026-10-28) with one worker kept warm while the page is idle. Follow-ups: run the semantic pass inside that worker, so the page loads one web-ifc instead of two (the semantics worker is 391 KB gzipped); and `clearModel` does not wait for `disposeModel`, so a reload that reuses a model id could race (seen once by the agent with ids it then changed; not seen since).
-2. IFC survey items 6 and 8: door widths as capacity in the forecast and deadline models; a room graph from IfcSpace and door space boundaries.
-3. Gaps not built: LG5 (publish the cross-model harness as a benchmark), LG7 (routing-ready surrogates with error bounds), LG8 (a two-zone fire model on the room graph). The heat in all three fire models is an index, not a measured temperature, so every dose ranks routes under the model only.
-4. Novelty of C1 is provisional until Chen et al. (2023, https://doi.org/10.1016/j.ress.2023.109571) and Tabirca et al. (2015, https://doi.org/10.1016/j.procs.2015.05.425) are read in full and the Semantic Scholar queries are rerun with an API key.
-5. Gaps no proof bounds: the deadline map's distance below the exact deadline (up to 7.8 s in tests, C20-Institute); the graph front's error with walls (only "never early" is proved).
+1. The benchmark branch (`feature/benchmark`, worktree agent-ab4f7303ef3afd806) stopped mid-merge of next/browser-core on a session rate limit; resume that agent, then merge its stress suite and known-bug list.
+2. Gap G1 from the study: stairs are walked at level speed (reference tools use 0.45 to 0.88 of it), so stair times are 13% to 50% short. Needs a per-link pace used by every router (route.js, forecast.js, deadline.js, rl.js, alternatives.js, fire.js) and a Lean restatement with link times scaled.
+3. Gaps G2 to G5 from the study: walking slowed in smoke, toxic gases and radiant heat in the dose, door capacity and queues, pre-movement distributions (pairs with the deadline map).
+4. HITOS (`more2\osb-testfiles-hitos`) joins its floors only with lifts on; its stair cores link but its floors stay apart. Not yet investigated.
+5. Lift rides cost their rise at walking speed with no wait; assumed stairs have no known width.
+6. Novelty of C1 is provisional until Chen et al. (2023, https://doi.org/10.1016/j.ress.2023.109571) and Tabirca et al. (2015, https://doi.org/10.1016/j.procs.2015.05.425) are read in full.
+7. Not proved: floating point for the zone model (tested), the zone Euler step's accuracy, componentLabels' correctness, the deadline map's distance below the exact deadline (up to 7.8 s in tests).
