@@ -133,7 +133,6 @@ export class ViewerManager {
       wasm: { path: WASM_PATH, absolute: WASM_PATH.startsWith("http") },
     });
     ifcLoader.settings.webIfc.COORDINATE_TO_ORIGIN = true;
-    ifcLoader.settings.webIfc.OPTIMIZE_PROFILES = true;
     this.ifcLoader = ifcLoader;
 
     this.ready = true;
@@ -143,6 +142,7 @@ export class ViewerManager {
     if (this.disposed) return;
     this.disposed = true;
     this.ready = false;
+    this._abortImport?.();
 
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
@@ -425,6 +425,9 @@ export class ViewerManager {
    */
   async loadIfc(file, { onProgress, signal } = {}) {
     if (!this.ready) throw new Error("Viewer is still starting up.");
+    // The page stays responsive while a model converts, so another file can
+    // be opened meanwhile; the older conversion is dropped ("cancelled").
+    this._abortImport?.();
 
     const timer = new PhaseTimer("ifc.load");
     const report = (stage, detail) => onProgress?.({ stage, detail });
@@ -441,8 +444,29 @@ export class ViewerManager {
     if (!cached) {
       report("converting", "Converting IFC to fragments");
       fragmentBytes = await timer.run("convert", async () => {
+        const { fragments: converted, ifc } = await this._convertInWorker(buffer, file.name, {
+          onProgress: (p) => report("converting", p),
+          signal,
+        });
+        if (converted) {
+          // What IfcLoader.load sets and names a model it converted. The id
+          // must differ from the cached path's: clearModel does not wait for
+          // the old model's disposal, whose last step drops the thread route
+          // by id, so reopening the file from the cache under the same id
+          // could lose the new model's route and never finish loading.
+          this.fragments.core.settings.autoCoordinate = false;
+          // Loading transfers the buffer to the fragments worker; the copy
+          // is what gets cached.
+          const model = await this.fragments.core.load(converted.slice(), {
+            modelId: file.name,
+            raw: false,
+          });
+          this._adoptModel(model);
+          return converted;
+        }
+        // No worker could convert it here: convert on this thread, as before.
         const model = await this.ifcLoader.load(
-          new Uint8Array(buffer),
+          new Uint8Array(ifc),
           false,
           file.name,
           { processData: { progressCallback: (p) => report("converting", p) } },
@@ -517,6 +541,103 @@ export class ViewerManager {
         storeys: this.categoryIds.storeys.length,
       },
     };
+  }
+
+  /**
+   * Convert IFC bytes to a fragments buffer in src/workers/ifc-import.worker.js,
+   * with the importer settings `init` gave the IfcLoader.
+   *
+   * Resolves to `{ fragments }`, or to `{ ifc }` when no worker can run the
+   * conversion here (no module workers, its script failed to load, or web-ifc
+   * could not start in it); `ifc` is then the IFC buffer, still whole, for the
+   * caller to convert on this thread. The buffer is only transferred once the
+   * worker has loaded, and comes back if web-ifc fails to start. Rejects with
+   * a message for the user when the conversion itself fails, and with
+   * "cancelled" when `signal` aborts, another load starts or the viewer is
+   * disposed.
+   */
+  _convertInWorker(buffer, name, { onProgress, signal } = {}) {
+    if (typeof Worker === "undefined") return Promise.resolve({ ifc: buffer });
+    if (signal?.aborted) return Promise.reject(new Error("cancelled"));
+
+    let worker;
+    try {
+      worker = new Worker(new URL("../workers/ifc-import.worker.js", import.meta.url), {
+        type: "module",
+        name: "ifc-import",
+      });
+    } catch (error) {
+      console.warn("[viewer] IFC import worker unavailable; converting on the main thread.", error);
+      return Promise.resolve({ ifc: buffer });
+    }
+
+    // A relative WASM path means relative to this page; the worker's own URL
+    // is under assets/, so it gets the resolved URL.
+    const { path, absolute } = this.ifcLoader.settings.wasm;
+    const wasm = absolute
+      ? { path, absolute }
+      : { path: new URL(path, window.location.href).href, absolute: true };
+    const webIfc = { ...this.ifcLoader.settings.webIfc };
+
+    return new Promise((resolve, reject) => {
+      let started = false;
+      let settled = false;
+      const finish = (settle, value) => {
+        if (settled) return;
+        settled = true;
+        worker.terminate();
+        signal?.removeEventListener("abort", abort);
+        if (this._abortImport === abort) this._abortImport = null;
+        settle(value);
+      };
+      const abort = () => finish(reject, new Error("cancelled"));
+      const unavailable = (reason, ifc) => {
+        console.warn(`[viewer] IFC import worker unavailable (${reason}); converting on the main thread.`);
+        finish(resolve, { ifc });
+      };
+
+      worker.onmessage = ({ data }) => {
+        switch (data?.type) {
+          case "ready":
+            started = true;
+            worker.postMessage({ type: "convert", bytes: buffer, name, wasm, webIfc }, [buffer]);
+            break;
+          case "unavailable":
+            unavailable(data.reason, data.bytes);
+            break;
+          case "progress":
+            onProgress?.(data.value);
+            break;
+          case "done":
+            finish(resolve, { fragments: data.bytes });
+            break;
+          case "failed":
+            finish(reject, new Error(data.message));
+            break;
+          default:
+            break;
+        }
+      };
+      worker.onerror = (event) => {
+        event.preventDefault?.();
+        if (!started) {
+          unavailable(event.message || "its script did not load", buffer);
+        } else {
+          finish(
+            reject,
+            new Error(
+              `The IFC converter stopped while reading ${name}, usually because the browser ran out of ` +
+                "memory. Close other tabs and try again, or open the file on a desktop browser.",
+            ),
+          );
+        }
+      };
+      worker.onmessageerror = () =>
+        finish(reject, new Error(`The converted model of ${name} could not be passed back to the page. Try again.`));
+
+      signal?.addEventListener("abort", abort, { once: true });
+      this._abortImport = abort;
+    });
   }
 
   _adoptModel(model) {
