@@ -14,7 +14,7 @@
  * The expensive middle is off the main thread, and only the sampled points
  * cross the network - not the triangles.
  */
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
@@ -86,6 +86,28 @@ const MODES = [
 ];
 
 const NO_PLAN = { busy: false, result: null };
+
+/**
+ * Which layer colours the graph: "deadlines", "fire", or null for the graph's
+ * own colours. A small store rather than state, since the deadline effect
+ * sets it and the legend reads it.
+ */
+function createColourOwner() {
+  let owner = null;
+  const listeners = new Set();
+  return {
+    get: () => owner,
+    set: (next) => {
+      if (next === owner) return;
+      owner = next;
+      listeners.forEach((listener) => listener());
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
 
 const DEFAULT_TOPOLOGY_OPTIONS = {
   showFaces: true,
@@ -213,6 +235,15 @@ export default function App() {
   // an older one is dropped (review M3).
   const planGenRef = useRef(0);
 
+  // The layer colouring the graph, so that one layer does not wipe another's
+  // colours and the legend shows the one drawn (review M6).
+  const [colours] = useState(createColourOwner);
+  const graphColours = useSyncExternalStore(colours.subscribe, colours.get);
+
+  // The plan's deadline map, when it was made on the graph on screen.
+  const deadlines = forecastPlan.result && forecastPlan.nodes === graph?.nodes ? forecastPlan.result.deadlines : null;
+  const planHorizon = forecastPlan.result?.horizon ?? 300;
+
   // Whether the alternative-route overlays hold the plan's routes rather than
   // the alternatives: a ref for the handlers, state for the legend.
   const planRoutesRef = useRef(false);
@@ -268,6 +299,8 @@ export default function App() {
 
       rlRef.current?.cancel();
       dropPlan();
+      // The new model starts with no graph to colour.
+      colours.set(null);
       studio.beginLoad(nextFile);
       geometryRef.current = null;
       setLastSample(null);
@@ -366,7 +399,7 @@ export default function App() {
         if (latest()) studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan],
+    [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan, colours],
   );
 
   // --------------------------------------------------------------- examples
@@ -510,6 +543,7 @@ export default function App() {
       viewer.setRoutes(null);
 
       viewer.setGraph(response.nodes, response.edges, response.kinds);
+      colours.set(null);
       viewer.setGraphVisible(settings.showGraph);
 
       // A freshly built graph is completely hidden behind solid walls and a
@@ -558,7 +592,7 @@ export default function App() {
       studio.setGraphBusy(false);
       studio.setLoadState({ busy: false, stage: null, detail: null });
     }
-  }, [reportError, sample, setSettings, settings, studio, toast, dropPlan]);
+  }, [reportError, sample, setSettings, settings, studio, toast, dropPlan, colours]);
 
   /**
    * Server-backed actions need this graph on the server. Without an id the
@@ -859,6 +893,7 @@ export default function App() {
             (message.nodes || []).forEach((n) => burning.add(n));
             studio.setFire((current) => ({ ...current, step: message.step }));
             viewer?.setBurningNodes(burning);
+            colours.set("fire");
           } else if (message.type === "temperature_step") {
             const temperatures = temperatureRef.current;
             temperatures.clear();
@@ -867,6 +902,7 @@ export default function App() {
             }
             studio.setFire((current) => ({ ...current, step: message.step }));
             viewer?.setTemperatures(temperatures);
+            colours.set("fire");
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
             // Straight runs keep clear of burning or heated nodes.
@@ -888,13 +924,23 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast, dropPlan]);
+  }, [graph, points, reportError, settings, studio, toast, dropPlan, colours]);
 
+  // A fire that ends by itself keeps its final colours. Stopping it clears
+  // them, back to what the graph showed before: the deadline map if it is
+  // wanted, else the graph's own colours.
   const stopFire = useCallback(() => {
     studio.stopFire();
-    viewerRef.current?.setTemperatures(null);
-    viewerRef.current?.setBurningNodes(null);
-  }, [studio]);
+    const viewer = viewerRef.current;
+    viewer?.setTemperatures(null);
+    viewer?.setBurningNodes(null);
+    if (settings.showDeadlineMap && deadlines) {
+      viewer?.setDeadlines(deadlines, { max: planHorizon });
+      colours.set("deadlines");
+    } else {
+      colours.set(null);
+    }
+  }, [studio, settings.showDeadlineMap, deadlines, planHorizon, colours]);
 
   // --------------------------------------------------------------------- RL
 
@@ -1049,18 +1095,21 @@ export default function App() {
     }
   }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes]);
 
-  // The plan's deadline map, when it was made on the graph on screen.
-  const deadlines = forecastPlan.result && forecastPlan.nodes === graph?.nodes ? forecastPlan.result.deadlines : null;
-
-  // The deadline map is drawn on the graph while it is wanted and no fire is
-  // colouring the graph.
+  // The deadline map colours the graph when a plan arrives or the toggle
+  // changes, and only then. A fire that has coloured the graph since keeps
+  // its final colours when it ends: this ran again when the fire stopped
+  // running and wiped them (review M6).
   useEffect(() => {
     const viewer = viewerRef.current;
-    if (!viewer || fire.running) return;
-    viewer.setDeadlines(settings.showDeadlineMap ? deadlines : null, {
-      max: forecastPlan.result?.horizon ?? 300,
-    });
-  }, [deadlines, forecastPlan.result, settings.showDeadlineMap, fire.running]);
+    if (!viewer) return;
+    if (settings.showDeadlineMap && deadlines) {
+      viewer.setDeadlines(deadlines, { max: planHorizon });
+      colours.set("deadlines");
+    } else if (colours.get() === "deadlines") {
+      viewer.setDeadlines(null);
+      colours.set(null);
+    }
+  }, [deadlines, planHorizon, settings.showDeadlineMap, colours]);
 
   // --------------------------------------------------------- reactive push
 
@@ -1284,7 +1333,9 @@ export default function App() {
 
   const legend = useMemo(() => {
     const items = [];
-    if (graph) {
+    // The deadline map recolours every link, so the graph's own colours are
+    // not on screen then (review m4); heat and burning leave the rest as is.
+    if (graph && graphColours !== "deadlines") {
       items.push({ label: "Walkable graph", color: "var(--viz-graph)" });
       if (graph.stats.stair_nodes) {
         items.push({ label: "Stairs", color: "var(--viz-stair)" });
@@ -1292,6 +1343,9 @@ export default function App() {
       if (graph.stats.door_nodes) {
         items.push({ label: "Doors", color: "var(--viz-door)" });
       }
+    }
+    if (graphColours === "fire" && fire.model !== "temperature") {
+      items.push({ label: "Burning", color: "var(--viz-fire)" });
     }
     if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
     if (points.exit) items.push({ label: "Exit", color: "var(--viz-exit)", dot: true });
@@ -1317,7 +1371,19 @@ export default function App() {
       items.push({ label: "Planned on the fire now: unsafe", color: FORECAST_COLORS.snapshot });
     }
     return items;
-  }, [graph, points, path, dynamicPath, alternatives, navCheck, settings.showNavGraph, forecastPlan.result, planRoutesShown]);
+  }, [
+    graph,
+    points,
+    path,
+    dynamicPath,
+    alternatives,
+    navCheck,
+    settings.showNavGraph,
+    forecastPlan.result,
+    planRoutesShown,
+    graphColours,
+    fire.model,
+  ]);
 
   // ------------------------------------------------------------------ render
 
@@ -1447,10 +1513,8 @@ export default function App() {
               if (index !== null && settings.modelAppearance !== "solid") setSettings({ modelAppearance: "solid" });
             }}
             fireSteps={settings.fireMaxSteps}
-            heatLegend={fire.running && settings.fireModel === "temperature"}
-            deadlineLegend={
-              !fire.running && settings.showDeadlineMap && deadlines ? { max: forecastPlan.result.horizon } : null
-            }
+            heatLegend={graphColours === "fire" && fire.model === "temperature"}
+            deadlineLegend={graphColours === "deadlines" ? { max: planHorizon } : null}
             onStopFire={stopFire}
             legend={legend}
             examples={examples}

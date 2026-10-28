@@ -23,7 +23,7 @@ import {
 import { hashFile, readCached, writeCached } from "../lib/fragmentCache.js";
 import { PhaseTimer, mark } from "../lib/perf.js";
 import { collectCategoryIds, extractMeshes, withPredefinedType } from "./categories.js";
-import { heatColor, paintDeadlines } from "./heat.js";
+import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
 
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
  *  installed package versions. Both are served from public/, under the
@@ -79,6 +79,8 @@ export class ViewerManager {
     this._pointerStart = null;
     this._resizeObserver = null;
     this._theme = "dark";
+    // The layer colouring the graph, if any: { opacity, redraw? }.
+    this._colouring = null;
   }
 
   // ------------------------------------------------------------- lifecycle
@@ -248,6 +250,8 @@ export class ViewerManager {
     }
     const outlines = this.overlays.get(OVERLAY.outlines);
     if (outlines) outlines.material.color = new THREE.Color(this._outlineColor());
+    // Heat and deadline colours have a ramp per background.
+    this._colouring?.redraw?.();
   }
 
   _outlineColor() {
@@ -838,6 +842,7 @@ export class ViewerManager {
     // Picking reads these; a new model must not be picked against the old graph.
     this._graphNodes = null;
     this._graphEdges = null;
+    this._colouring = null;
   }
 
   /**
@@ -971,7 +976,10 @@ export class ViewerManager {
    * Fade the graph back when a route is on screen.
    *
    * 17k edges at full strength drown out the one line the user actually asked
-   * for, so the graph steps aside while a route is displayed.
+   * for, so the graph steps aside while a route is displayed. A layer that
+   * colours the graph (heat, burning, deadlines) is itself what is being
+   * read, and keeps its own strength; when it is removed the graph goes back
+   * to the strength the routes call for, not always the full one (review m11).
    */
   _updateGraphEmphasis() {
     const segments = this.overlays.get(OVERLAY.graph);
@@ -983,7 +991,7 @@ export class ViewerManager {
         name === OVERLAY.navRoute ||
         name.startsWith(ALT_PREFIX),
     );
-    segments.material.opacity = hasPath ? 0.16 : 0.45;
+    segments.material.opacity = this._colouring ? this._colouring.opacity : hasPath ? 0.16 : 0.45;
     segments.material.needsUpdate = true;
   }
 
@@ -1047,6 +1055,24 @@ export class ViewerManager {
     this._graphEdges = edges;
     this._graphKinds = kinds;
     this._baseColors = colors.slice();
+    this._colouring = null;
+    this._updateGraphEmphasis();
+  }
+
+  /** The heat ramp and the deadline map's "none" for the scene's background. */
+  _sceneColours() {
+    return this._theme === "dark" ? SCENE_COLOURS.dark : SCENE_COLOURS.light;
+  }
+
+  /**
+   * Put the graph back in its own colours, or note the layer now colouring
+   * it: its strength, and how to redraw it in the other theme's ramp.
+   */
+  _setColouring(colouring, colors, attribute) {
+    if (!colouring) colors.set(this._baseColors);
+    attribute.needsUpdate = true;
+    this._colouring = colouring;
+    this._updateGraphEmphasis();
   }
 
   /** Recolour graph edges from a node temperature map, in place. */
@@ -1059,14 +1085,13 @@ export class ViewerManager {
     const colors = attribute.array;
 
     if (!temperatures || temperatures.size === 0) {
-      colors.set(this._baseColors);
-      attribute.needsUpdate = true;
-      segments.material.opacity = 0.45;
+      this._setColouring(null, colors, attribute);
       return;
     }
 
     const edgeCount = this._graphEdges.length / 2;
     const scratch = new THREE.Color();
+    const { stops } = this._sceneColours();
 
     for (let e = 0; e < edgeCount; e += 1) {
       const o = e * 6;
@@ -1079,21 +1104,24 @@ export class ViewerManager {
           colors[offset + 1] = this._baseColors[offset + 1];
           colors[offset + 2] = this._baseColors[offset + 2];
         } else {
-          heatColor(scratch, temp, ambient, peak);
+          heatColor(scratch, temp, ambient, peak, stops);
           colors[offset] = scratch.r;
           colors[offset + 1] = scratch.g;
           colors[offset + 2] = scratch.b;
         }
       }
     }
-    attribute.needsUpdate = true;
-    segments.material.opacity = 0.75;
+    this._setColouring(
+      { opacity: 0.75, redraw: () => this.setTemperatures(temperatures, { ambient, peak }) },
+      colors,
+      attribute,
+    );
   }
 
   /**
    * Recolour graph edges by each node's escape deadline (seconds): the heat
-   * ramp reversed, so little time left reads as hot. -Infinity (no safe
-   * departure at all) is drawn in a neutral dark grey; null restores the
+   * ramp reversed, so little time left reads as hot. Grey: no departure on
+   * the grid gets out within the dose limit (-Infinity). null restores the
    * graph's own colours, and so does a map that is not one value per node of
    * this graph (one made before a rebuild: indexed by the new graph's nodes it
    * read past its end and threw, review C1).
@@ -1104,15 +1132,11 @@ export class ViewerManager {
     const attribute = segments.geometry.getAttribute("color");
     if (!attribute) return;
     const colors = attribute.array;
-    const none = new THREE.Color(0x52525b);
-    if (!paintDeadlines(colors, this._graphEdges, this._graphNodes.length / 3, deadlines, { max, none })) {
-      colors.set(this._baseColors);
-      attribute.needsUpdate = true;
-      segments.material.opacity = 0.45;
+    if (!paintDeadlines(colors, this._graphEdges, this._graphNodes.length / 3, deadlines, { max, ...this._sceneColours() })) {
+      this._setColouring(null, colors, attribute);
       return;
     }
-    attribute.needsUpdate = true;
-    segments.material.opacity = 0.8;
+    this._setColouring({ opacity: 0.8, redraw: () => this.setDeadlines(deadlines, { max }) }, colors, attribute);
   }
 
   /** Recolour graph edges from a set of burning node indices. */
@@ -1124,9 +1148,7 @@ export class ViewerManager {
     const colors = attribute.array;
 
     if (!burning || burning.size === 0) {
-      colors.set(this._baseColors);
-      attribute.needsUpdate = true;
-      segments.material.opacity = 0.45;
+      this._setColouring(null, colors, attribute);
       return;
     }
 
@@ -1148,8 +1170,7 @@ export class ViewerManager {
         }
       }
     }
-    attribute.needsUpdate = true;
-    segments.material.opacity = 0.7;
+    this._setColouring({ opacity: 0.7 }, colors, attribute);
   }
 
   setGraphVisible(visible) {

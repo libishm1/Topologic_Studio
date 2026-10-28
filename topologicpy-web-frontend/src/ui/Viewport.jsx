@@ -346,8 +346,10 @@ export function Viewport({
                       <span>{Math.round(deadlineLegend.max / 2)} s</span>
                       <span>{Math.round(deadlineLegend.max)} s</span>
                     </span>
+                    <span className="legend__note">Latest time to leave and still get out within the dose limit.</span>
                     <span className="legend__note">
-                      Latest time to leave and still get out within the dose limit. Grey: no safe departure.
+                      <span className="legend__swatch legend__swatch--inline legend__none" aria-hidden="true" />
+                      Grey: no departure on the grid gets out within the dose limit.
                     </span>
                   </div>
                 )}

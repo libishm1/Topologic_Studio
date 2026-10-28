@@ -8,9 +8,24 @@ import { Color } from "three";
  * Yellow -> orange -> red -> dark red across the temperature range: the stops
  * of .legend__ramp (styles/workflow.css), so the legend is literally what is
  * drawn. Lightness falls all the way, so heat reads in order for colour-blind
- * viewers too, which the rainbow this replaced did not.
+ * viewers too, which the rainbow this replaced did not. These are the light
+ * scene's; SCENE_COLOURS has the dark scene's.
  */
 export const HEAT_STOPS = [0xfacc15, 0xf97316, 0xdc2626, 0x7f1d1d].map((hex) => new Color(hex));
+
+/**
+ * The ramp and the deadline map's "no departure works" colour for each scene
+ * background. On the dark scene (#0d1219) the light ramp's dark red was 1.9:1
+ * against it and the old grey 2.4:1, and the two 1.3:1 apart for a protan
+ * viewer: there the ramp ends in a red that keeps 3.9:1 (lightness still
+ * falling all the way), and "none" is a light grey, 12.7:1 against the
+ * background and 3.3:1 against the red. The light scene keeps its ramp, with
+ * a mid grey (4.3:1). The legend draws the same (styles/workflow.css).
+ */
+export const SCENE_COLOURS = {
+  light: { stops: HEAT_STOPS, none: new Color(0x71717a) },
+  dark: { stops: [0xfacc15, 0xf97316, 0xef4444, 0xdc2626].map((hex) => new Color(hex)), none: new Color(0xd4d4d8) },
+};
 
 export function heatColor(target, temp, min, max, stops = HEAT_STOPS) {
   const t = (temp - min) / Math.max(1e-6, max - min);
