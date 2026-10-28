@@ -163,6 +163,7 @@ async function runModel(model, file, opts) {
   const { extract } = await import("./ifc-extract.mjs");
   const { findExits, flaggedDoors, oneSidedDoors, roomOneSideDoors } = await import("./exits.mjs");
   const { FreePlane } = await import("./geodesic.mjs");
+  const { levelSpread } = await import("./stress.mjs");
 
   // web-ifc reports geometry it cannot build on the console: count, do not print.
   let webIfcMessages = 0;
@@ -304,7 +305,17 @@ async function runModel(model, file, opts) {
       // apply; a staircase whose two floor links differ by 2 m joins storeys.
       joinTwoByRise: cases.filter((c) => c.floorLinks >= 2 && c.rise >= 2).length,
       unlinked: cases.filter((c) => c.floorLinks === 0).length,
+      // Vertical cores (src/core/cores.js): stairs assumed from stair rooms
+      // or parts, and lifts (off, as in the app).
+      cores: st.cores ?? null,
+      coreStairsAssumed: st.coreStairsAssumed ?? null,
     };
+    // Storeys joined, as tools/core-check.mjs reports it: the levels the
+    // best-joined part spans, and the share of floor in multi-level parts.
+    const spread = levelSpread(built, levels);
+    out.stairs.levels = levels.length;
+    out.stairs.levelsJoined = spread.levels;
+    out.stairs.multiLevelFloorPct = spread.multiPct;
   }
 
   // ----------------------------------------------------------------- exits
@@ -888,7 +899,7 @@ export function summarize(results) {
 
   lines.push("### Graph quality and stairs", "");
   table(
-    ["Model", "Nodes", "Parts (20+)", "Largest", "Reach exit", "Floor m2", "Floor nodes/m2", "Coverage", "Staircases", "Ends linked", "Join 2 levels"],
+    ["Model", "Nodes", "Parts (20+)", "Largest", "Reach exit", "Floor m2", "Floor nodes/m2", "Coverage", "Staircases", "Ends linked", "Join 2 levels", "Levels joined", "Multi-level floor"],
     ok.map((r) => [
       r.name,
       fmt(r.graph?.nodes),
@@ -901,6 +912,8 @@ export function summarize(results) {
       fmt(r.stairs?.staircases),
       r.stairs?.ends ? `${r.stairs.endsLinked}/${r.stairs.ends}` : "-",
       r.stairs?.staircases ? `${r.stairs.joinTwoLevels} (rise: ${r.stairs.joinTwoByRise})` : "-",
+      r.stairs?.levels ? `${r.stairs.levelsJoined} of ${r.stairs.levels}` : "-",
+      r.stairs?.levels ? `${fmt(r.stairs.multiLevelFloorPct, 1)}%` : "-",
     ]),
   );
 

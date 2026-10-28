@@ -712,6 +712,33 @@ async function semanticsOf(text) {
   }
 }
 
+/**
+ * Storey levels spanned by the best-joined part, and the share of floor nodes
+ * in parts spanning two or more levels (as tools/core-check.mjs reports them).
+ */
+export function levelSpread(g, levels, agent = 0.75) {
+  const n = g.points.length / 3;
+  const find = components(g);
+  const parts = new Map();
+  for (let i = 0; i < n; i += 1) {
+    if (g.kinds[i] !== 0) continue;
+    const level = levels.findIndex((h) => Math.abs(g.points[i * 3 + 1] - agent - h) < 0.4);
+    const r = find(i);
+    let part = parts.get(r);
+    if (!part) parts.set(r, (part = { count: 0, levels: new Map() }));
+    part.count += 1;
+    if (level >= 0) part.levels.set(level, (part.levels.get(level) || 0) + 1);
+  }
+  let floor = 0, multi = 0, most = 0;
+  for (const part of parts.values()) {
+    floor += part.count;
+    const spanned = [...part.levels.values()].filter((c) => c >= 20).length;
+    if (spanned >= 2) multi += part.count;
+    most = Math.max(most, spanned);
+  }
+  return { levels: most, multiPct: floor ? Math.round((1000 * multi) / floor) / 10 : 0 };
+}
+
 const UNITS_M = ["#90=IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.);", "#91=IFCUNITASSIGNMENT((#90));"];
 const PROJECT = ["#1=IFCPROJECT('0YvctVUKr0kugbFTf53O9L',$,'p',$,$,$,$,$,#91);"];
 
@@ -905,6 +932,49 @@ const REGRESSION = [
       const doors = [{ itemId: 1, node: 5, sides: [0, 3] }, { itemId: 2, node: 7, sides: [2, 2] }];
       const r = exitDoors(doors, { doors: [{ id: 2, exit: "Pset_DoorCommon.FireExit", name: "Fire exit" }] });
       return { checks: [{ name: "the flagged door, not the one-sided one", ok: JSON.stringify(r.nodes) === "[7]" && r.source === "Pset_DoorCommon.FireExit", detail: `${JSON.stringify(r.nodes)} from ${r.source}` }] };
+    },
+  },
+  {
+    id: "reg-core-stair-parts",
+    title: "Stair parts aggregated as proxies are read, so S_Office's storeys join (lifts off)",
+    cite: "63925b7 (vertical cores; tools/core-check.mjs)",
+    needsCorpus: ["S_Office_Integrated Design Archi"],
+    run: async ({ corpus }) => {
+      const { extract } = await import("./ifc-extract.mjs");
+      const { buildLatticeGraph, floorLevels } = await core("lattice.js");
+      const geo = await extract(corpus[0], { withDoorFlags: false });
+      const levels = floorLevels(geo.floors, "y");
+      const s = levelSpread(buildLatticeGraph({ ...geo, upAxis: "y", spacing: 0.5, agentHeight: 0.75 }), levels);
+      return {
+        checks: [
+          { name: "at least 5 storey levels joined", ok: s.levels >= 5, detail: `${s.levels} of ${levels.length}` },
+          { name: "at least 99% of floor in multi-level parts", ok: s.multiPct >= 99, detail: `${s.multiPct}%` },
+        ],
+      };
+    },
+  },
+  {
+    id: "reg-stairs-without-treads",
+    title: "With every stair mesh removed, rooms named as stairs still join the storeys (FM_ARC, C20)",
+    cite: "63925b7 (vertical cores; tools/core-check.mjs)",
+    needsCorpus: ["FM_ARC_DigitalHub", "C20-Institute-Var-2"],
+    run: async ({ corpus }) => {
+      const { extract } = await import("./ifc-extract.mjs");
+      const { buildLatticeGraph, floorLevels } = await core("lattice.js");
+      const { CORE_STAIR } = await core("cores.js");
+      const want = { FM_ARC_DigitalHub: 65, "C20-Institute-Var-2": 84 };
+      const checks = [];
+      for (const file of corpus) {
+        const geo = await extract(file, { withDoorFlags: false });
+        const levels = floorLevels(geo.floors, "y");
+        const rooms = geo.cores.filter((c) => c.kind === CORE_STAIR && c.source === "IfcSpace name");
+        const common = { ...geo, upAxis: "y", spacing: 0.5, agentHeight: 0.75, stairs: [], coreMeshes: [] };
+        const bare = levelSpread(buildLatticeGraph({ ...common, cores: [] }), levels);
+        const assumed = levelSpread(buildLatticeGraph({ ...common, cores: rooms }), levels);
+        const name = path.basename(file, ".ifc");
+        checks.push({ name: `${name}: at least ${want[name]}% of floor in multi-level parts`, ok: assumed.multiPct >= want[name], detail: `${assumed.multiPct}% with ${rooms.length} stair rooms, ${bare.multiPct}% without` });
+      }
+      return { checks };
     },
   },
   {
