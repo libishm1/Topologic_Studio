@@ -18,7 +18,9 @@
  *
  * `departureSafe` is an independent forward check (earliest-arrival search
  * from one node at one departure time), used to verify the labels: leaving
- * just before L(v) must reach an exit, leaving at or after it must not.
+ * just before L(v) must reach an exit, leaving after it must not
+ * (Deadline.mem_safeSet_iff, departureSafe_correct). Leaving at exactly L can
+ * pass in doubles, where (L - a) + a may round below the closing time.
  *
  * With a dose limit (the method the scoop check recommends, C1:
  * wiki/research/gap-analysis-2026-10-27/scoop-check.json) a departure is good
@@ -33,9 +35,13 @@
  *                    V_j(v) = min over links of d_e(j) + V_{j + tau_e}(w), and
  *                    the deadline is the last grid time j with V_j(v) <= limit.
  *                    Link times are rounded up to the grid, so it is never
- *                    later than the exact deadline: a walker who arrives early
- *                    can wait for the grid, accruing no more than the model
- *                    charged for the rounded-up link.
+ *                    later than the exact deadline: the real walker takes the
+ *                    same links without waiting, entering each no later and
+ *                    walking it no longer, so it accrues no more dose
+ *                    (Deadline.grid_conservative, studio_map_le_exact). The
+ *                    rounding is checked in floating point, and the closing
+ *                    and dose tests keep a margin of a part in 10^9, so that
+ *                    rounding in the sums cannot make the map later either.
  */
 import { Heap, csr, distancesFrom, edgeLengths } from "./route.js";
 import { doseFront, linkDose } from "./forecast.js";
@@ -93,27 +99,39 @@ export function escapeDeadlines(graph, { exits, untenable = null, speed = 1.2, b
  * The latest departure from `start` with a safe route to an exit whose dose is
  * at most `limit`, bracketed to within `tolerance` seconds.
  *
- * @returns {{good: number, bad: number, searches: number} | null}  leaving at
- *          `good` works and at `bad` does not; null when even leaving at once
- *          does not.
+ * @returns {{good: number, bad: number, searches: number, truncated: boolean} | null}
+ *          leaving at `good` works and at `bad` does not (Deadline.
+ *          doseDeadline_bisection); null when even leaving at once does not.
+ *          truncated: a search hit its label budget, so a "does not" may be
+ *          wrong and the bracket is not certain.
  */
 export function doseDeadline(graph, start, { exits, forecast, limit = 1, speed = 1.2, blocked = null, tolerance = 0.05 }) {
   let searches = 0;
+  let truncated = false;
   const works = (t) => {
     searches += 1;
-    const { front } = doseFront(graph, start, { exits, forecast, depart: t, speed, blocked });
+    const result = doseFront(graph, start, { exits, forecast, depart: t, speed, blocked });
+    truncated ||= result.truncated;
+    const { front } = result;
     return front.length > 0 && front[front.length - 1].dose <= limit;
   };
   if (!works(0)) return null;
-  // Leaving at or after the deadline without a dose limit is never safe.
+  // Leaving after the deadline without a dose limit is never safe; leaving at
+  // exactly it can pass in doubles, so the end is checked, and moved past any
+  // such rounding. A start that never closes is bounded by the forecast.
   let good = 0;
   let bad = escapeDeadlines(graph, { exits, untenable: forecast.closes, speed, blocked })[start];
+  if (!Number.isFinite(bad)) bad = forecast.horizon;
+  for (let nudge = 0; nudge < 4 && works(bad); nudge += 1) {
+    good = bad;
+    bad += 1e-9 * Math.max(1, Math.abs(bad));
+  }
   while (bad - good > tolerance) {
     const mid = (good + bad) / 2;
     if (works(mid)) good = mid;
     else bad = mid;
   }
-  return { good, bad, searches };
+  return { good, bad, searches, truncated };
 }
 
 /**
@@ -152,8 +170,12 @@ export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2
   const tau = new Int32Array(m);
   let longest = 1;
   for (let e = 0; e < m; e += 1) {
-    // Up, never down; the epsilon keeps an exact multiple from gaining a step.
+    // Up, never down (Deadline.ceil_steps_cover). The epsilon keeps a link
+    // whose time is an exact multiple of the step from gaining one through
+    // rounding in the division; the check puts back any link it rounded
+    // down (Deadline.epsilon_rounds_down).
     tau[e] = Math.max(1, Math.ceil(len[e] / speed / delta - 1e-9));
+    if (tau[e] * delta < len[e] / speed) tau[e] += 1;
     if (!blocked?.[e] && tau[e] > longest) longest = tau[e];
   }
   const isExit = new Uint8Array(n);
@@ -172,7 +194,9 @@ export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2
     const base = frame * n;
     for (let v = 0; v < n; v += 1) {
       let value = Infinity;
-      if (t < closes[v]) {
+      // A part in 10^9 in hand on every closing time and on the limit, so
+      // that rounding in the walker's sums cannot make the map later.
+      if (t + 1e-9 * Math.max(1, t) < closes[v]) {
         if (isExit[v]) value = 0;
         else {
           for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
@@ -184,7 +208,7 @@ export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2
             const ahead = ring[(jj % R) * n + w];
             if (ahead === Infinity) continue;
             const t2 = jj * delta;
-            if (!(t2 < closes[w])) continue;
+            if (!(t2 + 1e-9 * Math.max(1, t2) < closes[w])) continue;
             const dose =
               t2 <= frameEnd ? (t2 - t) * Math.max(rate[base + v], rate[base + w]) : linkDose(forecast, v, w, t, t2);
             const total = ahead + dose;
@@ -194,7 +218,7 @@ export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2
       }
       ring[row + v] = value;
       // Finite first: with no limit (Infinity), "no route" must not count as within it.
-      if (deadline[v] === -Infinity && value < Infinity && value <= limit) deadline[v] = t;
+      if (deadline[v] === -Infinity && value < Infinity && value * (1 + 1e-9) <= limit) deadline[v] = t;
     }
   }
   return { deadline, step: delta, layers: J + 1 };

@@ -847,6 +847,9 @@ function ForecastResult({ result, settings }) {
           </span>
         )}
         {truncated && <span>The dose search hit its label budget, so the least dose shown may not be the least.</span>}
+        {leaveBy?.truncated && (
+          <span>A search for the leaving time hit its label budget, so that time may be too early.</span>
+        )}
         {coarsened && (
           <span>The forecast was stored every {secs(coarsened)} to fit in memory, which only makes it more cautious.</span>
         )}
