@@ -37,18 +37,21 @@ export function Button({
   );
 }
 
-export function FileButton({ accept, onFile, children, variant = "default", disabled }) {
+/** `onIntent`: the pointer or focus came to the button, so a file may follow. */
+export function FileButton({ accept, onFile, children, variant = "default", disabled, onIntent }) {
   return (
     <label
       className={`btn file-btn${variant !== "default" ? ` btn--${variant}` : ""}${
         disabled ? " btn--disabled" : ""
       }`}
       style={disabled ? { opacity: 0.45, pointerEvents: "none" } : undefined}
+      onPointerEnter={onIntent}
     >
       <input
         type="file"
         accept={accept}
         disabled={disabled}
+        onFocus={onIntent}
         onChange={(event) => {
           const file = event.target.files?.[0];
           // Reset so choosing the same file twice still fires a change event.

@@ -303,6 +303,10 @@ export default function App() {
 
   // --------------------------------------------------------------- IFC load
 
+  // A file is about to be opened (pointer or focus on a file button or an
+  // example, or a file dragged over the page): load the import worker now.
+  const warmImport = useCallback(() => viewerRef.current?.warmImport?.(), []);
+
   const handleFile = useCallback(
     async (nextFile) => {
       if (!nextFile) return;
@@ -1453,7 +1457,7 @@ export default function App() {
         <div className="header__group">
           {mode === "ifc" ? (
             <>
-              <FileButton accept=".ifc" onFile={handleFile} variant="primary">
+              <FileButton accept=".ifc" onFile={handleFile} variant="primary" onIntent={warmImport}>
                 Open IFC
               </FileButton>
               {file && (
@@ -1560,6 +1564,7 @@ export default function App() {
             legend={legend}
             examples={examples}
             onExample={openExample}
+            onIntent={warmImport}
           />
         ) : (
           <div className="viewport">

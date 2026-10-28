@@ -139,7 +139,6 @@ export class ViewerManager {
     this.ifcLoader = ifcLoader;
 
     this.ready = true;
-    this._scheduleWarmImport();
   }
 
   dispose() {
@@ -684,10 +683,21 @@ export class ViewerManager {
   }
 
   /**
+   * Start loading an import worker because a file is about to be opened: the
+   * pointer or focus is on a file button or an example, or a file is dragged
+   * over the page. Warming at every page load made every visitor download its
+   * module, model or not (review m9).
+   */
+  warmImport() {
+    if (this.ready) this._scheduleWarmImport();
+  }
+
+  /**
    * Load an import worker while the page is idle, so its module (about 615
    * KB gzipped, its own fragments and web-ifc) is in memory before the next
    * file is opened: in a worker the first conversion otherwise paid that
-   * download, about 0.2-0.3 s on a desktop and more on a phone.
+   * download, about 0.2-0.3 s on a desktop and more on a phone. Asked for by
+   * warmImport, and after each conversion for the next file.
    */
   _scheduleWarmImport() {
     if (this._warmImport || this._warmPending || this.disposed || typeof Worker === "undefined") return;
