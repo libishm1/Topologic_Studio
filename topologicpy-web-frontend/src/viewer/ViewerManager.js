@@ -429,19 +429,27 @@ export class ViewerManager {
   async loadIfc(file, { onProgress, signal } = {}) {
     if (!this.ready) throw new Error("Viewer is still starting up.");
     // The page stays responsive while a model converts, so another file can
-    // be opened meanwhile; the older conversion is dropped ("cancelled").
+    // be opened meanwhile; the older load is dropped ("cancelled"). Its
+    // conversion is aborted, and every step after an await checks that it is
+    // still the latest load: a model it finishes loading after a newer load
+    // has begun is disposed, not added to the scene beside the new one.
     this._abortImport?.();
+    const token = (this._loadToken = (this._loadToken || 0) + 1);
+    const current = () => {
+      if (signal?.aborted || token !== this._loadToken || this.disposed) throw new Error("cancelled");
+    };
 
     const timer = new PhaseTimer("ifc.load");
     const report = (stage, detail) => onProgress?.({ stage, detail });
 
     report("reading", file.name);
     const { key, buffer } = await timer.run("hash", () => hashFile(file));
-    if (signal?.aborted) throw new Error("cancelled");
+    current();
 
     this.clearModel();
 
     let fragmentBytes = await timer.run("cacheLookup", () => readCached(key));
+    current();
     const cached = Boolean(fragmentBytes);
 
     if (!cached) {
@@ -451,6 +459,7 @@ export class ViewerManager {
           onProgress: (p) => report("converting", p),
           signal,
         });
+        current();
         if (converted) {
           // What IfcLoader.load sets and names a model it converted. The id
           // must differ from the cached path's: clearModel does not wait for
@@ -464,7 +473,7 @@ export class ViewerManager {
             modelId: file.name,
             raw: false,
           });
-          this._adoptModel(model);
+          this._adoptIfCurrent(model, current);
           return converted;
         }
         // No worker could convert it here: convert on this thread, as before.
@@ -474,7 +483,7 @@ export class ViewerManager {
           file.name,
           { processData: { progressCallback: (p) => report("converting", p) } },
         );
-        this._adoptModel(model);
+        this._adoptIfCurrent(model, current);
         // Serialise what we just built so the next load skips the parse.
         return model.getBuffer(false);
       });
@@ -496,33 +505,38 @@ export class ViewerManager {
           raw: false,
         }),
       );
-      this._adoptModel(model);
+      this._adoptIfCurrent(model, current);
     }
 
-    if (signal?.aborted) throw new Error("cancelled");
+    current();
+    // From here on the model is the one adopted above; a newer load's
+    // clearModel removes it if this one is overtaken.
+    const model = this.model;
 
     report("rendering", "Drawing the model");
     await timer.run("firstFrame", async () => {
       await this.fragments.core.update(true);
       this.fitToModel();
     });
+    current();
 
     // Categories come from the fragments model, not a second IFC parse.
     report("indexing", "Reading IFC categories");
-    this.categoryIds = await timer.run("categories", () =>
-      collectCategoryIds(this.model),
-    );
+    const categoryIds = await timer.run("categories", () => collectCategoryIds(model));
+    current();
+    this.categoryIds = categoryIds;
 
     // IfcSpace volumes are rooms, not built fabric: drawn, they wrap the
     // building in tinted boxes (the Duplex had one above its roof). Hidden
     // from view only; the graph still reads their floors.
-    if (this.categoryIds.spaces?.length && this.model.setVisible) {
+    if (categoryIds.spaces?.length && model.setVisible) {
       try {
-        await this.model.setVisible(this.categoryIds.spaces, false);
+        await model.setVisible(categoryIds.spaces, false);
         await this.fragments.core.update(true);
       } catch (error) {
         console.warn("[viewer] Could not hide IfcSpace volumes:", error);
       }
+      current();
     }
 
     const phases = timer.finish({
@@ -693,6 +707,23 @@ export class ViewerManager {
     };
     if (typeof requestIdleCallback === "function") requestIdleCallback(start, { timeout: 4000 });
     else setTimeout(start, 1500);
+  }
+
+  /** Adopt a model a load just produced, or dispose of it if that load has
+   *  been overtaken (`current` throws "cancelled"). */
+  _adoptIfCurrent(model, current) {
+    try {
+      current();
+    } catch (error) {
+      const id = model?.modelId;
+      if (id !== undefined) {
+        Promise.resolve()
+          .then(() => this.fragments?.core?.disposeModel?.(id))
+          .catch(() => {});
+      }
+      throw error;
+    }
+    this._adoptModel(model);
   }
 
   _adoptModel(model) {

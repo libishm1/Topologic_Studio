@@ -102,6 +102,8 @@ export default function App() {
   const forecastRef = useRef(null);
   const semanticsRef = useRef(null);
   const geometryRef = useRef(null);
+  // Counts file loads, so only the latest one updates the page.
+  const loadSeqRef = useRef(0);
   // Fire accumulators live in refs: they are written from SSE callbacks that
   // outlive any single render, and must not be re-created when the callback
   // identity changes mid-simulation.
@@ -221,6 +223,13 @@ export default function App() {
         return;
       }
 
+      // Another file may be opened while this one loads. Only the latest load
+      // may touch the page: an older one's progress, model info, semantics
+      // and geometry are dropped when they arrive (the viewer disposes of its
+      // model, ViewerManager.loadIfc).
+      const seq = ++loadSeqRef.current;
+      const latest = () => seq === loadSeqRef.current;
+
       studio.beginLoad(nextFile);
       geometryRef.current = null;
       setLastSample(null);
@@ -229,6 +238,7 @@ export default function App() {
       try {
         const result = await viewer.loadIfc(nextFile, {
           onProgress: ({ stage, detail }) => {
+            if (!latest()) return;
             const percent =
               typeof detail === "number"
                 ? Math.max(0, Math.min(100, detail * 100))
@@ -241,6 +251,7 @@ export default function App() {
             });
           },
         });
+        if (!latest()) return;
 
         studio.setModelInfo(result);
         viewer.setModelAppearance(settings.modelAppearance);
@@ -248,6 +259,7 @@ export default function App() {
           .arrayBuffer()
           .then((bytes) => semanticsJob(bytes))
           .then(async (semantics) => {
+            if (!latest()) return;
             studio.setSemantics(semantics);
             // Declared storeys, moved into the viewer frame by the model's
             // coordination shift, where the slab geometry collapses to one
@@ -256,6 +268,7 @@ export default function App() {
             // and a roof "storey" around its two floors.
             const shift = (await viewer.getCoordinationMatrix())?.[13] ?? 0;
             const geometry = await geometryPromiseRef.current;
+            if (!latest()) return;
             const fromGeometry = geometry ? floorLevels(geometry.floors, settings.upAxis) : [];
             const declared = [...new Set((semantics.storeys || []).map((s) => +(s.elevation + shift).toFixed(2)))].sort(
               (a, b) => a - b,
@@ -278,6 +291,7 @@ export default function App() {
         geometryPromiseRef.current = viewer
           .extractEgressGeometry()
           .then((geometry) => {
+            if (!latest()) return null;
             geometryRef.current = geometry;
             viewer.setOutlines([
               ...geometry.walls,
@@ -290,6 +304,7 @@ export default function App() {
             return geometry;
           })
           .catch((error) => {
+            if (!latest()) return null;
             console.warn("Geometry extraction failed; it will be retried at build.", error);
             geometryPromiseRef.current = null;
             return null;
@@ -304,11 +319,11 @@ export default function App() {
           { title: nextFile.name, variant: "success", ttl: 5000 },
         );
       } catch (error) {
-        if (error?.message !== "cancelled") {
+        if (latest() && !isCancelled(error)) {
           reportError(error, "Could not load the IFC file");
         }
       } finally {
-        studio.setLoadState({ busy: false, stage: null, detail: null });
+        if (latest()) studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
     [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast],
@@ -332,13 +347,17 @@ export default function App() {
 
   const openExample = useCallback(
     async (entry) => {
+      // A file opened while the example downloads wins over it.
+      const seq = ++loadSeqRef.current;
       try {
         studio.setLoadState({ busy: true, stage: "downloading", detail: entry.name });
         const res = await fetch(`${import.meta.env.BASE_URL}examples/${entry.file}`);
         if (!res.ok) throw new Error(`Could not download ${entry.name} (${res.status}).`);
         const blob = await res.blob();
+        if (seq !== loadSeqRef.current) return;
         await handleFile(new File([blob], entry.file, { type: "application/octet-stream" }));
       } catch (error) {
+        if (seq !== loadSeqRef.current) return;
         studio.setLoadState({ busy: false, stage: null, detail: null });
         reportError(error, "Could not open the example");
       }
