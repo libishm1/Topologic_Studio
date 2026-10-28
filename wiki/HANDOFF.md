@@ -2,7 +2,7 @@
 
 ## State
 
-- Live: https://libishm1.github.io/Topologic_Studio/ is `main` at b7e1208 (Pages deploy succeeded 2026-10-28). Work happens on `next/browser-core` in the `TopologicStudio-Next` worktree; `main` is fast-forwarded to it only after the gates below pass. The Render backend (`topologicstudio-backend`) is deployed by hand from its dashboard; it had no changes in this round.
+- Live: https://libishm1.github.io/Topologic_Studio/ is `main` (see `git log origin/main`; deployed 2026-10-28 after the gates below). Work happens on `next/browser-core` in the `TopologicStudio-Next` worktree; `main` is fast-forwarded to it only after the gates below pass. The Render backend (`topologicstudio-backend`) is deployed by hand from its dashboard; it had no changes in this round.
 - Gates before any deploy: `npm test` (121 tests), `npx eslint src`, a Pages build (`BASE_PATH=/Topologic_Studio/`), and `node tools/browser-test.mjs` desktop and `--mobile` against `vite preview` on the sub-path, all with 0 failed steps.
 - Live check after the deploy: every step passes except the TopologicPy Navigation cross-check, which times out at 240 s on Render's free tier (known; not a regression).
 
@@ -18,7 +18,7 @@
 
 ## Open
 
-1. IFC conversion in a worker (survey item 7): an agent's branch in worktree `TopologicStudio/.claude/worktrees/agent-a5564f61ecc07c56c` (branch `worktree-agent-a5564f61ecc07c56c`), in progress when this note was written. Merge, run the gates, measure the longest main-thread task before and after, then deploy. Afterwards consider running the semantic pass in that worker, so the page loads one web-ifc instead of two (the semantics worker is 391 KB gzipped).
+1. IFC conversion runs in a worker (survey item 7, merged 2026-10-28) with one worker kept warm while the page is idle. Follow-ups: run the semantic pass inside that worker, so the page loads one web-ifc instead of two (the semantics worker is 391 KB gzipped); and `clearModel` does not wait for `disposeModel`, so a reload that reuses a model id could race (seen once by the agent with ids it then changed; not seen since).
 2. IFC survey items 6 and 8: door widths as capacity in the forecast and deadline models; a room graph from IfcSpace and door space boundaries.
 3. Gaps not built: LG5 (publish the cross-model harness as a benchmark), LG7 (routing-ready surrogates with error bounds), LG8 (a two-zone fire model on the room graph). The heat in all three fire models is an index, not a measured temperature, so every dose ranks routes under the model only.
 4. Novelty of C1 is provisional until Chen et al. (2023, https://doi.org/10.1016/j.ress.2023.109571) and Tabirca et al. (2015, https://doi.org/10.1016/j.procs.2015.05.425) are read in full and the Semantic Scholar queries are rerun with an API key.

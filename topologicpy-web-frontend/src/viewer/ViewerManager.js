@@ -136,6 +136,7 @@ export class ViewerManager {
     this.ifcLoader = ifcLoader;
 
     this.ready = true;
+    this._scheduleWarmImport();
   }
 
   dispose() {
@@ -143,6 +144,8 @@ export class ViewerManager {
     this.disposed = true;
     this.ready = false;
     this._abortImport?.();
+    this._warmImport?.worker.terminate();
+    this._warmImport = null;
 
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
@@ -560,15 +563,24 @@ export class ViewerManager {
     if (typeof Worker === "undefined") return Promise.resolve({ ifc: buffer });
     if (signal?.aborted) return Promise.reject(new Error("cancelled"));
 
+    // Take the worker warmed while the page was idle, if it loaded; its
+    // "ready" may already have come, or still be on its way to the handler
+    // set below.
     let worker;
-    try {
-      worker = new Worker(new URL("../workers/ifc-import.worker.js", import.meta.url), {
-        type: "module",
-        name: "ifc-import",
-      });
-    } catch (error) {
-      console.warn("[viewer] IFC import worker unavailable; converting on the main thread.", error);
-      return Promise.resolve({ ifc: buffer });
+    let ready = false;
+    const warm = this._warmImport;
+    this._warmImport = null;
+    if (warm && !warm.failed) {
+      worker = warm.worker;
+      ready = warm.ready;
+    } else {
+      warm?.worker.terminate();
+      try {
+        worker = this._newImportWorker();
+      } catch (error) {
+        console.warn("[viewer] IFC import worker unavailable; converting on the main thread.", error);
+        return Promise.resolve({ ifc: buffer });
+      }
     }
 
     // A relative WASM path means relative to this page; the worker's own URL
@@ -589,6 +601,7 @@ export class ViewerManager {
         signal?.removeEventListener("abort", abort);
         if (this._abortImport === abort) this._abortImport = null;
         settle(value);
+        this._scheduleWarmImport();
       };
       const abort = () => finish(reject, new Error("cancelled"));
       const unavailable = (reason, ifc) => {
@@ -637,7 +650,49 @@ export class ViewerManager {
 
       signal?.addEventListener("abort", abort, { once: true });
       this._abortImport = abort;
+      if (ready) {
+        started = true;
+        worker.postMessage({ type: "convert", bytes: buffer, name, wasm, webIfc }, [buffer]);
+      }
     });
+  }
+
+  _newImportWorker() {
+    return new Worker(new URL("../workers/ifc-import.worker.js", import.meta.url), {
+      type: "module",
+      name: "ifc-import",
+    });
+  }
+
+  /**
+   * Load an import worker while the page is idle, so its module (about 615
+   * KB gzipped, its own fragments and web-ifc) is in memory before the next
+   * file is opened: in a worker the first conversion otherwise paid that
+   * download, about 0.2-0.3 s on a desktop and more on a phone.
+   */
+  _scheduleWarmImport() {
+    if (this._warmImport || this._warmPending || this.disposed || typeof Worker === "undefined") return;
+    this._warmPending = true;
+    const start = () => {
+      this._warmPending = false;
+      if (this._warmImport || this.disposed) return;
+      try {
+        const worker = this._newImportWorker();
+        const warm = { worker, ready: false, failed: false };
+        worker.onmessage = ({ data }) => {
+          if (data?.type === "ready") warm.ready = true;
+        };
+        worker.onerror = (event) => {
+          event.preventDefault?.();
+          warm.failed = true;
+        };
+        this._warmImport = warm;
+      } catch {
+        // No module workers here: conversions run on the main thread.
+      }
+    };
+    if (typeof requestIdleCallback === "function") requestIdleCallback(start, { timeout: 4000 });
+    else setTimeout(start, 1500);
   }
 
   _adoptModel(model) {
