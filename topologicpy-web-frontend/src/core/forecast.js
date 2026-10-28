@@ -24,17 +24,23 @@
  *
  * 1. earliestArrival: time-dependent Dijkstra (Dreyfus 1969). Each link's
  *    arrival function A(t) = t + l / speed, or closed if that is not before
- *    c(head), is FIFO and never earlier than t, so the labels are exact
- *    earliest arrivals (TimeDependent.td_dijkstra_correct).
+ *    c(head), is FIFO and never earlier than t (Forecast.arr_fifo, arr_ge),
+ *    so the first exit settled carries the earliest safe arrival over all
+ *    exits, and none settled means no safe route (Forecast.earliestArrival_
+ *    exact, _none, built on TimeDependent.td_dijkstra_correct).
  * 2. doseFront: fractional effective dose of convective heat (ISO 13571,
  *    Purser): rate 1 / t_I with t_I = 5e7 T^-3.4 min, T in degrees C,
  *    accumulated over the walk; a link takes the hotter of its two ends. The
  *    search keeps, per node, every label (arrival, dose) that no other label
  *    beats on both; because heat never falls, a label that arrives no later
- *    with no more dose stays at least as good along every continuation, and
- *    waiting never helps (MinDose.no_holdover), so the labels that reach an
- *    exit are the exact time-dose trade-off: its first point is the earliest
- *    safe arrival, its last the least-dose route.
+ *    with no more dose stays at least as good along every continuation
+ *    (Forecast.dominance_preserved), and waiting never helps (Forecast.
+ *    waiting_never_helps; on a whole-step clock MinDose.no_holdover, via
+ *    Forecast.dp_no_holdover). So the labels that reach an exit are the exact
+ *    time-dose trade-off: its first point is the earliest safe arrival, its
+ *    last the least-dose route, and no point is beaten on both counts
+ *    (Forecast.front_complete, front_sound, front_head_earliest,
+ *    front_last_leastDose, front_minimal with the tie filter below).
  *
  * The heat is the model's index, not a measured gas temperature (Methods), so
  * the dose ranks routes under the model; it is not a measured FED.
@@ -109,12 +115,14 @@ export function buildForecast(graph, { model = "temperature", seed, steps = 60, 
  */
 export function linkDose(forecast, v, w, t0, t1) {
   const { rate, n, K, frameSeconds: f } = forecast;
-  const k0 = Math.floor(t0 / f);
-  const k1 = Math.min(K - 1, Math.floor(t1 / f));
+  // Before time 0 the fire is in its first state, and past the last frame in
+  // its last; a negative departure used to read a frame that does not exist.
+  const k0 = Math.min(K - 1, Math.max(0, Math.floor(t0 / f)));
+  const k1 = Math.max(k0, Math.min(K - 1, Math.floor(t1 / f)));
   let dose = 0;
   for (let k = k0; k <= k1; k += 1) {
-    const a = Math.max(t0, k * f);
-    const b = Math.min(t1, (k + 1) * f);
+    const a = k === k0 ? t0 : k * f;
+    const b = k === k1 ? t1 : (k + 1) * f;
     if (b > a) dose += (b - a) * Math.max(rate[k * n + v], rate[k * n + w]);
   }
   return dose;
@@ -248,9 +256,18 @@ export function doseFront(graph, start, { exits, forecast, depart = 0, speed = 1
     }
   }
 
-  // Labels tied in time can settle in either dose order; keep the strict front.
+  // The heap orders labels by time only, so two exit labels tied in time can
+  // settle in either dose order and both pass the tests above. Each accepted
+  // one has less dose than the one before, and a front point can be beaten
+  // only by a later point tied with it in time (Forecast.front_minimal), so of
+  // a tie only the last is kept. Without this the "fastest" route could be
+  // beaten on dose at the same arrival (Forecast.tie_counterexample).
   const kept = [];
-  for (const L of front) if (!kept.length || dose[L] < dose[kept[kept.length - 1]]) kept.push(L);
+  for (const L of front) {
+    const last = kept[kept.length - 1];
+    if (last !== undefined && Math.abs(time[L] - time[last]) <= 1e-9 * Math.max(1, Math.abs(time[L]))) kept.pop();
+    kept.push(L);
+  }
   return {
     front: kept.map((L) => {
       const chain = [];
