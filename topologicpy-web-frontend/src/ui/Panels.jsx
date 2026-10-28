@@ -1216,7 +1216,7 @@ export function SimulatePanel({
           step={0.05}
           disabled={!settings.rlUseFire}
           onChange={(rlFireSpeed) => setSettings({ rlFireSpeed: rlFireSpeed ?? 1 })}
-          hint="1 = the front moves exactly as fast as the evacuee. On a real plan that often leaves no escape; the result says when."
+          hint="1 = the fire advances one link per move, as the evacuee does. On a real plan that often leaves no escape; the result says when."
         />
         <Button block busy={rl.busy} disabled={!ready || !points.start || !points.exit} onClick={onTrainRl}>
           Train policy
@@ -1246,11 +1246,18 @@ export function SimulatePanel({
             {settings.rlUseFire && rl.result?.fire_start_id != null && (
               <Stat
                 label="Escape possible"
-                value={rl.result.escape_steps == null ? "no" : `yes, ${rl.result.escape_steps} moves`}
+                value={rl.result.escape_steps == null ? "no, within the step limit" : `yes, ${rl.result.escape_steps} moves`}
                 warn={rl.result.escape_steps == null}
               />
             )}
           </div>
+        )}
+        {rl.path && (
+          <p className="field__hint">
+            Late-training success: share of the last fifth of training episodes, with exploration, that reached the
+            exit. Return vs best within the step limit: the learned policy&apos;s discounted return, and the most any
+            policy can collect within the step limit (backward induction).
+          </p>
         )}
       </Section>
     </>
