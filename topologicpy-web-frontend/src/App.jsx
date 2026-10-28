@@ -41,6 +41,22 @@ import logo from "./assets/topologicStudio-white-logo400x400.png";
 /** The points a route is drawn with: straightened when it has been. */
 const drawn = (route) => route?.straight_points || route?.points || null;
 
+/** Lowest and highest point of the egress geometry along the up axis. */
+function heightRange(geometry, upAxis) {
+  const up = upAxis === "z" ? 2 : upAxis === "x" ? 0 : 1;
+  let low = Infinity, high = -Infinity;
+  for (const group of [geometry.floors, geometry.walls, geometry.stairs]) {
+    for (const mesh of group || []) {
+      const p = mesh.positions;
+      for (let i = up; p && i < p.length; i += 3) {
+        if (p[i] < low) low = p[i];
+        if (p[i] > high) high = p[i];
+      }
+    }
+  }
+  return [low, high];
+}
+
 // Three plus OrbitControls only matter in this mode, so the chunk is loaded
 // on demand rather than shipped to everyone who opens the IFC viewer.
 const TopologyViewer = lazy(() => import("./viewer/TopologyViewer.jsx"));
@@ -259,7 +275,24 @@ export default function App() {
         nextFile
           .arrayBuffer()
           .then((bytes) => semanticsJob(bytes))
-          .then((semantics) => studio.setSemantics(semantics))
+          .then(async (semantics) => {
+            studio.setSemantics(semantics);
+            // Declared storeys, moved into the viewer frame by the model's
+            // coordination shift, where the slab geometry collapses to one
+            // level (dental clinic, Office A, example.ifc: survey strategy 5).
+            // Elsewhere the geometry stays: the Duplex declares a foundation
+            // and a roof "storey" around its two floors.
+            const shift = (await viewer.getCoordinationMatrix())?.[13] ?? 0;
+            const geometry = await geometryPromiseRef.current;
+            const fromGeometry = geometry ? floorLevels(geometry.floors, settings.upAxis) : [];
+            const declared = [...new Set((semantics.storeys || []).map((s) => +(s.elevation + shift).toFixed(2)))].sort(
+              (a, b) => a - b,
+            );
+            const [low, high] = geometry ? heightRange(geometry, settings.upAxis) : [-Infinity, Infinity];
+            if (fromGeometry.length <= 1 && declared.length >= 2 && declared.every((h) => h >= low - 1 && h <= high + 1)) {
+              setLevels(declared);
+            }
+          })
           .catch((error) => console.warn("Could not read the model's exit flags; exits fall back to geometry.", error));
         setTab("graph");
 

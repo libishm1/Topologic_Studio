@@ -82,7 +82,54 @@ export function ifcSemantics(api, modelID, W) {
     };
   });
   const roofSlabs = ids(W.IFCSLAB).filter((s) => val(line(s).PredefinedType) === "ROOF");
-  return { schema: api.GetModelSchema(modelID), doors, roofSlabs };
+  return { schema: api.GetModelSchema(modelID), doors, roofSlabs, storeys: storeys(api, modelID, W, ids, line) };
+}
+
+/** Metres per length unit of the file (IfcUnitAssignment): SI prefixes and
+ *  conversion-based units such as the foot. */
+function lengthScale(api, modelID, W, ids, line) {
+  const prefixes = { EXA: 1e18, PETA: 1e15, TERA: 1e12, GIGA: 1e9, MEGA: 1e6, KILO: 1e3, HECTO: 1e2, DECA: 10, DECI: 1e-1, CENTI: 1e-2, MILLI: 1e-3, MICRO: 1e-6, NANO: 1e-9 };
+  for (const a of ids(W.IFCUNITASSIGNMENT)) {
+    for (const ref of line(a).Units || []) {
+      const unit = line(val(ref));
+      if (val(unit?.UnitType) !== "LENGTHUNIT") continue;
+      const prefix = val(unit.Prefix);
+      if (prefix !== undefined && prefix !== null) return prefixes[prefix] ?? 1;
+      const factor = unit.ConversionFactor ? line(val(unit.ConversionFactor)) : null;
+      const value = val(factor?.ValueComponent);
+      if (typeof value === "number" && value > 0) {
+        const base = factor.UnitComponent ? line(val(factor.UnitComponent)) : null;
+        return value * (base && val(base.Prefix) ? prefixes[val(base.Prefix)] ?? 1 : 1);
+      }
+      return 1;
+    }
+  }
+  return 1;
+}
+
+/**
+ * Storeys with their absolute height in metres: the z of the storey's local
+ * placement chain (no tilt assumed), in the file's IFC frame (strategy 5 of
+ * the survey; the viewer adds its coordination matrix's vertical shift). Floor
+ * heights read from slab geometry collapse to one level on the dental clinic,
+ * Office A and example.ifc, which declare 4, 3 and 2 storeys.
+ */
+function storeys(api, modelID, W, ids, line) {
+  const scale = lengthScale(api, modelID, W, ids, line);
+  return ids(W.IFCBUILDINGSTOREY).map((id) => {
+    const storey = line(id);
+    let z = 0;
+    let placement = val(storey.ObjectPlacement);
+    for (let guard = 0; placement && guard < 32; guard += 1) {
+      const local = line(placement);
+      const axis = local?.RelativePlacement ? line(val(local.RelativePlacement)) : null;
+      const location = axis?.Location ? line(val(axis.Location)) : null;
+      const c = location?.Coordinates || [];
+      z += Number(val(c[2]) ?? 0) || 0;
+      placement = val(local?.PlacementRelTo);
+    }
+    return { id, name: val(storey.Name) ?? null, elevation: z * scale };
+  });
 }
 
 /**

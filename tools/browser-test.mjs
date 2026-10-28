@@ -675,6 +675,14 @@ if (await trainBtn.isEnabled()) {
 // (src/core/forecast.js, src/core/deadline.js) run in their own worker.
 
 console.log("\n[5c] Plan with the forecast");
+// The exit doors come from the IFC's own flags, read by the semantics worker
+// (src/core/ifcSemantics.js); the Duplex flags four doors IsExternal.
+const exitChoice = await page
+  .getByText(/^All \d+ exit doors?$/)
+  .first()
+  .textContent({ timeout: 15000 })
+  .catch(() => null);
+record(Boolean(exitChoice), "exit doors read from the model's own flags", exitChoice || "none offered");
 const planBtn = page.getByRole("button", { name: /^Plan with the forecast$/ });
 if (await planBtn.isEnabled().catch(() => false)) {
   const tPlan = Date.now();
