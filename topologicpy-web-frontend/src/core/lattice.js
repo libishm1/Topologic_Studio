@@ -842,6 +842,7 @@ export function buildLatticeGraph({
       levels: 0,
       linked: 0,
       modelled: 0,
+      unjoinedTreads: 0,
       reason: null,
     };
     coreReport.push(report);
@@ -915,17 +916,46 @@ export function buildLatticeGraph({
       if (!report.linked) report.reason = "no landing beside it on two levels";
       continue;
     }
+    // Whether two levels are already joined here: floor nodes of both in one
+    // part of the floor and stair nodes within a metre of the ring, by the
+    // links made so far. Treads standing in the core are not enough; they
+    // must reach both floors.
+    const local = new Map();
+    for (let n = 0; n < total; n += 1) {
+      if (kinds[n] !== KIND_FLOOR && kinds[n] !== KIND_STAIR) continue;
+      const [u, v] = lattice2uv(n);
+      if (within(u, v, ring + 1.0)) local.set(n, local.size);
+    }
+    const root = Int32Array.from({ length: local.size }, (_, i) => i);
+    const find = (x) => {
+      while (root[x] !== x) x = root[x] = root[root[x]];
+      return x;
+    };
+    for (let e = 0; e < edges.length; e += 2) {
+      const a = local.get(edges[e]), b = local.get(edges[e + 1]);
+      if (a !== undefined && b !== undefined) root[find(a)] = find(b);
+    }
+    const joined = (ha, hb) => {
+      const parts = new Set();
+      for (const [n, i] of local) if (kinds[n] === KIND_FLOOR && Math.abs(heights[n] - ha) <= maxRise) parts.add(find(i));
+      for (const [n, i] of local) if (kinds[n] === KIND_FLOOR && Math.abs(heights[n] - hb) <= maxRise && parts.has(find(i))) return true;
+      return false;
+    };
     for (let k = 0; k + 1 < levels.length; k += 1) {
       const ha = levels[k], hb = levels[k + 1];
       if (hb - ha < 1.0 || hb - ha > 8.0) continue;
-      let modelled = false;
-      for (let n = stairBase; n < stairBase + patches.length && !modelled; n += 1) {
-        const [u, v] = lattice2uv(n);
-        modelled = within(u, v, 0.5) && heights[n] > ha + 0.3 && heights[n] < hb - 0.3;
-      }
-      if (modelled) {
+      if (joined(ha, hb)) {
         report.modelled += 1;
         continue;
+      }
+      // Treads that stand here but do not join the two levels (Smiley West,
+      // HITOS) leave the floors apart, so the assumed line is added anyway.
+      for (let n = stairBase; n < stairBase + patches.length; n += 1) {
+        const [u, v] = lattice2uv(n);
+        if (within(u, v, 0.5) && heights[n] > ha + 0.3 && heights[n] < hb - 0.3) {
+          report.unjoinedTreads += 1;
+          break;
+        }
       }
       // The line in whichever of its four reflections starts and ends nearest
       // the floors: in a double-height stair hall the upper floor is a

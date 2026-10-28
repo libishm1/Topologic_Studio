@@ -1113,7 +1113,7 @@ export default function App() {
 
   // -------------------------------------------------------------- exit doors
 
-  const exits = useMemo(() => (graph?.doors ? exitDoors(graph.doors, studio.semantics) : null), [graph, studio.semantics]);
+  const exits = useMemo(() => (graph?.doors ? exitDoors(graph.doors, studio.semantics, graph) : null), [graph, studio.semantics]);
 
   const nearestExit = useCallback(() => {
     if (!graph || !points.start || !exits?.nodes.length) return;

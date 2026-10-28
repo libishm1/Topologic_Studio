@@ -1,7 +1,9 @@
 /**
  * Exit doors for the cross-model checks, in order of trust:
  *   1. doors flagged FireExit or IsExternal in Pset_DoorCommon (the door's own
- *      value over its type's), or with an EXTERNAL space boundary;
+ *      value over its type's), or with an EXTERNAL space boundary; plus, in
+ *      large parts of the graph no flagged exit reaches, the doors of rule 2
+ *      (exitsPerPart, as the site does);
  *   2. failing that, doors with walkable floor on one side only;
  *   3. failing that, doors with a room (IfcSpace) on exactly one side. Weaker
  *      than rule 2: in a block of flats it picks flat entrances that open onto
@@ -11,6 +13,7 @@
  * roomOneSideDoors) so the benchmark (tools/benchmark.mjs) can score rules 2
  * and 3 against rule 1 on the models that have flags.
  */
+import { exitsPerPart } from "../topologicpy-web-frontend/src/core/ifcSemantics.js";
 
 /**
  * Rule 1: the IFC's own exit signal. The site's reading first (occurrence over
@@ -83,9 +86,15 @@ export function roomOneSideDoors(geo, built) {
 export function findExits(geo, built) {
   const { ids: flagged, source: flagSource } = flaggedDoors(geo);
   let exits = built.doorReport.filter((d) => d.node >= 0 && flagged.has(d.itemId)).map((d) => d.node);
-  if (exits.length) return { exits: [...new Set(exits)], source: /^(FireExit|IsExternal)$/.test(flagSource) ? `Pset_DoorCommon.${flagSource}` : flagSource, flagged: flagged.size };
+  const oneSided = oneSidedDoors(built).map((d) => d.node);
+  if (exits.length) {
+    // As the site does: parts the flagged exits do not reach get the fallback.
+    const added = exitsPerPart({ nodes: built.points, edges: built.edges, blocked: built.blocked }, exits, oneSided);
+    const source = /^(FireExit|IsExternal)$/.test(flagSource) ? `Pset_DoorCommon.${flagSource}` : flagSource;
+    return { exits: [...new Set([...exits, ...added])], source: added.length ? `${source} + one-sided doors in ${new Set(added).size} unflagged parts` : source, flagged: flagged.size };
+  }
 
-  exits = oneSidedDoors(built).map((d) => d.node);
+  exits = oneSided;
   if (exits.length) return { exits: [...new Set(exits)], source: "one-sided door (fallback)", flagged: flagged.size };
 
   exits = roomOneSideDoors(geo, built).map((d) => d.node);

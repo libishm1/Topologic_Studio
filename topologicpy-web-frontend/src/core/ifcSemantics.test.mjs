@@ -3,7 +3,28 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ifcSemantics } from "./ifcSemantics.js";
+import { exitDoors, exitsPerPart, ifcSemantics } from "./ifcSemantics.js";
+
+test("parts no flagged exit reaches get the one-sided doors in them, small pockets do not", () => {
+  // Three chains: A (nodes 0..59) and B (60..119) of 60 nodes, C (120..124) of 5.
+  const n = 125;
+  const edges = [];
+  for (const [lo, hi] of [[0, 59], [60, 119], [120, 124]]) for (let i = lo; i < hi; i += 1) edges.push(i, i + 1);
+  const graph = { nodes: new Float32Array(n * 3), edges: Uint32Array.from(edges), blocked: new Uint8Array(edges.length / 2) };
+  assert.deepEqual(exitsPerPart(graph, [10], [20, 70, 122]), [70]);
+  assert.deepEqual(exitsPerPart(null, [10], [20, 70, 122]), [], "without the graph nothing is added");
+  // Through exitDoors: door 1 is flagged (in A); doors 2 and 3 are one-sided, in A and B.
+  const doors = [
+    { itemId: 1, node: 10, sides: [2, 2] },
+    { itemId: 2, node: 20, sides: [0, 3] },
+    { itemId: 3, node: 70, sides: [3, 0] },
+  ];
+  const semantics = { doors: [{ id: 1, exit: "Pset_DoorCommon.FireExit" }] };
+  assert.deepEqual(exitDoors(doors, semantics).nodes, [10]);
+  const withGraph = exitDoors(doors, semantics, graph);
+  assert.deepEqual(withGraph.nodes, [10, 70]);
+  assert.match(withGraph.source, /parts with no flagged exit/);
+});
 
 const W = { IFCRELDEFINESBYPROPERTIES: 1, IFCRELDEFINESBYTYPE: 2, IFCRELSPACEBOUNDARY: 3, IFCDOOR: 4, IFCSLAB: 5, IFCUNITASSIGNMENT: 6, IFCBUILDINGSTOREY: 7 };
 const ref = (id) => ({ type: 5, value: id });
