@@ -79,6 +79,30 @@ export const DEFAULT_SETTINGS = {
   modelAppearance: "solid",
 };
 
+/**
+ * The settings a forecast plan is made with. A plan keeps the values it used,
+ * so its card describes that plan rather than the fields as they read now,
+ * and says so when they differ (review M2).
+ */
+export const PLAN_SETTINGS = [
+  "fireModel",
+  "fireMaxSteps",
+  "forecastSecondsPerStep",
+  "untenableAbove",
+  "walkSpeed",
+  "departAfter",
+  "doseLimit",
+  "useWalls",
+  "forecastExits",
+  "zoneGrowth",
+  "zonePeakKw",
+  "zoneUntenableC",
+  "zoneSmoke",
+  "zoneHorizon",
+];
+
+export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));
+
 /** Whether the loaded model has IfcSpace rooms, which the two-zone fire model needs. */
 export function hasRooms(modelInfo) {
   return (modelInfo?.stats?.spaces ?? 0) > 0;

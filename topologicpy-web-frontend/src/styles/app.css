@@ -357,6 +357,13 @@
   line-height: 1.5;
 }
 
+/* A value that was not taken (NumberField). */
+.field__error {
+  font-size: 12.5px;
+  color: var(--danger);
+  line-height: 1.5;
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -725,6 +732,34 @@ select:focus {
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.6;
+}
+
+/* The page shown when the app itself fails (ui/ErrorBoundary.jsx). */
+.crash {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-0);
+}
+
+.crash .mono {
+  overflow-wrap: anywhere;
+}
+
+/* While the Methods page loads (App.jsx). */
+.methods-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.methods-loading .card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 13px;
 }
 
 .dropzone {

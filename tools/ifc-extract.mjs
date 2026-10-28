@@ -46,6 +46,8 @@ async function doorFlags(api, model) {
       for (const prop of set?.HasProperties || []) {
         const name = prop?.Name?.value;
         const value = prop?.NominalValue?.value;
+        // An unset value ($) says nothing: it must not hide the type's.
+        if (value === undefined || value === null) continue;
         // Pset_DoorCommon's IsExternal and FireExit, and Revit's own IsFireExit.
         if (name === "IsExternal" && /DoorCommon/i.test(set.Name?.value || "")) own.IsExternal = (own.IsExternal ?? false) || yes(value);
         if (name === "FireExit" || name === "IsFireExit") own.FireExit = (own.FireExit ?? false) || yes(value);

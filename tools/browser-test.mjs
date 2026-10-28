@@ -659,9 +659,9 @@ if (await trainBtn.isEnabled()) {
       r["Escape possible"],
     );
     record(
-      r["Return vs exact best"] !== undefined,
+      r["Return vs best within the step limit"] !== undefined,
       "RL reports its return against the exact optimum (backward induction)",
-      r["Return vs exact best"],
+      r["Return vs best within the step limit"],
     );
   }
   await shot(page, "rl-trained");
@@ -689,7 +689,10 @@ if (await planBtn.isEnabled().catch(() => false)) {
   await planBtn.click();
   const planned = await page
     .waitForFunction(
-      () => /safe route: out in|no safe route within the forecast/i.test(document.querySelector('[aria-label="Plan with the forecast"]')?.innerText || ""),
+      () =>
+        /safe route: out in|above the dose limit|no safe route within the forecast/i.test(
+          document.querySelector('[aria-label="Plan with the forecast"]')?.innerText || "",
+        ),
       null,
       { timeout: 120000 },
     )

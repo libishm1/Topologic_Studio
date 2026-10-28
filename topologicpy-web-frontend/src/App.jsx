@@ -14,10 +14,11 @@
  * The expensive middle is off the main thread, and only the sampled points
  * cross the network - not the triangles.
  */
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
+import { isCancelled, workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
@@ -28,8 +29,8 @@ import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
 import { zoneNodeFrames } from "./core/zone.js";
-import { trainRl as trainRlPolicy } from "./core/rl.js";
-import { fireModelIn, useStudio } from "./state/useStudio.js";
+import { RL_MAX_STEPS } from "./core/rl.js";
+import { fireModelIn, planSettings, useStudio } from "./state/useStudio.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -37,6 +38,7 @@ import { TopologyPanel } from "./ui/TopologyPanel.jsx";
 import { Viewport } from "./ui/Viewport.jsx";
 
 import { Badge, Button, FileButton, Icon, Segmented } from "./ui/primitives.jsx";
+import { ErrorBoundary } from "./ui/ErrorBoundary.jsx";
 import logo from "./assets/topologicStudio-white-logo400x400.png";
 
 /** The points a route is drawn with: straightened when it has been. */
@@ -65,8 +67,9 @@ function heightRange(geometry, upAxis) {
 // on demand rather than shipped to everyone who opens the IFC viewer.
 const TopologyViewer = lazy(() => import("./viewer/TopologyViewer.jsx"));
 // The Methods page brings KaTeX (about 270 KB and its fonts); it loads only
-// when someone opens the page.
-const MethodsDialog = lazy(() => import("./ui/MethodsDialog.jsx").then((m) => ({ default: m.MethodsDialog })));
+// when someone opens the page. A failed load is kept by React.lazy, so a
+// retry needs a new one.
+const loadMethods = () => lazy(() => import("./ui/MethodsDialog.jsx").then((m) => ({ default: m.MethodsDialog })));
 
 // The inspector is the workflow, one step per panel (src/ui/Panels.jsx).
 // Methods (what was proved, the limits, the server) opens from the header.
@@ -88,6 +91,44 @@ const MODES = [
   },
 ];
 
+const NO_PLAN = { busy: false, result: null };
+
+/**
+ * The fields check what is typed, but settings saved before they did can be
+ * out of range: a walking speed of 0 planned "too late" for the wrong
+ * reason, and -1 failed with "Invalid array length" (review m1).
+ */
+function planSettingsProblem(s) {
+  if (!(s.walkSpeed > 0)) return "Walking speed must be above 0 m/s.";
+  if (!(s.forecastSecondsPerStep > 0)) return "Seconds per fire step must be above 0.";
+  if (!(s.fireMaxSteps >= 1)) return "The fire needs at least one step (Steps, under Rerouting and timing).";
+  if (!(s.doseLimit > 0)) return "The dose limit must be above 0.";
+  if (!(s.departAfter >= 0)) return "Leave after cannot be negative.";
+  return null;
+}
+
+/**
+ * Which layer colours the graph: "deadlines", "fire", or null for the graph's
+ * own colours. A small store rather than state, since the deadline effect
+ * sets it and the legend reads it.
+ */
+function createColourOwner() {
+  let owner = null;
+  const listeners = new Set();
+  return {
+    get: () => owner,
+    set: (next) => {
+      if (next === owner) return;
+      owner = next;
+      listeners.forEach((listener) => listener());
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
 const DEFAULT_TOPOLOGY_OPTIONS = {
   showFaces: true,
   showVerts: false,
@@ -101,10 +142,13 @@ const DEFAULT_TOPOLOGY_OPTIONS = {
 export default function App() {
   const studio = useStudio();
   const viewerRef = useRef(null);
-  const workerRef = useRef(null);
-  const forecastWorkerRef = useRef(null);
-  const semanticsWorkerRef = useRef(null);
+  const samplerRef = useRef(null);
+  const forecastRef = useRef(null);
+  const semanticsRef = useRef(null);
+  const rlRef = useRef(null);
   const geometryRef = useRef(null);
+  // Counts file loads, so only the latest one updates the page.
+  const loadSeqRef = useRef(0);
   // Fire accumulators live in refs: they are written from SSE callbacks that
   // outlive any single render, and must not be re-created when the callback
   // identity changes mid-simulation.
@@ -113,11 +157,26 @@ export default function App() {
   const [tab, setTab] = useState("model");
   const [panelOpen, setPanelOpen] = useState(true);
   const [methodsOpen, setMethodsOpen] = useState(false);
+  const [MethodsDialog, setMethodsDialog] = useState(loadMethods);
   // Storey heights for the section cut, and the chosen one (null = whole).
   const [levels, setLevels] = useState([]);
   const [section, setSection] = useState(null);
   const geometryPromiseRef = useRef(null);
   const closeMethods = useCallback(() => setMethodsOpen(false), []);
+  // Its chunk failed to load (offline, or a deploy replaced it): say so, close
+  // it, and load afresh at the next opening. Unhandled, this unmounted the app.
+  const methodsFailed = useCallback(
+    (error) => {
+      console.warn("The Methods page could not load.", error);
+      setMethodsOpen(false);
+      setMethodsDialog(() => loadMethods());
+      studio.toast("The Methods page could not load. Check the connection and open it again.", {
+        title: "Methods",
+        variant: "warning",
+      });
+    },
+    [studio],
+  );
   const [lastSample, setLastSample] = useState(null);
 
   // Legacy TopologicPy JSON-contract workflow.
@@ -152,90 +211,113 @@ export default function App() {
   // The two-zone model only where the model has IfcSpace rooms (useStudio.js).
   const fireModel = fireModelIn(settings, modelInfo);
 
-  // ------------------------------------------------------------- the worker
+  // ------------------------------------------------------------ the workers
 
-  const getWorker = useCallback(() => {
-    if (!workerRef.current) {
-      workerRef.current = new Worker(
-        new URL("./workers/sampler.worker.js", import.meta.url),
-        { type: "module" },
-      );
-    }
-    return workerRef.current;
-  }, []);
-
-  useEffect(() => () => workerRef.current?.terminate(), []);
-  useEffect(() => () => forecastWorkerRef.current?.terminate(), []);
-  useEffect(() => () => semanticsWorkerRef.current?.terminate(), []);
+  // Each job is a promise that also settles when its worker fails to load or
+  // dies (lib/workerJob.js); a failed worker is replaced at the next job.
+  useEffect(
+    () => () => {
+      samplerRef.current?.cancel();
+      forecastRef.current?.cancel();
+      semanticsRef.current?.cancel();
+      rlRef.current?.cancel();
+    },
+    [],
+  );
 
   // Exit flags and roof slabs from the IFC itself, read by a second, small
   // web-ifc in a worker while the geometry converts (core/ifcSemantics.js).
-  const semanticsJob = useCallback(
-    (bytes) =>
-      new Promise((resolve, reject) => {
-        if (!semanticsWorkerRef.current) {
-          semanticsWorkerRef.current = new Worker(new URL("./workers/semantics.worker.js", import.meta.url), {
-            type: "module",
-          });
-        }
-        const worker = semanticsWorkerRef.current;
-        const id = Math.random().toString(36).slice(2);
-        const onMessage = (event) => {
-          if (event.data?.id !== id) return;
-          worker.removeEventListener("message", onMessage);
-          if (event.data.ok) resolve(event.data.result);
-          else reject(new Error(event.data.error || "Could not read the model's exit flags."));
-        };
-        worker.addEventListener("message", onMessage);
-        const wasmPath =
-          import.meta.env.VITE_WEBIFC_WASM_PATH || new URL(`${import.meta.env.BASE_URL}wasm/`, window.location.href).href;
-        worker.postMessage({ id, bytes, wasmPath }, [bytes]);
-      }),
-    [],
-  );
+  // One worker per file, ended when it answers or when another file is
+  // opened: web-ifc's heap never shrinks, so a kept worker held it all session.
+  const semanticsJob = useCallback((bytes) => {
+    semanticsRef.current?.cancel();
+    const job = workerClient(
+      () => new Worker(new URL("./workers/semantics.worker.js", import.meta.url), { type: "module" }),
+      { failure: "Could not read the model's exit flags." },
+    );
+    semanticsRef.current = job;
+    // Against the page, as the viewer resolves it: a relative path would be
+    // read against the worker's own URL, under assets/.
+    const wasmPath = new URL(
+      import.meta.env.VITE_WEBIFC_WASM_PATH || `${import.meta.env.BASE_URL}wasm/`,
+      window.location.href,
+    ).href;
+    return job.run({ bytes, wasmPath }, [bytes]).finally(() => {
+      job.cancel();
+      if (semanticsRef.current === job) semanticsRef.current = null;
+    });
+  }, []);
 
   // Planning with the forecast has its own worker: its deadline map takes a
   // few seconds on a large graph and must not hold up a graph rebuild.
-  const forecastJob = useCallback(
-    (payload, transfers = []) =>
-      new Promise((resolve, reject) => {
-        if (!forecastWorkerRef.current) {
-          forecastWorkerRef.current = new Worker(new URL("./workers/forecast.worker.js", import.meta.url), {
-            type: "module",
-          });
-        }
-        const worker = forecastWorkerRef.current;
-        const id = Math.random().toString(36).slice(2);
-        const onMessage = (event) => {
-          if (event.data?.id !== id) return;
-          worker.removeEventListener("message", onMessage);
-          if (event.data.ok) resolve(event.data.result);
-          else reject(new Error(event.data.error || "Planning with the forecast failed."));
-        };
-        worker.addEventListener("message", onMessage);
-        worker.postMessage({ id, payload }, transfers);
-      }),
-    [],
-  );
+  const forecastJob = useCallback((payload, transfers = []) => {
+    forecastRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/forecast.worker.js", import.meta.url), { type: "module" }),
+      { failure: "Planning with the forecast stopped: its worker did not load or ran out of memory. Reload the page and try again." },
+    );
+    return forecastRef.current.run({ payload }, transfers);
+  }, []);
 
-  const sample = useCallback(
-    (payload, transfers) =>
-      new Promise((resolve, reject) => {
-        const worker = getWorker();
-        const id = Math.random().toString(36).slice(2);
-        const onMessage = (event) => {
-          if (event.data?.id !== id) return;
-          worker.removeEventListener("message", onMessage);
-          if (event.data.ok) resolve(event.data.result);
-          else reject(new Error(event.data.error || "Sampling failed."));
-        };
-        worker.addEventListener("message", onMessage);
-        worker.postMessage({ id, payload }, transfers);
-      }),
-    [getWorker],
-  );
+  const sample = useCallback((payload, transfers) => {
+    samplerRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/sampler.worker.js", import.meta.url), { type: "module" }),
+      { failure: "The graph builder stopped, usually because the browser ran out of memory. Reload the page and try again." },
+    );
+    return samplerRef.current.run({ payload }, transfers);
+  }, []);
+
+  // ------------------------------------------------------- forecast plan state
+
+  // Counts plan requests and the changes that make a plan stale; a reply to
+  // an older one is dropped (review M3).
+  const planGenRef = useRef(0);
+  // Whether a plan is running in the forecast worker, which also runs the
+  // two-zone frames a fire starts with: only a plan is ended for a new one.
+  const planRunningRef = useRef(false);
+
+  // The layer colouring the graph, so that one layer does not wipe another's
+  // colours and the legend shows the one drawn (review M6).
+  const [colours] = useState(createColourOwner);
+  const graphColours = useSyncExternalStore(colours.subscribe, colours.get);
+
+  // The plan's deadline map, when it was made on the graph on screen.
+  const deadlines = forecastPlan.result && forecastPlan.nodes === graph?.nodes ? forecastPlan.result.deadlines : null;
+  const planHorizon = forecastPlan.result?.horizon ?? 300;
+
+  // Whether the alternative-route overlays hold the plan's routes rather than
+  // the alternatives: a ref for the handlers, state for the legend.
+  const planRoutesRef = useRef(false);
+  const [planRoutesShown, setPlanRoutesShown] = useState(false);
+  const showPlanRoutes = useCallback((shown) => {
+    planRoutesRef.current = shown;
+    setPlanRoutesShown(shown);
+  }, []);
+
+  /**
+   * A plan holds for the model, graph, start, exit and fire it was made with.
+   * When any of them changes the plan is dropped in one step: its card, the
+   * routes it drew, its deadline colours (they follow the state) and any plan
+   * still running (review M1, M3). A map left on a rebuilt graph, indexed by
+   * the new graph's nodes, read past its end and took the page down (C1).
+   */
+  const dropPlan = useCallback(() => {
+    planGenRef.current += 1;
+    if (planRunningRef.current) {
+      planRunningRef.current = false;
+      forecastRef.current?.cancel();
+    }
+    studio.setForecastPlan(NO_PLAN);
+    if (planRoutesRef.current) {
+      viewerRef.current?.setRoutes(null);
+      showPlanRoutes(false);
+    }
+  }, [studio, showPlanRoutes]);
 
   // --------------------------------------------------------------- IFC load
+
+  // A file is about to be opened (pointer or focus on a file button or an
+  // example, or a file dragged over the page): load the import worker now.
+  const warmImport = useCallback(() => viewerRef.current?.warmImport?.(), []);
 
   const handleFile = useCallback(
     async (nextFile) => {
@@ -255,6 +337,17 @@ export default function App() {
         return;
       }
 
+      // Another file may be opened while this one loads. Only the latest load
+      // may touch the page: an older one's progress, model info, semantics
+      // and geometry are dropped when they arrive (the viewer disposes of its
+      // model, ViewerManager.loadIfc).
+      const seq = ++loadSeqRef.current;
+      const latest = () => seq === loadSeqRef.current;
+
+      rlRef.current?.cancel();
+      dropPlan();
+      // The new model starts with no graph to colour.
+      colours.set(null);
       studio.beginLoad(nextFile);
       geometryRef.current = null;
       setLastSample(null);
@@ -263,6 +356,7 @@ export default function App() {
       try {
         const result = await viewer.loadIfc(nextFile, {
           onProgress: ({ stage, detail }) => {
+            if (!latest()) return;
             const percent =
               typeof detail === "number"
                 ? Math.max(0, Math.min(100, detail * 100))
@@ -275,6 +369,7 @@ export default function App() {
             });
           },
         });
+        if (!latest()) return;
 
         studio.setModelInfo(result);
         viewer.setModelAppearance(settings.modelAppearance);
@@ -282,7 +377,10 @@ export default function App() {
           .arrayBuffer()
           .then((bytes) => semanticsJob(bytes))
           .then(async (semantics) => {
+            if (!latest()) return;
             studio.setSemantics(semantics);
+            // The exit doors can change with them.
+            dropPlan();
             // Declared storeys, moved into the viewer frame by the model's
             // coordination shift, where the slab geometry collapses to one
             // level (dental clinic, Office A, example.ifc: survey strategy 5).
@@ -290,6 +388,7 @@ export default function App() {
             // and a roof "storey" around its two floors.
             const shift = (await viewer.getCoordinationMatrix())?.[13] ?? 0;
             const geometry = await geometryPromiseRef.current;
+            if (!latest()) return;
             const fromGeometry = geometry ? floorLevels(geometry.floors, settings.upAxis) : [];
             const declared = [...new Set((semantics.storeys || []).map((s) => +(s.elevation + shift).toFixed(2)))].sort(
               (a, b) => a - b,
@@ -299,7 +398,9 @@ export default function App() {
               setLevels(declared);
             }
           })
-          .catch((error) => console.warn("Could not read the model's exit flags; exits fall back to geometry.", error));
+          .catch((error) => {
+            if (!isCancelled(error)) console.warn("Could not read the model's exit flags; exits fall back to geometry.", error);
+          });
         setTab("graph");
 
         // Extract the egress geometry now rather than at the first build:
@@ -310,6 +411,7 @@ export default function App() {
         geometryPromiseRef.current = viewer
           .extractEgressGeometry()
           .then((geometry) => {
+            if (!latest()) return null;
             geometryRef.current = geometry;
             viewer.setOutlines([
               ...geometry.walls,
@@ -322,6 +424,7 @@ export default function App() {
             return geometry;
           })
           .catch((error) => {
+            if (!latest()) return null;
             console.warn("Geometry extraction failed; it will be retried at build.", error);
             geometryPromiseRef.current = null;
             return null;
@@ -336,14 +439,14 @@ export default function App() {
           { title: nextFile.name, variant: "success", ttl: 5000 },
         );
       } catch (error) {
-        if (error?.message !== "cancelled") {
+        if (latest() && !isCancelled(error)) {
           reportError(error, "Could not load the IFC file");
         }
       } finally {
-        studio.setLoadState({ busy: false, stage: null, detail: null });
+        if (latest()) studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast],
+    [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan, colours],
   );
 
   // --------------------------------------------------------------- examples
@@ -364,13 +467,17 @@ export default function App() {
 
   const openExample = useCallback(
     async (entry) => {
+      // A file opened while the example downloads wins over it.
+      const seq = ++loadSeqRef.current;
       try {
         studio.setLoadState({ busy: true, stage: "downloading", detail: entry.name });
         const res = await fetch(`${import.meta.env.BASE_URL}examples/${entry.file}`);
         if (!res.ok) throw new Error(`Could not download ${entry.name} (${res.status}).`);
         const blob = await res.blob();
+        if (seq !== loadSeqRef.current) return;
         await handleFile(new File([blob], entry.file, { type: "application/octet-stream" }));
       } catch (error) {
+        if (seq !== loadSeqRef.current) return;
         studio.setLoadState({ busy: false, stage: null, detail: null });
         reportError(error, "Could not open the example");
       }
@@ -389,6 +496,8 @@ export default function App() {
 
     studio.setGraphBusy(true);
     studio.setLoadState({ busy: true, stage: "extracting", detail: null });
+    // A policy still training is for the graph being replaced.
+    rlRef.current?.cancel();
     const timer = new PhaseTimer("graph.build");
 
     try {
@@ -472,6 +581,13 @@ export default function App() {
         roofs: geometry.roofs || 0,
         cores: built.cores || [],
         useLifts: settings.useLifts,
+        // Why there is no graph at all, rather than "Graph ready, 0 nodes"
+        // (survey item 3): shown beside the Build button (Panels.jsx).
+        emptyCause: built.stats.nodes
+          ? null
+          : !geometry.floors?.length
+            ? "The model has no floors or slabs to walk on: it may be a structural, MEP or site model."
+            : "Its floors gave no walkable surface: they may be modelled only as spaces or coverings, or be too steep or too small.",
       };
 
       studio.setGraph(response);
@@ -479,9 +595,15 @@ export default function App() {
       studio.setDynamicPath(null);
       studio.setAlternatives(null);
       studio.setNavCheck(null);
+      dropPlan();
+      // A fire still running spreads over the old graph's node ids.
+      studio.stopFire();
+      viewer.setPath(null);
+      viewer.setPath(null, { dynamic: true });
       viewer.setRoutes(null);
 
       viewer.setGraph(response.nodes, response.edges, response.kinds);
+      colours.set(null);
       viewer.setGraphVisible(settings.showGraph);
 
       // A freshly built graph is completely hidden behind solid walls and a
@@ -507,16 +629,12 @@ export default function App() {
           .catch((error) => console.warn("Graph upload failed; continuing in the browser only.", error));
       }
 
-      // A graph in several parts is explained beside the graph (Panels.jsx,
-      // PartsNotice) and flagged on the stepper; a toast would vanish.
-      if (!response.stats.nodes) {
-        // Say why, rather than "Graph ready, 0 nodes" (survey item 3).
-        const g = geometryRef.current || {};
-        const cause = !g.floors?.length
-          ? "The model has no floors or slabs to walk on: it may be a structural, MEP or site model."
-          : "Its floors gave no walkable surface: they may be modelled only as spaces or coverings, or be too steep or too small.";
-        toast(cause, { title: "No walkable graph", variant: "warning", ttl: 9000 });
-      } else if (!graphIsSplit(response.stats)) {
+      // A graph in several parts, or none at all, is explained beside the
+      // graph (Panels.jsx) and flagged on the stepper; a toast would vanish.
+      // With no graph the Graph step stays on screen, since the Route step
+      // has nothing to offer (review m7).
+      if (!response.stats.nodes) return;
+      if (!graphIsSplit(response.stats)) {
         toast(
           `${response.stats.nodes.toLocaleString()} nodes, ` +
             `${response.stats.edges.toLocaleString()} edges.`,
@@ -530,7 +648,7 @@ export default function App() {
       studio.setGraphBusy(false);
       studio.setLoadState({ busy: false, stage: null, detail: null });
     }
-  }, [reportError, sample, setSettings, settings, studio, toast]);
+  }, [reportError, sample, setSettings, settings, studio, toast, dropPlan, colours]);
 
   /**
    * Server-backed actions need this graph on the server. Without an id the
@@ -587,6 +705,8 @@ export default function App() {
       studio.setPoints((current) => ({ ...current, [mode]: point }));
       viewerRef.current?.setMarker(mode, point);
       studio.setPickMode(null);
+      // A plan is for one start, exit and fire: moving any of them drops it.
+      dropPlan();
       if (mode !== "fire") {
         studio.setPath(null);
         studio.setAlternatives(null);
@@ -594,7 +714,7 @@ export default function App() {
         viewerRef.current?.setRoutes(null);
       }
     },
-    [snapToGraph, studio],
+    [snapToGraph, studio, dropPlan],
   );
 
   const requestPick = useCallback(
@@ -610,13 +730,14 @@ export default function App() {
   const clearPoints = useCallback(() => {
     studio.setPoints({ start: null, exit: null, fire: null });
     ["start", "exit", "fire"].forEach((name) => viewerRef.current?.setMarker(name, null));
+    dropPlan();
     studio.setPath(null);
     studio.setDynamicPath(null);
     studio.setAlternatives(null);
     viewerRef.current?.setPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
     viewerRef.current?.setRoutes(null);
-  }, [studio]);
+  }, [studio, dropPlan]);
 
   // ------------------------------------------------------------- find path
 
@@ -637,7 +758,9 @@ export default function App() {
     studio.setPathBusy(true);
     studio.setComparison(null);
     studio.setAlternatives(null);
+    // The route overlays held the alternatives or the plan's routes.
     viewerRef.current?.setRoutes(null);
+    showPlanRoutes(false);
     try {
       const result = onServer
         ? await api.findPath({
@@ -662,7 +785,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten, showPlanRoutes]);
 
   const comparePath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
@@ -728,6 +851,7 @@ export default function App() {
       viewerRef.current?.setRoutes(
         result.routes.map((route, i) => ({ points: drawn(route), color: hexToInt(routeColor(i)) })),
       );
+      showPlanRoutes(false);
       // "Only N of k" is shown in the panel next to the list it explains.
       if (!result.routes.length) {
         toast(result.note || "No route exists between those two points.", {
@@ -740,7 +864,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, straighten]);
+  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, straighten, showPlanRoutes]);
 
   // ------------------------------------------------- Navigation cross-check
 
@@ -813,6 +937,8 @@ export default function App() {
 
   const startFire = useCallback(async () => {
     if (!graph || !points.fire) return;
+    // A plan still running would land mid-fire and clear its route.
+    if (planRunningRef.current) dropPlan();
     studio.stopFire();
     studio.setDynamicPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
@@ -837,7 +963,8 @@ export default function App() {
         );
         zoneFrames = zoneNodeFrames(table.nodeRoom, table.table, table.rooms, table.frames);
       } catch (error) {
-        reportError(error, "The two-zone fire model");
+        // Cancelled: the worker was ended for a newer request, or the page.
+        if (!isCancelled(error)) reportError(error, "The two-zone fire model");
         return;
       }
     }
@@ -876,6 +1003,7 @@ export default function App() {
             (message.nodes || []).forEach((n) => burning.add(n));
             studio.setFire((current) => ({ ...current, step: message.step }));
             viewer?.setBurningNodes(burning);
+            colours.set("fire");
           } else if (message.type === "temperature_step") {
             const temperatures = temperatureRef.current;
             temperatures.clear();
@@ -885,6 +1013,7 @@ export default function App() {
             studio.setFire((current) => ({ ...current, step: message.step }));
             // Gas temperatures run far past heat diffusion's 120-degree index.
             viewer?.setTemperatures(temperatures, fireModel === "zone" ? { peak: ZONE_COLOUR_PEAK } : undefined);
+            colours.set("fire");
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
             // Straight runs keep clear of burning or heated nodes.
@@ -906,35 +1035,57 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob]);
+  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours]);
 
+  // A fire that ends by itself keeps its final colours. Stopping it clears
+  // them, back to what the graph showed before: the deadline map if it is
+  // wanted, else the graph's own colours.
   const stopFire = useCallback(() => {
     studio.stopFire();
-    viewerRef.current?.setTemperatures(null);
-    viewerRef.current?.setBurningNodes(null);
-  }, [studio]);
+    const viewer = viewerRef.current;
+    viewer?.setTemperatures(null);
+    viewer?.setBurningNodes(null);
+    if (settings.showDeadlineMap && deadlines) {
+      viewer?.setDeadlines(deadlines, { max: planHorizon });
+      colours.set("deadlines");
+    } else {
+      colours.set(null);
+    }
+  }, [studio, settings.showDeadlineMap, deadlines, planHorizon, colours]);
 
   // --------------------------------------------------------------------- RL
+
+  // Training and the exact optimum it is scored against run in a worker
+  // (src/workers/rl.worker.js): the optimum alone held the page for over a
+  // second on a large graph with a long step limit.
+  const rlJob = useCallback((graphData, options) => {
+    rlRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/rl.worker.js", import.meta.url), { type: "module" }),
+      { failure: "RL training stopped: its worker did not load or ran out of memory. Reload the page and try again." },
+    );
+    return rlRef.current.run({ graph: graphData, options });
+  }, []);
 
   const trainRl = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
     studio.setRl({ busy: true, path: null, reachedExit: false, result: null });
     try {
-      // Trains in the browser (src/core/rl.js), with the review's terminal-
-      // potential and horizon corrections. Yield a frame first so the busy
-      // state paints before the training loop holds the thread.
-      await new Promise((resolve) => requestAnimationFrame(() => resolve()));
-      const trained = trainRlPolicy(graph, {
-        startPoint: points.start,
-        exitPoint: points.exit,
-        // The fire starts at the picked origin, not at the evacuee.
-        firePoint: points.fire,
-        episodes: settings.rlEpisodes,
-        maxSteps: settings.rlMaxSteps,
-        useFire: settings.rlUseFire,
-        fireSpeed: settings.rlFireSpeed,
-        useWalls: settings.useWalls,
-      });
+      // In the browser (src/core/rl.js), with the review's terminal-potential
+      // and horizon corrections.
+      const trained = await rlJob(
+        { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked, graphId: graph.graphId ?? null },
+        {
+          startPoint: points.start,
+          exitPoint: points.exit,
+          // The fire starts at the picked origin, not at the evacuee.
+          firePoint: points.fire,
+          episodes: settings.rlEpisodes,
+          maxSteps: Math.min(settings.rlMaxSteps, RL_MAX_STEPS),
+          useFire: settings.rlUseFire,
+          fireSpeed: settings.rlFireSpeed,
+          useWalls: settings.useWalls,
+        },
+      );
       const result = straighten(trained);
       studio.setRl({
         busy: false,
@@ -942,6 +1093,8 @@ export default function App() {
         reachedExit: result.reached_exit,
         result,
       });
+      // Drawn where the hazard-aware route was, which goes with its drawing.
+      studio.setDynamicPath(null);
       viewerRef.current?.setPath(drawn(result), { color: 0x14b8a6, dynamic: true });
       if (!result.reached_exit || result.note) {
         // The server says *why*: no escape exists, the step limit is too low,
@@ -953,9 +1106,10 @@ export default function App() {
       }
     } catch (error) {
       studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
-      reportError(error, "RL training failed");
+      // Cancelled when the model or the graph changed under it.
+      if (!isCancelled(error)) reportError(error, "RL training failed");
     }
-  }, [graph, points, reportError, settings, studio, toast, straighten]);
+  }, [graph, points, reportError, settings, studio, toast, straighten, rlJob]);
 
   // -------------------------------------------------------------- exit doors
 
@@ -993,11 +1147,23 @@ export default function App() {
           ? [snap(graph, points.exit)]
           : [];
     if (!graph || !points.start || !points.fire || !exitNodes.length) return;
+    const problem = planSettingsProblem(settings);
+    if (problem) {
+      toast(problem, { title: "Check the plan's settings", variant: "warning" });
+      return;
+    }
+    // A plan still running is for older inputs: end its worker rather than
+    // queue behind a deadline map that can take seconds.
+    if (planRunningRef.current) forecastRef.current?.cancel();
+    const gen = ++planGenRef.current;
+    // What the card describes: the values this plan used (review M2).
+    const inputs = planSettings(settings);
     studio.setForecastPlan((current) => ({ ...current, busy: true }));
     try {
       // The two-zone model brings its rooms and fire, and is untenable from a
       // gas temperature; the graph models from a model-degree threshold.
       const zone = fireModel === "zone" ? zoneInputs() : null;
+      planRunningRef.current = true;
       const result = await forecastJob(
         {
           graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
@@ -1012,13 +1178,24 @@ export default function App() {
           depart: settings.departAfter,
           limit: settings.doseLimit,
           useWalls: settings.useWalls,
-          withMap: true,
+          // The map is the slow part; it is made only when it will be drawn.
+          withMap: settings.showDeadlineMap,
           zone: zone?.zone,
         },
         zone?.transfers,
       );
-      studio.setForecastPlan({ busy: false, result });
+      // Inputs changed (or another plan began) while it ran: not this one's.
+      if (gen !== planGenRef.current) return;
+      planRunningRef.current = false;
+      // Tagged with the graph it was made on: it is drawn only on that graph.
+      studio.setForecastPlan({ busy: false, result, nodes: graph.nodes, inputs });
+      // The plan's routes take the place of the others on screen, and their
+      // results go with their drawings, so the legend lists what is drawn.
       const viewer = viewerRef.current;
+      studio.setPath(null);
+      studio.setComparison(null);
+      studio.setAlternatives(null);
+      studio.setDynamicPath(null);
       viewer?.setPath(null);
       viewer?.setPath(null, { dynamic: true });
       const routes = [];
@@ -1030,6 +1207,7 @@ export default function App() {
         routes.push({ points: pointsOf(result.snapshot.nodes), color: hexToInt(FORECAST_COLORS.snapshot) });
       }
       viewer?.setRoutes(routes);
+      showPlanRoutes(routes.length > 0);
       if (!result.earliest) {
         toast("No route reaches the exit before the fire closes it, within the forecast.", {
           title: "No safe route",
@@ -1037,21 +1215,29 @@ export default function App() {
         });
       }
     } catch (error) {
-      studio.setForecastPlan({ busy: false, result: null });
+      // Cancelled, or overtaken: a newer request or a change owns the state.
+      if (isCancelled(error) || gen !== planGenRef.current) return;
+      planRunningRef.current = false;
+      studio.setForecastPlan(NO_PLAN);
       reportError(error, "Planning with the forecast failed");
     }
-  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, fireModel, zoneInputs]);
+  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes, fireModel, zoneInputs]);
 
-  // The deadline map is drawn on the graph while it is wanted and no fire is
-  // colouring the graph.
+  // The deadline map colours the graph when a plan arrives or the toggle
+  // changes, and only then. A fire that has coloured the graph since keeps
+  // its final colours when it ends: this ran again when the fire stopped
+  // running and wiped them (review M6).
   useEffect(() => {
     const viewer = viewerRef.current;
-    if (!viewer || fire.running) return;
-    const result = forecastPlan.result;
-    viewer.setDeadlines(settings.showDeadlineMap && result?.deadlines ? result.deadlines : null, {
-      max: result?.horizon ?? 300,
-    });
-  }, [forecastPlan.result, settings.showDeadlineMap, fire.running, graph]);
+    if (!viewer) return;
+    if (settings.showDeadlineMap && deadlines) {
+      viewer.setDeadlines(deadlines, { max: planHorizon });
+      colours.set("deadlines");
+    } else if (colours.get() === "deadlines") {
+      viewer.setDeadlines(null);
+      colours.set(null);
+    }
+  }, [deadlines, planHorizon, settings.showDeadlineMap, colours]);
 
   // --------------------------------------------------------- reactive push
 
@@ -1264,7 +1450,7 @@ export default function App() {
   const stepStatus = useMemo(
     () => ({
       model: modelInfo ? "done" : "todo",
-      graph: graph ? (graphIsSplit(graph.stats) ? "warning" : "done") : "todo",
+      graph: graph ? (!graph.stats.nodes || graphIsSplit(graph.stats) ? "warning" : "done") : "todo",
       route: path?.found ? "done" : "todo",
       simulate: fire.step > 0 || rl.result ? "done" : "todo",
     }),
@@ -1275,7 +1461,9 @@ export default function App() {
 
   const legend = useMemo(() => {
     const items = [];
-    if (graph) {
+    // The deadline map recolours every link, so the graph's own colours are
+    // not on screen then (review m4); heat and burning leave the rest as is.
+    if (graph && graphColours !== "deadlines") {
       items.push({ label: "Walkable graph", color: "var(--viz-graph)" });
       if (graph.stats.stair_nodes) {
         items.push({ label: "Stairs", color: "var(--viz-stair)" });
@@ -1286,6 +1474,10 @@ export default function App() {
       if (graph.stats.lift_nodes) {
         items.push({ label: "Lifts", color: "var(--viz-lift)" });
       }
+    }
+    // Flood and distance-band fires colour burning nodes; the others, heat.
+    if (graphColours === "fire" && (fire.model === "flood" || fire.model === "radial")) {
+      items.push({ label: "Burning", color: "var(--viz-fire)" });
     }
     if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
     if (points.exit) items.push({ label: "Exit", color: "var(--viz-exit)", dot: true });
@@ -1303,14 +1495,27 @@ export default function App() {
     if (navCheck && settings.showNavGraph) {
       items.push({ label: "TopologicPy Navigation", color: NAV_COLOR });
     }
-    const plan = forecastPlan.result;
+    // The plan's routes, while they are the ones drawn.
+    const plan = planRoutesShown ? forecastPlan.result : null;
     if (plan?.earliest) items.push({ label: "Earliest safe route (forecast)", color: FORECAST_COLORS.earliest });
     if (plan?.leastDose && plan.front.length > 1) items.push({ label: "Least-dose route", color: FORECAST_COLORS.leastDose });
     if (plan?.snapshot && !plan.snapshot.safe && !plan.snapshot.beyondForecast) {
       items.push({ label: "Planned on the fire now: unsafe", color: FORECAST_COLORS.snapshot });
     }
     return items;
-  }, [graph, points, path, dynamicPath, alternatives, navCheck, settings.showNavGraph, forecastPlan.result]);
+  }, [
+    graph,
+    points,
+    path,
+    dynamicPath,
+    alternatives,
+    navCheck,
+    settings.showNavGraph,
+    forecastPlan.result,
+    planRoutesShown,
+    graphColours,
+    fire.model,
+  ]);
 
   // ------------------------------------------------------------------ render
 
@@ -1339,7 +1544,7 @@ export default function App() {
         <div className="header__group">
           {mode === "ifc" ? (
             <>
-              <FileButton accept=".ifc" onFile={handleFile} variant="primary">
+              <FileButton accept=".ifc" onFile={handleFile} variant="primary" onIntent={warmImport}>
                 Open IFC
               </FileButton>
               {file && (
@@ -1440,8 +1645,10 @@ export default function App() {
               if (index !== null && settings.modelAppearance !== "solid") setSettings({ modelAppearance: "solid" });
             }}
             fireSteps={settings.fireMaxSteps}
+            // The legends follow the layer colouring the graph, which a fire
+            // keeps after it ends (review M6).
             heatLegend={
-              fire.running &&
+              graphColours === "fire" &&
               (fire.model === "zone"
                 ? {
                     title: "Gas temperature (°C)",
@@ -1450,15 +1657,12 @@ export default function App() {
                   }
                 : fire.model === "temperature")
             }
-            deadlineLegend={
-              !fire.running && settings.showDeadlineMap && forecastPlan.result?.deadlines
-                ? { max: forecastPlan.result.horizon }
-                : null
-            }
+            deadlineLegend={graphColours === "deadlines" ? { max: planHorizon } : null}
             onStopFire={stopFire}
             legend={legend}
             examples={examples}
             onExample={openExample}
+            onIntent={warmImport}
           />
         ) : (
           <div className="viewport">
@@ -1589,6 +1793,7 @@ export default function App() {
                   onStopFire={stopFire}
                   onTrainRl={trainRl}
                   onPlanForecast={planForecast}
+                  deadlinesShown={graphColours === "deadlines"}
                   exits={exits}
                   onGoTo={setTab}
                 />
@@ -1655,9 +1860,20 @@ export default function App() {
       </div>
 
       {methodsOpen && (
-        <Suspense fallback={null}>
-          <MethodsDialog open onClose={closeMethods} studio={studio} />
-        </Suspense>
+        <ErrorBoundary onError={methodsFailed}>
+          <Suspense
+            fallback={
+              <div className="methods-loading" role="status">
+                <div className="card">
+                  <div className="btn__spinner" aria-hidden="true" />
+                  <span>Loading the Methods page...</span>
+                </div>
+              </div>
+            }
+          >
+            <MethodsDialog open onClose={closeMethods} studio={studio} />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );

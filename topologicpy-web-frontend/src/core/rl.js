@@ -26,6 +26,9 @@ import { floodTimeline } from "./fire.js";
 export const EXIT_REWARD = 10;
 export const BURN_REWARD = -10;
 export const STEP_COST = 0.1;
+/** The step limit the page offers: the exact optimum's backward induction
+ *  costs steps x open moves, 1.6 s at 1,000 steps on a 34,000-node graph. */
+export const RL_MAX_STEPS = 1000;
 const CURVE_POINTS = 50;
 
 /** A small seeded generator (mulberry32), so a seed reproduces a run. */
@@ -176,8 +179,6 @@ export function qLearningPath(graph, start, exit, {
   const visited = new Set([start]);
   let state = start;
   let reachedExit = false, burned = false, total = 0;
-  // The rollout's discounted return, to compare with the exact optimum below.
-  let policyReturn = 0, discount = 1;
   for (let t = 0; t < maxSteps; t += 1) {
     const k = greedy(state, t, visited);
     if (k < 0) break;
@@ -187,19 +188,49 @@ export function qLearningPath(graph, start, exit, {
     if (t >= burnsAt(next)) {
       burned = true;
       total += BURN_REWARD;
-      policyReturn += discount * BURN_REWARD;
       break;
     }
     if (next === exit) {
       reachedExit = true;
       total += EXIT_REWARD;
-      policyReturn += discount * EXIT_REWARD;
       break;
     }
     total -= slotCost[k];
+    state = next;
+  }
+
+  // The learned greedy policy scored in the MDP the optimum below is computed
+  // in. The drawn path skips revisits and stops once every neighbour has been
+  // visited, booking nothing for a state the MDP must still leave, so its
+  // return could beat the proven optimum (review K1). Here the policy keeps
+  // moving: a move into a burning node or the exit ends the episode, the step
+  // limit ends it with nothing more, and ties go to the first move. Policy and
+  // MDP are deterministic, so this one walk is the exact value of the policy at
+  // the start (what backward induction on its own actions gives), never above
+  // the optimum.
+  let policyReturn = 0;
+  for (let t = 0, u = start, discount = 1; t < maxSteps; t += 1) {
+    let k = -1, top = -Infinity;
+    for (const j of slots[u]) {
+      const q = value(j, t);
+      if (q > top) {
+        top = q;
+        k = j;
+      }
+    }
+    if (k < 0) break;
+    const v = neighbours[k];
+    if (t >= burnsAt(v)) {
+      policyReturn += discount * BURN_REWARD;
+      break;
+    }
+    if (v === exit) {
+      policyReturn += discount * EXIT_REWARD;
+      break;
+    }
     policyReturn -= discount * slotCost[k];
     discount *= gamma;
-    state = next;
+    u = v;
   }
 
   // The exact optimum of the same problem, unshaped: backward induction over
@@ -207,14 +238,28 @@ export function qLearningPath(graph, start, exit, {
   // after a non-terminal move, V at the limit 0 (QLearning.lean,
   // dag_value_iteration_exact). RL evacuation papers report success rates, not
   // this gap (gap analysis 2026-10-27, LG6).
+  // It touches every open move at every step, so the moves are laid out flat
+  // (CSR over the open slots, with each move's head and cost): the arrays of
+  // arrays above made it several times slower.
+  const burnTime = new Float64Array(n);
+  for (let u = 0; u < n; u += 1) burnTime[u] = burnsAt(u);
+  const openStart = new Int32Array(n + 1);
+  for (let u = 0; u < n; u += 1) openStart[u + 1] = openStart[u] + slots[u].length;
+  const moveHead = new Int32Array(openStart[n]);
+  const moveCost = new Float64Array(openStart[n]);
+  for (let u = 0, i = 0; u < n; u += 1) {
+    for (const k of slots[u]) {
+      moveHead[i] = neighbours[k];
+      moveCost[i] = slotCost[k];
+      i += 1;
+    }
+  }
   // Only the start's value is wanted, and after t moves the agent is at most
   // t links from the start; so step t updates only the nodes that close, a
   // prefix of the breadth-first order from the start, instead of every node
   // (most of a graph on a large model). Each value updated is computed as
   // before, from values updated the step before (tools/output-hash.mjs:
   // identical optimal returns on the benchmark corpus).
-  const burnTime = new Float64Array(n);
-  for (let u = 0; u < n; u += 1) burnTime[u] = burnsAt(u);
   const order = new Int32Array(n);
   const hops = new Int32Array(n).fill(-1);
   let reached = 1;
@@ -223,8 +268,8 @@ export function qLearningPath(graph, start, exit, {
   for (let i = 0; i < reached; i += 1) {
     const u = order[i];
     if (hops[u] + 1 >= maxSteps) continue;
-    for (const k of slots[u]) {
-      const v = neighbours[k];
+    for (let j = openStart[u]; j < openStart[u + 1]; j += 1) {
+      const v = moveHead[j];
       if (hops[v] >= 0) continue;
       hops[v] = hops[u] + 1;
       order[reached++] = v;
@@ -236,12 +281,13 @@ export function qLearningPath(graph, start, exit, {
   for (let t = 1; t < within.length; t += 1) within[t] = Math.max(within[t], within[t - 1]);
   let ahead = new Float64Array(n), here = new Float64Array(n);
   for (let t = maxSteps - 1; t >= 0; t -= 1) {
-    for (let i = 0; i < within[t]; i += 1) {
-      const u = order[i];
-      let best = slots[u].length ? -Infinity : 0;
-      for (const k of slots[u]) {
-        const v = neighbours[k];
-        const value = t >= burnTime[v] ? BURN_REWARD : v === exit ? EXIT_REWARD : -slotCost[k] + gamma * ahead[v];
+    for (let q = 0; q < within[t]; q += 1) {
+      const u = order[q];
+      const a = openStart[u], b = openStart[u + 1];
+      let best = a < b ? -Infinity : 0;
+      for (let i = a; i < b; i += 1) {
+        const v = moveHead[i];
+        const value = t >= burnTime[v] ? BURN_REWARD : v === exit ? EXIT_REWARD : -moveCost[i] + gamma * ahead[v];
         if (value > best) best = value;
       }
       here[u] = best;
@@ -319,7 +365,8 @@ export function trainRl(graph, { startPoint, exitPoint, firePoint = null, episod
     success_rate: r.successRate,
     curve: r.curve,
     escape_steps: r.escapeSteps,
-    // Discounted, unshaped: the policy's rollout and the exact optimum.
+    // Discounted, unshaped, in the same MDP: the learned greedy policy's exact
+    // value and the best any policy reaches within the step limit.
     policy_return: r.policyReturn ?? null,
     optimal_return: r.optimalReturn ?? null,
     fire_start_id: fireStart,

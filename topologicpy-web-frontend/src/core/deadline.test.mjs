@@ -114,3 +114,46 @@ test("dose deadlines: the map never says later than the exact deadline, and is c
   console.log(JSON.stringify({ compared, unlimited, worstGap: +worstGap.toFixed(3) }));
   assert.ok(compared > 300 && unlimited > 50);
 });
+
+test("the dose deadline says when the end of the forecast, not the fire, is the limit (review M11)", () => {
+  // A corridor of 11 nodes 1 m apart, exit at node 0, walking 1 m/s. The
+  // fire starts at node 10 and takes a node per 5 s step; the forecast is 6
+  // steps (30 s), so it reaches node 5 at 25 s and node 4 only after it ends.
+  const g = lattice(11, 1);
+  const forecast = buildForecast(g, { model: "flood", seed: 10, steps: 6, dt: 5 });
+  const opts = { exits: [0], forecast, limit: 1, speed: 1, tolerance: 1e-3 };
+  // From node 2 the fire never matters: only the forecast's end does.
+  const far = doseDeadline(g, 2, opts);
+  assert.equal(far.horizon, true);
+  assert.ok(Math.abs(far.good - 28) < 0.01, `${far.good}`);
+  // From node 5 the fire is the limit: the start itself closes at 25 s.
+  const near = doseDeadline(g, 5, opts);
+  assert.equal(near.horizon, false);
+  assert.ok(Math.abs(near.good - 25) < 0.01, `${near.good}`);
+});
+
+test("the deadline map's work stays under its cap for long horizons (review K2)", () => {
+  // 2,000 fire steps of 5 s: at a quarter of the link time a 30 x 30 lattice
+  // would take 48,000 layers, 2e8 link updates.
+  const g = lattice(30, 30);
+  const n = g.nodes.length / 3;
+  const exits = [0, n - 1];
+  const speed = 1.2, limit = 0.3;
+  // Per layer: both ends of every (open) link, and every node.
+  const perLayer = g.edges.length + n;
+  for (const model of ["temperature", "flood"]) {
+    const forecast = buildForecast(g, { model, seed: 465, steps: 2000, dt: 5, threshold: 60 });
+    for (const maxWork of [2e5, 1e6, 5e6]) {
+      const map = doseDeadlineMap(g, { exits, forecast, limit, speed, maxWork });
+      const work = map.layers * perLayer;
+      assert.ok(work <= maxWork, `${model}: ${work} link updates against a cap of ${maxWork}`);
+      assert.equal(map.work, work);
+      // A wider step is still never later than the exact deadline.
+      for (const v of [31, 200, 450, 700]) {
+        if (map.deadline[v] === -Infinity) continue;
+        const exact = doseDeadline(g, v, { exits, forecast, limit, speed, tolerance: 1e-3 });
+        assert.ok(exact && map.deadline[v] <= exact.bad + 1e-9, `${model}: map later than exact at ${v}`);
+      }
+    }
+  }
+});

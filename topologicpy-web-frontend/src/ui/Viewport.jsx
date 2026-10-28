@@ -43,6 +43,7 @@ export function Viewport({
   legend,
   examples,
   onExample,
+  onIntent,
 }) {
   const containerRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
@@ -139,6 +140,7 @@ export function Viewport({
       className="viewport"
       aria-label="Model view"
       data-picking={pickMode ? "true" : "false"}
+      onDragEnter={onIntent}
       onDragOver={(event) => {
         event.preventDefault();
         setDragOver(true);
@@ -178,7 +180,7 @@ export function Viewport({
                 IFC 2x3 or IFC4. Converted once and cached in this browser, so the same file opens faster
                 the second time.
               </p>
-              <FileButton accept=".ifc" onFile={onFile}>
+              <FileButton accept=".ifc" onFile={onFile} onIntent={onIntent}>
                 Choose a file
               </FileButton>
             </div>
@@ -193,6 +195,8 @@ export function Viewport({
                         type="button"
                         className="example"
                         onClick={() => onExample(entry)}
+                        onPointerEnter={onIntent}
+                        onFocus={onIntent}
                         aria-label={entry.bytes ? `${entry.name}, ${formatBytes(entry.bytes)}` : entry.name}
                         aria-describedby={`welcome-example-${entry.id}`}
                       >
@@ -349,8 +353,10 @@ export function Viewport({
                       <span>{Math.round(deadlineLegend.max / 2)} s</span>
                       <span>{Math.round(deadlineLegend.max)} s</span>
                     </span>
+                    <span className="legend__note">Latest time to leave and still get out within the dose limit.</span>
                     <span className="legend__note">
-                      Latest time to leave and still get out within the dose limit. Grey: no safe departure.
+                      <span className="legend__swatch legend__swatch--inline legend__none" aria-hidden="true" />
+                      Grey: no departure on the grid gets out within the dose limit.
                     </span>
                   </div>
                 )}

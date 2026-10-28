@@ -14,6 +14,7 @@ export function Button({
   busy = false,
   icon = false,
   className = "",
+  disabled = false,
   ...rest
 }) {
   const classes = [
@@ -26,26 +27,31 @@ export function Button({
   ]
     .filter(Boolean)
     .join(" ");
+  // `disabled` is taken out of `rest` and set after it: spread last, a
+  // caller's disabled={false} switched a busy button back on.
   return (
-    <button type="button" className={classes} disabled={busy || rest.disabled} {...rest}>
+    <button type="button" className={classes} {...rest} disabled={busy || disabled} aria-busy={busy || undefined}>
       {busy && <span className="btn__spinner" aria-hidden="true" />}
       {children}
     </button>
   );
 }
 
-export function FileButton({ accept, onFile, children, variant = "default", disabled }) {
+/** `onIntent`: the pointer or focus came to the button, so a file may follow. */
+export function FileButton({ accept, onFile, children, variant = "default", disabled, onIntent }) {
   return (
     <label
       className={`btn file-btn${variant !== "default" ? ` btn--${variant}` : ""}${
         disabled ? " btn--disabled" : ""
       }`}
       style={disabled ? { opacity: 0.45, pointerEvents: "none" } : undefined}
+      onPointerEnter={onIntent}
     >
       <input
         type="file"
         accept={accept}
         disabled={disabled}
+        onFocus={onIntent}
         onChange={(event) => {
           const file = event.target.files?.[0];
           // Reset so choosing the same file twice still fires a change event.
@@ -135,7 +141,30 @@ export function Slider({ label, value, min, max, step, onChange, format, hint, d
   );
 }
 
-export function NumberField({ label, value, onChange, hint, ...rest }) {
+/** Why a typed number is not taken, or null. */
+function numberProblem(text, { min, max, optional }) {
+  if (text === "") return optional ? null : "Enter a number.";
+  const v = Number(text);
+  if (!Number.isFinite(v)) return "Enter a number.";
+  const range =
+    min != null && max != null ? `Enter a number from ${min} to ${max}.` : min != null ? `Enter ${min} or more.` : `Enter ${max} or less.`;
+  if ((min != null && v < min) || (max != null && v > max)) return range;
+  return null;
+}
+
+/**
+ * A number input that passes on only values in its range. While a value is
+ * typed the field shows the text as typed and says why a value is not taken:
+ * clearing a field no longer snaps it back to the default, and a speed of 0
+ * or -1 no longer reaches the planner (review m1). Leaving the field shows the
+ * value in use again. `optional` fields pass on a blank as null.
+ */
+export function NumberField({ label, value, onChange, hint, min, max, optional = false, ...rest }) {
+  const hintId = useId();
+  const errorId = useId();
+  const [draft, setDraft] = useState(null);
+  const problem = draft === null ? null : numberProblem(draft, { min, max, optional });
+  const describedBy = [problem && errorId, hint && hintId].filter(Boolean).join(" ") || undefined;
   return (
     <div className="field">
       <div className="field__label">
@@ -143,14 +172,30 @@ export function NumberField({ label, value, onChange, hint, ...rest }) {
       </div>
       <input
         type="number"
-        value={value ?? ""}
-        onChange={(event) =>
-          onChange(event.target.value === "" ? null : Number(event.target.value))
-        }
+        value={draft ?? value ?? ""}
+        min={min}
+        max={max}
+        onChange={(event) => {
+          const text = event.target.value;
+          setDraft(text);
+          if (!numberProblem(text, { min, max, optional })) onChange(text === "" ? null : Number(text));
+        }}
+        onBlur={() => setDraft(null)}
         aria-label={label}
+        aria-invalid={problem ? true : undefined}
+        aria-describedby={describedBy}
         {...rest}
       />
-      {hint && <p className="field__hint">{hint}</p>}
+      {problem && (
+        <p className="field__error" id={errorId}>
+          {problem}
+        </p>
+      )}
+      {hint && (
+        <p className="field__hint" id={hintId}>
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

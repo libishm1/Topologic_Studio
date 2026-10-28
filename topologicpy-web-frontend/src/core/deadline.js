@@ -99,11 +99,14 @@ export function escapeDeadlines(graph, { exits, untenable = null, speed = 1.2, b
  * The latest departure from `start` with a safe route to an exit whose dose is
  * at most `limit`, bracketed to within `tolerance` seconds.
  *
- * @returns {{good: number, bad: number, searches: number, truncated: boolean} | null}
+ * @returns {{good: number, bad: number, searches: number, truncated: boolean, horizon: boolean} | null}
  *          leaving at `good` works and at `bad` does not (Deadline.
  *          doseDeadline_bisection); null when even leaving at once does not.
  *          truncated: a search hit its label budget, so a "does not" may be
- *          wrong and the bracket is not certain.
+ *          wrong and the bracket is not certain. horizon: what stops leaving
+ *          at `bad` is the end of the forecast, not the fire (leaving then
+ *          works if points stay open until the fire reaches them), so the
+ *          real deadline is at least `good`, perhaps later.
  */
 export function doseDeadline(graph, start, { exits, forecast, limit = 1, speed = 1.2, blocked = null, tolerance = 0.05 }) {
   let searches = 0;
@@ -131,16 +134,26 @@ export function doseDeadline(graph, start, { exits, forecast, limit = 1, speed =
     if (works(mid)) good = mid;
     else bad = mid;
   }
-  return { good, bad, searches, truncated };
+  // Every point closes at the forecast's end. If leaving at `bad` works once
+  // they close only when the fire reaches them, the end of the forecast is
+  // the limit, not the fire (review M11).
+  const open = { ...forecast, closes: forecast.untenable };
+  const past = doseFront(graph, start, { exits, forecast: open, depart: bad, speed, blocked }).front;
+  const horizon = past.length > 0 && past[past.length - 1].dose <= limit;
+  return { good, bad, searches, truncated, horizon };
 }
 
 /**
  * Every node's dose-limited deadline on a time grid (conservative; see the
- * header). The grid step defaults to a quarter of the shortest link time and
- * is widened, if needed, to keep the work under `maxWork` link updates.
+ * header). The grid step defaults to a quarter of the median link time, or a
+ * half or a whole one where that would be too much work, and is widened
+ * further if needed so that the work, layers x (open link ends + nodes), is
+ * at most `maxWork` whatever the horizon. A wider step only rounds walking
+ * times up more, which is still conservative.
  *
- * @returns {{deadline: Float64Array, step: number, layers: number}}  deadline
- *          per node in seconds; -Infinity when no grid departure works.
+ * @returns {{deadline: Float64Array, step: number, layers: number, work: number}}
+ *          deadline per node in seconds, -Infinity when no grid departure
+ *          works; work: the link updates the map took.
  */
 export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2, blocked = null, step = null, maxWork = 1.5e8 }) {
   const { indptr, neighbours, edgeIds, n, m } = csr(graph);
@@ -160,11 +173,16 @@ export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2
   // round it up by 41%. Shorter links (door bridges) take one step, which is
   // still rounding up. A whole link time only on very large graphs.
   const typical = times.length ? times[times.length >> 1] : forecast.horizon;
-  const work = (d) => (forecast.horizon / d) * (slots + n);
+  const perLayer = slots + n;
+  const work = (d) => (Math.floor(forecast.horizon / d) + 1) * perLayer;
   let delta = step;
   if (!delta) {
-    const q = work(typical / 4) <= maxWork ? 4 : work(typical / 2) <= 8 * maxWork ? 2 : 1;
-    delta = typical / q;
+    // The half step used to be allowed 8 times the budget and the whole one
+    // any amount: 2,000 fire steps on the dental clinic took 38 times it
+    // (81 s). The step is now widened until the layers fit (review K2).
+    const q = work(typical / 4) <= maxWork ? 4 : work(typical / 2) <= maxWork ? 2 : 1;
+    const layers = Math.max(2, Math.floor(maxWork / perLayer));
+    delta = Math.max(typical / q, forecast.horizon / (layers - 1));
   }
   const J = Math.floor(forecast.horizon / delta);
   const tau = new Int32Array(m);
@@ -267,7 +285,7 @@ export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2
       if (deadline[v] === -Infinity && value < Infinity && value * (1 + 1e-9) <= limit) deadline[v] = t;
     }
   }
-  return { deadline, step: delta, layers: J + 1 };
+  return { deadline, step: delta, layers: J + 1, work: (J + 1) * perLayer };
 }
 
 /** Whether leaving `start` at `depart` reaches an exit safely (forward check). */

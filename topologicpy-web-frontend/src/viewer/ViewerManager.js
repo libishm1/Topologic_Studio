@@ -23,6 +23,7 @@ import {
 import { hashFile, readCached, writeCached } from "../lib/fragmentCache.js";
 import { PhaseTimer, mark } from "../lib/perf.js";
 import { aggregatedParts, collectCategoryIds, elementRecords, extractMeshes, withPredefinedType } from "./categories.js";
+import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
 import { coreItems } from "../core/cores.js";
 
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
@@ -79,6 +80,8 @@ export class ViewerManager {
     this._pointerStart = null;
     this._resizeObserver = null;
     this._theme = "dark";
+    // The layer colouring the graph, if any: { opacity, redraw? }.
+    this._colouring = null;
   }
 
   // ------------------------------------------------------------- lifecycle
@@ -137,7 +140,6 @@ export class ViewerManager {
     this.ifcLoader = ifcLoader;
 
     this.ready = true;
-    this._scheduleWarmImport();
   }
 
   dispose() {
@@ -248,6 +250,8 @@ export class ViewerManager {
     }
     const outlines = this.overlays.get(OVERLAY.outlines);
     if (outlines) outlines.material.color = new THREE.Color(this._outlineColor());
+    // Heat and deadline colours have a ramp per background.
+    this._colouring?.redraw?.();
   }
 
   _outlineColor() {
@@ -430,19 +434,27 @@ export class ViewerManager {
   async loadIfc(file, { onProgress, signal } = {}) {
     if (!this.ready) throw new Error("Viewer is still starting up.");
     // The page stays responsive while a model converts, so another file can
-    // be opened meanwhile; the older conversion is dropped ("cancelled").
+    // be opened meanwhile; the older load is dropped ("cancelled"). Its
+    // conversion is aborted, and every step after an await checks that it is
+    // still the latest load: a model it finishes loading after a newer load
+    // has begun is disposed, not added to the scene beside the new one.
     this._abortImport?.();
+    const token = (this._loadToken = (this._loadToken || 0) + 1);
+    const current = () => {
+      if (signal?.aborted || token !== this._loadToken || this.disposed) throw new Error("cancelled");
+    };
 
     const timer = new PhaseTimer("ifc.load");
     const report = (stage, detail) => onProgress?.({ stage, detail });
 
     report("reading", file.name);
     const { key, buffer } = await timer.run("hash", () => hashFile(file));
-    if (signal?.aborted) throw new Error("cancelled");
+    current();
 
     this.clearModel();
 
     let fragmentBytes = await timer.run("cacheLookup", () => readCached(key));
+    current();
     const cached = Boolean(fragmentBytes);
 
     if (!cached) {
@@ -452,6 +464,7 @@ export class ViewerManager {
           onProgress: (p) => report("converting", p),
           signal,
         });
+        current();
         if (converted) {
           // What IfcLoader.load sets and names a model it converted. The id
           // must differ from the cached path's: clearModel does not wait for
@@ -465,7 +478,7 @@ export class ViewerManager {
             modelId: file.name,
             raw: false,
           });
-          this._adoptModel(model);
+          this._adoptIfCurrent(model, current);
           return converted;
         }
         // No worker could convert it here: convert on this thread, as before.
@@ -475,7 +488,7 @@ export class ViewerManager {
           file.name,
           { processData: { progressCallback: (p) => report("converting", p) } },
         );
-        this._adoptModel(model);
+        this._adoptIfCurrent(model, current);
         // Serialise what we just built so the next load skips the parse.
         return model.getBuffer(false);
       });
@@ -497,33 +510,38 @@ export class ViewerManager {
           raw: false,
         }),
       );
-      this._adoptModel(model);
+      this._adoptIfCurrent(model, current);
     }
 
-    if (signal?.aborted) throw new Error("cancelled");
+    current();
+    // From here on the model is the one adopted above; a newer load's
+    // clearModel removes it if this one is overtaken.
+    const model = this.model;
 
     report("rendering", "Drawing the model");
     await timer.run("firstFrame", async () => {
       await this.fragments.core.update(true);
       this.fitToModel();
     });
+    current();
 
     // Categories come from the fragments model, not a second IFC parse.
     report("indexing", "Reading IFC categories");
-    this.categoryIds = await timer.run("categories", () =>
-      collectCategoryIds(this.model),
-    );
+    const categoryIds = await timer.run("categories", () => collectCategoryIds(model));
+    current();
+    this.categoryIds = categoryIds;
 
     // IfcSpace volumes are rooms, not built fabric: drawn, they wrap the
     // building in tinted boxes (the Duplex had one above its roof). Hidden
     // from view only; the graph still reads their floors.
-    if (this.categoryIds.spaces?.length && this.model.setVisible) {
+    if (categoryIds.spaces?.length && model.setVisible) {
       try {
-        await this.model.setVisible(this.categoryIds.spaces, false);
+        await model.setVisible(categoryIds.spaces, false);
         await this.fragments.core.update(true);
       } catch (error) {
         console.warn("[viewer] Could not hide IfcSpace volumes:", error);
       }
+      current();
     }
 
     const phases = timer.finish({
@@ -666,10 +684,21 @@ export class ViewerManager {
   }
 
   /**
+   * Start loading an import worker because a file is about to be opened: the
+   * pointer or focus is on a file button or an example, or a file is dragged
+   * over the page. Warming at every page load made every visitor download its
+   * module, model or not (review m9).
+   */
+  warmImport() {
+    if (this.ready) this._scheduleWarmImport();
+  }
+
+  /**
    * Load an import worker while the page is idle, so its module (about 615
    * KB gzipped, its own fragments and web-ifc) is in memory before the next
    * file is opened: in a worker the first conversion otherwise paid that
-   * download, about 0.2-0.3 s on a desktop and more on a phone.
+   * download, about 0.2-0.3 s on a desktop and more on a phone. Asked for by
+   * warmImport, and after each conversion for the next file.
    */
   _scheduleWarmImport() {
     if (this._warmImport || this._warmPending || this.disposed || typeof Worker === "undefined") return;
@@ -694,6 +723,23 @@ export class ViewerManager {
     };
     if (typeof requestIdleCallback === "function") requestIdleCallback(start, { timeout: 4000 });
     else setTimeout(start, 1500);
+  }
+
+  /** Adopt a model a load just produced, or dispose of it if that load has
+   *  been overtaken (`current` throws "cancelled"). */
+  _adoptIfCurrent(model, current) {
+    try {
+      current();
+    } catch (error) {
+      const id = model?.modelId;
+      if (id !== undefined) {
+        Promise.resolve()
+          .then(() => this.fragments?.core?.disposeModel?.(id))
+          .catch(() => {});
+      }
+      throw error;
+    }
+    this._adoptModel(model);
   }
 
   _adoptModel(model) {
@@ -832,6 +878,7 @@ export class ViewerManager {
     // Picking reads these; a new model must not be picked against the old graph.
     this._graphNodes = null;
     this._graphEdges = null;
+    this._colouring = null;
   }
 
   /**
@@ -965,7 +1012,10 @@ export class ViewerManager {
    * Fade the graph back when a route is on screen.
    *
    * 17k edges at full strength drown out the one line the user actually asked
-   * for, so the graph steps aside while a route is displayed.
+   * for, so the graph steps aside while a route is displayed. A layer that
+   * colours the graph (heat, burning, deadlines) is itself what is being
+   * read, and keeps its own strength; when it is removed the graph goes back
+   * to the strength the routes call for, not always the full one (review m11).
    */
   _updateGraphEmphasis() {
     const segments = this.overlays.get(OVERLAY.graph);
@@ -977,7 +1027,7 @@ export class ViewerManager {
         name === OVERLAY.navRoute ||
         name.startsWith(ALT_PREFIX),
     );
-    segments.material.opacity = hasPath ? 0.16 : 0.45;
+    segments.material.opacity = this._colouring ? this._colouring.opacity : hasPath ? 0.16 : 0.45;
     segments.material.needsUpdate = true;
   }
 
@@ -1042,6 +1092,24 @@ export class ViewerManager {
     this._graphEdges = edges;
     this._graphKinds = kinds;
     this._baseColors = colors.slice();
+    this._colouring = null;
+    this._updateGraphEmphasis();
+  }
+
+  /** The heat ramp and the deadline map's "none" for the scene's background. */
+  _sceneColours() {
+    return this._theme === "dark" ? SCENE_COLOURS.dark : SCENE_COLOURS.light;
+  }
+
+  /**
+   * Put the graph back in its own colours, or note the layer now colouring
+   * it: its strength, and how to redraw it in the other theme's ramp.
+   */
+  _setColouring(colouring, colors, attribute) {
+    if (!colouring) colors.set(this._baseColors);
+    attribute.needsUpdate = true;
+    this._colouring = colouring;
+    this._updateGraphEmphasis();
   }
 
   /** Recolour graph edges from a node temperature map, in place. */
@@ -1054,14 +1122,13 @@ export class ViewerManager {
     const colors = attribute.array;
 
     if (!temperatures || temperatures.size === 0) {
-      colors.set(this._baseColors);
-      attribute.needsUpdate = true;
-      segments.material.opacity = 0.45;
+      this._setColouring(null, colors, attribute);
       return;
     }
 
     const edgeCount = this._graphEdges.length / 2;
     const scratch = new THREE.Color();
+    const { stops } = this._sceneColours();
 
     for (let e = 0; e < edgeCount; e += 1) {
       const o = e * 6;
@@ -1074,22 +1141,27 @@ export class ViewerManager {
           colors[offset + 1] = this._baseColors[offset + 1];
           colors[offset + 2] = this._baseColors[offset + 2];
         } else {
-          heatColor(scratch, temp, ambient, peak);
+          heatColor(scratch, temp, ambient, peak, stops);
           colors[offset] = scratch.r;
           colors[offset + 1] = scratch.g;
           colors[offset + 2] = scratch.b;
         }
       }
     }
-    attribute.needsUpdate = true;
-    segments.material.opacity = 0.75;
+    this._setColouring(
+      { opacity: 0.75, redraw: () => this.setTemperatures(temperatures, { ambient, peak }) },
+      colors,
+      attribute,
+    );
   }
 
   /**
    * Recolour graph edges by each node's escape deadline (seconds): the heat
-   * ramp reversed, so little time left reads as hot. -Infinity (no safe
-   * departure at all) is drawn in a neutral dark grey; null restores the
-   * graph's own colours.
+   * ramp reversed, so little time left reads as hot. Grey: no departure on
+   * the grid gets out within the dose limit (-Infinity). null restores the
+   * graph's own colours, and so does a map that is not one value per node of
+   * this graph (one made before a rebuild: indexed by the new graph's nodes it
+   * read past its end and threw, review C1).
    */
   setDeadlines(deadlines, { max = 300 } = {}) {
     const segments = this.overlays.get(OVERLAY.graph);
@@ -1097,27 +1169,11 @@ export class ViewerManager {
     const attribute = segments.geometry.getAttribute("color");
     if (!attribute) return;
     const colors = attribute.array;
-    if (!deadlines) {
-      colors.set(this._baseColors);
-      attribute.needsUpdate = true;
-      segments.material.opacity = 0.45;
+    if (!paintDeadlines(colors, this._graphEdges, this._graphNodes.length / 3, deadlines, { max, ...this._sceneColours() })) {
+      this._setColouring(null, colors, attribute);
       return;
     }
-    const none = new THREE.Color(0x52525b);
-    const scratch = new THREE.Color();
-    const edgeCount = this._graphEdges.length / 2;
-    for (let e = 0; e < edgeCount; e += 1) {
-      for (let side = 0; side < 2; side += 1) {
-        const value = deadlines[this._graphEdges[e * 2 + side]];
-        const offset = e * 6 + side * 3;
-        const c = value === -Infinity ? none : heatColor(scratch, max - Math.max(0, value), 0, max);
-        colors[offset] = c.r;
-        colors[offset + 1] = c.g;
-        colors[offset + 2] = c.b;
-      }
-    }
-    attribute.needsUpdate = true;
-    segments.material.opacity = 0.8;
+    this._setColouring({ opacity: 0.8, redraw: () => this.setDeadlines(deadlines, { max }) }, colors, attribute);
   }
 
   /** Recolour graph edges from a set of burning node indices. */
@@ -1129,9 +1185,7 @@ export class ViewerManager {
     const colors = attribute.array;
 
     if (!burning || burning.size === 0) {
-      colors.set(this._baseColors);
-      attribute.needsUpdate = true;
-      segments.material.opacity = 0.45;
+      this._setColouring(null, colors, attribute);
       return;
     }
 
@@ -1153,8 +1207,7 @@ export class ViewerManager {
         }
       }
     }
-    attribute.needsUpdate = true;
-    segments.material.opacity = 0.7;
+    this._setColouring({ opacity: 0.7 }, colors, attribute);
   }
 
   setGraphVisible(visible) {
@@ -1381,19 +1434,4 @@ async function resolveWorkerUrl() {
     );
   }
   return fallback;
-}
-
-/**
- * Yellow -> orange -> red -> dark red across the temperature range: the stops
- * of .legend__ramp (styles/workflow.css), so the legend is literally what is
- * drawn. Lightness falls all the way, so heat reads in order for colour-blind
- * viewers too, which the rainbow this replaced did not.
- */
-const HEAT_STOPS = [0xfacc15, 0xf97316, 0xdc2626, 0x7f1d1d].map((hex) => new THREE.Color(hex));
-
-function heatColor(target, temp, min, max) {
-  const t = Math.max(0, Math.min(1, (temp - min) / Math.max(1e-6, max - min)));
-  const x = t * (HEAT_STOPS.length - 1);
-  const i = Math.min(HEAT_STOPS.length - 2, Math.floor(x));
-  return target.copy(HEAT_STOPS[i]).lerp(HEAT_STOPS[i + 1], x - i);
 }
