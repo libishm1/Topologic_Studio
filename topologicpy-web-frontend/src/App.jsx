@@ -18,7 +18,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 
 import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
-import { workerClient } from "./lib/workerJob.js";
+import { isCancelled, workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
@@ -162,14 +162,25 @@ export default function App() {
 
   // Exit flags and roof slabs from the IFC itself, read by a second, small
   // web-ifc in a worker while the geometry converts (core/ifcSemantics.js).
+  // One worker per file, ended when it answers or when another file is
+  // opened: web-ifc's heap never shrinks, so a kept worker held it all session.
   const semanticsJob = useCallback((bytes) => {
-    semanticsRef.current ||= workerClient(
+    semanticsRef.current?.cancel();
+    const job = workerClient(
       () => new Worker(new URL("./workers/semantics.worker.js", import.meta.url), { type: "module" }),
       { failure: "Could not read the model's exit flags." },
     );
-    const wasmPath =
-      import.meta.env.VITE_WEBIFC_WASM_PATH || new URL(`${import.meta.env.BASE_URL}wasm/`, window.location.href).href;
-    return semanticsRef.current.run({ bytes, wasmPath }, [bytes]);
+    semanticsRef.current = job;
+    // Against the page, as the viewer resolves it: a relative path would be
+    // read against the worker's own URL, under assets/.
+    const wasmPath = new URL(
+      import.meta.env.VITE_WEBIFC_WASM_PATH || `${import.meta.env.BASE_URL}wasm/`,
+      window.location.href,
+    ).href;
+    return job.run({ bytes, wasmPath }, [bytes]).finally(() => {
+      job.cancel();
+      if (semanticsRef.current === job) semanticsRef.current = null;
+    });
   }, []);
 
   // Planning with the forecast has its own worker: its deadline map takes a
@@ -254,7 +265,9 @@ export default function App() {
               setLevels(declared);
             }
           })
-          .catch((error) => console.warn("Could not read the model's exit flags; exits fall back to geometry.", error));
+          .catch((error) => {
+            if (!isCancelled(error)) console.warn("Could not read the model's exit flags; exits fall back to geometry.", error);
+          });
         setTab("graph");
 
         // Extract the egress geometry now rather than at the first build:

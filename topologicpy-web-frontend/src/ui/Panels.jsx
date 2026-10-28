@@ -79,7 +79,6 @@ function EgressCheck({ semantics }) {
           ["Schema", semantics.schema || "-"],
           ["Exit doors", doors.length ? `${exits.length} of ${doors.length}${sources.length ? ` (${sources.join(", ")})` : ""}` : "no doors"],
           ["Roof slabs", semantics.roofSlabs?.length ? `${semantics.roofSlabs.length}, not walked on` : "none typed"],
-          ["Declared storeys", fmt(semantics.storeys?.length ?? 0)],
         ]}
       />
       {doors.length > 0 && !exits.length && (
@@ -130,8 +129,8 @@ export function ModelPanel({ studio, examples, onExample, onClearCache }) {
             />
             <p className="field__hint">
               {modelInfo.cached
-                ? "Loaded from the local fragment cache, skipping IFC parsing entirely."
-                : "Converted and cached. Opening this file again skips the parse."}
+                ? "The geometry came from the local fragment cache, without converting the IFC again. The exit flags and storeys are still read from the file."
+                : "Converted and cached: opening this file again skips the conversion. The exit flags and storeys are read from the file each time."}
             </p>
             <EgressCheck semantics={studio.semantics} />
           </>
@@ -183,7 +182,7 @@ export function ModelPanel({ studio, examples, onExample, onClearCache }) {
 
       <Section title="Local cache" defaultOpen={false} badge={formatBytes(cacheInfo.bytes)}>
         <p className="field__hint">
-          Converted models are stored in this browser so repeat loads skip IFC parsing.
+          Converted models are stored in this browser so repeat loads skip the IFC conversion.
           {cacheInfo.count > 0 && ` Currently holding ${cacheInfo.count} model(s).`}
         </p>
         <Button block onClick={onClearCache} disabled={!cacheInfo.count}>
