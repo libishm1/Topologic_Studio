@@ -184,6 +184,35 @@ export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2
   const ring = new Float64Array(R * n).fill(Infinity);
   const deadline = new Float64Array(n).fill(-Infinity);
   const { rate, frameSeconds, K } = forecast;
+  // Each node's open links as two flat arrays, the far end and the link's
+  // steps, in CSR order: the loop below then reads two arrays per link
+  // instead of four and tests no wall flag. The same links in the same order
+  // give the same minimum (tools/output-hash.mjs: byte-identical maps).
+  const first = new Int32Array(n + 1);
+  for (let v = 0; v < n; v += 1) {
+    let count = 0;
+    for (let k = indptr[v]; k < indptr[v + 1]; k += 1) if (!blocked?.[edgeIds[k]]) count += 1;
+    first[v + 1] = first[v] + count;
+  }
+  const to = new Int32Array(first[n]), steps = new Int32Array(first[n]);
+  for (let v = 0, s = 0; v < n; v += 1) {
+    for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
+      const e = edgeIds[k];
+      if (blocked?.[e]) continue;
+      to[s] = neighbours[k];
+      steps[s] = tau[e];
+      s += 1;
+    }
+  }
+  // What depends only on a link's number of steps d, computed once per layer
+  // with the arithmetic the loop used to repeat per link: the ring row it
+  // lands in, the arrival time, that time with its closing margin, and the
+  // time on the link.
+  const rowAt = new Int32Array(R), arriveAt = new Float64Array(R), clearAt = new Float64Array(R), spanAt = new Float64Array(R);
+  // Values spread back from the exits along open links, so only exits and the
+  // neighbours of nodes that have had a value need the link loop; the others
+  // (nodes the exits do not reach yet, or at all) keep Infinity.
+  const live = Uint8Array.from(isExit), reached = new Uint8Array(n);
   for (let j = J; j >= 0; j -= 1) {
     const t = j * delta;
     const row = (j % R) * n;
@@ -192,31 +221,48 @@ export function doseDeadlineMap(graph, { exits, forecast, limit = 1, speed = 1.2
     const frame = Math.min(K - 1, Math.floor(t / frameSeconds));
     const frameEnd = (frame + 1) * frameSeconds;
     const base = frame * n;
+    // Links of more steps than this end past the grid (j + d > J).
+    const reach = Math.min(longest, J - j);
+    for (let d = 1; d <= reach; d += 1) {
+      const jj = j + d;
+      const t2 = jj * delta;
+      rowAt[d] = (jj % R) * n;
+      arriveAt[d] = t2;
+      clearAt[d] = t2 + 1e-9 * Math.max(1, t2);
+      spanAt[d] = t2 - t;
+    }
+    // A part in 10^9 in hand on every closing time and on the limit, so
+    // that rounding in the walker's sums cannot make the map later.
+    const leave = t + 1e-9 * Math.max(1, t);
     for (let v = 0; v < n; v += 1) {
+      // A node none of whose neighbours has had a value yet has none now
+      // either: its ring slots are still Infinity, and so is the answer.
+      if (!live[v]) continue;
       let value = Infinity;
-      // A part in 10^9 in hand on every closing time and on the limit, so
-      // that rounding in the walker's sums cannot make the map later.
-      if (t + 1e-9 * Math.max(1, t) < closes[v]) {
+      if (leave < closes[v]) {
         if (isExit[v]) value = 0;
         else {
-          for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
-            const e = edgeIds[k];
-            if (blocked?.[e]) continue;
-            const jj = j + tau[e];
-            if (jj > J) continue;
-            const w = neighbours[k];
-            const ahead = ring[(jj % R) * n + w];
+          const rv = rate[base + v];
+          for (let s = first[v]; s < first[v + 1]; s += 1) {
+            const d = steps[s];
+            if (d > reach) continue;
+            const w = to[s];
+            const ahead = ring[rowAt[d] + w];
             if (ahead === Infinity) continue;
-            const t2 = jj * delta;
-            if (!(t2 + 1e-9 * Math.max(1, t2) < closes[w])) continue;
-            const dose =
-              t2 <= frameEnd ? (t2 - t) * Math.max(rate[base + v], rate[base + w]) : linkDose(forecast, v, w, t, t2);
+            if (!(clearAt[d] < closes[w])) continue;
+            const t2 = arriveAt[d];
+            const dose = t2 <= frameEnd ? spanAt[d] * Math.max(rv, rate[base + w]) : linkDose(forecast, v, w, t, t2);
             const total = ahead + dose;
             if (total < value) value = total;
           }
         }
       }
       ring[row + v] = value;
+      if (value < Infinity && !reached[v]) {
+        // From the next (earlier) layer on, v's neighbours can have values.
+        reached[v] = 1;
+        for (let s = first[v]; s < first[v + 1]; s += 1) live[to[s]] = 1;
+      }
       // Finite first: with no limit (Infinity), "no route" must not count as within it.
       if (deadline[v] === -Infinity && value < Infinity && value * (1 + 1e-9) <= limit) deadline[v] = t;
     }
