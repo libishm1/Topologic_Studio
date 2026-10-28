@@ -2,7 +2,8 @@
  * What an IFC file says about egress that its geometry does not
  * (wiki/research/ifc-handling-survey-2026-10-27.md, items 1 and 2): which
  * doors are exits, and which slabs are roofs. One pass over the relations, no
- * geometry; at most 184 ms on the survey's 18 files.
+ * geometry; at most 184 ms on the survey's 18 files. Also each door's declared
+ * size and each IfcSpace's name, for the two-zone fire model (src/core/rooms.js).
  *
  * Exit doors, by the survey's measurements on 18 models:
  *   - Pset_DoorCommon.FireExit or .IsExternal TRUE: 5 of 18 files. The set is
@@ -72,27 +73,49 @@ export function ifcSemantics(api, modelID, W) {
     if (element && /EXTERNAL/.test(String(val(rel.InternalOrExternalBoundary) ?? ""))) external.add(element);
   }
 
+  // OverallWidth and OverallHeight are in the file's length unit; widthM and
+  // heightM are in metres (null when not given), for the two-zone fire model's
+  // door flows (src/core/rooms.js).
+  const scale = lengthScale(api, modelID, W, ids, line);
+  const metres = (v) => (typeof v === "number" && v > 0 ? v * scale : null);
   const doors = ids(W.IFCDOOR).map((id) => {
     const door = line(id);
     let exit = null;
     if (truthy(doorProp(id, "FireExit"))) exit = "Pset_DoorCommon.FireExit";
     else if (truthy(doorProp(id, "IsExternal"))) exit = "Pset_DoorCommon.IsExternal";
     else if (external.has(id)) exit = "IfcRelSpaceBoundary.EXTERNAL";
+    const width = val(door.OverallWidth) ?? null;
+    const height = val(door.OverallHeight) ?? null;
     return {
       id,
       name: val(door.Name) ?? null,
       operation: val(door.OperationType) ?? null,
-      width: val(door.OverallWidth) ?? null,
+      width,
+      height,
+      widthM: metres(width),
+      heightM: metres(height),
       exit,
     };
   });
   const roofSlabs = ids(W.IFCSLAB).filter((s) => val(line(s).PredefinedType) === "ROOF");
-  return { schema: api.GetModelSchema(modelID), doors, roofSlabs, storeys: storeys(api, modelID, W, ids, line) };
+  // Room names, to say which room the two-zone model's fire is in.
+  const spaces = ids(W.IFCSPACE).map((id) => {
+    const space = line(id);
+    return { id, name: val(space.Name) ?? null, longName: val(space.LongName) ?? null };
+  });
+  return {
+    schema: api.GetModelSchema(modelID),
+    doors,
+    roofSlabs,
+    storeys: storeys(api, modelID, W, ids, line),
+    spaces,
+    lengthScale: scale,
+  };
 }
 
 /** Metres per length unit of the file (IfcUnitAssignment): SI prefixes and
  *  conversion-based units such as the foot. */
-function lengthScale(api, modelID, W, ids, line) {
+export function lengthScale(api, modelID, W, ids, line) {
   const prefixes = { EXA: 1e18, PETA: 1e15, TERA: 1e12, GIGA: 1e9, MEGA: 1e6, KILO: 1e3, HECTO: 1e2, DECA: 10, DECI: 1e-1, CENTI: 1e-2, MILLI: 1e-3, MICRO: 1e-6, NANO: 1e-9 };
   // Metres per one `unit`: an SI unit by its prefix, a conversion-based unit
   // by its factor times the scale of the unit the factor is given in, which

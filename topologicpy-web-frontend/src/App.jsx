@@ -28,8 +28,9 @@ import { floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
+import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
-import { planSettings, useStudio } from "./state/useStudio.js";
+import { fireModelIn, planSettings, useStudio } from "./state/useStudio.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -42,6 +43,9 @@ import logo from "./assets/topologicStudio-white-logo400x400.png";
 
 /** The points a route is drawn with: straightened when it has been. */
 const drawn = (route) => route?.straight_points || route?.points || null;
+
+/** The two-zone model's gas temperatures are coloured from 20 to this many degrees C. */
+const ZONE_COLOUR_PEAK = 600;
 
 /** Lowest and highest point of the egress geometry along the up axis. */
 function heightRange(geometry, upAxis) {
@@ -204,6 +208,8 @@ export default function App() {
     toast,
     reportError,
   } = studio;
+  // The two-zone model only where the model has IfcSpace rooms (useStudio.js).
+  const fireModel = fireModelIn(settings, modelInfo);
 
   // ------------------------------------------------------------ the workers
 
@@ -244,12 +250,12 @@ export default function App() {
 
   // Planning with the forecast has its own worker: its deadline map takes a
   // few seconds on a large graph and must not hold up a graph rebuild.
-  const forecastJob = useCallback((payload) => {
+  const forecastJob = useCallback((payload, transfers = []) => {
     forecastRef.current ||= workerClient(
       () => new Worker(new URL("./workers/forecast.worker.js", import.meta.url), { type: "module" }),
       { failure: "Planning with the forecast stopped: its worker did not load or ran out of memory. Reload the page and try again." },
     );
-    return forecastRef.current.run({ payload });
+    return forecastRef.current.run({ payload }, transfers);
   }, []);
 
   const sample = useCallback((payload, transfers) => {
@@ -265,6 +271,9 @@ export default function App() {
   // Counts plan requests and the changes that make a plan stale; a reply to
   // an older one is dropped (review M3).
   const planGenRef = useRef(0);
+  // Whether a plan is running in the forecast worker, which also runs the
+  // two-zone frames a fire starts with: only a plan is ended for a new one.
+  const planRunningRef = useRef(false);
 
   // The layer colouring the graph, so that one layer does not wipe another's
   // colours and the legend shows the one drawn (review M6).
@@ -293,7 +302,10 @@ export default function App() {
    */
   const dropPlan = useCallback(() => {
     planGenRef.current += 1;
-    if (forecastRef.current?.busy) forecastRef.current.cancel();
+    if (planRunningRef.current) {
+      planRunningRef.current = false;
+      forecastRef.current?.cancel();
+    }
     studio.setForecastPlan(NO_PLAN);
     if (planRoutesRef.current) {
       viewerRef.current?.setRoutes(null);
@@ -517,6 +529,10 @@ export default function App() {
         walls: clone(geometry.walls),
         spaces: clone(geometry.spaces || []),
         obstacles: clone(geometry.obstacles || []),
+        // Lifts, escalators and stair cores (src/core/cores.js).
+        coreMeshes: clone(geometry.coreMeshes || []),
+        cores: geometry.cores || [],
+        useLifts: settings.useLifts,
         upAxis: settings.upAxis,
         floorSpacing: settings.floorSpacing,
         agentHeight: settings.agentHeight,
@@ -526,7 +542,7 @@ export default function App() {
         columnGap: settings.columnGap,
       };
       const transfers = [];
-      for (const key of ["floors", "stairs", "doors", "walls", "spaces", "obstacles"]) {
+      for (const key of ["floors", "stairs", "doors", "walls", "spaces", "obstacles", "coreMeshes"]) {
         for (const mesh of payload[key]) {
           transfers.push(mesh.positions.buffer, mesh.indices.buffer);
         }
@@ -563,6 +579,8 @@ export default function App() {
         lattice: { angleDeg: built.stats.angleDeg, spacing: built.spacing, ms: built.stats.ms },
         doors: built.doors || [],
         roofs: geometry.roofs || 0,
+        cores: built.cores || [],
+        useLifts: settings.useLifts,
         // Why there is no graph at all, rather than "Graph ready, 0 nodes"
         // (survey item 3): shown beside the Build button (Panels.jsx).
         emptyCause: built.stats.nodes
@@ -890,17 +908,70 @@ export default function App() {
 
   // ------------------------------------------------------------------- fire
 
-  const startFire = useCallback(() => {
+  // What the two-zone model needs besides the graph (src/core/rooms.js): the
+  // IfcSpace meshes (copied, then handed to the worker), the graph's doors with
+  // their directions, the IFC's door sizes and exit flags, and the fire.
+  const zoneInputs = useCallback(() => {
+    const spaces = (geometryRef.current?.spaces || []).map((mesh) => ({
+      itemId: mesh.itemId,
+      positions: mesh.positions.slice(),
+      indices: mesh.indices.slice(),
+    }));
+    if (!spaces.length) throw new Error("The two-zone model needs the model's IfcSpace rooms, and none were extracted.");
+    return {
+      zone: {
+        spaces,
+        doors: graph.doors || [],
+        declaredDoors: (studio.semantics?.doors || []).map(({ id, widthM, heightM, exit }) => ({ id, widthM, heightM, exit })),
+        upAxis: graph.upAxis,
+        agentHeight: graph.agentHeight,
+        growth: settings.zoneGrowth,
+        peak: settings.zonePeakKw,
+        smoke: settings.zoneSmoke,
+        horizon: settings.zoneHorizon,
+        untenableC: settings.zoneUntenableC,
+      },
+      transfers: spaces.flatMap((mesh) => [mesh.positions.buffer, mesh.indices.buffer]),
+    };
+  }, [graph, settings, studio.semantics]);
+
+  const startFire = useCallback(async () => {
     if (!graph || !points.fire) return;
     // A plan still running would land mid-fire and clear its route.
-    if (forecastRef.current?.busy) dropPlan();
+    if (planRunningRef.current) dropPlan();
     studio.stopFire();
     studio.setDynamicPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
 
+    // The two-zone model is run first, in the forecast worker; the simulation
+    // then plays its node temperatures, one frame per step over its horizon.
+    let zoneFrames = null;
+    if (fireModel === "zone") {
+      try {
+        const frames = Math.max(1, settings.fireMaxSteps);
+        const { zone, transfers } = zoneInputs();
+        const table = await forecastJob(
+          {
+            kind: "zoneFrames",
+            graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
+            seed: snap(graph, points.fire),
+            zone,
+            frames,
+            frameSeconds: settings.zoneHorizon / frames,
+          },
+          transfers,
+        );
+        zoneFrames = zoneNodeFrames(table.nodeRoom, table.table, table.rooms, table.frames);
+      } catch (error) {
+        // Cancelled: the worker was ended for a newer request, or the page.
+        if (!isCancelled(error)) reportError(error, "The two-zone fire model");
+        return;
+      }
+    }
+
     burningRef.current = new Set();
     temperatureRef.current = new Map();
-    studio.setFire({ running: true, step: 0, model: settings.fireModel });
+    studio.setFire({ running: true, step: 0, model: fireModel });
 
     // Every model reroutes now: temperature by hazard cost, flood and radial by
     // treating burning nodes as impassable.
@@ -911,7 +982,8 @@ export default function App() {
     const handle = runFire(
       graph,
       {
-        model: settings.fireModel,
+        model: fireModel,
+        zoneFrames,
         firePoint: points.fire,
         startPoint: points.start,
         exitPoint: points.exit,
@@ -939,7 +1011,8 @@ export default function App() {
               temperatures.set(Number(key), value);
             }
             studio.setFire((current) => ({ ...current, step: message.step }));
-            viewer?.setTemperatures(temperatures);
+            // Gas temperatures run far past heat diffusion's 120-degree index.
+            viewer?.setTemperatures(temperatures, fireModel === "zone" ? { peak: ZONE_COLOUR_PEAK } : undefined);
             colours.set("fire");
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
@@ -962,7 +1035,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast, dropPlan, colours]);
+  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours]);
 
   // A fire that ends by itself keeps its final colours. Stopping it clears
   // them, back to what the graph showed before: the deadline map if it is
@@ -1081,30 +1154,39 @@ export default function App() {
     }
     // A plan still running is for older inputs: end its worker rather than
     // queue behind a deadline map that can take seconds.
-    if (forecastRef.current?.busy) forecastRef.current.cancel();
+    if (planRunningRef.current) forecastRef.current?.cancel();
     const gen = ++planGenRef.current;
     // What the card describes: the values this plan used (review M2).
     const inputs = planSettings(settings);
     studio.setForecastPlan((current) => ({ ...current, busy: true }));
     try {
-      const result = await forecastJob({
-        graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
-        start: snap(graph, points.start),
-        exits: exitNodes,
-        seed: snap(graph, points.fire),
-        model: settings.fireModel,
-        steps: settings.fireMaxSteps,
-        secondsPerStep: settings.forecastSecondsPerStep,
-        threshold: settings.untenableAbove,
-        speed: settings.walkSpeed,
-        depart: settings.departAfter,
-        limit: settings.doseLimit,
-        useWalls: settings.useWalls,
-        // The map is the slow part; it is made only when it will be drawn.
-        withMap: settings.showDeadlineMap,
-      });
+      // The two-zone model brings its rooms and fire, and is untenable from a
+      // gas temperature; the graph models from a model-degree threshold.
+      const zone = fireModel === "zone" ? zoneInputs() : null;
+      planRunningRef.current = true;
+      const result = await forecastJob(
+        {
+          graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
+          start: snap(graph, points.start),
+          exits: exitNodes,
+          seed: snap(graph, points.fire),
+          model: fireModel,
+          steps: settings.fireMaxSteps,
+          secondsPerStep: settings.forecastSecondsPerStep,
+          threshold: zone ? settings.zoneUntenableC : settings.untenableAbove,
+          speed: settings.walkSpeed,
+          depart: settings.departAfter,
+          limit: settings.doseLimit,
+          useWalls: settings.useWalls,
+          // The map is the slow part; it is made only when it will be drawn.
+          withMap: settings.showDeadlineMap,
+          zone: zone?.zone,
+        },
+        zone?.transfers,
+      );
       // Inputs changed (or another plan began) while it ran: not this one's.
       if (gen !== planGenRef.current) return;
+      planRunningRef.current = false;
       // Tagged with the graph it was made on: it is drawn only on that graph.
       studio.setForecastPlan({ busy: false, result, nodes: graph.nodes, inputs });
       // The plan's routes take the place of the others on screen, and their
@@ -1135,10 +1217,11 @@ export default function App() {
     } catch (error) {
       // Cancelled, or overtaken: a newer request or a change owns the state.
       if (isCancelled(error) || gen !== planGenRef.current) return;
+      planRunningRef.current = false;
       studio.setForecastPlan(NO_PLAN);
       reportError(error, "Planning with the forecast failed");
     }
-  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes]);
+  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes, fireModel, zoneInputs]);
 
   // The deadline map colours the graph when a plan arrives or the toggle
   // changes, and only then. A fire that has coloured the graph since keeps
@@ -1388,8 +1471,12 @@ export default function App() {
       if (graph.stats.door_nodes) {
         items.push({ label: "Doors", color: "var(--viz-door)" });
       }
+      if (graph.stats.lift_nodes) {
+        items.push({ label: "Lifts", color: "var(--viz-lift)" });
+      }
     }
-    if (graphColours === "fire" && fire.model !== "temperature") {
+    // Flood and distance-band fires colour burning nodes; the others, heat.
+    if (graphColours === "fire" && (fire.model === "flood" || fire.model === "radial")) {
       items.push({ label: "Burning", color: "var(--viz-fire)" });
     }
     if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
@@ -1558,7 +1645,18 @@ export default function App() {
               if (index !== null && settings.modelAppearance !== "solid") setSettings({ modelAppearance: "solid" });
             }}
             fireSteps={settings.fireMaxSteps}
-            heatLegend={graphColours === "fire" && fire.model === "temperature"}
+            // The legends follow the layer colouring the graph, which a fire
+            // keeps after it ends (review M6).
+            heatLegend={
+              graphColours === "fire" &&
+              (fire.model === "zone"
+                ? {
+                    title: "Gas temperature (°C)",
+                    max: ZONE_COLOUR_PEAK,
+                    note: "Two-zone model: the smoke layer's temperature where it is at or below head height; ambient elsewhere.",
+                  }
+                : fire.model === "temperature")
+            }
             deadlineLegend={graphColours === "deadlines" ? { max: planHorizon } : null}
             onStopFire={stopFire}
             legend={legend}

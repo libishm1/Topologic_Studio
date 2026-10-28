@@ -61,6 +61,7 @@
   --viz-path-dynamic: #c026d3;
   --viz-graph: #3b82f6;
   --viz-stair: #8b5cf6;
+  --viz-lift: #0d9488;
   --viz-door: #f59e0b;
   --viz-fire: #ff4500;
   --viz-scene-bg: #eef2f7;
@@ -143,6 +144,7 @@
     --viz-path-dynamic: #e879f9;
     --viz-graph: #60a5fa;
     --viz-stair: #a78bfa;
+  --viz-lift: #2dd4bf;
     --viz-door: #fbbf24;
     --viz-fire: #ff6a2b;
     --viz-scene-bg: #0d1219;
@@ -198,6 +200,7 @@
   --viz-path-dynamic: #e879f9;
   --viz-graph: #60a5fa;
   --viz-stair: #a78bfa;
+  --viz-lift: #2dd4bf;
   --viz-door: #fbbf24;
   --viz-fire: #ff6a2b;
   --viz-scene-bg: #0d1219;

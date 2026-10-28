@@ -64,11 +64,13 @@ windows), `Tenability` (the convective FED law and sliding-window doses) and `Mi
        dose of any safe walk; `front_sorted`: arrival non-decreasing, dose strictly falling.
    `front_minimal` says exactly when a front point can be weakly beaten: only by a *later*
    front point with the *same* arrival time. `front_pareto` (no two points tied in time ⇒
-   every point is Pareto-optimal). `keepStrict_front`: the code's final filter ("keep the
-   strict front") returns the front unchanged, so it does not remove the tied point.
+   every point is Pareto-optimal). `keepStrict_front`: the filter the code had before 2026-10-28 ("keep the
+   strict front") returned the front unchanged, so it did not remove the tied point; the code
+   now keeps only the last point of a tie, which `front_minimal` shows is not beaten.
    `tie_counterexample`: a four-node run to exhaustion whose front is
    `[(2 s, dose 2), (2 s, dose 0)]`; the first point (the plan's `fastest`) is beaten at the
-   same arrival. The code returns this front on the same network (property test).
+   same arrival. The code returned this front on the same network before the tie filter was
+   fixed (property test, now a regression test).
 6. *Snapshot planning walks into the fire.* `snapshot_walks_into_fire`: on the five-node
    network of the test "a route planned on the fire at departure can walk into it", the
    shortest route on the departure-time fire reaches node 1 at 2 s, 0.5 s after it closes,
@@ -83,8 +85,8 @@ windows), `Tenability` (the convective FED law and sliding-window doses) and `Mi
 * Floating point (IEEE doubles, `Float32Array` rates) is not modelled; arithmetic is in `ℝ`.
 * `linkDose`'s frame-by-frame sum is modelled by the integral of the step rate it sums
   (`linkDose`); the identity of the sum and the integral is checked by the property test,
-  not proved. Times before 0 are outside the model (`Nat.floor` sends them to frame 0; the
-  code reads `rate` at a negative index and gets `NaN`).
+  not proved. Times before 0 are outside the model (`Nat.floor` sends them to frame 0, as the
+  code now does; before 2026-10-28 it read `rate` at a negative index and got `NaN`).
 * The heaps are abstracted to "pop an entry of least key" (`Selectable`, `Least`); a
   binary heap with lazy deletion is not verified. For `earliestArrival`, the code never
   queues an `Infinity` label and relaxes into settled nodes, which is a no-op since their
@@ -1126,9 +1128,10 @@ theorem keepStrict_some : ∀ (d : ℝ) (l : List (Lbl V)),
     rw [List.pairwise_cons] at hl
     rw [keepStrict, ite_eq_left (hd L List.mem_cons_self), keepStrict_some L.dose rest hl.2 hl.1]
 
-/-- The final filter is a no-op: the front's doses already fall strictly (every kept exit
-label passed `D < bestExit`), so `kept` is the front itself and a label tied in time with a
-later, lower-dose label is not removed. -/
+/-- The filter the code had before 2026-10-28 is a no-op: the front's doses already fall
+strictly (every kept exit label passed `D < bestExit`), so `kept` is the front itself and a
+label tied in time with a later, lower-dose label is not removed. The code now drops the
+earlier of two points tied in arrival. -/
 theorem keepStrict_front {N : Net V} {s : V} {t0 : ℝ} {σ : FState V}
     (hI : FInv N isExit s t0 σ) : keepStrict none σ.front = σ.front := by
   have hs : σ.front.Pairwise (fun p q => q.dose < p.dose) := hI.sorted.imp (fun h => h.2)
@@ -1315,9 +1318,9 @@ the same length to the exit, one through a hot room) a run of `doseFront`'s loop
 runs to exhaustion with front `[(2 s, dose 2), (2 s, dose 0)]`: the heap is keyed by time
 alone, so the two exit labels tied at 2 s may pop in either order, and both pass
 `D < bestExit`. The first point (the plan's `fastest`) is beaten by the second on dose at the
-same arrival, and the final filter keeps both (`keepStrict_front`). `front_minimal` shows
-this is the only way a front point can be beaten. The code returns exactly this front on this
-network (`forecast.property.test.mjs`). -/
+same arrival, and the filter the code had before 2026-10-28 kept both (`keepStrict_front`).
+`front_minimal` shows this is the only way a front point can be beaten; the code now keeps
+only the last point of a tie (`forecast.property.test.mjs` checks it on this network). -/
 theorem tie_counterexample :
     FInit 0 0 cx0 ∧ Relation.ReflTransGen (FStep cxNet cxExit) cx0 cx5 ∧ cx5.heap = ∅ ∧
     cx5.front = [⟨3, 2, 2⟩, ⟨3, 2, 0⟩] ∧ keepStrict none cx5.front = cx5.front ∧

@@ -720,6 +720,67 @@ if (await planBtn.isEnabled().catch(() => false)) {
   record(false, "Plan with the forecast was enabled", "needs start, exit and fire origin");
 }
 
+// ---- 5d. the two-zone room model ---------------------------------------------
+//
+// Added 2026-10-28 (gap LG8; src/core/rooms.js, src/core/zone.js): offered only
+// on a model with IfcSpace rooms (the Duplex has 21). The same routers plan on
+// its forecast, the result card states the model's limits, and the live
+// simulation plays its gas temperatures.
+
+console.log("\n[5d] Two-zone room model");
+const zoneChoice = page.getByText("Two-zone rooms (degrees C)", { exact: true });
+const zoneOffered = await zoneChoice.isVisible().catch(() => false);
+record(zoneOffered, "the two-zone model is offered on a model with IfcSpace rooms");
+if (zoneOffered) {
+  await zoneChoice.click();
+  await page.waitForTimeout(200);
+  if (await planBtn.isEnabled().catch(() => false)) {
+    const tZone = Date.now();
+    await planBtn.click();
+    const zoned = await page
+      .waitForFunction(() => /smoke reaches/i.test(document.querySelector('[aria-label="Plan with the forecast"]')?.innerText || ""), null, {
+        timeout: 120000,
+      })
+      .then(() => true)
+      .catch(() => false);
+    record(zoned, "planning on the two-zone forecast returned and rendered its result");
+    if (zoned) {
+      timing("Plan with the two-zone forecast + deadline map (click to result)", Date.now() - tZone);
+      const card = await page.evaluate(() => {
+        const el = document.querySelector('[aria-label="Plan with the forecast"]');
+        const out = { title: el?.querySelector(".result__title")?.textContent?.trim() };
+        el?.querySelectorAll(".result__item").forEach((item) => {
+          out[item.querySelector(".result__label")?.textContent?.trim()] = item.querySelector(".result__value")?.textContent?.trim();
+        });
+        return out;
+      });
+      console.log(`    zone: ${JSON.stringify(card)}`);
+      const text = await page.locator('[aria-label="Plan with the forecast"]').innerText();
+      record(Boolean(card["Flashover"]) && Boolean(card["Smoke reaches"]), "the card reports flashover and the rooms the smoke reaches", `${card["Flashover"]}; ${card["Smoke reaches"]}`);
+      record(/not a substitute for CFAST, FDS or an engineer/i.test(text), "the card states the model's limits");
+      await page.locator('[aria-label="Plan with the forecast"]').scrollIntoViewIfNeeded().catch(() => {});
+      await shot(page, "zone-plan");
+    }
+  } else {
+    record(false, "Plan with the forecast was enabled for the two-zone model");
+  }
+  if (await startFire.isEnabled().catch(() => false)) {
+    await page.getByRole("button", { name: /^Start fire$/ }).scrollIntoViewIfNeeded().catch(() => {});
+    await startFire.click();
+    const played = await page
+      .waitForFunction(() => /fire step \d+/i.test(document.body.innerText), null, { timeout: 45000 })
+      .then(() => true)
+      .catch(() => false);
+    await page.waitForTimeout(3000);
+    const legend = await page.getByText("Gas temperature (°C)", { exact: true }).isVisible().catch(() => false);
+    record(played, "the live simulation plays the two-zone model", legend ? "gas-temperature legend shown" : "legend not visible");
+    await shot(page, "zone-fire-running");
+    await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
+  }
+  // Back to heat diffusion for the steps that follow.
+  await page.getByText("Heat diffusion", { exact: true }).click().catch(() => {});
+}
+
 // ---- 6. theme, panels, topology mode ----------------------------------------
 
 console.log("\n[6] UI surfaces");

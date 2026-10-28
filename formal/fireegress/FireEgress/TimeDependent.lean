@@ -11,8 +11,9 @@ time `A u v t`; a fire that slows a link makes `A u v t` larger, and a fire that
 it makes `A u v t = ⊤` (in `WithTop ℝ`; see `GraphNumerics.closeArc`). The router is
 Dreyfus' label-setting loop (1969): settle the unsettled vertex of least label `d u`,
 then relax every link out of it with `d v ← min (d v) (A u v (d u))`. Kaufman and
-Smith (1993) identified FIFO as the condition that makes it exact. Studio does not
-implement the router yet, so this file is the specification it must meet.
+Smith (1993) identified FIFO as the condition that makes it exact. Studio's forecast
+router (`forecast.js` `earliestArrival`) implements it; `Forecast.lean` checks that it meets
+these hypotheses.
 
 Two hypotheses on every link carry the whole argument:
 * **FIFO** (non-overtaking): `A u v` is monotone, `s ≤ t → A u v s ≤ A u v t`;

@@ -28,6 +28,9 @@ export const DEFAULT_SETTINGS = {
   maxDegree: 12,
   useWalls: true,
   rectilinear: false,
+  // Lifts and escalators join floors only when on: a fire evacuation does not
+  // use them unless they are evacuation lifts (src/core/cores.js).
+  useLifts: false,
   straightenRoutes: true,
   gridSnap: false,
   gridCellSize: 1.5,
@@ -62,6 +65,15 @@ export const DEFAULT_SETTINGS = {
   // on one side); "picked": the exit picked in the Route step.
   forecastExits: "model",
   showDeadlineMap: true,
+  // The two-zone room model (fireModel "zone"; src/core/zone.js), on a clock
+  // in seconds with gas temperatures in degrees C: a t-squared fire of this
+  // growth up to this peak (and the room's ventilation limit), untenable from
+  // this gas temperature, or as soon as the smoke layer is at head height.
+  zoneGrowth: "medium",
+  zonePeakKw: 5000,
+  zoneUntenableC: 60,
+  zoneSmoke: true,
+  zoneHorizon: 600,
 
   showGraph: true,
   modelAppearance: "solid",
@@ -82,9 +94,25 @@ export const PLAN_SETTINGS = [
   "doseLimit",
   "useWalls",
   "forecastExits",
+  "zoneGrowth",
+  "zonePeakKw",
+  "zoneUntenableC",
+  "zoneSmoke",
+  "zoneHorizon",
 ];
 
 export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));
+
+/** Whether the loaded model has IfcSpace rooms, which the two-zone fire model needs. */
+export function hasRooms(modelInfo) {
+  return (modelInfo?.stats?.spaces ?? 0) > 0;
+}
+
+/** The fire model in use: a saved choice of the two-zone model falls back to
+ *  heat diffusion on a model without rooms. */
+export function fireModelIn(settings, modelInfo) {
+  return settings.fireModel === "zone" && !hasRooms(modelInfo) ? "temperature" : settings.fireModel;
+}
 
 function loadSettings() {
   try {

@@ -10,8 +10,9 @@ and 5.3; `wiki/research/fire-equations-verified-2026-10-27.json`, entry `T17-dos
 proposes routing an evacuee so as to minimise the fractional effective dose (FED) accrued on
 the way, `X_FED = ∑ Δt / t_I`, by a dynamic programme on the time-expanded graph; a
 dose-constrained variant (reach an exit while the dose stays below `X_crit`); and the claim
-that waiting ("holdover") arcs are not needed under a monotone fire. Studio does not
-implement this yet: the theorems below are the specification it must meet.
+that waiting ("holdover") arcs are not needed under a monotone fire. Studio's deadline
+map implements the recursion without holdover (`Deadline.gridV_eq_val`), and its least-dose
+search works in continuous time (`Forecast.dp_no_holdover` links the two).
 
 ## Model
 

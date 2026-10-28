@@ -1,5 +1,7 @@
 # IFC handling in Topologic Studio Next: a survey against current practice
 
+Items 1 to 5 and 7 have since been built (2026-10-28); section 1 describes the code before them.
+
 Date: 2026-10-27
 Status: survey and measurements. No repository code was changed; this file is the only edit.
 Scope: the browser IFC path (`topologicpy-web-frontend/src/viewer/ViewerManager.js`, `src/viewer/categories.js`, `src/lib/fragmentCache.js`, `src/core/lattice.js`, `src/workers/sampler.worker.js`, `src/App.jsx`, `vite.config.js`), the Node tools (`tools/ifc-extract.mjs`, `tools/exits.mjs`, `tools/deadline-check.mjs`, `tools/make_example_ifcs.py`) and the backend IFC routes (`topologicpy-web-backend/app/routers/ifc.py`, `app/legacy/contract.py`), on branch `next/browser-core`.
@@ -24,7 +26,7 @@ The measurements say this matters.
 2. Roofs. The geometric roof rule (`lattice.js:433-453`) removes only surfaces within 1 m of the model top. On C20-Institute 991 lattice nodes (7.1%) and on ISSUE_159 848 nodes (13.9%) stand on slabs typed `ROOF`, which the browser could exclude with a helper it already has.
 3. Storeys. Section-cut levels come from slab geometry (`App.jsx:247`) and collapse to a single level on three files whose floors are modelled as spaces or coverings (dental clinic, Office A, example), although the files declare 4, 3 and 2 storeys.
 4. Robustness. A cached fragments file that fails to load is not re-converted (`ViewerManager.js:464-473`), and the cache key ignores library versions. An empty graph is announced as "Graph ready" with 0 nodes. Four files emit between 10 and 1,236 web-ifc geometry errors that the importer silences; a cross-check against IfcOpenShell found no loss in egress-relevant geometry.
-5. Performance. IFC to fragments conversion runs on the main thread (0.9 to 2.6 s in Node for 3.9 to 20.3 MB files). Parsing itself is fast (1 to 144 ms per file for `OpenModel`), so multithreaded WASM would buy little.
+5. Performance. IFC to fragments conversion runs on the main thread (0.9 to 2.6 s in Node for 3.9 to 20.3 MB files). Parsing itself is fast (0 to 144 ms per file for `OpenModel`), so multithreaded WASM would buy little.
 
 The eight changes ranked in section 3 address these in order of impact per effort. The first, a semantic sidecar read with web-ifc beside the fragments conversion, costs at most 184 ms per file in Node and feeds exits, roofs, storeys and door attributes at once.
 
