@@ -559,6 +559,13 @@ export default function App() {
         lattice: { angleDeg: built.stats.angleDeg, spacing: built.spacing, ms: built.stats.ms },
         doors: built.doors || [],
         roofs: geometry.roofs || 0,
+        // Why there is no graph at all, rather than "Graph ready, 0 nodes"
+        // (survey item 3): shown beside the Build button (Panels.jsx).
+        emptyCause: built.stats.nodes
+          ? null
+          : !geometry.floors?.length
+            ? "The model has no floors or slabs to walk on: it may be a structural, MEP or site model."
+            : "Its floors gave no walkable surface: they may be modelled only as spaces or coverings, or be too steep or too small.",
       };
 
       studio.setGraph(response);
@@ -600,16 +607,12 @@ export default function App() {
           .catch((error) => console.warn("Graph upload failed; continuing in the browser only.", error));
       }
 
-      // A graph in several parts is explained beside the graph (Panels.jsx,
-      // PartsNotice) and flagged on the stepper; a toast would vanish.
-      if (!response.stats.nodes) {
-        // Say why, rather than "Graph ready, 0 nodes" (survey item 3).
-        const g = geometryRef.current || {};
-        const cause = !g.floors?.length
-          ? "The model has no floors or slabs to walk on: it may be a structural, MEP or site model."
-          : "Its floors gave no walkable surface: they may be modelled only as spaces or coverings, or be too steep or too small.";
-        toast(cause, { title: "No walkable graph", variant: "warning", ttl: 9000 });
-      } else if (!graphIsSplit(response.stats)) {
+      // A graph in several parts, or none at all, is explained beside the
+      // graph (Panels.jsx) and flagged on the stepper; a toast would vanish.
+      // With no graph the Graph step stays on screen, since the Route step
+      // has nothing to offer (review m7).
+      if (!response.stats.nodes) return;
+      if (!graphIsSplit(response.stats)) {
         toast(
           `${response.stats.nodes.toLocaleString()} nodes, ` +
             `${response.stats.edges.toLocaleString()} edges.`,
@@ -1360,7 +1363,7 @@ export default function App() {
   const stepStatus = useMemo(
     () => ({
       model: modelInfo ? "done" : "todo",
-      graph: graph ? (graphIsSplit(graph.stats) ? "warning" : "done") : "todo",
+      graph: graph ? (!graph.stats.nodes || graphIsSplit(graph.stats) ? "warning" : "done") : "todo",
       route: path?.found ? "done" : "todo",
       simulate: fire.step > 0 || rl.result ? "done" : "todo",
     }),

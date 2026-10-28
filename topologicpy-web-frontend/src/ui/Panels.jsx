@@ -213,7 +213,12 @@ export function GraphPanel({ studio, onBuildGraph, onNavigationCheck }) {
           {graphBusy ? "Building graph" : graph ? "Rebuild graph" : "Build egress graph"}
         </Button>
 
-        {graph && (
+        {graph && !graph.stats.nodes && (
+          <Notice tone="warning">
+            <strong>No walkable graph.</strong> {graph.emptyCause}
+          </Notice>
+        )}
+        {graph && graph.stats.nodes > 0 && (
           <>
             <div className="stats">
               <Stat label="Nodes" value={fmt(graph.stats.nodes)} />
