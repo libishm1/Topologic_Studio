@@ -824,8 +824,7 @@ const REGRESSION = [
   {
     id: "reg-rl-policy-above-optimum",
     title: "The policy's reported return never exceeds the exact optimum",
-    cite: "review K1 (fix on branch fix/review-2026-10-28)",
-    expectFail: "fix/review-2026-10-28 not merged",
+    cite: "review K1, 178cea6",
     run: async () => {
       const { trainRl } = await core("rl.js");
       // A short triangle (0.5 m links) where waiting beats burning, behind a burning link to the exit.
@@ -839,8 +838,7 @@ const REGRESSION = [
   {
     id: "reg-map-work-cap",
     title: "doseDeadlineMap keeps its work under maxWork",
-    cite: "review K2 (fix on branch fix/review-2026-10-28)",
-    expectFail: "fix/review-2026-10-28 not merged",
+    cite: "review K2, cefecf8",
     run: async () => {
       const { doseDeadlineMap } = await core("deadline.js");
       const { csr } = await core("route.js");
@@ -863,8 +861,7 @@ const REGRESSION = [
   {
     id: "reg-pset-unset-occurrence",
     title: "An unset Pset_DoorCommon value on the door does not hide its type's IsExternal",
-    cite: "review m12 (fix on branch fix/review-2026-10-28)",
-    expectFail: "fix/review-2026-10-28 not merged",
+    cite: "review m12, 9343f1a",
     run: async () => {
       const s = await semanticsOf(ifcText([
         ...UNITS_M, ...PROJECT,
@@ -884,8 +881,7 @@ const REGRESSION = [
   {
     id: "reg-nested-units",
     title: "A unit defined through another conversion-based unit (inch via foot) scales correctly",
-    cite: "review m12 (fix on branch fix/review-2026-10-28)",
-    expectFail: "fix/review-2026-10-28 not merged",
+    cite: "review m12, 9343f1a",
     run: async () => {
       const s = await semanticsOf(ifcText([
         "#80=IFCDIMENSIONALEXPONENTS(1,0,0,0,0,0,0);",

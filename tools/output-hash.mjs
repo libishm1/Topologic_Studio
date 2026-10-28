@@ -8,7 +8,8 @@
  *   node tools/output-hash.mjs > after.txt
  *   node tools/output-hash.mjs --diff before.txt after.txt
  *
- * Options as tools/benchmark.mjs: --only REGEX, --samples DIR. --save DIR also
+ * Options as tools/benchmark.mjs: --only REGEX, --samples DIR; --core DIR
+ * takes the core modules from DIR instead of src/core. --save DIR also
  * writes every output in full (JSON per model), so outputs whose hashes differ
  * can be compared with a tolerance: --diff A B --values DIRA DIRB --tol 1e-12.
  *
@@ -25,7 +26,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -81,15 +82,18 @@ if (argv.includes("--diff")) {
 
 // ------------------------------------------------------------- compute
 
-const CORE = "../topologicpy-web-frontend/src/core/";
-const { buildLatticeGraph } = await import(CORE + "lattice.js");
-const { astar, componentLabels } = await import(CORE + "route.js");
-const { alternativeRoutes } = await import(CORE + "alternatives.js");
-const { straightenRoute } = await import(CORE + "straighten.js");
-const { buildForecast, planWithForecast } = await import(CORE + "forecast.js");
-const { doseDeadline, doseDeadlineMap, escapeDeadlines } = await import(CORE + "deadline.js");
-const { hopSurrogate } = await import(CORE + "surrogate.js");
-const { trainRl } = await import(CORE + "rl.js");
+// --core DIR loads the core modules from another folder (for example src/core
+// of another commit, extracted with git), to compare two versions directly.
+const coreDir = option("--core", null);
+const core = (name) => import(coreDir ? pathToFileURL(path.resolve(coreDir, name)).href : `../topologicpy-web-frontend/src/core/${name}`);
+const { buildLatticeGraph } = await core("lattice.js");
+const { astar, componentLabels } = await core("route.js");
+const { alternativeRoutes } = await core("alternatives.js");
+const { straightenRoute } = await core("straighten.js");
+const { buildForecast, planWithForecast } = await core("forecast.js");
+const { doseDeadline, doseDeadlineMap, escapeDeadlines } = await core("deadline.js");
+const { hopSurrogate } = await core("surrogate.js");
+const { trainRl } = await core("rl.js");
 const { extract } = await import("./ifc-extract.mjs");
 const { findExits } = await import("./exits.mjs");
 
