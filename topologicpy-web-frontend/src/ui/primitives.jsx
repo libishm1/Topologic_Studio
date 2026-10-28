@@ -138,8 +138,30 @@ export function Slider({ label, value, min, max, step, onChange, format, hint, d
   );
 }
 
-export function NumberField({ label, value, onChange, hint, ...rest }) {
+/** Why a typed number is not taken, or null. */
+function numberProblem(text, { min, max, optional }) {
+  if (text === "") return optional ? null : "Enter a number.";
+  const v = Number(text);
+  if (!Number.isFinite(v)) return "Enter a number.";
+  const range =
+    min != null && max != null ? `Enter a number from ${min} to ${max}.` : min != null ? `Enter ${min} or more.` : `Enter ${max} or less.`;
+  if ((min != null && v < min) || (max != null && v > max)) return range;
+  return null;
+}
+
+/**
+ * A number input that passes on only values in its range. While a value is
+ * typed the field shows the text as typed and says why a value is not taken:
+ * clearing a field no longer snaps it back to the default, and a speed of 0
+ * or -1 no longer reaches the planner (review m1). Leaving the field shows the
+ * value in use again. `optional` fields pass on a blank as null.
+ */
+export function NumberField({ label, value, onChange, hint, min, max, optional = false, ...rest }) {
   const hintId = useId();
+  const errorId = useId();
+  const [draft, setDraft] = useState(null);
+  const problem = draft === null ? null : numberProblem(draft, { min, max, optional });
+  const describedBy = [problem && errorId, hint && hintId].filter(Boolean).join(" ") || undefined;
   return (
     <div className="field">
       <div className="field__label">
@@ -147,14 +169,25 @@ export function NumberField({ label, value, onChange, hint, ...rest }) {
       </div>
       <input
         type="number"
-        value={value ?? ""}
-        onChange={(event) =>
-          onChange(event.target.value === "" ? null : Number(event.target.value))
-        }
+        value={draft ?? value ?? ""}
+        min={min}
+        max={max}
+        onChange={(event) => {
+          const text = event.target.value;
+          setDraft(text);
+          if (!numberProblem(text, { min, max, optional })) onChange(text === "" ? null : Number(text));
+        }}
+        onBlur={() => setDraft(null)}
         aria-label={label}
-        aria-describedby={hint ? hintId : undefined}
+        aria-invalid={problem ? true : undefined}
+        aria-describedby={describedBy}
         {...rest}
       />
+      {problem && (
+        <p className="field__error" id={errorId}>
+          {problem}
+        </p>
+      )}
       {hint && (
         <p className="field__hint" id={hintId}>
           {hint}

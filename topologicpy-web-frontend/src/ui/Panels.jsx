@@ -694,6 +694,7 @@ function PlaceWithoutMouse({ kinds, doors, onPlace }) {
               key={axis}
               label={axis}
               value={xyz[i] === "" ? null : Number(xyz[i])}
+              optional
               step={0.1}
               onChange={(v) => setXyz((cur) => cur.map((c, j) => (j === i ? (v === null ? "" : String(v)) : c)))}
             />
@@ -1143,6 +1144,7 @@ export function SimulatePanel({
             min={30}
             max={200}
             step={5}
+            optional
             placeholder="none"
             onChange={(lethalityThreshold) => setSettings({ lethalityThreshold })}
             hint="Links hotter than this are closed. Left blank, heat only adds cost. The scale is an index, not a measured temperature (see Methods)."

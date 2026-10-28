@@ -90,6 +90,20 @@ const MODES = [
 const NO_PLAN = { busy: false, result: null };
 
 /**
+ * The fields check what is typed, but settings saved before they did can be
+ * out of range: a walking speed of 0 planned "too late" for the wrong
+ * reason, and -1 failed with "Invalid array length" (review m1).
+ */
+function planSettingsProblem(s) {
+  if (!(s.walkSpeed > 0)) return "Walking speed must be above 0 m/s.";
+  if (!(s.forecastSecondsPerStep > 0)) return "Seconds per fire step must be above 0.";
+  if (!(s.fireMaxSteps >= 1)) return "The fire needs at least one step (Steps, under Rerouting and timing).";
+  if (!(s.doseLimit > 0)) return "The dose limit must be above 0.";
+  if (!(s.departAfter >= 0)) return "Leave after cannot be negative.";
+  return null;
+}
+
+/**
  * Which layer colours the graph: "deadlines", "fire", or null for the graph's
  * own colours. A small store rather than state, since the deadline effect
  * sets it and the legend reads it.
@@ -1053,6 +1067,11 @@ export default function App() {
           ? [snap(graph, points.exit)]
           : [];
     if (!graph || !points.start || !points.fire || !exitNodes.length) return;
+    const problem = planSettingsProblem(settings);
+    if (problem) {
+      toast(problem, { title: "Check the plan's settings", variant: "warning" });
+      return;
+    }
     // A plan still running is for older inputs: end its worker rather than
     // queue behind a deadline map that can take seconds.
     if (forecastRef.current?.busy) forecastRef.current.cancel();
