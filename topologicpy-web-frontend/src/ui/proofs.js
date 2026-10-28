@@ -177,6 +177,20 @@ export const PROOFS = [
     status: "Proved",
   },
   {
+    property: "How long you can wait before leaving",
+    meaning:
+      "When heat never falls, leaving earlier is never worse, so the departures that still get out form an interval, and its end is the escape deadline. Without a dose limit it is the latest time a point can leave and reach an exit before each point on the way becomes untenable, computed exactly by settling the latest deadline first. With a dose limit it is the latest time that also keeps the dose within it: exact at the start, by bisection on the exact search, and over the whole graph on a time grid that rounds walking times up, so the map is never later than the exact deadline, though it can be a few seconds earlier.",
+    tex: [
+      String.raw`L(x) = u(x) \quad \text{for an exit } x`,
+      String.raw`L(v) = \max_{(v,w)} \min\bigl(u(v),\ L(w) - \tau_{vw}\bigr)`,
+      String.raw`\text{leaving at } t \text{ is safe} \iff t < L(v)`,
+      String.raw`T^{\ast}(v) = \sup\{\, t : D^{\ast}(v, t) \le \theta \,\}`,
+      String.raw`\mathrm{map}(v) \le T^{\ast}(v) \le L(v)`,
+    ],
+    files: ["Deadline", "MinDose"],
+    status: "Proved; two rounding issues it found are fixed",
+  },
+  {
     property: "Q-learning converges to the best table",
     meaning:
       "For Studio's deterministic problem the Bellman operator is a contraction, and tabular Q-learning with any constant step between 0 and 1 converges to the optimal table on every state updated infinitely often; with fire and a step limit the optimum is exact backward induction. This says nothing about a finite run, so the panel shows the policy's return beside that exact optimum. Shaping keeps the optimal policy only if the step limit, too, has zero potential; Studio now sets it so.",

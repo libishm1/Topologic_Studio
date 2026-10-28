@@ -13,3 +13,8 @@ import FireEgress.Frames
 import FireEgress.Yen
 import FireEgress.TimeDependent
 import FireEgress.MinDose
+import FireEgress.QLearning
+import FireEgress.Eikonal
+import FireEgress.FloatError
+import FireEgress.Forecast
+import FireEgress.Deadline
