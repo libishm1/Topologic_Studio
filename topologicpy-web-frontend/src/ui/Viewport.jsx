@@ -327,14 +327,17 @@ export function Viewport({
                 <summary className="legend__summary">Legend</summary>
                 {heatLegend && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 6 }}>
-                    <span className="legend__title">Model temperature</span>
+                    {/* true: heat diffusion's index; an object: a scale of its own (the two-zone model). */}
+                    <span className="legend__title">{heatLegend.title ?? "Model temperature"}</span>
                     <span className="legend__ramp" aria-hidden="true" />
                     <span className="legend__scale">
                       <span>20</span>
-                      <span>70</span>
-                      <span>120</span>
+                      <span>{Math.round((20 + (heatLegend.max ?? 120)) / 2)}</span>
+                      <span>{heatLegend.max ?? 120}</span>
                     </span>
-                    <span className="legend__note">An index scaled to read in °C, not a measured temperature.</span>
+                    <span className="legend__note">
+                      {heatLegend.note ?? "An index scaled to read in °C, not a measured temperature."}
+                    </span>
                   </div>
                 )}
                 {deadlineLegend && (

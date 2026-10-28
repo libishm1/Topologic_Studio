@@ -8,6 +8,11 @@
  *   flood        breadth-first along the graph, one hop per step (Classic)
  *   temperature  Classic's diffusion (eCAADe 2019): each node moves toward its
  *                neighbours' mean when that is hotter, clipped to 20-120 C
+ * and, in the browser only:
+ *   zone         the two-zone room model's gas temperatures in degrees C
+ *                (src/core/zone.js), computed beforehand from the IFC's rooms
+ *                and passed in as `zoneFrames`, one frame per step; it then
+ *                plays and reroutes as the temperature model does
  *
  * One correction from the literature review (wiki/research/fire-egress-
  * methods-2026-10-27.md, finding W1): the gain coefficient is
@@ -126,7 +131,10 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
     interval = 5,
     alpha = 0.5,
     lethality = null,
+    zoneFrames = null,
   } = opts;
+  // Both play temperatures (degrees C); the zone model's come precomputed.
+  const heat = model === "temperature" || model === "zone";
   const walls = useWalls ? graph.blocked : null;
   const seed = snap(graph, firePoint);
   const walker = startPoint ? snap(graph, startPoint) : null;
@@ -172,6 +180,9 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
   const burning = new Uint8Array(graph.nodes.length / 3);
   if (model === "temperature") {
     steps = temperatureSteps(graph, seed, { maxSteps, blocked: walls });
+  } else if (model === "zone") {
+    if (!zoneFrames) throw new Error("The two-zone model's frames must be computed first.");
+    steps = zoneFrames;
   } else {
     const timeline = model === "flood" ? floodTimeline(graph, seed, maxSteps, walls) : radialTimeline(graph, seed, maxSteps);
     steps = timeline.values();
@@ -186,7 +197,7 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
       onDone?.();
       return;
     }
-    if (model === "temperature") {
+    if (heat) {
       const temperatures = {};
       for (let i = 0; i < value.length; i += 1) if (value[i] > 21) temperatures[i] = Math.round(value[i] * 100) / 100;
       onMessage?.({ type: "temperature_step", step, temperatures });

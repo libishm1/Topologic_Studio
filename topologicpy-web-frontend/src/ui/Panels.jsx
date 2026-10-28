@@ -12,6 +12,7 @@ import React, { useId, useState } from "react";
 import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
+import { fireModelIn, hasRooms } from "../state/useStudio.js";
 import {
   Button,
   Choices,
@@ -733,6 +734,28 @@ const FIRE_MODELS = [
   { value: "radial", label: "Distance bands", description: "Straight-line distance from the origin. Ignores walls." },
 ];
 
+// Offered only on a model with IfcSpace rooms (src/core/zone.js, rooms.js).
+const ZONE_MODEL = {
+  value: "zone",
+  label: "Two-zone rooms (degrees C)",
+  description:
+    "A smoke layer and its gas temperature in each room, on a clock in seconds, spreading through open doors. Needs the model's rooms (IfcSpace).",
+};
+
+const ZONE_GROWTH = [
+  { value: "slow", label: "Slow (1 MW in 600 s)" },
+  { value: "medium", label: "Medium (1 MW in 300 s)" },
+  { value: "fast", label: "Fast (1 MW in 150 s)" },
+  { value: "ultra-fast", label: "Ultra-fast (1 MW in 75 s)" },
+];
+
+/** What the two-zone model leaves out (specification section 8), shown with every result. */
+const ZONE_LIMITS =
+  "Pre-flashover correlations (MQH) for rooms of ordinary size; one fire; doors open; no ceiling jet, radiant heat, " +
+  "toxic gases or visibility beyond the smoke layer's height; smoke spreads one way, outward from the fire room; " +
+  "lower layers at ambient. It ranks routes and deadlines under these assumptions, and is not a substitute for CFAST, " +
+  "FDS or an engineer's assessment.";
+
 function RerouteResult({ dynamicPath, step }) {
   const unsafe = dynamicPath.found === false;
   return (
@@ -778,8 +801,40 @@ function Swatch({ color }) {
   return <span className="legend__swatch legend__swatch--inline" style={{ background: color }} aria-hidden="true" />;
 }
 
-function ForecastResult({ result, settings }) {
-  const { earliest, leastDose, leaveBy, snapshot, front, truncated, coarsened, mapStep } = result;
+/** The two-zone model's account of its fire, and its limits (specification section 8). */
+function ZoneNotes({ zone, roomName }) {
+  return (
+    <>
+      <span>
+        The fire starts in {roomName || "a room"} ({zone.fireRoomArea.toFixed(0)} m², {zone.fireRoomHeight.toFixed(1)} m
+        high) and grows to {Math.round(zone.Qmax).toLocaleString()} kW
+        {zone.leakage
+          ? ": the room has no door in the graph, so it burns on a nominal 0.1 m² leak"
+          : zone.ventLimited
+            ? `, as much as its doors (${zone.ventArea.toFixed(1)} m²) let it burn`
+            : ""}
+        .{" "}
+        {zone.flashover !== null
+          ? `It flashes over at ${secs(zone.flashover)}.`
+          : "It does not flash over within the forecast."}{" "}
+        Smoke reaches {zone.roomsReached} of {zone.rooms} rooms, and {zone.roomsUntenable} become untenable.
+      </span>
+      {zone.nodesInRooms < 0.999 && (
+        <span>
+          {Math.round(zone.nodesInRooms * 100)}% of the graph lies in a room; the rest (outside, or where the model has no
+          IfcSpace) sees no fire.
+        </span>
+      )}
+      <span className="field__hint">
+        Times are seconds after ignition, and the dose is of the smoke layer&apos;s gas temperature (convective heat
+        only). Limits: {ZONE_LIMITS}
+      </span>
+    </>
+  );
+}
+
+function ForecastResult({ result, settings, roomName }) {
+  const { earliest, leastDose, leaveBy, snapshot, front, truncated, coarsened, mapStep, zone } = result;
   const depart = settings.departAfter || 0;
   const tradeoff = front.length > 1;
   const unsafePlan = snapshot && !snapshot.safe && !snapshot.beyondForecast;
@@ -808,6 +863,20 @@ function ForecastResult({ result, settings }) {
           <dt className="result__label">Forecast</dt>
           <dd className="result__value">{secs(result.horizon)}</dd>
         </div>
+        {zone && (
+          <>
+            <div className="result__item">
+              <dt className="result__label">Flashover</dt>
+              <dd className="result__value">{zone.flashover === null ? "not reached" : secs(zone.flashover)}</dd>
+            </div>
+            <div className="result__item">
+              <dt className="result__label">Smoke reaches</dt>
+              <dd className="result__value">
+                {zone.roomsReached} of {zone.rooms} rooms
+              </dd>
+            </div>
+          </>
+        )}
       </dl>
       <div className="result__note forecast__notes">
         {earliest && (
@@ -853,10 +922,14 @@ function ForecastResult({ result, settings }) {
         {coarsened && (
           <span>The forecast was stored every {secs(coarsened)} to fit in memory, which only makes it more cautious.</span>
         )}
-        <span className="field__hint">
-          Times run on the clock you set ({settings.forecastSecondsPerStep} s per fire step). The heat is the model&apos;s
-          index, so the dose ranks routes under the model; it is not a measured dose.
-        </span>
+        {zone ? (
+          <ZoneNotes zone={zone} roomName={roomName} />
+        ) : (
+          <span className="field__hint">
+            Times run on the clock you set ({settings.forecastSecondsPerStep} s per fire step). The heat is the model&apos;s
+            index, so the dose ranks routes under the model; it is not a measured dose.
+          </span>
+        )}
       </div>
     </section>
   );
@@ -871,14 +944,20 @@ function exitSourceText(source) {
 }
 
 function ForecastSection({ studio, exits, onPlan }) {
-  const { graph, points, settings, setSettings, forecastPlan, fire } = studio;
+  const { graph, points, settings, setSettings, forecastPlan, fire, modelInfo, semantics } = studio;
   const modelExits = settings.forecastExits === "model" && exits?.nodes.length > 0;
   const ready = Boolean(graph && points.start && points.fire && (modelExits || points.exit));
+  const zone = fireModelIn(settings, modelInfo) === "zone";
+  // The fire room's IfcSpace name, from the model's own data (ifcSemantics.js).
+  const fireRoomId = forecastPlan.result?.zone?.fireRoomId;
+  const space = fireRoomId !== null && fireRoomId !== undefined ? semantics?.spaces?.find((s) => s.id === fireRoomId) : null;
+  const roomName = space ? [space.longName, space.name].filter(Boolean).join(" ") || null : null;
   return (
     <Section title="Escape deadlines and forecast routes" badge={forecastPlan.result?.earliest ? "planned" : null}>
       <p className="field__hint">
         Runs the fire to its last step first, then routes with the state each point will be in when you would reach it,
         and works out how long you can wait before leaving.
+        {zone && " The fire is the two-zone room model chosen above: gas temperatures in degrees C, on a clock in seconds."}
       </p>
       {exits?.nodes.length > 0 && (
         <Choices
@@ -896,16 +975,57 @@ function ForecastSection({ studio, exits, onPlan }) {
           ]}
         />
       )}
+      {zone && (
+        <Disclosure summary="The room fire" defaultOpen>
+          <div className="grid-2">
+            <SelectField
+              label="Growth"
+              value={settings.zoneGrowth}
+              options={ZONE_GROWTH}
+              onChange={(zoneGrowth) => setSettings({ zoneGrowth })}
+            />
+            <NumberField
+              label="Peak heat release (kW)"
+              value={settings.zonePeakKw}
+              min={50}
+              max={50000}
+              step={250}
+              onChange={(v) => setSettings({ zonePeakKw: v ?? 5000 })}
+            />
+          </div>
+          <p className="field__hint">
+            A t-squared fire in the room of the fire origin, capped at this peak or at what the room&apos;s doors let it
+            burn, whichever is lower.
+          </p>
+          <Toggle
+            label="Smoke at head height is untenable"
+            checked={settings.zoneSmoke}
+            onChange={(zoneSmoke) => setSettings({ zoneSmoke })}
+            hint="A point closes once its room's smoke layer is down to 1.8 m, however hot; off, only from the gas temperature below."
+          />
+        </Disclosure>
+      )}
       <Disclosure summary="Clock, speed and limits">
         <div className="grid-2">
-          <NumberField
-            label="Seconds per fire step"
-            value={settings.forecastSecondsPerStep}
-            min={0.5}
-            max={60}
-            step={0.5}
-            onChange={(v) => setSettings({ forecastSecondsPerStep: v ?? 5 })}
-          />
+          {zone ? (
+            <NumberField
+              label="Forecast length (s)"
+              value={settings.zoneHorizon}
+              min={60}
+              max={1800}
+              step={30}
+              onChange={(v) => setSettings({ zoneHorizon: v ?? 600 })}
+            />
+          ) : (
+            <NumberField
+              label="Seconds per fire step"
+              value={settings.forecastSecondsPerStep}
+              min={0.5}
+              max={60}
+              step={0.5}
+              onChange={(v) => setSettings({ forecastSecondsPerStep: v ?? 5 })}
+            />
+          )}
           <NumberField
             label="Walking speed (m/s)"
             value={settings.walkSpeed}
@@ -914,14 +1034,25 @@ function ForecastSection({ studio, exits, onPlan }) {
             step={0.1}
             onChange={(v) => setSettings({ walkSpeed: v ?? 1.2 })}
           />
-          <NumberField
-            label="Untenable from (model °C)"
-            value={settings.untenableAbove}
-            min={25}
-            max={120}
-            step={5}
-            onChange={(v) => setSettings({ untenableAbove: v ?? 80 })}
-          />
+          {zone ? (
+            <NumberField
+              label="Untenable from (gas °C)"
+              value={settings.zoneUntenableC}
+              min={30}
+              max={200}
+              step={5}
+              onChange={(v) => setSettings({ zoneUntenableC: v ?? 60 })}
+            />
+          ) : (
+            <NumberField
+              label="Untenable from (model °C)"
+              value={settings.untenableAbove}
+              min={25}
+              max={120}
+              step={5}
+              onChange={(v) => setSettings({ untenableAbove: v ?? 80 })}
+            />
+          )}
           <NumberField
             label="Dose limit (FED)"
             value={settings.doseLimit}
@@ -937,7 +1068,11 @@ function ForecastSection({ studio, exits, onPlan }) {
           min={0}
           step={5}
           onChange={(v) => setSettings({ departAfter: v ?? 0 })}
-          hint="ISO 13571 uses an FED of 0.3 to protect most occupants and 1 for the average adult. The fire models count steps, so the seconds per step set the clock."
+          hint={
+            zone
+              ? "ISO 13571 uses an FED of 0.3 to protect most occupants and 1 for the average adult. Seconds after ignition."
+              : "ISO 13571 uses an FED of 0.3 to protect most occupants and 1 for the average adult. The fire models count steps, so the seconds per step set the clock."
+          }
         />
         <Toggle
           label="Colour the graph by escape deadline"
@@ -953,14 +1088,18 @@ function ForecastSection({ studio, exits, onPlan }) {
           Needs a start{modelExits ? "" : " and an exit"} (Route step) and a fire origin.
         </p>
       )}
-      {forecastPlan.result && <ForecastResult result={forecastPlan.result} settings={settings} />}
+      {forecastPlan.result && <ForecastResult result={forecastPlan.result} settings={settings} roomName={roomName} />}
     </Section>
   );
 }
 
 export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onStopFire, onTrainRl, onPlanForecast, onGoTo }) {
-  const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl } = studio;
+  const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo } = studio;
   const ready = Boolean(graph);
+  const rooms = hasRooms(modelInfo);
+  const fireModel = fireModelIn(settings, modelInfo);
+  // Heat diffusion and the two-zone model both give temperatures to reroute on.
+  const heat = fireModel === "temperature" || fireModel === "zone";
 
   return (
     <>
@@ -983,11 +1122,22 @@ export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onS
         <Choices
           legend="How the fire spreads"
           name="fire-model"
-          value={settings.fireModel}
+          value={fireModel}
           onChange={(fireModel) => setSettings({ fireModel })}
-          options={FIRE_MODELS}
+          options={rooms ? [...FIRE_MODELS, ZONE_MODEL] : FIRE_MODELS}
           disabled={fire.running}
         />
+        {modelInfo && !rooms && (
+          <p className="field__hint">
+            Two-zone rooms (degrees C) needs rooms: the model must have IfcSpace elements, and this one has none.
+          </p>
+        )}
+        {fireModel === "zone" && (
+          <p className="field__hint">
+            The rooms&apos; fire is computed first and played one step per {secs(settings.zoneHorizon / Math.max(1, settings.fireMaxSteps))};
+            set its growth and peak under Escape deadlines below.
+          </p>
+        )}
 
         <div className="row">
           <Button
@@ -1016,7 +1166,7 @@ export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onS
             checked={settings.reroute}
             onChange={(reroute) => setSettings({ reroute })}
             hint={
-              settings.fireModel === "temperature"
+              heat
                 ? "Re-solved against the current heat while the fire spreads."
                 : "Re-solved with burning nodes treated as impassable."
             }
@@ -1029,8 +1179,8 @@ export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onS
             step={0.1}
             onChange={(hazardAlpha) => setSettings({ hazardAlpha })}
             format={(v) => v.toFixed(1)}
-            disabled={!settings.reroute || settings.fireModel !== "temperature"}
-            hint="Heat diffusion only. Link cost is length x (1 + weight x heat); zero ignores the fire."
+            disabled={!settings.reroute || !heat}
+            hint="Heat diffusion and two-zone rooms only. Link cost is length x (1 + weight x degrees above ambient / 100); zero ignores the fire."
           />
           <Slider
             label="Recompute every"
