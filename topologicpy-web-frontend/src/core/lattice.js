@@ -486,20 +486,25 @@ export function buildLatticeGraph({
   const excludeAbove =
     Number.isFinite(modelTop) && modelTop - floorLow >= 2.0 ? modelTop - 1.0 : null;
 
+  const stairParts = stairPatches(stairs, { up, h0, h1 });
+
   // Coarsen until the lattice fits the point budget.
   let s = Math.max(spacing, 0.05);
   let samples, kept, windingFallback;
   for (let attempt = 0; attempt < 6; attempt += 1) {
     samples = { i: [], j: [], h: [], kind: [] };
     const base = { up, h0, h1, spacing: s, cos, sin, excludeAbove };
-    // Stairs are not sampled here: each becomes its walking line below
-    // (stairs.js).
+    // Stair treads are not sampled here: each staircase becomes its walking
+    // line below (stairs.js). A ramp's sloping surface is sampled as floor.
     // Room floors (IfcSpace bottoms) as well as slabs: some architectural
     // models have no floor slabs at all (Office A has 5 m2 of slab and floors
     // only as spaces), and a space's footprint is the floor inside the walls.
     // Where both exist the column collapse keeps the walking surface.
     sampleTriangles(spaces, { ...base, scale: 2, minUp: Math.cos((10 * Math.PI) / 180), kind: KIND_FLOOR, bottomOnly: true }, samples, false);
     windingFallback = sampleGroup(floors, { ...base, scale: 2, minUp: Math.cos((10 * Math.PI) / 180), kind: KIND_FLOOR }, samples);
+    if (stairParts.ramp.indices.length) {
+      sampleGroup([stairParts.ramp], { ...base, scale: 2, minUp: Math.cos((15 * Math.PI) / 180), kind: KIND_FLOOR }, samples);
+    }
     kept = collapse(samples, columnGap);
     if (kept.length <= maxPoints) break;
     s *= Math.sqrt(kept.length / maxPoints) * 1.05;
@@ -517,7 +522,7 @@ export function buildLatticeGraph({
   });
 
   const count = kept.length;
-  const patches = stairPatches(stairs, { up, h0, h1 });
+  const patches = stairParts.patches;
   const maxRise = stairRiser + 0.06;
   const walk = stairLinks(patches, { maxRise });
   // Room for up to four wall-face nodes per lattice node, one per door and one
@@ -621,6 +626,95 @@ export function buildLatticeGraph({
     }
   }
 
+  // Staircases (stairs.js): a node per tread or landing at its centroid, which
+  // on a flight is its centre line, linked up the flight. Each end of a
+  // staircase links once to the floor: to the floor node nearest the point
+  // one going beyond the end along the walking line, on the outward side,
+  // within one riser of it and not through a wall. These links, like the
+  // treads', are not blocked
+  // afterwards: each was checked against the walls when it was made.
+  const stairEdge = new Set();
+  const stairBase = total;
+  patches.forEach((patch, k) => {
+    const n = stairBase + k;
+    points[n * 3 + h0] = patch.x;
+    points[n * 3 + h1] = patch.y;
+    points[n * 3 + up] = patch.h + agentHeight;
+    heights[n] = patch.h;
+    kinds[n] = KIND_STAIR;
+  });
+  total += patches.length;
+  for (const [a, b] of walk.links) {
+    stairEdge.add(edges.length / 2);
+    edges.push(stairBase + a, stairBase + b);
+  }
+  const endReach = 1.5;
+  const floorAt = (x, y, h, side, dir, going) => {
+    // Lattice cells near (x, y): the inverse of plan().
+    const ci = (x * cos + y * sin) / hs, cj = (-x * sin + y * cos) / hs;
+    const r = Math.ceil(endReach / hs) + 1;
+    let pick = -1, score = Infinity;
+    for (let i = Math.floor(ci) - r; i <= Math.ceil(ci) + r; i += 1) {
+      for (let j = Math.floor(cj) - r; j <= Math.ceil(cj) + r; j += 1) {
+        const list = cells.get(key(i, j));
+        if (!list) continue;
+        for (const m of list) {
+          if (kinds[m] !== KIND_FLOOR) continue;
+          // Within one riser. A single step (no direction) joins the floor
+          // below at its foot and the floor above at its head; a flight's
+          // end may land a little proud of or below its floor (Wellness: a
+          // top tread 12 cm above the slab), and its direction picks the side.
+          const dh = heights[m] - h;
+          if (Math.abs(dh) > maxRise || (!dir && ((side < 0 && dh > 0.05) || (side > 0 && dh < -0.05)))) continue;
+          const mx = points[m * 3 + h0], my = points[m * 3 + h1];
+          const d = Math.hypot(mx - x, my - y);
+          if (d > endReach) continue;
+          let rank = d;
+          if (dir) {
+            if ((mx - x) * dir[0] + (my - y) * dir[1] <= 0) continue;
+            rank = Math.hypot(mx - (x + dir[0] * going), my - (y + dir[1] * going));
+          }
+          if (rank >= score) continue;
+          const index = sectionFor(heights[m]);
+          if (index.crosses(x, y, mx, my) || index.inside((x + mx) / 2, (y + my) / 2)) continue;
+          pick = m;
+          score = rank;
+        }
+      }
+    }
+    return pick;
+  };
+  let stairEnds = 0, stairEndsLinked = 0;
+  const linkEnd = (k, side, neighbours) => {
+    const patch = patches[k];
+    let dir = null, going = 0;
+    if (neighbours.length) {
+      let mx = 0, my = 0;
+      for (const q of neighbours) {
+        mx += patches[q].x / neighbours.length;
+        my += patches[q].y / neighbours.length;
+      }
+      const dx = patch.x - mx, dy = patch.y - my, len = Math.hypot(dx, dy);
+      if (len > 1e-6) {
+        dir = [dx / len, dy / len];
+        going = Math.max(0.25, Math.min(0.6, len));
+      }
+    }
+    stairEnds += 1;
+    // Failing a floor along the walking line (a wall or a void beyond the
+    // end), the nearest floor at the end's level in any direction.
+    let m = floorAt(patch.x, patch.y, patch.h, side, dir, going);
+    if (m < 0 && dir) m = floorAt(patch.x, patch.y, patch.h, side, null, 0);
+    if (m < 0) return;
+    stairEndsLinked += 1;
+    stairEdge.add(edges.length / 2);
+    edges.push(stairBase + k, m);
+  };
+  for (let k = 0; k < patches.length; k += 1) {
+    if (!walk.lower[k].length) linkEnd(k, -1, walk.higher[k]);
+    if (!walk.higher[k].length) linkEnd(k, 1, walk.lower[k]);
+  }
+
   // Doorways. Exporters often stop the slab at the wall face, so a doorway has
   // no floor under it and the lattice alone leaves the rooms either side apart
   // (on the Duplex, separate pieces at ground level). The old 2.25 m
@@ -640,7 +734,9 @@ export function buildLatticeGraph({
     const nx = -uy, ny = ux;
     const half = Math.max(width / 2, s / 2) + 1e-6;
     const local = [];
-    for (let n = 0; n < count; n += 1) {
+    for (let n = 0; n < stairBase + patches.length; n += 1) {
+      if (n === count) n = stairBase; // skip the wall-face nodes in between
+      if (n >= stairBase + patches.length) break;
       if (Math.abs(heights[n] - dlow) > maxEdgeRise + 0.05) continue;
       const rx = points[n * 3 + h0] - dx, ry = points[n * 3 + h1] - dy;
       const along = rx * ux + ry * uy, across = rx * nx + ry * ny;
@@ -680,88 +776,6 @@ export function buildLatticeGraph({
         edges.push(door, n);
       }
     }
-  }
-
-  // Staircases (stairs.js): a node per tread or landing at its centroid, which
-  // on a flight is its centre line, linked up the flight. Each end of a
-  // staircase links once to the floor: to the floor node nearest the point
-  // one going beyond the end along the walking line, on the outward side, at
-  // or below the bottom end and at or above the top end, within one riser
-  // and not through a wall. These links, like the treads', are not blocked
-  // afterwards: each was checked against the walls when it was made.
-  const stairEdge = new Set();
-  const stairBase = total;
-  patches.forEach((patch, k) => {
-    const n = stairBase + k;
-    points[n * 3 + h0] = patch.x;
-    points[n * 3 + h1] = patch.y;
-    points[n * 3 + up] = patch.h + agentHeight;
-    heights[n] = patch.h;
-    kinds[n] = KIND_STAIR;
-  });
-  total += patches.length;
-  for (const [a, b] of walk.links) {
-    stairEdge.add(edges.length / 2);
-    edges.push(stairBase + a, stairBase + b);
-  }
-  const endReach = 1.5;
-  const floorAt = (x, y, h, side, dir, going) => {
-    // Lattice cells near (x, y): the inverse of plan().
-    const ci = (x * cos + y * sin) / hs, cj = (-x * sin + y * cos) / hs;
-    const r = Math.ceil(endReach / hs) + 1;
-    let pick = -1, score = Infinity;
-    for (let i = Math.floor(ci) - r; i <= Math.ceil(ci) + r; i += 1) {
-      for (let j = Math.floor(cj) - r; j <= Math.ceil(cj) + r; j += 1) {
-        const list = cells.get(key(i, j));
-        if (!list) continue;
-        for (const m of list) {
-          if (kinds[m] !== KIND_FLOOR) continue;
-          const dh = heights[m] - h;
-          if (Math.abs(dh) > maxRise || (side < 0 && dh > 0.05) || (side > 0 && dh < -0.05)) continue;
-          const mx = points[m * 3 + h0], my = points[m * 3 + h1];
-          const d = Math.hypot(mx - x, my - y);
-          if (d > endReach) continue;
-          let rank = d;
-          if (dir) {
-            if ((mx - x) * dir[0] + (my - y) * dir[1] <= 0) continue;
-            rank = Math.hypot(mx - (x + dir[0] * going), my - (y + dir[1] * going));
-          }
-          if (rank >= score) continue;
-          const index = sectionFor(heights[m]);
-          if (index.crosses(x, y, mx, my) || index.inside((x + mx) / 2, (y + my) / 2)) continue;
-          pick = m;
-          score = rank;
-        }
-      }
-    }
-    return pick;
-  };
-  let stairEnds = 0, stairEndsLinked = 0;
-  const linkEnd = (k, side, neighbours) => {
-    const patch = patches[k];
-    let dir = null, going = 0;
-    if (neighbours.length) {
-      let mx = 0, my = 0;
-      for (const q of neighbours) {
-        mx += patches[q].x / neighbours.length;
-        my += patches[q].y / neighbours.length;
-      }
-      const dx = patch.x - mx, dy = patch.y - my, len = Math.hypot(dx, dy);
-      if (len > 1e-6) {
-        dir = [dx / len, dy / len];
-        going = Math.max(0.25, Math.min(0.6, len));
-      }
-    }
-    stairEnds += 1;
-    const m = floorAt(patch.x, patch.y, patch.h, side, dir, going);
-    if (m < 0) return;
-    stairEndsLinked += 1;
-    stairEdge.add(edges.length / 2);
-    edges.push(stairBase + k, m);
-  };
-  for (let k = 0; k < patches.length; k += 1) {
-    if (!walk.lower[k].length) linkEnd(k, -1, walk.higher[k]);
-    if (!walk.higher[k].length) linkEnd(k, 1, walk.lower[k]);
   }
 
   const edgeCount = edges.length / 2;
