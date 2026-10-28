@@ -1492,7 +1492,7 @@
     {
      "name": "case ran",
      "ok": false,
-     "detail": "threw: RangeError: Invalid array length\n    at Array.push (<anonymous>)\n    at sampleTriangles (file:///C:/Users/lmurugesan/OneDrive%20-%20Alfaisal%20University/CM-iTAD/topologic_webapp/TopologicStudio/.claude/worktrees/agent-ab4f7303ef3afd806/topologicpy-web-frontend/src/core/lattice.js:185:17)\n    at sampleGroup (file:///C:/Users/lmurugesan/OneDrive%20-%20Alfaisal%20University/CM-iTAD/topologic_webapp/TopologicStudio/.claude/worktrees/agent-ab4f7303ef3afd806/topologicpy-web-frontend/src/core/lattice.js:201:7)\n    at buildLatticeGraph (file:///C:/Users/lmurugesan/OneDrive%20-%20Alfaisal%20University"
+     "detail": "threw: RangeError: Invalid array length\n    at Array.push (<anonymous>)\n    at sampleTriangles (topologicpy-web-frontend/src/core/lattice.js:185:17)\n    at sampleGroup (topologicpy-web-frontend/src/core/lattice.js:201:7)\n    at buildLatticeGraph ((local path)"
     }
    ]
   },

@@ -428,7 +428,7 @@ All 15 known-bug cases pass, and every one whose fix lies in `src/core` fails on
 | Rooms and a wall with a door, 500 km from the origin (float32 positions) | pass | 60 | connected; 13 ms; route, straighten, temperature, flood |
 | The door scene in millimetres (units not converted): no crash, within budget | open (lattice.js samples the full grid before coarsening, 4e8 samples here (not fixed here)) | 12254 | case ran: threw: RangeError: Invalid array length
     at Array.push (<anonymous>)
-    at sampleTriangles (file:///C:/Users/lmurugesan/OneDrive%20-%20Alfaisal%20University/CM-iTAD/topologic_webapp/Topo |
+    at sampleTriangles ((local path) |
 
 </details>
 

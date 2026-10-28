@@ -25,10 +25,21 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
+
+/**
+ * Results as JSON, with this checkout's location (in stack traces) made
+ * repo-relative and any other absolute file URL (a trace cut short) replaced:
+ * results are committed.
+ */
+const resultsJson = (results) =>
+  JSON.stringify(results, null, 1)
+    .split(`${pathToFileURL(ROOT).href}/`).join("")
+    .split(JSON.stringify(`${ROOT}${path.sep}`).slice(1, -1)).join("")
+    .replace(/file:\/\/\/[A-Za-z]:\/[^\s"|)]*/g, "(local path)");
 const MANIFEST = path.join(ROOT, "benchmark", "manifest.json");
 const CORE = "../topologicpy-web-frontend/src/core/";
 
@@ -996,7 +1007,7 @@ async function stress(manifest) {
   const count = (s) => results.cases.filter((x) => x.status === s).length;
   results.totals = { cases: results.cases.length, pass: count("pass"), fail: count("FAIL"), open: count("open"), expectedFail: count("xfail"), unexpectedPass: count("fixed?"), skipped: count("skipped") };
   mkdirSync(path.dirname(outFile), { recursive: true });
-  writeFileSync(outFile, JSON.stringify(results, null, 1));
+  writeFileSync(outFile, resultsJson(results));
   console.log(`\n${JSON.stringify(results.totals)}\nWrote ${path.relative(ROOT, outFile)}\n`);
   console.log(summarizeStress(results));
 }
@@ -1133,7 +1144,7 @@ async function main() {
   }
   results.totalMinutes = round((performance.now() - t0) / 60000, 1);
   mkdirSync(path.dirname(outFile), { recursive: true });
-  writeFileSync(outFile, JSON.stringify(results, null, 1));
+  writeFileSync(outFile, resultsJson(results));
   console.log(`\nWrote ${path.relative(ROOT, outFile)} (${results.totalMinutes} min)\n`);
   console.log(summarize(results));
 }
