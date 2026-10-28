@@ -14,6 +14,7 @@ export function Button({
   busy = false,
   icon = false,
   className = "",
+  disabled = false,
   ...rest
 }) {
   const classes = [
@@ -26,8 +27,10 @@ export function Button({
   ]
     .filter(Boolean)
     .join(" ");
+  // `disabled` is taken out of `rest` and set after it: spread last, a
+  // caller's disabled={false} switched a busy button back on.
   return (
-    <button type="button" className={classes} disabled={busy || rest.disabled} {...rest}>
+    <button type="button" className={classes} {...rest} disabled={busy || disabled} aria-busy={busy || undefined}>
       {busy && <span className="btn__spinner" aria-hidden="true" />}
       {children}
     </button>
