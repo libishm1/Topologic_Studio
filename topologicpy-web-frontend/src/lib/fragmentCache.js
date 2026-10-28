@@ -11,17 +11,19 @@
  * multi-second parse into a fetch from disk.
  */
 
-import pkg from "../../package.json";
-
 /**
  * What produced a cached buffer. The key was the IFC's hash alone, so a model
  * converted by an older fragments or web-ifc, or with other importer
  * settings, was served again after an upgrade
  * (wiki/research/ifc-handling-survey-2026-10-27.md, item 4). Bump
  * IMPORT_SETTINGS when ViewerManager's importer settings change.
+ *
+ * The versions are the installed ones, put in at build time by
+ * vite.config.js: package.json holds ranges ("~3.4.7" whatever patch is
+ * installed), and importing it bundled the whole file (review m10).
  */
 const IMPORT_SETTINGS = 1;
-export const CONVERTER = `fragments ${pkg.dependencies["@thatopen/fragments"]}; web-ifc ${pkg.dependencies["web-ifc"]}; settings ${IMPORT_SETTINGS}`;
+export const CONVERTER = `fragments ${import.meta.env.FRAGMENTS_VERSION}; web-ifc ${import.meta.env.WEBIFC_VERSION}; settings ${IMPORT_SETTINGS}`;
 
 const DB_NAME = "topologic-studio";
 const DB_VERSION = 1;
@@ -122,14 +124,31 @@ export async function writeCached(key, buffer, meta = {}) {
       transaction.onabort = () => reject(transaction.error);
     });
     void evict(db).catch(() => {});
-    // Ask the browser not to clear the cache under storage pressure; it may
-    // say no, which changes nothing.
-    void globalThis.navigator?.storage?.persist?.().catch(() => {});
+    askToPersist();
     return true;
   } catch {
     // A quota error just means no cache for this model; loading still works.
     return false;
   }
+}
+
+let persistAsked = false;
+
+/**
+ * Ask the browser not to clear the cache under storage pressure; it may say
+ * no, which changes nothing. Once per session, after the first conversion is
+ * stored (writes follow conversions only), and not when the cache is already
+ * kept: Firefox asks the user each time it is called, and it was called on
+ * every write.
+ */
+function askToPersist() {
+  if (persistAsked) return;
+  persistAsked = true;
+  const storage = globalThis.navigator?.storage;
+  if (!storage?.persist) return;
+  Promise.resolve(storage.persisted?.())
+    .then((kept) => (kept ? null : storage.persist()))
+    .catch(() => {});
 }
 
 async function touch(db, key) {

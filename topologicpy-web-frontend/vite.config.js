@@ -1,9 +1,21 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+
+/** The installed version of a package, not the range package.json asks for. */
+const installed = (name) =>
+  JSON.parse(readFileSync(new URL(`./node_modules/${name}/package.json`, import.meta.url), "utf8")).version;
 
 export default defineConfig({
   plugins: [react()],
   base: process.env.BASE_PATH || "/",
+
+  // The fragment cache keys converted models on the converter's versions
+  // (src/lib/fragmentCache.js); only the two strings go into the bundle.
+  define: {
+    "import.meta.env.FRAGMENTS_VERSION": JSON.stringify(installed("@thatopen/fragments")),
+    "import.meta.env.WEBIFC_VERSION": JSON.stringify(installed("web-ifc")),
+  },
 
   optimizeDeps: {
     // web-ifc ships a WASM runtime that Vite's dependency pre-bundler cannot
