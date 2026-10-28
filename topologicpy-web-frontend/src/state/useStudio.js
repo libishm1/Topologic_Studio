@@ -67,6 +67,25 @@ export const DEFAULT_SETTINGS = {
   modelAppearance: "solid",
 };
 
+/**
+ * The settings a forecast plan is made with. A plan keeps the values it used,
+ * so its card describes that plan rather than the fields as they read now,
+ * and says so when they differ (review M2).
+ */
+export const PLAN_SETTINGS = [
+  "fireModel",
+  "fireMaxSteps",
+  "forecastSecondsPerStep",
+  "untenableAbove",
+  "walkSpeed",
+  "departAfter",
+  "doseLimit",
+  "useWalls",
+  "forecastExits",
+];
+
+export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));
+
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);

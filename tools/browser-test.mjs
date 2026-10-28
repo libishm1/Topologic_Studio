@@ -689,7 +689,10 @@ if (await planBtn.isEnabled().catch(() => false)) {
   await planBtn.click();
   const planned = await page
     .waitForFunction(
-      () => /safe route: out in|no safe route within the forecast/i.test(document.querySelector('[aria-label="Plan with the forecast"]')?.innerText || ""),
+      () =>
+        /safe route: out in|above the dose limit|no safe route within the forecast/i.test(
+          document.querySelector('[aria-label="Plan with the forecast"]')?.innerText || "",
+        ),
       null,
       { timeout: 120000 },
     )

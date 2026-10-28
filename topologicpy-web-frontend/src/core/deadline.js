@@ -99,11 +99,14 @@ export function escapeDeadlines(graph, { exits, untenable = null, speed = 1.2, b
  * The latest departure from `start` with a safe route to an exit whose dose is
  * at most `limit`, bracketed to within `tolerance` seconds.
  *
- * @returns {{good: number, bad: number, searches: number, truncated: boolean} | null}
+ * @returns {{good: number, bad: number, searches: number, truncated: boolean, horizon: boolean} | null}
  *          leaving at `good` works and at `bad` does not (Deadline.
  *          doseDeadline_bisection); null when even leaving at once does not.
  *          truncated: a search hit its label budget, so a "does not" may be
- *          wrong and the bracket is not certain.
+ *          wrong and the bracket is not certain. horizon: what stops leaving
+ *          at `bad` is the end of the forecast, not the fire (leaving then
+ *          works if points stay open until the fire reaches them), so the
+ *          real deadline is at least `good`, perhaps later.
  */
 export function doseDeadline(graph, start, { exits, forecast, limit = 1, speed = 1.2, blocked = null, tolerance = 0.05 }) {
   let searches = 0;
@@ -131,7 +134,13 @@ export function doseDeadline(graph, start, { exits, forecast, limit = 1, speed =
     if (works(mid)) good = mid;
     else bad = mid;
   }
-  return { good, bad, searches, truncated };
+  // Every point closes at the forecast's end. If leaving at `bad` works once
+  // they close only when the fire reaches them, the end of the forecast is
+  // the limit, not the fire (review M11).
+  const open = { ...forecast, closes: forecast.untenable };
+  const past = doseFront(graph, start, { exits, forecast: open, depart: bad, speed, blocked }).front;
+  const horizon = past.length > 0 && past[past.length - 1].dose <= limit;
+  return { good, bad, searches, truncated, horizon };
 }
 
 /**

@@ -29,7 +29,7 @@ import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
-import { useStudio } from "./state/useStudio.js";
+import { planSettings, useStudio } from "./state/useStudio.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -1040,6 +1040,8 @@ export default function App() {
     // queue behind a deadline map that can take seconds.
     if (forecastRef.current?.busy) forecastRef.current.cancel();
     const gen = ++planGenRef.current;
+    // What the card describes: the values this plan used (review M2).
+    const inputs = planSettings(settings);
     studio.setForecastPlan((current) => ({ ...current, busy: true }));
     try {
       const result = await forecastJob({
@@ -1061,7 +1063,7 @@ export default function App() {
       // Inputs changed (or another plan began) while it ran: not this one's.
       if (gen !== planGenRef.current) return;
       // Tagged with the graph it was made on: it is drawn only on that graph.
-      studio.setForecastPlan({ busy: false, result, nodes: graph.nodes });
+      studio.setForecastPlan({ busy: false, result, nodes: graph.nodes, inputs });
       // The plan's routes take the place of the others on screen, and their
       // results go with their drawings, so the legend lists what is drawn.
       const viewer = viewerRef.current;
@@ -1649,6 +1651,7 @@ export default function App() {
                   onStopFire={stopFire}
                   onTrainRl={trainRl}
                   onPlanForecast={planForecast}
+                  deadlinesShown={graphColours === "deadlines"}
                   exits={exits}
                   onGoTo={setTab}
                 />

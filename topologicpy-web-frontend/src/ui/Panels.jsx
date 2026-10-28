@@ -13,6 +13,7 @@ import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
+import { PLAN_SETTINGS } from "../state/useStudio.js";
 import {
   Button,
   Choices,
@@ -760,12 +761,17 @@ function RerouteResult({ dynamicPath, step }) {
   );
 }
 
-/** Seconds, as "42.0 s" or "3 min 5 s". */
-function secs(s) {
+/**
+ * Seconds, as "42.0 s" or "3 min 5 s". `round` is Math.floor for a deadline,
+ * so it never reads later than it is, and Math.ceil for the first time that
+ * fails, so the two never print the same.
+ */
+function secs(s, round = Math.round) {
   if (s === null || s === undefined || Number.isNaN(s)) return "-";
   if (s === Infinity) return "never";
-  if (s < 90) return `${s.toFixed(1)} s`;
-  return `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`;
+  if (s < 90) return `${(round(s * 10) / 10).toFixed(1)} s`;
+  const whole = round(s);
+  return `${Math.floor(whole / 60)} min ${whole % 60} s`;
 }
 
 /** A fractional effective dose: small ones in scientific notation. */
@@ -778,21 +784,51 @@ function Swatch({ color }) {
   return <span className="legend__swatch legend__swatch--inline" style={{ background: color }} aria-hidden="true" />;
 }
 
-function ForecastResult({ result, settings }) {
+/**
+ * The plan's heading. "Safe route" only when some route is within the dose
+ * limit, timed by the first such route; when every route exceeds it the
+ * heading says so (review M11).
+ */
+function planHeading(result, inputs) {
+  const depart = inputs.departAfter || 0;
+  const within = result.front.find((point) => point.dose <= inputs.doseLimit);
+  if (within) return { ok: true, text: `Safe route: out in ${secs(within.arrival - depart)}` };
+  if (result.earliest) return { ok: false, text: `Out in ${secs(result.earliest.arrival - depart)}, above the dose limit` };
+  return { ok: false, text: "No safe route within the forecast" };
+}
+
+/** The leaving time: rounded down, and "at least" when the forecast's end, not the fire, sets it. */
+function leaveWithin(leaveBy) {
+  if (!leaveBy) return "too late";
+  return `${leaveBy.horizon ? "at least " : ""}${secs(leaveBy.good, Math.floor)}`;
+}
+
+function ForecastResult({ plan, settings, deadlinesShown }) {
+  const { result, inputs } = plan;
   const { earliest, leastDose, leaveBy, snapshot, front, truncated, coarsened, mapStep } = result;
-  const depart = settings.departAfter || 0;
+  // What the plan was made with, not what the fields say now (review M2).
+  const depart = inputs.departAfter || 0;
+  const limit = inputs.doseLimit;
   const tradeoff = front.length > 1;
   const unsafePlan = snapshot && !snapshot.safe && !snapshot.beyondForecast;
+  const heading = planHeading(result, inputs);
+  const changed = PLAN_SETTINGS.some((key) => settings[key] !== inputs[key]);
+  // Announced by the section's status line, not here: a live region that
+  // mounts with its content is not read, and this one was read again at
+  // every keystroke in the settings (review m5).
   return (
-    <section className="result" aria-live="polite" aria-label="Plan with the forecast">
-      <h3 className="result__title" data-tone={earliest ? "ok" : "warn"}>
-        <Icon name={earliest ? "check" : "alert"} size={16} />
-        {earliest ? `Safe route: out in ${secs(earliest.arrival - depart)}` : "No safe route within the forecast"}
+    <section className="result" aria-label="Plan with the forecast" aria-busy={plan.busy || undefined}>
+      <h3 className="result__title" data-tone={heading.ok ? "ok" : "warn"}>
+        <Icon name={heading.ok ? "check" : "alert"} size={16} />
+        {heading.text}
       </h3>
+      {changed && (
+        <Notice tone="warning">The settings have changed since this plan was made. Plan again to use them.</Notice>
+      )}
       <dl className="result__grid">
         <div className="result__item">
           <dt className="result__label">Leave within</dt>
-          <dd className="result__value result__value--lead">{leaveBy ? secs(leaveBy.good) : "too late"}</dd>
+          <dd className="result__value result__value--lead">{leaveWithin(leaveBy)}</dd>
         </div>
         <div className="result__item">
           <dt className="result__label">Closest call</dt>
@@ -818,11 +854,20 @@ function ForecastResult({ result, settings }) {
               : `The earliest safe route reaches every point before the fire makes it untenable; at its closest it is ${secs(earliest.slack)} ahead.`}
           </span>
         )}
-        {leaveBy && (
+        {leaveBy && !leaveBy.horizon && (
           <span>
-            Leaving within {secs(leaveBy.good)} still gets out with a dose of at most {settings.doseLimit}; leaving at{" "}
-            {secs(leaveBy.bad)} does not.
+            Leaving by {secs(leaveBy.good, Math.floor)} after ignition still gets out with a dose of at most {limit};
+            leaving at {secs(leaveBy.bad, Math.ceil)} does not.
           </span>
+        )}
+        {leaveBy?.horizon && (
+          <span>
+            Leaving by {secs(leaveBy.good, Math.floor)} after ignition still gets out with a dose of at most {limit}. The
+            forecast ends at {secs(result.horizon)}, so no later departure was checked: the real deadline may be later.
+          </span>
+        )}
+        {leaveBy && depart > leaveBy.good && (
+          <span>The departure planned, {secs(depart)} after ignition, is later than that.</span>
         )}
         {earliest && !leaveBy && <span>A safe route exists, but every one accrues more than the dose limit.</span>}
         {tradeoff && leastDose && earliest && (
@@ -840,13 +885,20 @@ function ForecastResult({ result, settings }) {
             untenable. The forecast route avoids it.
           </span>
         )}
-        {mapStep && settings.showDeadlineMap && (
+        {mapStep && deadlinesShown && (
           <span>
-            The graph is coloured by escape deadline: the latest time each point can leave and still get out within the
-            dose limit, to the nearest {mapStep.toFixed(2)} s and never later than the exact time.
+            The graph is coloured by escape deadline: for each point, the latest departure time on a{" "}
+            {mapStep.toFixed(2)} s grid that still gets out within the dose limit. It is never later than the exact
+            deadline, but it can be several seconds earlier, because every walking time is rounded up to the grid.
           </span>
         )}
-        {truncated && <span>The dose search hit its label budget, so the least dose shown may not be the least.</span>}
+        {!result.deadlines && settings.showDeadlineMap && <span>Plan again to colour the graph by escape deadline.</span>}
+        {truncated && (
+          <span>
+            The dose search hit its label budget, so the least dose shown may not be the least. The route shown is safe
+            and has the dose shown.
+          </span>
+        )}
         {leaveBy?.truncated && (
           <span>A search for the leaving time hit its label budget, so that time may be too early.</span>
         )}
@@ -854,12 +906,21 @@ function ForecastResult({ result, settings }) {
           <span>The forecast was stored every {secs(coarsened)} to fit in memory, which only makes it more cautious.</span>
         )}
         <span className="field__hint">
-          Times run on the clock you set ({settings.forecastSecondsPerStep} s per fire step). The heat is the model&apos;s
-          index, so the dose ranks routes under the model; it is not a measured dose.
+          Times are counted from ignition, on the clock set for this plan ({inputs.forecastSecondsPerStep} s per fire
+          step). The heat is the model&apos;s index, so the dose ranks routes under the model; it is not a measured
+          dose.
         </span>
       </div>
     </section>
   );
+}
+
+/** One line for screen readers, kept mounted so that a change is read. */
+function planStatus(plan) {
+  if (plan.busy) return "Planning with the forecast.";
+  if (!plan.result || !plan.inputs) return "";
+  const heading = planHeading(plan.result, plan.inputs);
+  return `${heading.text}. Leave within ${leaveWithin(plan.result.leaveBy)}.`;
 }
 
 /** Where the exit doors came from, in words. */
@@ -870,7 +931,7 @@ function exitSourceText(source) {
   return source;
 }
 
-function ForecastSection({ studio, exits, onPlan }) {
+function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
   const { graph, points, settings, setSettings, forecastPlan, fire } = studio;
   const modelExits = settings.forecastExits === "model" && exits?.nodes.length > 0;
   const ready = Boolean(graph && points.start && points.fire && (modelExits || points.exit));
@@ -905,6 +966,7 @@ function ForecastSection({ studio, exits, onPlan }) {
             max={60}
             step={0.5}
             onChange={(v) => setSettings({ forecastSecondsPerStep: v ?? 5 })}
+            hint="The fire models count steps; this sets the clock."
           />
           <NumberField
             label="Walking speed (m/s)"
@@ -923,21 +985,22 @@ function ForecastSection({ studio, exits, onPlan }) {
             onChange={(v) => setSettings({ untenableAbove: v ?? 80 })}
           />
           <NumberField
-            label="Dose limit (FED)"
-            value={settings.doseLimit}
-            min={0.01}
-            max={1}
-            step={0.05}
-            onChange={(v) => setSettings({ doseLimit: v ?? 0.3 })}
+            label="Leave after (s)"
+            value={settings.departAfter}
+            min={0}
+            step={5}
+            onChange={(v) => setSettings({ departAfter: v ?? 0 })}
+            hint="Counted from ignition."
           />
         </div>
         <NumberField
-          label="Leave after (s)"
-          value={settings.departAfter}
-          min={0}
-          step={5}
-          onChange={(v) => setSettings({ departAfter: v ?? 0 })}
-          hint="ISO 13571 uses an FED of 0.3 to protect most occupants and 1 for the average adult. The fire models count steps, so the seconds per step set the clock."
+          label="Dose limit (FED)"
+          value={settings.doseLimit}
+          min={0.01}
+          max={1}
+          step={0.05}
+          onChange={(v) => setSettings({ doseLimit: v ?? 0.3 })}
+          hint="ISO 13571 uses an FED of 0.3 to protect most occupants and 1 for the average adult."
         />
         <Toggle
           label="Colour the graph by escape deadline"
@@ -953,7 +1016,12 @@ function ForecastSection({ studio, exits, onPlan }) {
           Needs a start{modelExits ? "" : " and an exit"} (Route step) and a fire origin.
         </p>
       )}
-      {forecastPlan.result && <ForecastResult result={forecastPlan.result} settings={settings} />}
+      <p className="visually-hidden" role="status">
+        {planStatus(forecastPlan)}
+      </p>
+      {forecastPlan.result && forecastPlan.inputs && (
+        <ForecastResult plan={forecastPlan} settings={settings} deadlinesShown={deadlinesShown} />
+      )}
     </Section>
   );
 }
@@ -974,7 +1042,18 @@ function returnVsBest(r) {
   return `${r.policy_return.toFixed(2)} / ${r.optimal_return.toFixed(2)}${short}`;
 }
 
-export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onStopFire, onTrainRl, onPlanForecast, onGoTo }) {
+export function SimulatePanel({
+  studio,
+  exits,
+  onPick,
+  onPlace,
+  onStartFire,
+  onStopFire,
+  onTrainRl,
+  onPlanForecast,
+  deadlinesShown,
+  onGoTo,
+}) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl } = studio;
   const ready = Boolean(graph);
 
@@ -1088,7 +1167,7 @@ export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onS
         </Disclosure>
       </div>
 
-      <ForecastSection studio={studio} exits={exits} onPlan={onPlanForecast} />
+      <ForecastSection studio={studio} exits={exits} onPlan={onPlanForecast} deadlinesShown={deadlinesShown} />
 
       <Section title="Train an agent against this fire" defaultOpen={false}>
         <p className="field__hint">

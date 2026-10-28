@@ -115,6 +115,23 @@ test("dose deadlines: the map never says later than the exact deadline, and is c
   assert.ok(compared > 300 && unlimited > 50);
 });
 
+test("the dose deadline says when the end of the forecast, not the fire, is the limit (review M11)", () => {
+  // A corridor of 11 nodes 1 m apart, exit at node 0, walking 1 m/s. The
+  // fire starts at node 10 and takes a node per 5 s step; the forecast is 6
+  // steps (30 s), so it reaches node 5 at 25 s and node 4 only after it ends.
+  const g = lattice(11, 1);
+  const forecast = buildForecast(g, { model: "flood", seed: 10, steps: 6, dt: 5 });
+  const opts = { exits: [0], forecast, limit: 1, speed: 1, tolerance: 1e-3 };
+  // From node 2 the fire never matters: only the forecast's end does.
+  const far = doseDeadline(g, 2, opts);
+  assert.equal(far.horizon, true);
+  assert.ok(Math.abs(far.good - 28) < 0.01, `${far.good}`);
+  // From node 5 the fire is the limit: the start itself closes at 25 s.
+  const near = doseDeadline(g, 5, opts);
+  assert.equal(near.horizon, false);
+  assert.ok(Math.abs(near.good - 25) < 0.01, `${near.good}`);
+});
+
 test("the deadline map's work stays under its cap for long horizons (review K2)", () => {
   // 2,000 fire steps of 5 s: at a quarter of the link time a 30 x 30 lattice
   // would take 48,000 layers, 2e8 link updates.

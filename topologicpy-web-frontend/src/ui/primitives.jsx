@@ -139,6 +139,7 @@ export function Slider({ label, value, min, max, step, onChange, format, hint, d
 }
 
 export function NumberField({ label, value, onChange, hint, ...rest }) {
+  const hintId = useId();
   return (
     <div className="field">
       <div className="field__label">
@@ -151,9 +152,14 @@ export function NumberField({ label, value, onChange, hint, ...rest }) {
           onChange(event.target.value === "" ? null : Number(event.target.value))
         }
         aria-label={label}
+        aria-describedby={hint ? hintId : undefined}
         {...rest}
       />
-      {hint && <p className="field__hint">{hint}</p>}
+      {hint && (
+        <p className="field__hint" id={hintId}>
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
