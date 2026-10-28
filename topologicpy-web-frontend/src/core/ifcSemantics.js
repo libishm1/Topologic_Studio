@@ -17,6 +17,8 @@
  * @param modelID  its model id
  * @param W        the web-ifc module (for the type constants)
  */
+import { componentLabels } from "./route.js";
+
 const val = (a) => (a && typeof a === "object" && "value" in a ? a.value : a);
 const truthy = (v) => v === true || v === "T" || v === ".T." || v === "TRUE" || v === 1;
 
@@ -167,24 +169,53 @@ function storeys(api, modelID, W, ids, line) {
 }
 
 /**
+ * Fallback exits for the parts of the graph the flagged exits do not reach.
+ * A model may flag only some of its exits: AdvancedProject flags one, in a
+ * part holding 0.5% of the graph, so the rest had no way out. Each part
+ * (connected with walls on) of at least 50 nodes and 2% of the graph that
+ * holds no flagged exit gets the fallback doors standing in it.
+ *
+ * @param graph     {nodes, edges, blocked}, or null to skip
+ * @param flagged   exit nodes from the flags
+ * @param fallback  candidate nodes (doors with floor on one side)
+ * @returns {number[]} the fallback nodes added
+ */
+export function exitsPerPart(graph, flagged, fallback) {
+  if (!graph?.nodes || !fallback.length) return [];
+  const { labels, sizes } = componentLabels(graph);
+  const min = Math.max(50, 0.02 * labels.length);
+  const served = new Set(flagged.map((n) => labels[n]));
+  return fallback.filter((n) => !served.has(labels[n]) && sizes[labels[n]] >= min);
+}
+
+/**
  * The model's exit doors as graph nodes, in order of trust: the doors the IFC
- * marks as exits; failing that, doors with walkable floor on one side only
- * (73% recall and 69% precision against the flags on five models).
+ * marks as exits, plus doors with floor on one side in large parts of the
+ * graph no flagged exit reaches (exitsPerPart) when the graph is given;
+ * failing any flag, doors with walkable floor on one side only (73% recall
+ * and 69% precision against the flags on five models).
  *
  * @param graphDoors  the graph's doors, [{itemId, node, sides}] (lattice.js doorReport)
  * @param semantics   ifcSemantics output, or null
  * @returns {{nodes: number[], doors: object[], source: string|null}}
  */
-export function exitDoors(graphDoors, semantics) {
+export function exitDoors(graphDoors, semantics, graph = null) {
   const doors = graphDoors || [];
   const marked = new Map((semantics?.doors || []).filter((d) => d.exit).map((d) => [d.id, d]));
+  const oneSided = doors.filter((d) => d.node >= 0 && (d.sides?.[0] === 0 || d.sides?.[1] === 0));
   let chosen = doors.filter((d) => d.node >= 0 && marked.has(d.itemId));
   let source = null;
   if (chosen.length) {
     const sources = new Set(chosen.map((d) => marked.get(d.itemId).exit));
     source = sources.size === 1 ? [...sources][0] : "the model's exit flags";
+    const added = exitsPerPart(graph, chosen.map((d) => d.node), oneSided.map((d) => d.node));
+    if (added.length) {
+      const extra = new Set(added);
+      chosen = [...chosen, ...oneSided.filter((d) => extra.has(d.node))];
+      source = `${source}, and doors with floor on one side in parts with no flagged exit`;
+    }
   } else {
-    chosen = doors.filter((d) => d.node >= 0 && (d.sides?.[0] === 0 || d.sides?.[1] === 0));
+    chosen = oneSided;
     if (chosen.length) source = "doors with floor on one side";
   }
   const seen = new Set();
