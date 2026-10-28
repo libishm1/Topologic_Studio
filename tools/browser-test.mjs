@@ -734,6 +734,11 @@ for (const tab of ["Model", "Graph", "Route", "Simulate"]) {
   await page.waitForTimeout(200);
   const visible = await page.locator(".panel__scroll").isVisible();
   record(visible, `workflow step "${tab}" renders`);
+  if (tab === "Model") {
+    // What the IFC itself says about egress (EgressCheck, ifcSemantics.js).
+    const row = await page.locator(".panel__scroll").getByText(/^\d+ of \d+ \(/).first().textContent({ timeout: 5000 }).catch(() => null);
+    record(Boolean(row), "the Model step reports the file's exit doors", row || "not shown");
+  }
 }
 
 // Arrow keys move between steps (the tab pattern).

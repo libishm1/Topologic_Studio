@@ -60,6 +60,43 @@ function PartsNotice({ stats }) {
 
 // -------------------------------------------------------------------- model
 
+/**
+ * What the file itself says about egress (core/ifcSemantics.js): read beside
+ * the geometry, so it appears a moment after the model. Missing exit flags
+ * are the most common reason an egress result needs care, so it says so.
+ */
+function EgressCheck({ semantics }) {
+  if (!semantics) return null;
+  const doors = semantics.doors || [];
+  const exits = doors.filter((d) => d.exit);
+  const sources = [...new Set(exits.map((d) => d.exit))].map((s) =>
+    s.startsWith("Pset_DoorCommon") ? s.split(".")[1] : "external space boundary",
+  );
+  return (
+    <>
+      <KeyValue
+        entries={[
+          ["Schema", semantics.schema || "-"],
+          ["Exit doors", doors.length ? `${exits.length} of ${doors.length}${sources.length ? ` (${sources.join(", ")})` : ""}` : "no doors"],
+          ["Roof slabs", semantics.roofSlabs?.length ? `${semantics.roofSlabs.length}, not walked on` : "none typed"],
+          ["Declared storeys", fmt(semantics.storeys?.length ?? 0)],
+        ]}
+      />
+      {doors.length > 0 && !exits.length && (
+        <Notice tone="warning">
+          <strong>No exit doors in the file.</strong> No door is flagged as an exit (Pset_DoorCommon FireExit or IsExternal) or has an external space boundary, so
+          exits fall back to doors with floor on one side. Check them, or pick the exit yourself.
+        </Notice>
+      )}
+      {!doors.length && (
+        <Notice tone="warning">
+          <strong>No doors in the file.</strong> Rooms connect only through gaps the walls leave; a route may not find a way out.
+        </Notice>
+      )}
+    </>
+  );
+}
+
 export function ModelPanel({ studio, examples, onExample, onClearCache }) {
   const { modelInfo, file, settings, setSettings, cacheInfo } = studio;
 
@@ -96,6 +133,7 @@ export function ModelPanel({ studio, examples, onExample, onClearCache }) {
                 ? "Loaded from the local fragment cache, skipping IFC parsing entirely."
                 : "Converted and cached. Opening this file again skips the parse."}
             </p>
+            <EgressCheck semantics={studio.semantics} />
           </>
         )}
 
