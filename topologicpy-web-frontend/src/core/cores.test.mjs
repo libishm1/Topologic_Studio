@@ -153,6 +153,23 @@ test("in a double-height stair hall the line turns to end at the landing", () =>
   }
 });
 
+test("treads that stand in a core but reach neither floor do not stop the assumed line", () => {
+  // Three treads in mid-air inside the stair room, joined to each other but
+  // to no floor (as in Smiley West): the floors stay apart without the line.
+  const floors = [rect(0, 0, 10, 10, 0), rect(0, 3, 10, 10, 3), rect(0, 0, 6, 3, 3)];
+  const spaces = [box(6, 0, 0, 10, 3, 2.8, 101), box(6, 0, 3, 10, 3, 5.8, 102)];
+  const stairs = [1.2, 1.4, 1.6].map((h, k) => ({ ...rect(7 + k * 0.25, 1, 7.25 + k * 0.25, 2, h), itemId: 9 }));
+  const cores = coreItems([
+    { itemId: 101, type: "IFCSPACE", name: "Stair - EG" },
+    { itemId: 102, type: "IFCSPACE", name: "Stair - OG" },
+  ]);
+  const g = buildLatticeGraph({ ...base, floors, spaces, stairs, walls: [tallWall], cores });
+  const find = components(g);
+  assert.equal(find(nearest(g, 2, 5, 0)), find(nearest(g, 2, 5, 3)));
+  assert.equal(g.cores[0].linked, 1);
+  assert.equal(g.cores[0].unjoinedTreads, 1);
+});
+
 test("a stair whose treads are modelled is left as it was", () => {
   // The flight of lattice.test.mjs, as one IfcStair (item 7).
   const stairs = [];
