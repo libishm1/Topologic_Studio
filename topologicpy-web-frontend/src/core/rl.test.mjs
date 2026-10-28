@@ -103,3 +103,48 @@ test("the exact optimum bounds the policy and matches brute force on small graph
     assert.ok(Math.abs(best(start, 0) - r.optimalReturn) < 1e-9, `${best(start, 0)} vs ${r.optimalReturn}`);
   }
 });
+
+test("the policy's return is scored in the optimum's MDP, so it is never above it (review K1)", () => {
+  // The review's line X - S - A - B - E, fire from B one hop per step. The
+  // drawn rollout stops at X once every neighbour is visited; scored there it
+  // booked -0.1 against an optimum of -10.
+  const line = {
+    nodes: Float32Array.from([-1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0]),
+    edges: Uint32Array.from([0, 1, 1, 2, 2, 3, 3, 4]),
+    blocked: new Uint8Array(4),
+  };
+  const ignite = new Map([[3, 0], [2, 1], [4, 1], [1, 2], [0, 3]]);
+  for (let seed = 0; seed < 20; seed += 1) {
+    const r = qLearningPath(line, 1, 4, { ignite, episodes: 300, maxSteps: 10, seed });
+    assert.ok(r.policyReturn <= r.optimalReturn + 1e-9, `seed ${seed}: ${r.policyReturn} > ${r.optimalReturn}`);
+  }
+
+  // Random grids: walls, start, exit, fire (or none), its speed, the step
+  // limit and the training length all drawn at random.
+  let s = 7;
+  const rand = () => {
+    s = (s * 1103515245 + 12345) % 2147483648;
+    return s / 2147483648;
+  };
+  for (let c = 0; c < 80; c += 1) {
+    const w = 3 + Math.floor(rand() * 6), h = 2 + Math.floor(rand() * 6);
+    const g = grid(w, h);
+    for (let e = 0; e < g.blocked.length; e += 1) if (rand() < 0.15) g.blocked[e] = 1;
+    const at = () => {
+      const i = Math.floor(rand() * w * h);
+      return [i % w, Math.floor(i / w), 0];
+    };
+    const r = trainRl(g, {
+      startPoint: at(),
+      exitPoint: at(),
+      firePoint: rand() < 0.75 ? at() : null,
+      useFire: true,
+      fireSpeed: [0.25, 0.5, 1, 2][Math.floor(rand() * 4)],
+      maxSteps: 4 + Math.floor(rand() * 40),
+      episodes: 20 + Math.floor(rand() * 200),
+      seed: c,
+    });
+    if (r.optimal_return == null) continue;
+    assert.ok(r.policy_return <= r.optimal_return + 1e-9, `case ${c}: ${r.policy_return} > ${r.optimal_return}`);
+  }
+});

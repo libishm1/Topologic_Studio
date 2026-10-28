@@ -958,6 +958,22 @@ function ForecastSection({ studio, exits, onPlan }) {
   );
 }
 
+/**
+ * How far the policy's return falls short of the best within the step limit,
+ * as a share of the best's size. Flagged above 5%: a gap of a few thousandths
+ * is a tie broken another way, not a worse policy.
+ */
+const RETURN_SHORTFALL_WARN = 0.05;
+function returnShortfall(r) {
+  return Math.max(0, r.optimal_return - r.policy_return) / Math.max(Math.abs(r.optimal_return), 1e-9);
+}
+function returnVsBest(r) {
+  const gap = returnShortfall(r);
+  const pct = gap * 100;
+  const short = pct < 0.5 ? "" : `, ${pct < 10 ? pct.toFixed(1) : Math.round(pct)}% short`;
+  return `${r.policy_return.toFixed(2)} / ${r.optimal_return.toFixed(2)}${short}`;
+}
+
 export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onStopFire, onTrainRl, onPlanForecast, onGoTo }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl } = studio;
   const ready = Boolean(graph);
@@ -1133,11 +1149,11 @@ export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onS
               />
             )}
             <Stat label="Late-training success" value={`${Math.round((rl.result?.success_rate ?? 0) * 100)}%`} />
-            {rl.result?.optimal_return != null && (
+            {rl.result?.optimal_return != null && rl.result.policy_return != null && (
               <Stat
-                label="Return vs exact best"
-                value={`${rl.result.policy_return.toFixed(2)} / ${rl.result.optimal_return.toFixed(2)}`}
-                warn={rl.result.policy_return < rl.result.optimal_return - 1e-6}
+                label="Return vs best within the step limit"
+                value={returnVsBest(rl.result)}
+                warn={returnShortfall(rl.result) > RETURN_SHORTFALL_WARN}
               />
             )}
             {settings.rlUseFire && rl.result?.fire_start_id != null && (

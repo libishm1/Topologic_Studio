@@ -659,9 +659,9 @@ if (await trainBtn.isEnabled()) {
       r["Escape possible"],
     );
     record(
-      r["Return vs exact best"] !== undefined,
+      r["Return vs best within the step limit"] !== undefined,
       "RL reports its return against the exact optimum (backward induction)",
-      r["Return vs exact best"],
+      r["Return vs best within the step limit"],
     );
   }
   await shot(page, "rl-trained");

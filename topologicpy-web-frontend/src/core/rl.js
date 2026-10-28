@@ -176,8 +176,6 @@ export function qLearningPath(graph, start, exit, {
   const visited = new Set([start]);
   let state = start;
   let reachedExit = false, burned = false, total = 0;
-  // The rollout's discounted return, to compare with the exact optimum below.
-  let policyReturn = 0, discount = 1;
   for (let t = 0; t < maxSteps; t += 1) {
     const k = greedy(state, t, visited);
     if (k < 0) break;
@@ -187,19 +185,49 @@ export function qLearningPath(graph, start, exit, {
     if (t >= burnsAt(next)) {
       burned = true;
       total += BURN_REWARD;
-      policyReturn += discount * BURN_REWARD;
       break;
     }
     if (next === exit) {
       reachedExit = true;
       total += EXIT_REWARD;
-      policyReturn += discount * EXIT_REWARD;
       break;
     }
     total -= slotCost[k];
+    state = next;
+  }
+
+  // The learned greedy policy scored in the MDP the optimum below is computed
+  // in. The drawn path skips revisits and stops once every neighbour has been
+  // visited, booking nothing for a state the MDP must still leave, so its
+  // return could beat the proven optimum (review K1). Here the policy keeps
+  // moving: a move into a burning node or the exit ends the episode, the step
+  // limit ends it with nothing more, and ties go to the first move. Policy and
+  // MDP are deterministic, so this one walk is the exact value of the policy at
+  // the start (what backward induction on its own actions gives), never above
+  // the optimum.
+  let policyReturn = 0;
+  for (let t = 0, u = start, discount = 1; t < maxSteps; t += 1) {
+    let k = -1, top = -Infinity;
+    for (const j of slots[u]) {
+      const q = value(j, t);
+      if (q > top) {
+        top = q;
+        k = j;
+      }
+    }
+    if (k < 0) break;
+    const v = neighbours[k];
+    if (t >= burnsAt(v)) {
+      policyReturn += discount * BURN_REWARD;
+      break;
+    }
+    if (v === exit) {
+      policyReturn += discount * EXIT_REWARD;
+      break;
+    }
     policyReturn -= discount * slotCost[k];
     discount *= gamma;
-    state = next;
+    u = v;
   }
 
   // The exact optimum of the same problem, unshaped: backward induction over
@@ -293,7 +321,8 @@ export function trainRl(graph, { startPoint, exitPoint, firePoint = null, episod
     success_rate: r.successRate,
     curve: r.curve,
     escape_steps: r.escapeSteps,
-    // Discounted, unshaped: the policy's rollout and the exact optimum.
+    // Discounted, unshaped, in the same MDP: the learned greedy policy's exact
+    // value and the best any policy reaches within the step limit.
     policy_return: r.policyReturn ?? null,
     optimal_return: r.optimalReturn ?? null,
     fire_start_id: fireStart,
