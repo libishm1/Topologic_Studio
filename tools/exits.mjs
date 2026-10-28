@@ -1,6 +1,7 @@
 /**
  * Exit doors for the cross-model checks, in order of trust:
- *   1. doors flagged FireExit or IsExternal in Pset_DoorCommon (instance or type);
+ *   1. doors flagged FireExit or IsExternal in Pset_DoorCommon (the door's own
+ *      value over its type's), or with an EXTERNAL space boundary;
  *   2. failing that, doors with walkable floor on one side only;
  *   3. failing that, doors with a room (IfcSpace) on exactly one side. Weaker
  *      than rule 2: in a block of flats it picks flat entrances that open onto
@@ -13,6 +14,13 @@
 export function findExits(geo, built) {
   const flagged = new Set();
   let flagSource = null;
+  // The site's reading first (occurrence over type, then EXTERNAL space
+  // boundaries; src/core/ifcSemantics.js), then Revit's IsFireExit.
+  for (const d of geo.semantics?.doors || []) {
+    if (!d.exit) continue;
+    flagged.add(d.id);
+    flagSource = flagSource && flagSource !== d.exit.replace(/^Pset_DoorCommon\./, "") ? "mixed flags" : d.exit.replace(/^Pset_DoorCommon\./, "");
+  }
   for (const [id, f] of geo.doorFlags || []) {
     if (f.FireExit) {
       flagged.add(id);
@@ -23,7 +31,7 @@ export function findExits(geo, built) {
     }
   }
   let exits = built.doorReport.filter((d) => d.node >= 0 && flagged.has(d.itemId)).map((d) => d.node);
-  if (exits.length) return { exits: [...new Set(exits)], source: `Pset_DoorCommon.${flagSource}`, flagged: flagged.size };
+  if (exits.length) return { exits: [...new Set(exits)], source: /^(FireExit|IsExternal)$/.test(flagSource) ? `Pset_DoorCommon.${flagSource}` : flagSource, flagged: flagged.size };
 
   exits = built.doorReport.filter((d) => d.node >= 0 && (d.sides[0] === 0 || d.sides[1] === 0)).map((d) => d.node);
   if (exits.length) return { exits: [...new Set(exits)], source: "one-sided door (fallback)", flagged: flagged.size };

@@ -21,6 +21,8 @@ import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
+import { earliestArrival } from "./core/forecast.js";
+import { exitDoors } from "./core/ifcSemantics.js";
 import { floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
@@ -81,6 +83,7 @@ export default function App() {
   const viewerRef = useRef(null);
   const workerRef = useRef(null);
   const forecastWorkerRef = useRef(null);
+  const semanticsWorkerRef = useRef(null);
   const geometryRef = useRef(null);
   // Fire accumulators live in refs: they are written from SSE callbacks that
   // outlive any single render, and must not be re-created when the callback
@@ -141,6 +144,33 @@ export default function App() {
 
   useEffect(() => () => workerRef.current?.terminate(), []);
   useEffect(() => () => forecastWorkerRef.current?.terminate(), []);
+  useEffect(() => () => semanticsWorkerRef.current?.terminate(), []);
+
+  // Exit flags and roof slabs from the IFC itself, read by a second, small
+  // web-ifc in a worker while the geometry converts (core/ifcSemantics.js).
+  const semanticsJob = useCallback(
+    (bytes) =>
+      new Promise((resolve, reject) => {
+        if (!semanticsWorkerRef.current) {
+          semanticsWorkerRef.current = new Worker(new URL("./workers/semantics.worker.js", import.meta.url), {
+            type: "module",
+          });
+        }
+        const worker = semanticsWorkerRef.current;
+        const id = Math.random().toString(36).slice(2);
+        const onMessage = (event) => {
+          if (event.data?.id !== id) return;
+          worker.removeEventListener("message", onMessage);
+          if (event.data.ok) resolve(event.data.result);
+          else reject(new Error(event.data.error || "Could not read the model's exit flags."));
+        };
+        worker.addEventListener("message", onMessage);
+        const wasmPath =
+          import.meta.env.VITE_WEBIFC_WASM_PATH || new URL(`${import.meta.env.BASE_URL}wasm/`, window.location.href).href;
+        worker.postMessage({ id, bytes, wasmPath }, [bytes]);
+      }),
+    [],
+  );
 
   // Planning with the forecast has its own worker: its deadline map takes a
   // few seconds on a large graph and must not hold up a graph rebuild.
@@ -226,6 +256,11 @@ export default function App() {
 
         studio.setModelInfo(result);
         viewer.setModelAppearance(settings.modelAppearance);
+        nextFile
+          .arrayBuffer()
+          .then((bytes) => semanticsJob(bytes))
+          .then((semantics) => studio.setSemantics(semantics))
+          .catch((error) => console.warn("Could not read the model's exit flags; exits fall back to geometry.", error));
         setTab("graph");
 
         // Extract the egress geometry now rather than at the first build:
@@ -269,7 +304,7 @@ export default function App() {
         studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, settings.modelAppearance, settings.upAxis, studio, toast],
+    [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast],
   );
 
   // --------------------------------------------------------------- examples
@@ -390,6 +425,8 @@ export default function App() {
         agentHeight: settings.agentHeight,
         spacing: built.spacing,
         lattice: { angleDeg: built.stats.angleDeg, spacing: built.spacing, ms: built.stats.ms },
+        doors: built.doors || [],
+        roofs: geometry.roofs || 0,
       };
 
       studio.setGraph(response);
@@ -427,7 +464,14 @@ export default function App() {
 
       // A graph in several parts is explained beside the graph (Panels.jsx,
       // PartsNotice) and flagged on the stepper; a toast would vanish.
-      if (!graphIsSplit(response.stats)) {
+      if (!response.stats.nodes) {
+        // Say why, rather than "Graph ready, 0 nodes" (survey item 3).
+        const g = geometryRef.current || {};
+        const cause = !g.floors?.length
+          ? "The model has no floors or slabs to walk on: it may be a structural, MEP or site model."
+          : "Its floors gave no walkable surface: they may be modelled only as spaces or coverings, or be too steep or too small.";
+        toast(cause, { title: "No walkable graph", variant: "warning", ttl: 9000 });
+      } else if (!graphIsSplit(response.stats)) {
         toast(
           `${response.stats.nodes.toLocaleString()} nodes, ` +
             `${response.stats.edges.toLocaleString()} edges.`,
@@ -814,6 +858,27 @@ export default function App() {
     }
   }, [graph, points, reportError, settings, studio, toast, straighten]);
 
+  // -------------------------------------------------------------- exit doors
+
+  const exits = useMemo(() => (graph?.doors ? exitDoors(graph.doors, studio.semantics) : null), [graph, studio.semantics]);
+
+  const nearestExit = useCallback(() => {
+    if (!graph || !points.start || !exits?.nodes.length) return;
+    const open = new Float64Array(graph.nodes.length / 3).fill(Infinity);
+    const found = earliestArrival(graph, snap(graph, points.start), 0, {
+      exits: exits.nodes,
+      closes: open,
+      speed: 1,
+      blocked: settings.useWalls ? graph.blocked : null,
+    });
+    if (found.exit < 0) {
+      toast("None of the exit doors can be reached from the start.", { title: "No exit", variant: "warning" });
+      return;
+    }
+    const i = found.exit * 3;
+    handlePick("exit", [graph.nodes[i], graph.nodes[i + 1], graph.nodes[i + 2]]);
+  }, [graph, points.start, exits, settings.useWalls, handlePick, toast]);
+
   // ------------------------------------------------- plan with the forecast
 
   const pointsOf = useCallback(
@@ -822,13 +887,19 @@ export default function App() {
   );
 
   const planForecast = useCallback(async () => {
-    if (!graph || !points.start || !points.exit || !points.fire) return;
+    const exitNodes =
+      settings.forecastExits === "model" && exits?.nodes.length
+        ? exits.nodes
+        : points.exit && graph
+          ? [snap(graph, points.exit)]
+          : [];
+    if (!graph || !points.start || !points.fire || !exitNodes.length) return;
     studio.setForecastPlan((current) => ({ ...current, busy: true }));
     try {
       const result = await forecastJob({
         graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
         start: snap(graph, points.start),
-        exits: [snap(graph, points.exit)],
+        exits: exitNodes,
         seed: snap(graph, points.fire),
         model: settings.fireModel,
         steps: settings.fireMaxSteps,
@@ -863,7 +934,7 @@ export default function App() {
       studio.setForecastPlan({ busy: false, result: null });
       reportError(error, "Planning with the forecast failed");
     }
-  }, [graph, points, settings, studio, forecastJob, pointsOf, toast, reportError]);
+  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError]);
 
   // The deadline map is drawn on the graph while it is wanted and no fire is
   // colouring the graph.
@@ -1386,6 +1457,8 @@ export default function App() {
                   onAlternatives={findAlternatives}
                   onPlace={handlePick}
                   doors={doorList}
+                  exits={exits}
+                  onNearestExit={nearestExit}
                   onGoTo={setTab}
                 />
               )}
@@ -1398,6 +1471,7 @@ export default function App() {
                   onStopFire={stopFire}
                   onTrainRl={trainRl}
                   onPlanForecast={planForecast}
+                  exits={exits}
                   onGoTo={setTab}
                 />
               )}

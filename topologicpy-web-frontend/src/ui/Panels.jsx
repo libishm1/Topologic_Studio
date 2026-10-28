@@ -440,7 +440,7 @@ function RouteResult({ path }) {
   );
 }
 
-export function RoutePanel({ studio, onPick, onPlace, doors, onClearPoints, onFindPath, onCompare, onAlternatives, onGoTo }) {
+export function RoutePanel({ studio, onPick, onPlace, doors, exits, onNearestExit, onClearPoints, onFindPath, onCompare, onAlternatives, onGoTo }) {
   const { graph, points, pickMode, path, pathBusy, comparison, alternatives, settings, setSettings, capabilities } =
     studio;
 
@@ -476,6 +476,17 @@ export function RoutePanel({ studio, onPick, onPlace, doors, onClearPoints, onFi
             shortcut="E"
           />
           <p className="field__hint">Points snap to the graph: only its nodes can be picked.</p>
+          {exits?.nodes.length > 0 && (
+            <>
+              <Button size="sm" disabled={!points.start} onClick={onNearestExit}>
+                Use the nearest exit door
+              </Button>
+              <p className="field__hint">
+                {exits.nodes.length} exit door{exits.nodes.length === 1 ? "" : "s"}, from {exitSourceText(exits.source)}.
+                {!points.start && " Set a start first."}
+              </p>
+            </>
+          )}
         </fieldset>
         {ready && <PlaceWithoutMouse kinds={["start", "exit"]} doors={doors} onPlace={onPlace} />}
 
@@ -810,15 +821,40 @@ function ForecastResult({ result, settings }) {
   );
 }
 
-function ForecastSection({ studio, onPlan }) {
+/** Where the exit doors came from, in words. */
+function exitSourceText(source) {
+  if (!source) return "nowhere";
+  if (source.startsWith("Pset_DoorCommon")) return `the model's ${source.split(".")[1]} flags`;
+  if (source.startsWith("IfcRelSpaceBoundary")) return "the model's external space boundaries";
+  return source;
+}
+
+function ForecastSection({ studio, exits, onPlan }) {
   const { graph, points, settings, setSettings, forecastPlan, fire } = studio;
-  const ready = Boolean(graph && points.start && points.exit && points.fire);
+  const modelExits = settings.forecastExits === "model" && exits?.nodes.length > 0;
+  const ready = Boolean(graph && points.start && points.fire && (modelExits || points.exit));
   return (
     <Section title="Escape deadlines and forecast routes" badge={forecastPlan.result?.earliest ? "planned" : null}>
       <p className="field__hint">
         Runs the fire to its last step first, then routes with the state each point will be in when you would reach it,
         and works out how long you can wait before leaving.
       </p>
+      {exits?.nodes.length > 0 && (
+        <Choices
+          legend="Exits"
+          name="forecast-exits"
+          value={settings.forecastExits}
+          onChange={(forecastExits) => setSettings({ forecastExits })}
+          options={[
+            {
+              value: "model",
+              label: `All ${exits.nodes.length} exit door${exits.nodes.length === 1 ? "" : "s"}`,
+              description: `From ${exitSourceText(exits.source)}.`,
+            },
+            { value: "picked", label: "The exit you picked", description: "Set in the Route step." },
+          ]}
+        />
+      )}
       <Disclosure summary="Clock, speed and limits">
         <div className="grid-2">
           <NumberField
@@ -871,13 +907,17 @@ function ForecastSection({ studio, onPlan }) {
       <Button block busy={forecastPlan.busy} disabled={!ready || fire.running} onClick={onPlan}>
         Plan with the forecast
       </Button>
-      {!ready && graph && <p className="field__hint">Needs a start and an exit (Route step) and a fire origin.</p>}
+      {!ready && graph && (
+        <p className="field__hint">
+          Needs a start{modelExits ? "" : " and an exit"} (Route step) and a fire origin.
+        </p>
+      )}
       {forecastPlan.result && <ForecastResult result={forecastPlan.result} settings={settings} />}
     </Section>
   );
 }
 
-export function SimulatePanel({ studio, onPick, onPlace, onStartFire, onStopFire, onTrainRl, onPlanForecast, onGoTo }) {
+export function SimulatePanel({ studio, exits, onPick, onPlace, onStartFire, onStopFire, onTrainRl, onPlanForecast, onGoTo }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl } = studio;
   const ready = Boolean(graph);
 
@@ -991,7 +1031,7 @@ export function SimulatePanel({ studio, onPick, onPlace, onStartFire, onStopFire
         </Disclosure>
       </div>
 
-      <ForecastSection studio={studio} onPlan={onPlanForecast} />
+      <ForecastSection studio={studio} exits={exits} onPlan={onPlanForecast} />
 
       <Section title="Train an agent against this fire" defaultOpen={false}>
         <p className="field__hint">

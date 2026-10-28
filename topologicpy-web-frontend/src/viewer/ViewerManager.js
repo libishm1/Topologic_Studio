@@ -570,8 +570,15 @@ export class ViewerManager {
       () => [],
     );
 
+    // Slabs typed ROOF are walkable surfaces but not floors: 7% of C20's
+    // graph and 14% of ISSUE_159's, and two of C20's separate parts
+    // (wiki/research/ifc-handling-survey-2026-10-27.md, item 2). Untyped roofs
+    // are still caught by the height rule in lattice.js.
+    const roofs = new Set(await withPredefinedType(this.model, ids.floors, "ROOF").catch(() => []));
+    const floorIds = roofs.size ? ids.floors.filter((id) => !roofs.has(id)) : ids.floors;
+
     const [floors, stairs, doors, walls, spaces, obstacles] = await Promise.all([
-      extractMeshes(this.model, [...ids.floors, ...flooring], world),
+      extractMeshes(this.model, [...floorIds, ...flooring], world),
       extractMeshes(this.model, ids.stairs, world),
       extractMeshes(this.model, ids.doors, world),
       extractMeshes(this.model, ids.walls, world),
@@ -586,8 +593,9 @@ export class ViewerManager {
       walls: walls.length,
       spaces: spaces.length,
       obstacles: obstacles.length,
+      roofs: roofs.size,
     });
-    return { floors, stairs, doors, walls, spaces, obstacles };
+    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size };
   }
 
   // --------------------------------------------------------------- overlays

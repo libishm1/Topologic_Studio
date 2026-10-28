@@ -44,6 +44,8 @@ self.onmessage = (event) => {
       sections: graph.sections,
       sectionHeight: graph.sectionHeight,
       stats: { ...graph.stats, walls: graph.walls.length },
+      // Doors as the graph sees them, to join with the IFC's exit flags.
+      doors: graph.doorReport.map((d) => ({ itemId: d.itemId, node: d.node, sides: d.sides })),
     };
     self.postMessage({ id, ok: true, result }, [
       result.points.buffer,

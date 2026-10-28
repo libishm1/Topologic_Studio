@@ -58,6 +58,9 @@ export const DEFAULT_SETTINGS = {
   untenableAbove: 80,
   doseLimit: 0.3,
   departAfter: 0,
+  // "model": every exit door the IFC marks (or, failing that, doors with floor
+  // on one side); "picked": the exit picked in the Route step.
+  forecastExits: "model",
   showDeadlineMap: true,
 
   showGraph: true,
@@ -113,6 +116,8 @@ export function useStudio() {
   const [dynamicPath, setDynamicPath] = useState(null);
   const [rl, setRl] = useState({ busy: false, path: null, reachedExit: false, result: null });
   const [forecastPlan, setForecastPlan] = useState({ busy: false, result: null });
+  // What the IFC says about egress beyond its geometry (core/ifcSemantics.js).
+  const [semantics, setSemantics] = useState(null);
 
   const [toasts, setToasts] = useState([]);
   const [cacheInfo, setCacheInfo] = useState({ count: 0, bytes: 0 });
@@ -305,6 +310,7 @@ export function useStudio() {
     (nextFile) => {
       setFile(nextFile);
       setModelInfo(null);
+      setSemantics(null);
       setPoints({ start: null, exit: null, fire: null });
       setPickMode(null);
       resetDownstream();
@@ -361,6 +367,7 @@ export function useStudio() {
       dynamicPath,
       rl,
       forecastPlan,
+      semantics,
       toasts,
       cacheInfo,
 
@@ -381,6 +388,7 @@ export function useStudio() {
       setDynamicPath,
       setRl,
       setForecastPlan,
+      setSemantics,
       setCacheInfo,
       setFireHandle,
       abortRef,
@@ -421,6 +429,7 @@ export function useStudio() {
       dynamicPath,
       rl,
       forecastPlan,
+      semantics,
       toasts,
       cacheInfo,
       setSettings,
