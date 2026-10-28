@@ -180,6 +180,60 @@ test("a stair joins two floors into one connected graph", () => {
   assert.equal(find(upper), find(ground), "the upper floor is reachable from the ground by the stair");
 });
 
+/** Union-find over a graph's edges. */
+function components(g) {
+  const parent = Int32Array.from({ length: g.stats.nodes }, (_, i) => i);
+  const find = (x) => (parent[x] === x ? x : (parent[x] = find(parent[x])));
+  for (let e = 0; e < g.edges.length; e += 2) parent[find(g.edges[e])] = find(g.edges[e + 1]);
+  return find;
+}
+
+test("a staircase links to each floor once, on its centre line", () => {
+  // The flight of the test above: 15 treads 2 m wide (y 0..2), so its centre
+  // line is y = 1.
+  const stairs = [];
+  for (let k = 1; k <= 15; k += 1) stairs.push(rect(2.25 + (k - 1) * 0.25, 0, 2.25 + k * 0.25, 2, 0.1875 * k));
+  const floors = [rect(0, 0, 2.25, 4, 0), rect(2.25, 2, 10, 4, 0), rect(6, 0, 10, 2, 3)];
+  const walls = [box(6, -0.2, 3, 10, 0, 5.8)];
+  const g = buildLatticeGraph({ ...base, floors, stairs, walls });
+  const stair = (n) => g.kinds[n] === KIND_STAIR;
+  // One node per tread, each on the centre line.
+  const treads = [...Array(g.stats.nodes).keys()].filter(stair);
+  assert.equal(treads.length, 15);
+  for (const n of treads) assert.ok(Math.abs(g.points[n * 3 + 1] - 1) < 1e-6, `tread node off the centre line at y ${g.points[n * 3 + 1]}`);
+  // Exactly two links between the staircase and the floors: one at each end,
+  // to floor nodes in line with the flight.
+  const floorLinks = [];
+  for (let e = 0; e < g.edges.length; e += 2) {
+    const a = g.edges[e], b = g.edges[e + 1];
+    if (stair(a) !== stair(b)) floorLinks.push(stair(a) ? b : a);
+  }
+  assert.equal(floorLinks.length, 2);
+  for (const f of floorLinks) assert.ok(Math.abs(g.points[f * 3 + 1] - 1) <= 0.25 + 1e-6, `floor link at y ${g.points[f * 3 + 1]}, off the centre line`);
+  const heights = floorLinks.map((f) => g.points[f * 3 + 2]).sort((x, y) => x - y);
+  assert.ok(heights[0] < 0.5 && heights[1] > 2.9, `one link reaches the ground floor and one the upper floor: ${heights}`);
+  assert.equal(g.stats.stairEnds, 2);
+  assert.equal(g.stats.stairEndsLinked, 2);
+});
+
+test("a U-shaped stair with a separate landing joins both floors", () => {
+  // Flight 1 rises along +x at y 0..1, a landing at x 3..4 spans both
+  // flights, flight 2 rises back along -x at y 1..2.
+  const stairs = [];
+  for (let k = 1; k <= 8; k += 1) stairs.push(rect(1 + (k - 1) * 0.25, 0, 1 + k * 0.25, 1, 0.1875 * k));
+  stairs.push(rect(3, 0, 4, 2, 1.5));
+  for (let k = 1; k <= 8; k += 1) stairs.push(rect(3 - k * 0.25, 1, 3 - (k - 1) * 0.25, 2, 1.5 + 0.1875 * k));
+  const floors = [rect(-3, 0, 1, 1, 0), rect(-3, 1, 1, 2, 3)];
+  const walls = [box(-3, 2, 3, 1, 2.2, 5.8)];
+  const g = buildLatticeGraph({ ...base, floors, stairs, walls });
+  const find = components(g);
+  const upper = [...Array(g.stats.nodes).keys()].find((n) => g.kinds[n] !== KIND_STAIR && g.points[n * 3 + 2] > 2.9);
+  const ground = [...Array(g.stats.nodes).keys()].find((n) => g.kinds[n] !== KIND_STAIR && g.points[n * 3 + 2] < 0.1);
+  assert.ok(upper !== undefined && ground !== undefined);
+  assert.equal(find(upper), find(ground), "the U-stair joins the floors through its landing");
+  assert.equal(g.stats.stairEndsLinked, 2);
+});
+
 test("storey levels are the floor heights, not landings or slab undersides", () => {
   // Two 10 x 6 m storeys at 0 and 3 m, a 1 x 1 m landing at 1.5 m, and the
   // upper slab's underside (facing down) at 2.8 m.

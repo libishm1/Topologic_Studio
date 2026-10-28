@@ -15,6 +15,8 @@
  * worker and node's test runner can both import it.
  */
 
+import { stairLinks, stairPatches } from "./stairs.js";
+
 export const KIND_FLOOR = 0;
 export const KIND_STAIR = 1;
 export const KIND_DOOR = 2;
@@ -428,7 +430,8 @@ export function buildLatticeGraph({
   spacing = 0.5,
   agentHeight = 0.75,
   maxEdgeRise = 0.35,
-  maxStairGradient = 1.0,
+  // The highest riser a staircase may have: treads link up to this plus a
+  // margin, and a staircase's ends link to floors within it.
   stairRiser = 0.3,
   minFragment = 8,
   columnGap = 0.9,
@@ -489,18 +492,14 @@ export function buildLatticeGraph({
   for (let attempt = 0; attempt < 6; attempt += 1) {
     samples = { i: [], j: [], h: [], kind: [] };
     const base = { up, h0, h1, spacing: s, cos, sin, excludeAbove };
-    // Stairs on a grid twice as fine as the floor, as the old sampler did: a
-    // 1 m flight then has about four columns instead of one or two, and each
-    // link climbs half as much. On FZK-Haus the 0.5 m grid gave the stair one
-    // column and broke it in three places.
+    // Stairs are not sampled here: each becomes its walking line below
+    // (stairs.js).
     // Room floors (IfcSpace bottoms) as well as slabs: some architectural
     // models have no floor slabs at all (Office A has 5 m2 of slab and floors
     // only as spaces), and a space's footprint is the floor inside the walls.
     // Where both exist the column collapse keeps the walking surface.
     sampleTriangles(spaces, { ...base, scale: 2, minUp: Math.cos((10 * Math.PI) / 180), kind: KIND_FLOOR, bottomOnly: true }, samples, false);
-    windingFallback =
-      sampleGroup(floors, { ...base, scale: 2, minUp: Math.cos((10 * Math.PI) / 180), kind: KIND_FLOOR }, samples) |
-      sampleGroup(stairs, { ...base, spacing: s / 2, scale: 1, minUp: Math.cos((45 * Math.PI) / 180), kind: KIND_STAIR }, samples);
+    windingFallback = sampleGroup(floors, { ...base, scale: 2, minUp: Math.cos((10 * Math.PI) / 180), kind: KIND_FLOOR }, samples);
     kept = collapse(samples, columnGap);
     if (kept.length <= maxPoints) break;
     s *= Math.sqrt(kept.length / maxPoints) * 1.05;
@@ -518,9 +517,12 @@ export function buildLatticeGraph({
   });
 
   const count = kept.length;
-  // Room for up to four wall-face nodes per lattice node and one per door
-  // (see the wall-hugging and doorway steps below).
-  const capacity = count * 5 + doorPoints.length;
+  const patches = stairPatches(stairs, { up, h0, h1 });
+  const maxRise = stairRiser + 0.06;
+  const walk = stairLinks(patches, { maxRise });
+  // Room for up to four wall-face nodes per lattice node, one per door and one
+  // per stair tread or landing (see the steps below).
+  const capacity = count * 5 + doorPoints.length + patches.length;
   const points = new Float32Array(capacity * 3);
   const kinds = new Uint8Array(capacity);
   const heights = new Float64Array(capacity);
@@ -539,27 +541,17 @@ export function buildLatticeGraph({
   });
   const lattice = kept.map((n) => [samples.i[n], samples.j[n]]);
 
-  // A floor link may span maxEdgeRise. A link touching a stair may climb a
-  // gradient plus one riser: sampling treads at a fixed step sometimes skips a
-  // tread, so the height difference comes in whole risers, not a smooth slope.
-  // (TopologicPy's Navigation uses a 0.35 m stair-riser limit for the same reason.)
-  const reach = (a, b, run) => {
-    const dh = Math.abs(heights[a] - heights[b]);
-    if (kinds[a] === KIND_STAIR || kinds[b] === KIND_STAIR) {
-      return dh <= maxStairGradient * run + stairRiser + 1e-6;
-    }
-    return dh <= maxEdgeRise + 1e-6;
-  };
+  // A floor link may span maxEdgeRise.
+  const reach = (a, b) => Math.abs(heights[a] - heights[b]) <= maxEdgeRise + 1e-6;
   const best = (from, di, dj, want) => {
     const [i, j] = lattice[from];
     const list = cells.get(key(i + di, j + dj));
     if (!list) return -1;
-    const run = hs * Math.hypot(di, dj);
     let pick = -1, gap = Infinity;
     for (const m of list) {
       if (want !== undefined && kinds[m] !== want) continue;
       const dh = Math.abs(heights[m] - heights[from]);
-      if (dh < gap && reach(from, m, run)) {
+      if (dh < gap && reach(from, m)) {
         pick = m;
         gap = dh;
       }
@@ -567,39 +559,25 @@ export function buildLatticeGraph({
     return pick;
   };
 
-  // Floor nodes sit on even half-step indices and link a full step apart;
-  // anything touching a stair links a half step apart. Each unordered pair is
-  // visited once: both kinds look the same four directions, floors look for
-  // stairs only at half steps, and floors never share a half-step cell.
+  // Floor nodes sit on even half-step indices and link a full step apart. Each
+  // unordered pair is visited once: every node looks the same four directions.
   const edges = [];
   // Each floor diagonal with its two axis detours (a -> c -> b), checked once
   // the walls are known (below).
   const diagonals = [];
   const fullSteps = rectilinear ? [[2, 0], [0, 2]] : [[2, 0], [0, 2], [2, 2], [2, -2]];
-  const halfSteps = rectilinear ? [[1, 0], [0, 1]] : [[1, 0], [0, 1], [1, 1], [1, -1]];
   for (let a = 0; a < count; a += 1) {
-    if (kinds[a] !== KIND_STAIR) {
-      for (const [di, dj] of fullSteps) {
-        const b = best(a, di, dj, KIND_FLOOR);
-        if (b < 0) continue;
-        // No corner cutting: both axis neighbours must be walkable too.
-        if (di !== 0 && dj !== 0) {
-          const c1 = best(a, di, 0, KIND_FLOOR);
-          const c2 = best(a, 0, dj, KIND_FLOOR);
-          if (c1 < 0 || c2 < 0) continue;
-          diagonals.push([edges.length / 2, a, c1, c2, b]);
-        }
-        edges.push(a, b);
+    for (const [di, dj] of fullSteps) {
+      const b = best(a, di, dj, KIND_FLOOR);
+      if (b < 0) continue;
+      // No corner cutting: both axis neighbours must be walkable too.
+      if (di !== 0 && dj !== 0) {
+        const c1 = best(a, di, 0, KIND_FLOOR);
+        const c2 = best(a, 0, dj, KIND_FLOOR);
+        if (c1 < 0 || c2 < 0) continue;
+        diagonals.push([edges.length / 2, a, c1, c2, b]);
       }
-      for (const [di, dj] of halfSteps) {
-        const b = best(a, di, dj, KIND_STAIR);
-        if (b >= 0) edges.push(a, b);
-      }
-    } else {
-      for (const [di, dj] of halfSteps) {
-        const b = best(a, di, dj);
-        if (b >= 0) edges.push(a, b);
-      }
+      edges.push(a, b);
     }
   }
 
@@ -704,10 +682,92 @@ export function buildLatticeGraph({
     }
   }
 
+  // Staircases (stairs.js): a node per tread or landing at its centroid, which
+  // on a flight is its centre line, linked up the flight. Each end of a
+  // staircase links once to the floor: to the floor node nearest the point
+  // one going beyond the end along the walking line, on the outward side, at
+  // or below the bottom end and at or above the top end, within one riser
+  // and not through a wall. These links, like the treads', are not blocked
+  // afterwards: each was checked against the walls when it was made.
+  const stairEdge = new Set();
+  const stairBase = total;
+  patches.forEach((patch, k) => {
+    const n = stairBase + k;
+    points[n * 3 + h0] = patch.x;
+    points[n * 3 + h1] = patch.y;
+    points[n * 3 + up] = patch.h + agentHeight;
+    heights[n] = patch.h;
+    kinds[n] = KIND_STAIR;
+  });
+  total += patches.length;
+  for (const [a, b] of walk.links) {
+    stairEdge.add(edges.length / 2);
+    edges.push(stairBase + a, stairBase + b);
+  }
+  const endReach = 1.5;
+  const floorAt = (x, y, h, side, dir, going) => {
+    // Lattice cells near (x, y): the inverse of plan().
+    const ci = (x * cos + y * sin) / hs, cj = (-x * sin + y * cos) / hs;
+    const r = Math.ceil(endReach / hs) + 1;
+    let pick = -1, score = Infinity;
+    for (let i = Math.floor(ci) - r; i <= Math.ceil(ci) + r; i += 1) {
+      for (let j = Math.floor(cj) - r; j <= Math.ceil(cj) + r; j += 1) {
+        const list = cells.get(key(i, j));
+        if (!list) continue;
+        for (const m of list) {
+          if (kinds[m] !== KIND_FLOOR) continue;
+          const dh = heights[m] - h;
+          if (Math.abs(dh) > maxRise || (side < 0 && dh > 0.05) || (side > 0 && dh < -0.05)) continue;
+          const mx = points[m * 3 + h0], my = points[m * 3 + h1];
+          const d = Math.hypot(mx - x, my - y);
+          if (d > endReach) continue;
+          let rank = d;
+          if (dir) {
+            if ((mx - x) * dir[0] + (my - y) * dir[1] <= 0) continue;
+            rank = Math.hypot(mx - (x + dir[0] * going), my - (y + dir[1] * going));
+          }
+          if (rank >= score) continue;
+          const index = sectionFor(heights[m]);
+          if (index.crosses(x, y, mx, my) || index.inside((x + mx) / 2, (y + my) / 2)) continue;
+          pick = m;
+          score = rank;
+        }
+      }
+    }
+    return pick;
+  };
+  let stairEnds = 0, stairEndsLinked = 0;
+  const linkEnd = (k, side, neighbours) => {
+    const patch = patches[k];
+    let dir = null, going = 0;
+    if (neighbours.length) {
+      let mx = 0, my = 0;
+      for (const q of neighbours) {
+        mx += patches[q].x / neighbours.length;
+        my += patches[q].y / neighbours.length;
+      }
+      const dx = patch.x - mx, dy = patch.y - my, len = Math.hypot(dx, dy);
+      if (len > 1e-6) {
+        dir = [dx / len, dy / len];
+        going = Math.max(0.25, Math.min(0.6, len));
+      }
+    }
+    stairEnds += 1;
+    const m = floorAt(patch.x, patch.y, patch.h, side, dir, going);
+    if (m < 0) return;
+    stairEndsLinked += 1;
+    stairEdge.add(edges.length / 2);
+    edges.push(stairBase + k, m);
+  };
+  for (let k = 0; k < patches.length; k += 1) {
+    if (!walk.lower[k].length) linkEnd(k, -1, walk.higher[k]);
+    if (!walk.higher[k].length) linkEnd(k, 1, walk.lower[k]);
+  }
+
   const edgeCount = edges.length / 2;
   const blocked = new Uint8Array(edgeCount);
   for (let e = 0; e < edgeCount; e += 1) {
-    if (doorEdge.has(e)) continue;
+    if (doorEdge.has(e) || stairEdge.has(e)) continue;
     const a = edges[e * 2], b = edges[e * 2 + 1];
     const ax = points[a * 3 + h0], ay = points[a * 3 + h1];
     const bx = points[b * 3 + h0], by = points[b * 3 + h1];
@@ -828,6 +888,8 @@ export function buildLatticeGraph({
       prunedNodes: pruned,
       wallFaceNodes: hugged,
       stairNodes,
+      stairEnds,
+      stairEndsLinked,
       doorNodes,
       blockedEdges: blockedCount,
       cornerBlocked,
