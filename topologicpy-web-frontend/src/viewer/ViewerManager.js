@@ -23,6 +23,7 @@ import {
 import { hashFile, readCached, writeCached } from "../lib/fragmentCache.js";
 import { PhaseTimer, mark } from "../lib/perf.js";
 import { collectCategoryIds, extractMeshes, withPredefinedType } from "./categories.js";
+import { heatColor, paintDeadlines } from "./heat.js";
 
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
  *  installed package versions. Both are served from public/, under the
@@ -1093,7 +1094,9 @@ export class ViewerManager {
    * Recolour graph edges by each node's escape deadline (seconds): the heat
    * ramp reversed, so little time left reads as hot. -Infinity (no safe
    * departure at all) is drawn in a neutral dark grey; null restores the
-   * graph's own colours.
+   * graph's own colours, and so does a map that is not one value per node of
+   * this graph (one made before a rebuild: indexed by the new graph's nodes it
+   * read past its end and threw, review C1).
    */
   setDeadlines(deadlines, { max = 300 } = {}) {
     const segments = this.overlays.get(OVERLAY.graph);
@@ -1101,24 +1104,12 @@ export class ViewerManager {
     const attribute = segments.geometry.getAttribute("color");
     if (!attribute) return;
     const colors = attribute.array;
-    if (!deadlines) {
+    const none = new THREE.Color(0x52525b);
+    if (!paintDeadlines(colors, this._graphEdges, this._graphNodes.length / 3, deadlines, { max, none })) {
       colors.set(this._baseColors);
       attribute.needsUpdate = true;
       segments.material.opacity = 0.45;
       return;
-    }
-    const none = new THREE.Color(0x52525b);
-    const scratch = new THREE.Color();
-    const edgeCount = this._graphEdges.length / 2;
-    for (let e = 0; e < edgeCount; e += 1) {
-      for (let side = 0; side < 2; side += 1) {
-        const value = deadlines[this._graphEdges[e * 2 + side]];
-        const offset = e * 6 + side * 3;
-        const c = value === -Infinity ? none : heatColor(scratch, max - Math.max(0, value), 0, max);
-        colors[offset] = c.r;
-        colors[offset + 1] = c.g;
-        colors[offset + 2] = c.b;
-      }
     }
     attribute.needsUpdate = true;
     segments.material.opacity = 0.8;
@@ -1385,19 +1376,4 @@ async function resolveWorkerUrl() {
     );
   }
   return fallback;
-}
-
-/**
- * Yellow -> orange -> red -> dark red across the temperature range: the stops
- * of .legend__ramp (styles/workflow.css), so the legend is literally what is
- * drawn. Lightness falls all the way, so heat reads in order for colour-blind
- * viewers too, which the rainbow this replaced did not.
- */
-const HEAT_STOPS = [0xfacc15, 0xf97316, 0xdc2626, 0x7f1d1d].map((hex) => new THREE.Color(hex));
-
-function heatColor(target, temp, min, max) {
-  const t = Math.max(0, Math.min(1, (temp - min) / Math.max(1e-6, max - min)));
-  const x = t * (HEAT_STOPS.length - 1);
-  const i = Math.min(HEAT_STOPS.length - 2, Math.floor(x));
-  return target.copy(HEAT_STOPS[i]).lerp(HEAT_STOPS[i + 1], x - i);
 }

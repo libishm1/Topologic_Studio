@@ -727,6 +727,17 @@ select:focus {
   line-height: 1.6;
 }
 
+/* The page shown when the app itself fails (ui/ErrorBoundary.jsx). */
+.crash {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-0);
+}
+
+.crash .mono {
+  overflow-wrap: anywhere;
+}
+
 .dropzone {
   width: 100%;
   padding: var(--space-5);

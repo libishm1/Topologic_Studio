@@ -85,6 +85,8 @@ const MODES = [
   },
 ];
 
+const NO_PLAN = { busy: false, result: null };
+
 const DEFAULT_TOPOLOGY_OPTIONS = {
   showFaces: true,
   showVerts: false,
@@ -368,6 +370,18 @@ export default function App() {
     [handleFile, reportError, studio],
   );
 
+  // ------------------------------------------------------- forecast plan state
+
+  /**
+   * A plan holds for the graph it was made on. When that is replaced the plan
+   * is dropped, with any plan still running: its deadline map, indexed by the
+   * new graph's nodes, read past its end and took the page down (review C1).
+   */
+  const dropPlan = useCallback(() => {
+    if (forecastRef.current?.busy) forecastRef.current.cancel();
+    studio.setForecastPlan(NO_PLAN);
+  }, [studio]);
+
   // ------------------------------------------------------------ graph build
 
   const buildGraph = useCallback(async () => {
@@ -465,6 +479,11 @@ export default function App() {
       studio.setDynamicPath(null);
       studio.setAlternatives(null);
       studio.setNavCheck(null);
+      dropPlan();
+      // A fire still running spreads over the old graph's node ids.
+      studio.stopFire();
+      viewer.setPath(null);
+      viewer.setPath(null, { dynamic: true });
       viewer.setRoutes(null);
 
       viewer.setGraph(response.nodes, response.edges, response.kinds);
@@ -516,7 +535,7 @@ export default function App() {
       studio.setGraphBusy(false);
       studio.setLoadState({ busy: false, stage: null, detail: null });
     }
-  }, [reportError, sample, setSettings, settings, studio, toast]);
+  }, [reportError, sample, setSettings, settings, studio, toast, dropPlan]);
 
   /**
    * Server-backed actions need this graph on the server. Without an id the
@@ -959,7 +978,8 @@ export default function App() {
         // The map is the slow part; it is made only when it will be drawn.
         withMap: settings.showDeadlineMap,
       });
-      studio.setForecastPlan({ busy: false, result });
+      // Tagged with the graph it was made on: it is drawn only on that graph.
+      studio.setForecastPlan({ busy: false, result, nodes: graph.nodes });
       const viewer = viewerRef.current;
       viewer?.setPath(null);
       viewer?.setPath(null, { dynamic: true });
@@ -986,16 +1006,18 @@ export default function App() {
     }
   }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError]);
 
+  // The plan's deadline map, when it was made on the graph on screen.
+  const deadlines = forecastPlan.result && forecastPlan.nodes === graph?.nodes ? forecastPlan.result.deadlines : null;
+
   // The deadline map is drawn on the graph while it is wanted and no fire is
   // colouring the graph.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || fire.running) return;
-    const result = forecastPlan.result;
-    viewer.setDeadlines(settings.showDeadlineMap && result?.deadlines ? result.deadlines : null, {
-      max: result?.horizon ?? 300,
+    viewer.setDeadlines(settings.showDeadlineMap ? deadlines : null, {
+      max: forecastPlan.result?.horizon ?? 300,
     });
-  }, [forecastPlan.result, settings.showDeadlineMap, fire.running, graph]);
+  }, [deadlines, forecastPlan.result, settings.showDeadlineMap, fire.running]);
 
   // --------------------------------------------------------- reactive push
 
@@ -1383,9 +1405,7 @@ export default function App() {
             fireSteps={settings.fireMaxSteps}
             heatLegend={fire.running && settings.fireModel === "temperature"}
             deadlineLegend={
-              !fire.running && settings.showDeadlineMap && forecastPlan.result?.deadlines
-                ? { max: forecastPlan.result.horizon }
-                : null
+              !fire.running && settings.showDeadlineMap && deadlines ? { max: forecastPlan.result.horizon } : null
             }
             onStopFire={stopFire}
             legend={legend}
