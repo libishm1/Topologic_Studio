@@ -1,12 +1,24 @@
-# TopologicPy Web Backend
+# Topologic Studio: the optional server
 
-## Local development (Windows)
+A FastAPI service around TopologicPy. The app works without it; it adds the
+TopologicPy `TGraph` route engine, the Navigation cross-check and the
+Topology JSON viewer. See the [main README](../README.md) for what runs where
+and for the API table.
 
-Start the backend server with the local virtual environment:
+Needs Python 3.12. From the repository root:
 
-```powershell
-cd "C:/Users/lmurugesan/OneDrive - Alfaisal University/CM-iTAD/topologic_webapp/TopologicStudio/topologicpy-web-backend"
-.\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```bash
+python -m venv .venv-next
+.venv-next/Scripts/python -m pip install -r topologicpy-web-backend/requirements-dev.txt   # bin/python on macOS and Linux
+
+cd topologicpy-web-backend
+../.venv-next/Scripts/python -m uvicorn app.main:app --reload --port 8000
+../.venv-next/Scripts/python -m pytest tests -q
 ```
 
-If port 8000 is already in use, choose another port and update `API_BASE` in `topologicpy-web-frontend/src/App.jsx`.
+<http://localhost:8000/api/capabilities> should report `"usable": true`, and
+<http://localhost:8000/docs> lists every route. If you run it on another port,
+set `VITE_API_BASE` in `topologicpy-web-frontend/.env`.
+
+`Dockerfile` is the image Render runs (`render.yaml` at the repository root).
+Allowed browser origins are set with `CORS_ORIGINS`.

@@ -1,29 +1,31 @@
-# React + Vite
+# Topologic Studio: the app
 
-## Local development (Windows)
+The browser app: React and Vite, the That Open engine for the viewer, and
+web-ifc for reading IFC. What it does, with screenshots, is in the
+[main README](../README.md).
 
-Start the frontend with the bundled Node runtime (no admin install needed):
+Needs Node.js 20.11 or later.
 
-```powershell
-cd "C:/Users/lmurugesan/OneDrive - Alfaisal University/CM-iTAD/topologic_webapp/TopologicStudio/topologicpy-web-frontend"
-$nodeDir = "C:/Users/lmurugesan/OneDrive - Alfaisal University/CM-iTAD/topologic_webapp/TopologicStudio/node-v24.11.1-win-x64"
-$env:Path = "$nodeDir;$env:Path"
-& "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173
+```bash
+npm ci                     # also copies web-ifc's WASM and the fragments worker into public/
+npm run dev                # http://localhost:5173
+npm test                   # unit and property tests of src/core
+npm run lint
+npm run build              # converts the examples, then builds dist/
+npm run prepare-examples   # converts the examples only, for npm run dev
 ```
 
-If the backend is running on a different port (not 8000), update `API_BASE` in `src/App.jsx`.
+The app looks for the optional server at `http://localhost:8000`. To use
+another address, copy `.env.example` to `.env` and set `VITE_API_BASE`. For a
+build served from a sub-path, as on GitHub Pages, set `BASE_PATH` (for
+example `BASE_PATH=/Topologic_Studio/`).
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Folder | What is in it |
+| --- | --- |
+| `src/core/` | Routing, the walkable graph, stairs and cores, fire models, forecast and deadline map, Q-learning, IFC semantics; each with its tests |
+| `src/workers/` | The IFC import, graph, forecast and RL workers |
+| `src/viewer/` | `ViewerManager`, which owns the 3D scene |
+| `src/ui/` | The four step panels, the viewport overlays and the Methods page |
+| `src/lib/` | The server client and the IndexedDB model cache |
+| `public/examples/` | The example IFCs and their credits (`index.json`) |
+| `scripts/` | Asset sync after install, and the build-time example conversion |

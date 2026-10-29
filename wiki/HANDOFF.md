@@ -5,6 +5,7 @@
 - Live: https://libishm1.github.io/Topologic_Studio/ is `main` at 4f09929 (deployed 2026-10-29 after the gates below; checked live: preload links, prepared examples with a matching converter, no semantics worker, the Duplex example opening with no IFC worker, and a Duplex file reporting 4 of 14 exit doors). Work happens on `next/browser-core` in the `TopologicStudio-Next` worktree; `main` is fast-forwarded to it only after the gates pass. The Render backend (`topologicstudio-backend`) is deployed by hand from its dashboard; it had no changes in this round.
 - Gates before any deploy: `npm test` (166 tests), `npx eslint src`, a Pages build (`npm run build` with `BASE_PATH=/Topologic_Studio/`; from Git Bash prefix `MSYS_NO_PATHCONV=1`), and `node tools/browser-test.mjs` desktop and `--mobile` against `vite preview` on the sub-path, all with 0 failed steps.
 - Live check after the deploy: every step passes except the TopologicPy Navigation cross-check, which times out at 240 s on Render's free tier (known; not a regression).
+- README (2026-10-29): rewritten for new users, with a tour of the four steps on the Duplex, the other examples, a phone view and the Methods page. The screenshots in `docs/images/` come from `node tools/readme-shots.mjs` against a running dev server (or any build with `?debug`), using only the shipped examples; re-run it after a UI change. The RL shot's success rate varies between runs, so the README quotes none.
 
 ## Loading speed (2026-10-29)
 
