@@ -8,6 +8,12 @@
  * same importer, with the same settings, runs in its own worker; the page only
  * loads the finished fragments buffer, which is the path a cached model takes.
  *
+ * After the fragments, the same worker reads what the IFC says about egress
+ * (exit doors, roof slabs; src/core/ifcSemantics.js). Its web-ifc is already
+ * loaded and compiled, where a second worker cost the page another 419 KB
+ * download and another start of the engine, and it began only after the model
+ * was drawn.
+ *
  * One worker per conversion: terminating it when the job ends hands web-ifc's
  * WASM heap (hundreds of MB on a large file) straight back to the browser.
  *
@@ -16,15 +22,29 @@
  *   worker -> page  { type: "ready" }        this module loaded and evaluated
  *   page -> worker  { type: "convert", bytes, name, wasm, webIfc }
  *                                            bytes: the IFC, transferred
+ *                   { type: "semantics", bytes, wasm }
+ *                                            the semantics alone, for a model
+ *                                            whose fragments were cached
  *   worker -> page  { type: "progress", value }       0..1, as IfcLoader reports
  *                   { type: "done", bytes }           fragments, transferred
  *                   { type: "failed", message }       a message for the user
  *                   { type: "unavailable", reason, bytes }
  *                       web-ifc could not start here; the IFC goes back so the
  *                       page can convert it in its own thread
+ *                   { type: "semantics", result }     after "done", or alone
+ *                   { type: "semanticsFailed", message }
  */
-import { IfcImporter } from "@thatopen/fragments";
+import { DataSet, IfcImporter } from "@thatopen/fragments";
 import * as WEBIFC from "web-ifc";
+
+import { trimImporter } from "../core/importSettings.js";
+import { ifcSemantics } from "../core/ifcSemantics.js";
+
+// The loader's tape is reserved up front, 64 MiB by default. Reading the
+// relations needs far less: with 4 MiB the heap is 16 MiB after the Duplex
+// and 33 MiB after the 12 MiB dental clinic, against 133 MiB, with the same
+// result; a larger file takes more of it as it goes.
+const TAPE_SIZE = 4 * 1024 * 1024;
 
 // web-ifc picks its pthread build whenever the scope is cross-origin isolated.
 // That build cannot start under Vite (see vite.config.js) and GitHub Pages
@@ -46,6 +66,7 @@ WEBIFC.IfcAPI.prototype.Init = async function initSingleThreaded(customLocateFil
 
 self.onmessage = (event) => {
   if (event.data?.type === "convert") void convert(event.data);
+  else if (event.data?.type === "semantics") void semantics(new Uint8Array(event.data.bytes), event.data.wasm);
 };
 
 async function convert({ bytes: buffer, name = "the file", wasm = {}, webIfc = {} }) {
@@ -54,6 +75,8 @@ async function convert({ bytes: buffer, name = "the file", wasm = {}, webIfc = {
     const importer = new IfcImporter();
     importer.wasm = { path: wasm.path ?? "", absolute: Boolean(wasm.absolute) };
     importer.webIfcSettings = { ...webIfc };
+    // Only what the page reads from the fragments (core/importSettings.js).
+    trimImporter(importer, WEBIFC, DataSet);
 
     // The importer reports per IFC class; the page shows whole percent, so
     // one message per percent is all it can use.
@@ -85,6 +108,29 @@ async function convert({ bytes: buffer, name = "the file", wasm = {}, webIfc = {
       return;
     }
     self.postMessage({ type: "failed", message: describeFailure(error, name, bytes) });
+    return;
+  }
+  await semantics(bytes, wasm);
+}
+
+/** Read the egress semantics with a fresh web-ifc and post them. */
+async function semantics(bytes, wasm = {}) {
+  try {
+    const api = new WEBIFC.IfcAPI();
+    api.SetWasmPath(wasm.path ?? "", Boolean(wasm.absolute));
+    await api.Init();
+    api.SetLogLevel(WEBIFC.LogLevel.LOG_LEVEL_OFF);
+    const t0 = performance.now();
+    const model = api.OpenModel(bytes, { TAPE_SIZE });
+    try {
+      const result = ifcSemantics(api, model, WEBIFC);
+      result.ms = performance.now() - t0;
+      self.postMessage({ type: "semantics", result });
+    } finally {
+      api.CloseModel(model);
+    }
+  } catch (error) {
+    self.postMessage({ type: "semanticsFailed", message: messageOf(error) });
   }
 }
 

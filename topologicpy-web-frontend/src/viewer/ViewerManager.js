@@ -20,7 +20,7 @@ import {
   Worlds,
 } from "@thatopen/components";
 
-import { hashFile, readCached, writeCached } from "../lib/fragmentCache.js";
+import { hashFile, readCached, writeCached, writeCachedSemantics } from "../lib/fragmentCache.js";
 import { PhaseTimer, mark } from "../lib/perf.js";
 import { aggregatedParts, collectCategoryIds, elementRecords, extractMeshes, withPredefinedType } from "./categories.js";
 import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
@@ -128,7 +128,8 @@ export class ViewerManager {
     this.applyTheme(theme);
 
     const fragments = components.get(FragmentsManager);
-    fragments.init(await resolveWorkerUrl());
+    this._fragmentsWorkerUrl = await resolveWorkerUrl();
+    fragments.init(this._fragmentsWorkerUrl);
     this.fragments = fragments;
 
     const ifcLoader = components.get(IfcLoader);
@@ -429,9 +430,17 @@ export class ViewerManager {
    * Load an IFC file, using the fragment cache when the same bytes have been
    * seen before.
    *
-   * @returns {Promise<{cached: boolean, phases: object, stats: object}>}
+   * `prepared`: {fragments, semantics} converted ahead of time (the examples,
+   * scripts/prepare-examples.mjs). The file is then not read: only its name
+   * and size are used, and nothing is converted or cached.
+   *
+   * @returns {Promise<{cached: boolean, phases: object, stats: object,
+   *          semantics: Promise<object>|null}>}  semantics: what the IFC says
+   *          about egress (core/ifcSemantics.js), from the cache or read by
+   *          the import worker; they may come after the model is drawn. Null
+   *          when no worker could read them.
    */
-  async loadIfc(file, { onProgress, signal } = {}) {
+  async loadIfc(file, { onProgress, signal, prepared = null } = {}) {
     if (!this.ready) throw new Error("Viewer is still starting up.");
     // The page stays responsive while a model converts, so another file can
     // be opened meanwhile; the older load is dropped ("cancelled"). Its
@@ -447,25 +456,35 @@ export class ViewerManager {
     const timer = new PhaseTimer("ifc.load");
     const report = (stage, detail) => onProgress?.({ stage, detail });
 
-    report("reading", file.name);
-    const { key, buffer } = await timer.run("hash", () => hashFile(file));
-    current();
+    let key = null;
+    let buffer = null;
+    if (!prepared) {
+      report("reading", file.name);
+      ({ key, buffer } = await timer.run("hash", () => hashFile(file)));
+      current();
+    }
 
     this.clearModel();
 
-    let fragmentBytes = await timer.run("cacheLookup", () => readCached(key));
+    const record = prepared
+      ? { buffer: prepared.fragments, semantics: prepared.semantics }
+      : await timer.run("cacheLookup", () => readCached(key));
     current();
+    let fragmentBytes = record?.buffer ?? null;
     const cached = Boolean(fragmentBytes);
+    let semantics = null;
 
     if (!cached) {
       report("converting", "Converting IFC to fragments");
       fragmentBytes = await timer.run("convert", async () => {
-        const { fragments: converted, ifc } = await this._convertInWorker(buffer, file.name, {
+        const job = await this._importJob(buffer, file.name, {
           onProgress: (p) => report("converting", p),
           signal,
         });
         current();
+        const { fragments: converted, ifc } = job;
         if (converted) {
+          semantics = job.semantics;
           // What IfcLoader.load sets and names a model it converted. The id
           // must differ from the cached path's: clearModel does not wait for
           // the old model's disposal, whose last step drops the thread route
@@ -494,6 +513,8 @@ export class ViewerManager {
       });
 
       report("caching", "Saving to local cache");
+      // The fragments now; the semantics when the worker has read them.
+      const reading = semantics;
       void timer
         .run("cacheWrite", () =>
           writeCached(key, fragmentBytes, {
@@ -501,12 +522,22 @@ export class ViewerManager {
             bytes: file.size,
           }),
         )
+        .then((written) => written && reading?.then((s) => writeCachedSemantics(key, s)))
         .catch(() => {});
     } else {
-      report("cached", "Loading cached fragments");
+      report("cached", prepared ? "Loading the model" : "Loading cached fragments");
+      if (record.semantics) {
+        semantics = Promise.resolve(record.semantics);
+      } else if (buffer) {
+        // Cached without them: read them beside the model's load.
+        semantics = (await this._importJob(buffer, file.name, { signal, convert: false })).semantics;
+        void semantics.then((s) => writeCachedSemantics(key, s)).catch(() => {});
+      }
       const model = await timer.run("loadFragments", () =>
         this.fragments.core.load(fragmentBytes, {
-          modelId: `${file.name}-${key.slice(0, 8)}`,
+          // A prepared model has no hash; the load's own number keeps
+          // its id apart from a model of the same name still being disposed.
+          modelId: prepared ? `${file.name}#${token}` : `${file.name}-${key.slice(0, 8)}`,
           raw: false,
         }),
       );
@@ -546,12 +577,15 @@ export class ViewerManager {
 
     const phases = timer.finish({
       cached,
+      prepared: Boolean(prepared),
       file: file.name,
       bytes: file.size,
     });
 
     return {
       cached,
+      prepared: Boolean(prepared),
+      semantics,
       phases: phases.detail,
       totalMs: phases.ms,
       stats: {
@@ -566,21 +600,46 @@ export class ViewerManager {
   }
 
   /**
-   * Convert IFC bytes to a fragments buffer in src/workers/ifc-import.worker.js,
-   * with the importer settings `init` gave the IfcLoader.
+   * Run a job in src/workers/ifc-import.worker.js, with the importer settings
+   * `init` gave the IfcLoader.
    *
-   * Resolves to `{ fragments }`, or to `{ ifc }` when no worker can run the
-   * conversion here (no module workers, its script failed to load, or web-ifc
-   * could not start in it); `ifc` is then the IFC buffer, still whole, for the
-   * caller to convert on this thread. The buffer is only transferred once the
-   * worker has loaded, and comes back if web-ifc fails to start. Rejects with
-   * a message for the user when the conversion itself fails, and with
-   * "cancelled" when `signal` aborts, another load starts or the viewer is
-   * disposed.
+   * Converting (`convert` true), resolves to `{ fragments, semantics }` once
+   * the fragments are back: `semantics` is a promise for what the same worker
+   * reads next (core/ifcSemantics.js), and the worker ends when it settles.
+   * Resolves to `{ ifc }` when no worker can run the conversion here (no
+   * module workers, its script failed to load, or web-ifc could not start in
+   * it); `ifc` is then the IFC buffer, still whole, for the caller to convert
+   * on this thread. The buffer is only transferred once the worker has
+   * loaded, and comes back if web-ifc fails to start. Rejects with a message
+   * for the user when the conversion itself fails.
+   *
+   * With `convert` false, only reads the semantics: resolves to
+   * `{ semantics }` at once.
+   *
+   * The conversion, or else the semantics, reject with "cancelled" when
+   * `signal` aborts, another load starts or the viewer is disposed.
    */
-  _convertInWorker(buffer, name, { onProgress, signal } = {}) {
-    if (typeof Worker === "undefined") return Promise.resolve({ ifc: buffer });
+  _importJob(buffer, name, { onProgress, signal, convert = true } = {}) {
     if (signal?.aborted) return Promise.reject(new Error("cancelled"));
+
+    let resolveJob, rejectJob, resolveSemantics, rejectSemantics;
+    const job = new Promise((resolve, reject) => {
+      resolveJob = resolve;
+      rejectJob = reject;
+    });
+    const semantics = new Promise((resolve, reject) => {
+      resolveSemantics = resolve;
+      rejectSemantics = reject;
+    });
+    // Not every caller reads them.
+    semantics.catch(() => {});
+
+    const noWorker = (reason) => {
+      rejectSemantics(new Error(`The IFC reader could not start in a worker (${reason}).`));
+      resolveJob(convert ? { ifc: buffer } : { semantics });
+      return job;
+    };
+    if (typeof Worker === "undefined") return noWorker("no module workers");
 
     // Take the worker warmed while the page was idle, if it loaded; its
     // "ready" may already have come, or still be on its way to the handler
@@ -598,82 +657,102 @@ export class ViewerManager {
         worker = this._newImportWorker();
       } catch (error) {
         console.warn("[viewer] IFC import worker unavailable; converting on the main thread.", error);
-        return Promise.resolve({ ifc: buffer });
+        return noWorker(error?.message || "it did not start");
       }
     }
 
-    // A relative WASM path means relative to this page; the worker's own URL
-    // is under assets/, so it gets the resolved URL.
-    const { path, absolute } = this.ifcLoader.settings.wasm;
-    const wasm = absolute
-      ? { path, absolute }
-      : { path: new URL(path, window.location.href).href, absolute: true };
+    const wasm = this._wasmSettings();
     const webIfc = { ...this.ifcLoader.settings.webIfc };
 
-    return new Promise((resolve, reject) => {
-      let started = false;
-      let settled = false;
-      const finish = (settle, value) => {
-        if (settled) return;
-        settled = true;
-        worker.terminate();
-        signal?.removeEventListener("abort", abort);
-        if (this._abortImport === abort) this._abortImport = null;
-        settle(value);
-        this._scheduleWarmImport();
-      };
-      const abort = () => finish(reject, new Error("cancelled"));
-      const unavailable = (reason, ifc) => {
-        console.warn(`[viewer] IFC import worker unavailable (${reason}); converting on the main thread.`);
-        finish(resolve, { ifc });
-      };
+    let started = false;
+    // The fragments are back, or none were asked for: what fails from here
+    // on is the semantics.
+    let converted = !convert;
+    let ended = false;
+    const end = () => {
+      if (ended) return;
+      ended = true;
+      worker.terminate();
+      signal?.removeEventListener("abort", abort);
+      if (this._abortImport === abort) this._abortImport = null;
+      this._scheduleWarmImport();
+    };
+    const fail = (error) => {
+      end();
+      if (!converted) rejectJob(error);
+      rejectSemantics(error);
+    };
+    const abort = () => fail(new Error("cancelled"));
+    const unavailable = (reason, ifc) => {
+      if (convert) console.warn(`[viewer] IFC import worker unavailable (${reason}); converting on the main thread.`);
+      end();
+      buffer = ifc;
+      noWorker(reason);
+    };
+    const post = () => {
+      started = true;
+      if (convert) worker.postMessage({ type: "convert", bytes: buffer, name, wasm, webIfc }, [buffer]);
+      else worker.postMessage({ type: "semantics", bytes: buffer, wasm }, [buffer]);
+    };
 
-      worker.onmessage = ({ data }) => {
-        switch (data?.type) {
-          case "ready":
-            started = true;
-            worker.postMessage({ type: "convert", bytes: buffer, name, wasm, webIfc }, [buffer]);
-            break;
-          case "unavailable":
-            unavailable(data.reason, data.bytes);
-            break;
-          case "progress":
-            onProgress?.(data.value);
-            break;
-          case "done":
-            finish(resolve, { fragments: data.bytes });
-            break;
-          case "failed":
-            finish(reject, new Error(data.message));
-            break;
-          default:
-            break;
-        }
-      };
-      worker.onerror = (event) => {
-        event.preventDefault?.();
-        if (!started) {
-          unavailable(event.message || "its script did not load", buffer);
-        } else {
-          finish(
-            reject,
-            new Error(
-              `The IFC converter stopped while reading ${name}, usually because the browser ran out of ` +
-                "memory. Close other tabs and try again, or open the file on a desktop browser.",
-            ),
-          );
-        }
-      };
-      worker.onmessageerror = () =>
-        finish(reject, new Error(`The converted model of ${name} could not be passed back to the page. Try again.`));
-
-      signal?.addEventListener("abort", abort, { once: true });
-      this._abortImport = abort;
-      if (ready) {
-        started = true;
-        worker.postMessage({ type: "convert", bytes: buffer, name, wasm, webIfc }, [buffer]);
+    worker.onmessage = ({ data }) => {
+      switch (data?.type) {
+        case "ready":
+          post();
+          break;
+        case "unavailable":
+          unavailable(data.reason, data.bytes);
+          break;
+        case "progress":
+          onProgress?.(data.value);
+          break;
+        case "done":
+          converted = true;
+          resolveJob({ fragments: data.bytes, semantics });
+          break;
+        case "failed":
+          fail(new Error(data.message));
+          break;
+        case "semantics":
+          end();
+          resolveSemantics(data.result);
+          break;
+        case "semanticsFailed":
+          end();
+          rejectSemantics(new Error(data.message));
+          break;
+        default:
+          break;
       }
-    });
+    };
+    worker.onerror = (event) => {
+      event.preventDefault?.();
+      if (!started) {
+        unavailable(event.message || "its script did not load", buffer);
+      } else {
+        fail(
+          new Error(
+            `The IFC ${converted ? "reader" : "converter"} stopped while reading ${name}, usually because the ` +
+              "browser ran out of memory. Close other tabs and try again, or open the file on a desktop browser.",
+          ),
+        );
+      }
+    };
+    worker.onmessageerror = () =>
+      fail(new Error(`What the IFC worker read from ${name} could not be passed back to the page. Try again.`));
+
+    signal?.addEventListener("abort", abort, { once: true });
+    this._abortImport = abort;
+    if (ready) post();
+    if (!convert) resolveJob({ semantics });
+    return job;
+  }
+
+  /** web-ifc's WASM directory, as a full URL: the worker's own URL is under
+   *  assets/, against which a relative path would be read. */
+  _wasmSettings() {
+    const { path, absolute } = this.ifcLoader.settings.wasm;
+    return absolute ? { path, absolute } : { path: new URL(path, window.location.href).href, absolute: true };
   }
 
   _newImportWorker() {
@@ -687,21 +766,43 @@ export class ViewerManager {
    * Start loading an import worker because a file is about to be opened: the
    * pointer or focus is on a file button or an example, or a file is dragged
    * over the page. Warming at every page load made every visitor download its
-   * module, model or not (review m9).
+   * module, model or not (review m9). Started at once, not when the page is
+   * next idle: on a phone the tap comes a moment before the file does.
    */
-  warmImport() {
-    if (this.ready) this._scheduleWarmImport();
+  warmImport({ convert = true } = {}) {
+    if (!this.ready) return;
+    this._prefetch(this._fragmentsWorkerUrl);
+    if (!convert) return;
+    this._prefetch(new URL("web-ifc.wasm", this._wasmSettings().path).href);
+    this._scheduleWarmImport({ now: true });
   }
 
   /**
-   * Load an import worker while the page is idle, so its module (about 615
-   * KB gzipped, its own fragments and web-ifc) is in memory before the next
-   * file is opened: in a worker the first conversion otherwise paid that
-   * download, about 0.2-0.3 s on a desktop and more on a phone. Asked for by
-   * warmImport, and after each conversion for the next file.
+   * Fetch into the HTTP cache what a first open otherwise asks for one after
+   * the other: web-ifc's WASM (477 KB gzipped), which the import worker
+   * requests only once its own module has loaded, and the fragments worker
+   * (283 KB), which the viewer starts only once the conversion is done. In
+   * turn they cost a phone on 4G about a second of each first open.
    */
-  _scheduleWarmImport() {
-    if (this._warmImport || this._warmPending || this.disposed || typeof Worker === "undefined") return;
+  _prefetch(url) {
+    this._prefetched ||= new Set();
+    if (!url || this._prefetched.has(url) || typeof fetch !== "function") return;
+    this._prefetched.add(url);
+    fetch(url)
+      .then((response) => response.arrayBuffer())
+      .catch(() => {});
+  }
+
+  /**
+   * Load an import worker, so its module (about 645 KB gzipped, its own
+   * fragments and web-ifc) is in memory before the next file is opened: in a
+   * worker the first conversion otherwise paid that download, about 0.2-0.3
+   * s on a desktop and more on a phone. Asked for by warmImport, and after
+   * each job, when the page is idle, for the next file.
+   */
+  _scheduleWarmImport({ now = false } = {}) {
+    // A start already waiting for idle time is overtaken by one asked for now.
+    if (this._warmImport || (this._warmPending && !now) || this.disposed || typeof Worker === "undefined") return;
     this._warmPending = true;
     const start = () => {
       this._warmPending = false;
@@ -721,7 +822,8 @@ export class ViewerManager {
         // No module workers here: conversions run on the main thread.
       }
     };
-    if (typeof requestIdleCallback === "function") requestIdleCallback(start, { timeout: 4000 });
+    if (now) start();
+    else if (typeof requestIdleCallback === "function") requestIdleCallback(start, { timeout: 4000 });
     else setTimeout(start, 1500);
   }
 

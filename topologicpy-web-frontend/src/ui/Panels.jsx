@@ -177,13 +177,15 @@ export function ModelPanel({ studio, examples, onExample, onClearCache }) {
                 ["Spaces", fmt(modelInfo.stats.spaces)],
                 ["File size", formatBytes(file?.size || 0)],
                 ["Load time", formatMs(modelInfo.totalMs)],
-                ["Source", modelInfo.cached ? "local cache" : "converted now"],
+                ["Source", modelInfo.prepared ? "converted with the site" : modelInfo.cached ? "local cache" : "converted now"],
               ]}
             />
             <p className="field__hint">
-              {modelInfo.cached
-                ? "The geometry came from the local fragment cache, without converting the IFC again. The exit flags and storeys are still read from the file."
-                : "Converted and cached: opening this file again skips the conversion. The exit flags and storeys are read from the file each time."}
+              {modelInfo.prepared
+                ? "This example was converted when the site was built, so it opened without reading the IFC. Its exit flags and storeys were read then too."
+                : modelInfo.cached
+                  ? "The geometry, exit flags and storeys came from the local cache, without reading the IFC again."
+                  : "Converted and cached: opening this file again skips the conversion, and keeps the exit flags and storeys read from it."}
             </p>
             <EgressCheck semantics={studio.semantics} />
           </>

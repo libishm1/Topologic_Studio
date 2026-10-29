@@ -6,9 +6,36 @@ import react from "@vitejs/plugin-react";
 const installed = (name) =>
   JSON.parse(readFileSync(new URL(`./node_modules/${name}/package.json`, import.meta.url), "utf8")).version;
 
+const base = process.env.BASE_PATH || "/";
+
+/**
+ * Fetch the 3D viewer's chunks while the page script runs, not after it.
+ * Viewport imports ViewerManager (and with it three and the That Open engine,
+ * about 1 MB gzipped) only once React has rendered, so on a phone the network
+ * sat idle for that long on every page load.
+ */
+function preloadViewer() {
+  return {
+    name: "preload-viewer",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, ctx) {
+        return Object.values(ctx.bundle || {})
+          .filter((chunk) => chunk.type === "chunk" && ["ViewerManager", "thatopen", "three"].includes(chunk.name))
+          .map((chunk) => ({
+            tag: "link",
+            attrs: { rel: "modulepreload", crossorigin: "", href: `${base}${chunk.fileName}` },
+            injectTo: "head",
+          }));
+      },
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
-  base: process.env.BASE_PATH || "/",
+  plugins: [react(), preloadViewer()],
+  base,
 
   // The fragment cache keys converted models on the converter's versions
   // (src/lib/fragmentCache.js); only the two strings go into the bundle.

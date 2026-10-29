@@ -18,6 +18,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 
 import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
+import { CONVERTER } from "./lib/fragmentCache.js";
 import { isCancelled, workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats } from "./core/graph.js";
@@ -144,7 +145,6 @@ export default function App() {
   const viewerRef = useRef(null);
   const samplerRef = useRef(null);
   const forecastRef = useRef(null);
-  const semanticsRef = useRef(null);
   const rlRef = useRef(null);
   const geometryRef = useRef(null);
   // Counts file loads, so only the latest one updates the page.
@@ -219,34 +219,10 @@ export default function App() {
     () => () => {
       samplerRef.current?.cancel();
       forecastRef.current?.cancel();
-      semanticsRef.current?.cancel();
       rlRef.current?.cancel();
     },
     [],
   );
-
-  // Exit flags and roof slabs from the IFC itself, read by a second, small
-  // web-ifc in a worker while the geometry converts (core/ifcSemantics.js).
-  // One worker per file, ended when it answers or when another file is
-  // opened: web-ifc's heap never shrinks, so a kept worker held it all session.
-  const semanticsJob = useCallback((bytes) => {
-    semanticsRef.current?.cancel();
-    const job = workerClient(
-      () => new Worker(new URL("./workers/semantics.worker.js", import.meta.url), { type: "module" }),
-      { failure: "Could not read the model's exit flags." },
-    );
-    semanticsRef.current = job;
-    // Against the page, as the viewer resolves it: a relative path would be
-    // read against the worker's own URL, under assets/.
-    const wasmPath = new URL(
-      import.meta.env.VITE_WEBIFC_WASM_PATH || `${import.meta.env.BASE_URL}wasm/`,
-      window.location.href,
-    ).href;
-    return job.run({ bytes, wasmPath }, [bytes]).finally(() => {
-      job.cancel();
-      if (semanticsRef.current === job) semanticsRef.current = null;
-    });
-  }, []);
 
   // Planning with the forecast has its own worker: its deadline map takes a
   // few seconds on a large graph and must not hold up a graph rebuild.
@@ -317,10 +293,16 @@ export default function App() {
 
   // A file is about to be opened (pointer or focus on a file button or an
   // example, or a file dragged over the page): load the import worker now.
-  const warmImport = useCallback(() => viewerRef.current?.warmImport?.(), []);
+  // An example converted at build time needs only the fragments worker.
+  const warmImport = useCallback(
+    (entry) => viewerRef.current?.warmImport?.({ convert: !entry?.prepared }),
+    [],
+  );
 
+  // `prepared`: an example's fragments and semantics, converted at build time
+  // (openExample); nextFile then stands in for its IFC.
   const handleFile = useCallback(
-    async (nextFile) => {
+    async (nextFile, { prepared = null } = {}) => {
       if (!nextFile) return;
       if (!nextFile.name.toLowerCase().endsWith(".ifc")) {
         toast("Only .ifc files can be opened in the viewer.", {
@@ -355,6 +337,7 @@ export default function App() {
 
       try {
         const result = await viewer.loadIfc(nextFile, {
+          prepared,
           onProgress: ({ stage, detail }) => {
             if (!latest()) return;
             const percent =
@@ -371,13 +354,16 @@ export default function App() {
         });
         if (!latest()) return;
 
-        studio.setModelInfo(result);
+        // Exit flags and roof slabs from the IFC itself (core/ifcSemantics.js),
+        // read by the import worker after the fragments, or kept with them in
+        // the cache. They may come after the model is drawn.
+        const { semantics: reading, ...info } = result;
+        studio.setModelInfo(info);
         viewer.setModelAppearance(settings.modelAppearance);
-        nextFile
-          .arrayBuffer()
-          .then((bytes) => semanticsJob(bytes))
+        Promise.resolve(reading)
           .then(async (semantics) => {
             if (!latest()) return;
+            if (!semantics) throw new Error("No worker could read the IFC.");
             studio.setSemantics(semantics);
             // The exit doors can change with them.
             dropPlan();
@@ -433,9 +419,11 @@ export default function App() {
         void studio.refreshCacheInfo();
 
         toast(
-          result.cached
-            ? `Loaded from cache in ${formatMs(result.totalMs)}.`
-            : `Converted and cached in ${formatMs(result.totalMs)}.`,
+          result.prepared
+            ? `Opened in ${formatMs(result.totalMs)}.`
+            : result.cached
+              ? `Loaded from cache in ${formatMs(result.totalMs)}.`
+              : `Converted and cached in ${formatMs(result.totalMs)}.`,
           { title: nextFile.name, variant: "success", ttl: 5000 },
         );
       } catch (error) {
@@ -446,20 +434,29 @@ export default function App() {
         if (latest()) studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, semanticsJob, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan, colours],
+    [reportError, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan, colours],
   );
 
   // --------------------------------------------------------------- examples
 
   // Shipped with the site (public/examples, written by
   // tools/make_example_ifcs.py), so anyone can try Studio without a model.
+  // Converted at build time too (scripts/prepare-examples.mjs): an example
+  // whose fragments match this build's converter opens from them, with no
+  // IFC download, no web-ifc and no conversion.
   const [examples, setExamples] = useState([]);
   useEffect(() => {
     let alive = true;
-    fetch(`${import.meta.env.BASE_URL}examples/index.json`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((list) => alive && setExamples(Array.isArray(list) ? list : []))
-      .catch(() => alive && setExamples([]));
+    const base = `${import.meta.env.BASE_URL}examples/`;
+    const json = (url, fallback) =>
+      fetch(url)
+        .then((res) => (res.ok ? res.json() : fallback))
+        .catch(() => fallback);
+    Promise.all([json(`${base}index.json`, []), json(`${base}prepared/index.json`, null)]).then(([list, prepared]) => {
+      if (!alive) return;
+      const ready = prepared?.converter === CONVERTER ? prepared.examples || {} : {};
+      setExamples(Array.isArray(list) ? list.map((entry) => ({ ...entry, prepared: ready[entry.id] || null })) : []);
+    });
     return () => {
       alive = false;
     };
@@ -469,11 +466,33 @@ export default function App() {
     async (entry) => {
       // A file opened while the example downloads wins over it.
       const seq = ++loadSeqRef.current;
+      const base = `${import.meta.env.BASE_URL}examples/`;
+      const download = async (path, read) => {
+        const res = await fetch(`${base}${path}`);
+        if (!res.ok) throw new Error(`Could not download ${entry.name} (${res.status}).`);
+        return read(res);
+      };
       try {
         studio.setLoadState({ busy: true, stage: "downloading", detail: entry.name });
-        const res = await fetch(`${import.meta.env.BASE_URL}examples/${entry.file}`);
-        if (!res.ok) throw new Error(`Could not download ${entry.name} (${res.status}).`);
-        const blob = await res.blob();
+        if (entry.prepared) {
+          const [fragments, semantics] = await Promise.all([
+            download(entry.prepared.fragments, (res) => res.arrayBuffer()),
+            download(entry.prepared.semantics, (res) => res.json()),
+          ]);
+          if (seq !== loadSeqRef.current) return;
+          // The IFC itself is fetched only if the server cross-check needs it.
+          const standIn = {
+            name: entry.file,
+            size: entry.bytes || 0,
+            download: async () =>
+              new File([await download(entry.file, (res) => res.blob())], entry.file, {
+                type: "application/octet-stream",
+              }),
+          };
+          await handleFile(standIn, { prepared: { fragments, semantics } });
+          return;
+        }
+        const blob = await download(entry.file, (res) => res.blob());
         if (seq !== loadSeqRef.current) return;
         await handleFile(new File([blob], entry.file, { type: "application/octet-stream" }));
       } catch (error) {
@@ -874,7 +893,9 @@ export default function App() {
     if (needsServerGraph("The TopologicPy cross-check")) return;
     studio.setNavBusy(true);
     try {
-      const result = await api.navigationCheck(file, {
+      // An example opened from its prepared fragments fetches its IFC now.
+      const ifc = file.download ? await file.download() : file;
+      const result = await api.navigationCheck(ifc, {
         graphId: graph.graphId,
         spacing: settings.navSpacing,
         startPoint: points.start,

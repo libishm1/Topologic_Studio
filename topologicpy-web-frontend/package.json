@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/prepare-examples.mjs && vite build",
+    "prepare-examples": "node scripts/prepare-examples.mjs",
     "lint": "eslint .",
     "test": "node --test \"src/core/*.test.mjs\"",
     "preview": "vite preview",

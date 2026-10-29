@@ -195,8 +195,8 @@ export function Viewport({
                         type="button"
                         className="example"
                         onClick={() => onExample(entry)}
-                        onPointerEnter={onIntent}
-                        onFocus={onIntent}
+                        onPointerEnter={() => onIntent?.(entry)}
+                        onFocus={() => onIntent?.(entry)}
                         aria-label={entry.bytes ? `${entry.name}, ${formatBytes(entry.bytes)}` : entry.name}
                         aria-describedby={`welcome-example-${entry.id}`}
                       >

@@ -675,7 +675,7 @@ if (await trainBtn.isEnabled()) {
 // (src/core/forecast.js, src/core/deadline.js) run in their own worker.
 
 console.log("\n[5c] Plan with the forecast");
-// The exit doors come from the IFC's own flags, read by the semantics worker
+// The exit doors come from the IFC's own flags, read by the import worker
 // (src/core/ifcSemantics.js); the Duplex flags four doors IsExternal.
 const exitChoice = await page
   .getByText(/^All \d+ exit doors?$/)
@@ -933,6 +933,48 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
   console.log(`    ${name}: ${JSON.stringify(stats)}`);
   record(stats.Reachable === "100%", `example "${name}" is one connected graph`, stats.Reachable);
   await shot(page, `example-${name.toLowerCase().replace(/[^a-z]+/g, "-")}`);
+}
+
+// The examples are converted when the site is built
+// (scripts/prepare-examples.mjs): one opens from its fragments, with no IFC
+// worker, and still knows its exit doors. Skipped against a build made with
+// `vite build` alone, which has none.
+{
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const prepared = await page
+    .evaluate(() => fetch(`${location.pathname.replace(/[^/]*$/, "")}examples/prepared/index.json`).then((r) => r.ok))
+    .catch(() => false);
+  const button = page.locator(".welcome").getByRole("button", { name: /^Duplex apartment/ });
+  const offered = await button
+    .waitFor({ timeout: 60000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!prepared || !offered) {
+    console.log("    (no prepared examples in this build; skipped)");
+  } else {
+    const workers = [];
+    const onWorker = (w) => workers.push(w.url());
+    page.on("worker", onWorker);
+    const tEx = Date.now();
+    await button.click();
+    const opened = await page
+      .waitForFunction(
+        () => [...document.querySelectorAll("button")].some((b) => /Build egress graph|Rebuild graph/.test(b.textContent) && !b.disabled),
+        null,
+        { timeout: 120000 },
+      )
+      .then(() => true)
+      .catch(() => false);
+    record(opened, 'example "Duplex apartment" opens from its prepared fragments', `${((Date.now() - tEx) / 1000).toFixed(1)}s`);
+    page.off("worker", onWorker);
+    const ifcWorkers = workers.filter((u) => /ifc-import|semantics/.test(u));
+    record(ifcWorkers.length === 0, "  without starting an IFC worker", ifcWorkers.join(", ") || "none started");
+    if (opened) {
+      await page.getByRole("tab", { name: /^Model/ }).click();
+      const row = await page.locator(".panel__scroll").getByText(/^\d+ of \d+ \(/).first().textContent({ timeout: 10000 }).catch(() => null);
+      record(row === "4 of 14 (IsExternal)", "  and reports its exit doors", row || "not shown");
+    }
+  }
 }
 
 // ---- report -----------------------------------------------------------------

@@ -8,22 +8,24 @@
  *
  * Here the first load pays the conversion; every load after that reads a
  * ready-made fragments buffer straight out of the browser, which turns a
- * multi-second parse into a fetch from disk.
+ * multi-second parse into a fetch from disk. The egress semantics read from
+ * the same IFC (core/ifcSemantics.js) are kept with it, so a cached model
+ * opens without starting web-ifc at all.
  */
+import { converterId } from "../core/importSettings.js";
 
 /**
  * What produced a cached buffer. The key was the IFC's hash alone, so a model
  * converted by an older fragments or web-ifc, or with other importer
  * settings, was served again after an upgrade
- * (wiki/research/ifc-handling-survey-2026-10-27.md, item 4). Bump
- * IMPORT_SETTINGS when ViewerManager's importer settings change.
+ * (wiki/research/ifc-handling-survey-2026-10-27.md, item 4). The settings
+ * are numbered by IMPORT_SETTINGS in core/importSettings.js.
  *
  * The versions are the installed ones, put in at build time by
  * vite.config.js: package.json holds ranges ("~3.4.7" whatever patch is
  * installed), and importing it bundled the whole file (review m10).
  */
-const IMPORT_SETTINGS = 1;
-export const CONVERTER = `fragments ${import.meta.env.FRAGMENTS_VERSION}; web-ifc ${import.meta.env.WEBIFC_VERSION}; settings ${IMPORT_SETTINGS}`;
+export const CONVERTER = converterId(import.meta.env.FRAGMENTS_VERSION, import.meta.env.WEBIFC_VERSION);
 
 const DB_NAME = "topologic-studio";
 const DB_VERSION = 1;
@@ -95,25 +97,49 @@ export async function hashFile(file) {
   return { key: fallback, buffer };
 }
 
+/**
+ * @returns {Promise<{buffer: ArrayBuffer, semantics: object|null}|null>}
+ *          null when the model is not cached; semantics null when they were
+ *          not stored with it.
+ */
 export async function readCached(key) {
   try {
     const db = await openDb();
     const record = await promisify(tx(db, [STORE], "readonly").objectStore(STORE).get(key));
-    if (!record) return null;
+    if (!record?.buffer) return null;
     // Touch the access time so eviction stays LRU rather than FIFO.
     void touch(db, key).catch(() => {});
-    return record.buffer ?? null;
+    return { buffer: record.buffer, semantics: record.semantics ?? null };
   } catch {
     return null;
   }
 }
 
-export async function writeCached(key, buffer, meta = {}) {
+/** Add semantics to a cached model that was stored without them. */
+export async function writeCachedSemantics(key, semantics) {
+  try {
+    const db = await openDb();
+    const transaction = tx(db, [STORE], "readwrite");
+    const store = transaction.objectStore(STORE);
+    const record = await promisify(store.get(key));
+    if (record) store.put({ ...record, semantics }, key);
+    await new Promise((resolve, reject) => {
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    return Boolean(record);
+  } catch {
+    return false;
+  }
+}
+
+export async function writeCached(key, buffer, meta = {}, semantics = null) {
   try {
     const db = await openDb();
     const size = buffer.byteLength ?? 0;
     const transaction = tx(db, [STORE, META], "readwrite");
-    transaction.objectStore(STORE).put({ buffer, size }, key);
+    transaction.objectStore(STORE).put({ buffer, size, semantics }, key);
     transaction.objectStore(META).put(
       { key, size, accessed: Date.now(), created: Date.now(), ...meta },
       key,
