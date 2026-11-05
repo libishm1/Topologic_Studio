@@ -1,0 +1,1263 @@
+{
+ "date": "2026-11-05",
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14700",
+  "cores": 28,
+  "node": "v24.21.0"
+ },
+ "note": "Aggregates only: the drawings are a private building. found: IoU >= 0.8 (the lab notebook's 'found'); matched: IoU >= 0.5; near: 0.3 to 0.5; missed: < 0.3; extra: draft rooms matching no written room at 0.3. Times in ms.",
+ "results": [
+  {
+   "label": "A",
+   "layouts": 4,
+   "sheets": 1,
+   "totals": {
+    "aided": {
+     "written": 54,
+     "drafted": 61,
+     "found": 42,
+     "matched": 49,
+     "near": 4,
+     "missed": 1,
+     "extra": 6,
+     "meanIoU": 0.742,
+     "classAgreement": 0.43,
+     "notebookOutcomes": {
+      "found": 42,
+      "close": 7,
+      "merged": 2,
+      "split": 2,
+      "missed": 1
+     }
+    },
+    "unaided": {
+     "written": 54,
+     "drafted": 55,
+     "found": 38,
+     "matched": 45,
+     "near": 6,
+     "missed": 3,
+     "extra": 6,
+     "meanIoU": 0.581,
+     "classAgreement": 0.2,
+     "notebookOutcomes": {
+      "found": 38,
+      "close": 7,
+      "merged": 6,
+      "split": 2,
+      "missed": 1
+     }
+    }
+   },
+   "perLayout": [
+    {
+     "layout": "B1",
+     "sheetMB": 13.4,
+     "readMs": 385,
+     "aided": {
+      "written": 9,
+      "drafted": 11,
+      "found": 5,
+      "matched": 7,
+      "near": 2,
+      "missed": 0,
+      "extra": 1,
+      "meanIoU": 0.742,
+      "classAgreement": 0.43,
+      "notebookOutcomes": {
+       "found": 5,
+       "close": 2,
+       "merged": 1,
+       "split": 1,
+       "missed": 0
+      },
+      "doors": 11,
+      "twoRooms": 10,
+      "toOutside": 1,
+      "openings": 0,
+      "ms": 103,
+      "stages": {
+       "walls": 11,
+       "outline": 57,
+       "faces": 23,
+       "rooms": 4,
+       "total": 101
+      },
+      "splits": 0,
+      "issues": {
+       "door-inside-room": 1,
+       "no-label": 6,
+       "large-room": 1,
+       "several-labels": 1
+      }
+     },
+     "unaided": {
+      "written": 9,
+      "drafted": 9,
+      "found": 3,
+      "matched": 5,
+      "near": 2,
+      "missed": 2,
+      "extra": 1,
+      "meanIoU": 0.581,
+      "classAgreement": 0.2,
+      "notebookOutcomes": {
+       "found": 3,
+       "close": 2,
+       "merged": 3,
+       "split": 1,
+       "missed": 0
+      },
+      "doors": 8,
+      "twoRooms": 7,
+      "toOutside": 1,
+      "openings": 1,
+      "ms": 49,
+      "splits": 1,
+      "issues": {
+       "door-inside-room": 1,
+       "no-label": 4,
+       "large-room": 1,
+       "several-labels": 1
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 3,
+      "wallLayersOfSchedule": 3,
+      "wallLayerOverlap": 1,
+      "doorBlocksSuggested": 2
+     }
+    },
+    {
+     "layout": "GF",
+     "sheetMB": 13.4,
+     "readMs": 385,
+     "aided": {
+      "written": 16,
+      "drafted": 17,
+      "found": 13,
+      "matched": 14,
+      "near": 1,
+      "missed": 1,
+      "extra": 2,
+      "meanIoU": 0.827,
+      "classAgreement": 0.57,
+      "notebookOutcomes": {
+       "found": 13,
+       "close": 1,
+       "merged": 0,
+       "split": 1,
+       "missed": 1
+      },
+      "doors": 13,
+      "twoRooms": 11,
+      "toOutside": 2,
+      "openings": 6,
+      "ms": 19,
+      "stages": {
+       "walls": 2,
+       "outline": 7,
+       "faces": 8,
+       "rooms": 1,
+       "total": 19
+      },
+      "splits": 0,
+      "issues": {
+       "door-no-room": 1,
+       "door-inside-room": 1,
+       "no-label": 8,
+       "several-labels": 4
+      }
+     },
+     "unaided": {
+      "written": 16,
+      "drafted": 17,
+      "found": 13,
+      "matched": 14,
+      "near": 1,
+      "missed": 1,
+      "extra": 2,
+      "meanIoU": 0.827,
+      "classAgreement": 0,
+      "notebookOutcomes": {
+       "found": 13,
+       "close": 1,
+       "merged": 0,
+       "split": 1,
+       "missed": 1
+      },
+      "doors": 13,
+      "twoRooms": 11,
+      "toOutside": 2,
+      "openings": 6,
+      "ms": 32,
+      "splits": 0,
+      "issues": {
+       "door-no-room": 1,
+       "door-inside-room": 1,
+       "no-label": 8,
+       "several-labels": 4
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 3,
+      "wallLayersOfSchedule": 3,
+      "wallLayerOverlap": 1,
+      "doorBlocksSuggested": 2
+     }
+    },
+    {
+     "layout": "F1",
+     "sheetMB": 13.4,
+     "readMs": 385,
+     "aided": {
+      "written": 22,
+      "drafted": 24,
+      "found": 19,
+      "matched": 22,
+      "near": 0,
+      "missed": 0,
+      "extra": 0,
+      "meanIoU": 0.915,
+      "classAgreement": 0.55,
+      "notebookOutcomes": {
+       "found": 19,
+       "close": 3,
+       "merged": 0,
+       "split": 0,
+       "missed": 0
+      },
+      "doors": 18,
+      "twoRooms": 18,
+      "toOutside": 0,
+      "openings": 4,
+      "ms": 27,
+      "stages": {
+       "walls": 2,
+       "outline": 5,
+       "faces": 17,
+       "rooms": 1,
+       "total": 27
+      },
+      "splits": 0,
+      "issues": {
+       "no-label": 10,
+       "names-outside-rooms": 1
+      }
+     },
+     "unaided": {
+      "written": 22,
+      "drafted": 20,
+      "found": 17,
+      "matched": 20,
+      "near": 2,
+      "missed": 0,
+      "extra": 0,
+      "meanIoU": 0.841,
+      "classAgreement": 0,
+      "notebookOutcomes": {
+       "found": 17,
+       "close": 3,
+       "merged": 2,
+       "split": 0,
+       "missed": 0
+      },
+      "doors": 16,
+      "twoRooms": 16,
+      "toOutside": 0,
+      "openings": 4,
+      "ms": 37,
+      "splits": 0,
+      "issues": {
+       "no-label": 8,
+       "several-labels": 2,
+       "names-outside-rooms": 1
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 3,
+      "wallLayersOfSchedule": 4,
+      "wallLayerOverlap": 0.75,
+      "doorBlocksSuggested": 2
+     }
+    },
+    {
+     "layout": "AN",
+     "sheetMB": 13.4,
+     "readMs": 385,
+     "aided": {
+      "written": 7,
+      "drafted": 9,
+      "found": 5,
+      "matched": 6,
+      "near": 1,
+      "missed": 0,
+      "extra": 3,
+      "meanIoU": 0.793,
+      "classAgreement": 0.67,
+      "notebookOutcomes": {
+       "found": 5,
+       "close": 1,
+       "merged": 1,
+       "split": 0,
+       "missed": 0
+      },
+      "doors": 7,
+      "twoRooms": 7,
+      "toOutside": 0,
+      "openings": 1,
+      "ms": 12,
+      "stages": {
+       "walls": 1,
+       "outline": 5,
+       "faces": 5,
+       "rooms": 1,
+       "total": 12
+      },
+      "splits": 0,
+      "issues": {
+       "door-inside-room": 1,
+       "no-label": 3
+      }
+     },
+     "unaided": {
+      "written": 7,
+      "drafted": 9,
+      "found": 5,
+      "matched": 6,
+      "near": 1,
+      "missed": 0,
+      "extra": 3,
+      "meanIoU": 0.793,
+      "classAgreement": 0,
+      "notebookOutcomes": {
+       "found": 5,
+       "close": 1,
+       "merged": 1,
+       "split": 0,
+       "missed": 0
+      },
+      "doors": 7,
+      "twoRooms": 7,
+      "toOutside": 0,
+      "openings": 1,
+      "ms": 16,
+      "splits": 0,
+      "issues": {
+       "door-inside-room": 1,
+       "no-label": 3
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 3,
+      "wallLayersOfSchedule": 3,
+      "wallLayerOverlap": 1,
+      "doorBlocksSuggested": 2
+     }
+    }
+   ],
+   "variants": {
+    "no door blocks or swings bridged": {
+     "written": 54,
+     "drafted": 52,
+     "found": 25,
+     "matched": 42,
+     "near": 3,
+     "missed": 9,
+     "extra": 6,
+     "meanIoU": 0.538,
+     "classAgreement": 0.6,
+     "notebookOutcomes": {
+      "found": 25,
+      "close": 17,
+      "merged": 8,
+      "split": 3,
+      "missed": 1
+     }
+    },
+    "no splitting by names": {
+     "written": 54,
+     "drafted": 61,
+     "found": 42,
+     "matched": 49,
+     "near": 4,
+     "missed": 1,
+     "extra": 6,
+     "meanIoU": 0.742,
+     "classAgreement": 0.43,
+     "notebookOutcomes": {
+      "found": 42,
+      "close": 7,
+      "merged": 2,
+      "split": 2,
+      "missed": 1
+     }
+    },
+    "no growing to centre-lines": {
+     "written": 54,
+     "drafted": 61,
+     "found": 37,
+     "matched": 48,
+     "near": 5,
+     "missed": 1,
+     "extra": 8,
+     "meanIoU": 0.679,
+     "classAgreement": 0.33,
+     "notebookOutcomes": {
+      "found": 37,
+      "close": 11,
+      "merged": 2,
+      "split": 3,
+      "missed": 1
+     }
+    },
+    "no outline closing": {
+     "written": 54,
+     "drafted": 61,
+     "found": 42,
+     "matched": 49,
+     "near": 4,
+     "missed": 1,
+     "extra": 6,
+     "meanIoU": 0.742,
+     "classAgreement": 0.43,
+     "notebookOutcomes": {
+      "found": 42,
+      "close": 7,
+      "merged": 2,
+      "split": 2,
+      "missed": 1
+     }
+    },
+    "snap 1 cm, extend 10 cm": {
+     "written": 54,
+     "drafted": 61,
+     "found": 42,
+     "matched": 49,
+     "near": 4,
+     "missed": 1,
+     "extra": 6,
+     "meanIoU": 0.742,
+     "classAgreement": 0.43,
+     "notebookOutcomes": {
+      "found": 42,
+      "close": 7,
+      "merged": 2,
+      "split": 2,
+      "missed": 1
+     }
+    },
+    "snap 6 cm, extend 50 cm": {
+     "written": 54,
+     "drafted": 61,
+     "found": 43,
+     "matched": 49,
+     "near": 4,
+     "missed": 1,
+     "extra": 6,
+     "meanIoU": 0.748,
+     "classAgreement": 0.43,
+     "notebookOutcomes": {
+      "found": 43,
+      "close": 6,
+      "merged": 2,
+      "split": 2,
+      "missed": 1
+     }
+    },
+    "walls by layer name, not path": {
+     "written": 54,
+     "drafted": 61,
+     "found": 42,
+     "matched": 49,
+     "near": 4,
+     "missed": 1,
+     "extra": 6,
+     "meanIoU": 0.742,
+     "classAgreement": 0.43,
+     "notebookOutcomes": {
+      "found": 42,
+      "close": 7,
+      "merged": 2,
+      "split": 2,
+      "missed": 1
+     }
+    },
+    "suggested wall layers, schedule's scale": {
+     "written": 54,
+     "drafted": 55,
+     "found": 38,
+     "matched": 45,
+     "near": 6,
+     "missed": 3,
+     "extra": 6,
+     "meanIoU": 0.581,
+     "classAgreement": 0.6,
+     "notebookOutcomes": {
+      "found": 38,
+      "close": 7,
+      "merged": 6,
+      "split": 2,
+      "missed": 1
+     }
+    }
+   }
+  },
+  {
+   "label": "B",
+   "layouts": 7,
+   "sheets": 7,
+   "totals": {
+    "aided": {
+     "written": 194,
+     "drafted": 320,
+     "found": 57,
+     "matched": 135,
+     "near": 28,
+     "missed": 31,
+     "extra": 147,
+     "meanIoU": 0.628,
+     "classAgreement": 0.92,
+     "notebookOutcomes": {
+      "found": 57,
+      "close": 78,
+      "merged": 21,
+      "split": 26,
+      "missed": 12
+     }
+    },
+    "unaided": {
+     "written": 194,
+     "drafted": 362,
+     "found": 53,
+     "matched": 135,
+     "near": 25,
+     "missed": 34,
+     "extra": 193,
+     "meanIoU": 0.626,
+     "classAgreement": 0.92,
+     "notebookOutcomes": {
+      "found": 53,
+      "close": 82,
+      "merged": 16,
+      "split": 22,
+      "missed": 21
+     }
+    }
+   },
+   "perLayout": [
+    {
+     "layout": "B2",
+     "sheetMB": 7.9,
+     "readMs": 72,
+     "aided": {
+      "written": 19,
+      "drafted": 26,
+      "found": 7,
+      "matched": 13,
+      "near": 3,
+      "missed": 3,
+      "extra": 10,
+      "meanIoU": 0.628,
+      "classAgreement": 0.92,
+      "notebookOutcomes": {
+       "found": 7,
+       "close": 6,
+       "merged": 3,
+       "split": 3,
+       "missed": 0
+      },
+      "doors": 11,
+      "twoRooms": 11,
+      "toOutside": 0,
+      "openings": 3,
+      "ms": 83,
+      "stages": {
+       "walls": 22,
+       "outline": 17,
+       "faces": 10,
+       "rooms": 34,
+       "total": 83
+      },
+      "splits": 3,
+      "issues": {
+       "door-inside-room": 1,
+       "no-label": 9,
+       "small-room": 3,
+       "several-labels": 1,
+       "large-room": 1
+      }
+     },
+     "unaided": {
+      "written": 19,
+      "drafted": 27,
+      "found": 7,
+      "matched": 13,
+      "near": 3,
+      "missed": 3,
+      "extra": 11,
+      "meanIoU": 0.626,
+      "classAgreement": 0.92,
+      "notebookOutcomes": {
+       "found": 7,
+       "close": 6,
+       "merged": 3,
+       "split": 3,
+       "missed": 0
+      },
+      "doors": 13,
+      "twoRooms": 13,
+      "toOutside": 0,
+      "openings": 3,
+      "ms": 94,
+      "splits": 3,
+      "issues": {
+       "door-inside-room": 3,
+       "no-label": 10,
+       "small-room": 3,
+       "several-labels": 1,
+       "large-room": 1
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 5,
+      "wallLayersOfSchedule": 6,
+      "wallLayerOverlap": 0.83,
+      "doorBlocksSuggested": 0
+     }
+    },
+    {
+     "layout": "B1",
+     "sheetMB": 6.3,
+     "readMs": 63,
+     "aided": {
+      "written": 17,
+      "drafted": 23,
+      "found": 7,
+      "matched": 12,
+      "near": 1,
+      "missed": 4,
+      "extra": 10,
+      "meanIoU": 0.62,
+      "classAgreement": 0.5,
+      "notebookOutcomes": {
+       "found": 7,
+       "close": 5,
+       "merged": 3,
+       "split": 2,
+       "missed": 0
+      },
+      "doors": 12,
+      "twoRooms": 12,
+      "toOutside": 0,
+      "openings": 0,
+      "ms": 35,
+      "stages": {
+       "walls": 7,
+       "outline": 16,
+       "faces": 8,
+       "rooms": 3,
+       "total": 35
+      },
+      "splits": 0,
+      "issues": {
+       "no-label": 14,
+       "small-room": 3,
+       "large-room": 1
+      }
+     },
+     "unaided": {
+      "written": 17,
+      "drafted": 23,
+      "found": 7,
+      "matched": 12,
+      "near": 1,
+      "missed": 4,
+      "extra": 10,
+      "meanIoU": 0.619,
+      "classAgreement": 0.5,
+      "notebookOutcomes": {
+       "found": 7,
+       "close": 5,
+       "merged": 3,
+       "split": 2,
+       "missed": 0
+      },
+      "doors": 14,
+      "twoRooms": 14,
+      "toOutside": 0,
+      "openings": 0,
+      "ms": 61,
+      "splits": 0,
+      "issues": {
+       "door-inside-room": 2,
+       "no-label": 14,
+       "small-room": 3,
+       "large-room": 1
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 5,
+      "wallLayersOfSchedule": 6,
+      "wallLayerOverlap": 0.83,
+      "doorBlocksSuggested": 0
+     }
+    },
+    {
+     "layout": "GF",
+     "sheetMB": 6,
+     "readMs": 82,
+     "aided": {
+      "written": 23,
+      "drafted": 25,
+      "found": 4,
+      "matched": 9,
+      "near": 6,
+      "missed": 8,
+      "extra": 8,
+      "meanIoU": 0.471,
+      "classAgreement": 0.78,
+      "notebookOutcomes": {
+       "found": 4,
+       "close": 5,
+       "merged": 8,
+       "split": 4,
+       "missed": 2
+      },
+      "doors": 15,
+      "twoRooms": 15,
+      "toOutside": 0,
+      "openings": 4,
+      "ms": 138,
+      "stages": {
+       "walls": 23,
+       "outline": 12,
+       "faces": 24,
+       "rooms": 77,
+       "total": 138
+      },
+      "splits": 6,
+      "issues": {
+       "door-inside-room": 2,
+       "no-label": 12,
+       "small-room": 4,
+       "several-labels": 3,
+       "large-room": 1
+      }
+     },
+     "unaided": {
+      "written": 23,
+      "drafted": 41,
+      "found": 1,
+      "matched": 8,
+      "near": 7,
+      "missed": 8,
+      "extra": 26,
+      "meanIoU": 0.43,
+      "classAgreement": 1,
+      "notebookOutcomes": {
+       "found": 1,
+       "close": 7,
+       "merged": 5,
+       "split": 1,
+       "missed": 9
+      },
+      "doors": 21,
+      "twoRooms": 16,
+      "toOutside": 1,
+      "openings": 10,
+      "ms": 155,
+      "splits": 4,
+      "issues": {
+       "door-inside-room": 5,
+       "door-no-room": 4,
+       "no-label": 28,
+       "small-room": 6,
+       "several-labels": 3,
+       "door-one-side": 4
+      },
+      "scale": 0.001,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 6,
+      "wallLayersOfSchedule": 9,
+      "wallLayerOverlap": 0.5,
+      "doorBlocksSuggested": 0
+     }
+    },
+    {
+     "layout": "MZ",
+     "sheetMB": 7.3,
+     "readMs": 92,
+     "aided": {
+      "written": 24,
+      "drafted": 41,
+      "found": 4,
+      "matched": 13,
+      "near": 3,
+      "missed": 8,
+      "extra": 24,
+      "meanIoU": 0.504,
+      "classAgreement": 0.69,
+      "notebookOutcomes": {
+       "found": 4,
+       "close": 9,
+       "merged": 2,
+       "split": 7,
+       "missed": 2
+      },
+      "doors": 29,
+      "twoRooms": 29,
+      "toOutside": 0,
+      "openings": 6,
+      "ms": 184,
+      "stages": {
+       "walls": 104,
+       "outline": 18,
+       "faces": 17,
+       "rooms": 43,
+       "total": 184
+      },
+      "splits": 5,
+      "issues": {
+       "door-inside-room": 7,
+       "no-label": 25,
+       "small-room": 7,
+       "several-labels": 1,
+       "large-room": 1
+      }
+     },
+     "unaided": {
+      "written": 24,
+      "drafted": 49,
+      "found": 4,
+      "matched": 12,
+      "near": 3,
+      "missed": 9,
+      "extra": 32,
+      "meanIoU": 0.5,
+      "classAgreement": 0.83,
+      "notebookOutcomes": {
+       "found": 4,
+       "close": 8,
+       "merged": 1,
+       "split": 7,
+       "missed": 4
+      },
+      "doors": 29,
+      "twoRooms": 29,
+      "toOutside": 0,
+      "openings": 7,
+      "ms": 223,
+      "splits": 6,
+      "issues": {
+       "door-inside-room": 7,
+       "no-label": 32,
+       "small-room": 5,
+       "several-labels": 1
+      },
+      "scale": 0.001,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 7,
+      "wallLayersOfSchedule": 7,
+      "wallLayerOverlap": 0.75,
+      "doorBlocksSuggested": 0
+     }
+    },
+    {
+     "layout": "F1",
+     "sheetMB": 9.7,
+     "readMs": 137,
+     "aided": {
+      "written": 48,
+      "drafted": 93,
+      "found": 15,
+      "matched": 37,
+      "near": 8,
+      "missed": 3,
+      "extra": 44,
+      "meanIoU": 0.649,
+      "classAgreement": 0.84,
+      "notebookOutcomes": {
+       "found": 15,
+       "close": 22,
+       "merged": 2,
+       "split": 5,
+       "missed": 4
+      },
+      "doors": 44,
+      "twoRooms": 42,
+      "toOutside": 0,
+      "openings": 25,
+      "ms": 279,
+      "stages": {
+       "walls": 18,
+       "outline": 27,
+       "faces": 213,
+       "rooms": 18,
+       "total": 279
+      },
+      "splits": 0,
+      "issues": {
+       "door-inside-room": 3,
+       "no-label": 69,
+       "small-room": 8,
+       "door-one-side": 2
+      }
+     },
+     "unaided": {
+      "written": 48,
+      "drafted": 91,
+      "found": 15,
+      "matched": 37,
+      "near": 6,
+      "missed": 5,
+      "extra": 44,
+      "meanIoU": 0.637,
+      "classAgreement": 0.84,
+      "notebookOutcomes": {
+       "found": 15,
+       "close": 22,
+       "merged": 2,
+       "split": 5,
+       "missed": 4
+      },
+      "doors": 44,
+      "twoRooms": 42,
+      "toOutside": 0,
+      "openings": 25,
+      "ms": 331,
+      "splits": 0,
+      "issues": {
+       "door-inside-room": 3,
+       "no-label": 67,
+       "small-room": 8,
+       "door-one-side": 2
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 6,
+      "wallLayersOfSchedule": 7,
+      "wallLayerOverlap": 0.63,
+      "doorBlocksSuggested": 5
+     }
+    },
+    {
+     "layout": "TYP",
+     "sheetMB": 9,
+     "readMs": 129,
+     "aided": {
+      "written": 49,
+      "drafted": 83,
+      "found": 16,
+      "matched": 42,
+      "near": 5,
+      "missed": 2,
+      "extra": 33,
+      "meanIoU": 0.686,
+      "classAgreement": 0.81,
+      "notebookOutcomes": {
+       "found": 16,
+       "close": 26,
+       "merged": 2,
+       "split": 3,
+       "missed": 2
+      },
+      "doors": 46,
+      "twoRooms": 46,
+      "toOutside": 0,
+      "openings": 28,
+      "ms": 239,
+      "stages": {
+       "walls": 11,
+       "outline": 19,
+       "faces": 199,
+       "rooms": 9,
+       "total": 239
+      },
+      "splits": 0,
+      "issues": {
+       "door-inside-room": 3,
+       "no-label": 59,
+       "small-room": 8
+      }
+     },
+     "unaided": {
+      "written": 49,
+      "drafted": 81,
+      "found": 16,
+      "matched": 42,
+      "near": 3,
+      "missed": 4,
+      "extra": 33,
+      "meanIoU": 0.674,
+      "classAgreement": 0.81,
+      "notebookOutcomes": {
+       "found": 16,
+       "close": 26,
+       "merged": 2,
+       "split": 3,
+       "missed": 2
+      },
+      "doors": 46,
+      "twoRooms": 46,
+      "toOutside": 0,
+      "openings": 28,
+      "ms": 238,
+      "splits": 0,
+      "issues": {
+       "door-inside-room": 3,
+       "no-label": 57,
+       "small-room": 8
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 6,
+      "wallLayersOfSchedule": 7,
+      "wallLayerOverlap": 0.63,
+      "doorBlocksSuggested": 5
+     }
+    },
+    {
+     "layout": "RF",
+     "sheetMB": 5.8,
+     "readMs": 74,
+     "aided": {
+      "written": 14,
+      "drafted": 29,
+      "found": 4,
+      "matched": 9,
+      "near": 2,
+      "missed": 3,
+      "extra": 18,
+      "meanIoU": 0.568,
+      "classAgreement": 1,
+      "notebookOutcomes": {
+       "found": 4,
+       "close": 5,
+       "merged": 1,
+       "split": 2,
+       "missed": 2
+      },
+      "doors": 11,
+      "twoRooms": 11,
+      "toOutside": 0,
+      "openings": 2,
+      "ms": 41,
+      "stages": {
+       "walls": 7,
+       "outline": 17,
+       "faces": 9,
+       "rooms": 7,
+       "total": 41
+      },
+      "splits": 2,
+      "issues": {
+       "door-inside-room": 3,
+       "no-label": 15,
+       "small-room": 3,
+       "several-labels": 2,
+       "large-room": 1,
+       "names-outside-rooms": 1
+      }
+     },
+     "unaided": {
+      "written": 14,
+      "drafted": 50,
+      "found": 3,
+      "matched": 11,
+      "near": 2,
+      "missed": 1,
+      "extra": 37,
+      "meanIoU": 0.647,
+      "classAgreement": 0.82,
+      "notebookOutcomes": {
+       "found": 3,
+       "close": 8,
+       "merged": 0,
+       "split": 1,
+       "missed": 2
+      },
+      "doors": 11,
+      "twoRooms": 11,
+      "toOutside": 0,
+      "openings": 91,
+      "ms": 232,
+      "splits": 4,
+      "issues": {
+       "door-inside-room": 56,
+       "door-no-room": 5,
+       "no-label": 23,
+       "small-room": 5,
+       "several-labels": 5,
+       "large-room": 1,
+       "names-outside-rooms": 1
+      },
+      "scale": 1,
+      "scaleSource": "door swings",
+      "scaleRight": true,
+      "wallLayersSuggested": 9,
+      "wallLayersOfSchedule": 5,
+      "wallLayerOverlap": 0.4,
+      "doorBlocksSuggested": 2
+     }
+    }
+   ],
+   "variants": {
+    "no door blocks or swings bridged": {
+     "written": 194,
+     "drafted": 190,
+     "found": 15,
+     "matched": 56,
+     "near": 42,
+     "missed": 96,
+     "extra": 92,
+     "meanIoU": 0.48,
+     "classAgreement": 0.9,
+     "notebookOutcomes": {
+      "found": 15,
+      "close": 41,
+      "merged": 93,
+      "split": 33,
+      "missed": 12
+     }
+    },
+    "no splitting by names": {
+     "written": 194,
+     "drafted": 304,
+     "found": 55,
+     "matched": 127,
+     "near": 23,
+     "missed": 44,
+     "extra": 145,
+     "meanIoU": 0.593,
+     "classAgreement": 0.85,
+     "notebookOutcomes": {
+      "found": 55,
+      "close": 72,
+      "merged": 29,
+      "split": 26,
+      "missed": 12
+     }
+    },
+    "no growing to centre-lines": {
+     "written": 194,
+     "drafted": 320,
+     "found": 31,
+     "matched": 131,
+     "near": 29,
+     "missed": 34,
+     "extra": 154,
+     "meanIoU": 0.594,
+     "classAgreement": 0.92,
+     "notebookOutcomes": {
+      "found": 31,
+      "close": 100,
+      "merged": 20,
+      "split": 27,
+      "missed": 16
+     }
+    },
+    "no outline closing": {
+     "written": 194,
+     "drafted": 313,
+     "found": 56,
+     "matched": 131,
+     "near": 26,
+     "missed": 37,
+     "extra": 146,
+     "meanIoU": 0.628,
+     "classAgreement": 0.92,
+     "notebookOutcomes": {
+      "found": 56,
+      "close": 75,
+      "merged": 13,
+      "split": 26,
+      "missed": 24
+     }
+    },
+    "snap 1 cm, extend 10 cm": {
+     "written": 194,
+     "drafted": 279,
+     "found": 43,
+     "matched": 106,
+     "near": 29,
+     "missed": 59,
+     "extra": 139,
+     "meanIoU": 0.526,
+     "classAgreement": 0.91,
+     "notebookOutcomes": {
+      "found": 43,
+      "close": 63,
+      "merged": 35,
+      "split": 30,
+      "missed": 23
+     }
+    },
+    "snap 6 cm, extend 50 cm": {
+     "written": 194,
+     "drafted": 317,
+     "found": 55,
+     "matched": 129,
+     "near": 33,
+     "missed": 32,
+     "extra": 147,
+     "meanIoU": 0.625,
+     "classAgreement": 0.92,
+     "notebookOutcomes": {
+      "found": 55,
+      "close": 74,
+      "merged": 24,
+      "split": 28,
+      "missed": 13
+     }
+    },
+    "walls by layer name, not path": {
+     "written": 194,
+     "drafted": 320,
+     "found": 57,
+     "matched": 135,
+     "near": 28,
+     "missed": 31,
+     "extra": 147,
+     "meanIoU": 0.628,
+     "classAgreement": 0.92,
+     "notebookOutcomes": {
+      "found": 57,
+      "close": 78,
+      "merged": 21,
+      "split": 26,
+      "missed": 12
+     }
+    },
+    "suggested wall layers, schedule's scale": {
+     "written": 194,
+     "drafted": 362,
+     "found": 53,
+     "matched": 135,
+     "near": 25,
+     "missed": 34,
+     "extra": 193,
+     "meanIoU": 0.626,
+     "classAgreement": 0.92,
+     "notebookOutcomes": {
+      "found": 53,
+      "close": 82,
+      "merged": 16,
+      "split": 22,
+      "missed": 21
+     }
+    }
+   }
+  }
+ ]
+}
