@@ -162,7 +162,7 @@ export function MethodsDialog({ open, onClose, studio }) {
                     absorbed by soot, flame-front particles and, in the second option, embers carried by the gas
                     that start spot fires. The room contents are the paper&apos;s statistical fire load; the first
                     item burns with the fuel of its fire class (NFPA 10: A, B, C, D, K; ISO 3941:2026: L, lithium-ion
-                    batteries). Read at head height
+                    batteries); a liquid (B, K) evaporates at most at its pool&apos;s burning rate. Read at head height
                     (1.8 m) at each graph node: gas temperature, visibility through the smoke (S = 3 / (8700 m²/kg
                     times soot density)) and CO. The plan adds the CO dose of ISO 13571 to the heat dose. It runs on
                     the GPU through WebGPU where the browser offers it, otherwise on one CPU core.
@@ -253,7 +253,8 @@ export function MethodsDialog({ open, onClose, studio }) {
                   closed, and contents are a statistical fire load. It shows how heat and smoke may move through
                   the building; it is not calibrated, and its fire class values marked provisional are still being
                   checked. Indoors at these cells embers seldom land hot enough to light anything: in a 120 s fire in
-                  the Duplex they lit no spot fire.
+                  the Duplex they lit no spot fire. A liquid pool lights, but much of its vapour stays unburnt on this
+                  grid: a 1 m² heptane pool reached 0.3 MW after 30 s in a test room, against the 3.2 MW its burning rate allows.
                 </li>
               </ul>
             </section>
@@ -288,6 +289,13 @@ export function MethodsDialog({ open, onClose, studio }) {
                   and Materials 24, 227-230.{" "}
                   <a href="https://doi.org/10.1002/1099-1018(200009/10)24:5<227::AID-FAM742>3.0.CO;2-9" target="_blank" rel="noreferrer">
                     doi:10.1002/1099-1018(200009/10)24:5&lt;227::AID-FAM742&gt;3.0.CO;2-9
+                  </a>
+                </li>
+                <li>
+                  Babrauskas (1983). Estimating large pool fire burning rates. Fire Technology 19(4), 251-261 (the
+                  liquid pool&apos;s burning rate, through the SFPE Handbook table in NUREG-1805 Suppl. 1).{" "}
+                  <a href="https://doi.org/10.1007/BF02380810" target="_blank" rel="noreferrer">
+                    doi:10.1007/BF02380810
                   </a>
                 </li>
                 <li>

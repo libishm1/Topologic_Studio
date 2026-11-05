@@ -1288,7 +1288,7 @@ function CombustionStatus({ combustion, running }) {
         <div className="result__item">
           <dt className="result__label">Heat release</dt>
           <dd className="result__value">
-            {Math.round(combustion.hrr ?? 0)} kW (peak {Math.round(combustion.peak ?? 0)})
+            {Math.round(combustion.hrr ?? 0)} kW (peak {Math.round(combustion.peak ?? 0)} kW)
           </dd>
         </div>
         {combustion.embers !== undefined && (

@@ -1182,6 +1182,8 @@ AxiomCheck.lean: 'FireEgress.FlamescapesPort.chemistry_liquid_evaporation_energy
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.chemistry_liquid_energy' depends on axioms: [propext, Classical.choice, Quot.sound]
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.chemistry_liquid_above_boiling' depends on axioms: [propext, Classical.choice, Quot.sound]
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.chemistry_liquid_unclamped' depends on axioms: [propext, Classical.choice, Quot.sound]
+AxiomCheck.lean: 'FireEgress.FlamescapesPort.chemistry_liquid_capped' depends on axioms: [propext, Classical.choice, Quot.sound]
+AxiomCheck.lean: 'FireEgress.FlamescapesPort.poolCap_bounds' depends on axioms: [propext, Classical.choice, Quot.sound]
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.chemistry_mixFresh_enthalpy' depends on axioms: [propext, Classical.choice, Quot.sound]
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.chemistry_mixFresh_between' depends on axioms: [propext, Classical.choice, Quot.sound]
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.chemistry_fresh_refills_skin' depends on axioms: [propext, Classical.choice, Quot.sound]

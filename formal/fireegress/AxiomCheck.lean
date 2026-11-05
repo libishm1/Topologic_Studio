@@ -221,6 +221,8 @@ import FireEgress
 #print axioms FireEgress.FlamescapesPort.chemistry_liquid_energy
 #print axioms FireEgress.FlamescapesPort.chemistry_liquid_above_boiling
 #print axioms FireEgress.FlamescapesPort.chemistry_liquid_unclamped
+#print axioms FireEgress.FlamescapesPort.chemistry_liquid_capped
+#print axioms FireEgress.FlamescapesPort.poolCap_bounds
 #print axioms FireEgress.FlamescapesPort.chemistry_mixFresh_enthalpy
 #print axioms FireEgress.FlamescapesPort.chemistry_mixFresh_between
 #print axioms FireEgress.FlamescapesPort.chemistry_fresh_refills_skin

@@ -229,7 +229,7 @@ class GpuSim {
       const st = sim.stoich[k];
       const fuel = sim.fuels[k];
       const liquid = fuel.liquid;
-      return [st.o2, st.co2, st.co, st.soot, st.h2o, st.heat, fuel.ignitionTemperature + KELVIN, fuel.embers ? 1 : 0, liquid ? 1 : 0, liquid?.boiling ?? 0, liquid?.latent ?? 1, st.ash ?? 0, fuel.heatCapacity ?? P.fuelHeatCapacity, 0, 0, 0];
+      return [st.o2, st.co2, st.co, st.soot, st.h2o, st.heat, fuel.ignitionTemperature + KELVIN, fuel.embers ? 1 : 0, liquid ? 1 : 0, liquid?.boiling ?? 0, liquid?.latent ?? 1, st.ash ?? 0, fuel.heatCapacity ?? P.fuelHeatCapacity, liquid?.mInf ?? -1, liquid?.kBeta ?? -1, 0];
     };
     this.paramF.set([...fuelRow(0), ...fuelRow(1)], PARAM_SCALARS);
     this.setParams({

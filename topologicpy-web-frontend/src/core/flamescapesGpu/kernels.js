@@ -88,10 +88,10 @@ export const PARAMS = [
   ["burnFlux", "f32"],
 ];
 /**
- * Scalars padded to a 16-byte boundary; the fuel table follows, three vec4
+ * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
  * per fuel (contents 0, first item 1): (o2, co2, co, soot), (h2o, heat,
  * ignition K, embers), (liquid, boiling K, latent J/kg, ash kg/kg),
- * (specific heat J/(kg K), 0, 0, 0).
+ * (specific heat J/(kg K), pool m''_inf kg/(m^2 s) or -1, pool k beta /m or -1, 0).
  */
 export const PARAM_SCALARS = Math.ceil(PARAMS.length / 4) * 4;
 export const FUEL_VEC4 = 4;
@@ -292,7 +292,7 @@ ${scalars.join("\n")}
   fuel: array<vec4<f32>, ${2 * FUEL_VEC4}>,
 }
 struct Particle { p: vec4<f32>, v: vec4<f32>, q: vec4<f32> }
-struct Fuel { o2: f32, co2: f32, co: f32, soot: f32, h2o: f32, heat: f32, ign: f32, embers: f32, liquid: f32, boiling: f32, latent: f32, ash: f32, cp: f32 }
+struct Fuel { o2: f32, co2: f32, co: f32, soot: f32, h2o: f32, heat: f32, ign: f32, embers: f32, liquid: f32, boiling: f32, latent: f32, ash: f32, cp: f32, mInf: f32, kBeta: f32 }
 struct Tri { b: u32, di: u32, dj: u32, dk: u32, f: vec3<f32> }
 
 @group(0) @binding(0) var<uniform> U: Params;
@@ -425,7 +425,7 @@ fn fuelOf(k: u32) -> Fuel {
   let b = U.fuel[${FUEL_VEC4}u * k + 1u];
   let l = U.fuel[${FUEL_VEC4}u * k + 2u];
   let e = U.fuel[${FUEL_VEC4}u * k + 3u];
-  return Fuel(a.x, a.y, a.z, a.w, b.x, b.y, b.z, b.w, l.x, l.y, l.z, l.w, e.x);
+  return Fuel(a.x, a.y, a.z, a.w, b.x, b.y, b.z, b.w, l.x, l.y, l.z, l.w, e.x, e.y, e.z);
 }
 fn skinOf(fuel: f32, area: f32) -> f32 { return min(fuel, U.skinDensity * area); }
 fn capOf(inertC: f32, fuel: f32, area: f32, moist: f32, cp: f32) -> f32 {
@@ -1026,7 +1026,14 @@ fn chemCell(c: u32) -> vec2<f32> {
       // A liquid first item (fire classes B and K) evaporates instead: the
       // heat above its boiling point turns its surface into fuel vapour.
       if (Ts > st.boiling) {
-        let dv = min(skinOf(fuel, area), (C * (Ts - st.boiling)) / st.latent);
+        // At most the pool's large-pool burning rate (flamescapes.js poolCap).
+        var cap = 3.0e38;
+        if (st.mInf > 0.0) {
+          var size = 1.0;
+          if (st.kBeta > 0.0) { size = 1.0 - exp(-st.kBeta * sqrt(4.0 * area / 3.14159265)); }
+          cap = st.mInf * size * area * dt;
+        }
+        let dv = min(min(skinOf(fuel, area), (C * (Ts - st.boiling)) / st.latent), cap);
         if (dv > 0.0) {
           fuel -= dv;
           Ts -= (dv * st.latent) / C;

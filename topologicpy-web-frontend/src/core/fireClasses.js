@@ -75,8 +75,10 @@ export const FIRE_CLASSES = {
     short: "B",
     iso: "B (liquids), C (gases)",
     examples: "Petrol or another accelerant, solvents and paints, heating oil, gas at burners and boilers",
-    // n-heptane, the standard test liquid: boils at 98.4 C, 0.317 MJ/kg to evaporate.
-    fuel: fuel(44.1, 0.839, 0.022, 0.072, { liquid: { boiling: 371.6, latent: 3.17e5 }, embers: false, ignitionTemperature: 250 }),
+    // n-heptane, the standard test liquid: boils at 98.4 C, 0.317 MJ/kg to evaporate,
+    // and burns at most m''_inf (1 - exp(-k beta D)) per m^2 of pool, with
+    // m''_inf 0.101 kg/(m^2 s) and k beta 1.1 /m (3.2 MW for this 1 m^2 pool).
+    fuel: fuel(44.1, 0.839, 0.022, 0.072, { liquid: { boiling: 371.6, latent: 3.17e5, mInf: 0.101, kBeta: 1.1 }, embers: false, ignitionTemperature: 250 }),
     growth: { class: "ultra-fast", alpha: 0.1876, note: "a spill or pool; gasoline burns at 0.055 kg/m2s in large pools" },
     item: { mass: 4, area: 1 },
     agents: {
@@ -87,7 +89,7 @@ export const FIRE_CLASSES = {
       heatOfCombustion: ["hu2021tn2133"],
       co: ["hu2021tn2133", "gannbryner"],
       soot: ["hu2021tn2133"],
-      liquid: ["nistwebbookHeptane"],
+      liquid: ["nistwebbookHeptane", "babrauskas1983pool", "nureg1805s1"],
       growth: ["babrauskas1983pool", "nureg1805s1"],
       agents: ["nfpa10"],
     },
@@ -143,7 +145,11 @@ export const FIRE_CLASSES = {
     iso: "F",
     examples: "Oil or fat in a pan on a hob, a deep-fat fryer, grease in an oven or range hood",
     // Oil gives off vapour and autoignites near 390 C (canola 385, butter 429 C).
-    fuel: fuel(37.4, 0.774, 0.021, 0.069, { liquid: { boiling: 663, latent: 2.5e5 }, embers: false, ignitionTemperature: 390 }),
+    // No pool burning rate for cooking oil was read: transformer oil's, the
+    // nearest row of the SFPE table (0.039 kg/(m^2 s), k beta 0.7 /m), stands
+    // in. For this pan it gives about 19 kW, the low end of the 20 to 110 kW
+    // that pan fires reach (growth, below).
+    fuel: fuel(37.4, 0.774, 0.021, 0.069, { liquid: { boiling: 663, latent: 2.5e5, mInf: 0.039, kBeta: 0.7 }, embers: false, ignitionTemperature: 390 }),
     growth: { class: "ultra-fast", alpha: 0.1876, note: "a pan fire peaks at 20 to 110 kW within 40 s and spreads to cabinets ultra-fast" },
     item: { mass: 2, area: 0.07 },
     agents: {
@@ -158,11 +164,12 @@ export const FIRE_CLASSES = {
       co: ["hu2021tn2133"],
       soot: ["hu2021tn2133", "hu2021jfs"],
       ignitionTemperature: ["hu2021tn2133", "hostikka2023"],
+      liquid: ["nureg1805s1"],
       growth: ["hamins2018", "hostikka2023"],
       agents: ["nfpa10", "liu2005fss"],
     },
-    // The latent heat of the oil's vapour release is ours.
-    provisional: ["liquid.latent"],
+    // The latent heat of the oil's vapour release is ours; its burning rate is transformer oil's.
+    provisional: ["liquid.latent", "liquid.mInf", "liquid.kBeta"],
   },
   L: {
     label: "Class L: lithium-ion batteries",

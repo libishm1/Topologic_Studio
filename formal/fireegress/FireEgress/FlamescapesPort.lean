@@ -50,7 +50,8 @@ counterexample that documents the defect.
   `addProducts_guard`, `addProducts_gas_mass`. Before 30c019a: `addProducts_clamp_counterexample`,
   `carbon_yield_exceeds` (for `stoichiometryOld`).
 * `chemistry`. The liquid item: `chemistry_liquid_energy` (`C T + L · vapour` is conserved),
-  `chemistry_liquid_above_boiling`, `chemistry_liquid_unclamped`; before 30c019a,
+  `chemistry_liquid_above_boiling`, `chemistry_liquid_capped`, `chemistry_liquid_unclamped`, and
+  the pool's burning-rate cap `poolCap_bounds`; before 30c019a,
   `chemistry_liquid_evaporation_energy_old`. Fresh fuel: `chemistry_mixFresh_enthalpy`,
   `chemistry_mixFresh_between`, `chemistry_fresh_refills_skin`. Ash: `chemistry_ash_capacity`,
   `chemistry_ash_capacity_mono`, `chemistry_ash_capacity_mono_cp`,
@@ -888,40 +889,77 @@ theorem chemistry_liquid_evaporation_energy_old {C T Tb L skin : ℝ} (hC : 0 < 
     have := (lt_div_iff₀ hL).1 h
     linarith
 
-/-- The vapour made since 30c019a: `dv = min(skin, C (T - T_b) / L)`. -/
-noncomputable def liquidVapour (C T Tb L skin : ℝ) : ℝ := min skin (C * (T - Tb) / L)
+/-- The most a pool of exposed area `A` gives off in `dt`: `m''∞ (1 - exp(-kβ D)) A dt`, with
+`D = √(4 A / π)` the diameter of a round pool of that area (Babrauskas 1983; `poolCap` in
+flamescapes.js). -/
+noncomputable def poolCap (mInf kBeta A dt : ℝ) : ℝ :=
+  mInf * (1 - Real.exp (-(kBeta * Real.sqrt (4 * A / Real.pi)))) * A * dt
+
+/-- The cap is never negative, and never more than the infinite pool's `m''∞ A dt`. -/
+theorem poolCap_bounds {mInf kBeta A dt : ℝ} (hm : 0 ≤ mInf) (hk : 0 ≤ kBeta) (hA : 0 ≤ A)
+    (hdt : 0 ≤ dt) : 0 ≤ poolCap mInf kBeta A dt ∧ poolCap mInf kBeta A dt ≤ mInf * A * dt := by
+  have hx : 0 ≤ kBeta * Real.sqrt (4 * A / Real.pi) := mul_nonneg hk (Real.sqrt_nonneg _)
+  have he1 : Real.exp (-(kBeta * Real.sqrt (4 * A / Real.pi))) ≤ 1 :=
+    Real.exp_le_one_iff.2 (by linarith)
+  have he0 : 0 < Real.exp (-(kBeta * Real.sqrt (4 * A / Real.pi))) := Real.exp_pos _
+  have hf0 : 0 ≤ 1 - Real.exp (-(kBeta * Real.sqrt (4 * A / Real.pi))) := by linarith
+  have hf1 : 1 - Real.exp (-(kBeta * Real.sqrt (4 * A / Real.pi))) ≤ 1 := by linarith
+  have hmAdt : 0 ≤ mInf * A * dt := mul_nonneg (mul_nonneg hm hA) hdt
+  unfold poolCap
+  constructor
+  · exact mul_nonneg (mul_nonneg (mul_nonneg hm hf0) hA) hdt
+  · have : mInf * (1 - Real.exp (-(kBeta * Real.sqrt (4 * A / Real.pi)))) * A * dt
+        = (1 - Real.exp (-(kBeta * Real.sqrt (4 * A / Real.pi)))) * (mInf * A * dt) := by ring
+    rw [this]
+    calc (1 - Real.exp (-(kBeta * Real.sqrt (4 * A / Real.pi)))) * (mInf * A * dt)
+        ≤ 1 * (mInf * A * dt) := mul_le_mul_of_nonneg_right hf1 hmAdt
+      _ = mInf * A * dt := one_mul _
+
+/-- The vapour made: `dv = min(skin, C (T - T_b) / L, cap)` (since 30c019a without `cap`; the
+pool's burning-rate cap `cap ≥ 0` since 2026-11-05: without it the pilot boiled a whole pool off
+in a few steps into one cell, too rich to burn). An uncapped liquid takes `cap` large. -/
+noncomputable def liquidVapour (C T Tb L skin cap : ℝ) : ℝ := min (min skin (C * (T - Tb) / L)) cap
 
 /-- The surface temperature after it: `T - dv L / C`. -/
-noncomputable def liquidT (C T Tb L skin : ℝ) : ℝ := T - liquidVapour C T Tb L skin * L / C
+noncomputable def liquidT (C T Tb L skin cap : ℝ) : ℝ := T - liquidVapour C T Tb L skin cap * L / C
 
-/-- The energy `C T + L · (vapour made)` is conserved. -/
-theorem chemistry_liquid_energy {C T Tb L skin : ℝ} (hC : 0 < C) :
-    C * liquidT C T Tb L skin + L * liquidVapour C T Tb L skin = C * T := by
+/-- The energy `C T + L · (vapour made)` is conserved, whatever the cap. -/
+theorem chemistry_liquid_energy {C T Tb L skin cap : ℝ} (hC : 0 < C) :
+    C * liquidT C T Tb L skin cap + L * liquidVapour C T Tb L skin cap = C * T := by
   unfold liquidT
   field_simp
   ring
 
 /-- The surface never falls below its boiling point, and never warms (for `T > T_b`,
-`skin ≥ 0`). -/
-theorem chemistry_liquid_above_boiling {C T Tb L skin : ℝ} (hC : 0 < C) (hL : 0 < L)
-    (hT : Tb < T) (hs : 0 ≤ skin) :
-    Tb ≤ liquidT C T Tb L skin ∧ liquidT C T Tb L skin ≤ T ∧ 0 ≤ liquidVapour C T Tb L skin := by
-  have hle : liquidVapour C T Tb L skin ≤ C * (T - Tb) / L := min_le_right _ _
-  have hnn : 0 ≤ liquidVapour C T Tb L skin :=
-    le_min hs (div_nonneg (mul_nonneg hC.le (by linarith)) hL.le)
-  have h1 : liquidVapour C T Tb L skin * L / C ≤ T - Tb := by
+`skin ≥ 0`, `cap ≥ 0`). -/
+theorem chemistry_liquid_above_boiling {C T Tb L skin cap : ℝ} (hC : 0 < C) (hL : 0 < L)
+    (hT : Tb < T) (hs : 0 ≤ skin) (hcap : 0 ≤ cap) :
+    Tb ≤ liquidT C T Tb L skin cap ∧ liquidT C T Tb L skin cap ≤ T ∧
+      0 ≤ liquidVapour C T Tb L skin cap := by
+  have hle : liquidVapour C T Tb L skin cap ≤ C * (T - Tb) / L :=
+    (min_le_left _ _).trans (min_le_right _ _)
+  have hnn : 0 ≤ liquidVapour C T Tb L skin cap :=
+    le_min (le_min hs (div_nonneg (mul_nonneg hC.le (by linarith)) hL.le)) hcap
+  have h1 : liquidVapour C T Tb L skin cap * L / C ≤ T - Tb := by
     rw [div_le_iff₀ hC]
     have := (le_div_iff₀ hL).1 hle
     linarith
-  have h2 : 0 ≤ liquidVapour C T Tb L skin * L / C := by positivity
+  have h2 : 0 ≤ liquidVapour C T Tb L skin cap * L / C := by positivity
   unfold liquidT
   exact ⟨by linarith, by linarith, hnn⟩
 
-/-- Unclamped (enough liquid in the layer), the surface ends exactly at its boiling point. -/
-theorem chemistry_liquid_unclamped {C T Tb L skin : ℝ} (hC : 0 < C) (hL : 0 < L)
-    (h : C * (T - Tb) / L ≤ skin) : liquidT C T Tb L skin = Tb := by
+/-- The pool never gives off more than its burning rate allows over the step. -/
+theorem chemistry_liquid_capped {C T Tb L skin cap : ℝ} :
+    liquidVapour C T Tb L skin cap ≤ cap :=
+  min_le_right _ _
+
+/-- Unclamped (enough liquid in the layer, the cap not binding), the surface ends exactly at its
+boiling point. -/
+theorem chemistry_liquid_unclamped {C T Tb L skin cap : ℝ} (hC : 0 < C) (hL : 0 < L)
+    (h : C * (T - Tb) / L ≤ skin) (hc : C * (T - Tb) / L ≤ cap) :
+    liquidT C T Tb L skin cap = Tb := by
   unfold liquidT liquidVapour
-  rw [min_eq_right h]
+  rw [min_eq_right h, min_eq_left hc]
   field_simp
   ring
 

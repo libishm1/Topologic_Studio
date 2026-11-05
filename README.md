@@ -306,7 +306,11 @@ These are also on the Methods page.
   what the paper resolves. Walls and slabs do not burn, doors are open and
   windows closed, room contents are a statistical fire load, and CO does not
   rise when the fire is short of air. Indoors at these cells embers seldom land
-  hot enough to light anything: in a 120 s fire in the Duplex they lit none. Large models are clipped to the area
+  hot enough to light anything: in a 120 s fire in the Duplex they lit none. A
+  liquid pool (classes B and K) evaporates at most at its burning rate
+  (Babrauskas 1983) and lights, but much of its vapour stays unburnt: a 1 m²
+  heptane pool reached 0.3 MW after 30 s in a test room, against the 3.2 MW
+  its burning rate allows. Large models are clipped to the area
   round the fire. It is not calibrated against room fire tests.
 
 - **The temperature is an index.** It is scaled to read 20 to 120 degrees C,

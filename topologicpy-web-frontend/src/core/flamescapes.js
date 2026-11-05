@@ -564,6 +564,20 @@ function particleToGrid(sim) {
   }
 }
 
+/**
+ * The most a liquid pool of exposed area `area` gives off in `dt`:
+ * m''_inf (1 - exp(-k beta D)) A dt, D the diameter of a round pool of that
+ * area (Babrauskas 1983, via the SFPE Handbook table in NUREG-1805 Suppl. 1).
+ * Without k beta the rate does not depend on the diameter; without m''_inf
+ * there is no cap.
+ */
+export function poolCap(liquid, area, dt) {
+  if (!(liquid?.mInf > 0)) return Infinity;
+  const D = Math.sqrt((4 * area) / Math.PI);
+  const size = liquid.kBeta > 0 ? 1 - Math.exp(-liquid.kBeta * D) : 1;
+  return liquid.mInf * size * area * dt;
+}
+
 function ignitionK(sim, c) {
   return sim.fuels[sim.fuelKind[c]].ignitionTemperature + KELVIN;
 }
@@ -976,11 +990,16 @@ function chemistry(sim, dt) {
       }
       // A liquid first item (fire classes B and K) evaporates instead: the
       // heat above its boiling point turns its surface into fuel vapour
-      // (Fire-X's energy-limited evaporation), which burns in the gas.
+      // (Fire-X's energy-limited evaporation), which burns in the gas. The
+      // pool gives off at most its large-pool burning rate,
+      // m'' = m''_inf (1 - exp(-k beta D)) (Babrauskas 1983): the coarse grid
+      // cannot resolve the flame's heat feedback to the pool, and without the
+      // cap the pilot holding the surface hot boiled the whole pool off in a
+      // few steps into one cell, too rich to burn.
       if (fuel.liquid) {
         if (sim.Ts[c] > fuel.liquid.boiling) {
           const skin0 = skinMass(sim, c);
-          const dv = Math.min(skin0, (C * (sim.Ts[c] - fuel.liquid.boiling)) / fuel.liquid.latent);
+          const dv = Math.min(skin0, (C * (sim.Ts[c] - fuel.liquid.boiling)) / fuel.liquid.latent, poolCap(fuel.liquid, sim.area[c], dt));
           if (dv > 0) {
             sim.fuelMass[c] -= dv;
             sim.Ts[c] -= (dv * fuel.liquid.latent) / C;

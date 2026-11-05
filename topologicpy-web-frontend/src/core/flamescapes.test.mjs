@@ -13,6 +13,7 @@ import {
   Y_O2_AIR,
   changeGas,
   createSolver,
+  poolCap,
   exchange,
   gasDensity,
   step,
@@ -287,4 +288,21 @@ test("regressions from the GPU port: only real combustion spawns flame particles
   assert.ok(zeroed > 0);
   step(empty);
   for (let c = 0; c < empty.N; c += 1) assert.ok(Number.isFinite(empty.Ts[c]), `Ts[${c}] = ${empty.Ts[c]}`);
+});
+
+test("every fire class burns: liquid pools give off at most their burning rate", () => {
+  // n-heptane, 1 m^2: m''_inf (1 - exp(-k beta D)) A dt with D = sqrt(4 / pi).
+  const heptane = FIRE_CLASSES.B.fuel.liquid;
+  const expected = 0.101 * (1 - Math.exp(-1.1 * Math.sqrt(4 / Math.PI))) * 1 * 0.1;
+  assert.ok(Math.abs(poolCap(heptane, 1, 0.1) - expected) < 1e-12);
+  assert.equal(poolCap({ boiling: 300, latent: 1e5 }, 1, 0.1), Infinity);
+  assert.ok(Math.abs(poolCap({ mInf: 0.017 }, 2, 0.1) - 0.017 * 2 * 0.1) < 1e-12, "no k beta: no diameter dependence");
+  // Without the cap the pilot boiled a liquid pool off in a few steps into
+  // one cell, too rich to burn: classes B and K released nothing.
+  for (const cls of FIRE_CLASS_KEYS) {
+    const { contentsFuel, ignitionFuel, item } = fuelsFor(cls);
+    const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item });
+    const out = runScene(scene, { nodes: Float32Array.from([2.5, 0.75, 2]), horizon: 5, frameSeconds: 5, particles: 0 });
+    assert.ok(out.stats.released > 1e5, `class ${cls}: released ${out.stats.released} J`);
+  }
 });

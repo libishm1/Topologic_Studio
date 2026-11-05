@@ -57,6 +57,8 @@ const HEADED = args.includes("--headed");
 const SWIFTSHADER = args.includes("--swiftshader");
 const QUICK = args.includes("--quick");
 const PHASE = flag("--phase", "all");
+// --class B runs the checks with that fire class's fuels (fireClasses.js); default: a class A fuel.
+const FIRE_CLASS = flag("--class", null);
 const HORIZON = Number(flag("--horizon", QUICK ? 60 : 120));
 
 // ---- a static server for the frontend's source files
@@ -107,7 +109,7 @@ await page.goto(server ? `${origin}/check.html` : `${origin}/src/core/flamescape
  * Everything below runs in the page. It is serialised by Playwright, so it
  * holds its own helpers.
  */
-async function suite({ base, phase, horizon, quick }) {
+async function suite({ base, phase, horizon, quick, fireClass }) {
   const V = await import(base + "voxelize.js");
   const F = await import(base + "flamescapes.js");
   const R = await import(base + "flamescapesRun.js");
@@ -133,6 +135,9 @@ async function suite({ base, phase, horizon, quick }) {
     box(W, 2.0, 1.5, W + t, H, 2.4, S),
   ];
   const classA = { heatOfCombustion: 17.5e6, yields: { co2: 1.27, co: 0.004, soot: 0.015 }, embers: true, ignitionTemperature: 300 };
+  const chosen = fireClass ? (await import(base + "fireClasses.js")).fuelsFor(fireClass) : null;
+  const contentsFuel = chosen?.contentsFuel ?? classA;
+  const ignitionFuel = chosen?.ignitionFuel ?? classA;
   function room(cell, maxCells) {
     const grid = V.gridFor(meshes, { upAxis: "y", cell, margin: 3, headroom: 3, maxCells });
     const fraction = V.volumeFractions(grid, meshes, { rays: V.raysFor(grid) });
@@ -146,10 +151,10 @@ async function suite({ base, phase, horizon, quick }) {
       contents: { cells, masses: fuel.masses },
       ignition: { cell: ign, mass: 2 },
       pilot: { cells: [ign], power: 30000, duration: 60 },
-      fuels: { contentsFuel: classA, ignitionFuel: classA },
+      fuels: { contentsFuel, ignitionFuel },
     };
   }
-  const solverOf = (scene, options) => F.createSolver(scene, { contentsFuel: classA, ignitionFuel: classA, ...options });
+  const solverOf = (scene, options) => F.createSolver(scene, { contentsFuel, ignitionFuel, ...options });
   // Graph nodes 0.75 m above the floor: a 0.5 m lattice in the room and a few outside the door.
   const nodes = [];
   for (let x = 0.25; x < W; x += 0.5) for (let z = 0.25; z < D; z += 0.5) nodes.push(x, 0.75, z);
@@ -344,7 +349,7 @@ async function suite({ base, phase, horizon, quick }) {
 
   // The room as the app builds it (buildScene: a 5 kg first item held at 900 K
   // for 30 s), whose fuel-rich, oxygen-starved plume is the most sensitive case.
-  const appScene = () => R.buildScene({ floors: [meshes[0]], roofs: [meshes[1]], walls: meshes.slice(2) }, { upAxis: "y", fire: [2.5, 0, 2.0], maxCells: 400000, contentsFuel: classA, ignitionFuel: classA });
+  const appScene = () => R.buildScene({ floors: [meshes[0]], roofs: [meshes[1]], walls: meshes.slice(2) }, { upAxis: "y", fire: [2.5, 0, 2.0], maxCells: 400000, contentsFuel, ignitionFuel });
   const bare = { maxParticles: 0, emitAbove: 1e9 };
 
   // ---- 1c. one step from identical states: the CPU's state at several times, uploaded
@@ -419,7 +424,7 @@ async function suite({ base, phase, horizon, quick }) {
       };
       worker.postMessage({ id: 1, payload: {
         backend, geometry: { floors: [meshes[0]], roofs: [meshes[1]], walls: meshes.slice(2) }, upAxis: "y", fire: [2.5, 0, 2.0],
-        contentsFuel: classA, ignitionFuel: classA, nodes: nodeArray, agentHeight: 0.75, headHeight: 1.8,
+        contentsFuel, ignitionFuel, nodes: nodeArray, agentHeight: 0.75, headHeight: 1.8,
         horizon: quick ? 30 : 60, frameSeconds: 5, embers: false, particles: 500,
       } });
     });
@@ -477,7 +482,7 @@ const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
   console.log(`\n== ${phase}`);
-  const res = await page.evaluate(suite, { base: `${origin}/src/core/`, phase, horizon: HORIZON, quick: QUICK });
+  const res = await page.evaluate(suite, { base: `${origin}/src/core/`, phase, horizon: HORIZON, quick: QUICK, fireClass: FIRE_CLASS });
   if (res.error) {
     console.log(`  ${res.error}`);
     report.error = res.error;
