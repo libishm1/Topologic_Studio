@@ -131,6 +131,9 @@ export class ViewerManager {
     const world = worlds.create();
     world.scene = new SimpleScene(components);
     world.renderer = new SimpleRenderer(components, container);
+    // No engine logo over the model (the engine's own switch); That Open
+    // Engine is credited in the README and on the Methods page (MIT).
+    world.renderer.showLogo = false;
     world.camera = new SimpleCamera(components);
     this.world = world;
 

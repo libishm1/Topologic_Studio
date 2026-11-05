@@ -865,6 +865,11 @@ for (const tab of ["Model", "Graph", "Route", "Simulate"]) {
       .textContent({ timeout: 30000 })
       .catch(() => null);
     record(Boolean(named), "the Model step identifies the elements", named || "not shown");
+    // Describe this model: the facts it would send are the app's own, shown before anything is sent.
+    await page.locator(".panel__scroll").getByText("Describe this model", { exact: true }).click();
+    await page.locator(".panel__scroll").getByText("The facts it is given", { exact: true }).click();
+    const facts = (await page.locator(".describe__facts").textContent({ timeout: 10000 }).catch(() => "")) || "";
+    record(/Model: .*storeys/.test(facts) && /Doors: \d+/.test(facts), "Describe this model shows the facts it is given", facts.split("\n").slice(0, 2).join(" | ").slice(0, 160));
   }
 }
 

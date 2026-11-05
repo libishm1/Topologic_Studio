@@ -223,7 +223,97 @@ function ElementIdentification({ identification, onIdentify, onIdentifyByShape }
   );
 }
 
-export function ModelPanel({ studio, examples, onExample, onClearCache, identification, onIdentify, onIdentifyByShape }) {
+/**
+ * Describe this model: a plain description written from the facts Studio
+ * computed (core/describeFacts.js), on this device or by the site's
+ * Cloudflare describer (lib/describe.js). The facts are shown first.
+ */
+function DescribeModel({ describe, onDescribe, onStop, onEngine }) {
+  if (!describe) return null;
+  const onDevice = describe.status !== "unsupported" && describe.status !== "unavailable" && describe.status !== "checking";
+  const engine = describe.engine || "device";
+  const ready = engine === "device" ? onDevice : describe.cloud;
+  const deviceNote = {
+    checking: "Checking for this browser's built-in model...",
+    unsupported: "This browser has no built-in model (Chrome 148 or later on a desktop computer has one).",
+    unavailable: "This browser's built-in model cannot run here (it needs more than 4 GB of GPU memory, or 16 GB of RAM).",
+    downloadable: "Chrome downloads its model the first time (once, a few GB); nothing leaves this computer.",
+    downloading: "Chrome is downloading its model; nothing leaves this computer.",
+    available: "Written on this computer by Chrome's built-in model; nothing is sent.",
+  }[describe.status];
+  return (
+    <Disclosure summary="Describe this model">
+      <p className="field__hint">
+        A short description of the building, its ways out and its fire, written by a language model from the facts Studio has worked out from the IFC and
+        its own simulations, and from nothing else. It grows as you go: describe again after building the graph, finding a route or running a fire.
+      </p>
+      <div className="field">
+        <div className="field__label">
+          <span>Written by</span>
+        </div>
+        <Segmented
+          label="Written by"
+          value={engine}
+          onChange={onEngine}
+          disabled={describe.busy}
+          options={[
+            { value: "device", label: "This device" },
+            { value: "cloud", label: "Cloudflare" },
+          ]}
+        />
+        <p className="field__hint">
+          {engine === "device"
+            ? deviceNote
+            : describe.cloud
+              ? "The facts below are sent to the site's describer on Cloudflare Workers AI, which says it neither keeps nor trains on them; the IFC itself is not sent."
+              : "This site has no Cloudflare describer set up yet (cloudflare/describe-worker in the repository)."}
+        </p>
+      </div>
+      <Disclosure summary="The facts it is given">
+        <pre className="describe__facts">{describe.facts}</pre>
+      </Disclosure>
+      <div className="row">
+        <Button block variant="primary" busy={describe.busy} disabled={!ready} onClick={onDescribe}>
+          {engine === "cloud" ? "Send the facts and describe" : "Describe"}
+        </Button>
+        {describe.busy && (
+          <Button onClick={onStop}>
+            Stop
+          </Button>
+        )}
+      </div>
+      {describe.progress != null && describe.progress < 1 && (
+        <p className="field__hint">Downloading the model: {Math.round(describe.progress * 100)}%</p>
+      )}
+      {describe.error && <Notice tone="warning">{describe.error}</Notice>}
+      {describe.text && (
+        <div className="describe__text" aria-live="polite">
+          {describe.text.split(/\n{2,}/).map((para, i) => (
+            <p key={i}>{para}</p>
+          ))}
+          <p className="field__hint">
+            Written by {describe.model || "a language model"} from the facts above. Check it against the panels: a language model can still word things
+            wrongly.
+          </p>
+        </div>
+      )}
+    </Disclosure>
+  );
+}
+
+export function ModelPanel({
+  studio,
+  examples,
+  onExample,
+  onClearCache,
+  identification,
+  onIdentify,
+  onIdentifyByShape,
+  describe,
+  onDescribe,
+  onStopDescribe,
+  onDescribeEngine,
+}) {
   const { modelInfo, file, settings, setSettings, cacheInfo } = studio;
 
   return (
@@ -263,6 +353,7 @@ export function ModelPanel({ studio, examples, onExample, onClearCache, identifi
             </p>
             <EgressCheck semantics={studio.semantics} />
             <ElementIdentification identification={identification} onIdentify={onIdentify} onIdentifyByShape={onIdentifyByShape} />
+            <DescribeModel describe={describe} onDescribe={onDescribe} onStop={onStopDescribe} onEngine={onDescribeEngine} />
           </>
         )}
 

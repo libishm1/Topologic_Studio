@@ -35,6 +35,8 @@ import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/use
 import { FIRE_CLASSES, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_RUNS, farthestFromExits, nodeAlong, stagesFor } from "./core/guided.js";
+import { describeFacts } from "./core/describeFacts.js";
+import { CLOUD_URL, describeInCloud, describeOnDevice, onDeviceStatus } from "./lib/describe.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -1569,6 +1571,68 @@ export default function App() {
     handlePick("exit", [graph.nodes[i], graph.nodes[i + 1], graph.nodes[i + 2]]);
   }, [graph, points.start, exits, settings.useWalls, handlePick, toast]);
 
+  // ------------------------------------------------- describe this model
+
+  // A plain description written by a language model from the facts Studio
+  // has computed (core/describeFacts.js): on this device with Chrome's
+  // built-in model, or by the Cloudflare Worker when the site has one
+  // (lib/describe.js). The facts are shown before anything is sent.
+  const [describe, setDescribe] = useState({ status: "checking", engine: null, busy: false, text: "", error: null, progress: null, model: null });
+  const describeAbortRef = useRef(null);
+  useEffect(() => {
+    let live = true;
+    onDeviceStatus().then((status) => {
+      if (!live) return;
+      const onDevice = status !== "unsupported" && status !== "unavailable";
+      setDescribe((d) => ({ ...d, status, engine: d.engine ?? (onDevice || !CLOUD_URL ? "device" : "cloud") }));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const describeFactsText = useMemo(
+    () =>
+      describeFacts({
+        file,
+        stats: modelInfo?.stats,
+        semantics: studio.semantics,
+        identification: identification?.answers,
+        graph: graph ? { stats: graph.stats, cores: graph.cores } : null,
+        route: path,
+        walkSpeed: settings.walkSpeed,
+        fire,
+        combustion: fire.combustion,
+        plan: forecastPlan?.result ? forecastPlan : null,
+        rl: rl.result,
+      }).text,
+    [file, modelInfo, studio.semantics, identification, graph, path, settings.walkSpeed, fire, forecastPlan, rl.result],
+  );
+  const runDescribe = useCallback(async () => {
+    describeAbortRef.current?.abort();
+    const abort = new AbortController();
+    describeAbortRef.current = abort;
+    const engine = describe.engine || "device";
+    setDescribe((d) => ({ ...d, busy: true, text: "", error: null, progress: null, model: engine === "device" ? "Chrome's built-in model" : null }));
+    try {
+      if (engine === "device") {
+        await describeOnDevice(describeFactsText, {
+          signal: abort.signal,
+          onText: (text) => setDescribe((d) => ({ ...d, text })),
+          onProgress: (progress) => setDescribe((d) => ({ ...d, progress })),
+        });
+      } else {
+        const { text, model } = await describeInCloud(describeFactsText, { signal: abort.signal });
+        setDescribe((d) => ({ ...d, text, model: `${model} on Cloudflare Workers AI` }));
+      }
+      setDescribe((d) => ({ ...d, busy: false, progress: null }));
+    } catch (error) {
+      if (abort.signal.aborted) setDescribe((d) => ({ ...d, busy: false }));
+      else setDescribe((d) => ({ ...d, busy: false, error: error?.message || String(error) }));
+    }
+  }, [describe.engine, describeFactsText]);
+  const stopDescribe = useCallback(() => describeAbortRef.current?.abort(), []);
+  const setDescribeEngine = useCallback((engine) => setDescribe((d) => ({ ...d, engine })), []);
+
   // ------------------------------------------------- guided runs
 
   // The welcome screen's presets (core/guided.js) step through the app as a
@@ -2385,6 +2449,10 @@ export default function App() {
                   identification={identification}
                   onIdentify={identifyElements}
                   onIdentifyByShape={identifyByShape}
+                  describe={{ ...describe, facts: describeFactsText, cloud: Boolean(CLOUD_URL) }}
+                  onDescribe={runDescribe}
+                  onStopDescribe={stopDescribe}
+                  onDescribeEngine={setDescribeEngine}
                 />
               )}
               {activeTab === "graph" && (

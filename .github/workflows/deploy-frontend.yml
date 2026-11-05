@@ -38,6 +38,8 @@ jobs:
         env:
           BASE_PATH: '/${{ github.event.repository.name }}/'
           VITE_API_BASE: ${{ vars.VITE_API_BASE || 'https://topologicstudio-backend.onrender.com' }}
+          # The Cloudflare describer's address (cloudflare/describe-worker); empty until it is deployed.
+          VITE_DESCRIBE_URL: ${{ vars.DESCRIBE_URL || '' }}
         run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

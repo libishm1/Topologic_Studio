@@ -96,6 +96,19 @@ downloads 4.5 MB. The comparison with IFCNet, text embeddings and small
 language models is in
 [wiki/research/ifc-identification-benchmark-2026-11-05.md](wiki/research/ifc-identification-benchmark-2026-11-05.md).
 
+**Describe this model** writes a short plain description of the building,
+its ways out and its fire. A language model writes it from the facts Studio
+has already worked out (storeys, rooms, doors and exits, the walkable graph,
+the route, the fire's results) and from nothing else. The facts are listed
+under it before anything is written.
+
+- **On Chrome 148 or later on a desktop computer:** Chrome's built-in model
+  writes it on the computer, and nothing is sent.
+- **On other browsers:** a site deployed with the Cloudflare describer
+  ([cloudflare/describe-worker](cloudflare/describe-worker/README.md)) can
+  send those facts, never the IFC, to a Workers AI model on Cloudflare's free
+  allowance instead.
+
 **Show the building as** switches the model between Solid, Ghost (see-through,
 so the graph shows inside) and Hidden. The view buttons give top, front,
 side and isometric views, and **Show** cuts the building at a storey.
