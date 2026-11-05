@@ -1,0 +1,2660 @@
+{
+ "date": "2026-11-05",
+ "seed": 20261105,
+ "featureNames": [
+  "len",
+  "wid",
+  "hgt",
+  "above",
+  "top",
+  "logVol",
+  "widLen",
+  "hgtLen",
+  "logArea",
+  "areaRatio",
+  "logTris",
+  "floorKnown",
+  "linearity",
+  "planarity",
+  "scattering",
+  "omnivariance",
+  "anisotropy",
+  "eigenentropy",
+  "curvChange",
+  "logEigSum",
+  "axisVert",
+  "verticality",
+  "nUp",
+  "nDown",
+  "nSide",
+  "nSlant",
+  "meanAbsNy",
+  "orientEntropy",
+  "hRel0",
+  "hRel1",
+  "hRel2",
+  "hRel3",
+  "hRel4",
+  "hRel5",
+  "hRel6",
+  "hRel7",
+  "upH0",
+  "upH1",
+  "upH2",
+  "upH3",
+  "upH4",
+  "upH5",
+  "upH6",
+  "upH7",
+  "upLevels",
+  "upTopShare",
+  "upMainHeight",
+  "segN1",
+  "segN5",
+  "segTop1",
+  "segTop3",
+  "segCover",
+  "partsN",
+  "partsTop1",
+  "occ8",
+  "planFill",
+  "layer0",
+  "layer1",
+  "layer2",
+  "layer3",
+  "locLinMean",
+  "locPlaMean",
+  "locScaMean",
+  "locLinStd",
+  "locPlaStd",
+  "locScaStd",
+  "share1d",
+  "share2d",
+  "share3d",
+  "locVertMean",
+  "locCurvMean"
+ ],
+ "featureTiming": {
+  "n": 13536,
+  "medianMs": 2.657599999998638,
+  "p90Ms": 3.9464000000007218,
+  "p99Ms": 6.66530000000057,
+  "maxMs": 59.247199999997974,
+  "meanMs": 2.9840169400118146
+ },
+ "node": "v24.21.0",
+ "corpus": {
+  "models": 45,
+  "buildings": 38,
+  "recordsWithFeatures": 13536,
+  "openModels": 18
+ },
+ "embedding": {
+  "seconds": 645.893229007721,
+  "threads": 8,
+  "n": 13536,
+  "msPerElement": 47.72
+ },
+ "featureGroups": {
+  "box": 9,
+  "box+mesh": 12,
+  "box+eigen": 30,
+  "box+surfaces": 34,
+  "box+segments,voxels": 22,
+  "all": 71
+ },
+ "checks": {
+  "rulesReproduced": "6225 of 6225",
+  "ifcnetReproduced": "6210 of 6225"
+ },
+ "taskA": {
+  "folds": 5,
+  "split": "leave buildings out (5 folds; train on the typed elements of the other buildings)",
+  "n": {
+   "primary": 6066,
+   "hard": 159
+  },
+  "methods": {
+   "rules (benchmark)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.8595,
+     "macroF1": 0.8288,
+     "f1": {
+      "wall": 0.884,
+      "slab": 0.962,
+      "roof": 0.899,
+      "door": 0.935,
+      "window": 0.877,
+      "stair": 0.793,
+      "railing": 0.796,
+      "column": 0.865,
+      "beam": 0.824,
+      "covering": 0.906,
+      "furniture": 0.734,
+      "heater": 1.0,
+      "lighting": 0.493,
+      "mep": 0.596,
+      "space": 0.961,
+      "other": 0.733
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.6038,
+     "macroF1": 0.5438,
+     "f1": {
+      "slab": 0.235,
+      "door": 0.667,
+      "stair": 1.0,
+      "railing": 0.0,
+      "beam": 0.714,
+      "furniture": 0.074,
+      "appliance": 0.947,
+      "sanitary": 0.906,
+      "heater": 0.0,
+      "lighting": 0.667,
+      "mep": 0.694,
+      "other": 0.621
+     }
+    },
+    "note": "src/core/identify.js, from preds-rules.json"
+   },
+   "IFCNet DGCNN zero-shot (benchmark)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.4126,
+     "macroF1": 0.3494,
+     "f1": {
+      "wall": 0.716,
+      "slab": 0.543,
+      "roof": 0.0,
+      "door": 0.728,
+      "window": 0.0,
+      "stair": 0.749,
+      "railing": 0.634,
+      "column": 0.0,
+      "beam": 0.467,
+      "covering": 0.0,
+      "furniture": 0.714,
+      "heater": 0.295,
+      "lighting": 0.593,
+      "mep": 0.079,
+      "space": 0.0,
+      "other": 0.072
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.2767,
+     "macroF1": 0.2009,
+     "f1": {
+      "slab": 0.0,
+      "door": 0.333,
+      "stair": 0.0,
+      "railing": 0.0,
+      "beam": 0.211,
+      "furniture": 0.0,
+      "appliance": 0.0,
+      "sanitary": 0.621,
+      "heater": 0.0,
+      "lighting": 0.8,
+      "mep": 0.419,
+      "other": 0.028
+     }
+    },
+    "note": "pruned fp32 2,048 points, from the benchmark"
+   },
+   "rules, then IFCNet at 0.8 (benchmark)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.8615,
+     "macroF1": 0.8313,
+     "f1": {
+      "wall": 0.886,
+      "slab": 0.962,
+      "roof": 0.899,
+      "door": 0.936,
+      "window": 0.875,
+      "stair": 0.795,
+      "railing": 0.801,
+      "column": 0.865,
+      "beam": 0.829,
+      "covering": 0.906,
+      "furniture": 0.749,
+      "heater": 0.98,
+      "lighting": 0.515,
+      "mep": 0.604,
+      "space": 0.962,
+      "other": 0.735
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.5975,
+     "macroF1": 0.5426,
+     "f1": {
+      "slab": 0.235,
+      "door": 0.667,
+      "stair": 1.0,
+      "railing": 0.0,
+      "beam": 0.714,
+      "furniture": 0.074,
+      "appliance": 0.947,
+      "sanitary": 0.906,
+      "heater": 0.0,
+      "lighting": 0.667,
+      "mep": 0.694,
+      "other": 0.608
+     }
+    },
+    "note": "from the benchmark"
+   },
+   "rules without names": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.701,
+     "macroF1": 0.6302,
+     "f1": {
+      "wall": 0.708,
+      "slab": 0.914,
+      "roof": 0.811,
+      "door": 0.863,
+      "window": 0.787,
+      "stair": 0.288,
+      "railing": 0.401,
+      "column": 0.764,
+      "beam": 0.585,
+      "covering": 0.906,
+      "furniture": 0.583,
+      "heater": 1.0,
+      "lighting": 0.241,
+      "mep": 0.0,
+      "space": 0.822,
+      "other": 0.411
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.1887,
+     "macroF1": 0.0773,
+     "f1": {
+      "slab": 0.211,
+      "door": 0.0,
+      "stair": 0.0,
+      "railing": 0.0,
+      "beam": 0.222,
+      "furniture": 0.047,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.0,
+      "other": 0.448
+     }
+    },
+    "note": "identify() given PredefinedType, LongName and the box only"
+   },
+   "features only (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.759,
+     "macroF1": 0.6687,
+     "f1": {
+      "wall": 0.865,
+      "slab": 0.699,
+      "roof": 0.668,
+      "door": 0.898,
+      "window": 0.812,
+      "stair": 0.877,
+      "railing": 0.804,
+      "column": 0.704,
+      "beam": 0.524,
+      "covering": 0.668,
+      "furniture": 0.833,
+      "heater": 0.0,
+      "lighting": 0.583,
+      "mep": 0.327,
+      "space": 0.978,
+      "other": 0.458
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.1132,
+     "macroF1": 0.1668,
+     "f1": {
+      "slab": 0.118,
+      "door": 0.667,
+      "stair": 0.0,
+      "railing": 0.0,
+      "beam": 0.154,
+      "furniture": 0.04,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.667,
+      "mep": 0.167,
+      "other": 0.19
+     }
+    },
+    "note": "names withheld; 71 features"
+   },
+   "features only, box (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.6515,
+     "macroF1": 0.5266,
+     "f1": {
+      "wall": 0.785,
+      "slab": 0.674,
+      "roof": 0.422,
+      "door": 0.828,
+      "window": 0.687,
+      "stair": 0.569,
+      "railing": 0.399,
+      "column": 0.675,
+      "beam": 0.438,
+      "covering": 0.571,
+      "furniture": 0.765,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.374,
+      "space": 0.828,
+      "other": 0.412
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.1447,
+     "macroF1": 0.1125,
+     "f1": {
+      "slab": 0.087,
+      "door": 0.4,
+      "stair": 0.0,
+      "railing": 0.0,
+      "beam": 0.2,
+      "furniture": 0.043,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.341,
+      "other": 0.279
+     }
+    },
+    "note": "ablation"
+   },
+   "features only, box+eigen (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.7306,
+     "macroF1": 0.6072,
+     "f1": {
+      "wall": 0.848,
+      "slab": 0.695,
+      "roof": 0.475,
+      "door": 0.88,
+      "window": 0.781,
+      "stair": 0.842,
+      "railing": 0.701,
+      "column": 0.725,
+      "beam": 0.453,
+      "covering": 0.66,
+      "furniture": 0.824,
+      "heater": 0.0,
+      "lighting": 0.074,
+      "mep": 0.363,
+      "space": 0.977,
+      "other": 0.417
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.1384,
+     "macroF1": 0.1847,
+     "f1": {
+      "slab": 0.167,
+      "door": 0.5,
+      "stair": 0.5,
+      "railing": 0.0,
+      "beam": 0.267,
+      "furniture": 0.039,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.333,
+      "mep": 0.158,
+      "other": 0.253
+     }
+    },
+    "note": "ablation"
+   },
+   "features only, box+surfaces (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.726,
+     "macroF1": 0.6009,
+     "f1": {
+      "wall": 0.844,
+      "slab": 0.705,
+      "roof": 0.563,
+      "door": 0.887,
+      "window": 0.75,
+      "stair": 0.876,
+      "railing": 0.58,
+      "column": 0.708,
+      "beam": 0.464,
+      "covering": 0.646,
+      "furniture": 0.819,
+      "heater": 0.0,
+      "lighting": 0.1,
+      "mep": 0.238,
+      "space": 0.966,
+      "other": 0.47
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.1258,
+     "macroF1": 0.1362,
+     "f1": {
+      "slab": 0.087,
+      "door": 0.333,
+      "stair": 0.0,
+      "railing": 0.0,
+      "beam": 0.286,
+      "furniture": 0.043,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.5,
+      "mep": 0.15,
+      "other": 0.235
+     }
+    },
+    "note": "ablation"
+   },
+   "features only, box+segments,voxels (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.7326,
+     "macroF1": 0.6117,
+     "f1": {
+      "wall": 0.852,
+      "slab": 0.689,
+      "roof": 0.568,
+      "door": 0.899,
+      "window": 0.736,
+      "stair": 0.842,
+      "railing": 0.636,
+      "column": 0.721,
+      "beam": 0.508,
+      "covering": 0.639,
+      "furniture": 0.809,
+      "heater": 0.0,
+      "lighting": 0.182,
+      "mep": 0.269,
+      "space": 0.981,
+      "other": 0.455
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.0943,
+     "macroF1": 0.1142,
+     "f1": {
+      "slab": 0.125,
+      "door": 0.333,
+      "stair": 0.0,
+      "railing": 0.0,
+      "beam": 0.182,
+      "furniture": 0.035,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.333,
+      "mep": 0.211,
+      "other": 0.152
+     }
+    },
+    "note": "ablation"
+   },
+   "features + rules, stacked (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.8741,
+     "macroF1": 0.7831,
+     "f1": {
+      "wall": 0.933,
+      "slab": 0.972,
+      "roof": 0.912,
+      "door": 0.927,
+      "window": 0.858,
+      "stair": 0.904,
+      "railing": 0.822,
+      "column": 0.877,
+      "beam": 0.796,
+      "covering": 0.899,
+      "furniture": 0.859,
+      "heater": 0.0,
+      "lighting": 0.64,
+      "mep": 0.438,
+      "space": 0.991,
+      "other": 0.703
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.3648,
+     "macroF1": 0.3572,
+     "f1": {
+      "slab": 0.25,
+      "door": 1.0,
+      "stair": 0.333,
+      "railing": 0.0,
+      "beam": 0.667,
+      "furniture": 0.033,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.8,
+      "mep": 0.583,
+      "other": 0.62
+     }
+    },
+    "note": "rules' label and source as inputs"
+   },
+   "rules, then features (cascade)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.8821,
+     "macroF1": 0.8734,
+     "f1": {
+      "wall": 0.914,
+      "slab": 0.958,
+      "roof": 0.931,
+      "door": 0.927,
+      "window": 0.888,
+      "stair": 0.937,
+      "railing": 0.834,
+      "column": 0.883,
+      "beam": 0.748,
+      "covering": 0.89,
+      "furniture": 0.885,
+      "heater": 1.0,
+      "lighting": 0.941,
+      "mep": 0.517,
+      "space": 0.997,
+      "other": 0.725
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.5283,
+     "macroF1": 0.5329,
+     "f1": {
+      "slab": 0.133,
+      "door": 1.0,
+      "stair": 0.667,
+      "railing": 0.0,
+      "beam": 0.625,
+      "furniture": 0.091,
+      "appliance": 0.947,
+      "sanitary": 0.906,
+      "heater": 0.0,
+      "lighting": 0.889,
+      "mep": 0.68,
+      "other": 0.457
+     }
+    },
+    "note": "the rules answer when a PredefinedType or a name decides; the features model otherwise"
+   },
+   "features + rules without names, stacked (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.8188,
+     "macroF1": 0.712,
+     "f1": {
+      "wall": 0.891,
+      "slab": 0.931,
+      "roof": 0.838,
+      "door": 0.903,
+      "window": 0.828,
+      "stair": 0.902,
+      "railing": 0.805,
+      "column": 0.731,
+      "beam": 0.526,
+      "covering": 0.886,
+      "furniture": 0.82,
+      "heater": 0.0,
+      "lighting": 0.381,
+      "mep": 0.376,
+      "space": 0.978,
+      "other": 0.596
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.1761,
+     "macroF1": 0.2277,
+     "f1": {
+      "slab": 0.0,
+      "door": 0.667,
+      "stair": 0.5,
+      "railing": 0.0,
+      "beam": 0.267,
+      "furniture": 0.038,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.75,
+      "mep": 0.15,
+      "other": 0.362
+     }
+    },
+    "note": "names withheld everywhere"
+   },
+   "DGCNN linear probe (256-d penultimate layer)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.6222,
+     "macroF1": 0.4982,
+     "f1": {
+      "wall": 0.77,
+      "slab": 0.392,
+      "roof": 0.29,
+      "door": 0.88,
+      "window": 0.789,
+      "stair": 0.736,
+      "railing": 0.637,
+      "column": 0.614,
+      "beam": 0.461,
+      "covering": 0.385,
+      "furniture": 0.731,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.184,
+      "space": 0.797,
+      "other": 0.306
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.1195,
+     "macroF1": 0.1403,
+     "f1": {
+      "slab": 0.0,
+      "door": 0.667,
+      "stair": 0.0,
+      "railing": 0.154,
+      "beam": 0.353,
+      "furniture": 0.0,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.133,
+      "mep": 0.12,
+      "other": 0.256
+     }
+    },
+    "note": "logistic regression on IFCNet's frozen embedding; names withheld"
+   },
+   "features + DGCNN embedding (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.759,
+     "macroF1": 0.6249,
+     "f1": {
+      "wall": 0.873,
+      "slab": 0.702,
+      "roof": 0.641,
+      "door": 0.898,
+      "window": 0.839,
+      "stair": 0.88,
+      "railing": 0.737,
+      "column": 0.686,
+      "beam": 0.564,
+      "covering": 0.663,
+      "furniture": 0.821,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.186,
+      "space": 0.977,
+      "other": 0.53
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.1321,
+     "macroF1": 0.1401,
+     "f1": {
+      "slab": 0.133,
+      "door": 0.5,
+      "stair": 0.0,
+      "railing": 0.0,
+      "beam": 0.333,
+      "furniture": 0.0,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.25,
+      "mep": 0.233,
+      "other": 0.233
+     }
+    },
+    "note": "names withheld"
+   },
+   "features + rules + DGCNN embedding, stacked (HGB)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.8719,
+     "macroF1": 0.7343,
+     "f1": {
+      "wall": 0.932,
+      "slab": 0.965,
+      "roof": 0.895,
+      "door": 0.936,
+      "window": 0.852,
+      "stair": 0.926,
+      "railing": 0.817,
+      "column": 0.863,
+      "beam": 0.769,
+      "covering": 0.908,
+      "furniture": 0.853,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.318,
+      "space": 0.989,
+      "other": 0.727
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.3459,
+     "macroF1": 0.3324,
+     "f1": {
+      "slab": 0.333,
+      "door": 0.667,
+      "stair": 0.667,
+      "railing": 0.0,
+      "beam": 0.556,
+      "furniture": 0.04,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.667,
+      "mep": 0.48,
+      "other": 0.58
+     }
+    },
+    "note": ""
+   },
+   "rules, then features + embedding (cascade)": {
+    "primary": {
+     "n": 6066,
+     "accuracy": 0.8836,
+     "macroF1": 0.852,
+     "f1": {
+      "wall": 0.923,
+      "slab": 0.955,
+      "roof": 0.931,
+      "door": 0.927,
+      "window": 0.901,
+      "stair": 0.932,
+      "railing": 0.796,
+      "column": 0.881,
+      "beam": 0.754,
+      "covering": 0.897,
+      "furniture": 0.895,
+      "heater": 0.98,
+      "lighting": 0.621,
+      "mep": 0.498,
+      "space": 0.996,
+      "other": 0.746
+     }
+    },
+    "hard": {
+     "n": 159,
+     "accuracy": 0.5472,
+     "macroF1": 0.5602,
+     "f1": {
+      "slab": 0.286,
+      "door": 1.0,
+      "stair": 1.0,
+      "railing": 0.0,
+      "beam": 0.667,
+      "furniture": 0.0,
+      "appliance": 0.947,
+      "sanitary": 0.906,
+      "heater": 0.0,
+      "lighting": 0.727,
+      "mep": 0.706,
+      "other": 0.484
+     }
+    },
+    "note": ""
+   }
+  },
+  "secondsFeaturesModel": 30.8,
+  "secondsProbe": 3.2,
+  "bootstrap": {
+   "stacked - rules (primary)": {
+    "accuracy": {
+     "mean": 0.015,
+     "ci95": [
+      -0.0032,
+      0.0312
+     ]
+    },
+    "macroF1": {
+     "mean": -0.031,
+     "ci95": [
+      -0.0985,
+      0.0443
+     ]
+    }
+   },
+   "stacked - rules (hard)": {
+    "accuracy": {
+     "mean": -0.2334,
+     "ci95": [
+      -0.3741,
+      -0.0672
+     ]
+    },
+    "macroF1": {
+     "mean": -0.1952,
+     "ci95": [
+      -0.2806,
+      -0.0732
+     ]
+    }
+   },
+   "cascade - rules (primary)": {
+    "accuracy": {
+     "mean": 0.0228,
+     "ci95": [
+      0.0064,
+      0.0365
+     ]
+    },
+    "macroF1": {
+     "mean": 0.044,
+     "ci95": [
+      0.0128,
+      0.0834
+     ]
+    }
+   },
+   "cascade - rules (hard)": {
+    "accuracy": {
+     "mean": -0.0767,
+     "ci95": [
+      -0.1333,
+      -0.0224
+     ]
+    },
+    "macroF1": {
+     "mean": -0.0102,
+     "ci95": [
+      -0.0643,
+      0.0505
+     ]
+    }
+   },
+   "features - box only (primary)": {
+    "accuracy": {
+     "mean": 0.1067,
+     "ci95": [
+      0.0723,
+      0.1387
+     ]
+    },
+    "macroF1": {
+     "mean": 0.1352,
+     "ci95": [
+      0.0772,
+      0.1883
+     ]
+    }
+   },
+   "features + rules without names - rules without names (primary)": {
+    "accuracy": {
+     "mean": 0.1172,
+     "ci95": [
+      0.0726,
+      0.1599
+     ]
+    },
+    "macroF1": {
+     "mean": 0.1037,
+     "ci95": [
+      0.0192,
+      0.1922
+     ]
+    }
+   },
+   "features - IFCNet zero-shot (primary)": {
+    "accuracy": {
+     "mean": 0.3471,
+     "ci95": [
+      0.2973,
+      0.4
+     ]
+    },
+    "macroF1": {
+     "mean": 0.3327,
+     "ci95": [
+      0.2722,
+      0.4084
+     ]
+    }
+   },
+   "features - DGCNN probe (primary)": {
+    "accuracy": {
+     "mean": 0.1362,
+     "ci95": [
+      0.1044,
+      0.1647
+     ]
+    },
+    "macroF1": {
+     "mean": 0.1641,
+     "ci95": [
+      0.1079,
+      0.2135
+     ]
+    }
+   },
+   "features+embedding - features (primary)": {
+    "accuracy": {
+     "mean": 0.0003,
+     "ci95": [
+      -0.0151,
+      0.0171
+     ]
+    },
+    "macroF1": {
+     "mean": -0.0329,
+     "ci95": [
+      -0.0707,
+      0.0082
+     ]
+    }
+   }
+  },
+  "rulesFallback": {
+   "primary": {
+    "n": 1624,
+    "rules": {
+     "n": 1624,
+     "accuracy": 0.5788,
+     "macroF1": 0.397,
+     "f1": {
+      "wall": 0.638,
+      "slab": 0.327,
+      "roof": 0.0,
+      "door": 0.853,
+      "window": 0.767,
+      "stair": 0.0,
+      "railing": 0.415,
+      "column": 0.635,
+      "beam": 0.649,
+      "covering": 0.0,
+      "furniture": 0.346,
+      "lighting": 0.32,
+      "mep": 0.0,
+      "space": 0.612,
+      "other": 0.392
+     }
+    },
+    "features": {
+     "n": 1624,
+     "accuracy": 0.6632,
+     "macroF1": 0.6013,
+     "f1": {
+      "wall": 0.784,
+      "slab": 0.296,
+      "roof": 0.736,
+      "door": 0.822,
+      "window": 0.792,
+      "stair": 0.899,
+      "railing": 0.642,
+      "column": 0.55,
+      "beam": 0.407,
+      "covering": 0.0,
+      "furniture": 0.686,
+      "lighting": 0.933,
+      "mep": 0.168,
+      "space": 0.952,
+      "other": 0.353
+     }
+    },
+    "featuresEmbedding": {
+     "n": 1624,
+     "accuracy": 0.6687,
+     "macroF1": 0.5384,
+     "f1": {
+      "wall": 0.821,
+      "slab": 0.281,
+      "roof": 0.729,
+      "door": 0.82,
+      "window": 0.82,
+      "stair": 0.881,
+      "railing": 0.511,
+      "column": 0.548,
+      "beam": 0.45,
+      "covering": 0.0,
+      "furniture": 0.698,
+      "lighting": 0.0,
+      "mep": 0.155,
+      "space": 0.938,
+      "other": 0.423
+     }
+    }
+   },
+   "hard": {
+    "n": 68,
+    "rules": {
+     "n": 68,
+     "accuracy": 0.2353,
+     "macroF1": 0.0713,
+     "f1": {
+      "slab": 0.167,
+      "railing": 0.0,
+      "beam": 0.0,
+      "furniture": 0.087,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.0,
+      "other": 0.459
+     }
+    },
+    "features": {
+     "n": 68,
+     "accuracy": 0.0588,
+     "macroF1": 0.0231,
+     "f1": {
+      "slab": 0.0,
+      "railing": 0.0,
+      "beam": 0.0,
+      "furniture": 0.111,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.0,
+      "other": 0.12
+     }
+    },
+    "featuresEmbedding": {
+     "n": 68,
+     "accuracy": 0.1029,
+     "macroF1": 0.0578,
+     "f1": {
+      "slab": 0.222,
+      "railing": 0.0,
+      "beam": 0.0,
+      "furniture": 0.0,
+      "appliance": 0.0,
+      "sanitary": 0.0,
+      "heater": 0.0,
+      "lighting": 0.0,
+      "mep": 0.167,
+      "other": 0.189
+     }
+    }
+   }
+  },
+  "openVariant": {
+   "train": {
+    "elements": 2256,
+    "buildings": 16
+   },
+   "test": {
+    "elements": 3529,
+    "buildings": 22
+   },
+   "featuresTrainedOnOpen": {
+    "n": 3529,
+    "accuracy": 0.6999,
+    "macroF1": 0.625,
+    "f1": {
+     "wall": 0.825,
+     "slab": 0.687,
+     "roof": 0.544,
+     "door": 0.856,
+     "window": 0.715,
+     "stair": 0.741,
+     "railing": 0.59,
+     "column": 0.753,
+     "beam": 0.498,
+     "covering": 0.697,
+     "furniture": 0.721,
+     "lighting": 0.0,
+     "mep": 0.39,
+     "space": 0.952,
+     "other": 0.407
+    }
+   },
+   "featuresCrossValidatedSameElements": {
+    "n": 3529,
+    "accuracy": 0.7535,
+    "macroF1": 0.7206,
+    "f1": {
+     "wall": 0.865,
+     "slab": 0.711,
+     "roof": 0.567,
+     "door": 0.874,
+     "window": 0.773,
+     "stair": 0.85,
+     "railing": 0.764,
+     "column": 0.794,
+     "beam": 0.533,
+     "covering": 0.669,
+     "furniture": 0.845,
+     "lighting": 0.609,
+     "mep": 0.443,
+     "space": 0.957,
+     "other": 0.556
+    }
+   },
+   "rulesSameElements": {
+    "n": 3529,
+    "accuracy": 0.8558,
+    "macroF1": 0.8291,
+    "f1": {
+     "wall": 0.871,
+     "slab": 0.979,
+     "roof": 0.918,
+     "door": 0.91,
+     "window": 0.839,
+     "stair": 0.879,
+     "railing": 0.835,
+     "column": 0.866,
+     "beam": 0.832,
+     "covering": 0.885,
+     "furniture": 0.694,
+     "lighting": 0.492,
+     "mep": 0.705,
+     "space": 0.956,
+     "other": 0.777
+    }
+   },
+   "hardSubsetNotOpen": {
+    "n": 126,
+    "accuracy": 0.1111,
+    "macroF1": 0.1158,
+    "f1": {
+     "slab": 0.105,
+     "door": 0.667,
+     "stair": 0.0,
+     "beam": 0.0,
+     "furniture": 0.069,
+     "appliance": 0.0,
+     "sanitary": 0.0,
+     "heater": 0.0,
+     "lighting": 0.0,
+     "mep": 0.162,
+     "other": 0.271
+    }
+   },
+   "hardSubsetNotOpenRules": {
+    "n": 126,
+    "accuracy": 0.6429,
+    "macroF1": 0.6281,
+    "f1": {
+     "slab": 0.267,
+     "door": 0.667,
+     "stair": 1.0,
+     "beam": 0.889,
+     "furniture": 0.095,
+     "appliance": 0.947,
+     "sanitary": 0.889,
+     "heater": 0.0,
+     "lighting": 0.8,
+     "mep": 0.732,
+     "other": 0.623
+    }
+   }
+  },
+  "modelOnnxBytes": 8829090,
+  "modelPickleBytes": 13748320
+ },
+ "taskB": {
+  "census": {
+   "furnitureClassElements": 2009,
+   "applianceClassElements": 0,
+   "furnitureClassWithSubtype": 1536,
+   "furnitureClassSubtypeByPredefined": 144,
+   "genericWithFurnitureSubtype": 574,
+   "rawBySubtype": {
+    "chair": 411,
+    "desk": 271,
+    "counter": 144,
+    "storage": 872,
+    "lamp": 65,
+    "cooking": 41,
+    "fridge": 20,
+    "dishwasher": 16,
+    "electronics": 66,
+    "laundry": 10,
+    "table": 136,
+    "seat-upholstered": 38,
+    "furniture-other": 2,
+    "bed": 18
+   },
+   "dedupBySubtype": {
+    "electronics": 25,
+    "lamp": 22,
+    "seat-upholstered": 27,
+    "storage": 266,
+    "bed": 18,
+    "chair": 55,
+    "counter": 100,
+    "table": 90,
+    "cooking": 24,
+    "desk": 24,
+    "fridge": 20,
+    "laundry": 10,
+    "dishwasher": 11,
+    "furniture-other": 2
+   },
+   "familiesBySubtype": {
+    "electronics": 14,
+    "lamp": 8,
+    "seat-upholstered": 14,
+    "storage": 119,
+    "bed": 11,
+    "chair": 22,
+    "counter": 71,
+    "table": 50,
+    "cooking": 13,
+    "desk": 10,
+    "fridge": 11,
+    "laundry": 7,
+    "dishwasher": 6,
+    "furniture-other": 2
+   },
+   "buildingsBySubtype": {
+    "electronics": 4,
+    "lamp": 2,
+    "seat-upholstered": 6,
+    "storage": 12,
+    "bed": 6,
+    "chair": 8,
+    "counter": 7,
+    "table": 9,
+    "cooking": 5,
+    "desk": 9,
+    "fridge": 5,
+    "laundry": 4,
+    "dishwasher": 4,
+    "furniture-other": 2
+   },
+   "rule": "supported when at least 15 instances (at most 3 per family) from at least 3 buildings",
+   "supported": [
+    "bed",
+    "chair",
+    "cooking",
+    "counter",
+    "desk",
+    "electronics",
+    "fridge",
+    "seat-upholstered",
+    "storage",
+    "table"
+   ]
+  },
+  "n": 649,
+  "buildings": 19,
+  "labels": [
+   "bed",
+   "chair",
+   "cooking",
+   "counter",
+   "desk",
+   "electronics",
+   "fridge",
+   "seat-upholstered",
+   "storage",
+   "table"
+  ],
+  "byPredefined": 3,
+  "methods": {
+   "majority class": {
+    "n": 649,
+    "accuracy": 0.4099,
+    "macroF1": 0.0581,
+    "f1": {
+     "bed": 0.0,
+     "chair": 0.0,
+     "cooking": 0.0,
+     "counter": 0.0,
+     "desk": 0.0,
+     "electronics": 0.0,
+     "fridge": 0.0,
+     "seat-upholstered": 0.0,
+     "storage": 0.581,
+     "table": 0.0
+    }
+   },
+   "features box (HGB)": {
+    "n": 649,
+    "accuracy": 0.7088,
+    "macroF1": 0.5921,
+    "f1": {
+     "bed": 0.895,
+     "chair": 0.457,
+     "cooking": 0.0,
+     "counter": 0.796,
+     "desk": 0.714,
+     "electronics": 0.6,
+     "fridge": 0.809,
+     "seat-upholstered": 0.208,
+     "storage": 0.821,
+     "table": 0.621
+    }
+   },
+   "features box+mesh (HGB)": {
+    "n": 649,
+    "accuracy": 0.7411,
+    "macroF1": 0.6142,
+    "f1": {
+     "bed": 0.865,
+     "chair": 0.611,
+     "cooking": 0.125,
+     "counter": 0.843,
+     "desk": 0.735,
+     "electronics": 0.433,
+     "fridge": 0.652,
+     "seat-upholstered": 0.364,
+     "storage": 0.859,
+     "table": 0.656
+    }
+   },
+   "features box+eigen (HGB)": {
+    "n": 649,
+    "accuracy": 0.6857,
+    "macroF1": 0.5919,
+    "f1": {
+     "bed": 0.821,
+     "chair": 0.61,
+     "cooking": 0.059,
+     "counter": 0.732,
+     "desk": 0.889,
+     "electronics": 0.378,
+     "fridge": 0.844,
+     "seat-upholstered": 0.346,
+     "storage": 0.82,
+     "table": 0.42
+    }
+   },
+   "features box+surfaces (HGB)": {
+    "n": 649,
+    "accuracy": 0.6934,
+    "macroF1": 0.5457,
+    "f1": {
+     "bed": 0.432,
+     "chair": 0.692,
+     "cooking": 0.057,
+     "counter": 0.814,
+     "desk": 0.667,
+     "electronics": 0.254,
+     "fridge": 0.667,
+     "seat-upholstered": 0.55,
+     "storage": 0.832,
+     "table": 0.491
+    }
+   },
+   "features box+segments,voxels (HGB)": {
+    "n": 649,
+    "accuracy": 0.678,
+    "macroF1": 0.5633,
+    "f1": {
+     "bed": 0.865,
+     "chair": 0.586,
+     "cooking": 0.047,
+     "counter": 0.821,
+     "desk": 0.524,
+     "electronics": 0.474,
+     "fridge": 0.735,
+     "seat-upholstered": 0.377,
+     "storage": 0.827,
+     "table": 0.378
+    }
+   },
+   "features all (HGB)": {
+    "n": 649,
+    "accuracy": 0.7103,
+    "macroF1": 0.594,
+    "f1": {
+     "bed": 0.85,
+     "chair": 0.655,
+     "cooking": 0.154,
+     "counter": 0.849,
+     "desk": 0.528,
+     "electronics": 0.319,
+     "fridge": 0.792,
+     "seat-upholstered": 0.537,
+     "storage": 0.862,
+     "table": 0.395
+    }
+   },
+   "DGCNN linear probe (256-d)": {
+    "n": 649,
+    "accuracy": 0.6333,
+    "macroF1": 0.5154,
+    "f1": {
+     "bed": 0.667,
+     "chair": 0.561,
+     "cooking": 0.333,
+     "counter": 0.857,
+     "desk": 0.522,
+     "electronics": 0.278,
+     "fridge": 0.275,
+     "seat-upholstered": 0.49,
+     "storage": 0.764,
+     "table": 0.408
+    }
+   },
+   "features + DGCNN embedding (HGB)": {
+    "n": 649,
+    "accuracy": 0.698,
+    "macroF1": 0.5894,
+    "f1": {
+     "bed": 0.842,
+     "chair": 0.615,
+     "cooking": 0.229,
+     "counter": 0.777,
+     "desk": 0.588,
+     "electronics": 0.344,
+     "fridge": 0.744,
+     "seat-upholstered": 0.512,
+     "storage": 0.849,
+     "table": 0.395
+    }
+   }
+  },
+  "ifcnetTop1OnTheseElements": {
+   "IfcFurniture": 323,
+   "IfcSlab": 77,
+   "IfcDuctFitting": 68,
+   "IfcSanitaryTerminal": 46,
+   "IfcBeam": 35,
+   "IfcDuctSegment": 30,
+   "IfcCableCarrierSegment": 27,
+   "IfcAirTerminal": 7,
+   "IfcWall": 6,
+   "IfcDoor": 6,
+   "IfcRailing": 5,
+   "IfcValve": 5,
+   "IfcPlate": 4,
+   "IfcCableCarrierFitting": 4,
+   "IfcStair": 3,
+   "IfcSpaceHeater": 2,
+   "IfcPipeFitting": 1
+  },
+  "bootstrap": {
+   "all - box": {
+    "accuracy": {
+     "mean": -0.0046,
+     "ci95": [
+      -0.1088,
+      0.0635
+     ]
+    },
+    "macroF1": {
+     "mean": 0.0159,
+     "ci95": [
+      -0.0568,
+      0.0929
+     ]
+    }
+   },
+   "box+eigen - box": {
+    "accuracy": {
+     "mean": -0.0284,
+     "ci95": [
+      -0.1306,
+      0.0378
+     ]
+    },
+    "macroF1": {
+     "mean": 0.0138,
+     "ci95": [
+      -0.0387,
+      0.0789
+     ]
+    }
+   },
+   "all - probe": {
+    "accuracy": {
+     "mean": 0.0771,
+     "ci95": [
+      0.0226,
+      0.1353
+     ]
+    },
+    "macroF1": {
+     "mean": 0.0911,
+     "ci95": [
+      -0.0032,
+      0.2023
+     ]
+    }
+   },
+   "features+embedding - all": {
+    "accuracy": {
+     "mean": -0.0126,
+     "ci95": [
+      -0.0558,
+      0.0347
+     ]
+    },
+    "macroF1": {
+     "mean": -0.0175,
+     "ci95": [
+      -0.1484,
+      0.0581
+     ]
+    }
+   }
+  },
+  "confusionAll": {
+   "bed": {
+    "bed": 17,
+    "seat-upholstered": 1
+   },
+   "chair": {
+    "chair": 37,
+    "storage": 6,
+    "table": 5,
+    "desk": 4,
+    "cooking": 3
+   },
+   "cooking": {
+    "counter": 3,
+    "fridge": 2,
+    "desk": 1,
+    "storage": 15,
+    "cooking": 3
+   },
+   "counter": {
+    "counter": 87,
+    "electronics": 1,
+    "desk": 1,
+    "table": 5,
+    "seat-upholstered": 2,
+    "storage": 4
+   },
+   "desk": {
+    "desk": 14,
+    "chair": 3,
+    "table": 7
+   },
+   "electronics": {
+    "electronics": 11,
+    "table": 7,
+    "storage": 4,
+    "chair": 3
+   },
+   "fridge": {
+    "fridge": 19,
+    "storage": 1
+   },
+   "seat-upholstered": {
+    "seat-upholstered": 11,
+    "storage": 7,
+    "chair": 2,
+    "table": 7
+   },
+   "storage": {
+    "storage": 232,
+    "electronics": 4,
+    "table": 1,
+    "desk": 3,
+    "counter": 7,
+    "fridge": 7,
+    "chair": 6,
+    "cooking": 6
+   },
+   "table": {
+    "table": 30,
+    "electronics": 28,
+    "cooking": 3,
+    "storage": 3,
+    "bed": 5,
+    "desk": 6,
+    "counter": 8,
+    "chair": 7
+   }
+  },
+  "openVariant": {
+   "train": {
+    "elements": 145,
+    "buildings": 5,
+    "bySubtype": {
+     "desk": 9,
+     "chair": 7,
+     "counter": 43,
+     "storage": 62,
+     "seat-upholstered": 6,
+     "bed": 8,
+     "table": 10
+    }
+   },
+   "test": {
+    "elements": 500,
+    "buildings": 13,
+    "bySubtype": {
+     "electronics": 25,
+     "seat-upholstered": 21,
+     "storage": 203,
+     "bed": 8,
+     "chair": 48,
+     "counter": 57,
+     "table": 80,
+     "cooking": 24,
+     "desk": 14,
+     "fridge": 20
+    }
+   },
+   "featuresTrainedOnOpen": {
+    "n": 500,
+    "accuracy": 0.53,
+    "macroF1": 0.24,
+    "f1": {
+     "bed": 0.0,
+     "chair": 0.175,
+     "cooking": 0.0,
+     "counter": 0.787,
+     "desk": 0.359,
+     "electronics": 0.0,
+     "fridge": 0.0,
+     "seat-upholstered": 0.0,
+     "storage": 0.763,
+     "table": 0.316
+    }
+   },
+   "featuresCrossValidatedSameElements": {
+    "n": 500,
+    "accuracy": 0.67,
+    "macroF1": 0.5775,
+    "f1": {
+     "bed": 0.762,
+     "chair": 0.712,
+     "cooking": 0.182,
+     "counter": 0.739,
+     "desk": 0.432,
+     "electronics": 0.319,
+     "fridge": 0.792,
+     "seat-upholstered": 0.647,
+     "storage": 0.841,
+     "table": 0.349
+    }
+   },
+   "labelsMissingFromOpenTraining": [
+    "cooking",
+    "electronics",
+    "fridge"
+   ]
+  },
+  "unknownFurnitureElements": 473,
+  "unknownFurniturePredicted": {
+   "desk": 85,
+   "chair": 106,
+   "table": 9,
+   "counter": 27,
+   "electronics": 2,
+   "cooking": 11,
+   "storage": 193,
+   "seat-upholstered": 16,
+   "fridge": 7,
+   "bed": 17
+  },
+  "modelPickleBytes": 2486832,
+  "modelOnnxBytes": 1362533,
+  "onnxAgreesWithSklearn": "649 of 649",
+  "onnxMsPerElementNative": 0.054
+ },
+ "dgcnnTrainingCost": {
+  "threads": 8,
+  "torch": "2.15.0+cpu",
+  "configs": [
+   {
+    "points": 2048,
+    "k": 40,
+    "batch": 16,
+    "secondsPerStep": 15.079,
+    "msPerSampleTrain": 942.4,
+    "msPerSampleInfer": 460.6
+   },
+   {
+    "points": 1024,
+    "k": 20,
+    "batch": 16,
+    "secondsPerStep": 3.336,
+    "msPerSampleTrain": 208.5,
+    "msPerSampleInfer": 99.1
+   },
+   {
+    "points": 1024,
+    "k": 20,
+    "batch": 32,
+    "secondsPerStep": 7.454,
+    "msPerSampleTrain": 232.9,
+    "msPerSampleInfer": 106.1
+   }
+  ]
+ },
+ "reextraction": {
+  "sameRecords": true,
+  "maxFeatureDifference": 0.0,
+  "sameRuleAnswers": 13536,
+  "sameSubtypes": 13536,
+  "timing": {
+   "n": 13536,
+   "medianMs": 5.926599999998871,
+   "p90Ms": 8.454299999997602,
+   "p99Ms": 14.802500000005239,
+   "maxMs": 122.2606999999989,
+   "meanMs": 6.289718520981004
+  },
+  "note": "second extraction, run while the pilot's model fitting used 15 threads"
+ },
+ "ignitionNameMatches": {
+  "note": "elements of features.json (the benchmark's sample and every furniture element) whose Name or ObjectType matches a scenario",
+  "byScenario": {
+   "extension-lead": {
+    "elements": 82,
+    "models": 1
+   },
+   "waste-bin-workstation": {
+    "elements": 74,
+    "models": 7
+   },
+   "cooking-range": {
+    "elements": 33,
+    "models": 3
+   },
+   "smoking-upholstery": {
+    "elements": 31,
+    "models": 7
+   },
+   "electrical-distribution": {
+    "elements": 26,
+    "models": 2
+   },
+   "tv-electronics": {
+    "elements": 25,
+    "models": 4
+   },
+   "smoking-bedding": {
+    "elements": 18,
+    "models": 7
+   },
+   "refrigerator-freezer": {
+    "elements": 17,
+    "models": 4
+   },
+   "washing-machine": {
+    "elements": 9,
+    "models": 3
+   },
+   "dishwasher": {
+    "elements": 7,
+    "models": 2
+   },
+   "li-ion-micromobility": {
+    "elements": 2,
+    "models": 1
+   },
+   "clothes-dryer": {
+    "elements": 1,
+    "models": 1
+   },
+   "heating-stove-fireplace": {
+    "elements": 1,
+    "models": 1
+   }
+  }
+ },
+ "literatureSearch": {
+  "date": "2026-11-05",
+  "queriesByDatabase": {
+   "ax": 15,
+   "cr": 45,
+   "oa": 35
+  },
+  "note": "OpenAlex: title_and_abstract.search, 2015-2026, top 25 screened; Crossref: query.bibliographic from 2015, top 20 screened (its totals are loose relevance counts); arXiv export API, top 25 screened. Retries of failed queries are counted once.",
+  "queries": [
+   {
+    "id": "X1",
+    "database": "ax",
+    "query": "all:IFC AND all:classification AND all:BIM",
+    "hits": "1"
+   },
+   {
+    "id": "X10",
+    "database": "ax",
+    "query": "abs:\"semantic enrichment\" AND abs:BIM",
+    "hits": "4"
+   },
+   {
+    "id": "X11",
+    "database": "ax",
+    "query": "abs:\"fire load\"",
+    "hits": "0"
+   },
+   {
+    "id": "X12",
+    "database": "ax",
+    "query": "abs:furniture AND abs:fire",
+    "hits": "1"
+   },
+   {
+    "id": "X13",
+    "database": "ax",
+    "query": "abs:\"fuel load\" AND abs:indoor",
+    "hits": "0"
+   },
+   {
+    "id": "X14",
+    "database": "ax",
+    "query": "abs:BIM AND abs:\"large language model\" AND abs:classification",
+    "hits": "0"
+   },
+   {
+    "id": "X15",
+    "database": "ax",
+    "query": "abs:IFC AND abs:semantic AND abs:geometry",
+    "hits": "9"
+   },
+   {
+    "id": "X2",
+    "database": "ax",
+    "query": "abs:BIM AND abs:classification",
+    "hits": "18"
+   },
+   {
+    "id": "X3",
+    "database": "ax",
+    "query": "abs:\"building information model\" AND abs:classification",
+    "hits": "5"
+   },
+   {
+    "id": "X4",
+    "database": "ax",
+    "query": "abs:BIM AND abs:furniture",
+    "hits": "5"
+   },
+   {
+    "id": "X5",
+    "database": "ax",
+    "query": "abs:IFC AND abs:\"language model\"",
+    "hits": "12"
+   },
+   {
+    "id": "X6",
+    "database": "ax",
+    "query": "abs:BIM AND abs:fire",
+    "hits": "4"
+   },
+   {
+    "id": "X7",
+    "database": "ax",
+    "query": "abs:\"fire load\" AND abs:building",
+    "hits": "0"
+   },
+   {
+    "id": "X8",
+    "database": "ax",
+    "query": "abs:IFC AND abs:\"point cloud\"",
+    "hits": "6"
+   },
+   {
+    "id": "X9",
+    "database": "ax",
+    "query": "abs:IFC AND abs:classification",
+    "hits": "4"
+   },
+   {
+    "id": "R1",
+    "database": "cr",
+    "query": "IFCNet benchmark dataset IFC entity classification",
+    "hits": "601001"
+   },
+   {
+    "id": "R10",
+    "database": "cr",
+    "query": "fire load density estimation building information modelling",
+    "hits": "3041426"
+   },
+   {
+    "id": "R11",
+    "database": "cr",
+    "query": "furniture classification building information modeling machine learning",
+    "hits": "5087623"
+   },
+   {
+    "id": "R12",
+    "database": "cr",
+    "query": "Revit family object classification machine learning",
+    "hits": "3167570"
+   },
+   {
+    "id": "R13",
+    "database": "cr",
+    "query": "fire load survey computer vision deep learning",
+    "hits": "4317474"
+   },
+   {
+    "id": "R14",
+    "database": "cr",
+    "query": "BIM-based automated fire load calculation",
+    "hits": "5279827"
+   },
+   {
+    "id": "R15",
+    "database": "cr",
+    "query": "web-based browser machine learning IFC BIM classification",
+    "hits": "7247283"
+   },
+   {
+    "id": "R16",
+    "database": "cr",
+    "query": "support vector machine building elements semantic integrity BIM",
+    "hits": "1950701"
+   },
+   {
+    "id": "R17",
+    "database": "cr",
+    "query": "large language model IFC class mapping BIM elements",
+    "hits": "3728110"
+   },
+   {
+    "id": "R18",
+    "database": "cr",
+    "query": "ignition source fire hazard detection indoor objects deep learning",
+    "hits": "3886952"
+   },
+   {
+    "id": "R19",
+    "database": "cr",
+    "query": "IFC object classification property sets names text machine learning",
+    "hits": "3165246"
+   },
+   {
+    "id": "R2",
+    "database": "cr",
+    "query": "BIM furniture object classification deep learning",
+    "hits": "2904499"
+   },
+   {
+    "id": "R20",
+    "database": "cr",
+    "query": "BIM evacuation simulation furniture obstacles fire",
+    "hits": "693428"
+   },
+   {
+    "id": "R21",
+    "database": "cr",
+    "query": "automated fuel load estimation image recognition compartment fire",
+    "hits": "1861957"
+   },
+   {
+    "id": "R22",
+    "database": "cr",
+    "query": "combustible objects detection fire risk indoor deep learning BIM",
+    "hits": "4728181"
+   },
+   {
+    "id": "R23",
+    "database": "cr",
+    "query": "IfcFurnishingElement furniture IFC",
+    "hits": "47629"
+   },
+   {
+    "id": "R24",
+    "database": "cr",
+    "query": "BIM element classification OmniClass Uniclass natural language processing",
+    "hits": "2555277"
+   },
+   {
+    "id": "R25",
+    "database": "cr",
+    "query": "BIM object classification geometry and semantic attributes random forest",
+    "hits": "1102592"
+   },
+   {
+    "id": "R26",
+    "database": "cr",
+    "query": "indoor furniture point cloud classification eigenvalue features",
+    "hits": "1194875"
+   },
+   {
+    "id": "R27",
+    "database": "cr",
+    "query": "3D shape retrieval BIM components furniture",
+    "hits": "762012"
+   },
+   {
+    "id": "R28",
+    "database": "cr",
+    "query": "fire risk assessment furniture layout building information modeling",
+    "hits": "4785482"
+   },
+   {
+    "id": "R29",
+    "database": "cr",
+    "query": "BIM element classification BERT text embedding geometry fusion",
+    "hits": "1096994"
+   },
+   {
+    "id": "R3",
+    "database": "cr",
+    "query": "IFC element classification large language model",
+    "hits": "3630475"
+   },
+   {
+    "id": "R30",
+    "database": "cr",
+    "query": "graph neural network IFC element classification",
+    "hits": "1945119"
+   },
+   {
+    "id": "R31",
+    "database": "cr",
+    "query": "Automatic fine-grained BIM element classification using multi-modal deep learning",
+    "hits": "987752"
+   },
+   {
+    "id": "R32",
+    "database": "cr",
+    "query": "GlobalIFC classification of building components in IFC model via multi-feature fusion",
+    "hits": "292958"
+   },
+   {
+    "id": "R33",
+    "database": "cr",
+    "query": "IFC building component classification mesh multi-feature fusion",
+    "hits": "2239558"
+   },
+   {
+    "id": "R34",
+    "database": "cr",
+    "query": "BIM element classification graphical and non-graphical features fusion",
+    "hits": "2139809"
+   },
+   {
+    "id": "R35",
+    "database": "cr",
+    "query": "digitized fuel load surveying methodology using machine vision",
+    "hits": "4685382"
+   },
+   {
+    "id": "R36",
+    "database": "cr",
+    "query": "automatic assessment of fuel load and fire risk via digitized database and intelligent computer vision",
+    "hits": "438155"
+   },
+   {
+    "id": "R37",
+    "database": "cr",
+    "query": "automatic classification and coding of prefabricated components using IFC and random forest",
+    "hits": "4359774"
+   },
+   {
+    "id": "R38",
+    "database": "cr",
+    "query": "IFC fire simulation interoperability fuel packages furniture",
+    "hits": "912825"
+   },
+   {
+    "id": "R39",
+    "database": "cr",
+    "query": "semantic enrichment furniture BIM fire safety",
+    "hits": "859009"
+   },
+   {
+    "id": "R4",
+    "database": "cr",
+    "query": "BIM fire load furniture",
+    "hits": "295623"
+   },
+   {
+    "id": "R40",
+    "database": "cr",
+    "query": "upholstered furniture ignition residential fire risk ranking objects",
+    "hits": "1444625"
+   },
+   {
+    "id": "R41",
+    "database": "cr",
+    "query": "semantic enrichment BIM semantic textual similarity fine-tuning multilingual large language model",
+    "hits": "237558"
+   },
+   {
+    "id": "R42",
+    "database": "cr",
+    "query": "NLP-based semantic model healing BIM embodied emissions",
+    "hits": "6719714"
+   },
+   {
+    "id": "R43",
+    "database": "cr",
+    "query": "IfcBuildingElementProxy classification machine learning",
+    "hits": "2658139"
+   },
+   {
+    "id": "R44",
+    "database": "cr",
+    "query": "assessing implicit knowledge in BIM models with machine learning Krijnen Tamke",
+    "hits": "3799631"
+   },
+   {
+    "id": "R45",
+    "database": "cr",
+    "query": "BIM object classification leave-one-project-out cross-project generalization",
+    "hits": "385437"
+   },
+   {
+    "id": "R5",
+    "database": "cr",
+    "query": "ignition source identification building information model",
+    "hits": "4467636"
+   },
+   {
+    "id": "R6",
+    "database": "cr",
+    "query": "BIM fire risk assessment",
+    "hits": "2246257"
+   },
+   {
+    "id": "R7",
+    "database": "cr",
+    "query": "eigenvalue geometric features BIM element classification",
+    "hits": "950538"
+   },
+   {
+    "id": "R8",
+    "database": "cr",
+    "query": "multimodal IFC element classification text geometry",
+    "hits": "952466"
+   },
+   {
+    "id": "R9",
+    "database": "cr",
+    "query": "BIM object classification point cloud deep learning",
+    "hits": "3284111"
+   },
+   {
+    "id": "A1",
+    "database": "oa",
+    "query": "IFC classification deep learning",
+    "hits": "42"
+   },
+   {
+    "id": "A10",
+    "database": "oa",
+    "query": "BIM element classification machine learning geometry",
+    "hits": "4"
+   },
+   {
+    "id": "A2",
+    "database": "oa",
+    "query": "BIM object classification",
+    "hits": "285"
+   },
+   {
+    "id": "A3",
+    "database": "oa",
+    "query": "IFCNet",
+    "hits": "7"
+   },
+   {
+    "id": "A4",
+    "database": "oa",
+    "query": "BIM element classification point cloud",
+    "hits": "19"
+   },
+   {
+    "id": "A5",
+    "database": "oa",
+    "query": "BIM semantic enrichment machine learning",
+    "hits": "39"
+   },
+   {
+    "id": "A6",
+    "database": "oa",
+    "query": "IFC integrity checking classification",
+    "hits": "4"
+   },
+   {
+    "id": "A7",
+    "database": "oa",
+    "query": "BIM graph neural network classification",
+    "hits": "40"
+   },
+   {
+    "id": "A8",
+    "database": "oa",
+    "query": "BIM object classification convolutional neural network",
+    "hits": "17"
+   },
+   {
+    "id": "A9",
+    "database": "oa",
+    "query": "IFC entity classification",
+    "hits": "40"
+   },
+   {
+    "id": "B1",
+    "database": "oa",
+    "query": "furniture BIM classification",
+    "hits": "11"
+   },
+   {
+    "id": "B2",
+    "database": "oa",
+    "query": "furniture point cloud BIM",
+    "hits": "25"
+   },
+   {
+    "id": "B3",
+    "database": "oa",
+    "query": "BIM object library furniture",
+    "hits": "2"
+   },
+   {
+    "id": "B4",
+    "database": "oa",
+    "query": "scan-to-BIM furniture",
+    "hits": "18"
+   },
+   {
+    "id": "C1",
+    "database": "oa",
+    "query": "IFC large language model classification",
+    "hits": "11"
+   },
+   {
+    "id": "C2",
+    "database": "oa",
+    "query": "BIM element classification natural language processing",
+    "hits": "2"
+   },
+   {
+    "id": "C3",
+    "database": "oa",
+    "query": "multimodal BIM element classification",
+    "hits": "2"
+   },
+   {
+    "id": "C4",
+    "database": "oa",
+    "query": "IFC semantic geometric features classification",
+    "hits": "9"
+   },
+   {
+    "id": "D1",
+    "database": "oa",
+    "query": "eigenvalue features BIM",
+    "hits": "1"
+   },
+   {
+    "id": "D2",
+    "database": "oa",
+    "query": "geometric features IFC element classification",
+    "hits": "6"
+   },
+   {
+    "id": "D3",
+    "database": "oa",
+    "query": "shape descriptors BIM object",
+    "hits": "2"
+   },
+   {
+    "id": "E1",
+    "database": "oa",
+    "query": "BIM fire risk assessment",
+    "hits": "47"
+   },
+   {
+    "id": "E2",
+    "database": "oa",
+    "query": "ignition source BIM",
+    "hits": "4"
+   },
+   {
+    "id": "E3",
+    "database": "oa",
+    "query": "fire load BIM",
+    "hits": "37"
+   },
+   {
+    "id": "E4",
+    "database": "oa",
+    "query": "fuel load building information model",
+    "hits": "151"
+   },
+   {
+    "id": "E5",
+    "database": "oa",
+    "query": "fire load survey furniture",
+    "hits": "10"
+   },
+   {
+    "id": "E6",
+    "database": "oa",
+    "query": "BIM evacuation simulation fire",
+    "hits": "137"
+   },
+   {
+    "id": "E7",
+    "database": "oa",
+    "query": "BIM fire safety compliance checking",
+    "hits": "34"
+   },
+   {
+    "id": "E8",
+    "database": "oa",
+    "query": "furniture ignition fire risk building",
+    "hits": "4"
+   },
+   {
+    "id": "F1",
+    "database": "oa",
+    "query": "IfcFurniture",
+    "hits": "0"
+   },
+   {
+    "id": "F2",
+    "database": "oa",
+    "query": "furniture classification 3D model deep learning BIM",
+    "hits": "3"
+   },
+   {
+    "id": "F3",
+    "database": "oa",
+    "query": "web-based IFC machine learning classification",
+    "hits": "2"
+   },
+   {
+    "id": "F4",
+    "database": "oa",
+    "query": "BIM object classification name property text geometry",
+    "hits": "0"
+   },
+   {
+    "id": "F5",
+    "database": "oa",
+    "query": "fire load furniture building information modelling automatic",
+    "hits": "0"
+   },
+   {
+    "id": "F6",
+    "database": "oa",
+    "query": "combustible furniture ignition source identification building",
+    "hits": "0"
+   }
+  ]
+ },
+ "doiVerification": {
+  "date": "2026-11-05",
+  "method": "each DOI resolved at Crossref (or DataCite when Crossref has no record) and at OpenAlex",
+  "resolved": 35,
+  "of": 35,
+  "dois": [
+   {
+    "doi": "10.1117/12.542536",
+    "registry": "Crossref",
+    "title": "&lt;title&gt;Context-driven automated target detection in 3D data&lt;/title&gt;",
+    "year": 2004,
+    "openalex": true
+   },
+   {
+    "doi": "10.5194/isprsarchives-XXXVIII-5-W12-97-2011",
+    "registry": "Crossref",
+    "title": "DIMENSIONALITY BASED SCALE SELECTION IN 3D LIDAR POINT CLOUDS",
+    "year": 2012,
+    "openalex": true
+   },
+   {
+    "doi": "10.5194/isprsannals-I-3-99-2012",
+    "registry": "Crossref",
+    "title": "STREAMED VERTICAL RECTANGLE DETECTION IN TERRESTRIAL LASER SCANS FOR FACADE DATABASE PRODUCTION",
+    "year": 2012,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.isprsjprs.2015.01.016",
+    "registry": "Crossref",
+    "title": "Semantic point cloud interpretation based on optimal neighborhoods, relevant features and efficient classifiers",
+    "year": 2015,
+    "openalex": true
+   },
+   {
+    "doi": "10.5194/isprs-annals-III-3-177-2016",
+    "registry": "Crossref",
+    "title": "FAST SEMANTIC SEGMENTATION OF 3D POINT CLOUDS WITH STRONGLY  VARYING DENSITY",
+    "year": 2016,
+    "openalex": true
+   },
+   {
+    "doi": "10.3390/ijgi8050213",
+    "registry": "Crossref",
+    "title": "Voxel-based 3D Point Cloud Semantic Segmentation: Unsupervised Geometric and Relationship Featuring vs Deep Learning Methods",
+    "year": 2019,
+    "openalex": true
+   },
+   {
+    "doi": "10.3390/rs10091412",
+    "registry": "Crossref",
+    "title": "3D Point Cloud Semantic Modelling: Integrated Framework for Indoor Spaces and Furniture",
+    "year": 2018,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.autcon.2022.104250",
+    "registry": "Crossref",
+    "title": "Automatic region-growing system for the segmentation of large point clouds",
+    "year": 2022,
+    "openalex": true
+   },
+   {
+    "doi": "10.48550/arXiv.2106.09712",
+    "registry": "DataCite",
+    "title": "IFCNet: A Benchmark Dataset for IFC Entity Classification",
+    "year": 2021,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.aei.2022.101641",
+    "registry": "Crossref",
+    "title": "SpaRSE-BIM: Classification of IFC-based geometry via sparse convolutional neural networks",
+    "year": 2022,
+    "openalex": true
+   },
+   {
+    "doi": "10.35490/ec3.2021.168",
+    "registry": "Crossref",
+    "title": "Assessing IFC classes with means of geometric deep learning on different graph encodings",
+    "year": 2021,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.aei.2020.101200",
+    "registry": "Crossref",
+    "title": "Automatic classification of wall and door BIM element subtypes using 3D geometric deep neural networks",
+    "year": 2021,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.autcon.2018.11.015",
+    "registry": "Crossref",
+    "title": "Using support vector machines to classify building elements for checking the semantic integrity of building information models",
+    "year": 2019,
+    "openalex": true
+   },
+   {
+    "doi": "10.1061/(asce)cp.1943-5487.0001012",
+    "registry": "Crossref",
+    "title": "Constructing Invariant Signatures for AEC Objects to Support BIM-Based Analysis Automation through Object Classification",
+    "year": 2022,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.aei.2024.102503",
+    "registry": "Crossref",
+    "title": "Classification of architectural and MEP BIM objects for building performance evaluation",
+    "year": 2024,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.aei.2024.102458",
+    "registry": "Crossref",
+    "title": "Automatic Fine-Grained BIM element classification using Multi-Modal deep learning (MMDL)",
+    "year": 2024,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.aei.2026.105040",
+    "registry": "Crossref",
+    "title": "Tri-modal unified representation–driven IFC element classification",
+    "year": 2026,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.autcon.2025.106660",
+    "registry": "Crossref",
+    "title": "Lightweight framework for IFC element classification using multi-view and heterogeneous graph with decision-level fusion",
+    "year": 2026,
+    "openalex": true
+   },
+   {
+    "doi": "10.1145/3746027.3758238",
+    "registry": "Crossref",
+    "title": "BIMCompNet: Multimodal Dataset for Geometric Deep Learning in Building Information Model",
+    "year": 2025,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.autcon.2026.107075",
+    "registry": "Crossref",
+    "title": "Self-supervised learning for BIM element classification using a joint embedding predictive architecture",
+    "year": 2026,
+    "openalex": true
+   },
+   {
+    "doi": "10.1109/access.2024.3436681",
+    "registry": "Crossref",
+    "title": "Comparative Evaluation of Deep Neural Network Performance for Point Cloud-Based IFC Object Classification",
+    "year": 2024,
+    "openalex": true
+   },
+   {
+    "doi": "10.3390/buildings15132347",
+    "registry": "Crossref",
+    "title": "Automatic Classification of BIM Object Based on IFC Data Using the Uniclass Classification Standard",
+    "year": 2025,
+    "openalex": true
+   },
+   {
+    "doi": "10.3390/buildings14020527",
+    "registry": "Crossref",
+    "title": "Incorporating Context into BIM-Derived Data—Leveraging Graph Neural Networks for Building Element Classification",
+    "year": 2024,
+    "openalex": true
+   },
+   {
+    "doi": "10.1061/(asce)cp.1943-5487.0001039",
+    "registry": "Crossref",
+    "title": "Exploiting BIM Objects for Synthetic Data Generation toward Indoor Point Cloud Classification Using Deep Learning",
+    "year": 2022,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.psep.2025.107031",
+    "registry": "Crossref",
+    "title": "Automatic assessment of fuel load and fire risk via digitized database and intelligent computer vision",
+    "year": 2025,
+    "openalex": true
+   },
+   {
+    "doi": "10.1007/s10694-020-00989-9",
+    "registry": "Crossref",
+    "title": "A Digitized Fuel Load Surveying Methodology Using Machine Vision",
+    "year": 2020,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.ress.2026.113173",
+    "registry": "Crossref",
+    "title": "Fire evacuation design optimization of public buildings based on building information modeling semantic enrichment for fire simulation requirements",
+    "year": 2027,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.dibe.2026.100869",
+    "registry": "Crossref",
+    "title": "From image to fire safety: An image-driven framework for as-is BIM reconstruction and fire risk assessment of existing buildings via semantic guidance",
+    "year": 2026,
+    "openalex": true
+   },
+   {
+    "doi": "10.3390/buildings16132655",
+    "registry": "Crossref",
+    "title": "Fire Hazard Identification in Large-Scale 4-Dimensional Building Information Models: A Voxelization-Based Approach",
+    "year": 2026,
+    "openalex": true
+   },
+   {
+    "doi": "10.1016/j.jobe.2024.110312",
+    "registry": "Crossref",
+    "title": "Semantic enrichment for BIM-based building energy performance simulations using semantic textual similarity and fine-tuning multilingual LLM",
+    "year": 2024,
+    "openalex": true
+   },
+   {
+    "doi": "10.1007/978-3-031-25082-8_23",
+    "registry": "Crossref",
+    "title": "A Geometric-Relational Deep Learning Framework for BIM Object Classification",
+    "year": 2023,
+    "openalex": true
+   },
+   {
+    "doi": "10.2312/3dor.20211306",
+    "registry": "DataCite",
+    "title": "Shape Classification of Building Information Models using Neural Networks",
+    "year": 2021,
+    "openalex": true
+   },
+   {
+    "doi": "10.7910/DVN/YK86XK",
+    "registry": "DataCite",
+    "title": "BIMGEOM",
+    "year": 2021,
+    "openalex": true
+   },
+   {
+    "doi": "10.48550/arXiv.2212.08051",
+    "registry": "DataCite",
+    "title": "Objaverse: A Universe of Annotated 3D Objects",
+    "year": 2022,
+    "openalex": true
+   },
+   {
+    "doi": "10.1109/iccv48922.2021.01023",
+    "registry": "Crossref",
+    "title": "BuildingNet: Learning to Label 3D Buildings",
+    "year": 2021,
+    "openalex": true
+   }
+  ]
+ }
+}
