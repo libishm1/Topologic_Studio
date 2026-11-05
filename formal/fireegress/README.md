@@ -240,6 +240,37 @@ first six batches, 284 in AxiomCheck.lean: the original 11, the 270 of this batc
 (`axioms-all-2026-11-05.txt`: the build log's prints followed by AxiomCheck.lean's output), no
 `sorry`, no warnings.
 
+## Eighth batch: the shielded learned escape (2026-11-05)
+
+SafeEscape.lean (33 results) proves the claims of `rlSafe.js`, the learned escape that replaces the
+tabular Q-learning of `rl.js` in the study [wiki/research/rl-egress-study-2026-11-05.md](../../wiki/research/rl-egress-study-2026-11-05.md).
+The model is the code's: one open link per step, a move at step `t` into `w` safe when it arrives
+at `t + 1 ≤ opn w` (`openUntil`), exits terminal, a step limit `H`; `Esc G t v k` is an escape of
+exactly `k` moves from `v` at step `t`. Property tests in `rlSafe.test.mjs` check the same
+statements against the code.
+
+| Part | What is proved | What is not covered |
+|---|---|---|
+| Value iteration (`escapeValues`) | Backward induction on the time-expanded graph is the earliest safe escape: a lower bound on every escape, each finite value attained, `⊤` exactly when none is left (`bi_spec`, `vi_le`, `vi_esc`, `vi_top_iff`, `vi_eq_earliest`); leaving later never escapes sooner (`esc_mono`, `val_mono_time`). | The breadth-first `earliestSafeEscape` as a program (it is `GraphNumerics.L7_bfs_layer_eq_earliest` for one target). |
+| Deadline map (`hopDeadlines`) | Any solution of the max-min recursion `D x = opn x`, `D v = max (-1) (min (opn v) (max_w D w - 1))` satisfies `t ≤ D v` iff `v` can be entered at `t` with an escape left (`deadline_iff`), so the recursion has one solution, the deadline. | The bucket label-setting that computes it; the tests check the code's output against the recursion. |
+| Shield (moves with `t + 1 ≤ D w`) | An allowed move is safe on arrival and keeps an escape; a move is masked only if no escape goes through it; some move is allowed until an exit; every walk inside the shield from a start with an escape reaches an exit by `H`, entering every node before it closes, however its moves are chosen (`shield_iff`, `shield_safe`, `shield_keeps`, `shield_complete`, `shield_nonempty`, `shield_reaches_exit`). | A fire that is not known in advance: the shield is as safe as the forecast. |
+| Learner (`learnSafeEscape`) | A consistent potential (the fire-free or the deadline-restricted hop distance) is admissible (`consistent_admissible`); the learning real-time search update and `StepTable`'s sharing of a bound with every later step keep the table admissible (`lrta_admissible`, `raise_admissible`); a safe walk to an exit no longer than an admissible start value is an earliest escape (`walk_esc`, `certificate_optimal`); a trial that changes no value passes that test (`trial_no_change`); tables that only rise below a bound change finitely often (`bounded_raises`); initialising with a potential is shaping the costs (`potential_init_eq_shaping`, after Wiewiora 2003). | The number of trials on a given building (measured in the study, not bounded usefully here); the tie-breaking by fire-free metres. |
+| Counterexamples | No policy on the node alone (the state of Jabi et al. 2019) escapes earliest from one start and at all from another (`node_policy_fails`); masking only nodes untenable on arrival can trap the agent while an escape exists, and the deadline shield masks the trapping move (`arrival_mask_traps`, `G3_no_escape_from_p`); with `rl.js`'s reward (+10, -0.1 per median link, gamma 0.99) an escape of 122 moves returns less than staying inside on short links until the step limit (`legacy_reward_prefers_staying`), as the study measured on one corpus model. | The unfolding lemmas `bi_exit`, `bi_zero`, `bi_succ` are counted among the 33. |
+
+What the proofs found. Formalising corrected one claim of the first draft of `rlSafe.js`:
+pruning the value table at a node's deadline does not leave `NEVER` at every pruned state (a
+node past its closing step can still have an escape in the table); it leaves every value that is
+read unchanged, which is what the code needs and what its header now says. A shield that masks
+only nodes untenable on arrival, one of the candidates the study started from, is not enough
+(`arrival_mask_traps`), and the shipped reward's optimum need not escape
+(`legacy_reward_prefers_staying`).
+
+Full build on 2026-11-05 after this batch: 28 modules, 1297 theorems and lemmas, 1284 of them with
+an axiom print (967 in the modules of the first six batches, 317 in AxiomCheck.lean: the original
+11, the seventh batch's 270, the ducts' 3 and this batch's 33), every one on Lean's standard axioms
+or none (`axioms-all-2026-11-05.txt`, regenerated from this build's log and AxiomCheck.lean's
+output, with every earlier line kept in order), no `sorry`, no warnings.
+
 ## Building
 
 Lake caches are gigabytes, so build outside OneDrive. Keep the working copy
