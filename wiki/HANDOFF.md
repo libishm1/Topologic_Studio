@@ -7,12 +7,12 @@
 
 ## Resume here (2026-11-05)
 
-Committed and passing: everything through 7df6041. Uncommitted in the worktree, by owner:
+Committed and passing: everything through 0e06fab (187 tests). Uncommitted in the worktree, by owner:
 
-- WebGPU port of the Flamescapes solver (background agent): `src/core/flamescapesGpu.js`, `src/core/flamescapesGpu/`, `tools/flamescapes-gpu-check.mjs`. The worker already loads `createGpuRunner` from `flamescapesGpu.js` when the browser offers WebGPU and falls back to the CPU otherwise. Done means: it mirrors the CPU solver (solid-aware advection, `keep`, the same frame format), agrees with the CPU on a small scene within stated tolerances, and has per-step timings against the CPU at matched grids. Review the diff before committing.
+- WebGPU port: done and committed (a3093a7). Check it with `node tools/flamescapes-gpu-check.mjs --quick --phase onestep` after any change to `flamescapes.js`; every solver change needs the same change in `flamescapesGpu/kernels.js`. Open: a GPU lost mid-run ends the run with a message to switch to the CPU, rather than rerunning on the CPU by itself.
 - IFC object identification study (background agent): `tools/identify-bench.mjs`, `tools/identify-ifcnet.py`, `src/core/identify.js`, `src/core/identifyGeometry.js`, `src/workers/identify.worker.js`. The brief: survey what can be packaged as browser ONNX (IFCNet, RWTH-E3D/ifcnet-models, MIT code with pretrained MVCNN, DGCNN and MeshNet), port the best one after checking the weights' and dataset's terms, optimise it (quantisation, input size, WASM or WebGPU), and benchmark it against rules, text embeddings and a small LLM (Qwen2.5-0.5B-Instruct through Transformers.js) on the same labelled elements for accuracy, latency and download size. Outputs: `wiki/research/ifc-identification-benchmark-2026-11-05.md`, `benchmark/results/2026-11-05-identify.json`. Weights with unstated terms stay out of the public build. An in-browser IFC description (LLM, lazy and grounded on the parsed facts) depends on its outcome. Watch for bloat: nothing loads until asked for.
-- Docs, mine: `README.md` (Flamescapes rows, "What burns first", the limits bullet, the tests table, credits) and `tools/readme-shots.mjs` (a `flamescapes` job). Still to add: the embers-indoors result (the Duplex fire throws embers but lights no spot fire in 120 s), class L in the Methods card, the GPU wording once the port lands, and a Flamescapes screenshot.
-- `benchmark/results/2026-11-05-fire.json`: its timings were taken while agents ran (55 to 65 ms per step against 32 to 38 ms on a quiet machine). Re-run `node tools/fire-bench.mjs` on a quiet machine before committing.
+- Docs: committed (0e06fab). Still to do: a Flamescapes screenshot (`node tools/readme-shots.mjs`, job `flamescapes`).
+- `benchmark/results/2026-11-05-fire.json`: stale. Its timings were taken while agents ran, and before the burning floor, which removed about 12,000 idle flame particles (the CPU run fell from 24.7 to 9.4 s). Re-run `node tools/fire-bench.mjs` on a quiet machine and update the speed lines here and in the README.
 - Scrub the third-party local paths from `Code01.ipynb` before it is ever committed.
 
 Then: the gates, fast-forward `origin/main`, the live check, and update this file.
