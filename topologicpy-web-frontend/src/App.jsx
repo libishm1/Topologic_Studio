@@ -1336,7 +1336,19 @@ export default function App() {
       let frames = null;
       if (isFlamescapes(fireModel)) {
         const run = runCombustion();
-        const done = await run.promise;
+        let done;
+        try {
+          done = await run.promise;
+        } catch (error) {
+          // The run was stopped (Stop, or a newer run): this plan ends
+          // with it rather than waiting for ever.
+          if (isCancelled(error) && gen === planGenRef.current) {
+            planRunningRef.current = false;
+            studio.setForecastPlan(NO_PLAN);
+            return;
+          }
+          throw error;
+        }
         if (gen !== planGenRef.current) return;
         frames = {
           n: done.n,
@@ -1408,6 +1420,15 @@ export default function App() {
       reportError(error, "Planning with the forecast failed");
     }
   }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes, fireModel, zoneInputs, runCombustion]);
+
+  // A Flamescapes run belongs to the graph it was made on: a new graph ends
+  // it and lets its frames go.
+  useEffect(() => {
+    if (combustionRef.current && combustionRef.current.graph !== graph) {
+      if (!combustionRef.current.done) flamescapesRef.current?.cancel();
+      combustionRef.current = null;
+    }
+  }, [graph]);
 
   // Switching a Flamescapes run between heat and smoke redraws the frame on
   // screen, also once the run has ended.

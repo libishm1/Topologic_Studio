@@ -35,7 +35,7 @@
  *     step's start (m <- m exp(-k dt), never below zero), and every two-body
  *     heat exchange is the exact relaxation of the pair (energy conserved, no
  *     overshoot). The paper's explicit forms are the first-order expansions
- *     of these (formal/fireegress/FireEgress/Flamescapes.lean).
+ *     of these (formal/fireegress/FireEgress/FlamescapesPort.lean).
  *   - Radiation is attenuated deterministically along each ray (it keeps the
  *     fraction exp(-kappa Y_r l) of its energy per cell, the paper's
  *     absorption probability as an expected value), with a fixed number of
@@ -109,7 +109,8 @@ export const DEFAULTS = Object.freeze({
   sootAbsorption: 500, // the paper's residual absorption coefficient kappa
   vorticity: 10, // confinement strength
   porousVelocity: 0.5, // velocity multiplier in porous cells
-  projection: 30, // red-black Gauss-Seidel sweeps
+  projection: 30, // red-black Gauss-Seidel sweeps at most
+  projectionTolerance: 1e-3, // m/s: stop sweeping when a sweep changes the flow less
   diffusivity: 2e-5, // m^2 / s, species at ambient (Eq. 11), scaled by (T/T0)^1.75
   conductivity: 0.026, // W / (m K), gas at ambient
   emitAbove: 500, // K: surfaces and gas cooler than this do not cast rays
@@ -209,7 +210,12 @@ export function stoichiometry(fuel) {
   const co = fuel.yields.co;
   const soot = fuel.yields.soot;
   const ash = fuel.ash ?? 0; // solid oxide that stays out of the gas
-  const h2o = Math.max(0, 1 + o2 - co2 - co - soot - ash);
+  // Water closes the balance; yields that leave none to close it with would
+  // create mass (FlamescapesPort: addProducts conserves mass only then).
+  if (co2 + co + soot + ash > 1 + o2 + 1e-9) {
+    throw new Error(`A fuel's yields (${(co2 + co + soot + ash).toFixed(3)} kg per kg) exceed the fuel and its oxygen (${(1 + o2).toFixed(3)}).`);
+  }
+  const h2o = 1 + o2 - co2 - co - soot - ash;
   return { o2, co2, co, soot, h2o, ash, heat: fuel.heatOfCombustion };
 }
 
@@ -671,6 +677,13 @@ function march(sim, x, y, z, dir, energy, from, skipOwn) {
       return;
     }
   }
+  // Out of reach (or below the cut-off): what the ray still carries is
+  // absorbed in the gas cell it ended in, so no energy is lost.
+  if (left > 0 && i >= 0 && j >= 0 && k >= 0 && i < g.nx && j < g.ny && k < g.nz) {
+    const c = at(g, i, j, k);
+    if (sim.kind[c] === GAS) sim.T[c] += left / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
+    else sim.Ts[c] += left / Math.max(solidCapacity(sim, c), 1e-6);
+  }
 }
 
 // ------------------------------------------------------------- gas phase
@@ -681,50 +694,75 @@ function advect(sim, dt) {
   const { nx, ny, nz, h } = g;
   const s = dt / h;
   const vel = [0, 0, 0];
+  const pos = [0, 0, 0];
   // The back-trace reads the velocity of the step's start, not the faces
   // being overwritten.
   const u = sim.u.slice(), v = sim.v.slice(), w = sim.w.slice();
   const old = { u, v, w };
+  // Midpoint (RK2) back-trace in cell units, into `pos` (no allocation).
   const back = (x, y, z) => {
-    // Midpoint (RK2) back-trace in cell units.
     velocityAt(sim, x, y, z, vel, old);
     const mx = x - 0.5 * s * vel[0], my = y - 0.5 * s * vel[1], mz = z - 0.5 * s * vel[2];
     velocityAt(sim, mx, my, mz, vel, old);
-    return [x - s * vel[0], y - s * vel[1], z - s * vel[2]];
+    pos[0] = x - s * vel[0];
+    pos[1] = y - s * vel[1];
+    pos[2] = z - s * vel[2];
   };
   const T = sim.T.slice(), Y = sim.Y.slice();
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i <= nx; i += 1) {
-        const [x, y, z] = back(i, j + 0.5, k + 0.5);
-        sim.u[uAt(g, i, j, k)] = sampleFace(u, nx + 1, ny, nz, x, y - 0.5, z - 0.5);
+        back(i, j + 0.5, k + 0.5);
+        sim.u[uAt(g, i, j, k)] = sampleFace(u, nx + 1, ny, nz, pos[0], pos[1] - 0.5, pos[2] - 0.5);
       }
     }
   }
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j <= ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
-        const [x, y, z] = back(i + 0.5, j, k + 0.5);
-        sim.v[vAt(g, i, j, k)] = sampleFace(v, nx, ny + 1, nz, x - 0.5, y, z - 0.5);
+        back(i + 0.5, j, k + 0.5);
+        sim.v[vAt(g, i, j, k)] = sampleFace(v, nx, ny + 1, nz, pos[0] - 0.5, pos[1], pos[2] - 0.5);
       }
     }
   }
   for (let k = 0; k <= nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
-        const [x, y, z] = back(i + 0.5, j + 0.5, k);
-        sim.w[wAt(g, i, j, k)] = sampleFace(w, nx, ny, nz + 1, x - 0.5, y - 0.5, z);
+        back(i + 0.5, j + 0.5, k);
+        sim.w[wAt(g, i, j, k)] = sampleFace(w, nx, ny, nz + 1, pos[0] - 0.5, pos[1] - 0.5, pos[2]);
       }
     }
   }
+  // Temperature and the six species share one back-trace and one set of
+  // trilinear weights per cell (as sampleCell computes them).
+  const sx = 1, sy = nx, sz = nx * ny;
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
         const c = at(g, i, j, k);
         if (sim.kind[c] === SOLID) continue;
-        const [x, y, z] = back(i + 0.5, j + 0.5, k + 0.5);
-        sim.T[c] = sampleCell(g, T, x, y, z);
-        for (let q = 0; q < NS; q += 1) sim.Y[c * NS + q] = sampleCell(g, Y, x, y, z, NS, q);
+        back(i + 0.5, j + 0.5, k + 0.5);
+        const x = Math.min(Math.max(pos[0] - 0.5, 0), nx - 1.001);
+        const y = Math.min(Math.max(pos[1] - 0.5, 0), ny - 1.001);
+        const z = Math.min(Math.max(pos[2] - 0.5, 0), nz - 1.001);
+        const i0 = Math.floor(x), j0 = Math.floor(y), k0 = Math.floor(z);
+        const fx = x - i0, fy = y - j0, fz = z - k0;
+        const di = i0 + 1 < nx ? sx : 0, dj = j0 + 1 < ny ? sy : 0, dk = k0 + 1 < nz ? sz : 0;
+        const b = i0 + nx * (j0 + ny * k0);
+        const w000 = (1 - fx) * (1 - fy) * (1 - fz), w100 = fx * (1 - fy) * (1 - fz);
+        const w010 = (1 - fx) * fy * (1 - fz), w110 = fx * fy * (1 - fz);
+        const w001 = (1 - fx) * (1 - fy) * fz, w101 = fx * (1 - fy) * fz;
+        const w011 = (1 - fx) * fy * fz, w111 = fx * fy * fz;
+        const c000 = b, c100 = b + di, c010 = b + dj, c110 = b + dj + di;
+        const c001 = b + dk, c101 = b + dk + di, c011 = b + dk + dj, c111 = b + dk + dj + di;
+        sim.T[c] =
+          w000 * T[c000] + w100 * T[c100] + w010 * T[c010] + w110 * T[c110] +
+          w001 * T[c001] + w101 * T[c101] + w011 * T[c011] + w111 * T[c111];
+        for (let q = 0; q < NS; q += 1) {
+          sim.Y[c * NS + q] =
+            w000 * Y[c000 * NS + q] + w100 * Y[c100 * NS + q] + w010 * Y[c010 * NS + q] + w110 * Y[c110 * NS + q] +
+            w001 * Y[c001 * NS + q] + w101 * Y[c101 * NS + q] + w011 * Y[c011 * NS + q] + w111 * Y[c111 * NS + q];
+        }
       }
     }
   }
@@ -818,18 +856,27 @@ function diffuse(sim, dt) {
   const T = sim.T.slice();
   const topo = topology(sim);
   const off = topo.offsets;
+  // rho D per open cell; a face takes the mean of its two cells, so the
+  // species mass flux rho D (Y_n - Y_c) / h is the same seen from both sides
+  // (FlamescapesPort: diffusion conserves each species).
+  const rhoD = sim.scratchRhoD && sim.scratchRhoD.length === sim.N ? sim.scratchRhoD : (sim.scratchRhoD = new Float64Array(sim.N));
+  for (const list of topo.colours) {
+    for (let q = 0; q < list.length; q += 1) {
+      const c = list[q];
+      rhoD[c] = sim.rho[c] * P.diffusivity * Math.pow(T[c] / P.ambient, 1.75);
+    }
+  }
   for (const list of topo.colours) {
     for (let q = 0; q < list.length; q += 1) {
       const c = list[q];
       const mask = topo.mask[c];
       if (!mask) continue;
-      const D = P.diffusivity * Math.pow(T[c] / P.ambient, 1.75);
       const alpha = P.conductivity / (sim.rho[c] * mixtureCp(Y, c * NS));
-      const lamD = Math.min((D * dt) / (h * h), 1 / 7);
       const lamT = Math.min((alpha * dt) / (h * h), 1 / 7);
       for (let d = 0; d < 6; d += 1) {
         if (!(mask & (1 << d))) continue;
         const n = c + off[d];
+        const lamD = Math.min((0.5 * (rhoD[c] + rhoD[n]) * dt) / (sim.rho[c] * h * h), 1 / 7);
         for (let s2 = 0; s2 < NS; s2 += 1) sim.Y[c * NS + s2] += lamD * (Y[n * NS + s2] - Y[c * NS + s2]);
         sim.T[c] += lamT * (T[n] - T[c]);
       }
@@ -894,7 +941,7 @@ function chemistry(sim, dt) {
           const dv = Math.min(skin0, (C * (sim.Ts[c] - fuel.liquid.boiling)) / fuel.liquid.latent);
           if (dv > 0) {
             sim.fuelMass[c] -= dv;
-            sim.Ts[c] = fuel.liquid.boiling;
+            sim.Ts[c] -= (dv * fuel.liquid.latent) / C;
             addGas(sim, gcell, SPECIES.FUEL, dv);
             sim.fuelVapourKind ??= new Uint8Array(sim.N);
             sim.fuelVapourKind[gcell] = sim.fuelKind[c];
@@ -921,6 +968,8 @@ function chemistry(sim, dt) {
       const dPy = Math.max(0, skin - dOx) * (1 - survives(kp, dt));
       if (dOx > 0) {
         sim.fuelMass[c] -= dOx;
+        // A metal's oxide stays as ash (MgO, about 900 J/(kg K)).
+        if (st.ash > 0) sim.inertC[c] += st.ash * dOx * 900;
         const heat = dOx * st.heat;
         sim.Ts[c] += heat / Math.max(solidCapacity(sim, c), 1e-6);
         addProducts(sim, gcell, st, dOx);
@@ -1206,7 +1255,13 @@ function project(sim, dt) {
   const p = sim.p;
   const topo = topology(sim);
   const off = topo.offsets;
+  // Sweeps stop early once the largest pressure change in a sweep would move
+  // the flow by less than `projectionTolerance` m/s (the pressure is kept
+  // from the last step, so a calm flow needs few).
+  const settle = (P.projectionTolerance * sim.rho0 * h) / dt;
+  sim.stats.sweeps = 0;
   for (let sweep = 0; sweep < P.projection; sweep += 1) {
+    let change = 0;
     for (const list of topo.colours) {
       for (let q = 0; q < list.length; q += 1) {
         const c = list[q];
@@ -1218,9 +1273,14 @@ function project(sim, dt) {
         if (mask & 8) sum += p[c + off[3]];
         if (mask & 16) sum += p[c + off[4]];
         if (mask & 32) sum += p[c + off[5]];
-        p[c] = (sum - scale * div[c]) / topo.count[c];
+        const next = (sum - scale * div[c]) / topo.count[c];
+        const d = Math.abs(next - p[c]);
+        if (d > change) change = d;
+        p[c] = next;
       }
     }
+    sim.stats.sweeps = sweep + 1;
+    if (sweep >= 3 && change < settle) break;
   }
   const k2 = dt / (sim.rho0 * h);
   const pr = (i, j, k) => (i < 0 || k < 0 || i >= nx || j >= ny || k >= nz || j < 0 ? 0 : p[at(g, i, j, k)]);
@@ -1298,23 +1358,40 @@ function pilot(sim, dt) {
   }
 }
 
-/** One frame of Algorithm 1. */
+/** Algorithm 1's stages in order, as [name, function(sim, dt)]. */
+const STAGES = [
+  ["pilot", pilot],
+  ["particles", particleStep],
+  ["radiation", radiation],
+  ["particleToGrid", (sim) => particleToGrid(sim)],
+  ["advect", advect],
+  ["density", (sim) => updateDensity(sim)],
+  ["buoyancy", buoyancy],
+  ["vorticity", vorticityConfinement],
+  ["diffuse", diffuse],
+  ["chemistry", chemistry],
+  ["cullFlameFront", (sim) => cullFlameFront(sim)],
+  ["conduct", conduct],
+  ["density2", (sim) => updateDensity(sim)],
+  ["boundaries", (sim) => boundaries(sim)],
+  ["project", project],
+];
+
+/**
+ * One frame of Algorithm 1. With `sim.profile` set to an object, each
+ * stage's wall time (ms) is added to sim.profile[stage].
+ */
 export function step(sim, dt = sim.P.dt) {
-  pilot(sim, dt);
-  particleStep(sim, dt);
-  radiation(sim, dt);
-  particleToGrid(sim);
-  advect(sim, dt);
-  updateDensity(sim);
-  buoyancy(sim, dt);
-  vorticityConfinement(sim, dt);
-  diffuse(sim, dt);
-  chemistry(sim, dt);
-  cullFlameFront(sim);
-  conduct(sim, dt);
-  updateDensity(sim);
-  boundaries(sim);
-  project(sim, dt);
+  const profile = sim.profile;
+  if (profile) {
+    for (const [name, fn] of STAGES) {
+      const t0 = performance.now();
+      fn(sim, dt);
+      profile[name] = (profile[name] || 0) + performance.now() - t0;
+    }
+  } else {
+    for (const [, fn] of STAGES) fn(sim, dt);
+  }
   let maxT = sim.P.ambient;
   for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] !== SOLID && sim.T[c] > maxT) maxT = sim.T[c];
   sim.stats.maxT = maxT;

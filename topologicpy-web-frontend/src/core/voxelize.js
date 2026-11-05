@@ -291,5 +291,12 @@ export function interiorFuel(grid, cells, { fireLoad = 780e6, heatOfCombustion =
     masses[q] = Math.max(0, mu + sigma * normal(random));
     total += masses[q];
   }
+  // Cutting draws at zero raises the expected total above M; rescaled, the
+  // contents hold exactly the paper's budget (Eq. 4).
+  if (total > 0) {
+    const scale = mass / total;
+    for (let q = 0; q < cells.length; q += 1) masses[q] *= scale;
+    total = mass;
+  }
   return { masses, area, energy, mass, total, mu, sigma };
 }

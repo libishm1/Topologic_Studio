@@ -197,3 +197,19 @@ test("fire classes carry what the solver and the panel need", () => {
   assert.equal(fuelsFor("nope").ignitionFuel, FIRE_CLASSES.A.fuel);
   assert.equal(fuelsFor("K").contentsFuel, FIRE_CLASSES.A.fuel);
 });
+
+test("regressions found by the Lean proofs: exact fire load, and yields that would create mass", () => {
+  // interiorFuel cut negative draws at zero and so held more than M; it is
+  // rescaled to exactly the budget (FlamescapesPort.lean).
+  const geo = room();
+  const meshes = [...geo.walls, ...geo.floors, ...geo.roofs];
+  const grid = gridFor(meshes, { cell: 0.25, margin: 2, maxCells: 1e6 });
+  const fraction = volumeFractions(grid, meshes, { rays: raysFor(grid) });
+  const cells = interiorCells(grid, fraction, { layers: 2 });
+  const fuel = interiorFuel(grid, cells, { fireLoad: 780e6, heatOfCombustion: 18e6, spread: 0.9, layers: 2 });
+  let sum = 0;
+  for (const m of fuel.masses) sum += m;
+  assert.ok(Math.abs(sum - fuel.mass) / fuel.mass < 1e-5);
+  // Products heavier than the fuel and its oxygen are refused.
+  assert.throws(() => stoichiometry({ heatOfCombustion: 13.03e6, yields: { co2: 3, co: 0, soot: 0 } }));
+});

@@ -128,10 +128,25 @@ export function buildScene(geometry, {
       }
     }
     if (ignitionCell < 0 || best > 9) {
-      const i = Math.floor(fi), j = Math.floor(fj), k = Math.floor(fk);
-      if (i >= 0 && j >= 0 && k >= 0 && i < grid.nx && j < grid.ny && k < grid.nz) {
-        const cell = i + grid.nx * (j + grid.ny * k);
-        if (!solid[cell]) ignitionCell = cell;
+      // No contents near the origin (an uncovered floor, or the origin in a
+      // wall's column of cells): the nearest open cell standing on a solid
+      // floor within 3 m, with open air above it.
+      ignitionCell = -1;
+      const reach = Math.ceil(3 / grid.h);
+      const i0 = Math.floor(fi), j0 = Math.floor(fj), k0 = Math.floor(fk);
+      let near = Infinity;
+      for (let k = Math.max(0, k0 - reach); k <= Math.min(grid.nz - 1, k0 + reach); k += 1) {
+        for (let i = Math.max(0, i0 - reach); i <= Math.min(grid.nx - 1, i0 + reach); i += 1) {
+          for (let j = Math.max(1, j0 - reach); j <= Math.min(grid.ny - 2, j0 + reach); j += 1) {
+            const cell = i + grid.nx * (j + grid.ny * k);
+            if (solid[cell] || !solid[cell - grid.nx] || solid[cell + grid.nx]) continue;
+            const d = (i + 0.5 - fi) ** 2 + 4 * (j + 0.5 - fj) ** 2 + (k + 0.5 - fk) ** 2;
+            if (d < near) {
+              near = d;
+              ignitionCell = cell;
+            }
+          }
+        }
       }
     }
   }
@@ -251,8 +266,10 @@ export function particleSnapshot(sim, max = 3000) {
  * with the node readings, the frame's mean heat release rate (kW) and the
  * particles. Returns the frames stacked: T, vis, co as Float32Array(K n).
  */
-export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, solverOptions = {} } = {}) {
+export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, solverOptions = {}, profileInto = null } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
+  // Per-stage timing for the benchmark (tools/fire-bench.mjs).
+  if (profileInto) sim.profile = profileInto;
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
   const K = Math.max(1, Math.round(horizon / frameSeconds));
