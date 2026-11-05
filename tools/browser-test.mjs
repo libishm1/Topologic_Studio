@@ -837,6 +837,17 @@ for (const tab of ["Model", "Graph", "Route", "Simulate"]) {
     // What the IFC itself says about egress (EgressCheck, ifcSemantics.js).
     const row = await page.locator(".panel__scroll").getByText(/^\d+ of \d+ \(/).first().textContent({ timeout: 5000 }).catch(() => null);
     record(Boolean(row), "the Model step reports the file's exit doors", row || "not shown");
+    // What the elements are (identify.js): rules only, no download. The shape
+    // classifier loads its runtime from a CDN, so it is checked by hand.
+    await page.locator(".panel__scroll").getByText("What the elements are", { exact: true }).click();
+    await page.getByRole("button", { name: /^Identify elements$/ }).click();
+    const named = await page
+      .locator(".panel__scroll")
+      .getByText(/generic:|Every element is typed by its class/)
+      .first()
+      .textContent({ timeout: 30000 })
+      .catch(() => null);
+    record(Boolean(named), "the Model step identifies the elements", named || "not shown");
   }
 }
 

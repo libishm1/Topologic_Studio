@@ -169,6 +169,17 @@ export function MethodsDialog({ open, onClose, studio }) {
                   </dd>
                 </div>
                 <div className="methods__card">
+                  <dt>What the elements are</dt>
+                  <dd>
+                    Each element by its IFC class where the exporter typed it; generic elements (IfcBuildingElementProxy
+                    and the like) by their name, in English, German, Norwegian, Dutch, French, Spanish, Italian and a few
+                    Arabic words, else by the size and height of their box. On request, IFCNet&apos;s DGCNN point-cloud
+                    classifier (Emunds et al. 2021), converted to ONNX and run in a worker, looks at the shape of those the
+                    name could not place, and its answer replaces the box&apos;s when it is at least 90% sure. With their
+                    class hidden, the rules named 86% of 6,066 typed elements from 45 models correctly.
+                  </dd>
+                </div>
+                <div className="methods__card">
                   <dt>Learned escape</dt>
                   <dd>
                     Tabular Q-learning with distance-based reward shaping, compared against the earliest escape
@@ -256,6 +267,12 @@ export function MethodsDialog({ open, onClose, studio }) {
                   the Duplex they lit no spot fire. A liquid pool lights, but much of its vapour stays unburnt on this
                   grid: a 1 m² heptane pool reached 0.3 MW after 30 s in a test room, against the 3.2 MW its burning rate allows.
                 </li>
+                <li>
+                  <strong>Identifying generic elements is a best guess.</strong> On 159 proxies labelled by hand from their
+                  names, the rules were right for 55 to 60%. IFCNet on its own was right for 41% of typed elements (61% within
+                  the 20 classes it knows) and added almost nothing to the rules in the benchmark. Its weights are published
+                  by its authors without a stated licence and are shipped with credit.
+                </li>
               </ul>
             </section>
 
@@ -306,6 +323,14 @@ export function MethodsDialog({ open, onClose, studio }) {
                   </a>
                 </li>
                 <li>
+                  Emunds, Pauen, Richter, Frisch and van Treeck (2021). IFCNet: a benchmark dataset for IFC entity
+                  classification. EG-ICE 2021. Code MIT (RWTH-E3D/ifcnet-models); the DGCNN weights from
+                  ifcnet.e3d.rwth-aachen.de, converted and pruned, with no stated licence (see models/NOTICE-ifcnet.md).{" "}
+                  <a href="https://doi.org/10.48550/arXiv.2106.09712" target="_blank" rel="noreferrer">
+                    doi:10.48550/arXiv.2106.09712
+                  </a>
+                </li>
+                <li>
                   Hart, Nilsson and Raphael (1968). A formal basis for the heuristic determination of minimum cost
                   paths. IEEE Trans. Systems Science and Cybernetics 4, 100-107.{" "}
                   <a href="https://doi.org/10.1109/TSSC.1968.300136" target="_blank" rel="noreferrer">
@@ -332,7 +357,7 @@ export function MethodsDialog({ open, onClose, studio }) {
                 </li>
                 <li>
                   TopologicPy (Jabi) for the TGraph route engine and the Navigation cross-check; That Open Engine
-                  and web-ifc for the viewer.
+                  and web-ifc for the viewer; onnxruntime-web (MIT) for the shape classifier.
                 </li>
                 <li>
                   Example models: Duplex Apartment, NIBS buildingSMART alliance and U.S. Army ERDC (2011);

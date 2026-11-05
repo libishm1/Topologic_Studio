@@ -14,13 +14,13 @@
  * it at best). See wiki/research/ifc-identification-benchmark-2026-11-05.md.
  *
  * Weights: the MIT licence covers IFCNet's code; the pretrained weights are
- * published separately (ifcnet.e3d.rwth-aachen.de) with no stated licence and
- * were trained on third-party models, so they are not in this repository and
- * there is no default model URL. `createGeometryIdentifier` needs `modelUrl`
- * (an ONNX file built by tools/identify-ifcnet.py from weights the user
- * downloaded, or a published copy once the authors licence one). Without it,
- * or when the runtime or model cannot load, it fails with a clear message and
- * the caller keeps the rule-based answer.
+ * published separately by the authors (ifcnet.e3d.rwth-aachen.de) with no
+ * stated licence. The site ships them, converted and pruned (IFCNET_MODEL,
+ * built by tools/identify-ifcnet.py), with the credit and terms note in
+ * public/models/NOTICE-ifcnet.md, and removes them if the authors ask.
+ * `createGeometryIdentifier` needs `modelUrl`; without it, or when the
+ * runtime or model cannot load, it fails with a clear message and the caller
+ * keeps the rule-based answer.
  *
  * Input, as IFCNet's preprocessing (src/data/make_dgcnn_data.py) makes it:
  * the element's triangles in IFC's frame (Z up; the viewer frame is
@@ -67,6 +67,12 @@ export const IFCNET_LABELS = {
  * stays at 2,048 and the speed comes from the pruned graph instead.
  */
 export const DEFAULT_POINTS = 2048;
+
+/**
+ * The shipped model, relative to the site's base: IFCNet's DGCNN, fused and
+ * pruned, fp32, 2,048 points, batch 1 (1.45 MB; SHA-256 6f1fc45c...85481).
+ */
+export const IFCNET_MODEL = "models/ifcnet-dgcnn-2048.onnx";
 
 /** onnxruntime-web, pinned, from a CDN: never in the app bundle. */
 export const ORT_VERSION = "1.30.0";
@@ -230,7 +236,7 @@ export function combine(rule, shape, minConfidence = 0.9) {
  */
 export function createGeometryIdentifier({ modelUrl, points = DEFAULT_POINTS, backend = "wasm", ortBase = ORT_BASE, workerFactory } = {}) {
   if (!modelUrl) {
-    const error = new Error("No geometry model is configured (IFCNet's weights are not shipped; see identifyGeometry.js). The name rules' answers stand.");
+    const error = new Error("No geometry model is configured (see IFCNET_MODEL in identifyGeometry.js). The name rules' answers stand.");
     return { ready: Promise.reject(error), classify: () => Promise.reject(error), terminate() {} };
   }
   const worker = workerFactory ? workerFactory() : new Worker(new URL("../workers/identify.worker.js", import.meta.url), { type: "module" });

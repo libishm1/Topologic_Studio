@@ -27,6 +27,9 @@ import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
 import { coreItems } from "../core/cores.js";
 import { centroidOf } from "../core/centroid.js";
 
+/** Categories that are not building elements: the spatial structure, openings, annotations. */
+const NOT_ELEMENTS = /^IFC(PROJECT|SITE|BUILDING|BUILDINGSTOREY|OPENINGELEMENT|ANNOTATION|GRID|VIRTUALELEMENT|GRIDAXIS)$|TYPE$/i;
+
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
  *  installed package versions. Both are served from public/, under the
  *  site's base path: GitHub Pages serves the app from /Topologic_Studio/,
@@ -994,6 +997,46 @@ export class ViewerManager {
       elementRecords(this.model, ids.spaces || []).catch(() => []),
     ]);
     return { records, rooms };
+  }
+
+  /**
+   * Every element, for identification (src/core/identify.js): class, names
+   * and predefined type. Generic elements (IfcBuildingElementProxy and the
+   * like) also get their box, its bottom's height above the floor below (the
+   * highest door bottom under it), and their meshes, for the shape classifier.
+   */
+  async identifyData() {
+    if (!this.model || !this.categoryIds) throw new Error("Load an IFC model first.");
+    // identify.js carries the ignition catalogue's name patterns: loaded when asked for.
+    const { GENERIC_CLASSES, boxOf } = await import("../core/identify.js");
+    const categories = ((await this.model.getCategories()) || []).filter((c) => !NOT_ELEMENTS.test(c));
+    const found = categories.length ? await this.model.getItemsOfCategories(categories.map((c) => new RegExp(`^${c}$`, "i"))) : {};
+    const ids = [...new Set(Object.values(found || {}).flat())];
+    const records = await elementRecords(this.model, ids);
+    const generic = records.filter((r) => GENERIC_CLASSES.has(String(r.type).toUpperCase()));
+    const world = this.modelObject?.matrixWorld?.clone() || null;
+    const [meshes, doorMeshes] = await Promise.all([
+      extractMeshes(this.model, generic.map((r) => r.itemId), world),
+      extractMeshes(this.model, this.categoryIds.doors, world),
+    ]);
+    const group = (list) => {
+      const by = new Map();
+      for (const mesh of list) {
+        if (!by.has(mesh.itemId)) by.set(mesh.itemId, []);
+        by.get(mesh.itemId).push(mesh);
+      }
+      return by;
+    };
+    const levels = [...group(doorMeshes).values()].map((list) => boxOf(list)?.bottom).filter(Number.isFinite);
+    const meshesOf = group(meshes);
+    for (const r of generic) {
+      const box = boxOf(meshesOf.get(r.itemId));
+      if (!box) continue;
+      r.dims = box.dims;
+      const below = levels.filter((z) => z <= box.bottom + 0.2);
+      r.above = below.length ? box.bottom - Math.max(...below) : null;
+    }
+    return { records, meshesOf };
   }
 
   /** Centroids (viewer frame) of some items' geometry, as a Map itemId -> [x, y, z]. */

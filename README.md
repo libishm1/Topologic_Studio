@@ -77,6 +77,17 @@ external space boundary. If the file marks none, Studio falls back to doors
 with floor on one side only and says so. The Duplex marks 4 of its 14 doors
 as external.
 
+**What the elements are** names every element: by its IFC class where the
+exporter typed it, and otherwise (furniture and appliances often arrive as
+`IfcBuildingElementProxy`) by its name, then by the size of its box. With the
+class hidden, these rules named 86% of 6,066 typed elements from 45 models
+correctly. **Identify by shape** then runs IFCNet's point-cloud classifier
+(Emunds et al. 2021) in your browser on the elements only the box could
+place, and keeps its answer when it is at least 90% sure. The first use
+downloads 4.5 MB. The comparison with IFCNet, text embeddings and small
+language models is in
+[wiki/research/ifc-identification-benchmark-2026-11-05.md](wiki/research/ifc-identification-benchmark-2026-11-05.md).
+
 **Show the building as** switches the model between Solid, Ghost (see-through,
 so the graph shows inside) and Hidden. The view buttons give top, front,
 side and isometric views, and **Show** cuts the building at a storey.
@@ -142,7 +153,8 @@ Pałubicki, Michels and Pirk, ACM Transactions on Graphics 2026, CC BY 4.0),
 whose gas chemistry is that of *Fire-X* (Wrede et al. 2025). Switch it on
 with **Flamescapes combustion solver (optional)** in the Simulate step. It
 runs in your browser: on the GPU through WebGPU where the browser offers it,
-otherwise on one CPU core at about three times real time for a dwelling. Its
+otherwise on one CPU core at 2.8 to 2.9 times real time for the Duplex (34 to
+36 ms a step, `tools/fire-bench.mjs`), several times faster on a GPU. Its
 frames play as they are computed, the route reroutes on the gas temperature at
 head height, and **Plan with the forecast** plans on the same run, adding the
 CO dose of ISO 13571 to the heat dose. **Show on the graph** switches between
@@ -524,6 +536,18 @@ Topologic_Studio/
   are in [wiki/sources/papers/](wiki/sources/papers/). No code from them is
   used: their repositories hold project pages, and the solver here is written
   from the papers.
+- *IFCNet: A Benchmark Dataset for IFC Entity Classification* (Emunds,
+  Pauen, Richter, Frisch, van Treeck; EG-ICE 2021;
+  [doi:10.48550/arXiv.2106.09712](https://doi.org/10.48550/arXiv.2106.09712)).
+  Its code is MIT
+  ([RWTH-E3D/ifcnet-models](https://github.com/RWTH-E3D/ifcnet-models)). Its
+  DGCNN weights, published by the authors at ifcnet.e3d.rwth-aachen.de with
+  no stated licence, are shipped converted and pruned in
+  `public/models/`, with credit
+  ([NOTICE](topologicpy-web-frontend/public/models/NOTICE-ifcnet.md)), and
+  will be removed if the authors ask.
+  [onnxruntime-web](https://github.com/microsoft/onnxruntime) (MIT) runs it,
+  loaded from jsDelivr when first used.
 - The fire classes' values: the sources listed in
   [fireClasses.js](topologicpy-web-frontend/src/core/fireClasses.js), among
   them NFPA 10, ISO 3941:2026 and peer-reviewed calorimetry and cooktop studies.

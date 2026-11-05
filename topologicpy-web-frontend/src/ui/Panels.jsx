@@ -150,7 +150,80 @@ function EgressCheck({ semantics }) {
   );
 }
 
-export function ModelPanel({ studio, examples, onExample, onClearCache }) {
+const LABEL_NAMES = {
+  wall: "Walls",
+  slab: "Slabs and floors",
+  roof: "Roofs",
+  door: "Doors",
+  window: "Windows",
+  stair: "Stairs and ramps",
+  railing: "Railings",
+  column: "Columns",
+  beam: "Beams",
+  covering: "Coverings and ceilings",
+  furniture: "Furniture",
+  appliance: "Appliances",
+  sanitary: "Sanitary fittings",
+  heater: "Heaters",
+  lighting: "Lights",
+  mep: "Building services",
+  space: "Rooms",
+  other: "Other",
+};
+
+/**
+ * What the elements are (core/identify.js): typed elements by their class,
+ * generic ones by name, then box, then, when asked, IFCNet's shape classifier
+ * (core/identifyGeometry.js) for those only the box could place.
+ */
+function ElementIdentification({ identification, onIdentify, onIdentifyByShape }) {
+  const answers = identification?.answers;
+  const counts = new Map();
+  for (const a of answers || []) counts.set(a.label, (counts.get(a.label) || 0) + 1);
+  const generic = (answers || []).filter((a) => a.by !== "class");
+  const by = (...kinds) => generic.filter((a) => kinds.includes(a.by)).length;
+  const open = by("box", "none");
+  return (
+    <Disclosure summary="What the elements are">
+      <p className="field__hint">
+        Each element by its IFC class where the exporter typed it. Generic ones (IfcBuildingElementProxy and the like), as furniture and appliances often
+        arrive, by their name, else by their size.
+      </p>
+      <Button block busy={identification?.busy} onClick={onIdentify}>
+        Identify elements
+      </Button>
+      {answers && (
+        <>
+          <KeyValue entries={[...counts].sort((a, b) => b[1] - a[1]).map(([label, n]) => [LABEL_NAMES[label] || label, fmt(n)])} />
+          <p className="field__hint">
+            {generic.length
+              ? `${fmt(generic.length)} generic: ${fmt(by("name", "predefined"))} by name or type, ${fmt(by("box"))} by size, ${fmt(by("shape"))} by shape, ${fmt(by("none"))} not identified.`
+              : "Every element is typed by its class."}
+          </p>
+          {(open > 0 || identification.shapeRun) && (
+            <>
+              <Button block busy={identification.shapeBusy} disabled={identification.shapeRun || !open} onClick={onIdentifyByShape}>
+                {identification.shapeBusy
+                  ? `By shape: ${fmt(identification.shapeDone)} of ${fmt(identification.shapeTotal)}`
+                  : identification.shapeRun
+                    ? "Checked by shape"
+                    : `Identify ${fmt(open)} by shape (IFCNet)`}
+              </Button>
+              <p className="field__hint">
+                IFCNet&apos;s point-cloud network (Emunds et al. 2021) looks at the shape of each element the name could not place, and its answer replaces
+                the size&apos;s when it is at least 90% sure. The first use downloads 4.5 MB (the model from this site, onnxruntime-web from jsDelivr) and
+                takes about 0.2 s an element.
+                {identification.shapeRun && ` It identified ${fmt(identification.byShape)}; the rest keep the rules' answer.`}
+              </p>
+            </>
+          )}
+        </>
+      )}
+    </Disclosure>
+  );
+}
+
+export function ModelPanel({ studio, examples, onExample, onClearCache, identification, onIdentify, onIdentifyByShape }) {
   const { modelInfo, file, settings, setSettings, cacheInfo } = studio;
 
   return (
@@ -189,6 +262,7 @@ export function ModelPanel({ studio, examples, onExample, onClearCache }) {
                   : "Converted and cached: opening this file again skips the conversion, and keeps the exit flags and storeys read from it."}
             </p>
             <EgressCheck semantics={studio.semantics} />
+            <ElementIdentification identification={identification} onIdentify={onIdentify} onIdentifyByShape={onIdentifyByShape} />
           </>
         )}
 

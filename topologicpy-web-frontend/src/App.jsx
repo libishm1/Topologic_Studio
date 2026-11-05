@@ -1079,6 +1079,57 @@ export default function App() {
     return run;
   }, [combustionInputs, flamescapesJob, graph, studio]);
 
+  // What the elements are (src/core/identify.js): the IFC class where the
+  // exporter typed it, else the name, else the box; then, when asked, IFCNet's
+  // shape classifier for the generic elements the rules could only size up
+  // (src/core/identifyGeometry.js). Both load only when asked for.
+  const [identifyState, setIdentify] = useState({ busy: false, modelKey: null });
+  const identification = identifyState.modelKey === modelInfo ? identifyState : null;
+  const identifyDataRef = useRef(null);
+  const identifyElements = useCallback(async () => {
+    const viewer = viewerRef.current;
+    if (!viewer || !modelInfo) return;
+    setIdentify({ busy: true, modelKey: modelInfo });
+    try {
+      const [{ identify }, data] = await Promise.all([import("./core/identify.js"), viewer.identifyData()]);
+      const answers = data.records.map((record) => ({ record, answer: identify(record) }));
+      identifyDataRef.current = { modelKey: modelInfo, answers, meshesOf: data.meshesOf };
+      setIdentify({ busy: false, modelKey: modelInfo, answers: answers.map((a) => a.answer) });
+    } catch (error) {
+      setIdentify({ busy: false, modelKey: null });
+      reportError(error, "Identifying the elements");
+    }
+  }, [modelInfo, reportError]);
+  const identifyByShape = useCallback(async () => {
+    const data = identifyDataRef.current;
+    if (!data || data.modelKey !== modelInfo) return;
+    const open = data.answers.filter((a) => a.answer.by === "box" || a.answer.by === "none");
+    if (!open.length) return;
+    setIdentify((c) => ({ ...c, shapeBusy: true, shapeDone: 0, shapeTotal: open.length }));
+    const { IFCNET_MODEL, combine, createGeometryIdentifier, samplePoints } = await import("./core/identifyGeometry.js");
+    const classifier = createGeometryIdentifier({ modelUrl: `${import.meta.env.BASE_URL}${IFCNET_MODEL}` });
+    try {
+      let byShape = 0;
+      for (let i = 0; i < open.length; i += 8) {
+        const chunk = open.slice(i, i + 8).map((a) => ({ a, cloud: samplePoints(data.meshesOf.get(a.record.itemId), { seed: a.record.itemId }) })).filter((c) => c.cloud);
+        const shapes = chunk.length ? await classifier.classify(chunk.map((c) => c.cloud)) : [];
+        chunk.forEach(({ a }, k) => {
+          const combined = combine(a.answer, shapes[k]);
+          if (combined.by === "shape") byShape += 1;
+          a.answer = combined;
+        });
+        if (data !== identifyDataRef.current) return;
+        setIdentify((c) => ({ ...c, shapeDone: Math.min(open.length, i + 8) }));
+      }
+      setIdentify((c) => ({ ...c, shapeBusy: false, answers: data.answers.map((a) => a.answer), byShape, shapeRun: true }));
+    } catch (error) {
+      setIdentify((c) => ({ ...c, shapeBusy: false }));
+      reportError(error, "Identifying elements by shape");
+    } finally {
+      classifier.terminate();
+    }
+  }, [modelInfo, reportError]);
+
   // Likely ignition points (src/core/ignition.js): the model's appliances,
   // furniture and rooms ranked by the ignition-source review.
   const [ignitionState, setIgnition] = useState({ busy: false, candidates: null, occupancy: "residential", graphKey: null });
@@ -2101,6 +2152,9 @@ export default function App() {
                   examples={examples}
                   onExample={openExample}
                   onClearCache={studio.purgeCache}
+                  identification={identification}
+                  onIdentify={identifyElements}
+                  onIdentifyByShape={identifyByShape}
                 />
               )}
               {activeTab === "graph" && (
