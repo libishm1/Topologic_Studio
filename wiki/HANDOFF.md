@@ -1,55 +1,132 @@
-# Handoff: Topologic Studio Next (2026-11-05, evening)
+# Handoff: Topologic Studio Next (2026-11-05, late evening)
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 95018d5 (the app of ae7db83, the shielded learner as default), 32 commits after the previous live f8bc65e.
-  - **The deploy of ae7db83 timed out:** `actions/deploy-pages` aborted with "Timeout reached" after a successful build, a GitHub Pages fault. The workflow runs only on changes under `topologicpy-web-frontend/` or to itself, so an empty commit (747f6b3) did not redeploy.
-  - **Manual deploys:** 95018d5 adds `workflow_dispatch`, so a failed deploy can be run again from the Actions tab; that change deployed it.
-  - **Live checks:** every deploy this round (4f0f82a, 00ec1a4, 49ae6e5, 95018d5) passed the browser suite against the live site with 0 failed steps. Live, the shielded agent took the earliest route (39 moves, certified).
-  - **The TopologicPy Navigation cross-check** passes in 1.6 to 82 s when the Render backend is awake. Asleep (free tier), the page's capability probe fails and the step reports the button disabled; wake it with `curl https://topologicstudio-backend.onrender.com/health` and rerun.
-  - **The local `main`** is a stale ref (f936b86). Deploy by fast-forwarding `origin/main` to `next/browser-core` (`git push origin HEAD:main` after `git merge-base --is-ancestor origin/main HEAD`).
-  - **The Render backend** is unchanged since 4f09929 and is deployed by hand.
-- **Gates before any deploy** (all 0 failed steps):
-  - `npm test` in `topologicpy-web-frontend`: 217 tests;
-  - `npx eslint src`;
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 4cfcefb.
+  - **Live check of 4cfcefb:** every step passed except the TopologicPy cross-check.
+    - The rooms (LOD1) step passed live: the plan opened in 0.3 s and its graph joined both storeys.
+    - The cross-check failed because the Render backend did not answer: `/health` timed out three times over about ten minutes (2026-11-05, late evening), though it had answered earlier the same evening.
+    - **Next:** wake it and rerun the live check. If it still does not answer, look at the Render dashboard. Only the frontend changed this round.
+  - **Deployed this evening:**
+    - da7064f, "Describe this model";
+    - d9afc1c, the code check (live check 0 failed steps);
+    - 96170e4, the Worker's room suggestions (the page's client only; the Worker is not deployed);
+    - eea6d1d, rooms (LOD1) models;
+    - 4cfcefb, the drawing core (no screen yet).
+  - **Deploy route:** fast-forward `origin/main` to `next/browser-core` (`git merge-base --is-ancestor origin/main HEAD`, then `git push origin HEAD:main`). The local `main` is a stale ref.
+  - **Watching the deploy:** `gh` is not installed. Read the runs from the public API at `https://api.github.com/repos/libishm1/Topologic_Studio/actions/runs?per_page=4`.
+- **Uncommitted on purpose:**
+  - `wiki/research/free-inference-gpu-options-2026-11-05.md`: its drafts speak in the user's voice and the repository is public. The user decides.
+- **The drawing-to-LOD1 core is committed but has no screen yet:**
+  - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
+  - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
+- **Gates before any deploy:**
+  - `npm test` in `topologicpy-web-frontend`: 243 tests;
+  - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
-  - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview --port 4173` on that sub-path.
+  - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
+  - the live check after the deploy;
+  - the Worker's own tests: `node --test test/index.test.mjs` in `cloudflare/describe-worker` (7 tests).
+- **Lean:** unchanged this evening; 28 modules, 1297 theorems.
 
-  The suite now also checks:
-  - the Model step identifies elements;
-  - the run card says embers are on and gives the openings;
-  - the shielded agent escapes when an escape exists (at fire speed 0.25), and Q-learning still reports its return;
-  - every Methods equation typesets;
-  - a guided run reaches its route.
-- **Lean:** 28 modules, 1297 theorems, 317 AxiomCheck lines, standard axioms only. The working copy (`lean/fireegress` under the user's home) and `formal/fireegress` match byte for byte.
-- **Both research agents reported** and their work is committed:
-  - **The learned-escape study** (`rlSafe.js`, `SafeEscape.lean`, `wiki/research/rl-egress-study-2026-11-05.md`). The shielded learner is the app's default.
-  - **The IFCNet furniture study, phase 1** (feffefc, `wiki/research/ifcnet-furniture-study-plan-2026-11-05.md`). It is research and a pilot only; no training campaign has been run.
-- **Uncommitted on purpose:** `wiki/research/free-inference-gpu-options-2026-11-05.md`. Its application drafts speak in the user's voice and the repository is public; the user decides.
+## Resume here (2026-11-05, late evening)
 
-## Resume here (2026-11-05, evening)
+The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-built, step 2 is built but not on screen, and step 3 is deferred.
 
-Nothing is half-done. The next steps are the user's decisions:
-
-1. **IFCNet retraining** (the phase 1 plan, section 7):
-   - **Scope:** a feature model trained only on open data (a few CPU hours of fitting, but 2 to 4 weeks of supervised data work), with or without a DGCNN trained from scratch (about a week more of CPU).
-   - **Data:** which open sources to download, and the disk budget, outside OneDrive.
-   - **Licence:** the published model's licence (CC BY 4.0 or MIT), and whether to train on CC0 data only.
-   - **Labels:**
-     - approve the sub-type vocabulary;
-     - decide whether to hand-label the 473 unnamed furniture elements as the final test set;
-     - decide whether the app should use the rules-then-features cascade for typed elements only, since it hurts proxies.
-   - **Venue:** Automation in Construction or AEI, or Fire Safety Journal or Fire Technology.
-   - **Pilot findings:**
-     - fine-tuning IFCNet's weights neither helps nor can be published;
-     - only a model trained on open data alone can be published;
-     - the rules-then-features cascade beats the rules on typed elements (+0.022 accuracy) but not on proxies;
-     - furniture sub-types are no better than the box alone yet.
-2. **IFCNet weights now shipped:** write to the authors (Christoph Emunds, E3D, RWTH Aachen) for a licence, or replace them once an open model exists.
-3. **"Describe this model":** whether to build it. Chrome's on-device Prompt API first (Chrome 148+ desktop), and an opt-in Cloudflare Worker only for other browsers. Not FreeInference: its terms log prompts.
-4. **The free-inference note:** whether to commit it.
+1. **Drawings to LOD1 (step 1).**
+   - **Done:**
+     - the rooms model and its import, live (eea6d1d);
+     - the drafting core, with its match rates checked here (This round).
+   - **Next: the review screen.** Pipeline: `decodeDxfBytes`, `readDxf`, `suggestLayers`, `draftRooms`, in a worker or a dynamic import.
+   - **What the user confirms per storey, in order:**
+     1. the sheet region and scale (one DXF often holds several plans);
+     2. the wall layers (suggestions pre-ticked);
+     3. a common point to stack the storeys;
+     4. floor level and height.
+   - **Room review works from the draft's issues list.** The edits needed, most needed first:
+     1. merge;
+     2. split by a line snapped to wall ends;
+     3. rename and set class;
+     4. mark exits (the hotel's sheets have no entrance door blocks);
+     5. delete or draw rooms, and add or remove doors.
+   - **Keying edits:** key them by room position, so a re-draft keeps them. `keepLines: true` returns the linework to draw under the draft.
+   - **End:** `toLod1Model([{level, draft}], levels)`, then `openLod1(model, {name})` in App.jsx, the entry point the JSON import uses.
+   - **Merging needs a polygon union.** It is simple where drafted rooms share edges, since they are faces of one planar arrangement. It is not simple after the rooms have grown to the wall centre lines.
+2. **AI room suggestions (step 2).**
+   - **Built:** the Worker endpoint and the page's `suggestRoomsInCloud` (96170e4).
+   - **To do:** show them in the review screen.
+   - **Deploying the Worker needs the user's own Cloudflare account:** `npx wrangler login`, then `npx wrangler deploy` in `cloudflare/describe-worker`, then the repository variable `DESCRIBE_URL`. See that folder's README. Do not create accounts or sign in for the user.
+3. **A fine-tuned vision model for scanned plans (step 3).** Deferred by agreement. It is worth doing only if many scanned plans must be handled. Ask the user before starting.
+4. **IFCNet retraining:** paused by the user ("use the IFCNet weights themselves"). The shipped weights stay.
+   - **To resume:** start from `STATUS.md` in the IFCNet working folder outside OneDrive, and the phase 1 plan in `wiki/research/ifcnet-furniture-study-plan-2026-11-05.md`.
+   - **Before a paper:** read Utkucu et al. 2024 (doi:10.1016/j.aei.2024.102503) in full. It is the closest precedent for fusing names, rules and geometry, so the claim must stay narrow: ignition-relevant furniture sub-types, leave-buildings-out, in the browser, open weights with provenance.
 
 Before any deploy: the gates above, then the live check, then update this file.
+
+## This round (2026-11-05, late evening)
+
+- **"Describe this model"** (da7064f, live):
+  - **What it does:** describes the model from the app's own computed facts (`src/core/describeFacts.js`).
+  - **Where it runs:**
+    - on the device with Chrome's Prompt API (Chrome 148 or later, desktop);
+    - or through the Cloudflare Worker in `cloudflare/describe-worker` (Workers AI, `@cf/openai/gpt-oss-20b`, free allowance, no retention by Cloudflare's terms). The Worker is offered only when the site is built with `DESCRIBE_URL`.
+  - **Logo:** the engine's logo is off.
+- **Code check** (d9afc1c, live; `src/core/codeCheck.js`; Route step, "Code check"):
+  - **What it checks, per storey:**
+    - the longest walk to an exit or stair;
+    - exits against the occupant load;
+    - exit separation;
+    - exit door widths;
+    - high-rise.
+  - **Values:** IBC 2021, occupancy group B (offices), each labelled to be confirmed against SBC 201. The SBC's own text is not open. Sources are in `wiki/research/tall-office-sbc-egress-2026-11-05.md`.
+  - **Display:** a toggle colours the graph by the distance to spare.
+  - **On the TU Wien test models** (CC BY 4.0, local only): the real-world model passes; the custom model fails on exits and their separation.
+- **The Worker's room suggestions** (96170e4): `POST /rooms`.
+  - **Input:** one storey's draft summary.
+  - **Output:** suggested merges, and names with classes.
+  - **Checks:** only suggestions that name known rooms survive. Merged rooms must touch, each room gets at most one merge and one name, and classes come from the LOD1 set.
+  - **Cost:** about 100 to 200 neurons a storey.
+- **Rooms (LOD1) models in the app** (eea6d1d, live):
+  - **The core** (`src/core/lod1.js`, written by an agent, checked here) reads:
+    - a TopologicPy LOD1 export with its circulation and adjacency graphs;
+    - a GeoJSON plan, whose schema is in `wiki/concepts/lod1-models.md`;
+    - IfcSpace volumes.
+
+    It converts them to the egress geometry an IFC gives, and also writes the GeoJSON plan.
+  - **The app** (Model step, "Rooms models (LOD1)"; or drop the JSON files together on the viewport):
+    - opens the model with no IFC;
+    - draws it as rooms tinted by class, with walls, slabs, stairs, and doors (exits green) (`ViewerManager.loadLod1`);
+    - lists rooms, storeys and warnings;
+    - exports the GeoJSON plan.
+
+    The graph, routes, code check, both fire models and the TopologicPy export run on it unchanged. Identification and the TopologicPy cross-check need an IFC and say so.
+  - **The lab's hotel model** (private, local only; not in the repository): 586 rooms on 15 storeys.
+    - In the dev app it opened in 0.5 s, with 1 warning (one opening whose rooms do not touch).
+    - Graph: 47,305 nodes in 0.6 s, 100% reachable, every storey joined.
+    - A Flamescapes fire ran 180 s in 58.5 s on the GPU, with no console errors.
+    - Headless (`tools/lod1-check.mjs`, rerun here): the route from the top-floor guest room is 143.1 m, and the GeoJSON round trip is identical.
+  - **The new block** (also private): 54 rooms on 4 storeys, all joined.
+  - **IfcSpace fast path:** within about 6% of the full IFC's route on four public models, with 3 to 5 times faster extraction.
+  - **Rooms without IfcSpace:** traced from the graph's regions, they matched too few rooms to ship (12 of 21 on the Duplex).
+  - **The browser suite** gains step 9: a two-storey GeoJSON plan opens, lists its rooms, exports, and builds a graph joined through its stair.
+    - **A false failure, fixed:** the step's first version failed because its wait function used a closure variable. The function runs inside the page, where the variable does not exist, so the wait failed at once. The step now passes the value in.
+- **Drawings to LOD1, the core** (4cfcefb; `src/core/drawingToLod1.js`, written by an agent, checked here):
+  - **Reader:** its own DXF reader, with no dependency. It explodes nested blocks and handles mirrored entities, code pages, and Rhino's arcs exported as polylines.
+  - **Pipeline:** it suggests layers, bridges door openings, builds the planar arrangement, cuts rooms by their names and grows them to the walls' centre lines. `toLod1Model` and `draftSummary` (for the Worker) are included.
+  - **Results against the lab's checked rooms**, rerun here: rooms found at IoU 0.8 or more, then matched at 0.5 or more.
+
+    | building | rooms | lab's drafting | with the lab's layer settings | layers suggested by the core |
+    |---|---|---|---|---|
+    | residence (new block) | 54 | 30 found, 43 matched | 42 found, 49 matched, 6 extra | 38 found, 45 matched |
+    | hotel, 7 sheets | 194 | 20 found, 65 matched | 57 found, 135 matched, 147 extra | 53 found, 135 matched, 193 extra |
+
+  - **Speed:** each sheet is read in 0.1 to 0.4 s and a storey is drafted in 12 to 280 ms.
+  - **Failure modes:**
+    - partitions the drawing omits;
+    - spaces bounded only by columns;
+    - site walls on wall layers;
+    - no entrance doors on the hotel's sheets;
+    - hatch-only walls.
 
 ## This round (2026-11-05, afternoon and evening)
 
@@ -143,8 +220,8 @@ Opening an IFC on a phone was slow: every step of a first open waited on the one
     - **Missing inputs:** system membership (IfcRelAssignsToGroup with IfcDistributionSystem) and supply, return and exhaust roles are not read; duct geometry is unused; 100 L/s a terminal is an assumption.
     - **Next:** read the systems where the IFC has them (DS3 has 4), make exhaust terminals a sink, and source the flows.
 13. **Doors in the graph fire models,** SBC egress checks, fire hose coverage and firefighter access: see `wiki/research/sbc-firefighting-future-notes-2026-11-05.md`. Suppression: `fire-suppression-note-2026-11-05.md`.
-14. **"Describe this model":** not built. Plan in Resume here, decision 2.
-15. **IFCNet:**
+14. **"Describe this model":** built and live (da7064f). The Worker is not deployed until the user sets it up with their own Cloudflare account.
+15. **IFCNet:** retraining paused by the user (late evening).
     - the weights' licence (ask the authors);
     - the retraining study (agent phase 1 pilot; the full campaign needs approval);
     - the shape classifier adds almost nothing to the rules today.
@@ -157,3 +234,11 @@ Opening an IFC on a phone was slow: every step of a first open waited on the one
     - **Item 8:** its per-room, any-exit policy now exists as `escapeField`.
 17. **The CPU solver's advection** is half of each step, at about 730k trilinear samples. Any speed-up must stay bit-identical: vorticity reads the faces between solids, so no face can be skipped. Micro-optimisations, such as the exact own-component shortcut, are possible.
 18. **The guided run "A fire on the route"** uses heat diffusion, which reads faintly. Spread-along-links, or the forecast plan, may show the rerouting better.
+19. **Resolved, test only:** step 9's first version failed on a broken wait in the test itself (This round). The app opened the plan every time.
+20. **The code check covers offices only** (IBC group B), so a hotel (group R-1) or a mixed building needs its own values.
+    - **On the hotel:** it reports exits as close as 2.3 to 5.8 m apart on several storeys. The cause is not yet established, either the stairs' real layout or how stair entrances are grouped. Check before quoting it.
+    - **Not checked:** the common path of travel, dead ends, stair widths and capacity, enclosure.
+21. **The IfcSpace fast path is not in the app.** `lod1FromIfcSpaces` works headless.
+    - **What it would give:** for very large IFCs it could skip fragments conversion: read spaces, doors and stairs in the import worker and draw prisms, as in `tools/lod1-check.mjs`.
+    - **Frame:** do not mix its frame with a fragments model of the same file.
+22. **Drawings to LOD1:** see Resume here, item 1. Even the improved core finds only 57 of the hotel's 194 rooms at IoU 0.8, with 147 extra rooms, so the review screen is not optional.
