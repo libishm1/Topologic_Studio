@@ -533,13 +533,18 @@ function particleToGrid(sim) {
       // size of the ember's contact patch; a coarse cell's surface layer is
       // a hundred times larger and would dilute the ember's heat. So the
       // ember is taken to heat a patch of `emberPatch` m^2 of the surface
-      // layer: if its heat brings that patch to the fuel's ignition
+      // layer with its excess thermal energy m c (T_e - T_s) (supplement
+      // Algorithm 2, line 5): if that brings the patch to the fuel's ignition
       // temperature, the cell's surface ignites there (it is set to the
-      // ignition temperature) and the solver burns it from then on.
+      // ignition temperature) and the solver burns it from then on. The
+      // ember's own burning heats the whole layer over time (above), not the
+      // patch at once; counting it in the patch lit any fuel an ember
+      // touched (291 spot fires in a 30 m2 room), whereas firebrands mostly
+      // ignite fuel that is already hot (manzello2020).
       const ign = ignitionK(sim, cell);
       if (sim.fuelMass[cell] > 0 && sim.Ts[cell] < ign) {
         const patch = P.skinDensity * P.emberPatch * fuelCp(sim, cell);
-        if (sim.Ts[cell] + (excess + own) / patch >= ign) {
+        if (sim.Ts[cell] + excess / patch >= ign) {
           sim.Ts[cell] = ign;
           sim.stats.spotIgnitions += 1;
         }
