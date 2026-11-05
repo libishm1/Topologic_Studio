@@ -33,7 +33,7 @@
  * 10 m for large spaces).
  */
 
-import { DEFAULTS, NS, SPECIES, MOLAR, createSolver, step } from "./flamescapes.js";
+import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, createSolver, step } from "./flamescapes.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, toLocal, volumeFractions } from "./voxelize.js";
 // The CO dose and the forecast from frames live in forecast.js, so the
 // forecast worker does not load the solver; re-exported here.
@@ -261,11 +261,60 @@ export function particleSnapshot(sim, max = 3000) {
 }
 
 /**
- * Run the solver to `horizon` seconds, calling onFrame every `frameSeconds`
- * with the node readings, the frame's mean heat release rate (kW) and the
- * particles. Returns the frames stacked: T, vis, co as Float32Array(K n).
+ * The smoke as a cloud to draw: the soot density (rho Y_soot, the paper's
+ * residual species) averaged over blocks of `block` cubed cells, one point at
+ * the centre of each block's open cells (viewer frame), with the opacity of
+ * light crossing the block, 1 - exp(-sigma_m rho_s block h) with Mulholland
+ * and Croarkin's sigma_m (the visibility's own coefficient), as 0 to 255.
+ * Blocks under `min` opacity are left out. The GPU passes its read-back
+ * fields, so both backends draw the same cloud.
+ *
+ * @returns {{positions: Float32Array, opacity: Uint8Array, size: number}}
  */
-export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, solverOptions = {}, profileInto = null, keep = true } = {}) {
+export function smokeCloud(grid, rho, Y, kind, { block = 2, min = 0.03 } = {}) {
+  const { nx, ny, nz, h } = grid;
+  const bx = Math.ceil(nx / block), by = Math.ceil(ny / block), bz = Math.ceil(nz / block);
+  const sum = new Float32Array(bx * by * bz);
+  const open = new Uint16Array(bx * by * bz);
+  for (let k = 0; k < nz; k += 1) {
+    for (let j = 0; j < ny; j += 1) {
+      for (let i = 0; i < nx; i += 1) {
+        const c = i + nx * (j + ny * k);
+        if (kind[c] === SOLID_KIND) continue;
+        const b = Math.floor(i / block) + bx * (Math.floor(j / block) + by * Math.floor(k / block));
+        sum[b] += rho[c] * Y[c * NS + SPECIES.SOOT];
+        open[b] += 1;
+      }
+    }
+  }
+  const keep = [];
+  const opacity = [];
+  const depth = SOOT_EXTINCTION * block * h;
+  for (let b = 0; b < sum.length; b += 1) {
+    if (!open[b]) continue;
+    const alpha = 1 - Math.exp(-depth * (sum[b] / open[b]));
+    if (alpha < min) continue;
+    keep.push(b);
+    opacity.push(Math.min(255, Math.round(alpha * 255)));
+  }
+  const positions = new Float32Array(keep.length * 3);
+  keep.forEach((b, q) => {
+    const i = b % bx, j = Math.floor(b / bx) % by, k = Math.floor(b / (bx * by));
+    const centre = (n, at) => (at * block + Math.min(block, n - at * block) / 2) * h;
+    positions[q * 3 + grid.axes[0]] = grid.origin[0] + centre(nx, i);
+    positions[q * 3 + grid.axes[1]] = grid.origin[1] + centre(ny, j);
+    positions[q * 3 + grid.axes[2]] = grid.origin[2] + centre(nz, k);
+  });
+  return { positions, opacity: Uint8Array.from(opacity), size: block * h };
+}
+
+/**
+ * Run the solver to `horizon` seconds, calling onFrame every `frameSeconds`
+ * with the node readings, the frame's mean heat release rate (kW), the
+ * particles and, with `smoke`, the smoke cloud (smokeCloud). Returns the
+ * frames stacked: T, vis, co as Float32Array(K n).
+ */
+export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
   // Per-stage timing for the benchmark (tools/fire-bench.mjs).
   if (profileInto) sim.profile = profileInto;
@@ -302,6 +351,7 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
       spots: sim.stats.spotIgnitions,
       burnt: sim.stats.burnt,
       particles: particles ? particleSnapshot(sim, particles) : null,
+      smoke: smoke ? smokeCloud(sim.grid, sim.rho, sim.Y, sim.kind) : null,
     });
   }
   const inGrid = cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0);

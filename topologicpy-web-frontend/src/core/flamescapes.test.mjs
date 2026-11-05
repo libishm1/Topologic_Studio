@@ -21,7 +21,7 @@ import {
   survives,
 } from "./flamescapes.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, volumeFractions } from "./voxelize.js";
-import { CO_LIMIT, buildScene, coDoseRate, forecastFromFrames, runScene, visibility } from "./flamescapesRun.js";
+import { CO_LIMIT, buildScene, coDoseRate, forecastFromFrames, runScene, smokeCloud, visibility } from "./flamescapesRun.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS, fuelsFor } from "./fireClasses.js";
 
 function box(x0, y0, z0, x1, y1, z1, material = MATERIAL.STONE) {
@@ -186,6 +186,38 @@ test("a room fire with its first item alight heats and smokes the room; embers o
   for (let v = 0; v < n; v += 1) {
     for (let k = 1; k < forecast.K; k += 1) assert.ok(forecast.rate[k * n + v] >= forecast.rate[(k - 1) * n + v]);
   }
+});
+
+test("the smoke cloud: the opacity of its soot across a block, none before the fire, a cloud after it", () => {
+  // One block of 2 x 2 x 2 cells of 0.5 m with soot density 1.2e-4 kg/m3:
+  // 1 - exp(-8700 x 1 m x 1.2e-4) = 0.648; a solid cell's soot is not counted.
+  const grid = { nx: 2, ny: 2, nz: 2, h: 0.5, origin: [10, 0, -3], axes: [0, 1, 2] };
+  const rho = new Float32Array(8).fill(1.2);
+  const Y = new Float32Array(8 * NS);
+  for (let c = 0; c < 8; c += 1) Y[c * NS + SPECIES.SOOT] = 1e-4;
+  const kind = new Uint8Array(8);
+  kind[7] = 2;
+  Y[7 * NS + SPECIES.SOOT] = 1;
+  const one = smokeCloud(grid, rho, Y, kind);
+  assert.equal(one.opacity.length, 1);
+  assert.equal(one.opacity[0], Math.round((1 - Math.exp(-8700 * 1 * 1.2e-4)) * 255));
+  assert.deepEqual([...one.positions], [10.5, 0.5, -2.5]);
+  assert.equal(one.size, 1);
+
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item });
+  const nodes = Float32Array.from([2.5, 0.75, 2]);
+  const clouds = [];
+  runScene(scene, { nodes, horizon: 30, frameSeconds: 5, particles: 0, smoke: true, keep: false, onFrame: (f) => clouds.push(f.smoke) });
+  const fresh = smokeCloud(scene.grid, new Float32Array(scene.grid.nx * scene.grid.ny * scene.grid.nz).fill(1.2), new Float32Array(scene.grid.nx * scene.grid.ny * scene.grid.nz * NS), new Uint8Array(scene.grid.nx * scene.grid.ny * scene.grid.nz));
+  assert.equal(fresh.opacity.length, 0, "clean air draws nothing");
+  const last = clouds.at(-1);
+  assert.ok(last.opacity.length > 0, "the fire makes smoke");
+  for (const x of last.positions) assert.ok(Number.isFinite(x));
+  // Without the option a frame carries no cloud.
+  const plain = [];
+  runScene(buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item }), { nodes, horizon: 5, frameSeconds: 5, particles: 0, keep: false, onFrame: (f) => plain.push(f.smoke) });
+  assert.equal(plain[0], null);
 });
 
 test("fire classes carry what the solver and the panel need", () => {

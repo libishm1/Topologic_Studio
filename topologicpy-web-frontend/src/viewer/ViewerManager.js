@@ -14,6 +14,7 @@ import {
   FragmentsManager,
   IfcLoader,
   Raycasters,
+  RendererMode,
   SimpleCamera,
   SimpleRenderer,
   SimpleScene,
@@ -51,6 +52,7 @@ const OVERLAY = {
   outlines: "outlines",
   flames: "flames",
   embers: "embers",
+  smoke: "smoke",
 };
 
 /** A soft round sprite for glowing particles, drawn once on a canvas. */
@@ -176,6 +178,7 @@ export class ViewerManager {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.setDrawRate(0);
     this._glowSprite?.dispose();
     this._glowSprite = null;
     this.ready = false;
@@ -1385,6 +1388,88 @@ export class ViewerManager {
       return;
     }
     this._setColouring({ opacity: 0.8, redraw: () => this.setDeadlines(deadlines, { max }) }, colors, attribute);
+  }
+
+  /**
+   * How often the view draws. 0 (the default) draws every frame. While the
+   * fire solver computes on the GPU it shares it with this view: drawing
+   * `fps` times a second, and whenever the camera moves, gives the solver
+   * back most of what drawing took (Duplex, 120 s fire on an integrated GPU:
+   * 72 s with drawing every frame, 53 s with none).
+   */
+  setDrawRate(fps) {
+    const renderer = this.world?.renderer;
+    clearInterval(this._drawTimer);
+    this._drawTimer = null;
+    if (this._onCameraMove) this.world?.camera?.controls?.removeEventListener?.("update", this._onCameraMove);
+    if (!renderer) return;
+    if (!(fps > 0)) {
+      renderer.mode = RendererMode.AUTO;
+      return;
+    }
+    renderer.mode = RendererMode.MANUAL;
+    this._onCameraMove ||= () => {
+      if (this.world?.renderer) this.world.renderer.needsUpdate = true;
+    };
+    this.world.camera?.controls?.addEventListener?.("update", this._onCameraMove);
+    this._drawTimer = setInterval(() => {
+      renderer.needsUpdate = true;
+    }, 1000 / fps);
+    renderer.needsUpdate = true;
+  }
+
+  /**
+   * The smoke as a cloud (smokeCloud in core/flamescapesRun.js): one soft grey
+   * point per block of cells, as opaque as light crossing the block finds it,
+   * pale where thin and darker where thick. `strength` scales it: lighter in
+   * the heat view, so the graph's colours show through. One layer for the
+   * whole run, rewritten in place like the particles.
+   */
+  setSmokeCloud(cloud, { strength = 1 } = {}) {
+    const count = cloud?.opacity?.length || 0;
+    if (!count) {
+      this._setOverlay(OVERLAY.smoke, null);
+      return;
+    }
+    let points = this.overlays.get(OVERLAY.smoke);
+    if (!points || points.userData.capacity < count) {
+      const capacity = Math.max(2048, count, 2 * (points?.userData.capacity || 0));
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      // Four components: three.js reads the fourth as each point's alpha.
+      geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(capacity * 4), 4).setUsage(THREE.DynamicDrawUsage));
+      const material = new THREE.PointsMaterial({
+        size: 1,
+        map: this._glowSprite || (this._glowSprite = glowTexture()),
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        sizeAttenuation: true,
+      });
+      points = new THREE.Points(geometry, material);
+      points.renderOrder = 9;
+      points.frustumCulled = false;
+      points.userData.capacity = capacity;
+      this._setOverlay(OVERLAY.smoke, points);
+    }
+    // A sprite fades to its edge, so twice the block and a little more closes the gaps.
+    points.material.size = cloud.size * 2.2;
+    points.material.opacity = strength;
+    const position = points.geometry.getAttribute("position");
+    const color = points.geometry.getAttribute("color");
+    position.array.set(cloud.positions);
+    const colors = color.array;
+    for (let q = 0; q < count; q += 1) {
+      const alpha = cloud.opacity[q] / 255;
+      const shade = 0.6 - 0.4 * alpha;
+      colors[q * 4] = shade;
+      colors[q * 4 + 1] = shade;
+      colors[q * 4 + 2] = shade;
+      colors[q * 4 + 3] = alpha;
+    }
+    position.needsUpdate = true;
+    color.needsUpdate = true;
+    points.geometry.setDrawRange(0, count);
   }
 
   /**

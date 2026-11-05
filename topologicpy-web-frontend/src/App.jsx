@@ -49,6 +49,13 @@ const drawn = (route) => route?.straight_points || route?.points || null;
 
 /** The two-zone model's gas temperatures are coloured from 20 to this many degrees C. */
 const ZONE_COLOUR_PEAK = 600;
+// The smoke cloud at full strength in the smoke view; lighter in the heat
+// view, where the graph's colours have to show through it.
+const SMOKE_IN_HEAT_VIEW = 0.35;
+// Frames a second the view draws while the fire solver computes on the GPU
+// (and whenever the camera moves): the playback changes it about 8 times a second.
+const GPU_RUN_DRAW_RATE = 15;
+const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate";
 
 /** Lowest and highest point of the egress geometry along the up axis. */
 function heightRange(geometry, upAxis) {
@@ -152,6 +159,17 @@ export default function App() {
   // they arrive, and the stacked result once done (reused by the plan).
   const flamescapesRef = useRef(null);
   const combustionRef = useRef(null);
+  // {name, rate}: the cells a millisecond this device's GPU stepped in its
+  // first measured run, kept in this browser so the same GPU always gets the
+  // same grid level (the results depend on the grid).
+  const gpuRateRef = useRef(null);
+  if (gpuRateRef.current === null) {
+    try {
+      gpuRateRef.current = JSON.parse(localStorage.getItem(GPU_RATE_KEY) || "false") || false;
+    } catch {
+      gpuRateRef.current = false;
+    }
+  }
   // The run whose frames are on screen (playback reads its view from a ref,
   // so switching heat and smoke mid-run holds: review 4).
   const playingRunRef = useRef(null);
@@ -1017,6 +1035,10 @@ export default function App() {
       item,
       fireLoad: settings.flamescapesFireLoad * 1e6,
       backend: settings.flamescapesBackend,
+      // The GPU's measured speed (cells a ms) sizes its grid, unless the finest grid is asked for.
+      sizeBySpeed: settings.flamescapesGrid !== "finest",
+      gpuRate: gpuRateRef.current?.rate ?? null,
+      gpuName: gpuRateRef.current?.name ?? null,
     };
     transfers.push(payload.nodes.buffer);
     const key = JSON.stringify([
@@ -1027,6 +1049,7 @@ export default function App() {
       settings.fireMaxSteps,
       settings.flamescapesFireLoad,
       settings.flamescapesBackend,
+      settings.flamescapesGrid,
     ]);
     return { payload, transfers, key };
   }, [graph, points.fire, settings, fireModel]);
@@ -1047,7 +1070,9 @@ export default function App() {
         // frame k resumes when the new run reaches it).
         if (progress.info.restarted) run.frames.length = 0;
         run.info = progress.info;
-        studio.setFire((c) => ({ ...c, combustion: { ...progress.info, time: 0, hrr: 0, peak: 0, horizon: payload.horizon } }));
+        // The view shares the GPU with the solver: it draws less while the GPU computes.
+        viewerRef.current?.setDrawRate(progress.info.backend?.kind === "gpu" ? GPU_RUN_DRAW_RATE : 0);
+        studio.setFire((c) => ({ ...c, combustion: { ...progress.info, time: 0, hrr: 0, peak: 0, horizon: payload.horizon, embersOn: payload.embers } }));
         return;
       }
       run.frames.push(progress);
@@ -1060,6 +1085,7 @@ export default function App() {
           peak: Math.max(c.combustion?.peak || 0, progress.hrr),
           embers: progress.embers,
           spots: progress.spots,
+          embersOn: payload.embers,
           horizon: payload.horizon,
         },
       }));
@@ -1067,11 +1093,24 @@ export default function App() {
       (result) => {
         run.done = true;
         run.result = result;
+        // The first measurement on a GPU stands, so its grid does not drift between runs.
+        const name = result?.info?.backend?.name;
+        if (result?.info?.gpuRate > 0 && name && gpuRateRef.current?.name !== name) {
+          gpuRateRef.current = { name, rate: result.info.gpuRate };
+          try {
+            localStorage.setItem(GPU_RATE_KEY, JSON.stringify(gpuRateRef.current));
+          } catch {
+            // Private windows and blocked storage: the next session measures again.
+          }
+        }
+        // A run replaced by a newer one leaves the newer one's draw rate alone.
+        if (!combustionRef.current || combustionRef.current === run) viewerRef.current?.setDrawRate(0);
         return result;
       },
       (error) => {
         run.done = true;
         run.failed = true;
+        if (!combustionRef.current || combustionRef.current === run) viewerRef.current?.setDrawRate(0);
         throw error;
       },
     );
@@ -1225,8 +1264,9 @@ export default function App() {
       }
     }
 
-    // Flames and embers of an earlier run go (review 7).
+    // Flames, embers and smoke of an earlier run go (review 7).
     viewerRef.current?.setParticles(null);
+    viewerRef.current?.setSmokeCloud(null);
     // The Flamescapes solver streams its frames from its worker; the
     // simulation plays each as it arrives, waiting while the next is computed.
     let combustion = null;
@@ -1306,7 +1346,10 @@ export default function App() {
             const frame = combustion?.frames[message.step];
             if (frame && showRef.current === "smoke") viewer?.setSmoke(frame.vis);
             else viewer?.setTemperatures(temperatures, fireModel === "zone" || combustion ? { peak: ZONE_COLOUR_PEAK } : undefined);
-            if (combustion) viewer?.setParticles(frame?.particles || null);
+            if (combustion) {
+              viewer?.setParticles(frame?.particles || null);
+              viewer?.setSmokeCloud(frame?.smoke || null, { strength: showRef.current === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
+            }
             colours.set("fire");
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
@@ -1347,6 +1390,7 @@ export default function App() {
     viewer?.setTemperatures(null);
     viewer?.setBurningNodes(null);
     viewer?.setParticles(null);
+    viewer?.setSmokeCloud(null);
     if (settings.showDeadlineMap && deadlines) {
       viewer?.setDeadlines(deadlines, { max: planHorizon });
       colours.set("deadlines");
@@ -1576,6 +1620,8 @@ export default function App() {
       combustionRef.current = null;
       playingRunRef.current = null;
       viewerRef.current?.setParticles(null);
+      viewerRef.current?.setSmokeCloud(null);
+      viewerRef.current?.setDrawRate(0);
     }
   }, [graph]);
 
@@ -1588,6 +1634,7 @@ export default function App() {
     const frame = run.frames[Math.min(fire.step, run.frames.length - 1)];
     if (!frame) return;
     const viewer = viewerRef.current;
+    viewer?.setSmokeCloud(frame.smoke || null, { strength: settings.flamescapesShow === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
     if (settings.flamescapesShow === "smoke") viewer?.setSmoke(frame.vis);
     else {
       const temperatures = new Map();

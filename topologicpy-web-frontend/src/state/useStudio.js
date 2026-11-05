@@ -86,6 +86,10 @@ export const DEFAULT_SETTINGS = {
   flamescapesSmoke: true, // visibility below the limit is untenable
   flamescapesVisibility: 10, // m
   flamescapesBackend: "auto", // "auto" (WebGPU where offered) or "cpu"
+  // The GPU's grid: "speed" (the finest level its measured speed steps at
+  // three times real time) or "finest" (the finest its memory allows). The
+  // results depend on the grid, so comparisons should keep one.
+  flamescapesGrid: "speed",
   flamescapesShow: "heat", // the graph's colour while it plays: "heat" or "smoke"
 
   showGraph: true,

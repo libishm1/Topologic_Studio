@@ -1365,14 +1365,13 @@ function CombustionStatus({ combustion, running }) {
             {Math.round(combustion.hrr ?? 0)} kW (peak {Math.round(combustion.peak ?? 0)} kW)
           </dd>
         </div>
-        {combustion.embers !== undefined && (
-          <div className="result__item">
-            <dt className="result__label">Embers, spot fires</dt>
-            <dd className="result__value">
-              {combustion.embers}, {combustion.spots}
-            </dd>
-          </div>
-        )}
+        {/* Off says so, so "0 thrown" never reads as embers that failed to fly. */}
+        <div className="result__item">
+          <dt className="result__label">Embers</dt>
+          <dd className="result__value">
+            {combustion.embersOn ? `on: ${combustion.embers ?? 0} thrown, ${combustion.spots ?? 0} spot fires` : "off"}
+          </dd>
+        </div>
         {combustion.grid && (
           <div className="result__item">
             <dt className="result__label">Grid</dt>
@@ -1385,7 +1384,11 @@ function CombustionStatus({ combustion, running }) {
       {combustion.backend && (
         <p className="result__note">
           Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}.
-          {combustion.restarted ? " The GPU stopped partway, so the fire started again on the CPU." : ""}
+          {combustion.resized
+            ? " The GPU stepped the first grid slower than three times real time, so the fire started again on a coarser grid it keeps up with."
+            : combustion.restarted
+              ? " The GPU stopped partway, so the fire started again on the CPU."
+              : ""}
           {combustion.clipped ? " The model is larger than the grid allows, so the grid covers the area round the fire; nodes outside it read as clear air." : ""}
         </p>
       )}
@@ -1617,6 +1620,20 @@ export function SimulatePanel({
                 { value: "cpu", label: "The CPU (one core, coarser grid)" },
               ]}
             />
+            <SelectField
+              label="Grid on the GPU"
+              value={settings.flamescapesGrid}
+              onChange={(flamescapesGrid) => setSettings({ flamescapesGrid })}
+              options={[
+                { value: "speed", label: "Sized to keep three times real time on this GPU" },
+                { value: "finest", label: "The finest this GPU's memory allows (slower)" },
+              ]}
+            />
+            <p className="field__hint">
+              The fire depends on the grid: on the Duplex a sofa fire peaked at 0.09 MW on a 0.20 m grid, 2.5 MW on 0.23 m and 6.1 MW on
+              0.27 m. Keep one grid when comparing runs; the run card gives it. This browser remembers the GPU&apos;s speed, so the first
+              setting picks the same grid each time on the same GPU.
+            </p>
             <p className="field__hint">{FLAMESCAPES_LIMITS}</p>
           </Disclosure>
         )}

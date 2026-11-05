@@ -164,8 +164,10 @@ export function MethodsDialog({ open, onClose, studio }) {
                     item burns with the fuel of its fire class (NFPA 10: A, B, C, D, K; ISO 3941:2026: L, lithium-ion
                     batteries); a liquid (B, K) evaporates at most at its pool&apos;s burning rate. Read at head height
                     (1.8 m) at each graph node: gas temperature, visibility through the smoke (S = 3 / (8700 m²/kg
-                    times soot density)) and CO. The plan adds the CO dose of ISO 13571 to the heat dose. It runs on
-                    the GPU through WebGPU where the browser offers it, otherwise on one CPU core.
+                    times soot density)) and CO. The smoke itself, the paper&apos;s residual species carried by the gas, is
+                    drawn as a cloud: its soot density averaged over blocks of cells, each as opaque as light crossing
+                    the block finds it. The plan adds the CO dose of ISO 13571 to the heat dose. It runs on the GPU
+                    through WebGPU where the browser offers it, otherwise on one CPU core.
                   </dd>
                 </div>
                 <div className="methods__card">
@@ -266,6 +268,9 @@ export function MethodsDialog({ open, onClose, studio }) {
                   checked. Indoors at these cells embers seldom land hot enough to light anything: in a 120 s fire in
                   the Duplex they lit no spot fire. A liquid pool lights, but much of its vapour stays unburnt on this
                   grid: a 1 m² heptane pool reached 0.3 MW after 30 s in a test room, against the 3.2 MW its burning rate allows.
+                  The heat release depends strongly on the grid, and not in one direction: a sofa fire in the Duplex peaked at
+                  0.09 MW on a 0.20 m grid, 2.5 MW on 0.23 m, 6.1 MW on 0.27 m and 0.75 MW on the CPU&apos;s 0.34 m. On the GPU the
+                  grid is sized to the GPU&apos;s speed unless the finest is asked for; compare runs on one grid.
                 </li>
                 <li>
                   <strong>Identifying generic elements is a best guess.</strong> On 159 proxies labelled by hand from their

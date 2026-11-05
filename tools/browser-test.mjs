@@ -806,6 +806,9 @@ if (await fsToggle.isVisible().catch(() => false)) {
   if (fsDone) timing("Flamescapes, 30 s simulated (click to complete)", Date.now() - tFs);
   const card = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
   record(/Running on (the GPU|one CPU core)/.test(card), "the run says what it ran on", card.split("\n").find((l) => /Running on/.test(l)) || "no backend line");
+  // This run asked for embers: the card says they are on (an "off" run says "off").
+  const embersLine = card.split("\n").find((l) => /^on: \d+ thrown|^off$/.test(l.trim())) || "";
+  record(/^on: \d+ thrown/.test(embersLine.trim()), "the run card says embers are on", embersLine.trim() || "no embers line");
   const legendFs = await page.getByText("Gas temperature at head height (°C)", { exact: true }).isVisible().catch(() => false);
   record(legendFs || MOBILE, "the graph is coloured by gas temperature at head height", MOBILE ? "legend folded on a phone" : undefined);
   await shot(page, "flamescapes-run");

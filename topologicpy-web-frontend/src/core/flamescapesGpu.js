@@ -33,8 +33,8 @@
  *     runs on the CPU solver instead.
  */
 
-import { DEFAULTS, createSolver } from "./flamescapes.js";
-import { KELVIN, headCells, runScene as cpuRunScene } from "./flamescapesRun.js";
+import { DEFAULTS, NS, createSolver } from "./flamescapes.js";
+import { KELVIN, headCells, smokeCloud, runScene as cpuRunScene } from "./flamescapesRun.js";
 import {
   AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
   PARTICLE_FLOATS, SWEEP_BYTES, WG, buildShader,
@@ -444,7 +444,7 @@ class GpuSim {
    * frame's per-step sums and the counters (and a particle snapshot), read
    * them back, and start the next frame's sums.
    */
-  async readFrame({ particles = true } = {}) {
+  async readFrame({ particles = true, smoke = false } = {}) {
     const { device, buf, dims: d } = this;
     if (this.ctx.lost) throw new Error("The GPU device was lost during the fire run.");
     device.queue.writeBuffer(buf.ctr, CTR.maxT * 4, Float32Array.of(this.sim.P.ambient));
@@ -469,7 +469,21 @@ class GpuSim {
     const snapBytes = (1 + 5 * d.snapMax) * 4;
     if (snap) enc.copyBufferToBuffer(buf.io, this.io.snap * 4, this.staging, o, snapBytes);
     enc.clearBuffer(buf.red, this.red.steps * 4, stepBytes);
+    // The smoke cloud needs the gas density and the species (soot among them),
+    // read into their own buffer only when it is drawn.
+    if (smoke) {
+      this.smokeStaging ||= device.createBuffer({ label: "smoke readback", size: (NS + 1) * d.N * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+      enc.copyBufferToBuffer(buf.Y, 0, this.smokeStaging, 0, NS * d.N * 4);
+      enc.copyBufferToBuffer(buf.cf, CF.rho * d.N * 4, this.smokeStaging, NS * d.N * 4, d.N * 4);
+    }
     device.queue.submit([enc.finish()]);
+    let cloud = null;
+    if (smoke) {
+      await this.smokeStaging.mapAsync(GPUMapMode.READ);
+      const fields = new Float32Array(this.smokeStaging.getMappedRange().slice(0));
+      this.smokeStaging.unmap();
+      cloud = smokeCloud(this.sim.grid, fields.subarray(NS * d.N), fields.subarray(0, NS * d.N), this.sim.kind);
+    }
     await this.staging.mapAsync(GPUMapMode.READ);
     const bytes = this.staging.getMappedRange().slice(0);
     this.staging.unmap();
@@ -506,6 +520,7 @@ class GpuSim {
       spotIgnitions: counters[CTR.spots],
       sweeps,
       particles: snapshot,
+      smoke: cloud,
     };
   }
 
@@ -573,6 +588,7 @@ class GpuSim {
   destroy() {
     for (const b of Object.values(this.buf)) b.destroy();
     this.staging.destroy();
+    this.smokeStaging?.destroy();
   }
 }
 
@@ -590,7 +606,7 @@ function supported(sim) {
  * timestamp queries to time.
  */
 async function runSceneGpu(ctx, scene, opts = {}) {
-  const { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, solverOptions = {}, keep = true } = opts;
+  const { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, keep = true } = opts;
   if (ctx.lost) return cpuRunScene(scene, opts);
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
   if (!supported(sim)) return cpuRunScene(scene, opts);
@@ -626,7 +642,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
         gpu.step(Math.min(dt, end - gpu.time));
         if (shouldStop?.()) return null;
       }
-      const frame = await gpu.readFrame({ particles: Boolean(particles) });
+      const frame = await gpu.readFrame({ particles: Boolean(particles), smoke });
       if (shouldStop?.()) return null;
       const row = keep ? k : 0;
       T.set(frame.T, row * n);
@@ -653,6 +669,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
         spots: stats.spotIgnitions,
         burnt: stats.burnt,
         particles: particles ? frame.particles : null,
+        smoke: frame.smoke,
       });
     }
   } finally {

@@ -158,7 +158,10 @@ otherwise on one CPU core at 2.8 to 2.9 times real time for the Duplex (34 to
 frames play as they are computed, the route reroutes on the gas temperature at
 head height, and **Plan with the forecast** plans on the same run, adding the
 CO dose of ISO 13571 to the heat dose. **Show on the graph** switches between
-heat and smoke (visibility through the smoke at head height).
+heat and smoke (visibility through the smoke at head height). The smoke the
+solver carries (its soot) is drawn as a grey cloud, faint in the heat view
+and full in the smoke view. The run card says whether embers are on, and how
+many were thrown and how many spot fires they lit.
 
 **What burns first.** The first item takes the fuel of its fire class: NFPA 10
 classes A (ordinary combustibles), B (flammable liquids), C (energised

@@ -392,6 +392,8 @@ await page.getByRole("button", { name: /^Start fire$/ }).click();
 const stepNow = () => page.evaluate(() => Number((/Fire step\s*(\d+)/.exec(document.body.innerText) || [])[1] ?? -1));
 const running = () => page.evaluate(() => /fire step \d+/i.test(document.body.innerText) && [...document.querySelectorAll("button")].some((b) => /^Stop$/.test(b.textContent.trim())));
 await page.waitForFunction(() => /fire step \d+/i.test(document.body.innerText), null, { timeout: 120000 });
+const backend = await page.locator(".result__note", { hasText: "Running on" }).first().textContent({ timeout: 10000 }).catch(() => "");
+console.log(`  ${backend.split(".")[0] || "backend not shown"}`);
 const view = page.locator(".viewport");
 const shots = [];
 let last = -1, smoke = false;
