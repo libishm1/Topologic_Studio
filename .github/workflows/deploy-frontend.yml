@@ -6,6 +6,9 @@ on:
     paths:
       - 'topologicpy-web-frontend/**'
       - '.github/workflows/deploy-frontend.yml'
+  # A deploy that fails for GitHub's reasons (a Pages timeout) can be run
+  # again from the Actions tab without a source change.
+  workflow_dispatch:
 
 permissions:
   contents: read
