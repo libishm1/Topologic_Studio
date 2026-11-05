@@ -1,0 +1,3048 @@
+{
+  "source": {
+    "citation": "Wrede, H., Wagner, A. R., Pałubicki, W., Michels, D. L., Pirk, S. (2026). Flamescapes: Simulating the Wildlandfire Urban Interface. ACM Transactions on Graphics 45(6), Article 246.",
+    "doi": "https://doi.org/10.1145/3842518",
+    "licence": "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), as stated on the paper's first page. © 2026 the authors.",
+    "transcription": "flamescapes-2026.md and flamescapes-2026-supplement.md (same folder)",
+    "transcribed": "2026-11-05",
+    "changes": "Equations retyped in LaTeX from page renders of the authors' PDF (project page https://helgewrede.github.io/flamescapes/, retrieved 2026-11-05); meanings, notes and symbol glosses are ours. Transcription errors are ours; cite the original."
+  },
+  "conventions": {
+    "ids": "F1 to F19 are the main paper's numbered equations (1) to (19); S1 is the supplement's only numbered equation (1). Neither document has unnumbered display equations. Inline definitions (I1 to I4, S-I1, S-I2) and the mathematical lines of the algorithms (A1-2 from main Algorithm 1; S-A2-n from supplement Algorithm 2, line n) are listed separately under supplementary_expressions.",
+    "page": "Page numbers are PDF pages, equal to article pages 246:n. Entries without a 'document' field belong to the main paper; supplement entries carry \"document\": \"supplement\" and supplement page numbers.",
+    "latex": "LaTeX reproduces the printed equation, including suspected typos (see transcriber_note fields and the 'Transcriber's notes' sections of the two Markdown files).",
+    "symbols": "Units in square brackets come from the paper's A.4 symbol list (main p. 19) where given; otherwise the gloss says 'unit implied' or 'not given'.",
+    "depends_on": "Ids of equations whose quantities the entry uses directly.",
+    "parameters": "Every numeric constant stated in the paper and supplement. 'value' is machine-readable (ranges as [min, max], vectors as lists, null when the table shows a dash); 'printed' keeps the original formatting where it differs; 'origin' is the Table 5 classification (Physical, Numerical, Scene)."
+  },
+  "equations": [
+    {
+      "id": "F1",
+      "section": "4.2.1 Transforming Scene Geometry into the Solid Fuel Grid",
+      "page": 5,
+      "latex": "\\varphi_i = \\frac{\\sum_{r=1}^{N} l_{i,r}}{\\sum_{r=1}^{N} d_r},",
+      "meaning": "Estimates the volume fraction of each material in a voxel as the total in-material ray length over N rays cast through the voxel, divided by the total length the rays travel across the voxel.",
+      "symbols": {
+        "varphi_i": "volume fraction of material i [-]",
+        "N": "number of rays per voxel [-] (64 by default)",
+        "l_{i,r}": "accumulated length of ray r inside material i [m] (unit implied; foliage hits add an artificial length set by delta_l)",
+        "d_r": "side length of the voxel crossed by ray r [m] (unit implied; equals the cell size Delta x)"
+      },
+      "depends_on": [],
+      "kind": "sampling"
+    },
+    {
+      "id": "F2",
+      "section": "4.2.1 Transforming Scene Geometry into the Solid Fuel Grid",
+      "page": 5,
+      "latex": "\\varphi_{moisture} = r_d\\, \\varphi_{\\mathrm{dense}} + r_s\\, \\varphi_{\\mathrm{sparse}},",
+      "meaning": "Adds a moisture volume fraction to the voxel in linear proportion to its dense (wood) and sparse (leaf) biomass volume fractions.",
+      "symbols": {
+        "varphi_moisture": "moisture volume fraction of the voxel [-]",
+        "varphi_dense": "volume fraction of dense biomass, e.g. wood [-]",
+        "varphi_sparse": "volume fraction of sparse biomass, e.g. leaves [-]",
+        "r_d": "dense biomass moisture ratio [-] (value not given)",
+        "r_s": "sparse biomass moisture ratio [-] (value not given)"
+      },
+      "depends_on": [
+        "F1"
+      ],
+      "kind": "definition"
+    },
+    {
+      "id": "F3",
+      "section": "4.2.1 Transforming Scene Geometry into the Solid Fuel Grid (Modeling of Interior Fuel)",
+      "page": 5,
+      "latex": "Q_b = q''_b A\\,.",
+      "meaning": "Total combustion energy available inside building b, computed as a sampled fire load density times the building floor area.",
+      "symbols": {
+        "Q_b": "total available combustion energy of building b [MJ] (unit implied by q''_b and A)",
+        "q''_b": "total fire load density sampled for building b from the residential distribution of Dzolev et al. 2021 [MJ m^-2]",
+        "A": "building floor area [m^2] (unit implied)"
+      },
+      "depends_on": [],
+      "kind": "definition"
+    },
+    {
+      "id": "F4",
+      "section": "4.2.1 Transforming Scene Geometry into the Solid Fuel Grid (Modeling of Interior Fuel)",
+      "page": 6,
+      "latex": "M_b = \\frac{Q_b}{\\Delta_c H^{\\mathrm{eff}}}\\,.",
+      "meaning": "Converts the building's interior fire load energy into an equivalent combustible solid mass using an effective net heat of combustion for mixed residential contents.",
+      "symbols": {
+        "M_b": "total initial combustible mass assigned to the interior of building b [kg] (unit implied)",
+        "Q_b": "total available combustion energy of building b (Eq. 3)",
+        "Delta_c H^eff": "effective net heat of combustion for mixed residential contents (value and unit not given)"
+      },
+      "depends_on": [
+        "F3"
+      ],
+      "kind": "definition"
+    },
+    {
+      "id": "F5",
+      "section": "4.2.1 Transforming Scene Geometry into the Solid Fuel Grid (Modeling of Interior Fuel)",
+      "page": 6,
+      "latex": "m_{b,t} \\sim \\mathcal{N}(\\mu_b, \\sigma_b^2)\\,, \\qquad t \\in \\mathcal{I}_b\\,.",
+      "meaning": "Draws the fuel mass of each interior solid voxel of building b from a normal distribution whose mean spreads M_b evenly over the interior voxels and whose spread follows the reported variability of residential fire loads.",
+      "symbols": {
+        "m_{b,t}": "fuel mass of interior voxel t of building b [kg per voxel]",
+        "mu_b": "mean per-voxel fuel mass, mu_b = M_b / N_b [kg]",
+        "sigma_b": "building-specific dispersion parameter derived from Dzolev et al. 2021 [kg] (value not given)",
+        "I_b": "set of interior solid voxels of building b",
+        "N_b": "number of interior solid voxels, N_b = |I_b| [-]"
+      },
+      "depends_on": [
+        "F4"
+      ],
+      "kind": "sampling"
+    },
+    {
+      "id": "F6",
+      "section": "4.3 Fluid Dynamics",
+      "page": 6,
+      "latex": "\\frac{D\\boldsymbol{u}}{Dt} = -\\frac{\\nabla p}{\\rho_g} - \\boldsymbol{g}\\left(1 - \\frac{\\rho_{amb}}{\\rho_g}\\right),",
+      "meaning": "Gas momentum equation without viscosity: the velocity changes under the pressure gradient and a buoyancy force that depends on how far the local gas density departs from the ambient reference density.",
+      "symbols": {
+        "u": "velocity field [m s^-1]",
+        "D/Dt": "material derivative",
+        "p": "pressure [Pa]",
+        "rho_g": "gas density [kg m^-3]",
+        "g": "effective gravity vector [m s^-2] (Table 5: -9.81)",
+        "rho_amb": "reference (ambient) density [kg m^-3] (Table 5: 1.1726)"
+      },
+      "depends_on": [
+        "F7"
+      ],
+      "kind": "conservation law",
+      "transcriber_note": "Sign of the buoyancy term depends on the unstated orientation of g; see Transcriber's note 9 in flamescapes-2026.md."
+    },
+    {
+      "id": "F7",
+      "section": "4.3 Fluid Dynamics",
+      "page": 6,
+      "latex": "\\rho_g = \\rho_{\\mathrm{amb}} \\left(R T_g \\sum_{i=0}^{n} \\frac{Y_i}{M_i}\\right)^{-1},",
+      "meaning": "Equation of state that sets the gas density from the gas temperature and the mixture's mean molar mass, so hot gas becomes lighter.",
+      "symbols": {
+        "rho_g": "gas density [kg m^-3]",
+        "rho_amb": "ambient reference density [kg m^-3]",
+        "R": "universal gas constant [8.314 J mol^-1 K^-1]",
+        "T_g": "gas temperature [K]",
+        "Y_i": "mass fraction of species i [-]",
+        "M_i": "molar mass of species i [kg mol^-1]",
+        "n": "index of the last species (number of species minus one)"
+      },
+      "depends_on": [],
+      "kind": "constitutive law",
+      "transcriber_note": "Dimensionally the ideal-gas law needs a pressure where rho_amb stands; see Transcriber's note 8."
+    },
+    {
+      "id": "F8",
+      "section": "4.4 Gas Combustion",
+      "page": 7,
+      "latex": "\\rho_g C_{p,g} \\frac{\\partial T_g}{\\partial t} = \\nabla \\cdot (k_g \\nabla T_g) - \\nabla q_{\\mathrm{rad}} + \\dot{q}_{c,g}\\,,",
+      "meaning": "Gas energy equation: gas temperature changes through heat conduction, a volumetric radiation term from soot, and heat released by gas-phase combustion (advection is handled separately in the semi-Lagrangian step).",
+      "symbols": {
+        "rho_g": "gas density [kg m^-3]",
+        "C_{p,g}": "specific heat capacity of the gas mixture [J kg^-1 K^-1]",
+        "T_g": "gas temperature [K]",
+        "t": "time [s]",
+        "k_g": "mixture-dependent thermal conductivity [W m^-1 K^-1]",
+        "nabla q_rad": "volumetric radiation of the gas (Eq. 17); A.4 writes Delta q_rad [J s^-1]",
+        "qdot_{c,g}": "combustion heat source in the gas phase (Eq. 9); A.4 unit for qdot_c [J s^-1]"
+      },
+      "depends_on": [
+        "F9",
+        "F17"
+      ],
+      "kind": "conservation law",
+      "transcriber_note": "Printed as a gradient of q_rad, not a divergence; A.4 units are per second, not per volume; sign of the radiation term conflicts with Eq. 17 (Transcriber's notes 2, 3, 7)."
+    },
+    {
+      "id": "F9",
+      "section": "4.4 Gas Combustion",
+      "page": 7,
+      "latex": "\\dot{q}_{c,g} = -\\Delta_{c,g} H^0 v_{c,g},",
+      "meaning": "Heat released by gas-phase combustion equals minus the (negative) heat of combustion times the molar combustion rate, kept unchanged from Fire-X.",
+      "symbols": {
+        "qdot_{c,g}": "gas-phase combustion heat source [J s^-1] (A.4; per unit volume in Eq. 8)",
+        "Delta_{c,g} H^0": "heat of combustion of the gas fuel [J mol^-1] (Table 3: -8.34e5)",
+        "v_{c,g}": "gas combustion rate [mol m^-3 s^-1] (Eq. 10)"
+      },
+      "depends_on": [
+        "F10"
+      ],
+      "kind": "constitutive law"
+    },
+    {
+      "id": "F10",
+      "section": "4.4 Gas Combustion",
+      "page": 7,
+      "latex": "v_{c,g} = A_{c,g} \\exp\\left(\\frac{-E_{a,c,g}}{R T_g}\\right) c_f^{a} c_0^{b}\\,,",
+      "meaning": "Arrhenius-type global rate law for gas-phase combustion, depending on gas temperature and on the fuel and oxidizer molar concentrations raised to empirical exponents.",
+      "symbols": {
+        "v_{c,g}": "gas combustion rate [mol m^-3 s^-1]",
+        "A_{c,g}": "pre-exponential factor (units vary with reaction order; Table 3 gas Arrhenius factor 8.30e5 1/s)",
+        "E_{a,c,g}": "activation energy for gaseous combustion [J mol^-1] (Table 3: 1.26e5)",
+        "R": "universal gas constant [8.314 J mol^-1 K^-1]",
+        "T_g": "gas temperature [K]; flame-front particles can supersede the cell temperature (Sec. 4.7)",
+        "c_f": "molar concentration of fuel [mol m^-3]",
+        "c_0": "molar concentration of oxidizer [mol m^-3] (printed c_0 in the equation, c_o in the text and A.4)",
+        "a": "empirical reaction order exponent for fuel [-] (Table 3: -0.30)",
+        "b": "empirical reaction order exponent for oxidizer [-] (Table 3: 1.30)"
+      },
+      "depends_on": [],
+      "kind": "empirical correlation"
+    },
+    {
+      "id": "F11",
+      "section": "4.4 Gas Combustion",
+      "page": 7,
+      "latex": "\\frac{\\partial Y_i}{\\partial t} + \\boldsymbol{u} \\cdot \\nabla Y_i = D_i \\nabla^2 Y_i + \\dot{m}_{c,g} + \\dot{m}_{e,s} + \\dot{m}_{p,s} + \\dot{m}_{c,s}\\,,",
+      "meaning": "Transport of each gas species mass fraction by advection and diffusion, with source terms from gas combustion and from the three new solid processes: moisture evaporation, pyrolysis and solid combustion.",
+      "symbols": {
+        "Y_i": "mass fraction of species i [-]",
+        "u": "velocity field [m s^-1]",
+        "D_i": "diffusion coefficient of species i [m^2 s^-1]",
+        "mdot_{c,g}": "gas combustion source term (Eq. 12) [s^-1]",
+        "mdot_{e,s}": "solid evaporation source term [s^-1] (no equation given)",
+        "mdot_{p,s}": "solid pyrolysis source term (Eq. 14) [s^-1]",
+        "mdot_{c,s}": "solid combustion source term (Eq. 15) [s^-1]"
+      },
+      "depends_on": [
+        "F12",
+        "F14",
+        "F15"
+      ],
+      "kind": "conservation law"
+    },
+    {
+      "id": "F12",
+      "section": "4.4 Gas Combustion",
+      "page": 7,
+      "latex": "\\dot{m}_{c,g} = \\frac{v_{c,g} q_i M_i}{\\rho_g}\\,,",
+      "meaning": "Converts the molar gas combustion rate into a rate of change of each species mass fraction using its stoichiometric coefficient and molar mass.",
+      "symbols": {
+        "mdot_{c,g}": "gas combustion mass fraction source term [s^-1]",
+        "v_{c,g}": "gas combustion rate [mol m^-3 s^-1]",
+        "q_i": "stoichiometric coefficient for species i [-]",
+        "M_i": "molar mass of species i [kg mol^-1]",
+        "rho_g": "gas density [kg m^-3]"
+      },
+      "depends_on": [
+        "F10",
+        "F7"
+      ],
+      "kind": "constitutive law"
+    },
+    {
+      "id": "F13",
+      "section": "4.5 Solid Combustion",
+      "page": 7,
+      "latex": "\\rho_s = \\sum_{i=0}^{n} \\varphi_i \\rho_i\\,, \\qquad C_{p,s} = \\frac{\\sum_{i=0}^{n} \\varphi_i C_{p,i}}{\\sum_{i=0}^{n} \\varphi_i}\\,,",
+      "meaning": "Mixing rules for a solid voxel: density is the volume-fraction-weighted sum of material densities, and specific heat (and, by the text, conductivity) is the volume-fraction-weighted mean of the material values.",
+      "symbols": {
+        "rho_s": "solid density of the voxel [kg m^-3]",
+        "varphi_i": "volume fraction of material i [-]",
+        "rho_i": "density of material i [kg m^-3] (Table 4)",
+        "C_{p,s}": "specific heat capacity of the solid voxel [J kg^-1 K^-1]",
+        "C_{p,i}": "specific heat capacity of material i [J kg^-1 K^-1] (Table 4)",
+        "n": "index of the last material"
+      },
+      "depends_on": [
+        "F1",
+        "F2"
+      ],
+      "kind": "constitutive law"
+    },
+    {
+      "id": "F14",
+      "section": "4.5 Solid Combustion (Pyrolysis, without oxygen)",
+      "page": 8,
+      "latex": "\\dot{m}_{p,s} = \\frac{M_i}{\\rho_i}\\, v_{p,s}\\,, \\qquad \\dot{q}_{p,s} = \\Delta_{p,s} H^0\\, v_{p,s}\\,,",
+      "meaning": "Pyrolysis of heated solid fuel where oxygen is lacking: the Arrhenius pyrolysis rate sets both the gaseous volatile source injected into the cell and the heat term in the solid energy equation.",
+      "symbols": {
+        "mdot_{p,s}": "pyrolysis mass fraction source term [s^-1] (A.4)",
+        "M_i": "molar mass of material i [kg mol^-1] (Table 4)",
+        "rho_i": "density of material i [kg m^-3] (Table 4)",
+        "v_{p,s}": "pyrolysis reaction rate, Arrhenius form analogous to Eq. 10 but not printed [kg m^-3 s^-1] (A.4); Table 3: activation energy 9.22e4 J/mol, Arrhenius factor 4.78e4 1/s",
+        "qdot_{p,s}": "pyrolysis heat term in the solid energy equation [J s^-1] (A.4)",
+        "Delta_{p,s} H^0": "heat of pyrolysis [J mol^-1 or J kg^-1] (Table 3: 2.50e05 J/kg)"
+      },
+      "depends_on": [],
+      "kind": "constitutive law",
+      "transcriber_note": "Units of mdot_{p,s} and the sign of qdot_{p,s} conflict with A.4 and the text (Transcriber's notes 5 and 6)."
+    },
+    {
+      "id": "F15",
+      "section": "4.5 Solid Combustion (Oxidation, with oxygen)",
+      "page": 8,
+      "latex": "\\dot{m}_{c,s} = \\frac{M_i}{\\rho_i}\\, v_{c,s}\\,, \\qquad \\dot{q}_{c,s} = \\Delta_{c,s} H^0\\, v_{c,s}\\,,",
+      "meaning": "Oxidation of solid char or fuel when oxygen is present: the Arrhenius solid combustion rate sets the gaseous species source and the heat released in the solid.",
+      "symbols": {
+        "mdot_{c,s}": "solid combustion mass fraction source term [s^-1]",
+        "M_i": "molar mass of material i [kg mol^-1]",
+        "rho_i": "density of material i [kg m^-3]",
+        "v_{c,s}": "solid combustion (oxidation) rate, Arrhenius form not printed [mol m^-3 s^-1] (A.4 unit for v_c); Table 3: activation energy 9.22e4 J/mol, Arrhenius factor 1.80e8 1/s",
+        "qdot_{c,s}": "heat release by solid oxidation [J s^-1] (A.4)",
+        "Delta_{c,s} H^0": "lower heat of combustion of the solid [J mol^-1] (Table 3: -2.80e6)"
+      },
+      "depends_on": [],
+      "kind": "constitutive law",
+      "transcriber_note": "With the negative Table 3 value and no minus sign, qdot_{c,s} would be a sink (Transcriber's note 5)."
+    },
+    {
+      "id": "F16",
+      "section": "4.6 Radiation (Surface emission)",
+      "page": 8,
+      "latex": "q_{\\mathrm{rad},s} = \\epsilon\\sigma\\left(T_s^4 - T_{\\mathrm{amb}}^4\\right),",
+      "meaning": "Net diffuse (Lambertian) radiative emission from a solid cell face adjacent to gas, relative to the ambient temperature; it is removed from the solid and carried by Monte Carlo rays to gas and other solids.",
+      "symbols": {
+        "q_{rad,s}": "radiative flux emitted by the solid surface [W m^-2] (unit implied)",
+        "epsilon": "material emissivity [-] (no material values given; ember emissivity 0.95)",
+        "sigma": "Stefan-Boltzmann constant [5.67e-8 W m^-2 K^-4]",
+        "T_s": "solid surface temperature [K]",
+        "T_amb": "ambient temperature [K] (Table 5: 300)"
+      },
+      "depends_on": [],
+      "kind": "constitutive law"
+    },
+    {
+      "id": "F17",
+      "section": "4.6 Radiation (Volumetric emission and absorption)",
+      "page": 9,
+      "latex": "-\\nabla q_{\\mathrm{rad}} = 4 Y_s \\kappa_s \\sigma\\left(T_g^4 - T_{\\mathrm{amb}}^4\\right),",
+      "meaning": "Volumetric radiative emission of hot sooty gas, proportional to the soot mass fraction and an effective absorption coefficient, without wavelength dependence.",
+      "symbols": {
+        "nabla q_rad": "volumetric radiation of the gas [J s^-1] (A.4, written Delta q_rad)",
+        "Y_s": "soot mass fraction [-]",
+        "kappa_s": "effective absorption coefficient [-] per A.4 (dimensionally m^-1 in P_abs); Table 5 'Residual absorption coefficient' [500, 4000] may be this value (our reading)",
+        "sigma": "Stefan-Boltzmann constant [5.67e-8 W m^-2 K^-4]",
+        "T_g": "gas temperature [K]",
+        "T_amb": "ambient temperature [K]"
+      },
+      "depends_on": [],
+      "kind": "constitutive law",
+      "transcriber_note": "Text calls this a loss term, but the printed sign makes it a gain when inserted in Eq. 8 (Transcriber's note 3)."
+    },
+    {
+      "id": "F18",
+      "section": "4.9 Solid Temperature Evolution",
+      "page": 10,
+      "latex": "\\rho_s C_{p,s} \\frac{\\partial T_s}{\\partial t} = \\nabla \\cdot (k_s \\nabla T_s) + \\dot{q}_{e,s} + \\dot{q}_{c,s} + \\dot{q}_{p,s}\\,,",
+      "meaning": "Solid energy equation: solid temperature changes by heat conduction through the voxelized solid plus the evaporation, oxidation and pyrolysis heat terms; radiative and ember deposits enter as additional sources in the implementation.",
+      "symbols": {
+        "rho_s": "solid density [kg m^-3] (Eq. 13)",
+        "C_{p,s}": "solid specific heat capacity [J kg^-1 K^-1] (Eq. 13)",
+        "T_s": "solid temperature [K]",
+        "k_s": "solid thermal conductivity [W m^-1 K^-1] (mixing rule as for C_{p,s})",
+        "qdot_{e,s}": "evaporation heat source (sink) term [J s^-1]",
+        "qdot_{c,s}": "heat release by solid oxidation (Eq. 15) [J s^-1]",
+        "qdot_{p,s}": "pyrolysis heat term (Eq. 14) [J s^-1]"
+      },
+      "depends_on": [
+        "F13",
+        "F14",
+        "F15"
+      ],
+      "kind": "conservation law"
+    },
+    {
+      "id": "F19",
+      "section": "4.9 Solid Temperature Evolution",
+      "page": 10,
+      "latex": "-k_s \\nabla T_s \\cdot \\mathbf{n} = h\\left(T_s - T_g\\right) + \\epsilon\\sigma\\left(T_s^4 - T_{\\mathrm{amb}}^4\\right),",
+      "meaning": "Boundary condition at solid-gas interfaces (also applied inside porous cells): conductive flux out of the solid equals convective exchange with the neighbouring gas plus net surface radiation.",
+      "symbols": {
+        "k_s": "solid thermal conductivity [W m^-1 K^-1]",
+        "T_s": "solid temperature [K]",
+        "n": "outward normal [-]",
+        "h": "heat transfer coefficient, listed as dimensionless in A.4 (dimensionally W m^-2 K^-1); likely the Table 5 'Convection coefficient' [0, 200] (our reading)",
+        "T_g": "neighbouring gas temperature [K]",
+        "epsilon": "emissivity [-]",
+        "sigma": "Stefan-Boltzmann constant [5.67e-8 W m^-2 K^-4]",
+        "T_amb": "ambient temperature [K]"
+      },
+      "depends_on": [
+        "F16",
+        "F18"
+      ],
+      "kind": "conservation law"
+    },
+    {
+      "id": "S1",
+      "section": "Supplement 1.3 Architectural constraints",
+      "page": 1,
+      "document": "supplement",
+      "latex": "r = (S, T, E),",
+      "meaning": "A wave function collapse building rule is a triple of scope, target condition and effect, where the effect keeps compatible states, removes incompatible ones, or changes state weights.",
+      "symbols": {
+        "r": "architectural constraint rule",
+        "S": "rule scope (grid-local or building-global)",
+        "T": "target condition (not temperature here)",
+        "E": "rule effect (keep, remove, or reweight states)"
+      },
+      "depends_on": [],
+      "kind": "definition"
+    }
+  ],
+  "supplementary_expressions": [
+    {
+      "id": "I1",
+      "section": "4.2.1 Transforming Scene Geometry into the Solid Fuel Grid (Modeling of Interior Fuel)",
+      "page": 6,
+      "display": "inline",
+      "latex": "N_b = |\\mathcal{I}_b|",
+      "meaning": "Number of interior solid voxels of building b.",
+      "symbols": {
+        "N_b": "number of interior solid voxels [-]",
+        "I_b": "set of interior solid voxels of building b"
+      },
+      "depends_on": [],
+      "kind": "definition"
+    },
+    {
+      "id": "I2",
+      "section": "4.2.1 Transforming Scene Geometry into the Solid Fuel Grid (Modeling of Interior Fuel)",
+      "page": 6,
+      "display": "inline",
+      "latex": "\\mu_b = M_b/N_b",
+      "meaning": "Mean of the per-voxel interior fuel mass distribution, fixed so that the expected total equals the fire-load mass M_b.",
+      "symbols": {
+        "mu_b": "mean per-voxel fuel mass [kg]",
+        "M_b": "interior combustible mass (Eq. 4) [kg]",
+        "N_b": "number of interior solid voxels [-]"
+      },
+      "depends_on": [
+        "F4",
+        "I1"
+      ],
+      "kind": "definition"
+    },
+    {
+      "id": "I3",
+      "section": "4.2.1 Transforming Scene Geometry into the Solid Fuel Grid (durability)",
+      "page": 6,
+      "display": "inline",
+      "latex": "D(t) < \\tau\\, D_{\\max}",
+      "meaning": "Visibility test: a mesh module is removed from rendering once the combustible fuel mass left in its voxels falls below the fraction tau = 0.05 of its initial mass; it does not affect combustion.",
+      "symbols": {
+        "D(t)": "current durability, sum of the module's remaining combustible fuel mass in voxels [kg]",
+        "D_max": "initial (maximum) durability [kg]",
+        "tau": "destruction threshold [-] (0.05)"
+      },
+      "depends_on": [
+        "F1",
+        "F5"
+      ],
+      "kind": "definition"
+    },
+    {
+      "id": "I4",
+      "section": "4.6 Radiation (Volumetric emission and absorption)",
+      "page": 9,
+      "display": "inline",
+      "latex": "P_{\\mathrm{abs}} = 1 - \\exp(-\\kappa_s Y_s \\ell)",
+      "meaning": "Probability that a radiation ray is absorbed by sooty gas over a path segment, used in the Monte Carlo ray transport; absorbed or solid-hitting rays deposit their energy and terminate.",
+      "symbols": {
+        "P_abs": "absorption probability [-]",
+        "kappa_s": "effective absorption coefficient (A.4: dimensionless; dimensionally m^-1 here)",
+        "Y_s": "soot mass fraction [-]",
+        "ell": "path segment length [m] (unit implied)"
+      },
+      "depends_on": [
+        "F17"
+      ],
+      "kind": "sampling"
+    },
+    {
+      "id": "A1-2",
+      "section": "5 Algorithmics and Implementation (Algorithm 1, line 2)",
+      "page": 10,
+      "display": "algorithm",
+      "latex": "\\boldsymbol{u} \\leftarrow \\boldsymbol{u}_0,\\; T_s, T_g \\leftarrow T_{amb},\\; Y_i \\leftarrow Y_i^0",
+      "meaning": "Initial conditions of every grid cell: initial velocity, both temperatures at ambient (300 K with air at atmospheric pressure, Sec. 5.1) and initial species mass fractions.",
+      "symbols": {
+        "u_0": "initial velocity [m s^-1]",
+        "T_amb": "ambient temperature [K]",
+        "Y_i^0": "initial mass fraction of species i [-]"
+      },
+      "depends_on": [],
+      "kind": "numerical scheme",
+      "transcriber_note": "Sec. 5.1 calls the initial temperature T_0 (Transcriber's note 13)."
+    },
+    {
+      "id": "S-I1",
+      "section": "Supplement 1.2 WFC Rule Formalism",
+      "page": 1,
+      "document": "supplement",
+      "display": "inline",
+      "latex": "\\sigma(t, d),\\quad d \\in \\{left, right, up, down\\}",
+      "meaning": "Each wall-cell semantic state exposes a discrete interface label on each of its four sides.",
+      "symbols": {
+        "sigma": "interface label function (not the Stefan-Boltzmann constant)",
+        "t": "semantic state",
+        "d": "side direction"
+      },
+      "depends_on": [],
+      "kind": "definition"
+    },
+    {
+      "id": "S-I2",
+      "section": "Supplement 1.2 WFC Rule Formalism",
+      "page": 1,
+      "document": "supplement",
+      "display": "inline",
+      "latex": "\\sigma(t_i, d) = \\sigma(t_j, \\bar{d})",
+      "meaning": "Two neighbouring states are compatible in direction d exactly when their facing interface labels match.",
+      "symbols": {
+        "t_i, t_j": "states of two adjacent cells",
+        "d": "direction from cell i to cell j",
+        "bar d": "opposite direction"
+      },
+      "depends_on": [
+        "S-I1"
+      ],
+      "kind": "definition"
+    },
+    {
+      "id": "S-A2-3",
+      "section": "Supplement 2 Algorithms (Algorithm 2, line 3)",
+      "page": 3,
+      "document": "supplement",
+      "display": "algorithm",
+      "latex": "\\dot{q} \\leftarrow 0",
+      "meaning": "Resets the per-cell accumulator of ember thermal energy.",
+      "symbols": {
+        "qdot": "ember thermal energy accumulated in the cell"
+      },
+      "depends_on": [],
+      "kind": "numerical scheme"
+    },
+    {
+      "id": "S-A2-5",
+      "section": "Supplement 2 Algorithms (Algorithm 2, line 5)",
+      "page": 3,
+      "document": "supplement",
+      "display": "algorithm",
+      "latex": "\\dot{q}_e \\leftarrow m_e \\cdot (T_e - T_s) \\cdot C_e",
+      "meaning": "Excess thermal energy an ember brings into a solid cell: ember mass times its temperature excess over the solid times its heat capacity.",
+      "symbols": {
+        "qdot_e": "excess thermal energy of one ember (an energy despite the rate dot)",
+        "m_e": "ember mass [kg] (Table 5 range [1e-6, 0.2])",
+        "T_e": "ember temperature [K] (not defined in the text)",
+        "T_s": "solid temperature [K]",
+        "C_e": "ember heat capacity (not defined in the text)"
+      },
+      "depends_on": [],
+      "kind": "numerical scheme",
+      "transcriber_note": "See supplement Transcriber's note 3."
+    },
+    {
+      "id": "S-A2-6",
+      "section": "Supplement 2 Algorithms (Algorithm 2, line 6)",
+      "page": 3,
+      "document": "supplement",
+      "display": "algorithm",
+      "latex": "\\dot{q} \\leftarrow \\dot{q} + \\dot{q}_e",
+      "meaning": "Sums the excess energy of all embers in the cell.",
+      "symbols": {
+        "qdot": "accumulated ember energy",
+        "qdot_e": "excess energy of one ember"
+      },
+      "depends_on": [
+        "S-A2-3",
+        "S-A2-5"
+      ],
+      "kind": "numerical scheme"
+    },
+    {
+      "id": "S-A2-7",
+      "section": "Supplement 2 Algorithms (Algorithm 2, line 7)",
+      "page": 3,
+      "document": "supplement",
+      "display": "algorithm",
+      "latex": "T_s \\leftarrow T_s + \\dot{q} \\cdot \\rho_s C_{p,s}",
+      "meaning": "Raises the solid temperature by the deposited ember energy (printed as a multiplication by the volumetric heat capacity).",
+      "symbols": {
+        "T_s": "solid temperature [K]",
+        "qdot": "accumulated ember energy",
+        "rho_s": "solid density [kg m^-3]",
+        "C_{p,s}": "solid specific heat capacity [J kg^-1 K^-1]"
+      },
+      "depends_on": [
+        "S-A2-6",
+        "F13"
+      ],
+      "kind": "numerical scheme",
+      "transcriber_note": "Dimensionally a division by rho_s C_{p,s} (and cell volume) is expected; see supplement Transcriber's note 4."
+    },
+    {
+      "id": "S-A2-8",
+      "section": "Supplement 2 Algorithms (Algorithm 2, line 8)",
+      "page": 3,
+      "document": "supplement",
+      "display": "algorithm",
+      "latex": "T_f \\leftarrow 0",
+      "meaning": "Resets the per-cell maximum flame-front particle temperature.",
+      "symbols": {
+        "T_f": "maximum flame-front temperature in the cell [K]"
+      },
+      "depends_on": [],
+      "kind": "numerical scheme"
+    },
+    {
+      "id": "S-A2-10",
+      "section": "Supplement 2 Algorithms (Algorithm 2, line 10)",
+      "page": 3,
+      "document": "supplement",
+      "display": "algorithm",
+      "latex": "T_f \\leftarrow max(T_f, T_p)",
+      "meaning": "Keeps the highest temperature carried by any flame-front particle in the cell.",
+      "symbols": {
+        "T_f": "maximum flame-front temperature [K]",
+        "T_p": "temperature carried by a flame-front particle [K] (temperature of its originating cell)"
+      },
+      "depends_on": [
+        "S-A2-8"
+      ],
+      "kind": "numerical scheme"
+    },
+    {
+      "id": "S-A2-11",
+      "section": "Supplement 2 Algorithms (Algorithm 2, line 11)",
+      "page": 3,
+      "document": "supplement",
+      "display": "algorithm",
+      "latex": "max(T_f, T_s)",
+      "meaning": "Temperature used in the gas combustion step: the larger of the flame-front temperature and the cell temperature, which lets ignition run ahead of the resolved burning region.",
+      "symbols": {
+        "T_f": "maximum flame-front temperature [K]",
+        "T_s": "solid temperature as printed [K]"
+      },
+      "depends_on": [
+        "S-A2-10",
+        "F10"
+      ],
+      "kind": "numerical scheme",
+      "transcriber_note": "Main Sec. 4.7 and Eq. 10 suggest the gas temperature T_g; see supplement Transcriber's note 5."
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Rays per voxel for volume-fraction estimation",
+      "symbol": "N",
+      "value": 64,
+      "unit": "rays",
+      "where_used": "Eq. 1 voxelization (default)",
+      "page": 5,
+      "document": "main",
+      "source": "Sec. 4.2.1"
+    },
+    {
+      "name": "Destruction threshold",
+      "symbol": "tau",
+      "value": 0.05,
+      "unit": "-",
+      "where_used": "durability test D(t) < tau D_max; removes mesh modules from rendering only",
+      "page": 6,
+      "document": "main",
+      "source": "Sec. 4.2.1"
+    },
+    {
+      "name": "Flame-front particles spawned per combusting cell",
+      "value": 6,
+      "unit": "particles",
+      "where_used": "flame-front propagation, emitted uniformly in the six cell directions",
+      "page": 9,
+      "document": "main",
+      "source": "Sec. 4.7"
+    },
+    {
+      "name": "Initial grid temperature",
+      "value": 300,
+      "unit": "K",
+      "where_used": "grid initialized with typical air composition at atmospheric pressure",
+      "page": 10,
+      "document": "main",
+      "source": "Sec. 5.1"
+    },
+    {
+      "name": "Path-tracer samples per pixel",
+      "value": 128,
+      "unit": "samples per pixel",
+      "where_used": "rendering of most figures; Table 1 Render timings",
+      "page": 13,
+      "document": "main",
+      "source": "Sec. 5.2; Table 1 caption"
+    },
+    {
+      "name": "Scene-construction time limit for Table 1",
+      "value": 30,
+      "unit": "min",
+      "where_used": "runs that did not finish within this time are marked DNF",
+      "page": 16,
+      "document": "main",
+      "source": "Table 1 caption"
+    },
+    {
+      "name": "Universal gas constant",
+      "symbol": "R",
+      "value": 8.314,
+      "unit": "J mol^-1 K^-1",
+      "where_used": "Eqs. 7 and 10",
+      "page": 19,
+      "document": "main",
+      "source": "A.4"
+    },
+    {
+      "name": "Stefan-Boltzmann constant",
+      "symbol": "sigma",
+      "value": 5.67e-08,
+      "printed": "5.67 × 10^-8",
+      "unit": "W m^-2 K^-4",
+      "where_used": "Eqs. 16, 17, 19",
+      "page": 19,
+      "document": "main",
+      "source": "A.4"
+    },
+    {
+      "name": "Grid dimensions of the Fig. 1 scene",
+      "value": [
+        600,
+        375,
+        150
+      ],
+      "printed": "600 x 375 x 150",
+      "unit": "voxels",
+      "where_used": "performance run on RTX Pro 6000",
+      "page": 16,
+      "document": "main",
+      "source": "Table 1"
+    },
+    {
+      "name": "Grid dimensions of the Fig. 7 scene",
+      "value": [
+        250,
+        250,
+        60
+      ],
+      "printed": "250 x 250 x 60",
+      "unit": "voxels",
+      "where_used": "performance run on RTX 4090",
+      "page": 16,
+      "document": "main",
+      "source": "Table 1"
+    },
+    {
+      "name": "Grid dimensions of the Fig. 10 scene",
+      "value": [
+        240,
+        240,
+        100
+      ],
+      "printed": "240 x 240 x 100",
+      "unit": "voxels",
+      "where_used": "performance run on RTX 4090",
+      "page": 16,
+      "document": "main",
+      "source": "Table 1"
+    },
+    {
+      "name": "Grid dimensions of the Fig. 11 scene",
+      "value": [
+        510,
+        510,
+        225
+      ],
+      "printed": "510 x 510 x 225",
+      "unit": "voxels",
+      "where_used": "performance run on RTX Pro 6000",
+      "page": 16,
+      "document": "main",
+      "source": "Table 1"
+    },
+    {
+      "name": "Grid dimensions of the Fig. 12 scene",
+      "value": [
+        400,
+        400,
+        200
+      ],
+      "printed": "400 x 400 x 200",
+      "unit": "voxels",
+      "where_used": "performance run on RTX Pro 6000",
+      "page": 16,
+      "document": "main",
+      "source": "Table 1"
+    },
+    {
+      "name": "Solid Pyrolysis Activation Energy",
+      "value": 92200.0,
+      "printed": "9.22e4",
+      "unit": "J/mol",
+      "where_used": "Arrhenius pyrolysis rate v_{p,s} (Eq. 14)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Solid Pyrolysis Arrhenius Factor",
+      "value": 47800.0,
+      "printed": "4.78e4",
+      "unit": "1/s",
+      "where_used": "Arrhenius pyrolysis rate v_{p,s} (Eq. 14)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Solid Heat of Pyrolysis",
+      "value": 250000.0,
+      "printed": "2.50e05",
+      "unit": "J/kg",
+      "where_used": "Delta_{p,s}H^0 in Eq. 14",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Solid Combustion Arrhenius Factor",
+      "value": 180000000.0,
+      "printed": "1.80e8",
+      "unit": "1/s",
+      "where_used": "Arrhenius oxidation rate v_{c,s} (Eq. 15)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Solid Combustion Activation Energy",
+      "value": 92200.0,
+      "printed": "9.22e4",
+      "unit": "J/mol",
+      "where_used": "Arrhenius oxidation rate v_{c,s} (Eq. 15)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Solid Heat of Combustion",
+      "value": -2800000.0,
+      "printed": "-2.80e6",
+      "unit": "J/mol",
+      "where_used": "Delta_{c,s}H^0 in Eq. 15",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Moisture Heat of Evaporation",
+      "value": 40700.0,
+      "printed": "4.07e4",
+      "unit": "J/mol",
+      "where_used": "evaporation sink qdot_{e,s} (Eq. 18)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Gas Activation Energy",
+      "value": 126000.0,
+      "printed": "1.26e5",
+      "unit": "J/mol",
+      "where_used": "E_{a,c,g} in Eq. 10",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Gas Arrhenius Factor",
+      "value": 830000.0,
+      "printed": "8.30e5",
+      "unit": "1/s",
+      "where_used": "A_{c,g} in Eq. 10",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Gas Fuel Reaction Exponent",
+      "value": -0.3,
+      "printed": "-0.30",
+      "unit": "1",
+      "where_used": "exponent a in Eq. 10",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Gas Oxygen Reaction Exponent",
+      "value": 1.3,
+      "printed": "1.30",
+      "unit": "1",
+      "where_used": "exponent b in Eq. 10",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Gas Heat of Combustion",
+      "value": -834000.0,
+      "printed": "-8.34e5",
+      "unit": "J/mol",
+      "where_used": "Delta_{c,g}H^0 in Eq. 9",
+      "page": 18,
+      "document": "main",
+      "source": "Table 3 (A.2), combustion values for biomass fuel"
+    },
+    {
+      "name": "Steel density",
+      "symbol": "rho",
+      "value": 7850,
+      "printed": "7850",
+      "unit": "kg/m^3",
+      "where_used": "rho_i in Eq. 13 (and Eqs. 14, 15)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Steel specific heat capacity",
+      "symbol": "c_p",
+      "value": 470,
+      "printed": "470",
+      "unit": "J/(kg K)",
+      "where_used": "C_{p,i} in Eq. 13",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Steel thermal conductivity",
+      "symbol": "k",
+      "value": 52.5,
+      "printed": "52.5",
+      "unit": "W/(m K)",
+      "where_used": "k mixing rule (Sec. 4.5) and Eq. 18",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Steel molar mass",
+      "symbol": "M",
+      "value": 0.05585,
+      "printed": "0.05585",
+      "unit": "kg/mol",
+      "where_used": "M_i in Eqs. 14, 15",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Wood density",
+      "symbol": "rho",
+      "value": 600,
+      "printed": "600",
+      "unit": "kg/m^3",
+      "where_used": "rho_i in Eq. 13 (and Eqs. 14, 15)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Wood specific heat capacity",
+      "symbol": "c_p",
+      "value": 2000,
+      "printed": "2000",
+      "unit": "J/(kg K)",
+      "where_used": "C_{p,i} in Eq. 13",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Wood thermal conductivity",
+      "symbol": "k",
+      "value": 0.15,
+      "printed": "0.15",
+      "unit": "W/(m K)",
+      "where_used": "k mixing rule (Sec. 4.5) and Eq. 18",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Wood molar mass",
+      "symbol": "M",
+      "value": 0.16214,
+      "printed": "0.16214",
+      "unit": "kg/mol",
+      "where_used": "M_i in Eqs. 14, 15",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)",
+      "note": "for composites an assumption based on dominant constituents (Table 4 caption)"
+    },
+    {
+      "name": "Leaves density",
+      "symbol": "rho",
+      "value": 60,
+      "printed": "60",
+      "unit": "kg/m^3",
+      "where_used": "rho_i in Eq. 13 (and Eqs. 14, 15)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Leaves specific heat capacity",
+      "symbol": "c_p",
+      "value": 1800,
+      "printed": "1800",
+      "unit": "J/(kg K)",
+      "where_used": "C_{p,i} in Eq. 13",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Leaves thermal conductivity",
+      "symbol": "k",
+      "value": 0.06,
+      "printed": "0.06",
+      "unit": "W/(m K)",
+      "where_used": "k mixing rule (Sec. 4.5) and Eq. 18",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Leaves molar mass",
+      "symbol": "M",
+      "value": 0.16214,
+      "printed": "0.16214",
+      "unit": "kg/mol",
+      "where_used": "M_i in Eqs. 14, 15",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)",
+      "note": "for composites an assumption based on dominant constituents (Table 4 caption)"
+    },
+    {
+      "name": "Stone density",
+      "symbol": "rho",
+      "value": 2700,
+      "printed": "2700",
+      "unit": "kg/m^3",
+      "where_used": "rho_i in Eq. 13 (and Eqs. 14, 15)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Stone specific heat capacity",
+      "symbol": "c_p",
+      "value": 800,
+      "printed": "800",
+      "unit": "J/(kg K)",
+      "where_used": "C_{p,i} in Eq. 13",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Stone thermal conductivity",
+      "symbol": "k",
+      "value": 2.5,
+      "printed": "2.5",
+      "unit": "W/(m K)",
+      "where_used": "k mixing rule (Sec. 4.5) and Eq. 18",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Stone molar mass",
+      "symbol": "M",
+      "value": 0.06008,
+      "printed": "0.06008",
+      "unit": "kg/mol",
+      "where_used": "M_i in Eqs. 14, 15",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)",
+      "note": "for composites an assumption based on dominant constituents (Table 4 caption)"
+    },
+    {
+      "name": "Glass density",
+      "symbol": "rho",
+      "value": 2500,
+      "printed": "2500",
+      "unit": "kg/m^3",
+      "where_used": "rho_i in Eq. 13 (and Eqs. 14, 15)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Glass specific heat capacity",
+      "symbol": "c_p",
+      "value": 840,
+      "printed": "840",
+      "unit": "J/(kg K)",
+      "where_used": "C_{p,i} in Eq. 13",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Glass thermal conductivity",
+      "symbol": "k",
+      "value": 1.0,
+      "printed": "1.0",
+      "unit": "W/(m K)",
+      "where_used": "k mixing rule (Sec. 4.5) and Eq. 18",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Glass molar mass",
+      "symbol": "M",
+      "value": 0.06,
+      "printed": "0.06000",
+      "unit": "kg/mol",
+      "where_used": "M_i in Eqs. 14, 15",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)",
+      "note": "for composites an assumption based on dominant constituents (Table 4 caption)"
+    },
+    {
+      "name": "Moisture density",
+      "symbol": "rho",
+      "value": 1000,
+      "printed": "1000",
+      "unit": "kg/m^3",
+      "where_used": "rho_i in Eq. 13 (and Eqs. 14, 15)",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Moisture specific heat capacity",
+      "symbol": "c_p",
+      "value": 4184,
+      "printed": "4184",
+      "unit": "J/(kg K)",
+      "where_used": "C_{p,i} in Eq. 13",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Moisture thermal conductivity",
+      "symbol": "k",
+      "value": 0.6,
+      "printed": "0.6",
+      "unit": "W/(m K)",
+      "where_used": "k mixing rule (Sec. 4.5) and Eq. 18",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Moisture molar mass",
+      "symbol": "M",
+      "value": 0.01802,
+      "printed": "0.01802",
+      "unit": "kg/mol",
+      "where_used": "M_i in Eqs. 14, 15",
+      "page": 18,
+      "document": "main",
+      "source": "Table 4 (A.3)"
+    },
+    {
+      "name": "Gas fuel type",
+      "value": "Methane, Propane, etc.",
+      "printed": "Methane, Propane, etc.",
+      "unit": "—",
+      "where_used": "gas-phase fuel species burnt by Eq. 10",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Combustion & Pyrolysis",
+      "origin": "Scene"
+    },
+    {
+      "name": "Combustion CO2 fraction",
+      "value": [
+        0.85,
+        0.995
+      ],
+      "printed": "[0.850, 0.995]",
+      "unit": "—",
+      "where_used": "share of combustion products released as CO2 (by its name; not defined further)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Combustion & Pyrolysis",
+      "origin": "Scene"
+    },
+    {
+      "name": "Combustion residual fraction",
+      "value": [
+        0.0,
+        0.15
+      ],
+      "printed": "[0.0, 0.150]",
+      "unit": "—",
+      "where_used": "share of combustion products released as residual species (by its name; not defined further)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Combustion & Pyrolysis",
+      "origin": "Scene"
+    },
+    {
+      "name": "Pyrolysis fuel fraction",
+      "value": [
+        0.85,
+        1.0
+      ],
+      "printed": "[0.850, 1.0]",
+      "unit": "—",
+      "where_used": "share of pyrolysis products released as gaseous fuel (Eq. 14; by its name)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Combustion & Pyrolysis",
+      "origin": "Scene"
+    },
+    {
+      "name": "Pyrolysis residual fraction",
+      "value": [
+        0.0,
+        0.15
+      ],
+      "printed": "[0.0, 0.150]",
+      "unit": "—",
+      "where_used": "share of pyrolysis products released as residual (by its name)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Combustion & Pyrolysis",
+      "origin": "Scene"
+    },
+    {
+      "name": "Gas residual reaction fraction",
+      "value": [
+        0.0,
+        0.5
+      ],
+      "printed": "[0.0, 0.500]",
+      "unit": "—",
+      "where_used": "residual produced by gas-phase combustion (not defined further)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Combustion & Pyrolysis",
+      "origin": "Scene"
+    },
+    {
+      "name": "Convection coefficient",
+      "value": [
+        0.0,
+        200.0
+      ],
+      "printed": "[0.0, 200.0]",
+      "unit": "—",
+      "where_used": "probably the heat transfer coefficient h of Eq. 19 (our reading)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Heat Transfer",
+      "origin": "Numerical"
+    },
+    {
+      "name": "Radiation ray energy",
+      "value": [
+        0.0,
+        200.0
+      ],
+      "printed": "[0.0, 200.0]",
+      "unit": "J",
+      "where_used": "energy carried by each radiation ray (Sec. 4.6; supplement Alg. 1 line 5)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Heat Transfer",
+      "origin": "Numerical"
+    },
+    {
+      "name": "Residual absorption coefficient",
+      "value": [
+        500,
+        4000
+      ],
+      "printed": "[500, 4000]",
+      "unit": "—",
+      "where_used": "probably kappa_s of Eq. 17 and P_abs for the residual (soot) species (our reading)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Heat Transfer",
+      "origin": "Scene"
+    },
+    {
+      "name": "Vorticity confinement strength",
+      "value": [
+        0.0,
+        50.0
+      ],
+      "printed": "[0.0, 50.0]",
+      "unit": "—",
+      "where_used": "vorticity confinement (Alg. 1 line 22)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Fluid Dynamics",
+      "origin": "Scene"
+    },
+    {
+      "name": "Wind velocity (x, y, z)",
+      "value": [
+        -15.0,
+        15.0
+      ],
+      "printed": "[−15.0, 15.0]",
+      "unit": "m s^-1",
+      "where_used": "imposed wind, per component",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Fluid Dynamics",
+      "origin": "Scene"
+    },
+    {
+      "name": "Porous solid velocity multiplier",
+      "value": [
+        0.1,
+        0.5
+      ],
+      "printed": "[0.10, 0.50]",
+      "unit": "—",
+      "where_used": "upper velocity bound in porous cells (Sec. 4.3)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Fluid Dynamics",
+      "origin": "Scene"
+    },
+    {
+      "name": "Ambient temperature",
+      "value": 300,
+      "printed": "300",
+      "unit": "K",
+      "where_used": "T_amb in Eqs. 16, 17, 19 and initial conditions",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Fluid Dynamics",
+      "origin": "Physical"
+    },
+    {
+      "name": "Ambient gas density",
+      "value": 1.1726,
+      "printed": "1.1726",
+      "unit": "kg m^-3",
+      "where_used": "rho_amb in Eqs. 6, 7",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Fluid Dynamics",
+      "origin": "Physical"
+    },
+    {
+      "name": "Gravitational acceleration",
+      "value": -9.81,
+      "printed": "−9.81",
+      "unit": "m s^-2",
+      "where_used": "g in Eq. 6",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Fluid Dynamics",
+      "origin": "Physical"
+    },
+    {
+      "name": "Porous solid density threshold",
+      "value": [
+        0.5,
+        10.0
+      ],
+      "printed": "[0.5, 10.0]",
+      "unit": "kg m^-3",
+      "where_used": "voxel becomes a porous solid above this solid density (Sec. 4.2.1)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Fluid Dynamics",
+      "origin": "Scene"
+    },
+    {
+      "name": "Solid density threshold",
+      "value": [
+        59.0,
+        1000.0
+      ],
+      "printed": "[59.0, 1000.0]",
+      "unit": "kg m^-3",
+      "where_used": "voxel becomes a fully blocking solid above this solid density (Sec. 4.2.1)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Fluid Dynamics",
+      "origin": "Scene"
+    },
+    {
+      "name": "Particle capacity",
+      "value": [
+        1024,
+        1048576
+      ],
+      "printed": "[1024, 1 048 576]",
+      "unit": "—",
+      "where_used": "maximum number of Lagrangian particles",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Numerical"
+    },
+    {
+      "name": "Ember spawn rate",
+      "value": [
+        0.0,
+        10.0
+      ],
+      "printed": "[0.0, 10.0]",
+      "unit": "—",
+      "where_used": "ember emission from burning solid biomass cells (Sec. 4.8)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Scene"
+    },
+    {
+      "name": "Ember lifetime",
+      "value": [
+        1.0,
+        120.0
+      ],
+      "printed": "[1.0, 120.0]",
+      "unit": "s",
+      "where_used": "ember removal (Alg. 1 line 34)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Scene"
+    },
+    {
+      "name": "Ember mass",
+      "value": [
+        1e-06,
+        0.2
+      ],
+      "printed": "[10^-6, 0.2]",
+      "unit": "kg",
+      "where_used": "mass carried by each ember (Sec. 4.8)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Physical"
+    },
+    {
+      "name": "Ember emissivity",
+      "value": 0.95,
+      "printed": "0.95",
+      "unit": "—",
+      "where_used": "ember radiation in flight (Sec. 4.8)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Physical"
+    },
+    {
+      "name": "Ember mass loss rate",
+      "value": [
+        1e-06,
+        0.06
+      ],
+      "printed": "[10^-6, 0.06]",
+      "unit": "kg s^-1",
+      "where_used": "ember combustion in flight (Sec. 4.8)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Scene"
+    },
+    {
+      "name": "Ember grid velocity factor",
+      "value": [
+        0.03,
+        0.5
+      ],
+      "printed": "[0.03, 0.50]",
+      "unit": "—",
+      "where_used": "drag factor scaling the gas velocity applied to embers (Sec. 4.8, Alg. 1 line 11)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Scene"
+    },
+    {
+      "name": "Flame-front lifetime",
+      "value": [
+        0.5,
+        5.0
+      ],
+      "printed": "[0.5, 5.0]",
+      "unit": "s",
+      "where_used": "flame-front particle removal (Alg. 1 line 35)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Numerical"
+    },
+    {
+      "name": "Flame-front speed",
+      "value": [
+        1.0,
+        10.0
+      ],
+      "printed": "[1.0, 10.0]",
+      "unit": "m s^-1",
+      "where_used": "fuel-specific flame-front particle speed (Sec. 4.7)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Particle System",
+      "origin": "Physical"
+    },
+    {
+      "name": "OSM request size",
+      "value": [
+        0,
+        200
+      ],
+      "printed": "[0, 200]",
+      "unit": "m",
+      "where_used": "extent of the OpenStreetMap request (Sec. 4.1)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Procedural Scene Generation",
+      "origin": "Scene"
+    },
+    {
+      "name": "Vegetation density",
+      "value": [
+        0.0,
+        0.6
+      ],
+      "printed": "[0.0, 0.60]",
+      "unit": "—",
+      "where_used": "vegetation placement (Sec. 4.1; supplement 1.5)",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Procedural Scene Generation",
+      "origin": "Scene"
+    },
+    {
+      "name": "Leaf thickness",
+      "value": [
+        1e-06,
+        0.01
+      ],
+      "printed": "[10^-6, 0.01]",
+      "unit": "m",
+      "where_used": "delta_l, artificial solid length added for foliage hits in Eq. 1",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Procedural Scene Generation",
+      "origin": "Scene"
+    },
+    {
+      "name": "Minimum house distance",
+      "value": [
+        0.0,
+        12.5
+      ],
+      "printed": "[0.0, 12.5]",
+      "unit": "m",
+      "where_used": "procedural scene layout",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Procedural Scene Generation",
+      "origin": "Scene"
+    },
+    {
+      "name": "Minimum road distance",
+      "value": [
+        0.0,
+        2.45
+      ],
+      "printed": "[0.0, 2.45]",
+      "unit": "m",
+      "where_used": "procedural scene layout",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Procedural Scene Generation",
+      "origin": "Scene"
+    },
+    {
+      "name": "Fixed timestep",
+      "value": [
+        0.004,
+        0.1
+      ],
+      "printed": "[0.004, 0.10]",
+      "unit": "s",
+      "where_used": "simulation time step",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Computational Domain",
+      "origin": "Numerical"
+    },
+    {
+      "name": "Maximum simulation time",
+      "value": [
+        0.0,
+        300.0
+      ],
+      "printed": "[0.0, 300.0]",
+      "unit": "s",
+      "where_used": "simulated duration",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Computational Domain",
+      "origin": "Scene"
+    },
+    {
+      "name": "Grid resolution (x, y, z)",
+      "value": {
+        "min": [
+          128,
+          128,
+          80
+        ],
+        "max": [
+          600,
+          600,
+          300
+        ]
+      },
+      "printed": "[128 × 128 × 80] – [600 × 600 × 300]",
+      "unit": "voxels",
+      "where_used": "Eulerian grid size",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Computational Domain",
+      "origin": "Numerical"
+    },
+    {
+      "name": "Domain size (x, y, z)",
+      "value": {
+        "min": [
+          16,
+          16,
+          8
+        ],
+        "max": [
+          600,
+          600,
+          300
+        ]
+      },
+      "printed": "[16 × 16 × 8] – [600 × 600 × 300]",
+      "unit": "m",
+      "where_used": "physical domain extent",
+      "page": 19,
+      "document": "main",
+      "source": "Table 5 (A.5), Computational Domain",
+      "origin": "Scene"
+    },
+    {
+      "name": "NISTIR 6546 Sample Problem 1: dike diameter",
+      "value": 12,
+      "unit": "m",
+      "where_used": "pool-fire radiative heat flux validation",
+      "page": 14,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "NIST acceptable-separation threshold for buildings",
+      "value": 31.5,
+      "unit": "kW/m^2",
+      "where_used": "pool-fire validation (Fig. 14)",
+      "page": 14,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "NIST acceptable-separation threshold for people",
+      "value": 1.4,
+      "unit": "kW/m^2",
+      "where_used": "pool-fire validation (Fig. 14)",
+      "page": 14,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Gasoline heat release rate per unit area (NIST)",
+      "value": 2400,
+      "unit": "kW/m^2",
+      "where_used": "pool-fire validation",
+      "page": 14,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "NIST acceptable separation distance for buildings",
+      "value": "< 10",
+      "printed": "less than 10 m",
+      "unit": "m",
+      "where_used": "pool-fire validation, measured from the dike edge",
+      "page": 14,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "NIST acceptable separation distance for people",
+      "value": 55,
+      "unit": "m",
+      "where_used": "pool-fire validation, measured from the dike edge",
+      "page": 14,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Pool-fire target probe distances",
+      "value": [
+        6,
+        10,
+        50,
+        55
+      ],
+      "unit": "m",
+      "where_used": "probe placement for buildings (6, 10) and people (50, 55)",
+      "page": 14,
+      "document": "main",
+      "source": "Fig. 14 caption"
+    },
+    {
+      "name": "Douglas-fir tree: time of heat release peak (simulation)",
+      "value": 30,
+      "unit": "s",
+      "where_used": "vegetation combustion validation (Fig. 16 left)",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Douglas-fir tree: onset of stable smoldering (simulation)",
+      "value": 50,
+      "unit": "s",
+      "where_used": "vegetation combustion validation",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Douglas-fir tree: experiment stopped before furniture ignites",
+      "value": 65,
+      "printed": "around 65 seconds",
+      "unit": "s",
+      "where_used": "vegetation combustion validation",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Hedayati Test 13: target building distance downwind",
+      "value": 6.1,
+      "printed": "6.1 m (20 ft)",
+      "unit": "m",
+      "where_used": "wind-driven structure exposure validation",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Hedayati Test 13: target building orientation",
+      "value": 45,
+      "unit": "deg",
+      "where_used": "wind-driven structure exposure validation",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Hedayati Test 13: mean wind speed",
+      "value": 43.9,
+      "printed": "43.9 ± 3.3 km/h (27.3 ± 2.1 mph)",
+      "unit": "km/h",
+      "where_used": "wind-driven structure exposure validation",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2",
+      "note": "uncertainty ± 3.3 km/h"
+    },
+    {
+      "name": "Hedayati Test 13: measured peak heat flux",
+      "value": 33,
+      "printed": "approximately 33 kW/m^2",
+      "unit": "kW/m^2",
+      "where_used": "reached at about 23 min",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Hedayati Test 13: vinyl glazing detachment time",
+      "value": "11:41",
+      "unit": "min:s",
+      "where_used": "wind-driven structure exposure validation",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Hedayati Test 13: tempered window pane failure time",
+      "value": "23:05",
+      "unit": "min:s",
+      "where_used": "wind-driven structure exposure validation",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Hedayati Test 13: wood burned in the source",
+      "value": 21,
+      "printed": "roughly 21 t",
+      "unit": "t",
+      "where_used": "burned within a 40 min time frame; the simulation is scaled down with the same mass loss rate",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Hedayati Test 13: burn duration of the source",
+      "value": 40,
+      "unit": "min",
+      "where_used": "wind-driven structure exposure validation",
+      "page": 15,
+      "document": "main",
+      "source": "Sec. 6.2"
+    },
+    {
+      "name": "Cells per wall grid",
+      "value": [
+        150,
+        250
+      ],
+      "printed": "approx. 150–250",
+      "unit": "cells",
+      "where_used": "WFC wall discretization (approximate)",
+      "page": 1,
+      "document": "supplement",
+      "source": "Supplement Sec. 1.1"
+    },
+    {
+      "name": "WFC neighbourhood size",
+      "value": 4,
+      "unit": "neighbours",
+      "where_used": "WFC over a 4-neighborhood (left, right, up, down)",
+      "page": 1,
+      "document": "supplement",
+      "source": "Supplement Sec. 1.1"
+    },
+    {
+      "name": "WFC semantic state count: Studs",
+      "value": 156,
+      "unit": "states",
+      "where_used": "wall discretization",
+      "page": 2,
+      "document": "supplement",
+      "source": "Supplement Table 1"
+    },
+    {
+      "name": "WFC semantic state count: Windows",
+      "value": 9,
+      "unit": "states",
+      "where_used": "wall discretization",
+      "page": 2,
+      "document": "supplement",
+      "source": "Supplement Table 1"
+    },
+    {
+      "name": "WFC semantic state count: Doors",
+      "value": 3,
+      "unit": "states",
+      "where_used": "wall discretization",
+      "page": 2,
+      "document": "supplement",
+      "source": "Supplement Table 1"
+    },
+    {
+      "name": "WFC semantic state count: Fireplace bases",
+      "value": 9,
+      "unit": "states",
+      "where_used": "wall discretization",
+      "page": 2,
+      "document": "supplement",
+      "source": "Supplement Table 1"
+    },
+    {
+      "name": "WFC semantic state count: Chimneys",
+      "value": 2,
+      "unit": "states",
+      "where_used": "wall discretization",
+      "page": 2,
+      "document": "supplement",
+      "source": "Supplement Table 1"
+    },
+    {
+      "name": "WFC semantic state count: Total",
+      "value": 179,
+      "unit": "states",
+      "where_used": "wall discretization",
+      "page": 2,
+      "document": "supplement",
+      "source": "Supplement Table 1"
+    },
+    {
+      "name": "Ground-level door band (maximum door row index)",
+      "value": 4,
+      "printed": "j ≤ 4",
+      "unit": "row",
+      "where_used": "door constraint: door at row j <= 4 forces rows 0 to 4 into a door stack",
+      "page": 2,
+      "document": "supplement",
+      "source": "Supplement Sec. 1.3 (Door constraints)"
+    },
+    {
+      "name": "Window(Center, Center) forced neighbourhood",
+      "value": [
+        3,
+        3
+      ],
+      "printed": "3 × 3",
+      "unit": "cells",
+      "where_used": "window constraint",
+      "page": 2,
+      "document": "supplement",
+      "source": "Supplement Sec. 1.3 (Window constraints)"
+    },
+    {
+      "name": "Gas fuel type",
+      "value": "IsoOctane",
+      "printed": "IsoOctane",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Combustion CO2 fraction",
+      "value": 0.85,
+      "printed": "0.850",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Combustion residual fraction",
+      "value": 0.15,
+      "printed": "0.150",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Pyrolysis fuel fraction",
+      "value": 0.9,
+      "printed": "0.900",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Pyrolysis residual fraction",
+      "value": 0.1,
+      "printed": "0.100",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Gas residual reaction fraction",
+      "value": 0.6,
+      "printed": "0.600",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Convection coefficient",
+      "value": 3.0,
+      "printed": "3.0",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Radiation ray energy",
+      "value": 0.1,
+      "printed": "0.100",
+      "unit": "J",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Residual absorption coefficient",
+      "value": 500,
+      "printed": "500",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Vorticity confinement strength",
+      "value": 20.0,
+      "printed": "20.0",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Wind velocity (x, y, z)",
+      "value": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "printed": "(0.0, 0.0, 0.0)",
+      "unit": "m s^-1",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Porous solid velocity multiplier",
+      "value": 0.1,
+      "printed": "0.100",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Ambient temperature",
+      "value": 300,
+      "printed": "300",
+      "unit": "K",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Ambient gas density",
+      "value": 1.1726,
+      "printed": "1.1726",
+      "unit": "kg m^-3",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Gravitational acceleration",
+      "value": -9.81,
+      "printed": "−9.81",
+      "unit": "m s^-2",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Porous solid density threshold",
+      "value": 10.0,
+      "printed": "10.0",
+      "unit": "kg m^-3",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Solid density threshold",
+      "value": 100.0,
+      "printed": "100.0",
+      "unit": "kg m^-3",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Particle capacity",
+      "value": 262144,
+      "printed": "262,144",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Ember spawn rate",
+      "value": 1.0,
+      "printed": "1.0",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Ember lifetime",
+      "value": [
+        1.0,
+        10.0
+      ],
+      "printed": "[1.0, 10.0]",
+      "unit": "s",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Ember mass",
+      "value": [
+        1e-06,
+        0.0001
+      ],
+      "printed": "[10^-6, 10^-4]",
+      "unit": "kg",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Ember emissivity",
+      "value": 0.95,
+      "printed": "0.95",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Ember mass loss rate",
+      "value": null,
+      "printed": "—",
+      "unit": "kg s^-1",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Ember grid velocity factor",
+      "value": 0.5,
+      "printed": "0.500",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Flame-front lifetime",
+      "value": 0.5,
+      "printed": "0.5",
+      "unit": "s",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Flame-front speed",
+      "value": 8.0,
+      "printed": "8.0",
+      "unit": "m s^-1",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "OSM request size",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Vegetation density",
+      "value": null,
+      "printed": "–",
+      "unit": "—",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Leaf thickness",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Minimum house distance",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Minimum road distance",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Fixed timestep",
+      "value": 0.00833,
+      "printed": "0.00833",
+      "unit": "s",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Maximum simulation time",
+      "value": "infinity",
+      "printed": "∞",
+      "unit": "s",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Grid resolution (x, y, z)",
+      "value": [
+        164,
+        164,
+        328
+      ],
+      "printed": "164 × 164 × 328",
+      "unit": "voxels",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Domain size (x, y, z)",
+      "value": [
+        20.0,
+        20.0,
+        40.0
+      ],
+      "printed": "20.0 × 20.0 × 40.0",
+      "unit": "m",
+      "where_used": "radiative heat flux validation (NISTIR 6546 pool fire; main Sec. 6.2, Fig. 14)",
+      "page": 3,
+      "document": "supplement",
+      "source": "Supplement Table 4"
+    },
+    {
+      "name": "Gas fuel type",
+      "value": "Methane",
+      "printed": "Methane",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Combustion CO2 fraction",
+      "value": 0.9,
+      "printed": "0.900",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Combustion residual fraction",
+      "value": 0.1,
+      "printed": "0.100",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Pyrolysis fuel fraction",
+      "value": 0.9,
+      "printed": "0.900",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Pyrolysis residual fraction",
+      "value": 0.1,
+      "printed": "0.100",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Gas residual reaction fraction",
+      "value": 0.5,
+      "printed": "0.500",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Convection coefficient",
+      "value": 200.0,
+      "printed": "200.0",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Radiation ray energy",
+      "value": 0.1,
+      "printed": "0.100",
+      "unit": "J",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Residual absorption coefficient",
+      "value": 3000,
+      "printed": "3000",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Vorticity confinement strength",
+      "value": 10.0,
+      "printed": "10.0",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Wind velocity (x, y, z)",
+      "value": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "printed": "(0.0, 0.0, 0.0)",
+      "unit": "m s^-1",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Porous solid velocity multiplier",
+      "value": 0.5,
+      "printed": "0.500",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Ambient temperature",
+      "value": 300,
+      "printed": "300",
+      "unit": "K",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Ambient gas density",
+      "value": 1.1726,
+      "printed": "1.1726",
+      "unit": "kg m^-3",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Gravitational acceleration",
+      "value": -9.81,
+      "printed": "−9.81",
+      "unit": "m s^-2",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Porous solid density threshold",
+      "value": 1.0,
+      "printed": "1.0",
+      "unit": "kg m^-3",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Solid density threshold",
+      "value": 600.0,
+      "printed": "600.0",
+      "unit": "kg m^-3",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Particle capacity",
+      "value": 524288,
+      "printed": "524,288",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Ember spawn rate",
+      "value": 0.5,
+      "printed": "0.500",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Ember lifetime",
+      "value": 10.0,
+      "printed": "10.0",
+      "unit": "s",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Ember mass",
+      "value": [
+        1e-06,
+        0.005
+      ],
+      "printed": "[10^-6, 0.005]",
+      "unit": "kg",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Ember emissivity",
+      "value": 0.95,
+      "printed": "0.95",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Ember mass loss rate",
+      "value": 0.006,
+      "printed": "0.006",
+      "unit": "kg s^-1",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Ember grid velocity factor",
+      "value": 0.5,
+      "printed": "0.500",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Flame-front lifetime",
+      "value": 1.0,
+      "printed": "1.0",
+      "unit": "s",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Flame-front speed",
+      "value": 8.0,
+      "printed": "8.0",
+      "unit": "m s^-1",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "OSM request size",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Vegetation density",
+      "value": null,
+      "printed": "–",
+      "unit": "—",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Leaf thickness",
+      "value": 1e-06,
+      "printed": "10^-6",
+      "unit": "m",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Minimum house distance",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Minimum road distance",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Fixed timestep",
+      "value": 0.004,
+      "printed": "0.004",
+      "unit": "s",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Maximum simulation time",
+      "value": 60.0,
+      "printed": "60.0",
+      "unit": "s",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Grid resolution (x, y, z)",
+      "value": [
+        240,
+        240,
+        200
+      ],
+      "printed": "240 × 240 × 200",
+      "unit": "voxels",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Domain size (x, y, z)",
+      "value": [
+        3.6,
+        3.6,
+        3.0
+      ],
+      "printed": "3.60 × 3.60 × 3.00",
+      "unit": "m",
+      "where_used": "vegetation combustion validation (NIST dry Douglas-fir tree; main Sec. 6.2, Figs. 15, 16)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 5"
+    },
+    {
+      "name": "Gas fuel type",
+      "value": "Methane",
+      "printed": "Methane",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Combustion CO2 fraction",
+      "value": 0.999,
+      "printed": "0.999",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Combustion residual fraction",
+      "value": 0.0005,
+      "printed": "0.0005",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Pyrolysis fuel fraction",
+      "value": 1.0,
+      "printed": "1.000",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Pyrolysis residual fraction",
+      "value": 0.0005,
+      "printed": "0.0005",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Gas residual reaction fraction",
+      "value": 0.001,
+      "printed": "0.001",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Convection coefficient",
+      "value": 200.0,
+      "printed": "200.0",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Radiation ray energy",
+      "value": 0.5,
+      "printed": "0.500",
+      "unit": "J",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Residual absorption coefficient",
+      "value": 500,
+      "printed": "500",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Vorticity confinement strength",
+      "value": 11.0,
+      "printed": "11.0",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Wind velocity (x, y, z)",
+      "value": [
+        12.0,
+        0.0,
+        0.0
+      ],
+      "printed": "(12.0, 0.0, 0.0)",
+      "unit": "m s^-1",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Porous solid velocity multiplier",
+      "value": 0.14,
+      "printed": "0.140",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Ambient temperature",
+      "value": 300,
+      "printed": "300",
+      "unit": "K",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Ambient gas density",
+      "value": 1.1726,
+      "printed": "1.1726",
+      "unit": "kg m^-3",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Gravitational acceleration",
+      "value": -9.81,
+      "printed": "−9.81",
+      "unit": "m s^-2",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Porous solid density threshold",
+      "value": 1.0,
+      "printed": "1.0",
+      "unit": "kg m^-3",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Solid density threshold",
+      "value": 1000.0,
+      "printed": "1000.0",
+      "unit": "kg m^-3",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Particle capacity",
+      "value": 1048576,
+      "printed": "1,048,576",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Ember spawn rate",
+      "value": 0.0,
+      "printed": "0.0",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Ember lifetime",
+      "value": [
+        0.0,
+        120.0
+      ],
+      "printed": "[0.0, 120.0]",
+      "unit": "s",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Ember mass",
+      "value": [
+        0.001,
+        0.002
+      ],
+      "printed": "[0.001, 0.002]",
+      "unit": "kg",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Ember emissivity",
+      "value": 0.95,
+      "printed": "0.950",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Ember mass loss rate",
+      "value": 1e-06,
+      "printed": "1e − 6",
+      "unit": "kg s^-1",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Ember grid velocity factor",
+      "value": 0.1,
+      "printed": "0.100",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Flame-front lifetime",
+      "value": 5.0,
+      "printed": "5.0",
+      "unit": "s",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Flame-front speed",
+      "value": 5.0,
+      "printed": "5.0",
+      "unit": "m s^-1",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "OSM request size",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Vegetation density",
+      "value": null,
+      "printed": "–",
+      "unit": "—",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Leaf thickness",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Minimum house distance",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Minimum road distance",
+      "value": null,
+      "printed": "–",
+      "unit": "m",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6",
+      "note": "no value given in the table"
+    },
+    {
+      "name": "Fixed timestep",
+      "value": 0.005,
+      "printed": "0.005",
+      "unit": "s",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Maximum simulation time",
+      "value": 365.0,
+      "printed": "365.0",
+      "unit": "s",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Grid resolution (x, y, z)",
+      "value": [
+        320,
+        160,
+        80
+      ],
+      "printed": "320 × 160 × 80",
+      "unit": "voxels",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    },
+    {
+      "name": "Domain size (x, y, z)",
+      "value": [
+        32.0,
+        16.0,
+        8.0
+      ],
+      "printed": "32.0 × 16.0 × 8.0",
+      "unit": "m",
+      "where_used": "wind-driven structure exposure validation (Hedayati et al. Test 13; main Sec. 6.2, Figs. 16, 17)",
+      "page": 4,
+      "document": "supplement",
+      "source": "Supplement Table 6"
+    }
+  ]
+}

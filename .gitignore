@@ -14,3 +14,6 @@ __pycache__/
 .pytest_cache/
 .env
 tools/shots/
+# Local reading copies of papers (PDFs, tens of MB). Open-licence papers are
+# transcribed into wiki/sources/papers/ with attribution; the PDFs stay here.
+reference/papers/

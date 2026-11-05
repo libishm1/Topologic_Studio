@@ -1,0 +1,2278 @@
+{
+  "source": {
+    "citation": "Wrede, H., Wagner, A. R., Mahfuz, S. M., Pałubicki, W., Michels, D. L., Pirk, S. (2025). Fire-X: Extinguishing Fire with Stoichiometric Heat Release. ACM Transactions on Graphics 44(6), Article 268.",
+    "doi": "https://doi.org/10.1145/3763338",
+    "licence": "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), as stated on the paper's first page. © 2025 the authors.",
+    "transcription": "firex-2025.md (same folder)",
+    "transcribed": "2026-11-05"
+  },
+  "conventions": {
+    "ids": "X1 to X32 are the paper's numbered equations (1) to (32). The running text has no unnumbered display equations. Equations typeset inside Fig. 3 (F3a to F3e), the Fig. 17 legend (F17) and inline definitions (I1 to I5) are listed separately under supplementary_expressions.",
+    "latex": "LaTeX reproduces the printed equation, including suspected typos (see transcriber_note fields and the 'Transcriber's notes' section of firex-2025.md).",
+    "symbols": "Units in square brackets come from the paper's Appendix A.1 where given; otherwise the entry says so.",
+    "depends_on": "Ids of equations that define quantities this equation uses.",
+    "parameters": "Every numeric constant the paper gives: physical constants, Table 1 fuel data, Table 3 configurable values or ranges, Table 4 numeric entries, and experiment and validation settings. value holds the number with column scale factors applied; value_as_printed holds the printed text. Table 2 runtime measurements and hardware are not parameters and are omitted.",
+    "gaps": "The paper gives no fire or smoke detector model or parameters, no activation energies (Table 4 defers to Westbrook and Dryer 1981), no molar mass for the residual species, and no sprinkler spray model beyond the particle emitter parameters of Table 3 and the 300 L/min, 15 s activation of the validation case."
+  },
+  "equations": [
+    {
+      "id": "X1",
+      "section": "4.1 General",
+      "page": 4,
+      "latex": "\\frac{D\\boldsymbol{u}}{Dt} = \\nu \\nabla^2 \\boldsymbol{u} - \\frac{1}{\\rho}\\nabla p - \\boldsymbol{g}\\left(1 - \\frac{T_{\\mathrm{amb}}}{T}\\right) .",
+      "meaning": "Incompressible momentum equation for the gas with viscous diffusion, pressure gradient and a Boussinesq-type buoyancy term driven by the ratio of ambient to local temperature.",
+      "symbols": {
+        "u": "gas velocity field (vector) [m s^-1]",
+        "D/Dt": "material derivative, D/Dt = d/dt + u . grad (written out in Fig. 3)",
+        "nu": "kinematic viscosity [m^2 s^-1]",
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "p": "pressure [Pa]",
+        "g": "gravitational acceleration vector ('effective gravity') [m s^-2]",
+        "T": "(gas) temperature [K]",
+        "T_amb": "reference ambient temperature [K]"
+      },
+      "depends_on": [
+        "X8"
+      ],
+      "kind": "conservation law"
+    },
+    {
+      "id": "X2",
+      "section": "4.1 General",
+      "page": 4,
+      "latex": "\\frac{DT}{Dt} = \\frac{k}{\\rho C_p}\\nabla^2 T + \\frac{\\epsilon\\sigma}{C_p}\\left(T_{\\mathrm{amb}}^4 - T^4\\right) + \\frac{J_c}{\\rho C_p} ,",
+      "meaning": "Gas energy (temperature) equation: advection, conduction, a Stefan-Boltzmann exchange with the ambient temperature, and the combustion heat source J_c.",
+      "symbols": {
+        "T": "(gas) temperature [K]",
+        "D/Dt": "material derivative, D/Dt = d/dt + u . grad (written out in Fig. 3)",
+        "k": "thermal conductivity [W m^-1 K^-1]",
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "C_p": "specific heat at constant pressure (gas) or liquid specific heat capacity (liquid) [J kg^-1 K^-1]",
+        "epsilon": "emissivity [-]; called 'radiation coefficient' in Sec. 6.1.1 and Table 3 (range 0.0 - 6.0)",
+        "sigma": "Stefan-Boltzmann constant [5.67e-8 W m^-2 K^-4]",
+        "T_amb": "reference ambient temperature [K]",
+        "J_c": "volumetric heat release rate from combustion [W m^-3]"
+      },
+      "depends_on": [
+        "X1",
+        "X6",
+        "X8"
+      ],
+      "kind": "conservation law",
+      "transcriber_note": "Transcriber's note 1: the radiative term is not dimensionally a temperature rate; epsilon is used as a tunable coefficient (0.0 - 6.0)."
+    },
+    {
+      "id": "X3",
+      "section": "4.1 General",
+      "page": 4,
+      "latex": "\\frac{DY_i}{Dt} = D_i \\nabla^2 Y_i + \\frac{v_c q_i M_i}{\\rho} + S_i ,",
+      "meaning": "Transport of each species mass fraction by advection and Fickian diffusion, with a stoichiometric reaction source and an evaporation source.",
+      "symbols": {
+        "Y_i": "mass fraction of species i [-]",
+        "D/Dt": "material derivative, D/Dt = d/dt + u . grad (written out in Fig. 3)",
+        "D_i": "diffusion coefficient of species i [m^2 s^-1]",
+        "v_c": "volumetric reaction rate [typically mol m^-3 s^-1]",
+        "q_i": "stoichiometric coefficient for species i [-] (negative for reactants, Table 1)",
+        "M_i": "molar mass of species i [kg mol^-1]",
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "S_i": "source term from phase change for species i [s^-1]"
+      },
+      "depends_on": [
+        "X1",
+        "X5",
+        "X7",
+        "X8",
+        "X11"
+      ],
+      "kind": "conservation law"
+    },
+    {
+      "id": "X4",
+      "section": "4.2 Combustion",
+      "page": 4,
+      "latex": "\\Delta_c H^o \\approx -417(c + 0.25h - 0.5o) .",
+      "meaning": "Empirical lower heating value per mole of fuel: about 417 kJ released per mole of O2 consumed, with c + 0.25h - 0.5o the O2 demand of fuel C_c H_h O_o N_n (Schmidt-Rohr 2015).",
+      "symbols": {
+        "Delta_c H^o": "(standard) heat of combustion of the fuel [kJ mol^-1 per Eq. 4 text; J mol^-1 or J kg^-1 per App. A.1.1]",
+        "c,h,o": "numbers of carbon, hydrogen, oxygen atoms in the fuel molecule C_c H_h O_o N_n [-]"
+      },
+      "depends_on": [],
+      "kind": "empirical correlation",
+      "transcriber_note": "Result in kJ mol^-1 (text); Table 1 lists the same values in J mol^-1 (x10^6 column). See transcriber's notes 2 and 3."
+    },
+    {
+      "id": "X5",
+      "section": "4.2 Combustion",
+      "page": 4,
+      "latex": "v_c = A T^n \\exp\\left(\\frac{-E_a}{RT}\\right) c_f^a\\, c_o^b ,",
+      "meaning": "Global one-step Arrhenius rate of the fuel-oxidizer reaction per unit volume, with empirical concentration exponents.",
+      "symbols": {
+        "v_c": "volumetric reaction rate [typically mol m^-3 s^-1]",
+        "A": "Arrhenius pre-exponential factor [units vary with reaction order and concentration units]",
+        "T": "(gas) temperature [K]",
+        "n": "temperature exponent in Arrhenius equation [-] (0 per Table 4)",
+        "E_a": "activation energy [J mol^-1]",
+        "R": "universal gas constant [8.314 J mol^-1 K^-1]",
+        "c_f": "molar concentration of fuel [mol m^-3]",
+        "c_o": "molar concentration of oxidizer [mol m^-3]",
+        "a": "empirical reaction order exponent for fuel [-]",
+        "b": "empirical reaction order exponent for oxidizer [-]"
+      },
+      "depends_on": [],
+      "kind": "constitutive law",
+      "transcriber_note": "Concentrations c_f, c_o are not related to Y_i in the paper (presumably c = rho Y / M). Table 4 sets n = 0; Table 1 has no E_a column (transcriber's note 18)."
+    },
+    {
+      "id": "X6",
+      "section": "4.2 Combustion",
+      "page": 4,
+      "latex": "J_c = -\\varphi v_c \\Delta_c H^0",
+      "meaning": "Volumetric heat release rate: reaction rate times (negative) heat of combustion, scaled by a heat efficiency factor for incomplete combustion.",
+      "symbols": {
+        "J_c": "volumetric heat release rate from combustion [W m^-3]",
+        "varphi": "combustion heat efficiency, weighting factor [-] (Table 3: 0.0 - 1.0)",
+        "v_c": "volumetric reaction rate [typically mol m^-3 s^-1]",
+        "Delta_c H^0": "heat of combustion, same quantity as Delta_c H^o (printed with digit zero in Eq. 6) [J mol^-1 or J kg^-1]"
+      },
+      "depends_on": [
+        "X4",
+        "X5"
+      ],
+      "kind": "constitutive law",
+      "transcriber_note": "No stoichiometric factor q_f appears; for fuels with q_f = -2 (Table 1) heat and species consumption are per different molar bases unless v_c is per mole of fuel (transcriber's note 4)."
+    },
+    {
+      "id": "X7",
+      "section": "4.2 Combustion",
+      "page": 5,
+      "latex": "\\frac{\\partial Y_i}{\\partial t} = \\frac{v_c q_i M_i}{\\rho} ,",
+      "meaning": "Species source from the global reaction: each species changes in proportion to the reaction rate, its stoichiometric coefficient and its molar mass, divided by gas density.",
+      "symbols": {
+        "Y_i": "mass fraction of species i [-]",
+        "t": "time (unit not stated in the paper)",
+        "v_c": "volumetric reaction rate [typically mol m^-3 s^-1]",
+        "q_i": "stoichiometric coefficient for species i [-] (negative for reactants, Table 1)",
+        "M_i": "molar mass of species i [kg mol^-1]",
+        "rho": "fluid's local (gas) density [kg m^-3]"
+      },
+      "depends_on": [
+        "X5",
+        "X8"
+      ],
+      "kind": "conservation law",
+      "transcriber_note": "Mass is conserved only if sum_i q_i M_i = 0, which holds for the Table 1 coefficients but not for arbitrary product coefficients from Table 3 (transcriber's note 19)."
+    },
+    {
+      "id": "X8",
+      "section": "4.2 Combustion",
+      "page": 5,
+      "latex": "\\rho = p_{\\mathrm{amb}} \\left( T R \\sum_i \\frac{Y_i}{,} M_i \\right)^{-1} ,",
+      "meaning": "Ideal-gas equation of state at constant ambient (thermodynamic) pressure giving gas density from temperature and mixture composition.",
+      "symbols": {
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "p_amb": "ambient pressure [Pa]",
+        "T": "(gas) temperature [K]",
+        "R": "universal gas constant [8.314 J mol^-1 K^-1]",
+        "Y_i": "mass fraction of species i [-]",
+        "M_i": "molar mass of species i [kg mol^-1]"
+      },
+      "depends_on": [],
+      "kind": "constitutive law",
+      "transcriber_note": "Printed with a comma as the denominator of Y_i; the physically consistent form is rho = p_amb / (R T sum_i Y_i / M_i) (transcriber's note 5). LaTeX reproduces the print."
+    },
+    {
+      "id": "X9",
+      "section": "4.3 Evaporation Model",
+      "page": 5,
+      "latex": "\\frac{\\partial \\rho_l}{\\partial t} = -\\frac{\\rho_l C_p (T_l - T_{\\mathrm{amb}})}{C_p (T_B - T_{\\mathrm{amb}}) + \\Delta_v H^0} ,",
+      "meaning": "Continuous evaporation: the liquid density falls by the ratio of the liquid's sensible energy above ambient to the energy needed to heat it to boiling and vaporize it.",
+      "symbols": {
+        "rho_l": "liquid density (liquid mass per grid volume) [kg m^-3]",
+        "t": "time (unit not stated in the paper)",
+        "C_p": "specific heat at constant pressure (gas) or liquid specific heat capacity (liquid) [J kg^-1 K^-1]",
+        "T_l": "current liquid temperature [K]",
+        "T_amb": "reference ambient temperature [K]",
+        "T_B": "boiling temperature [K]",
+        "Delta_v H^0": "latent heat of vaporization [J kg^-1]"
+      },
+      "depends_on": [],
+      "kind": "constitutive law",
+      "transcriber_note": "Right-hand side has units of density, not density per time; C_p is the liquid specific heat (transcriber's note 6)."
+    },
+    {
+      "id": "X10",
+      "section": "4.3 Evaporation Model",
+      "page": 5,
+      "latex": "T_{dc} = \\frac{\\rho_l}{\\rho_d}\\frac{A_d}{d_d}(T_l - T) , \\quad \\frac{\\partial T}{\\partial t} = \\frac{k T_{dc}}{\\rho C_p} , \\quad \\frac{\\partial T_l}{\\partial t} = -\\frac{k T_{dc}}{\\rho C_p} .",
+      "meaning": "Droplet conduction: heat exchange between gas and liquid spray scales with droplet count (rho_l/rho_d), surface-to-diameter ratio and temperature difference, applied with equal and opposite rates.",
+      "symbols": {
+        "T_dc": "intermediate term for droplet conduction [K m]",
+        "rho_l": "liquid density (liquid mass per grid volume) [kg m^-3]",
+        "rho_d": "droplet density: 'amount of liquid in the form of droplets' (p. 5) or 'intrinsic density of the liquid making up a droplet' (App. A.1.1) [kg m^-3]",
+        "A_d": "droplet surface area [m^2]",
+        "d_d": "droplet diameter [m]",
+        "T_l": "current liquid temperature [K]",
+        "T": "(gas) temperature [K]",
+        "t": "time (unit not stated in the paper)",
+        "k": "thermal conductivity [W m^-1 K^-1]",
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "C_p": "specific heat at constant pressure (gas) or liquid specific heat capacity (liquid) [J kg^-1 K^-1]"
+      },
+      "depends_on": [],
+      "kind": "constitutive law",
+      "transcriber_note": "k T_dc / (rho C_p) has units K m^3 s^-1; liquid equation uses gas rho C_p (transcriber's notes 7 and 9)."
+    },
+    {
+      "id": "X11",
+      "section": "4.3 Evaporation Model",
+      "page": 5,
+      "latex": "\\frac{\\partial Y_i}{\\partial t} = \\Gamma_i \\rho_l (= S_i) ,",
+      "meaning": "Evaporation source for a gas species (e.g. water vapor or fuel vapor) proportional to the liquid density with a species-specific evaporation coefficient; this is S_i in Eq. 3.",
+      "symbols": {
+        "Y_i": "mass fraction of species i [-]",
+        "t": "time (unit not stated in the paper)",
+        "Gamma_i": "evaporation coefficient for species i [m^3 kg^-1 s^-1]",
+        "rho_l": "liquid density (liquid mass per grid volume) [kg m^-3]",
+        "S_i": "source term from phase change for species i [s^-1]"
+      },
+      "depends_on": [
+        "X9"
+      ],
+      "kind": "constitutive law",
+      "transcriber_note": "Text says 'evaporated density' but the equation uses rho_l (transcriber's note 8)."
+    },
+    {
+      "id": "X12",
+      "section": "5.2 Smoothed Particle Hydrodynamics",
+      "page": 6,
+      "latex": "\\rho_{s_i} = \\sum_{j \\in N_s(i)} \\left(1 - \\frac{r_{s_{ij}}}{h_s}\\right)^2 .",
+      "meaning": "SPH pseudo-density of particle i as a sum of a quadratic kernel over neighbours (Clavet et al. 2005 double density relaxation).",
+      "symbols": {
+        "rho_s_i": "SPH particle local pseudo-density (sum of kernel values) [-]",
+        "N_s(i)": "SPH neighbourhood of particle i (r_s_ij <= h_s)",
+        "r_s_ij": "Euclidean distance between SPH particles i and j [m]",
+        "h_s": "SPH smoothing radius for particle-particle interactions [m]"
+      },
+      "depends_on": [],
+      "kind": "numerical scheme"
+    },
+    {
+      "id": "X13",
+      "section": "5.2 Smoothed Particle Hydrodynamics",
+      "page": 6,
+      "latex": "\\rho_{s_i}^{\\mathrm{near}} = \\sum_{j \\in N_s(i)} \\left(1 - \\frac{r_{ij}}{h_s}\\right)^3 .",
+      "meaning": "SPH near-density with a cubic kernel, giving short-range repulsion for collision avoidance and surface tension.",
+      "symbols": {
+        "rho_s_i^near": "SPH particle near pseudo-density [-]",
+        "N_s(i)": "SPH neighbourhood of particle i (r_s_ij <= h_s)",
+        "r_ij": "Euclidean distance between SPH particle i and grid cell centre j [m] (also used in Eq. 13 for particle pairs)",
+        "h_s": "SPH smoothing radius for particle-particle interactions [m]"
+      },
+      "depends_on": [],
+      "kind": "numerical scheme",
+      "transcriber_note": "Uses r_ij where r_s_ij is presumably meant (transcriber's note 10)."
+    },
+    {
+      "id": "X14",
+      "section": "5.2 Smoothed Particle Hydrodynamics",
+      "page": 6,
+      "latex": "p_{s_i} = k_s(\\rho_{s_i} - \\rho_{s_0}) , \\quad p_{s_i}^{\\mathrm{near}} = k_s^{\\mathrm{near}} \\rho_{s_i}^{\\mathrm{near}} ,",
+      "meaning": "Linear SPH equations of state turning pseudo-density deviation from rest and near-density into pseudo-pressure and near-pressure.",
+      "symbols": {
+        "p_s_i": "SPH particle pseudo-pressure (specific energy form) [m^2 s^-2]",
+        "k_s": "SPH stiffness coefficient [m^2 s^-2]",
+        "rho_s_i": "SPH particle local pseudo-density (sum of kernel values) [-]",
+        "rho_s_0": "SPH reference (rest) pseudo-density [-]",
+        "p_s_i^near": "SPH particle near pseudo-pressure [m^2 s^-2]",
+        "k_s^near": "SPH near-stiffness coefficient [m^2 s^-2]",
+        "rho_s_i^near": "SPH particle near pseudo-density [-]"
+      },
+      "depends_on": [
+        "X12",
+        "X13"
+      ],
+      "kind": "constitutive law"
+    },
+    {
+      "id": "X15",
+      "section": "5.2 Smoothed Particle Hydrodynamics",
+      "page": 6,
+      "latex": "F_{s_i}^{\\mathrm{press}} = -\\sum_{j \\in N_s(i)} p_{s_j}\\left(1 - \\frac{r_{s_{ij}}}{h_s}\\right) + p_{s_j}^{\\mathrm{near}}\\left(1 - \\frac{r_{s_{ij}}}{h_s}\\right)^2",
+      "meaning": "Pseudo-pressure interaction on particle i summed over neighbours, weighted by the derivative-like linear and quadratic kernels of the pressure and near-pressure.",
+      "symbols": {
+        "F_s_i^press": "pseudo-pressure force on SPH particle i (App. A.1.2: assumed m_i a_s_i^press)",
+        "N_s(i)": "SPH neighbourhood of particle i (r_s_ij <= h_s)",
+        "p_s_i": "SPH particle pseudo-pressure (specific energy form) [m^2 s^-2]",
+        "p_s_i^near": "SPH particle near pseudo-pressure [m^2 s^-2]",
+        "r_s_ij": "Euclidean distance between SPH particles i and j [m]",
+        "h_s": "SPH smoothing radius for particle-particle interactions [m]"
+      },
+      "depends_on": [
+        "X14"
+      ],
+      "kind": "numerical scheme",
+      "transcriber_note": "Printed as a scalar without direction vector; p_s_j and p_s_j^near are the neighbour's values of p_s_i, p_s_i^near (transcriber's note 11)."
+    },
+    {
+      "id": "X16",
+      "section": "5.2 Smoothed Particle Hydrodynamics",
+      "page": 6,
+      "latex": "\\Delta\\boldsymbol{u}_{s_{ij}}^{\\mathrm{vis}} = (\\boldsymbol{u}_{p_i} - \\boldsymbol{u}_{p_j}) \\cdot \\hat{r}_{s_{ij}} ,",
+      "meaning": "Radial component of the relative velocity of two neighbouring SPH particles, used for viscous damping.",
+      "symbols": {
+        "Delta u_s_ij^vis": "pairwise radial velocity difference for SPH viscosity [m s^-1]",
+        "u_p_i": "velocity of SPH particle i [m s^-1]",
+        "r-hat_s_ij": "unit vector from SPH particle i to j [-]"
+      },
+      "depends_on": [],
+      "kind": "definition"
+    },
+    {
+      "id": "X17",
+      "section": "5.2 Smoothed Particle Hydrodynamics",
+      "page": 6,
+      "latex": "\\boldsymbol{a}_{s_i}^{\\mathrm{vis}} = (1 - \\frac{r_{s_{ij}}}{h_s})(\\alpha \\boldsymbol{u}_{s_{ij}}^{\\mathrm{vis}} + \\beta (\\Delta\\boldsymbol{u}_{s_{ij}}^{\\mathrm{vis}})^2)\\hat{r}_{s_{ij}} ,",
+      "meaning": "Pairwise viscous acceleration with linear (alpha) and quadratic (beta) damping of the radial relative velocity, weighted by a linear kernel.",
+      "symbols": {
+        "a_s_i^vis": "viscous acceleration on SPH particle i [m s^-2]",
+        "r_s_ij": "Euclidean distance between SPH particles i and j [m]",
+        "h_s": "SPH smoothing radius for particle-particle interactions [m]",
+        "alpha": "SPH linear viscosity damping coefficient [s^-1]",
+        "beta": "SPH quadratic viscosity damping coefficient [m^-1]",
+        "Delta u_s_ij^vis": "pairwise radial velocity difference for SPH viscosity [m s^-1]",
+        "r-hat_s_ij": "unit vector from SPH particle i to j [-]"
+      },
+      "depends_on": [
+        "X16"
+      ],
+      "kind": "numerical scheme",
+      "transcriber_note": "The linear term is printed without Delta; Delta u_s_ij^vis is presumably meant (transcriber's note 12)."
+    },
+    {
+      "id": "X18",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 6,
+      "latex": "w_{ij} = 1 - \\frac{r_{ij}}{h} .",
+      "meaning": "Linear tent weight between particle i and grid cell j for particle-grid transfers.",
+      "symbols": {
+        "w_ij": "linear distance-based weight between particle i and grid cell j [-]",
+        "r_ij": "Euclidean distance between SPH particle i and grid cell centre j [m] (also used in Eq. 13 for particle pairs)",
+        "h": "smoothing radius for particle-grid sampling [m]"
+      },
+      "depends_on": [],
+      "kind": "sampling"
+    },
+    {
+      "id": "X19",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 6,
+      "latex": "\\rho_{l_j} = \\sum_{i \\in N(j)} m_{p_i} w_{ij} .",
+      "meaning": "Liquid density on grid cell j accumulated from weighted particle masses.",
+      "symbols": {
+        "rho_l_j": "total liquid density contribution to grid cell j [kg m^-3]",
+        "N(j)": "particles within distance h of grid cell j",
+        "m_p_i": "mass of SPH particle i [kg]",
+        "w_ij": "linear distance-based weight between particle i and grid cell j [-]"
+      },
+      "depends_on": [
+        "X18"
+      ],
+      "kind": "sampling",
+      "transcriber_note": "As printed the sum has units of mass; no division by cell volume is shown (transcriber's note 13)."
+    },
+    {
+      "id": "X20",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 6,
+      "latex": "\\omega_j^{\\rho} = \\sum_{i \\in N(j)} w_{ij} ,",
+      "meaning": "Sum of particle weights at grid cell j, used to normalise grid-to-particle mass transfer.",
+      "symbols": {
+        "omega_j^rho": "sampling normalization factor for liquid density at cell j [-]",
+        "N(j)": "particles within distance h of grid cell j",
+        "w_ij": "linear distance-based weight between particle i and grid cell j [-]"
+      },
+      "depends_on": [
+        "X18"
+      ],
+      "kind": "sampling"
+    },
+    {
+      "id": "X21",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 6,
+      "latex": "m_{p_i} = \\left( \\sum_{j \\in N(i)} w_{ij} \\right)^{-1} \\sum_{j \\in N(i)} \\rho_{l_j} \\frac{w_{ij}}{\\omega_j^{\\rho}} .",
+      "meaning": "Grid-to-particle transfer of liquid mass: each particle takes its weighted share of the surrounding cells' liquid density, normalised by its own weight sum.",
+      "symbols": {
+        "m_p_i": "mass of SPH particle i [kg]",
+        "N(i)": "grid cells within distance h of particle i",
+        "w_ij": "linear distance-based weight between particle i and grid cell j [-]",
+        "rho_l_j": "total liquid density contribution to grid cell j [kg m^-3]",
+        "omega_j^rho": "sampling normalization factor for liquid density at cell j [-]"
+      },
+      "depends_on": [
+        "X18",
+        "X19",
+        "X20"
+      ],
+      "kind": "sampling"
+    },
+    {
+      "id": "X22",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 6,
+      "latex": "\\omega_j^{\\mathsf{T}} = \\sum_{i \\in N(j)} m_{p_i} w_{ij} .",
+      "meaning": "Mass-weighted normalisation factor for liquid temperature sampling at grid cell j.",
+      "symbols": {
+        "omega_j^T": "sampling normalization factor for liquid temperature at cell j [kg]",
+        "N(j)": "particles within distance h of grid cell j",
+        "m_p_i": "mass of SPH particle i [kg]",
+        "w_ij": "linear distance-based weight between particle i and grid cell j [-]"
+      },
+      "depends_on": [
+        "X18"
+      ],
+      "kind": "sampling"
+    },
+    {
+      "id": "X23",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 6,
+      "latex": "T_{l_j} = \\sum_{i \\in N(j)} T_{p_i} m_{p_i} w_{ij} / \\omega_j^{\\mathsf{T}} .",
+      "meaning": "Particle-to-grid liquid temperature as a mass- and distance-weighted average of particle temperatures.",
+      "symbols": {
+        "T_l_j": "liquid temperature at grid cell j [K]",
+        "N(j)": "particles within distance h of grid cell j",
+        "T_p_i": "temperature of SPH particle i [K]",
+        "m_p_i": "mass of SPH particle i [kg]",
+        "w_ij": "linear distance-based weight between particle i and grid cell j [-]",
+        "omega_j^T": "sampling normalization factor for liquid temperature at cell j [kg]"
+      },
+      "depends_on": [
+        "X18",
+        "X22"
+      ],
+      "kind": "sampling"
+    },
+    {
+      "id": "X24",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 6,
+      "latex": "T_{p_i} = \\left( \\sum_{j \\in N(i)} \\frac{m_{p_i} w_{ij}}{\\omega_j^{\\mathsf{T}}} \\right)^{-1} \\sum_{j \\in N(i)} T_{l_j} \\frac{m_{p_i} w_{ij}}{\\omega_j^{\\mathsf{T}}} .",
+      "meaning": "Grid-to-particle liquid temperature as a normalised weighted average of the surrounding cells' liquid temperatures.",
+      "symbols": {
+        "T_p_i": "temperature of SPH particle i [K]",
+        "N(i)": "grid cells within distance h of particle i",
+        "m_p_i": "mass of SPH particle i [kg]",
+        "w_ij": "linear distance-based weight between particle i and grid cell j [-]",
+        "omega_j^T": "sampling normalization factor for liquid temperature at cell j [kg]",
+        "T_l_j": "liquid temperature at grid cell j [K]"
+      },
+      "depends_on": [
+        "X18",
+        "X22",
+        "X23"
+      ],
+      "kind": "sampling"
+    },
+    {
+      "id": "X25",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 7,
+      "latex": "\\boldsymbol{u}_{l_j} = \\frac{1}{|N(j)|} \\sum_{i \\in N(j)} \\boldsymbol{u}_{p_i} .",
+      "meaning": "One-way particle-to-grid liquid velocity as the plain average of neighbouring particle velocities.",
+      "symbols": {
+        "u_l_j": "liquid velocity sampled to grid cell j [m s^-1]",
+        "|N(j)|": "number of particles in N(j)",
+        "N(j)": "particles within distance h of grid cell j",
+        "u_p_i": "velocity of SPH particle i [m s^-1]"
+      },
+      "depends_on": [],
+      "kind": "sampling"
+    },
+    {
+      "id": "X26",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "E_l = (T_l - T_{\\mathrm{amb}}) C_p \\rho_l V_c",
+      "meaning": "Sensible energy of the liquid in a grid cell above ambient temperature, available for evaporation.",
+      "symbols": {
+        "E_l": "total available energy in a liquid cell [J]",
+        "T_l": "current liquid temperature [K]",
+        "T_amb": "reference ambient temperature [K]",
+        "C_p": "specific heat at constant pressure (gas) or liquid specific heat capacity (liquid) [J kg^-1 K^-1]",
+        "rho_l": "liquid density (liquid mass per grid volume) [kg m^-3]",
+        "V_c": "volume of a grid cell [m^3]"
+      },
+      "depends_on": [],
+      "kind": "definition"
+    },
+    {
+      "id": "X27",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "E_d = (C_p (T_B - T_{\\mathrm{amb}}) + \\Delta_v H^0) \\rho_d V_d .",
+      "meaning": "Energy to heat one droplet from ambient to boiling temperature and vaporize it.",
+      "symbols": {
+        "E_d": "energy required to evaporate one droplet [J]",
+        "C_p": "specific heat at constant pressure (gas) or liquid specific heat capacity (liquid) [J kg^-1 K^-1]",
+        "T_B": "boiling temperature [K]",
+        "T_amb": "reference ambient temperature [K]",
+        "Delta_v H^0": "latent heat of vaporization [J kg^-1]",
+        "rho_d": "droplet density: 'amount of liquid in the form of droplets' (p. 5) or 'intrinsic density of the liquid making up a droplet' (App. A.1.1) [kg m^-3]",
+        "V_d": "volume of one droplet [m^3]"
+      },
+      "depends_on": [],
+      "kind": "definition",
+      "transcriber_note": "Uses rho_d as intrinsic liquid density; compare Eq. 28 (transcriber's note 9)."
+    },
+    {
+      "id": "X28",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "E_l = E_d n_d , \\quad \\rho_l = \\rho_d n_d .",
+      "meaning": "Energy and mass bookkeeping that expresses the cell's liquid as n_d droplets, from which the evaporable droplet count n_e = E_l/E_d follows.",
+      "symbols": {
+        "E_l": "total available energy in a liquid cell [J]",
+        "E_d": "energy required to evaporate one droplet [J]",
+        "n_d": "total number of droplets in a cell [-]",
+        "rho_l": "liquid density (liquid mass per grid volume) [kg m^-3]",
+        "rho_d": "droplet density: 'amount of liquid in the form of droplets' (p. 5) or 'intrinsic density of the liquid making up a droplet' (App. A.1.1) [kg m^-3]"
+      },
+      "depends_on": [
+        "X26",
+        "X27"
+      ],
+      "kind": "conservation law",
+      "transcriber_note": "The second relation treats rho_d as per-droplet density contribution, unlike Eq. 27 and rho_e = n_e rho_d V_d / V_c (transcriber's note 9)."
+    },
+    {
+      "id": "X29",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "\\rho' = \\frac{\\rho}{\\rho + \\Delta\\rho_l} ,",
+      "meaning": "Fraction of the post-evaporation gas mixture that was gas before evaporation, used as a mixing weight.",
+      "symbols": {
+        "rho'": "mixture density ratio after evaporation [-]",
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "Delta rho_l": "change of liquid density by evaporation (not defined in the paper; presumably rho_e)"
+      },
+      "depends_on": [
+        "X28"
+      ],
+      "kind": "definition",
+      "transcriber_note": "Delta rho_l is undefined in the paper; presumably the evaporated density rho_e (transcriber's note 14)."
+    },
+    {
+      "id": "X30",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "T' = (1 - \\rho') T_B + \\rho' T ,",
+      "meaning": "Gas temperature after mixing with vapor released at the boiling temperature.",
+      "symbols": {
+        "T'": "gas temperature after evaporative mixing [K]",
+        "rho'": "mixture density ratio after evaporation [-]",
+        "T_B": "boiling temperature [K]",
+        "T": "(gas) temperature [K]"
+      },
+      "depends_on": [
+        "X29"
+      ],
+      "kind": "numerical scheme"
+    },
+    {
+      "id": "X31",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "Y_i' = \\rho' Y_i .",
+      "meaning": "Dilution of existing species mass fractions by the added vapor mass.",
+      "symbols": {
+        "Y_i'": "rescaled mass fraction of species i [-]",
+        "rho'": "mixture density ratio after evaporation [-]",
+        "Y_i": "mass fraction of species i [-]"
+      },
+      "depends_on": [
+        "X29"
+      ],
+      "kind": "numerical scheme",
+      "transcriber_note": "Leaves sum_i Y_i' = rho' unless the vapor species is incremented elsewhere (transcriber's note 15)."
+    },
+    {
+      "id": "X32",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "\\boldsymbol{u}' = (1 - \\rho') \\boldsymbol{u}_l + \\rho' \\boldsymbol{u} .",
+      "meaning": "Gas velocity after evaporation, blended toward the liquid velocity by the evaporated fraction to mimic vapor expansion and spray drag (the 'displacement' effect).",
+      "symbols": {
+        "u'": "gas velocity after evaporative expansion [m s^-1]",
+        "rho'": "mixture density ratio after evaporation [-]",
+        "u_l": "liquid velocity sampled to grid [m s^-1]",
+        "u": "gas velocity field (vector) [m s^-1]"
+      },
+      "depends_on": [
+        "X25",
+        "X29"
+      ],
+      "kind": "numerical scheme"
+    }
+  ],
+  "supplementary_expressions": [
+    {
+      "id": "F3a",
+      "section": "4.1 General (Fig. 3, 'Thermal Transport (Eqs. 2, 6)')",
+      "page": 4,
+      "latex": "\\frac{\\partial T}{\\partial t} + \\boldsymbol{u}\\cdot\\nabla T = \\frac{k}{\\rho C_p}\\nabla^2 T + \\frac{\\epsilon\\sigma}{C_p}\\left(T_{\\mathrm{amb}}^4 - T^4\\right) - \\frac{\\Delta_c H^0}{\\rho C_p}\\varphi v_c",
+      "meaning": "Energy equation with Eq. 6 substituted for J_c and the material derivative written out.",
+      "symbols": {
+        "T": "(gas) temperature [K]",
+        "t": "time (unit not stated in the paper)",
+        "u": "gas velocity field (vector) [m s^-1]",
+        "k": "thermal conductivity [W m^-1 K^-1]",
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "C_p": "specific heat at constant pressure (gas) or liquid specific heat capacity (liquid) [J kg^-1 K^-1]",
+        "epsilon": "emissivity [-]; called 'radiation coefficient' in Sec. 6.1.1 and Table 3 (range 0.0 - 6.0)",
+        "sigma": "Stefan-Boltzmann constant [5.67e-8 W m^-2 K^-4]",
+        "T_amb": "reference ambient temperature [K]",
+        "Delta_c H^0": "heat of combustion, same quantity as Delta_c H^o (printed with digit zero in Eq. 6) [J mol^-1 or J kg^-1]",
+        "varphi": "combustion heat efficiency, weighting factor [-] (Table 3: 0.0 - 1.0)",
+        "v_c": "volumetric reaction rate [typically mol m^-3 s^-1]"
+      },
+      "depends_on": [
+        "X2",
+        "X6"
+      ],
+      "kind": "conservation law",
+      "where": "typeset inside Fig. 3"
+    },
+    {
+      "id": "F3b",
+      "section": "4.1 General (Fig. 3, 'Natural Convection (Eq. 1)')",
+      "page": 4,
+      "latex": "\\frac{D\\boldsymbol{u}}{Dt} = \\nu\\nabla^2\\boldsymbol{u} - \\frac{1}{\\rho}\\nabla p - \\boldsymbol{g}\\left(1 - \\frac{T_{\\mathrm{amb}}}{T}\\right)",
+      "meaning": "Same as Eq. 1.",
+      "symbols": {
+        "u": "gas velocity field (vector) [m s^-1]",
+        "nu": "kinematic viscosity [m^2 s^-1]",
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "p": "pressure [Pa]",
+        "g": "gravitational acceleration vector ('effective gravity') [m s^-2]",
+        "T": "(gas) temperature [K]",
+        "T_amb": "reference ambient temperature [K]"
+      },
+      "depends_on": [
+        "X1"
+      ],
+      "kind": "conservation law",
+      "where": "typeset inside Fig. 3"
+    },
+    {
+      "id": "F3c",
+      "section": "4.1 General (Fig. 3, 'Chemical Species Evolution (Eqs. 3, 11)')",
+      "page": 4,
+      "latex": "\\frac{\\partial Y_i}{\\partial t} + \\boldsymbol{u}\\cdot\\nabla Y_i = D_i\\nabla^2 Y_i + \\Gamma_i\\rho_l + \\frac{q_i M_i}{\\rho} v_c",
+      "meaning": "Species equation with the evaporation source S_i = Gamma_i rho_l of Eq. 11 substituted and the material derivative written out.",
+      "symbols": {
+        "Y_i": "mass fraction of species i [-]",
+        "t": "time (unit not stated in the paper)",
+        "u": "gas velocity field (vector) [m s^-1]",
+        "D_i": "diffusion coefficient of species i [m^2 s^-1]",
+        "Gamma_i": "evaporation coefficient for species i [m^3 kg^-1 s^-1]",
+        "rho_l": "liquid density (liquid mass per grid volume) [kg m^-3]",
+        "q_i": "stoichiometric coefficient for species i [-] (negative for reactants, Table 1)",
+        "M_i": "molar mass of species i [kg mol^-1]",
+        "rho": "fluid's local (gas) density [kg m^-3]",
+        "v_c": "volumetric reaction rate [typically mol m^-3 s^-1]"
+      },
+      "depends_on": [
+        "X3",
+        "X11"
+      ],
+      "kind": "conservation law",
+      "where": "typeset inside Fig. 3"
+    },
+    {
+      "id": "F3d",
+      "section": "4.1 General (Fig. 3, 'Evaporation (Eq. 9)')",
+      "page": 4,
+      "latex": "\\frac{\\partial \\rho_l}{\\partial t} = -\\frac{\\rho_l C_p (T_l - T_{\\mathrm{amb}})}{C_p(T_B - T_{\\mathrm{amb}}) + \\Delta_v H^0}",
+      "meaning": "Same as Eq. 9.",
+      "symbols": {
+        "rho_l": "liquid density (liquid mass per grid volume) [kg m^-3]",
+        "t": "time (unit not stated in the paper)",
+        "C_p": "specific heat at constant pressure (gas) or liquid specific heat capacity (liquid) [J kg^-1 K^-1]",
+        "T_l": "current liquid temperature [K]",
+        "T_amb": "reference ambient temperature [K]",
+        "T_B": "boiling temperature [K]",
+        "Delta_v H^0": "latent heat of vaporization [J kg^-1]"
+      },
+      "depends_on": [
+        "X9"
+      ],
+      "kind": "constitutive law",
+      "where": "typeset inside Fig. 3"
+    },
+    {
+      "id": "F3e",
+      "section": "4.1 General (Fig. 3, 'Combustion (Eq. 5)')",
+      "page": 4,
+      "latex": "v_c = A T^n \\exp\\left(\\frac{-E_a}{RT}\\right) c_f^a\\, c_o^b",
+      "meaning": "Same as Eq. 5.",
+      "symbols": {
+        "v_c": "volumetric reaction rate [typically mol m^-3 s^-1]",
+        "A": "Arrhenius pre-exponential factor [units vary with reaction order and concentration units]",
+        "T": "(gas) temperature [K]",
+        "n": "temperature exponent in Arrhenius equation [-] (0 per Table 4)",
+        "E_a": "activation energy [J mol^-1]",
+        "R": "universal gas constant [8.314 J mol^-1 K^-1]",
+        "c_f": "molar concentration of fuel [mol m^-3]",
+        "c_o": "molar concentration of oxidizer [mol m^-3]",
+        "a": "empirical reaction order exponent for fuel [-]",
+        "b": "empirical reaction order exponent for oxidizer [-]"
+      },
+      "depends_on": [
+        "X5"
+      ],
+      "kind": "constitutive law",
+      "where": "typeset inside Fig. 3"
+    },
+    {
+      "id": "F17",
+      "section": "6.2.1 Comparison to McCaffrey and FDS (Fig. 17 legend)",
+      "page": 13,
+      "latex": "\\Delta T \\propto \\left(z/Q^{2/5}\\right)^{\\eta}, \\quad \\eta = 0 \\ (\\text{Flame}),\\ \\eta = -1 \\ (\\text{Intermittent}),\\ \\eta = -5/3 \\ (\\text{Plume})",
+      "meaning": "McCaffrey (1979) centreline plume correlation used as the reference line in Fig. 17; the figure gives only the legend label (z/Q^{2/5})^eta and the three region exponents, the proportionality is the transcriber's reading of the plot.",
+      "symbols": {
+        "Delta T": "centreline temperature rise [degC]",
+        "z": "height above the burner [m]",
+        "Q": "heat release rate [W] (axis z/Q^{2/5} in m W^-2/5)",
+        "eta": "regime exponent [-]"
+      },
+      "depends_on": [],
+      "kind": "empirical correlation",
+      "where": "figure legend and region labels, Fig. 17"
+    },
+    {
+      "id": "I1",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "n_e = E_l / E_d",
+      "meaning": "Number of droplets in a cell that the available energy can evaporate.",
+      "symbols": {
+        "n_e": "number of droplets that can be evaporated from a cell [-]",
+        "E_l": "total available energy in a liquid cell [J]",
+        "E_d": "energy required to evaporate one droplet [J]"
+      },
+      "depends_on": [
+        "X26",
+        "X27"
+      ],
+      "kind": "definition",
+      "where": "inline in text after Eq. 28"
+    },
+    {
+      "id": "I2",
+      "section": "5.4 Droplet based Evaporation",
+      "page": 7,
+      "latex": "\\rho_e = n_e \\rho_d V_d / V_c",
+      "meaning": "Evaporated liquid density: mass of the evaporated droplets per unit cell volume.",
+      "symbols": {
+        "rho_e": "evaporated liquid density (mass evaporated per unit gas volume) [kg m^-3]",
+        "n_e": "number of droplets that can be evaporated from a cell [-]",
+        "rho_d": "droplet density: 'amount of liquid in the form of droplets' (p. 5) or 'intrinsic density of the liquid making up a droplet' (App. A.1.1) [kg m^-3]",
+        "V_d": "volume of one droplet [m^3]",
+        "V_c": "volume of a grid cell [m^3]"
+      },
+      "depends_on": [
+        "I1"
+      ],
+      "kind": "definition",
+      "where": "inline in text after Eq. 28"
+    },
+    {
+      "id": "I3",
+      "section": "5.2 Smoothed Particle Hydrodynamics",
+      "page": 6,
+      "latex": "j \\in N_s(i) \\iff r_{s_{ij}} \\le h_s",
+      "meaning": "Definition of the SPH particle neighbourhood.",
+      "symbols": {
+        "N_s(i)": "SPH neighbourhood of particle i (r_s_ij <= h_s)",
+        "r_s_ij": "Euclidean distance between SPH particles i and j [m]",
+        "h_s": "SPH smoothing radius for particle-particle interactions [m]"
+      },
+      "depends_on": [],
+      "kind": "definition",
+      "where": "inline in text before Eq. 12"
+    },
+    {
+      "id": "I4",
+      "section": "5.3 Particle-Grid Sampling",
+      "page": 6,
+      "latex": "i \\in N \\iff r_{ij} \\le h",
+      "meaning": "Definition of the particle-grid sampling neighbourhood.",
+      "symbols": {
+        "r_ij": "Euclidean distance between SPH particle i and grid cell centre j [m] (also used in Eq. 13 for particle pairs)",
+        "h": "smoothing radius for particle-grid sampling [m]"
+      },
+      "depends_on": [],
+      "kind": "definition",
+      "where": "inline in text before Eq. 18"
+    },
+    {
+      "id": "I5",
+      "section": "A.1.2 Algorithmic and SPH Parameters",
+      "page": 16,
+      "latex": "F_{s_i}^{\\mathrm{press}} = m_i \\boldsymbol{a}_{s_i}^{\\mathrm{press}}",
+      "meaning": "Stated assumption linking the pressure term of Eq. 15 to a particle acceleration.",
+      "symbols": {
+        "F_s_i^press": "pseudo-pressure force on SPH particle i (App. A.1.2: assumed m_i a_s_i^press)",
+        "m_i": "mass of SPH particle i [kg]",
+        "a_s_i^press": "acceleration on SPH particle i due to pseudo-pressure forces [m s^-2]"
+      },
+      "depends_on": [
+        "X15"
+      ],
+      "kind": "definition",
+      "where": "symbol list, Appendix A.1.2"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Stefan-Boltzmann constant",
+      "symbol": "sigma",
+      "value": 5.67e-08,
+      "unit": "W m^-2 K^-4",
+      "where_used": "Eq. 2 radiative term",
+      "page": 16,
+      "source": "Appendix A.1.1"
+    },
+    {
+      "name": "Universal gas constant",
+      "symbol": "R",
+      "value": 8.314,
+      "unit": "J mol^-1 K^-1",
+      "where_used": "Eqs. 5 and 8",
+      "page": 16,
+      "source": "Appendix A.1.1"
+    },
+    {
+      "name": "Heat of combustion per unit O2 demand",
+      "value": -417,
+      "value_as_printed": "-417",
+      "unit": "kJ mol^-1",
+      "where_used": "Eq. 4",
+      "page": 4,
+      "source": "Eq. 4",
+      "note": "Multiplies (c + 0.25h - 0.5o); Schmidt-Rohr (2015) title: 'about 418 kJ per mole of O2'."
+    },
+    {
+      "name": "Hydrogen coefficient in Eq. 4",
+      "value": 0.25,
+      "value_as_printed": "0.25",
+      "unit": "-",
+      "where_used": "Eq. 4",
+      "page": 4,
+      "source": "Eq. 4"
+    },
+    {
+      "name": "Oxygen coefficient in Eq. 4",
+      "value": -0.5,
+      "value_as_printed": "- 0.5o",
+      "unit": "-",
+      "where_used": "Eq. 4",
+      "page": 4,
+      "source": "Eq. 4"
+    },
+    {
+      "name": "Arrhenius temperature exponent",
+      "symbol": "n",
+      "value": 0,
+      "value_as_printed": "0 [Westbrook and Dryer 1981]",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 17,
+      "source": "Table 4"
+    },
+    {
+      "name": "Nitrogen reaction coefficients",
+      "symbol": "q_N2",
+      "value": 0,
+      "value_as_printed": "0",
+      "unit": "-",
+      "where_used": "Eq. 7 (q_i for N2)",
+      "page": 17,
+      "source": "Table 4",
+      "note": "Nitrogen is inert."
+    },
+    {
+      "name": "Fuel diffusivity, Acetylene (C2H2)",
+      "symbol": "D_f",
+      "value": 1.46e-05,
+      "value_as_printed": "1.46 (.10^-5)",
+      "unit": "m^2 s^-1 (unit from App. A.1.1 for D_i; Table 1 gives none)",
+      "where_used": "Eq. 3 (D_i for the fuel)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Arrhenius pre-exponential factor, Acetylene (C2H2)",
+      "symbol": "A",
+      "value": 6500000000000.0,
+      "value_as_printed": "6.50 x 10^12",
+      "unit": "not stated (App. A.1.1: units vary based on reaction order and concentration units)",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel reaction exponent, Acetylene (C2H2)",
+      "symbol": "a",
+      "value": 0.5,
+      "value_as_printed": "0.50",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen reaction exponent, Acetylene (C2H2)",
+      "symbol": "b",
+      "value": 1.25,
+      "value_as_printed": "1.25",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Heat of combustion (lower heating value), Acetylene (C2H2)",
+      "symbol": "Delta_c H^o",
+      "value": -1042500.0,
+      "value_as_printed": "-1.0425 (.10^6)",
+      "unit": "J mol^-1 (inferred: equals Eq. 4 in kJ mol^-1 x 1000; Table 1 gives none)",
+      "where_used": "Eqs. 4 and 6",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel stoichiometric coefficient, Acetylene (C2H2)",
+      "symbol": "q_f",
+      "value": -2,
+      "value_as_printed": "-2.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen stoichiometric coefficient, Acetylene (C2H2)",
+      "symbol": "q_o",
+      "value": -5,
+      "value_as_printed": "-5.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "CO2 stoichiometric coefficient, Acetylene (C2H2)",
+      "symbol": "q_CO2",
+      "value": 4,
+      "value_as_printed": "4.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "H2O stoichiometric coefficient, Acetylene (C2H2)",
+      "symbol": "q_H2O",
+      "value": 2,
+      "value_as_printed": "2.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel molar mass, Acetylene (C2H2)",
+      "symbol": "M_f",
+      "value": 0.026,
+      "value_as_printed": "2.600 (.10^-2)",
+      "unit": "kg mol^-1 (unit from App. A.1.1 for M_i; Table 1 gives none)",
+      "where_used": "Eqs. 7 and 8",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel specific heat capacity, Acetylene (C2H2)",
+      "symbol": "C_p",
+      "value": 63,
+      "value_as_printed": "63",
+      "unit": "not stated in Table 1 (App. A.1.1 gives J kg^-1 K^-1 for C_p)",
+      "where_used": "Eq. 2 (mixture C_p)",
+      "page": 10,
+      "source": "Table 1",
+      "note": "Much smaller than the other fuels' values; possibly a molar heat capacity in J mol^-1 K^-1 (transcriber's note 17)."
+    },
+    {
+      "name": "Fuel thermal conductivity, Acetylene (C2H2)",
+      "symbol": "k",
+      "value": 0.024,
+      "value_as_printed": "0.024",
+      "unit": "not stated in Table 1 (App. A.1.1 gives W m^-1 K^-1 for k)",
+      "where_used": "Eq. 2 (mixture k)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel diffusivity, Butane (C4H10)",
+      "symbol": "D_f",
+      "value": 1e-05,
+      "value_as_printed": "1.00 (.10^-5)",
+      "unit": "m^2 s^-1 (unit from App. A.1.1 for D_i; Table 1 gives none)",
+      "where_used": "Eq. 3 (D_i for the fuel)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Arrhenius pre-exponential factor, Butane (C4H10)",
+      "symbol": "A",
+      "value": 740000000000.0,
+      "value_as_printed": "7.40 x 10^11",
+      "unit": "not stated (App. A.1.1: units vary based on reaction order and concentration units)",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel reaction exponent, Butane (C4H10)",
+      "symbol": "a",
+      "value": 0.15,
+      "value_as_printed": "0.15",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen reaction exponent, Butane (C4H10)",
+      "symbol": "b",
+      "value": 1.6,
+      "value_as_printed": "1.60",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Heat of combustion (lower heating value), Butane (C4H10)",
+      "symbol": "Delta_c H^o",
+      "value": -2710500.0,
+      "value_as_printed": "-2.7105 (.10^6)",
+      "unit": "J mol^-1 (inferred: equals Eq. 4 in kJ mol^-1 x 1000; Table 1 gives none)",
+      "where_used": "Eqs. 4 and 6",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel stoichiometric coefficient, Butane (C4H10)",
+      "symbol": "q_f",
+      "value": -2,
+      "value_as_printed": "-2.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen stoichiometric coefficient, Butane (C4H10)",
+      "symbol": "q_o",
+      "value": -13,
+      "value_as_printed": "-13.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "CO2 stoichiometric coefficient, Butane (C4H10)",
+      "symbol": "q_CO2",
+      "value": 8,
+      "value_as_printed": "8.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "H2O stoichiometric coefficient, Butane (C4H10)",
+      "symbol": "q_H2O",
+      "value": 10,
+      "value_as_printed": "10.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel molar mass, Butane (C4H10)",
+      "symbol": "M_f",
+      "value": 0.05812,
+      "value_as_printed": "5.812 (.10^-2)",
+      "unit": "kg mol^-1 (unit from App. A.1.1 for M_i; Table 1 gives none)",
+      "where_used": "Eqs. 7 and 8",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel specific heat capacity, Butane (C4H10)",
+      "symbol": "C_p",
+      "value": 1720,
+      "value_as_printed": "1720",
+      "unit": "not stated in Table 1 (App. A.1.1 gives J kg^-1 K^-1 for C_p)",
+      "where_used": "Eq. 2 (mixture C_p)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel thermal conductivity, Butane (C4H10)",
+      "symbol": "k",
+      "value": 0.015,
+      "value_as_printed": "0.015",
+      "unit": "not stated in Table 1 (App. A.1.1 gives W m^-1 K^-1 for k)",
+      "where_used": "Eq. 2 (mixture k)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel diffusivity, Cyclopropane (C3H6)",
+      "symbol": "D_f",
+      "value": 1.14e-05,
+      "value_as_printed": "1.14 (.10^-5)",
+      "unit": "m^2 s^-1 (unit from App. A.1.1 for D_i; Table 1 gives none)",
+      "where_used": "Eq. 3 (D_i for the fuel)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Arrhenius pre-exponential factor, Cyclopropane (C3H6)",
+      "symbol": "A",
+      "value": 420000000000.0,
+      "value_as_printed": "4.20 x 10^11",
+      "unit": "not stated (App. A.1.1: units vary based on reaction order and concentration units)",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1",
+      "note": "A, a, b match the Westbrook and Dryer (1981) C3H6 (propene) entry by the transcriber's recollection (transcriber's note 18)."
+    },
+    {
+      "name": "Fuel reaction exponent, Cyclopropane (C3H6)",
+      "symbol": "a",
+      "value": -0.1,
+      "value_as_printed": "-0.10",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen reaction exponent, Cyclopropane (C3H6)",
+      "symbol": "b",
+      "value": 1.85,
+      "value_as_printed": "1.85",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Heat of combustion (lower heating value), Cyclopropane (C3H6)",
+      "symbol": "Delta_c H^o",
+      "value": -1876500.0,
+      "value_as_printed": "-1.8765 (.10^6)",
+      "unit": "J mol^-1 (inferred: equals Eq. 4 in kJ mol^-1 x 1000; Table 1 gives none)",
+      "where_used": "Eqs. 4 and 6",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel stoichiometric coefficient, Cyclopropane (C3H6)",
+      "symbol": "q_f",
+      "value": -2,
+      "value_as_printed": "-2.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen stoichiometric coefficient, Cyclopropane (C3H6)",
+      "symbol": "q_o",
+      "value": -9,
+      "value_as_printed": "-9.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "CO2 stoichiometric coefficient, Cyclopropane (C3H6)",
+      "symbol": "q_CO2",
+      "value": 6,
+      "value_as_printed": "6.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "H2O stoichiometric coefficient, Cyclopropane (C3H6)",
+      "symbol": "q_H2O",
+      "value": 6,
+      "value_as_printed": "6.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel molar mass, Cyclopropane (C3H6)",
+      "symbol": "M_f",
+      "value": 0.042,
+      "value_as_printed": "4.200 (.10^-2)",
+      "unit": "kg mol^-1 (unit from App. A.1.1 for M_i; Table 1 gives none)",
+      "where_used": "Eqs. 7 and 8",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel specific heat capacity, Cyclopropane (C3H6)",
+      "symbol": "C_p",
+      "value": 114,
+      "value_as_printed": "114",
+      "unit": "not stated in Table 1 (App. A.1.1 gives J kg^-1 K^-1 for C_p)",
+      "where_used": "Eq. 2 (mixture C_p)",
+      "page": 10,
+      "source": "Table 1",
+      "note": "Much smaller than the other fuels' values; possibly a molar heat capacity in J mol^-1 K^-1 (transcriber's note 17)."
+    },
+    {
+      "name": "Fuel thermal conductivity, Cyclopropane (C3H6)",
+      "symbol": "k",
+      "value": 0.015,
+      "value_as_printed": "0.015",
+      "unit": "not stated in Table 1 (App. A.1.1 gives W m^-1 K^-1 for k)",
+      "where_used": "Eq. 2 (mixture k)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel diffusivity, Propane (C3H8)",
+      "symbol": "D_f",
+      "value": 1.14e-05,
+      "value_as_printed": "1.14 (.10^-5)",
+      "unit": "m^2 s^-1 (unit from App. A.1.1 for D_i; Table 1 gives none)",
+      "where_used": "Eq. 3 (D_i for the fuel)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Arrhenius pre-exponential factor, Propane (C3H8)",
+      "symbol": "A",
+      "value": 860000000000.0,
+      "value_as_printed": "8.60 x 10^11",
+      "unit": "not stated (App. A.1.1: units vary based on reaction order and concentration units)",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel reaction exponent, Propane (C3H8)",
+      "symbol": "a",
+      "value": 0.1,
+      "value_as_printed": "0.10",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen reaction exponent, Propane (C3H8)",
+      "symbol": "b",
+      "value": 1.65,
+      "value_as_printed": "1.65",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Heat of combustion (lower heating value), Propane (C3H8)",
+      "symbol": "Delta_c H^o",
+      "value": -2085000.0,
+      "value_as_printed": "-2.0850 (.10^6)",
+      "unit": "J mol^-1 (inferred: equals Eq. 4 in kJ mol^-1 x 1000; Table 1 gives none)",
+      "where_used": "Eqs. 4 and 6",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel stoichiometric coefficient, Propane (C3H8)",
+      "symbol": "q_f",
+      "value": -1,
+      "value_as_printed": "-1.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen stoichiometric coefficient, Propane (C3H8)",
+      "symbol": "q_o",
+      "value": -5,
+      "value_as_printed": "-5.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "CO2 stoichiometric coefficient, Propane (C3H8)",
+      "symbol": "q_CO2",
+      "value": 3,
+      "value_as_printed": "3.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "H2O stoichiometric coefficient, Propane (C3H8)",
+      "symbol": "q_H2O",
+      "value": 4,
+      "value_as_printed": "4.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel molar mass, Propane (C3H8)",
+      "symbol": "M_f",
+      "value": 0.0441,
+      "value_as_printed": "4.410 (.10^-2)",
+      "unit": "kg mol^-1 (unit from App. A.1.1 for M_i; Table 1 gives none)",
+      "where_used": "Eqs. 7 and 8",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel specific heat capacity, Propane (C3H8)",
+      "symbol": "C_p",
+      "value": 1670,
+      "value_as_printed": "1670",
+      "unit": "not stated in Table 1 (App. A.1.1 gives J kg^-1 K^-1 for C_p)",
+      "where_used": "Eq. 2 (mixture C_p)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel thermal conductivity, Propane (C3H8)",
+      "symbol": "k",
+      "value": 0.016,
+      "value_as_printed": "0.016",
+      "unit": "not stated in Table 1 (App. A.1.1 gives W m^-1 K^-1 for k)",
+      "where_used": "Eq. 2 (mixture k)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel diffusivity, Methane (CH4)",
+      "symbol": "D_f",
+      "value": 2.1e-05,
+      "value_as_printed": "2.10 (.10^-5)",
+      "unit": "m^2 s^-1 (unit from App. A.1.1 for D_i; Table 1 gives none)",
+      "where_used": "Eq. 3 (D_i for the fuel)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Arrhenius pre-exponential factor, Methane (CH4)",
+      "symbol": "A",
+      "value": 830000.0,
+      "value_as_printed": "8.30 x 10^5",
+      "unit": "not stated (App. A.1.1: units vary based on reaction order and concentration units)",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel reaction exponent, Methane (CH4)",
+      "symbol": "a",
+      "value": -0.3,
+      "value_as_printed": "-0.30",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen reaction exponent, Methane (CH4)",
+      "symbol": "b",
+      "value": 1.3,
+      "value_as_printed": "1.30",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Heat of combustion (lower heating value), Methane (CH4)",
+      "symbol": "Delta_c H^o",
+      "value": -834000.0,
+      "value_as_printed": "-0.8340 (.10^6)",
+      "unit": "J mol^-1 (inferred: equals Eq. 4 in kJ mol^-1 x 1000; Table 1 gives none)",
+      "where_used": "Eqs. 4 and 6",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel stoichiometric coefficient, Methane (CH4)",
+      "symbol": "q_f",
+      "value": -1,
+      "value_as_printed": "-1.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen stoichiometric coefficient, Methane (CH4)",
+      "symbol": "q_o",
+      "value": -2,
+      "value_as_printed": "-2.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "CO2 stoichiometric coefficient, Methane (CH4)",
+      "symbol": "q_CO2",
+      "value": 1,
+      "value_as_printed": "1.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "H2O stoichiometric coefficient, Methane (CH4)",
+      "symbol": "q_H2O",
+      "value": 2,
+      "value_as_printed": "2.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel molar mass, Methane (CH4)",
+      "symbol": "M_f",
+      "value": 0.01604,
+      "value_as_printed": "1.604 (.10^-2)",
+      "unit": "kg mol^-1 (unit from App. A.1.1 for M_i; Table 1 gives none)",
+      "where_used": "Eqs. 7 and 8",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel specific heat capacity, Methane (CH4)",
+      "symbol": "C_p",
+      "value": 2230,
+      "value_as_printed": "2230",
+      "unit": "not stated in Table 1 (App. A.1.1 gives J kg^-1 K^-1 for C_p)",
+      "where_used": "Eq. 2 (mixture C_p)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel thermal conductivity, Methane (CH4)",
+      "symbol": "k",
+      "value": 0.034,
+      "value_as_printed": "0.034",
+      "unit": "not stated in Table 1 (App. A.1.1 gives W m^-1 K^-1 for k)",
+      "where_used": "Eq. 2 (mixture k)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel diffusivity, Ethylene (C2H4)",
+      "symbol": "D_f",
+      "value": 1.63e-05,
+      "value_as_printed": "1.63 (.10^-5)",
+      "unit": "m^2 s^-1 (unit from App. A.1.1 for D_i; Table 1 gives none)",
+      "where_used": "Eq. 3 (D_i for the fuel)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Arrhenius pre-exponential factor, Ethylene (C2H4)",
+      "symbol": "A",
+      "value": 2000000000000.0,
+      "value_as_printed": "2.00 x 10^12",
+      "unit": "not stated (App. A.1.1: units vary based on reaction order and concentration units)",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel reaction exponent, Ethylene (C2H4)",
+      "symbol": "a",
+      "value": 0.1,
+      "value_as_printed": "0.10",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen reaction exponent, Ethylene (C2H4)",
+      "symbol": "b",
+      "value": 1.65,
+      "value_as_printed": "1.65",
+      "unit": "-",
+      "where_used": "Eq. 5",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Heat of combustion (lower heating value), Ethylene (C2H4)",
+      "symbol": "Delta_c H^o",
+      "value": -1251000.0,
+      "value_as_printed": "-1.2510 (.10^6)",
+      "unit": "J mol^-1 (inferred: equals Eq. 4 in kJ mol^-1 x 1000; Table 1 gives none)",
+      "where_used": "Eqs. 4 and 6",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel stoichiometric coefficient, Ethylene (C2H4)",
+      "symbol": "q_f",
+      "value": -1,
+      "value_as_printed": "-1.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Oxygen stoichiometric coefficient, Ethylene (C2H4)",
+      "symbol": "q_o",
+      "value": -3,
+      "value_as_printed": "-3.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "CO2 stoichiometric coefficient, Ethylene (C2H4)",
+      "symbol": "q_CO2",
+      "value": 2,
+      "value_as_printed": "2.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "H2O stoichiometric coefficient, Ethylene (C2H4)",
+      "symbol": "q_H2O",
+      "value": 2,
+      "value_as_printed": "2.0",
+      "unit": "-",
+      "where_used": "Eq. 7",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel molar mass, Ethylene (C2H4)",
+      "symbol": "M_f",
+      "value": 0.02805,
+      "value_as_printed": "2.805 (.10^-2)",
+      "unit": "kg mol^-1 (unit from App. A.1.1 for M_i; Table 1 gives none)",
+      "where_used": "Eqs. 7 and 8",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel specific heat capacity, Ethylene (C2H4)",
+      "symbol": "C_p",
+      "value": 1550,
+      "value_as_printed": "1550",
+      "unit": "not stated in Table 1 (App. A.1.1 gives J kg^-1 K^-1 for C_p)",
+      "where_used": "Eq. 2 (mixture C_p)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Fuel thermal conductivity, Ethylene (C2H4)",
+      "symbol": "k",
+      "value": 0.019,
+      "value_as_printed": "0.019",
+      "unit": "not stated in Table 1 (App. A.1.1 gives W m^-1 K^-1 for k)",
+      "where_used": "Eq. 2 (mixture k)",
+      "page": 10,
+      "source": "Table 1"
+    },
+    {
+      "name": "Simulation Parameters: Delta Time",
+      "value": 0.008333333333333333,
+      "value_as_printed": "1 / 120 s",
+      "unit": "s",
+      "where_used": "time step",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Simulation Parameters: Ambient Temperature",
+      "value": 300.0,
+      "value_as_printed": "300.0 K",
+      "unit": "K",
+      "where_used": "T_amb in Eqs. 1, 2, 9, 26, 27",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle System Parameters: Particle Capacity",
+      "value": {
+        "min": 131072,
+        "max": 1048576
+      },
+      "value_as_printed": "131072 - 1048576",
+      "unit": "-",
+      "where_used": "SPH particle buffer",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle System Parameters: Update Multiplier",
+      "value": {
+        "min": 1,
+        "max": 4
+      },
+      "value_as_printed": "1 - 4",
+      "unit": "-",
+      "where_used": "SPH sub-steps per frame (interpretation not stated)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle System Parameters: Smoothing Radius",
+      "value": {
+        "min": 0.06,
+        "max": 0.4
+      },
+      "value_as_printed": "0.06 - 0.4 m",
+      "unit": "m",
+      "where_used": "h_s (Eqs. 12-17) or h (Eq. 18); not specified which",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle System Parameters: Stiffness",
+      "value": {
+        "min": 0.004,
+        "max": 0.005
+      },
+      "value_as_printed": "0.004 - 0.005",
+      "unit": "not stated (App. A.1.2: m^2 s^-2)",
+      "where_used": "k_s in Eq. 14",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle System Parameters: Near Stiffness",
+      "value": {
+        "min": 0.01,
+        "max": 0.02
+      },
+      "value_as_printed": "0.01 - 0.02",
+      "unit": "not stated (App. A.1.2: m^2 s^-2)",
+      "where_used": "k_s^near in Eq. 14",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle System Parameters: Rest Density (pseudo)",
+      "value": {
+        "min": 1.0,
+        "max": 300.0
+      },
+      "value_as_printed": "1.0 - 300.0",
+      "unit": "-",
+      "where_used": "rho_s_0 in Eq. 14",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle System Parameters: Linear Impulse",
+      "value": 0.0,
+      "value_as_printed": "0.0",
+      "unit": "not stated (App. A.1.2: s^-1)",
+      "where_used": "alpha in Eq. 17",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle System Parameters: Quadratic Impulse",
+      "value": 0.4,
+      "value_as_printed": "0.4",
+      "unit": "not stated (App. A.1.2: m^-1)",
+      "where_used": "beta in Eq. 17",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Grid Parameter: Grid Size",
+      "value": {
+        "min": "64x64x64",
+        "max": "200x300x400"
+      },
+      "value_as_printed": "64x64x64 - 200x300x400",
+      "unit": "cells",
+      "where_used": "voxel grid resolution",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Grid Parameter: Grid Length",
+      "value": {
+        "min": 0.1,
+        "max": 10.0
+      },
+      "value_as_printed": "0.1 - 10.0 m",
+      "unit": "m",
+      "where_used": "domain size",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Grid Parameter: Pressure Iterations",
+      "value": {
+        "min": 64,
+        "max": 128
+      },
+      "value_as_printed": "64 - 128",
+      "unit": "-",
+      "where_used": "iterative pressure Poisson solve (Algorithm 1, Line 22)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Thermal Parameters: Radiation coefficient",
+      "value": {
+        "min": 0.0,
+        "max": 6.0
+      },
+      "value_as_printed": "0.0 - 6.0",
+      "unit": "-",
+      "where_used": "epsilon in Eq. 2 (Sec. 6.1.1 calls epsilon the radiation coefficient)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Thermal Parameters: Density temperature coupling limit",
+      "value": {
+        "min": 300,
+        "max": 3000
+      },
+      "value_as_printed": "300 - 3000 K",
+      "unit": "K",
+      "where_used": "clamp on T in density coupling (Eq. 8), interpretation not stated",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Liquid Parameters: Liquid Droplet Diameter",
+      "value": {
+        "min": 0.0005,
+        "max": 0.005
+      },
+      "value_as_printed": "0.0005 - 0.005 m",
+      "unit": "m",
+      "where_used": "d_d in Eqs. 10, 27",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Liquid Parameters: Liquid Displacement Factor",
+      "value": {
+        "min": 0.0,
+        "max": 0.4
+      },
+      "value_as_printed": "0.0 - 0.4",
+      "unit": "-",
+      "where_used": "displacement term (Sec. 6.2.3); presumably scales Eq. 32",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Vorticity confinement: Strength",
+      "value": {
+        "min": 0.0,
+        "max": 50.0
+      },
+      "value_as_printed": "0.0 - 50.0",
+      "unit": "-",
+      "where_used": "vorticity confinement",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Vorticity confinement: Lower velocity threshold",
+      "value": {
+        "min": 0.0,
+        "max": 0.1
+      },
+      "value_as_printed": "0.0 - 0.1",
+      "unit": "not stated",
+      "where_used": "vorticity confinement",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Vorticity confinement: Upper velocity threshold",
+      "value": {
+        "min": 0.0,
+        "max": 5.0
+      },
+      "value_as_printed": "0.0 - 5.0",
+      "unit": "not stated",
+      "where_used": "vorticity confinement",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Vorticity confinement: Lower temperature threshold",
+      "value": 301,
+      "value_as_printed": "301 K",
+      "unit": "K",
+      "where_used": "vorticity confinement",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Combustion Parameters: Carbon dioxide reaction coefficients",
+      "value": {
+        "min": 0.0,
+        "max": 10.0
+      },
+      "value_as_printed": "0.0 - 10.0",
+      "unit": "-",
+      "where_used": "q_CO2 in Eq. 7",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Combustion Parameters: Water vapor reaction coefficients",
+      "value": {
+        "min": 0.0,
+        "max": 10.0
+      },
+      "value_as_printed": "0.0 - 10.0",
+      "unit": "-",
+      "where_used": "q_H2O in Eq. 7 (Fig. 7 vertical axis)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Combustion Parameters: Residual reaction coefficient",
+      "value": {
+        "min": 0.0,
+        "max": 10.0
+      },
+      "value_as_printed": "0.0 - 10.0",
+      "unit": "-",
+      "where_used": "q_residual in Eq. 7 (Fig. 7 horizontal axis; Sec. 6.1.1)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Combustion Parameters: Heat Efficiency",
+      "value": {
+        "min": 0.0,
+        "max": 1.0
+      },
+      "value_as_printed": "0.0 - 1.0",
+      "unit": "-",
+      "where_used": "varphi in Eq. 6",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle Emitter Parameter: Mass",
+      "value": {
+        "min": 0.1,
+        "max": 1.0
+      },
+      "value_as_printed": "0.1 - 1.0 kg",
+      "unit": "kg",
+      "where_used": "liquid emitters (sprays, sprinklers, jets)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle Emitter Parameter: Velocity",
+      "value": {
+        "min": 0.0,
+        "max": 10.0
+      },
+      "value_as_printed": "0.0 - 10.0 m s^-1",
+      "unit": "m s^-1",
+      "where_used": "liquid emitters",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle Emitter Parameter: Lifetime",
+      "value": {
+        "min": 0.0,
+        "max": 120.0
+      },
+      "value_as_printed": "0.0 - 120.0 s",
+      "unit": "s",
+      "where_used": "particle removal (Algorithm 1, Line 25)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle Emitter Parameter: Frequency",
+      "value": {
+        "min": 10.0,
+        "max": 100.0
+      },
+      "value_as_printed": "10.0 - 100.0 Hz",
+      "unit": "Hz",
+      "where_used": "liquid emitters",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle Emitter Parameter: Temperature",
+      "value": 300.0,
+      "value_as_printed": "300.0 K",
+      "unit": "K",
+      "where_used": "initial T_p",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Particle Emitter Parameter: Spray Angle",
+      "value": {
+        "min": 0.0,
+        "max": 180.0
+      },
+      "value_as_printed": "0.0 - 180.0 deg",
+      "unit": "deg",
+      "where_used": "liquid emitters (spray cone)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Grid Emitter Parameter: Fuel Mass Fraction",
+      "value": {
+        "min": 0.1,
+        "max": 1.0
+      },
+      "value_as_printed": "0.1 - 1.0",
+      "unit": "-",
+      "where_used": "gas emitters (Y_f)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Grid Emitter Parameter: Oxygen Mass Fraction",
+      "value": {
+        "min": 0.1,
+        "max": 1.0
+      },
+      "value_as_printed": "0.1 - 1.0",
+      "unit": "-",
+      "where_used": "gas emitters (Y_o)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Grid Emitter Parameter: Nitrogen Mass Fraction",
+      "value": {
+        "min": 0.1,
+        "max": 1.0
+      },
+      "value_as_printed": "0.1 - 1.0",
+      "unit": "-",
+      "where_used": "gas emitters (Y_N2)",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Grid Emitter Parameter: Temperature",
+      "value": {
+        "min": 300,
+        "max": 1500
+      },
+      "value_as_printed": "300 - 1500 K",
+      "unit": "K",
+      "where_used": "gas emitters",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Grid Emitter Parameter: Velocity",
+      "value": {
+        "min": 0.0,
+        "max": 10.0
+      },
+      "value_as_printed": "0.0 - 10.0 m s^-1",
+      "unit": "m s^-1",
+      "where_used": "gas emitters",
+      "page": 17,
+      "source": "Table 3 (configurable; values used for the paper's results)"
+    },
+    {
+      "name": "Flame establishment time shown in Fig. 4",
+      "value": 0.8,
+      "value_as_printed": "800 ms",
+      "unit": "s",
+      "where_used": "6.1.1, Fig. 4",
+      "page": 5,
+      "source": "Fig. 4 caption; Sec. 6.1.1"
+    },
+    {
+      "name": "Fig. 7 residual reaction coefficient values",
+      "value": [
+        0,
+        0.01,
+        0.1,
+        1,
+        10
+      ],
+      "value_as_printed": "(0, 0.01, 0.1, 1, 10)",
+      "unit": "-",
+      "where_used": "6.1.1, Fig. 7",
+      "page": 10,
+      "source": "Sec. 6.1.1"
+    },
+    {
+      "name": "Fig. 7 water vapor reaction coefficient values",
+      "value": [
+        0,
+        2.5,
+        5,
+        7.5,
+        10
+      ],
+      "value_as_printed": "(0, 2.5, 5, 7.5, 10)",
+      "unit": "-",
+      "where_used": "6.1.1, Fig. 7",
+      "page": 10,
+      "source": "Sec. 6.1.1"
+    },
+    {
+      "name": "Fig. 9 fuel mass fraction ramp",
+      "value": {
+        "min": 0.1,
+        "max": 1.0
+      },
+      "value_as_printed": "from a mass fraction of 0.1 to 1.0",
+      "unit": "-",
+      "where_used": "6.1.1, Fig. 9 (methane-oxygen in nitrogen)",
+      "page": 9,
+      "source": "Fig. 9 caption"
+    },
+    {
+      "name": "Validation compartment size",
+      "value": [
+        1.5,
+        1.5,
+        3.9
+      ],
+      "value_as_printed": "1.5m x 1.5m x 3.9m",
+      "unit": "m",
+      "where_used": "6.2.1, NBSIR 79-1910 enclosure and sprinkler cases",
+      "page": 12,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "Burner heat release rate range",
+      "value": {
+        "min": 14.4,
+        "max": 57.5
+      },
+      "value_as_printed": "approximately 14.4 to 57.5 kW",
+      "unit": "kW",
+      "where_used": "6.2.1, natural gas burner",
+      "page": 12,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "Heat release rates compared (Fig. 14)",
+      "value": [
+        14,
+        57
+      ],
+      "value_as_printed": "14 kW and 57 kW",
+      "unit": "kW",
+      "where_used": "6.2.1, Fig. 14a-f",
+      "page": 13,
+      "source": "Sec. 6.2.1; Fig. 14 caption"
+    },
+    {
+      "name": "Heat release rates compared (Fig. 17)",
+      "value": [
+        14.4,
+        33.0,
+        57.5
+      ],
+      "value_as_printed": "14.4 kW, 33 kW, 57.5 kW",
+      "unit": "kW",
+      "where_used": "6.2.1, Fig. 17",
+      "page": 13,
+      "source": "Sec. 6.2.1; Fig. 17 legend"
+    },
+    {
+      "name": "Burner pedestal height",
+      "value": 0.72,
+      "value_as_printed": "0.72 m",
+      "unit": "m",
+      "where_used": "6.2.1",
+      "page": 12,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "Number of temperature sensors",
+      "value": 21,
+      "value_as_printed": "21",
+      "unit": "-",
+      "where_used": "6.2.1, vertical sensor line",
+      "page": 13,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "Sensor height range above pedestal",
+      "value": {
+        "min": 0.05,
+        "max": 3.0
+      },
+      "value_as_printed": "0.05m to 3.0m",
+      "unit": "m",
+      "where_used": "6.2.1",
+      "page": 13,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "Temperature averaging interval",
+      "value": 30,
+      "value_as_printed": "30-second interval",
+      "unit": "s",
+      "where_used": "6.2.1, Fig. 14a, d",
+      "page": 13,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "Sprinkler case flame heat release rate",
+      "value": 33,
+      "value_as_printed": "33 kW",
+      "unit": "kW",
+      "where_used": "6.2.1 sprinkler experiment",
+      "page": 13,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "Sprinkler activation time",
+      "value": 15,
+      "value_as_printed": "After 15 seconds",
+      "unit": "s",
+      "where_used": "6.2.1 sprinkler experiment",
+      "page": 13,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "Sprinkler water flow rate",
+      "value": 300,
+      "value_as_printed": "300 liters/min",
+      "unit": "L min^-1",
+      "where_used": "6.2.1 sprinkler experiment",
+      "page": 13,
+      "source": "Sec. 6.2.1"
+    },
+    {
+      "name": "McCaffrey plume exponent, flame region",
+      "value": 0,
+      "value_as_printed": "eta = 0",
+      "unit": "-",
+      "where_used": "Fig. 17 reference line",
+      "page": 13,
+      "source": "Fig. 17 legend"
+    },
+    {
+      "name": "McCaffrey plume exponent, intermittent region",
+      "value": -1,
+      "value_as_printed": "eta = -1",
+      "unit": "-",
+      "where_used": "Fig. 17 reference line",
+      "page": 13,
+      "source": "Fig. 17 legend"
+    },
+    {
+      "name": "McCaffrey plume exponent, plume region",
+      "value": -1.6666666666666667,
+      "value_as_printed": "eta = -5/3",
+      "unit": "-",
+      "where_used": "Fig. 17 reference line",
+      "page": 13,
+      "source": "Fig. 17 legend"
+    }
+  ],
+  "derived_from_table_1": {
+    "note": "Derived by the transcriber from Table 1 stoichiometric coefficients; not printed in the paper.",
+    "reactions": [
+      {
+        "fuel": "Acetylene",
+        "formula": "C2H2",
+        "global_reaction": "2 C2H2 + 5 O2 -> 4 CO2 + 2 H2O",
+        "Delta_c_H_o_J_per_mol": -1042500.0
+      },
+      {
+        "fuel": "Butane",
+        "formula": "C4H10",
+        "global_reaction": "2 C4H10 + 13 O2 -> 8 CO2 + 10 H2O",
+        "Delta_c_H_o_J_per_mol": -2710500.0
+      },
+      {
+        "fuel": "Cyclopropane",
+        "formula": "C3H6",
+        "global_reaction": "2 C3H6 + 9 O2 -> 6 CO2 + 6 H2O",
+        "Delta_c_H_o_J_per_mol": -1876500.0
+      },
+      {
+        "fuel": "Propane",
+        "formula": "C3H8",
+        "global_reaction": "C3H8 + 5 O2 -> 3 CO2 + 4 H2O",
+        "Delta_c_H_o_J_per_mol": -2085000.0
+      },
+      {
+        "fuel": "Methane",
+        "formula": "CH4",
+        "global_reaction": "CH4 + 2 O2 -> CO2 + 2 H2O",
+        "Delta_c_H_o_J_per_mol": -834000.0
+      },
+      {
+        "fuel": "Ethylene",
+        "formula": "C2H4",
+        "global_reaction": "C2H4 + 3 O2 -> 2 CO2 + 2 H2O",
+        "Delta_c_H_o_J_per_mol": -1251000.0
+      }
+    ]
+  }
+}
