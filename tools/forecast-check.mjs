@@ -19,6 +19,7 @@
  * step, untenable from 80 model degrees C): this checks that the methods run,
  * agree and are fast on each model, not what to conclude about a building.
  */
+import os from "node:os";
 import { readdirSync, existsSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -47,7 +48,7 @@ function ifcsIn(dir) {
 }
 
 if (!files.length) {
-  for (const d of ["C:/Users/lmurugesan/ifc-samples", "topologicpy-web-frontend/public/examples", "C:/Users/lmurugesan/Downloads"]) files.push(...ifcsIn(d));
+  for (const d of [process.env.BENCHMARK_SAMPLES || path.join(os.homedir(), "ifc-samples"), "topologicpy-web-frontend/public/examples"]) files.push(...ifcsIn(d));
   // The Downloads copy of the Duplex is the same file as the shipped example.
   files = files.filter((f) => !/Ifc2x3_Duplex_Architecture\.ifc$/i.test(f));
 }

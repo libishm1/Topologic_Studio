@@ -14,6 +14,7 @@
  * this checks that the method runs and is consistent on each model, not what
  * a fire engineer should conclude about it.
  */
+import os from "node:os";
 import { readdirSync, existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -28,7 +29,7 @@ const jsonAt = args.indexOf("--json");
 const jsonOut = jsonAt >= 0 ? args[jsonAt + 1] : null;
 let files = args.filter((a, i) => a.toLowerCase().endsWith(".ifc") && i !== jsonAt + 1);
 if (!files.length) {
-  const dirs = ["C:/Users/lmurugesan/ifc-samples", "topologicpy-web-frontend/public/examples", "C:/Users/lmurugesan/Downloads"];
+  const dirs = [process.env.BENCHMARK_SAMPLES || path.join(os.homedir(), "ifc-samples"), "topologicpy-web-frontend/public/examples"];
   for (const d of dirs) {
     if (!existsSync(d)) continue;
     for (const f of readdirSync(d)) if (f.toLowerCase().endsWith(".ifc")) files.push(path.join(d, f));

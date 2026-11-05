@@ -395,13 +395,13 @@ Watkins and Dayan prove convergence of tabular Q-learning with probability 1 for
 
 ### 8.1 Toolchain and packages
 
-Existing setup (read, not modified). `C:\Users\lmurugesan\lean\earth3dp` pins `leanprover/lean4:v4.34.1` and Mathlib tag `v4.34.1` (manifest revision `d13f23b`), with `relaxedAutoImplicit = false` and the `weak.linter.mathlibStandardSet` linter. Its manifest shows the packages Mathlib brings in transitively: Plausible, LeanSearchClient, import-graph, ProofWidgets4, Aesop, Qq (quote4), Batteries and Cli. Installed toolchains: v4.32.2, v4.34.1, v4.35.0-rc4, v4.35.0. The README is the default template and carries no project information. `Earth3dp/Dimensions.lean` and the skill template `PaperTemplate.lean` both use a decidable `Dim` structure with integer exponents, closed by `decide`, and earth3dp checks axioms with `#print axioms`.
+Existing setup (read, not modified). `%USERPROFILE%\lean\earth3dp` pins `leanprover/lean4:v4.34.1` and Mathlib tag `v4.34.1` (manifest revision `d13f23b`), with `relaxedAutoImplicit = false` and the `weak.linter.mathlibStandardSet` linter. Its manifest shows the packages Mathlib brings in transitively: Plausible, LeanSearchClient, import-graph, ProofWidgets4, Aesop, Qq (quote4), Batteries and Cli. Installed toolchains: v4.32.2, v4.34.1, v4.35.0-rc4, v4.35.0. The README is the default template and carries no project information. `Earth3dp/Dimensions.lean` and the skill template `PaperTemplate.lean` both use a decidable `Dim` structure with integer exponents, closed by `decide`, and earth3dp checks axioms with `#print axioms`.
 
 State on 2026-10-27 (GitHub API): the latest stable Lean 4 release [moura2021lean4] is v4.35.0 (2026-10-12), Mathlib has a matching `v4.35.0` tag, and v4.36.0-rc1 is a pre-release.
 
 Recommendation:
 
-- New project outside OneDrive, for example `C:\Users\lmurugesan\lean\fireegress`, to keep `.lake` (several GB) out of sync and away from long-path problems.
+- New project outside OneDrive, for example `formal/fireegress`, to keep `.lake` (several GB) out of sync and away from long-path problems.
 - `lean-toolchain`: `leanprover/lean4:v4.35.0`. `lakefile.toml`: copy earth3dp's `[leanOptions]` and require Mathlib at `rev = "v4.35.0"`. If disk or bandwidth matters more than currency, `v4.34.1` reuses the Mathlib cache earth3dp already downloaded.
 - Lean projects pin one Mathlib revision; adding a second library (for example PhysLib) requires that it builds against the same revision.
 

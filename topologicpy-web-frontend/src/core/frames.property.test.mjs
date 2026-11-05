@@ -1,7 +1,7 @@
 // Run with: node --test src/core/frames.property.test.mjs
 //
 // Property tests for the frame change IFC -> viewer, the statements proved in
-// FireEgress/Frames.lean (C:\Users\lmurugesan\lean\fireegress):
+// FireEgress/Frames.lean (formal/fireegress):
 //   (1) (x, y, z) -> (x, z, -y) is orthogonal with determinant +1 and keeps
 //       the cross product (handedness);
 //   (2) any rigid motion R p + t (R orthogonal, det +1) leaves the lengths the

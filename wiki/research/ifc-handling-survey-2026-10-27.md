@@ -10,7 +10,7 @@ Builds on: [../roadmap/review-2026-10-27.md](../roadmap/review-2026-10-27.md), [
 
 Line numbers are those of the working tree on 2026-10-27. `src/App.jsx`, `src/viewer/ViewerManager.js` (after line 874) and `tools/deadline-check.mjs` had uncommitted edits by another session while this survey ran, so their line numbers may drift; function names are given alongside.
 
-Test set. The 19 rows of `deadline-crosscheck.json` contain 18 distinct files: `Building-Architecture.ifc` is byte-identical to `public/examples/buildingsmart-sample-scene.ifc`. All numbers below are over these 18 files (12 in `C:\Users\lmurugesan\ifc-samples`, 4 in `public/examples`, 2 in Downloads). Eight are IFC2X3 and ten IFC4; none is IFC4X3. Fourteen contain at least one IfcDoor.
+Test set. The 19 rows of `deadline-crosscheck.json` contain 18 distinct files: `Building-Architecture.ifc` is byte-identical to `public/examples/buildingsmart-sample-scene.ifc`. All numbers below are over these 18 files (12 in `%USERPROFILE%\ifc-samples`, 4 in `public/examples`, 2 in Downloads). Eight are IFC2X3 and ten IFC4; none is IFC4X3. Fourteen contain at least one IfcDoor.
 
 Method. Every number in this note comes from scripts run with web-ifc 0.0.77 in Node, kept in the session scratchpad (`ifc-survey/semantics.mjs`, `exits.mjs`, `errors.mjs`, `frag.mjs`, `storeys.mjs`, `sidecar.mjs`, `extra.mjs`, `area_wi.mjs`, `area_ios.py`). Browser timings were not measured. buildingSMART's HTML documentation refused automated retrieval (HTTP 403), so property definitions were read from the buildingSMART property set templates shipped with IfcOpenShell 0.8.5 [S5]; entity page URLs are given for reference.
 

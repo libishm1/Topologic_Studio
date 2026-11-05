@@ -68,7 +68,7 @@ Order of work, each step verified and committed:
 
 Iterated against 16 models: the Duplex, the buildingSMART sample scene, our two
 examples, and 12 web-ifc test models (ThatOpen/engine_web-ifc
-`tests/ifcfiles/public`, downloaded to `C:\Users\lmurugesan\ifc-samples` for
+`tests/ifcfiles/public`, downloaded to `%USERPROFILE%\ifc-samples` for
 testing only; their licences vary, so they are not shipped). "Largest" is the
 share of nodes in the biggest connected piece with walls on.
 

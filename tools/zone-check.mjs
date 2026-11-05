@@ -28,6 +28,7 @@
  * it; it is not a fire assessment of any building. Model files are read in
  * place and never copied.
  */
+import os from "node:os";
 import { readdirSync, existsSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -57,7 +58,7 @@ function ifcsIn(dir) {
 }
 
 if (!files.length) {
-  for (const d of ["C:/Users/lmurugesan/ifc-samples", "topologicpy-web-frontend/public/examples"]) files.push(...ifcsIn(d));
+  for (const d of [process.env.BENCHMARK_SAMPLES || path.join(os.homedir(), "ifc-samples"), "topologicpy-web-frontend/public/examples"]) files.push(...ifcsIn(d));
 }
 
 const WALK = 1.2, LIMIT = 0.3, GROWTH = "medium", PEAK = 5000, HORIZON = 600, FRAME = 1, UNTENABLE_C = 60;

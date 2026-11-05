@@ -3,7 +3,7 @@
 The workspace lives under:
 
 ```text
-C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp
+%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp
 ```
 
 This creates practical constraints:
@@ -20,7 +20,7 @@ This creates practical constraints:
 Always quote paths in PowerShell:
 
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio"
+cd "%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio"
 ```
 
 Avoid relying on global tools unless already configured. The verification run found:
@@ -35,7 +35,7 @@ Avoid relying on global tools unless already configured. The verification run fo
 Use the bundled Node path before invoking npm scripts:
 
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
+cd "%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
 $nodeDir = Resolve-Path "..\node-v24.11.1-win-x64"
 $env:Path = "$nodeDir;$env:Path"
 & "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173
@@ -52,7 +52,7 @@ Why both `$env:Path` and `npm.cmd` matter:
 Use the backend `.venv`, not the workspace `.venv`, when testing backend imports:
 
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
+cd "%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
 $env:PYTHONDONTWRITEBYTECODE = "1"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
@@ -82,14 +82,14 @@ This avoids touching the normal frontend `dist/` output while still proving Vite
 Backend:
 
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
+cd "%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Frontend:
 
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
+cd "%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
 $nodeDir = Resolve-Path "..\node-v24.11.1-win-x64"
 $env:Path = "$nodeDir;$env:Path"
 & "$nodeDir\npm.cmd" run dev -- --host 0.0.0.0 --port 5173

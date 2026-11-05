@@ -25,8 +25,8 @@ Conclusion: this PDF is image-based or otherwise has no extractable text in the 
 Files:
 
 ```text
-C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\Human.pdf
-C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\1-s2.0-S1093968726030215-main.pdf
+%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\Human.pdf
+%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\1-s2.0-S1093968726030215-main.pdf
 ```
 
 Parse status:

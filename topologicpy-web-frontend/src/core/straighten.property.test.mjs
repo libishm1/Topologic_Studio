@@ -1,5 +1,5 @@
 // Property test for straightenRoute, checked against the Lean file
-// FireEgress/Straighten.lean (C:\Users\lmurugesan\lean\fireegress).
+// FireEgress/Straighten.lean (formal/fireegress).
 // Run with: node --test src/core/straighten.property.test.mjs
 //
 // (1) Straightening keeps a subsequence of the lattice route's nodes with the

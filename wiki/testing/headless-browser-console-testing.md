@@ -13,7 +13,7 @@ Run a browser against the local Vite app, capture console output, page errors, f
 - If global Node/npm is unavailable, prepend the bundled Node path.
 
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
+cd "%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-frontend"
 $env:PATH=(Resolve-Path ..\node-v24.11.1-win-x64).Path + ';' + $env:PATH
 npm.cmd run dev -- --host 0.0.0.0 --port 5173
 ```

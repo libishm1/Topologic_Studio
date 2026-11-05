@@ -1,5 +1,5 @@
 // Property test for wall blocking's segment test, `segmentsCross` in lattice.js.
-// Mirrors FireEgress/Segments.lean (Lean project C:\Users\lmurugesan\lean\fireegress):
+// Mirrors FireEgress/Segments.lean (Lean project formal/fireegress):
 //   sound + complete : test(a,b,c,d) <=> the lines are not parallel and the
 //                      parametric intersection has 0 < t < 1 and 0 < u < 1
 //   crossTest_iff    : test <=> the closed segments meet and no endpoint of

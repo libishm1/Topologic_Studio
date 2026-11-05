@@ -28,7 +28,7 @@ Standard tests:
 - **NIST TN 1822 (17 tests).** Studio can run four today (2.1, 2.3, 3.1, 4.1) and 2.6 in part. Seven need one of the gaps above (1.1, 2.2, 2.4, 2.5, 2.7, 3.3, and the single-evacuee part of 2.10). Five need crowds (2.8, 2.9, 3.2, 5.1, 5.2).
 - **ISO 20414:2020.** We did not access the text; its published scope lists components consistent with TN 1822's five core components [I1]. The ISO numbering should be checked against the standard before any claim of conformity.
 
-Eleven openly licensed IFC models were added under `C:\Users\lmurugesan\ifc-samples\more2\` (section 10). They include lifts as IfcTransportElement, ramps, stairs drawn as one stepped solid, a building whose only vertical links are lifts, and the only file in the corpus with FireExit flags.
+Eleven openly licensed IFC models were added under `%USERPROFILE%\ifc-samples\more2\` (section 10). They include lifts as IfcTransportElement, ramps, stairs drawn as one stepped solid, a building whose only vertical links are lifts, and the only file in the corpus with FireExit flags.
 
 ## 2. Method
 
@@ -42,7 +42,7 @@ The method follows the reverse-engineer-anything (REA) skill (https://github.com
 
 Sources were obtained as follows:
 
-- **Read-only copies outside OneDrive.** Shallow clones of Menge, MomenTUM, JuPedSim and Vadere, and raw single-file downloads of FDS 6.7.7 (`evac.f90`, `ieva.f90`, `func.f90`), CFAST (seven files) and JPSfire (three files and `Pedestrian.cpp` from JuPedSim v0.8.4), all under `C:\Users\lmurugesan\oss-study\`. Line numbers come from `grep -n` and `sed -n` on these copies.
+- **Read-only copies outside OneDrive.** Shallow clones of Menge, MomenTUM, JuPedSim and Vadere, and raw single-file downloads of FDS 6.7.7 (`evac.f90`, `ieva.f90`, `func.f90`), CFAST (seven files) and JPSfire (three files and `Pedestrian.cpp` from JuPedSim v0.8.4), all under `%USERPROFILE%\oss-study\`. Line numbers come from `grep -n` and `sed -n` on these copies.
 - **Documentation and standards** were read with WebFetch: the Pathfinder 2026.1 technical reference and V&V pages, the FSEG buildingEXODUS capability page, NIST TN 1822 (public domain) and the RiMEA 4.1.1 guideline (CC BY-ND 4.0).
 - **DOIs** were checked against Crossref on 2026-10-28. One candidate DOI resolved to an unrelated paper and was dropped.
 - **Fetched content** was treated as data only.
@@ -469,7 +469,7 @@ Studio's exactness results give a useful asymmetry: on the same graph and speeds
 
 ## 10. IFC files obtained for testing
 
-Eleven files, about 180 MB, each in its own subfolder of `C:\Users\lmurugesan\ifc-samples\more2\`. URLs, licence evidence, SHA-256 and counts are in `C:\Users\lmurugesan\ifc-samples\more2\SOURCES.md`. None matches the SHA-256 of a file already in the corpus. Counts are plain text counts of entity names; storeys are IfcBuildingStorey entities.
+Eleven files, about 180 MB, each in its own subfolder of `%USERPROFILE%\ifc-samples\more2\`. URLs, licence evidence, SHA-256 and counts are in `%USERPROFILE%\ifc-samples\more2\SOURCES.md`. None matches the SHA-256 of a file already in the corpus. Counts are plain text counts of entity names; storeys are IfcBuildingStorey entities.
 
 | Subfolder | Licence | Schema, tool | Storeys | IfcStair / Flight | IfcRamp | IfcTransportElement | IfcSpace | IfcDoor | Notable for egress testing |
 |---|---|---|---|---|---|---|---|---|---|

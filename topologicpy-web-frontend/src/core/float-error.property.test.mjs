@@ -1,6 +1,6 @@
 // Run with: node --test src/core/float-error.property.test.mjs
 //
-// Property test for FireEgress/FloatError.lean (Lean project C:\Users\lmurugesan\lean\fireegress):
+// Property test for FireEgress/FloatError.lean (Lean project formal/fireegress):
 // floating-point error in the standard model fl(x op y) = (x op y)(1 + d), |d| <= u, with
 // u = 2^-53 (doubles) and u = 2^-24 (Float32Array / Math.fround). Every "exact" value
 // below is a BigInt dyadic rational built from the exact binary value of the doubles, so

@@ -3,7 +3,7 @@
 The project is inside:
 
 ```text
-C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio
+%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio
 ```
 
 The path contains spaces and is synced by OneDrive. Treat shell commands and generated files accordingly.
@@ -36,7 +36,7 @@ $env:PATH=(Resolve-Path .\node-v24.11.1-win-x64).Path + ';' + $env:PATH
 Use the backend virtual environment:
 
 ```powershell
-cd "C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
+cd "%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio\topologicpy-web-backend"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 

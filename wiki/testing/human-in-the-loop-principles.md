@@ -4,8 +4,8 @@ This page converts the two requested PDFs into testing rules for this project.
 
 ## Sources
 
-- `C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\Human.pdf`
-- `C:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\1-s2.0-S1093968726030215-main.pdf`
+- `%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\Human.pdf`
+- `%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\1-s2.0-S1093968726030215-main.pdf`
 
 `Human.pdf` is a 2026 document on Human-in-the-Loop AI for strategic decision-making in critical infrastructure systems. The gridshell paper is an Elsevier pre-proof titled "AI-driven human-in-the-loop structural optimization of gridshells" with DOI `10.1016/j.cacaie.2026.100044`.
 

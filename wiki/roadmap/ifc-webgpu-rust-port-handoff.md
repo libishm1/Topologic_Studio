@@ -25,7 +25,7 @@ The recommended strategy is:
 Working repository:
 
 ```text
-c:\Users\lmurugesan\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio
+%USERPROFILE%\OneDrive - Alfaisal University\CM-iTAD\topologic_webapp\TopologicStudio
 ```
 
 Key files (verified to exist as of 2026-05-07):
