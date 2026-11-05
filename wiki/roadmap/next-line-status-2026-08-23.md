@@ -16,7 +16,7 @@ Everything below is on the Next line only; Classic is byte-for-byte unchanged.
 | 1. Demo-safe freeze | Done | Tag `demo-safe-2026-08-24` on `38e08b7`. Uncommitted working-tree edits in the Classic checkout are **not** in the tag. |
 | 2. Frontend runtime hardening | Done | `optimizeDeps.exclude`, StrictMode removed, WASM self-hosted. |
 | 3. Dependency reconciliation | Done | `requirements.txt` is the single source of truth and now includes `ifcopenshell` and `topologic-core`. |
-| 4. Import cleanup | Done | `sys.path.append("C:/Users/sarwj/...")` deleted. |
+| 4. Import cleanup | Done | `sys.path.append("<another developer's local path>")` deleted. |
 | 5. Pathfinding unification spike | Done | One engine interface, parity verified, both exposed via `/api/ifc/path/compare`. |
 
 ## Roadmap phases

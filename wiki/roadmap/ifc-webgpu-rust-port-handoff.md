@@ -51,7 +51,7 @@ Key files (verified to exist as of 2026-05-07):
 
 The worktree may contain uncommitted changes and generated local artifacts (`frontend-dev.log`, `uvicorn-out.log`, the bundled `node-v24.11.1-win-x64/` runtime, the backend `.venv/`). Do not reset or revert unrelated changes.
 
-`main.py:11` hardcodes a `sys.path.append("C:/Users/sarwj/...")` to a TopologicPy checkout from a different developer's machine. This line is dead on the current machine and in Docker (the path doesn't exist there) but should be removed in the Phase 1 cleanup so it doesn't mask import errors after the TopologicPy upgrade.
+`main.py:11` hardcodes a `sys.path.append("<another developer's local path>")` to a TopologicPy checkout from a different developer's machine. This line is dead on the current machine and in Docker (the path doesn't exist there) but should be removed in the Phase 1 cleanup so it doesn't mask import errors after the TopologicPy upgrade.
 
 ## Current Architecture
 
@@ -492,7 +492,7 @@ If the IFC RL path is broken or unverified for the migration target, mark it exp
 ## Known Risks To Preserve
 
 - Module-global `LAST_GRAPHS` makes the backend session-unsafe — a second concurrent user overwrites the first user's graph. This is a latent bug; do not hide it with a renderer migration. Replace with per-session keying (e.g., a graph ID returned from `/ifc-egress-graph` that the frontend passes back in `/ifc-egress-path` and `/fire-sim`) before scaling to multi-user.
-- `main.py` line 11 hardcodes `sys.path.append("C:/Users/sarwj/...")` from a different developer's machine. Remove during Phase 1.
+- `main.py` line 11 hardcodes `sys.path.append("<another developer's local path>")` from a different developer's machine. Remove during Phase 1.
 - Axis handling is inconsistent across `IFCViewer.jsx` (`upAxis` is forced to `"y"` in `App.jsx`) and the backend (which accepts `up_axis` per request). Don't bury this with a renderer migration.
 - Server `/upload-ifc` and browser IFC egress are separate paths. They don't currently share the IFC Lite contract; Phase 3 is where they should converge.
 - Existing lint may fail for unrelated reasons; do not mix lint cleanup with loader migration unless it blocks builds.
