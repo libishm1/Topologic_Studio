@@ -3,10 +3,10 @@
 ## State
 
 - **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 4cfcefb.
-  - **Live check of 4cfcefb:** every step passed except the TopologicPy cross-check.
+  - **Live check of 4cfcefb:** 0 failed steps.
     - The rooms (LOD1) step passed live: the plan opened in 0.3 s and its graph joined both storeys.
-    - The cross-check failed because the Render backend did not answer: `/health` timed out three times over about ten minutes (2026-11-05, late evening), though it had answered earlier the same evening.
-    - **Next:** wake it and rerun the live check. If it still does not answer, look at the Render dashboard. Only the frontend changed this round.
+    - **The first attempt** failed only the TopologicPy cross-check: the Render backend did not answer `/health` for about ten minutes.
+    - **Once it answered,** the rerun passed in full; the cross-check took 69 s.
   - **Deployed this evening:**
     - da7064f, "Describe this model";
     - d9afc1c, the code check (live check 0 failed steps);
