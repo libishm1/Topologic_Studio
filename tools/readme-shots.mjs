@@ -23,7 +23,7 @@ const argOf = (name, fallback) => {
 };
 const URL_BASE = argOf("--url", "http://localhost:5173/");
 const URL_DEBUG = `${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`;
-const ONLY = argOf("--only", "welcome,duplex,examples,phone,methods").split(",");
+const ONLY = argOf("--only", "welcome,duplex,flamescapes,examples,phone,methods").split(",");
 const CHROME = argOf("--chrome", "C:/Program Files/Google/Chrome/Application/chrome.exe");
 
 await mkdir(OUT, { recursive: true });
@@ -255,6 +255,37 @@ async function phone() {
   await page.context().close();
 }
 
+/** The optional Flamescapes solver with embers, on the Duplex: heat, then smoke. */
+async function flamescapes() {
+  console.log("\nFlamescapes");
+  const page = await newPage();
+  await openExample(page, "Duplex apartment");
+  await buildGraph(page);
+  await view(page, "Fit");
+  if (!(await routeFrom(page, [[0.42, 0.62], [0.55, 0.62], [0.6, 0.45]]))) console.log("  no route found");
+  const box = await page.locator(".viewport__canvas").boundingBox();
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.55);
+  await page.mouse.wheel(0, -120);
+  await page.waitForTimeout(1000);
+  await tab(page, "Simulate");
+  await pickAt(page, "Fire", 0.5, 0.68);
+  await page.getByText("Flamescapes combustion solver (optional)", { exact: true }).click();
+  await page.getByText("Flamescapes: fire, smoke and embers", { exact: true }).click();
+  await page.getByText("Flamescapes settings", { exact: true }).click();
+  await page.getByLabel("Simulated time (s)").fill("90");
+  await page.getByLabel("Simulated time (s)").blur();
+  await page.getByRole("button", { name: /^Start fire$/ }).scrollIntoViewIfNeeded();
+  await page.getByRole("button", { name: /^Start fire$/ }).click();
+  await page.waitForFunction(() => /Flamescapes run complete/.test(document.body.innerText), null, { timeout: 600000 });
+  await page.waitForFunction(() => !/fire step \d+/i.test(document.body.innerText), null, { timeout: 120000 }).catch(() => {});
+  await page.locator('[aria-label="Flamescapes run"]').scrollIntoViewIfNeeded();
+  await save(page, "duplex-flamescapes");
+  await page.getByText("Smoke", { exact: true }).click();
+  await page.waitForTimeout(1500);
+  await save(page, "duplex-flamescapes-smoke");
+  await page.context().close();
+}
+
 async function welcome() {
   console.log("\nWelcome");
   const page = await newPage();
@@ -273,7 +304,7 @@ async function methods() {
   await page.context().close();
 }
 
-const jobs = { welcome, duplex, examples, phone, methods };
+const jobs = { welcome, duplex, flamescapes, examples, phone, methods };
 for (const name of ONLY) {
   if (!jobs[name]) throw new Error(`Unknown set "${name}"; use ${Object.keys(jobs).join(", ")}.`);
   await jobs[name]();

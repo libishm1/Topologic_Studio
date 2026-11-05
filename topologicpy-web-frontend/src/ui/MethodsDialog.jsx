@@ -161,7 +161,8 @@ export function MethodsDialog({ open, onClose, studio }) {
                     rates, gas combustion with the heat of Fire-X&apos;s 417 kJ per mol of oxygen, radiation by rays
                     absorbed by soot, flame-front particles and, in the second option, embers carried by the gas
                     that start spot fires. The room contents are the paper&apos;s statistical fire load; the first
-                    item burns with the fuel of its fire class (NFPA 10: A, B, C, D, K). Read at head height
+                    item burns with the fuel of its fire class (NFPA 10: A, B, C, D, K; ISO 3941:2026: L, lithium-ion
+                    batteries). Read at head height
                     (1.8 m) at each graph node: gas temperature, visibility through the smoke (S = 3 / (8700 m²/kg
                     times soot density)) and CO. The plan adds the CO dose of ISO 13571 to the heat dose. It runs on
                     the GPU through WebGPU where the browser offers it, otherwise on one CPU core.
@@ -251,7 +252,8 @@ export function MethodsDialog({ open, onClose, studio }) {
                   stand in for what the paper resolves. Walls and slabs do not burn, doors are open and windows
                   closed, and contents are a statistical fire load. It shows how heat and smoke may move through
                   the building; it is not calibrated, and its fire class values marked provisional are still being
-                  checked.
+                  checked. Indoors at these cells embers seldom land hot enough to light anything: in a 120 s fire in
+                  the Duplex they lit no spot fire.
                 </li>
               </ul>
             </section>
@@ -286,6 +288,13 @@ export function MethodsDialog({ open, onClose, studio }) {
                   and Materials 24, 227-230.{" "}
                   <a href="https://doi.org/10.1002/1099-1018(200009/10)24:5<227::AID-FAM742>3.0.CO;2-9" target="_blank" rel="noreferrer">
                     doi:10.1002/1099-1018(200009/10)24:5&lt;227::AID-FAM742&gt;3.0.CO;2-9
+                  </a>
+                </li>
+                <li>
+                  Lyon and Quintiere (2007). Criteria for piloted ignition of combustible solids. Combustion and
+                  Flame 151(4), 551-559 (the floor below which a heated solid is not counted as burning).{" "}
+                  <a href="https://doi.org/10.1016/j.combustflame.2007.07.020" target="_blank" rel="noreferrer">
+                    doi:10.1016/j.combustflame.2007.07.020
                   </a>
                 </li>
                 <li>

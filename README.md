@@ -124,7 +124,8 @@ cheapest routes exactly.
 Press **Set** beside Fire origin (or F), click where the fire starts, and press
 **Start fire**. The fire spreads step by step on the graph while the route is
 checked every five steps and moved away from the heat when it has to be (the
-picture at the top of this page). Four fire models are offered:
+picture at the top of this page). Four fire models are offered, and two more
+with the optional Flamescapes solver:
 
 | Model | What it does |
 | --- | --- |
@@ -132,6 +133,31 @@ picture at the top of this page). Four fire models are offered:
 | Spread along links | The fire moves one link per step, so walls and doors shape the front. |
 | Distance bands | Straight-line distance from the origin, ignoring walls. |
 | Two-zone rooms | A smoke layer and its gas temperature in each room, in seconds and degrees C, spreading through open doors. Needs the model's rooms (`IfcSpace`). |
+| Flamescapes: fire and smoke (optional) | The Flamescapes combustion solver on a 3D grid built from the IFC: buoyant gas flow, burning room contents, radiation and smoke, read at head height at every graph node. |
+| Flamescapes: fire, smoke and embers (optional) | As above, with embers carried by the hot gas that can start spot fires away from the flame. |
+
+**The Flamescapes solver** is a JavaScript version of the fire solver in
+*Flamescapes: Simulating the Wildlandfire Urban Interface* (Wrede, Wagner,
+Pałubicki, Michels and Pirk, ACM Transactions on Graphics 2026, CC BY 4.0),
+whose gas chemistry is that of *Fire-X* (Wrede et al. 2025). Switch it on
+with **Flamescapes combustion solver (optional)** in the Simulate step. It
+runs in your browser: on the GPU through WebGPU where the browser offers it,
+otherwise on one CPU core at about three times real time for a dwelling. Its
+frames play as they are computed, the route reroutes on the gas temperature at
+head height, and **Plan with the forecast** plans on the same run, adding the
+CO dose of ISO 13571 to the heat dose. **Show on the graph** switches between
+heat and smoke (visibility through the smoke at head height).
+
+**What burns first.** The first item takes the fuel of its fire class: NFPA 10
+classes A (ordinary combustibles), B (flammable liquids), C (energised
+electrical equipment), D (metals) and K (cooking oils), and class L
+(lithium-ion batteries, ISO 3941:2026). The panel says which extinguishers
+suit the class and which are dangerous on it, for example water on cooking
+oil. Each class's heat of combustion, CO and soot yields, growth and ignition
+temperature come from a literature review
+([wiki/research/ignition-sources-2026-11-05.json](wiki/research/ignition-sources-2026-11-05.json))
+and are cited in
+[fireClasses.js](topologicpy-web-frontend/src/core/fireClasses.js).
 
 ![The two-zone room model: rooms upstairs shown hot in red, with the route still clear at step 53](docs/images/duplex-zone.jpg)
 
@@ -256,6 +282,7 @@ saying why.
 | Building the walkable graph | Navigation cross-check (the IFC file is uploaded for this) |
 | Routes, straightening and alternative routes | The **Topology JSON** viewer for TopologicPy files |
 | Fire spread, rerouting and the forecast | |
+| The optional Flamescapes solver (WebGPU on your GPU where offered, else one CPU core) | |
 | Reinforcement learning | |
 
 The server is a FastAPI service around
@@ -270,6 +297,17 @@ it is never reached.
 ## Limits to keep in mind
 
 These are also on the Methods page.
+
+- **Flamescapes in the browser is coarse.** The paper resolves centimetres on
+  a desktop GPU; here a cell is 0.2 to 0.45 m and a step 0.1 s. A surface
+  layer of the fuel, a sub-grid rule for where an ember lands, the first item
+  alight from the start, the paper's raised solid-gas heat transfer
+  coefficient and exact integration of each reaction over a step stand in for
+  what the paper resolves. Walls and slabs do not burn, doors are open and
+  windows closed, room contents are a statistical fire load, and CO does not
+  rise when the fire is short of air. Indoors at these cells embers seldom land
+  hot enough to light anything: in a 120 s fire in the Duplex they lit none. Large models are clipped to the area
+  round the fire. It is not calibrated against room fire tests.
 
 - **The temperature is an index.** It is scaled to read 20 to 120 degrees C,
   but it is not a temperature a sensor would measure. Doses computed from it
@@ -338,13 +376,15 @@ windows (`studio`, `studio stop`, `studio status`, `studio test`), and
 
 | What | Command | Where |
 | --- | --- | --- |
-| Unit and property tests of the browser core (166) | `npm test` | `topologicpy-web-frontend` |
+| Unit and property tests of the browser core (178) | `npm test` | `topologicpy-web-frontend` |
 | Lint | `npm run lint` | `topologicpy-web-frontend` |
 | Production build (also converts the examples) | `npm run build` | `topologicpy-web-frontend` |
 | Server tests | `../.venv-next/Scripts/python -m pytest tests -q` | `topologicpy-web-backend` |
 | The real app in Chrome, end to end | `npm install`, then `npm run test:browser -- --ifc topologicpy-web-frontend/public/examples/duplex-apartment.ifc` (add `--mobile` for a phone) | repository root, with the app running |
 | Speed, accuracy and robustness benchmark on 38 public models | `node tools/benchmark.mjs` | see [benchmark/README.md](benchmark/README.md) |
-| Lean 4 proofs | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
+| Speed and sanity of all six fire models, Flamescapes timed per stage | `node tools/fire-bench.mjs [model.ifc ...]` | repository root; results in `benchmark/results/` |
+| The Flamescapes solver on one IFC | `node tools/flamescapes-check.mjs [model.ifc] [--embers]` | repository root |
+| Lean 4 proofs (26 modules, over 1,230 theorems, including Fire-X, Flamescapes and its browser port) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
 | This README's screenshots | `node tools/readme-shots.mjs` | repository root, with the app running |
 
 The browser suite drives the installed Chrome (no browser download) through
@@ -460,6 +500,19 @@ Topologic_Studio/
   [web-ifc](https://github.com/ThatOpen/engine_web-ifc) (MPL-2.0) for reading
   IFC. [three.js](https://threejs.org/), [React](https://react.dev/) and
   [KaTeX](https://katex.org/) (all MIT).
+- *Flamescapes: Simulating the Wildlandfire Urban Interface* (Wrede, Wagner,
+  Pałubicki, Michels, Pirk 2026; ACM Transactions on Graphics 45(6) 246;
+  [project page](https://helgewrede.github.io/flamescapes/); its DOI
+  10.1145/3842518 was not yet registered on 2026-11-05) and *Fire-X:
+  Extinguishing Fire with Stoichiometric Heat Release* (Wrede et al. 2025;
+  [doi:10.1145/3763338](https://doi.org/10.1145/3763338)), both CC BY 4.0,
+  for the optional fire solver. Their transcriptions, with the changes stated,
+  are in [wiki/sources/papers/](wiki/sources/papers/). No code from them is
+  used: their repositories hold project pages, and the solver here is written
+  from the papers.
+- The fire classes' values: the sources listed in
+  [fireClasses.js](topologicpy-web-frontend/src/core/fireClasses.js), among
+  them NFPA 10, ISO 3941:2026 and peer-reviewed calorimetry and cooktop studies.
 - The example buildings are credited in the table above and in
   `topologicpy-web-frontend/public/examples/index.json`.
 - The full source list for the methods is on the app's Methods page.
