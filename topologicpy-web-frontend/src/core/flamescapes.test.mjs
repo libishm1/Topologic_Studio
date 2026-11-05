@@ -213,3 +213,44 @@ test("regressions found by the Lean proofs: exact fire load, and yields that wou
   // Products heavier than the fuel and its oxygen are refused.
   assert.throws(() => stoichiometry({ heatOfCombustion: 13.03e6, yields: { co2: 3, co: 0, soot: 0 } }));
 });
+
+test("regressions from the architecture review: walls are not a source of air, and clipping keeps crossing faces", () => {
+  // A sealed room (no door) with its gas at 10% oxygen: advection must not
+  // draw fresh air out of the walls, floor or ceiling.
+  const t = 0.3, W = 5, D = 4, H = 2.7;
+  const sealed = {
+    walls: [box(-t, 0, -t, W + t, H, 0), box(-t, 0, D, W + t, H, D + t), box(-t, 0, 0, 0, H, D), box(W, 0, 0, W + t, H, D)],
+    floors: [box(-t, -t, -t, W + t, 0, D + t)],
+    roofs: [box(-t, H, -t, W + t, H + t, D + t)],
+    stairs: [],
+    obstacles: [],
+  };
+  const scene = buildScene(sealed, { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.25, maxCell: 0.25, contentsFuel: FIRE_CLASSES.A.fuel });
+  const sim = createSolver({ ...scene, contents: { cells: [], masses: [] }, ignition: null, pilot: null }, { contentsFuel: FIRE_CLASSES.A.fuel });
+  const inside = [];
+  for (let c = 0; c < sim.N; c += 1) {
+    const g = sim.grid, i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+    const [x, y, z] = [g.origin[0] + (i + 0.5) * g.h, g.origin[1] + (j + 0.5) * g.h, g.origin[2] + (k + 0.5) * g.h];
+    if (sim.kind[c] === 0 && x > 0 && x < W && z > 0 && z < D && y > 0 && y < H) inside.push(c);
+  }
+  for (const c of inside) sim.Y[c * NS + SPECIES.O2] = 0.1;
+  for (let s = 0; s < 50; s += 1) step(sim);
+  let max = 0;
+  for (const c of inside) max = Math.max(max, sim.Y[c * NS + SPECIES.O2]);
+  assert.ok(max < 0.1 + 1e-4, `oxygen rose to ${max}`);
+
+  // A 30 m single storey clipped round the fire still has its walls and slab.
+  const L = 30;
+  const big = {
+    walls: [box(-t, 0, -t, L + t, 3, 0), box(-t, 0, L, L + t, 3, L + t), box(-t, 0, 0, 0, 3, L), box(L, 0, 0, L + t, 3, L)],
+    floors: [box(-t, -t, -t, L + t, 0, L + t)],
+    roofs: [box(-t, 3, -t, L + t, 3 + t, L + t)],
+    stairs: [],
+    obstacles: [],
+  };
+  const clipped = buildScene(big, { fire: [15, 0.75, 15], maxCells: 30000, contentsFuel: FIRE_CLASSES.A.fuel });
+  assert.ok(clipped.clipped, "the 30 m storey is clipped at the CPU budget");
+  let solid = 0;
+  for (const v of clipped.solid) solid += v;
+  assert.ok(solid > 1000 && clipped.ignition, `${solid} solid cells`);
+});

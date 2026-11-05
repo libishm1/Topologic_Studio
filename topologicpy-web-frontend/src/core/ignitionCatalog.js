@@ -807,7 +807,7 @@ export const IGNITION_SCENARIOS = [
   {
     "id": "li-ion-micromobility",
     "label": "E-bike or e-scooter battery, often while charging",
-    "fireClass": "C",
+    "fireClass": "L",
     "fuelClass": "B",
     "room": "hallway or living area; 66 % of UK-notified e-bike and e-scooter fires in 2024 were indoor or residential",
     "entities": [
@@ -854,7 +854,7 @@ export const IGNITION_SCENARIOS = [
   {
     "id": "li-ion-small-device",
     "label": "Phone, laptop, power bank or charger on a bed or sofa",
-    "fireClass": "C",
+    "fireClass": "L",
     "fuelClass": "A",
     "room": "bedroom",
     "entities": [
@@ -1183,7 +1183,7 @@ export const IGNITION_SCENARIOS = [
   {
     "id": "battery-storage-ups",
     "label": "Battery room or UPS",
-    "fireClass": "C",
+    "fireClass": "L",
     "fuelClass": "B",
     "room": "battery or electrical room",
     "entities": [

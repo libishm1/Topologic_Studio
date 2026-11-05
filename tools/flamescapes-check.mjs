@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { extract } from "./ifc-extract.mjs";
 import { buildLatticeGraph } from "../topologicpy-web-frontend/src/core/lattice.js";
 import { buildScene, forecastFromFrames, runScene } from "../topologicpy-web-frontend/src/core/flamescapesRun.js";
+import { fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -29,8 +30,8 @@ const solverOptions = {};
 if (flag("--h")) solverOptions.convection = Number(flag("--h"));
 const itemMass = Number(flag("--item", 5));
 
-// A charring class A contents fuel; the app takes these from fireClasses.js.
-const classA = { heatOfCombustion: 17.5e6, yields: { co2: 1.27, co: 0.004, soot: 0.015 }, embers: true, ignitionTemperature: 300 };
+// The fuels the app uses for the class (--class, A by default), from fireClasses.js.
+const fuels = fuelsFor(flag("--class", "A"));
 
 const geo = await extract(ifc);
 const built = buildLatticeGraph({ ...geo, upAxis: "y", spacing: 0.5, agentHeight: 0.75 });
@@ -53,7 +54,7 @@ else {
 }
 
 const t0 = performance.now();
-const scene = buildScene(geo, { upAxis: "y", fire, maxCells, contentsFuel: classA, ignitionFuel: classA, item: { mass: itemMass, area: 1 } });
+const scene = buildScene(geo, { upAxis: "y", fire, maxCells, contentsFuel: fuels.contentsFuel, ignitionFuel: fuels.ignitionFuel, item: { ...fuels.item, ...(flag("--item") ? { mass: itemMass } : {}) } });
 const g = scene.grid;
 console.log(`${path.basename(ifc)}: ${n} graph nodes; grid ${g.nx}x${g.ny}x${g.nz} = ${g.cells} cells of ${g.h.toFixed(2)} m${scene.clipped ? " (clipped round the fire)" : ""}; contents ${scene.contentsSummary.mass.toFixed(0)} kg on ${scene.contentsSummary.area.toFixed(0)} m2; scene ${(performance.now() - t0).toFixed(0)} ms`);
 console.log(`fire at ${fire.map((x) => x.toFixed(2)).join(", ")}; embers ${embers ? "on" : "off"}`);

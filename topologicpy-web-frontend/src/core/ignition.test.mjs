@@ -68,6 +68,10 @@ test("every scenario's fire class is one the solver offers, and its patterns com
     assert.ok(FIRE_CLASSES[s.fireClass], `${s.id}: class ${s.fireClass}`);
     for (const r of [s.nameRegex, s.nameExclude, s.spaceRegex]) if (r) new RegExp(r, "i");
   }
+  // Lithium-ion scenarios are class L (ISO 3941:2026), not C.
+  const lithium = IGNITION_SCENARIOS.filter((s) => /^(li-ion|battery-storage)/.test(s.id));
+  assert.ok(lithium.length > 0);
+  for (const s of lithium) assert.equal(s.fireClass, "L", s.id);
   assert.deepEqual(centroidOf([{ positions: Float32Array.from([0, 0, 0, 2, 4, 6]) }]), [1, 2, 3]);
   assert.equal(centroidOf([]), null);
 });

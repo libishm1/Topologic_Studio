@@ -9,6 +9,8 @@
  * fragments already in memory, so the second parse is gone entirely.
  */
 
+import { IGNITION_CLASSES } from "../core/ignitionClasses.js";
+
 export const CATEGORY_PATTERNS = {
   floors: /^IFC(SLAB|SLABSTANDARDCASE|SLABELEMENTEDCASE|PLATE)$/i,
   // Floors only when typed FLOORING; ceilings are coverings too (Office A's
@@ -28,8 +30,11 @@ export const CATEGORY_PATTERNS = {
   // (src/core/cores.js): "Aufzug-Kabine", "M_Electric Lift-4 person".
   transport: /^IFCTRANSPORTELEMENT$/i,
   proxies: /^IFCBUILDINGELEMENTPROXY$/i,
-  // What a fire most often starts at (src/core/ignition.js).
-  ignition: /^IFC(FURNITURE|FURNISHINGELEMENT|SYSTEMFURNITUREELEMENT|ELECTRICAPPLIANCE|SPACEHEATER|CHIMNEY|ELECTRICDISTRIBUTIONBOARD|ELECTRICDISTRIBUTIONPOINT|OUTLET|AUDIOVISUALAPPLIANCE|ELECTRICFLOWSTORAGEDEVICE|BOILER|ENERGYCONVERSIONDEVICE|FLOWTERMINAL|SANITARYTERMINAL)$/i,
+  // What a fire most often starts at: every occurrence class the ignition
+  // catalogue names (src/core/ignitionClasses.js, generated with it).
+  ignition: new RegExp(`^(${IGNITION_CLASSES.filter((c) => c !== "IFCBUILDINGELEMENTPROXY" && c !== "IFCDOOR").join("|")})$`, "i"),
+  // Roofs modelled as IfcRoof with their own geometry: the top storey's ceiling.
+  roofElements: /^IFCROOF$/i,
 };
 
 /**

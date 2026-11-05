@@ -35,23 +35,19 @@
 
 import { DEFAULTS, NS, SPECIES, MOLAR, createSolver, step } from "./flamescapes.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, toLocal, volumeFractions } from "./voxelize.js";
-import { MAX_CELLS, convectiveDoseRate } from "./forecast.js";
+// The CO dose and the forecast from frames live in forecast.js, so the
+// forecast worker does not load the solver; re-exported here.
+export { CO_LIMIT, coDoseRate, forecastFromFrames } from "./forecast.js";
 
 export const KELVIN = 273.15;
 export const SOOT_EXTINCTION = 8700; // m^2 / kg, flaming smoke (Mulholland and Croarkin 2000)
 export const SIGN_CONSTANT = 3; // light-reflecting signs
 export const MAX_VISIBILITY = 100; // m
-export const CO_LIMIT = 35000; // ppm min to FED 1 (ISO 13571)
 
 /** Visibility (m) through smoke of soot density rhoSoot (kg/m^3). */
 export function visibility(rhoSoot, C = SIGN_CONSTANT, sigma = SOOT_EXTINCTION) {
   const K = sigma * rhoSoot;
   return K > C / MAX_VISIBILITY ? C / K : MAX_VISIBILITY;
-}
-
-/** CO FED per second at `ppm` (ISO 13571: ppm / 35000 per minute). */
-export function coDoseRate(ppm) {
-  return ppm > 0 ? ppm / (CO_LIMIT * 60) : 0;
 }
 
 /**
@@ -166,17 +162,20 @@ export function buildScene(geometry, {
 /** Keep the triangles of a mesh with a vertex inside the box (local frame). */
 function clipMesh(mesh, axes, box) {
   const P = mesh.positions;
-  const inside = (v) => {
-    for (let d = 0; d < 3; d += 1) {
-      const x = P[v * 3 + axes[d]];
-      if (x < box.lo[d] || x > box.hi[d]) return false;
-    }
-    return true;
-  };
   const kept = [];
   const ix = mesh.indices;
+  // A triangle is kept when its bounding box overlaps the clip box on every
+  // axis. Keeping only triangles with a vertex inside dropped large wall and
+  // slab faces that cross the box (review 2): a dropped face leaves the ray
+  // parity odd and that column of wall or slab vanishes. volumeFractions
+  // clamps rays and heights to the grid, so the parts outside are harmless.
   for (let t = 0; t < ix.length; t += 3) {
-    if (inside(ix[t]) || inside(ix[t + 1]) || inside(ix[t + 2])) kept.push(ix[t], ix[t + 1], ix[t + 2]);
+    let overlaps = true;
+    for (let d = 0; d < 3 && overlaps; d += 1) {
+      const a = P[ix[t] * 3 + axes[d]], b = P[ix[t + 1] * 3 + axes[d]], c = P[ix[t + 2] * 3 + axes[d]];
+      if (Math.max(a, b, c) < box.lo[d] || Math.min(a, b, c) > box.hi[d]) overlaps = false;
+    }
+    if (overlaps) kept.push(ix[t], ix[t + 1], ix[t + 2]);
   }
   return { ...mesh, indices: Uint32Array.from(kept) };
 }
@@ -266,16 +265,19 @@ export function particleSnapshot(sim, max = 3000) {
  * with the node readings, the frame's mean heat release rate (kW) and the
  * particles. Returns the frames stacked: T, vis, co as Float32Array(K n).
  */
-export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, solverOptions = {}, profileInto = null } = {}) {
+export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, solverOptions = {}, profileInto = null, keep = true } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
   // Per-stage timing for the benchmark (tools/fire-bench.mjs).
   if (profileInto) sim.profile = profileInto;
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
   const K = Math.max(1, Math.round(horizon / frameSeconds));
-  const T = new Float32Array(K * n);
-  const vis = new Float32Array(K * n);
-  const co = new Float32Array(K * n);
+  // With keep, every frame is stacked (K x n); without, one frame's buffers
+  // are reused and onFrame must copy what it keeps (the worker does).
+  const rows = keep ? K : 1;
+  const T = new Float32Array(rows * n);
+  const vis = new Float32Array(rows * n);
+  const co = new Float32Array(rows * n);
   const hrr = new Float32Array(K);
   let released = 0;
   for (let k = 0; k < K; k += 1) {
@@ -284,7 +286,8 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
       step(sim, Math.min(dt, end - sim.time));
       if (shouldStop?.()) return null;
     }
-    const frame = readNodes(sim, cells, { T: T.subarray(k * n, (k + 1) * n), vis: vis.subarray(k * n, (k + 1) * n), co: co.subarray(k * n, (k + 1) * n) });
+    const row = keep ? k : 0;
+    const frame = readNodes(sim, cells, { T: T.subarray(row * n, (row + 1) * n), vis: vis.subarray(row * n, (row + 1) * n), co: co.subarray(row * n, (row + 1) * n) });
     hrr[k] = (sim.stats.released - released) / frameSeconds / 1000;
     released = sim.stats.released;
     onFrame?.({
@@ -301,34 +304,7 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
       particles: particles ? particleSnapshot(sim, particles) : null,
     });
   }
-  return { n, K, frameSeconds, horizon: K * frameSeconds, T, vis, co, hrr, stats: { ...sim.stats }, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0) };
-}
-
-/**
- * The planners' forecast from stacked frames (see the header): a running
- * maximum FED rate per node and frame, and each node's untenable time.
- */
-export function forecastFromFrames(frames, { threshold = 60, smoke = true, visibilityLimit = 10 } = {}) {
-  const { n, K: K0, frameSeconds, T, vis, co } = frames;
-  const stride = Math.max(1, Math.ceil((K0 * n) / MAX_CELLS));
-  const K = Math.ceil(K0 / stride);
-  const rate = new Float32Array(K * n);
-  const untenable = new Float64Array(n).fill(Infinity);
-  const peak = new Float64Array(n);
-  for (let k0 = 0; k0 < K0; k0 += 1) {
-    const row = k0 * n;
-    for (let v = 0; v < n; v += 1) {
-      const r = convectiveDoseRate(T[row + v]) + coDoseRate(co[row + v]);
-      if (r > peak[v]) peak[v] = r;
-      if (untenable[v] === Infinity && (T[row + v] >= threshold || (smoke && vis[row + v] < visibilityLimit))) untenable[v] = k0 * frameSeconds;
-    }
-    if ((k0 + 1) % stride === 0 || k0 === K0 - 1) {
-      const out = Math.floor(k0 / stride) * n;
-      for (let v = 0; v < n; v += 1) rate[out + v] = peak[v];
-    }
-  }
-  const horizon = K0 * frameSeconds;
-  const closes = new Float64Array(n);
-  for (let v = 0; v < n; v += 1) closes[v] = Math.min(untenable[v], horizon);
-  return { n, K, stride, dt: frameSeconds, frameSeconds: stride * frameSeconds, horizon, rate, untenable, closes, threshold, model: "flamescapes" };
+  const inGrid = cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0);
+  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid };
+  return keep ? { ...out, T, vis, co } : out;
 }

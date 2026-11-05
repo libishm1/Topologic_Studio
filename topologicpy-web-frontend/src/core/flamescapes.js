@@ -344,22 +344,25 @@ const uAt = (g, i, j, k) => i + (g.nx + 1) * (j + g.ny * k);
 const vAt = (g, i, j, k) => i + g.nx * (j + (g.ny + 1) * k);
 const wAt = (g, i, j, k) => i + g.nx * (j + g.ny * k);
 
-/** Trilinear sample of a cell-centred field (stride s, offset o) at grid coordinates (x, y, z). */
-function sampleCell(g, F, x, y, z, s = 1, o = 0) {
+/** Trilinear sample of a cell-centred gas field that gives solid cells no weight (their values are not gas). */
+function sampleGas(sim, F, x, y, z) {
+  const g = sim.grid;
   x = Math.min(Math.max(x - 0.5, 0), g.nx - 1.001);
   y = Math.min(Math.max(y - 0.5, 0), g.ny - 1.001);
   z = Math.min(Math.max(z - 0.5, 0), g.nz - 1.001);
   const i = Math.floor(x), j = Math.floor(y), k = Math.floor(z);
   const fx = x - i, fy = y - j, fz = z - k;
-  const di = (i + 1 < g.nx ? 1 : 0) * s;
-  const dj = (j + 1 < g.ny ? g.nx : 0) * s;
-  const dk = (k + 1 < g.nz ? g.nx * g.ny : 0) * s;
-  const b = (i + g.nx * (j + g.ny * k)) * s + o;
-  const c00 = F[b] * (1 - fx) + F[b + di] * fx;
-  const c10 = F[b + dj] * (1 - fx) + F[b + dj + di] * fx;
-  const c01 = F[b + dk] * (1 - fx) + F[b + dk + di] * fx;
-  const c11 = F[b + dk + dj] * (1 - fx) + F[b + dk + dj + di] * fx;
-  return (c00 * (1 - fy) + c10 * fy) * (1 - fz) + (c01 * (1 - fy) + c11 * fy) * fz;
+  let sum = 0, total = 0;
+  for (let q = 0; q < 8; q += 1) {
+    const a = q & 1, b = (q >> 1) & 1, d = (q >> 2) & 1;
+    const ii = Math.min(i + a, g.nx - 1), jj = Math.min(j + b, g.ny - 1), kk = Math.min(k + d, g.nz - 1);
+    const c = ii + g.nx * (jj + g.ny * kk);
+    if (sim.kind[c] === SOLID) continue;
+    const w = (a ? fx : 1 - fx) * (b ? fy : 1 - fy) * (d ? fz : 1 - fz);
+    sum += w * F[c];
+    total += w;
+  }
+  return total > 1e-9 ? sum / total : sim.P.ambient;
 }
 
 /** Trilinear sample of a face field with dims (dx, dy, dz) and the face's offset from cell centres. */
@@ -487,7 +490,7 @@ function particleStep(sim, dt) {
       const m = pr.m[q];
       const r = Math.cbrt((3 * m) / (4 * Math.PI * 300));
       const A = 4 * Math.PI * r * r;
-      const Tg = sampleCell(g, sim.T, x, y, z);
+      const Tg = sampleGas(sim, sim.T, x, y, z);
       const loss = (P.emberEmissivity * SIGMA * (pr.T[q] ** 4 - P.ambient ** 4) + P.convection * (pr.T[q] - Tg)) * A * dt;
       pr.T[q] = Math.max(Tg, pr.T[q] - loss / (m * P.emberHeatCapacity));
       pr.m[q] = m * Math.exp(-P.emberMassLoss * dt);
@@ -716,7 +719,7 @@ function advect(sim, dt) {
   const pos = [0, 0, 0];
   // The back-trace reads the velocity of the step's start, not the faces
   // being overwritten.
-  const u = sim.u.slice(), v = sim.v.slice(), w = sim.w.slice();
+  const u = copyOf(sim, "u0", sim.u), v = copyOf(sim, "v0", sim.v), w = copyOf(sim, "w0", sim.w);
   const old = { u, v, w };
   // Midpoint (RK2) back-trace in cell units, into `pos` (no allocation).
   const back = (x, y, z) => {
@@ -727,7 +730,7 @@ function advect(sim, dt) {
     pos[1] = y - s * vel[1];
     pos[2] = z - s * vel[2];
   };
-  const T = sim.T.slice(), Y = sim.Y.slice();
+  const T = copyOf(sim, "T0", sim.T), Y = copyOf(sim, "Y0", sim.Y);
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i <= nx; i += 1) {
@@ -755,6 +758,8 @@ function advect(sim, dt) {
   // Temperature and the six species share one back-trace and one set of
   // trilinear weights per cell (as sampleCell computes them).
   const sx = 1, sy = nx, sz = nx * ny;
+  const corner = new Int32Array(8);
+  const weight = new Float64Array(8);
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
@@ -768,19 +773,29 @@ function advect(sim, dt) {
         const fx = x - i0, fy = y - j0, fz = z - k0;
         const di = i0 + 1 < nx ? sx : 0, dj = j0 + 1 < ny ? sy : 0, dk = k0 + 1 < nz ? sz : 0;
         const b = i0 + nx * (j0 + ny * k0);
-        const w000 = (1 - fx) * (1 - fy) * (1 - fz), w100 = fx * (1 - fy) * (1 - fz);
-        const w010 = (1 - fx) * fy * (1 - fz), w110 = fx * fy * (1 - fz);
-        const w001 = (1 - fx) * (1 - fy) * fz, w101 = fx * (1 - fy) * fz;
-        const w011 = (1 - fx) * fy * fz, w111 = fx * fy * fz;
-        const c000 = b, c100 = b + di, c010 = b + dj, c110 = b + dj + di;
-        const c001 = b + dk, c101 = b + dk + di, c011 = b + dk + dj, c111 = b + dk + dj + di;
-        sim.T[c] =
-          w000 * T[c000] + w100 * T[c100] + w010 * T[c010] + w110 * T[c110] +
-          w001 * T[c001] + w101 * T[c101] + w011 * T[c011] + w111 * T[c111];
+        // Corners inside solids hold no gas (their T and Y are never updated):
+        // they get no weight, and the rest are renormalised; a cell whose
+        // back-trace lands among solids only keeps its own state (review 1:
+        // walls had been an endless source of cool fresh air).
+        corner[0] = b; corner[1] = b + di; corner[2] = b + dj; corner[3] = b + dj + di;
+        corner[4] = b + dk; corner[5] = b + dk + di; corner[6] = b + dk + dj; corner[7] = b + dk + dj + di;
+        weight[0] = (1 - fx) * (1 - fy) * (1 - fz); weight[1] = fx * (1 - fy) * (1 - fz);
+        weight[2] = (1 - fx) * fy * (1 - fz); weight[3] = fx * fy * (1 - fz);
+        weight[4] = (1 - fx) * (1 - fy) * fz; weight[5] = fx * (1 - fy) * fz;
+        weight[6] = (1 - fx) * fy * fz; weight[7] = fx * fy * fz;
+        let total = 0;
+        for (let q = 0; q < 8; q += 1) {
+          if (sim.kind[corner[q]] === SOLID) weight[q] = 0;
+          total += weight[q];
+        }
+        if (!(total > 1e-9)) continue;
+        let t = 0;
+        for (let q = 0; q < 8; q += 1) t += weight[q] * T[corner[q]];
+        sim.T[c] = t / total;
         for (let q = 0; q < NS; q += 1) {
-          sim.Y[c * NS + q] =
-            w000 * Y[c000 * NS + q] + w100 * Y[c100 * NS + q] + w010 * Y[c010 * NS + q] + w110 * Y[c110 * NS + q] +
-            w001 * Y[c001 * NS + q] + w101 * Y[c101 * NS + q] + w011 * Y[c011 * NS + q] + w111 * Y[c111 * NS + q];
+          let acc = 0;
+          for (let r = 0; r < 8; r += 1) acc += weight[r] * Y[corner[r] * NS + q];
+          sim.Y[c * NS + q] = acc / total;
         }
       }
     }
@@ -812,9 +827,10 @@ function vorticityConfinement(sim, dt) {
   if (!(P.vorticity > 0)) return;
   const { nx, ny, nz, h } = g;
   const N = sim.N;
-  const wx = new Float32Array(N), wy = new Float32Array(N), wz = new Float32Array(N), mag = new Float32Array(N);
+  const wx = workArray(sim, "wx", N), wy = workArray(sim, "wy", N), wz = workArray(sim, "wz", N), mag = workArray(sim, "mag", N);
+  mag.fill(0);
   // Cell-centred velocity: the mean of each cell's two faces per axis.
-  const cu = new Float32Array(N), cv = new Float32Array(N), cw = new Float32Array(N);
+  const cu = workArray(sim, "cu", N), cv = workArray(sim, "cv", N), cw = workArray(sim, "cw", N);
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
@@ -871,8 +887,8 @@ function vorticityConfinement(sim, dt) {
 function diffuse(sim, dt) {
   const { grid: g, P } = sim;
   const h = g.h;
-  const Y = sim.Y.slice();
-  const T = sim.T.slice();
+  const Y = copyOf(sim, "Y0", sim.Y);
+  const T = copyOf(sim, "T0", sim.T);
   const topo = topology(sim);
   const off = topo.offsets;
   // rho D per open cell; a face takes the mean of its two cells, so the
@@ -1257,7 +1273,8 @@ function project(sim, dt) {
       for (let i = 0; i < nx; i += 1) if (solid(i, j, k - 1) || solid(i, j, k)) sim.w[wAt(g, i, j, k)] = 0;
     }
   }
-  const div = new Float32Array(sim.N);
+  const div = workArray(sim, "div", sim.N);
+  div.fill(0);
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
@@ -1375,6 +1392,24 @@ function pilot(sim, dt) {
     if (C > 0) sim.Ts[c] += share / C;
     else sim.T[c] += share / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
   }
+}
+
+/**
+ * A persistent working array on the solver, made once (review 14: each
+ * step allocated about 25 arrays of N cells).
+ */
+function workArray(sim, name, length, Type = Float32Array) {
+  sim.work ||= {};
+  let a = sim.work[name];
+  if (!a || a.length !== length || !(a instanceof Type)) a = sim.work[name] = new Type(length);
+  return a;
+}
+
+/** A persistent copy of a field: its scratch array, filled from the field. */
+function copyOf(sim, name, field) {
+  const a = workArray(sim, name, field.length, field.constructor);
+  a.set(field);
+  return a;
 }
 
 /** Algorithm 1's stages in order, as [name, function(sim, dt)]. */

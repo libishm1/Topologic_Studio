@@ -41,7 +41,8 @@ export function scenarioWeight(s, occupancy = "residential") {
     if (s.deathShare != null) return { weight: 0.5 * s.deathShare, estimated: true };
     return { weight: UNKNOWN_WEIGHT, estimated: true };
   }
-  if (s.deathShare != null && s.deathShare > 0) return { weight: s.deathShare, estimated: false };
+  // A known share, zero included (review 12); only a missing one is estimated.
+  if (s.deathShare != null) return { weight: s.deathShare, estimated: false };
   return { weight: UNKNOWN_WEIGHT, estimated: true };
 }
 
@@ -120,17 +121,5 @@ export function rankIgnitionPoints(records, rooms = [], { occupancy = "residenti
 /** The IFC classes worth reading for candidates (the union of the catalogue's entities). */
 export const CANDIDATE_CLASSES = [...new Set(IGNITION_SCENARIOS.flatMap((s) => s.entities.map((e) => e.entity)))];
 
-/** Centroid of a set of meshes (positions in the viewer frame), or null. */
-export function centroidOf(meshes) {
-  let x = 0, y = 0, z = 0, n = 0;
-  for (const mesh of meshes || []) {
-    const p = mesh.positions;
-    for (let v = 0; v < p.length; v += 3) {
-      x += p[v];
-      y += p[v + 1];
-      z += p[v + 2];
-      n += 1;
-    }
-  }
-  return n ? [x / n, y / n, z / n] : null;
-}
+// Re-exported for the tests and callers that had it from here.
+export { centroidOf } from "./centroid.js";

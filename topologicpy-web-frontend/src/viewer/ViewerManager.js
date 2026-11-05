@@ -25,7 +25,7 @@ import { PhaseTimer, mark } from "../lib/perf.js";
 import { aggregatedParts, collectCategoryIds, elementRecords, extractMeshes, withPredefinedType } from "./categories.js";
 import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
 import { coreItems } from "../core/cores.js";
-import { centroidOf } from "../core/ignition.js";
+import { centroidOf } from "../core/centroid.js";
 
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
  *  installed package versions. Both are served from public/, under the
@@ -173,6 +173,8 @@ export class ViewerManager {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this._glowSprite?.dispose();
+    this._glowSprite = null;
     this.ready = false;
     this._abortImport?.();
     this._warmImport?.worker.terminate();
@@ -961,7 +963,7 @@ export class ViewerManager {
       extractMeshes(this.model, coreMeshIds, world),
       // Roof slabs are not walked on, but the Flamescapes solver needs them
       // as the top storey's ceiling.
-      extractMeshes(this.model, [...roofs], world),
+      extractMeshes(this.model, [...roofs, ...(ids.roofElements || [])], world),
     ]);
 
     done({
@@ -1402,12 +1404,36 @@ export class ViewerManager {
     ]) {
       let count = 0;
       for (let q = 0; q < snapshot.kinds.length; q += 1) if (snapshot.kinds[q] === kind) count += 1;
-      if (!count) {
-        this._setOverlay(name, null);
-        continue;
+      // One layer per kind for the whole run: a frame rewrites its buffers and
+      // reallocates only when the count outgrows them (frames arrive every few
+      // seconds of playback, each with thousands of particles).
+      let points = this.overlays.get(name);
+      if (!points || points.userData.capacity < count) {
+        const capacity = Math.max(1024, count, 2 * (points?.userData.capacity || 0));
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3).setUsage(THREE.DynamicDrawUsage));
+        geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3).setUsage(THREE.DynamicDrawUsage));
+        const material = new THREE.PointsMaterial({
+          size,
+          map: sprite,
+          vertexColors: true,
+          transparent: true,
+          opacity,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          sizeAttenuation: true,
+        });
+        points = new THREE.Points(geometry, material);
+        points.renderOrder = 10;
+        // The particles move every frame; culling would need a new bounding sphere each time.
+        points.frustumCulled = false;
+        points.userData.capacity = capacity;
+        this._setOverlay(name, points);
       }
-      const positions = new Float32Array(count * 3);
-      const colors = new Float32Array(count * 3);
+      const position = points.geometry.getAttribute("position");
+      const color = points.geometry.getAttribute("color");
+      const positions = position.array;
+      const colors = color.array;
       const scratch = new THREE.Color();
       let o = 0;
       for (let q = 0; q < snapshot.kinds.length; q += 1) {
@@ -1419,22 +1445,9 @@ export class ViewerManager {
         colors[o * 3 + 2] = scratch.b;
         o += 1;
       }
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-      const material = new THREE.PointsMaterial({
-        size,
-        map: sprite,
-        vertexColors: true,
-        transparent: true,
-        opacity,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        sizeAttenuation: true,
-      });
-      const points = new THREE.Points(geometry, material);
-      points.renderOrder = 10;
-      this._setOverlay(name, points);
+      position.needsUpdate = true;
+      color.needsUpdate = true;
+      points.geometry.setDrawRange(0, count);
     }
   }
 

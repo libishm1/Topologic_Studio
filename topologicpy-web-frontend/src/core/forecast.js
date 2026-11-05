@@ -375,3 +375,42 @@ function margin(nodes, arrive, forecast) {
   }
   return { slack, slackNode: at };
 }
+
+// ---------------------------------------------------- forecast from frames
+
+/** CO needed for an FED of 1, ppm min (ISO 13571). */
+export const CO_LIMIT = 35000;
+
+/** CO FED per second at `ppm` (ISO 13571: ppm / 35000 per minute). */
+export function coDoseRate(ppm) {
+  return ppm > 0 ? ppm / (CO_LIMIT * 60) : 0;
+}
+
+/**
+ * The planners' forecast from stacked frames (see the header): a running
+ * maximum FED rate per node and frame, and each node's untenable time.
+ */
+export function forecastFromFrames(frames, { threshold = 60, smoke = true, visibilityLimit = 10 } = {}) {
+  const { n, K: K0, frameSeconds, T, vis, co } = frames;
+  const stride = Math.max(1, Math.ceil((K0 * n) / MAX_CELLS));
+  const K = Math.ceil(K0 / stride);
+  const rate = new Float32Array(K * n);
+  const untenable = new Float64Array(n).fill(Infinity);
+  const peak = new Float64Array(n);
+  for (let k0 = 0; k0 < K0; k0 += 1) {
+    const row = k0 * n;
+    for (let v = 0; v < n; v += 1) {
+      const r = convectiveDoseRate(T[row + v]) + coDoseRate(co[row + v]);
+      if (r > peak[v]) peak[v] = r;
+      if (untenable[v] === Infinity && (T[row + v] >= threshold || (smoke && vis[row + v] < visibilityLimit))) untenable[v] = k0 * frameSeconds;
+    }
+    if ((k0 + 1) % stride === 0 || k0 === K0 - 1) {
+      const out = Math.floor(k0 / stride) * n;
+      for (let v = 0; v < n; v += 1) rate[out + v] = peak[v];
+    }
+  }
+  const horizon = K0 * frameSeconds;
+  const closes = new Float64Array(n);
+  for (let v = 0; v < n; v += 1) closes[v] = Math.min(untenable[v], horizon);
+  return { n, K, stride, dt: frameSeconds, frameSeconds: stride * frameSeconds, horizon, rate, untenable, closes, threshold, model: "flamescapes" };
+}

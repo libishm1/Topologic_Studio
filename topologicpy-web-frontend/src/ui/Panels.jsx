@@ -949,7 +949,7 @@ function leaveWithin(leaveBy) {
 
 function ForecastResult({ plan, settings, deadlinesShown, roomName }) {
   const { result, inputs } = plan;
-  const { earliest, leastDose, leaveBy, snapshot, front, truncated, coarsened, mapStep, zone } = result;
+  const { earliest, leastDose, leaveBy, snapshot, front, truncated, coarsened, mapStep, zone, coverage } = result;
   // What the plan was made with, not what the fields say now (review M2).
   const depart = inputs.departAfter || 0;
   const limit = inputs.doseLimit;
@@ -966,6 +966,12 @@ function ForecastResult({ plan, settings, deadlinesShown, roomName }) {
         <Icon name={heading.ok ? "check" : "alert"} size={16} />
         {heading.text}
       </h3>
+      {coverage?.clipped && (
+        <Notice tone="warning">
+          The Flamescapes grid covered only the area round the fire ({Math.round(coverage.inGrid * 100)}% of the graph&apos;s
+          nodes). Outside it this plan reads clear air, so routes and deadlines there are optimistic.
+        </Notice>
+      )}
       {changed && (
         <Notice tone="warning">The settings have changed since this plan was made. Plan again to use them.</Notice>
       )}

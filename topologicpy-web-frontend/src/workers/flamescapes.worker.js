@@ -63,17 +63,19 @@ self.onmessage = async (event) => {
       frameSeconds: payload.frameSeconds,
       embers: payload.embers,
       particles: payload.particles ?? 2500,
+      keep: false,
       onFrame: (frame) => {
         frames += 1;
-        // Copies: the stacked arrays stay here until the run ends.
+        // Copies: the solver reuses its frame buffers for the next frame.
         const out = { ...frame, type: "frame", T: frame.T.slice(), vis: frame.vis.slice(), co: frame.co.slice() };
         const transfers = [out.T.buffer, out.vis.buffer, out.co.buffer];
         if (out.particles) transfers.push(out.particles.positions.buffer, out.particles.temps.buffer, out.particles.kinds.buffer);
         self.postMessage({ id, progress: out }, transfers);
       },
     });
+    // The frames went out one by one; the answer carries only the summary.
     const done = { ...result, info: { ...info, frames, ms: performance.now() - t0 } };
-    self.postMessage({ id, ok: true, result: done }, [done.T.buffer, done.vis.buffer, done.co.buffer, done.hrr.buffer]);
+    self.postMessage({ id, ok: true, result: done }, [done.hrr.buffer]);
   } catch (error) {
     self.postMessage({ id, ok: false, error: error?.message || String(error) });
   }

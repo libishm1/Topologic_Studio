@@ -33,7 +33,7 @@ import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
 import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
 import { FIRE_CLASSES, fuelsFor } from "./core/fireClasses.js";
-import { centroidOf, rankIgnitionPoints } from "./core/ignition.js";
+import { centroidOf } from "./core/centroid.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -152,6 +152,10 @@ export default function App() {
   // they arrive, and the stacked result once done (reused by the plan).
   const flamescapesRef = useRef(null);
   const combustionRef = useRef(null);
+  // The run whose frames are on screen (playback reads its view from a ref,
+  // so switching heat and smoke mid-run holds: review 4).
+  const playingRunRef = useRef(null);
+  const showRef = useRef("heat");
   const geometryRef = useRef(null);
   // Counts file loads, so only the latest one updates the page.
   const loadSeqRef = useRef(0);
@@ -297,6 +301,13 @@ export default function App() {
     if (planRunningRef.current) {
       planRunningRef.current = false;
       forecastRef.current?.cancel();
+      // A Flamescapes run started for this plan, and not on screen, is ended
+      // too (review 8).
+      const run = combustionRef.current;
+      if (run && !run.done && run !== playingRunRef.current) {
+        flamescapesRef.current?.cancel();
+        combustionRef.current = null;
+      }
     }
     studio.setForecastPlan(NO_PLAN);
     if (planRoutesRef.current) {
@@ -988,7 +999,9 @@ export default function App() {
     };
     const transfers = Object.values(geo).flatMap((list) => list.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
     const { contentsFuel, ignitionFuel, item } = fuelsFor(settings.flamescapesClass);
-    const frames = Math.max(1, settings.fireMaxSteps);
+    // At most 120 frames of at least 1 s: memory is frames x nodes x 12 bytes
+    // (review 6), and a frame shorter than the solver's step means nothing.
+    const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(settings.flamescapesHorizon)));
     const payload = {
       geometry: geo,
       upAxis: graph.upAxis,
@@ -1064,9 +1077,11 @@ export default function App() {
 
   // Likely ignition points (src/core/ignition.js): the model's appliances,
   // furniture and rooms ranked by the ignition-source review.
-  const [ignitionState, setIgnition] = useState({ busy: false, candidates: null, occupancy: "residential", graph: null });
-  // Candidates found for another graph (a rebuilt or new model) are not shown.
-  const ignition = ignitionState.graph === graph ? ignitionState : { ...ignitionState, candidates: null };
+  const [ignitionState, setIgnition] = useState({ busy: false, candidates: null, occupancy: "residential", graphKey: null });
+  // A token per graph: candidates found for another graph are not shown, and
+  // the old graph's arrays are not kept alive by them (review 13).
+  const graphKey = useMemo(() => ({ graph: Boolean(graph) }), [graph]);
+  const ignition = ignitionState.graphKey === graphKey ? ignitionState : { ...ignitionState, candidates: null };
   const findIgnition = useCallback(
     async (occupancy = ignition.occupancy) => {
       const viewer = viewerRef.current;
@@ -1081,18 +1096,20 @@ export default function App() {
           spaceMeshes.get(mesh.itemId).push(mesh);
         }
         const placedRooms = rooms.map((r) => ({ ...r, position: centroidOf(spaceMeshes.get(r.itemId)) })).filter((r) => r.position);
+        // The catalogue (about 35 KB) loads only when the list is asked for.
+        const { rankIgnitionPoints } = await import("./core/ignition.js");
         const ranked = rankIgnitionPoints(records, placedRooms, { occupancy, limit: 8 });
         const positions = await viewer.positionsOf(ranked.filter((c) => !c.byRoom).map((c) => c.itemId));
         const candidates = ranked
           .map((c) => ({ ...c, position: c.byRoom ? c.position : positions.get(c.itemId) }))
           .filter((c) => c.position);
-        setIgnition({ busy: false, candidates, occupancy, graph });
+        setIgnition({ busy: false, candidates, occupancy, graphKey });
       } catch (error) {
         setIgnition((c) => ({ ...c, busy: false, candidates: [] }));
         reportError(error, "Finding likely ignition points");
       }
     },
-    [graph, ignition.occupancy, reportError],
+    [graph, graphKey, ignition.occupancy, reportError],
   );
   const useIgnition = useCallback(
     (candidate) => {
@@ -1153,6 +1170,8 @@ export default function App() {
       }
     }
 
+    // Flames and embers of an earlier run go (review 7).
+    viewerRef.current?.setParticles(null);
     // The Flamescapes solver streams its frames from its worker; the
     // simulation plays each as it arrives, waiting while the next is computed.
     let combustion = null;
@@ -1166,6 +1185,7 @@ export default function App() {
       combustion.promise.catch((error) => {
         if (!isCancelled(error)) reportError(error, "The Flamescapes fire model");
       });
+      playingRunRef.current = combustion;
       let k = 0;
       zoneFrames = {
         next() {
@@ -1229,7 +1249,7 @@ export default function App() {
             // The Flamescapes frames can show the smoke instead, and their
             // flames and embers.
             const frame = combustion?.frames[message.step];
-            if (frame && settings.flamescapesShow === "smoke") viewer?.setSmoke(frame.vis);
+            if (frame && showRef.current === "smoke") viewer?.setSmoke(frame.vis);
             else viewer?.setTemperatures(temperatures, fireModel === "zone" || combustion ? { peak: ZONE_COLOUR_PEAK } : undefined);
             if (combustion) viewer?.setParticles(frame?.particles || null);
             colours.set("fire");
@@ -1245,6 +1265,8 @@ export default function App() {
         },
         onDone: () => {
           studio.setFire((current) => ({ ...current, running: false }));
+          // A Flamescapes run that failed has said so already (review 9).
+          if (combustion?.failed) return;
           toast("Fire simulation finished.", { variant: "info", ttl: 3500 });
         },
         onError: (error) => {
@@ -1408,15 +1430,27 @@ export default function App() {
           throw error;
         }
         if (gen !== planGenRef.current) return;
+        // Stacked here from the run's frames, sent as copies (the worker no
+        // longer sends them twice: review 6).
+        const { n, K } = done;
+        const T = new Float32Array(K * n), vis = new Float32Array(K * n), co = new Float32Array(K * n);
+        run.frames.forEach((f, k) => {
+          T.set(f.T, k * n);
+          vis.set(f.vis, k * n);
+          co.set(f.co, k * n);
+        });
         frames = {
-          n: done.n,
-          K: done.K,
+          n,
+          K,
           frameSeconds: done.frameSeconds,
-          T: done.T.slice(),
-          vis: done.vis.slice(),
-          co: done.co.slice(),
+          T,
+          vis,
+          co,
           smoke: settings.flamescapesSmoke,
           visibilityLimit: settings.flamescapesVisibility,
+          // What the grid covered, for the plan card (review 3).
+          clipped: Boolean(run.info?.clipped),
+          inGrid: done.inGrid / Math.max(1, n),
         };
       }
       const result = await forecastJob(
@@ -1485,13 +1519,16 @@ export default function App() {
     if (combustionRef.current && combustionRef.current.graph !== graph) {
       if (!combustionRef.current.done) flamescapesRef.current?.cancel();
       combustionRef.current = null;
+      playingRunRef.current = null;
+      viewerRef.current?.setParticles(null);
     }
   }, [graph]);
 
   // Switching a Flamescapes run between heat and smoke redraws the frame on
   // screen, also once the run has ended.
   useEffect(() => {
-    const run = combustionRef.current;
+    showRef.current = settings.flamescapesShow;
+    const run = playingRunRef.current;
     if (!run || !isFlamescapes(fire.model) || graphColours !== "fire") return;
     const frame = run.frames[Math.min(fire.step, run.frames.length - 1)];
     if (!frame) return;
