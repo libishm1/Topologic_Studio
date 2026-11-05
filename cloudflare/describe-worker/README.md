@@ -10,6 +10,22 @@
 - **Storage:** nothing is stored by the Worker. Cloudflare says it "does not use Customer Content processed by Workers AI to train AI models". It also says it "does not retain inputs or outputs after they are no longer needed to process the request", unless logging is turned on, for example in AI Gateway. Source: https://developers.cloudflare.com/workers-ai/platform/data-usage/, read on 2026-11-05. Keep logging off.
 - **Cost:** on the Workers Free plan the AI allowance is 10,000 neurons a day, reset at 00:00 UTC. Past it, requests fail and nothing is billed. With `@cf/openai/gpt-oss-20b` (18,182 neurons per million input tokens, 27,273 per million output, on Cloudflare's pricing page on 2026-11-05), a description of about 1,000 tokens in and 400 out costs about 30 neurons, roughly 300 a day.
 
+## Room suggestions for drawings
+
+When Studio drafts rooms from a floor-plan drawing, it can ask the same Worker for suggestions.
+
+- **Endpoint:** `POST /rooms` with `{"summary": {...}}`. The summary covers one storey: each room's id, area, the texts found inside it, its centroid, its neighbours and the rooms its doors open to.
+- **What comes back:** `{"merge", "names", "dropped", "model"}`. `merge` lists groups of rooms the tracing split in error. `names` gives a name and class for rooms with no clear label.
+- **Checks before returning:** the Worker keeps a suggestion only if:
+  - it names rooms that were sent;
+  - a merge joins rooms that touch;
+  - no room appears in two merges or gets two names.
+
+  A class must be one of the LOD1 model's (Unit, Corridor, Stair, Ramp, Toilet, Service, Office, Commercial, Parking, Arcade, Shaft, Void, Tank). `dropped` counts the suggestions left out.
+- **What the page does with them:** it shows each suggestion with its reason, and applies only the ones the user accepts.
+- **Input limit:** a summary is capped at 24,000 characters, enough for a storey of a few hundred rooms.
+- **Cost:** with the default model, a storey of about 100 rooms costs roughly 100 to 200 neurons. That allows about 50 storeys a day on the free allowance.
+
 ## Deploy it (with your own Cloudflare account)
 
 1. Create a free Cloudflare account at https://dash.cloudflare.com/sign-up, if you have none.

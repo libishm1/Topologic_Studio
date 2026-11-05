@@ -70,3 +70,22 @@ export async function describeInCloud(facts, { url = CLOUD_URL, signal } = {}) {
   if (!response.ok) throw new Error(body.error || `The describer answered ${response.status}.`);
   return { text: body.text, model: body.model };
 }
+
+/**
+ * Suggestions for a storey drafted from a floor-plan drawing (draftSummary in
+ * core/drawingToLod1.js): rooms to merge, and names and classes for rooms,
+ * already checked against the summary by the Worker. The page offers each
+ * one; none is applied unless the user accepts it.
+ */
+export async function suggestRoomsInCloud(summary, { url = CLOUD_URL, signal } = {}) {
+  if (!url) throw new Error("This site has no Cloudflare describer set up (VITE_DESCRIBE_URL).");
+  const response = await fetch(`${url}/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ summary }),
+    signal,
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || `The describer answered ${response.status}.`);
+  return { merge: body.merge || [], names: body.names || [], dropped: body.dropped || 0, model: body.model };
+}
