@@ -268,20 +268,26 @@ async function flamescapes() {
   await page.mouse.wheel(0, -120);
   await page.waitForTimeout(1000);
   await tab(page, "Simulate");
-  await pickAt(page, "Fire", 0.5, 0.68);
   await page.getByText("Flamescapes combustion solver (optional)", { exact: true }).click();
   await page.getByText("Flamescapes: fire, smoke and embers", { exact: true }).click();
+  // The fire starts where the ignition review ranks it most likely in this model.
+  await page.getByText("Likely ignition points", { exact: true }).click();
+  await page.getByRole("button", { name: /^Find in this model$/ }).click();
+  const first = page.getByRole("button", { name: /^Start here$/ }).first();
+  await first.waitFor({ timeout: 60000 });
+  await first.click();
   await page.getByText("Flamescapes settings", { exact: true }).click();
-  await page.getByLabel("Simulated time (s)").fill("90");
+  await page.getByLabel("Simulated time (s)").fill("120");
   await page.getByLabel("Simulated time (s)").blur();
   await page.getByRole("button", { name: /^Start fire$/ }).scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: /^Start fire$/ }).click();
-  await page.waitForFunction(() => /Flamescapes run complete/.test(document.body.innerText), null, { timeout: 600000 });
-  await page.waitForFunction(() => !/fire step \d+/i.test(document.body.innerText), null, { timeout: 120000 }).catch(() => {});
+  // Mid-playback, while the flames and embers show.
+  const stepAtLeast = (n) => page.waitForFunction((m) => Number((/Fire step\s*(\d+)/.exec(document.body.innerText) || [])[1] || -1) >= m, n, { timeout: 600000 });
+  await stepAtLeast(40);
   await page.locator('[aria-label="Flamescapes run"]').scrollIntoViewIfNeeded();
   await save(page, "duplex-flamescapes");
   await page.getByText("Smoke", { exact: true }).click();
-  await page.waitForTimeout(1500);
+  await stepAtLeast(44);
   await save(page, "duplex-flamescapes-smoke");
   await page.context().close();
 }

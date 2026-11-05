@@ -158,6 +158,16 @@ temperature come from a literature review
 ([wiki/research/ignition-sources-2026-11-05.json](wiki/research/ignition-sources-2026-11-05.json))
 and are cited in
 [fireClasses.js](topologicpy-web-frontend/src/core/fireClasses.js).
+**Likely ignition points** (in the Simulate step) finds where a fire most
+often starts in your model, from its appliances, furniture and rooms ranked by
+their share of fire deaths, and **Start here** puts the fire there with its
+class.
+
+![The Duplex with a Flamescapes fire started at the cooking range, the top-ranked ignition point: the kitchen nodes warm at head height, the hazard-aware route has changed at step 40, and the panel shows class K's extinguishers, the heat release and the GPU it runs on](docs/images/duplex-flamescapes.jpg)
+
+*Flamescapes on the Duplex, started at the cooking range (class K) on the
+GPU: a pan fire of about 20 kW warms the kitchen at head height, and the
+route changes to avoid it.*
 
 ![The two-zone room model: rooms upstairs shown hot in red, with the route still clear at step 53](docs/images/duplex-zone.jpg)
 
