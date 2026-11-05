@@ -1,0 +1,479 @@
+{
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14700",
+  "cores": 28,
+  "node": "v24.21.0"
+ },
+ "horizon": 120,
+ "maxCells": 30000,
+ "results": [
+  {
+   "model": "buildingsmart-sample-scene.ifc",
+   "nodes": 112,
+   "edges": 330,
+   "spaces": 2,
+   "prepareMs": 90.40470000000002,
+   "methods": {
+    "radial": {
+     "runMs": 0.3255999999999517,
+     "forecastMs": 0.930499999999995,
+     "reached": 112,
+     "untenable": 112,
+     "rssMB": 85
+    },
+    "flood": {
+     "runMs": 0.23059999999998126,
+     "forecastMs": 0.8000000000000114,
+     "reached": 112,
+     "untenable": 112,
+     "rssMB": 86
+    },
+    "temperature": {
+     "runMs": 1.4443999999999733,
+     "forecastMs": 1.5740000000000123,
+     "reached": 112,
+     "untenable": 1,
+     "rssMB": 86
+    },
+    "zone": {
+     "roomsMs": 1.5337000000000103,
+     "runMs": 2.967300000000023,
+     "rooms": 2,
+     "untenable": 84,
+     "rssMB": 87
+    },
+    "flamescapes": {
+     "grid": [
+      29,
+      30,
+      31
+     ],
+     "cell": 0.25194240000000007,
+     "cells": 26970,
+     "clipped": false,
+     "setupMs": 41.46550000000002,
+     "runMs": 47564.617999999995,
+     "msPerStep": 39.63718166666666,
+     "realTime": 2.5228837115857843,
+     "stagesMsPerStep": {
+      "pilot": 0.0017631666666602542,
+      "particles": 0.870567166666527,
+      "radiation": 0.5064315833333543,
+      "particleToGrid": 0.08768158333330575,
+      "advect": 18.607589333333216,
+      "density": 0.45459083333342276,
+      "buoyancy": 0.14256549999989754,
+      "vorticity": 2.790547250000133,
+      "diffuse": 3.201090583333377,
+      "chemistry": 1.4121229166666913,
+      "cullFlameFront": 0.08188400000000912,
+      "conduct": 0.7001634166666918,
+      "density2": 0.4501398333334752,
+      "boundaries": 0.08549141666671858,
+      "project": 10.185511499999926
+     },
+     "peakHrrKw": 985.2019653320312,
+     "embers": 0,
+     "spots": 0,
+     "nonFinite": 0,
+     "hotAtEnd": 31,
+     "smokyAtEnd": 110,
+     "untenable": 110,
+     "forecastMs": 0.43950000000040745,
+     "nodesInGrid": 110,
+     "rssMB": 126
+    },
+    "flamescapes-embers": {
+     "grid": [
+      29,
+      30,
+      31
+     ],
+     "cell": 0.25194240000000007,
+     "cells": 26970,
+     "clipped": false,
+     "setupMs": 37.75200000000041,
+     "runMs": 44641.07169999999,
+     "msPerStep": 37.20089308333333,
+     "realTime": 2.6881075079566252,
+     "stagesMsPerStep": {
+      "pilot": 0.0020653333336304058,
+      "particles": 1.0366513333332963,
+      "radiation": 0.5182852500000809,
+      "particleToGrid": 0.09995716666693624,
+      "advect": 17.166339083333526,
+      "density": 0.4182360000001184,
+      "buoyancy": 0.13448308333310707,
+      "vorticity": 2.670193583333433,
+      "diffuse": 2.9664065000001454,
+      "chemistry": 1.3677448333333329,
+      "cullFlameFront": 0.08415516666633872,
+      "conduct": 0.6593829166666304,
+      "density2": 0.4629105833333233,
+      "boundaries": 0.0786641666668705,
+      "project": 9.484102583333103
+     },
+     "peakHrrKw": 966.3192749023438,
+     "embers": 641,
+     "spots": 1,
+     "nonFinite": 0,
+     "hotAtEnd": 35,
+     "smokyAtEnd": 110,
+     "untenable": 110,
+     "forecastMs": 0.14250000000174623,
+     "nodesInGrid": 110,
+     "rssMB": 176
+    }
+   }
+  },
+  {
+   "model": "courtyard-ring.ifc",
+   "nodes": 650,
+   "edges": 1623,
+   "spaces": 0,
+   "prepareMs": 28.813099999999395,
+   "methods": {
+    "radial": {
+     "runMs": 0.6230000000068685,
+     "forecastMs": 3.052000000010594,
+     "reached": 650,
+     "untenable": 650,
+     "rssMB": 165
+    },
+    "flood": {
+     "runMs": 0.4418000000005122,
+     "forecastMs": 1.150500000003376,
+     "reached": 650,
+     "untenable": 650,
+     "rssMB": 169
+    },
+    "temperature": {
+     "runMs": 2.555099999997765,
+     "forecastMs": 3.391300000002957,
+     "reached": 56,
+     "untenable": 1,
+     "rssMB": 172
+    },
+    "zone": {
+     "skipped": "no IfcSpace rooms"
+    },
+    "flamescapes": {
+     "grid": [
+      41,
+      16,
+      41
+     ],
+     "cell": 0.3173748645888002,
+     "cells": 26896,
+     "clipped": true,
+     "setupMs": 38.56710000000021,
+     "runMs": 43008.14779999999,
+     "msPerStep": 35.84012316666666,
+     "realTime": 2.790168982817717,
+     "stagesMsPerStep": {
+      "pilot": 0.0024924166667672884,
+      "particles": 0.0831024166666369,
+      "radiation": 0.13444925000005847,
+      "particleToGrid": 0.011651833333089598,
+      "advect": 17.330512833333245,
+      "density": 0.4776090833333971,
+      "buoyancy": 0.1319461666670395,
+      "vorticity": 2.684782416666567,
+      "diffuse": 3.0402168333330093,
+      "chemistry": 1.1634519166665995,
+      "cullFlameFront": 0.0050563333329531205,
+      "conduct": 0.4227103333329918,
+      "density2": 0.46942150000021987,
+      "boundaries": 0.07549849999998211,
+      "project": 9.754889916667064
+     },
+     "peakHrrKw": 72.94173431396484,
+     "embers": 0,
+     "spots": 0,
+     "nonFinite": 0,
+     "hotAtEnd": 0,
+     "smokyAtEnd": 83,
+     "untenable": 115,
+     "forecastMs": 0.5390999999945052,
+     "nodesInGrid": 162,
+     "rssMB": 170
+    },
+    "flamescapes-embers": {
+     "grid": [
+      41,
+      16,
+      41
+     ],
+     "cell": 0.3173748645888002,
+     "cells": 26896,
+     "clipped": true,
+     "setupMs": 18.647300000011455,
+     "runMs": 48605.24159999998,
+     "msPerStep": 40.504367999999985,
+     "realTime": 2.4688695303183117,
+     "stagesMsPerStep": {
+      "pilot": 0.0010169999996530047,
+      "particles": 0.19912541666674466,
+      "radiation": 0.14847224999983155,
+      "particleToGrid": 0.01332033333380726,
+      "advect": 19.22081558333317,
+      "density": 0.5475105833333025,
+      "buoyancy": 0.14585550000027675,
+      "vorticity": 3.0091607499996704,
+      "diffuse": 3.4817894166662153,
+      "chemistry": 1.314207833332912,
+      "cullFlameFront": 0.005758000000205357,
+      "conduct": 0.46765250000088904,
+      "density2": 0.5340219166672372,
+      "boundaries": 0.08365916666625708,
+      "project": 11.276186583333377
+     },
+     "peakHrrKw": 79.01220703125,
+     "embers": 233,
+     "spots": 0,
+     "nonFinite": 0,
+     "hotAtEnd": 0,
+     "smokyAtEnd": 79,
+     "untenable": 116,
+     "forecastMs": 0.4499999999825377,
+     "nodesInGrid": 162,
+     "rssMB": 176
+    }
+   }
+  },
+  {
+   "model": "duplex-apartment.ifc",
+   "nodes": 1540,
+   "edges": 4361,
+   "spaces": 21,
+   "prepareMs": 281.7911000000022,
+   "methods": {
+    "radial": {
+     "runMs": 1.4870999999984633,
+     "forecastMs": 6.892599999991944,
+     "reached": 1540,
+     "untenable": 1540,
+     "rssMB": 175
+    },
+    "flood": {
+     "runMs": 0.14380000001983717,
+     "forecastMs": 3.742400000017369,
+     "reached": 750,
+     "untenable": 750,
+     "rssMB": 176
+    },
+    "temperature": {
+     "runMs": 4.840300000010757,
+     "forecastMs": 10.071900000009919,
+     "reached": 30,
+     "untenable": 1,
+     "rssMB": 179
+    },
+    "zone": {
+     "roomsMs": 2.751300000003539,
+     "runMs": 7.4487000000081025,
+     "rooms": 21,
+     "untenable": 107,
+     "rssMB": 183
+    },
+    "flamescapes": {
+     "grid": [
+      28,
+      26,
+      36
+     ],
+     "cell": 0.3701860420563766,
+     "cells": 26208,
+     "clipped": true,
+     "setupMs": 127.82970000000205,
+     "runMs": 43307.9571,
+     "msPerStep": 36.08996425,
+     "realTime": 2.7708533958993877,
+     "stagesMsPerStep": {
+      "pilot": 0.0008659999993687962,
+      "particles": 0.12819791666627375,
+      "radiation": 0.16343483333352196,
+      "particleToGrid": 0.014848666666657663,
+      "advect": 17.728654583333217,
+      "density": 0.44866566666680835,
+      "buoyancy": 0.1258808333330186,
+      "vorticity": 2.247098666665867,
+      "diffuse": 2.5496103333336455,
+      "chemistry": 1.2179350000004343,
+      "cullFlameFront": 0.007562499999645904,
+      "conduct": 1.7508584166670333,
+      "density2": 0.43850025000009435,
+      "boundaries": 0.08239499999998467,
+      "project": 9.123971583333454
+     },
+     "peakHrrKw": 239.81851196289062,
+     "embers": 0,
+     "spots": 0,
+     "nonFinite": 0,
+     "hotAtEnd": 5,
+     "smokyAtEnd": 296,
+     "untenable": 304,
+     "forecastMs": 0.8791999999957625,
+     "nodesInGrid": 769,
+     "rssMB": 257
+    },
+    "flamescapes-embers": {
+     "grid": [
+      28,
+      26,
+      36
+     ],
+     "cell": 0.3701860420563766,
+     "cells": 26208,
+     "clipped": true,
+     "setupMs": 78.83989999999176,
+     "runMs": 41185.51410000003,
+     "msPerStep": 34.321261750000026,
+     "realTime": 2.9136457956706656,
+     "stagesMsPerStep": {
+      "pilot": 0.0008094166670828902,
+      "particles": 0.2771313333331879,
+      "radiation": 0.15745833333329454,
+      "particleToGrid": 0.01586708333323865,
+      "advect": 16.791394333333397,
+      "density": 0.41557858333263237,
+      "buoyancy": 0.11995341666673388,
+      "vorticity": 2.1265315833341445,
+      "diffuse": 2.378609999999705,
+      "chemistry": 1.2260896666663272,
+      "cullFlameFront": 0.007888749999644158,
+      "conduct": 1.664529666666252,
+      "density2": 0.40439341666705636,
+      "boundaries": 0.07706566666660365,
+      "project": 8.598827749999522
+     },
+     "peakHrrKw": 283.3414611816406,
+     "embers": 350,
+     "spots": 1,
+     "nonFinite": 0,
+     "hotAtEnd": 10,
+     "smokyAtEnd": 286,
+     "untenable": 302,
+     "forecastMs": 1.1486000000149943,
+     "nodesInGrid": 769,
+     "rssMB": 270
+    }
+   }
+  },
+  {
+   "model": "office-two-storey.ifc",
+   "nodes": 3374,
+   "edges": 8782,
+   "spaces": 0,
+   "prepareMs": 92.62909999996191,
+   "methods": {
+    "radial": {
+     "runMs": 2.8236000000033528,
+     "forecastMs": 9.664300000004005,
+     "reached": 3374,
+     "untenable": 3374,
+     "rssMB": 266
+    },
+    "flood": {
+     "runMs": 0.16370000003371388,
+     "forecastMs": 5.412199999962468,
+     "reached": 2013,
+     "untenable": 2013,
+     "rssMB": 266
+    },
+    "temperature": {
+     "runMs": 7.186999999976251,
+     "forecastMs": 18.08079999999609,
+     "reached": 144,
+     "untenable": 1,
+     "rssMB": 266
+    },
+    "zone": {
+     "skipped": "no IfcSpace rooms"
+    },
+    "flamescapes": {
+     "grid": [
+      36,
+      23,
+      36
+     ],
+     "cell": 0.3701860420563766,
+     "cells": 29808,
+     "clipped": true,
+     "setupMs": 80.48999999999069,
+     "runMs": 49408.61660000001,
+     "msPerStep": 41.173847166666675,
+     "realTime": 2.4287261667633895,
+     "stagesMsPerStep": {
+      "pilot": 0.0007845833331521135,
+      "particles": 0.48087066666572353,
+      "radiation": 0.32522325000002944,
+      "particleToGrid": 0.047112166667551116,
+      "advect": 19.154777083333368,
+      "density": 0.5111265000001488,
+      "buoyancy": 0.12904500000178815,
+      "vorticity": 2.841303916666899,
+      "diffuse": 3.1935619166669977,
+      "chemistry": 1.3653847500005214,
+      "cullFlameFront": 0.03270358333301071,
+      "conduct": 1.1664852499994838,
+      "density2": 0.5062549166676278,
+      "boundaries": 0.08658158333249351,
+      "project": 11.280078749998648
+     },
+     "peakHrrKw": 4086.631591796875,
+     "embers": 0,
+     "spots": 0,
+     "nonFinite": 0,
+     "hotAtEnd": 50,
+     "smokyAtEnd": 521,
+     "untenable": 538,
+     "forecastMs": 1.6920999999856576,
+     "nodesInGrid": 1258,
+     "rssMB": 282
+    },
+    "flamescapes-embers": {
+     "grid": [
+      36,
+      23,
+      36
+     ],
+     "cell": 0.3701860420563766,
+     "cells": 29808,
+     "clipped": true,
+     "setupMs": 84.74379999999655,
+     "runMs": 58467.87910000002,
+     "msPerStep": 48.72323258333335,
+     "realTime": 2.052408978180294,
+     "stagesMsPerStep": {
+      "pilot": 0.0010796666675499484,
+      "particles": 0.5607274999997268,
+      "radiation": 0.27584316666626063,
+      "particleToGrid": 0.04241858333281319,
+      "advect": 21.68735400000107,
+      "density": 0.5986751666659742,
+      "buoyancy": 0.14670466666735593,
+      "vorticity": 3.2434717500000745,
+      "diffuse": 3.7289358333334772,
+      "chemistry": 1.4553516666672173,
+      "cullFlameFront": 0.027577416666657275,
+      "conduct": 1.3224126666660596,
+      "density2": 0.5826364166664038,
+      "boundaries": 0.09819933333463268,
+      "project": 14.887401833333522
+     },
+     "peakHrrKw": 850.056640625,
+     "embers": 690,
+     "spots": 1,
+     "nonFinite": 0,
+     "hotAtEnd": 34,
+     "smokyAtEnd": 524,
+     "untenable": 542,
+     "forecastMs": 1.9194999999599531,
+     "nodesInGrid": 1258,
+     "rssMB": 299
+    }
+   }
+  }
+ ]
+}
