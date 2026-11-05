@@ -122,10 +122,107 @@ Full build on 2026-10-28 after this batch: 23 modules, 991 theorems and lemmas (
 11 in AxiomCheck.lean), every one on Lean's standard axioms or none
 (`axioms-all-2026-10-28.txt`, regenerated from the build log), no `sorry`, no warnings.
 
+## Seventh batch: Fire-X, Flamescapes and the browser port (2026-11-05)
+
+Three modules formalise the two papers behind Studio's Flamescapes fire model and the numerical
+schemes of its JavaScript port: Fire-X (Wrede et al. 2025, https://doi.org/10.1145/3763338),
+Flamescapes (Wrede, Wagner et al. 2026, https://doi.org/10.1145/3842518), and `flamescapes.js`,
+`voxelize.js` and `flamescapesRun.js` as they stood on 2026-11-05. Every equation of the
+transcriptions in [wiki/sources/papers/](../../wiki/sources/papers/) is a Lean definition stated
+at a point; units are checked with `Dim` extended by an exponent of amount of substance
+(`FireX.DN`), since both papers mix per-mole and per-kilogram quantities. Each module's header
+maps every theorem to an equation number or a JS function and lists what it leaves out; the
+port's theorems carry the name of the function they cover. The axiom prints of these three
+modules are in `AxiomCheck.lean`, one line per theorem.
+
+FireX.lean (78 results), Eqs. X1 to X32 with the boxes of Fig. 3, the legend of Fig. 17 and
+the inline definitions I1 to I5:
+
+| Equations | What is proved | What is not covered |
+|---|---|---|
+| X1 to X3, momentum, energy, species | The units of every term. Buoyancy lifts gas hotter than ambient, never faster than `\|g\|`, and under the ideal gas law is the Boussinesq deficit `(ρ_amb - ρ)/ρ_amb` (`X1_buoy_up`, `X1_buoy_lt_g`, `X1_boussinesq`); the radiative term cools hot gas; Fig. 3's boxes are X1 to X3 with X6 and X11 substituted. | The PDEs are stated by their right-hand sides; existence, uniqueness and the GPU schemes are not formalised. |
+| X4 to X8, combustion | Eq. 4's bracket is the O₂ demand of `C_c H_h O_o`, so Eq. 4 releases 417 kJ per mole of O₂, 13.03 MJ per kg, Huggett's principle within 0.53% (`X4_per_kg_O2`); the six Table 1 heats are Eq. 4 per mole of fuel; Arrhenius rates are positive and rise with temperature; the reaction keeps `Σ Y_i` exactly when `Σ q_i M_i = 0`, which the six Table 1 reactions satisfy for any atomic masses; Eq. 8 with `Y_i / M_i` is the ideal gas law and falls with temperature. | The activation energies, which the paper does not give. |
+| X9 to X11, X26 to X32, evaporation | Eq. 9 is the per-step evaporated density of Sec. 5.4 (`X9_eq_rho_e`); the evaporated mass is the available energy over the energy per kilogram; mixing (Eqs. 30 to 32) conserves enthalpy, each species' mass and momentum; `ρ'` lies in `(0, 1]`. | Where the vapour enters `Y_i` (the paper does not say). |
+| X12 to X25, SPH and particle-grid transfer | The kernels lie in `[0, 1]` and fall with distance; the near-density is at most the density; the viscous pair terms cancel (momentum); Eqs. 23 and 24 are weighted means, between their inputs; Eq. 21 returns a uniform mass unchanged. | Neighbour search and the SPH integrator; vectors are `Fin 3 → ℝ`. |
+
+Flamescapes.lean (60 results), Eqs. F1 to F19, the supplement's S1 and its two algorithms, and
+the inline definitions:
+
+| Equations | What is proved | What is not covered |
+|---|---|---|
+| F1 to F5, I1 to I3, voxels and interior fuel | Volume fractions are non-negative and sum to at most one when no ray spends longer in material than across the voxel; moisture is at most the biomass fraction; draws with mean `M_b / N_b` have expected total `M_b` (`F5_expected_total`); a destroyed module stays destroyed. | The code's random draws; the fuel graph. |
+| F6, F7, the gas flow | Eq. 7 follows from the ideal gas law over the mixture once `ρ_amb` is a pressure, and density falls with temperature; the buoyancy term read as intended is the port's `\|g\| (ρ_amb/ρ_g - 1)` and equals Fire-X's `-g (1 - T_amb/T)` times `ρ_amb/ρ_g = T/T_amb` (`F6_vs_X1`), agreeing to first order with difference `\|g\| (T - T_amb)²/(T T_amb)`, and four times Fire-X's at 1200 K over 300 K. | Compressibility; the pressure solve. |
+| F8 to F15, combustion and the solid | Eqs. 9, 10 and 12 are Fire-X's Eqs. 6, 5 and 7, and Table 3's gas values are Fire-X's methane; Arrhenius rates are positive and rise with temperature; Eq. 13's specific heat (and conductivity) lies between the constituents', and its density between `Σφ` times the least and largest; the units of every term. | The conversion from solid volume fraction to gas mass fraction in Eqs. 14 and 15, which the paper does not state; the unprinted Arrhenius forms of `v_p,s` and `v_c,s`. |
+| F16 to F19, I4, radiation and the interface | Eq. 16's emission has the sign of `T_s - T_amb`; absorption probabilities lie in `[0, 1)`, grow with path length and compose along a ray, `1 - e^{-a(l₁+l₂)} = 1 - (1 - P₁)(1 - P₂)`; the interface carries heat out of a solid hotter than gas and ambient; the initial state is at rest. | Wavelength dependence (none in the paper). |
+| Supplement algorithms, S1, S-I1, S-I2 | Algorithm 1 conserves energy in expectation, and what passes `n` segments is `E exp(-Σ κ Y_j ℓ_j)`; Algorithm 2's line 7, divided by the heat capacity, deposits exactly the embers' excess energy; the flame-front maximum can only raise the gas reaction rate; the building rules' compatibility is symmetric. | The wave function collapse solver; ember and flame-front motion. |
+
+FlamescapesPort.lean (107 results), the browser schemes:
+
+| Functions | What is proved | What is not covered |
+|---|---|---|
+| `survives`, `arrhenius` | `exp(-k dt)` is the exact solution of `dm/dt = -k m` and the only one; the remaining mass lies in `[0, m]`; two steps compose; the paper's Euler update `m (1 - k dt)` is its first-order expansion, below it by at most `m (k dt)²/2`, and goes negative once `k dt > 1`, where the exponential never does. | Float32 storage of the fields. |
+| `exchange` | Energy is conserved; neither temperature overshoots the other; the moved heat has the sign of `Ta - Tb`; it is the closed form of the linear pair `Ca dTa/dt = G (Tb - Ta)`, `Cb dTb/dt = G (Ta - Tb)`; as `dt → 0` it agrees with Eq. 19's explicit flux `G (Ta - Tb) dt` to first order, within `\|Ta - Tb\| G² dt²/(2μ)`, while that flux over a whole step can reverse the two temperatures. | The order in which `conduct` visits pairs. |
+| `changeGas`, `stoichiometry`, `addProducts`, `chemistry` | Species masses change by their deltas and nitrogen is kept, under the guards `chemistry` applies; burning `dm` adds `dm` to the gas from a solid and nothing from vapour (less the ash, for class D); the heat released is `HEAT_PER_O2 = 417e3/0.032` J per kg of O₂ for every class without its own `o2`, within 1% of Huggett's 13.1 MJ kg⁻¹; all five fire classes close the water balance; mixing fresh fuel into the surface layer conserves its enthalpy and leaves the temperature between `T_amb` and the old one, and `fresh` refills the layer exactly. | That every call site meets the guards is read from the code. |
+| `march`, `radiation`, `particleToGrid` | Gas, first solid, outside and dropped energy add up to the energy emitted (`march_balance`); each part is non-negative; the deterministic attenuation is the expected value of the paper's Monte Carlo absorption (`march_expected`); an emitter never cools past the midpoint with ambient; ember deposits conserve energy. | The ray geometry (Amanatides-Woo traversal, Lambert sampling). |
+| `gasDensity`, `buoyancy`, `diffuse` | The equation of state is the ideal gas law and falls with temperature; buoyancy is upward exactly for gas lighter than ambient and is Eq. 6 read as intended; explicit diffusion stays within its neighbours' bounds, and conserves heat below its cap. | Advection, projection, vorticity confinement. |
+| `visibility`, `coDoseRate` (`flamescapesRun.js`), `volumeFractions`, `interiorFuel` (`voxelize.js`) | Visibility `S = C/(σ_m ρ Y_soot)`, capped at 100 m, never rises with the soot density and falls strictly below the cap; the CO dose rate `ppm/(35000 × 60)` per second integrates to 1 exactly at 35 000 ppm·min (`coDoseRate_reaches_one`) and is ISO 13571's FED (`Tenability.fed`); renormalised fractions sum to at most one; the expected total of the interior fuel is `M`. | The conversion of CO from mass fraction to ppm; the reading of the solver at head height. |
+
+What the proofs found. **Paper typos and inconsistencies confirmed by a proof.** Fire-X, against
+its transcriber's notes: note 1 (Eq. 2's radiative term has units kg K m⁻² s⁻¹, not K s⁻¹, and
+needs a factor of area per volume over ρ); 3 (all six Table 1 heats are Eq. 4 per mole of
+fuel); 4 (for the three fuels with `q_f = -2`, Eq. 6 releases 208.5 kJ per mole of O₂ that Eq. 7
+removes, half of Eq. 4's 417); 5 (Eq. 8 with its comma is not a density, and makes a heavier gas
+lighter); 6 (Eq. 9's right-hand side is a density, and any liquid above ambient evaporates below
+its boiling point); 7 (Eq. 10's rate is in K m³ s⁻¹, and equal and opposite rates conserve
+energy only for equal volumetric heat capacities); 9 (Eqs. 27 and 28 agree only if a droplet
+fills the cell); 11 (Eq. 15 is a specific energy, and as a scalar cannot conserve momentum); 12;
+13 (Eq. 19 gives a mass; as printed, Eqs. 19 and 21 agree with each other); 14; 15 (the rescaled
+fractions sum to `ρ' < 1`); 17 (Table 1's 63 and 114 fall below the ideal-gas bound `5R/(2M)`
+if read in J kg⁻¹ K⁻¹); 18 (the units of `A` vary with `a + b`); and 19 (configurable product
+coefficients break `Σ q_i M_i = 0`). Notes 8 and 10 are substantiated beyond their claim: Eq. 11
+driven by `ρ_l` creates vapour at `T_l = T_amb`, where Eq. 9 removes no liquid, and Eq. 13's
+cubic kernel is negative beyond `h_s`. Flamescapes: notes 3 (Eq. 17's sign makes the radiation
+term heat hot sooty gas), 5 (with Table 3's signs, oxidation is a heat sink and pyrolysis a
+source), 6 (`ṁ_p,s` is in kg mol⁻¹ s⁻¹), 7, 8 (Eq. 7 needs a pressure where `ρ_amb` stands; as
+printed it gives air at 300 K a density of 1.36e-5 kg m⁻³), 9 (with `g = -9.81` the printed
+term pushes hot gas down), 10 (`κ_s` needs m⁻¹), 12 (`h` needs W m⁻² K⁻¹), and supplement notes
+3 (Algorithm 2's line 5 is an energy) and 4 (line 7 must divide by `ρ_s C_p,s` and the cell
+volume). **Refuted:** none. The notational and prose notes (Fire-X 2, 16, 20 to 24; Flamescapes
+1, 2, 4, 11, 13 to 18 and the remaining supplement notes) are not mathematical claims and are not
+decided. **Found beyond the notes:** Fire-X's particle-grid round trip is not
+mass-conservative although Sec. 5.1 calls it so (masses 1 and 0 come back as 2/3 and 2/3,
+`X21_not_conservative`); Flamescapes' leaf-thickness correction can push a volume fraction above
+one; its Eq. 13 makes `ρ_s C_p,s` 8% lower than the summed heat capacities for half wood and
+half moisture; and under one convention for `g` the two papers' printed buoyancy terms point in
+opposite directions. **Papers against the port.** The port corrects five of these: Eq. 7 with
+`p_amb`, Eq. 6 with the intended sign, Algorithm 2's line 7 divided by the heat capacity,
+Eq. 13's heat capacity summed over the constituents, and Eq. 1's fractions renormalised to at
+most one. It replaces the paper's explicit updates by the exact exponential and the exact
+relaxation (first-order agreement proved) and its Monte Carlo absorption by its expected value.
+Its buoyancy `|g| (ρ₀/ρ - 1)` exceeds Fire-X's by the factor `ρ₀/ρ`, and `HEAT_PER_O2`, Fire-X's
+constant, lies 0.525% below Huggett's. **Statements about the port that are false or need a
+hypothesis**, each with its counterexample in `FlamescapesPort.lean`: `march` drops what is left
+after `rayReach` cells whatever its size, so the dropped energy is below the cutoff only when the
+ray ends early (`march_reach_drops_all`: all of it through soot-free air); class D sets its own
+`o2` and releases about 37.6 MJ per kg of O₂, not `HEAT_PER_O2`, and its ash is kept nowhere, so
+a magnesium cell loses 1.658 kg of tracked mass per kg burnt; the liquid branch of `chemistry`
+sets the item to its boiling point even when its surface layer runs out first, losing heat;
+`diffuse` does not conserve species mass across a temperature jump, since `ρ λ_D ∝ T^0.75`
+differs between the cells; `interiorFuel`'s cut at zero raises the expected total strictly
+above `M`; and the mass balance of `addProducts` needs `co2 + co + soot + ash ≤ 1 + o2`, which
+all five classes meet. The header of `flamescapes.js` cites `Flamescapes.lean` for the
+first-order expansions, which are in `FlamescapesPort.lean`.
+
+Full build on 2026-11-05 after this batch: 26 modules, 1236 theorems and lemmas, 1223 of them
+with an axiom print (967 in the modules of the first six batches, 256 in AxiomCheck.lean: the
+original 11 and the 245 of this batch), every one on Lean's standard axioms or none
+(`axioms-all-2026-11-05.txt`: the build log's prints followed by AxiomCheck.lean's output), no
+`sorry`, no warnings.
+
 ## Building
 
-Lake caches are gigabytes, so build outside OneDrive. The working copy is at
-`C:\Users\lmurugesan\lean\fireegress`; to rebuild elsewhere:
+Lake caches are gigabytes, so build outside OneDrive. Keep the working copy
+outside any synced folder (ours lives under the user's home, in `lean/fireegress`); to rebuild elsewhere:
 
 ```
 # copy this folder somewhere outside OneDrive, then:
