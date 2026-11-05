@@ -285,3 +285,6 @@ import FireEgress
 #print axioms FireEgress.FlamescapesPort.interiorFuel_rescaled_nonneg
 #print axioms FireEgress.FlamescapesPort.interiorFuel_rescaled_ratio
 #print axioms FireEgress.FlamescapesPort.interiorFuel_cut
+#print axioms FireEgress.DuctMixing.ducts_conserve
+#print axioms FireEgress.DuctMixing.mixture_mem
+#print axioms FireEgress.DuctMixing.ducts_after_mem

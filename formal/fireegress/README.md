@@ -226,9 +226,17 @@ burns (`chemistry_ash_capacity_counterexample`). Class D sets its own `o2` and s
 37.6 MJ per kg of O₂, not `HEAT_PER_O2`, by design (`classD_heat_per_O2`). The tolerance of 1e-9
 in `stoichiometry` admits water down to `-1e-9` kg per kg; the six classes close without it.
 
-Full build on 2026-11-05 after this batch, the port's fixes and the liquid pool's cap: 26
-modules, 1261 theorems and lemmas, 1248 of them with an axiom print (967 in the modules of the
-first six batches, 281 in AxiomCheck.lean: the original 11 and the 270 of this batch), every one on Lean's standard axioms or none
+DuctMixing.lean (3 results, 2026-11-05), the running ventilation's ducts (`ducts` in
+flamescapes.js; not the paper's, which models no ducts): one exchange between a system's air
+terminals and its well-mixed ducts conserves each species' mass and the heat over the system
+(`ducts_conserve`); the ducts' mixture lies within the range of the values drawn (`mixture_mem`);
+and no terminal cell leaves that range (`ducts_after_mem`), so mass fractions stay in `[0, 1]`
+and no cell is heated past the hottest terminal. Not covered: floating point (the unit test
+checks the conservation to 1e-5) and the duct network's geometry, which the model does not read.
+
+Full build on 2026-11-05 after this batch, the port's fixes, the liquid pool's cap and the ducts: 27
+modules, 1264 theorems and lemmas, 1251 of them with an axiom print (967 in the modules of the
+first six batches, 284 in AxiomCheck.lean: the original 11, the 270 of this batch and the ducts' 3), every one on Lean's standard axioms or none
 (`axioms-all-2026-11-05.txt`: the build log's prints followed by AxiomCheck.lean's output), no
 `sorry`, no warnings.
 

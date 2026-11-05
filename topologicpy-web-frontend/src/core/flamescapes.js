@@ -46,8 +46,10 @@
  *     closes the mass balance. The paper's "residual" species is the soot.
  *   - Room contents are the paper's statistical interior fuel (Eqs. 3 to 5)
  *     on the floor of every covered space; walls, slabs and roofs are inert
- *     (the trimmed IFC import does not read materials). Doors are open,
- *     windows closed.
+ *     (the trimmed IFC import does not read materials). Doors are open and
+ *     windows closed unless the run says otherwise: closed doors are inert
+ *     leaves in their openings, open windows holes in their walls
+ *     (buildScene in flamescapesRun.js).
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -342,6 +344,7 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     time: 0,
     kindVersion: 0,
     pilot: scene.pilot || null,
+    ducts: scene.ducts?.cells?.length ? scene.ducts : null,
     stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0 },
   };
 }
@@ -904,6 +907,37 @@ function vorticityConfinement(sim, dt) {
   }
 }
 
+/**
+ * Running ventilation (sim.ducts, from ductsFor): each system's air terminals
+ * swap a share of their cell's gas with the system's ducts, taken as one
+ * well-mixed volume. A terminal draws f = Q dt / V of its cell's gas, mass
+ * m_t = f rho_t V, and gets the same mass of the system's mixture back, so
+ * each species and the heat (as m T) are conserved over each system, and
+ * smoke drawn in at one terminal comes out at all of them. Not the paper's:
+ * Flamescapes and Fire-X model no ducts (DuctMixing.lean proves the sums).
+ */
+export function ducts(sim, dt) {
+  const D = sim.ducts;
+  if (!D) return;
+  const f = Math.min(1, (D.flow * dt) / sim.V);
+  if (!(f > 0)) return;
+  const S = D.systems;
+  const mass = new Float64Array(S), heat = new Float64Array(S), species = new Float64Array(S * NS);
+  for (let q = 0; q < D.cells.length; q += 1) {
+    const c = D.cells[q], s = D.system[q];
+    const m = f * sim.rho[c] * sim.V;
+    mass[s] += m;
+    heat[s] += m * sim.T[c];
+    for (let i = 0; i < NS; i += 1) species[s * NS + i] += m * sim.Y[c * NS + i];
+  }
+  for (let q = 0; q < D.cells.length; q += 1) {
+    const c = D.cells[q], s = D.system[q];
+    if (!(mass[s] > 0)) continue;
+    sim.T[c] = (1 - f) * sim.T[c] + (f * heat[s]) / mass[s];
+    for (let i = 0; i < NS; i += 1) sim.Y[c * NS + i] = (1 - f) * sim.Y[c * NS + i] + (f * species[s * NS + i]) / mass[s];
+  }
+}
+
 /** Explicit diffusion of species and heat (Eq. 11 and Eq. 8's conduction) between open cells. */
 function diffuse(sim, dt) {
   const { grid: g, P } = sim;
@@ -1450,6 +1484,7 @@ const STAGES = [
   ["buoyancy", buoyancy],
   ["vorticity", vorticityConfinement],
   ["diffuse", diffuse],
+  ["ducts", ducts],
   ["chemistry", chemistry],
   ["cullFlameFront", (sim) => cullFlameFront(sim)],
   ["conduct", conduct],

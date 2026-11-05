@@ -1246,3 +1246,6 @@ AxiomCheck.lean: 'FireEgress.FlamescapesPort.interiorFuel_rescaled_sum' depends 
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.interiorFuel_rescaled_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.interiorFuel_rescaled_ratio' depends on axioms: [propext, Classical.choice, Quot.sound]
 AxiomCheck.lean: 'FireEgress.FlamescapesPort.interiorFuel_cut' depends on axioms: [propext, Classical.choice, Quot.sound]
+AxiomCheck.lean: 'FireEgress.DuctMixing.ducts_conserve' depends on axioms: [propext, Classical.choice, Quot.sound]
+AxiomCheck.lean: 'FireEgress.DuctMixing.mixture_mem' depends on axioms: [propext, Classical.choice, Quot.sound]
+AxiomCheck.lean: 'FireEgress.DuctMixing.ducts_after_mem' depends on axioms: [propext, Classical.choice, Quot.sound]

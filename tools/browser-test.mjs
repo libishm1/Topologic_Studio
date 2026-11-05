@@ -809,6 +809,9 @@ if (await fsToggle.isVisible().catch(() => false)) {
   // This run asked for embers: the card says they are on (an "off" run says "off").
   const embersLine = card.split("\n").find((l) => /^on: \d+ thrown|^off$/.test(l.trim())) || "";
   record(/^on: \d+ thrown/.test(embersLine.trim()), "the run card says embers are on", embersLine.trim() || "no embers line");
+  // The default openings: doors open, windows closed.
+  const openings = card.split("\n").find((l) => /doors (open|closed), \d+ windows (open|closed)/.test(l)) || "";
+  record(/doors open, \d+ windows closed/.test(openings), "the run card gives the openings", openings.trim() || "no openings line");
   const legendFs = await page.getByText("Gas temperature at head height (°C)", { exact: true }).isVisible().catch(() => false);
   record(legendFs || MOBILE, "the graph is coloured by gas temperature at head height", MOBILE ? "legend folded on a phone" : undefined);
   await shot(page, "flamescapes-run");

@@ -90,6 +90,14 @@ export const DEFAULT_SETTINGS = {
   // three times real time) or "finest" (the finest its memory allows). The
   // results depend on the grid, so comparisons should keep one.
   flamescapesGrid: "speed",
+  // Openings for the smoke: doors "open" or "closed"; windows "closed" or "open".
+  flamescapesDoors: "open",
+  flamescapesWindows: "closed",
+  // Ventilation through the model's air terminals: "off" (fans stopped and
+  // dampers shut, as a fire alarm does) or "running" (the ducts mix the air
+  // of every terminal), and the air each terminal moves (L/s, an assumption).
+  flamescapesVentilation: "off",
+  flamescapesTerminalFlow: 100,
   flamescapesShow: "heat", // the graph's colour while it plays: "heat" or "smoke"
 
   showGraph: true,
@@ -122,6 +130,11 @@ export const PLAN_SETTINGS = [
   "flamescapesUntenableC",
   "flamescapesSmoke",
   "flamescapesVisibility",
+  "flamescapesDoors",
+  "flamescapesWindows",
+  "flamescapesVentilation",
+  "flamescapesTerminalFlow",
+  "flamescapesGrid",
 ];
 
 export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));

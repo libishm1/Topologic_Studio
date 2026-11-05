@@ -13,6 +13,7 @@ import {
   Y_O2_AIR,
   changeGas,
   createSolver,
+  ducts,
   poolCap,
   exchange,
   gasDensity,
@@ -218,6 +219,73 @@ test("the smoke cloud: the opacity of its soot across a block, none before the f
   const plain = [];
   runScene(buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item }), { nodes, horizon: 5, frameSeconds: 5, particles: 0, keep: false, onFrame: (f) => plain.push(f.smoke) });
   assert.equal(plain[0], null);
+});
+
+test("a closed door keeps the smoke in: outside the room it stays clearer than with the door open", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  // The room's doorway is x = 5, z 1.5 to 2.4, up to 2 m; its leaf fills it.
+  const leaf = box(5, 0, 1.5, 5.2, 2.0, 2.4);
+  const nodes = Float32Array.from([2.5, 0.75, 2]);
+  const outside = {};
+  for (const closed of [false, true]) {
+    const geo = { ...room(), ...(closed ? { doors: [leaf] } : {}) };
+    const scene = buildScene(geo, { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item });
+    let cloud = null;
+    const out = runScene(scene, { nodes, horizon: 40, frameSeconds: 10, particles: 0, smoke: true, onFrame: (f) => (cloud = f.smoke) });
+    for (const a of [out.T, out.vis, out.co]) for (const x of a) assert.ok(Number.isFinite(x));
+    // The smoke's opacity summed over the cloud's blocks beyond the doorway's wall.
+    let sum = 0;
+    for (let q = 0; q < cloud.opacity.length; q += 1) if (cloud.positions[q * 3] > 5.4) sum += cloud.opacity[q];
+    outside[closed] = sum;
+  }
+  assert.ok(outside[true] < 0.5 * outside[false], `smoke outside: ${outside[true]} with the door closed, ${outside[false]} open`);
+});
+
+test("running ventilation: the ducts conserve each species and the heat, and carry smoke to a sealed room", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  // The fire room, and a sealed room beside it (x 6 to 9) joined to it only by the ducts.
+  const sealed = [box(5.8, 0, -0.2, 9.2, 2.7, 0), box(5.8, 0, 4, 9.2, 2.7, 4.2), box(5.8, 0, 0, 6, 2.7, 4), box(9, 0, 0, 9.2, 2.7, 4)];
+  const geometry = () => {
+    const g = room();
+    return { ...g, walls: [...g.walls, ...sealed], floors: [...g.floors, box(5.8, -0.2, -0.2, 9.2, 0, 4.2)], roofs: [...g.roofs, box(5.8, 2.7, -0.2, 9.2, 2.9, 4.2)] };
+  };
+  const terminals = [[2.5, 2.6, 2], [7.5, 2.6, 2]];
+  const nodes = Float32Array.from([7.5, 0.75, 2]);
+  const options = (ventilation) => ({ fire: [2.5, 0.75, 2], maxCells: 30000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item, ventilation });
+
+  // One exchange conserves sum m Y_i and sum m T over the terminals' cells.
+  const scene = buildScene(geometry(), options({ terminals, flow: 0.1 }));
+  assert.equal(scene.ducts.cells.length, 2, "both terminals land on open cells");
+  const sim = createSolver(scene, { contentsFuel, ignitionFuel });
+  const [a, b] = scene.ducts.cells;
+  sim.T[a] = 600;
+  sim.Y[a * NS + SPECIES.SOOT] = 0.01;
+  const totals = () => {
+    let heat = 0;
+    const y = new Array(NS).fill(0);
+    for (const c of [a, b]) {
+      const m = sim.rho[c] * sim.V;
+      heat += m * sim.T[c];
+      for (let i = 0; i < NS; i += 1) y[i] += m * sim.Y[c * NS + i];
+    }
+    return { heat, y };
+  };
+  const before = totals();
+  ducts(sim, 0.1);
+  const after = totals();
+  assert.ok(Math.abs(after.heat - before.heat) <= 1e-5 * before.heat, `heat ${before.heat} -> ${after.heat}`);
+  for (let i = 0; i < NS; i += 1) assert.ok(Math.abs(after.y[i] - before.y[i]) <= 1e-6 * Math.max(1e-12, Math.abs(before.y[i])) + 1e-12);
+  assert.ok(sim.Y[b * NS + SPECIES.SOOT] > 0, "soot reached the other terminal");
+
+  // Over a fire: the sealed room stays clear with the ventilation off, and is reached with it running.
+  const least = {};
+  for (const on of [false, true]) {
+    const out = runScene(buildScene(geometry(), options(on ? { terminals, flow: 0.1 } : null)), { nodes, horizon: 60, frameSeconds: 10, particles: 0 });
+    for (const x of out.vis) assert.ok(Number.isFinite(x));
+    least[on] = Math.min(...out.vis);
+  }
+  assert.equal(least[false], 100, "no smoke in the sealed room without ventilation");
+  assert.ok(least[true] < 100, `the ducts bring smoke: visibility ${least[true]} m`);
 });
 
 test("fire classes carry what the solver and the panel need", () => {

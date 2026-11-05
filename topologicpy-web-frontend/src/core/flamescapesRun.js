@@ -54,10 +54,13 @@ export function visibility(rhoSoot, C = SIGN_CONSTANT, sigma = SOOT_EXTINCTION) 
  * The scene for the solver: meshes tagged with materials, the grid, volume
  * fractions, occupancy, the contents and the ignition cell.
  *
- * @param {object} geometry  {walls, floors, roofs, stairs, obstacles} meshes in the viewer frame
+ * @param {object} geometry  {walls, floors, roofs, stairs, obstacles, doors?} meshes in the viewer
+ *                           frame; doors only when they are closed, and open windows left out of obstacles
  * @param {object} opts      upAxis; fire: [x, y, z] in the viewer frame; maxCells; maxCell (m);
  *                           reach (m); fireLoad (J/m^2); contentsFuel, ignitionFuel; item: {mass, area};
- *                           burner: {power (W), duration (s)}; seed
+ *                           burner: {power (W), duration (s)}; seed;
+ *                           ventilation: {terminals: [[x, y, z]] in the viewer frame, flow (m^3/s a terminal)},
+ *                           the running ventilation's air terminals (ductsFor)
  */
 export function buildScene(geometry, {
   upAxis = "y",
@@ -72,6 +75,7 @@ export function buildScene(geometry, {
   ignitionFuel = contentsFuel,
   item = { mass: 5, area: 1 },
   burner = { temperature: 900, duration: 30 },
+  ventilation = null,
   seed = 1,
 } = {}) {
   const tag = (list, material) => (list || []).map((m) => ({ positions: m.positions, indices: m.indices, material }));
@@ -81,6 +85,8 @@ export function buildScene(geometry, {
     ...tag(geometry.roofs, MATERIAL.STONE),
     ...tag(geometry.stairs, MATERIAL.STONE),
     ...tag(geometry.obstacles, MATERIAL.STONE),
+    // Closed doors, when the run closes them: inert leaves in their openings.
+    ...tag(geometry.doors, MATERIAL.STONE),
   ];
   if (!meshes.length) throw new Error("The model has no walls or floors to build a fire grid from.");
 
@@ -154,9 +160,49 @@ export function buildScene(geometry, {
     contentsSummary: { cells: cells.length, area: fuel.area, mass: fuel.total, energy: fuel.energy },
     ignition: ignitionCell >= 0 ? { cell: ignitionCell, mass: item.mass, area: item.area } : null,
     pilot: ignitionCell >= 0 ? { cells: [ignitionCell], ...burner } : null,
+    ducts: ventilation ? ductsFor(grid, solid, ventilation) : null,
     clipped,
     fuels: { contentsFuel, ignitionFuel },
   };
+}
+
+/**
+ * The running ventilation's air terminals on the grid: each terminal at the
+ * open cell nearest its centre within two cells (a ceiling grille sits in
+ * the ceiling's solid cells), once per cell; terminals outside the grid are
+ * left out. One system: the IFC import does not read which system a
+ * terminal belongs to, so every terminal shares one duct volume, the case
+ * that spreads smoke furthest.
+ *
+ * @returns {{cells: Int32Array, system: Uint8Array, systems: number, flow: number, outside: number}}
+ */
+export function ductsFor(grid, solid, { terminals = [], flow = 0.1 } = {}) {
+  const cells = [];
+  const seen = new Set();
+  let outside = 0;
+  for (const p of terminals) {
+    const [a, b, c] = toLocal(grid, p[0], p[1], p[2]);
+    const i0 = Math.floor((a - grid.origin[0]) / grid.h), j0 = Math.floor((b - grid.origin[1]) / grid.h), k0 = Math.floor((c - grid.origin[2]) / grid.h);
+    let best = -1, bestD = Infinity;
+    for (let dk = -2; dk <= 2; dk += 1) {
+      for (let dj = -2; dj <= 2; dj += 1) {
+        for (let di = -2; di <= 2; di += 1) {
+          const i = i0 + di, j = j0 + dj, k = k0 + dk;
+          if (i < 0 || j < 0 || k < 0 || i >= grid.nx || j >= grid.ny || k >= grid.nz) continue;
+          const cell = i + grid.nx * (j + grid.ny * k);
+          if (solid[cell]) continue;
+          const d = di * di + dj * dj + dk * dk;
+          if (d < bestD) [best, bestD] = [cell, d];
+        }
+      }
+    }
+    if (best < 0) outside += 1;
+    else if (!seen.has(best)) {
+      seen.add(best);
+      cells.push(best);
+    }
+  }
+  return { cells: Int32Array.from(cells), system: new Uint8Array(cells.length), systems: 1, flow, outside };
 }
 
 /** Keep the triangles of a mesh with a vertex inside the box (local frame). */

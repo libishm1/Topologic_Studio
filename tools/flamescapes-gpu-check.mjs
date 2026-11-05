@@ -59,6 +59,8 @@ const QUICK = args.includes("--quick");
 const PHASE = flag("--phase", "all");
 // --class B runs the checks with that fire class's fuels (fireClasses.js); default: a class A fuel.
 const FIRE_CLASS = flag("--class", null);
+// --ducts: the app scene with two ceiling air terminals and the ventilation running.
+const DUCTS = args.includes("--ducts");
 const HORIZON = Number(flag("--horizon", QUICK ? 60 : 120));
 
 // ---- a static server for the frontend's source files
@@ -109,7 +111,7 @@ await page.goto(server ? `${origin}/check.html` : `${origin}/src/core/flamescape
  * Everything below runs in the page. It is serialised by Playwright, so it
  * holds its own helpers.
  */
-async function suite({ base, phase, horizon, quick, fireClass }) {
+async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
   const V = await import(base + "voxelize.js");
   const F = await import(base + "flamescapes.js");
   const R = await import(base + "flamescapesRun.js");
@@ -349,7 +351,7 @@ async function suite({ base, phase, horizon, quick, fireClass }) {
 
   // The room as the app builds it (buildScene: a 5 kg first item held at 900 K
   // for 30 s), whose fuel-rich, oxygen-starved plume is the most sensitive case.
-  const appScene = () => R.buildScene({ floors: [meshes[0]], roofs: [meshes[1]], walls: meshes.slice(2) }, { upAxis: "y", fire: [2.5, 0, 2.0], maxCells: 400000, contentsFuel, ignitionFuel });
+  const appScene = () => R.buildScene({ floors: [meshes[0]], roofs: [meshes[1]], walls: meshes.slice(2) }, { upAxis: "y", fire: [2.5, 0, 2.0], maxCells: 400000, contentsFuel, ignitionFuel, ventilation: ducts ? { terminals: [[1, 2.3, 1], [4, 2.3, 3]], flow: 0.1 } : null });
   const bare = { maxParticles: 0, emitAbove: 1e9 };
 
   // ---- 1c. one step from identical states: the CPU's state at several times, uploaded
@@ -385,7 +387,7 @@ async function suite({ base, phase, horizon, quick, fireClass }) {
         twin: { T: compare(a, tw).T.max, Trel: rel(a.T, tw.T, open) },
       });
     }
-    out.onestep = { cells: scene.grid.cells, rows };
+    out.onestep = { cells: scene.grid.cells, rows, ducts: scene.ducts?.cells.length ?? 0 };
   }
 
   // ---- 1d. ensembles: eight tiny perturbations of the same fire on each path
@@ -482,7 +484,7 @@ const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
   console.log(`\n== ${phase}`);
-  const res = await page.evaluate(suite, { base: `${origin}/src/core/`, phase, horizon: HORIZON, quick: QUICK, fireClass: FIRE_CLASS });
+  const res = await page.evaluate(suite, { base: `${origin}/src/core/`, phase, horizon: HORIZON, quick: QUICK, fireClass: FIRE_CLASS, ducts: DUCTS });
   if (res.error) {
     console.log(`  ${res.error}`);
     report.error = res.error;
@@ -534,7 +536,7 @@ if (report.full) {
 }
 if (report.onestep) {
   console.log(`
-One step from the CPU's own state (the app's scene, ${report.onestep.cells} cells, radiation and particles off): largest |CPU - GPU|, and |CPU - CPU twin one ulp warmer|`);
+One step from the CPU's own state (the app's scene, ${report.onestep.cells} cells, radiation and particles off${report.onestep.ducts ? `, ventilation running through ${report.onestep.ducts} terminals` : ""}): largest |CPU - GPU|, and |CPU - CPU twin one ulp warmer|`);
   console.log("  step | released J CPU / GPU | sweeps | gas T K (rel)        | Ts K (rel)           | rho rel  | O2       | soot     | twin T K (rel)");
   for (const r of report.onestep.rows) console.log(`  ${String(r.step).padStart(4)} | ${f(r.releasedJ.cpu, 1).padStart(8)} / ${f(r.releasedJ.gpu, 1).padStart(8)} | ${r.sweeps.cpu}/${r.sweeps.gpu} | ${e(r.gpu.T)} (${e(r.gpu.Trel)}) | ${e(r.gpu.Ts)} (${e(r.gpu.Tsrel)}) | ${e(r.gpu.rho)} | ${e(r.gpu.O2)} | ${e(r.gpu.soot)} | ${e(r.twin.T)} (${e(r.twin.Trel)})`);
 }

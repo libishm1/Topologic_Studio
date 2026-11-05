@@ -85,7 +85,8 @@ export const PARAMS = [
   ["flameLife", "f32"], ["emberRate", "f32"], ["emberPatch", "f32"], ["emberMassLo", "f32"],
   ["emberMassHi", "f32"], ["emberLife", "f32"], ["emberMassLoss", "f32"], ["emberDrag", "f32"],
   ["emberEmis", "f32"], ["emberHC", "f32"], ["pilotTemp", "f32"], ["pilotPower", "f32"],
-  ["burnFlux", "f32"],
+  ["burnFlux", "f32"], ["ductN", "u32"], ["ductSystems", "u32"], ["ductAt", "u32"],
+  ["ductFlow", "f32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -138,6 +139,7 @@ const half = (d) => Math.floor((d.nx + 1) / 2) * d.ny * d.nz;
 const one = () => 1;
 export const KERNELS = {
   pilot: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
+  ducts: { uses: [0, 1, 2, 11], threads: one, wg: 1 },
   spawnFlame: { uses: [0, 1, 3, 7, 9], threads: cells },
   spawnFlameEnd: { uses: [0, 9], threads: one, wg: 1 },
   spawnEmbers: { uses: [0, 1, 3, 4, 7, 9], threads: cells },
@@ -539,6 +541,38 @@ fn pilot() {
       if (C > 0.0) { cf[ix(fTs, c)] += share / C; }
       else { cf[ix(fT, c)] += share / (cf[ix(fRho, c)] * mixtureCp(c) * U.V); }
     }
+  }
+}
+
+// ------------------------------------------------------------------ ventilation (flamescapes.js ducts)
+
+/**
+ * Running ventilation: the CPU's ducts, in the same order. Each system's
+ * terminals (io[ductAt + 2q] the cell, + 1 the system, at most 8 systems)
+ * draw f = Q dt / V of their cell's gas into the system's ducts and get the
+ * same mass of the mixture back. Few terminals, so one thread.
+ */
+@compute @workgroup_size(1)
+fn ducts() {
+  let f = min(1.0, U.ductFlow * U.dt / U.V);
+  if (f <= 0.0) { return; }
+  var mass: array<f32, 8>;
+  var heat: array<f32, 8>;
+  var spec: array<f32, 48>;
+  for (var q = 0u; q < U.ductN; q++) {
+    let c = io[U.ductAt + 2u * q];
+    let s = min(io[U.ductAt + 2u * q + 1u], 7u);
+    let m = f * cf[ix(fRho, c)] * U.V;
+    mass[s] += m;
+    heat[s] += m * cf[ix(fT, c)];
+    for (var i = 0u; i < NS; i++) { spec[s * NS + i] += m * Y[c * NS + i]; }
+  }
+  for (var q = 0u; q < U.ductN; q++) {
+    let c = io[U.ductAt + 2u * q];
+    let s = min(io[U.ductAt + 2u * q + 1u], 7u);
+    if (!(mass[s] > 0.0)) { continue; }
+    cf[ix(fT, c)] = (1.0 - f) * cf[ix(fT, c)] + f * heat[s] / mass[s];
+    for (var i = 0u; i < NS; i++) { Y[c * NS + i] = (1.0 - f) * Y[c * NS + i] + f * spec[s * NS + i] / mass[s]; }
   }
 }
 

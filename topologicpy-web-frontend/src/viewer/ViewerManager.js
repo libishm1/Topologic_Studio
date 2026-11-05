@@ -23,7 +23,7 @@ import {
 
 import { hashFile, readCached, writeCached, writeCachedSemantics } from "../lib/fragmentCache.js";
 import { PhaseTimer, mark } from "../lib/perf.js";
-import { aggregatedParts, collectCategoryIds, elementRecords, extractMeshes, withPredefinedType } from "./categories.js";
+import { AIR_TERMINAL_NAME, aggregatedParts, collectCategoryIds, elementRecords, extractMeshes, withPredefinedType } from "./categories.js";
 import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
 import { coreItems } from "../core/cores.js";
 import { centroidOf } from "../core/centroid.js";
@@ -983,7 +983,11 @@ export class ViewerManager {
       stairParts: stairPartIds.length,
       cores: cores.length,
     });
-    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size, roofMeshes, cores, coreMeshes };
+    // Air terminals, for the fire solver's ventilation: their centres.
+    const flowTerminals = await elementRecords(this.model, ids.flowTerminals || []).catch(() => []);
+    const terminalIds = [...(ids.airTerminals || []), ...flowTerminals.filter((r) => AIR_TERMINAL_NAME.test(r.name)).map((r) => r.itemId)];
+    const terminals = [...(await this.positionsOf(terminalIds).catch(() => new Map())).values()];
+    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size, roofMeshes, cores, coreMeshes, terminals };
   }
 
   /**

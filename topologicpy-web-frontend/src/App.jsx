@@ -1008,12 +1008,19 @@ export default function App() {
     const geometry = geometryRef.current;
     if (!geometry) throw new Error("Build the walkable graph first.");
     const clone = (meshes) => (meshes || []).map((m) => ({ positions: m.positions.slice(), indices: m.indices.slice() }));
+    // Openings for the smoke: open windows leave the obstacles (their walls
+    // are cut round them), closed doors join the solids.
+    const ids = viewerRef.current?.categoryIds || {};
+    const windowIds = new Set(ids.windows || []);
+    const windowsOpen = settings.flamescapesWindows === "open";
+    const doorsClosed = settings.flamescapesDoors === "closed";
     const geo = {
       walls: clone(geometry.walls),
       floors: clone(geometry.floors),
       roofs: clone(geometry.roofMeshes),
       stairs: clone(geometry.stairs),
-      obstacles: clone(geometry.obstacles),
+      obstacles: clone(windowsOpen ? (geometry.obstacles || []).filter((m) => !windowIds.has(m.itemId)) : geometry.obstacles),
+      ...(doorsClosed ? { doors: clone(geometry.doors) } : {}),
     };
     const transfers = Object.values(geo).flatMap((list) => list.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
     const { contentsFuel, ignitionFuel, item } = fuelsFor(settings.flamescapesClass);
@@ -1030,6 +1037,19 @@ export default function App() {
       horizon: settings.flamescapesHorizon,
       frameSeconds: settings.flamescapesHorizon / frames,
       embers: fireModel === "flamescapes-embers",
+      openings: {
+        doors: doorsClosed ? "closed" : "open",
+        doorCount: new Set((geometry.doors || []).map((m) => m.itemId)).size,
+        windows: windowsOpen ? "open" : "closed",
+        windowCount: windowIds.size,
+        terminals: (geometry.terminals || []).length,
+        ventilation: settings.flamescapesVentilation,
+      },
+      // The model's air terminals, when the ventilation runs (flamescapesRun.js ductsFor).
+      ventilation:
+        settings.flamescapesVentilation === "running" && geometry.terminals?.length
+          ? { terminals: geometry.terminals, flow: settings.flamescapesTerminalFlow / 1000 }
+          : null,
       contentsFuel,
       ignitionFuel,
       item,
@@ -1050,6 +1070,10 @@ export default function App() {
       settings.flamescapesFireLoad,
       settings.flamescapesBackend,
       settings.flamescapesGrid,
+      settings.flamescapesDoors,
+      settings.flamescapesWindows,
+      settings.flamescapesVentilation,
+      settings.flamescapesTerminalFlow,
     ]);
     return { payload, transfers, key };
   }, [graph, points.fire, settings, fireModel]);

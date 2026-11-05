@@ -35,7 +35,17 @@ export const CATEGORY_PATTERNS = {
   ignition: new RegExp(`^(${IGNITION_CLASSES.filter((c) => c !== "IFCBUILDINGELEMENTPROXY" && c !== "IFCDOOR").join("|")})$`, "i"),
   // Roofs modelled as IfcRoof with their own geometry: the top storey's ceiling.
   roofElements: /^IFCROOF$/i,
+  // Windows (also in obstacles): left out of the fire grid when the run opens them.
+  windows: /^IFC(WINDOW|WINDOWSTANDARDCASE)$/i,
+  // Air terminals: where the ventilation's ducts meet the rooms (the fire
+  // solver's ducts, flamescapes.js). IFC2x3 writes them as flow terminals,
+  // told apart by name (AIR_TERMINAL_NAME).
+  airTerminals: /^IFCAIRTERMINAL$/i,
+  flowTerminals: /^IFCFLOWTERMINAL$/i,
 };
+
+/** An IFC2x3 flow terminal named as an air terminal (Revit and ArchiCAD family names). */
+export const AIR_TERMINAL_NAME = /air ?terminal|diffuser|grille|supply ?air|return ?air|exhaust|extract|register|louvre|louver|zuluft|abluft|luftauslass|ventil/i;
 
 /**
  * Resolve the local ids for every category we care about, in one round trip

@@ -315,4 +315,17 @@ export const PROOFS = [
     files: ["FireX", "FlamescapesPort"],
     status: "Proved",
   },
+  {
+    property: "Running ventilation moves smoke and heat between rooms without making or losing any",
+    meaning:
+      "With the ventilation running, each air terminal draws a share f of its cell's gas into the ducts, taken as one well-mixed volume, and gets the same mass of the mixture back. Over the system, the mass of each gas (soot and CO among them) and the heat are unchanged, and no terminal's cell leaves the range of values the terminals held before, so a mass fraction stays between 0 and 1.",
+    tex: [
+      String.raw`x_t' = (1 - f)\,x_t + f\,\bar{x}`,
+      String.raw`\bar{x} = \frac{\sum_t M_t x_t}{\sum_t M_t}`,
+      String.raw`\sum_t M_t x_t' = \sum_t M_t x_t`,
+      String.raw`\min_u x_u \le x_t' \le \max_u x_u`,
+    ],
+    files: ["DuctMixing"],
+    status: "Proved",
+  },
 ];

@@ -328,8 +328,13 @@ These are also on the Methods page.
   layer of the fuel, a sub-grid rule for where an ember lands, the first item
   alight from the start, the paper's raised solid-gas heat transfer
   coefficient and exact integration of each reaction over a step stand in for
-  what the paper resolves. Walls and slabs do not burn, doors are open and
-  windows closed, room contents are a statistical fire load, and CO does not
+  what the paper resolves. Walls and slabs do not burn; doors are open and
+  windows closed unless **Doors** and **Windows** in the Flamescapes settings
+  say otherwise (a closed door has no gaps). **Ventilation: running** joins
+  the model's air terminals through one well-mixed duct volume at an assumed
+  100 L/s a terminal, without reading which system each belongs to or the
+  ducts themselves, so it shows the furthest the ducts could spread smoke;
+  room contents are a statistical fire load, and CO does not
   rise when the fire is short of air. Indoors at these cells embers seldom land
   hot enough to light anything: in a 120 s fire in the Duplex they lit none. A
   liquid pool (classes B and K) evaporates at most at its burning rate
@@ -413,7 +418,7 @@ windows (`studio`, `studio stop`, `studio status`, `studio test`), and
 | Speed, accuracy and robustness benchmark on 38 public models | `node tools/benchmark.mjs` | see [benchmark/README.md](benchmark/README.md) |
 | Speed and sanity of all six fire models, Flamescapes timed per stage | `node tools/fire-bench.mjs [model.ifc ...]` | repository root; results in `benchmark/results/` |
 | The Flamescapes solver on one IFC | `node tools/flamescapes-check.mjs [model.ifc] [--embers]` | repository root |
-| Lean 4 proofs (26 modules, over 1,230 theorems, including Fire-X, Flamescapes and its browser port) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
+| Lean 4 proofs (27 modules, over 1,260 theorems, including Fire-X, Flamescapes, its browser port and the ventilation ducts) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
 | This README's screenshots | `node tools/readme-shots.mjs` | repository root, with the app running |
 
 The browser suite drives the installed Chrome (no browser download) through

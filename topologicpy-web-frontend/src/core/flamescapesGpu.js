@@ -164,12 +164,16 @@ class GpuSim {
     this.vorticityOn = P.vorticity > 0;
     const pilot = sim.pilot && sim.pilot.cells?.length ? sim.pilot : null;
     this.pilot = pilot;
+    // Running ventilation (flamescapes.js ducts): at most 8 systems.
+    const ducts = sim.ducts && sim.ducts.cells?.length && sim.ducts.systems <= 8 ? sim.ducts : null;
+    this.ducts = ducts;
 
     // ---- layout of the shared buffers
     const io = { nodes: pilot ? pilot.cells.length : 0 };
     io.out = io.nodes + d.nNodes;
     io.snap = io.out + 3 * d.nNodes;
-    io.size = io.snap + 1 + 5 * d.snapMax;
+    io.ducts = io.snap + 1 + 5 * d.snapMax;
+    io.size = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
     this.io = io;
     const red = { rad: 2 * this.nPart, steps: 3 * this.nPart };
     red.size = red.steps + 4 * this.slots;
@@ -249,6 +253,7 @@ class GpuSim {
       emberLife: P.emberLifetime, emberMassLoss: P.emberMassLoss, emberDrag: P.emberDrag, emberEmis: P.emberEmissivity,
       emberHC: P.emberHeatCapacity, pilotTemp: pilot?.temperature || 0, pilotPower: pilot?.power || 0,
       burnFlux: P.burningFlux,
+      ductN: ducts ? ducts.cells.length : 0, ductSystems: ducts ? ducts.systems : 0, ductAt: io.ducts, ductFlow: ducts ? ducts.flow : 0,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -320,6 +325,12 @@ class GpuSim {
     q.writeBuffer(this.buf.ctr, 0, ctr);
     const io = new Uint32Array(this.io.size);
     if (this.pilot) io.set(this.pilot.cells, 0);
+    if (this.ducts) {
+      for (let q = 0; q < this.ducts.cells.length; q += 1) {
+        io[this.io.ducts + 2 * q] = this.ducts.cells[q];
+        io[this.io.ducts + 2 * q + 1] = this.ducts.system[q];
+      }
+    }
     for (let v = 0; v < nodeCells.length; v += 1) io[this.io.nodes + v] = nodeCells[v] < 0 ? 0xffffffff : nodeCells[v];
     q.writeBuffer(this.buf.io, 0, io);
     // Open-neighbour masks for the first diffusion and projection.
@@ -411,6 +422,7 @@ class GpuSim {
     enc.copyBufferToBuffer(buf.Y, 0, buf.snap, (nuvw + N) * 4, 6 * N * 4);
     pass = enc.beginComputePass();
     this.dispatch(pass, "diffuse");
+    if (this.ducts) this.dispatch(pass, "ducts");
     this.dispatch(pass, "chemistry");
     this.dispatch(pass, "reduceFinish");
     if (this.particlesOn) this.dispatch(pass, "cullFlameFront");

@@ -59,13 +59,14 @@ function sceneFor(payload, backend) {
     ignitionFuel: payload.ignitionFuel,
     item: payload.item,
     burner: payload.burner,
+    ventilation: payload.ventilation || null,
     seed: payload.seed ?? 1,
   });
   if (!scene.ignition) throw new Error("The fire origin is not inside the fire grid. Pick it on a floor of the building.");
   return scene;
 }
 
-function describe(scene, backend, t0, restarted, resized = false) {
+function describe(scene, backend, t0, restarted, resized = false, openings = null) {
   const g = scene.grid;
   return {
     backend: { kind: backend.kind, name: backend.name },
@@ -77,6 +78,7 @@ function describe(scene, backend, t0, restarted, resized = false) {
     setupMs: performance.now() - t0,
     restarted,
     resized,
+    openings: openings && { ...openings, ductCells: scene.ducts?.cells.length ?? 0, ductsOutside: scene.ducts?.outside ?? 0 },
   };
 }
 
@@ -91,7 +93,7 @@ self.onmessage = async (event) => {
     const knownRate = bySpeed && payload.gpuName === backend.name ? payload.gpuRate : null;
     if (gpu && knownRate) backend = { ...backend, cells: gpuCells(backend, knownRate) };
     let scene = sceneFor(payload, backend);
-    let info = describe(scene, backend, t0, false);
+    let info = describe(scene, backend, t0, false, false, payload.openings);
     self.postMessage({ id, progress: { type: "scene", info } });
     let frames = 0;
     const options = {
@@ -141,7 +143,7 @@ self.onmessage = async (event) => {
         if (!result && coarser) {
           backend = { ...backend, cells: coarser };
           scene = sceneFor(payload, backend);
-          info = describe(scene, backend, t0, true, true);
+          info = describe(scene, backend, t0, true, true, payload.openings);
           frames = 0;
           self.postMessage({ id, progress: { type: "scene", info } });
           result = await gpu.runScene(scene, options);
@@ -150,7 +152,7 @@ self.onmessage = async (event) => {
         // The GPU stopped mid-run: start again on the CPU, on a grid sized for it.
         backend = await chooseBackend("cpu");
         scene = sceneFor(payload, backend);
-        info = describe(scene, backend, t0, true);
+        info = describe(scene, backend, t0, true, false, payload.openings);
         frames = 0;
         self.postMessage({ id, progress: { type: "scene", info } });
       }

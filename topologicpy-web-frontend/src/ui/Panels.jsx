@@ -1365,6 +1365,19 @@ function CombustionStatus({ combustion, running }) {
             {Math.round(combustion.hrr ?? 0)} kW (peak {Math.round(combustion.peak ?? 0)} kW)
           </dd>
         </div>
+        {combustion.openings && (
+          <div className="result__item">
+            <dt className="result__label">Openings</dt>
+            <dd className="result__value">
+              {combustion.openings.doorCount} doors {combustion.openings.doors}, {combustion.openings.windowCount} windows {combustion.openings.windows}
+              {combustion.openings.ventilation === "running"
+                ? `; ventilation running through ${combustion.openings.ductCells} of ${combustion.openings.terminals} air terminals`
+                : combustion.openings.terminals
+                  ? `; ventilation off (${combustion.openings.terminals} air terminals)`
+                  : "; no air terminals in the model"}
+            </dd>
+          </div>
+        )}
         {/* Off says so, so "0 thrown" never reads as embers that failed to fly. */}
         <div className="result__item">
           <dt className="result__label">Embers</dt>
@@ -1620,6 +1633,48 @@ export function SimulatePanel({
                 { value: "cpu", label: "The CPU (one core, coarser grid)" },
               ]}
             />
+            <SelectField
+              label="Doors"
+              value={settings.flamescapesDoors}
+              onChange={(flamescapesDoors) => setSettings({ flamescapesDoors })}
+              options={[
+                { value: "open", label: "Open: smoke passes through the doorways" },
+                { value: "closed", label: "Closed: each door's leaf fills its opening" },
+              ]}
+            />
+            <SelectField
+              label="Windows"
+              value={settings.flamescapesWindows}
+              onChange={(flamescapesWindows) => setSettings({ flamescapesWindows })}
+              options={[
+                { value: "closed", label: "Closed" },
+                { value: "open", label: "Open: smoke vents through the window openings" },
+              ]}
+            />
+            <SelectField
+              label="Ventilation"
+              value={settings.flamescapesVentilation}
+              onChange={(flamescapesVentilation) => setSettings({ flamescapesVentilation })}
+              options={[
+                { value: "off", label: "Off: fans stopped and dampers shut, as a fire alarm should do" },
+                { value: "running", label: "Running: the ducts carry the air between the model's air terminals" },
+              ]}
+            />
+            {settings.flamescapesVentilation === "running" && (
+              <NumberField
+                label="Air through each terminal (L/s)"
+                value={settings.flamescapesTerminalFlow}
+                min={10}
+                max={1000}
+                step={10}
+                onChange={(flamescapesTerminalFlow) => setSettings({ flamescapesTerminalFlow: flamescapesTerminalFlow ?? 100 })}
+              />
+            )}
+            <p className="field__hint">
+              For the smoke only: a route still goes through every door. Closed doors and windows do not leak or burn. Running ventilation joins
+              every air terminal in the model (IfcAirTerminal) through one well-mixed duct volume, the case that spreads smoke furthest: which
+              system a terminal belongs to is not read, and 100 L/s a terminal is an assumption, not a measured value.
+            </p>
             <SelectField
               label="Grid on the GPU"
               value={settings.flamescapesGrid}

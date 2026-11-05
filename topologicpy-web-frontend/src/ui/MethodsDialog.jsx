@@ -166,7 +166,9 @@ export function MethodsDialog({ open, onClose, studio }) {
                     (1.8 m) at each graph node: gas temperature, visibility through the smoke (S = 3 / (8700 m²/kg
                     times soot density)) and CO. The smoke itself, the paper&apos;s residual species carried by the gas, is
                     drawn as a cloud: its soot density averaged over blocks of cells, each as opaque as light crossing
-                    the block finds it. The plan adds the CO dose of ISO 13571 to the heat dose. It runs on the GPU
+                    the block finds it. With the ventilation running, the model&apos;s air terminals (IfcAirTerminal) swap
+                    gas each step with one well-mixed duct volume, carrying smoke to every room with a terminal (not
+                    the paper&apos;s: Flamescapes models no ducts). The plan adds the CO dose of ISO 13571 to the heat dose. It runs on the GPU
                     through WebGPU where the browser offers it, otherwise on one CPU core.
                   </dd>
                 </div>
@@ -194,7 +196,7 @@ export function MethodsDialog({ open, onClose, studio }) {
             <section id="methods-proved" aria-labelledby="h-proved">
               <h3 id="h-proved">What has been proved</h3>
               <p style={{ marginBottom: 12 }}>
-                These statements are proved in Lean 4 with Mathlib, more than 1,230 machine-checked theorems and lemmas in 26 modules,
+                These statements are proved in Lean 4 with Mathlib, more than 1,260 machine-checked theorems and lemmas in 27 modules,
                 each resting only on Lean&apos;s standard axioms or none. The proofs are about idealised models in exact
                 arithmetic: they do not cover floating-point rounding unless a statement says so, and each file
                 lists what it leaves out. Sources: <code>formal/fireegress</code> in the repository; each
@@ -262,8 +264,11 @@ export function MethodsDialog({ open, onClose, studio }) {
                   GPU; here a cell is 0.2 to 0.45 m and a step 0.1 s. So the fuel&apos;s surface layer, a sub-grid
                   rule for where an ember lands, the first item alight from the start, a raised solid-gas heat
                   transfer coefficient (the paper&apos;s own 200) and exact integration of each reaction over a step
-                  stand in for what the paper resolves. Walls and slabs do not burn, doors are open and windows
-                  closed, and contents are a statistical fire load. It shows how heat and smoke may move through
+                  stand in for what the paper resolves. Walls and slabs do not burn; doors are open and windows
+                  closed unless the run closes the doors (each leaf fills its opening, without leaks) or opens the
+                  windows (their wall openings vent the smoke); running ventilation joins every air terminal through
+                  one duct volume at an assumed 100 L/s a terminal, without reading which system a terminal belongs to
+                  or the ducts themselves; and contents are a statistical fire load. It shows how heat and smoke may move through
                   the building; it is not calibrated, and its fire class values marked provisional are still being
                   checked. Indoors at these cells embers seldom land hot enough to light anything: in a 120 s fire in
                   the Duplex they lit no spot fire. A liquid pool lights, but much of its vapour stays unburnt on this
