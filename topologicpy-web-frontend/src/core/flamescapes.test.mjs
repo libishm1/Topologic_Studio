@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import {
   HEAT_PER_O2,
   NS,
+  POROUS,
   SPECIES,
   Y_O2_AIR,
   changeGas,
@@ -253,4 +254,37 @@ test("regressions from the architecture review: walls are not a source of air, a
   let solid = 0;
   for (const v of clipped.solid) solid += v;
   assert.ok(solid > 1000 && clipped.ignition, `${solid} solid cells`);
+});
+
+test("regressions from the GPU port: only real combustion spawns flame particles; a massless contents cell exchanges nothing", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item });
+  // The Arrhenius oxidation never stops: at ambient every contents cell
+  // reacted a little and counted as burning, spawning six particles a step.
+  const sim = createSolver(scene, { contentsFuel, ignitionFuel, seed: 1 });
+  let contents = 0;
+  for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] === POROUS && sim.fuelMass[c] > 0) contents += 1;
+  assert.ok(contents > 50, `${contents} contents cells`);
+  for (let k = 0; k < 5; k += 1) step(sim);
+  const burning = sim.burning.reduce((a, b) => a + b, 0);
+  assert.ok(burning < contents / 5, `${burning} burning of ${contents} contents cells`);
+  assert.ok(sim.parts.n <= 6 * 5 * Math.max(1, burning), `${sim.parts.n} particles`);
+  // A contents cell drawn with no mass has no heat capacity: conduction into
+  // it was 0 / 0 and left NaN in the solid temperature.
+  const empty = createSolver(scene, { contentsFuel, ignitionFuel, seed: 1 });
+  const { nx, ny } = empty.grid;
+  let zeroed = 0;
+  for (let c = 0; c < empty.N; c += 1) {
+    if (empty.kind[c] !== POROUS) continue;
+    const below = c - nx * ny, west = c - 1;
+    const solidBefore = [below, west].some((n) => n >= 0 && empty.kind[n] !== 0);
+    if (!solidBefore) continue;
+    empty.fuelMass[c] = 0;
+    empty.moisture[c] = 0;
+    empty.inertC[c] = 0;
+    zeroed += 1;
+  }
+  assert.ok(zeroed > 0);
+  step(empty);
+  for (let c = 0; c < empty.N; c += 1) assert.ok(Number.isFinite(empty.Ts[c]), `Ts[${c}] = ${empty.Ts[c]}`);
 });

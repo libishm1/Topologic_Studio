@@ -26,7 +26,9 @@ export async function detectGpu(nav = globalThis.navigator) {
     if (!adapter) return null;
     const info = adapter.info || (await adapter.requestAdapterInfo?.()) || {};
     const limits = adapter.limits || {};
-    // About 160 bytes a cell across the solver's buffers.
+    // About 196 bytes a cell across the GPU solver's buffers plus 96 per
+    // particle slot; the largest single binding is 76 bytes a cell, so a
+    // thirty-second of the binding limit leaves room.
     const byBinding = Math.floor((limits.maxStorageBufferBindingSize || 128 * 2 ** 20) / 32);
     const cells = Math.max(30000, Math.min(400000, byBinding));
     return {

@@ -141,6 +141,15 @@ export const DEFAULTS = Object.freeze({
   // Flame front (section 4.7) and embers (section 4.8, supplement Table 6).
   flameSpeed: 1.0, // m / s
   flameLifetime: 0.5, // s
+  flameShare: 0.75, // flame-front particles fill at most this share of the buffer, so embers always find room
+  // A solid counts as burning (spawns flame-front particles) once its
+  // oxidation releases this much per m^2 of exposed fuel. The Arrhenius rate
+  // never stops: at 20 C it releases about 0.1 W/m^2, and without a floor every
+  // contents cell spawned particles from the first step. 1 kW/m^2 is reached
+  // near 110 C with the paper's kinetics and lies far below what a solid
+  // releases at incipient piloted ignition, 24 kW/m^2 at 1 g/(m^2 s) (Lyon &
+  // Quintiere 2007, doi:10.1016/j.combustflame.2007.07.020), so no flame is lost.
+  burningFlux: 1e3, // W / m^2
   embers: false,
   emberRate: 20, // embers per kg of charring solid burnt
   emberPatch: 1e-3, // m^2 of surface layer an ember heats where it lands
@@ -395,13 +404,11 @@ export function velocityAt(sim, x, y, z, out = [0, 0, 0], field = sim) {
 
 // ------------------------------------------------------------- particles
 
-/** Flame-front particles may fill at most this share of the buffer, so embers always find room. */
-const FLAME_SHARE = 0.75;
 
 function spawn(sim, kind, x, y, z, vx, vy, vz, T, m, life) {
   const pr = sim.parts;
   if (pr.n >= sim.P.maxParticles) return false;
-  if (kind === 0 && pr.n >= FLAME_SHARE * sim.P.maxParticles) return false;
+  if (kind === 0 && pr.n >= sim.P.flameShare * sim.P.maxParticles) return false;
   const q = pr.n;
   pr.kind[q] = kind;
   pr.x[q * 3] = x;
@@ -1010,7 +1017,7 @@ function chemistry(sim, dt) {
         addProducts(sim, gcell, st, dOx);
         released += heat;
         burnt += dOx;
-        sim.burning[c] = 1;
+        if (heat >= P.burningFlux * sim.area[c] * dt) sim.burning[c] = 1;
       }
       if (dPy > 0) {
         sim.fuelMass[c] -= dPy;
@@ -1031,7 +1038,7 @@ function chemistry(sim, dt) {
         const Cnow = solidCapacity(sim, c);
         sim.Ts[c] =(sim.Ts[c] * Math.max(0, Cnow - Cfresh) + P.ambient * Cfresh) / Math.max(Cnow, 1e-9);
       }
-      if (dOx + dPy > 0 && sim.ignitedAt[c] === Infinity && dOx > 0) sim.ignitedAt[c] = sim.time;
+      if (sim.burning[c] && sim.ignitedAt[c] === Infinity) sim.ignitedAt[c] = sim.time;
       if (sim.fuelMass[c] <= 1e-7) {
         sim.fuelMass[c] = 0;
         if (kc === POROUS && sim.inertC[c] === 0) {
@@ -1164,6 +1171,7 @@ function conduct(sim, dt) {
             sim.T[n] += q / Cg;
           } else if (n > c) {
             const Cn = solidCapacity(sim, n);
+            if (!(Cn > 0)) continue; // contents drawn with no mass: nothing to exchange (0 / 0)
             const kk2 = 0.5 * (Math.max(sim.inertK[c], 0.1) + Math.max(sim.inertK[n], 0.1));
             const q = exchange(sim.Ts[c], sim.Ts[n], Cs, Cn, (kk2 * A) / h, dt);
             sim.Ts[c] -= q / Cs;

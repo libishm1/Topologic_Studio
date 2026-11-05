@@ -77,6 +77,9 @@ self.onmessage = async (event) => {
     const done = { ...result, info: { ...info, frames, ms: performance.now() - t0 } };
     self.postMessage({ id, ok: true, result: done }, [done.hrr.buffer]);
   } catch (error) {
-    self.postMessage({ id, ok: false, error: error?.message || String(error) });
+    // A GPU lost mid-run (driver reset, tab in the background on some phones)
+    // ends the run; say how to run it on the CPU instead.
+    const gpuHint = /gpu|device/i.test(String(error?.message || error)) ? " The GPU stopped: set the solver to CPU in the Flamescapes settings and run again." : "";
+    self.postMessage({ id, ok: false, error: (error?.message || String(error)) + gpuHint });
   }
 };

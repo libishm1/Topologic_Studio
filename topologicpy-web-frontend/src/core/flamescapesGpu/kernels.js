@@ -1,0 +1,1398 @@
+/**
+ * The WGSL compute kernels of the Flamescapes solver on the GPU
+ * (src/core/flamescapesGpu.js), written from the CPU solver
+ * (src/core/flamescapes.js) and the paper (Wrede, Wagner et al. 2026,
+ * https://doi.org/10.1145/3842518, CC BY 4.0; transcription in
+ * wiki/sources/papers/flamescapes-2026.md). One module, one entry point per
+ * stage of Algorithm 1; each entry point is one compute pass.
+ *
+ * What is the paper's: Algorithm 1 in the CPU solver's order, its equations
+ * and constants unchanged, and the paper's own choice of WGSL compute kernels
+ * (section 5: Rust, WGPU and WGSL). What is the CPU solver's and kept as it
+ * is: the exact integration of each reaction and two-body exchange; the
+ * liquid first item's evaporation and a metal's ash; each fuel's own specific
+ * heat; solid-aware trilinear sampling (advected T and Y, and the gas round
+ * an ember, give solid corners no weight); species diffusion with each face's
+ * mean rho D; rays that leave what they still carry in the cell they end in;
+ * flame-front particles kept to a share of the buffer; spot ignition by an
+ * ember's excess heat; and the pressure projection's red-black Gauss-Seidel
+ * with its early stop (at least four sweeps, then stop once a sweep would
+ * move the flow by less than projectionTolerance). The red and black passes
+ * of a sweep are exact: each colour reads only the other.
+ *
+ * What is changed from the CPU solver, and why:
+ *   - Arithmetic is float32 throughout, where the CPU keeps float64
+ *     intermediates and stores float32. 1 - exp(-x) is evaluated by its
+ *     series for small x (omexp), because in float32 it would round to zero
+ *     for the slow ambient reactions the CPU still integrates.
+ *   - Conduction (Eqs. 18, 19) visits each pair of cells once per step, as
+ *     the CPU does, in ten race-free passes instead of the CPU's cell order,
+ *     arranged so that every solid or porous cell meets its neighbours in
+ *     the CPU's own order: its own gas (porous cells), then its +x, +y and +z
+ *     faces (gas or solid), each axis split by the parity of the cell's
+ *     coordinate so that no cell is in two pairs of one pass, then its -x,
+ *     -y and -z faces where they are gas (one pass each: a gas cell is the
+ *     backward neighbour of one cell only). The order matters: a nearly
+ *     burnt-out item's surface layer holds a fraction of a J/K, each exact
+ *     exchange settles it at the other body's temperature, and the last face
+ *     wins. The exchange of each pair is the CPU's exact relaxation.
+ *   - Vorticity confinement gathers each face's two half forces from its two
+ *     cells instead of scattering them, so no two threads write one face.
+ *   - Radiation: every emitting cell computes its emission from the
+ *     temperatures at the start of the pass (the CPU's later cells see
+ *     earlier cells' deposits), and rays deposit temperature rises as
+ *     fixed-point integers through atomicAdd (DEP_SCALE steps per kelvin).
+ *     Ray directions come from a per-thread PCG hash, not the CPU's seeded
+ *     stream.
+ *   - Particles live in a fixed-capacity buffer with an atomic counter; dead
+ *     particles are flagged and the buffer is compacted once per step. The
+ *     hottest particle per cell is an atomicMax on the temperature's bits
+ *     (positive floats order like their bit patterns). Embers that land in a
+ *     solid add their heat through a fixed-point atomicAdd; the spot-ignition
+ *     test then uses the cell's temperature after all of this step's embers
+ *     and the largest single ember, where the CPU tests embers one by one.
+ *   - Reductions (heat released, fuel burnt, energy radiated, peak
+ *     temperature, a sweep's largest pressure change) are per-workgroup trees
+ *     and a final pass or one atomicMax per workgroup, in a different order
+ *     from the CPU's running sums.
+ *   - The projection's early stop cannot read the GPU's answer on the CPU
+ *     without a round trip per sweep, so every sweep is queued and each
+ *     sweep's threads decide alike from the previous sweep's largest change
+ *     (gsSkip); a skipped sweep costs a workgroup launch and one read.
+ *   - A value every thread needs from an atomic (the particle count, the
+ *     sweep's state) is read by one thread per workgroup and shared through
+ *     workgroupUniformLoad; kernels that only read the atomic buffer bind it a
+ *     second time as plain u32 (atomPlain). On D3D12 an atomicLoad is a
+ *     read-modify-write, and thousands on one address serialise.
+ */
+
+/** Uniform parameters, all 4-byte scalars, then the two fuels' stoichiometry. */
+export const PARAMS = [
+  ["nx", "u32"], ["ny", "u32"], ["nz", "u32"], ["N", "u32"],
+  ["nu", "u32"], ["nv", "u32"], ["nw", "u32"], ["stepNo", "u32"],
+  ["slot", "u32"], ["rays", "u32"], ["rayReach", "u32"], ["cap", "u32"],
+  ["nPart", "u32"], ["nNodes", "u32"], ["snapMax", "u32"], ["pilotN", "u32"],
+  ["pilotMode", "u32"], ["ioNodes", "u32"], ["ioOut", "u32"], ["ioSnap", "u32"],
+  ["redRad", "u32"], ["redSteps", "u32"], ["seed", "u32"], ["gsAt", "u32"],
+  ["h", "f32"], ["dt", "f32"], ["V", "f32"], ["rho0", "f32"],
+  ["settle", "f32"], ["flameCap", "u32"],
+  ["ambient", "f32"], ["gravity", "f32"], ["convection", "f32"], ["kappa", "f32"],
+  ["vorticity", "f32"], ["porousVel", "f32"], ["diffusivity", "f32"], ["conductivity", "f32"],
+  ["emitAbove", "f32"], ["pyA", "f32"], ["pyE", "f32"], ["pyHeat", "f32"],
+  ["oxA", "f32"], ["oxE", "f32"], ["pyFuel", "f32"], ["latent", "f32"],
+  ["moistFrac", "f32"], ["fuelHC", "f32"], ["skinDensity", "f32"], ["gasA", "f32"],
+  ["gasE", "f32"], ["gasFuelExp", "f32"], ["gasOxExp", "f32"], ["flameSpeed", "f32"],
+  ["flameLife", "f32"], ["emberRate", "f32"], ["emberPatch", "f32"], ["emberMassLo", "f32"],
+  ["emberMassHi", "f32"], ["emberLife", "f32"], ["emberMassLoss", "f32"], ["emberDrag", "f32"],
+  ["emberEmis", "f32"], ["emberHC", "f32"], ["pilotTemp", "f32"], ["pilotPower", "f32"],
+  ["burnFlux", "f32"],
+];
+/**
+ * Scalars padded to a 16-byte boundary; the fuel table follows, three vec4
+ * per fuel (contents 0, first item 1): (o2, co2, co, soot), (h2o, heat,
+ * ignition K, embers), (liquid, boiling K, latent J/kg, ash kg/kg),
+ * (specific heat J/(kg K), 0, 0, 0).
+ */
+export const PARAM_SCALARS = Math.ceil(PARAMS.length / 4) * 4;
+export const FUEL_VEC4 = 4;
+export const PARAM_BYTES = PARAM_SCALARS * 4 + 2 * FUEL_VEC4 * 16;
+
+/** Per-cell float fields, each N long, in the `cf` buffer. */
+export const CF = Object.freeze({ T: 0, Ts: 1, rho: 2, p: 3, fuel: 4, moist: 5, area: 6, inertC: 7, inertK: 8, eps: 9, loss: 10, div: 11, wx: 12, wy: 13, wz: 14, mag: 15, fx: 16, fy: 17, fz: 18 });
+export const CF_FIELDS = 19;
+/** Per-cell integer fields in the `ci` buffer. */
+export const CI = Object.freeze({ kind: 0, fuelKind: 1, burning: 2, vapour: 3, mask: 4, count: 5 });
+export const CI_FIELDS = 6;
+/**
+ * Per-cell atomic fields in the `atom` buffer, then (from U.gsAt = AT_FIELDS
+ * N) one slot per pressure sweep: the largest pressure change of that sweep.
+ */
+export const AT = Object.freeze({ flame: 0, depGas: 1, depSolid: 2, ember: 3, emberMax: 4 });
+export const AT_FIELDS = 5;
+/** Counters in the `ctr` buffer. */
+export const CTR = Object.freeze({ count: 0, countB: 1, embers: 2, spots: 3, maxT: 4, before: 5 });
+export const CTR_SIZE = 8;
+/** Floats per particle (three vec4). */
+export const PARTICLE_FLOATS = 12;
+export const WG = 64;
+
+/**
+ * Bindings: 0 the parameters, 12 the pressure sweep's index (a uniform at a
+ * dynamic offset, one per sweep), the rest storage buffers. 13 is the `atom`
+ * buffer again as plain u32, for kernels that only read it: an atomicLoad is a
+ * read-modify-write on some backends (D3D12), a plain load is not.
+ */
+export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13 });
+/** Bytes of the sweep-index uniform binding. */
+export const SWEEP_BYTES = 16;
+
+/**
+ * Entry points: the bindings each uses (its pipeline layout) and how many
+ * threads it runs, as a function of the sizes d = {N, nu, nv, nw, nx, ny, nz,
+ * cap, nNodes, snapMax}.
+ */
+const cells = (d) => d.N;
+const faces = (d) => d.nu + d.nv + d.nw;
+const particles = (d) => d.cap;
+const half = (d) => Math.floor((d.nx + 1) / 2) * d.ny * d.nz;
+const one = () => 1;
+export const KERNELS = {
+  pilot: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
+  spawnFlame: { uses: [0, 1, 3, 7, 9], threads: cells },
+  spawnFlameEnd: { uses: [0, 9], threads: one, wg: 1 },
+  spawnEmbers: { uses: [0, 1, 3, 4, 7, 9], threads: cells },
+  moveParticles: { uses: [0, 1, 3, 4, 7, 9], threads: particles },
+  radEmit: { uses: [0, 1, 2, 3, 6, 10], threads: cells },
+  radApply: { uses: [0, 1, 13], threads: cells },
+  particleToGrid: { uses: [0, 1, 3, 6, 7, 9], threads: particles },
+  emberDeposit: { uses: [0, 1, 3, 9, 13], threads: cells },
+  advect: { uses: [0, 1, 2, 3, 4, 5], threads: (d) => d.nu + d.nv + d.nw + d.N },
+  density: { uses: [0, 1, 2, 3], threads: cells },
+  buoyancy: { uses: [0, 1, 3, 4], threads: (d) => d.nv },
+  vortCurl: { uses: [0, 1, 3, 4], threads: cells },
+  vortForce: { uses: [0, 1, 3], threads: cells },
+  vortApply: { uses: [0, 1, 4], threads: faces },
+  diffuse: { uses: [0, 1, 2, 3, 5], threads: cells },
+  chemistry: { uses: [0, 1, 2, 3, 10, 13], threads: cells },
+  reduceFinish: { uses: [0, 10], threads: () => WG },
+  cullFlameFront: { uses: [0, 3, 7, 9], threads: particles },
+  conductPorous: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_x0: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_x1: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_y0: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_y1: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_z0: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_z1: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_bx: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_by: { uses: [0, 1, 2, 3], threads: cells },
+  conduct_bz: { uses: [0, 1, 2, 3], threads: cells },
+  densityBoundaries: { uses: [0, 1, 2, 3], threads: cells },
+  topology: { uses: [0, 3], threads: cells },
+  projectZero: { uses: [0, 3, 4], threads: faces },
+  divergence: { uses: [0, 1, 3, 4], threads: cells },
+  gsRed: { uses: [0, 1, 3, 6, 12], threads: half },
+  gsBlack: { uses: [0, 1, 3, 6, 12], threads: half },
+  projectUpdate: { uses: [0, 1, 3, 4], threads: faces },
+  compact: { uses: [0, 7, 8, 9], threads: particles },
+  compactFinish: { uses: [0, 9], threads: one, wg: 1 },
+  gather: { uses: [0, 1, 2, 11], threads: (d) => d.nNodes },
+  peakTemperature: { uses: [0, 1, 3, 9], threads: cells },
+  snapshot: { uses: [0, 7, 9, 11], threads: (d) => d.snapMax },
+};
+
+/** Fixed-point steps per kelvin of a radiation deposit, and per joule of ember heat. */
+export const DEP_SCALE = 16384;
+export const EMBER_SCALE = 16;
+
+const fieldConsts = (prefix, table) => Object.entries(table).map(([k, v]) => `const ${prefix}${k[0].toUpperCase()}${k.slice(1)}: u32 = ${v}u;`).join("\n");
+
+/** Trilinear sample of a face field (the CPU's sampleFace) and the velocity there (velocityAt), from buffer `buf`. */
+const faceSample = (suffix, buf) => `
+fn face${suffix}(base: u32, dx: u32, dy: u32, dz: u32, p: vec3<f32>) -> f32 {
+  let x = min(max(p.x, 0.0), f32(dx) - 1.001);
+  let y = min(max(p.y, 0.0), f32(dy) - 1.001);
+  let z = min(max(p.z, 0.0), f32(dz) - 1.001);
+  let i = u32(floor(x)); let j = u32(floor(y)); let k = u32(floor(z));
+  let fx = x - f32(i); let fy = y - f32(j); let fz = z - f32(k);
+  let b = base + i + dx * (j + dy * k);
+  let sj = dx; let sk = dx * dy;
+  let c00 = ${buf}[b] * (1.0 - fx) + ${buf}[b + 1u] * fx;
+  let c10 = ${buf}[b + sj] * (1.0 - fx) + ${buf}[b + sj + 1u] * fx;
+  let c01 = ${buf}[b + sk] * (1.0 - fx) + ${buf}[b + sk + 1u] * fx;
+  let c11 = ${buf}[b + sk + sj] * (1.0 - fx) + ${buf}[b + sk + sj + 1u] * fx;
+  return (c00 * (1.0 - fy) + c10 * fy) * (1.0 - fz) + (c01 * (1.0 - fy) + c11 * fy) * fz;
+}
+fn velocity${suffix}(p: vec3<f32>) -> vec3<f32> {
+  return vec3<f32>(
+    face${suffix}(0u, U.nx + 1u, U.ny, U.nz, p - vec3<f32>(0.0, 0.5, 0.5)),
+    face${suffix}(U.nu, U.nx, U.ny + 1u, U.nz, p - vec3<f32>(0.5, 0.0, 0.5)),
+    face${suffix}(U.nu + U.nv, U.nx, U.ny, U.nz + 1u, p - vec3<f32>(0.5, 0.5, 0.0)));
+}`;
+
+/** A per-cell entry point: `body` runs for cell c < N. */
+const perCell = (name, body) => `
+@compute @workgroup_size(64)
+fn ${name}(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>) {
+  let c = lin(gid, nwg);
+  if (c >= U.N) { return; }
+${body}
+}`;
+
+/** An entry point over `count` threads (index t). */
+const perThread = (name, count, body) => `
+@compute @workgroup_size(64)
+fn ${name}(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>) {
+  let t = lin(gid, nwg);
+  if (t >= ${count}) { return; }
+${body}
+}`;
+
+/**
+ * An entry point over the live particles (index t < n): one thread per
+ * workgroup reads the atomic count and the workgroup shares it.
+ */
+const perParticle = (name, body) => `
+@compute @workgroup_size(64)
+fn ${name}(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  if (li == 0u) { wshare = min(atomicLoad(&ctr[0]), U.cap); }
+  let n = workgroupUniformLoad(&wshare);
+  let t = lin(gid, nwg);
+${name === "snapshot" ? "" : "  if (t >= n) { return; }"}
+${body}
+}`;
+
+/** Conduction across the +axis faces of the solid cells whose coordinate has the given parity. */
+const conductPass = (axis, parity) => {
+  const coord = ["x", "y", "z"][axis];
+  const dim = ["U.nx", "U.ny", "U.nz"][axis];
+  const stride = ["1u", "U.nx", "U.nx * U.ny"][axis];
+  return perCell(`conduct_${coord}${parity}`, `
+  let p = coords(c);
+  if ((p.${coord} & 1u) != ${parity}u || p.${coord} + 1u >= ${dim}) { return; }
+  conductForward(c, c + ${stride});`);
+};
+
+/** Conduction across the -axis faces of the solid cells, where the neighbour is gas. */
+const conductBack = (axis) => {
+  const coord = ["x", "y", "z"][axis];
+  const stride = ["1u", "U.nx", "U.nx * U.ny"][axis];
+  return perCell(`conduct_b${coord}`, `
+  let p = coords(c);
+  if (p.${coord} == 0u) { return; }
+  conductBackward(c, c - ${stride});`);
+};
+
+/**
+ * One colour of a red-black Gauss-Seidel sweep, over the cells of that colour
+ * only, unless the projection has settled (gsSkip); the workgroup's largest
+ * pressure change goes to the sweep's slot (an atomicMax on the bits of a
+ * non-negative float).
+ */
+const gsPass = (name, colour) => `
+@compute @workgroup_size(64)
+fn ${name}(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  // One thread reads the sweep's state; the workgroup shares it (and returns together).
+  if (li == 0u) { wshare = select(0u, 1u, gsSkip()); }
+  if (workgroupUniformLoad(&wshare) != 0u) { return; }
+  wmax[li] = bitcast<u32>(gsCell(lin(gid, nwg), ${colour}u));
+  workgroupBarrier();
+  for (var s = 32u; s > 0u; s >>= 1u) {
+    if (li < s) { wmax[li] = max(wmax[li], wmax[li + s]); }
+    workgroupBarrier();
+  }
+  if (li == 0u && wmax[0] > 0u) { atomicMax(&atom[U.gsAt + SW.s], wmax[0]); }
+}`;
+
+export function buildShader() {
+  const scalars = PARAMS.map(([name, type]) => `  ${name}: ${type},`);
+  for (let i = PARAMS.length; i < PARAM_SCALARS; i += 1) scalars.push(`  padEnd${i}: u32,`);
+  return /* wgsl */ `
+struct Params {
+${scalars.join("\n")}
+  fuel: array<vec4<f32>, ${2 * FUEL_VEC4}>,
+}
+struct Particle { p: vec4<f32>, v: vec4<f32>, q: vec4<f32> }
+struct Fuel { o2: f32, co2: f32, co: f32, soot: f32, h2o: f32, heat: f32, ign: f32, embers: f32, liquid: f32, boiling: f32, latent: f32, ash: f32, cp: f32 }
+struct Tri { b: u32, di: u32, dj: u32, dk: u32, f: vec3<f32> }
+
+@group(0) @binding(0) var<uniform> U: Params;
+@group(0) @binding(1) var<storage, read_write> cf: array<f32>;
+@group(0) @binding(2) var<storage, read_write> Y: array<f32>;
+@group(0) @binding(3) var<storage, read_write> ci: array<u32>;
+@group(0) @binding(4) var<storage, read_write> vel: array<f32>;
+@group(0) @binding(5) var<storage, read_write> snap: array<f32>;
+@group(0) @binding(6) var<storage, read_write> atom: array<atomic<u32>>;
+@group(0) @binding(7) var<storage, read_write> parts: array<Particle>;
+@group(0) @binding(8) var<storage, read_write> partsB: array<Particle>;
+@group(0) @binding(9) var<storage, read_write> ctr: array<atomic<u32>>;
+@group(0) @binding(10) var<storage, read_write> red: array<f32>;
+@group(0) @binding(11) var<storage, read_write> io: array<u32>;
+struct Sweep { s: u32, pad0: u32, pad1: u32, pad2: u32 }
+@group(0) @binding(12) var<uniform> SW: Sweep;
+@group(0) @binding(13) var<storage, read_write> atomPlain: array<u32>;
+
+var<workgroup> wsum: array<vec4<f32>, 64>;
+var<workgroup> wmax: array<u32, 64>;
+var<workgroup> wshare: u32;
+
+${fieldConsts("f", CF)}
+${fieldConsts("i", CI)}
+${fieldConsts("a", AT)}
+const GAS: u32 = 0u;
+const POROUS: u32 = 1u;
+const SOLID: u32 = 2u;
+const NS: u32 = 6u;
+const R_GAS: f32 = 8.314462618;
+const SIGMA: f32 = 5.670374419e-8;
+const P_AMBIENT: f32 = 101325.0;
+const KELVIN: f32 = 273.15;
+const Y_O2_AIR: f32 = 0.232;
+const PI: f32 = 3.14159265358979;
+const DEP_SCALE: f32 = ${DEP_SCALE}.0;
+const EMBER_SCALE: f32 = ${EMBER_SCALE}.0;
+const NO_CELL: u32 = 0xffffffffu;
+
+// ------------------------------------------------------------------ indexing
+
+fn lin(g: vec3<u32>, n: vec3<u32>) -> u32 { return g.x + g.y * n.x * 64u; }
+fn ix(field: u32, c: u32) -> u32 { return field * U.N + c; }
+fn coords(c: u32) -> vec3<u32> { return vec3<u32>(c % U.nx, (c / U.nx) % U.ny, c / (U.nx * U.ny)); }
+fn at3(i: u32, j: u32, k: u32) -> u32 { return i + U.nx * (j + U.ny * k); }
+fn inside(q: vec3<i32>) -> bool {
+  return q.x >= 0 && q.y >= 0 && q.z >= 0 && q.x < i32(U.nx) && q.y < i32(U.ny) && q.z < i32(U.nz);
+}
+fn atI(q: vec3<i32>) -> u32 { return u32(q.x) + U.nx * (u32(q.y) + U.ny * u32(q.z)); }
+fn kindOf(c: u32) -> u32 { return ci[ix(iKind, c)]; }
+fn solidAt(q: vec3<i32>) -> bool { return inside(q) && kindOf(atI(q)) == SOLID; }
+fn porousAt(q: vec3<i32>) -> bool { return inside(q) && kindOf(atI(q)) == POROUS; }
+/** The CPU's DIRS: +x, -x, +y, -y, +z, -z. */
+fn dirv(d: u32) -> vec3<i32> {
+  var D = array<vec3<i32>, 6>(vec3<i32>(1, 0, 0), vec3<i32>(-1, 0, 0), vec3<i32>(0, 1, 0), vec3<i32>(0, -1, 0), vec3<i32>(0, 0, 1), vec3<i32>(0, 0, -1));
+  return D[d];
+}
+/** Index offset of the neighbour in direction d. */
+fn noff(d: u32) -> i32 {
+  let sx = 1; let sy = i32(U.nx); let sz = i32(U.nx * U.ny);
+  var D = array<i32, 6>(sx, -sx, sy, -sy, sz, -sz);
+  return D[d];
+}
+fn uAt(i: u32, j: u32, k: u32) -> u32 { return i + (U.nx + 1u) * (j + U.ny * k); }
+fn vAt(i: u32, j: u32, k: u32) -> u32 { return U.nu + i + U.nx * (j + (U.ny + 1u) * k); }
+fn wAt(i: u32, j: u32, k: u32) -> u32 { return U.nu + U.nv + i + U.nx * (j + U.ny * k); }
+
+// ------------------------------------------------------------------ physics helpers
+
+/** 1 - exp(-x), accurate in float32 for small x (the CPU's 1 - survives(k, dt)). */
+fn omexp(x: f32) -> f32 {
+  if (x < 0.5) {
+    return x * (1.0 - x / 2.0 * (1.0 - x / 3.0 * (1.0 - x / 4.0 * (1.0 - x / 5.0 * (1.0 - x / 6.0 * (1.0 - x / 7.0 * (1.0 - x / 8.0)))))));
+  }
+  return 1.0 - exp(-x);
+}
+/** First-order Arrhenius rate (Eq. 10's form). */
+fn arrhenius(A: f32, E: f32, T: f32) -> f32 {
+  if (T > 0.0) { return A * exp(-E / (R_GAS * T)); }
+  return 0.0;
+}
+/** Exact exchange between two bodies (the CPU's exchange). */
+fn exchange(Ta: f32, Tb: f32, Ca: f32, Cb: f32, G: f32, dt: f32) -> f32 {
+  if (!(Ca > 0.0) || !(Cb > 0.0) || !(G > 0.0)) { return 0.0; }
+  let mu = (Ca * Cb) / (Ca + Cb);
+  return (Ta - Tb) * mu * omexp(G * dt / mu);
+}
+fn molar(s: u32) -> f32 {
+  var M = array<f32, 6>(0.03, 0.032, 0.044, 0.018, 0.012, 0.028);
+  return M[s];
+}
+fn heatCap(s: u32) -> f32 {
+  var C = array<f32, 6>(2200.0, 918.0, 844.0, 1864.0, 710.0, 1040.0);
+  return C[s];
+}
+/** Equation of state, Eq. 7, nitrogen the rest. */
+fn gasDensity(T: f32, c: u32) -> f32 {
+  var inv = 0.0;
+  var rest = 1.0;
+  for (var s = 0u; s < NS; s++) {
+    let y = Y[c * NS + s];
+    inv += y / molar(s);
+    rest -= y;
+  }
+  inv += max(0.0, rest) / 0.028;
+  return P_AMBIENT / (R_GAS * T * inv);
+}
+fn mixtureCp(c: u32) -> f32 {
+  var cp = 0.0;
+  var rest = 1.0;
+  for (var s = 0u; s < NS; s++) {
+    cp += Y[c * NS + s] * heatCap(s);
+    rest -= Y[c * NS + s];
+  }
+  return cp + max(0.0, rest) * 1040.0;
+}
+fn mixtureCpSnap(c: u32, base: u32) -> f32 {
+  var cp = 0.0;
+  var rest = 1.0;
+  for (var s = 0u; s < NS; s++) {
+    let y = snap[base + c * NS + s];
+    cp += y * heatCap(s);
+    rest -= y;
+  }
+  return cp + max(0.0, rest) * 1040.0;
+}
+fn gasCap(c: u32) -> f32 { return cf[ix(fRho, c)] * mixtureCp(c) * U.V; }
+fn fuelOf(k: u32) -> Fuel {
+  let a = U.fuel[${FUEL_VEC4}u * k];
+  let b = U.fuel[${FUEL_VEC4}u * k + 1u];
+  let l = U.fuel[${FUEL_VEC4}u * k + 2u];
+  let e = U.fuel[${FUEL_VEC4}u * k + 3u];
+  return Fuel(a.x, a.y, a.z, a.w, b.x, b.y, b.z, b.w, l.x, l.y, l.z, l.w, e.x);
+}
+fn skinOf(fuel: f32, area: f32) -> f32 { return min(fuel, U.skinDensity * area); }
+fn capOf(inertC: f32, fuel: f32, area: f32, moist: f32, cp: f32) -> f32 {
+  return inertC + skinOf(fuel, area) * cp + moist * 4186.0;
+}
+/** Specific heat of a cell's fuel: the fuel's own, else wood's (the CPU's fuelCp). */
+fn fuelCp(c: u32) -> f32 { return fuelOf(ci[ix(iFuelKind, c)]).cp; }
+/** Heat capacity of a cell's solid: inert part, fuel surface layer, water (J/K). */
+fn solidCap(c: u32) -> f32 {
+  return capOf(cf[ix(fInertC, c)], cf[ix(fFuel, c)], cf[ix(fArea, c)], cf[ix(fMoist, c)], fuelCp(c));
+}
+
+/** Change a gas cell's species masses by d (kg each), nitrogen kept; renormalise (the CPU's changeGas). */
+fn changeGas(c: u32, d0: array<f32, 6>) {
+  var d = d0;
+  var s: array<f32, 6>;
+  let o = c * NS;
+  let mass = cf[ix(fRho, c)] * U.V;
+  var n2 = mass;
+  var total = 0.0;
+  for (var q = 0u; q < NS; q++) {
+    let m = Y[o + q] * mass;
+    n2 -= m;
+    s[q] = max(0.0, m + d[q]);
+    total += s[q];
+  }
+  total += max(0.0, n2);
+  if (!(total > 0.0)) { return; }
+  for (var q = 0u; q < NS; q++) { Y[o + q] = s[q] / total; }
+  cf[ix(fRho, c)] = total / U.V;
+}
+fn addGas(c: u32, s: u32, dm: f32) {
+  if (!(dm > 0.0)) { return; }
+  var d = array<f32, 6>(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  d[s] = dm;
+  changeGas(c, d);
+}
+/** Burning dm kg of fuel (Eq. 12 with the fire class's yields). */
+fn addProducts(c: u32, st: Fuel, dm: f32, vapour: bool) {
+  var d = array<f32, 6>(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  d[1] = -st.o2 * dm;
+  d[2] = st.co2 * dm;
+  d[5] = st.co * dm;
+  d[4] = st.soot * dm;
+  d[3] = st.h2o * dm;
+  if (vapour) { d[0] = -dm; }
+  changeGas(c, d);
+}
+
+// ------------------------------------------------------------------ sampling
+
+fn triOf(p: vec3<f32>) -> Tri {
+  let x = min(max(p.x - 0.5, 0.0), f32(U.nx) - 1.001);
+  let y = min(max(p.y - 0.5, 0.0), f32(U.ny) - 1.001);
+  let z = min(max(p.z - 0.5, 0.0), f32(U.nz) - 1.001);
+  let i = u32(floor(x)); let j = u32(floor(y)); let k = u32(floor(z));
+  var t: Tri;
+  t.f = vec3<f32>(x - f32(i), y - f32(j), z - f32(k));
+  t.di = select(0u, 1u, i + 1u < U.nx);
+  t.dj = select(0u, U.nx, j + 1u < U.ny);
+  t.dk = select(0u, U.nx * U.ny, k + 1u < U.nz);
+  t.b = i + U.nx * (j + U.ny * k);
+  return t;
+}
+/** Trilinear sample of the gas temperature that gives solid cells no weight (the CPU's sampleGas). */
+fn sampleGasT(p: vec3<f32>) -> f32 {
+  let x = min(max(p.x - 0.5, 0.0), f32(U.nx) - 1.001);
+  let y = min(max(p.y - 0.5, 0.0), f32(U.ny) - 1.001);
+  let z = min(max(p.z - 0.5, 0.0), f32(U.nz) - 1.001);
+  let i = u32(floor(x)); let j = u32(floor(y)); let k = u32(floor(z));
+  let fx = x - f32(i); let fy = y - f32(j); let fz = z - f32(k);
+  var sum = 0.0;
+  var total = 0.0;
+  for (var q = 0u; q < 8u; q++) {
+    let a = q & 1u; let b = (q >> 1u) & 1u; let d = (q >> 2u) & 1u;
+    let c = at3(min(i + a, U.nx - 1u), min(j + b, U.ny - 1u), min(k + d, U.nz - 1u));
+    if (kindOf(c) == SOLID) { continue; }
+    let w = select(1.0 - fx, fx, a == 1u) * select(1.0 - fy, fy, b == 1u) * select(1.0 - fz, fz, d == 1u);
+    sum += w * cf[ix(fT, c)];
+    total += w;
+  }
+  return select(U.ambient, sum / total, total > 1e-9);
+}
+${faceSample("Snap", "snap")}
+${faceSample("Vel", "vel")}
+
+// ------------------------------------------------------------------ random numbers
+
+fn pcg(v: u32) -> u32 {
+  let state = v * 747796405u + 2891336453u;
+  let word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+  return (word >> 22u) ^ word;
+}
+fn seedOf(c: u32, salt: u32) -> u32 { return pcg(c ^ pcg(U.stepNo * 8u + salt + pcg(U.seed))); }
+fn rnd(s: ptr<function, u32>) -> f32 {
+  *s = pcg(*s);
+  return f32(*s >> 8u) * (1.0 / 16777216.0);
+}
+
+// ------------------------------------------------------------------ ignition source
+
+@compute @workgroup_size(1)
+fn pilot() {
+  for (var q = 0u; q < U.pilotN; q++) {
+    let c = io[q];
+    if (U.pilotMode == 0u) {
+      if (cf[ix(fTs, c)] < U.pilotTemp) { cf[ix(fTs, c)] = U.pilotTemp; }
+    } else {
+      let share = U.pilotPower * U.dt / f32(U.pilotN);
+      let C = solidCap(c);
+      if (C > 0.0) { cf[ix(fTs, c)] += share / C; }
+      else { cf[ix(fT, c)] += share / (cf[ix(fRho, c)] * mixtureCp(c) * U.V); }
+    }
+  }
+}
+
+// ------------------------------------------------------------------ particles (Alg. 1 lines 8 to 14)
+
+${perCell("spawnFlame", `
+  if (ci[ix(iBurning, c)] == 0u) { return; }
+  let p = vec3<f32>(coords(c)) + 0.5;
+  let temp = max(cf[ix(fT, c)], cf[ix(fTs, c)]);
+  let base = atomicAdd(&ctr[0], 6u);
+  for (var d = 0u; d < 6u; d++) {
+    let q = base + d;
+    if (q >= U.flameCap) { break; }
+    let dv = vec3<f32>(dirv(d)) * U.flameSpeed;
+    parts[q] = Particle(vec4<f32>(p, 0.0), vec4<f32>(dv, temp), vec4<f32>(f32(d), 0.0, U.flameLife, 0.0));
+  }`)}
+
+/**
+ * Flame-front particles may fill at most flameCap slots (the CPU's
+ * flameShare of the buffer), so embers always find room: the count drops
+ * back to the last slot written (or to where it was, if none could be).
+ */
+@compute @workgroup_size(1)
+fn spawnFlameEnd() {
+  let limit = max(atomicLoad(&ctr[5]), U.flameCap);
+  if (atomicLoad(&ctr[0]) > limit) { atomicStore(&ctr[0], limit); }
+}
+
+${perCell("spawnEmbers", `
+  let loss = cf[ix(fLoss, c)];
+  if (!(loss > 0.0)) { return; }
+  if (fuelOf(ci[ix(iFuelKind, c)]).embers == 0.0) { return; }
+  var rs = seedOf(c, 1u);
+  let expected = U.emberRate * loss;
+  var count = u32(min(floor(expected), 64.0));
+  if (rnd(&rs) < expected - floor(expected)) { count += 1u; }
+  let g = vec3<f32>(coords(c));
+  let Ts = cf[ix(fTs, c)];
+  for (var e = 0u; e < count; e++) {
+    let x = vec3<f32>(g.x + rnd(&rs), g.y + 1.0 + rnd(&rs) * 0.5, g.z + rnd(&rs));
+    let v = velocityVel(x);
+    let m = U.emberMassLo + (U.emberMassHi - U.emberMassLo) * rnd(&rs);
+    let q = atomicAdd(&ctr[0], 1u);
+    if (q < U.cap) {
+      parts[q] = Particle(vec4<f32>(x, 1.0), vec4<f32>(v, max(Ts, 900.0)), vec4<f32>(m, 0.0, U.emberLife, 0.0));
+      atomicAdd(&ctr[2], 1u);
+    }
+  }`)}
+
+${perParticle("moveParticles", `
+  var P = parts[t];
+  if (P.p.w < 0.0) { return; }
+  let x = P.p.xyz;
+  let vg = velocityVel(x);
+  if (P.p.w == 1.0) {
+    // Embers relax toward the drag-scaled gas velocity, settle, cool and burn down.
+    let relax = 1.0 - exp(-U.dt / 0.5);
+    var v = P.v.xyz + (U.emberDrag * vg - P.v.xyz) * relax;
+    v.y -= 0.5 * U.dt;
+    let m = P.q.x;
+    let r = pow(3.0 * m / (4.0 * PI * 300.0), 1.0 / 3.0);
+    let A = 4.0 * PI * r * r;
+    let Tg = sampleGasT(x);
+    let Tp = P.v.w;
+    let Ta = U.ambient;
+    let lossE = (U.emberEmis * SIGMA * (Tp * Tp * Tp * Tp - Ta * Ta * Ta * Ta) + U.convection * (Tp - Tg)) * A * U.dt;
+    P.v = vec4<f32>(v, max(Tg, Tp - lossE / (m * U.emberHC)));
+    P.q.x = m * exp(-U.emberMassLoss * U.dt);
+  } else {
+    // Flame-front particles: the flame speed along their own direction plus the gas velocity.
+    P.v = vec4<f32>(vec3<f32>(dirv(u32(P.q.x))) * U.flameSpeed + vg, P.v.w);
+  }
+  let np = x + P.v.xyz * U.dt / U.h;
+  P.p = vec4<f32>(np, P.p.w);
+  P.q.y += U.dt;
+  let outside = np.x < 0.0 || np.y < 0.0 || np.z < 0.0 || np.x >= f32(U.nx) || np.y >= f32(U.ny) || np.z >= f32(U.nz);
+  if (outside || P.q.y > P.q.z) {
+    P.p.w = -1.0;
+  } else if (P.p.w == 0.0 && kindOf(at3(u32(np.x), u32(np.y), u32(np.z))) == SOLID) {
+    P.p.w = -1.0;
+  }
+  parts[t] = P;`)}
+
+/** Supplement Alg. 2: the hottest particle per cell; embers reaching a solid deposit their heat and go. */
+${perParticle("particleToGrid", `
+  let P = parts[t];
+  if (P.p.w < 0.0) { return; }
+  let cell = at3(u32(P.p.x), u32(P.p.y), u32(P.p.z));
+  atomicMax(&atom[ix(aFlame, cell)], bitcast<u32>(max(P.v.w, 0.0)));
+  if (P.p.w != 1.0 || kindOf(cell) == GAS) { return; }
+  let m = P.q.x;
+  let excess = m * U.emberHC * max(0.0, P.v.w - cf[ix(fTs, cell)]);
+  let own = m * fuelOf(0u).heat;
+  atomicAdd(&atom[ix(aEmber, cell)], u32(clamp((excess + own) * EMBER_SCALE, 0.0, 4.0e9)));
+  atomicMax(&atom[ix(aEmberMax, cell)], u32(clamp(excess * EMBER_SCALE, 0.0, 4.0e9)));
+  parts[t].p.w = -1.0;`)}
+
+${perCell("emberDeposit", `
+  let Eu = atomPlain[ix(aEmber, c)];
+  if (Eu == 0u) { return; }
+  let C = solidCap(c);
+  if (!(C > 0.0)) { return; }
+  var Ts = cf[ix(fTs, c)] + f32(Eu) / EMBER_SCALE / C;
+  // Sub-grid spot ignition (the CPU's emberPatch test) by the largest single
+  // ember's excess thermal energy m c (T_e - T_s).
+  let fu = fuelOf(ci[ix(iFuelKind, c)]);
+  let ign = fu.ign;
+  if (cf[ix(fFuel, c)] > 0.0 && Ts < ign) {
+    let patchC = U.skinDensity * U.emberPatch * fu.cp;
+    let Emax = f32(atomPlain[ix(aEmberMax, c)]) / EMBER_SCALE;
+    if (Ts + Emax / patchC >= ign) {
+      Ts = ign;
+      atomicAdd(&ctr[3], 1u);
+    }
+  }
+  cf[ix(fTs, c)] = Ts;`)}
+
+${perParticle("cullFlameFront", `
+  let P = parts[t];
+  if (P.p.w != 0.0) { return; }
+  let cell = at3(u32(P.p.x), u32(P.p.y), u32(P.p.z));
+  if (ci[ix(iBurning, cell)] == 0u) { parts[t].p.w = -1.0; }`)}
+
+${perParticle("compact", `
+  let P = parts[t];
+  if (P.p.w < 0.0) { return; }
+  let q = atomicAdd(&ctr[1], 1u);
+  partsB[q] = P;`)}
+
+@compute @workgroup_size(1)
+fn compactFinish() {
+  let n = atomicLoad(&ctr[1]);
+  atomicStore(&ctr[0], n);
+  atomicStore(&ctr[5], n);
+  atomicStore(&ctr[1], 0u);
+}
+
+// ------------------------------------------------------------------ radiation (supplement Alg. 1, Eqs. 16, 17)
+
+fn deposit(field: u32, c: u32, dT: f32) {
+  let v = i32(round(clamp(dT, -20000.0, 20000.0) * DEP_SCALE));
+  atomicAdd(&atom[ix(field, c)], bitcast<u32>(v));
+}
+
+/** March one ray cell by cell (Amanatides-Woo), depositing its energy (the CPU's march). */
+fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool) {
+  var q = p0;
+  let stepv = select(vec3<i32>(-1), vec3<i32>(1), dir > vec3<f32>(0.0));
+  var tDelta = vec3<f32>(1e30);
+  var tMax = vec3<f32>(1e30);
+  for (var a = 0u; a < 3u; a++) {
+    if (dir[a] != 0.0) {
+      tDelta[a] = abs(1.0 / dir[a]);
+      tMax[a] = 0.5 / abs(dir[a]);
+    }
+  }
+  var left = energy;
+  var t = 0.0;
+  for (var n = 0u; n < U.rayReach && left > 1e-9 * energy; n++) {
+    var a = 2u;
+    if (tMax.x < tMax.y) { if (tMax.x < tMax.z) { a = 0u; } } else if (tMax.y < tMax.z) { a = 1u; }
+    let seg = (tMax[a] - t) * U.h;
+    t = tMax[a];
+    let c = atI(q);
+    if (kindOf(c) == GAS && c != src) {
+      let tau = U.kappa * Y[c * NS + 4u] * seg;
+      if (tau > 0.0) {
+        let taken = left * omexp(tau);
+        deposit(aDepGas, c, taken / (cf[ix(fRho, c)] * mixtureCp(c) * U.V));
+        left -= taken;
+      }
+    }
+    tMax[a] += tDelta[a];
+    q[a] += stepv[a];
+    if (!inside(q)) { return; }
+    let next = atI(q);
+    if (kindOf(next) != GAS && !(skipOwn && next == src)) {
+      deposit(aDepSolid, next, left / max(solidCap(next), 1e-6));
+      return;
+    }
+  }
+  // Out of reach (or below the cut-off): the rest is absorbed in the cell the
+  // ray ended in, so no energy is lost (the CPU's march).
+  if (left > 0.0 && inside(q)) {
+    let c = atI(q);
+    if (kindOf(c) == GAS) { deposit(aDepGas, c, left / (cf[ix(fRho, c)] * mixtureCp(c) * U.V)); }
+    else { deposit(aDepSolid, c, left / max(solidCap(c), 1e-6)); }
+  }
+}
+
+fn radiateCell(c: u32) -> f32 {
+  let kc = kindOf(c);
+  let p = vec3<i32>(coords(c));
+  let Ta = U.ambient;
+  let Ta4 = Ta * Ta * Ta * Ta;
+  var emitted = 0.0;
+  var fromSolid = false;
+  var faces: array<u32, 6>;
+  var nf = 0u;
+  let Ts = cf[ix(fTs, c)];
+  let T = cf[ix(fT, c)];
+  if (kc != GAS && Ts > U.emitAbove) {
+    // Eq. 16 over the cell's faces open to gas.
+    for (var d = 0u; d < 6u; d++) {
+      let q = p + dirv(d);
+      if (!inside(q) || kindOf(atI(q)) == GAS) { faces[nf] = d; nf++; }
+    }
+    if (nf == 0u) { return 0.0; }
+    let A = U.h * U.h;
+    let surface = select(A * f32(nf), max(cf[ix(fArea, c)], A), kc == POROUS);
+    let C = solidCap(c);
+    emitted = cf[ix(fEps, c)] * SIGMA * (Ts * Ts * Ts * Ts - Ta4) * surface * U.dt;
+    emitted = min(emitted, 0.5 * C * (Ts - Ta));
+    if (!(emitted > 0.0)) { return 0.0; }
+    cf[ix(fTs, c)] = Ts - emitted / C;
+    fromSolid = true;
+  } else if (kc == GAS && T > U.emitAbove) {
+    // Eq. 17: 4 kappa Y_soot sigma (T^4 - T_amb^4) per unit volume.
+    let ys = Y[c * NS + 4u];
+    if (!(ys > 0.0)) { return 0.0; }
+    let Cg = cf[ix(fRho, c)] * mixtureCp(c) * U.V;
+    emitted = 4.0 * U.kappa * ys * SIGMA * (T * T * T * T - Ta4) * U.V * U.dt;
+    emitted = min(emitted, 0.5 * Cg * (T - Ta));
+    if (!(emitted > 0.0)) { return 0.0; }
+    cf[ix(fT, c)] = T - emitted / Cg;
+  } else {
+    return 0.0;
+  }
+  let share = emitted / f32(U.rays);
+  var rs = seedOf(c, 2u);
+  for (var r = 0u; r < U.rays; r++) {
+    // Uniform on the sphere; from a surface, plus the normal of one open face (Lambert).
+    let zc = 2.0 * rnd(&rs) - 1.0;
+    let phi = 2.0 * PI * rnd(&rs);
+    let s = sqrt(max(0.0, 1.0 - zc * zc));
+    var dir = vec3<f32>(s * cos(phi), zc, s * sin(phi));
+    if (fromSolid) {
+      let f = faces[min(u32(rnd(&rs) * f32(nf)), nf - 1u)];
+      dir += vec3<f32>(dirv(f));
+      let len = length(dir);
+      dir = dir / select(1.0, len, len > 0.0);
+    }
+    march(c, p, dir, share, fromSolid);
+  }
+  return emitted;
+}
+
+@compute @workgroup_size(64)
+fn radEmit(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>,
+           @builtin(local_invocation_index) li: u32, @builtin(workgroup_id) wid: vec3<u32>) {
+  let c = lin(gid, nwg);
+  var e = 0.0;
+  if (c < U.N) { e = radiateCell(c); }
+  wsum[li] = vec4<f32>(e, 0.0, 0.0, 0.0);
+  workgroupBarrier();
+  for (var s = 32u; s > 0u; s >>= 1u) {
+    if (li < s) { wsum[li] += wsum[li + s]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) { red[U.redRad + wid.x + wid.y * nwg.x] = wsum[0].x; }
+}
+
+${perCell("radApply", `
+  let g = bitcast<i32>(atomPlain[ix(aDepGas, c)]);
+  if (g != 0) { cf[ix(fT, c)] += f32(g) / DEP_SCALE; }
+  let s = bitcast<i32>(atomPlain[ix(aDepSolid, c)]);
+  if (s != 0) { cf[ix(fTs, c)] += f32(s) / DEP_SCALE; }`)}
+
+// ------------------------------------------------------------------ gas phase (Alg. 1 lines 20 to 23)
+
+/** Midpoint (RK2) back-trace in cell units through the velocity of the step's start. */
+fn backTrace(p: vec3<f32>) -> vec3<f32> {
+  let s = U.dt / U.h;
+  let v1 = velocitySnap(p);
+  let m = p - 0.5 * s * v1;
+  let v2 = velocitySnap(m);
+  return p - s * v2;
+}
+
+/** Semi-Lagrangian advection of u, v, w, T and Y; reads the snapshot, writes the live fields. */
+${perThread("advect", "U.nu + U.nv + U.nw + U.N", `
+  let nx = U.nx; let ny = U.ny;
+  if (t < U.nu) {
+    let i = t % (nx + 1u); let j = (t / (nx + 1u)) % ny; let k = t / ((nx + 1u) * ny);
+    let x = backTrace(vec3<f32>(f32(i), f32(j) + 0.5, f32(k) + 0.5));
+    vel[t] = faceSnap(0u, nx + 1u, ny, U.nz, x - vec3<f32>(0.0, 0.5, 0.5));
+    return;
+  }
+  if (t < U.nu + U.nv) {
+    let r = t - U.nu;
+    let i = r % nx; let j = (r / nx) % (ny + 1u); let k = r / (nx * (ny + 1u));
+    let x = backTrace(vec3<f32>(f32(i) + 0.5, f32(j), f32(k) + 0.5));
+    vel[t] = faceSnap(U.nu, nx, ny + 1u, U.nz, x - vec3<f32>(0.5, 0.0, 0.5));
+    return;
+  }
+  if (t < U.nu + U.nv + U.nw) {
+    let r = t - U.nu - U.nv;
+    let i = r % nx; let j = (r / nx) % ny; let k = r / (nx * ny);
+    let x = backTrace(vec3<f32>(f32(i) + 0.5, f32(j) + 0.5, f32(k)));
+    vel[t] = faceSnap(U.nu + U.nv, nx, ny, U.nz + 1u, x - vec3<f32>(0.5, 0.5, 0.0));
+    return;
+  }
+  // Temperature and the six species share one back-trace and one set of
+  // eight trilinear weights per cell (the CPU's advect). Corners inside
+  // solids hold no gas: they get no weight and the rest are renormalised; a
+  // cell whose back-trace lands among solids only keeps its own state.
+  let c = t - U.nu - U.nv - U.nw;
+  if (kindOf(c) == SOLID) { return; }
+  let x = backTrace(vec3<f32>(coords(c)) + 0.5);
+  let r = triOf(x);
+  let fx = r.f.x; let fy = r.f.y; let fz = r.f.z;
+  var w = array<f32, 8>(
+    (1.0 - fx) * (1.0 - fy) * (1.0 - fz), fx * (1.0 - fy) * (1.0 - fz),
+    (1.0 - fx) * fy * (1.0 - fz), fx * fy * (1.0 - fz),
+    (1.0 - fx) * (1.0 - fy) * fz, fx * (1.0 - fy) * fz,
+    (1.0 - fx) * fy * fz, fx * fy * fz);
+  var n = array<u32, 8>(r.b, r.b + r.di, r.b + r.dj, r.b + r.dj + r.di, r.b + r.dk, r.b + r.dk + r.di, r.b + r.dk + r.dj, r.b + r.dk + r.dj + r.di);
+  var total = 0.0;
+  for (var q = 0u; q < 8u; q++) {
+    if (kindOf(n[q]) == SOLID) { w[q] = 0.0; }
+    total += w[q];
+  }
+  if (!(total > 1e-9)) { return; }
+  let sT = U.nu + U.nv + U.nw;
+  let sY = sT + U.N;
+  var T = 0.0;
+  for (var q = 0u; q < 8u; q++) { T += w[q] * snap[sT + n[q]]; }
+  cf[ix(fT, c)] = T / total;
+  for (var s = 0u; s < NS; s++) {
+    var y = 0.0;
+    for (var q = 0u; q < 8u; q++) { y += w[q] * snap[sY + n[q] * NS + s]; }
+    Y[c * NS + s] = y / total;
+  }`)}
+
+${perCell("density", `
+  if (kindOf(c) == SOLID) { return; }
+  cf[ix(fRho, c)] = gasDensity(cf[ix(fT, c)], c);`)}
+
+/** Buoyancy, Eq. 6's (1 - rho_0 / rho) g on the vertical faces. */
+${perThread("buoyancy", "U.nv", `
+  let i = t % U.nx; let j = (t / U.nx) % (U.ny + 1u); let k = t / (U.nx * (U.ny + 1u));
+  if (j < 1u || j >= U.ny) { return; }
+  let a = at3(i, j - 1u, k);
+  let b = at3(i, j, k);
+  if (kindOf(a) == SOLID || kindOf(b) == SOLID) { return; }
+  let r = 0.5 * (cf[ix(fRho, a)] + cf[ix(fRho, b)]);
+  vel[U.nu + t] += U.dt * U.gravity * (U.rho0 / r - 1.0);`)}
+
+fn cu(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[uAt(i, j, k)] + vel[uAt(i + 1u, j, k)]); }
+fn cv(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[vAt(i, j, k)] + vel[vAt(i, j + 1u, k)]); }
+fn cw(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[wAt(i, j, k)] + vel[wAt(i, j, k + 1u)]); }
+
+/** Vorticity confinement, 1: the curl of the cell-centred velocity. */
+${perCell("vortCurl", `
+  let p = coords(c);
+  var wx = 0.0; var wy = 0.0; var wz = 0.0;
+  let interior = p.x >= 1u && p.y >= 1u && p.z >= 1u && p.x + 1u < U.nx && p.y + 1u < U.ny && p.z + 1u < U.nz;
+  if (interior && kindOf(c) != SOLID) {
+    let i = p.x; let j = p.y; let k = p.z;
+    let h2 = 2.0 * U.h;
+    wx = (cw(i, j + 1u, k) - cw(i, j - 1u, k) - cv(i, j, k + 1u) + cv(i, j, k - 1u)) / h2;
+    wy = (cu(i, j, k + 1u) - cu(i, j, k - 1u) - cw(i + 1u, j, k) + cw(i - 1u, j, k)) / h2;
+    wz = (cv(i + 1u, j, k) - cv(i - 1u, j, k) - cu(i, j + 1u, k) + cu(i, j - 1u, k)) / h2;
+  }
+  cf[ix(fWx, c)] = wx; cf[ix(fWy, c)] = wy; cf[ix(fWz, c)] = wz;
+  cf[ix(fMag, c)] = sqrt(wx * wx + wy * wy + wz * wz);`)}
+
+/** Vorticity confinement, 2: the confinement force per cell. */
+${perCell("vortForce", `
+  let p = coords(c);
+  var f = vec3<f32>(0.0);
+  let inner = p.x >= 2u && p.y >= 2u && p.z >= 2u && p.x + 2u < U.nx && p.y + 2u < U.ny && p.z + 2u < U.nz;
+  let mag = cf[ix(fMag, c)];
+  if (inner && kindOf(c) != SOLID && mag > 0.0) {
+    let sx = 1u; let sy = U.nx; let sz = U.nx * U.ny;
+    let h2 = 2.0 * U.h;
+    var Nv = vec3<f32>(
+      (cf[ix(fMag, c + sx)] - cf[ix(fMag, c - sx)]) / h2,
+      (cf[ix(fMag, c + sy)] - cf[ix(fMag, c - sy)]) / h2,
+      (cf[ix(fMag, c + sz)] - cf[ix(fMag, c - sz)]) / h2);
+    let len = sqrt(Nv.x * Nv.x + Nv.y * Nv.y + Nv.z * Nv.z);
+    if (len > 1e-9) {
+      Nv = Nv / len;
+      let s = U.vorticity * U.h * U.dt;
+      let wx = cf[ix(fWx, c)]; let wy = cf[ix(fWy, c)]; let wz = cf[ix(fWz, c)];
+      f = vec3<f32>(s * (Nv.y * wz - Nv.z * wy), s * (Nv.z * wx - Nv.x * wz), s * (Nv.x * wy - Nv.y * wx));
+    }
+  }
+  cf[ix(fFx, c)] = f.x; cf[ix(fFy, c)] = f.y; cf[ix(fFz, c)] = f.z;`)}
+
+/** Vorticity confinement, 3: each face gathers half the force of each of its two cells. */
+${perThread("vortApply", "U.nu + U.nv + U.nw", `
+  let nx = U.nx; let ny = U.ny; let nz = U.nz;
+  if (t < U.nu) {
+    let i = t % (nx + 1u); let j = (t / (nx + 1u)) % ny; let k = t / ((nx + 1u) * ny);
+    var u = vel[t];
+    if (i >= 1u) { u += 0.5 * cf[ix(fFx, at3(i - 1u, j, k))]; }
+    if (i < nx) { u += 0.5 * cf[ix(fFx, at3(i, j, k))]; }
+    vel[t] = u;
+  } else if (t < U.nu + U.nv) {
+    let r = t - U.nu;
+    let i = r % nx; let j = (r / nx) % (ny + 1u); let k = r / (nx * (ny + 1u));
+    var v = vel[t];
+    if (j >= 1u) { v += 0.5 * cf[ix(fFy, at3(i, j - 1u, k))]; }
+    if (j < ny) { v += 0.5 * cf[ix(fFy, at3(i, j, k))]; }
+    vel[t] = v;
+  } else {
+    let r = t - U.nu - U.nv;
+    let i = r % nx; let j = (r / nx) % ny; let k = r / (nx * ny);
+    var w = vel[t];
+    if (k >= 1u) { w += 0.5 * cf[ix(fFz, at3(i, j, k - 1u))]; }
+    if (k < nz) { w += 0.5 * cf[ix(fFz, at3(i, j, k))]; }
+    vel[t] = w;
+  }`)}
+
+/** rho D of an open cell at its snapshot temperature (Eq. 11's diffusivity, scaled by (T/T0)^1.75). */
+fn rhoD(c: u32, sT: u32) -> f32 {
+  return cf[ix(fRho, c)] * U.diffusivity * pow(snap[sT + c] / U.ambient, 1.75);
+}
+
+/**
+ * Explicit diffusion of species (Eq. 11) and heat between open cells, from
+ * the snapshot (Jacobi, as the CPU). A face's rho D is the mean of its two
+ * cells', so the species flux is the same seen from both sides.
+ */
+${perCell("diffuse", `
+  let mask = ci[ix(iMask, c)];
+  if (mask == 0u) { return; }
+  let nuvw = U.nu + U.nv + U.nw;
+  let sT = nuvw;
+  let sY = nuvw + U.N;
+  let Tc = snap[sT + c];
+  let rho = cf[ix(fRho, c)];
+  let rDc = rhoD(c, sT);
+  let alpha = U.conductivity / (rho * mixtureCpSnap(c, sY));
+  let h2 = U.h * U.h;
+  let lamT = min(alpha * U.dt / h2, 1.0 / 7.0);
+  var y: array<f32, 6>;
+  for (var s = 0u; s < NS; s++) { y[s] = snap[sY + c * NS + s]; }
+  var T = Tc;
+  for (var d = 0u; d < 6u; d++) {
+    if ((mask & (1u << d)) == 0u) { continue; }
+    let n = u32(i32(c) + noff(d));
+    let lamD = min((0.5 * (rDc + rhoD(n, sT)) * U.dt) / (rho * h2), 1.0 / 7.0);
+    for (var s = 0u; s < NS; s++) { y[s] += lamD * (snap[sY + n * NS + s] - snap[sY + c * NS + s]); }
+    T += lamT * (snap[sT + n] - Tc);
+  }
+  for (var s = 0u; s < NS; s++) { Y[c * NS + s] = y[s]; }
+  cf[ix(fT, c)] = T;`)}
+
+// ------------------------------------------------------------------ chemistry (Alg. 1 lines 24 to 27)
+
+/**
+ * Evaporation, oxidation (Eq. 15), oxygen-limited pyrolysis (Eq. 14) and gas
+ * combustion (Eqs. 9, 10, 12) of one cell, as the CPU's chemistry. A porous
+ * cell trades species with its own gas; solid cells hold no fuel (the runner
+ * checks this). Returns (heat released, fuel burnt).
+ */
+fn chemCell(c: u32) -> vec2<f32> {
+  var released = 0.0;
+  var burnt = 0.0;
+  let kc = kindOf(c);
+  ci[ix(iBurning, c)] = 0u;
+  cf[ix(fLoss, c)] = 0.0;
+  let dt = U.dt;
+  if (kc == POROUS && cf[ix(fFuel, c)] > 0.0) {
+    let fk = ci[ix(iFuelKind, c)];
+    let st = fuelOf(fk);
+    var inertC = cf[ix(fInertC, c)];
+    let area = cf[ix(fArea, c)];
+    var fuel = cf[ix(fFuel, c)];
+    var moist = cf[ix(fMoist, c)];
+    var Ts = cf[ix(fTs, c)];
+    let C = capOf(inertC, fuel, area, moist, st.cp);
+    let gasMass = cf[ix(fRho, c)] * U.V;
+    let o2 = Y[c * NS + 1u] * gasMass;
+    // Evaporation: water leaves with the heat above 100 C.
+    if (moist > 0.0 && Ts > 373.15) {
+      let dw = min(moist, (C * (Ts - 373.15)) / U.latent);
+      moist -= dw;
+      Ts -= (dw * U.latent) / C;
+      addGas(c, 3u, dw);
+    }
+    if (st.liquid != 0.0) {
+      // A liquid first item (fire classes B and K) evaporates instead: the
+      // heat above its boiling point turns its surface into fuel vapour.
+      if (Ts > st.boiling) {
+        let dv = min(skinOf(fuel, area), (C * (Ts - st.boiling)) / st.latent);
+        if (dv > 0.0) {
+          fuel -= dv;
+          Ts -= (dv * st.latent) / C;
+          addGas(c, 0u, dv);
+          ci[ix(iVapour, c)] = fk;
+          cf[ix(fLoss, c)] = dv;
+          if (fuel <= 1e-7) {
+            fuel = 0.0;
+            if (inertC == 0.0) { ci[ix(iKind, c)] = GAS; }
+          }
+        }
+      }
+    } else {
+    // Oxidation, Eq. 15, then pyrolysis, Eq. 14, suppressed as oxygen becomes available.
+    let skin = skinOf(fuel, area);
+    let yO = Y[c * NS + 1u];
+    let ko = arrhenius(U.oxA, U.oxE, Ts) * (yO / Y_O2_AIR);
+    var dOx = skin * omexp(max(0.0, ko) * dt);
+    dOx = min(dOx, o2 / st.o2);
+    let starved = 1.0 - min(1.0, yO / Y_O2_AIR);
+    let kp = arrhenius(U.pyA, U.pyE, Ts) * (0.25 + 0.75 * starved);
+    let dPy = max(0.0, skin - dOx) * omexp(max(0.0, kp) * dt);
+    if (dOx > 0.0) {
+      fuel -= dOx;
+      // A metal's oxide stays as ash (MgO, about 900 J/(kg K)).
+      if (st.ash > 0.0) {
+        inertC += st.ash * dOx * 900.0;
+        cf[ix(fInertC, c)] = inertC;
+      }
+      let heat = dOx * st.heat;
+      Ts += heat / max(capOf(inertC, fuel, area, moist, st.cp), 1e-6);
+      addProducts(c, st, dOx, false);
+      released += heat;
+      burnt += dOx;
+      // flamescapes.js's burning floor (DEFAULTS.burningFlux).
+      if (heat >= U.burnFlux * area * dt) { ci[ix(iBurning, c)] = 1u; }
+    }
+    if (dPy > 0.0) {
+      fuel -= dPy;
+      Ts -= (dPy * U.pyHeat) / max(capOf(inertC, fuel, area, moist, st.cp), 1e-6);
+      addGas(c, 0u, dPy * U.pyFuel);
+      addGas(c, 4u, dPy * (1.0 - U.pyFuel));
+      ci[ix(iVapour, c)] = fk;
+    }
+    cf[ix(fLoss, c)] = dOx + dPy;
+    // Fresh fuel from the bulk replaces what reacted, at ambient temperature and with its water.
+    let fresh = min(dOx + dPy, max(0.0, fuel - (skin - dOx - dPy)));
+    if (fresh > 0.0) {
+      let water = fresh * U.moistFrac;
+      let Cfresh = fresh * st.cp + water * 4186.0;
+      moist += water;
+      let Cnow = capOf(inertC, fuel, area, moist, st.cp);
+      Ts = (Ts * max(0.0, Cnow - Cfresh) + U.ambient * Cfresh) / max(Cnow, 1e-9);
+    }
+    if (fuel <= 1e-7) {
+      fuel = 0.0;
+      if (inertC == 0.0) { ci[ix(iKind, c)] = GAS; }
+    }
+    }
+    cf[ix(fFuel, c)] = fuel;
+    cf[ix(fMoist, c)] = moist;
+    cf[ix(fTs, c)] = Ts;
+  }
+  if (kc != SOLID) {
+    let yF = Y[c * NS];
+    let yO = Y[c * NS + 1u];
+    if (yF > 1e-7 && yO > 1e-6) {
+      let rho = cf[ix(fRho, c)];
+      let mass = rho * U.V;
+      let st = fuelOf(ci[ix(iVapour, c)]);
+      // Flame-front particles and embers supersede the cell's temperature when hotter.
+      let Teff = max(cf[ix(fT, c)], bitcast<f32>(atomPlain[ix(aFlame, c)]));
+      let cF = (rho * yF) / 0.03;
+      let cO = (rho * yO) / 0.032;
+      let omega = arrhenius(U.gasA, U.gasE, Teff) * pow(cF, U.gasFuelExp - 1.0) * pow(cO, U.gasOxExp);
+      var dF = yF * mass * omexp(max(0.0, omega) * dt);
+      dF = min(dF, (yO * mass) / st.o2);
+      if (dF > 1e-12) {
+        addProducts(c, st, dF, true);
+        let heat = dF * st.heat;
+        cf[ix(fT, c)] += heat / (mass * mixtureCp(c));
+        released += heat;
+        burnt += dF;
+        ci[ix(iBurning, c)] = 1u;
+      }
+    }
+  }
+  return vec2<f32>(released, burnt);
+}
+
+@compute @workgroup_size(64)
+fn chemistry(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>,
+             @builtin(local_invocation_index) li: u32, @builtin(workgroup_id) wid: vec3<u32>) {
+  let c = lin(gid, nwg);
+  var r = vec2<f32>(0.0);
+  if (c < U.N) { r = chemCell(c); }
+  wsum[li] = vec4<f32>(r, 0.0, 0.0);
+  workgroupBarrier();
+  for (var s = 32u; s > 0u; s >>= 1u) {
+    if (li < s) { wsum[li] += wsum[li + s]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) {
+    let w = wid.x + wid.y * nwg.x;
+    red[2u * w] = wsum[0].x;
+    red[2u * w + 1u] = wsum[0].y;
+  }
+}
+
+/** Sum the per-workgroup partials into this step's slot: released, burnt, radiated. */
+@compute @workgroup_size(64)
+fn reduceFinish(@builtin(local_invocation_index) li: u32) {
+  var s = vec4<f32>(0.0);
+  for (var w = li; w < U.nPart; w += 64u) {
+    s += vec4<f32>(red[2u * w], red[2u * w + 1u], red[U.redRad + w], 0.0);
+  }
+  wsum[li] = s;
+  workgroupBarrier();
+  for (var k = 32u; k > 0u; k >>= 1u) {
+    if (li < k) { wsum[li] += wsum[li + k]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) {
+    let o = U.redSteps + 4u * U.slot;
+    red[o] += wsum[0].x;
+    red[o + 1u] += wsum[0].y;
+    red[o + 2u] += wsum[0].z;
+    red[o + 3u] += 1.0;
+  }
+}
+
+// ------------------------------------------------------------------ heat transfer (Alg. 1 line 30)
+
+${perCell("conductPorous", `
+  if (kindOf(c) != POROUS) { return; }
+  let Cs = solidCap(c);
+  if (!(Cs > 0.0)) { return; }
+  let Cg = gasCap(c);
+  let A = U.h * U.h;
+  let q = exchange(cf[ix(fTs, c)], cf[ix(fT, c)], Cs, Cg, U.convection * max(cf[ix(fArea, c)], A), U.dt);
+  cf[ix(fTs, c)] -= q / Cs;
+  cf[ix(fT, c)] += q / Cg;`)}
+
+/** The solid-gas interface (Eq. 19) between solid s and gas g. */
+fn conductGas(s: u32, g: u32, Cs: f32) {
+  let Cg = gasCap(g);
+  let q = exchange(cf[ix(fTs, s)], cf[ix(fT, g)], Cs, Cg, U.convection * U.h * U.h, U.dt);
+  cf[ix(fTs, s)] -= q / Cs;
+  cf[ix(fT, g)] += q / Cg;
+}
+
+/** Solid c's +axis face to n: solid-solid conduction (Eq. 18) or the interface with gas (Eq. 19). */
+fn conductForward(c: u32, n: u32) {
+  if (kindOf(c) == GAS) { return; }
+  let Cs = solidCap(c);
+  if (!(Cs > 0.0)) { return; }
+  if (kindOf(n) == GAS) {
+    conductGas(c, n, Cs);
+    return;
+  }
+  let Cn = solidCap(n);
+  // A porous cell whose contents mass was drawn as zero holds no heat; the
+  // CPU's q / Cn makes its Ts 0 / 0 = NaN there (it stays in that cell).
+  if (!(Cn > 0.0)) { return; }
+  let kk = 0.5 * (max(cf[ix(fInertK, c)], 0.1) + max(cf[ix(fInertK, n)], 0.1));
+  let q = exchange(cf[ix(fTs, c)], cf[ix(fTs, n)], Cs, Cn, (kk * U.h * U.h) / U.h, U.dt);
+  cf[ix(fTs, c)] -= q / Cs;
+  cf[ix(fTs, n)] += q / Cn;
+}
+
+/** Solid c's -axis face to n, when n is gas (a solid there met c across its own +axis face). */
+fn conductBackward(c: u32, n: u32) {
+  if (kindOf(c) == GAS || kindOf(n) != GAS) { return; }
+  let Cs = solidCap(c);
+  if (!(Cs > 0.0)) { return; }
+  conductGas(c, n, Cs);
+}
+${conductPass(0, 0)}
+${conductPass(0, 1)}
+${conductPass(1, 0)}
+${conductPass(1, 1)}
+${conductPass(2, 0)}
+${conductPass(2, 1)}
+${conductBack(0)}
+${conductBack(1)}
+${conductBack(2)}
+
+/** The equation of state (line 31) and the open sides of the domain (line 32). */
+${perCell("densityBoundaries", `
+  if (kindOf(c) == SOLID) { return; }
+  let p = coords(c);
+  if (p.x == 0u || p.z == 0u || p.x == U.nx - 1u || p.z == U.nz - 1u || p.y == U.ny - 1u) {
+    cf[ix(fT, c)] = U.ambient;
+    for (var q = 0u; q < NS; q++) { Y[c * NS + q] = 0.0; }
+    Y[c * NS + 1u] = Y_O2_AIR;
+    cf[ix(fRho, c)] = U.rho0;
+  } else {
+    cf[ix(fRho, c)] = gasDensity(cf[ix(fT, c)], c);
+  }`)}
+
+// ------------------------------------------------------------------ pressure projection (line 33)
+
+/** Open neighbours (bit d for DIRS[d]) and pressure links per open cell; the ground is closed. */
+${perCell("topology", `
+  if (kindOf(c) == SOLID) { ci[ix(iMask, c)] = 0u; ci[ix(iCount, c)] = 0u; return; }
+  let p = vec3<i32>(coords(c));
+  var m = 0u;
+  var n = 0u;
+  for (var d = 0u; d < 6u; d++) {
+    let q = p + dirv(d);
+    if (q.y < 0) { continue; }
+    if (!inside(q)) { n++; continue; }
+    if (kindOf(atI(q)) == SOLID) { continue; }
+    m |= 1u << d;
+    n++;
+  }
+  ci[ix(iMask, c)] = m;
+  ci[ix(iCount, c)] = max(1u, n);`)}
+
+/** Zero the faces of solid cells (and the ground). */
+${perThread("projectZero", "U.nu + U.nv + U.nw", `
+  let nx = U.nx; let ny = U.ny;
+  if (t < U.nu) {
+    let q = vec3<i32>(vec3<u32>(t % (nx + 1u), (t / (nx + 1u)) % ny, t / ((nx + 1u) * ny)));
+    if (solidAt(q - vec3<i32>(1, 0, 0)) || solidAt(q)) { vel[t] = 0.0; }
+  } else if (t < U.nu + U.nv) {
+    let r = t - U.nu;
+    let q = vec3<i32>(vec3<u32>(r % nx, (r / nx) % (ny + 1u), r / (nx * (ny + 1u))));
+    if (solidAt(q - vec3<i32>(0, 1, 0)) || solidAt(q) || q.y == 0) { vel[t] = 0.0; }
+  } else {
+    let r = t - U.nu - U.nv;
+    let q = vec3<i32>(vec3<u32>(r % nx, (r / nx) % ny, r / (nx * ny)));
+    if (solidAt(q - vec3<i32>(0, 0, 1)) || solidAt(q)) { vel[t] = 0.0; }
+  }`)}
+
+${perCell("divergence", `
+  if (kindOf(c) == SOLID) { cf[ix(fDiv, c)] = 0.0; return; }
+  let p = coords(c);
+  let i = p.x; let j = p.y; let k = p.z;
+  cf[ix(fDiv, c)] = (vel[uAt(i + 1u, j, k)] - vel[uAt(i, j, k)] + vel[vAt(i, j + 1u, k)] - vel[vAt(i, j, k)] + vel[wAt(i, j, k + 1u)] - vel[wAt(i, j, k)]) / U.h;`)}
+
+/** One cell of a sweep: half-index t of the given colour; returns |new p - old p|. */
+fn gsCell(t: u32, colour: u32) -> f32 {
+  let hx = (U.nx + 1u) / 2u;
+  if (t >= hx * U.ny * U.nz) { return 0.0; }
+  let j = (t / hx) % U.ny;
+  let k = t / (hx * U.ny);
+  let i = 2u * (t % hx) + ((colour + j + k) & 1u);
+  if (i >= U.nx) { return 0.0; }
+  let c = i + U.nx * (j + U.ny * k);
+  if (ci[ix(iKind, c)] == SOLID) { return 0.0; }
+  let mask = ci[ix(iMask, c)];
+  var sum = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    if ((mask & (1u << d)) != 0u) { sum += cf[ix(fP, u32(i32(c) + noff(d)))]; }
+  }
+  let scale = U.rho0 * U.h * U.h / U.dt;
+  let next = (sum - scale * cf[ix(fDiv, c)]) / f32(ci[ix(iCount, c)]);
+  let change = abs(next - cf[ix(fP, c)]);
+  cf[ix(fP, c)] = next;
+  return change;
+}
+/**
+ * The CPU's stopping rule: at least four sweeps, then stop once a sweep's
+ * largest pressure change would move the flow by less than
+ * projectionTolerance. Every thread of sweep s decides alike from sweep s - 1;
+ * a skipped sweep leaves its slot at zero, so the sweeps after it skip too.
+ */
+fn gsSkip() -> bool {
+  let s = SW.s;
+  if (s < 4u) { return false; }
+  return bitcast<f32>(atomicLoad(&atom[U.gsAt + s - 1u])) < U.settle;
+}
+${gsPass("gsRed", 0)}
+${gsPass("gsBlack", 1)}
+
+fn pressureAt(q: vec3<i32>) -> f32 {
+  if (!inside(q)) { return 0.0; }
+  return cf[ix(fP, atI(q))];
+}
+fn porousFactor(a: vec3<i32>, b: vec3<i32>) -> f32 {
+  var f = 1.0;
+  if (U.porousVel < 1.0) {
+    if (porousAt(a)) { f *= U.porousVel; }
+    if (porousAt(b)) { f *= U.porousVel; }
+  }
+  return f;
+}
+
+/** Subtract the pressure gradient; porous cells slow the flow through their faces. */
+${perThread("projectUpdate", "U.nu + U.nv + U.nw", `
+  let nx = U.nx; let ny = U.ny;
+  let k2 = U.dt / (U.rho0 * U.h);
+  var q: vec3<i32>;
+  var e: vec3<i32>;
+  if (t < U.nu) {
+    q = vec3<i32>(vec3<u32>(t % (nx + 1u), (t / (nx + 1u)) % ny, t / ((nx + 1u) * ny)));
+    e = vec3<i32>(1, 0, 0);
+  } else if (t < U.nu + U.nv) {
+    let r = t - U.nu;
+    q = vec3<i32>(vec3<u32>(r % nx, (r / nx) % (ny + 1u), r / (nx * (ny + 1u))));
+    e = vec3<i32>(0, 1, 0);
+    if (q.y == 0) { vel[t] *= porousFactor(q - e, q); return; }
+  } else {
+    let r = t - U.nu - U.nv;
+    q = vec3<i32>(vec3<u32>(r % nx, (r / nx) % ny, r / (nx * ny)));
+    e = vec3<i32>(0, 0, 1);
+  }
+  var x = vel[t];
+  if (!(solidAt(q - e) || solidAt(q))) { x -= k2 * (pressureAt(q) - pressureAt(q - e)); }
+  vel[t] = x * porousFactor(q - e, q);`)}
+
+// ------------------------------------------------------------------ readings
+
+/** Gas temperature (C), visibility (m) and CO (ppm) at the nodes' head cells (the CPU's readNodes). */
+${perThread("gather", "U.nNodes", `
+  let c = io[U.ioNodes + t];
+  var T = U.ambient - KELVIN;
+  var vis = 100.0;
+  var co = 0.0;
+  if (c != NO_CELL) {
+    T = cf[ix(fT, c)] - KELVIN;
+    let K = 8700.0 * cf[ix(fRho, c)] * Y[c * NS + 4u];
+    vis = select(100.0, 3.0 / K, K > 3.0 / 100.0);
+    var moles = 0.0;
+    var rest = 1.0;
+    for (var q = 0u; q < NS; q++) {
+      moles += Y[c * NS + q] / molar(q);
+      rest -= Y[c * NS + q];
+    }
+    moles += max(0.0, rest) / 0.028;
+    if (moles > 0.0) { co = ((Y[c * NS + 5u] / 0.028) / moles) * 1e6; }
+  }
+  io[U.ioOut + t] = bitcast<u32>(T);
+  io[U.ioOut + U.nNodes + t] = bitcast<u32>(vis);
+  io[U.ioOut + 2u * U.nNodes + t] = bitcast<u32>(co);`)}
+
+@compute @workgroup_size(64)
+fn peakTemperature(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>,
+                   @builtin(local_invocation_index) li: u32) {
+  let c = lin(gid, nwg);
+  var v = 0u;
+  if (c < U.N) {
+    if (kindOf(c) != SOLID) { v = bitcast<u32>(max(cf[ix(fT, c)], 0.0)); }
+  }
+  wmax[li] = v;
+  workgroupBarrier();
+  for (var s = 32u; s > 0u; s >>= 1u) {
+    if (li < s) { wmax[li] = max(wmax[li], wmax[li + s]); }
+    workgroupBarrier();
+  }
+  if (li == 0u) { atomicMax(&ctr[4], wmax[0]); }
+}
+
+/** Up to snapMax particles, evenly strided (the CPU's particleSnapshot), in grid units. */
+${perParticle("snapshot", `
+  let count = min(n, U.snapMax);
+  if (t == 0u) { io[U.ioSnap] = count; }
+  if (t >= count) { return; }
+  let stride = select(1.0, f32(n) / f32(U.snapMax), n > U.snapMax);
+  let P = parts[min(u32(floor(f32(t) * stride)), n - 1u)];
+  let o = U.ioSnap + 1u + t * 5u;
+  io[o] = bitcast<u32>(P.p.x);
+  io[o + 1u] = bitcast<u32>(P.p.y);
+  io[o + 2u] = bitcast<u32>(P.p.z);
+  io[o + 3u] = bitcast<u32>(P.v.w);
+  io[o + 4u] = bitcast<u32>(P.p.w);`)}
+`;
+}
