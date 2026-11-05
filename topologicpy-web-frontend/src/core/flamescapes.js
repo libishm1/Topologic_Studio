@@ -392,9 +392,13 @@ export function velocityAt(sim, x, y, z, out = [0, 0, 0], field = sim) {
 
 // ------------------------------------------------------------- particles
 
+/** Flame-front particles may fill at most this share of the buffer, so embers always find room. */
+const FLAME_SHARE = 0.75;
+
 function spawn(sim, kind, x, y, z, vx, vy, vz, T, m, life) {
   const pr = sim.parts;
   if (pr.n >= sim.P.maxParticles) return false;
+  if (kind === 0 && pr.n >= FLAME_SHARE * sim.P.maxParticles) return false;
   const q = pr.n;
   pr.kind[q] = kind;
   pr.x[q * 3] = x;

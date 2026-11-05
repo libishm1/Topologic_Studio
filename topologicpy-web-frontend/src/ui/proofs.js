@@ -287,4 +287,32 @@ export const PROOFS = [
     files: ["Cores"],
     status: "Proved",
   },
+  {
+    property: "The Flamescapes port's reactions and heat exchange are exact over a step",
+    meaning:
+      "On a coarse grid the browser cannot take the paper's millisecond steps, so each reaction is integrated exactly over a step: the fuel left is the exact solution of first-order decay, never negative and never more than before, and the paper's explicit update is its first-order expansion. Each solid-gas exchange is the exact relaxation of two bodies: energy is conserved and neither temperature passes the other.",
+    tex: [
+      String.raw`m' = m\,e^{-k\Delta t}, \quad 0 \le m' \le m`,
+      String.raw`\bigl| m(1 - k\Delta t) - m' \bigr|`,
+      String.raw`\quad \le \tfrac{1}{2} m (k\Delta t)^{2}`,
+      String.raw`q = (T_a - T_b)\,\mu \bigl(1 - e^{-G\Delta t/\mu}\bigr)`,
+      String.raw`\mu = \frac{C_a C_b}{C_a + C_b}`,
+      String.raw`C_a T_a' + C_b T_b' = C_a T_a + C_b T_b`,
+    ],
+    files: ["FlamescapesPort"],
+    status: "Proved",
+  },
+  {
+    property: "Fire-X's heat release is a fixed heat per kilogram of oxygen",
+    meaning:
+      "Fire-X derives the heat of combustion of a fuel with c carbon, h hydrogen and o oxygen atoms per molecule from the oxygen it consumes: 417 kJ for each mole of O2, whatever the fuel. That is 13.03 MJ per kilogram of oxygen, within 0.53% of Huggett's oxygen-consumption constant, so Studio's solver releases heat in proportion to the oxygen each fuel burns (metals, class D, excepted).",
+    tex: [
+      String.raw`\Delta_c H = -417\,\bigl(c + \tfrac{h}{4} - \tfrac{o}{2}\bigr)`,
+      String.raw`\frac{417\ \mathrm{kJ/mol}}{0.032\ \mathrm{kg/mol}}`,
+      String.raw`\quad = 13.03\ \mathrm{MJ/kg}`,
+      String.raw`\Bigl|1 - \frac{13.03}{13.1}\Bigr| < 0.0053`,
+    ],
+    files: ["FireX", "FlamescapesPort"],
+    status: "Proved",
+  },
 ];
