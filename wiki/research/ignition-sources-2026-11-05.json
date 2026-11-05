@@ -1,0 +1,3705 @@
+{
+  "title": "Ignition scenarios, design fires and fire classes for Topologic Studio Next",
+  "date": "2026-11-05",
+  "review": "wiki/research/ignition-sources-2026-11-05.md",
+  "schemaVersion": 1,
+  "conventions": {
+    "shares": "Fractions (0.49 = 49 %). 'share' is the share of fires, 'shareDeaths' the share of civilian deaths, both in the population named in 'of'. Values marked derived in 'note' are products of two published shares (scenario share = cause share x conditional share) or quotients computed here.",
+    "growth": "Keys match zone.js GROWTH: slow, medium, fast, ultra-fast. alpha_kW_per_s2 is the class value (FD-02 in fire-equations-verified-2026-10-27.json); zone.js uses 0.188 for ultra-fast, 1055/75^2 = 0.1876.",
+    "measuredAlpha": "Where a test reports a peak HRR Q_p (kW) and a time to peak t_p (s), the effective coefficient Q_p / t_p^2 is given as derivedAlpha and mapped to the nearest class on a log scale (class boundaries at the geometric means 0.00586, 0.0234 and 0.0938 kW s^-2). t_p includes any incubation after the test ignition, so derivedAlpha is a lower bound on the growth after sustained flaming.",
+    "peak": "peak_kW is the Q_user that Studio's two-zone model takes; zone.js caps it at the ventilation limit 1500 A_o sqrt(H_o). peak_kW_per_m2, where given instead, is multiplied by the fire room's floor area (rooms.js floorArea).",
+    "basis": "item = the first item alone; item+adjacent = the first item plus the furniture item it ignites (composite, a judgement); room = a measured room-scale test; occupancy = a standard's occupancy design fire.",
+    "evidence": "Strongest evidence behind the scenario: peer-reviewed, standard, official statistics, industry statistics (NFPA), measurement (laboratory report or database). evidenceDetail says which field rests on what.",
+    "nameRegex": "JavaScript regular expressions, flag 'i'. English tokens are preceded by (?:^|[^a-z]) rather than \\b, because Revit-exported names start with prefixes such as 'M_' or 'N_' and '_' is a word character, so \\b fails in 'M_Bed'. German and Norwegian tokens have no leading boundary so that compounds (Doppelbett, Elektroherd) match. Arabic tokens in nameHintsAr and spaceHintsAr are matched as substrings, because JavaScript \\w and \\b cover ASCII only. Apply nameExclude after nameRegex. Patterns were tested against the local IFC corpus on 2026-11-05 (review, section 5.3).",
+    "fireClass": "NFPA 10 (2022) class of the fire at origin: A, B, C, D or K. For class C (energised equipment) fuelClass is the class of what burns once the equipment is involved. isoClass is the ISO 3941:2007 / EN 2:1992+A1:2004 class (A, B, C gases, D, F); 'L' marks ISO 3941:2026's new lithium-ion class."
+  },
+  "growthClasses": {
+    "slow": {
+      "alpha_kW_per_s2": 0.00293,
+      "t_1055kW_s": 600
+    },
+    "medium": {
+      "alpha_kW_per_s2": 0.0117,
+      "t_1055kW_s": 300
+    },
+    "fast": {
+      "alpha_kW_per_s2": 0.0469,
+      "t_1055kW_s": 150
+    },
+    "ultra-fast": {
+      "alpha_kW_per_s2": 0.1876,
+      "t_1055kW_s": 75
+    },
+    "source": [
+      "heskestad1979",
+      "studioFD02"
+    ]
+  },
+  "occupancyDesignFires": {
+    "note": "EN 1991-1-2:2002 Annex E, Table E.5 (growth, RHR_f) and Table E.4 80 % fractile fire load, read as reproduced on a JRC Eurocodes workshop slide (jrc2012vassart, slide 22). Values apply with delta_q2 = 1.0.",
+    "dwelling": {
+      "growth": "medium",
+      "rhr_kW_per_m2": 250,
+      "fireLoad80_MJ_per_m2": 948
+    },
+    "hospitalRoom": {
+      "growth": "medium",
+      "rhr_kW_per_m2": 250,
+      "fireLoad80_MJ_per_m2": 280
+    },
+    "hotelRoom": {
+      "growth": "medium",
+      "rhr_kW_per_m2": 250,
+      "fireLoad80_MJ_per_m2": 377
+    },
+    "library": {
+      "growth": "fast",
+      "rhr_kW_per_m2": 500,
+      "fireLoad80_MJ_per_m2": 1824
+    },
+    "office": {
+      "growth": "medium",
+      "rhr_kW_per_m2": 250,
+      "fireLoad80_MJ_per_m2": 511
+    },
+    "school": {
+      "growth": "medium",
+      "rhr_kW_per_m2": 250,
+      "fireLoad80_MJ_per_m2": 347
+    },
+    "shoppingCentre": {
+      "growth": "fast",
+      "rhr_kW_per_m2": 250,
+      "fireLoad80_MJ_per_m2": 730
+    },
+    "theatre": {
+      "growth": "fast",
+      "rhr_kW_per_m2": 500,
+      "fireLoad80_MJ_per_m2": 365
+    },
+    "transportPublicSpace": {
+      "growth": "slow",
+      "rhr_kW_per_m2": 250,
+      "fireLoad80_MJ_per_m2": 122
+    },
+    "source": [
+      "en1991-1-2",
+      "jrc2012vassart"
+    ]
+  },
+  "secondItemIgnition": {
+    "levels_kW_per_m2": {
+      "especiallyEasy": 10,
+      "normal": 20,
+      "difficult": 40
+    },
+    "envelope": "Irradiance measured 0.05 m from the fastest-burning furniture items reached about 80 kW/m2; 40 kW/m2 was not recorded farther than 0.44 m and 20 kW/m2 not beyond 0.88 m, so common furnishings needing about 20 kW/m2 'would stand little hazard of fire involvement if placed at least 1 m away' (pre-flashover only).",
+    "ignitionDistanceAtPeakMassLoss47gps_m": {
+      "10": 1.38,
+      "20": 0.88,
+      "40": 0.4,
+      "note": "read by eye from Fig. 13 at the largest first item (47 g/s)"
+    },
+    "pointSource": "q'' = chi_r Q / (4 pi R^2) at R >= 5 D (TN 2133 Eq. 5, after Modak); chi_r measured 0.44 for corn oil and 0.37 for gasoline pan fires.",
+    "source": [
+      "babrauskas1981nbsir",
+      "babrauskas1981fsj",
+      "hu2021tn2133"
+    ]
+  },
+  "fireClasses": {
+    "A": {
+      "label": "Ordinary combustibles",
+      "isoClass": "A",
+      "nfpa10": "Wood, cloth, paper, rubber and many plastics (NFPA 10, 5.2.1).",
+      "examples": [
+        "upholstered furniture (polyurethane foam, fabric)",
+        "mattresses and bedding",
+        "wood and wood panels (wardrobes, cabinets)",
+        "paper and cardboard",
+        "clothing and curtains",
+        "plastics casings"
+      ],
+      "heatOfCombustion_MJ_per_kg": {
+        "value": 18.0,
+        "range": [
+          13.9,
+          20.9
+        ],
+        "note": "Average effective heat of combustion of wood-framed upholstered chairs and sofas, 13.9-20.9 MJ/kg (a polypropylene-framed chair 35.1 MJ/kg); wardrobes 14.2-17.5 MJ/kg. Wood pallets 14.0 MJ/kg (secondary).",
+        "source": [
+          "babrauskas1982nbsir",
+          "lawson1984nbsir",
+          "nureg1805s1"
+        ]
+      },
+      "yields": {
+        "co": {
+          "value": 0.01,
+          "underVentilated": 0.2,
+          "note": "Generic: below 0.01 kg/kg well ventilated (equivalence ratio below 0.5), about 0.2 kg/kg above an equivalence ratio of about 1.5; 0.05 at stoichiometric.",
+          "source": [
+            "gannbryner",
+            "mckenna2016"
+          ]
+        },
+        "soot": {
+          "value": 0.015,
+          "range": [
+            0.008,
+            0.194
+          ],
+          "note": "Wood 0.015-0.018; flexible polyurethane foam 0.188; polystyrene foam 0.194 (Klote and Milke 2002, reproducing Tewarson; secondary). Furniture items measured 0.1-10.7 % particulate conversion at peak.",
+          "source": [
+            "klotemilke2002",
+            "nureg1805s1",
+            "babrauskas1982nbsir",
+            "lawson1984nbsir"
+          ]
+        },
+        "coToSootRatio": {
+          "value": 0.34,
+          "note": "Well-ventilated CO/smoke yield ratio for ordinary polymers, liquids and gases; not for halogenated polymers.",
+          "source": [
+            "tewarson2008"
+          ]
+        }
+      },
+      "growth": {
+        "class": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "note": "Occupancy default for dwellings, offices, schools and hospital rooms (EN 1991-1-2). Upholstered furniture alone is fast (derived 0.025-0.055 kW s^-2 for polyurethane-foam chairs and sofas).",
+        "source": [
+          "en1991-1-2",
+          "jrc2012vassart",
+          "babrauskas1982nbsir"
+        ]
+      },
+      "ignition": {
+        "criticalFlux_kW_per_m2": 20,
+        "range_kW_per_m2": [
+          10,
+          40
+        ],
+        "temperature_C": 390,
+        "note": "20 kW/m2 is Babrauskas's 'normal ignition range' for furnishings (10 especially easy, 40 difficult); most fabric/polyurethane items ignited within 45 s at 20 kW/m2. Piloted ignition of 12.7 mm plywood and 25 mm flexible foam: 16 kW/m2 and 390 C (SFPE guide, secondary).",
+        "source": [
+          "babrauskas1981nbsir",
+          "sfpe2002ignition",
+          "nureg1805s1"
+        ]
+      },
+      "embers": {
+        "value": true,
+        "note": "Charring solids (wood, structures, vegetation) produce firebrands; the evidence concerns outdoor fire spread, abstract-level only. Thermoplastic furnishings: no evidence either way.",
+        "source": [
+          "manzello2020"
+        ]
+      },
+      "agents": {
+        "suitable": [
+          "water",
+          "foam (AFFF, FFFP) rated for class A",
+          "multipurpose (ABC) dry chemical",
+          "wet chemical",
+          "halogenated agents"
+        ],
+        "unsuitable": [
+          {
+            "agent": "carbon dioxide",
+            "reason": "Listed for classes B and C only; short range (about 1-2.4 m) and no cooling of deep-seated embers."
+          }
+        ],
+        "source": [
+          "nfpa10"
+        ]
+      },
+      "sources": [
+        "nfpa10",
+        "babrauskas1982nbsir",
+        "lawson1984nbsir",
+        "babrauskas1981nbsir",
+        "gannbryner",
+        "mckenna2016",
+        "tewarson2008",
+        "klotemilke2002",
+        "manzello2020"
+      ]
+    },
+    "B": {
+      "label": "Flammable and combustible liquids and gases",
+      "isoClass": "B",
+      "isoNote": "ISO 3941 / EN 2 split this into B (liquids and liquefiable solids) and C (gases).",
+      "nfpa10": "Flammable liquids, combustible liquids, petroleum greases, tars, oils, oil-based paints, solvents, lacquers, alcohols and flammable gases (NFPA 10, 5.2.2).",
+      "examples": [
+        "gasoline or other accelerant (deliberate fires)",
+        "solvents and paints",
+        "heating oil",
+        "transformer oil",
+        "natural gas and LPG at burners and boilers"
+      ],
+      "heatOfCombustion_MJ_per_kg": {
+        "value": 44.1,
+        "range": [
+          20.0,
+          46.0
+        ],
+        "note": "Gasoline 44.1 and n-heptane 44.6 MJ/kg (TN 2133 Table 3, read). Range from methanol 20.0 to transformer oil 46.0 MJ/kg (SFPE Handbook 3rd ed. pool table via NUREG-1805 Suppl. 1, secondary).",
+        "source": [
+          "hu2021tn2133",
+          "nureg1805s1"
+        ]
+      },
+      "yields": {
+        "co": {
+          "value": 0.022,
+          "underVentilated": 0.2,
+          "note": "Derived: CO yield = 0.034 g/m2 x SEA with gasoline SEA 0.65 m2/g (TN 2133 abstract and Eq. 18 relation).",
+          "source": [
+            "hu2021tn2133",
+            "gannbryner"
+          ]
+        },
+        "soot": {
+          "value": 0.072,
+          "note": "Derived: soot yield = 0.11 g/m2 x SEA (TN 2133 Eq. 18) with gasoline SEA 0.65 m2/g (+/- 45 %), pan fires 9.7-26 cm.",
+          "source": [
+            "hu2021tn2133"
+          ]
+        }
+      },
+      "growth": {
+        "class": "ultra-fast",
+        "alpha_kW_per_s2": 0.1876,
+        "poolBurning": {
+          "fuel": "gasoline",
+          "mInf_kg_per_m2_s": 0.055,
+          "kBeta_per_m": 2.1,
+          "deltaHc_MJ_per_kg": 43.7,
+          "formula": "m'' = mInf (1 - exp(-kBeta D)); Q = m'' deltaHc A"
+        },
+        "otherPools": {
+          "kerosene": [
+            0.039,
+            3.5,
+            43.2
+          ],
+          "diesel": [
+            0.045,
+            2.1,
+            44.4
+          ],
+          "heptane": [
+            0.101,
+            1.1,
+            44.6
+          ],
+          "methanol": [
+            0.017,
+            null,
+            20.0
+          ],
+          "ethanol": [
+            0.015,
+            null,
+            26.8
+          ],
+          "transformerOil": [
+            0.039,
+            0.7,
+            46.0
+          ],
+          "columns": "mInf kg m^-2 s^-1, kBeta m^-1 (null: no diameter dependence), deltaHc MJ/kg"
+        },
+        "note": "Pool values from the SFPE Handbook (3rd ed.) table derived from Babrauskas (1983), read in NUREG-1805 Suppl. 1 spreadsheets (secondary). 'Ultra-fast' for a spill is a judgement: a pool reaches its burning rate within seconds; it is not a fitted t-squared value.",
+        "source": [
+          "babrauskas1983pool",
+          "nureg1805s1"
+        ]
+      },
+      "ignition": {
+        "criticalFlux_kW_per_m2": null,
+        "temperature_C": null,
+        "note": "Flash and autoignition temperatures of gasoline and solvents were not read in this study; a liquid at or above its flash point ignites from a pilot flame."
+      },
+      "embers": {
+        "value": false,
+        "note": "No literature found on firebrands from liquid pools; inference, not a sourced finding."
+      },
+      "agents": {
+        "suitable": [
+          "foam (AFFF, FFFP), which floats on the fuel and prevents re-ignition",
+          "carbon dioxide",
+          "dry chemical",
+          "halogenated agents",
+          "for pressurised gas or liquid jets: dry chemical, and only once the fuel supply can be shut off"
+        ],
+        "unsuitable": [
+          {
+            "agent": "water (plain jet or stream)",
+            "reason": "Water extinguishers are for class A only; a stream splashes and spreads burning liquid, and drops sinking into a hot liquid boil and expel it."
+          }
+        ],
+        "source": [
+          "nfpa10",
+          "liu2005fss"
+        ]
+      },
+      "sources": [
+        "nfpa10",
+        "hu2021tn2133",
+        "nureg1805s1",
+        "babrauskas1983pool",
+        "gannbryner"
+      ]
+    },
+    "C": {
+      "label": "Energised electrical equipment",
+      "isoClass": null,
+      "isoNote": "ISO 3941:2007 and EN 2 have no electrical class; the fire is classed by its fuel (A or B).",
+      "nfpa10": "Fires that involve energised electrical equipment (NFPA 10, 5.2.3).",
+      "examples": [
+        "refrigerator-freezers",
+        "dishwashers",
+        "washing machines and tumble dryers",
+        "TV sets and electronics",
+        "distribution boards and wiring",
+        "transformers (oil: fuel class B)"
+      ],
+      "fuelClass": "A",
+      "heatOfCombustion_MJ_per_kg": {
+        "value": 30.3,
+        "range": [
+          28.1,
+          32.3
+        ],
+        "note": "Mean of the average effective heats of combustion of free-burning TV sets (29.5), washing machines (32.3), dishwashers (31.3) and refrigerator-freezers (28.1); in a cupboard 18.6-19.5 MJ/kg.",
+        "source": [
+          "hietaniemi2001vtt"
+        ]
+      },
+      "yields": {
+        "co": {
+          "value": 0.056,
+          "range": [
+            0.038,
+            0.071
+          ],
+          "note": "Mean of the average CO yields per appliance type (TV 0.071, washing machine 0.038, dishwasher 0.067, refrigerator-freezer 0.049 kg/kg).",
+          "source": [
+            "hietaniemi2001vtt"
+          ]
+        },
+        "soot": {
+          "value": 0.056,
+          "range": [
+            0.021,
+            0.116
+          ],
+          "note": "Mean of the average smoke yields (TV 0.116, washing machine 0.021, dishwasher 0.036, refrigerator-freezer 0.050 kg/kg).",
+          "source": [
+            "hietaniemi2001vtt"
+          ]
+        },
+        "hydrogenHalides": "HF 27 g (2 g/kg of mass burnt, 193 g/kg of the 140 g of refrigerant) from one refrigerator-freezer; HCl 67-123 g from a dishwasher and a refrigerator-freezer; no HBr in any test."
+      },
+      "growth": {
+        "class": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "note": "Judgement: appliances span slow (refrigerator-freezers, derived about 0.004-0.006 kW s^-2) to fast (TV sets, derived about 0.03-0.07 kW s^-2) after an incipient phase of 1.5-3 min (TV) to 10-20 min (washing machines). Use the item's own entry where one exists.",
+        "source": [
+          "hietaniemi2001vtt"
+        ]
+      },
+      "ignition": {
+        "criticalFlux_kW_per_m2": null,
+        "temperature_C": null,
+        "note": "Ignition is by overheating, arcing or overload inside the equipment; not a radiant-flux criterion. Babrauskas's SFPE chapter on electrical fires (verified DOI) was not read."
+      },
+      "embers": {
+        "value": false,
+        "note": "Plastics-dominated appliances; no evidence of firebrands. Inherits the fuel's behaviour."
+      },
+      "agents": {
+        "suitable": [
+          "carbon dioxide (non-conductive)",
+          "halocarbon clean agents (non-conductive, no residue)",
+          "dry chemical (but its residue can form a conductive path on wet equipment)",
+          "de-energise the circuit as soon as possible, then treat as class A or B"
+        ],
+        "unsuitable": [
+          {
+            "agent": "water or foam on energised equipment",
+            "reason": "Conducts electricity to the operator; NFPA 10 requires that class C extinguishers contain no conductive agent."
+          }
+        ],
+        "source": [
+          "nfpa10"
+        ]
+      },
+      "sources": [
+        "nfpa10",
+        "hietaniemi2001vtt"
+      ]
+    },
+    "D": {
+      "label": "Combustible metals",
+      "isoClass": "D",
+      "nfpa10": "Magnesium, titanium, zirconium, sodium, lithium and potassium (NFPA 10, 5.2.4).",
+      "examples": [
+        "magnesium alloy parts and swarf (workshops, laboratories)",
+        "sodium and potassium (laboratories)",
+        "lithium metal primary cells (not lithium-ion)"
+      ],
+      "heatOfCombustion_MJ_per_kg": {
+        "value": 24.75,
+        "note": "Derived for magnesium: 601.60 kJ/mol (CODATA enthalpy of formation of MgO) / 24.305 g/mol.",
+        "source": [
+          "nistwebbookMgO"
+        ]
+      },
+      "yields": {
+        "co": {
+          "value": 0,
+          "note": "Metal fires form metal oxide fume ('dense white smoke' for magnesium), not soot or CO from the metal itself."
+        },
+        "soot": {
+          "value": 0,
+          "note": "As above; secondary source."
+        },
+        "source": [
+          "cameo"
+        ]
+      },
+      "growth": {
+        "class": null,
+        "note": "No t-squared characterisation found; out of scope for the two-zone model."
+      },
+      "ignition": {
+        "temperature_C": 473,
+        "range_C": [
+          121,
+          650
+        ],
+        "note": "Magnesium autoignition about 473 C (alloys 427-650 C); sodium about 121 C; lithium about 179 C (secondary: NOAA CAMEO Chemicals and studies quoted in Zhao et al. 2022).",
+        "source": [
+          "cameo",
+          "zhao2022"
+        ]
+      },
+      "embers": {
+        "value": null,
+        "note": "Not established in the sources read."
+      },
+      "agents": {
+        "suitable": [
+          "listed class D dry powders",
+          "dry sand, dolomite, soda ash, sodium chloride or graphite powder applied gently so the metal does not scatter"
+        ],
+        "unsuitable": [
+          {
+            "agent": "water",
+            "reason": "Reacts with burning metal to release hydrogen; the reaction can be explosive (sodium and lithium react with water even cold)."
+          },
+          {
+            "agent": "foam",
+            "reason": "Water-based; same reaction as water."
+          },
+          {
+            "agent": "carbon dioxide and halogenated agents",
+            "reason": "Burning magnesium continues to react with them (secondary source)."
+          }
+        ],
+        "source": [
+          "nfpa10",
+          "cameo"
+        ]
+      },
+      "sources": [
+        "nfpa10",
+        "nistwebbookMgO",
+        "cameo",
+        "zhao2022"
+      ]
+    },
+    "K": {
+      "label": "Cooking oils and fats in cooking appliances",
+      "isoClass": "F",
+      "nfpa10": "Cooking appliances that involve combustible cooking media (vegetable or animal oils and fats) (NFPA 10, 5.2.5).",
+      "examples": [
+        "oil or fat in a pan on a cooktop",
+        "deep-fat fryer",
+        "grease in an oven or range hood"
+      ],
+      "heatOfCombustion_MJ_per_kg": {
+        "value": 37.4,
+        "note": "Corn oil, measured by a testing laboratory (TN 2133 Table 3).",
+        "source": [
+          "hu2021tn2133"
+        ]
+      },
+      "yields": {
+        "co": {
+          "value": 0.021,
+          "note": "Derived: 0.034 g/m2 x SEA with corn oil SEA 0.63 m2/g (+/- 22 %).",
+          "source": [
+            "hu2021tn2133"
+          ]
+        },
+        "soot": {
+          "value": 0.069,
+          "note": "Derived: 0.11 g/m2 x 0.63 m2/g (TN 2133 Eq. 18). CO and soot yields fall with pan diameter.",
+          "source": [
+            "hu2021tn2133",
+            "hu2021jfs"
+          ]
+        }
+      },
+      "growth": {
+        "class": "ultra-fast",
+        "alpha_kW_per_s2": 0.1876,
+        "note": "Kitchen-scale: small cooktop fires 'spread and grew ultra-fast' in a 3.6 m x 3.4 m x 2.4 m kitchen with fiberboard cabinets (abstract). The pan fire alone peaks at 20-35 kW (28 cm pans) to 110 kW (26 cm pan, 7 mm of corn oil), 20-40 s after ignition.",
+        "source": [
+          "hamins2018",
+          "hostikka2023",
+          "hu2021tn2133"
+        ]
+      },
+      "ignition": {
+        "temperature_C": 390,
+        "range_C": [
+          385,
+          429
+        ],
+        "note": "Corn oil must exceed about 392 C to autoignite (TN 2133 citing Hamins et al.); oil temperature just before ignition in a cast-iron pan on a ceramic hob: canola 385 +/- 27, sunflower 392 +/- 29, olive 420 +/- 39, butter 429 +/- 18 C. Mean ignition after 309 +/- 81 s of heating, probability 0.44 +/- 0.13.",
+        "source": [
+          "hu2021tn2133",
+          "hostikka2023"
+        ]
+      },
+      "embers": {
+        "value": false,
+        "note": "No literature found on firebrands from oil fires; boil-over can throw burning oil, which is a spill, not an ember. Inference."
+      },
+      "agents": {
+        "suitable": [
+          "wet chemical (saponifies the oil into a foam blanket that excludes air and cools it)",
+          "fine water mist from fixed systems (cools the oil below autoignition)"
+        ],
+        "unsuitable": [
+          {
+            "agent": "water (jet or coarse spray)",
+            "reason": "Drops sink into the hot oil, boil and expel it, spreading the fire."
+          },
+          {
+            "agent": "carbon dioxide",
+            "reason": "Knocks the flame down but does not cool the oil below its autoignition temperature, so it re-ignites."
+          },
+          {
+            "agent": "wet chemical injected below the oil surface",
+            "reason": "Can cause a reaction NFPA 10 compares to an explosion."
+          }
+        ],
+        "source": [
+          "nfpa10",
+          "liu2005fss"
+        ]
+      },
+      "sources": [
+        "nfpa10",
+        "hu2021tn2133",
+        "hu2021jfs",
+        "hamins2018",
+        "hostikka2023",
+        "liu2005fss"
+      ]
+    },
+    "L": {
+      "label": "Lithium-ion cells and batteries (no metallic lithium)",
+      "isoClass": "L",
+      "nfpa10": null,
+      "note": "Not an NFPA 10 class and not class D (which covers lithium metal). ISO 3941:2026 adds Class L (reported by trade and consultancy sources; the standard's text was not read). For NFPA purposes Studio records a charging pack as class C with fuel class B (electrolyte vapour) and A (the vehicle or device).",
+      "examples": [
+        "e-bike and e-scooter packs",
+        "power banks, phones, laptops",
+        "UPS and battery storage"
+      ],
+      "heatOfCombustion_MJ_per_kg": {
+        "value": null,
+        "note": "Not a single fuel; heat release scales with stored energy and state of charge."
+      },
+      "yields": {
+        "hf_mg_per_Wh": {
+          "value": 20,
+          "range": [
+            20,
+            200
+          ]
+        },
+        "pof3_mg_per_Wh": {
+          "range": [
+            15,
+            22
+          ]
+        },
+        "note": "Seven commercial cell types; water mist also tested.",
+        "source": [
+          "larsson2017"
+        ]
+      },
+      "growth": {
+        "class": "ultra-fast",
+        "alpha_kW_per_s2": 0.1876,
+        "note": "An overcharged e-scooter in a closed bedroom: gas ignition about 20 s and flashover within 30 s of visible smoke (FSRI summary of a peer-reviewed paper whose abstract was read). An overcapacity e-bike pack alone: peak 68 kW at 80 % and 107 kW at 60 % state of charge, with jet flames.",
+        "source": [
+          "fleischmann2025",
+          "fsri2025",
+          "liu2025ebike"
+        ]
+      },
+      "ignition": {
+        "temperature_C": 300,
+        "note": "Thermal runaway onset at 300 C for the e-bike packs tested (abstract).",
+        "source": [
+          "liu2025ebike"
+        ]
+      },
+      "embers": {
+        "value": null,
+        "note": "Packs eject burning material in jet flames, but no source read quantifies it."
+      },
+      "agents": {
+        "suitable": [],
+        "unsuitable": [],
+        "note": "No peer-reviewed comparison of agents was read; ISO 3941:2026 is reported not to prescribe agents. Packs re-ignite without sustained cooling (abstract-level)."
+      },
+      "sources": [
+        "larsson2017",
+        "fleischmann2025",
+        "fsri2025",
+        "liu2025ebike",
+        "iso3941-2026"
+      ]
+    }
+  },
+  "fuelItems": [
+    {
+      "id": "sofa-pu-foam",
+      "label": "Sofa, California foam, polyolefin fabric, wood frame",
+      "mass_kg": 51.5,
+      "peak_kW": 3120,
+      "timeToPeak_s": 250,
+      "totalHeat_MJ": 714,
+      "ehc_MJ_per_kg": 18.9,
+      "derivedAlpha": 0.05,
+      "growth": "fast",
+      "source": "babrauskas1982nbsir",
+      "note": "Test T38 (F32). The same design in NBSIR 83-2787 test 38: 3200 kW, 714 MJ."
+    },
+    {
+      "id": "loveseat-pu-foam",
+      "label": "Loveseat, California foam, polyolefin fabric, wood frame",
+      "mass_kg": 40.4,
+      "peak_kW": 2890,
+      "timeToPeak_s": 230,
+      "totalHeat_MJ": 614,
+      "ehc_MJ_per_kg": 17.5,
+      "derivedAlpha": 0.055,
+      "growth": "fast",
+      "source": "babrauskas1982nbsir"
+    },
+    {
+      "id": "armchair-pu-foam",
+      "label": "Armchair, California foam, polyolefin fabric, wood frame",
+      "mass_kg": 28.3,
+      "peak_kW": 1970,
+      "timeToPeak_s": 280,
+      "totalHeat_MJ": 440,
+      "ehc_MJ_per_kg": 18.1,
+      "derivedAlpha": 0.025,
+      "growth": "fast",
+      "source": "babrauskas1982nbsir",
+      "note": "F21; repeat T45 2130 kW at 260 s (derived 0.032). Derived alpha lies just above the medium/fast boundary 0.0234."
+    },
+    {
+      "id": "armchair-pp-frame",
+      "label": "Armchair, non-California foam, polypropylene frame",
+      "mass_kg": 14.0,
+      "peak_kW": 1950,
+      "timeToPeak_s": 220,
+      "totalHeat_MJ": 446,
+      "ehc_MJ_per_kg": 35.1,
+      "derivedAlpha": 0.04,
+      "growth": "fast",
+      "source": "babrauskas1982nbsir"
+    },
+    {
+      "id": "armchair-cotton",
+      "label": "Armchair, California foam, cotton fabric, wood frame",
+      "mass_kg": 28.3,
+      "peak_kW": 700,
+      "timeToPeak_s": 650,
+      "totalHeat_MJ": 369,
+      "ehc_MJ_per_kg": 14.6,
+      "derivedAlpha": 0.0017,
+      "growth": "slow",
+      "source": "babrauskas1982nbsir",
+      "note": "F24: the fabric alone moved the chair from fast to slow."
+    },
+    {
+      "id": "office-chair",
+      "label": "Office chair (Cook County exemplar)",
+      "mass_kg": 20.45,
+      "peak_kW": 500,
+      "timeToPeak_s": null,
+      "source": "madrzykowski2004sp1021"
+    },
+    {
+      "id": "office-workstation",
+      "label": "Office workstation, 3.15 m2, 83 kg/m2 fuel load",
+      "peak_kW": 3500,
+      "timeToPeak_s": null,
+      "source": "madrzykowski2004sp1021",
+      "note": "Earlier workstations of 3.8 m2: 2.8-6.9 MW depending on how many sides were enclosed."
+    },
+    {
+      "id": "mattress-sheet-lighter",
+      "label": "Mattress without box spring, sheet ignited with a lighter",
+      "peak_kW": 1700,
+      "timeToPeak_s": 740,
+      "totalHeat_MJ": 204,
+      "derivedAlpha": 0.0031,
+      "growth": "slow",
+      "source": "lawson1984nbsir",
+      "note": "Test 74, hospital or nursing-home type bedding; 'fully involved mattress in 740 seconds'. Cigarettes did not ignite it."
+    },
+    {
+      "id": "mattress-boxspring",
+      "label": "Mattress and box spring, lighter ignition",
+      "mass_kg": 62.36,
+      "peak_kW": 660,
+      "totalHeat_MJ": 342,
+      "source": "lawson1984nbsir",
+      "note": "Test 67: initial peak 530 kW (mattress), secondary 660 kW (box spring)."
+    },
+    {
+      "id": "mattress-us-1633",
+      "label": "Mattress set compliant with 16 CFR 1633",
+      "peak_kW": 200,
+      "source": "cfr1633",
+      "note": "Regulatory limit in the standard open-flame test: peak HRR not above 200 kW within 30 min, total heat not above 15 MJ in the first 10 min. A limit, not a measured value."
+    },
+    {
+      "id": "wardrobe-plywood-12mm",
+      "label": "Wardrobe, 12.7 mm plywood, unfinished, with clothing",
+      "mass_kg": 68.3,
+      "peak_kW": 3300,
+      "totalHeat_MJ": 1067,
+      "source": "lawson1984nbsir",
+      "note": "Mean of three tests, standard deviation 208 kW; time to peak not read."
+    },
+    {
+      "id": "wardrobe-plywood-3mm",
+      "label": "Wardrobe, 3.2 mm plywood, unfinished, with clothing",
+      "mass_kg": 36.0,
+      "peak_kW": 6400,
+      "timeToPeak_s": 130,
+      "totalHeat_MJ": 590,
+      "derivedAlpha": 0.38,
+      "growth": "ultra-fast",
+      "source": "lawson1984nbsir"
+    },
+    {
+      "id": "wardrobe-plywood-3mm-fr",
+      "label": "Wardrobe, 3.2 mm plywood, two coats fire-retardant paint",
+      "mass_kg": 37.26,
+      "peak_kW": 2900,
+      "timeToPeak_s": 170,
+      "totalHeat_MJ": 408,
+      "derivedAlpha": 0.1,
+      "growth": "ultra-fast",
+      "source": "lawson1984nbsir"
+    },
+    {
+      "id": "wardrobe-particleboard",
+      "label": "Wardrobe, 19.1 mm particleboard",
+      "mass_kg": 120.33,
+      "peak_kW": 1900,
+      "totalHeat_MJ": 1349,
+      "source": "lawson1984nbsir"
+    },
+    {
+      "id": "wardrobe-metal",
+      "label": "Metal wardrobe with 3.18 kg of rags",
+      "mass_kg": 41.4,
+      "peak_kW": 770,
+      "totalHeat_MJ": 70,
+      "source": "lawson1984nbsir"
+    },
+    {
+      "id": "tv-set",
+      "label": "TV set (2001 test series)",
+      "mass_kg": 5.0,
+      "peak_kW": 241,
+      "range_kW": [
+        211,
+        274
+      ],
+      "ehc_MJ_per_kg": 29.5,
+      "yields": {
+        "soot": 0.116,
+        "co": 0.071
+      },
+      "derivedAlpha": [
+        0.03,
+        0.07
+      ],
+      "growth": "fast",
+      "source": "hietaniemi2001vtt",
+      "note": "Incipient phase 1.5-3 min, then peak within 1-1.5 min of the onset of rapid growth (abstract); alpha derived from those times."
+    },
+    {
+      "id": "washing-machine",
+      "label": "Washing machine",
+      "mass_kg": 10.9,
+      "peak_kW": 333,
+      "range_kW": [
+        221,
+        431
+      ],
+      "ehc_MJ_per_kg": 32.3,
+      "yields": {
+        "soot": 0.021,
+        "co": 0.038
+      },
+      "growth": null,
+      "source": "hietaniemi2001vtt",
+      "note": "Incipient phase 10-20 min depending on where it was ignited."
+    },
+    {
+      "id": "dishwasher",
+      "label": "Dishwasher, free-burning",
+      "mass_kg": 7.3,
+      "peak_kW": 411,
+      "range_kW": [
+        347,
+        723
+      ],
+      "ehc_MJ_per_kg": 31.3,
+      "yields": {
+        "soot": 0.036,
+        "co": 0.067
+      },
+      "growth": null,
+      "source": "hietaniemi2001vtt",
+      "note": "In a cupboard: 548 kW mean. Incipient phase 5-10 min."
+    },
+    {
+      "id": "refrigerator-freezer",
+      "label": "Refrigerator-freezer, free-burning",
+      "mass_kg": 16.2,
+      "peak_kW": 1970,
+      "range_kW": [
+        1148,
+        2125
+      ],
+      "ehc_MJ_per_kg": 28.1,
+      "yields": {
+        "soot": 0.05,
+        "co": 0.049
+      },
+      "derivedAlpha": [
+        0.004,
+        0.006
+      ],
+      "growth": "slow",
+      "source": "hietaniemi2001vtt",
+      "note": "Tests stopped by water at about 2 MW, so peaks are lower bounds. About 10 min from the onset of growth to about 2 MW, read by eye from Fig. 5.10."
+    },
+    {
+      "id": "christmas-tree-dry",
+      "label": "Dry 7 ft Douglas fir with upholstered chair and shelf in a room corner",
+      "peak_kW": 7362,
+      "timeToPeak_s": 31,
+      "totalHeat_MJ": 938,
+      "derivedAlpha": 7.6,
+      "growth": "ultra-fast",
+      "source": "nistfcd",
+      "note": "Cut 4 weeks before, not watered; electric match. A watered tree's HRR was below the detection limit."
+    },
+    {
+      "id": "kitchen-room",
+      "label": "Kitchen room, 500 mL canola oil in a 6 in cast-iron pan, OSB back wall",
+      "peak_kW": 7585,
+      "timeToPeak_s": 1006,
+      "totalHeat_MJ": 6813,
+      "derivedAlpha": 0.0075,
+      "growth": "medium",
+      "source": "nistfcd",
+      "note": "Times from pan ignition (17.52 min); flashover 9.35 min after pan ignition. Includes the burning OSB lining."
+    },
+    {
+      "id": "pan-corn-oil-26cm",
+      "label": "Corn oil, 26 cm pan, 7 mm deep, electric coil",
+      "peak_kW": 110,
+      "source": "hu2021tn2133"
+    },
+    {
+      "id": "pan-oil-28cm",
+      "label": "Sunflower, canola or olive oil, 28 cm pan, ceramic hob",
+      "peak_kW": 35,
+      "range_kW": [
+        20,
+        35
+      ],
+      "timeToPeak_s": 40,
+      "source": "hostikka2023"
+    },
+    {
+      "id": "wastebasket",
+      "label": "Small polyethylene wastebasket with milk cartons",
+      "peak_kW": 50,
+      "note": "Approximated as a constant 50 kW for 200 s.",
+      "source": "babrauskas1982nbsir"
+    },
+    {
+      "id": "ebike-pack",
+      "label": "Overcapacity e-bike lithium-ion pack in a charging cabinet",
+      "peak_kW": 107,
+      "range_kW": [
+        68,
+        107
+      ],
+      "source": "liu2025ebike",
+      "note": "107 kW at 60 % and 68 kW at 80 % state of charge (abstract)."
+    },
+    {
+      "id": "gasoline-pool-1m2",
+      "label": "Gasoline pool, 1 m2",
+      "peak_kW": 2180,
+      "source": [
+        "babrauskas1983pool",
+        "nureg1805s1"
+      ],
+      "note": "Derived: D = 1.128 m, m'' = 0.055 (1 - exp(-2.1 x 1.128)) = 0.0499 kg m^-2 s^-1, Q = 0.0499 x 43.7 MJ/kg x 1 m2."
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "cooking-range",
+      "label": "Cooktop or oven, unattended cooking",
+      "fireClass": "K",
+      "isoClass": "F",
+      "fuelClass": "K",
+      "classNote": "Oil and fat in a pan: class K. Food in an oven or microwave: class A.",
+      "ifc": [
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "ELECTRICCOOKER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "MICROWAVE",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.3
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "ELECTRICCOOKER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "MICROWAVE",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal",
+          "weight": 0.3
+        },
+        {
+          "entity": "IfcGasTerminalType",
+          "predefinedType": "GASAPPLIANCE",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal",
+          "pset": "Pset_GasTerminalTypeGasAppliance.GasApplianceType = GASCOOKER"
+        },
+        {
+          "entity": "IfcBurner",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "byName": true,
+          "pset": "Pset_BurnerTypeCommon.EnergySource = GAS, in a kitchen space"
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        },
+        {
+          "entity": "IfcFurniture",
+          "byName": true
+        },
+        {
+          "entity": "IfcFurnishingElement",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "cooker",
+        "cooktop",
+        "cook top",
+        "hob",
+        "stove",
+        "range",
+        "oven",
+        "induction",
+        "microwave",
+        "herd",
+        "kochfeld",
+        "backofen",
+        "mikrowelle",
+        "fryer"
+      ],
+      "nameHintsAr": [
+        "فرن",
+        "موقد",
+        "طباخ",
+        "ميكروويف"
+      ],
+      "nameRegex": "(?:^|[^a-z])(cook ?top|cooker|hob(?![a-z])|stove|oven|range(?! ?hood)|induction|microwave|fryer|komfyr)|herd(?![a-z])|kochfeld|backofen|mikrowelle|kochstelle|ovn(?![a-z])",
+      "nameExclude": "hood|dunstabzug|abzugshaube|extractor|wood ?stove|pellet|kamin",
+      "spaceHints": [
+        "kitchen",
+        "kitchenette",
+        "pantry",
+        "canteen",
+        "cafeteria",
+        "break room",
+        "staff room",
+        "küche",
+        "kueche",
+        "teeküche"
+      ],
+      "spaceHintsAr": [
+        "مطبخ"
+      ],
+      "spaceRegex": "kitchen|kitchenette|pantry|canteen|cafeteria|break ?room|staff ?room|k(ü|ue)che",
+      "firstFuel": "Cooking oil, fat or grease (51 % of US cooking-material fires); food; in England food 11.7 % and cooking oil or fat 9.1 % of primary dwelling fires",
+      "room": "kitchen",
+      "share": {
+        "value": 0.49,
+        "of": "US home structure fires, 2019-2023 annual average (cause: cooking)",
+        "source": "nfpa2025homes"
+      },
+      "shareDeaths": {
+        "value": 0.16,
+        "of": "US home fire civilian deaths, 2019-2023",
+        "source": "nfpa2025homes"
+      },
+      "shareInjuries": {
+        "value": 0.36,
+        "of": "US home fire civilian injuries, 2019-2023",
+        "source": "nfpa2025homes"
+      },
+      "shareEquipment": {
+        "fires": 0.25,
+        "deaths": 0.14,
+        "of": "US home fires with range or cooktop as equipment involved, 2019-2023",
+        "source": "nfpa2025homestables"
+      },
+      "shareUK": {
+        "fires": 0.417,
+        "deaths": 0.112,
+        "of": "England accidental dwelling fires, year ending March 2026 (source of ignition: cooking appliances; cooker including oven 26.6 % of fires, microwave 3.7 %)",
+        "source": "mhclg2026fire0602"
+      },
+      "shareNonResidential": {
+        "value": 0.303,
+        "of": "US non-residential building fires with known cause, 2017-2019 (mostly confined fires; 3 % of non-confined fires)",
+        "source": "usfa2021nonres"
+      },
+      "deathsPerThousandFires": {
+        "value": 2.7,
+        "note": "430 deaths / 159,400 fires per year",
+        "source": "nfpa2025homes"
+      },
+      "designFire": {
+        "growth": "ultra-fast",
+        "alpha_kW_per_s2": 0.1876,
+        "peak_kW": 7585,
+        "basis": "room",
+        "source": [
+          "hamins2018",
+          "nistfcd"
+        ],
+        "note": "Growth from the peer-reviewed kitchen experiments with cabinets above the cooktop; peak from the only room-scale kitchen test read (includes an OSB wall). The ventilation limit will usually bind first."
+      },
+      "firstItemFire": {
+        "peak_kW": 110,
+        "item": "corn oil, 26 cm pan",
+        "source": "hu2021tn2133",
+        "note": "20-35 kW in 28 cm pans (hostikka2023)."
+      },
+      "alternatives": [
+        {
+          "growth": "medium",
+          "peak_kW": 7585,
+          "basis": "room",
+          "source": "nistfcd",
+          "note": "Derived alpha 0.0075 kW s^-2 from pan ignition to peak in the FCD kitchen (small 6 in pan, no cabinets reported)."
+        }
+      ],
+      "evidence": "peer-reviewed",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA) and official statistics (England)",
+        "designFire": "peer-reviewed (growth), measurement database (peak)"
+      }
+    },
+    {
+      "id": "smoking-upholstery",
+      "label": "Smoking materials on a sofa or armchair",
+      "fireClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcFurniture",
+          "predefinedType": "SOFA",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcFurniture",
+          "predefinedType": "CHAIR",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.5,
+          "note": "Only upholstered chairs; exclude dining and office chairs by name."
+        },
+        {
+          "entity": "IfcFurnishingElement",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        },
+        {
+          "entity": "IfcFurnitureType",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ],
+          "note": "No PredefinedType in IFC2x3; the type's Name carries the hint."
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "sofa",
+        "couch",
+        "settee",
+        "loveseat",
+        "armchair",
+        "easy chair",
+        "lounge chair",
+        "recliner",
+        "sessel",
+        "polster",
+        "kanapee"
+      ],
+      "nameHintsAr": [
+        "كنبة",
+        "أريكة",
+        "كنب"
+      ],
+      "nameRegex": "(?:^|[^a-z])(sofa|couch|settee|love ?seat|arm ?chair|easy ?chair|lounge ?chair|recliner|ottoman)|sessel|polster|kanapee",
+      "nameExclude": "dining|office|executive|breuer|stuhl|stacking|bench|table|tisch",
+      "spaceHints": [
+        "living room",
+        "lounge",
+        "sitting room",
+        "family room",
+        "salon",
+        "majlis",
+        "wohnzimmer",
+        "waiting room"
+      ],
+      "spaceHintsAr": [
+        "مجلس",
+        "صالة",
+        "غرفة المعيشة"
+      ],
+      "spaceRegex": "living|lounge|sitting|family ?room|salon|majlis|wohn|waiting",
+      "firstFuel": "Upholstered furniture (polyurethane foam, fabric)",
+      "room": "living room",
+      "share": {
+        "value": 0.003,
+        "of": "US home structure fires, 2019-2023: smoking-materials cause (5 %) x upholstered furniture first ignited in smoking fires (6 %)",
+        "source": [
+          "nfpa2025homes",
+          "nfpa2025smoking"
+        ],
+        "note": "derived"
+      },
+      "shareDeaths": {
+        "value": 0.06,
+        "of": "US home fire deaths, 2019-2023: smoking (23 %) x upholstered furniture in smoking deaths (26 %)",
+        "source": [
+          "nfpa2025homes",
+          "nfpa2025smoking"
+        ],
+        "note": "derived"
+      },
+      "shareUK": {
+        "fires": 0.076,
+        "deaths": 0.267,
+        "of": "England accidental dwelling fires, year ending March 2026, smokers' materials (all first items)",
+        "source": "mhclg2026fire0602"
+      },
+      "deathsPerThousandFires": {
+        "value": 39.5,
+        "note": "All smoking fires: 600 deaths / 15,200 fires; NFPA notes one in 12 upholstered furniture fires caused a death",
+        "source": "nfpa2025homes"
+      },
+      "designFire": {
+        "growth": "fast",
+        "alpha_kW_per_s2": 0.0469,
+        "peak_kW": 3120,
+        "basis": "item",
+        "source": "babrauskas1982nbsir",
+        "note": "Sofa F32, derived alpha 0.050 kW s^-2. A cigarette first smoulders; that incubation is not modelled (use 'Leave after' or a later ignition time)."
+      },
+      "alternatives": [
+        {
+          "growth": "fast",
+          "peak_kW": 1970,
+          "basis": "item",
+          "source": "babrauskas1982nbsir",
+          "note": "Armchair F21"
+        }
+      ],
+      "evidence": "peer-reviewed",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (England); peer-reviewed support: holborn2003 (47 % of London fatal dwelling fires 1996-2000 from smokers' materials)",
+        "designFire": "measurement (NBS report)"
+      }
+    },
+    {
+      "id": "smoking-bedding",
+      "label": "Smoking materials on a bed or bedding",
+      "fireClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcFurniture",
+          "predefinedType": "BED",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcFurnishingElement",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        },
+        {
+          "entity": "IfcFurnitureType",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "bed",
+        "mattress",
+        "bunk",
+        "cot",
+        "bett",
+        "doppelbett",
+        "matratze"
+      ],
+      "nameHintsAr": [
+        "سرير",
+        "فراش",
+        "مرتبة"
+      ],
+      "nameRegex": "(?:^|[^a-z])(beds?(?![a-z])|mattress|bunk|cot(?![a-z])|crib)|bett(?![a-z])|matratze|seng(?![a-z])",
+      "nameExclude": "bedside|flower ?bed|sea ?bed|bedrock|nachttisch",
+      "spaceHints": [
+        "bedroom",
+        "bed room",
+        "master",
+        "dormitory",
+        "patient room",
+        "ward",
+        "hotel room",
+        "schlafzimmer",
+        "kinderzimmer"
+      ],
+      "spaceHintsAr": [
+        "غرفة نوم",
+        "نوم"
+      ],
+      "spaceRegex": "bed ?room|master|dorm|patient|ward\\b|guest ?room|schlaf|kinder",
+      "firstFuel": "Mattress and bedding",
+      "room": "bedroom",
+      "share": {
+        "value": 0.002,
+        "of": "US home structure fires, 2019-2023: smoking (5 %) x bedding first ignited in smoking fires (4 %)",
+        "source": [
+          "nfpa2025homes",
+          "nfpa2025smoking"
+        ],
+        "note": "derived"
+      },
+      "shareDeaths": {
+        "value": 0.041,
+        "of": "US home fire deaths, 2019-2023: smoking (23 %) x bedding in smoking deaths (18 %)",
+        "source": [
+          "nfpa2025homes",
+          "nfpa2025smoking"
+        ],
+        "note": "derived"
+      },
+      "shareUK": {
+        "fires": 0.076,
+        "deaths": 0.267,
+        "of": "England accidental dwelling fires, year ending March 2026, smokers' materials (all first items)",
+        "source": "mhclg2026fire0602"
+      },
+      "designFire": {
+        "growth": "slow",
+        "alpha_kW_per_s2": 0.00293,
+        "peak_kW": 1700,
+        "basis": "item",
+        "source": "lawson1984nbsir",
+        "note": "Mattress test 74: peak 1700 kW, fully involved 740 s after a lighter ignited the sheet; derived alpha 0.0031 kW s^-2 (includes the slow sheet phase)."
+      },
+      "alternatives": [
+        {
+          "growth": "slow",
+          "peak_kW": 200,
+          "basis": "item",
+          "source": "cfr1633",
+          "note": "Upper limit for a US mattress set compliant with 16 CFR 1633 in the standard test."
+        }
+      ],
+      "evidence": "peer-reviewed",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA); peer-reviewed: bedclothes were first ignited in 23 % of fatal London dwelling fires (holborn2003)",
+        "designFire": "measurement (NBS report)"
+      }
+    },
+    {
+      "id": "candle",
+      "label": "Candle near bedding, curtains or furniture",
+      "fireClass": "A",
+      "isoClass": "A",
+      "classNote": "Open flame igniting class A furnishings.",
+      "ifc": [
+        {
+          "entity": "IfcFurniture",
+          "predefinedType": "BED",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "note": "No IFC entity models candles; anchor at beds, then sofas and tables in living rooms."
+        },
+        {
+          "entity": "IfcFurnishingElement",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        }
+      ],
+      "nameHints": [
+        "candle",
+        "kerze",
+        "bed",
+        "sofa",
+        "table"
+      ],
+      "nameHintsAr": [
+        "شمعة"
+      ],
+      "nameRegex": "(?:^|[^a-z])(candle|beds?(?![a-z])|sofa|couch)|kerze|bett(?![a-z])",
+      "spaceHints": [
+        "bedroom",
+        "living room",
+        "bathroom"
+      ],
+      "spaceRegex": "bed ?room|living|lounge|bath|schlaf|wohn",
+      "firstFuel": "Bedding, curtains, furniture placed too close (60 % of US candle fires)",
+      "room": "bedroom (37 % of US candle fires, 40 % of candle deaths, 2014-2018)",
+      "share": {
+        "value": 0.02,
+        "of": "US home structure fires, 2019-2023 (cause: candles)",
+        "source": "nfpa2025homes"
+      },
+      "shareDeaths": {
+        "value": 0.03,
+        "of": "US home fire deaths, 2019-2023",
+        "source": "nfpa2025homes"
+      },
+      "shareUK": {
+        "fires": 0.035,
+        "deaths": 0.062,
+        "of": "England accidental dwelling fires, year ending March 2026",
+        "source": "mhclg2026fire0602"
+      },
+      "designFire": {
+        "growth": "slow",
+        "alpha_kW_per_s2": 0.00293,
+        "peak_kW": 1700,
+        "basis": "item",
+        "source": "lawson1984nbsir",
+        "note": "Bedding default (bedroom); use the sofa entry (fast, 3120 kW) when the anchor is in a living room."
+      },
+      "evidence": "industry statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (England)",
+        "designFire": "measurement (NBS report)"
+      },
+      "nameExclude": "bedside|nachttisch|table|tisch"
+    },
+    {
+      "id": "space-heater",
+      "label": "Space heater too close to combustibles",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "classNote": "Electric heater energised: class C; what burns (chair, bedding, clothing) is class A. A fuel-fired heater adds class B.",
+      "ifc": [
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "FREESTANDINGELECTRICHEATER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "ELECTRICHEATER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "RADIANTHEATER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricHeaterType",
+          "predefinedType": "ELECTRICPOINTHEATER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcSpaceHeater",
+          "predefinedType": "CONVECTOR",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "pset": "Pset_SpaceHeaterTypeCommon.EnergySource in {ELECTRICITY, GAS, OIL, PROPANE}",
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcSpaceHeater",
+          "predefinedType": "RADIATOR",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.1,
+          "note": "Hydronic radiators (EnergySource unset or hot water) are not a recorded ignition source; keep at low weight."
+        },
+        {
+          "entity": "IfcSpaceHeaterType",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcEnergyConversionDevice",
+          "pset": "Pset_SpaceHeaterTypeCommon.HeatingSource in {ELECTRICITY, GAS, FUEL}",
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "space heater",
+        "fan heater",
+        "radiant heater",
+        "electric heater",
+        "heater",
+        "convector",
+        "heizlüfter",
+        "heizstrahler",
+        "elektroheizung"
+      ],
+      "nameHintsAr": [
+        "دفاية",
+        "مدفأة",
+        "سخان"
+      ],
+      "nameRegex": "(?:^|[^a-z])(space ?heater|fan ?heater|radiant ?heater|electric ?heater|heater|convector)|heizl(ü|ue)fter|heizstrahler|elektroheiz|konvektor",
+      "nameExclude": "water ?heater|boiler|ceiling|panel radiator",
+      "spaceHints": [
+        "living room",
+        "bedroom"
+      ],
+      "spaceRegex": "living|lounge|bed ?room|wohn|schlaf",
+      "firstFuel": "Upholstered furniture, bedding or clothing within the heater's radiation",
+      "room": "living room (46 % of US heating deaths) and bedroom (22 %), 2016-2020",
+      "share": {
+        "value": 0.01,
+        "of": "US home structure fires, 2019-2023, equipment involved: space heater (excluding catalytic and oil-filled)",
+        "source": "nfpa2025homestables"
+      },
+      "shareDeaths": {
+        "value": 0.06,
+        "of": "US home fire deaths, 2019-2023",
+        "source": "nfpa2025homestables"
+      },
+      "shareCause": {
+        "fires": 0.2,
+        "deaths": 0.17,
+        "of": "US home fires and deaths, cause heating equipment, 2019-2023",
+        "source": "nfpa2025homes"
+      },
+      "shareUK": {
+        "fires": 0.031,
+        "deaths": 0.043,
+        "of": "England accidental dwelling fires, year ending March 2026 (space heating appliances)",
+        "source": "mhclg2026fire0602"
+      },
+      "designFire": {
+        "growth": "fast",
+        "alpha_kW_per_s2": 0.0469,
+        "peak_kW": 2000,
+        "basis": "item+adjacent",
+        "source": "babrauskas1982nbsir",
+        "note": "The heater ignites an armchair (F21: 1970-2130 kW, derived alpha 0.025-0.032)."
+      },
+      "evidence": "industry statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (England)",
+        "designFire": "measurement (NBS report)"
+      }
+    },
+    {
+      "id": "heating-stove-fireplace",
+      "label": "Heating stove, fireplace or chimney (solid fuel)",
+      "fireClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcChimney",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcSpaceHeater",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "pset": "Pset_SpaceHeaterTypeCommon.EnergySource in {WOOD, WOOD_CHIP, WOOD_PELLET, COAL}"
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        },
+        {
+          "entity": "IfcFurnishingElement",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "fireplace",
+        "wood stove",
+        "woodburner",
+        "log burner",
+        "chimney",
+        "kamin",
+        "kachelofen",
+        "schwedenofen"
+      ],
+      "nameHintsAr": [
+        "مدفأة حطب",
+        "موقد حطب"
+      ],
+      "nameRegex": "(?:^|[^a-z])(fire ?place|wood ?stove|wood ?burner|log ?burner|chimney|pellet ?stove)|kamin|kachelofen|schwedenofen",
+      "spaceHints": [
+        "living room",
+        "lounge",
+        "majlis"
+      ],
+      "spaceRegex": "living|lounge|majlis|wohn",
+      "firstFuel": "Creosote in the flue (confined chimney fires); furniture and wood near the appliance",
+      "room": "living room",
+      "share": {
+        "value": 0.09,
+        "of": "US home structure fires, 2019-2023, equipment involved: heating stove",
+        "source": "nfpa2025homestables"
+      },
+      "shareDeaths": {
+        "value": 0.06,
+        "of": "US home fire deaths, 2019-2023",
+        "source": "nfpa2025homestables"
+      },
+      "designFire": {
+        "growth": "fast",
+        "alpha_kW_per_s2": 0.0469,
+        "peak_kW": 2000,
+        "basis": "item+adjacent",
+        "source": "babrauskas1982nbsir",
+        "note": "Judgement: a confined chimney fire threatens egress little (30 % of US heating fires, no deaths, 2016-2020); the design case is an adjacent armchair."
+      },
+      "evidence": "industry statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA)",
+        "designFire": "measurement (NBS report), composite"
+      }
+    },
+    {
+      "id": "electrical-distribution",
+      "label": "Electrical distribution: wiring, distribution board, outlets, lighting",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcElectricDistributionBoard",
+          "predefinedType": "CONSUMERUNIT",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricDistributionBoard",
+          "predefinedType": "DISTRIBUTIONBOARD",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricDistributionBoard",
+          "predefinedType": "SWITCHBOARD",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricDistributionBoard",
+          "predefinedType": "MOTORCONTROLCENTRE",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricDistributionPoint",
+          "attribute": "DistributionPointFunction",
+          "values": [
+            "CONSUMERUNIT",
+            "DISTRIBUTIONBOARD",
+            "SWITCHBOARD",
+            "MOTORCONTROLCENTRE",
+            "CONTROLPANEL"
+          ],
+          "schema": [
+            "IFC2X3"
+          ]
+        },
+        {
+          "entity": "IfcOutlet",
+          "predefinedType": "POWEROUTLET",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.2
+        },
+        {
+          "entity": "IfcOutletType",
+          "predefinedType": "POWEROUTLET",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal",
+          "weight": 0.2
+        },
+        {
+          "entity": "IfcLightFixture",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.1
+        },
+        {
+          "entity": "IfcLightFixtureType",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal",
+          "weight": 0.1
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "panelboard",
+        "distribution board",
+        "consumer unit",
+        "fuse box",
+        "switchboard",
+        "breaker panel",
+        "sicherungskasten",
+        "verteiler",
+        "unterverteilung",
+        "schaltschrank"
+      ],
+      "nameHintsAr": [
+        "لوحة توزيع",
+        "لوحة كهرباء",
+        "قاطع"
+      ],
+      "nameRegex": "(?:^|[^a-z])(panel ?board|distribution ?board|consumer ?unit|fuse ?box|switch ?board|breaker ?panel|switchgear)|sicherungskasten|unterverteilung|hauptverteilung|stromverteiler|verteilerkasten|schaltschrank|z(ä|ae)hlerschrank",
+      "nameExclude": "solar|photovoltaic|ceiling|insulation|acoustic",
+      "spaceHints": [
+        "electrical",
+        "plant",
+        "utility",
+        "riser",
+        "hallway",
+        "garage",
+        "technikraum",
+        "elektro"
+      ],
+      "spaceRegex": "electric|elektro|plant|utility|riser|switch ?room|technik|haustechnik",
+      "firstFuel": "Electrical wire or cable insulation (32 %) and structural members (34 %) in US electrical distribution fires, 2015-2019",
+      "room": "bedroom (16 % of fires, 24 % of deaths), attic or concealed space (11 % of fires), living room (34 % of deaths)",
+      "share": {
+        "value": 0.09,
+        "of": "US home structure fires, 2019-2023 (cause: electrical distribution and lighting equipment)",
+        "source": "nfpa2025homes"
+      },
+      "shareDeaths": {
+        "value": 0.16,
+        "of": "US home fire deaths, 2019-2023",
+        "source": "nfpa2025homes"
+      },
+      "shareUK": {
+        "fires": 0.143,
+        "deaths": 0.019,
+        "of": "England accidental dwelling fires, year ending March 2026 (electrical distribution)",
+        "source": "mhclg2026fire0602"
+      },
+      "shareNonResidential": {
+        "value": 0.075,
+        "of": "US non-residential fires with known cause, 2017-2019 (14 % of non-confined fires; 11.0 % in stores and offices)",
+        "source": "usfa2021nonres"
+      },
+      "deathsPerThousandFires": {
+        "value": 13.6,
+        "note": "430 deaths / 31,650 fires",
+        "source": "nfpa2025homes"
+      },
+      "designFire": {
+        "growth": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "peak_kW": null,
+        "peak_kW_per_m2": 250,
+        "basis": "occupancy",
+        "source": [
+          "en1991-1-2",
+          "jrc2012vassart"
+        ],
+        "note": "No item-specific calorimetry: use the occupancy design fire (dwelling, office, school, hospital room: medium, 250 kW/m2 x floor area; shopping centre fast, 250; library fast, 500)."
+      },
+      "evidence": "standard",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (England, USFA)",
+        "designFire": "standard (EN 1991-1-2)"
+      }
+    },
+    {
+      "id": "extension-lead",
+      "label": "Extension lead, power strip or cord next to furniture or bedding",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "subsetOf": "electrical-distribution",
+      "ifc": [
+        {
+          "entity": "IfcOutlet",
+          "predefinedType": "POWEROUTLET",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "note": "Anchor: the outlet nearest a sofa or bed in the same space."
+        },
+        {
+          "entity": "IfcOutletType",
+          "predefinedType": "POWEROUTLET",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        }
+      ],
+      "nameHints": [
+        "socket",
+        "outlet",
+        "receptacle",
+        "steckdose",
+        "power strip"
+      ],
+      "nameHintsAr": [
+        "مقبس",
+        "فيش"
+      ],
+      "nameRegex": "(?:^|[^a-z])(socket|outlet|receptacle|power ?strip|extension ?(lead|cord))|steckdose",
+      "spaceHints": [
+        "living room",
+        "bedroom"
+      ],
+      "spaceRegex": "living|lounge|bed ?room|wohn|schlaf",
+      "firstFuel": "Upholstered furniture or bedding next to the cord",
+      "room": "living room, bedroom",
+      "share": {
+        "value": 0.01,
+        "of": "US home structure fires, 2019-2023, cords or plugs involved",
+        "source": "nfpa2025homes"
+      },
+      "shareDeaths": {
+        "value": 0.03,
+        "of": "US home fire deaths, 2019-2023",
+        "source": "nfpa2025homes"
+      },
+      "designFire": {
+        "growth": "fast",
+        "alpha_kW_per_s2": 0.0469,
+        "peak_kW": 2000,
+        "basis": "item+adjacent",
+        "source": "babrauskas1982nbsir",
+        "note": "Armchair F21 ignited by the cord."
+      },
+      "evidence": "industry statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA)",
+        "designFire": "measurement (NBS report), composite"
+      },
+      "nameExclude": "air|grille|valve|data|tele|network|lan(?![a-z])"
+    },
+    {
+      "id": "clothes-dryer",
+      "label": "Tumble dryer (lint, clothing)",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "TUMBLEDRYER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "TUMBLEDRYER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        },
+        {
+          "entity": "IfcFlowTerminal",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        }
+      ],
+      "nameHints": [
+        "tumble dryer",
+        "dryer",
+        "drier",
+        "trockner",
+        "wäschetrockner"
+      ],
+      "nameHintsAr": [
+        "مجفف",
+        "نشافة"
+      ],
+      "nameRegex": "(?:^|[^a-z])(tumble ?dryer|dryer|drier)|trockner|t(ø|o)rketrommel",
+      "nameExclude": "hand|hair|haar",
+      "spaceHints": [
+        "laundry",
+        "utility",
+        "washroom",
+        "waschküche",
+        "hauswirtschaft"
+      ],
+      "spaceHintsAr": [
+        "غسيل",
+        "غرفة الغسيل"
+      ],
+      "spaceRegex": "laundry|utility|wasch|hauswirtschaft|hwr",
+      "firstFuel": "Dust, fibre or lint (27 %) and clothing (26 %) in US dryer fires, 2010-2014",
+      "room": "laundry room",
+      "share": {
+        "value": 0.037,
+        "of": "US home structure fires, 2010-2014: dryers and washers 4 % of home fires, dryers 92 % of those",
+        "source": "nfpa2017dryers",
+        "note": "derived"
+      },
+      "shareDeaths": {
+        "value": 0.01,
+        "of": "US home fire deaths, 2010-2014 (dryers and washers together)",
+        "source": "nfpa2017dryers"
+      },
+      "shareUK": {
+        "fires": 0.024,
+        "deaths": 0.012,
+        "of": "England accidental dwelling fires, year ending March 2026 (tumble dryer: 579 fires, 2 deaths)",
+        "source": "mhclg2026fire0602",
+        "note": "derived from counts"
+      },
+      "designFire": {
+        "growth": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "peak_kW": 333,
+        "basis": "item",
+        "source": "hietaniemi2001vtt",
+        "note": "Proxy: the washing-machine mean (no dryer calorimetry was read). Growth is an assumption; washing machines showed a 10-20 min incipient phase."
+      },
+      "evidence": "industry statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (England)",
+        "designFire": "measurement (VTT report), proxy"
+      }
+    },
+    {
+      "id": "washing-machine",
+      "label": "Washing machine",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "WASHINGMACHINE",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "WASHINGMACHINE",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        },
+        {
+          "entity": "IfcFlowTerminal",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        }
+      ],
+      "nameHints": [
+        "washing machine",
+        "washer",
+        "waschmaschine"
+      ],
+      "nameHintsAr": [
+        "غسالة ملابس",
+        "غسالة"
+      ],
+      "nameRegex": "(?:^|[^a-z])(washing ?machine|washer(?! ?dryer))|waschmaschine|vaskemaskin",
+      "nameExclude": "dish|geschirr|pressure|oppvask",
+      "spaceHints": [
+        "laundry",
+        "utility",
+        "bathroom",
+        "waschküche"
+      ],
+      "spaceRegex": "laundry|utility|bath|wasch|hauswirtschaft",
+      "firstFuel": "Electrical wire insulation (26 %) and appliance housing (24 %) in US washer fires, 2010-2014",
+      "room": "laundry room, bathroom",
+      "share": {
+        "value": 0.003,
+        "of": "US home structure fires, 2010-2014: dryers and washers 4 %, washers 8 % of those",
+        "source": "nfpa2017dryers",
+        "note": "derived"
+      },
+      "shareDeaths": {
+        "value": null,
+        "of": "not separated from dryers",
+        "source": "nfpa2017dryers"
+      },
+      "shareUK": {
+        "fires": 0.017,
+        "deaths": 0.0,
+        "of": "England accidental dwelling fires, year ending March 2026 (409 fires, no deaths)",
+        "source": "mhclg2026fire0602",
+        "note": "derived from counts"
+      },
+      "designFire": {
+        "growth": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "peak_kW": 333,
+        "basis": "item",
+        "source": "hietaniemi2001vtt",
+        "note": "Mean of three tests, 221-431 kW. Growth is an assumption; the incipient phase lasted 10-20 min."
+      },
+      "evidence": "official statistics",
+      "evidenceDetail": {
+        "share": "official statistics (England), industry statistics (NFPA)",
+        "designFire": "measurement (VTT report)"
+      }
+    },
+    {
+      "id": "refrigerator-freezer",
+      "label": "Refrigerator or freezer",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "REFRIGERATOR",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "FRIDGE_FREEZER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "FREEZER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "REFRIGERATOR",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "FRIDGE_FREEZER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "FREEZER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        },
+        {
+          "entity": "IfcFurnishingElement",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "refrigerator",
+        "fridge",
+        "freezer",
+        "mastercool",
+        "kühlschrank",
+        "gefrierschrank",
+        "kühl"
+      ],
+      "nameHintsAr": [
+        "ثلاجة",
+        "براد",
+        "مجمد",
+        "فريزر"
+      ],
+      "nameRegex": "(?:^|[^a-z])(refrigerator|fridge|freezer)|k(ü|ue)hlschrank|gefrierschrank|gefriertruhe|kj(ø|o)leskap|fryser",
+      "spaceHints": [
+        "kitchen",
+        "pantry",
+        "break room"
+      ],
+      "spaceRegex": "kitchen|pantry|break ?room|k(ü|ue)che",
+      "firstFuel": "Polyurethane insulation, polystyrene and polypropylene liners",
+      "room": "kitchen",
+      "share": {
+        "value": 0.0038,
+        "of": "US home structure fires, 2019-2023, equipment involved: refrigerator or freezer (1,262 fires)",
+        "source": "nfpa2025homestables"
+      },
+      "shareDeaths": {
+        "value": 0.01,
+        "of": "US home fire deaths, 2019-2023 (27 deaths)",
+        "source": "nfpa2025homestables"
+      },
+      "shareUK": {
+        "fires": 0.006,
+        "deaths": 0.006,
+        "of": "England accidental dwelling fires, year ending March 2026 (141 fires, 1 death)",
+        "source": "mhclg2026fire0602",
+        "note": "derived from counts"
+      },
+      "designFire": {
+        "growth": "slow",
+        "alpha_kW_per_s2": 0.00293,
+        "peak_kW": 1970,
+        "basis": "item",
+        "source": "hietaniemi2001vtt",
+        "note": "Mean peak of free-burning units (tests stopped near 2 MW); derived alpha about 0.004-0.006 kW s^-2 from about 10 min of growth, nearest class slow. HF from the refrigerant (one test: 27 g)."
+      },
+      "evidence": "official statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (England)",
+        "designFire": "measurement (VTT report)"
+      }
+    },
+    {
+      "id": "dishwasher",
+      "label": "Dishwasher",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "DISHWASHER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "DISHWASHER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        },
+        {
+          "entity": "IfcFurnishingElementType",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        }
+      ],
+      "nameHints": [
+        "dishwasher",
+        "geschirrspüler",
+        "spülmaschine"
+      ],
+      "nameHintsAr": [
+        "غسالة صحون",
+        "جلاية"
+      ],
+      "nameRegex": "(?:^|[^a-z])(dish ?washer)|geschirrsp(ü|ue)ler|sp(ü|ue)lmaschine|oppvask",
+      "nameExclude": "recess",
+      "spaceHints": [
+        "kitchen",
+        "pantry"
+      ],
+      "spaceRegex": "kitchen|pantry|k(ü|ue)che",
+      "firstFuel": "Plastic tub, door seals and wiring",
+      "room": "kitchen",
+      "share": {
+        "value": 0.0024,
+        "of": "US home structure fires, 2019-2023 (805 fires)",
+        "source": "nfpa2025homestables"
+      },
+      "shareDeaths": {
+        "value": 0.0019,
+        "of": "US home fire deaths, 2019-2023 (5 deaths)",
+        "source": "nfpa2025homestables"
+      },
+      "shareUK": {
+        "fires": 0.005,
+        "deaths": 0.0,
+        "of": "England accidental dwelling fires, year ending March 2026 (119 fires)",
+        "source": "mhclg2026fire0602",
+        "note": "derived from counts"
+      },
+      "designFire": {
+        "growth": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "peak_kW": 411,
+        "basis": "item",
+        "source": "hietaniemi2001vtt",
+        "note": "Free-burning mean; 548 kW in a cupboard. Growth is an assumption after a 5-10 min incipient phase."
+      },
+      "evidence": "official statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (England)",
+        "designFire": "measurement (VTT report)"
+      }
+    },
+    {
+      "id": "tv-electronics",
+      "label": "TV set, computer or other electronics",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcAudioVisualAppliance",
+          "predefinedType": "DISPLAY",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcAudioVisualAppliance",
+          "predefinedType": "PLAYER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcAudioVisualAppliance",
+          "predefinedType": "PROJECTOR",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcCommunicationsAppliance",
+          "predefinedType": "COMPUTER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "TV",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "COMPUTER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal",
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "tv",
+        "television",
+        "monitor",
+        "display",
+        "screen",
+        "computer",
+        "fernseher",
+        "bildschirm"
+      ],
+      "nameHintsAr": [
+        "تلفاز",
+        "تلفزيون",
+        "شاشة"
+      ],
+      "nameRegex": "(?:^|[^a-z])(tv(?![a-z])|television|monitor|display|computer|flat ?screen)|fernseh|bildschirm",
+      "nameExclude": "screen ?wall|privacy|monitoring|display ?(case|cabinet)|vitrine",
+      "spaceHints": [
+        "living room",
+        "bedroom",
+        "office"
+      ],
+      "spaceRegex": "living|lounge|bed ?room|office|wohn|b(ü|ue)ro",
+      "firstFuel": "Plastic enclosure and circuit boards",
+      "room": "living room, bedroom",
+      "share": {
+        "value": 0.0074,
+        "of": "US home structure fires, 2019-2023, equipment: electronic and other electrical equipment (2,433 fires; TVs not separated)",
+        "source": "nfpa2025homestables"
+      },
+      "shareDeaths": {
+        "value": 0.018,
+        "of": "US home fire deaths, 2019-2023 (47 deaths)",
+        "source": "nfpa2025homestables"
+      },
+      "shareUK": {
+        "fires": 0.0011,
+        "deaths": null,
+        "of": "England accidental dwelling fires, year ending March 2026 (TV: 27 fires)",
+        "source": "mhclg2026fire0602",
+        "note": "derived from counts"
+      },
+      "designFire": {
+        "growth": "fast",
+        "alpha_kW_per_s2": 0.0469,
+        "peak_kW": 241,
+        "basis": "item",
+        "source": "hietaniemi2001vtt",
+        "note": "Mean of three TV sets (211-274 kW); peak within 1-1.5 min of the onset of rapid growth, derived alpha about 0.03-0.07. Highest smoke yield of the appliances (0.116 kg/kg)."
+      },
+      "evidence": "industry statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA)",
+        "designFire": "measurement (VTT report)"
+      }
+    },
+    {
+      "id": "li-ion-micromobility",
+      "label": "E-bike or e-scooter battery, often while charging",
+      "fireClass": "C",
+      "fuelClass": "B",
+      "isoClass": "L",
+      "classNote": "No NFPA 10 class; ISO 3941:2026 Class L. Electrolyte vapour burns like class B; the vehicle and nearby furniture are class A.",
+      "ifc": [
+        {
+          "entity": "IfcElectricFlowStorageDevice",
+          "predefinedType": "BATTERY",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.3
+        },
+        {
+          "entity": "IfcElectricFlowStorageDevice",
+          "predefinedType": "RECHARGER",
+          "schema": [
+            "IFC4X3"
+          ],
+          "weight": 0.3
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "e-bike",
+        "ebike",
+        "e-scooter",
+        "scooter",
+        "bicycle",
+        "bike",
+        "charging",
+        "fahrrad",
+        "ladestation"
+      ],
+      "nameHintsAr": [
+        "دراجة",
+        "سكوتر"
+      ],
+      "nameRegex": "(?:^|[^a-z])(e-?bike|e-?scooter|scooter|bicycle|bike|pedelec)|fahrrad",
+      "spaceHints": [
+        "hallway",
+        "corridor",
+        "entrance",
+        "bike store",
+        "bicycle",
+        "storage",
+        "garage",
+        "fahrradraum",
+        "flur"
+      ],
+      "spaceRegex": "hall|corridor|entrance|entry|lobby|bike|bicycle|cycle|store|garage|fahrrad|flur|diele",
+      "firstFuel": "Battery cells (electrolyte), then the vehicle and nearby furniture",
+      "room": "hallway or living area; 66 % of UK-notified e-bike and e-scooter fires in 2024 were indoor or residential",
+      "share": {
+        "value": 0.037,
+        "of": "England accidental dwelling fires, year ending March 2026: batteries and generators (885 fires; not only lithium-ion)",
+        "source": "mhclg2026fire0602"
+      },
+      "shareDeaths": {
+        "value": 0.006,
+        "of": "England accidental dwelling fire deaths, year ending March 2026 (1 death); casualties 5.3 %",
+        "source": "mhclg2026fire0602"
+      },
+      "shareUS": {
+        "fires": 0.0029,
+        "deaths": 0.0031,
+        "of": "US home structure fires and deaths, 2019-2023, equipment: battery (955 fires, 8 deaths)",
+        "source": "nfpa2025homestables"
+      },
+      "counts": {
+        "london2025": "206 e-bike and e-scooter fires, 2 deaths (London Fire Brigade)",
+        "uk2024": "211 fires notified, 8 deaths, 86 casualties; 39 % on charge (OPSS)",
+        "nyc2023": "268 lithium-ion fires, 18 deaths (FDNY)",
+        "source": [
+          "lfb2026",
+          "opss2025",
+          "fdny2025"
+        ]
+      },
+      "designFire": {
+        "growth": "ultra-fast",
+        "alpha_kW_per_s2": 0.1876,
+        "peak_kW": 3120,
+        "basis": "item+adjacent",
+        "source": [
+          "fleischmann2025",
+          "fsri2025",
+          "babrauskas1982nbsir"
+        ],
+        "note": "Growth: flashover within 30 s of visible smoke in a closed bedroom with an overcharged e-scooter. Peak: the pack plus an adjacent sofa (composite, judgement)."
+      },
+      "firstItemFire": {
+        "peak_kW": 107,
+        "item": "e-bike pack in a cabinet, 60 % state of charge",
+        "source": "liu2025ebike"
+      },
+      "evidence": "peer-reviewed",
+      "evidenceDetail": {
+        "share": "official statistics (England, London, OPSS, FDNY)",
+        "designFire": "peer-reviewed (abstract and summary), composite peak"
+      },
+      "nameExclude": "rack|stand|ladestation|charging ?station|car(?![a-z])|vehicle|kfz|pkw"
+    },
+    {
+      "id": "li-ion-small-device",
+      "label": "Phone, laptop, power bank or charger on a bed or sofa",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "L",
+      "ifc": [
+        {
+          "entity": "IfcFurniture",
+          "predefinedType": "BED",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "note": "No IFC entity for chargers; anchor at beds, then sofas."
+        },
+        {
+          "entity": "IfcOutlet",
+          "predefinedType": "POWEROUTLET",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.3
+        }
+      ],
+      "nameHints": [
+        "charger",
+        "power bank",
+        "bed",
+        "sofa"
+      ],
+      "nameRegex": "(?:^|[^a-z])(charger|power ?bank|beds?(?![a-z])|sofa|couch)|bett(?![a-z])|ladeger(ä|ae)t",
+      "spaceHints": [
+        "bedroom",
+        "living room"
+      ],
+      "spaceRegex": "bed ?room|living|lounge|schlaf|wohn",
+      "firstFuel": "Bedding or upholstery around the device",
+      "room": "bedroom",
+      "share": {
+        "value": 0.0032,
+        "of": "US home structure fires, 2019-2023, equipment: battery charger or rectifier (1,063 fires, no deaths)",
+        "source": "nfpa2025homestables"
+      },
+      "shareDeaths": {
+        "value": 0.0,
+        "of": "US home fire deaths, 2019-2023",
+        "source": "nfpa2025homestables"
+      },
+      "shareUK": {
+        "fires": 0.006,
+        "deaths": 0.0,
+        "of": "England accidental dwelling fires, year ending March 2026 (battery charger: 142 fires, 53 casualties)",
+        "source": "mhclg2026fire0602",
+        "note": "derived from counts"
+      },
+      "designFire": {
+        "growth": "slow",
+        "alpha_kW_per_s2": 0.00293,
+        "peak_kW": 1700,
+        "basis": "item+adjacent",
+        "source": "lawson1984nbsir",
+        "note": "Bedding default. A pack's jet flame may ignite bedding faster than a lighter on a sheet, which this default does not capture; no small-pack calorimetry without an ignition burner was read."
+      },
+      "evidence": "official statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (England)",
+        "designFire": "measurement (NBS report), composite"
+      },
+      "nameExclude": "bedside|nachttisch"
+    },
+    {
+      "id": "intentional-accelerant",
+      "label": "Deliberate fire with an accelerant at an entrance, corridor or stair",
+      "fireClass": "B",
+      "isoClass": "B",
+      "ifc": [
+        {
+          "entity": "IfcDoor",
+          "note": "Anchor at exit doors (ifcSemantics exitDoors) and the corridors and stair lobbies leading to them; no ignition entity."
+        }
+      ],
+      "nameHints": [],
+      "spaceHints": [
+        "corridor",
+        "hall",
+        "entrance",
+        "lobby",
+        "stair",
+        "foyer",
+        "flur",
+        "treppenhaus",
+        "eingang"
+      ],
+      "spaceHintsAr": [
+        "ممر",
+        "مدخل",
+        "درج"
+      ],
+      "spaceRegex": "corridor|hall|entrance|entry|lobby|stair|foyer|flur|treppe|eingang",
+      "firstFuel": "Gasoline or another flammable liquid, then floor coverings and contents",
+      "room": "entrance, corridor or stair",
+      "share": {
+        "value": 0.07,
+        "of": "US home structure fires, 2019-2023 (cause: intentional)",
+        "source": "nfpa2025homes"
+      },
+      "shareDeaths": {
+        "value": 0.05,
+        "of": "US home fire deaths, 2019-2023",
+        "source": "nfpa2025homes"
+      },
+      "shareNonResidential": {
+        "value": 0.102,
+        "of": "US non-residential fires with known cause, 2017-2019; 43 % of US school fires (2014-2018, NFPA)",
+        "source": [
+          "usfa2021nonres",
+          "nfpa2020schools"
+        ]
+      },
+      "designFire": {
+        "growth": "ultra-fast",
+        "alpha_kW_per_s2": 0.1876,
+        "peak_kW": 2180,
+        "basis": "item",
+        "source": [
+          "babrauskas1983pool",
+          "nureg1805s1"
+        ],
+        "note": "A 1 m2 gasoline pool (derived); 'ultra-fast' is a judgement for a liquid spill, not a fitted value."
+      },
+      "evidence": "industry statistics",
+      "evidenceDetail": {
+        "share": "industry statistics (NFPA), official statistics (USFA)",
+        "designFire": "peer-reviewed correlation via handbook table (secondary), derived"
+      }
+    },
+    {
+      "id": "waste-bin-workstation",
+      "label": "Waste bin or paper igniting an office workstation",
+      "fireClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcFurniture",
+          "predefinedType": "DESK",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcSystemFurnitureElement",
+          "predefinedType": "WORKSURFACE",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcSystemFurnitureElement",
+          "predefinedType": "PANEL",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcFurnishingElement",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        },
+        {
+          "entity": "IfcFurnitureType",
+          "byName": true,
+          "schema": [
+            "IFC2X3"
+          ]
+        }
+      ],
+      "nameHints": [
+        "desk",
+        "workstation",
+        "work station",
+        "cubicle",
+        "schreibtisch",
+        "arbeitsplatz",
+        "bin",
+        "wastebasket"
+      ],
+      "nameHintsAr": [
+        "مكتب",
+        "سلة مهملات"
+      ],
+      "nameRegex": "(?:^|[^a-z])(desk|work ?station|cubicle|waste ?(bin|basket)|recycling ?bin)|schreibtisch|arbeitsplatz",
+      "spaceHints": [
+        "office",
+        "open office",
+        "classroom",
+        "study",
+        "büro",
+        "klassenzimmer"
+      ],
+      "spaceHintsAr": [
+        "مكتب",
+        "فصل"
+      ],
+      "spaceRegex": "office|classroom|study|work|b(ü|ue)ro|klasse|unterricht",
+      "firstFuel": "Paper and cardboard (8.0 % of fires in England's non-dwelling buildings, 2025/26), then the workstation",
+      "room": "office, classroom",
+      "share": {
+        "value": null,
+        "of": "No waste-bin category in the US non-residential tables read"
+      },
+      "shareNonResidential": {
+        "value": 0.08,
+        "of": "England other buildings, year ending March 2026: paper or cardboard first ignited",
+        "source": "mhclg2026fire0603"
+      },
+      "designFire": {
+        "growth": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "peak_kW": 3500,
+        "basis": "item",
+        "source": [
+          "madrzykowski2004sp1021",
+          "en1991-1-2",
+          "jrc2012vassart"
+        ],
+        "note": "Peak: one office workstation of 3.15 m2 (earlier workstations 2.8-6.9 MW). Growth: EN 1991-1-2 office class."
+      },
+      "firstItemFire": {
+        "peak_kW": 50,
+        "item": "wastebasket, about 50 kW for 200 s",
+        "source": "babrauskas1982nbsir"
+      },
+      "evidence": "standard",
+      "evidenceDetail": {
+        "share": "official statistics (England)",
+        "designFire": "measurement (NIST report) and standard (growth)"
+      }
+    },
+    {
+      "id": "office-electrical-equipment",
+      "label": "Office or institutional electrical equipment (photocopier, computer, vending machine)",
+      "fireClass": "C",
+      "fuelClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "PHOTOCOPIER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "VENDINGMACHINE",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "HANDDRYER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.3
+        },
+        {
+          "entity": "IfcElectricAppliance",
+          "predefinedType": "KITCHENMACHINE",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcCommunicationsAppliance",
+          "predefinedType": "PRINTER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcCommunicationsAppliance",
+          "predefinedType": "COMPUTER",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "PHOTOCOPIER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "PRINTER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricApplianceType",
+          "predefinedType": "VENDINGMACHINE",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "copier",
+        "photocopier",
+        "printer",
+        "vending",
+        "server",
+        "kopierer",
+        "drucker"
+      ],
+      "nameHintsAr": [
+        "طابعة",
+        "آلة تصوير"
+      ],
+      "nameRegex": "(?:^|[^a-z])(photo ?copier|copier|printer|vending|server ?rack|plotter)|kopierer|drucker",
+      "spaceHints": [
+        "office",
+        "copy room",
+        "print room",
+        "server room",
+        "ward",
+        "nurse"
+      ],
+      "spaceRegex": "office|copy|print|server|ward|nurs|b(ü|ue)ro|kopier",
+      "firstFuel": "Equipment plastics, then paper and workstation furniture",
+      "room": "office, copy room",
+      "share": {
+        "value": null,
+        "of": "Not separated in the residential statistics"
+      },
+      "shareNonResidential": {
+        "value": 0.21,
+        "of": "US medical facilities, non-confined fires, 2014-2016: appliances 21 %, electrical 18 % (all medical-facility fires: cooking 71 %)",
+        "source": "usfa2018medical"
+      },
+      "designFire": {
+        "growth": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "peak_kW": 3500,
+        "basis": "item+adjacent",
+        "source": [
+          "madrzykowski2004sp1021",
+          "en1991-1-2"
+        ],
+        "note": "The equipment ignites the workstation it stands on (composite)."
+      },
+      "evidence": "official statistics",
+      "evidenceDetail": {
+        "share": "official statistics (USFA)",
+        "designFire": "measurement (NIST report), standard (growth)"
+      }
+    },
+    {
+      "id": "christmas-tree",
+      "label": "Dry Christmas tree (seasonal)",
+      "fireClass": "A",
+      "isoClass": "A",
+      "ifc": [
+        {
+          "entity": "IfcFurnishingElement",
+          "byName": true
+        },
+        {
+          "entity": "IfcBuildingElementProxy",
+          "byName": true
+        }
+      ],
+      "nameHints": [
+        "christmas tree",
+        "xmas tree",
+        "weihnachtsbaum",
+        "tannenbaum"
+      ],
+      "nameRegex": "(?:^|[^a-z])(christmas ?tree|xmas ?tree)|weihnachtsbaum|tannenbaum",
+      "spaceHints": [
+        "living room",
+        "lobby",
+        "foyer"
+      ],
+      "spaceRegex": "living|lounge|lobby|foyer|wohn",
+      "firstFuel": "Dry conifer needles and branches",
+      "room": "living room, lobby",
+      "share": {
+        "value": null,
+        "of": "Not gathered in this study"
+      },
+      "designFire": {
+        "growth": "ultra-fast",
+        "alpha_kW_per_s2": 0.1876,
+        "peak_kW": 7362,
+        "basis": "item+adjacent",
+        "source": "nistfcd",
+        "note": "7 ft Douglas fir, cut 4 weeks before and not watered, with an upholstered chair and shelf in a room corner: 7362 kW 31 s after an electric match (derived alpha about 7.6 kW s^-2). A watered tree did not sustain burning."
+      },
+      "evidence": "measurement",
+      "evidenceDetail": {
+        "share": "none",
+        "designFire": "measurement database (NIST FCD)"
+      }
+    },
+    {
+      "id": "boiler-plant",
+      "label": "Boiler, burner or generator in a plant room",
+      "fireClass": "B",
+      "isoClass": "B",
+      "classNote": "Gas (ISO class C) or oil (ISO class B) at the burner; electrical switchgear in the same room is class C.",
+      "ifc": [
+        {
+          "entity": "IfcBoiler",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcBoilerType",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcEnergyConversionDevice"
+        },
+        {
+          "entity": "IfcBurner",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcGasTerminalType",
+          "predefinedType": "GASBURNER",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowTerminal"
+        },
+        {
+          "entity": "IfcElectricGenerator",
+          "predefinedType": "ENGINEGENERATOR",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcTransformer",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.5
+        },
+        {
+          "entity": "IfcUnitaryEquipment",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ],
+          "weight": 0.2
+        }
+      ],
+      "nameHints": [
+        "boiler",
+        "burner",
+        "furnace",
+        "generator",
+        "kessel",
+        "heizkessel",
+        "brenner",
+        "therme"
+      ],
+      "nameHintsAr": [
+        "غلاية",
+        "مولد",
+        "حراق"
+      ],
+      "nameRegex": "(?:^|[^a-z])(boiler|burner|furnace|generator|genset)|heizkessel|kessel|brenner|therme",
+      "spaceHints": [
+        "plant room",
+        "boiler room",
+        "mechanical",
+        "heizraum",
+        "technikraum"
+      ],
+      "spaceRegex": "plant|boiler|mechanical|mech\\.|heiz|technik",
+      "firstFuel": "Fuel gas or oil at the burner; lubricating oil; switchgear insulation",
+      "room": "plant room",
+      "share": {
+        "value": null,
+        "of": "Not separated in the statistics read"
+      },
+      "designFire": {
+        "growth": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "peak_kW": null,
+        "peak_kW_per_m2": 250,
+        "basis": "occupancy",
+        "source": [
+          "en1991-1-2",
+          "jrc2012vassart"
+        ],
+        "note": "No item data read; occupancy default. A gas leak fire is limited by the gas supply, which the two-zone model does not represent."
+      },
+      "evidence": "standard",
+      "evidenceDetail": {
+        "share": "none",
+        "designFire": "standard (occupancy default)"
+      }
+    },
+    {
+      "id": "battery-storage-ups",
+      "label": "Battery room or UPS",
+      "fireClass": "C",
+      "fuelClass": "B",
+      "isoClass": "L",
+      "ifc": [
+        {
+          "entity": "IfcElectricFlowStorageDevice",
+          "predefinedType": "BATTERY",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricFlowStorageDevice",
+          "predefinedType": "UPS",
+          "schema": [
+            "IFC4",
+            "IFC4X3"
+          ]
+        },
+        {
+          "entity": "IfcElectricFlowStorageDeviceType",
+          "predefinedType": "BATTERY",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowStorageDevice"
+        },
+        {
+          "entity": "IfcElectricFlowStorageDeviceType",
+          "predefinedType": "UPS",
+          "schema": [
+            "IFC2X3"
+          ],
+          "occurrence": "IfcFlowStorageDevice"
+        }
+      ],
+      "nameHints": [
+        "battery",
+        "ups",
+        "accumulator",
+        "batterie",
+        "usv"
+      ],
+      "nameHintsAr": [
+        "بطارية"
+      ],
+      "nameRegex": "(?:^|[^a-z])(battery|batteries|ups(?![a-z])|accumulator)|batterie|usv(?![a-z])",
+      "spaceHints": [
+        "battery room",
+        "ups room",
+        "server room",
+        "electrical"
+      ],
+      "spaceRegex": "battery|batterie|ups|server|electric|elektro",
+      "firstFuel": "Cell electrolyte and casings",
+      "room": "battery or electrical room",
+      "share": {
+        "value": null,
+        "of": "Not separated for dwellings"
+      },
+      "shareNonResidential": {
+        "value": 0.059,
+        "of": "England other buildings, year ending March 2026: batteries and generators, 5.9 % of fires and 15.2 % of casualties",
+        "source": "mhclg2026fire0602"
+      },
+      "designFire": {
+        "growth": "medium",
+        "alpha_kW_per_s2": 0.0117,
+        "peak_kW": null,
+        "peak_kW_per_m2": 250,
+        "basis": "occupancy",
+        "source": [
+          "en1991-1-2",
+          "jrc2012vassart"
+        ],
+        "note": "No item data read; occupancy default. Toxic HF release (20-200 mg/Wh) matters more than heat for egress, and the two-zone model does not track it."
+      },
+      "evidence": "official statistics",
+      "evidenceDetail": {
+        "share": "official statistics (England)",
+        "designFire": "standard (occupancy default)"
+      }
+    }
+  ],
+  "ranking": {
+    "score": "score_i = w_s x m_i / N_s, where w_s is the scenario's share of deaths in the dataset for the building's occupancy (frequency x consequence: share of fires x deaths per fire is proportional to share of deaths), m_i the match confidence of candidate i, and N_s the number of candidates matched to scenario s in the model.",
+    "matchConfidence": {
+      "typedPredefinedType": 1.0,
+      "typedEntityAndName": 0.9,
+      "nameOnElement": 0.7,
+      "nameOnTypeOnly": 0.6,
+      "spaceNameOnly": 0.4,
+      "entityWeight": "multiply by the 'weight' of the matching ifc entry when given"
+    },
+    "occupancy": "Residential: shareDeaths (US NFPA 2019-2023), with shareUK as a cross-check. Non-residential: shareNonResidential where given, else the scenario's residential value times 0.5 and flagged. The panel lets the user override the inferred occupancy.",
+    "tieBreak": "shareInjuries, then share of fires"
+  },
+  "sources": {
+    "nfpa2025homes": {
+      "ref": "Hall S, McGree B. Home Structure Fires. NFPA Research, Quincy, MA, August 2025 (2019-2023 annual averages).",
+      "url": "https://content.nfpa.org/-/media/Project/Storefront/Catalog/Files/Research/NFPA-Research/Building-and-life-safety/oshomes.pdf",
+      "type": "industry statistics",
+      "read": "pp. 4-6 (Figs. 9 and 10, text) read by the author on 2026-11-05; other figures by the search agent"
+    },
+    "nfpa2025homestables": {
+      "ref": "NFPA. Home Structure Fires, Supporting Tables (2019-2023), Table 8: equipment involved.",
+      "url": "https://content.nfpa.org/-/media/Project/Storefront/Catalog/Files/Research/NFPA-Research/Building-and-life-safety/oshomefirestables.pdf",
+      "type": "industry statistics",
+      "read": "search agent, 2026-11-05"
+    },
+    "nfpa2023cooking": {
+      "ref": "Hall S, McGree B. Home Cooking Fires. NFPA Research, September 2023 (2017-2021).",
+      "url": "https://www.carrollcountymd.gov/media/swhl4wry/cook-fire-report.pdf",
+      "type": "industry statistics",
+      "read": "search agent (NFPA PDF re-hosted by Carroll County, MD)"
+    },
+    "nfpa2022heating": {
+      "ref": "Campbell R. Home Heating Fires, Supporting Tables. NFPA Research, December 2022 (2016-2020).",
+      "url": "https://content.nfpa.org/-/media/Project/Storefront/Catalog/Files/Research/NFPA-Research/US-Fire-Problem/Fire-causes/osHeatingTables.pdf",
+      "type": "industry statistics",
+      "read": "search agent"
+    },
+    "nfpa2022electrical": {
+      "ref": "Campbell R. Home Fires Involving Electrical Distribution and Lighting Equipment. NFPA Research, February 2022 (2015-2019).",
+      "url": "https://content.nfpa.org/-/media/Project/Storefront/Catalog/Files/Research/NFPA-Research/Electrical/osElectricalDistLighting.pdf",
+      "type": "industry statistics",
+      "read": "search agent"
+    },
+    "nfpa2025smoking": {
+      "ref": "McGree B. Home Fires Started by Smoking Materials. NFPA Research, March 2025 (2019-2023).",
+      "url": "https://content.nfpa.org/-/media/Project/Storefront/Catalog/Files/Research/NFPA-Research/US-Fire-Problem/Fire-causes/ossmoking.pdf",
+      "type": "industry statistics",
+      "read": "search agent"
+    },
+    "nfpa2020candles": {
+      "ref": "Ahrens M. Home Candle Fires. NFPA Research, May 2020 (2014-2018).",
+      "url": "https://content.nfpa.org/-/media/Project/Storefront/Catalog/Files/Research/NFPA-Research/US-Fire-Problem/Fire-causes/osCandles.pdf",
+      "type": "industry statistics",
+      "read": "search agent"
+    },
+    "nfpa2017dryers": {
+      "ref": "Campbell R. Home Fires Involving Clothes Dryers and Washing Machines. NFPA Research, March 2017 (2010-2014).",
+      "url": "https://content.nfpa.org/-/media/Project/Storefront/Catalog/Files/Research/NFPA-Research/US-Fire-Problem/Fire-causes/oswashersdryers.pdf",
+      "type": "industry statistics",
+      "read": "search agent"
+    },
+    "nfpa2020schools": {
+      "ref": "Campbell R. Structure Fires in Schools. NFPA Research, September 2020 (2014-2018).",
+      "url": "https://content.nfpa.org/-/media/Project/Storefront/Catalog/Files/Research/NFPA-Research/Building-and-life-safety/osSchools.pdf",
+      "type": "industry statistics",
+      "read": "search agent"
+    },
+    "usfa2021nonres": {
+      "ref": "US Fire Administration. Nonresidential Building Fires (2017-2019). Topical Fire Report Series 21(9), December 2021.",
+      "url": "https://www.usfa.fema.gov/downloads/pdf/statistics/v21i9.pdf",
+      "type": "official statistics",
+      "read": "search agent"
+    },
+    "usfa2018medical": {
+      "ref": "US Fire Administration. Medical Facility Fires (2014-2016). Data snapshot.",
+      "url": "https://www.usfa.fema.gov/downloads/pdf/statistics/snapshot_medical_facility.pdf",
+      "type": "official statistics",
+      "read": "search agent"
+    },
+    "mhclg2026detailed": {
+      "ref": "Ministry of Housing, Communities and Local Government. Detailed analysis of fires and response times to fires attended by fire and rescue services, England, year ending March 2026. Published 19 August 2026.",
+      "url": "https://www.gov.uk/government/statistics/detailed-analysis-of-fires-england-year-ending-march-2026/detailed-analysis-of-fires-and-response-times-to-fires-attended-by-fire-and-rescue-services-england-year-ending-march-2026",
+      "type": "official statistics",
+      "read": "author read the text (cooking 42 % / 11 %, smoking 7.6 % / 27 %, textiles first ignited 27 %) on 2026-11-05"
+    },
+    "mhclg2026fire0602": {
+      "ref": "MHCLG. Fire statistics data table FIRE0602: primary fires by source of ignition, England, year ending March 2026.",
+      "url": "https://assets.publishing.service.gov.uk/media/6a7c8fde154113c988fd98ae/FIRE0602.xlsx",
+      "type": "official statistics",
+      "read": "aggregated from the raw sheets by the search agent; totals match the published text"
+    },
+    "mhclg2026fire0603": {
+      "ref": "MHCLG. Fire statistics data table FIRE0603: primary fires by item first ignited, England, year ending March 2026.",
+      "url": "https://assets.publishing.service.gov.uk/media/6a7c3cea783bd442d7805c80/FIRE0603.xlsx",
+      "type": "official statistics",
+      "read": "aggregated by the search agent: the raw sheet sums to 25,096 primary dwelling fires against 26,180 published, so shares are approximate"
+    },
+    "homeoffice2021fatalities": {
+      "ref": "Home Office. An in-depth review of fire-related fatalities and severe casualties in England, 2010/11 to 2018/19.",
+      "url": "https://www.gov.uk/government/publications/an-in-depth-review-of-fire-related-fatalities-and-severe-casualties-in-england-2010-to-201819/an-in-depth-review-of-fire-related-fatalities-and-severe-casualties-in-england-201011-to-201819",
+      "type": "official statistics",
+      "read": "search agent"
+    },
+    "lfb2026": {
+      "ref": "London Fire Brigade. Record number of e-bike and e-scooter fires across London in 2025. News, 28 January 2026.",
+      "url": "https://www.london-fire.gov.uk/news/2026-news/january/record-number-of-e-bike-and-e-scooter-fires-across-london-in-2025-as-brigade-calls-for-regulation-to-be-introduced",
+      "type": "official statistics",
+      "read": "search agent"
+    },
+    "opss2025": {
+      "ref": "Office for Product Safety and Standards. Fires in e-bikes and e-scooters: 2024.",
+      "url": "https://www.gov.uk/government/publications/fires-in-e-bikes-and-e-scooters/fires-in-e-bikes-and-e-scooters-2024",
+      "type": "official statistics",
+      "read": "search agent"
+    },
+    "fdny2025": {
+      "ref": "FDNY. Commissioner Tucker: significant progress in the battle against lithium-ion battery fires. News, 8 January 2025.",
+      "url": "https://www.nyc.gov/site/fdny/news/03-25/fdny-commissioner-robert-s-tucker-significant-progress-the-battle-against-lithium-ion-battery-fires",
+      "type": "official statistics",
+      "read": "search agent"
+    },
+    "holborn2003": {
+      "ref": "Holborn PG, Nolan PF, Golt J. An analysis of fatal unintentional dwelling fires investigated by London Fire Brigade between 1996 and 2000. Fire Safety Journal 38(1):1-42, 2003.",
+      "doi": "10.1016/S0379-7112(02)00049-8",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "search agent read pp. 1-9"
+    },
+    "holborn2004": {
+      "ref": "Holborn PG, Nolan PF, Golt J. An analysis of fire sizes, fire growth rates and times between events using data from fire investigations. Fire Safety Journal 39(6):481-524, 2004.",
+      "doi": "10.1016/j.firesaf.2004.05.002",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "bibliographic record only; no numbers cited"
+    },
+    "jonsson2017": {
+      "ref": "Jonsson A, Bonander C, Nilson F, Huss F. The state of the residential fire fatality problem in Sweden: epidemiology, risk factors, and event typologies. Journal of Safety Research 62:89-100, 2017.",
+      "doi": "10.1016/j.jsr.2017.06.008",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract (search agent)"
+    },
+    "troitzsch2016": {
+      "ref": "Troitzsch JH. Fires, statistics, ignition sources, and passive fire protection measures. Journal of Fire Sciences 34(3):171-198, 2016.",
+      "doi": "10.1177/0734904116636642",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract (search agent)"
+    },
+    "salem2026": {
+      "ref": "Salem J, et al. The influence of cooking practices and social circumstances on kitchen fire incidents of residential buildings in the USA. Fire Technology 62(4), 2026.",
+      "doi": "10.1007/s10694-026-01902-6",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract (search agent)"
+    },
+    "bucala2026": {
+      "ref": "Bucala M, et al. Device-specific fire risk analysis of lithium-ion battery incidents: engineering implications for detection and protection systems. Fire Technology 62(2), 2026.",
+      "doi": "10.1007/s10694-026-01876-5",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract (author, via Crossref)"
+    },
+    "warnerlevy2024": {
+      "ref": "Warner-Levy J, Herieka E, Sheikh Z. Riding toward danger: a scoping review of burns associated with personal mobility devices, including e-bikes and e-scooters. Journal of Burn Care & Research 45(5):1154-1159, 2024.",
+      "doi": "10.1093/jbcr/irae115",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "full text via PMC (search agent)"
+    },
+    "hamins2018": {
+      "ref": "Hamins A, Kim SC, Madrzykowski D. Characterization of stovetop cooking oil fires. Journal of Fire Sciences 36(3):224-239, 2018.",
+      "doi": "10.1177/0734904118761884",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract (author, via Crossref)"
+    },
+    "hu2021jfs": {
+      "ref": "Hu Y, et al. The character of residential cooktop fires. Journal of Fire Sciences 39(2):142-163, 2021.",
+      "doi": "10.1177/0734904121990392",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract (author, via Crossref)"
+    },
+    "hu2021tn2133": {
+      "ref": "Hu Y, et al. The Character of Residential Cooktop Fires. NIST Technical Note 2133, 2021.",
+      "doi": "10.6028/NIST.TN.2133",
+      "type": "report (US government)",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "author read the abstract, pp. 1-12 (Tables 2-3, Eqs. 5 and 13-19)"
+    },
+    "hostikka2023": {
+      "ref": "Hostikka S, et al. Exploring the thermal characteristics, ignitions and heat release of oils and solid items at electric cooktops. Fire Safety Journal 140:103889, 2023.",
+      "doi": "10.1016/j.firesaf.2023.103889",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "Table 4 and results (search agent)"
+    },
+    "liu2005fss": {
+      "ref": "Liu Z, Carpenter DW, Kim AK. Application of water mist to extinguish large oil pool fires for industrial oil cooker protection. Fire Safety Science 8:741-752, 2005.",
+      "doi": "10.3801/IAFSS.FSS.8-741",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "full text (search agent)"
+    },
+    "babrauskas1981nbsir": {
+      "ref": "Babrauskas V. Will the Second Item Ignite? NBSIR 81-2271, National Bureau of Standards, May 1981.",
+      "doi": "10.6028/NBS.IR.81-2271",
+      "type": "report (US government)",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "author read pp. 21-28 (Table 3, Figs. 11-13, conclusions)"
+    },
+    "babrauskas1981fsj": {
+      "ref": "Babrauskas V. Will the second item ignite? Fire Safety Journal 4(4):281-292, 1981/82.",
+      "doi": "10.1016/0379-7112(81)90031-X",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "not read; journal version of babrauskas1981nbsir"
+    },
+    "babrauskas1982nbsir": {
+      "ref": "Babrauskas V, Lawson JR, Walton WD, Twilley WH. Upholstered Furniture Heat Release Rates Measured with a Furniture Calorimeter. NBSIR 82-2604, National Bureau of Standards, 1982.",
+      "doi": "10.6028/NBS.IR.82-2604",
+      "type": "report (US government)",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "author read Tables 1, 2A, 2B and p. 12"
+    },
+    "lawson1984nbsir": {
+      "ref": "Lawson JR, Walton WD, Twilley WH. Fire Performance of Furnishings as Measured in the NBS Furniture Calorimeter, Part I. NBSIR 83-2787, National Bureau of Standards, August 1983, issued January 1984.",
+      "doi": "10.6028/NBS.IR.83-2787",
+      "type": "report (US government)",
+      "verified": "Crossref 2026-11-05, title matches (Crossref lists two of the three authors on the cover)",
+      "read": "author read Tables 6-7, pp. 66-67, 85-87, 117-118"
+    },
+    "hietaniemi2001vtt": {
+      "ref": "Hietaniemi J, Mangs J, Hakkarainen T. Burning of Electrical Household Appliances: An Experimental Study. VTT Tiedotteita - Research Notes 2084, Espoo, 2001. ISBN 951-38-5803-0.",
+      "url": "https://sarjaweb.vtt.fi/pdf/tiedotteet/2001/T2084.pdf",
+      "type": "report (research institute)",
+      "read": "author read the abstract, Tables 5.1-5.3, Fig. 5.10 and p. 48"
+    },
+    "madrzykowski2004sp1021": {
+      "ref": "Madrzykowski D, Walton WD. Cook County Administration Building Fire, 69 West Washington, Chicago, Illinois, October 17, 2003: Heat Release Rate Experiments and FDS Simulations. NIST SP 1021, 2004.",
+      "doi": "10.6028/NIST.SP.1021",
+      "type": "report (US government)",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "author read the abstract and pp. 73-75"
+    },
+    "nistfcd": {
+      "ref": "Bundy M, Bryant R. NIST Fire Calorimetry Database (FCD), 2020. Experiments Dry_Pine_Tree, Kitchen Room Fire and stovetop_test_MassLoss_13.",
+      "doi": "10.18434/mds2-2314",
+      "url": "https://www.nist.gov/el/fcd",
+      "type": "measurement database",
+      "verified": "DataCite 2026-11-05 (not a Crossref DOI), title matches",
+      "read": "author read these three experiment pages; the lithium-polymer listings were not used because the listing does not say whether the ignition burner's heat is included"
+    },
+    "bryant2019tn2077": {
+      "ref": "Bryant RA, Bundy MF. The NIST 20 MW Calorimetry Measurement System for Large-Fire Research. NIST TN 2077, 2019.",
+      "doi": "10.6028/NIST.TN.2077",
+      "type": "report (US government)",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "cited as the FCD's measurement method; not read"
+    },
+    "liu2025ebike": {
+      "ref": "Liu J, et al. Experimental investigation of the thermal runaway and fire characteristics of overcapacity lithium-ion batteries for electric bicycles in charging cabinets. Frontiers in Energy Research 13:1681969, 2025.",
+      "doi": "10.3389/fenrg.2025.1681969",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract (author); full text (search agent)"
+    },
+    "fleischmann2025": {
+      "ref": "Fleischmann C, Weinschenk C, Madrzykowski D, Schraiber A, Gaudet B. Quantifying the fire hazard from Li-ion battery fires caused by thermal runaway in e-scooters. Fire Technology 61(5):2865-2887, 2025.",
+      "doi": "10.1007/s10694-025-01707-z",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract summary (Springer Professional) and the FSRI summary; full text not read"
+    },
+    "fsri2025": {
+      "ref": "UL FSRI. Journal article quantifies fire hazards of lithium-ion battery fires caused by thermal runaway. Research update, 1 May 2025.",
+      "url": "https://fsri.org/research-update/journal-article-quantifies-fire-hazards-lithium-ion-battery-fires-caused-thermal",
+      "type": "research institute summary (not peer-reviewed)",
+      "read": "author, 2026-11-05"
+    },
+    "larsson2017": {
+      "ref": "Larsson F, Andersson P, Blomqvist P, Mellander BE. Toxic fluoride gas emissions from lithium-ion battery fires. Scientific Reports 7:10018, 2017.",
+      "doi": "10.1038/s41598-017-09784-z",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract (author, via Crossref)"
+    },
+    "babrauskas1983pool": {
+      "ref": "Babrauskas V. Estimating large pool fire burning rates. Fire Technology 19(4):251-261, 1983.",
+      "doi": "10.1007/BF02380810",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "not read; values taken from the SFPE Handbook table built on it (see nureg1805s1)"
+    },
+    "nureg1805s1": {
+      "ref": "US Nuclear Regulatory Commission. NUREG-1805 Supplement 1, Fire Dynamics Tools (FDTs), 2013: spreadsheets reproducing SFPE Handbook (3rd ed.) pool-fire data, Klote and Milke soot yields and the SFPE piloted-ignition guide.",
+      "url": "https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr1805/s1/index.html",
+      "type": "report (US government), secondary",
+      "read": "spreadsheets read by the search agent"
+    },
+    "klotemilke2002": {
+      "ref": "Klote JH, Milke JA. Principles of Smoke Management. ASHRAE, 2002, p. 35 (reproducing Tewarson's soot yields).",
+      "type": "handbook",
+      "read": "secondary, via nureg1805s1"
+    },
+    "sfpe2002ignition": {
+      "ref": "SFPE. Engineering Guide: Piloted Ignition of Solid Materials Under Radiant Exposure. Society of Fire Protection Engineers, 2002, p. 14.",
+      "type": "standard (engineering guide)",
+      "read": "secondary, via nureg1805s1"
+    },
+    "gannbryner": {
+      "ref": "Gann RG, Bryner NP. Combustion products and their effects on life safety. In: Fire Protection Handbook, NFPA (Section 6, Chapter 2; edition not printed in the copy read).",
+      "url": "https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=900093",
+      "type": "handbook",
+      "read": "search agent read the NIST-hosted copy"
+    },
+    "mckenna2016": {
+      "ref": "McKenna ST, Hull TR. The fire toxicity of polyurethane foams. Fire Science Reviews 5:3, 2016.",
+      "doi": "10.1186/s40038-016-0012-3",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "full text table (search agent)"
+    },
+    "tewarson2008": {
+      "ref": "Tewarson A. Smoke emissions in fires. Fire Safety Science 9:1153-1164, 2008.",
+      "doi": "10.3801/IAFSS.FSS.9-1153",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "Table 1 (search agent)"
+    },
+    "khan2016sfpe": {
+      "ref": "Khan MM, Tewarson A, Chaos M. Combustion characteristics of materials and generation of fire products. In: Hurley MJ (ed.), SFPE Handbook of Fire Protection Engineering, 5th ed., Springer, 2016, pp. 1143-1232.",
+      "doi": "10.1007/978-1-4939-2565-0_36",
+      "type": "handbook",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "not read (paywall); needed to replace the secondary yields"
+    },
+    "manzello2020": {
+      "ref": "Manzello SL, Suzuki S, Gollner MJ, Fernandez-Pello AC. Role of firebrand combustion in large outdoor fire spread. Progress in Energy and Combustion Science 76:100801, 2020.",
+      "doi": "10.1016/j.pecs.2019.100801",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "abstract-level (search agent); no abstract in Crossref"
+    },
+    "zhao2022": {
+      "ref": "Zhao X, et al. The relationship between ignition and oxidation of molten magnesium alloys during the cooling process. Frontiers in Chemistry 10:980860, 2022.",
+      "doi": "10.3389/fchem.2022.980860",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "search agent; magnesium ignition values quoted there from earlier studies"
+    },
+    "cameo": {
+      "ref": "NOAA Office of Response and Restoration. CAMEO Chemicals datasheets: magnesium, sodium, lithium.",
+      "url": "https://cameochemicals.noaa.gov/",
+      "type": "government database",
+      "read": "search agent"
+    },
+    "nistwebbookMgO": {
+      "ref": "NIST Chemistry WebBook, SRD 69: magnesium oxide, condensed-phase thermochemistry (Cox, Wagman et al. 1984, CODATA).",
+      "url": "https://webbook.nist.gov/cgi/cbook.cgi?ID=C1309484&Mask=2",
+      "type": "reference data",
+      "read": "author, 2026-11-05 (-601.60 +/- 0.30 kJ/mol)"
+    },
+    "nfpa10": {
+      "ref": "NFPA 10, Standard for Portable Fire Extinguishers, 2022 edition. National Fire Protection Association. Class definitions 5.2.1-5.2.5 and Annexes A and C were read in the Second Draft Report of the next revision cycle (2022 text with revisions); a 2026 edition is reported published in September 2025.",
+      "url": "https://docinfofiles.nfpa.org/files/AboutTheCodes/10/10_SDR_A2025.pdf",
+      "type": "standard",
+      "read": "search agent"
+    },
+    "iso3941-2007": {
+      "ref": "ISO 3941:2007, Classification of fires. International Organization for Standardization. Withdrawn January 2026.",
+      "url": "https://www.iso.org/standard/40042.html",
+      "type": "standard",
+      "read": "not read (ISO site returned HTTP 403); classes as described in secondary sources"
+    },
+    "iso3941-2026": {
+      "ref": "ISO 3941:2026, Classification of fires (third edition), adding Class L for lithium-ion cells and batteries without metallic lithium. BSI national record 'Classification of fires', approved 27 January 2026.",
+      "doi": "10.3403/30482407",
+      "type": "standard",
+      "verified": "Crossref standards record 2026-11-05; designation not printed in the record",
+      "read": "not read; content from trade reports (Fire Protection Association, Exponent)"
+    },
+    "en2": {
+      "ref": "EN 2:1992 + A1:2004, Classification of fires (A1 adds Class F). BSI record approved 15 December 1992.",
+      "doi": "10.3403/00287011",
+      "type": "standard",
+      "verified": "Crossref standards record 2026-11-05",
+      "read": "not read"
+    },
+    "ifc906": {
+      "ref": "International Code Council. International Fire Code, Section 906.2: portable fire extinguishers selected, installed and maintained in accordance with this section and NFPA 10.",
+      "url": "https://regulations.justia.com/states/massachusetts/780-cmr/chapter-9/section-906/subsection-906-2",
+      "type": "regulation (model code)",
+      "read": "seen in state adoptions of the section (search snippets); the ICC text was not read"
+    },
+    "sbc801": {
+      "ref": "Saudi Building Code National Committee. SBC 801, The Saudi Fire Protection Code, 2024 edition.",
+      "url": "https://sbc.gov.sa/",
+      "type": "regulation",
+      "read": "listing only (search agent); its NFPA 10 reference was not confirmed"
+    },
+    "cfr1633": {
+      "ref": "16 CFR 1633.3, Standard for the Flammability (Open Flame) of Mattress Sets: test criteria.",
+      "url": "https://www.law.cornell.edu/cfr/text/16/1633.3",
+      "type": "regulation",
+      "read": "author, 2026-11-05"
+    },
+    "en1991-1-2": {
+      "ref": "EN 1991-1-2:2002, Eurocode 1: Actions on structures, Part 1-2: Actions on structures exposed to fire, Annex E. BSI record 'Eurocode 1. Actions on structures. General actions. Actions on structures exposed to fire', approved 28 February 2013.",
+      "doi": "10.3403/02700262",
+      "type": "standard",
+      "verified": "Crossref standards record 2026-11-05",
+      "read": "Table E.5 and the 80 % fractile fire loads read as reproduced in jrc2012vassart"
+    },
+    "jrc2012vassart": {
+      "ref": "Vassart O. EN 1991-1-2: basic design methods, worked examples. Workshop 'Structural Fire Design of Buildings according to the Eurocodes', JRC, Brussels, 27-28 November 2012, slide 22.",
+      "url": "https://eurocodes.jrc.ec.europa.eu/sites/default/files/2022-06/03a-VASSART-EC-FireDesign-WS.pdf",
+      "type": "standard (official reproduction)",
+      "read": "author, slides 19-24"
+    },
+    "pd7974-1": {
+      "ref": "PD 7974-1:2019, Application of fire safety engineering principles to the design of buildings, Part 1: Initiation and development of fire within the enclosure of origin (Sub-system 1). BSI, approved 27 March 2019.",
+      "doi": "10.3403/30357143",
+      "type": "standard",
+      "verified": "Crossref standards record 2026-11-05",
+      "read": "not read (no numbers cited)"
+    },
+    "iso16733-1": {
+      "ref": "ISO/TS 16733-1:2015, Fire safety engineering, Selection of design fire scenarios and design fires, Part 1: Selection of design fire scenarios. BSI adoption record approved 31 January 2016.",
+      "doi": "10.3403/30300271",
+      "type": "standard",
+      "verified": "Crossref standards record 2026-11-05",
+      "read": "not read (method cited only)"
+    },
+    "heskestad1979": {
+      "ref": "Heskestad G, Delichatsios MA. The initial convective flow in fire. Symposium (International) on Combustion 17(1):1113-1123, 1979.",
+      "doi": "10.1016/S0082-0784(79)80106-X",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "via the repository's verified-equations entry FD-01"
+    },
+    "studioFD02": {
+      "ref": "Topologic Studio. fire-equations-verified-2026-10-27.json, entries FD-01 to FD-05 and FD-17 (t-squared classes, Babrauskas, MQH and Thomas flashover).",
+      "url": "wiki/research/fire-equations-verified-2026-10-27.json",
+      "type": "internal (checked equations)"
+    },
+    "mccaffrey1981": {
+      "ref": "McCaffrey BJ, Quintiere JG, Harkleroad MF. Estimating room temperatures and the likelihood of flashover using fire test data correlations. Fire Technology 17(2):98-119, 1981.",
+      "doi": "10.1007/BF02479583",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "via FD-17"
+    },
+    "babrauskas1980": {
+      "ref": "Babrauskas V. Estimating room flashover potential. Fire Technology 16(2):94-103, 1980.",
+      "doi": "10.1007/BF02351801",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "via FD-03"
+    },
+    "thomas1981": {
+      "ref": "Thomas PH. Testing products and materials for their contribution to flashover in rooms. Fire and Materials 5(3):103-111, 1981.",
+      "doi": "10.1002/fam.810050305",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "via FD-05 (reproduced in Peacock et al. 1999)"
+    },
+    "peacock1999": {
+      "ref": "Peacock RD, Reneke PA, Bukowski RW, Babrauskas V. Defining flashover for fire hazard calculations. Fire Safety Journal 32(4):331-345, 1999.",
+      "doi": "10.1016/S0379-7112(98)00048-4",
+      "type": "peer-reviewed",
+      "verified": "Crossref 2026-11-05, title matches",
+      "read": "via FD-04 and FD-05"
+    },
+    "ifc2x3exp": {
+      "ref": "buildingSMART. IFC2x3 TC1 EXPRESS schema (IFC2X3_TC1.exp), reference_schemas folder of the IFC4.x-development repository.",
+      "url": "https://raw.githubusercontent.com/buildingSMART/IFC4.x-development/ifc4.3-main/reference_schemas/IFC2X3_TC1.exp",
+      "type": "standard (schema)",
+      "read": "schema agent; the HTML documentation returned HTTP 403"
+    },
+    "ifc4exp": {
+      "ref": "buildingSMART. IFC4 ADD2 TC1 EXPRESS schema (IFC4_ADD2_TC1.exp).",
+      "url": "https://raw.githubusercontent.com/buildingSMART/IFC4.x-development/ifc4.3-main/reference_schemas/IFC4_ADD2_TC1.exp",
+      "type": "standard (schema)",
+      "read": "schema agent"
+    },
+    "ifc43exp": {
+      "ref": "IFC4X3_ADD2 EXPRESS (copy in the web-ifc repository), cross-checked against buildingSMART's IFC4.3 documentation source.",
+      "url": "https://raw.githubusercontent.com/ThatOpen/engine_web-ifc/main/src/schema-generator/IFC4X3.exp",
+      "type": "standard (schema), third-party copy",
+      "read": "schema agent"
+    },
+    "ifc4html": {
+      "ref": "buildingSMART. IFC4 ADD2 TC1 HTML documentation, e.g. IfcElectricApplianceTypeEnum.",
+      "url": "https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2_TC1/HTML/schema/ifcelectricaldomain/lexical/ifcelectricappliancetypeenum.htm",
+      "type": "standard (schema documentation)",
+      "read": "HTTP 403 on 2026-11-05; values read from ifc4exp instead"
+    },
+    "ifc2x3html": {
+      "ref": "buildingSMART. IFC2x3 TC1 HTML documentation, e.g. IfcElectricApplianceTypeEnum.",
+      "url": "https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcelectricaldomain/lexical/ifcelectricappliancetypeenum.htm",
+      "type": "standard (schema documentation)",
+      "read": "HTTP 403 on 2026-11-05; values read from ifc2x3exp instead"
+    }
+  },
+  "corpusCheck": {
+    "date": "2026-11-05",
+    "corpus": "Local IFC test corpus (ifc-samples folder, local testing only; not in the repository): 45 distinct building models of at least 50 kB (one byte-identical duplicate removed).",
+    "findings": [
+      "17 of 45 models contain at least one element that the nameRegex patterns recognise: 10 an appliance, heater, fireplace or distribution board, 13 upholstered furniture, beds or desks.",
+      "No model contains an IfcElectricAppliance occurrence. IfcElectricApplianceType occurs in two IFC2x3 Revit exports (dental_clinic, Office_A) with PredefinedType NOTDEFINED and names such as '2000 lbs' and '3500 lbs', i.e. lift cars: the entity alone is not evidence of an appliance.",
+      "Appliances are exported as IfcBuildingElementProxy (Miele cooktop, oven, microwave, dryer, washer, fridge-freezer and dishwasher in Ifc4_Revit_ARC; 'M_Cook Top-4 Unit' and 'M_Refrigerator' in BasicHouse; 'N_Oven-Built-in' and 'Dishwasher:Asko oppvaskmaskin' in a Norwegian school), as IfcFlowTerminal ('M_Washing Machine' in BasicHouse), or as furniture types ('Refrigerator 24' and 'Cabinet Base Cooktop+Oven 24' in S_Office; 'Underbench oven 4D' in ISSUE_126).",
+      "All 238 IfcFurniture occurrences have PredefinedType unset or NOTDEFINED; only one IfcFurnitureType (Klassiqua office, DESK) is typed.",
+      "The only typed ignition-class entities with a specific PredefinedType are 44 IfcSpaceHeater RADIATOR and 2 IfcBoiler WATER in one model (TalTech), both hydronic.",
+      "Distribution boards appear only as proxies named 'Lighting and Appliance Panelboard'."
+    ]
+  }
+}

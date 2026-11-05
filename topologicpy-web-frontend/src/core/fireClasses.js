@@ -1,136 +1,188 @@
 /**
  * Fire classes for the first item to burn, and what each means for the
- * Flamescapes solver (src/core/flamescapes.js) and for the occupant.
+ * Flamescapes solver (src/core/flamescapes.js) and for the occupant. Every
+ * value carries its source key; the keys resolve in SOURCES below and in
+ * wiki/research/ignition-sources-2026-11-05.json (the review, with every DOI
+ * checked against Crossref on 2026-11-05).
  *
  * The classes are NFPA 10's (A ordinary combustibles, B flammable liquids
  * and gases, C energised electrical equipment, D combustible metals, K
  * cooking oils and fats), which the Saudi Fire Code (SBC 801, after the
- * International Fire Code) uses; `iso` gives the ISO 3941 / EN 2 class (A
- * solids, B liquids, C gases, D metals, F cooking media; electrical is not a
- * class there). Class C names the hazard, not a fuel: once the equipment
- * burns, its fuel is `fuel` (plastics, so class A by ISO 3941).
+ * International Fire Code) uses, plus ISO 3941:2026's class L, lithium-ion
+ * cells and batteries. `iso` gives the ISO 3941 / EN 2 class (A solids, B
+ * liquids, C gases, D metals, F cooking media, L lithium-ion; electrical is
+ * not a class there). Class C names the hazard, not a fuel: once the
+ * equipment burns, its fuel is `fuelClass`.
  *
  * Per class, the solver's fuel:
- *   heatOfCombustion  J per kg burnt
- *   yields            kg of CO2, CO and soot per kg burnt (the soot is the
- *                     paper's "residual" species, the smoke)
- *   o2                kg of oxygen per kg burnt, when not 417 kJ / mol O2
- *                     (Fire-X Eq. 4; Huggett 1980), as for metals
- *   ash               kg of solid oxide left per kg burnt (stays out of the gas)
- *   liquid            {boiling (K), latent (J/kg)}: evaporates when heated
- *                     past `boiling` with the heat above it (Fire-X's
- *                     energy-limited evaporation), instead of pyrolysing
- *   embers            whether the burning item throws embers (charring solids)
+ *   heatOfCombustion  J per kg burnt (effective)
+ *   yields            kg of CO2, CO and soot per kg burnt, well ventilated.
+ *                     CO2 is the carbon balance of a representative fuel:
+ *                     44/12 (w_C - 12/28 y_CO - y_soot), w_C its carbon mass
+ *                     fraction (cellulose 0.444, n-heptane 0.839, polypropylene
+ *                     0.857, triolein 0.774); the sources give CO and soot.
+ *   o2, ash           a metal's own oxygen and solid oxide (kg per kg), when
+ *                     not 417 kJ / mol O2 (Fire-X Eq. 4; Huggett 1980)
+ *   liquid            {boiling (K), latent (J/kg)}: evaporates past `boiling`
+ *   embers            whether the burning item throws embers
  *   ignitionTemperature  degrees C, for spot ignition by embers
- *   item              the first item: mass (kg) and exposed area (m^2)
+ *   growth            the t-squared class the sources give (for the panel and
+ *                     the two-zone model; the solver grows the fire itself)
+ *   item              the first item: mass (kg) and exposed area (m^2), ours
  *
- * Sources (wiki/research/ignition-sources-2026-11-05.md has the review):
- * class definitions NFPA 10 (2022) and ISO 3941:2007; class A heat of
- * combustion from Flamescapes Table 3 (2.80 MJ/mol over wood's 0.16214
- * kg/mol); magnesium from the heat of formation of MgO (601.6 kJ/mol).
- * Values marked `provisional` are representative handbook figures still to
- * be checked against the review's sources.
+ * What the solver does not model: CO rising to 0.2 kg/kg under-ventilated
+ * (gannbryner), hydrogen halides from appliances (hietaniemi2001vtt) and HF
+ * from lithium-ion packs (larsson2017), jet flames, and re-ignition.
  */
+
+/** CO2 per kg burnt from a fuel's carbon mass fraction, after CO and soot. */
+export function co2FromCarbon(carbon, co, soot) {
+  return (44 / 12) * Math.max(0, carbon - (12 / 28) * co - soot);
+}
+
+const fuel = (heatMJ, carbon, co, soot, extra = {}) => ({
+  heatOfCombustion: heatMJ * 1e6,
+  yields: { co2: co2FromCarbon(carbon, co, soot), co, soot },
+  ...extra,
+});
 
 export const FIRE_CLASSES = {
   A: {
     label: "Class A: ordinary combustibles",
     short: "A",
     iso: "A",
-    examples: "Upholstered furniture, bedding, wood, paper, cloth, waste, most plastics",
-    fuel: {
-      heatOfCombustion: 17.27e6,
-      yields: { co2: 1.27, co: 0.004, soot: 0.015 },
-      embers: true,
-      ignitionTemperature: 300,
-    },
+    examples: "Upholstered furniture, mattresses and bedding, wood, paper and cardboard, clothing and curtains, plastic casings",
+    fuel: fuel(18.0, 0.444, 0.01, 0.015, { embers: true, ignitionTemperature: 390 }),
+    growth: { class: "medium", alpha: 0.0117, note: "dwellings and offices; upholstered furniture alone is fast" },
     item: { mass: 20, area: 2 },
     agents: {
-      suitable: ["Water", "Foam", "Multipurpose (ABC) dry powder"],
-      unsuitable: [],
+      suitable: ["Water", "Foam rated for class A", "Multipurpose (ABC) dry chemical", "Wet chemical"],
+      unsuitable: [{ agent: "Carbon dioxide", reason: "Listed for classes B and C only; short range and no cooling of deep-seated embers." }],
+    },
+    sources: {
+      heatOfCombustion: ["babrauskas1982nbsir", "lawson1984nbsir"],
+      co: ["gannbryner", "mckenna2016"],
+      soot: ["klotemilke2002", "nureg1805s1"],
+      ignitionTemperature: ["nureg1805s1"],
+      growth: ["en1991-1-2", "babrauskas1982nbsir"],
+      embers: ["manzello2020"],
+      agents: ["nfpa10"],
     },
   },
   B: {
     label: "Class B: flammable liquids and gases",
     short: "B",
     iso: "B (liquids), C (gases)",
-    examples: "Petrol, solvents, paint thinners, alcohol, lamp oil",
-    fuel: {
-      heatOfCombustion: 43.4e6,
-      yields: { co2: 2.85, co: 0.01, soot: 0.037 },
-      liquid: { boiling: 371, latent: 3.2e5 },
-      embers: false,
-      ignitionTemperature: 250,
-      provisional: true,
-    },
+    examples: "Petrol or another accelerant, solvents and paints, heating oil, gas at burners and boilers",
+    // n-heptane, the standard test liquid: boils at 98.4 C, 0.317 MJ/kg to evaporate.
+    fuel: fuel(44.1, 0.839, 0.022, 0.072, { liquid: { boiling: 371.6, latent: 3.17e5 }, embers: false, ignitionTemperature: 250 }),
+    growth: { class: "ultra-fast", alpha: 0.1876, note: "a spill or pool; gasoline burns at 0.055 kg/m2s in large pools" },
     item: { mass: 4, area: 1 },
     agents: {
-      suitable: ["Foam", "Carbon dioxide", "Dry powder"],
-      unsuitable: [{ agent: "Water jet", reason: "Spreads the burning liquid; it floats on water." }],
+      suitable: ["Foam (floats on the fuel and prevents re-ignition)", "Carbon dioxide", "Dry chemical"],
+      unsuitable: [{ agent: "Water jet", reason: "Splashes and spreads the burning liquid; drops sinking into hot liquid boil and throw it out." }],
     },
+    sources: {
+      heatOfCombustion: ["hu2021tn2133"],
+      co: ["hu2021tn2133", "gannbryner"],
+      soot: ["hu2021tn2133"],
+      liquid: ["nistwebbookHeptane"],
+      growth: ["babrauskas1983pool", "nureg1805s1"],
+      agents: ["nfpa10"],
+    },
+    // Flash and autoignition temperatures were not read; 250 C is ours, for embers only.
+    provisional: ["ignitionTemperature"],
   },
   C: {
     label: "Class C: energised electrical equipment",
     short: "C",
     iso: "none (electrical is not an ISO 3941 class; the burning plastics are A)",
-    examples: "Televisions, chargers and power banks, extension leads, distribution boards, appliances",
-    fuel: {
-      heatOfCombustion: 25e6,
-      yields: { co2: 2.0, co: 0.06, soot: 0.1 },
-      embers: false,
-      ignitionTemperature: 350,
-      provisional: true,
-    },
+    examples: "Refrigerator-freezers, dishwashers, washing machines and dryers, televisions and electronics, distribution boards",
+    fuel: fuel(30.3, 0.857, 0.056, 0.056, { embers: false, ignitionTemperature: 390 }),
     fuelClass: "A",
+    growth: { class: "medium", alpha: 0.0117, note: "refrigerators slow, televisions fast, after minutes of smouldering" },
     item: { mass: 10, area: 1 },
     agents: {
-      suitable: ["Carbon dioxide", "Clean agent", "Dry powder", "Isolate the power first"],
-      unsuitable: [{ agent: "Water or foam while live", reason: "Conducts electricity to the person." }],
+      suitable: ["De-energise the circuit first", "Carbon dioxide", "Clean agent", "Dry chemical"],
+      unsuitable: [{ agent: "Water or foam on live equipment", reason: "Conducts electricity to the person holding it." }],
     },
+    sources: {
+      heatOfCombustion: ["hietaniemi2001vtt"],
+      co: ["hietaniemi2001vtt"],
+      soot: ["hietaniemi2001vtt"],
+      growth: ["hietaniemi2001vtt"],
+      agents: ["nfpa10"],
+    },
+    // Ignition is by overheating inside the equipment; 390 C is class A's, for embers only.
+    provisional: ["ignitionTemperature"],
   },
   D: {
     label: "Class D: combustible metals",
     short: "D",
     iso: "D",
-    examples: "Magnesium, titanium, sodium, lithium metal (rare in buildings; workshops and labs)",
-    fuel: {
-      // Mg + 1/2 O2 -> MgO: 601.6 kJ / mol over 24.305 g / mol.
-      heatOfCombustion: 24.75e6,
-      o2: 0.658,
-      ash: 1.658,
-      yields: { co2: 0, co: 0, soot: 0 },
-      embers: false,
-      ignitionTemperature: 650,
-    },
+    examples: "Magnesium parts and swarf, sodium and potassium in laboratories, lithium metal primary cells (not lithium-ion)",
+    // Mg + 1/2 O2 -> MgO: 601.6 kJ / mol over 24.305 g / mol; the oxide stays as ash.
+    fuel: { heatOfCombustion: 24.75e6, o2: 0.658, ash: 1.658, yields: { co2: 0, co: 0, soot: 0 }, embers: false, ignitionTemperature: 473 },
+    growth: { class: null, alpha: null, note: "no t-squared characterisation found" },
     item: { mass: 2, area: 0.2 },
     agents: {
-      suitable: ["Class D powder", "Dry sand"],
+      suitable: ["Class D dry powder", "Dry sand, applied gently so the metal does not scatter"],
       unsuitable: [
-        { agent: "Water", reason: "Reacts with burning metal, releasing hydrogen and spattering." },
-        { agent: "Carbon dioxide", reason: "Burning magnesium reduces it and keeps burning." },
+        { agent: "Water", reason: "Releases hydrogen from the burning metal; the reaction can be explosive." },
+        { agent: "Foam", reason: "Water-based: the same reaction." },
+        { agent: "Carbon dioxide", reason: "Burning magnesium keeps reacting with it." },
       ],
     },
+    sources: { heatOfCombustion: ["nistwebbookMgO"], ignitionTemperature: ["cameo", "zhao2022"], agents: ["nfpa10", "cameo"] },
   },
   K: {
     label: "Class K: cooking oils and fats",
     short: "K",
     iso: "F",
-    examples: "A pan or deep fryer of vegetable oil or fat on a hob",
-    fuel: {
-      heatOfCombustion: 37e6,
-      yields: { co2: 2.8, co: 0.006, soot: 0.02 },
-      // Oil does not boil before it ignites: it gives off vapour from its
-      // smoke point and autoignites near 360 to 400 C.
-      liquid: { boiling: 633, latent: 2.5e5 },
-      embers: false,
-      ignitionTemperature: 360,
-      provisional: true,
-    },
+    examples: "Oil or fat in a pan on a hob, a deep-fat fryer, grease in an oven or range hood",
+    // Oil gives off vapour and autoignites near 390 C (canola 385, butter 429 C).
+    fuel: fuel(37.4, 0.774, 0.021, 0.069, { liquid: { boiling: 663, latent: 2.5e5 }, embers: false, ignitionTemperature: 390 }),
+    growth: { class: "ultra-fast", alpha: 0.1876, note: "a pan fire peaks at 20 to 110 kW within 40 s and spreads to cabinets ultra-fast" },
     item: { mass: 2, area: 0.07 },
     agents: {
       suitable: ["Wet chemical (class K / F)", "Fire blanket", "Turn off the heat; lid on the pan"],
-      unsuitable: [{ agent: "Water", reason: "Turns to steam under the oil and throws burning oil out (a flare-up)." }],
+      unsuitable: [
+        { agent: "Water", reason: "Sinks into the hot oil, boils and throws burning oil out." },
+        { agent: "Carbon dioxide", reason: "Knocks the flame down but does not cool the oil, which re-ignites." },
+      ],
     },
+    sources: {
+      heatOfCombustion: ["hu2021tn2133"],
+      co: ["hu2021tn2133"],
+      soot: ["hu2021tn2133", "hu2021jfs"],
+      ignitionTemperature: ["hu2021tn2133", "hostikka2023"],
+      growth: ["hamins2018", "hostikka2023"],
+      agents: ["nfpa10", "liu2005fss"],
+    },
+    // The latent heat of the oil's vapour release is ours.
+    provisional: ["liquid.latent"],
+  },
+  L: {
+    label: "Class L: lithium-ion batteries",
+    short: "L",
+    iso: "L (ISO 3941:2026)",
+    examples: "E-bike and e-scooter packs, power banks, phones and laptops, battery storage",
+    // Not a single fuel: heat scales with stored energy; burnt as appliance plastics here.
+    fuel: fuel(30.3, 0.857, 0.056, 0.056, { embers: false, ignitionTemperature: 300 }),
+    growth: { class: "ultra-fast", alpha: 0.1876, note: "an e-scooter in a closed bedroom reached flashover within 30 s of visible smoke" },
+    item: { mass: 3, area: 0.3 },
+    agents: {
+      suitable: ["Leave and call the fire service", "Sustained cooling with water once safe; packs re-ignite"],
+      unsuitable: [],
+    },
+    sources: {
+      ignitionTemperature: ["liu2025ebike"],
+      growth: ["fleischmann2025", "liu2025ebike"],
+      toxic: ["larsson2017"],
+      class: ["iso3941-2026"],
+    },
+    // No peer-reviewed comparison of agents was read; the fuel stands in for the pack's plastics.
+    provisional: ["fuel", "agents"],
   },
 };
 
@@ -141,3 +193,35 @@ export function fuelsFor(cls = "A") {
   const first = FIRE_CLASSES[cls] || FIRE_CLASSES.A;
   return { contentsFuel: FIRE_CLASSES.A.fuel, ignitionFuel: first.fuel, item: first.item };
 }
+
+/**
+ * The sources behind the values above (full records, with how each was read,
+ * in wiki/research/ignition-sources-2026-11-05.json). DOIs were resolved at
+ * Crossref on 2026-11-05.
+ */
+export const SOURCES = {
+  nfpa10: "NFPA 10, Standard for Portable Fire Extinguishers, 2022 edition (standard).",
+  "iso3941-2026": "ISO 3941:2026, Classification of fires, adding class L (standard). doi:10.3403/30482407",
+  babrauskas1982nbsir: "Babrauskas, Lawson, Walton, Twilley (1982). Upholstered furniture heat release rates measured with a furniture calorimeter. NBSIR 82-2604. doi:10.6028/NBS.IR.82-2604",
+  lawson1984nbsir: "Lawson, Walton, Twilley (1984). Fire performance of furnishings as measured in the NBS furniture calorimeter, part I. NBSIR 83-2787. doi:10.6028/NBS.IR.83-2787",
+  babrauskas1983pool: "Babrauskas (1983). Estimating large pool fire burning rates. Fire Technology 19(4), 251-261. doi:10.1007/BF02380810",
+  gannbryner: "Gann, Bryner. Combustion products and their effects on life safety. Fire Protection Handbook, NFPA (handbook).",
+  mckenna2016: "McKenna, Hull (2016). The fire toxicity of polyurethane foams. Fire Science Reviews 5, 3. doi:10.1186/s40038-016-0012-3",
+  klotemilke2002: "Klote, Milke (2002). Principles of Smoke Management. ASHRAE, p. 35, reproducing Tewarson's soot yields (handbook, secondary).",
+  nureg1805s1: "US NRC (2013). NUREG-1805 Supplement 1, Fire Dynamics Tools (report, secondary for SFPE Handbook data).",
+  "en1991-1-2": "EN 1991-1-2, Eurocode 1, actions on structures exposed to fire, Annex E (standard).",
+  manzello2020: "Manzello, Suzuki, Gollner, Fernandez-Pello (2020). Role of firebrand combustion in large outdoor fire spread. Progress in Energy and Combustion Science 76, 100801. doi:10.1016/j.pecs.2019.100801",
+  hu2021tn2133: "Hu et al. (2021). The character of residential cooktop fires. NIST Technical Note 2133. doi:10.6028/NIST.TN.2133",
+  hu2021jfs: "Hu et al. (2021). The character of residential cooktop fires. Journal of Fire Sciences 39(2), 142-163. doi:10.1177/0734904121990392",
+  hamins2018: "Hamins, Kim, Madrzykowski (2018). Characterization of stovetop cooking oil fires. Journal of Fire Sciences 36(3), 224-239. doi:10.1177/0734904118761884",
+  hostikka2023: "Hostikka et al. (2023). Exploring the thermal characteristics, ignitions and heat release of oils and solid items at electric cooktops. Fire Safety Journal 140, 103889. doi:10.1016/j.firesaf.2023.103889",
+  liu2005fss: "Liu, Carpenter, Kim (2005). Application of water mist to extinguish large oil pool fires for industrial oil cooker protection. Fire Safety Science 8, 741-752. doi:10.3801/IAFSS.FSS.8-741",
+  hietaniemi2001vtt: "Hietaniemi, Mangs, Hakkarainen (2001). Burning of electrical household appliances: an experimental study. VTT Research Notes 2084 (report).",
+  nistwebbookMgO: "NIST Chemistry WebBook, SRD 69: magnesium oxide, enthalpy of formation (CODATA) (reference data).",
+  nistwebbookHeptane: "NIST Chemistry WebBook, SRD 69: n-heptane, boiling point and enthalpy of vaporisation (reference data).",
+  cameo: "NOAA CAMEO Chemicals datasheets: magnesium, sodium, lithium (government database).",
+  zhao2022: "Zhao et al. (2022). The relationship between ignition and oxidation of molten magnesium alloys during the cooling process. Frontiers in Chemistry 10, 980860. doi:10.3389/fchem.2022.980860",
+  larsson2017: "Larsson, Andersson, Blomqvist, Mellander (2017). Toxic fluoride gas emissions from lithium-ion battery fires. Scientific Reports 7, 10018. doi:10.1038/s41598-017-09784-z",
+  fleischmann2025: "Fleischmann, Weinschenk, Madrzykowski, Schraiber, Gaudet (2025). Quantifying the fire hazard from Li-ion battery fires caused by thermal runaway in e-scooters. Fire Technology 61(5), 2865-2887. doi:10.1007/s10694-025-01707-z",
+  liu2025ebike: "Liu et al. (2025). Experimental investigation of the thermal runaway and fire characteristics of overcapacity lithium-ion batteries for electric bicycles in charging cabinets. Frontiers in Energy Research 13, 1681969. doi:10.3389/fenrg.2025.1681969",
+};
