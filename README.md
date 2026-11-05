@@ -35,6 +35,7 @@ the heat.*
 - [The example buildings](#the-example-buildings)
 - [On a phone](#on-a-phone)
 - [Using your own IFC files](#using-your-own-ifc-files)
+- [Exporting results to TopologicPy](#exporting-results-to-topologicpy)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [What runs where](#what-runs-where)
 - [Limits to keep in mind](#limits-to-keep-in-mind)
@@ -64,6 +65,13 @@ examples. Studio reads IFC2x3 and IFC4 files. The first time you open a file
 it is converted and stored in your browser, so the next time it opens from
 the cache without being read again (up to 24 models or 512 MB; clear them
 under **Local cache** in the Model step).
+
+**Or watch a guided run** on the welcome screen: Studio opens the Duplex and
+takes each step itself, with a caption for each, then stops at the result.
+*The way out* builds the graph and finds the route from the room furthest
+from an exit; *A fire on the route* adds a fire part-way along it; *Smoke
+behind closed doors* runs the Flamescapes solver with every door closed.
+**Stop** ends a run where it is.
 
 ### Step 1, Model: what Studio found in the file
 
@@ -286,6 +294,37 @@ Files in the older IFC2X_FINAL schema, structural or MEP-only models and
 models with no floors are refused or give an empty graph, with a message
 saying why.
 
+## Exporting results to TopologicPy
+
+**Export for TopologicPy (JSON)**, in the Graph step and under a finished
+fire in the Simulate step, downloads the walkable graph in the JSON layout
+TopologicPy's `Graph.ExportToJSON` writes, so `Graph.ByJSONFile` reads it
+back (checked with topologicpy 0.9.86):
+
+- **Vertices:** every node in the IFC's own world coordinates (metres, Z
+  up, at floor level). The viewer's axis turn, the model's coordination
+  matrix and the agent's lift are undone.
+- **Node attributes:** its kind (floor, stair, door, lift) and its place on
+  the route. After a Flamescapes run they also hold the gas temperature,
+  visibility and CO at head height for every frame, their extremes, and the
+  time the node became untenable. After a graph fire model they hold whether
+  the node was burning at the end.
+- **Edges:** source and target, kind, length in metres, and whether the
+  edge is on the route.
+- **Graph properties:** the source file, the fire model and its settings
+  (fire class, doors, windows, ventilation, grid and backend), the fire
+  origin in IFC coordinates, the frame times and the heat release series.
+
+```python
+from topologicpy.Graph import Graph
+from topologicpy.Topology import Topology
+from topologicpy.Dictionary import Dictionary
+
+g = Graph.ByJSONFile(open("duplex-apartment-topologicpy.json"))
+first = Graph.Vertices(g)[0]
+print(Dictionary.PythonDictionary(Topology.Dictionary(first))["untenable_s"])
+```
+
 ## Keyboard shortcuts
 
 | Key | Action |
@@ -329,7 +368,8 @@ These are also on the Methods page.
   alight from the start, the paper's raised solid-gas heat transfer
   coefficient and exact integration of each reaction over a step stand in for
   what the paper resolves. Walls and slabs do not burn; doors are open and
-  windows closed unless **Doors** and **Windows** in the Flamescapes settings
+  windows closed unless the **Doors** switch beside the fire controls or
+  **Windows** in the Flamescapes settings
   say otherwise (a closed door has no gaps). **Ventilation: running** joins
   the model's air terminals through one well-mixed duct volume at an assumed
   100 L/s a terminal, without reading which system each belongs to or the

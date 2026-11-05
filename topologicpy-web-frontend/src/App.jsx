@@ -34,6 +34,7 @@ import { RL_MAX_STEPS } from "./core/rl.js";
 import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
 import { FIRE_CLASSES, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
+import { GUIDED_RUNS, farthestFromExits, nodeAlong, stagesFor } from "./core/guided.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -1142,6 +1143,63 @@ export default function App() {
     return run;
   }, [combustionInputs, flamescapesJob, graph, studio]);
 
+  // The graph, the route and the fire's results per node, as the JSON
+  // TopologicPy reads with Graph.ByJSONFile (src/core/topologicExport.js),
+  // in the IFC's world frame.
+  const exportTopologic = useCallback(async () => {
+    const viewer = viewerRef.current;
+    if (!graph) return;
+    try {
+      const [{ topologicGraph, frameChange, viewerToIfc }, coordination] = await Promise.all([
+        import("./core/topologicExport.js"),
+        viewer?.getCoordinationMatrix?.() ?? null,
+      ]);
+      const run = combustionRef.current;
+      const flamescapesRun = isFlamescapes(fire.model) && run && run.done && !run.failed && run.graph === graph ? run : null;
+      const shape = { points: graph.nodes, edges: graph.edges, kinds: graph.kinds, upAxis: graph.upAxis, agentHeight: graph.agentHeight };
+      const origin = points.fire ? viewerToIfc(Float32Array.from(points.fire), frameChange(coordination, graph.upAxis || "y", graph.agentHeight || 0)) : null;
+      const json = topologicGraph({
+        graph: shape,
+        coordination,
+        route: path?.node_ids?.length ? path.node_ids : null,
+        frames: flamescapesRun ? flamescapesRun.frames : null,
+        burning: !flamescapesRun && fire.step > 0 && burningRef.current?.size ? burningRef.current : null,
+        tenability: { untenableC: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility },
+        properties: {
+          source_file: file?.name || null,
+          exported_at: new Date().toISOString(),
+          route_length_m: path?.length ?? null,
+          fire_model: fire.step > 0 ? fire.model : null,
+          fire_origin_ifc: origin ? Array.from(origin, (v) => Math.round(v * 1000) / 1000) : null,
+          ...(flamescapesRun
+            ? {
+                fire_class: settings.flamescapesClass,
+                horizon_s: settings.flamescapesHorizon,
+                embers: fire.model === "flamescapes-embers" ? 1 : 0,
+                doors: flamescapesRun.info?.openings?.doors ?? null,
+                windows: flamescapesRun.info?.openings?.windows ?? null,
+                ventilation: flamescapesRun.info?.openings?.ventilation ?? null,
+                grid: flamescapesRun.info?.grid ?? null,
+                cell_m: flamescapesRun.info?.cell ?? null,
+                backend: flamescapesRun.info?.backend?.name ?? null,
+              }
+            : {}),
+        },
+      });
+      const blob = new Blob([JSON.stringify(json)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(file?.name || "model").replace(/\.ifc(\.gz)?$/i, "")}-topologicpy.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      toast(`Exported ${Object.keys(json.vertices).length.toLocaleString()} nodes${flamescapesRun ? " with the fire's results" : ""} for TopologicPy.`, { variant: "info", ttl: 3500 });
+    } catch (error) {
+      reportError(error, "Exporting for TopologicPy");
+    }
+  }, [graph, fire.model, fire.step, path, points.fire, file, settings, reportError, toast]);
+
   // What the elements are (src/core/identify.js): the IFC class where the
   // exporter typed it, else the name, else the box; then, when asked, IFCNet's
   // shape classifier for the generic elements the rules could only size up
@@ -1501,6 +1559,94 @@ export default function App() {
     const i = found.exit * 3;
     handlePick("exit", [graph.nodes[i], graph.nodes[i + 1], graph.nodes[i + 2]]);
   }, [graph, points.start, exits, settings.useWalls, handlePick, toast]);
+
+  // ------------------------------------------------- guided runs
+
+  // The welcome screen's presets (core/guided.js) step through the app as a
+  // user would and stop at the result. One stage at a time: each acts once,
+  // then advances when its result appears (a new model, graph, point, route
+  // or finished fire); Stop, or a stage that waits too long, ends the run.
+  const [guided, setGuided] = useState(null);
+  const startGuided = useCallback((run) => setGuided({ run, stage: "open", acted: null, before: null, error: null }), []);
+  const stopGuided = useCallback(() => setGuided(null), []);
+  // useIgnition is a callback, not a hook; the alias keeps the hooks lint from reading it as one.
+  const applyIgnition = useIgnition;
+  useEffect(() => {
+    if (!guided || guided.stage === "done" || guided.error) return undefined;
+    // Deferred a tick, so the stage's state changes happen outside the effect;
+    // a re-run before then cancels it, so no stage acts twice.
+    const timer = setTimeout(() => guidedStep(guided), 0);
+    return () => clearTimeout(timer);
+  });
+  const guidedStep = (guided) => {
+    const { run, stage, acted, before } = guided;
+    const ids = stagesFor(run).map((s) => s.id);
+    const advance = () => setGuided((g) => (g && g.run === run && g.stage === stage ? { ...g, stage: ids[ids.indexOf(stage) + 1], acted: null, before: null } : g));
+    const act = (then, was) => {
+      setGuided((g) => (g && g.run === run && g.stage === stage ? { ...g, acted: stage, before: was } : g));
+      then();
+    };
+    const fail = (error) => setGuided((g) => (g && g.run === run ? { ...g, error } : g));
+    const at = (v) => [graph.nodes[v * 3], graph.nodes[v * 3 + 1], graph.nodes[v * 3 + 2]];
+    if (stage === "open") {
+      if (acted !== stage) {
+        const entry = examples.find((e) => e.id === run.example);
+        if (!entry) return fail("The example is not available.");
+        setTab("model");
+        act(() => openExample(entry), modelInfo);
+      } else if (modelInfo && modelInfo !== before && !studio.loadState.busy) advance();
+    } else if (stage === "graph") {
+      if (acted !== stage) {
+        setTab("graph");
+        act(() => void buildGraph(), graph);
+      } else if (graph && graph !== before && !studio.graphBusy) advance();
+    } else if (stage === "start") {
+      if (acted !== stage) {
+        const v = farthestFromExits(graph, exits?.nodes);
+        if (v < 0) return fail("No room can be reached from an exit door.");
+        setTab("route");
+        act(() => handlePick("start", at(v)), points.start);
+      } else if (points.start && points.start !== before) advance();
+    } else if (stage === "exit") {
+      if (acted !== stage) act(() => nearestExit(), points.exit);
+      else if (points.exit && points.exit !== before) advance();
+    } else if (stage === "route") {
+      if (acted !== stage) act(() => void findPath(), path);
+      else if (path && path !== before) {
+        if (path.found === false) return fail("No route was found.");
+        advance();
+      }
+    } else if (stage === "origin") {
+      if (acted !== stage) {
+        setTab("simulate");
+        if (run.fire.model === "flamescapes") {
+          setSettings({ flamescapes: true, fireModel: "flamescapes", flamescapesDoors: run.fire.doors || "open", flamescapesHorizon: run.fire.horizon || 60 });
+          act(() => void findIgnition("residential"), points.fire);
+        } else {
+          setSettings({ flamescapes: false, fireModel: run.fire.model, reroute: true });
+          const v = nodeAlong(path?.node_ids, run.fire.along ?? 0.5);
+          if (v < 0) return fail("The route has no nodes to place the fire on.");
+          act(() => handlePick("fire", at(v)), points.fire);
+        }
+      } else if (run.fire.model === "flamescapes" && !guided.picked && ignition.candidates) {
+        if (!ignition.candidates.length) return fail("No likely ignition point was found in the model.");
+        setGuided((g) => (g && g.run === run ? { ...g, picked: true } : g));
+        applyIgnition(ignition.candidates[0]);
+      } else if (points.fire && points.fire !== before && (run.fire.model !== "flamescapes" || guided.picked)) advance();
+    } else if (stage === "fire") {
+      if (acted !== stage) act(() => void startFire(), null);
+      else if (fire.running && !guided.sawRunning) setGuided((g) => (g && g.run === run ? { ...g, sawRunning: true } : g));
+      else if (guided.sawRunning && !fire.running && fire.step > 0) advance();
+    }
+  };
+  // A stage that waits too long ends the run (a fire on the GPU or a CPU core can take minutes).
+  const guidedStage = guided && !guided.error && guided.stage !== "done" ? guided.stage : null;
+  useEffect(() => {
+    if (!guidedStage) return undefined;
+    const limit = guidedStage === "fire" ? 15 * 60000 : 4 * 60000;
+    const timer = setTimeout(() => setGuided((g) => (g && g.stage === guidedStage ? { ...g, error: "This step took too long." } : g)), limit);
+    return () => clearTimeout(timer);
+  }, [guidedStage]);
 
   // ------------------------------------------------- plan with the forecast
 
@@ -2122,6 +2268,10 @@ export default function App() {
             examples={examples}
             onExample={openExample}
             onIntent={warmImport}
+            guidedRuns={GUIDED_RUNS}
+            onGuided={startGuided}
+            guided={guided ? { title: guided.run.title, stages: stagesFor(guided.run), stage: guided.stage, error: guided.error } : null}
+            onStopGuided={stopGuided}
           />
         ) : (
           <div className="viewport">
@@ -2229,7 +2379,7 @@ export default function App() {
                 />
               )}
               {activeTab === "graph" && (
-                <GraphPanel studio={studio} onBuildGraph={buildGraph} onNavigationCheck={runNavigationCheck} />
+                <GraphPanel studio={studio} onBuildGraph={buildGraph} onNavigationCheck={runNavigationCheck} onExportTopologic={exportTopologic} />
               )}
               {activeTab === "route" && (
                 <RoutePanel
@@ -2261,6 +2411,7 @@ export default function App() {
                   deadlinesShown={graphColours === "deadlines"}
                   exits={exits}
                   onGoTo={setTab}
+                  onExportTopologic={exportTopologic}
                 />
               )}
             </div>

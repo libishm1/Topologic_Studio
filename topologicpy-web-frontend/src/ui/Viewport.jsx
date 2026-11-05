@@ -10,6 +10,31 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { formatBytes } from "../lib/perf.js";
 import { Badge, Button, FileButton, Icon } from "./primitives.jsx";
 
+/** Where a guided run is: its stage's caption, the stages as dots, and Stop (Close once it ends). */
+function GuidedCaption({ guided, onStop }) {
+  const index = Math.max(0, guided.stages.findIndex((s) => s.id === guided.stage));
+  const ended = guided.stage === "done" || Boolean(guided.error);
+  return (
+    <div className="card guided" role="status" aria-live="polite">
+      <div className="guided__head">
+        <strong>{guided.title}</strong>
+        <span className="guided__count">
+          {Math.min(index + 1, guided.stages.length)} of {guided.stages.length}
+        </span>
+      </div>
+      <p className="guided__caption">{guided.error ? `Stopped: ${guided.error}` : guided.stages[index]?.caption}</p>
+      <ol className="guided__dots" aria-hidden="true">
+        {guided.stages.map((s, i) => (
+          <li key={s.id} data-state={i < index || guided.stage === "done" ? "done" : i === index ? "now" : "next"} />
+        ))}
+      </ol>
+      <Button size="sm" onClick={onStop}>
+        {ended ? "Close" : "Stop"}
+      </Button>
+    </div>
+  );
+}
+
 const STAGE_LABELS = {
   reading: "Reading file",
   converting: "Converting IFC",
@@ -44,6 +69,10 @@ export function Viewport({
   examples,
   onExample,
   onIntent,
+  guidedRuns,
+  onGuided,
+  guided,
+  onStopGuided,
 }) {
   const containerRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
@@ -227,9 +256,32 @@ export function Viewport({
                 </p>
               </div>
             )}
+
+            {guidedRuns?.length > 0 && (
+              <div>
+                <h2 className="welcome__subtitle">Or watch a guided run</h2>
+                <p className="welcome__note">Studio opens an example and takes each step for you, then stops at the result.</p>
+                <ul className="example-grid">
+                  {guidedRuns.map((run) => (
+                    <li key={run.id}>
+                      <button type="button" className="example" onClick={() => onGuided(run)} aria-describedby={`guided-${run.id}`}>
+                        <span className="example__head">
+                          <span className="example__name">{run.title}</span>
+                        </span>
+                        <span className="example__desc" id={`guided-${run.id}`}>
+                          {run.description}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         </div>
       )}
+
+      {guided && <GuidedCaption guided={guided} onStop={onStopGuided} />}
 
       {initError && (
         <div className="placeholder">

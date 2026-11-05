@@ -64,7 +64,7 @@ export function FileButton({ accept, onFile, children, variant = "default", disa
   );
 }
 
-export function Segmented({ value, onChange, options, label }) {
+export function Segmented({ value, onChange, options, label, disabled = false }) {
   return (
     <div className="seg" role="group" aria-label={label}>
       {options.map((option) => (
@@ -73,6 +73,7 @@ export function Segmented({ value, onChange, options, label }) {
           type="button"
           className="seg__item"
           aria-pressed={value === option.value}
+          disabled={disabled}
           onClick={() => onChange(option.value)}
           title={option.hint}
         >

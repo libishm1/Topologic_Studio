@@ -1044,6 +1044,23 @@ for (const [call, list] of byCall) {
   console.log(`  ${call.padEnd(42)} n=${String(list.length).padEnd(3)} median ${Math.round(median)} ms`);
 }
 
+// A guided run from the welcome screen (core/guided.js), in a fresh page:
+// it takes every step itself and stops at the route.
+{
+  const guidedPage = await context.newPage();
+  await guidedPage.goto(URL_BASE, { waitUntil: "load", timeout: 60000 });
+  await guidedPage.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  const t0 = Date.now();
+  await guidedPage.locator(".welcome").getByRole("button", { name: /^The way out/ }).click().catch(() => {});
+  const caption = await guidedPage
+    .waitForFunction(() => /^(Done|Stopped)/.test(document.querySelector(".guided__caption")?.textContent || "") && document.querySelector(".guided__caption").textContent, null, { timeout: 240000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const result = (await guidedPage.locator(".result__title").first().textContent().catch(() => "")) || "";
+  record(/^Done/.test(caption) && /route found/i.test(result), "a guided run takes every step and stops at the route", `${((Date.now() - t0) / 1000).toFixed(1)}s: ${caption || "no caption"}; ${result.trim() || "no result"}`);
+  await guidedPage.close();
+}
+
 console.log("\n=== Chrome diagnostics ===");
 console.log(`  console errors : ${consoleErrors.length}`);
 consoleErrors.slice(0, 12).forEach((e) => console.log(`    - ${e.slice(0, 220)}`));

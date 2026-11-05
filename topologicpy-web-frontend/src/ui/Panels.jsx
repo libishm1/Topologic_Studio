@@ -325,7 +325,23 @@ export function ModelPanel({ studio, examples, onExample, onClearCache, identifi
 
 // -------------------------------------------------------------------- graph
 
-export function GraphPanel({ studio, onBuildGraph, onNavigationCheck }) {
+/** Download the graph (and, after a run, the fire's results per node) for TopologicPy. */
+function ExportTopologic({ onExport, disabled, withRun }) {
+  return (
+    <div className="field">
+      <Button block disabled={disabled} onClick={onExport}>
+        Export for TopologicPy (JSON)
+      </Button>
+      <p className="field__hint">
+        The walkable graph in the IFC&apos;s own coordinates, with the route
+        {withRun ? " and, per node, the fire's gas temperature, visibility and CO over time and when it became untenable" : ""}, as the JSON
+        TopologicPy reads with <code>Graph.ByJSONFile</code>.
+      </p>
+    </div>
+  );
+}
+
+export function GraphPanel({ studio, onBuildGraph, onNavigationCheck, onExportTopologic }) {
   const { modelInfo, graph, graphBusy, settings, setSettings } = studio;
 
   return (
@@ -429,6 +445,11 @@ export function GraphPanel({ studio, onBuildGraph, onNavigationCheck }) {
       </Section>
 
       <NavigationCheckSection studio={studio} onRun={onNavigationCheck} />
+      {graph && (
+        <div className="step-body">
+          <ExportTopologic onExport={onExportTopologic} disabled={graphBusy} />
+        </div>
+      )}
     </>
   );
 }
@@ -1474,6 +1495,7 @@ export function SimulatePanel({
   onPlanForecast,
   deadlinesShown,
   onGoTo,
+  onExportTopologic,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo } = studio;
   const ready = Boolean(graph);
@@ -1537,6 +1559,27 @@ export function SimulatePanel({
                 </span>
               ))}
             </Notice>
+            {/* Open or closed doors change the fire more than any other setting: here, not folded away. */}
+            <div className="field">
+              <div className="field__label">
+                <span>Doors</span>
+              </div>
+              <Segmented
+                label="Doors"
+                value={settings.flamescapesDoors}
+                onChange={(flamescapesDoors) => setSettings({ flamescapesDoors })}
+                disabled={fire.running}
+                options={[
+                  { value: "open", label: "Open" },
+                  { value: "closed", label: "Closed" },
+                ]}
+              />
+              <p className="field__hint">
+                {settings.flamescapesDoors === "closed"
+                  ? "Each door's leaf fills its opening, so the smoke stays in the rooms it starts in until it finds another way. Routes still pass through every door."
+                  : "Smoke and heat pass through every doorway. Close them to see what shut doors hold back; routes use the doors either way."}
+              </p>
+            </div>
             <Segmented
               label="Show on the graph"
               value={settings.flamescapesShow}
@@ -1581,6 +1624,7 @@ export function SimulatePanel({
 
         {flamescapes && <CombustionStatus combustion={fire.combustion} running={fire.running} />}
         {dynamicPath && <RerouteResult dynamicPath={dynamicPath} step={fire.step} />}
+        {ready && fire.step > 0 && !fire.running && <ExportTopologic onExport={onExportTopologic} withRun={flamescapes} />}
         {flamescapes && (
           <Disclosure summary="Flamescapes settings">
             <div className="grid-2">
@@ -1631,15 +1675,6 @@ export function SimulatePanel({
               options={[
                 { value: "auto", label: "The GPU where the browser offers WebGPU, else the CPU" },
                 { value: "cpu", label: "The CPU (one core, coarser grid)" },
-              ]}
-            />
-            <SelectField
-              label="Doors"
-              value={settings.flamescapesDoors}
-              onChange={(flamescapesDoors) => setSettings({ flamescapesDoors })}
-              options={[
-                { value: "open", label: "Open: smoke passes through the doorways" },
-                { value: "closed", label: "Closed: each door's leaf fills its opening" },
               ]}
             />
             <SelectField
