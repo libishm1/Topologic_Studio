@@ -160,12 +160,14 @@ export async function extract(ifcPath, { withDoorFlags = false } = {}) {
     const types = names.map((n) => WebIFC[n]).filter((t) => typeof t === "number");
     const meshes = [];
     api.StreamAllMeshesWithTypes(model, types, (mesh) => {
-      // Slabs typed ROOF are not floors (as the site does, ViewerManager.js).
+      // Slabs typed ROOF are not floors (as the site does, ViewerManager.js);
+      // the fire solver takes them as roofs.
       if (
         group === "floors" &&
         api.GetLineType(model, mesh.expressID) === WebIFC.IFCSLAB &&
         api.GetLine(model, mesh.expressID)?.PredefinedType?.value === "ROOF"
       ) {
+        meshesOf(mesh, (out.roofs ||= []));
         return;
       }
       if (
