@@ -472,6 +472,15 @@ if (gotStart && gotExit) {
       "route spans a meaningful distance",
       r.Length,
     );
+    // The egress code check (core/codeCheck.js): a verdict per storey, each with its clause.
+    await page.locator(".panel__scroll").getByText("Code check", { exact: true }).click();
+    await page.getByRole("button", { name: "Check the egress" }).click();
+    const verdicts = await page
+      .locator(".code-list")
+      .innerText({ timeout: 30000 })
+      .catch(() => "");
+    const storeysChecked = (verdicts.match(/longest walk to an exit|reaches an exit/g) || []).length;
+    record(storeysChecked > 0 && /Table 1017\.2/.test(verdicts), "the code check gives each storey's walk to an exit, with its clause", `${storeysChecked} storeys`);
     // Straightened by default (src/core/straighten.js): never longer than
     // the lattice route it came from.
     record(

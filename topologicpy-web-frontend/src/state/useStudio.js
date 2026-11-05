@@ -52,6 +52,8 @@ export const DEFAULT_SETTINGS = {
   // "shielded" (rlSafe.js: proved never to walk into the fire, certified
   // earliest escape) or "qlearning" (rl.js, after Jabi et al. 2019).
   rlMethod: "shielded",
+  // The egress code check (core/codeCheck.js): whether the building is sprinklered.
+  codeSprinklered: false,
   // The shielded learner escapes by "any" exit door or the "chosen" one.
   rlExits: "any",
   rlEpisodes: 400,

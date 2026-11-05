@@ -36,6 +36,7 @@ import { FIRE_CLASSES, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_RUNS, farthestFromExits, nodeAlong, stagesFor } from "./core/guided.js";
 import { describeFacts } from "./core/describeFacts.js";
+import { codeCheck } from "./core/codeCheck.js";
 import { CLOUD_URL, describeInCloud, describeOnDevice, onDeviceStatus } from "./lib/describe.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
@@ -1571,6 +1572,47 @@ export default function App() {
     handlePick("exit", [graph.nodes[i], graph.nodes[i + 1], graph.nodes[i + 2]]);
   }, [graph, points.start, exits, settings.useWalls, handlePick, toast]);
 
+  // ------------------------------------------------- egress code check
+
+  // Walking distance, exits per storey, separation, door widths and
+  // high-rise, against IBC 2021's limits for offices, to be confirmed
+  // against SBC 201 (core/codeCheck.js). Kept with the graph it was made on.
+  const [codeState, setCodeState] = useState({ result: null, graph: null, shown: false });
+  const code = codeState.graph === graph ? codeState : { result: null, graph: null, shown: false };
+  const runCodeCheck = useCallback(() => {
+    if (!graph) return;
+    try {
+      const result = codeCheck(graph, {
+        exits: exits?.nodes || [],
+        levels,
+        exitDoors: (studio.semantics?.doors || []).filter((d) => d.exit),
+        sprinklered: settings.codeSprinklered,
+        useWalls: settings.useWalls,
+      });
+      setCodeState({ result, graph, shown: false });
+    } catch (error) {
+      reportError(error, "Code check");
+    }
+  }, [graph, exits, levels, studio.semantics, settings.codeSprinklered, settings.useWalls, reportError]);
+  const showTravel = useCallback(
+    (on) => {
+      const viewer = viewerRef.current;
+      const result = code.result;
+      if (!viewer || !result) return;
+      if (on) {
+        // Distance to spare against the limit: red at or over it, yellow well within it.
+        const spare = Array.from(result.travel, (d) => (Number.isFinite(d) ? result.limit - d : -Infinity));
+        viewer.setDeadlines(spare, { max: result.limit });
+        colours.set("travel");
+      } else {
+        viewer.setDeadlines(null);
+        colours.set(null);
+      }
+      setCodeState((c) => ({ ...c, shown: on }));
+    },
+    [code.result, colours],
+  );
+
   // ------------------------------------------------- describe this model
 
   // A plain description written by a language model from the facts Studio
@@ -2335,7 +2377,19 @@ export default function App() {
                       }
                   : fire.model === "temperature")
             }
-            deadlineLegend={graphColours === "deadlines" ? { max: planHorizon } : null}
+            deadlineLegend={
+              graphColours === "deadlines"
+                ? { max: planHorizon }
+                : graphColours === "travel" && code.result
+                  ? {
+                      max: code.result.limit,
+                      title: "Walk to an exit: distance to spare",
+                      unit: "m",
+                      note: `Red: at or over the ${code.result.limit.toFixed(1)} m travel distance (IBC 2021 Table 1017.2, to be confirmed against SBC 201).`,
+                      noneNote: "Grey: reaches no exit on its storey.",
+                    }
+                  : null
+            }
             onStopFire={stopFire}
             legend={legend}
             examples={examples}
@@ -2471,6 +2525,9 @@ export default function App() {
                   exits={exits}
                   onNearestExit={nearestExit}
                   onGoTo={setTab}
+                  code={{ ...code, shown: code.shown && graphColours === "travel" }}
+                  onCodeCheck={runCodeCheck}
+                  onShowTravel={showTravel}
                 />
               )}
               {activeTab === "simulate" && (

@@ -731,7 +731,98 @@ function RouteResult({ path }) {
   );
 }
 
-export function RoutePanel({ studio, onPick, onPlace, doors, exits, onNearestExit, onClearPoints, onFindPath, onCompare, onAlternatives, onGoTo }) {
+/**
+ * The egress code check (core/codeCheck.js): per storey, the walk to an exit,
+ * the exits against the occupant load and their separation; the exit doors'
+ * widths; high-rise. IBC 2021's values for offices, to be confirmed against
+ * SBC 201, whose text is not open.
+ */
+function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
+  const result = code?.result;
+  const tone = { pass: "ok", fail: "warn" };
+  const mark = { pass: "Pass", fail: "Fail", "cannot tell": "Cannot tell", "n/a": "Not applicable" };
+  return (
+    <Section title="Code check" defaultOpen={false}>
+      <p className="field__hint">
+        Offices (occupancy group B), against the International Building Code 2021, which the Saudi Building Code SBC 201-2024 appears to follow. The
+        SBC&apos;s own text is not open, so every limit is to be confirmed against SBC 201. Distances are walked on the graph to the nearest exit door, or,
+        above and below it, to the nearest stair; the occupant load uses the walkable area, a lower bound. Exit doors come from the IFC&apos;s exit flags,
+        which some exporters set on every door along an escape route: then exits are counted too generously.
+      </p>
+      <Toggle
+        label="The building has automatic sprinklers"
+        checked={settings.codeSprinklered}
+        onChange={(codeSprinklered) => setSettings({ codeSprinklered })}
+        hint="Sprinklers allow longer walks (91.44 m against 60.96 m) and exits closer together (1/3 of the diagonal against 1/2)."
+      />
+      <Button block disabled={!ready} onClick={onRun}>
+        Check the egress
+      </Button>
+      {result && (
+        <>
+          <Notice tone={result.building.highRise ? "warning" : "neutral"}>
+            <strong>{result.building.highRise ? "High-rise." : "Not high-rise."}</strong> {result.building.text}.
+            {result.building.provisions.length > 0 && ` Check by hand: ${result.building.provisions.join("; ")}.`}
+          </Notice>
+          <ul className="code-list">
+            {result.storeys.map((s) => (
+              <li key={s.index} className="code-list__storey">
+                <strong>
+                  {s.name}
+                  {s.discharge ? ", exit doors" : ""}
+                </strong>{" "}
+                <span className="field__hint">
+                  {Math.round(s.area)} m² walkable, at least {s.occupants} occupants
+                </span>
+                <ul>
+                  {s.checks.map((c) => (
+                    <li key={c.id} data-tone={tone[c.status] || "neutral"}>
+                      <span className="pill">{mark[c.status]}</span> {c.text}. <span className="field__hint">{c.clause}.</span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+            <li className="code-list__storey">
+              <strong>Exit doors</strong>
+              <ul>
+                <li data-tone={tone[result.doors.status] || "neutral"}>
+                  <span className="pill">{mark[result.doors.status]}</span> {result.doors.text}. <span className="field__hint">{result.doors.clause}.</span>
+                </li>
+              </ul>
+            </li>
+          </ul>
+          <Toggle
+            label="Show the distance to spare on the graph"
+            checked={Boolean(code.shown)}
+            onChange={onShow}
+            hint="Red where a place is at or over the walking-distance limit, yellow where it is well within; grey where no exit can be reached on its storey."
+          />
+          <p className="field__hint">
+            Not checked yet: the common path of travel, dead ends, stair widths and capacity, and whether each stair is enclosed. {result.limits.source}.
+          </p>
+        </>
+      )}
+    </Section>
+  );
+}
+
+export function RoutePanel({
+  studio,
+  onPick,
+  onPlace,
+  doors,
+  exits,
+  onNearestExit,
+  onClearPoints,
+  onFindPath,
+  onCompare,
+  onAlternatives,
+  onGoTo,
+  code,
+  onCodeCheck,
+  onShowTravel,
+}) {
   const { graph, points, pickMode, path, pathBusy, comparison, alternatives, settings, setSettings, capabilities } =
     studio;
 
@@ -888,6 +979,7 @@ export function RoutePanel({ studio, onPick, onPlace, doors, exits, onNearestExi
           </Notice>
         )}
       </Section>
+      <CodeCheck code={code} settings={settings} setSettings={setSettings} onRun={onCodeCheck} onShow={onShowTravel} ready={Boolean(graph)} />
     </>
   );
 }

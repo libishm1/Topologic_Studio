@@ -399,17 +399,21 @@ export function Viewport({
                 )}
                 {deadlineLegend && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 6 }}>
-                    <span className="legend__title">Escape deadline</span>
+                    <span className="legend__title">{deadlineLegend.title ?? "Escape deadline"}</span>
                     <span className="legend__ramp legend__ramp--reverse" aria-hidden="true" />
                     <span className="legend__scale">
-                      <span>0 s</span>
-                      <span>{Math.round(deadlineLegend.max / 2)} s</span>
-                      <span>{Math.round(deadlineLegend.max)} s</span>
+                      <span>0 {deadlineLegend.unit ?? "s"}</span>
+                      <span>
+                        {Math.round(deadlineLegend.max / 2)} {deadlineLegend.unit ?? "s"}
+                      </span>
+                      <span>
+                        {Math.round(deadlineLegend.max)} {deadlineLegend.unit ?? "s"}
+                      </span>
                     </span>
-                    <span className="legend__note">Latest time to leave and still get out within the dose limit.</span>
+                    <span className="legend__note">{deadlineLegend.note ?? "Latest time to leave and still get out within the dose limit."}</span>
                     <span className="legend__note">
                       <span className="legend__swatch legend__swatch--inline legend__none" aria-hidden="true" />
-                      Grey: no departure on the grid gets out within the dose limit.
+                      {deadlineLegend.noneNote ?? "Grey: no departure on the grid gets out within the dose limit."}
                     </span>
                   </div>
                 )}
