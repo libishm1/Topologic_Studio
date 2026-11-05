@@ -1,0 +1,415 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Identification benchmark</title>
+<!--
+  Browser half of tools/identify-bench.mjs: every method runs here, on the
+  records the runner serves at /data/ (local only). Libraries come from pinned
+  URLs: onnxruntime-web 1.30.0 (the same files as on jsDelivr, served from
+  /ort/ so its threads are same-origin when the page is cross-origin
+  isolated), Transformers.js 3.8.1 from jsDelivr. The runner calls the
+  functions on window.bench and reads what they return.
+-->
+<body>
+<pre id="log"></pre>
+<script type="module">
+const log = (...a) => { console.log(...a); };
+// Under /isolated/ every request stays under it, so the server sends COOP and COEP for the workers too.
+const BASE = location.pathname.startsWith("/isolated") ? "/isolated" : "";
+const TRANSFORMERS = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js";
+const median = (xs) => { const s = xs.slice().sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : null; };
+let evalSet = null;
+let evalPoints = null;
+
+async function data() {
+  if (!evalSet) {
+    evalSet = await (await fetch(BASE + "/data/eval.json")).json();
+    evalPoints = new Float32Array(await (await fetch(BASE + "/data/eval-points.bin")).arrayBuffer());
+  }
+  return evalSet;
+}
+const cloud = (r, n) => {
+  // The first n of the element's 2,048 samples: an area-uniform sample of n.
+  const off = r.p * 2048 * 3;
+  return evalPoints.slice(off, off + n * 3);
+};
+
+// ---------------------------------------------------------------- rules
+async function rules({ module = "/src/core/identify.js" } = {}) {
+  const { identify } = await import(module);
+  const set = await data();
+  const input = (r) => ({ name: r.name, objectType: r.objectType, longName: r.longName, predefined: r.predefined, dims: r.dims, above: r.above });
+  for (const r of set.records.slice(0, 200)) identify(input(r));
+  const t0 = performance.now();
+  const out = set.records.map((r) => { const p = identify(input(r)); return { label: p.label, by: p.by }; });
+  const ms = performance.now() - t0;
+  return { predictions: out, msPerElement: ms / set.records.length };
+}
+
+// ---------------------------------------------------------------- IFCNet via onnxruntime-web
+let ort = null;
+async function loadOrt(kind) {
+  ort = await import(BASE + (kind === "webgpu" ? "/ort/ort.webgpu.min.mjs" : "/ort/ort.wasm.min.mjs"));
+  ort.env.wasm.wasmPaths = BASE + "/ort/";
+  return ort;
+}
+
+/** Latency and fixture agreement of one ONNX variant. */
+async function ifcnetVariant({ name, points, batch = 1, ep = "wasm", threads = 1, runs = 20, fixtures = null }) {
+  await data();
+  if (!ort) await loadOrt(ep);
+  ort.env.wasm.numThreads = threads;
+  ort.env.wasm.simd = true;
+  const t0 = performance.now();
+  const bytes = new Uint8Array(await (await fetch(`${BASE}/onnx/${name}.onnx`)).arrayBuffer());
+  const tFetch = performance.now() - t0;
+  let session;
+  try {
+    session = await ort.InferenceSession.create(bytes, { executionProviders: [ep], graphOptimizationLevel: "all" });
+  } catch (error) {
+    return { name, ep, error: String(error?.message || error) };
+  }
+  const tCreate = performance.now() - t0 - tFetch;
+  const recs = evalSet.records;
+  const input = (start) => {
+    const arr = new Float32Array(batch * points * 3);
+    for (let b = 0; b < batch; b += 1) arr.set(cloud(recs[(start + b) % recs.length], points), b * points * 3);
+    return new ort.Tensor("float32", arr, [batch, points, 3]);
+  };
+  for (let w = 0; w < 3; w += 1) await session.run({ points: input(w * batch) });
+  const times = [];
+  for (let i = 0; i < runs; i += 1) {
+    const x = input(100 + i * batch);
+    const t = performance.now();
+    await session.run({ points: x });
+    times.push(performance.now() - t);
+  }
+  let check = null;
+  if (fixtures) {
+    // The Python reference's logits for the same inputs (identify-ifcnet.py fixtures).
+    let maxDiff = 0, same = 0, nan = false;
+    for (const f of fixtures.items) {
+      const x = new ort.Tensor("float32", Float32Array.from(f.points), [1, points, 3]);
+      const out = (await session.run({ points: x })).logits.data;
+      let a = 0, b = 0;
+      for (let c = 0; c < out.length; c += 1) {
+        if (!Number.isFinite(out[c])) nan = true;
+        maxDiff = Math.max(maxDiff, Math.abs(out[c] - f.logits[c]));
+        if (out[c] > out[a]) a = c;
+        if (f.logits[c] > f.logits[b]) b = c;
+      }
+      if (a === b) same += 1;
+    }
+    check = { count: fixtures.items.length, maxAbsLogitDiff: maxDiff, sameArgmax: same, nan };
+  }
+  await session.release?.();
+  return { name, ep, threads, batch, points, bytes: bytes.length, fetchMs: tFetch, createMs: tCreate, medianMs: median(times), perElementMs: median(times) / batch, minMs: Math.min(...times), check, crossOriginIsolated: self.crossOriginIsolated };
+}
+
+/** The app's own path: identifyGeometry.js and its worker, on every record. */
+async function ifcnetApp({ modelUrl, points = 1024, backend = "wasm", ortBase = undefined, limit = Infinity, chunk = 32 }) {
+  const set = await data();
+  const G = await import("/src/core/identifyGeometry.js");
+  const t0 = performance.now();
+  const id = G.createGeometryIdentifier({ modelUrl, points, backend, ...(ortBase ? { ortBase } : {}) });
+  let info;
+  try {
+    info = await id.ready;
+  } catch (error) {
+    return { error: error.message };
+  }
+  const loadMs = performance.now() - t0;
+  // The page's own frames while the worker runs: the longest gap shows any blocking.
+  let last = performance.now(), worstGap = 0, ticks = 0;
+  let running = true;
+  const tick = () => { const now = performance.now(); worstGap = Math.max(worstGap, now - last); last = now; ticks += 1; if (running) setTimeout(tick, 0); };
+  setTimeout(tick, 0);
+  const recs = set.records.slice(0, limit);
+  const out = [];
+  const t1 = performance.now();
+  for (let i = 0; i < recs.length; i += chunk) {
+    const clouds = recs.slice(i, i + chunk).map((r) => cloud(r, points));
+    const res = await id.classify(clouds);
+    for (const r of res) out.push({ label: r.label, ifcClass: r.ifcClass, confidence: r.confidence });
+  }
+  const ms = performance.now() - t1;
+  running = false;
+  id.terminate();
+  return { info, loadMs, msPerElement: ms / recs.length, predictions: out, worstMainThreadGapMs: worstGap, ticks };
+}
+
+/** Graceful failure: no model URL, a model URL that 404s. */
+async function ifcnetFailures() {
+  const G = await import("/src/core/identifyGeometry.js");
+  const out = {};
+  for (const [name, opts] of [["noModel", {}], ["missingModel", { modelUrl: "/onnx/does-not-exist.onnx" }], ["badOrt", { modelUrl: "/onnx/x.onnx", ortBase: "/no-such-ort/" }]]) {
+    const id = G.createGeometryIdentifier(opts);
+    try {
+      await id.ready;
+      out[name] = "loaded (unexpected)";
+    } catch (error) {
+      out[name] = error.message;
+    }
+    id.terminate();
+  }
+  // What the caller keeps: the rule's answer when the shape is missing.
+  out.combineKeepsRule = G.combine({ label: "furniture", confidence: 0.4, by: "box" }, null);
+  return out;
+}
+
+// ---------------------------------------------------------------- Transformers.js
+let T = null;
+async function transformers() {
+  if (!T) {
+    T = await import(TRANSFORMERS);
+    T.env.allowRemoteModels = false;
+    T.env.allowLocalModels = true;
+    T.env.localModelPath = location.origin + "/models/";
+    T.env.useBrowserCache = false;
+  }
+  return T;
+}
+
+const DESCRIPTIONS = {
+  wall: "a wall or partition",
+  slab: "a floor slab or deck",
+  roof: "a roof",
+  door: "a door or gate",
+  window: "a window or skylight",
+  stair: "a stair, steps, ramp or landing",
+  railing: "a railing, handrail or balustrade",
+  column: "a column or pillar",
+  beam: "a beam, joist or lintel",
+  covering: "a ceiling, floor finish, cladding or covering",
+  furniture: "furniture: a chair, table, bed, sofa, cabinet or shelf",
+  appliance: "an appliance: cooker, oven, fridge, washing machine, dishwasher or TV",
+  sanitary: "a sanitary fitting: toilet, washbasin, sink, bath or shower",
+  heater: "a radiator or space heater",
+  lighting: "a light fitting or lamp",
+  mep: "building services: a pipe, duct, valve, diffuser, socket, switch or electrical panel",
+  space: "a room or space",
+  other: "something else: site, landscape, people, vehicles, structure parts",
+};
+const textOf = (r) => [r.name, r.objectType, r.predefined && !/^(NOTDEFINED|USERDEFINED)$/i.test(r.predefined) ? r.predefined : "", r.longName].filter(Boolean).join(" | ").slice(0, 300) || "unnamed element";
+
+async function embed({ model, dtype, device = "wasm", prefix = "", labelPrefix = "", limit = Infinity, batchSize = 32 }) {
+  const t0 = performance.now();
+  const { pipeline } = await transformers();
+  const set = await data();
+  let extractor;
+  try {
+    extractor = await pipeline("feature-extraction", model, { dtype, device });
+  } catch (error) {
+    return { error: String(error?.message || error) };
+  }
+  const loadMs = performance.now() - t0;
+  const labels = Object.keys(DESCRIPTIONS);
+  const lab = await extractor(labels.map((l) => labelPrefix + DESCRIPTIONS[l]), { pooling: "mean", normalize: true });
+  const dim = lab.dims[1];
+  const L = lab.data;
+  const recs = set.records.slice(0, limit);
+  await extractor([prefix + textOf(recs[0])], { pooling: "mean", normalize: true });
+  const t1 = performance.now();
+  const out = [];
+  for (let i = 0; i < recs.length; i += batchSize) {
+    const batch = recs.slice(i, i + batchSize);
+    const e = await extractor(batch.map((r) => prefix + textOf(r)), { pooling: "mean", normalize: true });
+    for (let b = 0; b < batch.length; b += 1) {
+      let best = 0, bestScore = -Infinity;
+      for (let l = 0; l < labels.length; l += 1) {
+        let s = 0;
+        for (let d = 0; d < dim; d += 1) s += e.data[b * dim + d] * L[l * dim + d];
+        if (s > bestScore) { bestScore = s; best = l; }
+      }
+      out.push({ label: labels[best], score: bestScore });
+    }
+  }
+  const ms = performance.now() - t1;
+  await extractor.dispose?.();
+  return { loadMs, msPerElement: ms / recs.length, predictions: out };
+}
+
+const LABELS = Object.keys(DESCRIPTIONS);
+// The words the model chooses from: the labels, with "services" for mep and "room" for space
+// (plain words it knows); each is scored as the continuation of "Answer:", with its leading space.
+const WORDS = { mep: "services", space: "room" };
+const word = (l) => WORDS[l] || l;
+const SYSTEM = "You identify building elements in IFC models.";
+const QUESTION = `Which one is it: ${LABELS.map(word).join(", ")}? (covering = ceiling or floor finish; services = pipes, ducts, valves, sockets, switches, electrical panels; other = site, landscape, people, vehicles, structural parts.) Answer with one word.`;
+const ANSWER = "Answer:";
+const fmt = (v) => (v == null ? "?" : (Math.round(v * 100) / 100).toString());
+function prompt(r, hint) {
+  const lines = [
+    `Name: ${r.name || "-"}`,
+    `Type: ${r.objectType || "-"}`,
+    `PredefinedType: ${r.predefined || "-"}`,
+  ];
+  if (r.longName) lines.push(`LongName: ${r.longName}`);
+  lines.push(`Storey: ${r.storey || "-"}; room: ${r.room || "-"}`);
+  lines.push(`Size: ${fmt(r.dims?.[0])} x ${fmt(r.dims?.[1])} m, ${fmt(r.dims?.[2])} m high, bottom ${fmt(r.above)} m above the floor`);
+  if (hint) lines.push(`A rule-based guess says: ${word(hint)}. Keep it unless it is wrong.`);
+  return lines.join("\n").slice(0, 600) + "\n" + QUESTION;
+}
+
+function lastLogits(logits) {
+  const [, seq, vocab] = logits.dims;
+  const off = (seq - 1) * vocab;
+  const d = logits.data;
+  if (logits.type === "float16" && d instanceof Uint16Array) {
+    const out = new Float32Array(vocab);
+    for (let i = 0; i < vocab; i += 1) {
+      const h = d[off + i];
+      const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 0x1f, f = h & 0x3ff;
+      out[i] = e === 0 ? s * 2 ** -14 * (f / 1024) : e === 31 ? (f ? NaN : s * Infinity) : s * 2 ** (e - 15) * (1 + f / 1024);
+    }
+    return out;
+  }
+  return d.subarray ? d.subarray(off, off + vocab) : Array.from(d).slice(off, off + vocab);
+}
+
+/**
+ * Constrained greedy decoding over the label set: each step one forward
+ * pass; only tokens that continue some label are allowed; it stops when one
+ * label is left. No sampling, so the answer is always a label.
+ */
+async function llm({ model, dtype, device = "webgpu", limit = Infinity, hint = false, rulesModule = "/src/core/identify.js", qwen3 = false, decodeTokens = 24 }) {
+  const t0 = performance.now();
+  const { AutoTokenizer, AutoModelForCausalLM, Tensor } = await transformers();
+  const set = await data();
+  let tokenizer, net;
+  try {
+    tokenizer = await AutoTokenizer.from_pretrained(model);
+    net = await AutoModelForCausalLM.from_pretrained(model, { dtype, device });
+  } catch (error) {
+    return { error: String(error?.message || error) };
+  }
+  const loadMs = performance.now() - t0;
+  const seqs = LABELS.map((l) => tokenizer.encode(" " + word(l), { add_special_tokens: false }));
+  const identify = hint ? (await import(rulesModule)).identify : null;
+  const recs = set.records.slice(0, limit);
+  const out = [];
+  let promptTokens = 0, passes = 0;
+  const forward = async (ids) => {
+    const input_ids = new Tensor("int64", BigInt64Array.from(ids.map(BigInt)), [1, ids.length]);
+    const attention_mask = new Tensor("int64", new BigInt64Array(ids.length).fill(1n), [1, ids.length]);
+    const res = await net({ input_ids, attention_mask });
+    passes += 1;
+    return lastLogits(res.logits);
+  };
+  const classify = async (r) => {
+    const g = identify ? identify({ name: r.name, objectType: r.objectType, longName: r.longName, predefined: r.predefined, dims: r.dims, above: r.above }).label : null;
+    let text = tokenizer.apply_chat_template([{ role: "system", content: SYSTEM }, { role: "user", content: prompt(r, g) }], { tokenize: false, add_generation_prompt: true });
+    if (qwen3) text += "<think>\n\n</think>\n\n";
+    text += ANSWER;
+    const ids = Array.from(tokenizer.encode(text, { add_special_tokens: false }));
+    promptTokens += ids.length;
+    let alive = LABELS.map((_, i) => i);
+    const prefix = [];
+    let calibrated = null;
+    for (let step = 0; alive.length > 1 && step < 6; step += 1) {
+      const logits = await forward(ids.concat(prefix));
+      if (step === 0 && cf) {
+        // Contextual calibration (Zhao et al. 2021): divide out the label prior the
+        // prompt alone gives, i.e. subtract the content-free log-probabilities.
+        const lp = logSoftmaxOver(logits);
+        let best = 0;
+        for (let i = 1; i < LABELS.length; i += 1) if (lp[i] - cf[i] > lp[best] - cf[best]) best = i;
+        calibrated = LABELS[best];
+      }
+      let bestTok = null, bestVal = -Infinity;
+      for (const i of alive) {
+        const tok = seqs[i][step];
+        if (tok === undefined) continue;
+        if (logits[tok] > bestVal) { bestVal = logits[tok]; bestTok = tok; }
+      }
+      if (bestTok === null) break;
+      // Labels that ended at this step stay only if nothing longer was better.
+      alive = alive.filter((i) => seqs[i][step] === bestTok);
+      prefix.push(bestTok);
+    }
+    return { label: LABELS[alive[0]], calibrated, hint: g };
+  };
+  // Log-probabilities restricted to the labels' first tokens (each label is one token).
+  const singleToken = seqs.every((s) => s.length === 1);
+  const logSoftmaxOver = (logits) => {
+    const v = seqs.map((s) => logits[s[0]]);
+    const m = Math.max(...v);
+    const z = Math.log(v.reduce((a, x) => a + Math.exp(x - m), 0)) + m;
+    return v.map((x) => x - z);
+  };
+  let cf = null;
+  if (singleToken) {
+    const blank = { name: "", objectType: "", predefined: "", longName: "", storey: "", room: "", dims: null, above: null };
+    let text = tokenizer.apply_chat_template([{ role: "system", content: SYSTEM }, { role: "user", content: prompt(blank, null) }], { tokenize: false, add_generation_prompt: true });
+    if (qwen3) text += "<think>\n\n</think>\n\n";
+    cf = logSoftmaxOver(await forward(Array.from(tokenizer.encode(text + ANSWER, { add_special_tokens: false }))));
+  }
+  await classify(recs[0]);
+  promptTokens = 0; passes = 0;
+  const t1 = performance.now();
+  for (const r of recs) out.push(await classify(r));
+  const ms = performance.now() - t1;
+  // Free decoding speed, for reference: greedy tokens after a short prompt.
+  let decode = null;
+  try {
+    const text = tokenizer.apply_chat_template([{ role: "user", content: "Describe a fire door in one sentence." }], { tokenize: false, add_generation_prompt: true });
+    const inputs = tokenizer(text);
+    await net.generate({ ...inputs, max_new_tokens: 4, do_sample: false });
+    const t = performance.now();
+    const gen = await net.generate({ ...inputs, max_new_tokens: decodeTokens, min_new_tokens: decodeTokens, do_sample: false });
+    const dt = performance.now() - t;
+    decode = { tokens: gen.dims[1] - inputs.input_ids.dims[1], ms: dt, tokensPerSecond: (gen.dims[1] - inputs.input_ids.dims[1]) / (dt / 1000) };
+  } catch (error) {
+    decode = { error: String(error?.message || error) };
+  }
+  await net.dispose?.();
+  return { loadMs, msPerElement: ms / recs.length, promptTokensPerElement: promptTokens / recs.length, passesPerElement: passes / recs.length, prefillTokensPerSecond: promptTokens / (ms / 1000), decode, predictions: out };
+}
+
+/** What the model sees and says for a few records (debugging the constrained decoder). */
+async function llmDebug({ model, dtype, device = "webgpu", count = 3 }) {
+  const { AutoTokenizer, AutoModelForCausalLM, Tensor } = await transformers();
+  const set = await data();
+  const tokenizer = await AutoTokenizer.from_pretrained(model);
+  const net = await AutoModelForCausalLM.from_pretrained(model, { dtype, device });
+  const out = { seqs: Object.fromEntries(LABELS.map((l) => [l, tokenizer.encode(" " + word(l), { add_special_tokens: false })])), items: [] };
+  for (const r of set.records.slice(0, count)) {
+    const text = tokenizer.apply_chat_template([{ role: "system", content: SYSTEM }, { role: "user", content: prompt(r) }], { tokenize: false, add_generation_prompt: true }) + ANSWER;
+    const ids = Array.from(tokenizer.encode(text, { add_special_tokens: false }));
+    const input_ids = new Tensor("int64", BigInt64Array.from(ids.map(BigInt)), [1, ids.length]);
+    const attention_mask = new Tensor("int64", new BigInt64Array(ids.length).fill(1n), [1, ids.length]);
+    const res = await net({ input_ids, attention_mask });
+    const lg = lastLogits(res.logits);
+    const top = Array.from(lg).map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, 5).map(([v, i]) => [tokenizer.decode([i]), Math.round(v * 100) / 100]);
+    const gen = await net.generate({ ...tokenizer(text), max_new_tokens: 5, do_sample: false });
+    out.items.push({ truth: r.truth, tail: text.slice(-160), type: res.logits.type, dims: res.logits.dims, dataType: res.logits.data.constructor.name, top, generated: tokenizer.decode(gen.tolist()[0].slice(ids.length).map(Number), { skip_special_tokens: true }) });
+  }
+  return out;
+}
+
+/** Does the model answer plain questions on this backend? Free greedy generation. */
+async function llmSanity({ model, dtype, device }) {
+  const { AutoTokenizer, AutoModelForCausalLM } = await transformers();
+  const tokenizer = await AutoTokenizer.from_pretrained(model);
+  const net = await AutoModelForCausalLM.from_pretrained(model, { dtype, device });
+  const out = [];
+  for (const q of ["What is the capital of France? Answer with one word.", "An IFC element is named 'Basic Wall:Exterior - Brick'. Is it a wall, a door or a window? Answer with one word.", "Describe a fire door in one sentence."]) {
+    const inputs = tokenizer(tokenizer.apply_chat_template([{ role: "user", content: q }], { tokenize: false, add_generation_prompt: true }));
+    const gen = await net.generate({ ...inputs, max_new_tokens: 20, do_sample: false });
+    out.push(tokenizer.decode(gen.tolist()[0].slice(inputs.input_ids.dims[1]).map(Number), { skip_special_tokens: true }));
+  }
+  await net.dispose?.();
+  return out;
+}
+
+async function gpuInfo() {
+  if (!("gpu" in navigator)) return { webgpu: false };
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) return { webgpu: false };
+  const info = adapter.info || {};
+  return { webgpu: true, vendor: info.vendor, architecture: info.architecture, description: info.description, f16: adapter.features.has("shader-f16") };
+}
+
+window.bench = { llmSanity, llmDebug, data: async () => (await data()).records.length, rules, ifcnetVariant, ifcnetApp, ifcnetFailures, embed, llm, gpuInfo, ready: true };
+document.getElementById("log").textContent = "ready";
+</script>
+</body>

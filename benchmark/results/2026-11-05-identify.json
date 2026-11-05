@@ -1,0 +1,6163 @@
+{
+  "date": "2026-11-05",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i7-14700",
+    "logicalCores": 28,
+    "memoryGB": 32,
+    "platform": "win32 10.0.26100",
+    "chrome": "156.0.8078.81",
+    "note": "Another user's six-process CPU job ran on this machine throughout; timings are medians and carry that load."
+  },
+  "methods": {
+    "rules": {
+      "download": {
+        "modelBytes": 0
+      },
+      "msPerElement": 0.0056867470032718765,
+      "msPerModel": 2.2803855483120223,
+      "worksWithoutWebGPU": true,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 0,
+        "addedMB": null
+      },
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.86,
+          "macroF1": 0.829,
+          "f1": {
+            "wall": 0.884,
+            "slab": 0.962,
+            "roof": 0.899,
+            "door": 0.935,
+            "window": 0.877,
+            "stair": 0.793,
+            "railing": 0.796,
+            "column": 0.865,
+            "beam": 0.824,
+            "covering": 0.906,
+            "furniture": 0.734,
+            "heater": 1,
+            "lighting": 0.493,
+            "mep": 0.596,
+            "space": 0.961,
+            "other": 0.733
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 645,
+              "stair": 0,
+              "wall": 8,
+              "slab": 0,
+              "else": 24
+            },
+            "stair": {
+              "door": 0,
+              "stair": 203,
+              "wall": 0,
+              "slab": 13,
+              "else": 81
+            },
+            "wall": {
+              "door": 14,
+              "stair": 2,
+              "wall": 733,
+              "slab": 0,
+              "else": 99
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 566,
+              "else": 7
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.826,
+          "macroF1": 0.829,
+          "f1": {
+            "wall": 0.923,
+            "slab": 0.909,
+            "roof": 0.923,
+            "door": 0.865,
+            "window": 0.919,
+            "stair": 0.743,
+            "railing": 0.778,
+            "column": 0.766,
+            "beam": 0.778,
+            "covering": 0.923,
+            "furniture": 0.618,
+            "heater": 1,
+            "lighting": 0.944,
+            "mep": 0.571,
+            "space": 0.93,
+            "other": 0.667
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 16,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 4
+            },
+            "stair": {
+              "door": 0,
+              "stair": 13,
+              "wall": 0,
+              "slab": 1,
+              "else": 6
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 18,
+              "slab": 0,
+              "else": 2
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 20,
+              "else": 0
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.604,
+          "macroF1": 0.544,
+          "f1": {
+            "slab": 0.235,
+            "door": 0.667,
+            "stair": 1,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0.074,
+            "appliance": 0.947,
+            "sanitary": 0.906,
+            "heater": 0,
+            "lighting": 0.667,
+            "mep": 0.694,
+            "other": 0.621
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 2,
+              "else": 3
+            }
+          }
+        }
+      },
+      "decidedBy": {
+        "name": 2658,
+        "predefined": 1875,
+        "box": 1451,
+        "none": 241
+      }
+    },
+    "rules-v1": {
+      "download": {
+        "modelBytes": 0
+      },
+      "msPerElement": 0.004674698779860653,
+      "msPerModel": 1.874554210724122,
+      "worksWithoutWebGPU": true,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 0,
+        "addedMB": null
+      },
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.789,
+          "macroF1": 0.768,
+          "f1": {
+            "wall": 0.788,
+            "slab": 0.965,
+            "roof": 0.899,
+            "door": 0.81,
+            "window": 0.832,
+            "stair": 0.717,
+            "railing": 0.79,
+            "column": 0.805,
+            "beam": 0.824,
+            "covering": 0.911,
+            "furniture": 0.605,
+            "heater": 1,
+            "lighting": 0.5,
+            "mep": 0.333,
+            "space": 0.954,
+            "other": 0.556
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 526,
+              "stair": 0,
+              "wall": 8,
+              "slab": 0,
+              "else": 143
+            },
+            "stair": {
+              "door": 0,
+              "stair": 191,
+              "wall": 0,
+              "slab": 13,
+              "else": 93
+            },
+            "wall": {
+              "door": 12,
+              "stair": 0,
+              "wall": 660,
+              "slab": 0,
+              "else": 176
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 566,
+              "else": 7
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.77,
+          "macroF1": 0.771,
+          "f1": {
+            "wall": 0.769,
+            "slab": 0.909,
+            "roof": 0.923,
+            "door": 0.611,
+            "window": 0.895,
+            "stair": 0.727,
+            "railing": 0.842,
+            "column": 0.735,
+            "beam": 0.778,
+            "covering": 0.947,
+            "furniture": 0.481,
+            "heater": 1,
+            "lighting": 0.944,
+            "mep": 0.4,
+            "space": 0.909,
+            "other": 0.465
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 11,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 9
+            },
+            "stair": {
+              "door": 0,
+              "stair": 12,
+              "wall": 0,
+              "slab": 1,
+              "else": 7
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 15,
+              "slab": 0,
+              "else": 5
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 20,
+              "else": 0
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.553,
+          "macroF1": 0.488,
+          "f1": {
+            "slab": 0.235,
+            "door": 0.286,
+            "stair": 1,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0.074,
+            "appliance": 0.824,
+            "sanitary": 0.84,
+            "heater": 0,
+            "lighting": 0.667,
+            "mep": 0.627,
+            "other": 0.588
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 2,
+              "else": 3
+            }
+          }
+        }
+      },
+      "decidedBy": {
+        "box": 1559,
+        "name": 2493,
+        "predefined": 1875,
+        "none": 298
+      }
+    },
+    "ifcnet-pruned-fp32-n2048-b1": {
+      "variant": "pruned-fp32-n2048-b1",
+      "download": {
+        "modelBytes": 1450950,
+        "runtimeBytesBrotli": 3090507,
+        "runtimeBytesRaw": 14290023
+      },
+      "loadMs": 1225.1999998092651,
+      "msPerElement": 211.06245783131763,
+      "msPerModelAllElements": 84636.04559035836,
+      "msPerModelGenericOnly": 844.2498313252705,
+      "worstMainThreadGapMs": 31.5,
+      "worksWithoutWebGPU": true,
+      "memory": {
+        "baselineMB": 687,
+        "peakMB": 864,
+        "addedMB": 176
+      },
+      "workerInfo": {
+        "backend": "wasm",
+        "threads": 1,
+        "bytes": 1450950,
+        "loadMs": 1214.2000000476837
+      },
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.413,
+          "macroF1": 0.349,
+          "f1": {
+            "wall": 0.716,
+            "slab": 0.543,
+            "roof": 0,
+            "door": 0.728,
+            "window": 0,
+            "stair": 0.749,
+            "railing": 0.634,
+            "column": 0,
+            "beam": 0.467,
+            "covering": 0,
+            "furniture": 0.714,
+            "heater": 0.295,
+            "lighting": 0.593,
+            "mep": 0.079,
+            "space": 0,
+            "other": 0.072
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 629,
+              "stair": 0,
+              "wall": 32,
+              "slab": 3,
+              "else": 13
+            },
+            "stair": {
+              "door": 0,
+              "stair": 181,
+              "wall": 0,
+              "slab": 56,
+              "else": 60
+            },
+            "wall": {
+              "door": 8,
+              "stair": 0,
+              "wall": 585,
+              "slab": 2,
+              "else": 253
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 3,
+              "slab": 391,
+              "else": 179
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.416,
+          "macroF1": 0.389,
+          "f1": {
+            "wall": 0.634,
+            "slab": 0.323,
+            "roof": 0,
+            "door": 0.702,
+            "window": 0,
+            "stair": 0.71,
+            "railing": 0.789,
+            "column": 0,
+            "beam": 0.537,
+            "covering": 0,
+            "furniture": 0.687,
+            "heater": 0.842,
+            "lighting": 0.64,
+            "mep": 0.259,
+            "space": 0,
+            "other": 0.108
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 20,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 11,
+              "wall": 0,
+              "slab": 4,
+              "else": 5
+            },
+            "wall": {
+              "door": 1,
+              "stair": 0,
+              "wall": 13,
+              "slab": 1,
+              "else": 5
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 10,
+              "else": 9
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.277,
+          "macroF1": 0.201,
+          "f1": {
+            "slab": 0,
+            "door": 0.333,
+            "stair": 0,
+            "railing": 0,
+            "beam": 0.211,
+            "furniture": 0,
+            "appliance": 0,
+            "sanitary": 0.621,
+            "heater": 0,
+            "lighting": 0.8,
+            "mep": 0.419,
+            "other": 0.028
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 6
+            }
+          }
+        }
+      },
+      "scoresCoveredLabelsOnly": {
+        "primary": {
+          "n": 4107,
+          "accuracy": 0.609,
+          "macroF1": 0.581,
+          "f1": {
+            "wall": 0.742,
+            "slab": 0.713,
+            "door": 0.954,
+            "stair": 0.751,
+            "railing": 0.688,
+            "beam": 0.535,
+            "furniture": 0.76,
+            "heater": 0.387,
+            "lighting": 0.64,
+            "mep": 0.141,
+            "other": 0.081
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 629,
+              "stair": 0,
+              "wall": 32,
+              "slab": 3,
+              "else": 13
+            },
+            "stair": {
+              "door": 0,
+              "stair": 181,
+              "wall": 0,
+              "slab": 56,
+              "else": 60
+            },
+            "wall": {
+              "door": 8,
+              "stair": 0,
+              "wall": 585,
+              "slab": 2,
+              "else": 253
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 3,
+              "slab": 391,
+              "else": 179
+            }
+          }
+        },
+        "primarySample": {
+          "n": 217,
+          "accuracy": 0.608,
+          "macroF1": 0.635,
+          "f1": {
+            "wall": 0.667,
+            "slab": 0.541,
+            "door": 0.952,
+            "stair": 0.71,
+            "railing": 0.811,
+            "beam": 0.579,
+            "furniture": 0.687,
+            "heater": 0.865,
+            "lighting": 0.64,
+            "mep": 0.395,
+            "other": 0.143
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 20,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 11,
+              "wall": 0,
+              "slab": 4,
+              "else": 5
+            },
+            "wall": {
+              "door": 1,
+              "stair": 0,
+              "wall": 13,
+              "slab": 1,
+              "else": 5
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 10,
+              "else": 9
+            }
+          }
+        },
+        "hard": {
+          "n": 149,
+          "accuracy": 0.295,
+          "macroF1": 0.223,
+          "f1": {
+            "slab": 0,
+            "door": 0.333,
+            "stair": 0,
+            "railing": 0,
+            "beam": 0.211,
+            "furniture": 0,
+            "sanitary": 0.643,
+            "heater": 0,
+            "lighting": 0.8,
+            "mep": 0.439,
+            "other": 0.028
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 6
+            }
+          }
+        }
+      },
+      "coveredLabels": [
+        "mep",
+        "beam",
+        "door",
+        "furniture",
+        "lighting",
+        "other",
+        "railing",
+        "sanitary",
+        "slab",
+        "heater",
+        "stair",
+        "wall"
+      ]
+    },
+    "minilm-fp32-wasm": {
+      "download": {
+        "modelBytes": 90387606
+      },
+      "loadMs": 1862.9000000953674,
+      "msPerElement": 48.706859437758666,
+      "msPerModel": 19531.450634541226,
+      "worksWithoutWebGPU": true,
+      "memory": {
+        "baselineMB": 652,
+        "peakMB": 1118,
+        "addedMB": 466
+      },
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.438,
+          "macroF1": 0.398,
+          "f1": {
+            "wall": 0.666,
+            "slab": 0.707,
+            "roof": 0.389,
+            "door": 0.422,
+            "window": 0.394,
+            "stair": 0.448,
+            "railing": 0.636,
+            "column": 0.306,
+            "beam": 0.304,
+            "covering": 0.636,
+            "furniture": 0.614,
+            "heater": 0.104,
+            "lighting": 0.071,
+            "mep": 0.187,
+            "space": 0.441,
+            "other": 0.041
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 219,
+              "stair": 17,
+              "wall": 18,
+              "slab": 6,
+              "else": 417
+            },
+            "stair": {
+              "door": 7,
+              "stair": 128,
+              "wall": 4,
+              "slab": 7,
+              "else": 151
+            },
+            "wall": {
+              "door": 40,
+              "stair": 3,
+              "wall": 476,
+              "slab": 23,
+              "else": 306
+            },
+            "slab": {
+              "door": 0,
+              "stair": 8,
+              "wall": 0,
+              "slab": 447,
+              "else": 118
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.476,
+          "macroF1": 0.465,
+          "f1": {
+            "wall": 0.485,
+            "slab": 0.542,
+            "roof": 0.655,
+            "door": 0.452,
+            "window": 0.5,
+            "stair": 0.462,
+            "railing": 0.769,
+            "column": 0.359,
+            "beam": 0.25,
+            "covering": 0.703,
+            "furniture": 0.71,
+            "heater": 0.597,
+            "lighting": 0.25,
+            "mep": 0.238,
+            "space": 0.4,
+            "other": 0.069
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 7,
+              "stair": 0,
+              "wall": 1,
+              "slab": 1,
+              "else": 11
+            },
+            "stair": {
+              "door": 0,
+              "stair": 9,
+              "wall": 0,
+              "slab": 0,
+              "else": 11
+            },
+            "wall": {
+              "door": 0,
+              "stair": 1,
+              "wall": 8,
+              "slab": 1,
+              "else": 10
+            },
+            "slab": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 13,
+              "else": 6
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.333,
+          "macroF1": 0.307,
+          "f1": {
+            "slab": 0.615,
+            "door": 0.25,
+            "stair": 0,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0,
+            "appliance": 0.286,
+            "sanitary": 0.553,
+            "heater": 0,
+            "lighting": 0.421,
+            "mep": 0.612,
+            "other": 0.231
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 4,
+              "else": 2
+            }
+          }
+        }
+      }
+    },
+    "minilm-int8-wasm": {
+      "download": {
+        "modelBytes": 22972370
+      },
+      "loadMs": 1372.2000000476837,
+      "msPerElement": 30.503694779116465,
+      "msPerModel": 12231.981606425703,
+      "worksWithoutWebGPU": true,
+      "memory": {
+        "baselineMB": 630,
+        "peakMB": 860,
+        "addedMB": 230
+      },
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.448,
+          "macroF1": 0.411,
+          "f1": {
+            "wall": 0.675,
+            "slab": 0.73,
+            "roof": 0.405,
+            "door": 0.426,
+            "window": 0.395,
+            "stair": 0.479,
+            "railing": 0.659,
+            "column": 0.32,
+            "beam": 0.319,
+            "covering": 0.674,
+            "furniture": 0.615,
+            "heater": 0.111,
+            "lighting": 0.052,
+            "mep": 0.249,
+            "space": 0.434,
+            "other": 0.033
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 218,
+              "stair": 17,
+              "wall": 13,
+              "slab": 23,
+              "else": 406
+            },
+            "stair": {
+              "door": 6,
+              "stair": 129,
+              "wall": 1,
+              "slab": 6,
+              "else": 155
+            },
+            "wall": {
+              "door": 36,
+              "stair": 3,
+              "wall": 485,
+              "slab": 17,
+              "else": 307
+            },
+            "slab": {
+              "door": 0,
+              "stair": 5,
+              "wall": 0,
+              "slab": 471,
+              "else": 97
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.498,
+          "macroF1": 0.488,
+          "f1": {
+            "wall": 0.529,
+            "slab": 0.627,
+            "roof": 0.613,
+            "door": 0.438,
+            "window": 0.5,
+            "stair": 0.474,
+            "railing": 0.857,
+            "column": 0.333,
+            "beam": 0.276,
+            "covering": 0.743,
+            "furniture": 0.71,
+            "heater": 0.645,
+            "lighting": 0.214,
+            "mep": 0.39,
+            "space": 0.4,
+            "other": 0.065
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 7,
+              "stair": 0,
+              "wall": 1,
+              "slab": 1,
+              "else": 11
+            },
+            "stair": {
+              "door": 0,
+              "stair": 9,
+              "wall": 0,
+              "slab": 0,
+              "else": 11
+            },
+            "wall": {
+              "door": 0,
+              "stair": 1,
+              "wall": 9,
+              "slab": 1,
+              "else": 9
+            },
+            "slab": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 16,
+              "else": 3
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.333,
+          "macroF1": 0.309,
+          "f1": {
+            "slab": 0.571,
+            "door": 0.222,
+            "stair": 0,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0,
+            "appliance": 0.429,
+            "sanitary": 0.553,
+            "heater": 0,
+            "lighting": 0.4,
+            "mep": 0.578,
+            "other": 0.247
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 4,
+              "else": 2
+            }
+          }
+        }
+      }
+    },
+    "minilm-fp32-webgpu": {
+      "download": {
+        "modelBytes": 90387606
+      },
+      "loadMs": 1752.8999998569489,
+      "msPerElement": 6.622971887550201,
+      "msPerModel": 2655.8117269076306,
+      "worksWithoutWebGPU": false,
+      "memory": {
+        "baselineMB": 630,
+        "peakMB": 2104,
+        "addedMB": 1473
+      },
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.438,
+          "macroF1": 0.398,
+          "f1": {
+            "wall": 0.666,
+            "slab": 0.707,
+            "roof": 0.389,
+            "door": 0.422,
+            "window": 0.394,
+            "stair": 0.448,
+            "railing": 0.636,
+            "column": 0.306,
+            "beam": 0.304,
+            "covering": 0.636,
+            "furniture": 0.614,
+            "heater": 0.104,
+            "lighting": 0.071,
+            "mep": 0.187,
+            "space": 0.441,
+            "other": 0.041
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 219,
+              "stair": 17,
+              "wall": 18,
+              "slab": 6,
+              "else": 417
+            },
+            "stair": {
+              "door": 7,
+              "stair": 128,
+              "wall": 4,
+              "slab": 7,
+              "else": 151
+            },
+            "wall": {
+              "door": 40,
+              "stair": 3,
+              "wall": 476,
+              "slab": 23,
+              "else": 306
+            },
+            "slab": {
+              "door": 0,
+              "stair": 8,
+              "wall": 0,
+              "slab": 447,
+              "else": 118
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.476,
+          "macroF1": 0.465,
+          "f1": {
+            "wall": 0.485,
+            "slab": 0.542,
+            "roof": 0.655,
+            "door": 0.452,
+            "window": 0.5,
+            "stair": 0.462,
+            "railing": 0.769,
+            "column": 0.359,
+            "beam": 0.25,
+            "covering": 0.703,
+            "furniture": 0.71,
+            "heater": 0.597,
+            "lighting": 0.25,
+            "mep": 0.238,
+            "space": 0.4,
+            "other": 0.069
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 7,
+              "stair": 0,
+              "wall": 1,
+              "slab": 1,
+              "else": 11
+            },
+            "stair": {
+              "door": 0,
+              "stair": 9,
+              "wall": 0,
+              "slab": 0,
+              "else": 11
+            },
+            "wall": {
+              "door": 0,
+              "stair": 1,
+              "wall": 8,
+              "slab": 1,
+              "else": 10
+            },
+            "slab": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 13,
+              "else": 6
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.333,
+          "macroF1": 0.307,
+          "f1": {
+            "slab": 0.615,
+            "door": 0.25,
+            "stair": 0,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0,
+            "appliance": 0.286,
+            "sanitary": 0.553,
+            "heater": 0,
+            "lighting": 0.421,
+            "mep": 0.612,
+            "other": 0.231
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 4,
+              "else": 2
+            }
+          }
+        }
+      }
+    },
+    "e5small-int8-wasm": {
+      "download": {
+        "modelBytes": 118308185
+      },
+      "loadMs": 2339.9000000953674,
+      "msPerElement": 50.94247389555935,
+      "msPerModel": 20427.9320321193,
+      "worksWithoutWebGPU": true,
+      "memory": {
+        "baselineMB": 896,
+        "peakMB": 1387,
+        "addedMB": 491
+      },
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.374,
+          "macroF1": 0.38,
+          "f1": {
+            "wall": 0.465,
+            "slab": 0.568,
+            "roof": 0.471,
+            "door": 0.465,
+            "window": 0.257,
+            "stair": 0.604,
+            "railing": 0.383,
+            "column": 0.282,
+            "beam": 0.308,
+            "covering": 0.345,
+            "furniture": 0.495,
+            "heater": 0.769,
+            "lighting": 0.058,
+            "mep": 0.121,
+            "space": 0.422,
+            "other": 0.062
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 257,
+              "stair": 0,
+              "wall": 5,
+              "slab": 0,
+              "else": 415
+            },
+            "stair": {
+              "door": 1,
+              "stair": 167,
+              "wall": 0,
+              "slab": 0,
+              "else": 129
+            },
+            "wall": {
+              "door": 59,
+              "stair": 12,
+              "wall": 287,
+              "slab": 6,
+              "else": 484
+            },
+            "slab": {
+              "door": 11,
+              "stair": 1,
+              "wall": 2,
+              "slab": 240,
+              "else": 319
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.438,
+          "macroF1": 0.431,
+          "f1": {
+            "wall": 0.316,
+            "slab": 0.588,
+            "roof": 0.655,
+            "door": 0.457,
+            "window": 0.296,
+            "stair": 0.588,
+            "railing": 0.533,
+            "column": 0.308,
+            "beam": 0.182,
+            "covering": 0.551,
+            "furniture": 0.611,
+            "heater": 0.952,
+            "lighting": 0.24,
+            "mep": 0.294,
+            "space": 0.278,
+            "other": 0.05
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 8,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 12
+            },
+            "stair": {
+              "door": 0,
+              "stair": 10,
+              "wall": 0,
+              "slab": 0,
+              "else": 10
+            },
+            "wall": {
+              "door": 1,
+              "stair": 0,
+              "wall": 6,
+              "slab": 0,
+              "else": 13
+            },
+            "slab": {
+              "door": 2,
+              "stair": 0,
+              "wall": 0,
+              "slab": 10,
+              "else": 8
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.308,
+          "macroF1": 0.278,
+          "f1": {
+            "slab": 0.222,
+            "door": 0.182,
+            "stair": 0,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0,
+            "appliance": 0.385,
+            "sanitary": 0.583,
+            "heater": 0,
+            "lighting": 0.667,
+            "mep": 0.304,
+            "other": 0.279
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 1,
+              "else": 4
+            }
+          }
+        }
+      }
+    },
+    "qwen2.5-0.5b-q4f16-webgpu": {
+      "download": {
+        "modelBytes": 483003582
+      },
+      "loadMs": 5999.299999952316,
+      "msPerElement": 1879.2226890756303,
+      "msPerModel": 753568.2983193278,
+      "promptTokensPerElement": 190.47058823529412,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 101.35604968083085,
+      "decode": {
+        "tokens": 24,
+        "ms": 3932.5999999046326,
+        "tokensPerSecond": 6.102832731674213
+      },
+      "sampleSize": 476,
+      "worksWithoutWebGPU": false,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 0,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.082,
+          "macroF1": 0.045,
+          "f1": {
+            "wall": 0,
+            "slab": 0,
+            "roof": 0,
+            "door": 0.124,
+            "window": 0,
+            "stair": 0.255,
+            "railing": 0,
+            "column": 0.167,
+            "beam": 0.069,
+            "covering": 0,
+            "furniture": 0,
+            "heater": 0,
+            "lighting": 0,
+            "mep": 0,
+            "space": 0.107,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 14,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 6
+            },
+            "stair": {
+              "door": 7,
+              "stair": 6,
+              "wall": 0,
+              "slab": 0,
+              "else": 7
+            },
+            "wall": {
+              "door": 13,
+              "stair": 2,
+              "wall": 0,
+              "slab": 0,
+              "else": 5
+            },
+            "slab": {
+              "door": 16,
+              "stair": 0,
+              "wall": 1,
+              "slab": 0,
+              "else": 3
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.019,
+          "macroF1": 0.027,
+          "f1": {
+            "slab": 0,
+            "door": 0.016,
+            "stair": 0,
+            "railing": 0,
+            "beam": 0.308,
+            "furniture": 0,
+            "appliance": 0,
+            "sanitary": 0,
+            "heater": 0,
+            "lighting": 0,
+            "mep": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 5,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            }
+          }
+        }
+      },
+      "note": "Broken backend, not the model: this build answered \"What is the capital of France?\" with \"Hello, welcome to the discussion of this topic...\" on this machine (Intel UHD 770, WebGPU); its q4 build and WASM answer \"Paris\". Kept as a warning."
+    },
+    "qwen2.5-0.5b-q4-webgpu": {
+      "download": {
+        "modelBytes": 786156820
+      },
+      "loadMs": 11535.900000095367,
+      "msPerElement": 2441.552499999603,
+      "msPerModel": 979062.5524998407,
+      "promptTokensPerElement": 190.12083333333334,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 77.86882867903282,
+      "decode": {
+        "tokens": 24,
+        "ms": 3568.9000000953674,
+        "tokensPerSecond": 6.724761130700966
+      },
+      "sampleSize": 240,
+      "worksWithoutWebGPU": false,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 8654,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 160,
+          "accuracy": 0.338,
+          "macroF1": 0.313,
+          "f1": {
+            "wall": 0.196,
+            "slab": 0.286,
+            "roof": 0.329,
+            "door": 0.4,
+            "window": 0.545,
+            "stair": 0.462,
+            "railing": 0.737,
+            "column": 0.167,
+            "beam": 0.333,
+            "covering": 0.533,
+            "furniture": 0.526,
+            "heater": 0,
+            "lighting": 0,
+            "mep": 0,
+            "space": 0.5,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 3,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 2
+            },
+            "stair": {
+              "door": 0,
+              "stair": 6,
+              "wall": 1,
+              "slab": 0,
+              "else": 6
+            },
+            "wall": {
+              "door": 1,
+              "stair": 0,
+              "wall": 5,
+              "slab": 0,
+              "else": 3
+            },
+            "slab": {
+              "door": 1,
+              "stair": 0,
+              "wall": 3,
+              "slab": 2,
+              "else": 6
+            }
+          }
+        },
+        "hard": {
+          "n": 80,
+          "accuracy": 0.038,
+          "macroF1": 0.088,
+          "f1": {
+            "slab": 0,
+            "beam": 0.571,
+            "furniture": 0,
+            "appliance": 0.222,
+            "sanitary": 0,
+            "heater": 0,
+            "lighting": 0,
+            "mep": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 1,
+              "wall": 2,
+              "slab": 0,
+              "else": 0
+            }
+          }
+        }
+      }
+    },
+    "qwen2.5-0.5b-int8-wasm": {
+      "download": {
+        "modelBytes": 512096557
+      },
+      "loadMs": 4610.299999952316,
+      "msPerElement": 4673.375,
+      "msPerModel": 1874023.375,
+      "promptTokensPerElement": 186.775,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 39.96576350068205,
+      "decode": {
+        "tokens": 24,
+        "ms": 3749.899999856949,
+        "tokensPerSecond": 6.400170671462052
+      },
+      "sampleSize": 40,
+      "worksWithoutWebGPU": true,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 0,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 27,
+          "accuracy": 0.111,
+          "macroF1": 0.041,
+          "f1": {
+            "wall": 0.182,
+            "slab": 0,
+            "roof": 0.25,
+            "door": 0.222,
+            "window": 0,
+            "stair": 0,
+            "railing": 0,
+            "column": 0,
+            "beam": 0,
+            "covering": 0,
+            "furniture": 0,
+            "heater": 0,
+            "lighting": 0,
+            "mep": 0,
+            "space": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "stair": {
+              "door": 2,
+              "stair": 0,
+              "wall": 1,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 0,
+              "else": 2
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 0,
+              "else": 1
+            }
+          }
+        },
+        "hard": {
+          "n": 13,
+          "accuracy": 0,
+          "macroF1": 0,
+          "f1": {
+            "furniture": 0,
+            "appliance": 0,
+            "sanitary": 0,
+            "mep": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            }
+          }
+        }
+      }
+    },
+    "qwen2.5-0.5b-q4-wasm": {
+      "download": {
+        "modelBytes": 786156820
+      },
+      "loadMs": 5314.399999856949,
+      "msPerElement": 5722.1,
+      "msPerModel": 2294562.1,
+      "promptTokensPerElement": 186.775,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 32.64098844829696,
+      "decode": {
+        "tokens": 24,
+        "ms": 13227.400000095367,
+        "tokensPerSecond": 1.8144155313838672
+      },
+      "sampleSize": 40,
+      "worksWithoutWebGPU": true,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 0,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 27,
+          "accuracy": 0.185,
+          "macroF1": 0.131,
+          "f1": {
+            "wall": 0.222,
+            "slab": 0,
+            "roof": 0.133,
+            "door": 0.4,
+            "window": 0,
+            "stair": 0.333,
+            "railing": 1,
+            "column": 0,
+            "beam": 0,
+            "covering": 0,
+            "furniture": 0,
+            "heater": 0,
+            "lighting": 0,
+            "mep": 0,
+            "space": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "stair": {
+              "door": 0,
+              "stair": 1,
+              "wall": 1,
+              "slab": 0,
+              "else": 1
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 0,
+              "else": 2
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 2
+            }
+          }
+        },
+        "hard": {
+          "n": 13,
+          "accuracy": 0,
+          "macroF1": 0,
+          "f1": {
+            "furniture": 0,
+            "appliance": 0,
+            "sanitary": 0,
+            "mep": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            }
+          }
+        }
+      }
+    },
+    "qwen3-0.6b-q4f16-webgpu": {
+      "download": {
+        "modelBytes": 569789750
+      },
+      "loadMs": 5070.200000047684,
+      "msPerElement": 2175.1291666666666,
+      "msPerModel": 872226.7958333333,
+      "promptTokensPerElement": 194.12083333333334,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 89.24565782491845,
+      "decode": {
+        "tokens": 24,
+        "ms": 1180,
+        "tokensPerSecond": 20.33898305084746
+      },
+      "sampleSize": 240,
+      "worksWithoutWebGPU": false,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 0,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 160,
+          "accuracy": 0.231,
+          "macroF1": 0.223,
+          "f1": {
+            "wall": 0.667,
+            "slab": 0.154,
+            "roof": 0.267,
+            "door": 0.353,
+            "window": 0.222,
+            "stair": 0.375,
+            "railing": 0.588,
+            "column": 0.588,
+            "beam": 0.182,
+            "covering": 0.164,
+            "furniture": 0,
+            "heater": 0,
+            "lighting": 0,
+            "mep": 0,
+            "space": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 3,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 2
+            },
+            "stair": {
+              "door": 1,
+              "stair": 3,
+              "wall": 0,
+              "slab": 0,
+              "else": 9
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 5,
+              "slab": 0,
+              "else": 4
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 1,
+              "else": 11
+            }
+          }
+        },
+        "hard": {
+          "n": 80,
+          "accuracy": 0.038,
+          "macroF1": 0.148,
+          "f1": {
+            "slab": 0,
+            "beam": 0.667,
+            "furniture": 0,
+            "appliance": 0,
+            "sanitary": 0,
+            "heater": 0,
+            "lighting": 0.667,
+            "mep": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 3
+            }
+          }
+        }
+      }
+    },
+    "qwen2.5-1.5b-q4f16-webgpu": {
+      "error": "Aborted(). Build with -sASSERTIONS for more info.",
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 0,
+        "addedMB": null
+      },
+      "note": "Aborted in Chrome on WebGPU and on WASM (RuntimeError: Aborted()). The q4 build (1.79 GB) could not be downloaded during the session (Hugging Face file downloads stalled), so no 1.5B result."
+    },
+    "qwen2.5-0.5b-q4-webgpu-calibrated": {
+      "download": {
+        "modelBytes": 786156820
+      },
+      "loadMs": 11535.900000095367,
+      "msPerElement": 2441.552499999603,
+      "msPerModel": 979062.5524998407,
+      "promptTokensPerElement": 190.12083333333334,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 77.86882867903282,
+      "decode": {
+        "tokens": 24,
+        "ms": 3568.9000000953674,
+        "tokensPerSecond": 6.724761130700966
+      },
+      "sampleSize": 240,
+      "worksWithoutWebGPU": false,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 8654,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 160,
+          "accuracy": 0.394,
+          "macroF1": 0.344,
+          "f1": {
+            "wall": 0.476,
+            "slab": 0.286,
+            "roof": 0.786,
+            "door": 0.286,
+            "window": 0.435,
+            "stair": 0.291,
+            "railing": 0.485,
+            "column": 0.167,
+            "beam": 0.182,
+            "covering": 0.471,
+            "furniture": 0.444,
+            "heater": 1,
+            "lighting": 0,
+            "mep": 0,
+            "space": 0.2,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 3,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "stair": {
+              "door": 0,
+              "stair": 8,
+              "wall": 0,
+              "slab": 0,
+              "else": 5
+            },
+            "wall": {
+              "door": 1,
+              "stair": 2,
+              "wall": 5,
+              "slab": 0,
+              "else": 1
+            },
+            "slab": {
+              "door": 0,
+              "stair": 6,
+              "wall": 0,
+              "slab": 2,
+              "else": 4
+            }
+          }
+        },
+        "hard": {
+          "n": 80,
+          "accuracy": 0.138,
+          "macroF1": 0.253,
+          "f1": {
+            "slab": 0,
+            "beam": 0.571,
+            "furniture": 0,
+            "appliance": 0.286,
+            "sanitary": 0.417,
+            "heater": 0,
+            "lighting": 1,
+            "mep": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 2
+            }
+          }
+        }
+      },
+      "note": "the same run, contextual calibration (label prior of a content-free prompt divided out)"
+    },
+    "hybrid-qwen2.5-0.5b-q4-webgpu": {
+      "download": {
+        "modelBytes": 786156820
+      },
+      "loadMs": 6773.299999952316,
+      "msPerElement": 2443.0029166668655,
+      "msPerModel": 979644.169583413,
+      "promptTokensPerElement": 205.12083333333334,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 83.9625822523339,
+      "decode": {
+        "tokens": 24,
+        "ms": 3521.2000000476837,
+        "tokensPerSecond": 6.815858230056514
+      },
+      "sampleSize": 240,
+      "worksWithoutWebGPU": false,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 10285,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 160,
+          "accuracy": 0.563,
+          "macroF1": 0.477,
+          "f1": {
+            "wall": 0.533,
+            "slab": 0.923,
+            "roof": 0.553,
+            "door": 0.5,
+            "window": 0.933,
+            "stair": 0.643,
+            "railing": 0.909,
+            "column": 0.636,
+            "beam": 0.706,
+            "covering": 0.429,
+            "furniture": 0.647,
+            "heater": 0,
+            "lighting": 0,
+            "mep": 0,
+            "space": 0.222,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 3,
+              "stair": 0,
+              "wall": 1,
+              "slab": 0,
+              "else": 1
+            },
+            "stair": {
+              "door": 1,
+              "stair": 9,
+              "wall": 0,
+              "slab": 1,
+              "else": 2
+            },
+            "wall": {
+              "door": 1,
+              "stair": 0,
+              "wall": 8,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 12,
+              "else": 0
+            }
+          }
+        },
+        "hard": {
+          "n": 80,
+          "accuracy": 0.113,
+          "macroF1": 0.244,
+          "f1": {
+            "slab": 0.25,
+            "beam": 0.571,
+            "furniture": 0.133,
+            "appliance": 0.571,
+            "sanitary": 0,
+            "heater": 0,
+            "lighting": 0.667,
+            "mep": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 1,
+              "else": 1
+            }
+          }
+        }
+      }
+    },
+    "hybrid-qwen2.5-0.5b-q4-webgpu-calibrated": {
+      "download": {
+        "modelBytes": 786156820
+      },
+      "loadMs": 6773.299999952316,
+      "msPerElement": 2443.0029166668655,
+      "msPerModel": 979644.169583413,
+      "promptTokensPerElement": 205.12083333333334,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 83.9625822523339,
+      "decode": {
+        "tokens": 24,
+        "ms": 3521.2000000476837,
+        "tokensPerSecond": 6.815858230056514
+      },
+      "sampleSize": 240,
+      "worksWithoutWebGPU": false,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 10285,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 160,
+          "accuracy": 0.638,
+          "macroF1": 0.571,
+          "f1": {
+            "wall": 0.364,
+            "slab": 0.923,
+            "roof": 0.88,
+            "door": 0.667,
+            "window": 0.778,
+            "stair": 0.541,
+            "railing": 0.541,
+            "column": 0.421,
+            "beam": 0.632,
+            "covering": 0.842,
+            "furniture": 0.647,
+            "heater": 1,
+            "lighting": 0.9,
+            "mep": 0,
+            "space": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 3,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 2
+            },
+            "stair": {
+              "door": 0,
+              "stair": 10,
+              "wall": 0,
+              "slab": 1,
+              "else": 2
+            },
+            "wall": {
+              "door": 0,
+              "stair": 2,
+              "wall": 2,
+              "slab": 0,
+              "else": 5
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 12,
+              "else": 0
+            }
+          }
+        },
+        "hard": {
+          "n": 80,
+          "accuracy": 0.338,
+          "macroF1": 0.364,
+          "f1": {
+            "slab": 0.25,
+            "beam": 0.667,
+            "furniture": 0.143,
+            "appliance": 0.727,
+            "sanitary": 0.919,
+            "heater": 0,
+            "lighting": 0.571,
+            "mep": 0,
+            "other": 0
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 1,
+              "else": 1
+            }
+          }
+        }
+      },
+      "note": "the same run, contextual calibration (label prior of a content-free prompt divided out)"
+    },
+    "qwen3-0.6b-q4f16-webgpu-calibrated": {
+      "download": {
+        "modelBytes": 569789750
+      },
+      "loadMs": 5070.200000047684,
+      "msPerElement": 2175.1291666666666,
+      "msPerModel": 872226.7958333333,
+      "promptTokensPerElement": 194.12083333333334,
+      "passesPerElement": 1,
+      "prefillTokensPerSecond": 89.24565782491845,
+      "decode": {
+        "tokens": 24,
+        "ms": 1180,
+        "tokensPerSecond": 20.33898305084746
+      },
+      "sampleSize": 240,
+      "worksWithoutWebGPU": false,
+      "memory": {
+        "baselineMB": null,
+        "peakMB": 0,
+        "addedMB": null
+      },
+      "scores": {
+        "primarySample": {
+          "n": 160,
+          "accuracy": 0.469,
+          "macroF1": 0.42,
+          "f1": {
+            "wall": 0.667,
+            "slab": 0.714,
+            "roof": 0.478,
+            "door": 0.429,
+            "window": 0.667,
+            "stair": 0.5,
+            "railing": 0.783,
+            "column": 0.632,
+            "beam": 0.316,
+            "covering": 0.286,
+            "furniture": 0.4,
+            "heater": 0.842,
+            "lighting": 0,
+            "mep": 0,
+            "space": 0,
+            "other": 0
+          }
+        },
+        "hard": {
+          "n": 80,
+          "accuracy": 0.225,
+          "macroF1": 0.349,
+          "f1": {
+            "slab": 0.667,
+            "beam": 0.571,
+            "furniture": 0,
+            "appliance": 0,
+            "sanitary": 0.733,
+            "heater": 0.167,
+            "lighting": 1,
+            "mep": 0,
+            "other": 0
+          }
+        }
+      },
+      "note": "the same run, contextual calibration; scored after the run from the stored answers (the page gained the calibrated readout while this run was in progress)"
+    }
+  },
+  "dataset": {
+    "models": 45,
+    "primary": 6066,
+    "hard": 159,
+    "hardLabelsBy": "hand, from the name only, by the benchmark's author (Claude); 20 of 179 picked names were too vague to label and are left out",
+    "llmSample": {
+      "primary": 317,
+      "hard": 159
+    },
+    "medianElementsPerModel": 401,
+    "medianGenericSampledPerModel": 4,
+    "primaryByLabel": {
+      "wall": 848,
+      "slab": 573,
+      "roof": 226,
+      "door": 677,
+      "window": 616,
+      "stair": 297,
+      "railing": 318,
+      "column": 362,
+      "beam": 289,
+      "covering": 283,
+      "furniture": 394,
+      "appliance": 0,
+      "sanitary": 0,
+      "heater": 25,
+      "lighting": 17,
+      "mep": 100,
+      "space": 472,
+      "other": 569
+    },
+    "hardByLabel": {
+      "wall": 0,
+      "slab": 6,
+      "roof": 0,
+      "door": 1,
+      "window": 0,
+      "stair": 1,
+      "railing": 1,
+      "column": 0,
+      "beam": 6,
+      "covering": 0,
+      "furniture": 4,
+      "appliance": 10,
+      "sanitary": 28,
+      "heater": 1,
+      "lighting": 5,
+      "mep": 30,
+      "space": 0,
+      "other": 66
+    },
+    "primaryByClass": {
+      "IFCMEMBER": 332,
+      "IFCDOOR": 677,
+      "IFCSLAB": 779,
+      "IFCBEAM": 289,
+      "IFCWINDOW": 616,
+      "IFCWALLSTANDARDCASE": 621,
+      "IFCSTAIR": 127,
+      "IFCRAILING": 318,
+      "IFCSPACE": 472,
+      "IFCFURNISHINGELEMENT": 313,
+      "IFCCOLUMN": 362,
+      "IFCCOVERING": 283,
+      "IFCPLATE": 64,
+      "IFCSTAIRFLIGHT": 119,
+      "IFCWALL": 224,
+      "IFCFOOTING": 16,
+      "IFCDISCRETEACCESSORY": 32,
+      "IFCROOF": 60,
+      "IFCLIGHTFIXTURE": 17,
+      "IFCFLOWCONTROLLER": 23,
+      "IFCFLOWSEGMENT": 38,
+      "IFCBUILDINGELEMENTPART": 88,
+      "IFCFLOWFITTING": 14,
+      "IFCFURNITURE": 78,
+      "IFCSYSTEMFURNITUREELEMENT": 3,
+      "IFCSPATIALZONE": 2,
+      "IFCRAMPFLIGHT": 2,
+      "IFCPAVEMENT": 4,
+      "IFCEARTHWORKSFILL": 7,
+      "IFCCOURSE": 11,
+      "IFCKERB": 3,
+      "IFCRAMP": 9,
+      "IFCTRANSPORTELEMENT": 4,
+      "IFCCURTAINWALL": 3,
+      "IFCSPACEHEATER": 25,
+      "IFCSHADINGDEVICE": 6,
+      "IFCPIPESEGMENT": 8,
+      "IFCPIPEFITTING": 8,
+      "IFCAIRTERMINAL": 5,
+      "IFCSOLARDEVICE": 4
+    },
+    "hardByClass": {
+      "IFCFLOWTERMINAL": 46,
+      "IFCBUILDINGELEMENTPROXY": 112,
+      "IFCDISTRIBUTIONELEMENT": 1
+    }
+  },
+  "gpu": {
+    "webgpu": true,
+    "vendor": "intel",
+    "architecture": "gen-12lp",
+    "description": "",
+    "f16": true
+  },
+  "ifcnetSweep": [
+    {
+      "name": "naive-fp32-n2048-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 7235447,
+      "fetchMs": 44.09999990463257,
+      "createMs": 395.09999990463257,
+      "medianMs": 11528,
+      "perElementMs": 11528,
+      "minMs": 1205.7999999523163,
+      "check": null,
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "naive",
+      "peakAddedMB": 337
+    },
+    {
+      "name": "fused-fp32-n1024-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 7221378,
+      "fetchMs": 39.200000047683716,
+      "createMs": 345.2000000476837,
+      "medianMs": 189.89999985694885,
+      "perElementMs": 189.89999985694885,
+      "minMs": 155.80000019073486,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.10174620151519775,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused",
+      "peakAddedMB": 156
+    },
+    {
+      "name": "pruned-fp32-n512-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 512,
+      "bytes": 1450950,
+      "fetchMs": 10.5,
+      "createMs": 322.2000000476837,
+      "medianMs": 44.200000047683716,
+      "perElementMs": 44.200000047683716,
+      "minMs": 39.200000047683716,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.09962058067321777,
+        "sameArgmax": 15,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 120
+    },
+    {
+      "name": "pruned-int8-n512-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 512,
+      "bytes": 383875,
+      "fetchMs": 5.5,
+      "createMs": 317.5,
+      "medianMs": 42,
+      "perElementMs": 42,
+      "minMs": 34.09999990463257,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.14906597137451172,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "int8 dynamic (MatMul weights, per-tensor)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 110
+    },
+    {
+      "name": "pruned-fp16-n512-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 512,
+      "bytes": 735026,
+      "fetchMs": 7.799999952316284,
+      "createMs": 365.40000009536743,
+      "medianMs": 46.90000009536743,
+      "perElementMs": 46.90000009536743,
+      "minMs": 41.09999990463257,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.07091426849365234,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp16 (fp32 inputs and outputs)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 129
+    },
+    {
+      "name": "pruned-w8-n512-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 512,
+      "bytes": 385775,
+      "fetchMs": 4.799999952316284,
+      "createMs": 322.30000019073486,
+      "medianMs": 44.200000047683716,
+      "perElementMs": 44.200000047683716,
+      "minMs": 40.89999985694885,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.7232372164726257,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "int8 weights, fp32 compute",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 111
+    },
+    {
+      "name": "pruned-fp32-n1024-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 1450950,
+      "fetchMs": 10.399999856948853,
+      "createMs": 264.7999999523163,
+      "medianMs": 96.5,
+      "perElementMs": 96.5,
+      "minMs": 74.59999990463257,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.10174679756164551,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 135
+    },
+    {
+      "name": "pruned-int8-n1024-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 383875,
+      "fetchMs": 5.6000001430511475,
+      "createMs": 326.59999990463257,
+      "medianMs": 104.89999985694885,
+      "perElementMs": 104.89999985694885,
+      "minMs": 75.80000019073486,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.14765822887420654,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "int8 dynamic (MatMul weights, per-tensor)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 134
+    },
+    {
+      "name": "pruned-fp16-n1024-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 735026,
+      "fetchMs": 7.799999952316284,
+      "createMs": 403.90000009536743,
+      "medianMs": 111.70000004768372,
+      "perElementMs": 111.70000004768372,
+      "minMs": 101.30000019073486,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.11865317821502686,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp16 (fp32 inputs and outputs)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 141
+    },
+    {
+      "name": "pruned-w8-n1024-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 385775,
+      "fetchMs": 4.199999809265137,
+      "createMs": 291.40000009536743,
+      "medianMs": 95.70000004768372,
+      "perElementMs": 95.70000004768372,
+      "minMs": 74.79999995231628,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.6204085350036621,
+        "sameArgmax": 10,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "int8 weights, fp32 compute",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 0
+    },
+    {
+      "name": "pruned-fp32-n2048-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 1450950,
+      "fetchMs": 11.299999952316284,
+      "createMs": 329.30000019073486,
+      "medianMs": 258.7000000476837,
+      "perElementMs": 258.7000000476837,
+      "minMs": 228.10000014305115,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.054228901863098145,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 180
+    },
+    {
+      "name": "pruned-int8-n2048-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 383875,
+      "fetchMs": 6.5,
+      "createMs": 314.09999990463257,
+      "medianMs": 239,
+      "perElementMs": 239,
+      "minMs": 194.40000009536743,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.0449291467666626,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "int8 dynamic (MatMul weights, per-tensor)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 177
+    },
+    {
+      "name": "pruned-fp16-n2048-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 735026,
+      "fetchMs": 7.799999952316284,
+      "createMs": 438.2999999523163,
+      "medianMs": 392.2999999523163,
+      "perElementMs": 392.2999999523163,
+      "minMs": 294.7000000476837,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.06404256820678711,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp16 (fp32 inputs and outputs)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 196
+    },
+    {
+      "name": "pruned-w8-n2048-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 385775,
+      "fetchMs": 8.799999952316284,
+      "createMs": 321.90000009536743,
+      "medianMs": 325,
+      "perElementMs": 325,
+      "minMs": 266.40000009536743,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.6385107040405273,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "int8 weights, fp32 compute",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 173
+    },
+    {
+      "name": "pruned-fp32-n2048-b8",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 8,
+      "points": 2048,
+      "bytes": 1451603,
+      "fetchMs": 15.900000095367432,
+      "createMs": 313.2000000476837,
+      "medianMs": 2656,
+      "perElementMs": 332,
+      "minMs": 2556,
+      "check": null,
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 566
+    },
+    {
+      "name": "pruned-w8-n2048-b8",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 8,
+      "points": 2048,
+      "bytes": 386428,
+      "fetchMs": 9.899999856948853,
+      "createMs": 298.7000000476837,
+      "medianMs": 2666.100000143051,
+      "perElementMs": 333.2625000178814,
+      "minMs": 2578.7999999523163,
+      "check": null,
+      "crossOriginIsolated": false,
+      "precision": "int8 weights, fp32 compute",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 562
+    },
+    {
+      "name": "pruned-fp32-n512k10-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 512,
+      "bytes": 1450942,
+      "fetchMs": 15.399999856948853,
+      "createMs": 308.10000014305115,
+      "medianMs": 19.199999809265137,
+      "perElementMs": 19.199999809265137,
+      "minMs": 17.699999809265137,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.017957031726837158,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 86
+    },
+    {
+      "name": "pruned-fp32-n1024k20-b1",
+      "ep": "wasm",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 1450950,
+      "fetchMs": 39.200000047683716,
+      "createMs": 323.5,
+      "medianMs": 73.09999990463257,
+      "perElementMs": 73.09999990463257,
+      "minMs": 62.09999990463257,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.27275168895721436,
+        "sameArgmax": 15,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 125
+    },
+    {
+      "name": "pruned-fp32-n1024-b1",
+      "ep": "webgpu",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 1450950,
+      "fetchMs": 10.599999904632568,
+      "createMs": 880,
+      "medianMs": 52.69999980926514,
+      "perElementMs": 52.69999980926514,
+      "minMs": 49.5,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.06616842746734619,
+        "sameArgmax": 15,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 306
+    },
+    {
+      "name": "pruned-fp16-n1024-b1",
+      "ep": "webgpu",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 735026,
+      "fetchMs": 7.6000001430511475,
+      "createMs": 890.2000000476837,
+      "medianMs": 46.40000009536743,
+      "perElementMs": 46.40000009536743,
+      "minMs": 43.5,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.7491879463195801,
+        "sameArgmax": 11,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp16 (fp32 inputs and outputs)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 254
+    },
+    {
+      "name": "pruned-int8-n1024-b1",
+      "ep": "webgpu",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 383875,
+      "fetchMs": 5.800000190734863,
+      "createMs": 915.2999999523163,
+      "medianMs": 85.5,
+      "perElementMs": 85.5,
+      "minMs": 74.5,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.027009963989257812,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "int8 dynamic (MatMul weights, per-tensor)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 244
+    },
+    {
+      "name": "pruned-w8-n1024-b1",
+      "ep": "webgpu",
+      "threads": 1,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 385775,
+      "fetchMs": 4.299999952316284,
+      "createMs": 711,
+      "medianMs": 51.19999980926514,
+      "perElementMs": 51.19999980926514,
+      "minMs": 48.60000014305115,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.6204090118408203,
+        "sameArgmax": 9,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "int8 weights, fp32 compute",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 245
+    },
+    {
+      "name": "pruned-fp32-n2048-b1",
+      "ep": "webgpu",
+      "threads": 1,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 1450950,
+      "fetchMs": 10.699999809265137,
+      "createMs": 840.3000001907349,
+      "medianMs": 168.40000009536743,
+      "perElementMs": 168.40000009536743,
+      "minMs": 157.40000009536743,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.052767395973205566,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 256
+    },
+    {
+      "name": "pruned-fp16-n2048-b1",
+      "ep": "webgpu",
+      "threads": 1,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 735026,
+      "fetchMs": 7,
+      "createMs": 857.2000000476837,
+      "medianMs": 149.29999995231628,
+      "perElementMs": 149.29999995231628,
+      "minMs": 140.5,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.5615530014038086,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp16 (fp32 inputs and outputs)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 240
+    },
+    {
+      "name": "pruned-fp32-n512-b1",
+      "ep": "webgpu",
+      "threads": 1,
+      "batch": 1,
+      "points": 512,
+      "bytes": 1450950,
+      "fetchMs": 9.5,
+      "createMs": 880.9000000953674,
+      "medianMs": 27.5,
+      "perElementMs": 27.5,
+      "minMs": 25.09999990463257,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.0005404949188232422,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 0
+    },
+    {
+      "name": "pruned-fp32-n1024-b8",
+      "ep": "webgpu",
+      "threads": 1,
+      "batch": 8,
+      "points": 1024,
+      "bytes": 1451597,
+      "fetchMs": 9.200000047683716,
+      "createMs": 696.1999998092651,
+      "medianMs": 399.10000014305115,
+      "perElementMs": 49.88750001788139,
+      "minMs": 363.2000000476837,
+      "check": null,
+      "crossOriginIsolated": false,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 480
+    },
+    {
+      "name": "pruned-fp32-n1024-b1",
+      "ep": "wasm",
+      "threads": 4,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 1450950,
+      "fetchMs": 10.825000047683716,
+      "createMs": 376.4299998283386,
+      "medianMs": 40.625,
+      "perElementMs": 40.625,
+      "minMs": 38.5,
+      "check": null,
+      "crossOriginIsolated": true,
+      "precision": "fp32",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 0
+    },
+    {
+      "name": "pruned-int8-n1024-b1",
+      "ep": "wasm",
+      "threads": 4,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 383875,
+      "fetchMs": 5.109999895095825,
+      "createMs": 344.72000002861023,
+      "medianMs": 36.640000104904175,
+      "perElementMs": 36.640000104904175,
+      "minMs": 35.47499990463257,
+      "check": null,
+      "crossOriginIsolated": true,
+      "precision": "int8 dynamic (MatMul weights, per-tensor)",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 102
+    },
+    {
+      "name": "pruned-w8-n1024-b1",
+      "ep": "wasm",
+      "threads": 4,
+      "batch": 1,
+      "points": 1024,
+      "bytes": 385775,
+      "fetchMs": 5.050000190734863,
+      "createMs": 354.57999992370605,
+      "medianMs": 36.08500003814697,
+      "perElementMs": 36.08500003814697,
+      "minMs": 34.625,
+      "check": null,
+      "crossOriginIsolated": true,
+      "precision": "int8 weights, fp32 compute",
+      "graph": "fused+pruned+onnxsim",
+      "peakAddedMB": 115
+    }
+  ],
+  "combined": {
+    "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.844,
+          "macroF1": 0.823,
+          "f1": {
+            "wall": 0.883,
+            "slab": 0.961,
+            "roof": 0.899,
+            "door": 0.872,
+            "window": 0.762,
+            "stair": 0.841,
+            "railing": 0.804,
+            "column": 0.896,
+            "beam": 0.825,
+            "covering": 0.908,
+            "furniture": 0.773,
+            "heater": 0.98,
+            "lighting": 0.596,
+            "mep": 0.474,
+            "space": 0.959,
+            "other": 0.734
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 643,
+              "stair": 0,
+              "wall": 15,
+              "slab": 0,
+              "else": 19
+            },
+            "stair": {
+              "door": 0,
+              "stair": 224,
+              "wall": 0,
+              "slab": 12,
+              "else": 61
+            },
+            "wall": {
+              "door": 7,
+              "stair": 2,
+              "wall": 738,
+              "slab": 0,
+              "else": 101
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 566,
+              "else": 7
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.845,
+          "macroF1": 0.851,
+          "f1": {
+            "wall": 0.895,
+            "slab": 0.909,
+            "roof": 0.923,
+            "door": 0.884,
+            "window": 0.824,
+            "stair": 0.811,
+            "railing": 0.769,
+            "column": 0.865,
+            "beam": 0.842,
+            "covering": 0.923,
+            "furniture": 0.75,
+            "heater": 1,
+            "lighting": 1,
+            "mep": 0.667,
+            "space": 0.872,
+            "other": 0.683
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 19,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "stair": {
+              "door": 0,
+              "stair": 15,
+              "wall": 0,
+              "slab": 1,
+              "else": 4
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 17,
+              "slab": 0,
+              "else": 3
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 20,
+              "else": 0
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.579,
+          "macroF1": 0.518,
+          "f1": {
+            "slab": 0.125,
+            "door": 0.667,
+            "stair": 1,
+            "railing": 0,
+            "beam": 0.667,
+            "furniture": 0,
+            "appliance": 0.947,
+            "sanitary": 0.862,
+            "heater": 0,
+            "lighting": 0.727,
+            "mep": 0.655,
+            "other": 0.571
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 1,
+              "else": 5
+            }
+          }
+        }
+      },
+      "shapeUsed": {
+        "primary": 724,
+        "hard": 23
+      }
+    },
+    "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.853,
+          "macroF1": 0.83,
+          "f1": {
+            "wall": 0.884,
+            "slab": 0.962,
+            "roof": 0.899,
+            "door": 0.892,
+            "window": 0.807,
+            "stair": 0.823,
+            "railing": 0.809,
+            "column": 0.897,
+            "beam": 0.83,
+            "covering": 0.908,
+            "furniture": 0.763,
+            "heater": 0.98,
+            "lighting": 0.567,
+            "mep": 0.553,
+            "space": 0.961,
+            "other": 0.743
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 647,
+              "stair": 0,
+              "wall": 11,
+              "slab": 0,
+              "else": 19
+            },
+            "stair": {
+              "door": 0,
+              "stair": 216,
+              "wall": 0,
+              "slab": 12,
+              "else": 69
+            },
+            "wall": {
+              "door": 12,
+              "stair": 2,
+              "wall": 732,
+              "slab": 0,
+              "else": 102
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 566,
+              "else": 7
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.849,
+          "macroF1": 0.852,
+          "f1": {
+            "wall": 0.895,
+            "slab": 0.889,
+            "roof": 0.923,
+            "door": 0.884,
+            "window": 0.824,
+            "stair": 0.743,
+            "railing": 0.789,
+            "column": 0.865,
+            "beam": 0.842,
+            "covering": 0.923,
+            "furniture": 0.706,
+            "heater": 1,
+            "lighting": 1,
+            "mep": 0.757,
+            "space": 0.93,
+            "other": 0.667
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 19,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 1
+            },
+            "stair": {
+              "door": 0,
+              "stair": 13,
+              "wall": 0,
+              "slab": 1,
+              "else": 6
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 17,
+              "slab": 0,
+              "else": 3
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 20,
+              "else": 0
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.585,
+          "macroF1": 0.53,
+          "f1": {
+            "slab": 0.222,
+            "door": 0.667,
+            "stair": 1,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0,
+            "appliance": 0.947,
+            "sanitary": 0.862,
+            "heater": 0,
+            "lighting": 0.667,
+            "mep": 0.694,
+            "other": 0.586
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 2,
+              "else": 4
+            }
+          }
+        }
+      },
+      "shapeUsed": {
+        "primary": 528,
+        "hard": 12
+      }
+    },
+    "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.862,
+          "macroF1": 0.831,
+          "f1": {
+            "wall": 0.886,
+            "slab": 0.962,
+            "roof": 0.899,
+            "door": 0.936,
+            "window": 0.875,
+            "stair": 0.795,
+            "railing": 0.801,
+            "column": 0.865,
+            "beam": 0.829,
+            "covering": 0.906,
+            "furniture": 0.749,
+            "heater": 0.98,
+            "lighting": 0.515,
+            "mep": 0.604,
+            "space": 0.962,
+            "other": 0.735
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 650,
+              "stair": 0,
+              "wall": 5,
+              "slab": 0,
+              "else": 22
+            },
+            "stair": {
+              "door": 0,
+              "stair": 204,
+              "wall": 0,
+              "slab": 13,
+              "else": 80
+            },
+            "wall": {
+              "door": 14,
+              "stair": 2,
+              "wall": 733,
+              "slab": 0,
+              "else": 99
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 566,
+              "else": 7
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.83,
+          "macroF1": 0.832,
+          "f1": {
+            "wall": 0.923,
+            "slab": 0.909,
+            "roof": 0.923,
+            "door": 0.895,
+            "window": 0.919,
+            "stair": 0.743,
+            "railing": 0.778,
+            "column": 0.739,
+            "beam": 0.778,
+            "covering": 0.923,
+            "furniture": 0.642,
+            "heater": 1,
+            "lighting": 0.944,
+            "mep": 0.6,
+            "space": 0.93,
+            "other": 0.667
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 17,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 3
+            },
+            "stair": {
+              "door": 0,
+              "stair": 13,
+              "wall": 0,
+              "slab": 1,
+              "else": 6
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 18,
+              "slab": 0,
+              "else": 2
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 20,
+              "else": 0
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.597,
+          "macroF1": 0.543,
+          "f1": {
+            "slab": 0.235,
+            "door": 0.667,
+            "stair": 1,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0.074,
+            "appliance": 0.947,
+            "sanitary": 0.906,
+            "heater": 0,
+            "lighting": 0.667,
+            "mep": 0.694,
+            "other": 0.608
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 2,
+              "else": 3
+            }
+          }
+        }
+      },
+      "shapeUsed": {
+        "primary": 196,
+        "hard": 1
+      }
+    },
+    "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+      "scores": {
+        "primary": {
+          "n": 6066,
+          "accuracy": 0.86,
+          "macroF1": 0.829,
+          "f1": {
+            "wall": 0.884,
+            "slab": 0.962,
+            "roof": 0.899,
+            "door": 0.936,
+            "window": 0.878,
+            "stair": 0.793,
+            "railing": 0.796,
+            "column": 0.867,
+            "beam": 0.827,
+            "covering": 0.906,
+            "furniture": 0.74,
+            "heater": 1,
+            "lighting": 0.493,
+            "mep": 0.596,
+            "space": 0.961,
+            "other": 0.733
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 646,
+              "stair": 0,
+              "wall": 8,
+              "slab": 0,
+              "else": 23
+            },
+            "stair": {
+              "door": 0,
+              "stair": 203,
+              "wall": 0,
+              "slab": 13,
+              "else": 81
+            },
+            "wall": {
+              "door": 14,
+              "stair": 2,
+              "wall": 733,
+              "slab": 0,
+              "else": 99
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 566,
+              "else": 7
+            }
+          }
+        },
+        "primarySample": {
+          "n": 317,
+          "accuracy": 0.83,
+          "macroF1": 0.831,
+          "f1": {
+            "wall": 0.923,
+            "slab": 0.909,
+            "roof": 0.923,
+            "door": 0.895,
+            "window": 0.919,
+            "stair": 0.743,
+            "railing": 0.778,
+            "column": 0.766,
+            "beam": 0.778,
+            "covering": 0.923,
+            "furniture": 0.63,
+            "heater": 1,
+            "lighting": 0.944,
+            "mep": 0.571,
+            "space": 0.93,
+            "other": 0.667
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 17,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 3
+            },
+            "stair": {
+              "door": 0,
+              "stair": 13,
+              "wall": 0,
+              "slab": 1,
+              "else": 6
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 18,
+              "slab": 0,
+              "else": 2
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 20,
+              "else": 0
+            }
+          }
+        },
+        "hard": {
+          "n": 159,
+          "accuracy": 0.604,
+          "macroF1": 0.544,
+          "f1": {
+            "slab": 0.235,
+            "door": 0.667,
+            "stair": 1,
+            "railing": 0,
+            "beam": 0.714,
+            "furniture": 0.074,
+            "appliance": 0.947,
+            "sanitary": 0.906,
+            "heater": 0,
+            "lighting": 0.667,
+            "mep": 0.694,
+            "other": 0.621
+          },
+          "egressConfusion": {
+            "door": {
+              "door": 1,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "stair": {
+              "door": 0,
+              "stair": 1,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "wall": {
+              "door": 0,
+              "stair": 0,
+              "wall": 0,
+              "slab": 0,
+              "else": 0
+            },
+            "slab": {
+              "door": 0,
+              "stair": 0,
+              "wall": 1,
+              "slab": 2,
+              "else": 3
+            }
+          }
+        }
+      },
+      "shapeUsed": {
+        "primary": 77,
+        "hard": 0
+      }
+    }
+  },
+  "ifcnetFailures": {
+    "noModel": "No geometry model is configured (IFCNet's weights are not shipped; see identifyGeometry.js). The name rules' answers stand.",
+    "missingModel": "The geometry model did not download (404 Not Found).",
+    "badOrt": "Could not load onnxruntime-web (Failed to fetch dynamically imported module: http://127.0.0.1:61005/no-such-ort/ort.wasm.min.mjs). Are you offline? The name rules' answers stand.",
+    "combineKeepsRule": {
+      "label": "furniture",
+      "confidence": 0.4,
+      "by": "box"
+    }
+  },
+  "onLlmSamplePrimary": {
+    "e5small-int8-wasm": {
+      "n": 317,
+      "accuracy": 0.438,
+      "macroF1": 0.431,
+      "f1": {
+        "wall": 0.316,
+        "slab": 0.588,
+        "roof": 0.655,
+        "door": 0.457,
+        "window": 0.296,
+        "stair": 0.588,
+        "railing": 0.533,
+        "column": 0.308,
+        "beam": 0.182,
+        "covering": 0.551,
+        "furniture": 0.611,
+        "heater": 0.952,
+        "lighting": 0.24,
+        "mep": 0.294,
+        "space": 0.278,
+        "other": 0.05
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 8,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 12
+        },
+        "stair": {
+          "door": 0,
+          "stair": 10,
+          "wall": 0,
+          "slab": 0,
+          "else": 10
+        },
+        "wall": {
+          "door": 1,
+          "stair": 0,
+          "wall": 6,
+          "slab": 0,
+          "else": 13
+        },
+        "slab": {
+          "door": 2,
+          "stair": 0,
+          "wall": 0,
+          "slab": 10,
+          "else": 8
+        }
+      }
+    },
+    "ifcnet-pruned-fp32-n2048-b1": {
+      "n": 317,
+      "accuracy": 0.416,
+      "macroF1": 0.389,
+      "f1": {
+        "wall": 0.634,
+        "slab": 0.323,
+        "roof": 0,
+        "door": 0.702,
+        "window": 0,
+        "stair": 0.71,
+        "railing": 0.789,
+        "column": 0,
+        "beam": 0.537,
+        "covering": 0,
+        "furniture": 0.687,
+        "heater": 0.842,
+        "lighting": 0.64,
+        "mep": 0.259,
+        "space": 0,
+        "other": 0.108
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 20,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 0
+        },
+        "stair": {
+          "door": 0,
+          "stair": 11,
+          "wall": 0,
+          "slab": 4,
+          "else": 5
+        },
+        "wall": {
+          "door": 1,
+          "stair": 0,
+          "wall": 13,
+          "slab": 1,
+          "else": 5
+        },
+        "slab": {
+          "door": 0,
+          "stair": 0,
+          "wall": 1,
+          "slab": 10,
+          "else": 9
+        }
+      }
+    },
+    "minilm-fp32-wasm": {
+      "n": 317,
+      "accuracy": 0.476,
+      "macroF1": 0.465,
+      "f1": {
+        "wall": 0.485,
+        "slab": 0.542,
+        "roof": 0.655,
+        "door": 0.452,
+        "window": 0.5,
+        "stair": 0.462,
+        "railing": 0.769,
+        "column": 0.359,
+        "beam": 0.25,
+        "covering": 0.703,
+        "furniture": 0.71,
+        "heater": 0.597,
+        "lighting": 0.25,
+        "mep": 0.238,
+        "space": 0.4,
+        "other": 0.069
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 7,
+          "stair": 0,
+          "wall": 1,
+          "slab": 1,
+          "else": 11
+        },
+        "stair": {
+          "door": 0,
+          "stair": 9,
+          "wall": 0,
+          "slab": 0,
+          "else": 11
+        },
+        "wall": {
+          "door": 0,
+          "stair": 1,
+          "wall": 8,
+          "slab": 1,
+          "else": 10
+        },
+        "slab": {
+          "door": 0,
+          "stair": 1,
+          "wall": 0,
+          "slab": 13,
+          "else": 6
+        }
+      }
+    },
+    "minilm-fp32-webgpu": {
+      "n": 317,
+      "accuracy": 0.476,
+      "macroF1": 0.465,
+      "f1": {
+        "wall": 0.485,
+        "slab": 0.542,
+        "roof": 0.655,
+        "door": 0.452,
+        "window": 0.5,
+        "stair": 0.462,
+        "railing": 0.769,
+        "column": 0.359,
+        "beam": 0.25,
+        "covering": 0.703,
+        "furniture": 0.71,
+        "heater": 0.597,
+        "lighting": 0.25,
+        "mep": 0.238,
+        "space": 0.4,
+        "other": 0.069
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 7,
+          "stair": 0,
+          "wall": 1,
+          "slab": 1,
+          "else": 11
+        },
+        "stair": {
+          "door": 0,
+          "stair": 9,
+          "wall": 0,
+          "slab": 0,
+          "else": 11
+        },
+        "wall": {
+          "door": 0,
+          "stair": 1,
+          "wall": 8,
+          "slab": 1,
+          "else": 10
+        },
+        "slab": {
+          "door": 0,
+          "stair": 1,
+          "wall": 0,
+          "slab": 13,
+          "else": 6
+        }
+      }
+    },
+    "minilm-int8-wasm": {
+      "n": 317,
+      "accuracy": 0.498,
+      "macroF1": 0.488,
+      "f1": {
+        "wall": 0.529,
+        "slab": 0.627,
+        "roof": 0.613,
+        "door": 0.438,
+        "window": 0.5,
+        "stair": 0.474,
+        "railing": 0.857,
+        "column": 0.333,
+        "beam": 0.276,
+        "covering": 0.743,
+        "furniture": 0.71,
+        "heater": 0.645,
+        "lighting": 0.214,
+        "mep": 0.39,
+        "space": 0.4,
+        "other": 0.065
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 7,
+          "stair": 0,
+          "wall": 1,
+          "slab": 1,
+          "else": 11
+        },
+        "stair": {
+          "door": 0,
+          "stair": 9,
+          "wall": 0,
+          "slab": 0,
+          "else": 11
+        },
+        "wall": {
+          "door": 0,
+          "stair": 1,
+          "wall": 9,
+          "slab": 1,
+          "else": 9
+        },
+        "slab": {
+          "door": 0,
+          "stair": 1,
+          "wall": 0,
+          "slab": 16,
+          "else": 3
+        }
+      }
+    },
+    "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+      "n": 317,
+      "accuracy": 0.845,
+      "macroF1": 0.851,
+      "f1": {
+        "wall": 0.895,
+        "slab": 0.909,
+        "roof": 0.923,
+        "door": 0.884,
+        "window": 0.824,
+        "stair": 0.811,
+        "railing": 0.769,
+        "column": 0.865,
+        "beam": 0.842,
+        "covering": 0.923,
+        "furniture": 0.75,
+        "heater": 1,
+        "lighting": 1,
+        "mep": 0.667,
+        "space": 0.872,
+        "other": 0.683
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 19,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 1
+        },
+        "stair": {
+          "door": 0,
+          "stair": 15,
+          "wall": 0,
+          "slab": 1,
+          "else": 4
+        },
+        "wall": {
+          "door": 0,
+          "stair": 0,
+          "wall": 17,
+          "slab": 0,
+          "else": 3
+        },
+        "slab": {
+          "door": 0,
+          "stair": 0,
+          "wall": 0,
+          "slab": 20,
+          "else": 0
+        }
+      }
+    },
+    "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+      "n": 317,
+      "accuracy": 0.849,
+      "macroF1": 0.852,
+      "f1": {
+        "wall": 0.895,
+        "slab": 0.889,
+        "roof": 0.923,
+        "door": 0.884,
+        "window": 0.824,
+        "stair": 0.743,
+        "railing": 0.789,
+        "column": 0.865,
+        "beam": 0.842,
+        "covering": 0.923,
+        "furniture": 0.706,
+        "heater": 1,
+        "lighting": 1,
+        "mep": 0.757,
+        "space": 0.93,
+        "other": 0.667
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 19,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 1
+        },
+        "stair": {
+          "door": 0,
+          "stair": 13,
+          "wall": 0,
+          "slab": 1,
+          "else": 6
+        },
+        "wall": {
+          "door": 0,
+          "stair": 0,
+          "wall": 17,
+          "slab": 0,
+          "else": 3
+        },
+        "slab": {
+          "door": 0,
+          "stair": 0,
+          "wall": 0,
+          "slab": 20,
+          "else": 0
+        }
+      }
+    },
+    "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+      "n": 317,
+      "accuracy": 0.83,
+      "macroF1": 0.832,
+      "f1": {
+        "wall": 0.923,
+        "slab": 0.909,
+        "roof": 0.923,
+        "door": 0.895,
+        "window": 0.919,
+        "stair": 0.743,
+        "railing": 0.778,
+        "column": 0.739,
+        "beam": 0.778,
+        "covering": 0.923,
+        "furniture": 0.642,
+        "heater": 1,
+        "lighting": 0.944,
+        "mep": 0.6,
+        "space": 0.93,
+        "other": 0.667
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 17,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 3
+        },
+        "stair": {
+          "door": 0,
+          "stair": 13,
+          "wall": 0,
+          "slab": 1,
+          "else": 6
+        },
+        "wall": {
+          "door": 0,
+          "stair": 0,
+          "wall": 18,
+          "slab": 0,
+          "else": 2
+        },
+        "slab": {
+          "door": 0,
+          "stair": 0,
+          "wall": 0,
+          "slab": 20,
+          "else": 0
+        }
+      }
+    },
+    "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+      "n": 317,
+      "accuracy": 0.83,
+      "macroF1": 0.831,
+      "f1": {
+        "wall": 0.923,
+        "slab": 0.909,
+        "roof": 0.923,
+        "door": 0.895,
+        "window": 0.919,
+        "stair": 0.743,
+        "railing": 0.778,
+        "column": 0.766,
+        "beam": 0.778,
+        "covering": 0.923,
+        "furniture": 0.63,
+        "heater": 1,
+        "lighting": 0.944,
+        "mep": 0.571,
+        "space": 0.93,
+        "other": 0.667
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 17,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 3
+        },
+        "stair": {
+          "door": 0,
+          "stair": 13,
+          "wall": 0,
+          "slab": 1,
+          "else": 6
+        },
+        "wall": {
+          "door": 0,
+          "stair": 0,
+          "wall": 18,
+          "slab": 0,
+          "else": 2
+        },
+        "slab": {
+          "door": 0,
+          "stair": 0,
+          "wall": 0,
+          "slab": 20,
+          "else": 0
+        }
+      }
+    },
+    "rules-v1": {
+      "n": 317,
+      "accuracy": 0.77,
+      "macroF1": 0.771,
+      "f1": {
+        "wall": 0.769,
+        "slab": 0.909,
+        "roof": 0.923,
+        "door": 0.611,
+        "window": 0.895,
+        "stair": 0.727,
+        "railing": 0.842,
+        "column": 0.735,
+        "beam": 0.778,
+        "covering": 0.947,
+        "furniture": 0.481,
+        "heater": 1,
+        "lighting": 0.944,
+        "mep": 0.4,
+        "space": 0.909,
+        "other": 0.465
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 11,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 9
+        },
+        "stair": {
+          "door": 0,
+          "stair": 12,
+          "wall": 0,
+          "slab": 1,
+          "else": 7
+        },
+        "wall": {
+          "door": 0,
+          "stair": 0,
+          "wall": 15,
+          "slab": 0,
+          "else": 5
+        },
+        "slab": {
+          "door": 0,
+          "stair": 0,
+          "wall": 0,
+          "slab": 20,
+          "else": 0
+        }
+      }
+    },
+    "rules": {
+      "n": 317,
+      "accuracy": 0.826,
+      "macroF1": 0.829,
+      "f1": {
+        "wall": 0.923,
+        "slab": 0.909,
+        "roof": 0.923,
+        "door": 0.865,
+        "window": 0.919,
+        "stair": 0.743,
+        "railing": 0.778,
+        "column": 0.766,
+        "beam": 0.778,
+        "covering": 0.923,
+        "furniture": 0.618,
+        "heater": 1,
+        "lighting": 0.944,
+        "mep": 0.571,
+        "space": 0.93,
+        "other": 0.667
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 16,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 4
+        },
+        "stair": {
+          "door": 0,
+          "stair": 13,
+          "wall": 0,
+          "slab": 1,
+          "else": 6
+        },
+        "wall": {
+          "door": 0,
+          "stair": 0,
+          "wall": 18,
+          "slab": 0,
+          "else": 2
+        },
+        "slab": {
+          "door": 0,
+          "stair": 0,
+          "wall": 0,
+          "slab": 20,
+          "else": 0
+        }
+      }
+    },
+    "qwen2.5-0.5b-q4f16-webgpu": {
+      "n": 317,
+      "accuracy": 0.082,
+      "macroF1": 0.045,
+      "f1": {
+        "wall": 0,
+        "slab": 0,
+        "roof": 0,
+        "door": 0.124,
+        "window": 0,
+        "stair": 0.255,
+        "railing": 0,
+        "column": 0.167,
+        "beam": 0.069,
+        "covering": 0,
+        "furniture": 0,
+        "heater": 0,
+        "lighting": 0,
+        "mep": 0,
+        "space": 0.107,
+        "other": 0
+      },
+      "egressConfusion": {
+        "door": {
+          "door": 14,
+          "stair": 0,
+          "wall": 0,
+          "slab": 0,
+          "else": 6
+        },
+        "stair": {
+          "door": 7,
+          "stair": 6,
+          "wall": 0,
+          "slab": 0,
+          "else": 7
+        },
+        "wall": {
+          "door": 13,
+          "stair": 2,
+          "wall": 0,
+          "slab": 0,
+          "else": 5
+        },
+        "slab": {
+          "door": 16,
+          "stair": 0,
+          "wall": 1,
+          "slab": 0,
+          "else": 3
+        }
+      }
+    }
+  },
+  "sameElements": {
+    "hybrid-qwen2.5-0.5b-q4-webgpu-calibrated": {
+      "primary": {
+        "n": 160,
+        "hybrid-qwen2.5-0.5b-q4-webgpu-calibrated": {
+          "accuracy": 0.638,
+          "macroF1": 0.571
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.45,
+          "macroF1": 0.43
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.4,
+          "macroF1": 0.376
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.544,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.863,
+          "macroF1": 0.866
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.85,
+          "macroF1": 0.854
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules-v1": {
+          "accuracy": 0.794,
+          "macroF1": 0.79
+        },
+        "rules": {
+          "accuracy": 0.825,
+          "macroF1": 0.824
+        }
+      },
+      "hard": {
+        "n": 80,
+        "hybrid-qwen2.5-0.5b-q4-webgpu-calibrated": {
+          "accuracy": 0.338,
+          "macroF1": 0.364
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.35,
+          "macroF1": 0.36
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.313,
+          "macroF1": 0.26
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.4,
+          "macroF1": 0.364
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.588,
+          "macroF1": 0.485
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.6,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules-v1": {
+          "accuracy": 0.55,
+          "macroF1": 0.502
+        },
+        "rules": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        }
+      }
+    },
+    "hybrid-qwen2.5-0.5b-q4-webgpu": {
+      "primary": {
+        "n": 160,
+        "hybrid-qwen2.5-0.5b-q4-webgpu": {
+          "accuracy": 0.563,
+          "macroF1": 0.477
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.45,
+          "macroF1": 0.43
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.4,
+          "macroF1": 0.376
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.544,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.863,
+          "macroF1": 0.866
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.85,
+          "macroF1": 0.854
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules-v1": {
+          "accuracy": 0.794,
+          "macroF1": 0.79
+        },
+        "rules": {
+          "accuracy": 0.825,
+          "macroF1": 0.824
+        }
+      },
+      "hard": {
+        "n": 80,
+        "hybrid-qwen2.5-0.5b-q4-webgpu": {
+          "accuracy": 0.113,
+          "macroF1": 0.244
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.35,
+          "macroF1": 0.36
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.313,
+          "macroF1": 0.26
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.4,
+          "macroF1": 0.364
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.588,
+          "macroF1": 0.485
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.6,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules-v1": {
+          "accuracy": 0.55,
+          "macroF1": 0.502
+        },
+        "rules": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        }
+      }
+    },
+    "qwen2.5-0.5b-int8-wasm": {
+      "primary": {
+        "n": 27,
+        "qwen2.5-0.5b-int8-wasm": {
+          "accuracy": 0.111,
+          "macroF1": 0.041
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.37,
+          "macroF1": 0.306
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.444,
+          "macroF1": 0.321
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.444,
+          "macroF1": 0.415
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.444,
+          "macroF1": 0.415
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.519,
+          "macroF1": 0.465
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.889,
+          "macroF1": 0.871
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.852,
+          "macroF1": 0.831
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.778,
+          "macroF1": 0.769
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.778,
+          "macroF1": 0.769
+        },
+        "rules-v1": {
+          "accuracy": 0.704,
+          "macroF1": 0.656
+        },
+        "rules": {
+          "accuracy": 0.778,
+          "macroF1": 0.769
+        }
+      },
+      "hard": {
+        "n": 13,
+        "qwen2.5-0.5b-int8-wasm": {
+          "accuracy": 0,
+          "macroF1": 0
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.385,
+          "macroF1": 0.417
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.077,
+          "macroF1": 0.08
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.462,
+          "macroF1": 0.373
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.462,
+          "macroF1": 0.373
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.385,
+          "macroF1": 0.347
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        },
+        "rules-v1": {
+          "accuracy": 0.385,
+          "macroF1": 0.438
+        },
+        "rules": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        }
+      }
+    },
+    "qwen2.5-0.5b-q4-wasm": {
+      "primary": {
+        "n": 27,
+        "qwen2.5-0.5b-q4-wasm": {
+          "accuracy": 0.185,
+          "macroF1": 0.131
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.37,
+          "macroF1": 0.306
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.444,
+          "macroF1": 0.321
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.444,
+          "macroF1": 0.415
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.444,
+          "macroF1": 0.415
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.519,
+          "macroF1": 0.465
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.889,
+          "macroF1": 0.871
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.852,
+          "macroF1": 0.831
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.778,
+          "macroF1": 0.769
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.778,
+          "macroF1": 0.769
+        },
+        "rules-v1": {
+          "accuracy": 0.704,
+          "macroF1": 0.656
+        },
+        "rules": {
+          "accuracy": 0.778,
+          "macroF1": 0.769
+        }
+      },
+      "hard": {
+        "n": 13,
+        "qwen2.5-0.5b-q4-wasm": {
+          "accuracy": 0,
+          "macroF1": 0
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.385,
+          "macroF1": 0.417
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.077,
+          "macroF1": 0.08
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.462,
+          "macroF1": 0.373
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.462,
+          "macroF1": 0.373
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.385,
+          "macroF1": 0.347
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        },
+        "rules-v1": {
+          "accuracy": 0.385,
+          "macroF1": 0.438
+        },
+        "rules": {
+          "accuracy": 0.462,
+          "macroF1": 0.467
+        }
+      }
+    },
+    "qwen2.5-0.5b-q4-webgpu-calibrated": {
+      "primary": {
+        "n": 160,
+        "qwen2.5-0.5b-q4-webgpu-calibrated": {
+          "accuracy": 0.394,
+          "macroF1": 0.344
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.45,
+          "macroF1": 0.43
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.4,
+          "macroF1": 0.376
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.544,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.863,
+          "macroF1": 0.866
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.85,
+          "macroF1": 0.854
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules-v1": {
+          "accuracy": 0.794,
+          "macroF1": 0.79
+        },
+        "rules": {
+          "accuracy": 0.825,
+          "macroF1": 0.824
+        }
+      },
+      "hard": {
+        "n": 80,
+        "qwen2.5-0.5b-q4-webgpu-calibrated": {
+          "accuracy": 0.138,
+          "macroF1": 0.253
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.35,
+          "macroF1": 0.36
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.313,
+          "macroF1": 0.26
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.4,
+          "macroF1": 0.364
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.588,
+          "macroF1": 0.485
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.6,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules-v1": {
+          "accuracy": 0.55,
+          "macroF1": 0.502
+        },
+        "rules": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        }
+      }
+    },
+    "qwen2.5-0.5b-q4-webgpu": {
+      "primary": {
+        "n": 160,
+        "qwen2.5-0.5b-q4-webgpu": {
+          "accuracy": 0.338,
+          "macroF1": 0.313
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.45,
+          "macroF1": 0.43
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.4,
+          "macroF1": 0.376
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.544,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.863,
+          "macroF1": 0.866
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.85,
+          "macroF1": 0.854
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules-v1": {
+          "accuracy": 0.794,
+          "macroF1": 0.79
+        },
+        "rules": {
+          "accuracy": 0.825,
+          "macroF1": 0.824
+        }
+      },
+      "hard": {
+        "n": 80,
+        "qwen2.5-0.5b-q4-webgpu": {
+          "accuracy": 0.038,
+          "macroF1": 0.088
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.35,
+          "macroF1": 0.36
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.313,
+          "macroF1": 0.26
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.4,
+          "macroF1": 0.364
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.588,
+          "macroF1": 0.485
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.6,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules-v1": {
+          "accuracy": 0.55,
+          "macroF1": 0.502
+        },
+        "rules": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        }
+      }
+    },
+    "qwen2.5-0.5b-q4f16-webgpu": {
+      "primary": {
+        "n": 317,
+        "qwen2.5-0.5b-q4f16-webgpu": {
+          "accuracy": 0.082,
+          "macroF1": 0.045
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.438,
+          "macroF1": 0.431
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.416,
+          "macroF1": 0.389
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.476,
+          "macroF1": 0.465
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.476,
+          "macroF1": 0.465
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.498,
+          "macroF1": 0.488
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.845,
+          "macroF1": 0.851
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.849,
+          "macroF1": 0.852
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.83,
+          "macroF1": 0.832
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.83,
+          "macroF1": 0.831
+        },
+        "rules-v1": {
+          "accuracy": 0.77,
+          "macroF1": 0.771
+        },
+        "rules": {
+          "accuracy": 0.826,
+          "macroF1": 0.829
+        }
+      },
+      "hard": {
+        "n": 159,
+        "qwen2.5-0.5b-q4f16-webgpu": {
+          "accuracy": 0.019,
+          "macroF1": 0.027
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.308,
+          "macroF1": 0.278
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.277,
+          "macroF1": 0.201
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.333,
+          "macroF1": 0.307
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.333,
+          "macroF1": 0.307
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.333,
+          "macroF1": 0.309
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.579,
+          "macroF1": 0.518
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.585,
+          "macroF1": 0.53
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.597,
+          "macroF1": 0.543
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.604,
+          "macroF1": 0.544
+        },
+        "rules-v1": {
+          "accuracy": 0.553,
+          "macroF1": 0.488
+        },
+        "rules": {
+          "accuracy": 0.604,
+          "macroF1": 0.544
+        }
+      }
+    },
+    "qwen3-0.6b-q4f16-webgpu": {
+      "primary": {
+        "n": 160,
+        "qwen3-0.6b-q4f16-webgpu": {
+          "accuracy": 0.231,
+          "macroF1": 0.223
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.45,
+          "macroF1": 0.43
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.4,
+          "macroF1": 0.376
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.525,
+          "macroF1": 0.504
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.544,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.863,
+          "macroF1": 0.866
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.85,
+          "macroF1": 0.854
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.831,
+          "macroF1": 0.834
+        },
+        "rules-v1": {
+          "accuracy": 0.794,
+          "macroF1": 0.79
+        },
+        "rules": {
+          "accuracy": 0.825,
+          "macroF1": 0.824
+        }
+      },
+      "hard": {
+        "n": 80,
+        "qwen3-0.6b-q4f16-webgpu": {
+          "accuracy": 0.038,
+          "macroF1": 0.148
+        },
+        "e5small-int8-wasm": {
+          "accuracy": 0.35,
+          "macroF1": 0.36
+        },
+        "ifcnet-pruned-fp32-n2048-b1": {
+          "accuracy": 0.313,
+          "macroF1": 0.26
+        },
+        "minilm-fp32-wasm": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-fp32-webgpu": {
+          "accuracy": 0.425,
+          "macroF1": 0.39
+        },
+        "minilm-int8-wasm": {
+          "accuracy": 0.4,
+          "macroF1": 0.364
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.5": {
+          "accuracy": 0.588,
+          "macroF1": 0.485
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.6": {
+          "accuracy": 0.6,
+          "macroF1": 0.516
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.8": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules+ifcnet-pruned-fp32-n2048-b1@0.9": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        },
+        "rules-v1": {
+          "accuracy": 0.55,
+          "macroF1": 0.502
+        },
+        "rules": {
+          "accuracy": 0.625,
+          "macroF1": 0.543
+        }
+      }
+    }
+  },
+  "ifcnetVerify": {
+    "note": "Every variant against the float32 PyTorch reference.\n\n    The reference is IFCNet's own graph (DGCNN above) at 2,048 points, on a\n    stratified sample of IFCNetCore's test split (`--per-class` objects per\n    class) and of the corpus (`--corpus-count`): IFCNet's graph runs at about\n    a second an object on this CPU even with subnormals flushed, so the full\n    split would take hours. The unpruned rewrite (DGCNNFused) is the same-N\n    reference for 512 and 1,024 points.",
+    "perClass": 20,
+    "reference": {
+      "ifcnet-test/naive-n2048-k40": {
+        "secondsPerObject": 0.5420012027923453,
+        "count": 394,
+        "accuracy": 0.799492385786802,
+        "balancedAccuracy": 0.7990972222222222,
+        "weightedF1": 0.7969543883747645,
+        "macroF1": 0.7976404548669448
+      },
+      "ifcnet-test/fused-n2048-k40": {
+        "secondsPerObject": 0.15536810355296424,
+        "count": 394,
+        "accuracy": 0.799492385786802,
+        "balancedAccuracy": 0.7990972222222222,
+        "weightedF1": 0.7969543883747645,
+        "macroF1": 0.7976404548669448,
+        "vsIFCNetGraph": {
+          "maxAbsLogitDiff": 0.09567505121231079,
+          "changed": 0
+        }
+      },
+      "ifcnet-test/fused-n1024-k40": {
+        "secondsPerObject": 0.05356606751264352,
+        "count": 394,
+        "accuracy": 0.7182741116751269,
+        "balancedAccuracy": 0.7190277777777777,
+        "weightedF1": 0.7158211437907731,
+        "macroF1": 0.7176875132698561
+      },
+      "ifcnet-test/fused-n512-k40": {
+        "secondsPerObject": 0.01862772106580663,
+        "count": 394,
+        "accuracy": 0.3883248730964467,
+        "balancedAccuracy": 0.39076388888888886,
+        "weightedF1": 0.37504697668585385,
+        "macroF1": 0.37956942018371415
+      },
+      "ifcnet-test/fused-n1024-k20": {
+        "secondsPerObject": 0.03900207030447436,
+        "count": 394,
+        "accuracy": 0.7055837563451777,
+        "balancedAccuracy": 0.7052083333333334,
+        "weightedF1": 0.6917821401323059,
+        "macroF1": 0.6925113988137314
+      },
+      "ifcnet-test/fused-n512-k10": {
+        "secondsPerObject": 0.010799645685571893,
+        "count": 394,
+        "accuracy": 0.3604060913705584,
+        "balancedAccuracy": 0.36249999999999993,
+        "weightedF1": 0.32147136958649203,
+        "macroF1": 0.32250295757928
+      },
+      "corpus/naive-n2048-k40": {
+        "secondsPerObject": 0.43625751924992073,
+        "count": 400
+      },
+      "corpus/fused-n2048-k40": {
+        "secondsPerObject": 0.16342170774994882,
+        "count": 400,
+        "vsIFCNetGraph": {
+          "maxAbsLogitDiff": 0.1603405475616455,
+          "changed": 0.0025
+        }
+      },
+      "corpus/fused-n1024-k40": {
+        "secondsPerObject": 0.059516618250054304,
+        "count": 400
+      },
+      "corpus/fused-n512-k40": {
+        "secondsPerObject": 0.025194940000073985,
+        "count": 400
+      },
+      "corpus/fused-n1024-k20": {
+        "secondsPerObject": 0.05115849724970758,
+        "count": 400
+      },
+      "corpus/fused-n512-k10": {
+        "secondsPerObject": 0.017071849500061943,
+        "count": 400
+      }
+    },
+    "variants": {
+      "naive-fp32-n2048-b1": {
+        "bytes": 7235447,
+        "points": 2048,
+        "k": 40,
+        "precision": "fp32",
+        "graph": "naive",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.32856655862952966,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.14020812511444092,
+          "changedVsSameN": 0,
+          "changedVsReference": 0,
+          "accuracy": 0.799492385786802,
+          "balancedAccuracy": 0.7990972222222222,
+          "weightedF1": 0.7969543883747645,
+          "macroF1": 0.7976404548669448,
+          "largestClassRecallDrop": {
+            "class": "IfcAirTerminal",
+            "drop": 0
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.37560594350041354,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.15091192722320557,
+          "changedVsSameN": 0.0025,
+          "changedVsReference": 0
+        }
+      },
+      "fused-fp32-n1024-b1": {
+        "bytes": 7221378,
+        "points": 1024,
+        "k": 40,
+        "precision": "fp32",
+        "graph": "fused",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.08575397715750174,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.13442230224609375,
+          "changedVsSameN": 0,
+          "changedVsReference": 0.23604060913705585,
+          "accuracy": 0.7182741116751269,
+          "balancedAccuracy": 0.7190277777777777,
+          "weightedF1": 0.7158211437907731,
+          "macroF1": 0.7176875132698561,
+          "largestClassRecallDrop": {
+            "class": "IfcAirTerminal",
+            "drop": 0.45000000000000007
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.08579846874985378,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.21778345108032227,
+          "changedVsSameN": 0,
+          "changedVsReference": 0.3325
+        }
+      },
+      "pruned-fp32-n512-b1": {
+        "bytes": 1450950,
+        "points": 512,
+        "k": 40,
+        "precision": "fp32",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.007740602284305857,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.09968000650405884,
+          "changedVsSameN": 0.0025380710659898475,
+          "changedVsReference": 0.616751269035533,
+          "accuracy": 0.38578680203045684,
+          "balancedAccuracy": 0.38763888888888887,
+          "weightedF1": 0.37308999573365365,
+          "macroF1": 0.37718595348995654,
+          "largestClassRecallDrop": {
+            "class": "IfcPipeFitting",
+            "drop": 0.9
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.007629694250063039,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.24599218368530273,
+          "changedVsSameN": 0,
+          "changedVsReference": 0.69
+        }
+      },
+      "pruned-int8-n512-b1": {
+        "bytes": 383875,
+        "points": 512,
+        "k": 40,
+        "precision": "int8 dynamic (MatMul weights, per-tensor)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.00771832817262464,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.3540854454040527,
+          "changedVsSameN": 0.1319796954314721,
+          "changedVsReference": 0.6345177664974619,
+          "accuracy": 0.36548223350253806,
+          "balancedAccuracy": 0.36701388888888886,
+          "weightedF1": 0.3365442633353606,
+          "macroF1": 0.34069609938533013,
+          "largestClassRecallDrop": {
+            "class": "IfcPipeFitting",
+            "drop": 0.9
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.007423511500237509,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.5709099769592285,
+          "changedVsSameN": 0.15,
+          "changedVsReference": 0.6975
+        }
+      },
+      "pruned-fp16-n512-b1": {
+        "bytes": 735026,
+        "points": 512,
+        "k": 40,
+        "precision": "fp16 (fp32 inputs and outputs)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.010237929695474957,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.5943889021873474,
+          "changedVsSameN": 0.04060913705583756,
+          "changedVsReference": 0.6294416243654822,
+          "accuracy": 0.36548223350253806,
+          "balancedAccuracy": 0.3670138888888889,
+          "weightedF1": 0.3493890397157659,
+          "macroF1": 0.3533482041200293,
+          "largestClassRecallDrop": {
+            "class": "IfcPipeFitting",
+            "drop": 0.9
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.01040987899992615,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.8330902457237244,
+          "changedVsSameN": 0.04,
+          "changedVsReference": 0.7075
+        }
+      },
+      "pruned-w8-n512-b1": {
+        "bytes": 385775,
+        "points": 512,
+        "k": 40,
+        "precision": "int8 weights, fp32 compute",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.008990054061343223,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.3364417552947998,
+          "changedVsSameN": 0.11421319796954314,
+          "changedVsReference": 0.6142131979695431,
+          "accuracy": 0.3934010152284264,
+          "balancedAccuracy": 0.3951388888888889,
+          "weightedF1": 0.36836714073187693,
+          "macroF1": 0.3725339413132065,
+          "largestClassRecallDrop": {
+            "class": "IfcPipeFitting",
+            "drop": 0.9
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.009380869500455446,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.1102705001831055,
+          "changedVsSameN": 0.115,
+          "changedVsReference": 0.685
+        }
+      },
+      "pruned-fp32-n1024-b1": {
+        "bytes": 1450950,
+        "points": 1024,
+        "k": 40,
+        "precision": "fp32",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.017952744415866657,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.1470622420310974,
+          "changedVsSameN": 0,
+          "changedVsReference": 0.23604060913705585,
+          "accuracy": 0.7182741116751269,
+          "balancedAccuracy": 0.7190277777777777,
+          "weightedF1": 0.7158211437907731,
+          "macroF1": 0.7176875132698561,
+          "largestClassRecallDrop": {
+            "class": "IfcAirTerminal",
+            "drop": 0.45000000000000007
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.01809683949977625,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.21778249740600586,
+          "changedVsSameN": 0,
+          "changedVsReference": 0.3325
+        }
+      },
+      "pruned-int8-n1024-b1": {
+        "bytes": 383875,
+        "points": 1024,
+        "k": 40,
+        "precision": "int8 dynamic (MatMul weights, per-tensor)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.017552848223379346,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.6300715208053589,
+          "changedVsSameN": 0.09390862944162437,
+          "changedVsReference": 0.2512690355329949,
+          "accuracy": 0.7131979695431472,
+          "balancedAccuracy": 0.7136805555555555,
+          "weightedF1": 0.7084591255843044,
+          "macroF1": 0.7101655720338732,
+          "largestClassRecallDrop": {
+            "class": "IfcAirTerminal",
+            "drop": 0.45000000000000007
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.017651190499891528,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.412722110748291,
+          "changedVsSameN": 0.1325,
+          "changedVsReference": 0.3425
+        }
+      },
+      "pruned-fp16-n1024-b1": {
+        "bytes": 735026,
+        "points": 1024,
+        "k": 40,
+        "precision": "fp16 (fp32 inputs and outputs)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.02292266091376751,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.6471735239028931,
+          "changedVsSameN": 0.030456852791878174,
+          "changedVsReference": 0.2182741116751269,
+          "accuracy": 0.7131979695431472,
+          "balancedAccuracy": 0.7134722222222223,
+          "weightedF1": 0.7091643531124362,
+          "macroF1": 0.710636068957189,
+          "largestClassRecallDrop": {
+            "class": "IfcAirTerminal",
+            "drop": 0.45000000000000007
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.02206580149999354,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.5056052803993225,
+          "changedVsSameN": 0.045,
+          "changedVsReference": 0.345
+        }
+      },
+      "pruned-w8-n1024-b1": {
+        "bytes": 385775,
+        "points": 1024,
+        "k": 40,
+        "precision": "int8 weights, fp32 compute",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.019917376396165885,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.1374973058700562,
+          "changedVsSameN": 0.08121827411167512,
+          "changedVsReference": 0.23857868020304568,
+          "accuracy": 0.7106598984771574,
+          "balancedAccuracy": 0.7111805555555556,
+          "weightedF1": 0.707791998148761,
+          "macroF1": 0.7098073020845757,
+          "largestClassRecallDrop": {
+            "class": "IfcFurniture",
+            "drop": 0.4
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.020649414000217803,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.1491090059280396,
+          "changedVsSameN": 0.0775,
+          "changedVsReference": 0.345
+        }
+      },
+      "pruned-fp32-n2048-b1": {
+        "bytes": 1450950,
+        "points": 2048,
+        "k": 40,
+        "precision": "fp32",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.05228371345166231,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.09434449672698975,
+          "changedVsSameN": 0,
+          "changedVsReference": 0,
+          "accuracy": 0.799492385786802,
+          "balancedAccuracy": 0.7990972222222222,
+          "weightedF1": 0.7969543883747645,
+          "macroF1": 0.7976404548669448,
+          "largestClassRecallDrop": {
+            "class": "IfcAirTerminal",
+            "drop": 0
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.05409970575012266,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.152191162109375,
+          "changedVsSameN": 0.0025,
+          "changedVsReference": 0
+        }
+      },
+      "pruned-int8-n2048-b1": {
+        "bytes": 383875,
+        "points": 2048,
+        "k": 40,
+        "precision": "int8 dynamic (MatMul weights, per-tensor)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.05443708121842766,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.5072031021118164,
+          "changedVsSameN": 0.1065989847715736,
+          "changedVsReference": 0.1065989847715736,
+          "accuracy": 0.7918781725888325,
+          "balancedAccuracy": 0.7922222222222222,
+          "weightedF1": 0.7885529982673725,
+          "macroF1": 0.7898016263702852,
+          "largestClassRecallDrop": {
+            "class": "IfcSpaceHeater",
+            "drop": 0.19999999999999996
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.05462112299981527,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.475294828414917,
+          "changedVsSameN": 0.11,
+          "changedVsReference": 0.1075
+        }
+      },
+      "pruned-fp16-n2048-b1": {
+        "bytes": 735026,
+        "points": 2048,
+        "k": 40,
+        "precision": "fp16 (fp32 inputs and outputs)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.05813726954348858,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.4948170781135559,
+          "changedVsSameN": 0.017766497461928935,
+          "changedVsReference": 0.017766497461928935,
+          "accuracy": 0.7944162436548223,
+          "balancedAccuracy": 0.7940972222222222,
+          "weightedF1": 0.7920206168251159,
+          "macroF1": 0.7928946500045009,
+          "largestClassRecallDrop": {
+            "class": "IfcFurniture",
+            "drop": 0.050000000000000044
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.06003654824977275,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.6376552581787109,
+          "changedVsSameN": 0.04,
+          "changedVsReference": 0.0425
+        }
+      },
+      "pruned-w8-n2048-b1": {
+        "bytes": 385775,
+        "points": 2048,
+        "k": 40,
+        "precision": "int8 weights, fp32 compute",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.05447154670012973,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.1314916610717773,
+          "changedVsSameN": 0.07106598984771574,
+          "changedVsReference": 0.07106598984771574,
+          "accuracy": 0.8020304568527918,
+          "balancedAccuracy": 0.8012500000000001,
+          "weightedF1": 0.7999963275425954,
+          "macroF1": 0.8006630492961231,
+          "largestClassRecallDrop": {
+            "class": "IfcStair",
+            "drop": 0.0625
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.06515395750000608,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.0872564315795898,
+          "changedVsSameN": 0.0975,
+          "changedVsReference": 0.1
+        }
+      },
+      "pruned-fp32-n512k10-b1": {
+        "bytes": 1450942,
+        "points": 512,
+        "k": 10,
+        "precision": "fp32",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.004393198731270274,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.09807336330413818,
+          "changedVsSameN": 0.0025380710659898475,
+          "changedVsReference": 0.6446700507614214,
+          "accuracy": 0.3604060913705584,
+          "balancedAccuracy": 0.36249999999999993,
+          "weightedF1": 0.32144036862081826,
+          "macroF1": 0.32247242162809137,
+          "largestClassRecallDrop": {
+            "class": "IfcDoor",
+            "drop": 1
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.0041710517497267575,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.05561518669128418,
+          "changedVsSameN": 0,
+          "changedVsReference": 0.7075
+        }
+      },
+      "pruned-int8-n512k10-b1": {
+        "bytes": 383867,
+        "points": 512,
+        "k": 10,
+        "precision": "int8 dynamic (MatMul weights, per-tensor)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.0038544870558464284,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 2.026165008544922,
+          "changedVsSameN": 0.30710659898477155,
+          "changedVsReference": 0.6243654822335025,
+          "accuracy": 0.3680203045685279,
+          "balancedAccuracy": 0.37125,
+          "weightedF1": 0.318073270806452,
+          "macroF1": 0.3190164574586409,
+          "largestClassRecallDrop": {
+            "class": "IfcDoor",
+            "drop": 1
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.0041513212496647614,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 2.1233136653900146,
+          "changedVsSameN": 0.2475,
+          "changedVsReference": 0.7075
+        }
+      },
+      "pruned-fp16-n512k10-b1": {
+        "bytes": 735018,
+        "points": 512,
+        "k": 10,
+        "precision": "fp16 (fp32 inputs and outputs)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.007209303299541854,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.8120968341827393,
+          "changedVsSameN": 0.09137055837563451,
+          "changedVsReference": 0.649746192893401,
+          "accuracy": 0.3604060913705584,
+          "balancedAccuracy": 0.3625,
+          "weightedF1": 0.3170068425097609,
+          "macroF1": 0.31810539840869984,
+          "largestClassRecallDrop": {
+            "class": "IfcDoor",
+            "drop": 1
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.006560373750398867,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.9537786245346069,
+          "changedVsSameN": 0.13,
+          "changedVsReference": 0.7125
+        }
+      },
+      "pruned-w8-n512k10-b1": {
+        "bytes": 385767,
+        "points": 512,
+        "k": 10,
+        "precision": "int8 weights, fp32 compute",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.00567572538062533,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.811971664428711,
+          "changedVsSameN": 0.26903553299492383,
+          "changedVsReference": 0.6243654822335025,
+          "accuracy": 0.37055837563451777,
+          "balancedAccuracy": 0.37312500000000004,
+          "weightedF1": 0.32212696280987907,
+          "macroF1": 0.323636521782365,
+          "largestClassRecallDrop": {
+            "class": "IfcDoor",
+            "drop": 1
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.004999912750208751,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.8170515298843384,
+          "changedVsSameN": 0.2625,
+          "changedVsReference": 0.705
+        }
+      },
+      "pruned-fp32-n1024k20-b1": {
+        "bytes": 1450950,
+        "points": 1024,
+        "k": 20,
+        "precision": "fp32",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.010655986040542234,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.16008463501930237,
+          "changedVsSameN": 0,
+          "changedVsReference": 0.233502538071066,
+          "accuracy": 0.7055837563451777,
+          "balancedAccuracy": 0.7052083333333334,
+          "weightedF1": 0.6917821401323059,
+          "macroF1": 0.6925113988137314,
+          "largestClassRecallDrop": {
+            "class": "IfcSpaceHeater",
+            "drop": 0.49999999999999994
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.01048268799961079,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.09835076332092285,
+          "changedVsSameN": 0.005,
+          "changedVsReference": 0.32
+        }
+      },
+      "pruned-int8-n1024k20-b1": {
+        "bytes": 383875,
+        "points": 1024,
+        "k": 20,
+        "precision": "int8 dynamic (MatMul weights, per-tensor)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.00994877106637746,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.7584517002105713,
+          "changedVsSameN": 0.15736040609137056,
+          "changedVsReference": 0.2715736040609137,
+          "accuracy": 0.6852791878172588,
+          "balancedAccuracy": 0.6852083333333334,
+          "weightedF1": 0.6742070749211684,
+          "macroF1": 0.675199959580761,
+          "largestClassRecallDrop": {
+            "class": "IfcSpaceHeater",
+            "drop": 0.49999999999999994
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.01018197625002358,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.8867692947387695,
+          "changedVsSameN": 0.235,
+          "changedVsReference": 0.34
+        }
+      },
+      "pruned-fp16-n1024k20-b1": {
+        "bytes": 735026,
+        "points": 1024,
+        "k": 20,
+        "precision": "fp16 (fp32 inputs and outputs)",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.015485966497167075,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.6396126747131348,
+          "changedVsSameN": 0.03807106598984772,
+          "changedVsReference": 0.22588832487309646,
+          "accuracy": 0.7030456852791879,
+          "balancedAccuracy": 0.7027083333333334,
+          "weightedF1": 0.6906928129100547,
+          "macroF1": 0.691438411499814,
+          "largestClassRecallDrop": {
+            "class": "IfcSpaceHeater",
+            "drop": 0.49999999999999994
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.015368316249805503,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 0.7020388245582581,
+          "changedVsSameN": 0.0825,
+          "changedVsReference": 0.33
+        }
+      },
+      "pruned-w8-n1024k20-b1": {
+        "bytes": 385775,
+        "points": 1024,
+        "k": 20,
+        "precision": "int8 weights, fp32 compute",
+        "graph": "fused+pruned+onnxsim",
+        "ifcnet-test": {
+          "secondsPerObjectOrtCpu": 0.013594256091725819,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.2322840690612793,
+          "changedVsSameN": 0.13451776649746192,
+          "changedVsReference": 0.24619289340101522,
+          "accuracy": 0.6928934010152284,
+          "balancedAccuracy": 0.6921527777777777,
+          "weightedF1": 0.6721407928351018,
+          "macroF1": 0.6722624160868877,
+          "largestClassRecallDrop": {
+            "class": "IfcSpaceHeater",
+            "drop": 0.49999999999999994
+          }
+        },
+        "corpus": {
+          "secondsPerObjectOrtCpu": 0.013585302499704995,
+          "nan": false,
+          "maxAbsLogitDiffSameN": 1.3168067932128906,
+          "changedVsSameN": 0.175,
+          "changedVsReference": 0.36
+        }
+      }
+    }
+  },
+  "ifcnetThreads": [
+    {
+      "name": "pruned-fp32-n2048-b1",
+      "ep": "wasm",
+      "threads": 2,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 1450950,
+      "fetchMs": 30.93499994277954,
+      "createMs": 269.3600001335144,
+      "medianMs": 141.84500002861023,
+      "perElementMs": 141.84500002861023,
+      "minMs": 129.3399999141693,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.054228901863098145,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": true,
+      "peakAddedMB": null
+    },
+    {
+      "name": "pruned-fp32-n2048-b1",
+      "ep": "wasm",
+      "threads": 4,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 1450950,
+      "fetchMs": 8.559999942779541,
+      "createMs": 253.2300000190735,
+      "medianMs": 83.49000000953674,
+      "perElementMs": 83.49000000953674,
+      "minMs": 71.49500012397766,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.054228901863098145,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": true,
+      "peakAddedMB": null
+    },
+    {
+      "name": "pruned-fp32-n2048-b1",
+      "ep": "wasm",
+      "threads": 8,
+      "batch": 1,
+      "points": 2048,
+      "bytes": 1450950,
+      "fetchMs": 9.27999997138977,
+      "createMs": 282.5,
+      "medianMs": 56.8199999332428,
+      "perElementMs": 56.8199999332428,
+      "minMs": 50.05000019073486,
+      "check": {
+        "count": 16,
+        "maxAbsLogitDiff": 0.054228901863098145,
+        "sameArgmax": 16,
+        "nan": false
+      },
+      "crossOriginIsolated": true,
+      "peakAddedMB": null
+    }
+  ],
+  "llmSanity": {
+    "qwen2.5-0.5b-q4f16-webgpu": "nonsense",
+    "qwen2.5-0.5b-q4-webgpu": "correct",
+    "qwen2.5-0.5b-q4-wasm": "correct",
+    "qwen3-0.6b-q4f16-webgpu": "correct (thinking mode)",
+    "qwen2.5-1.5b-q4f16-webgpu": "aborted",
+    "qwen2.5-1.5b-q4f16-wasm": "aborted",
+    "questions": [
+      "What is the capital of France? Answer with one word.",
+      "An IFC element is named Basic Wall:Exterior - Brick. Is it a wall, a door or a window? Answer with one word.",
+      "Describe a fire door in one sentence."
+    ]
+  },
+  "downloads": {
+    "measuredAt": "2026-11-05, from this machine",
+    "seconds": {
+      "qwen2.5-0.5b-q4f16": 44.4,
+      "qwen2.5-0.5b-q4": 66.1,
+      "qwen2.5-0.5b-int8": 42.9,
+      "qwen3-0.6b-q4f16": 49.2,
+      "qwen2.5-1.5b-q4f16": 61.2,
+      "minilm-fp32": 9.2,
+      "minilm-int8": 3.1,
+      "e5small-int8": 11.3
+    },
+    "runtimes": {
+      "onnxruntime-web@1.30.0 wasm": {
+        "raw": 14290023,
+        "brotli": 3090507
+      },
+      "onnxruntime-web@1.30.0 webgpu (jsep)": {
+        "raw": 28378377,
+        "brotli": 5501461
+      },
+      "transformers.js@3.8.1 (min.js) + onnxruntime-web 1.22.0-dev jsep": {
+        "raw": 22530503,
+        "brotliWasm": 4110288
+      }
+    }
+  },
+  "memoryNote": "Browser process-tree working set, sampled every 1.5 s through a Windows process query; the query timed out under load during the LLM runs, so most LLM rows have no reading. The one LLM reading (Qwen2.5-0.5B q4f16, WebGPU, a 12-element smoke run) was +5,305 MB."
+}
