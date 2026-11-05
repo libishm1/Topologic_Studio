@@ -1312,11 +1312,65 @@ function CombustionStatus({ combustion, running }) {
   );
 }
 
+/** Likely ignition points: the review's scenarios matched in this model, ranked. */
+function IgnitionPoints({ ignition, onFind, onUse, disabled }) {
+  const { busy, candidates, occupancy } = ignition || {};
+  const pct = (x) => (x == null ? "unknown" : `${(x * 100).toFixed(x < 0.01 ? 1 : 0)}%`);
+  return (
+    <Disclosure summary="Likely ignition points">
+      <p className="field__hint">
+        Where a fire most often starts, matched in this model by class, type, name or room, and ranked by each
+        cause&apos;s share of fire deaths (residential: US homes 2019-2023). Sources in the Methods page and{" "}
+        <code>wiki/research/ignition-sources-2026-11-05.md</code>.
+      </p>
+      <SelectField
+        label="Occupancy"
+        value={occupancy || "residential"}
+        onChange={(value) => onFind(value)}
+        options={[
+          { value: "residential", label: "Residential" },
+          { value: "non-residential", label: "Non-residential" },
+        ]}
+      />
+      <Button block busy={busy} disabled={disabled} onClick={() => onFind(occupancy)}>
+        Find in this model
+      </Button>
+      {candidates && !candidates.length && (
+        <p className="field__hint">
+          No appliance, furniture, heater or named room was found to suggest an origin. Pick one on the graph.
+        </p>
+      )}
+      {candidates?.length > 0 && (
+        <ul className="ignition-list">
+          {candidates.map((c) => (
+            <li key={`${c.byRoom ? "r" : "e"}${c.itemId}`} className="ignition-list__item">
+              <div>
+                <strong>{c.scenario.label}</strong>{" "}
+                <span className="pill">Class {c.scenario.fireClass}</span>
+                <div className="field__hint">
+                  {c.byRoom ? "Room" : "Element"}: {c.name || "unnamed"}. {pct(c.weight)} of fire deaths
+                  {c.estimated ? " (estimated)" : ""}; match {Math.round(c.confidence * 100)}%.
+                </div>
+              </div>
+              <Button size="sm" onClick={() => onUse(c)}>
+                Start here
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Disclosure>
+  );
+}
+
 export function SimulatePanel({
   studio,
   exits,
   onPick,
   onPlace,
+  ignition,
+  onFindIgnition,
+  onUseIgnition,
   onStartFire,
   onStopFire,
   onTrainRl,
@@ -1351,6 +1405,7 @@ export function SimulatePanel({
           shortcut="F"
         />
         {ready && <PlaceWithoutMouse kinds={["fire"]} onPlace={onPlace} />}
+        {ready && <IgnitionPoints ignition={ignition} onFind={onFindIgnition} onUse={onUseIgnition} disabled={fire.running} />}
 
         <Choices
           legend="How the fire spreads"

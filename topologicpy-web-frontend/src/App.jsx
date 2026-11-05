@@ -32,7 +32,8 @@ import { runFire } from "./core/fire.js";
 import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
 import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
-import { fuelsFor } from "./core/fireClasses.js";
+import { FIRE_CLASSES, fuelsFor } from "./core/fireClasses.js";
+import { centroidOf, rankIgnitionPoints } from "./core/ignition.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -1061,6 +1062,63 @@ export default function App() {
     return run;
   }, [combustionInputs, flamescapesJob, graph, studio]);
 
+  // Likely ignition points (src/core/ignition.js): the model's appliances,
+  // furniture and rooms ranked by the ignition-source review.
+  const [ignitionState, setIgnition] = useState({ busy: false, candidates: null, occupancy: "residential", graph: null });
+  // Candidates found for another graph (a rebuilt or new model) are not shown.
+  const ignition = ignitionState.graph === graph ? ignitionState : { ...ignitionState, candidates: null };
+  const findIgnition = useCallback(
+    async (occupancy = ignition.occupancy) => {
+      const viewer = viewerRef.current;
+      if (!viewer || !graph) return;
+      setIgnition((c) => ({ ...c, busy: true, occupancy }));
+      try {
+        const { records, rooms } = await viewer.ignitionData();
+        // Rooms are placed at their meshes' centroid (extracted with the graph).
+        const spaceMeshes = new Map();
+        for (const mesh of geometryRef.current?.spaces || []) {
+          if (!spaceMeshes.has(mesh.itemId)) spaceMeshes.set(mesh.itemId, []);
+          spaceMeshes.get(mesh.itemId).push(mesh);
+        }
+        const placedRooms = rooms.map((r) => ({ ...r, position: centroidOf(spaceMeshes.get(r.itemId)) })).filter((r) => r.position);
+        const ranked = rankIgnitionPoints(records, placedRooms, { occupancy, limit: 8 });
+        const positions = await viewer.positionsOf(ranked.filter((c) => !c.byRoom).map((c) => c.itemId));
+        const candidates = ranked
+          .map((c) => ({ ...c, position: c.byRoom ? c.position : positions.get(c.itemId) }))
+          .filter((c) => c.position);
+        setIgnition({ busy: false, candidates, occupancy, graph });
+      } catch (error) {
+        setIgnition((c) => ({ ...c, busy: false, candidates: [] }));
+        reportError(error, "Finding likely ignition points");
+      }
+    },
+    [graph, ignition.occupancy, reportError],
+  );
+  const useIgnition = useCallback(
+    (candidate) => {
+      const [x, y, z] = candidate.position;
+      const up = graph.upAxis === "z" ? 2 : graph.upAxis === "x" ? 0 : 1;
+      let best = -1, bestD = Infinity;
+      const P = graph.nodes;
+      for (let v = 0; v < P.length / 3; v += 1) {
+        const d = [P[v * 3] - x, P[v * 3 + 1] - y, P[v * 3 + 2] - z];
+        d[up] *= 4;
+        const dd = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+        if (dd < bestD) {
+          bestD = dd;
+          best = v;
+        }
+      }
+      if (best < 0) return;
+      handlePick("fire", [P[best * 3], P[best * 3 + 1], P[best * 3 + 2]]);
+      // The first item takes the scenario's fire class (cooking: K, appliances: C).
+      const cls = candidate.scenario.fireClass;
+      if (FIRE_CLASSES[cls]) setSettings({ flamescapesClass: cls });
+      toast(`Fire origin set at ${candidate.byRoom ? "the room" : "the element"} for: ${candidate.scenario.label}.`, { variant: "info", ttl: 4000 });
+    },
+    [graph, handlePick, setSettings, toast],
+  );
+
   const startFire = useCallback(async () => {
     if (!graph || !points.fire) return;
     // A plan still running would land mid-fire and clear its route.
@@ -2027,6 +2085,9 @@ export default function App() {
                   studio={studio}
                   onPick={requestPick}
                   onPlace={handlePick}
+                  ignition={ignition}
+                  onFindIgnition={findIgnition}
+                  onUseIgnition={useIgnition}
                   onStartFire={startFire}
                   onStopFire={stopFire}
                   onTrainRl={trainRl}

@@ -25,6 +25,7 @@ import { PhaseTimer, mark } from "../lib/perf.js";
 import { aggregatedParts, collectCategoryIds, elementRecords, extractMeshes, withPredefinedType } from "./categories.js";
 import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
 import { coreItems } from "../core/cores.js";
+import { centroidOf } from "../core/ignition.js";
 
 /** Self-hosted by default; `npm run sync-assets` keeps these matching the
  *  installed package versions. Both are served from public/, under the
@@ -975,6 +976,40 @@ export class ViewerManager {
       cores: cores.length,
     });
     return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size, roofMeshes, cores, coreMeshes };
+  }
+
+  /**
+   * Elements and rooms the ignition matcher reads (src/core/ignition.js):
+   * names, classes and predefined types of the candidate classes and the
+   * proxies, and the rooms' names. Positions come later, for the ranked
+   * candidates only (positionsOf).
+   */
+  async ignitionData() {
+    if (!this.model || !this.categoryIds) throw new Error("Load an IFC model first.");
+    const ids = this.categoryIds;
+    const [records, rooms] = await Promise.all([
+      elementRecords(this.model, [...(ids.ignition || []), ...(ids.proxies || [])]).catch(() => []),
+      elementRecords(this.model, ids.spaces || []).catch(() => []),
+    ]);
+    return { records, rooms };
+  }
+
+  /** Centroids (viewer frame) of some items' geometry, as a Map itemId -> [x, y, z]. */
+  async positionsOf(itemIds) {
+    const out = new Map();
+    if (!itemIds?.length) return out;
+    const world = this.modelObject?.matrixWorld?.clone() || null;
+    const meshes = await extractMeshes(this.model, itemIds, world);
+    const byItem = new Map();
+    for (const mesh of meshes) {
+      if (!byItem.has(mesh.itemId)) byItem.set(mesh.itemId, []);
+      byItem.get(mesh.itemId).push(mesh);
+    }
+    for (const [itemId, list] of byItem) {
+      const c = centroidOf(list);
+      if (c) out.set(itemId, c);
+    }
+    return out;
   }
 
   // --------------------------------------------------------------- overlays
