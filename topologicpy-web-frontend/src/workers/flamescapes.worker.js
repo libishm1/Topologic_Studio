@@ -2,12 +2,14 @@
  * The Flamescapes fire solver, off the main thread (src/core/flamescapes.js,
  * src/core/flamescapesRun.js). One job runs one fire: it builds the grid from
  * the IFC meshes, steps the solver to the horizon and streams a frame every
- * `frameSeconds` as progress ({ id, progress }), then answers with the frames
- * stacked for the planners. Ending the worker is the only way to stop a run.
+ * `frameSeconds` as progress ({ id, progress }), then answers with the run's
+ * summary. Ending the worker is the only way to stop a run.
  *
  * Backend: WebGPU on the visitor's GPU where the browser offers it and the
- * GPU solver is present (src/core/flamescapesGpu.js), one CPU core otherwise
- * (src/lib/hardware.js); the grid is sized to the backend.
+ * GPU solver starts (src/core/flamescapesGpu.js), one CPU core otherwise
+ * (src/lib/hardware.js); the grid is sized to the backend. A GPU lost
+ * mid-run (a driver reset, a phone suspending the tab) restarts the run on
+ * the CPU: a second "scene" message tells the page to drop the frames so far.
  */
 import { buildScene, runScene } from "../core/flamescapesRun.js";
 import { chooseBackend } from "../lib/hardware.js";
@@ -22,6 +24,36 @@ async function gpuRunner(backend) {
   }
 }
 
+function sceneFor(payload, backend) {
+  const scene = buildScene(payload.geometry, {
+    upAxis: payload.upAxis,
+    fire: payload.fire,
+    maxCells: payload.maxCells || backend.cells,
+    fireLoad: payload.fireLoad,
+    contentsFuel: payload.contentsFuel,
+    ignitionFuel: payload.ignitionFuel,
+    item: payload.item,
+    burner: payload.burner,
+    seed: payload.seed ?? 1,
+  });
+  if (!scene.ignition) throw new Error("The fire origin is not inside the fire grid. Pick it on a floor of the building.");
+  return scene;
+}
+
+function describe(scene, backend, t0, restarted) {
+  const g = scene.grid;
+  return {
+    backend: { kind: backend.kind, name: backend.name },
+    grid: [g.nx, g.ny, g.nz],
+    cell: g.h,
+    cells: g.cells,
+    clipped: scene.clipped,
+    contents: scene.contentsSummary,
+    setupMs: performance.now() - t0,
+    restarted,
+  };
+}
+
 self.onmessage = async (event) => {
   const { id, payload } = event.data || {};
   try {
@@ -29,32 +61,11 @@ self.onmessage = async (event) => {
     let backend = await chooseBackend(payload.backend || "auto");
     const gpu = await gpuRunner(backend);
     if (backend.kind === "gpu" && !gpu) backend = await chooseBackend("cpu");
-    const scene = buildScene(payload.geometry, {
-      upAxis: payload.upAxis,
-      fire: payload.fire,
-      maxCells: payload.maxCells || backend.cells,
-      fireLoad: payload.fireLoad,
-      contentsFuel: payload.contentsFuel,
-      ignitionFuel: payload.ignitionFuel,
-      item: payload.item,
-      burner: payload.burner,
-      seed: payload.seed ?? 1,
-    });
-    if (!scene.ignition) throw new Error("The fire origin is not inside the fire grid. Pick it on a floor of the building.");
-    const g = scene.grid;
-    const info = {
-      backend: { kind: backend.kind, name: backend.name },
-      grid: [g.nx, g.ny, g.nz],
-      cell: g.h,
-      cells: g.cells,
-      clipped: scene.clipped,
-      contents: scene.contentsSummary,
-      setupMs: performance.now() - t0,
-    };
+    let scene = sceneFor(payload, backend);
+    let info = describe(scene, backend, t0, false);
     self.postMessage({ id, progress: { type: "scene", info } });
-    const run = gpu ? gpu.runScene : runScene;
     let frames = 0;
-    const result = await run(scene, {
+    const options = {
       nodes: payload.nodes,
       upAxis: payload.upAxis,
       agentHeight: payload.agentHeight,
@@ -72,14 +83,25 @@ self.onmessage = async (event) => {
         if (out.particles) transfers.push(out.particles.positions.buffer, out.particles.temps.buffer, out.particles.kinds.buffer);
         self.postMessage({ id, progress: out }, transfers);
       },
-    });
+    };
+    let result = null;
+    if (gpu) {
+      try {
+        result = await gpu.runScene(scene, options);
+      } catch {
+        // The GPU stopped mid-run: start again on the CPU, on a grid sized for it.
+        backend = await chooseBackend("cpu");
+        scene = sceneFor(payload, backend);
+        info = describe(scene, backend, t0, true);
+        frames = 0;
+        self.postMessage({ id, progress: { type: "scene", info } });
+      }
+    }
+    if (!result) result = await runScene(scene, options);
     // The frames went out one by one; the answer carries only the summary.
     const done = { ...result, info: { ...info, frames, ms: performance.now() - t0 } };
     self.postMessage({ id, ok: true, result: done }, [done.hrr.buffer]);
   } catch (error) {
-    // A GPU lost mid-run (driver reset, tab in the background on some phones)
-    // ends the run; say how to run it on the CPU instead.
-    const gpuHint = /gpu|device/i.test(String(error?.message || error)) ? " The GPU stopped: set the solver to CPU in the Flamescapes settings and run again." : "";
-    self.postMessage({ id, ok: false, error: (error?.message || String(error)) + gpuHint });
+    self.postMessage({ id, ok: false, error: error?.message || String(error) });
   }
 };

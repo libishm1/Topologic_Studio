@@ -1311,6 +1311,7 @@ function CombustionStatus({ combustion, running }) {
       {combustion.backend && (
         <p className="result__note">
           Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}.
+          {combustion.restarted ? " The GPU stopped partway, so the fire started again on the CPU." : ""}
           {combustion.clipped ? " The model is larger than the grid allows, so the grid covers the area round the fire; nodes outside it read as clear air." : ""}
         </p>
       )}

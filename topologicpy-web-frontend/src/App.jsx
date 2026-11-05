@@ -1042,6 +1042,10 @@ export default function App() {
     const run = { key, graph, frames: [], done: false, failed: false, result: null, info: null };
     run.promise = flamescapesJob(payload, transfers, (progress) => {
       if (progress.type === "scene") {
+        // A second scene is a restart on the CPU after the GPU stopped: the
+        // frames so far came from the abandoned run (a playback waiting on
+        // frame k resumes when the new run reaches it).
+        if (progress.info.restarted) run.frames.length = 0;
         run.info = progress.info;
         studio.setFire((c) => ({ ...c, combustion: { ...progress.info, time: 0, hrr: 0, peak: 0, horizon: payload.horizon } }));
         return;
