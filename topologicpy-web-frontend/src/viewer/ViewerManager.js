@@ -87,6 +87,54 @@ const CLIPPED = new Set([OVERLAY.outlines, OVERLAY.graph, OVERLAY.navGraph]);
 /** Alternative routes are drawn as overlays alt0, alt1, ... */
 const ALT_PREFIX = "alt";
 
+/** A LOD1 room's tint by class (core/lod1.js); rooms nobody walks in are grey. */
+const LOD1_ROOM_COLOURS = {
+  Unit: 0xcbd5e1,
+  Office: 0xc7d2fe,
+  Commercial: 0xfbcfe8,
+  Corridor: 0xfde68a,
+  Arcade: 0xfde68a,
+  Stair: 0xfdba74,
+  Ramp: 0xfdba74,
+  Toilet: 0x93c5fd,
+  Service: 0xd6d3d1,
+  Parking: 0xe5e7eb,
+};
+const LOD1_DOOR_COLOURS = { exit: 0x16a34a, door: 0x92400e };
+
+/**
+ * One flat-shaded geometry from many extracted meshes ({positions, indices}),
+ * unindexed so each face keeps its own normal; `colourOf(mesh)` gives a
+ * per-mesh colour (vertex colours), or none.
+ */
+function mergedMeshes(meshes, colourOf = null) {
+  let count = 0;
+  for (const m of meshes) count += m.indices.length;
+  const positions = new Float32Array(count * 3);
+  const colours = colourOf ? new Float32Array(count * 3) : null;
+  const colour = new THREE.Color();
+  let o = 0;
+  for (const m of meshes) {
+    if (colourOf) colour.setHex(colourOf(m));
+    for (let k = 0; k < m.indices.length; k += 1, o += 3) {
+      const v = m.indices[k] * 3;
+      positions[o] = m.positions[v];
+      positions[o + 1] = m.positions[v + 1];
+      positions[o + 2] = m.positions[v + 2];
+      if (colours) {
+        colours[o] = colour.r;
+        colours[o + 1] = colour.g;
+        colours[o + 2] = colour.b;
+      }
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  if (colours) geometry.setAttribute("color", new THREE.BufferAttribute(colours, 3));
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 export class ViewerManager {
   constructor() {
     this.components = null;
@@ -99,6 +147,8 @@ export class ViewerManager {
     this.modelObject = null;
     this.modelId = null;
     this.categoryIds = null;
+    // A LOD1 model drawn without an IFC (loadLod1): its egress geometry.
+    this.lod1 = null;
 
     this.overlays = new Map();
     this.markers = {};
@@ -898,7 +948,61 @@ export class ViewerManager {
     this.world.scene.three.add(object);
   }
 
+  /**
+   * Draw a LOD1 model with no IFC behind it, from its egress geometry
+   * (core/lod1.js lod1ToEgressGeometry, in the viewer frame): the walkable
+   * rooms as translucent prisms tinted by class, the rooms nobody walks in
+   * grey, and the slabs, walls, stairs and doors (exits green) solid. Each
+   * group is merged into one mesh. The geometry is kept, so the graph, the
+   * fire and the two-zone model read it as they read an IFC's.
+   */
+  loadLod1(geometry) {
+    if (!this.ready) throw new Error("Viewer is still starting up.");
+    // An IFC still converting is dropped, as when another file is opened.
+    this._abortImport?.();
+    this._loadToken = (this._loadToken || 0) + 1;
+    this.clearModel();
+    const lod1 = geometry.lod1 || {};
+    const classOf = new Map((lod1.rooms || []).map((r) => [r.itemId, r.class]));
+    const kindOf = new Map((lod1.doors || []).map((d) => [d.itemId, d.kind]));
+    const group = new THREE.Group();
+    group.name = "lod1";
+    const add = (meshes, material, colourOf = null) => {
+      const list = (meshes || []).filter((m) => m?.indices?.length);
+      if (!list.length) return;
+      const mesh = new THREE.Mesh(mergedMeshes(list, colourOf), material);
+      group.add(mesh);
+    };
+    const solid = (color) => new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
+    const glass = (options) =>
+      new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide, ...options });
+    add(geometry.floors, solid(0xe2e8f0));
+    add(geometry.walls, solid(0xf8fafc));
+    add(geometry.stairs, solid(0xf59e0b));
+    add(
+      (geometry.doors || []).filter((m) => (m.kind ?? kindOf.get(m.itemId)) !== "opening"),
+      solid(0xffffff),
+      (m) => LOD1_DOOR_COLOURS[m.kind ?? kindOf.get(m.itemId)] ?? LOD1_DOOR_COLOURS.door,
+    );
+    add(geometry.spaces, glass({ vertexColors: true }), (m) => LOD1_ROOM_COLOURS[classOf.get(m.itemId)] ?? LOD1_ROOM_COLOURS.Unit);
+    add(lod1.shafts, glass({ color: 0x9ca3af, opacity: 0.25 }));
+    this.world.scene.three.add(group);
+    this.modelObject = group;
+    this.lod1 = geometry;
+    // Picked like a model's surfaces before a graph is built (castRay reads them).
+    group.children.forEach((mesh) => this.world.meshes?.add?.(mesh));
+    this.fitToModel();
+  }
+
   clearModel() {
+    if (this.lod1 && this.modelObject) {
+      for (const mesh of [...this.modelObject.children]) {
+        this.world?.meshes?.delete?.(mesh);
+        this.modelObject.remove(mesh);
+        this._destroyObject(mesh);
+      }
+    }
+    this.lod1 = null;
     if (this.modelObject) {
       this.world?.scene?.three?.remove(this.modelObject);
       this.modelObject = null;
@@ -920,6 +1024,8 @@ export class ViewerManager {
    * One pass per category, straight out of the fragments already in memory.
    */
   async extractEgressGeometry() {
+    // A LOD1 model is its egress geometry.
+    if (this.lod1) return this.lod1;
     if (!this.model || !this.categoryIds) {
       throw new Error("Load an IFC model first.");
     }
@@ -1000,6 +1106,11 @@ export class ViewerManager {
    * candidates only (positionsOf).
    */
   async ignitionData() {
+    // A LOD1 model has rooms but no furniture or appliances: rooms only.
+    if (this.lod1) {
+      const rooms = (this.lod1.lod1?.rooms || []).filter((r) => r.walkable).map((r) => ({ itemId: r.itemId, type: "IFCSPACE", name: r.name, longName: r.name }));
+      return { records: [], rooms };
+    }
     if (!this.model || !this.categoryIds) throw new Error("Load an IFC model first.");
     const ids = this.categoryIds;
     const [records, rooms] = await Promise.all([
@@ -1016,6 +1127,7 @@ export class ViewerManager {
    * highest door bottom under it), and their meshes, for the shape classifier.
    */
   async identifyData() {
+    if (this.lod1) throw new Error("A rooms (LOD1) model has no elements to identify: open an IFC.");
     if (!this.model || !this.categoryIds) throw new Error("Load an IFC model first.");
     // identify.js carries the ignition catalogue's name patterns: loaded when asked for.
     const { GENERIC_CLASSES, boxOf } = await import("../core/identify.js");
@@ -1052,7 +1164,7 @@ export class ViewerManager {
   /** Centroids (viewer frame) of some items' geometry, as a Map itemId -> [x, y, z]. */
   async positionsOf(itemIds) {
     const out = new Map();
-    if (!itemIds?.length) return out;
+    if (!itemIds?.length || this.lod1) return out;
     const world = this.modelObject?.matrixWorld?.clone() || null;
     const meshes = await extractMeshes(this.model, itemIds, world);
     const byItem = new Map();

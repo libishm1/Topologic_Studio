@@ -13,6 +13,7 @@ Use this page as the stable entry point.
 | Fire, dynamic rerouting, RL | [backend/fire-routing-rl.md](backend/fire-routing-rl.md) |
 | React workflow | [frontend/app-orchestration.md](frontend/app-orchestration.md) |
 | IFC browser viewer | [frontend/ifc-viewer.md](frontend/ifc-viewer.md) |
+| Rooms (LOD1) models and the GeoJSON plan | [concepts/lod1-models.md](concepts/lod1-models.md) |
 | Deployment | [deployment/vite-github-pages.md](deployment/vite-github-pages.md) |
 | Known bugs and risks | [issues/open-risks.md](issues/open-risks.md) |
 | HITL browser testing | [testing/agent-instructions-codex-claude.md](testing/agent-instructions-codex-claude.md) |

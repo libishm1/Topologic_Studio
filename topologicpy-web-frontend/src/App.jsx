@@ -348,16 +348,131 @@ export default function App() {
     [],
   );
 
-  // `prepared`: an example's fragments and semantics, converted at build time
-  // (openExample); nextFile then stands in for its IFC.
-  const handleFile = useCallback(
-    async (nextFile, { prepared = null } = {}) => {
-      if (!nextFile) return;
-      if (!nextFile.name.toLowerCase().endsWith(".ifc")) {
-        toast("Only .ifc files can be opened in the viewer.", {
-          title: "Unsupported file",
-          variant: "warning",
+  // ------------------------------------------------------ rooms (LOD1) models
+
+  // A rooms model with no IFC behind it (core/lod1.js): a TopologicPy LOD1
+  // export with its circulation and adjacency graphs, a GeoJSON plan, or the
+  // rooms drafted from floor-plan drawings. It becomes the egress geometry an
+  // IFC gives (lod1ToEgressGeometry), so the graph, routes, the code check and
+  // both fire models run on it unchanged, and is drawn as prisms.
+  const openLod1 = useCallback(
+    async (model, { name, size = 0 }) => {
+      const viewer = viewerRef.current;
+      if (!viewer?.ready) {
+        toast("The 3D viewer is still starting. Try again in a moment.", { variant: "warning" });
+        return;
+      }
+      // An IFC still loading is dropped.
+      ++loadSeqRef.current;
+      rlRef.current?.cancel();
+      dropPlan();
+      colours.set(null);
+      studio.beginLoad({ name, size, lod1: true });
+      setLastSample(null);
+      setSection(null);
+      viewer.setSectionHeight(null);
+      try {
+        const t0 = performance.now();
+        const { lod1ToEgressGeometry } = await import("./core/lod1.js");
+        // The model's frame is the IFC's: the viewer's up axis is y.
+        if (settings.upAxis !== "y") setSettings({ upAxis: "y" });
+        const geometry = lod1ToEgressGeometry(model, { upAxis: "y" });
+        viewer.loadLod1(geometry);
+        viewer.setModelAppearance(settings.modelAppearance);
+        geometryRef.current = geometry;
+        geometryPromiseRef.current = Promise.resolve(geometry);
+        studio.setSemantics(geometry.semantics);
+        setLevels(floorLevels(geometry.floors, "y"));
+        viewer.setOutlines([...geometry.walls, ...geometry.floors, ...geometry.stairs, ...geometry.doors]);
+        studio.setModelInfo({
+          lod1: model,
+          totalMs: performance.now() - t0,
+          stats: {
+            floors: geometry.floors.length,
+            stairs: model.links.filter((l) => l.kind !== "lift").length,
+            doors: model.doors.length,
+            walls: geometry.walls.length,
+            spaces: model.rooms.length,
+            storeys: model.levels.length,
+          },
         });
+        setTab("graph");
+        const warnings = model.meta?.warnings?.length || 0;
+        toast(`${model.rooms.length} rooms on ${model.levels.length} storeys${warnings ? `, ${warnings} warning${warnings > 1 ? "s" : ""} (step 1)` : ""}.`, {
+          title: name,
+          variant: warnings ? "warning" : "success",
+          ttl: 5000,
+        });
+      } catch (error) {
+        studio.beginLoad(null);
+        reportError(error, "Could not open the rooms model");
+      }
+    },
+    [colours, dropPlan, reportError, setSettings, settings.modelAppearance, settings.upAxis, studio, toast],
+  );
+
+  // JSON files chosen or dropped together: the TopologicPy CellComplex with
+  // its graphs, or a GeoJSON plan.
+  const openLod1Files = useCallback(
+    async (files) => {
+      try {
+        const jsons = await Promise.all(
+          files.map(async (f) => {
+            try {
+              return JSON.parse(await f.text());
+            } catch {
+              throw new Error(`${f.name} is not valid JSON.`);
+            }
+          }),
+        );
+        const { lod1FromJsonFiles, lod1JsonKind } = await import("./core/lod1.js");
+        const model = lod1FromJsonFiles(jsons);
+        const main = files[jsons.findIndex((j) => ["cellcomplex", "geojson"].includes(lod1JsonKind(j)))] || files[0];
+        const graphs = files.length - 1;
+        await openLod1(model, {
+          name: graphs > 0 ? `${main.name} + ${graphs} graph${graphs > 1 ? "s" : ""}` : main.name,
+          size: files.reduce((s, f) => s + (f.size || 0), 0),
+        });
+      } catch (error) {
+        reportError(error, "Could not open the rooms model");
+      }
+    },
+    [openLod1, reportError],
+  );
+
+  const exportLod1 = useCallback(async () => {
+    const model = modelInfo?.lod1;
+    if (!model) return;
+    const { lod1ToGeoJSON } = await import("./core/lod1.js");
+    const blob = new Blob([JSON.stringify(lod1ToGeoJSON(model))], { type: "application/geo+json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(file?.name || "rooms").replace(/(\.(geo)?json)?( \+ .*)?$/i, "")}-plan.geojson`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }, [modelInfo, file]);
+
+  // `prepared`: an example's fragments and semantics, converted at build time
+  // (openExample); nextFile then stands in for its IFC. JSON and GeoJSON files
+  // (one, or several chosen or dropped together) are rooms models.
+  const handleFile = useCallback(
+    async (chosen, { prepared = null } = {}) => {
+      const files = Array.isArray(chosen) ? chosen : chosen ? [chosen] : [];
+      const isJson = (f) => /\.(geo)?json$/i.test(f.name);
+      const nextFile = files.find((f) => f.name.toLowerCase().endsWith(".ifc")) || null;
+      if (!nextFile && files.length && files.every(isJson)) {
+        await openLod1Files(files);
+        return;
+      }
+      if (!nextFile) {
+        if (files.length) {
+          toast("Open an .ifc file, or a rooms model: a TopologicPy LOD1 export with its graphs, or a GeoJSON plan.", {
+            title: "Unsupported file",
+            variant: "warning",
+          });
+        }
         return;
       }
       const viewer = viewerRef.current;
@@ -483,7 +598,7 @@ export default function App() {
         if (latest()) studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan, colours],
+    [reportError, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan, colours, openLod1Files],
   );
 
   // --------------------------------------------------------------- examples
@@ -557,7 +672,7 @@ export default function App() {
 
   const buildGraph = useCallback(async () => {
     const viewer = viewerRef.current;
-    if (!viewer?.model) {
+    if (!viewer?.model && !viewer?.lod1) {
       toast("Load an IFC model first.", { variant: "warning" });
       return;
     }
@@ -939,6 +1054,10 @@ export default function App() {
   const runNavigationCheck = useCallback(async () => {
     const viewer = viewerRef.current;
     if (!graph || !file || !viewer) return;
+    if (viewer.lod1) {
+      toast("The TopologicPy cross-check reads an IFC; a rooms model has none to send.", { variant: "warning" });
+      return;
+    }
     if (needsServerGraph("The TopologicPy cross-check")) return;
     studio.setNavBusy(true);
     try {
@@ -1024,7 +1143,8 @@ export default function App() {
       roofs: clone(geometry.roofMeshes),
       stairs: clone(geometry.stairs),
       obstacles: clone(windowsOpen ? (geometry.obstacles || []).filter((m) => !windowIds.has(m.itemId)) : geometry.obstacles),
-      ...(doorsClosed ? { doors: clone(geometry.doors) } : {}),
+      // A rooms model's openings (doorways with no leaf) stay open.
+      ...(doorsClosed ? { doors: clone((geometry.doors || []).filter((m) => m.kind !== "opening")) } : {}),
     };
     const transfers = Object.values(geo).flatMap((list) => list.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
     const { contentsFuel, ignitionFuel, item } = fuelsFor(settings.flamescapesClass);
@@ -2507,6 +2627,8 @@ export default function App() {
                   onDescribe={runDescribe}
                   onStopDescribe={stopDescribe}
                   onDescribeEngine={setDescribeEngine}
+                  onOpenRooms={handleFile}
+                  onExportRooms={exportLod1}
                 />
               )}
               {activeTab === "graph" && (

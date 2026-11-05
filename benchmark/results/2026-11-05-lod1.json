@@ -1,0 +1,895 @@
+{
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14700",
+  "cores": 28,
+  "node": "v24.21.0"
+ },
+ "spacing": 0.5,
+ "maxCells": 30000,
+ "horizon": 0,
+ "doors": "open",
+ "results": [
+  {
+   "label": "LOD1 model A",
+   "source": "topologicpy",
+   "levels": 15,
+   "rooms": 586,
+   "walkableRooms": 520,
+   "doors": 582,
+   "doorKinds": {
+    "door": 532,
+    "opening": 46,
+    "exit": 4,
+    "ramp": 2,
+    "lift": 26,
+    "stair": 29
+   },
+   "links": 57,
+   "warnings": 1,
+   "adjacency": {
+    "wallPairs": 1310,
+    "wallPairsFound": 1310,
+    "slabPairs": 743
+   },
+   "geometry": {
+    "walls": 1984,
+    "floors": 543,
+    "ceilings": 86,
+    "doors": 530,
+    "cores": 26
+   },
+   "graph": {
+    "nodes": 47305,
+    "edges": 131721,
+    "blockedEdges": 7438,
+    "spacing": 0.5803031400699121,
+    "stairNodes": 540,
+    "doorNodes": 528,
+    "coreStairsAssumed": 0,
+    "cores": 2,
+    "coresLinked": 0,
+    "parts": 1,
+    "partsOver20": 1,
+    "mainShare": 1,
+    "storeys": [
+     {
+      "storey": 0,
+      "nodes": 3455,
+      "mainShare": 1
+     },
+     {
+      "storey": 1,
+      "nodes": 3467,
+      "mainShare": 1
+     },
+     {
+      "storey": 2,
+      "nodes": 3315,
+      "mainShare": 1
+     },
+     {
+      "storey": 3,
+      "nodes": 2222,
+      "mainShare": 1
+     },
+     {
+      "storey": 4,
+      "nodes": 2962,
+      "mainShare": 1
+     },
+     {
+      "storey": 5,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 6,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 7,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 8,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 9,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 10,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 11,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 12,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 13,
+      "nodes": 3162,
+      "mainShare": 1
+     },
+     {
+      "storey": 14,
+      "nodes": 2358,
+      "mainShare": 1
+     }
+    ],
+    "everyStoreyJoined": true,
+    "storeysJoined": 15,
+    "storeysWalked": 15,
+    "exits": 4,
+    "exitSource": "LOD1 exit",
+    "flaggedExits": 4,
+    "floorNodesReachingAnExit": 1,
+    "route": {
+     "found": true,
+     "length": 143.09392630964197,
+     "descent": 38.0099983215332,
+     "plan": 30.788317348341106,
+     "nodes": 286,
+     "stairNodes": 195,
+     "doorNodes": 6,
+     "ms": 32.39319999999998
+    }
+   },
+   "flamescapes": {
+    "setupMs": 38.47199999999998,
+    "grid": [
+     32,
+     22,
+     37
+    ],
+    "cell": 0.29386561536000017,
+    "cells": 26048,
+    "clipped": true,
+    "solidShare": 0.24857954545454544,
+    "contentsCells": 1479,
+    "contentsAreaM2": 63.8610014193291,
+    "ignition": true,
+    "doors": "open"
+   },
+   "zone": {
+    "spaces": 520,
+    "rooms": 520,
+    "nodes": 47305,
+    "inFootprint": 44869,
+    "assigned": 46562,
+    "joins": 524,
+    "vents": 6,
+    "inside": 0,
+    "unplaced": 0,
+    "sizedFromIfc": 530,
+    "inFootprintShare": 0.9485043864284959
+   },
+   "geojson": {
+    "features": 1225,
+    "sameCounts": true,
+    "areaDiffM2": 0,
+    "warnings": 1,
+    "parts": 1,
+    "routeLength": 143.09392630964197
+   },
+   "timings": {
+    "readMs": 17.81970000000001,
+    "parseMs": 42.606899999999996,
+    "convertMs": 63.612900000000025,
+    "latticeMs": 569.1517,
+    "partsMs": 7.36340000000007,
+    "routeMs": 32.39319999999998,
+    "sceneMs": 38.47199999999998,
+    "zoneRoomsMs": 24.810100000000034,
+    "geojsonMs": 798.9043000000001
+   },
+   "rssMB": 351
+  },
+  {
+   "label": "LOD1 model B",
+   "source": "topologicpy",
+   "levels": 4,
+   "rooms": 54,
+   "walkableRooms": 52,
+   "doors": 55,
+   "doorKinds": {
+    "door": 46,
+    "opening": 7,
+    "exit": 2,
+    "stair": 3
+   },
+   "links": 3,
+   "warnings": 0,
+   "adjacency": {
+    "wallPairs": 110,
+    "wallPairsFound": 110,
+    "slabPairs": 72
+   },
+   "geometry": {
+    "walls": 184,
+    "floors": 66,
+    "ceilings": 8,
+    "doors": 55,
+    "cores": 0
+   },
+   "graph": {
+    "nodes": 4946,
+    "edges": 14473,
+    "blockedEdges": 753,
+    "spacing": 0.5,
+    "stairNodes": 51,
+    "doorNodes": 55,
+    "coreStairsAssumed": 0,
+    "cores": 0,
+    "coresLinked": 0,
+    "parts": 1,
+    "partsOver20": 1,
+    "mainShare": 1,
+    "storeys": [
+     {
+      "storey": 0,
+      "nodes": 764,
+      "mainShare": 1
+     },
+     {
+      "storey": 1,
+      "nodes": 1238,
+      "mainShare": 1
+     },
+     {
+      "storey": 2,
+      "nodes": 1505,
+      "mainShare": 1
+     },
+     {
+      "storey": 3,
+      "nodes": 1333,
+      "mainShare": 1
+     }
+    ],
+    "everyStoreyJoined": true,
+    "storeysJoined": 4,
+    "storeysWalked": 4,
+    "exits": 2,
+    "exitSource": "LOD1 exit",
+    "flaggedExits": 2,
+    "floorNodesReachingAnExit": 1,
+    "route": {
+     "found": true,
+     "length": 35.06531256813454,
+     "descent": 6.6000001430511475,
+     "plan": 13.238201804275787,
+     "nodes": 68,
+     "stairNodes": 34,
+     "doorNodes": 5,
+     "ms": 1.530100000000175
+    }
+   },
+   "flamescapes": {
+    "setupMs": 26.702199999999948,
+    "grid": [
+     30,
+     22,
+     41
+    ],
+    "cell": 0.3173748645888002,
+    "cells": 27060,
+    "clipped": true,
+    "solidShare": 0.14645232815964523,
+    "contentsCells": 856,
+    "contentsAreaM2": 43.11107239994097,
+    "ignition": true,
+    "doors": "open"
+   },
+   "zone": {
+    "spaces": 52,
+    "rooms": 52,
+    "nodes": 4946,
+    "inFootprint": 4020,
+    "assigned": 4925,
+    "joins": 48,
+    "vents": 7,
+    "inside": 0,
+    "unplaced": 0,
+    "sizedFromIfc": 55,
+    "inFootprintShare": 0.812778002426203
+   },
+   "geojson": {
+    "features": 112,
+    "sameCounts": true,
+    "areaDiffM2": 0,
+    "warnings": 0,
+    "parts": 1,
+    "routeLength": 35.06531256813454
+   },
+   "timings": {
+    "readMs": 3.8226999999999407,
+    "parseMs": 3.8583000000000993,
+    "convertMs": 2.919300000000021,
+    "latticeMs": 50.21250000000009,
+    "partsMs": 0.37400000000002365,
+    "routeMs": 1.530100000000175,
+    "sceneMs": 26.702199999999948,
+    "zoneRoomsMs": 5.763300000000072,
+    "geojsonMs": 58.231700000000046
+   },
+   "rssMB": 376
+  },
+  {
+   "label": "duplex-apartment.ifc",
+   "source": "ifc-spaces",
+   "levels": 3,
+   "rooms": 21,
+   "walkableRooms": 21,
+   "doors": 14,
+   "doorKinds": {
+    "exit": 4,
+    "door": 10,
+    "stair": 2
+   },
+   "links": 2,
+   "warnings": 0,
+   "ifcSpaceMeshes": 21,
+   "geometry": {
+    "walls": 148,
+    "floors": 19,
+    "ceilings": 17,
+    "doors": 14,
+    "cores": 0
+   },
+   "graph": {
+    "nodes": 1914,
+    "edges": 5542,
+    "blockedEdges": 51,
+    "spacing": 0.5,
+    "stairNodes": 34,
+    "doorNodes": 14,
+    "coreStairsAssumed": 0,
+    "cores": 0,
+    "coresLinked": 0,
+    "parts": 3,
+    "partsOver20": 3,
+    "mainShare": 0.3463949843260188,
+    "storeys": [
+     {
+      "storey": 0,
+      "nodes": 630,
+      "mainShare": 0.5031746031746032
+     },
+     {
+      "storey": 1,
+      "nodes": 642,
+      "mainShare": 0.5015576323987538
+     },
+     {
+      "storey": 2,
+      "nodes": 594,
+      "mainShare": 0
+     }
+    ],
+    "everyStoreyJoined": false,
+    "storeysJoined": 0,
+    "storeysWalked": 3,
+    "exits": 4,
+    "exitSource": "LOD1 exit",
+    "flaggedExits": 4,
+    "floorNodesReachingAnExit": 0.6816720257234726,
+    "route": {
+     "found": true,
+     "length": 18.555064674871293,
+     "descent": 3.100000023841858,
+     "plan": 2.7915723561553407,
+     "nodes": 42,
+     "stairNodes": 17,
+     "doorNodes": 2,
+     "ms": 2.0138999999999214
+    }
+   },
+   "flamescapes": {
+    "setupMs": 55.432000000000016,
+    "grid": [
+     30,
+     30,
+     33
+    ],
+    "cell": 0.3173748645888002,
+    "cells": 29700,
+    "clipped": true,
+    "solidShare": 0.2336026936026936,
+    "contentsCells": 2778,
+    "contentsAreaM2": 139.90953169046264,
+    "ignition": true,
+    "doors": "open"
+   },
+   "zone": {
+    "spaces": 21,
+    "rooms": 21,
+    "nodes": 1914,
+    "inFootprint": 1875,
+    "assigned": 1900,
+    "joins": 10,
+    "vents": 4,
+    "inside": 0,
+    "unplaced": 0,
+    "sizedFromIfc": 14,
+    "inFootprintShare": 0.9796238244514106
+   },
+   "geojson": {
+    "features": 37,
+    "sameCounts": true,
+    "areaDiffM2": 0.0000015657051903872343,
+    "warnings": 0,
+    "parts": 3,
+    "routeLength": 18.555064772488738
+   },
+   "timings": {
+    "readMs": 82.33670000000006,
+    "parseMs": 4.8137000000001535,
+    "convertMs": 2.0851000000000113,
+    "latticeMs": 30.723999999999933,
+    "partsMs": 1.491800000000012,
+    "routeMs": 2.0138999999999214,
+    "sceneMs": 55.432000000000016,
+    "zoneRoomsMs": 2.388500000000022,
+    "geojsonMs": 28.15390000000025
+   },
+   "rssMB": 318,
+   "fullGeometry": {
+    "extractMs": 94.97759999999971,
+    "latticeMs": 31.385999999999967,
+    "nodes": 1540,
+    "parts": 2,
+    "partsOver20": 2,
+    "mainShare": 0.512987012987013,
+    "exits": 4,
+    "exitSource": "Pset_DoorCommon.IsExternal",
+    "route": {
+     "found": true,
+     "length": 17.460007928627395,
+     "descent": 3.1190000772476196,
+     "plan": 2.8553382813043284,
+     "nodes": 39,
+     "stairNodes": 15,
+     "doorNodes": 2,
+     "ms": 0.27739999999994325
+    }
+   }
+  },
+  {
+   "label": "AC20-FZK-Haus.ifc",
+   "source": "ifc-spaces",
+   "levels": 2,
+   "rooms": 7,
+   "walkableRooms": 7,
+   "doors": 5,
+   "doorKinds": {
+    "door": 3,
+    "exit": 2,
+    "stair": 1
+   },
+   "links": 1,
+   "warnings": 0,
+   "ifcSpaceMeshes": 7,
+   "geometry": {
+    "walls": 43,
+    "floors": 6,
+    "ceilings": 6,
+    "doors": 5,
+    "cores": 0
+   },
+   "graph": {
+    "nodes": 1020,
+    "edges": 3224,
+    "blockedEdges": 76,
+    "spacing": 0.5,
+    "stairNodes": 14,
+    "doorNodes": 5,
+    "coreStairsAssumed": 0,
+    "cores": 0,
+    "coresLinked": 0,
+    "parts": 1,
+    "partsOver20": 1,
+    "mainShare": 1,
+    "storeys": [
+     {
+      "storey": 0,
+      "nodes": 523,
+      "mainShare": 1
+     },
+     {
+      "storey": 1,
+      "nodes": 478,
+      "mainShare": 1
+     }
+    ],
+    "everyStoreyJoined": true,
+    "storeysJoined": 2,
+    "storeysWalked": 2,
+    "exits": 2,
+    "exitSource": "LOD1 exit",
+    "flaggedExits": 2,
+    "floorNodesReachingAnExit": 1,
+    "route": {
+     "found": true,
+     "length": 8.42369278043545,
+     "descent": 0,
+     "plan": 7.849785523128936,
+     "nodes": 15,
+     "stairNodes": 0,
+     "doorNodes": 2,
+     "ms": 0.5167999999998756
+    }
+   },
+   "flamescapes": {
+    "setupMs": 26.435899999999947,
+    "grid": [
+     30,
+     26,
+     31
+    ],
+    "cell": 0.3173748645888002,
+    "cells": 24180,
+    "clipped": true,
+    "solidShare": 0.12047146401985112,
+    "contentsCells": 916,
+    "contentsAreaM2": 46.132876540123746,
+    "ignition": true,
+    "doors": "open"
+   },
+   "zone": {
+    "spaces": 7,
+    "rooms": 7,
+    "nodes": 1020,
+    "inFootprint": 1008,
+    "assigned": 1016,
+    "joins": 3,
+    "vents": 2,
+    "inside": 0,
+    "unplaced": 0,
+    "sizedFromIfc": 5,
+    "inFootprintShare": 0.9882352941176471
+   },
+   "geojson": {
+    "features": 13,
+    "sameCounts": true,
+    "areaDiffM2": 0.000014521378346898928,
+    "warnings": 0,
+    "parts": 1,
+    "routeLength": 8.423692629543112
+   },
+   "timings": {
+    "readMs": 42.75770000000011,
+    "parseMs": 4.213400000000092,
+    "convertMs": 0.6689000000001215,
+    "latticeMs": 10.56100000000015,
+    "partsMs": 0.07789999999977226,
+    "routeMs": 0.5167999999998756,
+    "sceneMs": 26.435899999999947,
+    "zoneRoomsMs": 0.7591000000002168,
+    "geojsonMs": 10.695600000000013
+   },
+   "rssMB": 325,
+   "fullGeometry": {
+    "extractMs": 144.20350000000008,
+    "latticeMs": 21.885399999999663,
+    "nodes": 1092,
+    "parts": 2,
+    "partsOver20": 1,
+    "mainShare": 0.9990842490842491,
+    "exits": 2,
+    "exitSource": "IfcRelSpaceBoundary.EXTERNAL",
+    "route": {
+     "found": true,
+     "length": 8.535533159644647,
+     "descent": 0,
+     "plan": 7.382411565240206,
+     "nodes": 16,
+     "stairNodes": 0,
+     "doorNodes": 2,
+     "ms": 0.22379999999975553
+    }
+   }
+  },
+  {
+   "label": "Office_A_20110811.ifc",
+   "source": "ifc-spaces",
+   "levels": 3,
+   "rooms": 99,
+   "walkableRooms": 97,
+   "doors": 93,
+   "doorKinds": {
+    "door": 87,
+    "exit": 6,
+    "stair": 2
+   },
+   "links": 2,
+   "warnings": 1,
+   "ifcSpaceMeshes": 99,
+   "geometry": {
+    "walls": 1173,
+    "floors": 95,
+    "ceilings": 95,
+    "doors": 92,
+    "cores": 0
+   },
+   "graph": {
+    "nodes": 16947,
+    "edges": 52613,
+    "blockedEdges": 1956,
+    "spacing": 0.5,
+    "stairNodes": 46,
+    "doorNodes": 92,
+    "coreStairsAssumed": 0,
+    "cores": 0,
+    "coresLinked": 0,
+    "parts": 3,
+    "partsOver20": 3,
+    "mainShare": 0.9611140614858087,
+    "storeys": [
+     {
+      "storey": 0,
+      "nodes": 0,
+      "mainShare": null
+     },
+     {
+      "storey": 1,
+      "nodes": 8543,
+      "mainShare": 0.9230949315228842
+     },
+     {
+      "storey": 2,
+      "nodes": 8266,
+      "mainShare": 1
+     }
+    ],
+    "everyStoreyJoined": true,
+    "storeysJoined": 2,
+    "storeysWalked": 2,
+    "exits": 6,
+    "exitSource": "LOD1 exit",
+    "flaggedExits": 6,
+    "floorNodesReachingAnExit": 1,
+    "route": {
+     "found": true,
+     "length": 52.48416766294669,
+     "descent": 4.267220973968506,
+     "plan": 34.53139412337996,
+     "nodes": 104,
+     "stairNodes": 22,
+     "doorNodes": 1,
+     "ms": 17.708599999999933
+    }
+   },
+   "flamescapes": {
+    "setupMs": 59.16170000000011,
+    "grid": [
+     41,
+     15,
+     41
+    ],
+    "cell": 0.3173748645888002,
+    "cells": 25215,
+    "clipped": true,
+    "solidShare": 0.25492762244695616,
+    "contentsCells": 2634,
+    "contentsAreaM2": 132.65720175402396,
+    "ignition": true,
+    "doors": "open"
+   },
+   "zone": {
+    "spaces": 97,
+    "rooms": 97,
+    "nodes": 16947,
+    "inFootprint": 16887,
+    "assigned": 16921,
+    "joins": 86,
+    "vents": 6,
+    "inside": 0,
+    "unplaced": 0,
+    "sizedFromIfc": 92,
+    "inFootprintShare": 0.9964595503628961
+   },
+   "geojson": {
+    "features": 194,
+    "sameCounts": true,
+    "areaDiffM2": 0.000022709727545588976,
+    "warnings": 0,
+    "parts": 3,
+    "routeLength": 52.45229844030642
+   },
+   "timings": {
+    "readMs": 85.39319999999998,
+    "parseMs": 13.606200000000172,
+    "convertMs": 16.501800000000003,
+    "latticeMs": 241.96119999999974,
+    "partsMs": 0.9023999999999432,
+    "routeMs": 17.708599999999933,
+    "sceneMs": 59.16170000000011,
+    "zoneRoomsMs": 6.498000000000047,
+    "geojsonMs": 268.5360999999998
+   },
+   "rssMB": 364,
+   "fullGeometry": {
+    "extractMs": 345.10450000000037,
+    "latticeMs": 221.69180000000006,
+    "nodes": 17470,
+    "parts": 4,
+    "partsOver20": 4,
+    "mainShare": 0.9598168288494562,
+    "exits": 6,
+    "exitSource": "Pset_DoorCommon.IsExternal",
+    "route": {
+     "found": true,
+     "length": 54.05612371082409,
+     "descent": 4.267221033573151,
+     "plan": 34.620344166486674,
+     "nodes": 110,
+     "stairNodes": 22,
+     "doorNodes": 2,
+     "ms": 3.5183999999999287
+    }
+   }
+  },
+  {
+   "label": "dental_clinic.ifc",
+   "source": "ifc-spaces",
+   "levels": 5,
+   "rooms": 269,
+   "walkableRooms": 267,
+   "doors": 242,
+   "doorKinds": {
+    "door": 224,
+    "exit": 18,
+    "stair": 3
+   },
+   "links": 3,
+   "warnings": 1,
+   "ifcSpaceMeshes": 269,
+   "geometry": {
+    "walls": 2844,
+    "floors": 264,
+    "ceilings": 264,
+    "doors": 241,
+    "cores": 0
+   },
+   "graph": {
+    "nodes": 33394,
+    "edges": 102847,
+    "blockedEdges": 3837,
+    "spacing": 0.5,
+    "stairNodes": 76,
+    "doorNodes": 239,
+    "coreStairsAssumed": 0,
+    "cores": 0,
+    "coresLinked": 0,
+    "parts": 17,
+    "partsOver20": 16,
+    "mainShare": 0.7030604300173684,
+    "storeys": [
+     {
+      "storey": 0,
+      "nodes": 12877,
+      "mainShare": 0.9004426496854857
+     },
+     {
+      "storey": 1,
+      "nodes": 12154,
+      "mainShare": 0.9526081948329768
+     },
+     {
+      "storey": 2,
+      "nodes": 296,
+      "mainShare": 0
+     },
+     {
+      "storey": 3,
+      "nodes": 220,
+      "mainShare": 0
+     },
+     {
+      "storey": 4,
+      "nodes": 7532,
+      "mainShare": 0
+     }
+    ],
+    "everyStoreyJoined": false,
+    "storeysJoined": 2,
+    "storeysWalked": 5,
+    "exits": 16,
+    "exitSource": "LOD1 exit",
+    "flaggedExits": 16,
+    "floorNodesReachingAnExit": 0.7385047915595997,
+    "route": {
+     "found": true,
+     "length": 59.401591003721265,
+     "descent": 0,
+     "plan": 43.431451532150035,
+     "nodes": 108,
+     "stairNodes": 0,
+     "doorNodes": 4,
+     "ms": 47.28409999999985
+    }
+   },
+   "flamescapes": {
+    "setupMs": 82.07890000000043,
+    "grid": [
+     36,
+     20,
+     36
+    ],
+    "cell": 0.3701860420563766,
+    "cells": 25920,
+    "clipped": true,
+    "solidShare": 0.32689043209876545,
+    "contentsCells": 4188,
+    "contentsAreaM2": 286.95695580566723,
+    "ignition": true,
+    "doors": "open"
+   },
+   "zone": {
+    "spaces": 267,
+    "rooms": 267,
+    "nodes": 33394,
+    "inFootprint": 33264,
+    "assigned": 33348,
+    "joins": 223,
+    "vents": 20,
+    "inside": 0,
+    "unplaced": 0,
+    "sizedFromIfc": 243,
+    "inFootprintShare": 0.9961070851051087
+   },
+   "geojson": {
+    "features": 514,
+    "sameCounts": true,
+    "areaDiffM2": 0.000010781187484099064,
+    "warnings": 0,
+    "parts": 17,
+    "routeLength": 59.40562626613135
+   },
+   "timings": {
+    "readMs": 275.0063,
+    "parseMs": 28.54639999999972,
+    "convertMs": 26.55119999999988,
+    "latticeMs": 540.4706000000006,
+    "partsMs": 1.9299999999993815,
+    "routeMs": 47.28409999999985,
+    "sceneMs": 82.07890000000043,
+    "zoneRoomsMs": 11.120299999999588,
+    "geojsonMs": 616.3945000000003
+   },
+   "rssMB": 440,
+   "fullGeometry": {
+    "extractMs": 1321.7416999999996,
+    "latticeMs": 492.7340000000004,
+    "nodes": 33654,
+    "parts": 18,
+    "partsOver20": 17,
+    "mainShare": 0.7268081060200867,
+    "exits": 17,
+    "exitSource": "Pset_DoorCommon.IsExternal",
+    "route": {
+     "found": true,
+     "length": 57.95155857127256,
+     "descent": 4.570000231266022,
+     "plan": 35.740123615096294,
+     "nodes": 116,
+     "stairNodes": 24,
+     "doorNodes": 4,
+     "ms": 7.282400000000052
+    }
+   }
+  }
+ ]
+}

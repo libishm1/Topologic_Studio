@@ -20,6 +20,7 @@ import {
   Choices,
   Disclosure,
   Empty,
+  FileButton,
   Icon,
   KeyValue,
   Notice,
@@ -124,7 +125,7 @@ function EgressCheck({ semantics }) {
   const doors = semantics.doors || [];
   const exits = doors.filter((d) => d.exit);
   const sources = [...new Set(exits.map((d) => d.exit))].map((s) =>
-    s.startsWith("Pset_DoorCommon") ? s.split(".")[1] : "external space boundary",
+    s.startsWith("Pset_DoorCommon") ? s.split(".")[1] : s === "LOD1 exit" ? "marked in the rooms model" : "external space boundary",
   );
   return (
     <>
@@ -301,6 +302,53 @@ function DescribeModel({ describe, onDescribe, onStop, onEngine }) {
   );
 }
 
+/** What a rooms (LOD1) model holds, what its reading warned of, and its export as a GeoJSON plan. */
+function RoomsModel({ model, file, modelInfo, semantics, onExport }) {
+  const walked = model.rooms.filter((r) => r.walkable !== false).length;
+  const kinds = (kind) => model.links.filter((l) => l.kind === kind).length;
+  const warnings = model.meta?.warnings || [];
+  const source = { topologicpy: "TopologicPy LOD1 export", geojson: "GeoJSON plan", "ifc-spaces": "IFC spaces", drawing: "floor-plan drawings" };
+  return (
+    <>
+      <div className="stats">
+        <Stat label="Rooms" value={fmt(model.rooms.length)} />
+        <Stat label="Storeys" value={fmt(model.levels.length)} />
+        <Stat label="Doors" value={fmt(model.doors.length)} />
+        <Stat label="Stairs" value={fmt(kinds("stair") + kinds("ramp"))} />
+      </div>
+      <KeyValue
+        entries={[
+          ["File", file?.name || "-"],
+          ["Source", source[model.meta?.source] || model.meta?.source || "rooms model"],
+          ["Walked in", `${fmt(walked)} of ${fmt(model.rooms.length)} rooms`],
+          ["Lifts", fmt(kinds("lift"))],
+          ["Opened in", formatMs(modelInfo.totalMs)],
+        ]}
+      />
+      <p className="field__hint">
+        Drawn as rooms: walls 0.2 m thick on the rooms&apos; outlines, slabs under each floor, stairs as treads along their walking lines. Shafts, voids
+        and tanks are not walked in.
+      </p>
+      {warnings.length > 0 && (
+        <Notice tone="warning">
+          <strong>
+            {warnings.length} warning{warnings.length > 1 ? "s" : ""} while reading the model.
+          </strong>{" "}
+          {warnings.slice(0, 4).join(" ")}
+          {warnings.length > 4 ? ` And ${warnings.length - 4} more.` : ""}
+        </Notice>
+      )}
+      <EgressCheck semantics={semantics} />
+      <div className="field">
+        <Button block onClick={onExport}>
+          Export as a GeoJSON plan
+        </Button>
+        <p className="field__hint">Rooms, doors, stairs and storeys in plan metres, the format Studio reads back and other tools can edit.</p>
+      </div>
+    </>
+  );
+}
+
 export function ModelPanel({
   studio,
   examples,
@@ -313,8 +361,11 @@ export function ModelPanel({
   onDescribe,
   onStopDescribe,
   onDescribeEngine,
+  onOpenRooms,
+  onExportRooms,
 }) {
   const { modelInfo, file, settings, setSettings, cacheInfo } = studio;
+  const rooms = modelInfo?.lod1;
 
   return (
     <>
@@ -326,6 +377,8 @@ export function ModelPanel({
       <div className="step-body">
         {!modelInfo ? (
           <Empty>No model open. Use Open IFC above, drop a file on the viewport, or pick an example below.</Empty>
+        ) : rooms ? (
+          <RoomsModel model={rooms} file={file} modelInfo={modelInfo} semantics={studio.semantics} onExport={onExportRooms} />
         ) : (
           <>
             <div className="stats">
@@ -400,6 +453,16 @@ export function ModelPanel({
           </ul>
         </Section>
       )}
+
+      <Section title="Rooms models (LOD1)" defaultOpen={false}>
+        <p className="field__hint">
+          A building as rooms, storeys, doors and stairs, with no IFC: a TopologicPy LOD1 export (the CellComplex JSON, with its circulation and
+          adjacency graphs chosen together with it) or a GeoJSON plan. The graph, routes, code check and both fire models run on it as on an IFC.
+        </p>
+        <FileButton accept=".json,.geojson" multiple onFile={onOpenRooms}>
+          Open a rooms model
+        </FileButton>
+      </Section>
 
       <Section title="Local cache" defaultOpen={false} badge={formatBytes(cacheInfo.bytes)}>
         <p className="field__hint">

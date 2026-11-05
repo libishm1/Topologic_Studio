@@ -1054,6 +1054,67 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
   }
 }
 
+// ---- 9. a rooms (LOD1) model ---------------------------------------------------
+//
+// Added 2026-11-05: a GeoJSON plan (src/core/lod1.js) opens with no IFC, is
+// drawn as rooms, exports back as a plan, and gives a graph joined across its
+// two storeys by the stair.
+
+console.log("\n[9] Rooms (LOD1) model");
+{
+  const rect = (x0, y0, x1, y1) => [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]];
+  const room = (id, level, coords, name) => ({ type: "Feature", geometry: { type: "Polygon", coordinates: coords }, properties: { id, level, name } });
+  const point = (x, y, props) => ({ type: "Feature", geometry: { type: "Point", coordinates: [x, y] }, properties: props });
+  const plan = {
+    type: "FeatureCollection",
+    properties: { name: "two storeys", levels: [{ id: "G", ffl: 0, height: 3 }, { id: "1", ffl: 3, height: 3 }] },
+    features: [
+      room("hall", "G", rect(0, 0, 6, 5), "Hall"),
+      room("st-g", "G", rect(6, 0, 9, 5), "Stair"),
+      room("corr", "1", rect(0, 0, 6, 5), "Corridor"),
+      room("st-1", "1", rect(6, 0, 9, 5), "Stair"),
+      room("bed", "1", rect(0, 5, 6, 9), "Bedroom"),
+      point(6, 2.5, { level: "G", kind: "door", width: 1 }),
+      point(6, 2.5, { level: "1", kind: "door", width: 1 }),
+      point(3, 5, { level: "1", kind: "door", width: 0.9, rooms: ["corr", "bed"] }),
+      { type: "Feature", geometry: { type: "LineString", coordinates: [[0, 2], [0, 3.2]] }, properties: { level: "G", kind: "exit" } },
+      point(7.5, 2.5, { level: "G", kind: "stair", toLevel: "1" }),
+    ],
+  };
+  const planFile = { name: "studio-two-storey-plan.geojson", mimeType: "application/geo+json", buffer: Buffer.from(JSON.stringify(plan)) };
+  // The step is passed in: the function runs in the page, where no closure reaches.
+  const onStep = (step) => page.waitForFunction((s) => document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.step === s, step, { timeout: 60000 });
+  await page.getByRole("tab", { name: /^Model/ }).click();
+  await page.getByText("Rooms models (LOD1)", { exact: true }).click();
+  const tOpen = Date.now();
+  await page.locator('input[type="file"][multiple]').setInputFiles(planFile);
+  const opened = await onStep("graph").then(() => true).catch(() => false);
+  const said = opened ? `${((Date.now() - tOpen) / 1000).toFixed(1)}s` : (await page.locator(".toast").allInnerTexts().catch(() => [])).join(" | ").replace(/\s+/g, " ").slice(0, 300);
+  record(opened, "a GeoJSON rooms plan opens with no IFC", said);
+  if (opened) timing("Open a GeoJSON rooms plan (choose to drawn)", Date.now() - tOpen);
+  if (opened) {
+    await page.getByRole("tab", { name: /^Model/ }).click();
+    const text = await page.locator(".panel__scroll").first().innerText();
+    record(/Rooms\s+5\b/.test(text) && /Storeys\s+2\b/.test(text) && /GeoJSON plan/.test(text), "  and the Model step lists its rooms and storeys");
+    const [download] = await Promise.all([
+      page.waitForEvent("download", { timeout: 10000 }).catch(() => null),
+      page.getByRole("button", { name: "Export as a GeoJSON plan" }).click(),
+    ]);
+    const saved = download?.suggestedFilename() || "";
+    record(/\.geojson$/.test(saved), "  and exports as a GeoJSON plan", saved || "no download");
+    await page.getByRole("tab", { name: /^Graph/ }).click();
+    await page.getByRole("button", { name: /Build egress graph|Rebuild graph/ }).first().click();
+    const built = await onStep("route").then(() => true).catch(() => false);
+    let stats = "";
+    if (built) {
+      await page.getByRole("tab", { name: /^Graph/ }).click();
+      stats = await page.locator(".panel__scroll").first().innerText();
+    }
+    record(built && /Reachable\s+100%/.test(stats), "  its graph joins both storeys through the stair", (stats.match(/Nodes\s+[\d,]+/) || ["no graph"])[0].replace(/\s+/g, " "));
+    await shot(page, "rooms-model");
+  }
+}
+
 // ---- report -----------------------------------------------------------------
 
 console.log("\n=== Timing (as a user sees it) ===");

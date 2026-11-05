@@ -150,10 +150,9 @@ export function Viewport({
       setDragOver(false);
       const dropped = Array.from(event.dataTransfer?.files || []);
       const ifc = dropped.find((f) => f.name.toLowerCase().endsWith(".ifc"));
+      // JSON files dropped together are one rooms model (a TopologicPy export and its graphs).
       if (ifc) onFile(ifc);
-      else if (dropped.length) {
-        onFile(dropped[0]);
-      }
+      else if (dropped.length) onFile(dropped);
     },
     [onFile],
   );
@@ -207,7 +206,8 @@ export function Viewport({
               <p style={{ fontWeight: 650, color: "var(--text-primary)" }}>Drop an .ifc file here</p>
               <p style={{ fontSize: 13 }}>
                 IFC 2x3 or IFC4. Converted once and cached in this browser, so the same file opens faster
-                the second time.
+                the second time. A rooms model (a TopologicPy LOD1 export with its graphs, or a GeoJSON
+                plan) can be dropped here too.
               </p>
               <FileButton accept=".ifc" onFile={onFile} onIntent={onIntent}>
                 Choose a file
