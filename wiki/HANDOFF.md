@@ -2,8 +2,10 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 49ae6e5, 26 commits after the previous live f8bc65e.
-  - **Live checks:** the last three deploys (4f0f82a, 00ec1a4, 49ae6e5) each passed the browser suite against the live site with 0 failed steps.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 95018d5 (the app of ae7db83, the shielded learner as default), 32 commits after the previous live f8bc65e.
+  - **The deploy of ae7db83 timed out:** `actions/deploy-pages` aborted with "Timeout reached" after a successful build, a GitHub Pages fault. The workflow runs only on changes under `topologicpy-web-frontend/` or to itself, so an empty commit (747f6b3) did not redeploy.
+  - **Manual deploys:** 95018d5 adds `workflow_dispatch`, so a failed deploy can be run again from the Actions tab; that change deployed it.
+  - **Live checks:** every deploy this round (4f0f82a, 00ec1a4, 49ae6e5, 95018d5) passed the browser suite against the live site with 0 failed steps. Live, the shielded agent took the earliest route (39 moves, certified).
   - **The TopologicPy Navigation cross-check** passes in 1.6 to 82 s when the Render backend is awake. Asleep (free tier), the page's capability probe fails and the step reports the button disabled; wake it with `curl https://topologicstudio-backend.onrender.com/health` and rerun.
   - **The local `main`** is a stale ref (f936b86). Deploy by fast-forwarding `origin/main` to `next/browser-core` (`git push origin HEAD:main` after `git merge-base --is-ancestor origin/main HEAD`).
   - **The Render backend** is unchanged since 4f09929 and is deployed by hand.
