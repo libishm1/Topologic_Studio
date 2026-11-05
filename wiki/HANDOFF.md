@@ -1,21 +1,81 @@
-# Handoff: Topologic Studio Next (2026-11-05)
+# Handoff: Topologic Studio Next (2026-11-05, evening)
 
 ## State
 
-- Live: https://libishm1.github.io/Topologic_Studio/ is `origin/main` at f8bc65e (the 4f09929 app plus the new-user README). `next/browser-core` is at 7df6041, 13 commits ahead and not deployed: the Flamescapes solver and toggle, fire classes, the ignition review and "Likely ignition points", the Lean seventh batch, and the architecture review's fixes. The local `main` branch is a stale February ref (f936b86, an ancestor of this branch); deploy by fast-forwarding `origin/main` to `next/browser-core`, not through the local `main`. The Render backend (`topologicstudio-backend`) is deployed by hand from its dashboard; it has no changes since 4f09929.
-- Gates before any deploy: `npm test` (186 tests on 2026-11-05), `npx eslint src`, a Pages build (`npm run build` with `BASE_PATH=/Topologic_Studio/`; from Git Bash prefix `MSYS_NO_PATHCONV=1`), and `node tools/browser-test.mjs` desktop and `--mobile` against `vite preview` on the sub-path, all with 0 failed steps.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 49ae6e5, 26 commits after the previous live f8bc65e.
+  - **Live checks:** the last three deploys (4f0f82a, 00ec1a4, 49ae6e5) each passed the browser suite against the live site with 0 failed steps.
+  - **The TopologicPy Navigation cross-check** passes in 1.6 to 82 s when the Render backend is awake. Asleep (free tier), the page's capability probe fails and the step reports the button disabled; wake it with `curl https://topologicstudio-backend.onrender.com/health` and rerun.
+  - **The local `main`** is a stale ref (f936b86). Deploy by fast-forwarding `origin/main` to `next/browser-core` (`git push origin HEAD:main` after `git merge-base --is-ancestor origin/main HEAD`).
+  - **The Render backend** is unchanged since 4f09929 and is deployed by hand.
+- **Gates before any deploy** (all 0 failed steps):
+  - `npm test` in `topologicpy-web-frontend`: 207 committed tests;
+  - `npx eslint src`;
+  - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
+  - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview --port 4173` on that sub-path.
 
-## Resume here (2026-11-05)
+  The suite now also checks:
+  - the Model step identifies elements;
+  - the run card says embers are on and gives the openings;
+  - every Methods equation typesets;
+  - a guided run reaches its route.
+- **Lean:** 27 modules, 1264 theorems, 284 AxiomCheck lines, standard axioms only. The working copy (`lean/fireegress` under the user's home) and `formal/fireegress` match byte for byte.
+- **Still running when this was written,** uncommitted in the worktree:
+  - **The Q-learning study agent:**
+    - `src/core/rlSafe.js` and its test (10 tests, which `npm test` picks up locally);
+    - an edit to `src/workers/rl.worker.js`;
+    - `tools/rl-bench.mjs`;
+    - the note `wiki/research/rl-egress-study-2026-11-05.md`;
+    - Lean in the working copy.
+  - **The IFCNet retraining pilot agent:**
+    - `tools/identify-features.mjs`, `tools/identify-pilot.py`;
+    - `wiki/research/ifcnet-furniture-study-plan-2026-11-05.md`;
+    - `benchmark/results/2026-11-05-ifcnet-pilot.json`.
+  - Review both reports before committing anything of theirs (see Resume here).
+- **Uncommitted on purpose:** `wiki/research/free-inference-gpu-options-2026-11-05.md`. Its application drafts speak in the user's voice and the repository is public; the user decides.
 
-Committed and passing: everything through 0e06fab (187 tests). Uncommitted in the worktree, by owner:
+## Resume here (2026-11-05, evening)
 
-- WebGPU port: done and committed (a3093a7). Check it with `node tools/flamescapes-gpu-check.mjs --quick --phase onestep` after any change to `flamescapes.js`; every solver change needs the same change in `flamescapesGpu/kernels.js`. Open: a GPU lost mid-run ends the run with a message to switch to the CPU, rather than rerunning on the CPU by itself.
-- IFC object identification study (background agent): `tools/identify-bench.mjs`, `tools/identify-ifcnet.py`, `src/core/identify.js`, `src/core/identifyGeometry.js`, `src/workers/identify.worker.js`. The brief: survey what can be packaged as browser ONNX (IFCNet, RWTH-E3D/ifcnet-models, MIT code with pretrained MVCNN, DGCNN and MeshNet), port the best one after checking the weights' and dataset's terms, optimise it (quantisation, input size, WASM or WebGPU), and benchmark it against rules, text embeddings and a small LLM (Qwen2.5-0.5B-Instruct through Transformers.js) on the same labelled elements for accuracy, latency and download size. Outputs: `wiki/research/ifc-identification-benchmark-2026-11-05.md`, `benchmark/results/2026-11-05-identify.json`. Weights with unstated terms stay out of the public build. An in-browser IFC description (LLM, lazy and grounded on the parsed facts) depends on its outcome. Watch for bloat: nothing loads until asked for.
-- Docs: committed (0e06fab). Still to do: a Flamescapes screenshot (`node tools/readme-shots.mjs`, job `flamescapes`).
-- `benchmark/results/2026-11-05-fire.json`: stale. Its timings were taken while agents ran, and before the burning floor, which removed about 12,000 idle flame particles (the CPU run fell from 24.7 to 9.4 s). Re-run `node tools/fire-bench.mjs` on a quiet machine and update the speed lines here and in the README.
-- Scrub the third-party local paths from `Code01.ipynb` before it is ever committed.
+1. **Read the two agents' reports**, verify their most consequential claims yourself, then commit their work in separate commits.
+   - **RL:** the diagnosis (training defect or model defect), the new method (`rlSafe.js`), the old-vs-new benchmark and the Lean results. Wiring it into the UI was left to the main session: do it in `App.jsx` and `Panels.jsx`, then the Methods page and README.
+   - **IFCNet pilot:** the licence table (Florent Poux's two repositories, the candidate datasets), the novelty check, the pilot numbers and the full-campaign estimate. The full training campaign needs the user's approval first: state its compute time.
+2. **Decisions for the user:**
+   - **IFCNet weights:** write to the IFCNet authors (Christoph Emunds, E3D, RWTH Aachen) for a licence on the weights now shipped in `public/models/` with credit. Retraining only on openly licensed data is the alternative.
+   - **"Describe this model":** whether to build it. The recommendation is Chrome's built-in Prompt API (Gemini Nano, on device, Chrome 148+ desktop, per Google's page updated 2026-10-21) first. Second, an opt-in Cloudflare Worker with Workers AI for other browsers, but only if wanted. Not FreeInference: its terms (section 5) log prompts and may publish derived data.
+   - Whether to commit the free-inference note.
+3. **Then** the gates, deploy, the live check, and update this file.
 
-Then: the gates, fast-forward `origin/main`, the live check, and update this file.
+## This round (2026-11-05, afternoon and evening)
+
+- **Identification** (study 4ef5e1e; app 8ad8b3d):
+  - **Rules:** `src/core/identify.js` names elements by IFC class, else name, else box. Accuracy 0.86 and macro-F1 0.83 on 6,066 typed elements from 45 models; 0.55 to 0.60 on 159 hand-labelled proxies. The full study is `wiki/research/ifc-identification-benchmark-2026-11-05.md`.
+  - **IFCNet:** the DGCNN is ported to ONNX, exactly and pruned: 1.45 MB, and 22 to 45 times faster with no answer changed. It reproduces the paper's balanced accuracy (0.799 against 0.791). It adds almost nothing to the rules.
+  - **Shipped weights:** by the user's decision the weights are in the public build (`public/models/ifcnet-dgcnn-2048.onnx`, `NOTICE-ifcnet.md`). IFCNet's code is MIT; the weights state no licence, and they come down on request.
+  - **The Model step:** "What the elements are" shows the rules at once; "Identify by shape" runs IFCNet on generic elements the name could not place and keeps its answer at 90% or more. onnxruntime-web 1.30.0 loads from jsDelivr on first use.
+  - **LLMs:** Qwen 0.5 to 0.6B in the browser scored below the rules and made them worse when asked to correct them.
+- **Flamescapes:**
+  - **Liquid fires** (classes B and K) never lit; fixed with the pool burning-rate cap (0e9c2f1; Babrauskas 1983 via NUREG-1805).
+  - **GPU-lost fallback:** a GPU lost mid-run restarts the fire on the CPU (fac59bb).
+  - **Smoke cloud and embers** (4f0f82a): the solver's soot is drawn as a smoke cloud (`smokeCloud`, both backends); the run card says "Embers: off" or "on: N thrown, M spot fires".
+  - **Speed** (4f0f82a): on this machine's integrated GPU a 120 s fire went from 72 s to 25 to 29 s.
+    - The view draws 15 times a second while the GPU computes (`ViewerManager.setDrawRate`).
+    - The GPU grid is sized to its measured speed in fixed levels (`flamescapes.worker.js`, `GPU_STEP_MS` 33). The speed is kept per GPU in localStorage.
+    - "Grid on the GPU" offers speed-sized or finest.
+    - One CPU core: 2.8 to 2.9 times real time on the Duplex (`benchmark/results/2026-11-05-fire.json`).
+  - **Grid dependence (important):** the same Duplex sofa fire peaked at 0.09 MW on 0.20 m, 2.5 MW on 0.23 m, 6.1 MW on 0.27 m and 0.75 MW on the CPU's 0.34 m. The Methods page and the panel say to compare runs on one grid. See Open 11.
+  - **Openings** (00ec1a4, 49ae6e5):
+    - doors open or closed: a switch beside the fire class, for the smoke only; routes still use every door;
+    - windows closed or open;
+    - ventilation off or running: every air terminal swaps gas with one well-mixed duct volume at an assumed 100 L/s a terminal (`ducts` on both backends; `DuctMixing.lean` proves conservation and that values stay within range).
+
+    Checked on the CC BY TalTech DS3 model: 60 of 82 terminals inside the clipped grid.
+- **Export for TopologicPy (JSON)** (49ae6e5, `src/core/topologicExport.js`): in the Graph step and under a finished fire. It holds the graph in IFC world coordinates at floor level, with per-node fire time series and untenable times, edges with lengths, and the run's settings. topologicpy 0.9.86 `Graph.ByJSONFile` reads the Duplex export with all 1,597 nodes and 4,597 edges.
+- **Guided runs** (49ae6e5, `src/core/guided.js`): three presets on the welcome screen run the steps themselves and stop at the result (*The way out*; *A fire on the route*; *Smoke behind closed doors*).
+- **Notes for later:**
+  - `wiki/research/fire-suppression-note-2026-11-05.md`: sprinklers, RTI activation, Fire-X's droplet evaporation, manual agents;
+  - `wiki/research/sbc-firefighting-future-notes-2026-11-05.md`: SBC egress checks, hose coverage, firefighter access, doors in the graph fire models. No code value is quoted.
+- **Tools:**
+  - `tools/fire-gif.mjs` records the Flamescapes fire as a GIF with no encoder to install (`--origin`, `--smoke-at`);
+  - `tools/flamescapes-gpu-check.mjs` takes `--class` and `--ducts`.
 
 ## Flamescapes, fire classes and the ignition study (2026-11-05)
 
@@ -26,9 +86,9 @@ Then: the gates, fast-forward `origin/main`, the live check, and update this fil
 - Likely ignition points (`src/core/ignition.js`, catalogue generated by `tools/ignition-catalog.mjs` into `ignitionCatalog.js` and `ignitionClasses.js`): elements and rooms ranked by share of fire deaths times match confidence over candidates; one click sets the fire origin and its class. Lithium-ion scenarios are class L.
 - Lean: FireX.lean, Flamescapes.lean, FlamescapesPort.lean (seventh batch; 26 modules, more than 1,230 results, standard axioms only). The proofs confirmed the transcribers' suspected typos (none refuted) and found six defects in the port, fixed in 30c019a; class D's heat capacity followed in 0d0c676.
 - Architecture review (2026-11-05, 16 findings): all fixed in 7df6041. The two criticals were walls acting as an air source in advection and a clip that dropped long walls crossing a clipped storey; each has a regression test.
-- Speed (`tools/fire-bench.mjs`, one CPU core, quiet machine): Flamescapes 32 to 38 ms per step on the Duplex (26k cells, 0.37 m), about three times real time; advection and projection are most of it. The graph models take 0.1 to 12 ms.
-- Tests: 186 unit and property tests; the browser suite runs a 30 s Flamescapes fire with embers (12.6 s on the desktop).
-- Live check after the deploy: every step passes except the TopologicPy Navigation cross-check, which times out at 240 s on Render's free tier (known; not a regression).
+- Speed (`tools/fire-bench.mjs`, one CPU core, quiet machine, rerun 2026-11-05): Flamescapes 34 to 36 ms per step on the Duplex (26k cells, 0.37 m), 2.8 to 2.9 times real time; advection and projection are most of it. The graph models take 0.1 to 7 ms. GPU timings: see This round.
+- Tests: 207 committed unit and property tests (2026-11-05 evening); the browser suite runs a 30 s Flamescapes fire with embers (15 to 23 s).
+- Live check: 0 failed steps when the Render backend is awake (see State).
 - README (2026-10-29): rewritten for new users, with a tour of the four steps on the Duplex, the other examples, a phone view and the Methods page. The screenshots in `docs/images/` come from `node tools/readme-shots.mjs` against a running dev server (or any build with `?debug`), using only the shipped examples; re-run it after a UI change. The RL shot's success rate varies between runs, so the README quotes none.
 
 ## Loading speed (2026-10-29)
@@ -68,3 +128,19 @@ Opening an IFC on a phone was slow: every step of a first open waited on the one
 8. Occupant simulation add-on, asked for by the user (2026-11-05): many occupants moving at once, each with a pre-movement time, walking speed slowed on stairs (gap G1) and in smoke (the Flamescapes visibility, gap G2), door queues with a specific flow per metre of width (gap G4), and a running FED from heat and CO; route choice by shortest path, by re-planning on the fire as it is, by the forecast's earliest safe route, or by a learned Q-policy (today's Q-learning trains one start and one exit, so a per-exit or per-room policy is needed). Outputs: evacuation curve, RSET, incapacitated count, animated occupants. Needs a source review for each parameter before code.
 9. Fire classes: the parameters marked `provisional` in `fireClasses.js` (B and C ignition temperatures for embers, K's vapour latent heat, L's fuel and agents) have no source yet.
 10. Flamescapes in the browser is not calibrated against room fire tests; the review's room-scale data (NIST furniture calorimetry, cooktop fires) are the natural first comparisons. Indoors at 0.37 m the embers add little: the Duplex fire lights no spot fire in 120 s.
+11. **Grid dependence of the Flamescapes fire.**
+    - **The finding:** peak heat release moves by two orders of magnitude between 0.20 and 0.34 m cells, and not in one direction. The 0.23 m run also settles to a constant 460 kW tail.
+    - **Before any quantitative use:** a grid convergence study (same scene, 0.15 to 0.4 m, CPU and GPU), and a check of the tail (the pilot, or a steady burn of the contents).
+    - **Speed-sized grid noise:** sizing the GPU grid by speed makes the grid device-dependent; the stored speed keeps it fixed per browser. Fresh browsers picked 110k to 200k cells in three sessions, because the speed measurement is noisy while other jobs run.
+12. **Ventilation is a bound, not a model.**
+    - **Missing inputs:** system membership (IfcRelAssignsToGroup with IfcDistributionSystem) and supply, return and exhaust roles are not read; duct geometry is unused; 100 L/s a terminal is an assumption.
+    - **Next:** read the systems where the IFC has them (DS3 has 4), make exhaust terminals a sink, and source the flows.
+13. **Doors in the graph fire models,** SBC egress checks, fire hose coverage and firefighter access: see `wiki/research/sbc-firefighting-future-notes-2026-11-05.md`. Suppression: `fire-suppression-note-2026-11-05.md`.
+14. **"Describe this model":** not built. Plan in Resume here, decision 2.
+15. **IFCNet:**
+    - the weights' licence (ask the authors);
+    - the retraining study (agent phase 1 pilot; the full campaign needs approval);
+    - the shape classifier adds almost nothing to the rules today.
+16. **The Q-learning study:** see the agent's report and note when they arrive.
+17. **The CPU solver's advection** is half of each step, at about 730k trilinear samples. Any speed-up must stay bit-identical: vorticity reads the faces between solids, so no face can be skipped. Micro-optimisations, such as the exact own-component shortcut, are possible.
+18. **The guided run "A fire on the route"** uses heat diffusion, which reads faintly. Spread-along-links, or the forecast plan, may show the rerouting better.
