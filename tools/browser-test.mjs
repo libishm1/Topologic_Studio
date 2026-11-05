@@ -624,24 +624,15 @@ const trainBtn = page.getByRole("button", { name: /^Train policy$/ });
 if (await trainBtn.isEnabled()) {
   // RL trains in the browser now. That it used the picked fire origin shows
   // as the "Escape possible" stat, which appears only when a fire was seeded.
+  // A slower fire (0.25 links per move), so an escape usually exists and the
+  // shield's guarantee is exercised, not met vacuously.
+  await page.getByLabel("Fire speed (links per move)").fill("0.25").catch(() => {});
   const tRl = Date.now();
   await trainBtn.click();
   // innerText applies the stat labels' text-transform: uppercase, so match
   // case-insensitively.
-  const trained = await page
-    .waitForFunction(() => /late-training success/i.test(document.body.innerText), null, {
-      timeout: 120000,
-    })
-    .then(() => true)
-    .catch(() => false);
-  record(trained, "RL training returned and rendered its stats");
-  if (trained) timing("Train RL policy (click to stats)", Date.now() - tRl);
-  if (trained) {
-    await page
-      .locator(".stat", { hasText: /late-training success/i })
-      .scrollIntoViewIfNeeded()
-      .catch(() => {});
-    const r = await page.evaluate(() => {
+  const stats = () =>
+    page.evaluate(() => {
       const out = {};
       document.querySelectorAll(".stat").forEach((el) => {
         const k = el.querySelector(".stat__label")?.textContent?.trim();
@@ -650,21 +641,41 @@ if (await trainBtn.isEnabled()) {
       });
       return out;
     });
-    console.log(`    rl: ${JSON.stringify(r)}`);
+  // The default, shielded learner (rlSafe.js).
+  const trained = await page
+    .waitForFunction(() => /certified earliest/i.test(document.body.innerText), null, {
+      timeout: 120000,
+    })
+    .then(() => true)
+    .catch(() => false);
+  record(trained, "RL training returned and rendered its stats");
+  if (trained) timing("Train RL policy (click to stats)", Date.now() - tRl);
+  if (trained) {
+    await page.locator(".stat", { hasText: /certified earliest/i }).scrollIntoViewIfNeeded().catch(() => {});
+    const r = await stats();
+    console.log(`    rl (shielded): ${JSON.stringify(r)}`);
     // Whether an escape exists depends on where the fire was clicked, so the
     // contract is that the UI states it, not that the agent always escapes.
-    record(
-      r["Escape possible"] !== undefined,
-      "RL reports whether an escape exists",
-      r["Escape possible"],
-    );
-    record(
-      r["Return vs best within the step limit"] !== undefined,
-      "RL reports its return against the exact optimum (backward induction)",
-      r["Return vs best within the step limit"],
-    );
+    record(r["Escape possible"] !== undefined, "RL reports whether an escape exists", r["Escape possible"]);
+    // The shield's guarantee: when an escape exists, the agent reaches an exit.
+    const escapes = /^yes/.test(r["Escape possible"] || "");
+    record(!escapes || r["Reached exit"] === "yes", "the shielded agent escapes whenever an escape exists", `${r["Escape possible"]}; reached ${r["Reached exit"]}; certified ${r["Certified earliest"]}`);
   }
   await shot(page, "rl-trained");
+  // And the Q-learning it replaces, still offered for comparison.
+  await page.getByRole("group", { name: "Learning method" }).getByRole("button", { name: "Q-learning" }).click();
+  await trainBtn.click();
+  const trainedQ = await page
+    .waitForFunction(() => /late-training success/i.test(document.body.innerText), null, { timeout: 120000 })
+    .then(() => true)
+    .catch(() => false);
+  const q = trainedQ ? await stats() : {};
+  record(
+    q["Return vs best within the step limit"] !== undefined,
+    "Q-learning reports its return against the exact optimum (backward induction)",
+    q["Return vs best within the step limit"],
+  );
+  await page.getByRole("group", { name: "Learning method" }).getByRole("button", { name: "Shielded (proved)" }).click();
 } else {
   record(false, "Train policy was enabled", "needs start and exit");
 }

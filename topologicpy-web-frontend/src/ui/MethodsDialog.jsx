@@ -186,8 +186,12 @@ export function MethodsDialog({ open, onClose, studio }) {
                 <div className="methods__card">
                   <dt>Learned escape</dt>
                   <dd>
-                    Tabular Q-learning with distance-based reward shaping, compared against the earliest escape
-                    found by search and against the best return within the step limit.
+                    By default a shielded learner: learning real-time search on (node, time step), started from a
+                    hop-distance bound and behind a shield from the exact escape-deadline map, so it never steps into
+                    a node the fire will close before it can leave. It stops when its own bounds prove its route is the
+                    earliest escape, by any exit door or the chosen one. Tabular Q-learning with distance-based reward
+                    shaping, after Jabi et al. (2019), is kept for comparison, against the earliest escape found by
+                    search and the best return within the step limit.
                   </dd>
                 </div>
               </dl>
@@ -196,7 +200,7 @@ export function MethodsDialog({ open, onClose, studio }) {
             <section id="methods-proved" aria-labelledby="h-proved">
               <h3 id="h-proved">What has been proved</h3>
               <p style={{ marginBottom: 12 }}>
-                These statements are proved in Lean 4 with Mathlib, more than 1,260 machine-checked theorems and lemmas in 27 modules,
+                These statements are proved in Lean 4 with Mathlib, more than 1,290 machine-checked theorems and lemmas in 28 modules,
                 each resting only on Lean&apos;s standard axioms or none. The proofs are about idealised models in exact
                 arithmetic: they do not cover floating-point rounding unless a statement says so, and each file
                 lists what it leaves out. Sources: <code>formal/fireegress</code> in the repository; each
@@ -350,6 +354,30 @@ export function MethodsDialog({ open, onClose, studio }) {
                 <li>
                   Ng, Harada and Russell (1999). Policy invariance under reward transformations. ICML 1999,
                   278-287.
+                </li>
+                <li>
+                  Korf (1990). Real-time heuristic search. Artificial Intelligence 42(2-3), 189-211.{" "}
+                  <a href="https://doi.org/10.1016/0004-3702(90)90054-4" target="_blank" rel="noreferrer">
+                    doi:10.1016/0004-3702(90)90054-4
+                  </a>
+                </li>
+                <li>
+                  Barto, Bradtke and Singh (1995). Learning to act using real-time dynamic programming. Artificial Intelligence 72(1-2), 81-138.{" "}
+                  <a href="https://doi.org/10.1016/0004-3702(94)00011-O" target="_blank" rel="noreferrer">
+                    doi:10.1016/0004-3702(94)00011-O
+                  </a>
+                </li>
+                <li>
+                  Alshiekh, Bloem, Ehlers, Könighofer, Niekum and Topcu (2018). Safe reinforcement learning via shielding. AAAI 2018.{" "}
+                  <a href="https://doi.org/10.1609/aaai.v32i1.11797" target="_blank" rel="noreferrer">
+                    doi:10.1609/aaai.v32i1.11797
+                  </a>
+                </li>
+                <li>
+                  Wiewiora (2003). Potential-based shaping and Q-value initialization are equivalent. Journal of Artificial Intelligence Research 19, 205-208.{" "}
+                  <a href="https://doi.org/10.1613/jair.1190" target="_blank" rel="noreferrer">
+                    doi:10.1613/jair.1190
+                  </a>
                 </li>
                 <li>
                   Jabi et al. (2019). The synergy of non-manifold topology and reinforcement learning for fire

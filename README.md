@@ -207,11 +207,24 @@ be changed under **Clock, speed and limits**).
 
 ![The escape-deadline map: the graph coloured from red (leave now) to yellow (time to spare), with the earliest safe route in teal](docs/images/duplex-forecast.jpg)
 
-**Train an agent against this fire** trains a reinforcement-learning agent
-(tabular Q-learning) to find its own way out while the fire spreads. Studio
-first checks whether any escape exists, so a failed agent and an impossible
-escape are told apart, and it compares the agent's result with the best
-possible one.
+**Train an agent against this fire** trains an agent to find its own way
+out while the fire spreads. Studio first checks whether any escape exists, so
+a failed agent and an impossible escape are told apart.
+
+- **Shielded (the default):** learns on (node, time) behind a shield that
+  never lets it step where the fire will seal it in.
+  - It stops when it can prove its route is the earliest escape, by any exit
+    door or the chosen one.
+  - Both properties are proved in Lean (`SafeEscape.lean`).
+- **Q-learning:** the earlier tabular Q-learning (after Jabi et al. 2019),
+  kept for comparison.
+
+**Why the change.** In a study of 848 runs on nine buildings
+([wiki/research/rl-egress-study-2026-11-05.md](wiki/research/rl-egress-study-2026-11-05.md),
+`tools/rl-bench.mjs`), most "failures" near the fire had no escape at all.
+Where one existed, the Q-learning's drawn path missed it in 15% of runs,
+mostly from the way its path was drawn. The shielded learner escaped in all
+of them, by the earliest route, certified, in a median 1.8 ms.
 
 ![A trained agent's route out of the Duplex, as long as the shortest route (19.1 m), with its training success and its return against the best possible](docs/images/duplex-rl.jpg)
 
@@ -481,7 +494,7 @@ IFC file
   │
   ├─ in the page: A* + straightening, alternatives, fire spread            core/route.js, core/straighten.js, core/alternatives.js, core/fire.js
   ├─ forecast worker: time-dependent routes, escape-deadline map, zones    workers/forecast.worker.js, core/forecast.js, core/deadline.js, core/zone.js
-  ├─ RL worker: tabular Q-learning against the fire                        workers/rl.worker.js, core/rl.js
+  ├─ RL worker: the shielded learner, or Q-learning, against the fire      workers/rl.worker.js, core/rlSafe.js, core/rl.js
   │
   └─ optional server: graph uploaded in the background                    topologicpy-web-backend/
         TGraph routes, Navigation cross-check, Topology JSON

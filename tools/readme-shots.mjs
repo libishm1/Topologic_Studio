@@ -203,8 +203,8 @@ async function duplex() {
   await page.getByRole("button", { name: /Train an agent against this fire/ }).click();
   await page.getByLabel("Fire speed (links per move)").fill("0.25");
   await page.getByRole("button", { name: /^Train policy$/ }).click();
-  await page.waitForFunction(() => /late-training success/i.test(document.body.innerText), null, { timeout: 180000 });
-  await page.locator(".stat", { hasText: /late-training success/i }).scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => /certified earliest/i.test(document.body.innerText), null, { timeout: 180000 });
+  await page.locator(".stat", { hasText: /certified earliest/i }).scrollIntoViewIfNeeded();
   await save(page, "duplex-rl");
 
   // The two-zone model needs the model's rooms (IfcSpace), which the Duplex has.

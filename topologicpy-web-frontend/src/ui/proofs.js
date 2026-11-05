@@ -328,4 +328,19 @@ export const PROOFS = [
     files: ["DuctMixing"],
     status: "Proved",
   },
+  {
+    property: "The shielded learner never walks into the fire, and stops only at the earliest escape",
+    meaning:
+      "D(w) is the last time step at which node w can still be left for an exit before the fire closes the way. The shield allows a move into w at step t only if t + 1 is at most D(w). Every walk inside the shield reaches an exit whenever any escape exists, and the shield is never empty while one does. When a learning trial changes no value, the route it walked is the earliest escape.",
+    tex: [
+      String.raw`\text{move } v \to w \text{ at } t \text{ allowed}`,
+      String.raw`\quad \iff t + 1 \le D(w)`,
+      String.raw`\exists\ \text{escape from } (s, 0)`,
+      String.raw`\quad \Rightarrow \text{every shielded walk escapes}`,
+      String.raw`\text{a trial without change} \Rightarrow`,
+      String.raw`\quad \text{moves} = \text{earliest escape}`,
+    ],
+    files: ["SafeEscape"],
+    status: "Proved",
+  },
 ];

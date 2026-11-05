@@ -49,6 +49,11 @@ export const DEFAULT_SETTINGS = {
   hazardAlpha: 0.5,
   lethalityThreshold: null,
 
+  // "shielded" (rlSafe.js: proved never to walk into the fire, certified
+  // earliest escape) or "qlearning" (rl.js, after Jabi et al. 2019).
+  rlMethod: "shielded",
+  // The shielded learner escapes by "any" exit door or the "chosen" one.
+  rlExits: "any",
   rlEpisodes: 400,
   rlMaxSteps: 200,
   rlUseFire: true,

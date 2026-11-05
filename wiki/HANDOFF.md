@@ -8,7 +8,7 @@
   - **The local `main`** is a stale ref (f936b86). Deploy by fast-forwarding `origin/main` to `next/browser-core` (`git push origin HEAD:main` after `git merge-base --is-ancestor origin/main HEAD`).
   - **The Render backend** is unchanged since 4f09929 and is deployed by hand.
 - **Gates before any deploy** (all 0 failed steps):
-  - `npm test` in `topologicpy-web-frontend`: 207 committed tests;
+  - `npm test` in `topologicpy-web-frontend`: 217 tests;
   - `npx eslint src`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview --port 4173` on that sub-path.
@@ -16,33 +16,38 @@
   The suite now also checks:
   - the Model step identifies elements;
   - the run card says embers are on and gives the openings;
+  - the shielded agent escapes when an escape exists (at fire speed 0.25), and Q-learning still reports its return;
   - every Methods equation typesets;
   - a guided run reaches its route.
-- **Lean:** 27 modules, 1264 theorems, 284 AxiomCheck lines, standard axioms only. The working copy (`lean/fireegress` under the user's home) and `formal/fireegress` match byte for byte.
-- **Still running when this was written,** uncommitted in the worktree:
-  - **The Q-learning study agent:**
-    - `src/core/rlSafe.js` and its test (10 tests, which `npm test` picks up locally);
-    - an edit to `src/workers/rl.worker.js`;
-    - `tools/rl-bench.mjs`;
-    - the note `wiki/research/rl-egress-study-2026-11-05.md`;
-    - Lean in the working copy.
-  - **The IFCNet retraining pilot agent:**
-    - `tools/identify-features.mjs`, `tools/identify-pilot.py`;
-    - `wiki/research/ifcnet-furniture-study-plan-2026-11-05.md`;
-    - `benchmark/results/2026-11-05-ifcnet-pilot.json`.
-  - Review both reports before committing anything of theirs (see Resume here).
+- **Lean:** 28 modules, 1297 theorems, 317 AxiomCheck lines, standard axioms only. The working copy (`lean/fireegress` under the user's home) and `formal/fireegress` match byte for byte.
+- **Both research agents reported** and their work is committed:
+  - **The learned-escape study** (`rlSafe.js`, `SafeEscape.lean`, `wiki/research/rl-egress-study-2026-11-05.md`). The shielded learner is the app's default.
+  - **The IFCNet furniture study, phase 1** (feffefc, `wiki/research/ifcnet-furniture-study-plan-2026-11-05.md`). It is research and a pilot only; no training campaign has been run.
 - **Uncommitted on purpose:** `wiki/research/free-inference-gpu-options-2026-11-05.md`. Its application drafts speak in the user's voice and the repository is public; the user decides.
 
 ## Resume here (2026-11-05, evening)
 
-1. **Read the two agents' reports**, verify their most consequential claims yourself, then commit their work in separate commits.
-   - **RL:** the diagnosis (training defect or model defect), the new method (`rlSafe.js`), the old-vs-new benchmark and the Lean results. Wiring it into the UI was left to the main session: do it in `App.jsx` and `Panels.jsx`, then the Methods page and README.
-   - **IFCNet pilot:** the licence table (Florent Poux's two repositories, the candidate datasets), the novelty check, the pilot numbers and the full-campaign estimate. The full training campaign needs the user's approval first: state its compute time.
-2. **Decisions for the user:**
-   - **IFCNet weights:** write to the IFCNet authors (Christoph Emunds, E3D, RWTH Aachen) for a licence on the weights now shipped in `public/models/` with credit. Retraining only on openly licensed data is the alternative.
-   - **"Describe this model":** whether to build it. The recommendation is Chrome's built-in Prompt API (Gemini Nano, on device, Chrome 148+ desktop, per Google's page updated 2026-10-21) first. Second, an opt-in Cloudflare Worker with Workers AI for other browsers, but only if wanted. Not FreeInference: its terms (section 5) log prompts and may publish derived data.
-   - Whether to commit the free-inference note.
-3. **Then** the gates, deploy, the live check, and update this file.
+Nothing is half-done. The next steps are the user's decisions:
+
+1. **IFCNet retraining** (the phase 1 plan, section 7):
+   - **Scope:** a feature model trained only on open data (a few CPU hours of fitting, but 2 to 4 weeks of supervised data work), with or without a DGCNN trained from scratch (about a week more of CPU).
+   - **Data:** which open sources to download, and the disk budget, outside OneDrive.
+   - **Licence:** the published model's licence (CC BY 4.0 or MIT), and whether to train on CC0 data only.
+   - **Labels:**
+     - approve the sub-type vocabulary;
+     - decide whether to hand-label the 473 unnamed furniture elements as the final test set;
+     - decide whether the app should use the rules-then-features cascade for typed elements only, since it hurts proxies.
+   - **Venue:** Automation in Construction or AEI, or Fire Safety Journal or Fire Technology.
+   - **Pilot findings:**
+     - fine-tuning IFCNet's weights neither helps nor can be published;
+     - only a model trained on open data alone can be published;
+     - the rules-then-features cascade beats the rules on typed elements (+0.022 accuracy) but not on proxies;
+     - furniture sub-types are no better than the box alone yet.
+2. **IFCNet weights now shipped:** write to the authors (Christoph Emunds, E3D, RWTH Aachen) for a licence, or replace them once an open model exists.
+3. **"Describe this model":** whether to build it. Chrome's on-device Prompt API first (Chrome 148+ desktop), and an opt-in Cloudflare Worker only for other browsers. Not FreeInference: its terms log prompts.
+4. **The free-inference note:** whether to commit it.
+
+Before any deploy: the gates above, then the live check, then update this file.
 
 ## This round (2026-11-05, afternoon and evening)
 
@@ -141,6 +146,12 @@ Opening an IFC on a phone was slow: every step of a first open waited on the one
     - the weights' licence (ask the authors);
     - the retraining study (agent phase 1 pilot; the full campaign needs approval);
     - the shape classifier adds almost nothing to the rules today.
-16. **The Q-learning study:** see the agent's report and note when they arrive.
+16. **Learned escape:** done.
+    - **The new method:** the shielded learner (`rlSafe.js`, `SafeEscape.lean`, `wiki/research/rl-egress-study-2026-11-05.md`) is the default.
+    - **Still open:**
+      - The shield uses the RL step's own hop-front fire. Covering the temperature, zone and Flamescapes forecasts needs a seconds-based version (deadline.js has one).
+      - Certification with many exits can take up to 2.6 s.
+      - rl.js still draws its policy with a no-revisit walk, which caused most of its misses. Drawing the policy walk instead cuts them from 15.0% to 2.6%.
+    - **Item 8:** its per-room, any-exit policy now exists as `escapeField`.
 17. **The CPU solver's advection** is half of each step, at about 730k trilinear samples. Any speed-up must stay bit-identical: vorticity reads the faces between solids, so no face can be skipped. Micro-optimisations, such as the exact own-component shortcut, are possible.
 18. **The guided run "A fire on the route"** uses heat diffusion, which reads faintly. Spread-along-links, or the forecast plan, may show the rerouting better.

@@ -1503,6 +1503,7 @@ export function SimulatePanel({
   const fireModel = fireModelIn(settings, modelInfo);
   // Heat diffusion, the two-zone model and Flamescapes give temperatures to reroute on.
   const flamescapes = isFlamescapes(fireModel);
+  const shielded = settings.rlMethod !== "qlearning";
   const heat = fireModel === "temperature" || fireModel === "zone" || flamescapes;
   const fireClass = FIRE_CLASSES[settings.flamescapesClass] || FIRE_CLASSES.A;
   const models = [...FIRE_MODELS, ...(rooms ? [ZONE_MODEL] : []), ...(settings.flamescapes ? FLAMESCAPES_MODELS : [])];
@@ -1794,18 +1795,52 @@ export function SimulatePanel({
       <ForecastSection studio={studio} exits={exits} onPlan={onPlanForecast} deadlinesShown={deadlinesShown} />
 
       <Section title="Train an agent against this fire" defaultOpen={false}>
-        <p className="field__hint">
-          Tabular Q-learning over the same graph, with the spreading fire as a penalty. Studio first checks
-          whether any escape exists, so a failed agent and an impossible escape are told apart.
-        </p>
-        <div className="grid-2">
-          <NumberField
-            label="Episodes"
-            value={settings.rlEpisodes}
-            min={10}
-            step={50}
-            onChange={(rlEpisodes) => setSettings({ rlEpisodes: rlEpisodes ?? 200 })}
+        <div className="field">
+          <div className="field__label">
+            <span>Method</span>
+          </div>
+          <Segmented
+            label="Learning method"
+            value={settings.rlMethod}
+            onChange={(rlMethod) => setSettings({ rlMethod })}
+            options={[
+              { value: "shielded", label: "Shielded (proved)" },
+              { value: "qlearning", label: "Q-learning" },
+            ]}
           />
+          <p className="field__hint">
+            {shielded
+              ? "Learns the escape on (node, time) behind a shield that never lets it step where the fire will seal it in, and stops when it can prove its route is the earliest escape. Both properties are proved in Lean."
+              : "Tabular Q-learning over the same graph, with the spreading fire as a penalty (after Jabi et al. 2019). It is drawn by a walk that never revisits a node, and on the study's corpus it missed 15% of the escapes that existed."}{" "}
+            Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart.
+          </p>
+        </div>
+        {shielded && (
+          <div className="field">
+            <div className="field__label">
+              <span>Escape by</span>
+            </div>
+            <Segmented
+              label="Escape by"
+              value={settings.rlExits}
+              onChange={(rlExits) => setSettings({ rlExits })}
+              options={[
+                { value: "any", label: "Any exit door" },
+                { value: "chosen", label: "The chosen exit" },
+              ]}
+            />
+          </div>
+        )}
+        <div className="grid-2">
+          {!shielded && (
+            <NumberField
+              label="Episodes"
+              value={settings.rlEpisodes}
+              min={10}
+              step={50}
+              onChange={(rlEpisodes) => setSettings({ rlEpisodes: rlEpisodes ?? 200 })}
+            />
+          )}
           <NumberField
             label="Max steps"
             value={settings.rlMaxSteps}
@@ -1833,7 +1868,7 @@ export function SimulatePanel({
           step={0.05}
           disabled={!settings.rlUseFire}
           onChange={(rlFireSpeed) => setSettings({ rlFireSpeed: rlFireSpeed ?? 1 })}
-          hint="1 = the fire advances one link per move, as the evacuee does. On a real plan that often leaves no escape; the result says when."
+          hint="1 = the fire advances one link per move, as the evacuee does. With the fire on or beside the route at that speed, the study's runs had no escape in 70 of 72; the result says when."
         />
         <Button block busy={rl.busy} disabled={!ready || !points.start || !points.exit} onClick={onTrainRl}>
           Train policy
@@ -1852,7 +1887,17 @@ export function SimulatePanel({
                 value={`${rl.result.length.toFixed(1)} / ${rl.result.optimal_length.toFixed(1)} m`}
               />
             )}
-            <Stat label="Late-training success" value={`${Math.round((rl.result?.success_rate ?? 0) * 100)}%`} />
+            {rl.result?.method === "shielded" ? (
+              <>
+                {rl.result.escape_steps != null && rl.result.moves != null && (
+                  <Stat label="Moves vs earliest escape" value={`${rl.result.moves} / ${rl.result.escape_steps}`} warn={rl.result.moves > rl.result.escape_steps} />
+                )}
+                <Stat label="Certified earliest" value={rl.result.certified ? "yes" : "no"} warn={!rl.result.certified && rl.reachedExit} />
+                <Stat label="Trials" value={fmt(rl.result.episodes)} />
+              </>
+            ) : (
+              <Stat label="Late-training success" value={`${Math.round((rl.result?.success_rate ?? 0) * 100)}%`} />
+            )}
             {rl.result?.optimal_return != null && rl.result.policy_return != null && (
               <Stat
                 label="Return vs best within the step limit"
@@ -1869,7 +1914,13 @@ export function SimulatePanel({
             )}
           </div>
         )}
-        {rl.path && (
+        {rl.path && rl.result?.method === "shielded" && (
+          <p className="field__hint">
+            Certified earliest: the learner proved, from its own bounds, that no route leaves sooner. Moves vs earliest
+            escape: its route against the earliest escape found by search; they match whenever it is certified.
+          </p>
+        )}
+        {rl.path && rl.result?.method !== "shielded" && (
           <p className="field__hint">
             Late-training success: share of the last fifth of training episodes, with exploration, that reached the
             exit. Return vs best within the step limit: the learned policy&apos;s discounted return, and the most any

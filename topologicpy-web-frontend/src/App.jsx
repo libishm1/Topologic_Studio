@@ -1494,8 +1494,16 @@ export default function App() {
     return rlRef.current.run({ graph: graphData, options });
   }, []);
 
+  const exits = useMemo(() => (graph?.doors ? exitDoors(graph.doors, studio.semantics, graph) : null), [graph, studio.semantics]);
+
   const trainRl = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
+    const shielded = settings.rlMethod !== "qlearning";
+    // The shielded learner may escape by any exit door (rlSafe.js exitPoints).
+    const exitPoints =
+      shielded && settings.rlExits === "any" && exits?.nodes?.length
+        ? exits.nodes.map((v) => [graph.nodes[v * 3], graph.nodes[v * 3 + 1], graph.nodes[v * 3 + 2]])
+        : null;
     studio.setRl({ busy: true, path: null, reachedExit: false, result: null });
     try {
       // In the browser (src/core/rl.js), with the review's terminal-potential
@@ -1512,6 +1520,7 @@ export default function App() {
           useFire: settings.rlUseFire,
           fireSpeed: settings.rlFireSpeed,
           useWalls: settings.useWalls,
+          ...(shielded ? { method: "shielded", ...(exitPoints ? { exitPoints } : {}) } : {}),
         },
       );
       const result = straighten(trained);
@@ -1527,9 +1536,11 @@ export default function App() {
       if (!result.reached_exit || result.note) {
         // The server says *why*: no escape exists, the step limit is too low,
         // or the policy needs more episodes. Those call for different actions.
+        // No escape at all is a finding about the fire, not a failure of the agent.
+        const noEscape = result.escape_steps == null && result.fire_start_id != null;
         toast(result.note || "The policy did not reach the exit.", {
           title: "RL training",
-          variant: result.reached_exit ? "info" : "warning",
+          variant: result.reached_exit || noEscape ? "info" : "warning",
         });
       }
     } catch (error) {
@@ -1537,11 +1548,9 @@ export default function App() {
       // Cancelled when the model or the graph changed under it.
       if (!isCancelled(error)) reportError(error, "RL training failed");
     }
-  }, [graph, points, reportError, settings, studio, toast, straighten, rlJob]);
+  }, [graph, points, exits, reportError, settings, studio, toast, straighten, rlJob]);
 
   // -------------------------------------------------------------- exit doors
-
-  const exits = useMemo(() => (graph?.doors ? exitDoors(graph.doors, studio.semantics, graph) : null), [graph, studio.semantics]);
 
   const nearestExit = useCallback(() => {
     if (!graph || !points.start || !exits?.nodes.length) return;
