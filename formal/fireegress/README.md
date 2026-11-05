@@ -156,16 +156,18 @@ the inline definitions:
 | F16 to F19, I4, radiation and the interface | Eq. 16's emission has the sign of `T_s - T_amb`; absorption probabilities lie in `[0, 1)`, grow with path length and compose along a ray, `1 - e^{-a(l₁+l₂)} = 1 - (1 - P₁)(1 - P₂)`; the interface carries heat out of a solid hotter than gas and ambient; the initial state is at rest. | Wavelength dependence (none in the paper). |
 | Supplement algorithms, S1, S-I1, S-I2 | Algorithm 1 conserves energy in expectation, and what passes `n` segments is `E exp(-Σ κ Y_j ℓ_j)`; Algorithm 2's line 7, divided by the heat capacity, deposits exactly the embers' excess energy; the flame-front maximum can only raise the gas reaction rate; the building rules' compatibility is symmetric. | The wave function collapse solver; ember and flame-front motion. |
 
-FlamescapesPort.lean (107 results), the browser schemes:
+FlamescapesPort.lean (130 results), the browser schemes as of commit 30c019a, which fixed the six
+defects these proofs found; the version before it is kept, with its counterexample, wherever a
+defect is documented:
 
 | Functions | What is proved | What is not covered |
 |---|---|---|
 | `survives`, `arrhenius` | `exp(-k dt)` is the exact solution of `dm/dt = -k m` and the only one; the remaining mass lies in `[0, m]`; two steps compose; the paper's Euler update `m (1 - k dt)` is its first-order expansion, below it by at most `m (k dt)²/2`, and goes negative once `k dt > 1`, where the exponential never does. | Float32 storage of the fields. |
 | `exchange` | Energy is conserved; neither temperature overshoots the other; the moved heat has the sign of `Ta - Tb`; it is the closed form of the linear pair `Ca dTa/dt = G (Tb - Ta)`, `Cb dTb/dt = G (Ta - Tb)`; as `dt → 0` it agrees with Eq. 19's explicit flux `G (Ta - Tb) dt` to first order, within `\|Ta - Tb\| G² dt²/(2μ)`, while that flux over a whole step can reverse the two temperatures. | The order in which `conduct` visits pairs. |
-| `changeGas`, `stoichiometry`, `addProducts`, `chemistry` | Species masses change by their deltas and nitrogen is kept, under the guards `chemistry` applies; burning `dm` adds `dm` to the gas from a solid and nothing from vapour (less the ash, for class D); the heat released is `HEAT_PER_O2 = 417e3/0.032` J per kg of O₂ for every class without its own `o2`, within 1% of Huggett's 13.1 MJ kg⁻¹; all five fire classes close the water balance; mixing fresh fuel into the surface layer conserves its enthalpy and leaves the temperature between `T_amb` and the old one, and `fresh` refills the layer exactly. | That every call site meets the guards is read from the code. |
-| `march`, `radiation`, `particleToGrid` | Gas, first solid, outside and dropped energy add up to the energy emitted (`march_balance`); each part is non-negative; the deterministic attenuation is the expected value of the paper's Monte Carlo absorption (`march_expected`); an emitter never cools past the midpoint with ambient; ember deposits conserve energy. | The ray geometry (Amanatides-Woo traversal, Lambert sampling). |
-| `gasDensity`, `buoyancy`, `diffuse` | The equation of state is the ideal gas law and falls with temperature; buoyancy is upward exactly for gas lighter than ambient and is Eq. 6 read as intended; explicit diffusion stays within its neighbours' bounds, and conserves heat below its cap. | Advection, projection, vorticity confinement. |
-| `visibility`, `coDoseRate` (`flamescapesRun.js`), `volumeFractions`, `interiorFuel` (`voxelize.js`) | Visibility `S = C/(σ_m ρ Y_soot)`, capped at 100 m, never rises with the soot density and falls strictly below the cap; the CO dose rate `ppm/(35000 × 60)` per second integrates to 1 exactly at 35 000 ppm·min (`coDoseRate_reaches_one`) and is ISO 13571's FED (`Tenability.fed`); renormalised fractions sum to at most one; the expected total of the interior fuel is `M`. | The conversion of CO from mass fraction to ppm; the reading of the solver at head height. |
+| `changeGas`, `stoichiometry`, `addProducts`, `chemistry`, `fireClasses.js` | Species masses change by their deltas and nitrogen is kept, under the guards `chemistry` applies; with water closing the balance exactly, burning `dm` adds `dm` to the gas from a solid and nothing from vapour (less the ash, for class D) for every fuel, and all six fire classes (A, B, C, K and L from their carbon fractions, and D) are accepted; the heat released is `HEAT_PER_O2 = 417e3/0.032` J per kg of O₂ for every class without its own `o2`, within 1% of Huggett's 13.1 MJ kg⁻¹; the liquid item conserves `C T + L · vapour` and never cools below boiling; the ash's heat capacity keeps the solid's from falling while the bulk refills the surface layer; mixing fresh fuel into the layer conserves its enthalpy and leaves the temperature between `T_amb` and the old one, and `fresh` refills the layer exactly. | That every call site meets the guards is read from the code; the ash's mass is not a field. |
+| `march`, `radiation`, `particleToGrid` | Gas, solid and outside energy add up to the energy emitted, with nothing dropped, since what a ray carries when its loop stops goes into the cell it ends in (`march_balance`, `marchLoop_vs_old`); each part is non-negative; the deterministic attenuation is the expected value of the paper's Monte Carlo absorption (`march_expected`); an emitter never cools past the midpoint with ambient; ember deposits conserve energy. | The ray geometry (Amanatides-Woo traversal, Lambert sampling). |
+| `gasDensity`, `buoyancy`, `diffuse` | The equation of state is the ideal gas law and falls with temperature; buoyancy is upward exactly for gas lighter than ambient and is Eq. 6 read as intended; explicit diffusion stays within its neighbours' bounds, conserves heat below its cap, and, with a face coefficient from the mean of the two cells' `ρD`, conserves each species' mass in a pair exchange below its cap (`diffuse_species_pair`). | Advection, projection, vorticity confinement. |
+| `visibility`, `coDoseRate` (`flamescapesRun.js`), `volumeFractions`, `interiorFuel` (`voxelize.js`) | Visibility `S = C/(σ_m ρ Y_soot)`, capped at 100 m, never rises with the soot density and falls strictly below the cap; the CO dose rate `ppm/(35000 × 60)` per second integrates to 1 exactly at 35 000 ppm·min (`coDoseRate_reaches_one`) and is ISO 13571's FED (`Tenability.fed`); renormalised fractions sum to at most one; the interior fuel's draws, cut at zero and rescaled by `M / total`, sum to exactly `M` (`interiorFuel_rescaled_sum`). | The conversion of CO from mass fraction to ppm; the reading of the solver at head height. |
 
 What the proofs found. **Paper typos and inconsistencies confirmed by a proof.** Fire-X, against
 its transcriber's notes: note 1 (Eq. 2's radiative term has units kg K m⁻² s⁻¹, not K s⁻¹, and
@@ -200,22 +202,33 @@ Eq. 13's heat capacity summed over the constituents, and Eq. 1's fractions renor
 most one. It replaces the paper's explicit updates by the exact exponential and the exact
 relaxation (first-order agreement proved) and its Monte Carlo absorption by its expected value.
 Its buoyancy `|g| (ρ₀/ρ - 1)` exceeds Fire-X's by the factor `ρ₀/ρ`, and `HEAT_PER_O2`, Fire-X's
-constant, lies 0.525% below Huggett's. **Statements about the port that are false or need a
-hypothesis**, each with its counterexample in `FlamescapesPort.lean`: `march` drops what is left
-after `rayReach` cells whatever its size, so the dropped energy is below the cutoff only when the
-ray ends early (`march_reach_drops_all`: all of it through soot-free air); class D sets its own
-`o2` and releases about 37.6 MJ per kg of O₂, not `HEAT_PER_O2`, and its ash is kept nowhere, so
-a magnesium cell loses 1.658 kg of tracked mass per kg burnt; the liquid branch of `chemistry`
-sets the item to its boiling point even when its surface layer runs out first, losing heat;
-`diffuse` does not conserve species mass across a temperature jump, since `ρ λ_D ∝ T^0.75`
-differs between the cells; `interiorFuel`'s cut at zero raises the expected total strictly
-above `M`; and the mass balance of `addProducts` needs `co2 + co + soot + ash ≤ 1 + o2`, which
-all five classes meet. The header of `flamescapes.js` cites `Flamescapes.lean` for the
-first-order expansions, which are in `FlamescapesPort.lean`.
+constant, lies 0.525% below Huggett's. **The port's six defects, fixed in commit 30c019a.** Each was
+found by a proof and is kept as a lemma about the previous version: `march` dropped what was
+left after `rayReach` cells whatever its size (`marchOld_reach_drops_all`), and now leaves it in
+the cell the ray ends in, so gas, solid and outside account for every joule (`march_balance`);
+`diffuse` gave each cell its own coefficient, so species mass changed across a temperature jump
+(`diffuse_species_pair_old`), and a face now takes the mean of its cells' `ρD`, which conserves
+each species while the cap of 1/7 does not bind on either side (`diffuse_species_pair`; where
+it binds, `diffuse_species_capped`); the liquid branch set the surface to its boiling point even
+when the layer ran out first (`chemistry_liquid_evaporation_energy_old`), and now takes the
+latent heat of what evaporated, conserving `C T + L dv` (`chemistry_liquid_energy`); a metal's
+oxide vanished, and now adds `ash · dOx · 900` J K⁻¹ to the cell (`chemistry_ash_capacity`);
+yields heavier than the fuel and its oxygen created mass through the clamp on water
+(`addProducts_clamp_counterexample`), and are now refused, so the mass balance holds for every
+fuel (`addProducts_mass_solid`, `fireClasses_accepted`); and cutting the contents' draws at zero
+put more than `M` in the building in expectation (`interiorFuel_cut_raises_mean`), and the
+masses are now rescaled to exactly `M` (`interiorFuel_rescaled_sum`). **Still needing a
+hypothesis:** the ash keeps the solid's heat capacity from falling only while the bulk refills
+the surface layer, or where `fuelHeatCapacity ≤ ash · 900`; magnesium is given wood's
+2000 J kg⁻¹ K⁻¹ and its oxide holds 1492 J K⁻¹ per kg burnt, so once the remaining metal lies
+within the layer the capacity falls, from 200 to 174.6 J K⁻¹ when 0.05 kg of the last 0.1 kg
+burns (`chemistry_ash_capacity_counterexample`). Class D sets its own `o2` and so releases about
+37.6 MJ per kg of O₂, not `HEAT_PER_O2`, by design (`classD_heat_per_O2`). The tolerance of 1e-9
+in `stoichiometry` admits water down to `-1e-9` kg per kg; the six classes close without it.
 
-Full build on 2026-11-05 after this batch: 26 modules, 1236 theorems and lemmas, 1223 of them
-with an axiom print (967 in the modules of the first six batches, 256 in AxiomCheck.lean: the
-original 11 and the 245 of this batch), every one on Lean's standard axioms or none
+Full build on 2026-11-05 after this batch and the port's fixes: 26 modules, 1259 theorems and
+lemmas, 1246 of them with an axiom print (967 in the modules of the first six batches, 279 in
+AxiomCheck.lean: the original 11 and the 268 of this batch), every one on Lean's standard axioms or none
 (`axioms-all-2026-11-05.txt`: the build log's prints followed by AxiomCheck.lean's output), no
 `sorry`, no warnings.
 

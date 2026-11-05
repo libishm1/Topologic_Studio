@@ -8,12 +8,14 @@ import FireEgress.Flamescapes
 # The browser port of Flamescapes: exact steps, bookkeeping and egress quantities
 
 Studio's port of Flamescapes (`topologicpy-web-frontend/src/core/flamescapes.js`,
-`voxelize.js` and `flamescapesRun.js`, read on 2026-11-05) runs on a grid of 0.25 to 0.5 m with
-steps of 0.05 to 0.2 s. It therefore integrates every reaction exactly over a step for its rate
-frozen at the step's start, and every two-body heat exchange as the exact relaxation of the
-pair. This file proves, function by function and over real arithmetic, the properties the code
-relies on, and ties each scheme to the paper equation it replaces (`Flamescapes.lean`,
-`FireX.lean`).
+`voxelize.js`, `flamescapesRun.js` and `fireClasses.js`, read on 2026-11-05 after commit 30c019a)
+runs on a grid of 0.25 to 0.5 m with steps of 0.05 to 0.2 s. It therefore integrates every
+reaction exactly over a step for its rate frozen at the step's start, and every two-body heat
+exchange as the exact relaxation of the pair. This file proves, function by function and over
+real arithmetic, the properties the code relies on, and ties each scheme to the paper equation it
+replaces (`Flamescapes.lean`, `FireX.lean`). Where commit 30c019a corrected a defect these proofs
+found, the version before it is kept under an `Old` name or an `_old` suffix, with the
+counterexample that documents the defect.
 
 ## Which theorem covers which function
 
@@ -38,27 +40,36 @@ relies on, and ties each scheme to the paper equation it replaces (`Flamescapes.
   whole step can reverse the two temperatures).
 * `changeGas`. `changeGas_total`, `changeGas_species` (each species changes by its delta),
   `changeGas_mass`, `changeGas_nitrogen` (nitrogen is kept), `changeGas_clamp_creates_mass`.
-* `stoichiometry`, `addProducts`. `sum_Sp`, `stoichiometry_h2o`, `addProducts_mass_solid`,
-  `addProducts_mass_vapour`, `addProducts_mass_solid_noAsh` (`+dm` from a solid),
-  `addProducts_mass_vapour_noAsh` (0 from vapour), `addProducts_tracked_mass`,
-  `addProducts_heat_per_O2` (`HEAT_PER_O2` per kg of O₂ consumed), `stoichiometry_o2_vs_huggett`,
-  `fireClasses_close`, `classD_heat_per_O2`, `addProducts_clamp_counterexample`,
-  `carbon_yield_exceeds`, `addProducts_guard`, `addProducts_gas_mass`.
-* `chemistry`. `chemistry_liquid_evaporation_energy`, `chemistry_mixFresh_enthalpy` (mixing
-  fresh fuel in conserves the layer's enthalpy), `chemistry_mixFresh_between` (the new
-  temperature lies between `T_amb` and the old one), `chemistry_fresh_refills_skin`.
+* `stoichiometry`, `addProducts`, `fireClasses.js`. `sum_Sp`, `closes_accepted`,
+  `stoichiometry_h2o_bounds`, `stoichiometry_refuses_old_counterexample`,
+  `addProducts_mass_solid` and `addProducts_mass_vapour` (the mass balance, for every fuel),
+  `addProducts_mass_solid_noAsh` (`+dm` from a solid), `addProducts_mass_vapour_noAsh` (0 from
+  vapour), `addProducts_tracked_mass`, `addProducts_heat_per_O2` (`HEAT_PER_O2` per kg of O₂
+  consumed), `stoichiometry_o2_vs_huggett`, `fireClasses_close` and `fireClasses_accepted`
+  (classes A, B, C, D, K and L, with `co2FromCarbon`), `classD_heat_per_O2`,
+  `addProducts_guard`, `addProducts_gas_mass`. Before 30c019a: `addProducts_clamp_counterexample`,
+  `carbon_yield_exceeds` (for `stoichiometryOld`).
+* `chemistry`. The liquid item: `chemistry_liquid_energy` (`C T + L · vapour` is conserved),
+  `chemistry_liquid_above_boiling`, `chemistry_liquid_unclamped`; before 30c019a,
+  `chemistry_liquid_evaporation_energy_old`. Fresh fuel: `chemistry_mixFresh_enthalpy`,
+  `chemistry_mixFresh_between`, `chemistry_fresh_refills_skin`. Ash: `chemistry_ash_capacity`,
+  `chemistry_ash_capacity_mono`, `chemistry_ash_capacity_mono_cp`,
+  `chemistry_ash_capacity_counterexample`.
 * `march`. `march_taken_mem`, `march_taken_transmit`, `march_taken_transmit_two`,
-  `marchLoop_balance`, `march_balance` (gas, first solid, outside and dropped add up to the
-  energy emitted), `marchLoop_nonneg`, `marchLoop_dropped_of_gt`, `march_reach_drops_all`,
-  `march_leftFrom_eq`, `marchLoop_all_gas`, `march_expected` (the deterministic attenuation is
-  the expected value of supplement Algorithm 1's Monte Carlo absorption).
+  `march_leftFrom_eq`, `march_expected` (the deterministic attenuation is the expected value of
+  supplement Algorithm 1's Monte Carlo absorption); `endDeposit_balance`, `marchLoop_balance` and
+  `march_balance` (gas + solid + outside = emitted, nothing dropped), `marchLoop_nonneg`,
+  `marchLoop_vs_old`, `march_reach_deposits`. Before 30c019a: `marchLoopOld_balance`,
+  `marchOld_balance`, `marchLoopOld_nonneg`, `marchLoopOld_dropped_of_gt`,
+  `marchOld_reach_drops_all`, `marchLoopOld_all_gas`.
 * `radiation`. `radiation_emitter_cap`, `radiation_shares`. `particleToGrid`:
   `particleToGrid_energy` (supplement Algorithm 2's line 7 with the division its note 4 asks
   for).
 * `gasDensity` (Eq. 7 with the pressure). `gasDensity_eos`, `gasDensity_strictAntiOn`,
   `gasDensity_ratio`. `buoyancy` (Eq. 6): `buoyancy_sign`, `buoyancy_eq_F6`, `buoyancy_vs_FireX`.
-* `diffuse`. `diffuse_between`, `diffuse_heat_pair`, `diffuse_species_pair`,
-  `diffuse_species_counterexample`.
+* `diffuse`. `diffuse_between`, `diffuse_heat_pair`, `diffuse_lamD_mem`, `diffuse_species_pair`
+  (each species' mass conserved by a pair exchange below the cap), `diffuse_species_capped`.
+  Before 30c019a: `diffuse_species_pair_old`, `diffuse_species_counterexample_old`.
 * `flamescapesRun.js`. `visibility_formula`, `visibility_mem`, `visibility_antitone` (never
   rises with the soot density), `visibility_strictAntiOn`, `visibility_cap_continuous`,
   `visibility_units`; `coDoseRate_of_nonneg`, `coDoseRate_monotone`, `coDoseRate_integral`,
@@ -66,26 +77,37 @@ relies on, and ties each scheme to the paper equation it replaces (`Flamescapes.
   `coDoseRate_examples`.
 * `voxelize.js`. `volumeFractions_nonneg`, `volumeFractions_sum_le_one`,
   `volumeFractions_ratio` (the final pass of Eq. 1); `interiorFuel_expected_sum`,
-  `interiorFuel_gaussian_mean`, `interiorFuel_cut_raises_mean`.
+  `interiorFuel_gaussian_mean`, `interiorFuel_cut_raises_mean`, `interiorFuel_cut`,
+  `interiorFuel_rescaled_sum` (the contents hold exactly `M`), `interiorFuel_rescaled_nonneg`,
+  `interiorFuel_rescaled_ratio`.
 
-## What the proofs found in the port
+## What the proofs found in the port, and what commit 30c019a changed
 
-* `march` keeps every joule in its bookkeeping, but what it drops is below the cutoff only when
-  the ray stops early: at `rayReach` cells the remainder is dropped whatever its size, all of it
-  through soot-free air (`march_reach_drops_all`, `marchLoop_dropped_of_gt`).
-* `addProducts` conserves mass for every fire class that closes (all five do), but class D's ash
-  is kept nowhere, so a magnesium cell loses 1.658 kg of tracked mass per kg burnt
-  (`addProducts_tracked_mass`); and class D, which sets its own `o2`, releases about 37.6 MJ
-  per kg of O₂, not `HEAT_PER_O2` (`classD_heat_per_O2`).
-* The liquid branch of `chemistry` sets the item to its boiling point even when the surface
-  layer runs out first, losing `C (T - T_b) - dv L` of heat
-  (`chemistry_liquid_evaporation_energy`).
-* `diffuse` conserves heat while `λ_T` is below its cap, since `ρ c_p λ_T = k dt / h²` in every
-  cell, but not species mass across a temperature jump, since `ρ λ_D ∝ T^0.75` differs between
-  the two cells (`diffuse_species_pair`).
-* `interiorFuel` cuts each normal draw at zero, which raises the expected total strictly above
-  `M` (`interiorFuel_cut_raises_mean`); by less than 1e-4 of `M` at the default spread, a figure
-  not proved here.
+* `march` dropped what was left after `rayReach` cells whatever its size
+  (`marchOld_reach_drops_all`). It now leaves it in the cell the ray ends in, so gas, solid and
+  outside account for every joule (`march_balance`, `marchLoop_vs_old`).
+* `diffuse` gave each cell its own coefficient, so species mass changed across a temperature
+  jump (`diffuse_species_pair_old`). A face now takes the mean of its cells' `ρD`, and a pair
+  exchange conserves each species while the cap of 1/7 does not bind on either side
+  (`diffuse_species_pair`); where it binds it does not (`diffuse_species_capped`).
+* The liquid branch set the surface to its boiling point even when the layer ran out first
+  (`chemistry_liquid_evaporation_energy_old`). It now takes the latent heat of what evaporated,
+  which conserves `C T + L dv` and never cools the surface below boiling.
+* A metal's oxide vanished. It now adds `ash · dOx · 900` J K⁻¹ to the cell. That keeps the
+  solid's heat capacity from falling while the bulk refills the surface layer, or whenever
+  `fuelHeatCapacity ≤ ash · 900`; not otherwise: magnesium is given wood's 2000 J kg⁻¹ K⁻¹ and
+  its oxide holds 1492 J K⁻¹ per kg burnt, so once the remaining metal lies within the layer the
+  capacity falls (`chemistry_ash_capacity_counterexample`). The ash's mass is still not a field
+  (`addProducts_tracked_mass`).
+* Yields heavier than the fuel and its oxygen created mass through the clamp on water
+  (`addProducts_clamp_counterexample`). They are now refused, water closes the balance exactly,
+  and the mass balance holds for every fuel (`addProducts_mass_solid`); all six classes are
+  accepted (`fireClasses_accepted`). The tolerance of 1e-9 admits water down to `-1e-9` kg per
+  kg; the six classes close without it.
+* Cutting the contents' draws at zero put more than `M` in the building in expectation
+  (`interiorFuel_cut_raises_mean`). The masses are now rescaled to exactly `M`.
+* Unchanged and by design: class D sets its own `o2`, so it releases about 37.6 MJ per kg of O₂,
+  not `HEAT_PER_O2` (`classD_heat_per_O2`).
 * The paper's forms that the port corrects: Eq. 7 with `p_amb` (`gasDensity`), Eq. 6 with
   the intended sign (`buoyancy`), supplement Algorithm 2's line 7 divided by the heat capacity
   (`particleToGrid`), Eq. 13's heat capacity summed over the constituents (`createSolver`), and
@@ -95,16 +117,15 @@ relies on, and ties each scheme to the paper equation it replaces (`Flamescapes.
 
 * Floating point: the code keeps its fields in `Float32Array`.
 * The ray geometry (the Amanatides-Woo traversal, directions, Lambert sampling) is abstracted to
-  a path of cells with optical depths `τ = κ Y_soot l ≥ 0`.
+  a path of cells with optical depths `τ = κ Y_soot l ≥ 0` and the kind of the cell at each step.
 * Advection, the pressure projection, vorticity confinement, particle motion, the burner,
   boundaries, and the ember spot ignition, which sets a surface to its ignition temperature
-  without an energy balance.
+  without an energy balance. In the liquid branch `C` is the capacity read before the moisture
+  step, as the code reads it.
 * That each call site meets the hypotheses is read from the code: `dOx ≤ o2 / st.o2` and
   `dF ≤ yO mass / st.o2` (`addProducts_guard`), `Cf ≤ C` (`chemistry_mixFresh_*`), and soot
-  fractions that stay non-negative (`diffuse_between`; trilinear advection takes convex
-  combinations).
-* The header of `flamescapes.js` cites `Flamescapes.lean` for the first-order expansions of the
-  exact schemes; they are proved here.
+  fractions that stay non-negative (`diffuse_between` with `diffuse_lamD_mem`; trilinear
+  advection takes convex combinations).
 -/
 
 namespace FireEgress.FlamescapesPort
@@ -634,10 +655,6 @@ structure Stoich where
   ash : ℝ
   heat : ℝ
 
-/-- `stoichiometry(fuel)`: water closes the balance, clamped at 0. -/
-noncomputable def stoichiometry (f : FireClass) : Stoich :=
-  ⟨f.o2kg, f.co2, f.co, f.soot, max 0 (1 + f.o2kg - f.co2 - f.co - f.soot - f.ash), f.ash, f.heat⟩
-
 /-- The `delta` that `addProducts(sim, c, st, dm, vapour)` passes to `changeGas` (the ash is
 not a gas species). -/
 noncomputable def productsDelta (st : Stoich) (dm : ℝ) (vapour : Bool) : Sp → ℝ
@@ -658,52 +675,93 @@ lemma sum_Sp (f : Sp → ℝ) :
 /-- The yields leave room for water: `co2 + co + soot + ash ≤ 1 + o2`. -/
 def FireClass.closes (f : FireClass) : Prop := f.co2 + f.co + f.soot + f.ash ≤ 1 + f.o2kg
 
-/-- Water is not clamped when the yields leave room for it. -/
-theorem stoichiometry_h2o {f : FireClass} (h : f.closes) :
-    (stoichiometry f).h2o = 1 + f.o2kg - f.co2 - f.co - f.soot - f.ash := by
-  simp only [stoichiometry]
-  rw [max_eq_right (by unfold FireClass.closes at h; linarith)]
+/-! ### The version before commit 30c019a, which clamped water at zero -/
 
-/-- Burning `dm` of solid fuel: the gas gains `(1 - ash) dm` and the ash takes the rest, so fuel
-plus oxygen equals the products. -/
-theorem addProducts_mass_solid {f : FireClass} (h : f.closes) (dm : ℝ) :
+/-- `stoichiometry` before 30c019a: water closed the balance, clamped at 0. -/
+noncomputable def stoichiometryOld (f : FireClass) : Stoich :=
+  ⟨f.o2kg, f.co2, f.co, f.soot, max 0 (1 + f.o2kg - f.co2 - f.co - f.soot - f.ash), f.ash, f.heat⟩
+
+/-- The defect it had: a fuel with `Δh = HEAT_PER_O2` (1 kg of O₂ per kg) and a CO₂ yield of 3
+added 2 kg of gas per kg burnt from a solid, not 1. -/
+theorem addProducts_clamp_counterexample :
+    ∑ q, productsDelta (stoichiometryOld ⟨HEAT_PER_O2, 3, 0, 0, none, 0⟩) 1 false q = 2 := by
+  rw [sum_Sp]
+  simp only [productsDelta, stoichiometryOld, FireClass.o2kg, Option.getD_none,
+    Bool.false_eq_true, ↓reduceIte]
+  rw [div_self HEAT_PER_O2_pos.ne']
+  norm_num
+
+/-- Pure carbon burnt to CO₂ would have crossed that edge: its CO₂ yield 44/12 exceeds
+`1 + 32.8e6 / HEAT_PER_O2`. -/
+theorem carbon_yield_exceeds : 1 + 32.8e6 / HEAT_PER_O2 < (44 : ℝ) / 12 := by
+  rw [HEAT_PER_O2_eq]; norm_num
+
+/-! ### The current version: such yields are refused -/
+
+/-- `stoichiometry` accepts a fuel unless `co2 + co + soot + ash > 1 + o2 + 1e-9`. -/
+def FireClass.accepted (f : FireClass) : Prop := f.co2 + f.co + f.soot + f.ash ≤ 1 + f.o2kg + 1e-9
+
+/-- `stoichiometry(fuel)`: water closes the balance exactly,
+`h2o = 1 + o2 - co2 - co - soot - ash`. -/
+noncomputable def stoichiometry (f : FireClass) : Stoich :=
+  ⟨f.o2kg, f.co2, f.co, f.soot, 1 + f.o2kg - f.co2 - f.co - f.soot - f.ash, f.ash, f.heat⟩
+
+theorem closes_accepted {f : FireClass} (h : f.closes) : f.accepted := by
+  unfold FireClass.closes at h; unfold FireClass.accepted; linarith
+
+/-- An accepted fuel's water is at least `-1e-9` kg per kg, and non-negative when it closes
+without the tolerance. -/
+theorem stoichiometry_h2o_bounds {f : FireClass} :
+    (f.accepted → -1e-9 ≤ (stoichiometry f).h2o) ∧ (f.closes → 0 ≤ (stoichiometry f).h2o) := by
+  unfold FireClass.accepted FireClass.closes
+  simp only [stoichiometry]
+  constructor <;> intro h <;> linarith
+
+/-- The fuel that showed the old defect is now refused. -/
+theorem stoichiometry_refuses_old_counterexample :
+    ¬ (FireClass.accepted ⟨HEAT_PER_O2, 3, 0, 0, none, 0⟩) := by
+  unfold FireClass.accepted FireClass.o2kg
+  simp only [Option.getD_none]
+  rw [div_self HEAT_PER_O2_pos.ne']
+  norm_num
+
+/-- Burning `dm` of solid fuel: the gas gains `(1 - ash) dm` and the ash takes the rest. With
+water closing the balance exactly this holds for every fuel, accepted or not. -/
+theorem addProducts_mass_solid (f : FireClass) (dm : ℝ) :
     ∑ q, productsDelta (stoichiometry f) dm false q + f.ash * dm = dm := by
   rw [sum_Sp]
-  simp only [productsDelta, Bool.false_eq_true, ↓reduceIte]
-  rw [stoichiometry_h2o h]
-  simp only [stoichiometry]
+  simp only [productsDelta, stoichiometry, Bool.false_eq_true, ↓reduceIte]
   ring
 
 /-- Burning `dm` of fuel vapour: the gas loses only the ash (none for the classes that burn as
 vapour). -/
-theorem addProducts_mass_vapour {f : FireClass} (h : f.closes) (dm : ℝ) :
+theorem addProducts_mass_vapour (f : FireClass) (dm : ℝ) :
     ∑ q, productsDelta (stoichiometry f) dm true q + f.ash * dm = 0 := by
   rw [sum_Sp]
-  simp only [productsDelta, ↓reduceIte]
-  rw [stoichiometry_h2o h]
-  simp only [stoichiometry]
+  simp only [productsDelta, stoichiometry, ↓reduceIte]
   ring
 
-/-- Without ash (classes A, B, C, K): burning `dm` from a solid adds exactly `dm` to the gas. -/
-theorem addProducts_mass_solid_noAsh {f : FireClass} (h : f.closes) (h0 : f.ash = 0) (dm : ℝ) :
+/-- Without ash (classes A, B, C, K, L): burning `dm` from a solid adds exactly `dm` to the
+gas. -/
+theorem addProducts_mass_solid_noAsh {f : FireClass} (h0 : f.ash = 0) (dm : ℝ) :
     ∑ q, productsDelta (stoichiometry f) dm false q = dm := by
-  have := addProducts_mass_solid h dm
+  have := addProducts_mass_solid f dm
   rw [h0, zero_mul, add_zero] at this
   exact this
 
 /-- Without ash, burning `dm` of vapour leaves the gas's mass unchanged. -/
-theorem addProducts_mass_vapour_noAsh {f : FireClass} (h : f.closes) (h0 : f.ash = 0) (dm : ℝ) :
+theorem addProducts_mass_vapour_noAsh {f : FireClass} (h0 : f.ash = 0) (dm : ℝ) :
     ∑ q, productsDelta (stoichiometry f) dm true q = 0 := by
-  have := addProducts_mass_vapour h dm
+  have := addProducts_mass_vapour f dm
   rw [h0, zero_mul, add_zero] at this
   exact this
 
-/-- The ash is kept nowhere: `chemistry` removes `dm` from the solid's fuel and the gas gains
-`(1 - ash) dm`, so the tracked mass (solid fuel plus gas) falls by `ash · dm`; for class D
-(magnesium, `ash = 1.658`) the cell loses 1.658 kg per kg burnt. -/
-theorem addProducts_tracked_mass {f : FireClass} (h : f.closes) (dm : ℝ) :
+/-- The ash's mass is not a field of the solver: `chemistry` removes `dm` from the solid's fuel
+and the gas gains `(1 - ash) dm`, so the tracked mass (fuel plus gas) falls by `ash · dm`. Since
+30c019a the ash's heat capacity is kept (`chemistry_ash_capacity`). -/
+theorem addProducts_tracked_mass (f : FireClass) (dm : ℝ) :
     -dm + ∑ q, productsDelta (stoichiometry f) dm false q = -(f.ash * dm) := by
-  have := addProducts_mass_solid h dm
+  have := addProducts_mass_solid f dm
   linarith
 
 /-- For a class without its own `o2`, the heat released, `dm Δh`, is `HEAT_PER_O2` per kg of
@@ -720,51 +778,55 @@ theorem stoichiometry_o2_vs_huggett {f : FireClass} (ho : f.o2 = none) :
   simp only [stoichiometry, FireClass.o2kg, ho, Option.getD_none]
   field_simp [HEAT_PER_O2_pos.ne']
 
-/-- The fire classes of `fireClasses.js` (A, B, C, D, K). -/
-noncomputable def classA : FireClass := ⟨17.27e6, 1.27, 0.004, 0.015, none, 0⟩
-noncomputable def classB : FireClass := ⟨43.4e6, 2.85, 0.01, 0.037, none, 0⟩
-noncomputable def classC : FireClass := ⟨25e6, 2.0, 0.06, 0.1, none, 0⟩
+/-- `co2FromCarbon(carbon, co, soot) = 44/12 max(0, carbon - 12/28 co - soot)`. -/
+noncomputable def co2FromCarbon (carbon co soot : ℝ) : ℝ := 44 / 12 * max 0 (carbon - 12 / 28 * co - soot)
+
+/-- `fuel(heatMJ, carbon, co, soot)` of `fireClasses.js`. -/
+noncomputable def carbonFuel (heatMJ carbon co soot : ℝ) : FireClass :=
+  ⟨heatMJ * 1e6, co2FromCarbon carbon co soot, co, soot, none, 0⟩
+
+/-- The fire classes of `fireClasses.js` as of 2026-11-05: A, B, C, K and L from their carbon
+fractions, D (magnesium) with its own oxygen and ash. -/
+noncomputable def classA : FireClass := carbonFuel 18.0 0.444 0.01 0.015
+noncomputable def classB : FireClass := carbonFuel 44.1 0.839 0.022 0.072
+noncomputable def classC : FireClass := carbonFuel 30.3 0.857 0.056 0.056
 noncomputable def classD : FireClass := ⟨24.75e6, 0, 0, 0, some 0.658, 1.658⟩
-noncomputable def classK : FireClass := ⟨37e6, 2.8, 0.006, 0.02, none, 0⟩
+noncomputable def classK : FireClass := carbonFuel 37.4 0.774 0.021 0.069
+noncomputable def classL : FireClass := carbonFuel 30.3 0.857 0.056 0.056
 
-/-- Every class closes, so `stoichiometry` never clamps water and the mass balances hold;
-class D closes exactly (`1 + 0.658 = 1.658`). -/
+/-- Every current class closes without the tolerance (class D exactly, `1 + 0.658 = 1.658`), so
+`stoichiometry` accepts all six and their water is non-negative. -/
 theorem fireClasses_close :
-    classA.closes ∧ classB.closes ∧ classC.closes ∧ classD.closes ∧ classK.closes := by
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;>
-    norm_num [FireClass.closes, FireClass.o2kg, classA, classB, classC, classD, classK,
-      HEAT_PER_O2]
+    classA.closes ∧ classB.closes ∧ classC.closes ∧ classD.closes ∧ classK.closes ∧
+      classL.closes := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    norm_num [FireClass.closes, FireClass.o2kg, classA, classB, classC, classD, classK, classL,
+      carbonFuel, co2FromCarbon, HEAT_PER_O2, max_def]
 
-/-- The heat-per-oxygen statement fails for class D, which sets its own `o2`: magnesium releases
-about 37.6 MJ per kg of O₂, not `HEAT_PER_O2`. -/
+theorem fireClasses_accepted :
+    classA.accepted ∧ classB.accepted ∧ classC.accepted ∧ classD.accepted ∧ classK.accepted ∧
+      classL.accepted := by
+  obtain ⟨a, b, c, d, k, l⟩ := fireClasses_close
+  exact ⟨closes_accepted a, closes_accepted b, closes_accepted c, closes_accepted d,
+    closes_accepted k, closes_accepted l⟩
+
+/-- The heat-per-oxygen statement does not apply to class D, which sets its own `o2`: magnesium
+releases about 37.6 MJ per kg of O₂, not `HEAT_PER_O2`. -/
 theorem classD_heat_per_O2 :
     37.6e6 < (stoichiometry classD).heat / (stoichiometry classD).o2 ∧
       (stoichiometry classD).heat / (stoichiometry classD).o2 < 37.7e6 := by
   norm_num [stoichiometry, FireClass.o2kg, classD]
 
-/-- Mass is not conserved once the yields exceed `1 + o2`, where the code clamps water at
-zero: a fuel with `Δh = HEAT_PER_O2` (so 1 kg of O₂ per kg) and a CO₂ yield of 3 adds 2 kg of
-gas per kg burnt from a solid, not 1. Pure carbon burnt to CO₂ would cross this edge: its CO₂
-yield 44/12 exceeds `1 + 32.8e6 / HEAT_PER_O2`. -/
-theorem addProducts_clamp_counterexample :
-    ∑ q, productsDelta (stoichiometry ⟨HEAT_PER_O2, 3, 0, 0, none, 0⟩) 1 false q = 2 := by
-  rw [sum_Sp]
-  simp only [productsDelta, stoichiometry, FireClass.o2kg, Option.getD_none, Bool.false_eq_true,
-    ↓reduceIte]
-  rw [div_self HEAT_PER_O2_pos.ne']
-  norm_num
-
-theorem carbon_yield_exceeds : 1 + 32.8e6 / HEAT_PER_O2 < (44 : ℝ) / 12 := by
-  rw [HEAT_PER_O2_eq]; norm_num
-
 /-- The guards in `chemistry` keep `changeGas` from clamping: with `dm ≤ m_O₂ / o2` (and, for
-vapour, `dm ≤ m_fuel`), non-negative yields and `dm ≥ 0`, no species is driven negative. -/
+vapour, `dm ≤ m_fuel`), non-negative yields, a class that closes and `dm ≥ 0`, no species is
+driven negative. -/
 theorem addProducts_guard {f : FireClass} {dm : ℝ} {m : Sp → ℝ} {vapour : Bool}
-    (hm : ∀ q, 0 ≤ m q) (hdm : 0 ≤ dm) (ho2 : 0 < f.o2kg)
+    (hm : ∀ q, 0 ≤ m q) (hdm : 0 ≤ dm) (ho2 : 0 < f.o2kg) (hclose : f.closes)
     (hco2 : 0 ≤ f.co2) (hco : 0 ≤ f.co) (hsoot : 0 ≤ f.soot)
     (hO : dm ≤ m .o2 / (stoichiometry f).o2) (hF : vapour = true → dm ≤ m .fuel) :
     ∀ q, 0 ≤ m q + productsDelta (stoichiometry f) dm vapour q := by
   have ho2' : 0 < (stoichiometry f).o2 := ho2
+  have hw := stoichiometry_h2o_bounds.2 hclose
   intro q
   cases q with
   | fuel =>
@@ -777,10 +839,7 @@ theorem addProducts_guard {f : FireClass} {dm : ℝ} {m : Sp → ℝ} {vapour : 
     have := (le_div_iff₀ ho2').1 hO
     linarith
   | co2 => simp only [productsDelta, stoichiometry]; nlinarith [hm .co2]
-  | h2o =>
-    simp only [productsDelta, stoichiometry]
-    have := le_max_left 0 (1 + f.o2kg - f.co2 - f.co - f.soot - f.ash)
-    nlinarith [hm .h2o]
+  | h2o => simp only [productsDelta]; nlinarith [hm .h2o]
   | soot => simp only [productsDelta, stoichiometry]; nlinarith [hm .soot]
   | co => simp only [productsDelta, stoichiometry]; nlinarith [hm .co]
 
@@ -789,8 +848,8 @@ nitrogen (`changeGas_species`, `changeGas_nitrogen`), and changes the gas's mass
 `(1 - ash) dm` from a solid and by `-ash · dm` from vapour. -/
 theorem addProducts_gas_mass {V rho dm : ℝ} {Y : Sp → ℝ} {f : FireClass} {vapour : Bool}
     (hV : 0 < V) (hrho : 0 < rho) (hY : ∀ q, 0 ≤ Y q) (hN : ∑ q, Y q ≤ 1)
-    (hdm : 0 ≤ dm) (ho2 : 0 < f.o2kg) (hco2 : 0 ≤ f.co2) (hco : 0 ≤ f.co) (hsoot : 0 ≤ f.soot)
-    (hclose : f.closes)
+    (hdm : 0 ≤ dm) (ho2 : 0 < f.o2kg) (hclose : f.closes) (hco2 : 0 ≤ f.co2) (hco : 0 ≤ f.co)
+    (hsoot : 0 ≤ f.soot)
     (hO : dm ≤ Y .o2 * (rho * V) / (stoichiometry f).o2)
     (hF : vapour = true → dm ≤ Y .fuel * (rho * V))
     (hpos : 0 < rho * V + ((if vapour then 0 else dm) - f.ash * dm)) :
@@ -798,27 +857,28 @@ theorem addProducts_gas_mass {V rho dm : ℝ} {Y : Sp → ℝ} {f : FireClass} {
       rho * V + ((if vapour then 0 else dm) - f.ash * dm) := by
   have hmass : 0 < rho * V := mul_pos hrho hV
   have hg := addProducts_guard (m := fun q => Y q * (rho * V)) (vapour := vapour)
-    (fun q => mul_nonneg (hY q) hmass.le) hdm ho2 hco2 hco hsoot hO hF
+    (fun q => mul_nonneg (hY q) hmass.le) hdm ho2 hclose hco2 hco hsoot hO hF
   have hNn : 0 ≤ rho * V - ∑ q, Y q * (rho * V) := by
     rw [← Finset.sum_mul]; nlinarith
   have hsum : ∑ q, productsDelta (stoichiometry f) dm vapour q =
       (if vapour then 0 else dm) - f.ash * dm := by
     cases vapour
-    · have := addProducts_mass_solid hclose dm
+    · have := addProducts_mass_solid f dm
       simp only [Bool.false_eq_true, ↓reduceIte]
       linarith
-    · have := addProducts_mass_vapour hclose dm
+    · have := addProducts_mass_vapour f dm
       simp only [↓reduceIte]
       linarith
   have hp : 0 < rho * V + ∑ q, productsDelta (stoichiometry f) dm vapour q := by
     rw [hsum]; exact hpos
   rw [changeGas_mass hV hg hNn hp, hsum]
 
-/-- A liquid first item (classes B and K) evaporates the heat above its boiling point:
-`dv = min(skin, C (T - T_b) / L)` and then `T ← T_b`. Unclamped, the heat taken is exactly
-the latent heat carried off; when the skin runs out first, the code still sets `T_b` and loses
-`C (T - T_b) - dv L > 0`. -/
-theorem chemistry_liquid_evaporation_energy {C T Tb L skin : ℝ} (hC : 0 < C) (hL : 0 < L) :
+/-! ### The liquid first item (classes B and K) -/
+
+/-- Before 30c019a: `dv = min(skin, C (T - T_b) / L)` and then `T ← T_b`. Unclamped, the heat
+taken was the latent heat carried off; when the skin ran out first, `C (T - T_b) - dv L > 0` was
+lost. -/
+theorem chemistry_liquid_evaporation_energy_old {C T Tb L skin : ℝ} (hC : 0 < C) (hL : 0 < L) :
     (C * (T - Tb) / L ≤ skin → C * (T - Tb) = min skin (C * (T - Tb) / L) * L) ∧
       (skin < C * (T - Tb) / L → 0 < C * (T - Tb) - min skin (C * (T - Tb) / L) * L) := by
   constructor
@@ -827,6 +887,43 @@ theorem chemistry_liquid_evaporation_energy {C T Tb L skin : ℝ} (hC : 0 < C) (
     rw [min_eq_left h.le]
     have := (lt_div_iff₀ hL).1 h
     linarith
+
+/-- The vapour made since 30c019a: `dv = min(skin, C (T - T_b) / L)`. -/
+noncomputable def liquidVapour (C T Tb L skin : ℝ) : ℝ := min skin (C * (T - Tb) / L)
+
+/-- The surface temperature after it: `T - dv L / C`. -/
+noncomputable def liquidT (C T Tb L skin : ℝ) : ℝ := T - liquidVapour C T Tb L skin * L / C
+
+/-- The energy `C T + L · (vapour made)` is conserved. -/
+theorem chemistry_liquid_energy {C T Tb L skin : ℝ} (hC : 0 < C) :
+    C * liquidT C T Tb L skin + L * liquidVapour C T Tb L skin = C * T := by
+  unfold liquidT
+  field_simp
+  ring
+
+/-- The surface never falls below its boiling point, and never warms (for `T > T_b`,
+`skin ≥ 0`). -/
+theorem chemistry_liquid_above_boiling {C T Tb L skin : ℝ} (hC : 0 < C) (hL : 0 < L)
+    (hT : Tb < T) (hs : 0 ≤ skin) :
+    Tb ≤ liquidT C T Tb L skin ∧ liquidT C T Tb L skin ≤ T ∧ 0 ≤ liquidVapour C T Tb L skin := by
+  have hle : liquidVapour C T Tb L skin ≤ C * (T - Tb) / L := min_le_right _ _
+  have hnn : 0 ≤ liquidVapour C T Tb L skin :=
+    le_min hs (div_nonneg (mul_nonneg hC.le (by linarith)) hL.le)
+  have h1 : liquidVapour C T Tb L skin * L / C ≤ T - Tb := by
+    rw [div_le_iff₀ hC]
+    have := (le_div_iff₀ hL).1 hle
+    linarith
+  have h2 : 0 ≤ liquidVapour C T Tb L skin * L / C := by positivity
+  unfold liquidT
+  exact ⟨by linarith, by linarith, hnn⟩
+
+/-- Unclamped (enough liquid in the layer), the surface ends exactly at its boiling point. -/
+theorem chemistry_liquid_unclamped {C T Tb L skin : ℝ} (hC : 0 < C) (hL : 0 < L)
+    (h : C * (T - Tb) / L ≤ skin) : liquidT C T Tb L skin = Tb := by
+  unfold liquidT liquidVapour
+  rw [min_eq_right h]
+  field_simp
+  ring
 
 /-! ## Fresh fuel mixed into the surface layer -/
 
@@ -879,6 +976,58 @@ theorem chemistry_fresh_refills_skin {F S d : ℝ} (hd0 : 0 ≤ d) :
     · rw [min_eq_right h, max_eq_right (by linarith), min_eq_left (by linarith)]
       ring
 
+/-! ## Ash: the oxide of a metal stays as heat capacity -/
+
+/-- `solidCapacity` before and after an oxidation step of `dOx`: the fuel mass falls from `F`
+to `F - dOx`, the surface layer is `min(F, S)` at `c_f` J kg⁻¹ K⁻¹, and since 30c019a the ash
+adds `ash · dOx · c_ash` to `inertC` (`c_ash = 900`, MgO). -/
+noncomputable def capBefore (inert F S cf w : ℝ) : ℝ := inert + min F S * cf + w * 4186
+
+noncomputable def capAfter (inert F S cf w ash dOx cAsh : ℝ) : ℝ :=
+  (inert + ash * dOx * cAsh) + min (F - dOx) S * cf + w * 4186
+
+/-- The change is the ash's capacity less the surface fuel burnt. -/
+theorem chemistry_ash_capacity (inert F S cf w ash dOx cAsh : ℝ) :
+    capAfter inert F S cf w ash dOx cAsh - capBefore inert F S cf w =
+      ash * dOx * cAsh - cf * (min F S - min (F - dOx) S) := by
+  unfold capAfter capBefore; ring
+
+/-- While the bulk refills the surface layer (`F - dOx ≥ S`), oxidising a metal never lowers the
+solid's heat capacity. -/
+theorem chemistry_ash_capacity_mono {inert F S cf w ash dOx cAsh : ℝ} (hbulk : S ≤ F - dOx)
+    (hd : 0 ≤ dOx) (ha : 0 ≤ ash) (hc : 0 ≤ cAsh) :
+    capBefore inert F S cf w ≤ capAfter inert F S cf w ash dOx cAsh := by
+  have h := chemistry_ash_capacity inert F S cf w ash dOx cAsh
+  rw [min_eq_right hbulk, min_eq_right (by linarith : S ≤ F)] at h
+  have : 0 ≤ ash * dOx * cAsh := by positivity
+  linarith
+
+/-- Nor at any stage when the oxide holds at least the heat of the fuel it came from,
+`c_f ≤ ash · c_ash`. -/
+theorem chemistry_ash_capacity_mono_cp {inert F S cf w ash dOx cAsh : ℝ} (hd : 0 ≤ dOx)
+    (hcf : 0 ≤ cf) (hcp : cf ≤ ash * cAsh) :
+    capBefore inert F S cf w ≤ capAfter inert F S cf w ash dOx cAsh := by
+  have h := chemistry_ash_capacity inert F S cf w ash dOx cAsh
+  have hm : min F S - min (F - dOx) S ≤ dOx := by
+    rcases le_total F S with h1 | h1
+    · rw [min_eq_left h1, min_eq_left (by linarith : F - dOx ≤ S)]; linarith
+    · rw [min_eq_right h1]
+      have := min_le_left (F - dOx) S
+      have := min_le_right (F - dOx) S
+      rcases le_total (F - dOx) S with h2 | h2
+      · rw [min_eq_left h2]; linarith
+      · rw [min_eq_right h2]; linarith
+  have : cf * (min F S - min (F - dOx) S) ≤ cf * dOx := mul_le_mul_of_nonneg_left hm hcf
+  nlinarith
+
+/-- But not once the item's remaining fuel lies within its surface layer: magnesium is given
+wood's `fuelHeatCapacity` of 2000 J kg⁻¹ K⁻¹, and its 1.658 kg of MgO per kg burnt hold only
+1492 J K⁻¹. With 0.1 kg left in a 0.2 kg layer, burning 0.05 kg lowers the capacity from 200 to
+174.6 J K⁻¹. -/
+theorem chemistry_ash_capacity_counterexample :
+    capAfter 0 0.1 0.2 2000 0 1.658 0.05 900 < capBefore 0 0.1 0.2 2000 0 := by
+  norm_num [capAfter, capBefore, min_def]
+
 /-! ## `march`: ray energy bookkeeping -/
 
 /-- What lies past the cell a ray is in. -/
@@ -901,9 +1050,11 @@ structure Tally where
 /-- The energy a gas cell takes: `left (1 - exp(-τ))` if `τ > 0`. -/
 noncomputable def taken (left tau : ℝ) : ℝ := if 0 < tau then left * (1 - Real.exp (-tau)) else 0
 
-/-- The loop of `march`, with `k` iterations of `rayReach` left, at path index `n` with `left`
+/-! ### The version before commit 30c019a, which dropped the rest -/
+
+/-- The loop of `march` before 30c019a, with `k` iterations of `rayReach` left, at path index `n` with `left`
 joules; it stops when `left ≤ cut` (`cut = 1e-9 · energy`). -/
-noncomputable def marchLoop (cut : ℝ) (path : ℕ → Seg) : ℕ → ℕ → ℝ → Tally
+noncomputable def marchLoopOld (cut : ℝ) (path : ℕ → Seg) : ℕ → ℕ → ℝ → Tally
   | 0, _, left => ⟨0, 0, 0, left⟩
   | k + 1, n, left =>
     if left ≤ cut then ⟨0, 0, 0, left⟩ else
@@ -912,14 +1063,14 @@ noncomputable def marchLoop (cut : ℝ) (path : ℕ → Seg) : ℕ → ℕ → �
       | .solid => ⟨taken left (path n).tau, left - taken left (path n).tau, 0, 0⟩
       | .gas =>
         ⟨taken left (path n).tau +
-            (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).gas,
-          (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).solid,
-          (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).out,
-          (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).dropped⟩
+            (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).gas,
+          (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).solid,
+          (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).out,
+          (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).dropped⟩
 
-/-- `march(sim, x, y, z, dir, energy, from, skipOwn)` with `rayReach` iterations. -/
-noncomputable def march (reach : ℕ) (cut : ℝ) (path : ℕ → Seg) (energy : ℝ) : Tally :=
-  marchLoop cut path reach 0 energy
+/-- `march` before 30c019a, with `rayReach` iterations. -/
+noncomputable def marchOld (reach : ℕ) (cut : ℝ) (path : ℕ → Seg) (energy : ℝ) : Tally :=
+  marchLoopOld cut path reach 0 energy
 
 theorem march_taken_mem {left : ℝ} (tau : ℝ) (hl : 0 ≤ left) :
     0 ≤ taken left tau ∧ taken left tau ≤ left := by
@@ -945,15 +1096,15 @@ theorem march_taken_transmit_two (left : ℝ) {τ₁ τ₂ : ℝ} (h₁ : 0 ≤ 
     (left - taken left τ₁) - taken (left - taken left τ₁) τ₂ = left * Real.exp (-(τ₁ + τ₂)) := by
   rw [march_taken_transmit _ h₂, march_taken_transmit _ h₁, neg_add, Real.exp_add]; ring
 
-/-- Bookkeeping of the loop: gas + solid + outside + dropped = what entered. -/
-theorem marchLoop_balance (cut : ℝ) (path : ℕ → Seg) (k : ℕ) :
-    ∀ n left, (marchLoop cut path k n left).gas + (marchLoop cut path k n left).solid +
-      (marchLoop cut path k n left).out + (marchLoop cut path k n left).dropped = left := by
+/-- Bookkeeping of the old loop: gas + solid + outside + dropped = what entered. -/
+theorem marchLoopOld_balance (cut : ℝ) (path : ℕ → Seg) (k : ℕ) :
+    ∀ n left, (marchLoopOld cut path k n left).gas + (marchLoopOld cut path k n left).solid +
+      (marchLoopOld cut path k n left).out + (marchLoopOld cut path k n left).dropped = left := by
   induction k with
-  | zero => intro n left; simp [marchLoop]
+  | zero => intro n left; simp [marchLoopOld]
   | succ k ih =>
     intro n left
-    simp only [marchLoop]
+    simp only [marchLoopOld]
     split_ifs
     · simp
     · cases (path n).next with
@@ -964,24 +1115,24 @@ theorem marchLoop_balance (cut : ℝ) (path : ℕ → Seg) (k : ℕ) :
         have := ih (n + 1) (left - taken left (path n).tau)
         linarith
 
-/-- Ray bookkeeping in `march`: the energy left in gas cells, plus that deposited in the first
-solid, plus that leaving the domain, plus what is dropped, equals the energy emitted. -/
-theorem march_balance (reach : ℕ) (cut : ℝ) (path : ℕ → Seg) (energy : ℝ) :
-    (march reach cut path energy).gas + (march reach cut path energy).solid +
-      (march reach cut path energy).out + (march reach cut path energy).dropped = energy :=
-  marchLoop_balance cut path reach 0 energy
+/-- Ray bookkeeping before 30c019a: the energy left in gas cells, plus that deposited in the
+first solid, plus that leaving the domain, plus what was dropped, equals the energy emitted. -/
+theorem marchOld_balance (reach : ℕ) (cut : ℝ) (path : ℕ → Seg) (energy : ℝ) :
+    (marchOld reach cut path energy).gas + (marchOld reach cut path energy).solid +
+      (marchOld reach cut path energy).out + (marchOld reach cut path energy).dropped = energy :=
+  marchLoopOld_balance cut path reach 0 energy
 
-/-- Every part is non-negative. -/
-theorem marchLoop_nonneg (cut : ℝ) (path : ℕ → Seg) (k : ℕ) :
-    ∀ n left, 0 ≤ left → 0 ≤ (marchLoop cut path k n left).gas ∧
-      0 ≤ (marchLoop cut path k n left).solid ∧ 0 ≤ (marchLoop cut path k n left).out ∧
-      0 ≤ (marchLoop cut path k n left).dropped := by
+/-- Every part of the old tally is non-negative. -/
+theorem marchLoopOld_nonneg (cut : ℝ) (path : ℕ → Seg) (k : ℕ) :
+    ∀ n left, 0 ≤ left → 0 ≤ (marchLoopOld cut path k n left).gas ∧
+      0 ≤ (marchLoopOld cut path k n left).solid ∧ 0 ≤ (marchLoopOld cut path k n left).out ∧
+      0 ≤ (marchLoopOld cut path k n left).dropped := by
   induction k with
-  | zero => intro n left hl; simp [marchLoop, hl]
+  | zero => intro n left hl; simp [marchLoopOld, hl]
   | succ k ih =>
     intro n left hl
     have ht := march_taken_mem (path n).tau hl
-    simp only [marchLoop]
+    simp only [marchLoopOld]
     split_ifs
     · simp [hl]
     · cases (path n).next with
@@ -992,39 +1143,39 @@ theorem marchLoop_nonneg (cut : ℝ) (path : ℕ → Seg) (k : ℕ) :
         obtain ⟨a, b, c, d⟩ := ih (n + 1) (left - taken left (path n).tau) (by linarith)
         exact ⟨by linarith, b, c, d⟩
 
-/-- Energy above the cutoff is dropped only when the ray has used all its `rayReach` steps in
-gas: then nothing reached a solid or left the domain. -/
-theorem marchLoop_dropped_of_gt {cut : ℝ} (hcut : 0 ≤ cut) (path : ℕ → Seg) (k : ℕ) :
-    ∀ n left, cut < (marchLoop cut path k n left).dropped →
-      (marchLoop cut path k n left).solid = 0 ∧ (marchLoop cut path k n left).out = 0 ∧
+/-- Before 30c019a, energy above the cutoff was dropped only when the ray had used all its
+`rayReach` steps in gas: then nothing reached a solid or left the domain. -/
+theorem marchLoopOld_dropped_of_gt {cut : ℝ} (hcut : 0 ≤ cut) (path : ℕ → Seg) (k : ℕ) :
+    ∀ n left, cut < (marchLoopOld cut path k n left).dropped →
+      (marchLoopOld cut path k n left).solid = 0 ∧ (marchLoopOld cut path k n left).out = 0 ∧
         ∀ i < k, (path (n + i)).next = .gas := by
   induction k with
-  | zero => intro n left _; simp [marchLoop]
+  | zero => intro n left _; simp [marchLoopOld]
   | succ k ih =>
     intro n left h
     by_cases hc : left ≤ cut
-    · have e : marchLoop cut path (k + 1) n left = ⟨0, 0, 0, left⟩ := by
-        simp only [marchLoop]; rw [ite_eq_left hc]
+    · have e : marchLoopOld cut path (k + 1) n left = ⟨0, 0, 0, left⟩ := by
+        simp only [marchLoopOld]; rw [ite_eq_left hc]
       rw [e] at h; simp only at h; linarith
     · cases hn : (path n).next with
       | outside =>
-        have e : marchLoop cut path (k + 1) n left =
+        have e : marchLoopOld cut path (k + 1) n left =
             ⟨taken left (path n).tau, 0, left - taken left (path n).tau, 0⟩ := by
-          simp only [marchLoop]; rw [ite_eq_right hc, hn]
+          simp only [marchLoopOld]; rw [ite_eq_right hc, hn]
         rw [e] at h; simp only at h; linarith
       | solid =>
-        have e : marchLoop cut path (k + 1) n left =
+        have e : marchLoopOld cut path (k + 1) n left =
             ⟨taken left (path n).tau, left - taken left (path n).tau, 0, 0⟩ := by
-          simp only [marchLoop]; rw [ite_eq_right hc, hn]
+          simp only [marchLoopOld]; rw [ite_eq_right hc, hn]
         rw [e] at h; simp only at h; linarith
       | gas =>
-        have e : marchLoop cut path (k + 1) n left =
+        have e : marchLoopOld cut path (k + 1) n left =
             ⟨taken left (path n).tau +
-                (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).gas,
-              (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).solid,
-              (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).out,
-              (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).dropped⟩ := by
-          simp only [marchLoop]; rw [ite_eq_right hc, hn]
+                (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).gas,
+              (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).solid,
+              (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).out,
+              (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).dropped⟩ := by
+          simp only [marchLoopOld]; rw [ite_eq_right hc, hn]
         rw [e] at h ⊢
         simp only at h ⊢
         obtain ⟨h1, h2, h3⟩ := ih (n + 1) _ h
@@ -1035,19 +1186,19 @@ theorem marchLoop_dropped_of_gt {cut : ℝ} (hcut : 0 ≤ cut) (path : ℕ → S
         · have := h3 i (by omega)
           rwa [show n + 1 + i = n + (i + 1) by ring] at this
 
-/-- The drop at the reach limit can be the whole ray: through soot-free gas that never ends
-within `rayReach` cells, `march` drops all of the emitted energy, however far above the cutoff. -/
-theorem march_reach_drops_all (reach : ℕ) {cut energy : ℝ} (h : cut < energy) :
-    march reach cut (fun _ => ⟨0, .gas⟩) energy = ⟨0, 0, 0, energy⟩ := by
-  unfold march
-  suffices ∀ k n, marchLoop cut (fun _ => ⟨0, .gas⟩) k n energy = ⟨0, 0, 0, energy⟩ from this _ _
+/-- The defect the fix removed: through soot-free gas that does not end within `rayReach` cells,
+the old `march` dropped all of the emitted energy, however far above the cutoff. -/
+theorem marchOld_reach_drops_all (reach : ℕ) {cut energy : ℝ} (h : cut < energy) :
+    marchOld reach cut (fun _ => ⟨0, .gas⟩) energy = ⟨0, 0, 0, energy⟩ := by
+  unfold marchOld
+  suffices ∀ k n, marchLoopOld cut (fun _ => ⟨0, .gas⟩) k n energy = ⟨0, 0, 0, energy⟩ from this _ _
   intro k
   induction k with
-  | zero => intro n; simp [marchLoop]
+  | zero => intro n; simp [marchLoopOld]
   | succ k ih =>
     intro n
     have hn : ¬ energy ≤ cut := not_le.2 h
-    simp only [marchLoop, hn, ↓reduceIte]
+    simp only [marchLoopOld, hn, ↓reduceIte]
     have h0 : taken energy 0 = 0 := by simp [taken]
     simp only [h0, sub_zero, ih, zero_add]
 
@@ -1072,25 +1223,26 @@ theorem march_leftFrom_eq (path : ℕ → Seg) (hτ : ∀ j, 0 ≤ (path j).tau)
     congr 2
     ring
 
-/-- Through gas cells only, with no cutoff, `march` leaves `leftFrom` at the end and puts the
-rest in the gas. -/
-theorem marchLoop_all_gas {cut : ℝ} (hcut : cut < 0) (path : ℕ → Seg)
+/-- Through gas cells only, with no cutoff, the old loop leaves `leftFrom` at the end and puts
+the rest in the gas; the current loop then deposits that remainder in the end cell
+(`marchLoop_vs_old`). -/
+theorem marchLoopOld_all_gas {cut : ℝ} (hcut : cut < 0) (path : ℕ → Seg)
     (hgas : ∀ j, (path j).next = .gas) (k : ℕ) :
-    ∀ n left, 0 ≤ left → marchLoop cut path k n left =
+    ∀ n left, 0 ≤ left → marchLoopOld cut path k n left =
       ⟨left - leftFrom path n k left, 0, 0, leftFrom path n k left⟩ := by
   induction k with
-  | zero => intro n left _; simp [marchLoop, leftFrom]
+  | zero => intro n left _; simp [marchLoopOld, leftFrom]
   | succ k ih =>
     intro n left hl
     have hc : ¬ left ≤ cut := by linarith
     have ht := march_taken_mem (path n).tau hl
-    have e : marchLoop cut path (k + 1) n left =
+    have e : marchLoopOld cut path (k + 1) n left =
         ⟨taken left (path n).tau +
-            (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).gas,
-          (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).solid,
-          (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).out,
-          (marchLoop cut path k (n + 1) (left - taken left (path n).tau)).dropped⟩ := by
-      simp only [marchLoop]; rw [ite_eq_right hc, hgas n]
+            (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).gas,
+          (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).solid,
+          (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).out,
+          (marchLoopOld cut path k (n + 1) (left - taken left (path n).tau)).dropped⟩ := by
+      simp only [marchLoopOld]; rw [ite_eq_right hc, hgas n]
     rw [e, ih (n + 1) _ (by linarith)]
     simp only [leftFrom]
     congr 1
@@ -1105,6 +1257,139 @@ theorem march_expected {κ : ℝ} {Y l : ℕ → ℝ} (path : ℕ → Seg)
     leftFrom path 0 k E = Flamescapes.SA1_pass E (fun j => Flamescapes.Pabs κ (Y j) (l j)) k := by
   rw [Flamescapes.SA1_pass_exp, march_leftFrom_eq path (fun j => by rw [hτ]; exact hnn j)]
   simp only [zero_add, hτ]
+
+/-! ### The current version: the rest goes into the cell the ray ends in -/
+
+/-- Since 30c019a, what a ray still carries when its loop stops (at `rayReach` or below the
+cut-off) goes into the cell it is in: its gas (`T`) or its solid (`Ts`). -/
+noncomputable def endDeposit (gasEnd : Bool) (left : ℝ) : Tally :=
+  if gasEnd then ⟨left, 0, 0, 0⟩ else ⟨0, left, 0, 0⟩
+
+/-- The loop of `march`, with `isGas n` the kind of the cell at path index `n`. -/
+noncomputable def marchLoop (cut : ℝ) (path : ℕ → Seg) (isGas : ℕ → Bool) : ℕ → ℕ → ℝ → Tally
+  | 0, n, left => endDeposit (isGas n) left
+  | k + 1, n, left =>
+    if left ≤ cut then endDeposit (isGas n) left else
+      match (path n).next with
+      | .outside => ⟨taken left (path n).tau, 0, left - taken left (path n).tau, 0⟩
+      | .solid => ⟨taken left (path n).tau, left - taken left (path n).tau, 0, 0⟩
+      | .gas =>
+        ⟨taken left (path n).tau +
+            (marchLoop cut path isGas k (n + 1) (left - taken left (path n).tau)).gas,
+          (marchLoop cut path isGas k (n + 1) (left - taken left (path n).tau)).solid,
+          (marchLoop cut path isGas k (n + 1) (left - taken left (path n).tau)).out,
+          (marchLoop cut path isGas k (n + 1) (left - taken left (path n).tau)).dropped⟩
+
+/-- `march(sim, x, y, z, dir, energy, from, skipOwn)` with `rayReach` iterations. -/
+noncomputable def march (reach : ℕ) (cut : ℝ) (path : ℕ → Seg) (isGas : ℕ → Bool)
+    (energy : ℝ) : Tally :=
+  marchLoop cut path isGas reach 0 energy
+
+lemma endDeposit_balance (b : Bool) (left : ℝ) :
+    (endDeposit b left).gas + (endDeposit b left).solid + (endDeposit b left).out = left ∧
+      (endDeposit b left).dropped = 0 := by
+  cases b <;> simp [endDeposit]
+
+/-- Bookkeeping of the loop: gas + solid + outside = what entered, and nothing is dropped. -/
+theorem marchLoop_balance (cut : ℝ) (path : ℕ → Seg) (isGas : ℕ → Bool) (k : ℕ) :
+    ∀ n left, (marchLoop cut path isGas k n left).gas + (marchLoop cut path isGas k n left).solid +
+      (marchLoop cut path isGas k n left).out = left ∧
+      (marchLoop cut path isGas k n left).dropped = 0 := by
+  induction k with
+  | zero => intro n left; exact endDeposit_balance _ _
+  | succ k ih =>
+    intro n left
+    simp only [marchLoop]
+    split_ifs
+    · exact endDeposit_balance _ _
+    · cases (path n).next with
+      | outside => simp only; constructor <;> first | ring | trivial
+      | solid => simp only; constructor <;> first | ring | trivial
+      | gas =>
+        simp only
+        obtain ⟨h1, h2⟩ := ih (n + 1) (left - taken left (path n).tau)
+        exact ⟨by linarith, h2⟩
+
+/-- Ray bookkeeping in `march`: the energy left in gas cells, plus that in solids, plus that
+leaving the domain, equals the energy emitted, with nothing dropped. -/
+theorem march_balance (reach : ℕ) (cut : ℝ) (path : ℕ → Seg) (isGas : ℕ → Bool) (energy : ℝ) :
+    (march reach cut path isGas energy).gas + (march reach cut path isGas energy).solid +
+      (march reach cut path isGas energy).out = energy ∧
+      (march reach cut path isGas energy).dropped = 0 :=
+  marchLoop_balance cut path isGas reach 0 energy
+
+/-- Every part is non-negative. -/
+theorem marchLoop_nonneg (cut : ℝ) (path : ℕ → Seg) (isGas : ℕ → Bool) (k : ℕ) :
+    ∀ n left, 0 ≤ left → 0 ≤ (marchLoop cut path isGas k n left).gas ∧
+      0 ≤ (marchLoop cut path isGas k n left).solid ∧
+      0 ≤ (marchLoop cut path isGas k n left).out := by
+  have hend : ∀ (b : Bool) (left : ℝ), 0 ≤ left →
+      0 ≤ (endDeposit b left).gas ∧ 0 ≤ (endDeposit b left).solid ∧
+        0 ≤ (endDeposit b left).out := by
+    intro b left hl; cases b <;> simp [endDeposit, hl]
+  induction k with
+  | zero => intro n left hl; exact hend _ _ hl
+  | succ k ih =>
+    intro n left hl
+    have ht := march_taken_mem (path n).tau hl
+    simp only [marchLoop]
+    split_ifs
+    · exact hend _ _ hl
+    · cases (path n).next with
+      | outside => simp only; exact ⟨ht.1, le_rfl, by linarith⟩
+      | solid => simp only; exact ⟨ht.1, by linarith, le_rfl⟩
+      | gas =>
+        simp only
+        obtain ⟨a, b, c⟩ := ih (n + 1) (left - taken left (path n).tau) (by linarith)
+        exact ⟨by linarith, b, c⟩
+
+/-- The fix moves exactly what the old version dropped into the end cell: gas plus solid is the
+old gas plus solid plus dropped, and what leaves the domain is unchanged. -/
+theorem marchLoop_vs_old (cut : ℝ) (path : ℕ → Seg) (isGas : ℕ → Bool) (k : ℕ) :
+    ∀ n left, (marchLoop cut path isGas k n left).gas + (marchLoop cut path isGas k n left).solid =
+        (marchLoopOld cut path k n left).gas + (marchLoopOld cut path k n left).solid +
+          (marchLoopOld cut path k n left).dropped ∧
+      (marchLoop cut path isGas k n left).out = (marchLoopOld cut path k n left).out := by
+  have hend : ∀ (b : Bool) (left : ℝ), (endDeposit b left).gas + (endDeposit b left).solid = left ∧
+      (endDeposit b left).out = 0 := by
+    intro b left; cases b <;> simp [endDeposit]
+  induction k with
+  | zero =>
+    intro n left
+    obtain ⟨h1, h2⟩ := hend (isGas n) left
+    change (endDeposit (isGas n) left).gas + (endDeposit (isGas n) left).solid = 0 + 0 + left ∧
+      (endDeposit (isGas n) left).out = 0
+    exact ⟨by linarith, h2⟩
+  | succ k ih =>
+    intro n left
+    simp only [marchLoop, marchLoopOld]
+    split_ifs
+    · obtain ⟨h1, h2⟩ := hend (isGas n) left
+      exact ⟨by simp only; linarith, h2⟩
+    · cases (path n).next with
+      | outside => simp only; constructor <;> first | ring | trivial
+      | solid => simp only; constructor <;> first | ring | trivial
+      | gas =>
+        simp only
+        obtain ⟨h1, h2⟩ := ih (n + 1) (left - taken left (path n).tau)
+        exact ⟨by linarith, h2⟩
+
+/-- Through soot-free gas that does not end within `rayReach` cells, the energy that the old
+version dropped now all goes into the gas cell the ray ends in. -/
+theorem march_reach_deposits (reach : ℕ) {cut energy : ℝ} (h : cut < energy) :
+    march reach cut (fun _ => ⟨0, .gas⟩) (fun _ => true) energy = ⟨energy, 0, 0, 0⟩ := by
+  unfold march
+  suffices ∀ k n, marchLoop cut (fun _ => ⟨0, .gas⟩) (fun _ => true) k n energy =
+      ⟨energy, 0, 0, 0⟩ from this _ _
+  intro k
+  induction k with
+  | zero => intro n; simp [marchLoop, endDeposit]
+  | succ k ih =>
+    intro n
+    have hn : ¬ energy ≤ cut := not_le.2 h
+    simp only [marchLoop, hn, ↓reduceIte]
+    have h0 : taken energy 0 = 0 := by simp [taken]
+    simp only [h0, sub_zero, ih, zero_add]
 
 /-! ## `radiation`: the emitter never cools below the midpoint with ambient -/
 
@@ -1221,16 +1506,48 @@ theorem diffuse_heat_pair {Ka Kb kdt Ta Tb : ℝ} (ha : Ka = kdt) (hb : Kb = kdt
     Ka * (Tb - Ta) + Kb * (Ta - Tb) = 0 := by
   rw [ha, hb]; ring
 
-/-- Species: the pair's mass change is `V (ρ_a λ_a - ρ_b λ_b)(Y_b - Y_a)`, which vanishes only
-when `ρ_a λ_a = ρ_b λ_b`. With `λ ∝ (T/T₀)^1.75` and `ρ ∝ 1/T`, `ρλ ∝ T^0.75` differs between a
-hot and a cold cell, so species diffusion does not conserve mass across a temperature jump. -/
-theorem diffuse_species_pair (V ρa ρb la lb Ya Yb : ℝ) :
+/-- Species before 30c019a, each cell with its own coefficient: the pair's mass change is
+`V (ρ_a λ_a - ρ_b λ_b)(Y_b - Y_a)`, which vanishes only when `ρ_a λ_a = ρ_b λ_b`; with
+`λ ∝ (T/T₀)^1.75` and `ρ ∝ 1/T`, `ρλ ∝ T^0.75` differed between a hot and a cold cell. -/
+theorem diffuse_species_pair_old (V ρa ρb la lb Ya Yb : ℝ) :
     V * ρa * (la * (Yb - Ya)) + V * ρb * (lb * (Ya - Yb)) = V * (ρa * la - ρb * lb) * (Yb - Ya) := by
   ring
 
-theorem diffuse_species_counterexample :
+theorem diffuse_species_counterexample_old :
     (1 : ℝ) * 1 * ((1 / 7) * (1 - 0)) + 1 * 0.5 * ((1 / 14) * (0 - 1)) ≠ 0 := by
   norm_num
+
+/-- Since 30c019a a face takes the mean of its cells' `ρD`:
+`lamD = min(0.5 (ρD_c + ρD_n) dt / (ρ_c h²), 1/7)`. -/
+noncomputable def lamD (rhoDc rhoDn rhoc dt h : ℝ) : ℝ :=
+  min (0.5 * (rhoDc + rhoDn) * dt / (rhoc * h ^ 2)) (1 / 7)
+
+/-- It lies in `[0, 1/7]`, so `diffuse_between` applies: mass fractions stay within their
+neighbours' bounds. -/
+theorem diffuse_lamD_mem {rhoDc rhoDn rhoc dt h : ℝ} (hc : 0 ≤ rhoDc) (hn : 0 ≤ rhoDn)
+    (hr : 0 < rhoc) (hdt : 0 ≤ dt) :
+    0 ≤ lamD rhoDc rhoDn rhoc dt h ∧ lamD rhoDc rhoDn rhoc dt h ≤ 1 / 7 := by
+  unfold lamD
+  refine ⟨le_min (by positivity) (by norm_num), min_le_right _ _⟩
+
+/-- Each species' mass is conserved by a pair exchange while the cap is not binding on either
+side: `V ρ_c lamD_cn (Y_n - Y_c) + V ρ_n lamD_nc (Y_c - Y_n) = 0`. -/
+theorem diffuse_species_pair {V rhoDc rhoDn rhoc rhon dt h Yc Yn : ℝ} (hc : 0 < rhoc)
+    (hn : 0 < rhon) (hh : h ≠ 0)
+    (hcapc : 0.5 * (rhoDc + rhoDn) * dt / (rhoc * h ^ 2) ≤ 1 / 7)
+    (hcapn : 0.5 * (rhoDn + rhoDc) * dt / (rhon * h ^ 2) ≤ 1 / 7) :
+    V * rhoc * (lamD rhoDc rhoDn rhoc dt h * (Yn - Yc)) +
+      V * rhon * (lamD rhoDn rhoDc rhon dt h * (Yc - Yn)) = 0 := by
+  unfold lamD
+  rw [min_eq_left hcapc, min_eq_left hcapn]
+  field_simp
+  ring
+
+/-- When the cap binds on one side it is not: with `ρ_c = 1`, `ρ_n = 0.1` and a face flux that
+gives cell c the coefficient 0.1, cell n's would be 1 and is capped at 1/7. -/
+theorem diffuse_species_capped :
+    (1 : ℝ) * 1 * (0.1 * (1 - 0)) + 1 * 0.1 * (min 1 (1 / 7) * (0 - 1)) ≠ 0 := by
+  norm_num [min_def]
 
 /-! ## Egress quantities (`flamescapesRun.js`): visibility and the CO dose -/
 
@@ -1404,8 +1721,9 @@ theorem interiorFuel_gaussian_mean (μ : ℝ) (v : NNReal) : ∫ x, x ∂gaussia
   integral_id_gaussianReal
 
 /-- The code cuts each draw at zero, `max(0, μ + σ Z)`; for `σ > 0` that raises its mean
-strictly above `μ`, so the expected total exceeds `M` (by `N E[max(0, -X)]`, under 1e-4 of `M`
-for the default `σ = 0.3 μ`, a bound not proved here). -/
+strictly above `μ`, so the cut draws' expected total exceeds `M` (by `N E[max(0, -X)]`, under
+1e-4 of `M` for the default `σ = 0.3 μ`, a bound not proved here). Before 30c019a these were the
+contents' masses; since then they are rescaled to sum to `M` (`interiorFuel_rescaled_sum`). -/
 theorem interiorFuel_cut_raises_mean (μ : ℝ) {v : NNReal} (hv : v ≠ 0) :
     μ < ∫ x, max 0 x ∂gaussianReal μ v := by
   have hint : Integrable (fun x : ℝ => x) (gaussianReal μ v) :=
@@ -1437,5 +1755,35 @@ theorem interiorFuel_cut_raises_mean (μ : ℝ) {v : NNReal} (hv : v ≠ 0) :
     simp at this
   rw [integral_sub hint2 hint, integral_id_gaussianReal] at hpos
   linarith
+
+/-- Since 30c019a `interiorFuel` rescales the cut draws by `M / total` when `total > 0`. -/
+noncomputable def rescale {N : ℕ} (m : Fin N → ℝ) (M : ℝ) : Fin N → ℝ :=
+  if 0 < ∑ i, m i then fun i => m i * (M / ∑ i, m i) else m
+
+/-- The contents then hold exactly the paper's budget `M`. -/
+theorem interiorFuel_rescaled_sum {N : ℕ} (m : Fin N → ℝ) (M : ℝ) (h : 0 < ∑ i, m i) :
+    ∑ i, rescale m M i = M := by
+  unfold rescale
+  rw [ite_eq_left h, ← Finset.sum_mul]
+  field_simp
+
+/-- Each cell keeps a non-negative mass. -/
+theorem interiorFuel_rescaled_nonneg {N : ℕ} {m : Fin N → ℝ} {M : ℝ} (hm : ∀ i, 0 ≤ m i)
+    (hM : 0 ≤ M) (i : Fin N) : 0 ≤ rescale m M i := by
+  unfold rescale
+  split_ifs with h
+  · exact mul_nonneg (hm i) (div_nonneg hM h.le)
+  · exact hm i
+
+/-- And the proportions between cells are those of the draws. -/
+theorem interiorFuel_rescaled_ratio {N : ℕ} (m : Fin N → ℝ) (M : ℝ) (i j : Fin N) :
+    rescale m M i * m j = rescale m M j * m i := by
+  unfold rescale
+  split_ifs <;> ring
+
+/-- The draws are cut at zero before the rescaling: `max(0, μ + σ Z)` lies in `[0, ∞)` and is
+`μ + σ Z` whenever that is non-negative. -/
+theorem interiorFuel_cut (x : ℝ) : 0 ≤ max 0 x ∧ (0 ≤ x → max 0 x = x) :=
+  ⟨le_max_left _ _, fun h => max_eq_right h⟩
 
 end FireEgress.FlamescapesPort

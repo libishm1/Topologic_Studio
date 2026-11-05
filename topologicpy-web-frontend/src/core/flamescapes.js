@@ -125,7 +125,7 @@ export const DEFAULTS = Object.freeze({
   pyrolysisFuel: 0.9, // pyrolysate that is fuel vapour; the rest is residual (soot)
   latentHeat: 4.07e4 / 0.01802, // J / kg, water (Table 3, 40.7 kJ / mol)
   moisture: 0.1, // kg water per kg contents
-  fuelHeatCapacity: 2000, // J / (kg K), wood (Table 4)
+  fuelHeatCapacity: 2000, // J / (kg K), wood (Table 4); a fuel's own `heatCapacity` overrides it
   // Thermally thick fuel on a coarse grid: only a surface layer of this
   // areal density over the fuel's exposed area heats and reacts; it is
   // replenished from the cool bulk as it burns.
@@ -538,7 +538,7 @@ function particleToGrid(sim) {
       // ignition temperature) and the solver burns it from then on.
       const ign = ignitionK(sim, cell);
       if (sim.fuelMass[cell] > 0 && sim.Ts[cell] < ign) {
-        const patch = P.skinDensity * P.emberPatch * P.fuelHeatCapacity;
+        const patch = P.skinDensity * P.emberPatch * fuelCp(sim, cell);
         if (sim.Ts[cell] + (excess + own) / patch >= ign) {
           sim.Ts[cell] = ign;
           sim.stats.spotIgnitions += 1;
@@ -553,6 +553,16 @@ function ignitionK(sim, c) {
   return sim.fuels[sim.fuelKind[c]].ignitionTemperature + KELVIN;
 }
 
+/**
+ * Specific heat of a cell's fuel, J/(kg K): the fuel's own (a metal's is
+ * about half wood's), else wood's. With magnesium at wood's value, burning it
+ * could lower the solid's heat capacity even with its ash kept
+ * (FlamescapesPort.chemistry_ash_capacity_counterexample).
+ */
+function fuelCp(sim, c) {
+  return sim.fuels[sim.fuelKind[c]].heatCapacity ?? sim.P.fuelHeatCapacity;
+}
+
 /** Fuel in a cell's reacting surface layer (kg). */
 export function skinMass(sim, c) {
   return Math.min(sim.fuelMass[c], sim.P.skinDensity * sim.area[c]);
@@ -560,7 +570,7 @@ export function skinMass(sim, c) {
 
 /** Heat capacity of a cell's solid: inert part, the fuel's surface layer and its water (J / K). */
 function solidCapacity(sim, c) {
-  return sim.inertC[c] + skinMass(sim, c) * sim.P.fuelHeatCapacity + sim.moisture[c] * 4186;
+  return sim.inertC[c] + skinMass(sim, c) * fuelCp(sim, c) + sim.moisture[c] * 4186;
 }
 
 // -------------------------------------------------------------- radiation
@@ -995,7 +1005,7 @@ function chemistry(sim, dt) {
       const fresh = Math.min(dOx + dPy, Math.max(0, sim.fuelMass[c] - (skin - dOx - dPy)));
       if (fresh > 0) {
         const water = fresh * P.moisture;
-        const Cfresh = fresh * P.fuelHeatCapacity + water * 4186;
+        const Cfresh = fresh * fuelCp(sim, c) + water * 4186;
         sim.moisture[c] += water;
         const Cnow = solidCapacity(sim, c);
         sim.Ts[c] =(sim.Ts[c] * Math.max(0, Cnow - Cfresh) + P.ambient * Cfresh) / Math.max(Cnow, 1e-9);

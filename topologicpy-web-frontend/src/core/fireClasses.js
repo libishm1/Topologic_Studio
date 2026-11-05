@@ -23,6 +23,7 @@
  *                     0.857, triolein 0.774); the sources give CO and soot.
  *   o2, ash           a metal's own oxygen and solid oxide (kg per kg), when
  *                     not 417 kJ / mol O2 (Fire-X Eq. 4; Huggett 1980)
+ *   heatCapacity      J / (kg K) of the fuel, where it is not wood-like (metals)
  *   liquid            {boiling (K), latent (J/kg)}: evaporates past `boiling`
  *   embers            whether the burning item throws embers
  *   ignitionTemperature  degrees C, for spot ignition by embers
@@ -122,7 +123,8 @@ export const FIRE_CLASSES = {
     iso: "D",
     examples: "Magnesium parts and swarf, sodium and potassium in laboratories, lithium metal primary cells (not lithium-ion)",
     // Mg + 1/2 O2 -> MgO: 601.6 kJ / mol over 24.305 g / mol; the oxide stays as ash.
-    fuel: { heatOfCombustion: 24.75e6, o2: 0.658, ash: 1.658, yields: { co2: 0, co: 0, soot: 0 }, embers: false, ignitionTemperature: 473 },
+    // Magnesium's own specific heat, 24.87 J/(mol K) over 24.305 g/mol.
+    fuel: { heatOfCombustion: 24.75e6, o2: 0.658, ash: 1.658, heatCapacity: 1023, yields: { co2: 0, co: 0, soot: 0 }, embers: false, ignitionTemperature: 473 },
     growth: { class: null, alpha: null, note: "no t-squared characterisation found" },
     item: { mass: 2, area: 0.2 },
     agents: {
@@ -133,7 +135,7 @@ export const FIRE_CLASSES = {
         { agent: "Carbon dioxide", reason: "Burning magnesium keeps reacting with it." },
       ],
     },
-    sources: { heatOfCombustion: ["nistwebbookMgO"], ignitionTemperature: ["cameo", "zhao2022"], agents: ["nfpa10", "cameo"] },
+    sources: { heatOfCombustion: ["nistwebbookMgO"], heatCapacity: ["nistwebbookMg"], ignitionTemperature: ["cameo", "zhao2022"], agents: ["nfpa10", "cameo"] },
   },
   K: {
     label: "Class K: cooking oils and fats",
@@ -219,6 +221,7 @@ export const SOURCES = {
   hietaniemi2001vtt: "Hietaniemi, Mangs, Hakkarainen (2001). Burning of electrical household appliances: an experimental study. VTT Research Notes 2084 (report).",
   nistwebbookMgO: "NIST Chemistry WebBook, SRD 69: magnesium oxide, enthalpy of formation (CODATA) (reference data).",
   nistwebbookHeptane: "NIST Chemistry WebBook, SRD 69: n-heptane, boiling point and enthalpy of vaporisation (reference data).",
+  nistwebbookMg: "NIST Chemistry WebBook, SRD 69: magnesium, condensed-phase heat capacity at 298 K (reference data).",
   cameo: "NOAA CAMEO Chemicals datasheets: magnesium, sodium, lithium (government database).",
   zhao2022: "Zhao et al. (2022). The relationship between ignition and oxidation of molten magnesium alloys during the cooling process. Frontiers in Chemistry 10, 980860. doi:10.3389/fchem.2022.980860",
   larsson2017: "Larsson, Andersson, Blomqvist, Mellander (2017). Toxic fluoride gas emissions from lithium-ion battery fires. Scientific Reports 7, 10018. doi:10.1038/s41598-017-09784-z",
