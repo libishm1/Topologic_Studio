@@ -10,6 +10,10 @@
  * flags, and the fire's growth, peak, horizon and smoke criterion. The same
  * routers run on its forecast unchanged.
  *
+ * With model "flamescapes" or "flamescapes-embers" the payload carries the
+ * Flamescapes solver's frames (gas temperature, visibility and CO at every
+ * node; src/core/flamescapesRun.js), already computed by its own worker.
+ *
  * The graph arrives as copies of its typed arrays (the page keeps its own);
  * the deadline map goes back as a transferable buffer.
  */
@@ -17,6 +21,7 @@ import { buildForecast, planWithForecast } from "../core/forecast.js";
 import { doseDeadline, doseDeadlineMap, escapeDeadlines } from "../core/deadline.js";
 import { buildRoomGraph } from "../core/rooms.js";
 import { GROWTH, buildZoneForecast, fireRoomOf, roomTemperatureFrames, simulateRooms } from "../core/zone.js";
+import { forecastFromFrames } from "../core/flamescapesRun.js";
 
 /** The room graph, or a plain error when the model's spaces give no rooms. */
 function roomGraphFor(graph, zone) {
@@ -57,7 +62,7 @@ self.onmessage = (event) => {
       return;
     }
     const t0 = performance.now();
-    const { graph: g, start, exits, seed, model, steps, secondsPerStep, threshold, speed, depart, limit, useWalls, withMap, zone } = payload;
+    const { graph: g, start, exits, seed, model, steps, secondsPerStep, threshold, speed, depart, limit, useWalls, withMap, zone, frames } = payload;
     const graph = { nodes: g.nodes, edges: g.edges, blocked: g.blocked };
     const blocked = useWalls ? graph.blocked : null;
     let forecast, zoneSummary = null;
@@ -73,6 +78,9 @@ self.onmessage = (event) => {
       });
       // What the result card says; the per-room histories stay here.
       zoneSummary = { ...forecast.zone, roomStats: rooms.stats };
+    } else if (model === "flamescapes" || model === "flamescapes-embers") {
+      if (!frames) throw new Error("Run the Flamescapes fire first.");
+      forecast = forecastFromFrames(frames, { threshold, smoke: frames.smoke, visibilityLimit: frames.visibilityLimit });
     } else {
       forecast = buildForecast(graph, { model, seed, steps, dt: secondsPerStep, threshold, blocked });
     }

@@ -153,6 +153,21 @@ export function MethodsDialog({ open, onClose, studio }) {
                   </dd>
                 </div>
                 <div className="methods__card">
+                  <dt>Flamescapes fire and smoke (optional)</dt>
+                  <dd>
+                    A browser version of the Flamescapes solver (Wrede, Wagner et al. 2026), on a grid of 0.2 to
+                    0.45 m cells built from the IFC&apos;s walls, slabs, roofs and stairs: buoyant gas flow with
+                    pressure projection, solid fuel that dries, pyrolyses and oxidises with the paper&apos;s Arrhenius
+                    rates, gas combustion with the heat of Fire-X&apos;s 417 kJ per mol of oxygen, radiation by rays
+                    absorbed by soot, flame-front particles and, in the second option, embers carried by the gas
+                    that start spot fires. The room contents are the paper&apos;s statistical fire load; the first
+                    item burns with the fuel of its fire class (NFPA 10: A, B, C, D, K). Read at head height
+                    (1.8 m) at each graph node: gas temperature, visibility through the smoke (S = 3 / (8700 m²/kg
+                    times soot density)) and CO. The plan adds the CO dose of ISO 13571 to the heat dose. It runs on
+                    the GPU through WebGPU where the browser offers it, otherwise on one CPU core.
+                  </dd>
+                </div>
+                <div className="methods__card">
                   <dt>Learned escape</dt>
                   <dd>
                     Tabular Q-learning with distance-based reward shaping, compared against the earliest escape
@@ -228,12 +243,51 @@ export function MethodsDialog({ open, onClose, studio }) {
                   length of routes through the real ones. A lift ride counts as walking its rise, with no
                   wait for the car, and a lift is taken to stop at every floor beside it.
                 </li>
+                <li>
+                  <strong>Flamescapes in the browser is coarse.</strong> The paper resolves centimetres on a desktop
+                  GPU; here a cell is 0.2 to 0.45 m and a step 0.1 s. So the fuel&apos;s surface layer, a sub-grid
+                  rule for where an ember lands, the first item alight from the start, a raised solid-gas heat
+                  transfer coefficient (the paper&apos;s own 200) and exact integration of each reaction over a step
+                  stand in for what the paper resolves. Walls and slabs do not burn, doors are open and windows
+                  closed, and contents are a statistical fire load. It shows how heat and smoke may move through
+                  the building; it is not calibrated, and its fire class values marked provisional are still being
+                  checked.
+                </li>
               </ul>
             </section>
 
             <section id="methods-sources" aria-labelledby="h-sources">
               <h3 id="h-sources">Sources and credits</h3>
               <ul style={{ fontSize: 14 }}>
+                <li>
+                  Wrede, Wagner, Pałubicki, Michels and Pirk (2026). Flamescapes: simulating the wildlandfire urban
+                  interface. ACM Transactions on Graphics 45(6), 246 (CC BY 4.0); DOI 10.1145/3842518 printed
+                  on the paper, not yet registered.{" "}
+                  <a href="https://helgewrede.github.io/flamescapes/" target="_blank" rel="noreferrer">
+                    Project page
+                  </a>
+                </li>
+                <li>
+                  Wrede, Wagner, Mahfuz, Pałubicki, Michels and Pirk (2025). Fire-X: extinguishing fire with
+                  stoichiometric heat release. ACM Transactions on Graphics 44(6), 268.{" "}
+                  <a href="https://doi.org/10.1145/3763338" target="_blank" rel="noreferrer">
+                    doi:10.1145/3763338
+                  </a>
+                </li>
+                <li>
+                  Huggett (1980). Estimation of rate of heat release by means of oxygen consumption measurements.
+                  Fire and Materials 4, 61-65.{" "}
+                  <a href="https://doi.org/10.1002/fam.810040202" target="_blank" rel="noreferrer">
+                    doi:10.1002/fam.810040202
+                  </a>
+                </li>
+                <li>
+                  Mulholland and Croarkin (2000). Specific extinction coefficient of flame generated smoke. Fire
+                  and Materials 24, 227-230.{" "}
+                  <a href="https://doi.org/10.1002/1099-1018(200009/10)24:5<227::AID-FAM742>3.0.CO;2-9" target="_blank" rel="noreferrer">
+                    doi:10.1002/1099-1018(200009/10)24:5&lt;227::AID-FAM742&gt;3.0.CO;2-9
+                  </a>
+                </li>
                 <li>
                   Hart, Nilsson and Raphael (1968). A formal basis for the heuristic determination of minimum cost
                   paths. IEEE Trans. Systems Science and Cybernetics 4, 100-107.{" "}

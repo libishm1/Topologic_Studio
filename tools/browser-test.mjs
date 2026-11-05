@@ -781,6 +781,41 @@ if (zoneOffered) {
   await page.getByText("Heat diffusion", { exact: true }).click().catch(() => {});
 }
 
+// ---- 5e. the optional Flamescapes solver --------------------------------------
+//
+// Added 2026-11-05: switched on, it adds two fire models run by the
+// Flamescapes solver in its own worker (src/core/flamescapes.js). A short run
+// must stream frames, finish, colour the graph and say what it ran on.
+
+console.log("\n[5e] Flamescapes solver (optional)");
+const fsToggle = page.getByText("Flamescapes combustion solver (optional)", { exact: true });
+if (await fsToggle.isVisible().catch(() => false)) {
+  await fsToggle.click();
+  await page.getByText("Flamescapes: fire, smoke and embers", { exact: true }).click();
+  await page.getByText("Flamescapes settings", { exact: true }).click();
+  await page.getByLabel("Simulated time (s)").fill("30");
+  await page.getByLabel("Simulated time (s)").blur();
+  const tFs = Date.now();
+  await page.getByRole("button", { name: /^Start fire$/ }).scrollIntoViewIfNeeded();
+  await page.getByRole("button", { name: /^Start fire$/ }).click();
+  const fsDone = await page
+    .waitForFunction(() => /Flamescapes run complete/.test(document.body.innerText), null, { timeout: 240000 })
+    .then(() => true)
+    .catch(() => false);
+  record(fsDone, "a Flamescapes run streams its frames and completes", `${((Date.now() - tFs) / 1000).toFixed(1)}s`);
+  if (fsDone) timing("Flamescapes, 30 s simulated (click to complete)", Date.now() - tFs);
+  const card = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
+  record(/Running on (the GPU|one CPU core)/.test(card), "the run says what it ran on", card.split("\n").find((l) => /Running on/.test(l)) || "no backend line");
+  const legendFs = await page.getByText("Gas temperature at head height (°C)", { exact: true }).isVisible().catch(() => false);
+  record(legendFs || MOBILE, "the graph is coloured by gas temperature at head height", MOBILE ? "legend folded on a phone" : undefined);
+  await shot(page, "flamescapes-run");
+  // Back to the default, so later steps see the page as before.
+  await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
+  await fsToggle.click();
+} else {
+  record(false, "the Flamescapes toggle is offered in the Simulate step");
+}
+
 // ---- 6. theme, panels, topology mode ----------------------------------------
 
 console.log("\n[6] UI surfaces");

@@ -75,6 +75,19 @@ export const DEFAULT_SETTINGS = {
   zoneSmoke: true,
   zoneHorizon: 600,
 
+  // The optional Flamescapes solver (src/core/flamescapes.js): off until
+  // switched on, then two more fire models, "flamescapes" (fire and smoke)
+  // and "flamescapes-embers" (with embers).
+  flamescapes: false,
+  flamescapesClass: "A", // fire class of the first item (src/core/fireClasses.js)
+  flamescapesHorizon: 180, // s
+  flamescapesFireLoad: 780, // MJ / m^2 of floor, the contents
+  flamescapesUntenableC: 60, // gas at head height
+  flamescapesSmoke: true, // visibility below the limit is untenable
+  flamescapesVisibility: 10, // m
+  flamescapesBackend: "auto", // "auto" (WebGPU where offered) or "cpu"
+  flamescapesShow: "heat", // the graph's colour while it plays: "heat" or "smoke"
+
   showGraph: true,
   modelAppearance: "solid",
 };
@@ -99,6 +112,12 @@ export const PLAN_SETTINGS = [
   "zoneUntenableC",
   "zoneSmoke",
   "zoneHorizon",
+  "flamescapesClass",
+  "flamescapesHorizon",
+  "flamescapesFireLoad",
+  "flamescapesUntenableC",
+  "flamescapesSmoke",
+  "flamescapesVisibility",
 ];
 
 export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));
@@ -108,10 +127,16 @@ export function hasRooms(modelInfo) {
   return (modelInfo?.stats?.spaces ?? 0) > 0;
 }
 
+/** Whether a fire model is one of the Flamescapes solver's two. */
+export const isFlamescapes = (model) => model === "flamescapes" || model === "flamescapes-embers";
+
 /** The fire model in use: a saved choice of the two-zone model falls back to
- *  heat diffusion on a model without rooms. */
+ *  heat diffusion on a model without rooms, and of a Flamescapes model when
+ *  the solver is switched off. */
 export function fireModelIn(settings, modelInfo) {
-  return settings.fireModel === "zone" && !hasRooms(modelInfo) ? "temperature" : settings.fireModel;
+  if (settings.fireModel === "zone" && !hasRooms(modelInfo)) return "temperature";
+  if (isFlamescapes(settings.fireModel) && !settings.flamescapes) return "temperature";
+  return settings.fireModel;
 }
 
 function loadSettings() {

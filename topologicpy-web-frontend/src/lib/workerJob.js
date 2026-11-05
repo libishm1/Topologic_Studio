@@ -11,6 +11,9 @@
  * cancel() terminates the worker and rejects its jobs with "cancelled": the
  * only way to stop a long job, such as a deadline map no one wants any more.
  *
+ * A worker may also send { id, progress } any number of times before the
+ * answer; run()'s onProgress receives each (the fire solver's frames).
+ *
  * @param {() => Worker} create  makes the worker
  * @param {{failure?: string}} opts  failure: the message a failed worker's jobs
  *                                   reject with
@@ -32,6 +35,10 @@ export function workerClient(create, { failure = "A background task stopped. Rel
     w.addEventListener("message", (event) => {
       const job = pending.get(event.data?.id);
       if (!job) return;
+      if (event.data.progress !== undefined) {
+        job.onProgress?.(event.data.progress);
+        return;
+      }
       pending.delete(event.data.id);
       if (event.data.ok) job.resolve(event.data.result);
       else job.reject(new Error(event.data.error || failure));
@@ -46,12 +53,12 @@ export function workerClient(create, { failure = "A background task stopped. Rel
   };
 
   return {
-    run(message, transfers = []) {
+    run(message, transfers = [], { onProgress = null } = {}) {
       return new Promise((resolve, reject) => {
         const id = Math.random().toString(36).slice(2);
         try {
           worker ||= start();
-          pending.set(id, { resolve, reject });
+          pending.set(id, { resolve, reject, onProgress });
           worker.postMessage({ ...message, id }, transfers);
         } catch (error) {
           pending.delete(id);

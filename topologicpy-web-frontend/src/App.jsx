@@ -31,7 +31,8 @@ import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
 import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
-import { fireModelIn, planSettings, useStudio } from "./state/useStudio.js";
+import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
+import { fuelsFor } from "./core/fireClasses.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -146,6 +147,10 @@ export default function App() {
   const samplerRef = useRef(null);
   const forecastRef = useRef(null);
   const rlRef = useRef(null);
+  // The Flamescapes solver's worker, and its current run: inputs, frames as
+  // they arrive, and the stacked result once done (reused by the plan).
+  const flamescapesRef = useRef(null);
+  const combustionRef = useRef(null);
   const geometryRef = useRef(null);
   // Counts file loads, so only the latest one updates the page.
   const loadSeqRef = useRef(0);
@@ -220,6 +225,7 @@ export default function App() {
       samplerRef.current?.cancel();
       forecastRef.current?.cancel();
       rlRef.current?.cancel();
+      flamescapesRef.current?.cancel();
     },
     [],
   );
@@ -232,6 +238,15 @@ export default function App() {
       { failure: "Planning with the forecast stopped: its worker did not load or ran out of memory. Reload the page and try again." },
     );
     return forecastRef.current.run({ payload }, transfers);
+  }, []);
+
+  // The Flamescapes solver streams a frame at a time as progress.
+  const flamescapesJob = useCallback((payload, transfers, onProgress) => {
+    flamescapesRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/flamescapes.worker.js", import.meta.url), { type: "module" }),
+      { failure: "The Flamescapes fire solver stopped, usually because the browser ran out of memory. Try the CPU or a shorter run." },
+    );
+    return flamescapesRef.current.run({ payload }, transfers, { onProgress });
   }, []);
 
   const sample = useCallback((payload, transfers) => {
@@ -956,6 +971,96 @@ export default function App() {
     };
   }, [graph, settings, studio.semantics]);
 
+  // What the Flamescapes solver needs (src/core/flamescapesRun.js): the
+  // IFC's walls, slabs, roofs, stairs and obstacles, the graph's nodes, the
+  // fire and the first item's fire class (src/core/fireClasses.js).
+  const combustionInputs = useCallback(() => {
+    const geometry = geometryRef.current;
+    if (!geometry) throw new Error("Build the walkable graph first.");
+    const clone = (meshes) => (meshes || []).map((m) => ({ positions: m.positions.slice(), indices: m.indices.slice() }));
+    const geo = {
+      walls: clone(geometry.walls),
+      floors: clone(geometry.floors),
+      roofs: clone(geometry.roofMeshes),
+      stairs: clone(geometry.stairs),
+      obstacles: clone(geometry.obstacles),
+    };
+    const transfers = Object.values(geo).flatMap((list) => list.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
+    const { contentsFuel, ignitionFuel, item } = fuelsFor(settings.flamescapesClass);
+    const frames = Math.max(1, settings.fireMaxSteps);
+    const payload = {
+      geometry: geo,
+      upAxis: graph.upAxis,
+      fire: points.fire,
+      nodes: graph.nodes.slice(),
+      agentHeight: graph.agentHeight,
+      headHeight: 1.8,
+      horizon: settings.flamescapesHorizon,
+      frameSeconds: settings.flamescapesHorizon / frames,
+      embers: fireModel === "flamescapes-embers",
+      contentsFuel,
+      ignitionFuel,
+      item,
+      fireLoad: settings.flamescapesFireLoad * 1e6,
+      backend: settings.flamescapesBackend,
+    };
+    transfers.push(payload.nodes.buffer);
+    const key = JSON.stringify([
+      points.fire,
+      fireModel,
+      settings.flamescapesClass,
+      settings.flamescapesHorizon,
+      settings.fireMaxSteps,
+      settings.flamescapesFireLoad,
+      settings.flamescapesBackend,
+    ]);
+    return { payload, transfers, key };
+  }, [graph, points.fire, settings, fireModel]);
+
+  // Start the Flamescapes solver, or return the run already made for the
+  // same graph and inputs. Its frames collect in run.frames as they arrive;
+  // run.promise settles with the stacked frames.
+  const runCombustion = useCallback(() => {
+    const { payload, transfers, key } = combustionInputs();
+    const current = combustionRef.current;
+    if (current && current.key === key && current.graph === graph && !current.failed) return current;
+    flamescapesRef.current?.cancel();
+    const run = { key, graph, frames: [], done: false, failed: false, result: null, info: null };
+    run.promise = flamescapesJob(payload, transfers, (progress) => {
+      if (progress.type === "scene") {
+        run.info = progress.info;
+        studio.setFire((c) => ({ ...c, combustion: { ...progress.info, time: 0, hrr: 0, peak: 0, horizon: payload.horizon } }));
+        return;
+      }
+      run.frames.push(progress);
+      studio.setFire((c) => ({
+        ...c,
+        combustion: {
+          ...(c.combustion || run.info),
+          time: progress.time,
+          hrr: progress.hrr,
+          peak: Math.max(c.combustion?.peak || 0, progress.hrr),
+          embers: progress.embers,
+          spots: progress.spots,
+          horizon: payload.horizon,
+        },
+      }));
+    }).then(
+      (result) => {
+        run.done = true;
+        run.result = result;
+        return result;
+      },
+      (error) => {
+        run.done = true;
+        run.failed = true;
+        throw error;
+      },
+    );
+    combustionRef.current = run;
+    return run;
+  }, [combustionInputs, flamescapesJob, graph, studio]);
+
   const startFire = useCallback(async () => {
     if (!graph || !points.fire) return;
     // A plan still running would land mid-fire and clear its route.
@@ -990,9 +1095,39 @@ export default function App() {
       }
     }
 
+    // The Flamescapes solver streams its frames from its worker; the
+    // simulation plays each as it arrives, waiting while the next is computed.
+    let combustion = null;
+    if (isFlamescapes(fireModel)) {
+      try {
+        combustion = runCombustion();
+      } catch (error) {
+        reportError(error, "The Flamescapes fire model");
+        return;
+      }
+      combustion.promise.catch((error) => {
+        if (!isCancelled(error)) reportError(error, "The Flamescapes fire model");
+      });
+      let k = 0;
+      zoneFrames = {
+        next() {
+          if (k < combustion.frames.length) return { value: combustion.frames[k++].T, done: false };
+          return combustion.done ? { value: undefined, done: true } : { value: undefined, done: false };
+        },
+        [Symbol.iterator]() {
+          return this;
+        },
+      };
+    }
+
     burningRef.current = new Set();
     temperatureRef.current = new Map();
-    studio.setFire({ running: true, step: 0, model: fireModel });
+    studio.setFire((current) => ({
+      running: true,
+      step: 0,
+      model: fireModel,
+      combustion: combustion ? current.combustion : null,
+    }));
 
     // Every model reroutes now: temperature by hazard cost, flood and radial by
     // treating burning nodes as impassable.
@@ -1033,7 +1168,12 @@ export default function App() {
             }
             studio.setFire((current) => ({ ...current, step: message.step }));
             // Gas temperatures run far past heat diffusion's 120-degree index.
-            viewer?.setTemperatures(temperatures, fireModel === "zone" ? { peak: ZONE_COLOUR_PEAK } : undefined);
+            // The Flamescapes frames can show the smoke instead, and their
+            // flames and embers.
+            const frame = combustion?.frames[message.step];
+            if (frame && settings.flamescapesShow === "smoke") viewer?.setSmoke(frame.vis);
+            else viewer?.setTemperatures(temperatures, fireModel === "zone" || combustion ? { peak: ZONE_COLOUR_PEAK } : undefined);
+            if (combustion) viewer?.setParticles(frame?.particles || null);
             colours.set("fire");
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
@@ -1056,16 +1196,22 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours]);
+  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion]);
 
   // A fire that ends by itself keeps its final colours. Stopping it clears
   // them, back to what the graph showed before: the deadline map if it is
   // wanted, else the graph's own colours.
   const stopFire = useCallback(() => {
     studio.stopFire();
+    // A Flamescapes run still computing is ended: it holds a CPU core or the GPU.
+    if (combustionRef.current && !combustionRef.current.done) {
+      flamescapesRef.current?.cancel();
+      combustionRef.current = null;
+    }
     const viewer = viewerRef.current;
     viewer?.setTemperatures(null);
     viewer?.setBurningNodes(null);
+    viewer?.setParticles(null);
     if (settings.showDeadlineMap && deadlines) {
       viewer?.setDeadlines(deadlines, { max: planHorizon });
       colours.set("deadlines");
@@ -1185,6 +1331,24 @@ export default function App() {
       // gas temperature; the graph models from a model-degree threshold.
       const zone = fireModel === "zone" ? zoneInputs() : null;
       planRunningRef.current = true;
+      // The Flamescapes models plan on the solver's frames: the run already
+      // made for these inputs, or a new one, waited for.
+      let frames = null;
+      if (isFlamescapes(fireModel)) {
+        const run = runCombustion();
+        const done = await run.promise;
+        if (gen !== planGenRef.current) return;
+        frames = {
+          n: done.n,
+          K: done.K,
+          frameSeconds: done.frameSeconds,
+          T: done.T.slice(),
+          vis: done.vis.slice(),
+          co: done.co.slice(),
+          smoke: settings.flamescapesSmoke,
+          visibilityLimit: settings.flamescapesVisibility,
+        };
+      }
       const result = await forecastJob(
         {
           graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
@@ -1194,7 +1358,7 @@ export default function App() {
           model: fireModel,
           steps: settings.fireMaxSteps,
           secondsPerStep: settings.forecastSecondsPerStep,
-          threshold: zone ? settings.zoneUntenableC : settings.untenableAbove,
+          threshold: zone ? settings.zoneUntenableC : frames ? settings.flamescapesUntenableC : settings.untenableAbove,
           speed: settings.walkSpeed,
           depart: settings.departAfter,
           limit: settings.doseLimit,
@@ -1202,8 +1366,9 @@ export default function App() {
           // The map is the slow part; it is made only when it will be drawn.
           withMap: settings.showDeadlineMap,
           zone: zone?.zone,
+          frames,
         },
-        zone?.transfers,
+        zone?.transfers || (frames ? [frames.T.buffer, frames.vis.buffer, frames.co.buffer] : []),
       );
       // Inputs changed (or another plan began) while it ran: not this one's.
       if (gen !== planGenRef.current) return;
@@ -1242,7 +1407,25 @@ export default function App() {
       studio.setForecastPlan(NO_PLAN);
       reportError(error, "Planning with the forecast failed");
     }
-  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes, fireModel, zoneInputs]);
+  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes, fireModel, zoneInputs, runCombustion]);
+
+  // Switching a Flamescapes run between heat and smoke redraws the frame on
+  // screen, also once the run has ended.
+  useEffect(() => {
+    const run = combustionRef.current;
+    if (!run || !isFlamescapes(fire.model) || graphColours !== "fire") return;
+    const frame = run.frames[Math.min(fire.step, run.frames.length - 1)];
+    if (!frame) return;
+    const viewer = viewerRef.current;
+    if (settings.flamescapesShow === "smoke") viewer?.setSmoke(frame.vis);
+    else {
+      const temperatures = new Map();
+      for (let i = 0; i < frame.T.length; i += 1) if (frame.T[i] > 21) temperatures.set(i, frame.T[i]);
+      viewer?.setTemperatures(temperatures, { peak: ZONE_COLOUR_PEAK });
+    }
+    // Only a change of view redraws; frames redraw themselves as they play.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.flamescapesShow]);
 
   // The deadline map colours the graph when a plan arrives or the toggle
   // changes, and only then. A fire that has coloured the graph since keeps
@@ -1676,7 +1859,20 @@ export default function App() {
                     max: ZONE_COLOUR_PEAK,
                     note: "Two-zone model: the smoke layer's temperature where it is at or below head height; ambient elsewhere.",
                   }
-                : fire.model === "temperature")
+                : isFlamescapes(fire.model)
+                  ? settings.flamescapesShow === "smoke"
+                    ? {
+                        title: "Visibility at head height",
+                        ramp: "smoke",
+                        scale: ["30 m", "5 m", "1 m"],
+                        note: "Flamescapes: seeing through the smoke 1.8 m above each node's floor; clear air keeps the graph's colour.",
+                      }
+                    : {
+                        title: "Gas temperature at head height (°C)",
+                        max: ZONE_COLOUR_PEAK,
+                        note: "Flamescapes: the solver's gas temperature 1.8 m above each node's floor.",
+                      }
+                  : fire.model === "temperature")
             }
             deadlineLegend={graphColours === "deadlines" ? { max: planHorizon } : null}
             onStopFire={stopFire}

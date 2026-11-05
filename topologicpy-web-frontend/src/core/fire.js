@@ -13,6 +13,11 @@
  *                (src/core/zone.js), computed beforehand from the IFC's rooms
  *                and passed in as `zoneFrames`, one frame per step; it then
  *                plays and reroutes as the temperature model does
+ *   flamescapes, flamescapes-embers
+ *                the Flamescapes solver's gas temperatures at head height in
+ *                degrees C (src/core/flamescapesRun.js), streamed from its
+ *                worker as `zoneFrames`: an iterator that yields undefined
+ *                while the next frame is still being computed
  *
  * One correction from the literature review (wiki/research/fire-egress-
  * methods-2026-10-27.md, finding W1): the gain coefficient is
@@ -133,8 +138,10 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
     lethality = null,
     zoneFrames = null,
   } = opts;
-  // Both play temperatures (degrees C); the zone model's come precomputed.
-  const heat = model === "temperature" || model === "zone";
+  // These play temperatures (degrees C); the zone and Flamescapes models'
+  // come precomputed or streamed.
+  const framed = model === "zone" || model === "flamescapes" || model === "flamescapes-embers";
+  const heat = model === "temperature" || framed;
   const walls = useWalls ? graph.blocked : null;
   const seed = snap(graph, firePoint);
   const walker = startPoint ? snap(graph, startPoint) : null;
@@ -180,8 +187,8 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
   const burning = new Uint8Array(graph.nodes.length / 3);
   if (model === "temperature") {
     steps = temperatureSteps(graph, seed, { maxSteps, blocked: walls });
-  } else if (model === "zone") {
-    if (!zoneFrames) throw new Error("The two-zone model's frames must be computed first.");
+  } else if (framed) {
+    if (!zoneFrames) throw new Error("This fire model's frames must be computed first.");
     steps = zoneFrames;
   } else {
     const timeline = model === "flood" ? floodTimeline(graph, seed, maxSteps, walls) : radialTimeline(graph, seed, maxSteps);
@@ -195,6 +202,11 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
     if (done) {
       closed = true;
       onDone?.();
+      return;
+    }
+    // A streamed frame not computed yet: wait for it.
+    if (value === undefined) {
+      timer = setTimeout(tick, 100);
       return;
     }
     if (heat) {

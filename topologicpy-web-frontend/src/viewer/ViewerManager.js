@@ -45,7 +45,33 @@ const OVERLAY = {
   navGraph: "navGraph",
   navRoute: "navRoute",
   outlines: "outlines",
+  flames: "flames",
+  embers: "embers",
 };
+
+/** A soft round sprite for glowing particles, drawn once on a canvas. */
+function glowTexture() {
+  const size = 64;
+  const canvas = typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(size, size) : Object.assign(document.createElement("canvas"), { width: size, height: size });
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.35, "rgba(255,255,255,0.6)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+/** Glow colour of a particle at T kelvin: dull red to yellow-white, as hot bodies look. */
+const GLOW_STOPS = [0x7f1d1d, 0xdc2626, 0xf97316, 0xfacc15, 0xfef3c7].map((hex) => new THREE.Color(hex));
+function glowColor(target, T) {
+  const x = Math.min(1, Math.max(0, (T - 800) / 1000)) * (GLOW_STOPS.length - 1);
+  const i = Math.min(GLOW_STOPS.length - 2, Math.floor(x));
+  return target.copy(GLOW_STOPS[i]).lerp(GLOW_STOPS[i + 1], x - i);
+}
 
 /** Overlays the section cut also clips; routes and markers stay whole. */
 const CLIPPED = new Set([OVERLAY.outlines, OVERLAY.graph, OVERLAY.navGraph]);
@@ -924,7 +950,7 @@ export class ViewerManager {
     const extracted = new Set([...ids.stairs, ...stairPartIds, ...(ids.spaces || [])]);
     const coreMeshIds = cores.map((core) => core.itemId).filter((id) => !extracted.has(id));
 
-    const [floors, stairs, doors, walls, spaces, obstacles, coreMeshes] = await Promise.all([
+    const [floors, stairs, doors, walls, spaces, obstacles, coreMeshes, roofMeshes] = await Promise.all([
       extractMeshes(this.model, [...floorIds, ...flooring], world),
       extractMeshes(this.model, [...ids.stairs, ...stairPartIds], world),
       extractMeshes(this.model, ids.doors, world),
@@ -932,6 +958,9 @@ export class ViewerManager {
       extractMeshes(this.model, ids.spaces || [], world),
       extractMeshes(this.model, ids.obstacles || [], world),
       extractMeshes(this.model, coreMeshIds, world),
+      // Roof slabs are not walked on, but the Flamescapes solver needs them
+      // as the top storey's ceiling.
+      extractMeshes(this.model, [...roofs], world),
     ]);
 
     done({
@@ -945,7 +974,7 @@ export class ViewerManager {
       stairParts: stairPartIds.length,
       cores: cores.length,
     });
-    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size, cores, coreMeshes };
+    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size, roofMeshes, cores, coreMeshes };
   }
 
   // --------------------------------------------------------------- overlays
@@ -1276,6 +1305,102 @@ export class ViewerManager {
       return;
     }
     this._setColouring({ opacity: 0.8, redraw: () => this.setDeadlines(deadlines, { max }) }, colors, attribute);
+  }
+
+  /**
+   * Recolour graph edges by visibility through smoke (metres, one value per
+   * node): clear air keeps the graph's own colour, and the edge greys and
+   * darkens as visibility falls from `clear` to `dark` metres.
+   */
+  setSmoke(visibility, { clear = 30, dark = 1 } = {}) {
+    const segments = this.overlays.get(OVERLAY.graph);
+    if (!segments || !this._graphEdges) return;
+    const attribute = segments.geometry.getAttribute("color");
+    if (!attribute) return;
+    const colors = attribute.array;
+    if (!visibility || visibility.length !== this._graphNodes.length / 3) {
+      this._setColouring(null, colors, attribute);
+      return;
+    }
+    const light = this._theme === "dark" ? new THREE.Color(0xd4d4d8) : new THREE.Color(0xa1a1aa);
+    const black = this._theme === "dark" ? new THREE.Color(0x52525b) : new THREE.Color(0x18181b);
+    const scratch = new THREE.Color();
+    const edgeCount = this._graphEdges.length / 2;
+    const span = Math.log(clear / dark);
+    for (let e = 0; e < edgeCount; e += 1) {
+      for (let side = 0; side < 2; side += 1) {
+        const node = this._graphEdges[e * 2 + side];
+        const offset = e * 6 + side * 3;
+        const v = visibility[node];
+        if (!(v < clear)) {
+          colors[offset] = this._baseColors[offset];
+          colors[offset + 1] = this._baseColors[offset + 1];
+          colors[offset + 2] = this._baseColors[offset + 2];
+          continue;
+        }
+        // Darker as visibility falls, on a log scale (10 m is a third of the way).
+        const t = Math.min(1, Math.max(0, Math.log(clear / Math.max(v, dark)) / span));
+        scratch.copy(light).lerp(black, t);
+        colors[offset] = scratch.r;
+        colors[offset + 1] = scratch.g;
+        colors[offset + 2] = scratch.b;
+      }
+    }
+    this._setColouring({ opacity: 0.85, redraw: () => this.setSmoke(visibility, { clear, dark }) }, colors, attribute);
+  }
+
+  /**
+   * Draw the Flamescapes solver's particles as glowing points: flame-front
+   * particles larger and dimmer, embers small and bright, both coloured by
+   * temperature from dull red (800 K) to yellow-white (1800 K). null clears.
+   */
+  setParticles(snapshot) {
+    if (!snapshot || !snapshot.temps?.length) {
+      this._setOverlay(OVERLAY.flames, null);
+      this._setOverlay(OVERLAY.embers, null);
+      return;
+    }
+    const sprite = this._glowSprite || (this._glowSprite = glowTexture());
+    for (const [kind, name, size, opacity] of [
+      [0, OVERLAY.flames, 0.45, 0.5],
+      [1, OVERLAY.embers, 0.12, 1],
+    ]) {
+      let count = 0;
+      for (let q = 0; q < snapshot.kinds.length; q += 1) if (snapshot.kinds[q] === kind) count += 1;
+      if (!count) {
+        this._setOverlay(name, null);
+        continue;
+      }
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const scratch = new THREE.Color();
+      let o = 0;
+      for (let q = 0; q < snapshot.kinds.length; q += 1) {
+        if (snapshot.kinds[q] !== kind) continue;
+        positions.set(snapshot.positions.subarray(q * 3, q * 3 + 3), o * 3);
+        glowColor(scratch, snapshot.temps[q]);
+        colors[o * 3] = scratch.r;
+        colors[o * 3 + 1] = scratch.g;
+        colors[o * 3 + 2] = scratch.b;
+        o += 1;
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      const material = new THREE.PointsMaterial({
+        size,
+        map: sprite,
+        vertexColors: true,
+        transparent: true,
+        opacity,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true,
+      });
+      const points = new THREE.Points(geometry, material);
+      points.renderOrder = 10;
+      this._setOverlay(name, points);
+    }
   }
 
   /** Recolour graph edges from a set of burning node indices. */

@@ -13,7 +13,8 @@ import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
-import { PLAN_SETTINGS, fireModelIn, hasRooms } from "../state/useStudio.js";
+import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
+import { FIRE_CLASSES, FIRE_CLASS_KEYS } from "../core/fireClasses.js";
 import {
   Button,
   Choices,
@@ -808,6 +809,29 @@ const ZONE_MODEL = {
     "A smoke layer and its gas temperature in each room, on a clock in seconds, spreading through open doors. Needs the model's rooms (IfcSpace).",
 };
 
+// Offered when the optional Flamescapes solver is switched on
+// (src/core/flamescapes.js; Wrede, Wagner et al. 2026).
+const FLAMESCAPES_MODELS = [
+  {
+    value: "flamescapes",
+    label: "Flamescapes: fire and smoke",
+    description:
+      "The Flamescapes solver on a grid built from the IFC: gas flow, burning of the room contents, radiation and smoke, read at head height.",
+  },
+  {
+    value: "flamescapes-embers",
+    label: "Flamescapes: fire, smoke and embers",
+    description: "As above, with embers carried by the hot gas that can start spot fires away from the flame.",
+  },
+];
+
+/** What the Flamescapes solver leaves out, shown with its controls (Methods has more). */
+const FLAMESCAPES_LIMITS =
+  "A browser version of a graphics fire solver: grid cells of 0.2 to 0.45 m, not centimetres, so flames and " +
+  "thin walls are coarse; room contents are a statistical fire load, not the model's furniture; walls and slabs " +
+  "do not burn; doors open, windows closed. It shows how heat and smoke may move through this building; it is " +
+  "not a calibrated fire engineering model.";
+
 const ZONE_GROWTH = [
   { value: "slow", label: "Slow (1 MW in 600 s)" },
   { value: "medium", label: "Medium (1 MW in 300 s)" },
@@ -1238,6 +1262,56 @@ function returnVsBest(r) {
   return `${r.policy_return.toFixed(2)} / ${r.optimal_return.toFixed(2)}${short}`;
 }
 
+/** Progress and state of a Flamescapes run: backend, grid, time, heat release, embers. */
+function CombustionStatus({ combustion, running }) {
+  if (!combustion) return null;
+  const done = combustion.time >= (combustion.horizon ?? Infinity) - 1e-6;
+  return (
+    <section className="result" aria-live="polite" aria-label="Flamescapes run">
+      <h3 className="result__title" data-tone="ok">
+        <Icon name={done ? "check" : "info"} size={16} />
+        {done ? "Flamescapes run complete" : running ? "Flamescapes is computing" : "Flamescapes run"}
+      </h3>
+      <dl className="result__grid">
+        <div className="result__item">
+          <dt className="result__label">Simulated</dt>
+          <dd className="result__value result__value--lead">
+            {Math.round(combustion.time ?? 0)} / {Math.round(combustion.horizon ?? 0)} s
+          </dd>
+        </div>
+        <div className="result__item">
+          <dt className="result__label">Heat release</dt>
+          <dd className="result__value">
+            {Math.round(combustion.hrr ?? 0)} kW (peak {Math.round(combustion.peak ?? 0)})
+          </dd>
+        </div>
+        {combustion.embers !== undefined && (
+          <div className="result__item">
+            <dt className="result__label">Embers, spot fires</dt>
+            <dd className="result__value">
+              {combustion.embers}, {combustion.spots}
+            </dd>
+          </div>
+        )}
+        {combustion.grid && (
+          <div className="result__item">
+            <dt className="result__label">Grid</dt>
+            <dd className="result__value">
+              {combustion.grid.join(" x ")} of {combustion.cell?.toFixed(2)} m
+            </dd>
+          </div>
+        )}
+      </dl>
+      {combustion.backend && (
+        <p className="result__note">
+          Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}.
+          {combustion.clipped ? " The model is larger than the grid allows, so the grid covers the area round the fire; nodes outside it read as clear air." : ""}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function SimulatePanel({
   studio,
   exits,
@@ -1254,8 +1328,11 @@ export function SimulatePanel({
   const ready = Boolean(graph);
   const rooms = hasRooms(modelInfo);
   const fireModel = fireModelIn(settings, modelInfo);
-  // Heat diffusion and the two-zone model both give temperatures to reroute on.
-  const heat = fireModel === "temperature" || fireModel === "zone";
+  // Heat diffusion, the two-zone model and Flamescapes give temperatures to reroute on.
+  const flamescapes = isFlamescapes(fireModel);
+  const heat = fireModel === "temperature" || fireModel === "zone" || flamescapes;
+  const fireClass = FIRE_CLASSES[settings.flamescapesClass] || FIRE_CLASSES.A;
+  const models = [...FIRE_MODELS, ...(rooms ? [ZONE_MODEL] : []), ...(settings.flamescapes ? FLAMESCAPES_MODELS : [])];
 
   return (
     <>
@@ -1280,9 +1357,45 @@ export function SimulatePanel({
           name="fire-model"
           value={fireModel}
           onChange={(fireModel) => setSettings({ fireModel })}
-          options={rooms ? [...FIRE_MODELS, ZONE_MODEL] : FIRE_MODELS}
+          options={models}
           disabled={fire.running}
         />
+        <Toggle
+          label="Flamescapes combustion solver (optional)"
+          checked={settings.flamescapes}
+          disabled={fire.running}
+          onChange={(on) => setSettings(on ? { flamescapes: true, fireModel: "flamescapes" } : { flamescapes: false, fireModel: isFlamescapes(settings.fireModel) ? "temperature" : settings.fireModel })}
+          hint="Adds two fire models from the Flamescapes paper (Wrede, Wagner et al. 2026): fire and smoke, with or without embers. Heavier than the others: it runs on your GPU where the browser offers WebGPU, otherwise on one CPU core, for a minute or more."
+        />
+        {flamescapes && (
+          <>
+            <SelectField
+              label="What burns first"
+              value={settings.flamescapesClass}
+              onChange={(flamescapesClass) => setSettings({ flamescapesClass })}
+              options={FIRE_CLASS_KEYS.map((key) => ({ value: key, label: FIRE_CLASSES[key].label }))}
+              hint={`${fireClass.examples}. ISO 3941 class: ${fireClass.iso}.`}
+            />
+            <Notice tone={fireClass.agents.unsuitable.length ? "warning" : "neutral"}>
+              <strong>Extinguishing a class {fireClass.short} fire.</strong> Suitable: {fireClass.agents.suitable.join(", ")}.
+              {fireClass.agents.unsuitable.map((entry) => (
+                <span key={entry.agent}>
+                  {" "}
+                  Never {entry.agent.toLowerCase()}: {entry.reason}
+                </span>
+              ))}
+            </Notice>
+            <Segmented
+              label="Show on the graph"
+              value={settings.flamescapesShow}
+              onChange={(flamescapesShow) => setSettings({ flamescapesShow })}
+              options={[
+                { value: "heat", label: "Heat" },
+                { value: "smoke", label: "Smoke" },
+              ]}
+            />
+          </>
+        )}
         {modelInfo && !rooms && (
           <p className="field__hint">
             Two-zone rooms (degrees C) needs rooms: the model must have IfcSpace elements, and this one has none.
@@ -1314,7 +1427,63 @@ export function SimulatePanel({
           <p className="field__hint">Set a start and exit in the Route step to see the route react.</p>
         )}
 
+        {flamescapes && <CombustionStatus combustion={fire.combustion} running={fire.running} />}
         {dynamicPath && <RerouteResult dynamicPath={dynamicPath} step={fire.step} />}
+        {flamescapes && (
+          <Disclosure summary="Flamescapes settings">
+            <div className="grid-2">
+              <NumberField
+                label="Simulated time (s)"
+                value={settings.flamescapesHorizon}
+                min={30}
+                max={900}
+                step={30}
+                onChange={(flamescapesHorizon) => setSettings({ flamescapesHorizon: flamescapesHorizon ?? 180 })}
+              />
+              <NumberField
+                label="Fire load (MJ/m²)"
+                value={settings.flamescapesFireLoad}
+                min={50}
+                max={3000}
+                step={10}
+                onChange={(flamescapesFireLoad) => setSettings({ flamescapesFireLoad: flamescapesFireLoad ?? 780 })}
+                hint="Room contents per floor area; 780 is the Eurocode mean for dwellings."
+              />
+              <NumberField
+                label="Untenable from (gas °C)"
+                value={settings.flamescapesUntenableC}
+                min={30}
+                max={200}
+                step={5}
+                onChange={(flamescapesUntenableC) => setSettings({ flamescapesUntenableC: flamescapesUntenableC ?? 60 })}
+              />
+              <NumberField
+                label="Untenable below visibility (m)"
+                value={settings.flamescapesVisibility}
+                min={1}
+                max={30}
+                step={1}
+                onChange={(flamescapesVisibility) => setSettings({ flamescapesVisibility: flamescapesVisibility ?? 10 })}
+              />
+            </div>
+            <Toggle
+              label="Smoke makes a place untenable"
+              checked={settings.flamescapesSmoke}
+              onChange={(flamescapesSmoke) => setSettings({ flamescapesSmoke })}
+              hint="Visibility below the limit closes a node for the plan, as gas above the temperature does."
+            />
+            <SelectField
+              label="Run on"
+              value={settings.flamescapesBackend}
+              onChange={(flamescapesBackend) => setSettings({ flamescapesBackend })}
+              options={[
+                { value: "auto", label: "The GPU where the browser offers WebGPU, else the CPU" },
+                { value: "cpu", label: "The CPU (one core, coarser grid)" },
+              ]}
+            />
+            <p className="field__hint">{FLAMESCAPES_LIMITS}</p>
+          </Disclosure>
+        )}
 
         <Disclosure summary="Rerouting and timing">
           <Toggle
