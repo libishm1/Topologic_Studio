@@ -2,7 +2,8 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 3f9a4f2: the smoke, gas and tenability measures.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 7e009e6 (the exits out of the building and rerouting to any of them), with README commits fbdaed5 and 7130fac, which need no deploy.
+  - **Live check of 7e009e6:** 0 failed steps, with Render awake; before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 3f9a4f2:** 0 failed steps, with Render awake.
   - **Deployed 2026-11-06:**
     - 34d036b, the TU Wien Vienna example;
