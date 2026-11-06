@@ -12,6 +12,8 @@ export const GUIDED_RUNS = [
     description: "The Duplex: its walkable graph, then the shortest route from the room furthest from an exit.",
     example: "duplex-apartment",
     fire: null,
+    // The field note it ends on (core/fieldNotes.js).
+    note: "walk-out",
   },
   {
     id: "fire-on-route",
@@ -19,6 +21,7 @@ export const GUIDED_RUNS = [
     description: "The same route, then a fire part-way along it: heat spreads through the graph and the route bends round it.",
     example: "duplex-apartment",
     fire: { model: "temperature", along: 0.45 },
+    note: "reroute",
   },
   {
     id: "smoke-doors",
@@ -26,6 +29,7 @@ export const GUIDED_RUNS = [
     description: "Flamescapes, from the most likely ignition point, with every door closed: heat and smoke over 60 s (a minute or more to compute).",
     example: "duplex-apartment",
     fire: { model: "flamescapes", doors: "closed", horizon: 60 },
+    note: "closed-doors",
   },
 ];
 

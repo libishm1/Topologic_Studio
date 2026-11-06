@@ -826,6 +826,15 @@ if (await fsToggle.isVisible().catch(() => false)) {
   const tFs = Date.now();
   await page.getByRole("button", { name: /^Start fire$/ }).scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: /^Start fire$/ }).click();
+  // The doors switch stays usable while the fire runs, and offers a restart
+  // with the new doors (it was locked until the page was reloaded, 2026-11-06).
+  // Set back at once, so this run carries on with the doors open.
+  await page.waitForTimeout(800);
+  const doorsGroup = page.getByRole("group", { name: "Doors", exact: true });
+  await doorsGroup.getByRole("button", { name: "Closed" }).click({ timeout: 5000 }).catch(() => {});
+  const offered = await page.getByRole("button", { name: /^Restart the fire with the doors closed$/ }).count();
+  record(offered === 1, "the doors can be switched while the fire runs, with a restart offered", offered ? "offered" : "not offered");
+  await doorsGroup.getByRole("button", { name: "Open" }).click({ timeout: 5000 }).catch(() => {});
   const fsDone = await page
     .waitForFunction(() => /Flamescapes run complete/.test(document.body.innerText), null, { timeout: 240000 })
     .then(() => true)
@@ -1192,7 +1201,34 @@ for (const [call, list] of byCall) {
     .catch(() => "");
   const result = (await guidedPage.locator(".result__title").first().textContent().catch(() => "")) || "";
   record(/^Done/.test(caption) && /route found/i.test(result), "a guided run takes every step and stops at the route", `${((Date.now() - t0) / 1000).toFixed(1)}s: ${caption || "no caption"}; ${result.trim() || "no result"}`);
+  // It ends on its field note (core/fieldNotes.js), found.
+  const note = (await guidedPage.locator(".guided__note").textContent().catch(() => "")) || "";
+  record(/^Field note found: How far is the walk out\?/.test(note), "  and ends on the field note it found", note.slice(0, 80) || "no note");
   await guidedPage.close();
+}
+
+// Hints and field notes from a fresh browser (nothing stored): the count
+// starts at 0, a hint leads past the model, and a dismissed hint stays gone.
+{
+  const fresh = await browser.newContext(MOBILE ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1600, height: 950 } });
+  const p = await fresh.newPage();
+  const openDuplex = async () => {
+    await p.goto(URL_BASE, { waitUntil: "load", timeout: 60000 });
+    await p.locator(".welcome").getByRole("button", { name: /^Duplex apartment/ }).click({ timeout: 120000 });
+    await p.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Build egress graph/.test(b.textContent) && !b.disabled), null, { timeout: 120000 });
+  };
+  await p.goto(URL_BASE, { waitUntil: "load", timeout: 60000 });
+  const count = await p.getByRole("button", { name: /Field notes, \d+ of 12 found/ }).getAttribute("aria-label").catch(() => "");
+  record(/0 of 12/.test(count || ""), "field notes start at 0 of 12 in a fresh browser", count || "no button");
+  await openDuplex();
+  const first = (await p.locator(".hint").innerText({ timeout: 10000 }).catch(() => "")).replace(/\s+/g, " ");
+  record(/The model is only the start/.test(first), "a hint leads past the model step", first.slice(0, 90) || "no hint");
+  await p.locator(".hint").getByRole("button", { name: "Got it" }).click().catch(() => {});
+  await openDuplex();
+  await p.waitForTimeout(500);
+  const again = (await p.locator(".hint").innerText().catch(() => "")).replace(/\s+/g, " ");
+  record(!/The model is only the start/.test(again), "  and once dismissed it does not come back", again.slice(0, 60) || "no hint shown");
+  await fresh.close();
 }
 
 console.log("\n=== Chrome diagnostics ===");

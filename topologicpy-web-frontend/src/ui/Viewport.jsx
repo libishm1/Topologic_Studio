@@ -11,7 +11,11 @@ import { formatBytes } from "../lib/perf.js";
 import { Badge, Button, FileButton, Icon } from "./primitives.jsx";
 
 /** Where a guided run is: its stage's caption, the stages as dots, and Stop (Close once it ends). */
-function GuidedCaption({ guided, onStop }) {
+/**
+ * A guided run's card: its stages, then the field note it ends on, found
+ * (with what was found) or still a question.
+ */
+function GuidedCaption({ guided, onStop, onOpenNotes }) {
   const index = Math.max(0, guided.stages.findIndex((s) => s.id === guided.stage));
   const ended = guided.stage === "done" || Boolean(guided.error);
   return (
@@ -23,14 +27,27 @@ function GuidedCaption({ guided, onStop }) {
         </span>
       </div>
       <p className="guided__caption">{guided.error ? `Stopped: ${guided.error}` : guided.stages[index]?.caption}</p>
+      {guided.note && (
+        <p className="guided__note">
+          <strong>{guided.note.text ? "Field note found: " : "Field note: "}{guided.note.teaser}</strong>
+          {guided.note.text || "This run did not show it; look for it in the steps."}
+        </p>
+      )}
       <ol className="guided__dots" aria-hidden="true">
         {guided.stages.map((s, i) => (
           <li key={s.id} data-state={i < index || guided.stage === "done" ? "done" : i === index ? "now" : "next"} />
         ))}
       </ol>
-      <Button size="sm" onClick={onStop}>
-        {ended ? "Close" : "Stop"}
-      </Button>
+      <div className="hint__actions">
+        <Button size="sm" onClick={onStop}>
+          {ended ? "Close" : "Stop"}
+        </Button>
+        {guided.note && (
+          <Button size="sm" variant="ghost" onClick={onOpenNotes}>
+            Open field notes
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -73,6 +90,7 @@ export function Viewport({
   onGuided,
   guided,
   onStopGuided,
+  onOpenNotes,
 }) {
   const containerRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
@@ -281,7 +299,7 @@ export function Viewport({
         </div>
       )}
 
-      {guided && <GuidedCaption guided={guided} onStop={onStopGuided} />}
+      {guided && <GuidedCaption guided={guided} onStop={onStopGuided} onOpenNotes={onOpenNotes} />}
 
       {initError && (
         <div className="placeholder">

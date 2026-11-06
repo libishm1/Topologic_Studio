@@ -21,7 +21,7 @@ import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { CONVERTER } from "./lib/fragmentCache.js";
 import { isCancelled, workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
-import { graphIsSplit, graphStats } from "./core/graph.js";
+import { graphIsSplit, graphStats, reachablePct } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
 import { earliestArrival } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
@@ -37,6 +37,9 @@ import { centroidOf } from "./core/centroid.js";
 import { GUIDED_RUNS, farthestFromExits, nodeAlong, stagesFor } from "./core/guided.js";
 import { describeFacts } from "./core/describeFacts.js";
 import { codeCheck } from "./core/codeCheck.js";
+import { fieldNote, nextHint } from "./core/fieldNotes.js";
+import { useFieldNotes } from "./state/useFieldNotes.js";
+import { FieldNotesButton, FieldNotesDialog, HintCard } from "./ui/FieldNotes.jsx";
 import { CLOUD_URL, describeInCloud, describeOnDevice, onDeviceStatus } from "./lib/describe.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
@@ -189,6 +192,11 @@ export default function App() {
   const [tab, setTab] = useState("model");
   const [panelOpen, setPanelOpen] = useState(true);
   const [methodsOpen, setMethodsOpen] = useState(false);
+  // Field notes and hints (core/fieldNotes.js): found from the app's own
+  // results where they appear below, kept in this browser.
+  const notes = useFieldNotes();
+  const { markFound, markUsed } = notes;
+  const [notesOpen, setNotesOpen] = useState(false);
   const [MethodsDialog, setMethodsDialog] = useState(loadMethods);
   // Storey heights for the section cut, and the chosen one (null = whole).
   const [levels, setLevels] = useState([]);
@@ -774,6 +782,7 @@ export default function App() {
       };
 
       studio.setGraph(response);
+      if (graphIsSplit(response.stats)) markFound("cut-off", { largest: reachablePct(response.stats) });
       studio.setPath(null);
       studio.setDynamicPath(null);
       studio.setAlternatives(null);
@@ -831,7 +840,7 @@ export default function App() {
       studio.setGraphBusy(false);
       studio.setLoadState({ busy: false, stage: null, detail: null });
     }
-  }, [reportError, sample, setSettings, settings, studio, toast, dropPlan, colours]);
+  }, [reportError, sample, setSettings, settings, studio, toast, dropPlan, colours, markFound]);
 
   /**
    * Server-backed actions need this graph on the server. Without an id the
@@ -957,6 +966,7 @@ export default function App() {
       const shown = straighten(result);
       studio.setPath(shown);
       viewerRef.current?.setPath(drawn(shown));
+      if (result.found && shown.length > 0) markFound("walk-out", { length: shown.length });
       if (!result.found) {
         toast(result.note || "No route exists between those two points.", {
           title: "No route",
@@ -968,7 +978,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten, showPlanRoutes]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten, showPlanRoutes, markFound]);
 
   const comparePath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
@@ -1027,6 +1037,8 @@ export default function App() {
           });
       const result = { ...raw, routes: raw.routes.map(straighten) };
       studio.setAlternatives(result);
+      markUsed("alternatives");
+      if (result.routes.length >= 2) markFound("second-way", { first: result.routes[0].length, second: result.routes[1].length });
       // The best alternative is the route, so it takes the route's place
       // rather than being drawn twice.
       studio.setPath(result.routes[0] || null);
@@ -1047,7 +1059,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, straighten, showPlanRoutes]);
+  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, straighten, showPlanRoutes, markFound, markUsed]);
 
   // ------------------------------------------------- Navigation cross-check
 
@@ -1430,13 +1442,16 @@ export default function App() {
       // The first item takes the scenario's fire class (cooking: K, appliances: C).
       const cls = candidate.scenario.fireClass;
       if (FIRE_CLASSES[cls]) setSettings({ flamescapesClass: cls });
+      markUsed("ignition");
+      markFound("ignition", { label: candidate.scenario.label });
       toast(`Fire origin set at ${candidate.byRoom ? "the room" : "the element"} for: ${candidate.scenario.label}.`, { variant: "info", ttl: 4000 });
     },
-    [graph, handlePick, setSettings, toast],
+    [graph, handlePick, setSettings, toast, markFound, markUsed],
   );
 
   const startFire = useCallback(async () => {
     if (!graph || !points.fire) return;
+    markUsed("fire");
     // A plan still running would land mid-fire and clear its route.
     if (planRunningRef.current) dropPlan();
     studio.stopFire();
@@ -1486,6 +1501,8 @@ export default function App() {
         if (!isCancelled(error)) reportError(error, "The Flamescapes fire model");
       });
       playingRunRef.current = combustion;
+      markUsed("flamescapes");
+      if (settings.flamescapesDoors === "closed") markUsed("flamescapesClosed");
       let k = 0;
       zoneFrames = {
         next() {
@@ -1505,11 +1522,16 @@ export default function App() {
       step: 0,
       model: fireModel,
       combustion: combustion ? current.combustion : null,
+      // The doors this Flamescapes run was started with: the switch may change
+      // while it plays, for the next run (SimulatePanel offers a restart).
+      doors: combustion ? settings.flamescapesDoors : null,
     }));
 
     // Every model reroutes now: temperature by hazard cost, flood and radial by
     // treating burning nodes as impassable.
     const wantsReroute = settings.reroute && Boolean(points.start && points.exit);
+    // The route the fire first gives; a later one that differs is the fire's doing.
+    let firstRoute = null;
 
     // Runs in the browser (src/core/fire.js), emitting the messages the
     // server's stream did, so no round trip per step and no backend needed.
@@ -1558,6 +1580,9 @@ export default function App() {
             colours.set("fire");
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
+            const key = (message.node_ids || []).join(",");
+            if (firstRoute === null) firstRoute = key;
+            else if (message.found && key && key !== firstRoute) markFound("reroute");
             // Straight runs keep clear of burning or heated nodes.
             const shown =
               settings.straightenRoutes && message.node_ids?.length > 2
@@ -1570,6 +1595,11 @@ export default function App() {
           studio.setFire((current) => ({ ...current, running: false }));
           // A Flamescapes run that failed has said so already (review 9).
           if (combustion?.failed) return;
+          if (combustion) {
+            if (settings.flamescapesDoors === "closed") markFound("closed-doors");
+            const spots = combustion.frames[combustion.frames.length - 1]?.spots || 0;
+            if (spots > 0) markFound("embers", { spots });
+          }
           toast("Fire simulation finished.", { variant: "info", ttl: 3500 });
         },
         onError: (error) => {
@@ -1579,7 +1609,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion]);
+  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed]);
 
   // A fire that ends by itself keeps its final colours. Stopping it clears
   // them, back to what the graph showed before: the deadline map if it is
@@ -1647,6 +1677,8 @@ export default function App() {
         },
       );
       const result = straighten(trained);
+      markUsed("agent");
+      if (result.certified) markFound("certified");
       studio.setRl({
         busy: false,
         path: result.path,
@@ -1671,7 +1703,7 @@ export default function App() {
       // Cancelled when the model or the graph changed under it.
       if (!isCancelled(error)) reportError(error, "RL training failed");
     }
-  }, [graph, points, exits, reportError, settings, studio, toast, straighten, rlJob]);
+  }, [graph, points, exits, reportError, settings, studio, toast, straighten, rlJob, markFound, markUsed]);
 
   // -------------------------------------------------------------- exit doors
 
@@ -1710,10 +1742,15 @@ export default function App() {
         useWalls: settings.useWalls,
       });
       setCodeState({ result, graph, shown: false });
+      markUsed("codeCheck");
+      markUsed(settings.codeSprinklered ? "codeCheckSprinklered" : "codeCheckPlain");
+      if (notes.used.has(settings.codeSprinklered ? "codeCheckPlain" : "codeCheckSprinklered")) markFound("sprinklers");
+      const separations = result.storeys.flatMap((s) => s.checks.filter((c) => c.id === "separation" && c.status !== "n/a"));
+      if (separations.length) markFound("exit-separation", { passed: separations.filter((c) => c.status === "pass").length, checked: separations.length });
     } catch (error) {
       reportError(error, "Code check");
     }
-  }, [graph, exits, levels, studio.semantics, settings.codeSprinklered, settings.useWalls, reportError]);
+  }, [graph, exits, levels, studio.semantics, settings.codeSprinklered, settings.useWalls, reportError, markFound, markUsed, notes.used]);
   const showTravel = useCallback(
     (on) => {
       const viewer = viewerRef.current;
@@ -1803,7 +1840,12 @@ export default function App() {
   // or finished fire); Stop, or a stage that waits too long, ends the run.
   const [guided, setGuided] = useState(null);
   const startGuided = useCallback((run) => setGuided({ run, stage: "open", acted: null, before: null, error: null }), []);
-  const stopGuided = useCallback(() => setGuided(null), []);
+  // Its field note was shown in the run's own card: not again in the panel.
+  const { closeLatest } = notes;
+  const stopGuided = useCallback(() => {
+    setGuided(null);
+    closeLatest();
+  }, [closeLatest]);
   // useIgnition is a callback, not a hook; the alias keeps the hooks lint from reading it as one.
   const applyIgnition = useIgnition;
   useEffect(() => {
@@ -1882,6 +1924,44 @@ export default function App() {
     const timer = setTimeout(() => setGuided((g) => (g && g.stage === guidedStage ? { ...g, error: "This step took too long." } : g)), limit);
     return () => clearTimeout(timer);
   }, [guidedStage]);
+  // A finished run ends on its field note: found, with what was found, or
+  // still a question if this run did not show it.
+  const guidedNote = useMemo(() => {
+    if (guided?.stage !== "done" || !guided.run.note) return null;
+    const note = fieldNote(guided.run.note);
+    if (!note || !notes.found[note.id]) return note ? { teaser: note.teaser, text: null } : null;
+    // This run's own walk, not the one the note was first found with.
+    const own = note.id === "walk-out" && path?.found !== false && path?.length > 0 ? note.text({ length: path.length }) : null;
+    return { teaser: note.teaser, text: own || notes.found[note.id].text };
+  }, [guided, notes.found, path]);
+
+  // ------------------------------------------------- hints
+
+  // One hint for the step on screen (core/fieldNotes.js nextHint), none while
+  // a model loads, a graph builds, a fire runs or a guided run plays.
+  const hintState = useMemo(
+    () => ({
+      step: tab,
+      model: Boolean(modelInfo),
+      graph: Boolean(graph),
+      split: Boolean(graph && graphIsSplit(graph.stats)),
+      route: Boolean(path && path.found !== false),
+      appearance: settings.modelAppearance,
+      fireOrigin: Boolean(points.fire),
+      busy: Boolean(studio.loadState.busy || studio.graphBusy || fire.running || guided),
+    }),
+    [tab, modelInfo, graph, path, settings.modelAppearance, points.fire, studio.loadState.busy, studio.graphBusy, fire.running, guided],
+  );
+  const hint = nextHint(hintState, { used: notes.used, dismissed: notes.dismissed, on: notes.hints });
+  const takeHint = useCallback(
+    (h) => {
+      if (h.action?.tab) setTab(h.action.tab);
+      if (h.action?.settings) setSettings(h.action.settings);
+      notes.dismiss(h.id);
+    },
+    [notes, setSettings],
+  );
+  const closeNotes = useCallback(() => setNotesOpen(false), []);
 
   // ------------------------------------------------- plan with the forecast
 
@@ -1983,6 +2063,12 @@ export default function App() {
       planRunningRef.current = false;
       // Tagged with the graph it was made on: it is drawn only on that graph.
       studio.setForecastPlan({ busy: false, result, nodes: graph.nodes, inputs });
+      markUsed("plan");
+      if (result.deadlines) {
+        let places = 0;
+        for (const d of result.deadlines) if (d === -Infinity) places += 1;
+        if (places > 0) markFound("no-safe-time", { places });
+      }
       // The plan's routes take the place of the others on screen, and their
       // results go with their drawings, so the legend lists what is drawn.
       const viewer = viewerRef.current;
@@ -2015,7 +2101,7 @@ export default function App() {
       studio.setForecastPlan(NO_PLAN);
       reportError(error, "Planning with the forecast failed");
     }
-  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes, fireModel, zoneInputs, runCombustion]);
+  }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes, fireModel, zoneInputs, runCombustion, markFound, markUsed]);
 
   // A Flamescapes run belongs to the graph it was made on: a new graph ends
   // it and lets its frames go.
@@ -2423,6 +2509,7 @@ export default function App() {
         </div>
 
         <div className="header__group">
+          <FieldNotesButton found={notes.found} onOpen={() => setNotesOpen(true)} />
           <Button variant="ghost" onClick={() => setMethodsOpen(true)} aria-haspopup="dialog" aria-label="Methods">
             <Icon name="book" size={18} />
             <span className="header__label">Methods</span>
@@ -2517,7 +2604,18 @@ export default function App() {
             onIntent={warmImport}
             guidedRuns={GUIDED_RUNS}
             onGuided={startGuided}
-            guided={guided ? { title: guided.run.title, stages: stagesFor(guided.run), stage: guided.stage, error: guided.error } : null}
+            guided={
+              guided
+                ? {
+                    title: guided.run.title,
+                    stages: stagesFor(guided.run),
+                    stage: guided.stage,
+                    error: guided.error,
+                    note: guidedNote,
+                  }
+                : null
+            }
+            onOpenNotes={() => setNotesOpen(true)}
             onStopGuided={stopGuided}
           />
         ) : (
@@ -2672,6 +2770,15 @@ export default function App() {
               )}
             </div>
 
+            <HintCard
+              hint={hint}
+              latest={guided ? null : notes.latest}
+              onAction={takeHint}
+              onDismiss={notes.dismiss}
+              onCloseLatest={notes.closeLatest}
+              onOpenNotes={() => setNotesOpen(true)}
+            />
+
             <div className="statusbar">
               <span className="statusbar__item">
                 <span
@@ -2731,6 +2838,14 @@ export default function App() {
         ))}
       </div>
 
+      <FieldNotesDialog
+        open={notesOpen}
+        onClose={closeNotes}
+        found={notes.found}
+        hints={notes.hints}
+        onHints={notes.setHints}
+        onResetHints={notes.resetHints}
+      />
       {methodsOpen && (
         <ErrorBoundary onError={methodsFailed}>
           <Suspense

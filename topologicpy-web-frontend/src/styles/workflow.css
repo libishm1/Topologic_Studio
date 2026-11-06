@@ -1197,3 +1197,162 @@ details.legend[open] > .legend__summary {
   background: var(--success-soft);
   color: var(--success);
 }
+
+/* ------------------------------------------------- field notes and hints */
+
+/* One card at the foot of the workflow panel, between the steps and the
+ * status bar: a field note just found, or the hint for this step. */
+.hint {
+  flex-shrink: 0;
+  margin: 0 var(--space-3) var(--space-3);
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-size: 13px;
+}
+
+.hint--found {
+  border-left-color: var(--success);
+  background: var(--success-soft);
+}
+
+.hint__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hint__teaser,
+.hint__text {
+  margin: 0;
+}
+
+.hint__teaser {
+  font-weight: 650;
+}
+
+.hint__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.field-notes__count {
+  margin-left: 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.field-notes {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-5) var(--space-4);
+  background: var(--surface-scrim);
+}
+
+.field-notes__sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 100%;
+  overflow: auto;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-0);
+  box-shadow: var(--shadow-lg);
+}
+
+.field-notes__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.field-notes__bar h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.field-notes__bar h2 .mono {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.field-notes__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.field-notes__list li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.field-notes__list li[data-found="true"] {
+  background: var(--success-soft);
+}
+
+.field-notes__list p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.field-notes__mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.field-notes__list li[data-found="true"] .field-notes__mark {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.field-notes__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+/* The guided run's last card: the field note it ends on. */
+.guided__note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--success);
+  background: var(--success-soft);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.guided__note strong {
+  display: block;
+}

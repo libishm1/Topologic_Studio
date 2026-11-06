@@ -1781,6 +1781,7 @@ export function SimulatePanel({
           options={models}
           disabled={fire.running}
         />
+        {fire.running && <p className="field__hint">Stop the fire to change how it spreads.</p>}
         <Toggle
           label="Flamescapes combustion solver (optional)"
           checked={settings.flamescapes}
@@ -1811,16 +1812,25 @@ export function SimulatePanel({
               <div className="field__label">
                 <span>Doors</span>
               </div>
+              {/* Never locked: a run that is playing keeps its doors, and the
+                  switch sets the next run's, with a restart offered at once. */}
               <Segmented
                 label="Doors"
                 value={settings.flamescapesDoors}
                 onChange={(flamescapesDoors) => setSettings({ flamescapesDoors })}
-                disabled={fire.running}
                 options={[
                   { value: "open", label: "Open" },
                   { value: "closed", label: "Closed" },
                 ]}
               />
+              {fire.running && fire.doors && fire.doors !== settings.flamescapesDoors && (
+                <Notice tone="neutral">
+                  This fire is running with the doors {fire.doors}.{" "}
+                  <Button size="sm" onClick={onStartFire}>
+                    Restart the fire with the doors {settings.flamescapesDoors}
+                  </Button>
+                </Notice>
+              )}
               <p className="field__hint">
                 {settings.flamescapesDoors === "closed"
                   ? "Each door's leaf fills its opening, so the smoke stays in the rooms it starts in until it finds another way. Routes still pass through every door."
