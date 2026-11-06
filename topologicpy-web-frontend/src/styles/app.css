@@ -428,7 +428,12 @@ select:focus {
   outline: none;
 }
 
+/* The checkbox is hidden inside its own switch. Positioned against the page
+ * instead, it sat outside the scrolling panel, below the window for switches
+ * low in a panel, and focusing it on a click scrolled the whole page up and
+ * left a blank band under the app. */
 .toggle {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -439,6 +444,11 @@ select:focus {
 
 .toggle input {
   position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }

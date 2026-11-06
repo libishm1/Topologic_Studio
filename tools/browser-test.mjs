@@ -481,6 +481,14 @@ if (gotStart && gotExit) {
       .catch(() => "");
     const storeysChecked = (verdicts.match(/longest walk to an exit|reaches an exit/g) || []).length;
     record(storeysChecked > 0 && /Table 1017\.2/.test(verdicts), "the code check gives each storey's walk to an exit, with its clause", `${storeysChecked} storeys`);
+    // A switch low in a panel once scrolled the whole page when clicked,
+    // leaving a blank band under the app (fixed 2026-11-06). Flip one there
+    // and back: the page itself must not move.
+    const sprinklers = page.getByText("The building has automatic sprinklers", { exact: true });
+    await sprinklers.click();
+    await sprinklers.click();
+    const pageScroll = await page.evaluate(() => document.scrollingElement.scrollTop + document.body.scrollTop + document.getElementById("root").scrollTop);
+    record(pageScroll === 0, "a switch low in a panel leaves the page where it is", `${pageScroll} px scrolled`);
     // Straightened by default (src/core/straighten.js): never longer than
     // the lattice route it came from.
     record(
