@@ -1,8 +1,12 @@
-# Handoff: Topologic Studio Next (2026-11-05, late evening)
+# Handoff: Topologic Studio Next (2026-11-06, morning)
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 4cfcefb.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 17cf2ff, the scrolling fix.
+  - **Live check of 17cf2ff:** 0 failed steps, with Render awake. The TU Wien example opens live in 1.3 s.
+  - **Deployed 2026-11-06:**
+    - 34d036b, the TU Wien Vienna example;
+    - 17cf2ff, the fix for the blank band.
   - **Live check of 4cfcefb:** 0 failed steps.
     - The rooms (LOD1) step passed live: the plan opened in 0.3 s and its graph joined both storeys.
     - **The first attempt** failed only the TopologicPy cross-check: the Render backend did not answer `/health` for about ten minutes.
@@ -29,7 +33,12 @@
   - the Worker's own tests: `node --test test/index.test.mjs` in `cloudflare/describe-worker` (7 tests).
 - **Lean:** unchanged this evening; 28 modules, 1297 theorems.
 
-## Resume here (2026-11-05, late evening)
+## Resume here (2026-11-06)
+
+0. **Hints and discoveries:** a plan awaits the user's decisions, in `wiki/roadmap/hints-and-discoveries-plan-2026-11-06.md`. It lists 16 hints and 12 discoveries, ending with five questions: the name, the progress count, on by default, the guided runs, and which hints to keep. Build nothing until the user answers.
+
+Items 1 to 4 below are unchanged from the night before.
+
 
 The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-built, step 2 is built but not on screen, and step 3 is deferred.
 
@@ -62,6 +71,26 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
    - **Before a paper:** read Utkucu et al. 2024 (doi:10.1016/j.aei.2024.102503) in full. It is the closest precedent for fusing names, rules and geometry, so the claim must stay narrow: ignition-relevant furniture sub-types, leave-buildings-out, in the browser, open weights with provenance.
 
 Before any deploy: the gates above, then the live check, then update this file.
+
+## This round (2026-11-06, morning)
+
+- **The TU Wien escape-route model is a site example** (34d036b), by the user's decision:
+  - **Name:** "Vienna apartment building (TU Wien)". The user called it the office building, but its record describes a residential building; the mixed-use custom model, which has offices, stays local.
+  - **Licence:** CC BY 4.0, credited in `public/examples/index.json`, on the welcome screen and in the README.
+  - **Unchanged file:** SHA-256 759c5e5f… as in the record, kept byte for byte by a `.gitattributes` rule (`-text`).
+  - **Opening:** the build converts its 13.5 MB to 862 KB of fragments, so it opens in about a second with no IFC reader.
+  - **In the app:**
+    - graph: 6,795 nodes, 95% in one part;
+    - exit doors read from the file: 35 of 81;
+    - the code check passes on every storey.
+  - **Browser suite:** section 8 checks it opens and reads its exits, and that its graph's largest part holds at least 90%.
+- **The blank band after clicking a switch** (17cf2ff, reported by the user):
+  - **Cause:** a switch's hidden checkbox was positioned against the page, not its switch. For switches low in a panel (Flamescapes, the code check's sprinklers) it sat below the window. Focusing it on a click scrolled the whole page up by as much as 340 px, though `body` has `overflow: hidden`.
+  - **Fix:**
+    - the checkbox is inside its switch;
+    - `#root` is `position: relative; overflow: clip`, so the page has nothing to scroll.
+  - **Browser suite:** flips the sprinklers switch and checks the page has not moved.
+  - **The same band** showed in the 2026-11-05 screenshots of the hotel fire run and was wrongly blamed on the test script.
 
 ## This round (2026-11-05, late evening)
 
