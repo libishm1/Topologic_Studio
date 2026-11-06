@@ -1,13 +1,15 @@
-# Handoff: Topologic Studio Next (2026-11-06, morning)
+# Handoff: Topologic Studio Next (2026-11-06, afternoon)
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at d0d1749: field notes, hints and the doors fix.
-  - **Live check of d0d1749:** 0 failed steps, with Render awake.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 3f9a4f2: the smoke, gas and tenability measures.
+  - **Live check of 3f9a4f2:** 0 failed steps, with Render awake.
   - **Deployed 2026-11-06:**
     - 34d036b, the TU Wien Vienna example;
     - 17cf2ff, the fix for the blank band;
-    - d0d1749, field notes and hints, and the doors switch.
+    - d0d1749, field notes and hints, and the doors switch;
+    - 8852fe2, the human check (Turnstile), which stays off until its keys are set;
+    - 3f9a4f2, the measures.
   - **Live check of 4cfcefb:** 0 failed steps.
     - The rooms (LOD1) step passed live: the plan opened in 0.3 s and its graph joined both storeys.
     - **The first attempt** failed only the TopologicPy cross-check: the Render backend did not answer `/health` for about ten minutes.
@@ -26,29 +28,36 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 243 tests;
+  - `npm test` in `topologicpy-web-frontend`: 255 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
   - the live check after the deploy;
-  - the Worker's own tests: `node --test test/index.test.mjs` in `cloudflare/describe-worker` (7 tests).
+  - the Worker's own tests: `node --test test/index.test.mjs` in `cloudflare/describe-worker` (8 tests);
+  - after any solver change, `node tools/flamescapes-gpu-check.mjs --phase full --quick` (CPU and GPU agreement, now including soot, CO2 and O2) and `--phase timing`.
 - **Lean:** unchanged this evening; 28 modules, 1297 theorems.
 
 ## Resume here (2026-11-06)
 
 0. **In order, as the user asked on 2026-11-06:**
-   1. **Deploy the Cloudflare Worker** (`cloudflare/describe-worker`).
-      - **Needs the user:** `npx wrangler login` with their own account (never sign in for them), then `npx wrangler deploy`.
-      - **Then:** set the repository variable `DESCRIBE_URL` and rerun Deploy Frontend. See the Worker's README.
-      - **Not yet installed:** wrangler 4.158.0 is not on this machine.
-   2. **Smoke and gas measures to colour the graph and to export** (user request, 2026-11-06). Not started; no code was changed.
-      - **The plan:**
-        - sample soot density, CO2 and O2 beside temperature, visibility and CO: in `readNodes` (flamescapesRun.js) and the GPU `gather` kernel (flamescapesGpu/kernels.js, io out 3n to 6n floats);
-        - derive extinction, obscuration and optical density from soot (8.7 m²/g);
-        - add a combined tenability index: the largest of heat, smoke and cumulative CO FED, each against its limit;
-        - one grouped "Show on the graph" select;
-        - add the extras to the TopologicPy export, plus a CSV table for machine learning.
-      - **The user's condition:** the same speed or better, or else a switch over the baseline. Memory doubles per stored frame (3 to 6 floats a node), so very large graphs fall back to the basic three. Recheck GPU and CPU parity with `tools/flamescapes-gpu-check.mjs`.
+   1. **Cloudflare: the user's steps, then the deploy.**
+      - **Plugin:** Cloudflare's Claude Code plugin is installed for the user (`claude plugin marketplace add cloudflare/skills`, `claude plugin install cloudflare@cloudflare`), as the user asked from developers.cloudflare.com/agent-setup. It was reviewed first: it is from the Cloudflare organisation, has no hooks, and has one MCP server, `https://mcp.cloudflare.com/mcp`. The optional `cf` CLI was not installed: the page says to ask first.
+      - **Needs the user:**
+        - run `/reload-plugins`;
+        - approve Cloudflare's OAuth on first use;
+        - or run `npx wrangler login`.
+
+        Never sign in for them.
+      - **Then:**
+        - deploy the Worker (`npx wrangler deploy` in `cloudflare/describe-worker`, or through the MCP);
+        - set the repository variable `DESCRIBE_URL`;
+        - create a Turnstile widget (Managed, hostname `libishm1.github.io`);
+        - `npx wrangler secret put TURNSTILE_SECRET`;
+        - set the repository variable `TURNSTILE_SITE_KEY`;
+        - rerun Deploy Frontend.
+
+        The Worker's README has the steps.
+   2. **Smoke and gas measures:** done (3f9a4f2). See This round and `wiki/research/tenability-index-2026-11-06.md`.
    3. **Questions answered but not decided:**
       - fire replay from a cache (IndexedDB, keyed by model, graph and fire inputs);
       - door states: an "as built" mode from SelfClosing and "-C" fire ratings, a seeded random mode, and later an ensemble.
@@ -88,6 +97,33 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
    - **Before a paper:** read Utkucu et al. 2024 (doi:10.1016/j.aei.2024.102503) in full. It is the closest precedent for fusing names, rules and geometry, so the claim must stay narrow: ignition-relevant furniture sub-types, leave-buildings-out, in the browser, open weights with provenance.
 
 Before any deploy: the gates above, then the live check, then update this file.
+
+## This round (2026-11-06, afternoon)
+
+- **The human check** (8852fe2): Cloudflare Turnstile in front of the Worker.
+  - **On the page:** `lib/turnstile.js` loads Turnstile only when "Describe this model" is set to Cloudflare and the site has a site key. It shows one slim strip, the panel's width and in the app's theme, under the send button. It checks at once and gives a fresh token for each request.
+  - **In the Worker:** it checks the token with `siteverify` when it has `TURNSTILE_SECRET`, and refuses with 403 otherwise.
+  - **Tested:** with a stand-in for `siteverify`, and end to end on localhost with Cloudflare's test keys.
+- **Smoke, gas and tenability measures** (3f9a4f2):
+  - **Readout:** the solver reads soot (mg/m³), CO2 and O2 (%) at every node, on the CPU and the GPU.
+    - **Agreement:** CPU and GPU correlate 0.90 to 0.93 on them.
+    - **Speed:** unchanged. On the GPU, 3.04 against 3.06 ms a step, and the worker run takes 1.9 s both times. The CPU is within noise.
+    - **Memory switch:** "Record soot, CO₂ and O₂ too". A run past 64 MB of frames keeps the basic three.
+  - **Show on the graph:**
+    - Heat;
+    - Smoke: visibility, soot, extinction, obscuration or optical density per metre;
+    - Gases: CO, CO2, O2;
+    - Tenability.
+  - **The tenability index** is the largest share of a limit reached, after ISO 13571 cl. 4.1. Its four parts:
+    - gas temperature;
+    - visibility, 0 in clear air;
+    - the asphyxiant dose: CO / 35 000 a minute, times exp(CO2/5) above 2 % CO2, plus Purser's low-O2 dose as in FDS;
+    - the convected-heat dose, T^3.4 / 5e7 a minute.
+
+    Both doses are measured against FED 0.3.
+  - **The planner** closes nodes on the same four. No closure changed on the five examples within 30 s.
+  - **Exports:** the TopologicPy JSON carries the series, the index, its doses and the time each node reached 1. A new CSV gives one row per node per frame, gzipped.
+  - **Sources and what was read directly:** in the research note and on the Methods page. The ISO 13571:2012 constants were read in the 2007 text; confirm them against a full 2012 copy before a publication relies on them.
 
 ## This round (2026-11-06, morning)
 
