@@ -10,6 +10,17 @@
     "bytes": 2380763
   },
   {
+    "id": "vienna-escape-route-model",
+    "name": "Vienna apartment building (TU Wien)",
+    "file": "vienna-escape-route-model.ifc",
+    "description": "A real building in Vienna on seven levels, modelled to test escape-route checks: 111 rooms, 81 doors (32 flagged as fire exits), four stairs and two ramps.",
+    "credit": "Fischer, S., Schranz, C., Urban, H., Pfeiffer, D., Flamm, L. (2024). Real-World Test Model for Escape Route Analysis in IFC format (2.0.0). TU Wien. CC BY 4.0; unchanged.",
+    "source": "https://doi.org/10.48436/wzp90-dmf60",
+    "licence": "CC-BY-4.0",
+    "bytes": 13512479,
+    "sha256": "759c5e5f516eb23eb4a9a5f113e626e35e995029ca153ee759ac94a59043652e"
+  },
+  {
     "id": "buildingsmart-sample-scene",
     "name": "buildingSMART sample scene",
     "file": "buildingsmart-sample-scene.ifc",

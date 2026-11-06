@@ -1012,6 +1012,46 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
   await shot(page, `example-${name.toLowerCase().replace(/[^a-z]+/g, "-")}`);
 }
 
+// Added 2026-11-06: the TU Wien escape-route model (CC BY 4.0), a real
+// building in Vienna. It must open, read its exit doors from the file
+// (32 FireExit, 2 IsExternal, 1 external space boundary) and build a graph
+// whose largest part holds at least 90% of it: a few pockets have no door in
+// the model, so it is not one piece.
+{
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const button = page.locator(".welcome").getByRole("button", { name: /^Vienna apartment building/ });
+  const offered = await button
+    .waitFor({ timeout: 60000 })
+    .then(() => true)
+    .catch(() => false);
+  record(offered, 'example "Vienna apartment building (TU Wien)" is offered');
+  if (offered) {
+    const tEx = Date.now();
+    await button.click();
+    const opened = await page
+      .waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Build egress graph|Rebuild graph/.test(b.textContent) && !b.disabled), null, { timeout: 180000 })
+      .then(() => true)
+      .catch(() => false);
+    record(opened, 'example "Vienna apartment building (TU Wien)" opened', `${((Date.now() - tEx) / 1000).toFixed(1)}s`);
+    if (opened) {
+      await page.getByRole("tab", { name: /^Model/ }).click();
+      const row = await page.locator(".panel__scroll").getByText(/^\d+ of \d+ \(/).first().textContent({ timeout: 10000 }).catch(() => null);
+      record(/^35 of 81 \(/.test(row || ""), "  and reads its exit doors from the file", row || "not shown");
+      await page.getByRole("tab", { name: /^Graph/ }).click();
+      await page.getByRole("button", { name: /Build egress graph|Rebuild graph/ }).first().click();
+      await page
+        .waitForFunction((s) => document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.step === s, "route", { timeout: 180000 })
+        .catch(() => {});
+      await page.getByRole("tab", { name: /^Graph/ }).click();
+      await page.waitForTimeout(300);
+      const stats = await readStats();
+      console.log(`    Vienna apartment building: ${JSON.stringify(stats)}`);
+      record(parseFloat(stats.Reachable) >= 90, "  and its graph's largest part holds at least 90% of it", stats.Reachable);
+      await shot(page, "example-vienna");
+    }
+  }
+}
+
 // The examples are converted when the site is built
 // (scripts/prepare-examples.mjs): one opens from its fragments, with no IFC
 // worker, and still knows its exit doors. Skipped against a build made with
