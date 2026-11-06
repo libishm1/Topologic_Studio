@@ -74,6 +74,12 @@
         - The Open IFC Model Repository states no licences.
         - DURAARK is licensed dataset by dataset.
         - Several models are already in the local corpus: Duplex, FZK-Haus, Smiley West, HiTOS.
+      - **Also wanted: Sand3D** (Sandflow, sandflow.ai/sand3d; the user asked 2026-11-06).
+        - **What it is:** about 100K single 3D objects, each written as a Python program in the Sand3D language that builds a mesh (for glTF, Blender, three.js): furniture, lighting, vehicles, toys, garden and outdoor, sports, articulated objects (10K+ with 36K joints) and mechanical parts. No buildings, rooms or IFC. Counts are Sandflow's own.
+        - **Where:** five Hugging Face datasets, `Sandflow/sand3d-objaverse` (66,887), `-cad` (24,495), `-articraft` (9,209), `-simready` (2,334), `-automate` (3,169), all tagged CC BY 4.0; the library is Apache-2.0 (github.com/Sandflow-ai/sand3d, created 2026-11-03). A model is "release soon" per the page.
+        - **Licence, read on all five cards:** the programs, renders and USD files are CC BY 4.0. Each record is derived from a third-party object whose own licence also applies, and its per-row attribution must be kept (`source_license`, `attribution` columns). Upstream: Objaverse CC BY 4.0 or CC0 per object (Objaverse as a whole ODC-By), NVIDIA SimReady CC BY 4.0, Articraft CC BY 4.0 ("Articraft Data, Matt Zhou et al."), CADFS CC BY 4.0, AutoMate CC0. None is non-commercial or share-alike.
+        - **Autodesk:** 16,766 of the CAD objects derive from Zero-To-CAD (ADSKAILab, Autodesk's AI lab). Its card was read: Apache-2.0, not gated, no further terms, so it passes the user's rule; keep the Apache notice and a statement of changes.
+        - **Use here:** furniture and fixtures for the ignition-relevant furniture classes (IFCNet phase 1), as extra meshes or point clouds beside the IFC elements. Filter on each row's `f_score`, the pipeline's own measure of how close a program's shape is to its source. Keep the attribution columns with any derived set.
 
 Items 1 to 4 below are unchanged from the night before.
 
