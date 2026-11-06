@@ -2,11 +2,12 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 17cf2ff, the scrolling fix.
-  - **Live check of 17cf2ff:** 0 failed steps, with Render awake. The TU Wien example opens live in 1.3 s.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at d0d1749: field notes, hints and the doors fix.
+  - **Live check of d0d1749:** 0 failed steps, with Render awake.
   - **Deployed 2026-11-06:**
     - 34d036b, the TU Wien Vienna example;
-    - 17cf2ff, the fix for the blank band.
+    - 17cf2ff, the fix for the blank band;
+    - d0d1749, field notes and hints, and the doors switch.
   - **Live check of 4cfcefb:** 0 failed steps.
     - The rooms (LOD1) step passed live: the plan opened in 0.3 s and its graph joined both storeys.
     - **The first attempt** failed only the TopologicPy cross-check: the Render backend did not answer `/health` for about ten minutes.
@@ -35,7 +36,23 @@
 
 ## Resume here (2026-11-06)
 
-0. **Hints and discoveries:** a plan awaits the user's decisions, in `wiki/roadmap/hints-and-discoveries-plan-2026-11-06.md`. It lists 16 hints and 12 discoveries, ending with five questions: the name, the progress count, on by default, the guided runs, and which hints to keep. Build nothing until the user answers.
+0. **In order, as the user asked on 2026-11-06:**
+   1. **Deploy the Cloudflare Worker** (`cloudflare/describe-worker`).
+      - **Needs the user:** `npx wrangler login` with their own account (never sign in for them), then `npx wrangler deploy`.
+      - **Then:** set the repository variable `DESCRIBE_URL` and rerun Deploy Frontend. See the Worker's README.
+      - **Not yet installed:** wrangler 4.158.0 is not on this machine.
+   2. **Smoke and gas measures to colour the graph and to export** (user request, 2026-11-06). Not started; no code was changed.
+      - **The plan:**
+        - sample soot density, CO2 and O2 beside temperature, visibility and CO: in `readNodes` (flamescapesRun.js) and the GPU `gather` kernel (flamescapesGpu/kernels.js, io out 3n to 6n floats);
+        - derive extinction, obscuration and optical density from soot (8.7 m²/g);
+        - add a combined tenability index: the largest of heat, smoke and cumulative CO FED, each against its limit;
+        - one grouped "Show on the graph" select;
+        - add the extras to the TopologicPy export, plus a CSV table for machine learning.
+      - **The user's condition:** the same speed or better, or else a switch over the baseline. Memory doubles per stored frame (3 to 6 floats a node), so very large graphs fall back to the basic three. Recheck GPU and CPU parity with `tools/flamescapes-gpu-check.mjs`.
+   3. **Questions answered but not decided:**
+      - fire replay from a cache (IndexedDB, keyed by model, graph and fire inputs);
+      - door states: an "as built" mode from SelfClosing and "-C" fire ratings, a seeded random mode, and later an ensemble.
+   4. **Training** (IFCNet retraining, on Nebius, Vast.ai or a free offer): later, by the user's choice.
 
 Items 1 to 4 below are unchanged from the night before.
 
@@ -73,6 +90,15 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
 Before any deploy: the gates above, then the live check, then update this file.
 
 ## This round (2026-11-06, morning)
+
+- **Field notes and hints** (d0d1749, built to the plan and the user's answers):
+  - **Field notes:** 12 questions marked found from the app's own results; "Field notes N/12" in the header; the list in a dialog.
+  - **Hints:** one at a time at the foot of the panel. They lead past the model to the graph, route, alternatives, code check, fire, Flamescapes, closed doors, forecast plan and agent. On by default, with a switch and "Show closed hints again".
+  - **Guided runs:** each ends on its note. "The way out" reports this run's own walk.
+  - **Files:** `src/core/fieldNotes.js` (data, tested), `src/state/useFieldNotes.js` (localStorage), `src/ui/FieldNotes.jsx`.
+- **The doors switch** (d0d1749):
+  - **The problem:** it was locked for a whole fire run and its playback, with no explanation.
+  - **The fix:** it now always sets the next run's doors. While a Flamescapes fire plays with the other setting, it offers "Restart the fire with the doors ...". The fire model choices still lock, and now say so.
 
 - **The TU Wien escape-route model is a site example** (34d036b), by the user's decision:
   - **Name:** "Vienna apartment building (TU Wien)". The user called it the office building, but its record describes a residential building; the mixed-use custom model, which has offices, stays local.
