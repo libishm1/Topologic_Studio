@@ -19,6 +19,10 @@
  * MAX_SUMMARY; nothing is stored. On the Workers Free plan the AI allowance
  * (10,000 neurons a day) is a hard cap: past it requests fail, nothing is
  * billed.
+ *
+ * With a TURNSTILE_SECRET (wrangler secret put TURNSTILE_SECRET), every POST
+ * must carry a Cloudflare Turnstile token ("turnstile"), checked with
+ * Cloudflare before the model runs, so the allowance is spent on people.
  */
 
 export const DEFAULT_MODEL = "@cf/openai/gpt-oss-20b";
@@ -135,6 +139,26 @@ export function checkSuggestions(raw, summary) {
   return { merge, names, dropped };
 }
 
+const SITEVERIFY = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+
+/** Whether a request passed the human check: always when no secret is set; else Cloudflare's answer for its token. */
+export async function passesHumanCheck(token, env, ip = null) {
+  if (!env.TURNSTILE_SECRET) return true;
+  if (typeof token !== "string" || !token || token.length > 2048) return false;
+  const form = new FormData();
+  form.append("secret", env.TURNSTILE_SECRET);
+  form.append("response", token);
+  if (ip) form.append("remoteip", ip);
+  try {
+    const answer = await (await fetch(SITEVERIFY, { method: "POST", body: form })).json();
+    return answer?.success === true;
+  } catch {
+    return false;
+  }
+}
+
+const HUMAN_FAILED = "The check that you are human did not pass: reload the page and try again.";
+
 function json(body, status, headers) {
   return new Response(JSON.stringify(body), { status, headers: { ...headers, "Content-Type": "application/json" } });
 }
@@ -148,6 +172,7 @@ async function suggestRooms(request, env, model, cors) {
   } catch {
     return json({ error: "Send JSON: {\"summary\": {\"rooms\": [...]}}." }, 400, cors);
   }
+  if (!(await passesHumanCheck(body?.turnstile, env, request.headers.get("CF-Connecting-IP")))) return json({ error: HUMAN_FAILED }, 403, cors);
   const summary = body?.summary;
   if (!Array.isArray(summary?.rooms) || summary.rooms.length === 0) return json({ error: "No rooms were sent." }, 400, cors);
   const text = JSON.stringify(summary);
@@ -201,6 +226,7 @@ export default {
     } catch {
       return json({ error: "Send JSON: {\"facts\": \"...\"}." }, 400, cors);
     }
+    if (!(await passesHumanCheck(body?.turnstile, env, request.headers.get("CF-Connecting-IP")))) return json({ error: HUMAN_FAILED }, 403, cors);
     const facts = typeof body?.facts === "string" ? body.facts.slice(0, MAX_FACTS).trim() : "";
     if (!facts) return json({ error: "No facts were sent." }, 400, cors);
 

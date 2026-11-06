@@ -41,6 +41,7 @@ import { fieldNote, nextHint } from "./core/fieldNotes.js";
 import { useFieldNotes } from "./state/useFieldNotes.js";
 import { FieldNotesButton, FieldNotesDialog, HintCard } from "./ui/FieldNotes.jsx";
 import { CLOUD_URL, describeInCloud, describeOnDevice, onDeviceStatus } from "./lib/describe.js";
+import { humanToken } from "./lib/turnstile.js";
 import { GraphPanel, ModelPanel, RoutePanel, SimulatePanel } from "./ui/Panels.jsx";
 import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
@@ -1820,7 +1821,9 @@ export default function App() {
           onProgress: (progress) => setDescribe((d) => ({ ...d, progress })),
         });
       } else {
-        const { text, model } = await describeInCloud(describeFactsText, { signal: abort.signal });
+        // The human check's token (lib/turnstile.js); none if the site has no site key.
+        const token = await humanToken();
+        const { text, model } = await describeInCloud(describeFactsText, { signal: abort.signal, token });
         setDescribe((d) => ({ ...d, text, model: `${model} on Cloudflare Workers AI` }));
       }
       setDescribe((d) => ({ ...d, busy: false, progress: null }));

@@ -7,7 +7,7 @@
  * it as notices rather than in toasts. Controls that cannot do anything yet
  * are disabled with a reason, so the order of the steps stays visible.
  */
-import React, { useId, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 
 import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
@@ -15,6 +15,7 @@ import { formatBytes, formatMs } from "../lib/perf.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS } from "../core/fireClasses.js";
+import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
   Choices,
@@ -229,7 +230,25 @@ function ElementIdentification({ identification, onIdentify, onIdentifyByShape }
  * computed (core/describeFacts.js), on this device or by the site's
  * Cloudflare describer (lib/describe.js). The facts are shown first.
  */
-function DescribeModel({ describe, onDescribe, onStop, onEngine }) {
+/** The "I'm human" check (Cloudflare Turnstile, lib/turnstile.js): one slim strip while it is shown. */
+function HumanCheck({ theme }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    let alive = true;
+    // Its script may load after the panel has gone: then it is removed at once.
+    mountHumanCheck(el, { theme: theme === "dark" ? "dark" : "light" })
+      .then(() => alive || unmountHumanCheck(el))
+      .catch(() => {});
+    return () => {
+      alive = false;
+      unmountHumanCheck(el);
+    };
+  }, [theme]);
+  return <div ref={ref} className="human-check" />;
+}
+
+function DescribeModel({ describe, onDescribe, onStop, onEngine, theme }) {
   if (!describe) return null;
   const onDevice = describe.status !== "unsupported" && describe.status !== "unavailable" && describe.status !== "checking";
   const engine = describe.engine || "device";
@@ -266,7 +285,9 @@ function DescribeModel({ describe, onDescribe, onStop, onEngine }) {
           {engine === "device"
             ? deviceNote
             : describe.cloud
-              ? "The facts below are sent to the site's describer on Cloudflare Workers AI, which says it neither keeps nor trains on them; the IFC itself is not sent."
+              ? `The facts below are sent to the site's describer on Cloudflare Workers AI, which says it neither keeps nor trains on them; the IFC itself is not sent.${
+                  TURNSTILE_SITE_KEY ? " Cloudflare's check that you are human comes first; it rarely needs a click." : ""
+                }`
               : "This site has no Cloudflare describer set up yet (cloudflare/describe-worker in the repository)."}
         </p>
       </div>
@@ -283,6 +304,7 @@ function DescribeModel({ describe, onDescribe, onStop, onEngine }) {
           </Button>
         )}
       </div>
+      {engine === "cloud" && TURNSTILE_SITE_KEY && <HumanCheck theme={theme} />}
       {describe.progress != null && describe.progress < 1 && (
         <p className="field__hint">Downloading the model: {Math.round(describe.progress * 100)}%</p>
       )}
@@ -406,7 +428,7 @@ export function ModelPanel({
             </p>
             <EgressCheck semantics={studio.semantics} />
             <ElementIdentification identification={identification} onIdentify={onIdentify} onIdentifyByShape={onIdentifyByShape} />
-            <DescribeModel describe={describe} onDescribe={onDescribe} onStop={onStopDescribe} onEngine={onDescribeEngine} />
+            <DescribeModel describe={describe} onDescribe={onDescribe} onStop={onStopDescribe} onEngine={onDescribeEngine} theme={studio.theme} />
           </>
         )}
 

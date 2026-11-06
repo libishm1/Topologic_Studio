@@ -57,13 +57,16 @@ export async function describeOnDevice(facts, { onText, onProgress, signal } = {
   }
 }
 
-/** The description, written by the Cloudflare Worker (CLOUD_URL) from the facts sent to it. */
-export async function describeInCloud(facts, { url = CLOUD_URL, signal } = {}) {
+/**
+ * The description, written by the Cloudflare Worker (CLOUD_URL) from the facts
+ * sent to it; `token` is the human check's (lib/turnstile.js), when the site has one.
+ */
+export async function describeInCloud(facts, { url = CLOUD_URL, signal, token = null } = {}) {
   if (!url) throw new Error("This site has no Cloudflare describer set up (VITE_DESCRIBE_URL).");
   const response = await fetch(`${url}/describe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ facts }),
+    body: JSON.stringify(token ? { facts, turnstile: token } : { facts }),
     signal,
   });
   const body = await response.json().catch(() => ({}));
@@ -77,12 +80,12 @@ export async function describeInCloud(facts, { url = CLOUD_URL, signal } = {}) {
  * already checked against the summary by the Worker. The page offers each
  * one; none is applied unless the user accepts it.
  */
-export async function suggestRoomsInCloud(summary, { url = CLOUD_URL, signal } = {}) {
+export async function suggestRoomsInCloud(summary, { url = CLOUD_URL, signal, token = null } = {}) {
   if (!url) throw new Error("This site has no Cloudflare describer set up (VITE_DESCRIBE_URL).");
   const response = await fetch(`${url}/rooms`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ summary }),
+    body: JSON.stringify(token ? { summary, turnstile: token } : { summary }),
     signal,
   });
   const body = await response.json().catch(() => ({}));

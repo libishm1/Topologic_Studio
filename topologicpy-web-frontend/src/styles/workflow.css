@@ -1356,3 +1356,12 @@ details.legend[open] > .legend__summary {
 .guided__note strong {
   display: block;
 }
+
+/* The human check (lib/turnstile.js): empty unless Cloudflare asks for a click. */
+.human-check:empty {
+  display: none;
+}
+
+.human-check {
+  margin-top: var(--space-2);
+}
