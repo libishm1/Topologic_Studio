@@ -178,11 +178,17 @@ otherwise on one CPU core at 2.8 to 2.9 times real time for the Duplex (34 to
 36 ms a step, `tools/fire-bench.mjs`), several times faster on a GPU. Its
 frames play as they are computed, the route reroutes on the gas temperature at
 head height, and **Plan with the forecast** plans on the same run, adding the
-CO dose of ISO 13571 to the heat dose. **Show on the graph** switches between
-heat and smoke (visibility through the smoke at head height). The smoke the
-solver carries (its soot) is drawn as a grey cloud, faint in the heat view
-and full in the smoke view. The run card says whether embers are on, and how
-many were thrown and how many spot fires they lit.
+CO dose of ISO 13571 to the heat dose. **Show on the graph** colours the
+nodes by one of four readings at head height: heat (the gas temperature),
+smoke (the visibility, or the soot concentration, extinction coefficient,
+obscuration or optical density it comes from), gases (CO, CO₂ or O₂), or a
+tenability index. The index is the largest share of a limit a node has
+reached, over its gas temperature, its visibility, and the asphyxiant and
+heat doses of ISO 13571 against a fractional effective dose of 0.3, so that 1
+means untenable. The smoke the solver carries (its soot) is drawn as a grey
+cloud, faint in the heat view and full in the smoke view. The run card says
+whether embers are on, and how many were thrown and how many spot fires they
+lit.
 
 **What burns first.** The first item takes the fuel of its fire class: NFPA 10
 classes A (ordinary combustibles), B (flammable liquids), C (energised
@@ -240,6 +246,33 @@ mostly from the way its path was drawn. The shielded learner escaped in all
 of them, by the earliest route, certified, in a median 1.8 ms.
 
 ![A trained agent's route out of the Duplex, as long as the shortest route (19.1 m), with its training success and its return against the best possible](docs/images/duplex-rl.jpg)
+
+### A fire in a larger building
+
+The animations below repeat the Simulate step on the **Vienna apartment
+building (TU Wien)**, seven levels and 111 rooms. Each is a 300 s Flamescapes
+run with embers, computed on the GPU in the browser. The fire starts in a
+flat's living-kitchen, and the person leaves from the top floor, 53.8 m down
+the stairwell to the street door.
+
+![The Vienna building with all doors open: an electrical fire grows in a living-kitchen, smoke spreads round the building, and the hazard-aware route in magenta leaves the shortest route in red near the fire](docs/images/vienna-doors-open.gif)
+
+*All doors open. An electrical fault (class C) grows to 13.3 MW and throws
+5,154 embers, which light 13 spot fires. The graph shows the gas temperature
+at head height, and the hazard-aware route (magenta) leaves the shortest
+route (red) where the heat reaches it. With every door closed, the same fire
+peaks at 3.0 MW, under a quarter of the open-door peak.*
+
+![A gas fire at the cooking range of the flat above, coloured by the tenability index: the floors near the fire turn red as their nodes become untenable](docs/images/vienna-tenability.gif)
+
+*A gas fire (class B) at the cooking range of the flat above, doors open,
+peaking at 10.9 MW. The graph shows the tenability index: yellow as a node
+nears a limit, red once it is untenable.*
+
+The building model is by Fischer, Schranz, Urban, Pfeiffer and Flamm (TU
+Wien, 2024, [doi:10.48436/wzp90-dmf60](https://doi.org/10.48436/wzp90-dmf60)),
+under CC BY 4.0. The animations were made from frames of the running app
+with `tools/frames-gif.mjs`.
 
 ### The Methods page
 
@@ -333,9 +366,10 @@ back (checked with topologicpy 0.9.86):
   matrix and the agent's lift are undone.
 - **Node attributes:** its kind (floor, stair, door, lift) and its place on
   the route. After a Flamescapes run they also hold the gas temperature,
-  visibility and CO at head height for every frame, their extremes, and the
-  time the node became untenable. After a graph fire model they hold whether
-  the node was burning at the end.
+  visibility, CO, soot, CO₂ and O₂ at head height for every frame, their
+  extremes, the time the node became untenable, its tenability index and its
+  asphyxiant and heat doses. After a graph fire model they hold whether the
+  node was burning at the end.
 - **Edges:** source and target, kind, length in metres, and whether the
   edge is on the route.
 - **Graph properties:** the source file, the fire model and its settings
@@ -351,6 +385,11 @@ g = Graph.ByJSONFile(open("duplex-apartment-topologicpy.json"))
 first = Graph.Vertices(g)[0]
 print(Dictionary.PythonDictionary(Topology.Dictionary(first))["untenable_s"])
 ```
+
+**Export the run as a table (CSV)**, under a finished Flamescapes fire,
+writes one row per node per frame: its place and kind, the time, every
+reading and measure, the two doses and the tenability index, gzipped for a
+spreadsheet or a machine-learning dataset.
 
 ## Keyboard shortcuts
 
