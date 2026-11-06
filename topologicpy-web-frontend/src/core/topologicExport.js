@@ -16,6 +16,8 @@
  * lift are undone, and the properties say so.
  */
 
+import { FED_CRIT, SOOT_EXTINCTION_G, tenabilityTracker } from "./tenability.js";
+
 const KIND_NAMES = ["floor", "stair", "door", "lift"];
 const TURNS = {
   y: [
@@ -101,6 +103,19 @@ export function topologicGraph({ graph, coordination = null, route = null, frame
   const onRoute = new Map((route || []).map((v, i) => [v, i]));
   const { untenableC = 60, smoke = true, visibilityLimit = 10 } = tenability;
   const K = frames?.length || 0;
+  // Soot, CO2 and O2 when the run recorded them; the tenability index and its
+  // doses (core/tenability.js) from the frames, in order.
+  const extras = Boolean(K && frames[0].soot && frames[0].co2 && frames[0].o2);
+  let ti = null, tracker = null;
+  if (K) {
+    tracker = tenabilityTracker(n, { limitC: untenableC, smoke, visibilityLimit });
+    let before = 0;
+    ti = frames.map((f) => {
+      const minutes = Math.max(0, f.time - before) / 60;
+      before = f.time;
+      return tracker.step(f, minutes);
+    });
+  }
 
   const vertices = {};
   for (let v = 0; v < n; v += 1) {
@@ -129,6 +144,19 @@ export function topologicGraph({ graph, coordination = null, route = null, frame
       entry.gas_T_C = T;
       entry.visibility_m = vis;
       entry.co_ppm = co;
+      if (extras) {
+        entry.soot_mg_m3 = frames.map((f) => round(f.soot[v], 3));
+        entry.co2_pct = frames.map((f) => round(f.co2[v], 3));
+        entry.o2_pct = frames.map((f) => round(f.o2[v], 3));
+        entry.soot_max_mg_m3 = Math.max(...entry.soot_mg_m3);
+        entry.o2_min_pct = Math.min(...entry.o2_pct);
+      }
+      const index = ti.map((row) => round(row[v], 4));
+      const reached = index.findIndex((x) => x >= 1);
+      entry.tenability_index = index;
+      entry.tenability_s = reached < 0 ? -1 : round(frames[reached].time, 2);
+      entry.fed_asphyxiant = round(tracker.fedGas[v], 5);
+      entry.fed_heat = round(tracker.fedHeat[v], 5);
     }
     vertices[`Vertex_${v}`] = entry;
   }
@@ -166,6 +194,12 @@ export function topologicGraph({ graph, coordination = null, route = null, frame
             untenable_C: untenableC,
             smoke_untenable: smoke ? 1 : 0,
             visibility_limit_m: visibilityLimit,
+            measures: extras ? "gas temperature, visibility, CO, soot, CO2, O2" : "gas temperature, visibility, CO",
+            tenability_method:
+              "Tenability index: the largest share of a limit reached (ISO 13571 cl. 4.1): gas temperature against untenable_C, visibility_limit_m over visibility, and the asphyxiant dose (CO / 35000 per min, times exp(CO2 / 5) above 2 % CO2, plus Purser's low-O2 dose) and convected-heat dose (T^3.4 / 5e7 per min) against fed_crit. Doses are summed over frames.",
+            fed_crit: FED_CRIT,
+            soot_extinction_m2_g: SOOT_EXTINCTION_G,
+            visibility_sign_constant: 3,
           }
         : {}),
       ...properties,

@@ -173,6 +173,23 @@ export function MethodsDialog({ open, onClose, studio }) {
                   </dd>
                 </div>
                 <div className="methods__card">
+                  <dt>Smoke, gases and the tenability index</dt>
+                  <dd>
+                    At each node and frame the solver also gives the soot density, CO₂ and O₂ (by volume). From the soot, by Bouguer&apos;s law
+                    with 8.7 m²/g (Mulholland and Croarkin): the extinction coefficient K, the visibility of a reflecting sign S = 3 / K (Jin),
+                    the light lost over one metre 1 − e<sup>−K</sup> and the optical density per metre K / ln 10. The tenability index is the
+                    largest share of a limit reached, since ISO 13571 takes the time to compromised tenability as the shortest of the times for
+                    each hazard: the gas temperature against the untenable temperature (60 °C by default); the visibility limit (10 m, or 5 m
+                    in small rooms, PD 7974-6) over the visibility; the asphyxiant dose, the sum over minutes of CO / 35 000 ppm, times
+                    exp(CO₂ / 5) above 2 % CO₂ (ISO 13571), plus Purser&apos;s low-oxygen dose 1 / exp(8.13 − 0.54 (20.9 − O₂)) (as in FDS),
+                    against FED 0.3 (ISO 13571&apos;s threshold for general occupancies); and the convected-heat dose, the sum of T<sup>3.4</sup>{" "}
+                    / 5×10<sup>7</sup> per minute, against the same 0.3. At 1 a place is untenable; the plan closes nodes on the same four.
+                    Left out because the solver does not give them: radiant heat at head height, irritant gases and HCN, and particle sizes
+                    (no PM2.5 or PM10). The inputs come from an uncalibrated simulation, so the index ranks places and times under the model;
+                    it is not a measured exposure.
+                  </dd>
+                </div>
+                <div className="methods__card">
                   <dt>What the elements are</dt>
                   <dd>
                     Each element by its IFC class where the exporter typed it; generic elements (IfcBuildingElementProxy
@@ -385,6 +402,27 @@ export function MethodsDialog({ open, onClose, studio }) {
                   <a href="https://doi.org/10.5151/proceedings-ecaadesigradi2019_671" target="_blank" rel="noreferrer">
                     doi:10.5151/proceedings-ecaadesigradi2019_671
                   </a>
+                </li>
+                <li>
+                  ISO 13571:2007 and ISO 13571:2012. Life-threatening components of fire: guidelines for the estimation of time available
+                  for escape (2007) and of time to compromised tenability (2012). The asphyxiant (Eq. 2-3) and convected-heat (Eq. 10-11)
+                  doses, the FED threshold of 0.3 and the shortest-of-four-times rule.{" "}
+                  <a href="https://www.iso.org/standard/56172.html" target="_blank" rel="noreferrer">
+                    iso.org/standard/56172
+                  </a>
+                </li>
+                <li>
+                  McGrattan et al. Fire Dynamics Simulator User&apos;s Guide, NIST Special Publication 1019, sixth edition: section
+                  &quot;Fractional Effective Dose (FED) and Fractional Irritant Concentration (FIC)&quot;, for Purser&apos;s low-oxygen dose
+                  (read in the firemodels/fds repository on 2026-11-06).
+                </li>
+                <li>
+                  Jin (1978). Visibility through fire smoke. Journal of Fire and Flammability 9, 135-155. The sign constant 3 for
+                  light-reflecting signs.
+                </li>
+                <li>
+                  BSI PD 7974-6:2019. Application of fire safety engineering principles to the design of buildings, part 6: human factors.
+                  The visibility limits of 5 m (small rooms) and 10 m (large spaces).
                 </li>
                 <li>
                   Purser and McAllister (2016). Assessment of hazards to occupants from smoke, toxic gases, and

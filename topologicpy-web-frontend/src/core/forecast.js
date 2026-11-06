@@ -46,6 +46,7 @@
  * the dose ranks routes under the model; it is not a measured FED.
  */
 import { Heap, csr, edgeLengths } from "./route.js";
+import { FED_CRIT, asphyxiantRate, heatRate } from "./tenability.js";
 import { AMBIENT, FIRE, floodTimeline, radialTimeline, temperatureSteps } from "./fire.js";
 
 /** Convective-heat FED per second at T degrees C: 1 / (5e7 T^-3.4 min). */
@@ -389,20 +390,40 @@ export function coDoseRate(ppm) {
 /**
  * The planners' forecast from stacked frames (see the header): a running
  * maximum FED rate per node and frame, and each node's untenable time.
+ *
+ * A node is untenable from the first frame at which any criterion of the
+ * tenability index (core/tenability.js, after ISO 13571) is reached: gas
+ * temperature at the threshold, visibility below the limit (with `smoke`),
+ * or, with `doses`, its asphyxiant or convected-heat dose so far at
+ * `fedCrit`. The rate is the convected-heat FED rate plus the asphyxiant FED
+ * rate: CO, times CO2's hyperventilation factor and plus the low-O2 dose
+ * when the frames carry CO2 and O2 (they reduce to ISO's CO term without).
  */
-export function forecastFromFrames(frames, { threshold = 60, smoke = true, visibilityLimit = 10 } = {}) {
-  const { n, K: K0, frameSeconds, T, vis, co } = frames;
+export function forecastFromFrames(frames, { threshold = 60, smoke = true, visibilityLimit = 10, doses = true, fedCrit = FED_CRIT } = {}) {
+  const { n, K: K0, frameSeconds, T, vis, co, co2 = null, o2 = null } = frames;
   const stride = Math.max(1, Math.ceil((K0 * n) / MAX_CELLS));
   const K = Math.ceil(K0 / stride);
   const rate = new Float32Array(K * n);
   const untenable = new Float64Array(n).fill(Infinity);
   const peak = new Float64Array(n);
+  const fedGas = new Float64Array(n);
+  const fedHeat = new Float64Array(n);
+  const minutes = frameSeconds / 60;
   for (let k0 = 0; k0 < K0; k0 += 1) {
     const row = k0 * n;
     for (let v = 0; v < n; v += 1) {
-      const r = convectiveDoseRate(T[row + v]) + coDoseRate(co[row + v]);
+      const gas = asphyxiantRate(co[row + v], co2 ? co2[row + v] : null, o2 ? o2[row + v] : null);
+      const heat = heatRate(T[row + v]);
+      const r = (heat + gas) / 60;
       if (r > peak[v]) peak[v] = r;
-      if (untenable[v] === Infinity && (T[row + v] >= threshold || (smoke && vis[row + v] < visibilityLimit))) untenable[v] = k0 * frameSeconds;
+      fedGas[v] += gas * minutes;
+      fedHeat[v] += heat * minutes;
+      if (
+        untenable[v] === Infinity &&
+        (T[row + v] >= threshold || (smoke && vis[row + v] < visibilityLimit) || (doses && (fedGas[v] >= fedCrit || fedHeat[v] >= fedCrit)))
+      ) {
+        untenable[v] = k0 * frameSeconds;
+      }
     }
     if ((k0 + 1) % stride === 0 || k0 === K0 - 1) {
       const out = Math.floor(k0 / stride) * n;

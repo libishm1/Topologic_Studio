@@ -171,7 +171,8 @@ class GpuSim {
     // ---- layout of the shared buffers
     const io = { nodes: pilot ? pilot.cells.length : 0 };
     io.out = io.nodes + d.nNodes;
-    io.snap = io.out + 3 * d.nNodes;
+    // Six readings a node (gather): T, vis, co, soot, co2, o2.
+    io.snap = io.out + 6 * d.nNodes;
     io.ducts = io.snap + 1 + 5 * d.snapMax;
     io.size = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
     this.io = io;
@@ -222,7 +223,7 @@ class GpuSim {
         entries: k.uses.map((binding) => ({ binding, resource: binding === B.sweep ? { buffer: byBinding[binding], size: SWEEP_BYTES } : { buffer: byBinding[binding] } })),
       });
     }
-    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (3 * d.nNodes + CTR_SIZE + this.gsSlots + 4 * this.slots + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + CTR_SIZE + this.gsSlots + 4 * this.slots + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
 
     // ---- parameters
     this.paramBytes = new ArrayBuffer(PARAM_BYTES);
@@ -467,7 +468,7 @@ class GpuSim {
     const snap = particles && d.snapMax > 0;
     if (snap) this.dispatch(pass, "snapshot");
     pass.end();
-    const nodeBytes = 3 * d.nNodes * 4;
+    const nodeBytes = 6 * d.nNodes * 4;
     const stepBytes = 4 * this.slots * 4;
     let o = 0;
     if (nodeBytes) enc.copyBufferToBuffer(buf.io, this.io.out * 4, this.staging, o, nodeBytes);
@@ -506,7 +507,10 @@ class GpuSim {
     const T = f.slice(0, n);
     const vis = f.slice(n, 2 * n);
     const co = f.slice(2 * n, 3 * n);
-    let at = 3 * n;
+    const soot = f.slice(3 * n, 4 * n);
+    const co2 = f.slice(4 * n, 5 * n);
+    const o2 = f.slice(5 * n, 6 * n);
+    let at = 6 * n;
     const counters = u.slice(at, at + CTR_SIZE);
     at += CTR_SIZE;
     const sweeps = this.stepCount > 0 ? this.sweepsFrom(f.subarray(at, at + this.gsSlots)) : 0;
@@ -526,7 +530,7 @@ class GpuSim {
     else if (particles) snapshot = { positions: new Float32Array(0), temps: new Float32Array(0), kinds: new Uint8Array(0) };
     this.slot = 0;
     return {
-      T, vis, co, released, burnt, radiated, maxT, lastReleased,
+      T, vis, co, soot, co2, o2, released, burnt, radiated, maxT, lastReleased,
       particleCount: counters[CTR.count] > d.cap ? d.cap : counters[CTR.count],
       embersSpawned: counters[CTR.embers],
       spotIgnitions: counters[CTR.spots],
@@ -645,6 +649,9 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const T = new Float32Array(rows * n);
   const vis = new Float32Array(rows * n);
   const co = new Float32Array(rows * n);
+  const soot = new Float32Array(rows * n);
+  const co2 = new Float32Array(rows * n);
+  const o2 = new Float32Array(rows * n);
   const hrr = new Float32Array(K);
   const stats = { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: sim.P.ambient, released: 0, radiated: 0, sweeps: 0 };
   try {
@@ -660,6 +667,9 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       T.set(frame.T, row * n);
       vis.set(frame.vis, row * n);
       co.set(frame.co, row * n);
+      soot.set(frame.soot, row * n);
+      co2.set(frame.co2, row * n);
+      o2.set(frame.o2, row * n);
       hrr[k] = frame.released / frameSeconds / 1000;
       stats.released += frame.released;
       stats.burnt += frame.burnt;
@@ -675,6 +685,9 @@ async function runSceneGpu(ctx, scene, opts = {}) {
         T: T.subarray(row * n, (row + 1) * n),
         vis: vis.subarray(row * n, (row + 1) * n),
         co: co.subarray(row * n, (row + 1) * n),
+        soot: soot.subarray(row * n, (row + 1) * n),
+        co2: co2.subarray(row * n, (row + 1) * n),
+        o2: o2.subarray(row * n, (row + 1) * n),
         hrr: hrr[k],
         maxT: stats.maxT - KELVIN,
         embers: stats.embersSpawned,
@@ -688,5 +701,5 @@ async function runSceneGpu(ctx, scene, opts = {}) {
     gpu.destroy();
   }
   const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0) };
-  return keep ? { ...out, T, vis, co } : out;
+  return keep ? { ...out, T, vis, co, soot, co2, o2 } : out;
 }

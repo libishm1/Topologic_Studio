@@ -321,6 +321,21 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
       series.push({ time: (k + 1) * 5, hrrCpu: cpu.frames.hrr[k], hrrGpu: gpu.frames.hrr[k], meanTCpu: mc / n, meanTGpu: mg / n, maxTCpu: xc, maxTGpu: xg, smokyCpu: vc, smokyGpu: vg, partsCpu: cpu.perFrame[k]?.parts, partsGpu: gpu.perFrame[k]?.parts });
     }
     const corr = (m * sxy - sx * sy) / Math.sqrt((m * sxx - sx * sx) * (m * syy - sy * sy));
+    // The extra readings (2026-11-06): soot (mg/m^3), CO2 and O2 (%), the same statistics.
+    const agree = (field) => {
+      const A = cpu.frames[field], B = gpu.frames[field];
+      if (!A || !B) return null;
+      let e2 = 0, a1 = 0, b1 = 0, aa = 0, bb = 0, ab = 0;
+      for (let i = 0; i < A.length; i += 1) {
+        const a = A[i], b = B[i];
+        e2 += (a - b) ** 2; a1 += a; b1 += b; aa += a * a; bb += b * b; ab += a * b;
+      }
+      const N = A.length;
+      const den = Math.sqrt((N * aa - a1 * a1) * (N * bb - b1 * b1));
+      return { rms: Math.sqrt(e2 / N), correlation: den > 0 ? (N * ab - a1 * b1) / den : 1, meanCpu: a1 / N, meanGpu: b1 / N };
+    };
+    const extras = { soot: agree("soot"), co2: agree("co2"), o2: agree("o2"), co: agree("co") };
+    for (const [k, x] of Object.entries(extras)) if (x) log(`node ${k}: CPU mean ${x.meanCpu.toFixed(3)}, GPU mean ${x.meanGpu.toFixed(3)}, RMS ${x.rms.toFixed(3)}, correlation ${x.correlation.toFixed(3)}`);
     const untenable = [];
     for (let v = 0; v < n; v += 1) untenable.push(Math.abs(Math.min(cpu.forecast.untenable[v], horizon) - Math.min(gpu.forecast.untenable[v], horizon)));
     untenable.sort((a, b) => a - b);
@@ -332,6 +347,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
       radiated: { cpu: cpu.frames.stats.radiated, gpu: gpu.frames.stats.radiated },
       peakHrr: { cpu: Math.max(...cpu.frames.hrr), gpu: Math.max(...gpu.frames.hrr) },
       nodeT: { rms: Math.sqrt(se / m), correlation: corr },
+      extras,
       smokyAgreement: smokyAgree / m,
       untenable: { cpu: closes(cpu.forecast), gpu: closes(gpu.forecast), medianAbsDiff: untenable[untenable.length >> 1], maxAbsDiff: untenable.at(-1) },
       ms: { cpu: cpu.ms, gpu: gpu.ms },

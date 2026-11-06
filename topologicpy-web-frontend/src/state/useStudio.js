@@ -105,7 +105,14 @@ export const DEFAULT_SETTINGS = {
   // of every terminal), and the air each terminal moves (L/s, an assumption).
   flamescapesVentilation: "off",
   flamescapesTerminalFlow: 100,
-  flamescapesShow: "heat", // the graph's colour while it plays: "heat" or "smoke"
+  // The graph's colour while a run plays (core/measures.js): "heat", "smoke",
+  // "gases" or "tenability", and which smoke or gas measure.
+  flamescapesShow: "heat",
+  flamescapesSmokeMeasure: "visibility",
+  flamescapesGasMeasure: "co",
+  // Record soot, CO2 and O2 too (core/tenability.js); off, or past the
+  // memory budget, a run keeps temperature, visibility and CO only.
+  flamescapesMeasures: true,
 
   showGraph: true,
   modelAppearance: "solid",

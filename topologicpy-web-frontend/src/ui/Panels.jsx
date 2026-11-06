@@ -15,6 +15,7 @@ import { formatBytes, formatMs } from "../lib/perf.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS } from "../core/fireClasses.js";
+import { GAS_MEASURES, SHOW_GROUPS, SMOKE_MEASURES } from "../core/measures.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
@@ -502,7 +503,7 @@ export function ModelPanel({
 // -------------------------------------------------------------------- graph
 
 /** Download the graph (and, after a run, the fire's results per node) for TopologicPy. */
-function ExportTopologic({ onExport, disabled, withRun }) {
+function ExportTopologic({ onExport, disabled, withRun, onExportTable }) {
   return (
     <div className="field">
       <Button block disabled={disabled} onClick={onExport}>
@@ -510,9 +511,22 @@ function ExportTopologic({ onExport, disabled, withRun }) {
       </Button>
       <p className="field__hint">
         The walkable graph in the IFC&apos;s own coordinates, with the route
-        {withRun ? " and, per node, the fire's gas temperature, visibility and CO over time and when it became untenable" : ""}, as the JSON
-        TopologicPy reads with <code>Graph.ByJSONFile</code>.
+        {withRun
+          ? " and, per node, the fire's readings over time (gas temperature, visibility, CO, and soot, CO₂ and O₂ when recorded), the tenability index, its doses and when it reached 1"
+          : ""}
+        , as the JSON TopologicPy reads with <code>Graph.ByJSONFile</code>.
       </p>
+      {withRun && onExportTable && (
+        <>
+          <Button block onClick={onExportTable}>
+            Export the run as a table (CSV)
+          </Button>
+          <p className="field__hint">
+            One row per node per frame: place, kind, time, every reading and measure, the doses and the tenability index. Gzipped; ready for
+            pandas or a machine-learning pipeline.
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -1674,6 +1688,12 @@ function CombustionStatus({ combustion, running }) {
             {combustion.embersOn ? `on: ${combustion.embers ?? 0} thrown, ${combustion.spots ?? 0} spot fires` : "off"}
           </dd>
         </div>
+        <div className="result__item">
+          <dt className="result__label">Measures</dt>
+          <dd className="result__value">
+            {combustion.extras ? "heat, smoke, CO, CO₂, O₂" : combustion.extrasDropped ? "heat, smoke, CO (the rest would not fit in memory)" : "heat, smoke, CO"}
+          </dd>
+        </div>
         {combustion.grid && (
           <div className="result__item">
             <dt className="result__label">Grid</dt>
@@ -1764,6 +1784,7 @@ export function SimulatePanel({
   deadlinesShown,
   onGoTo,
   onExportTopologic,
+  onExportTable,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo } = studio;
   const ready = Boolean(graph);
@@ -1863,11 +1884,33 @@ export function SimulatePanel({
               label="Show on the graph"
               value={settings.flamescapesShow}
               onChange={(flamescapesShow) => setSettings({ flamescapesShow })}
-              options={[
-                { value: "heat", label: "Heat" },
-                { value: "smoke", label: "Smoke" },
-              ]}
+              options={SHOW_GROUPS}
             />
+            {settings.flamescapesShow === "smoke" && (
+              <SelectField
+                label="Smoke measure"
+                value={settings.flamescapesSmokeMeasure}
+                onChange={(flamescapesSmokeMeasure) => setSettings({ flamescapesSmokeMeasure })}
+                options={Object.entries(SMOKE_MEASURES).map(([value, m]) => ({ value, label: m.label }))}
+                hint="All five come from the soot at head height, so they shade the graph alike; the legend reads in the one chosen."
+              />
+            )}
+            {settings.flamescapesShow === "gases" && (
+              <SelectField
+                label="Gas"
+                value={settings.flamescapesGasMeasure}
+                onChange={(flamescapesGasMeasure) => setSettings({ flamescapesGasMeasure })}
+                options={Object.entries(GAS_MEASURES).map(([value, m]) => ({ value, label: m.label, disabled: m.extras && !settings.flamescapesMeasures }))}
+                hint={settings.flamescapesMeasures ? undefined : "CO₂ and O₂ need the extra measures (Flamescapes settings)."}
+              />
+            )}
+            {settings.flamescapesShow === "tenability" && (
+              <p className="field__hint">
+                The largest share of a limit each place has reached: gas temperature, visibility, and the asphyxiant (CO, with CO₂&apos;s
+                faster breathing and low O₂) and heat doses against FED 0.3, after ISO 13571. Red at 1: untenable. The Methods page gives the
+                formulas and sources.
+              </p>
+            )}
           </>
         )}
         {modelInfo && !rooms && (
@@ -1903,7 +1946,7 @@ export function SimulatePanel({
 
         {flamescapes && <CombustionStatus combustion={fire.combustion} running={fire.running} />}
         {dynamicPath && <RerouteResult dynamicPath={dynamicPath} step={fire.step} />}
-        {ready && fire.step > 0 && !fire.running && <ExportTopologic onExport={onExportTopologic} withRun={flamescapes} />}
+        {ready && fire.step > 0 && !fire.running && <ExportTopologic onExport={onExportTopologic} withRun={flamescapes} onExportTable={onExportTable} />}
         {flamescapes && (
           <Disclosure summary="Flamescapes settings">
             <div className="grid-2">
@@ -2003,6 +2046,12 @@ export function SimulatePanel({
               0.27 m. Keep one grid when comparing runs; the run card gives it. This browser remembers the GPU&apos;s speed, so the first
               setting picks the same grid each time on the same GPU.
             </p>
+            <Toggle
+              label="Record soot, CO₂ and O₂ too"
+              checked={settings.flamescapesMeasures}
+              onChange={(flamescapesMeasures) => setSettings({ flamescapesMeasures })}
+              hint="For the smoke and gas measures, the tenability index's CO₂ and O₂ terms, and the exports. The solver works them out anyway; recording them doubles what each stored frame holds, so a run past 64 MB of frames keeps temperature, visibility and CO only, and its card says so."
+            />
             <p className="field__hint">{FLAMESCAPES_LIMITS}</p>
           </Disclosure>
         )}

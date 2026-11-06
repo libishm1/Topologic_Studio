@@ -1634,6 +1634,43 @@ export class ViewerManager {
   }
 
   /**
+   * Colour the graph by a level per node, 0 (clear, the graph's own colour)
+   * to 1 (at the measure's mark, red) on the heat ramp: the gases and the
+   * tenability index (core/measures.js). null clears.
+   */
+  setNodeLevels(levels) {
+    const segments = this.overlays.get(OVERLAY.graph);
+    if (!segments || !this._graphEdges) return;
+    const attribute = segments.geometry.getAttribute("color");
+    if (!attribute) return;
+    const colors = attribute.array;
+    if (!levels || levels.length !== this._graphNodes.length / 3) {
+      this._setColouring(null, colors, attribute);
+      return;
+    }
+    const scratch = new THREE.Color();
+    const { stops } = this._sceneColours();
+    const edgeCount = this._graphEdges.length / 2;
+    for (let e = 0; e < edgeCount; e += 1) {
+      for (let side = 0; side < 2; side += 1) {
+        const level = levels[this._graphEdges[e * 2 + side]];
+        const offset = e * 6 + side * 3;
+        if (!(level > 0.02)) {
+          colors[offset] = this._baseColors[offset];
+          colors[offset + 1] = this._baseColors[offset + 1];
+          colors[offset + 2] = this._baseColors[offset + 2];
+          continue;
+        }
+        heatColor(scratch, Math.min(1, level), 0, 1, stops);
+        colors[offset] = scratch.r;
+        colors[offset + 1] = scratch.g;
+        colors[offset + 2] = scratch.b;
+      }
+    }
+    this._setColouring({ opacity: 0.8, redraw: () => this.setNodeLevels(levels) }, colors, attribute);
+  }
+
+  /**
    * Draw the Flamescapes solver's particles as glowing points: flame-front
    * particles larger and dimmer, embers small and bright, both coloured by
    * temperature from dull red (800 K) to yellow-white (1800 K). null clears.

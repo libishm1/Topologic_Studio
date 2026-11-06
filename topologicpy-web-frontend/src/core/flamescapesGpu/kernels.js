@@ -1382,16 +1382,25 @@ ${perThread("projectUpdate", "U.nu + U.nv + U.nw", `
 
 // ------------------------------------------------------------------ readings
 
-/** Gas temperature (C), visibility (m) and CO (ppm) at the nodes' head cells (the CPU's readNodes). */
+/**
+ * Gas temperature (C), visibility (m), CO (ppm), soot (mg/m^3), CO2 and O2
+ * (% by volume) at the nodes' head cells (the CPU's readNodes); outside the
+ * grid, clear air.
+ */
 ${perThread("gather", "U.nNodes", `
   let c = io[U.ioNodes + t];
   var T = U.ambient - KELVIN;
   var vis = 100.0;
   var co = 0.0;
+  var soot = 0.0;
+  var co2 = 0.0;
+  var o2 = (0.232 / 0.032) / (0.232 / 0.032 + 0.768 / 0.028) * 100.0;
   if (c != NO_CELL) {
     T = cf[ix(fT, c)] - KELVIN;
-    let K = 8700.0 * cf[ix(fRho, c)] * Y[c * NS + 4u];
+    let rhoSoot = cf[ix(fRho, c)] * Y[c * NS + 4u];
+    let K = 8700.0 * rhoSoot;
     vis = select(100.0, 3.0 / K, K > 3.0 / 100.0);
+    soot = rhoSoot * 1e6;
     var moles = 0.0;
     var rest = 1.0;
     for (var q = 0u; q < NS; q++) {
@@ -1399,11 +1408,19 @@ ${perThread("gather", "U.nNodes", `
       rest -= Y[c * NS + q];
     }
     moles += max(0.0, rest) / 0.028;
-    if (moles > 0.0) { co = ((Y[c * NS + 5u] / 0.028) / moles) * 1e6; }
+    o2 = 0.0;
+    if (moles > 0.0) {
+      co = ((Y[c * NS + 5u] / 0.028) / moles) * 1e6;
+      co2 = ((Y[c * NS + 2u] / 0.044) / moles) * 100.0;
+      o2 = ((Y[c * NS + 1u] / 0.032) / moles) * 100.0;
+    }
   }
   io[U.ioOut + t] = bitcast<u32>(T);
   io[U.ioOut + U.nNodes + t] = bitcast<u32>(vis);
-  io[U.ioOut + 2u * U.nNodes + t] = bitcast<u32>(co);`)}
+  io[U.ioOut + 2u * U.nNodes + t] = bitcast<u32>(co);
+  io[U.ioOut + 3u * U.nNodes + t] = bitcast<u32>(soot);
+  io[U.ioOut + 4u * U.nNodes + t] = bitcast<u32>(co2);
+  io[U.ioOut + 5u * U.nNodes + t] = bitcast<u32>(o2);`)}
 
 @compute @workgroup_size(64)
 fn peakTemperature(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>,

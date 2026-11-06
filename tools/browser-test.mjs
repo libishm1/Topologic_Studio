@@ -849,6 +849,21 @@ if (await fsToggle.isVisible().catch(() => false)) {
   // The default openings: doors open, windows closed.
   const openings = card.split("\n").find((l) => /doors (open|closed), \d+ windows (open|closed)/.test(l)) || "";
   record(/doors open, \d+ windows closed/.test(openings), "the run card gives the openings", openings.trim() || "no openings line");
+  // The smoke, gas and tenability measures (core/tenability.js, core/measures.js; 2026-11-06).
+  const measuresLine = card.split("\n").find((l) => /^heat, smoke, CO/.test(l.trim())) || "";
+  record(/CO₂, O₂/.test(measuresLine), "the run records soot, CO₂ and O₂ too", measuresLine.trim() || "no measures line");
+  const showGroup = page.getByRole("group", { name: "Show on the graph", exact: true });
+  await showGroup.getByRole("button", { name: "Tenability" }).click().catch(() => {});
+  await page.waitForTimeout(400);
+  const indexLegend = await page.getByText("Tenability index", { exact: true }).isVisible().catch(() => false);
+  record(indexLegend || MOBILE, "the graph can be coloured by the tenability index", MOBILE ? "legend folded on a phone" : undefined);
+  await showGroup.getByRole("button", { name: "Heat" }).click().catch(() => {});
+  // The exports are offered once the playback has ended too.
+  await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent)), null, { timeout: 180000 }).catch(() => {});
+  const tableButton = page.getByRole("button", { name: "Export the run as a table (CSV)" });
+  const [tableDownload] = await Promise.all([page.waitForEvent("download", { timeout: 30000 }).catch(() => null), tableButton.click().catch(() => {})]);
+  const tableName = tableDownload?.suggestedFilename() || "";
+  record(/\.csv(\.gz)?$/.test(tableName), "the run exports as a table for analysis", tableName || "no download");
   const legendFs = await page.getByText("Gas temperature at head height (°C)", { exact: true }).isVisible().catch(() => false);
   record(legendFs || MOBILE, "the graph is coloured by gas temperature at head height", MOBILE ? "legend folded on a phone" : undefined);
   await shot(page, "flamescapes-run");

@@ -37,6 +37,8 @@ import { centroidOf } from "./core/centroid.js";
 import { GUIDED_RUNS, farthestFromExits, nodeAlong, stagesFor } from "./core/guided.js";
 import { describeFacts } from "./core/describeFacts.js";
 import { codeCheck } from "./core/codeCheck.js";
+import { measureView } from "./core/measures.js";
+import { tenabilityTracker } from "./core/tenability.js";
 import { fieldNote, nextHint } from "./core/fieldNotes.js";
 import { useFieldNotes } from "./state/useFieldNotes.js";
 import { FieldNotesButton, FieldNotesDialog, HintCard } from "./ui/FieldNotes.jsx";
@@ -181,7 +183,10 @@ export default function App() {
   // The run whose frames are on screen (playback reads its view from a ref,
   // so switching heat and smoke mid-run holds: review 4).
   const playingRunRef = useRef(null);
-  const showRef = useRef("heat");
+  // What a Flamescapes run colours the graph by (core/measures.js), and the
+  // limits its tenability index is worked out with (core/tenability.js).
+  const showRef = useRef(measureView({}, false));
+  const tenabilityRef = useRef({ limitC: 60, visibilityLimit: 10, smoke: true });
   const geometryRef = useRef(null);
   // Counts file loads, so only the latest one updates the page.
   const loadSeqRef = useRef(0);
@@ -346,6 +351,46 @@ export default function App() {
       showPlanRoutes(false);
     }
   }, [studio, showPlanRoutes]);
+
+  // --------------------------------------------- Flamescapes frames on screen
+
+  // The tenability index of frame k of a run (core/tenability.js): worked
+  // out in order and kept with the run, again from the start when the limits
+  // change, or when a restarted run dropped its frames.
+  const tenabilityOf = useCallback((run, k) => {
+    const opts = tenabilityRef.current;
+    const key = JSON.stringify(opts);
+    const n = run.frames[0]?.T.length || 0;
+    if (!run.ti || run.tiKey !== key || run.ti.length > run.frames.length) {
+      run.ti = [];
+      run.tiKey = key;
+      run.tiTracker = tenabilityTracker(n, opts);
+    }
+    let before = run.ti.length ? run.frames[run.ti.length - 1].time : 0;
+    while (run.ti.length <= k && run.ti.length < run.frames.length) {
+      const frame = run.frames[run.ti.length];
+      run.ti.push(run.tiTracker.step(frame, Math.max(0, frame.time - before) / 60));
+      before = frame.time;
+    }
+    return run.ti[Math.min(k, run.ti.length - 1)] || null;
+  }, []);
+
+  // Frame k of a run in what is on show (core/measures.js): heat on the
+  // run's ramp, the smoke measures by visibility (each is a function of the
+  // soot), the gases and the index as levels.
+  const paintCombustion = useCallback((viewer, run, k) => {
+    const frame = run?.frames[Math.min(k, run.frames.length - 1)];
+    if (!viewer || !frame) return;
+    const view = showRef.current;
+    viewer.setSmokeCloud(frame.smoke || null, { strength: view.kind === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
+    if (view.kind === "smoke") viewer.setSmoke(frame.vis);
+    else if (view.kind === "levels") viewer.setNodeLevels(view.levels(frame, view.key === "tenability" ? tenabilityOf(run, k) : null));
+    else {
+      const temperatures = new Map();
+      for (let i = 0; i < frame.T.length; i += 1) if (frame.T[i] > 21) temperatures.set(i, frame.T[i]);
+      viewer.setTemperatures(temperatures, { peak: ZONE_COLOUR_PEAK });
+    }
+  }, [tenabilityOf]);
 
   // --------------------------------------------------------------- IFC load
 
@@ -1174,6 +1219,10 @@ export default function App() {
       horizon: settings.flamescapesHorizon,
       frameSeconds: settings.flamescapesHorizon / frames,
       embers: fireModel === "flamescapes-embers",
+      // Soot, CO2 and O2 too, unless switched off or past 64 MB of stored frames
+      // (12 bytes a node a frame): the run then keeps the basic three.
+      extras: settings.flamescapesMeasures && ((graph.nodes.length / 3) * frames * 12) <= 64 * 2 ** 20,
+      extrasWanted: settings.flamescapesMeasures,
       openings: {
         doors: doorsClosed ? "closed" : "open",
         doorCount: new Set((geometry.doors || []).map((m) => m.itemId)).size,
@@ -1211,6 +1260,7 @@ export default function App() {
       settings.flamescapesWindows,
       settings.flamescapesVentilation,
       settings.flamescapesTerminalFlow,
+      settings.flamescapesMeasures,
     ]);
     return { payload, transfers, key };
   }, [graph, points.fire, settings, fireModel]);
@@ -1233,7 +1283,10 @@ export default function App() {
         run.info = progress.info;
         // The view shares the GPU with the solver: it draws less while the GPU computes.
         viewerRef.current?.setDrawRate(progress.info.backend?.kind === "gpu" ? GPU_RUN_DRAW_RATE : 0);
-        studio.setFire((c) => ({ ...c, combustion: { ...progress.info, time: 0, hrr: 0, peak: 0, horizon: payload.horizon, embersOn: payload.embers } }));
+        studio.setFire((c) => ({
+          ...c,
+          combustion: { ...progress.info, time: 0, hrr: 0, peak: 0, horizon: payload.horizon, embersOn: payload.embers, extras: payload.extras, extrasDropped: payload.extrasWanted && !payload.extras },
+        }));
         return;
       }
       run.frames.push(progress);
@@ -1335,6 +1388,37 @@ export default function App() {
       reportError(error, "Exporting for TopologicPy");
     }
   }, [graph, fire.model, fire.step, path, points.fire, file, settings, reportError, toast]);
+
+  // The finished Flamescapes run as one table for analysis and machine
+  // learning (core/runTable.js): a row per node per frame, gzipped where the
+  // browser can.
+  const exportTable = useCallback(async () => {
+    const run = combustionRef.current;
+    if (!graph || !run?.done || run.failed || run.graph !== graph) return;
+    try {
+      const [{ runTableBlob }, { frameChange, viewerToIfc }, coordination] = await Promise.all([
+        import("./core/runTable.js"),
+        import("./core/topologicExport.js"),
+        viewerRef.current?.getCoordinationMatrix?.() ?? null,
+      ]);
+      const points = viewerToIfc(graph.nodes, frameChange(coordination, graph.upAxis || "y", graph.agentHeight || 0));
+      const n = graph.nodes.length / 3;
+      const { blob, extension } = await runTableBlob(
+        { frames: run.frames, frameSeconds: run.result?.frameSeconds ?? settings.flamescapesHorizon / Math.max(1, run.frames.length), n, points, kinds: graph.kinds },
+        { limitC: settings.flamescapesUntenableC, visibilityLimit: settings.flamescapesVisibility, smoke: settings.flamescapesSmoke },
+      );
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(file?.name || "model").replace(/\.ifc(\.gz)?$/i, "")}-flamescapes.${extension}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      toast(`Exported ${(n * run.frames.length).toLocaleString()} rows: one per node per frame.`, { variant: "info", ttl: 3500 });
+    } catch (error) {
+      reportError(error, "Exporting the run as a table");
+    }
+  }, [graph, file, settings, reportError, toast]);
 
   // What the elements are (src/core/identify.js): the IFC class where the
   // exporter typed it, else the name, else the box; then, when asked, IFCNet's
@@ -1572,12 +1656,9 @@ export default function App() {
             // The Flamescapes frames can show the smoke instead, and their
             // flames and embers.
             const frame = combustion?.frames[message.step];
-            if (frame && showRef.current === "smoke") viewer?.setSmoke(frame.vis);
+            if (frame) paintCombustion(viewer, combustion, message.step);
             else viewer?.setTemperatures(temperatures, fireModel === "zone" || combustion ? { peak: ZONE_COLOUR_PEAK } : undefined);
-            if (combustion) {
-              viewer?.setParticles(frame?.particles || null);
-              viewer?.setSmokeCloud(frame?.smoke || null, { strength: showRef.current === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
-            }
+            if (combustion) viewer?.setParticles(frame?.particles || null);
             colours.set("fire");
           } else if (message.type === "path_update") {
             studio.setDynamicPath(message);
@@ -1610,7 +1691,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed]);
+  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed, paintCombustion]);
 
   // A fire that ends by itself keeps its final colours. Stopping it clears
   // them, back to what the graph showed before: the deadline map if it is
@@ -2021,10 +2102,17 @@ export default function App() {
         // longer sends them twice: review 6).
         const { n, K } = done;
         const T = new Float32Array(K * n), vis = new Float32Array(K * n), co = new Float32Array(K * n);
+        // CO2 and O2 when the run recorded them: the plan's doses then use them (core/tenability.js).
+        const extras = Boolean(run.frames[0]?.co2 && run.frames[0]?.o2);
+        const co2 = extras ? new Float32Array(K * n) : null, o2 = extras ? new Float32Array(K * n) : null;
         run.frames.forEach((f, k) => {
           T.set(f.T, k * n);
           vis.set(f.vis, k * n);
           co.set(f.co, k * n);
+          if (extras) {
+            co2.set(f.co2, k * n);
+            o2.set(f.o2, k * n);
+          }
         });
         frames = {
           n,
@@ -2033,6 +2121,7 @@ export default function App() {
           T,
           vis,
           co,
+          ...(extras ? { co2, o2 } : {}),
           smoke: settings.flamescapesSmoke,
           visibilityLimit: settings.flamescapesVisibility,
           // What the grid covered, for the plan card (review 3).
@@ -2119,25 +2208,18 @@ export default function App() {
     }
   }, [graph]);
 
-  // Switching a Flamescapes run between heat and smoke redraws the frame on
-  // screen, also once the run has ended.
+  // Switching what a Flamescapes run shows (core/measures.js), or the limits
+  // of its tenability index, redraws the frame on screen, also once the run
+  // has ended.
   useEffect(() => {
-    showRef.current = settings.flamescapesShow;
     const run = playingRunRef.current;
+    showRef.current = measureView(settings, Boolean(run?.frames?.[0]?.co2));
+    tenabilityRef.current = { limitC: settings.flamescapesUntenableC, visibilityLimit: settings.flamescapesVisibility, smoke: settings.flamescapesSmoke };
     if (!run || !isFlamescapes(fire.model) || graphColours !== "fire") return;
-    const frame = run.frames[Math.min(fire.step, run.frames.length - 1)];
-    if (!frame) return;
-    const viewer = viewerRef.current;
-    viewer?.setSmokeCloud(frame.smoke || null, { strength: settings.flamescapesShow === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
-    if (settings.flamescapesShow === "smoke") viewer?.setSmoke(frame.vis);
-    else {
-      const temperatures = new Map();
-      for (let i = 0; i < frame.T.length; i += 1) if (frame.T[i] > 21) temperatures.set(i, frame.T[i]);
-      viewer?.setTemperatures(temperatures, { peak: ZONE_COLOUR_PEAK });
-    }
-    // Only a change of view redraws; frames redraw themselves as they play.
+    paintCombustion(viewerRef.current, run, fire.step);
+    // Only a change of view or limits redraws; frames redraw themselves as they play.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.flamescapesShow]);
+  }, [settings.flamescapesShow, settings.flamescapesSmokeMeasure, settings.flamescapesGasMeasure, settings.flamescapesUntenableC, settings.flamescapesVisibility, settings.flamescapesSmoke]);
 
   // The deadline map colours the graph when a plan arrives or the toggle
   // changes, and only then. A fire that has coloured the graph since keeps
@@ -2573,18 +2655,11 @@ export default function App() {
                     note: "Two-zone model: the smoke layer's temperature where it is at or below head height; ambient elsewhere.",
                   }
                 : isFlamescapes(fire.model)
-                  ? settings.flamescapesShow === "smoke"
-                    ? {
-                        title: "Visibility at head height",
-                        ramp: "smoke",
-                        scale: ["30 m", "5 m", "1 m"],
-                        note: "Flamescapes: seeing through the smoke 1.8 m above each node's floor; clear air keeps the graph's colour.",
-                      }
-                    : {
-                        title: "Gas temperature at head height (°C)",
-                        max: ZONE_COLOUR_PEAK,
-                        note: "Flamescapes: the solver's gas temperature 1.8 m above each node's floor.",
-                      }
+                  ? (measureView(settings, Boolean(fire.combustion?.extras)).legend ?? {
+                      title: "Gas temperature at head height (°C)",
+                      max: ZONE_COLOUR_PEAK,
+                      note: "Flamescapes: the solver's gas temperature 1.8 m above each node's floor.",
+                    })
                   : fire.model === "temperature")
             }
             deadlineLegend={
@@ -2769,6 +2844,7 @@ export default function App() {
                   exits={exits}
                   onGoTo={setTab}
                   onExportTopologic={exportTopologic}
+                  onExportTable={exportTable}
                 />
               )}
             </div>

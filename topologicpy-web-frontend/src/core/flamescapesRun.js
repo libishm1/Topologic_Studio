@@ -21,7 +21,10 @@
  *   visibility, S = C / (sigma_m rho Y_soot) with C = 3 for light-reflecting
  *   signs and the mass extinction coefficient of flaming smoke sigma_m =
  *   8700 m^2/kg (Mulholland and Croarkin 2000), capped at 100 m;
- *   CO in ppm by volume.
+ *   CO in ppm by volume;
+ *   and, for the extra measures (core/tenability.js), the soot mass
+ *   concentration (mg/m^3), CO2 and O2 (% by volume). Outside the grid a
+ *   node reads clear air: 20.9 % O2, no CO2 and no soot.
  *
  * Forecast. The planners (forecast.js, deadline.js) need, per node and
  * frame, a dose rate that never falls and the time each node becomes
@@ -254,12 +257,18 @@ export function headCells(sim, nodes, { agentHeight = 0.75, headHeight = 1.8 } =
   return out;
 }
 
-/** Read gas temperature (C), visibility (m) and CO (ppm) at the nodes' head cells. */
+/**
+ * Read, at the nodes' head cells: gas temperature (C), visibility (m), CO
+ * (ppm), soot (mg/m^3), CO2 and O2 (% by volume).
+ */
 export function readNodes(sim, cells, out = null) {
   const n = cells.length;
   const T = out?.T || new Float32Array(n);
   const vis = out?.vis || new Float32Array(n);
   const co = out?.co || new Float32Array(n);
+  const soot = out?.soot || new Float32Array(n);
+  const co2 = out?.co2 || new Float32Array(n);
+  const o2 = out?.o2 || new Float32Array(n);
   const ambient = sim.P.ambient - KELVIN;
   for (let v = 0; v < n; v += 1) {
     const c = cells[v];
@@ -267,10 +276,15 @@ export function readNodes(sim, cells, out = null) {
       T[v] = ambient;
       vis[v] = MAX_VISIBILITY;
       co[v] = 0;
+      soot[v] = 0;
+      co2[v] = 0;
+      o2[v] = AIR_O2_PERCENT;
       continue;
     }
     T[v] = sim.T[c] - KELVIN;
-    vis[v] = visibility(sim.rho[c] * sim.Y[c * NS + SPECIES.SOOT]);
+    const rhoSoot = sim.rho[c] * sim.Y[c * NS + SPECIES.SOOT];
+    vis[v] = visibility(rhoSoot);
+    soot[v] = rhoSoot * 1e6;
     let moles = 0;
     let rest = 1;
     for (let q = 0; q < NS; q += 1) {
@@ -278,10 +292,16 @@ export function readNodes(sim, cells, out = null) {
       rest -= sim.Y[c * NS + q];
     }
     moles += Math.max(0, rest) / 0.028;
-    co[v] = moles > 0 ? ((sim.Y[c * NS + SPECIES.CO] / MOLAR[SPECIES.CO]) / moles) * 1e6 : 0;
+    const share = (q) => (moles > 0 ? sim.Y[c * NS + q] / MOLAR[q] / moles : 0);
+    co[v] = share(SPECIES.CO) * 1e6;
+    co2[v] = share(SPECIES.CO2) * 100;
+    o2[v] = share(SPECIES.O2) * 100;
   }
-  return { T, vis, co };
+  return { T, vis, co, soot, co2, o2 };
 }
+
+/** O2 in air, % by volume, as the solver's air (Y_O2 0.232, the rest N2) reads. */
+export const AIR_O2_PERCENT = (0.232 / 0.032 / (0.232 / 0.032 + 0.768 / 0.028)) * 100;
 
 /** Up to `max` particles in the viewer frame: [x, y, z] triples, temperatures (K) and kinds. */
 export function particleSnapshot(sim, max = 3000) {
@@ -358,7 +378,7 @@ export function smokeCloud(grid, rho, Y, kind, { block = 2, min = 0.03 } = {}) {
  * Run the solver to `horizon` seconds, calling onFrame every `frameSeconds`
  * with the node readings, the frame's mean heat release rate (kW), the
  * particles and, with `smoke`, the smoke cloud (smokeCloud). Returns the
- * frames stacked: T, vis, co as Float32Array(K n).
+ * frames stacked: T, vis, co, soot, co2, o2 as Float32Array(K n).
  */
 export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
@@ -373,6 +393,9 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
   const T = new Float32Array(rows * n);
   const vis = new Float32Array(rows * n);
   const co = new Float32Array(rows * n);
+  const soot = new Float32Array(rows * n);
+  const co2 = new Float32Array(rows * n);
+  const o2 = new Float32Array(rows * n);
   const hrr = new Float32Array(K);
   let released = 0;
   for (let k = 0; k < K; k += 1) {
@@ -382,7 +405,8 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
       if (shouldStop?.()) return null;
     }
     const row = keep ? k : 0;
-    const frame = readNodes(sim, cells, { T: T.subarray(row * n, (row + 1) * n), vis: vis.subarray(row * n, (row + 1) * n), co: co.subarray(row * n, (row + 1) * n) });
+    const at = (a) => a.subarray(row * n, (row + 1) * n);
+    const frame = readNodes(sim, cells, { T: at(T), vis: at(vis), co: at(co), soot: at(soot), co2: at(co2), o2: at(o2) });
     hrr[k] = (sim.stats.released - released) / frameSeconds / 1000;
     released = sim.stats.released;
     onFrame?.({
@@ -391,6 +415,9 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
       T: frame.T,
       vis: frame.vis,
       co: frame.co,
+      soot: frame.soot,
+      co2: frame.co2,
+      o2: frame.o2,
       hrr: hrr[k],
       maxT: sim.stats.maxT - KELVIN,
       embers: sim.stats.embersSpawned,
@@ -402,5 +429,5 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
   }
   const inGrid = cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0);
   const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid };
-  return keep ? { ...out, T, vis, co } : out;
+  return keep ? { ...out, T, vis, co, soot, co2, o2 } : out;
 }
