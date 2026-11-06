@@ -170,11 +170,11 @@ building, by another stair if it must; **Reroute towards**, under
 
 ![The Office example with a fire at the foot of its east stair: the route from an upstairs room first takes the east stair, then, once the way out by it is above 60 degrees C at head height, turns back along the upper corridor to the west stair and exit](docs/images/office-reroute.gif)
 
-*The Office example, with a Flamescapes fire (class B, 8.6 MW at its peak)
-at the foot of the east stair and **Impassable above** set to 60 °C. The
-route from the upstairs room takes the east stair until step 20 (100 s),
-when the way out by it passes 60 °C at head height; from then on it takes
-the west stair and exit.*
+*The Office example, with a Flamescapes fire (class B) at the foot of the
+east stair and **Impassable above** set to 60 °C. The route from the
+upstairs room takes the east stair until step 20 (100 s), when the way out
+by it passes 60 °C at head height; from then on it takes the west stair and
+exit. The switch came at step 20 in each of five runs.*
 
 Four fire models are offered, and two more with the optional Flamescapes
 solver:
@@ -273,21 +273,25 @@ The animations below repeat the Simulate step on the **Vienna apartment
 building (TU Wien)**, seven levels and 111 rooms. Each is a 300 s Flamescapes
 run with embers, computed on the GPU in the browser. The fire starts in a
 flat's living-kitchen, and the person leaves from the top floor, 53.8 m down
-the stairwell to the street door.
+the stairwell to the street door. (They were recorded before Studio counted
+the first-floor fire exit at the back, which is now the nearer way out, at
+33.6 m.)
 
 ![The Vienna building with all doors open: an electrical fire grows in a living-kitchen, smoke spreads round the building, and the hazard-aware route in magenta leaves the shortest route in red near the fire](docs/images/vienna-doors-open.gif)
 
-*All doors open. An electrical fault (class C) grows to 13.3 MW and throws
-5,154 embers, which light 13 spot fires. The graph shows the gas temperature
+*All doors open. An electrical fault (class C) grows through the flat and
+throws embers, which light spot fires. The graph shows the gas temperature
 at head height, and the hazard-aware route (magenta) leaves the shortest
 route (red) where the heat reaches it. With every door closed, the same fire
-peaks at 3.0 MW, under a quarter of the open-door peak.*
+on the same grid released under a quarter of the heat. The solver's heat
+release depends strongly on its grid, so these runs give no fire size to
+quote.*
 
 ![A gas fire at the cooking range of the flat above, coloured by the tenability index: the floors near the fire turn red as their nodes become untenable](docs/images/vienna-tenability.gif)
 
-*A gas fire (class B) at the cooking range of the flat above, doors open,
-peaking at 10.9 MW. The graph shows the tenability index: yellow as a node
-nears a limit, red once it is untenable.*
+*A gas fire (class B) at the cooking range of the flat above, doors open.
+The graph shows the tenability index: yellow as a node nears a limit, red
+once it is untenable.*
 
 The building model is by Fischer, Schranz, Urban, Pfeiffer and Flamm (TU
 Wien, 2024, [doi:10.48436/wzp90-dmf60](https://doi.org/10.48436/wzp90-dmf60)),
