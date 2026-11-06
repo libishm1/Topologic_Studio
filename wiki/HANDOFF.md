@@ -58,10 +58,24 @@
 
         The Worker's README has the steps.
    2. **Smoke and gas measures:** done (3f9a4f2). See This round and `wiki/research/tenability-index-2026-11-06.md`.
+   2b. **Asked for during the video (2026-11-06), not built:**
+      - **Shelter areas outside the building:** identify safe assembly areas outside when there is a fire. Read the guidance first (distance from the facade, clear of exits and fire-service access, upwind), then propose the method before building it.
+      - **"Nearest exit" stops at a flat's own door in the Vienna model.**
+        - **Why:** the model flags 32 flat and stair doors FireExit TRUE, so the nearest exit from any flat is its own front door, and the code check counts those doors as exits too.
+        - **The street exits:** the doors flagged IsExternal, or bounded by external space, at the lowest level.
+        - **Next:** tell final exits apart from doors onto escape routes (external flag, external boundary, floor on one side) and route to final exits by default. Check the code check's exit counts afterwards.
+      - **Ignition by context:** the video picked the fire's context (cooking, electrical, gas) by hand from the ranked list. A "Context" choice in Likely ignition points would make this one click.
    3. **Questions answered but not decided:**
       - fire replay from a cache (IndexedDB, keyed by model, graph and fire inputs);
       - door states: an "as built" mode from SelfClosing and "-C" fire ratings, a seeded random mode, and later an ensemble.
    4. **Training** (IFCNet retraining, on Nebius, Vast.ai or a free offer): later, by the user's choice.
+      - **Wanted in the data:** the user asked to use "all of these models", the list on github.com/bimdata/BIMData-Research-and-Development, page `pages/IFC_FILES.md`. It holds 100 IFC files (3.7 GB, 40 models) from seven sources: DURAARK at TIB, the Open IFC Model Repository, BIMcollab examples, Schependomlaan, IFCCompressor, NIBS common BIM files and markusplassen.no. The repository itself has no licence and holds screenshots only.
+      - **Check each source's licence first.**
+        - `NBS_Lakeside` is an NBS model: excluded by the user's standing rule.
+        - The `Autodesk_*` models need Autodesk's terms read first.
+        - The Open IFC Model Repository states no licences.
+        - DURAARK is licensed dataset by dataset.
+        - Several models are already in the local corpus: Duplex, FZK-Haus, Smiley West, HiTOS.
 
 Items 1 to 4 below are unchanged from the night before.
 
@@ -99,6 +113,17 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
 Before any deploy: the gates above, then the live check, then update this file.
 
 ## This round (2026-11-06, afternoon)
+
+- **A video of the Vienna model** (the user's request): 3 min 22 s, captioned, 1280×720 H.264.
+  - **Where:** in OneDrive under `CM-iTAD/topologic_webapp/videos/2026-11-06 Vienna fire escape/`, full quality (48 MB) and phone (21 MB). Not in the repository.
+  - **What it shows:**
+    - the model, the graph and the ranked ignition points;
+    - an electrical fault (class C) in a first-floor living-kitchen, 300 s with smoke and embers. Doors open: 13.3 MW peak, about 5 000 embers, 13 spot fires, and the route replanned at step 55. Doors closed: 3.0 MW;
+    - a gas fire (class B) at another flat's hob: 10.9 MW;
+    - escapes from the top floor (53.8 m down the stairwell to the street door) and from the fire's floor (29.5 m);
+    - the heat, smoke and tenability views.
+  - **How it was made:** Playwright driving the dev app, then a canvas page recorded with MediaRecorder (MP4). The scripts are in the session scratchpad: `video/capture.mjs`, `compose.mjs`, `probe.mjs`. A temporary dev-only hook exposing the exits was removed afterwards; the tree is clean.
+  - **What it taught about the fires:** an electrical or gas fire in the services rooms stays small (26 to 122 kW), as there is little to burn. A fire in a furnished living-kitchen grows to megawatts within 300 s.
 
 - **The human check** (8852fe2): Cloudflare Turnstile in front of the Worker.
   - **On the page:** `lib/turnstile.js` loads Turnstile only when "Describe this model" is set to Cloudflare and the site has a site key. It shows one slim strip, the panel's width and in the app's theme, under the send button. It checks at once and gives a fresh token for each request.
