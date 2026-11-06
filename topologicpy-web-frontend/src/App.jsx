@@ -1534,6 +1534,16 @@ export default function App() {
     [graph, handlePick, setSettings, toast, markFound, markUsed],
   );
 
+  // The model's exit doors; `final` are the ones out of the building, which
+  // the nearest exit, rerouting, the forecast and the agent use.
+  const exits = useMemo(() => (graph?.doors ? exitDoors(graph.doors, studio.semantics, graph) : null), [graph, studio.semantics]);
+
+  // Rings at the exits the nearest exit and rerouting use.
+  useEffect(() => {
+    const shown = graph && exits?.final.length ? exits.final : null;
+    viewerRef.current?.setExitDoors(shown?.map((v) => [graph.nodes[v * 3], graph.nodes[v * 3 + 1], graph.nodes[v * 3 + 2]]) ?? null);
+  }, [graph, exits]);
+
   const startFire = useCallback(async () => {
     if (!graph || !points.fire) return;
     markUsed("fire");
@@ -1617,6 +1627,9 @@ export default function App() {
     const wantsReroute = settings.reroute && Boolean(points.start && points.exit);
     // The route the fire first gives; a later one that differs is the fire's doing.
     let firstRoute = null;
+    // With "any exit", the route may leave by another exit out of the building.
+    const otherExits = settings.rerouteExits === "any" && exits?.final.length ? exits.final : null;
+    const pickedExit = points.exit ? snap(graph, points.exit) : -1;
 
     // Runs in the browser (src/core/fire.js), emitting the messages the
     // server's stream did, so no round trip per step and no backend needed.
@@ -1628,6 +1641,7 @@ export default function App() {
         firePoint: points.fire,
         startPoint: points.start,
         exitPoint: points.exit,
+        exits: otherExits,
         maxSteps: settings.fireMaxSteps,
         delayMs: settings.fireDelayMs,
         useWalls: settings.useWalls,
@@ -1661,7 +1675,8 @@ export default function App() {
             if (combustion) viewer?.setParticles(frame?.particles || null);
             colours.set("fire");
           } else if (message.type === "path_update") {
-            studio.setDynamicPath(message);
+            const otherExit = message.found && message.exit_node !== null && message.exit_node !== undefined && message.exit_node !== pickedExit;
+            studio.setDynamicPath({ ...message, otherExit });
             const key = (message.node_ids || []).join(",");
             if (firstRoute === null) firstRoute = key;
             else if (message.found && key && key !== firstRoute) markFound("reroute");
@@ -1691,7 +1706,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed, paintCombustion]);
+  }, [graph, points, exits, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed, paintCombustion]);
 
   // A fire that ends by itself keeps its final colours. Stopping it clears
   // them, back to what the graph showed before: the deadline map if it is
@@ -1729,15 +1744,13 @@ export default function App() {
     return rlRef.current.run({ graph: graphData, options });
   }, []);
 
-  const exits = useMemo(() => (graph?.doors ? exitDoors(graph.doors, studio.semantics, graph) : null), [graph, studio.semantics]);
-
   const trainRl = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
     const shielded = settings.rlMethod !== "qlearning";
-    // The shielded learner may escape by any exit door (rlSafe.js exitPoints).
+    // The shielded learner may escape by any exit out of the building (rlSafe.js exitPoints).
     const exitPoints =
-      shielded && settings.rlExits === "any" && exits?.nodes?.length
-        ? exits.nodes.map((v) => [graph.nodes[v * 3], graph.nodes[v * 3 + 1], graph.nodes[v * 3 + 2]])
+      shielded && settings.rlExits === "any" && exits?.final?.length
+        ? exits.final.map((v) => [graph.nodes[v * 3], graph.nodes[v * 3 + 1], graph.nodes[v * 3 + 2]])
         : null;
     studio.setRl({ busy: true, path: null, reachedExit: false, result: null });
     try {
@@ -1790,10 +1803,10 @@ export default function App() {
   // -------------------------------------------------------------- exit doors
 
   const nearestExit = useCallback(() => {
-    if (!graph || !points.start || !exits?.nodes.length) return;
+    if (!graph || !points.start || !exits?.final.length) return;
     const open = new Float64Array(graph.nodes.length / 3).fill(Infinity);
     const found = earliestArrival(graph, snap(graph, points.start), 0, {
-      exits: exits.nodes,
+      exits: exits.final,
       closes: open,
       speed: 1,
       blocked: settings.useWalls ? graph.blocked : null,
@@ -1963,7 +1976,7 @@ export default function App() {
       } else if (graph && graph !== before && !studio.graphBusy) advance();
     } else if (stage === "start") {
       if (acted !== stage) {
-        const v = farthestFromExits(graph, exits?.nodes);
+        const v = farthestFromExits(graph, exits?.final);
         if (v < 0) return fail("No room can be reached from an exit door.");
         setTab("route");
         act(() => handlePick("start", at(v)), points.start);
@@ -2056,8 +2069,8 @@ export default function App() {
 
   const planForecast = useCallback(async () => {
     const exitNodes =
-      settings.forecastExits === "model" && exits?.nodes.length
-        ? exits.nodes
+      settings.forecastExits === "model" && exits?.final.length
+        ? exits.final
         : points.exit && graph
           ? [snap(graph, points.exit)]
           : [];
@@ -2479,6 +2492,9 @@ export default function App() {
     }
     if (points.start) items.push({ label: "Start", color: "var(--viz-start)", dot: true });
     if (points.exit) items.push({ label: "Exit", color: "var(--viz-exit)", dot: true });
+    if (graph && exits?.final.length) {
+      items.push({ label: exits.finalSource ? "Exits out of the building (rings)" : "Exit doors (rings)", color: "var(--viz-exit)" });
+    }
     if (points.fire) items.push({ label: "Fire origin (spike)", color: "var(--viz-fire)", dot: true });
     if (alternatives?.routes.length > 1) {
       alternatives.routes.forEach((route, i) =>
@@ -2504,6 +2520,7 @@ export default function App() {
   }, [
     graph,
     points,
+    exits,
     path,
     dynamicPath,
     alternatives,

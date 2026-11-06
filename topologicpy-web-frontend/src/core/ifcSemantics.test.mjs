@@ -26,6 +26,46 @@ test("parts no flagged exit reaches get the one-sided doors in them, small pocke
   assert.match(withGraph.source, /parts with no flagged exit/);
 });
 
+test("the final exits are street-level external doors and fire escapes to the open air, not flat doors or balconies", () => {
+  // A stair 0..9 rising 1 m a node (y up), and a separate part of 60 nodes
+  // at street level whose only exit is a FireExit door.
+  const nodes = [], edges = [];
+  for (let i = 0; i < 10; i += 1) nodes.push(0, i, 0);
+  for (let i = 0; i < 60; i += 1) nodes.push(20 + i, 0, 0);
+  for (let i = 0; i < 9; i += 1) edges.push(i, i + 1);
+  for (let i = 10; i < 69; i += 1) edges.push(i, i + 1);
+  const graph = { nodes: Float32Array.from(nodes), edges: Uint32Array.from(edges), blocked: new Uint8Array(edges.length / 2) };
+  const doors = [
+    { itemId: 1, node: 0, sides: [3, 0] }, // the street door
+    { itemId: 2, node: 1, sides: [3, 0] }, // a side door, 1 m up the slope
+    { itemId: 3, node: 5, sides: [3, 3] }, // a balcony door, flagged FireExit
+    { itemId: 6, node: 6, sides: [3, 0] }, // a fire escape to the open air, 6 m up
+    { itemId: 7, node: 7, sides: [3, 0] }, // an external door to nowhere, not a fire exit
+    { itemId: 4, node: 9, sides: [3, 3] }, // a flat's front door, flagged
+    { itemId: 5, node: 40, sides: [3, 3] }, // the other part's only exit
+  ];
+  const semantics = {
+    doors: [
+      { id: 1, exit: "Pset_DoorCommon.FireExit", external: true },
+      { id: 2, exit: "Pset_DoorCommon.IsExternal", external: true },
+      { id: 3, exit: "Pset_DoorCommon.FireExit", external: true },
+      { id: 6, exit: "Pset_DoorCommon.FireExit", external: true },
+      { id: 7, exit: "IfcRelSpaceBoundary.EXTERNAL", external: true },
+      { id: 4, exit: "Pset_DoorCommon.FireExit", external: false },
+      { id: 5, exit: "Pset_DoorCommon.FireExit", external: false },
+    ],
+  };
+  const exits = exitDoors(doors, semantics, graph);
+  assert.deepEqual(exits.nodes, [0, 1, 5, 6, 7, 9, 40]);
+  assert.deepEqual(exits.final, [0, 1, 6, 40]);
+  assert.match(exits.finalSource, /street level/);
+  // Without the graph, or without external doors, they are the exits.
+  assert.deepEqual(exitDoors(doors, semantics).final, [0, 1, 5, 6, 7, 9, 40]);
+  const flagsOnly = { doors: semantics.doors.map((d) => ({ ...d, external: false })) };
+  assert.deepEqual(exitDoors(doors, flagsOnly, graph).final, [0, 1, 5, 6, 7, 9, 40]);
+  assert.equal(exitDoors(doors, flagsOnly, graph).finalSource, null);
+});
+
 const W = { IFCRELDEFINESBYPROPERTIES: 1, IFCRELDEFINESBYTYPE: 2, IFCRELSPACEBOUNDARY: 3, IFCDOOR: 4, IFCSLAB: 5, IFCUNITASSIGNMENT: 6, IFCBUILDINGSTOREY: 7 };
 const ref = (id) => ({ type: 5, value: id });
 const E = (v) => ({ type: 3, value: v });
@@ -71,6 +111,28 @@ test("a door's own FALSE still overrides its type's TRUE", () => {
   };
   const s = ifcSemantics(mockApi(lines, { 1: [20], 2: [30], 4: [10] }), 0, W);
   assert.equal(s.doors[0].exit, null);
+});
+
+test("a door flagged FireExit still says it is external, from IsExternal or an EXTERNAL boundary", () => {
+  const lines = {
+    10: { Name: { value: "Street" } },
+    11: { Name: { value: "Garden" } },
+    12: { Name: { value: "Flat" } },
+    20: { RelatedObjects: [ref(10), ref(12)], RelatingPropertyDefinition: ref(21) },
+    21: { Name: { value: "Pset_DoorCommon" }, HasProperties: [ref(22), ref(23)] },
+    22: { Name: { value: "FireExit" }, NominalValue: { type: 1, value: "T" } },
+    23: { Name: { value: "IsExternal" }, NominalValue: { type: 1, value: "F" } },
+    40: { RelatedBuildingElement: ref(11), InternalOrExternalBoundary: E("EXTERNAL") },
+    41: { RelatedBuildingElement: ref(10), InternalOrExternalBoundary: E("EXTERNAL") },
+  };
+  const s = ifcSemantics(mockApi(lines, { 1: [20], 3: [40, 41], 4: [10, 11, 12] }), 0, W);
+  const byName = Object.fromEntries(s.doors.map((d) => [d.name, d]));
+  assert.equal(byName.Street.exit, "Pset_DoorCommon.FireExit");
+  assert.equal(byName.Street.external, true, "its boundary says so, whatever its IsExternal");
+  assert.equal(byName.Garden.exit, "IfcRelSpaceBoundary.EXTERNAL");
+  assert.equal(byName.Garden.external, true);
+  assert.equal(byName.Flat.exit, "Pset_DoorCommon.FireExit");
+  assert.equal(byName.Flat.external, false);
 });
 
 test("storey heights follow nested conversion-based units (an inch defined through the foot)", () => {

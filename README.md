@@ -144,6 +144,14 @@ egress route** draws the shortest route and straightens it, so it reads as a
 person would walk it rather than as a zigzag across the grid. The result gives
 its length, the length on the grid before straightening, and its turns.
 
+The nearest exit door is one of the doors out of the building, drawn as
+orange rings. Where the model says which doors are external, these are the
+external doors at street level and the fire exits that open onto no walkable
+floor. A flat's front door flagged as a fire exit leads only to the stair,
+and a balcony door leads nowhere, so neither counts: of the Vienna model's 35
+exit doors, two lead out, the street door and a fire exit at the back of the
+first floor.
+
 Without a mouse, **Place without the mouse** puts the exit at any door from a
 list, or any point at typed coordinates. **Route options** switch between the
 built-in A* search (in your browser) and TopologicPy's `TGraph` engine (on the
@@ -156,8 +164,20 @@ cheapest routes exactly.
 Press **Set** beside Fire origin (or F), click where the fire starts, and press
 **Start fire**. The fire spreads step by step on the graph while the route is
 checked every five steps and moved away from the heat when it has to be (the
-picture at the top of this page). Four fire models are offered, and two more
-with the optional Flamescapes solver:
+picture at the top of this page). It may move to any exit out of the
+building, by another stair if it must; **Reroute towards**, under
+**Rerouting and timing**, keeps it to the exit you picked instead.
+
+![The Office example with a fire at the foot of its east stair: the route from an upstairs room first takes the east stair, then, once the way out by it is above 60 degrees C at head height, turns back along the upper corridor to the west stair and exit](docs/images/office-reroute.gif)
+
+*The Office example, with a Flamescapes fire (class B, 8.6 MW at its peak)
+at the foot of the east stair and **Impassable above** set to 60 °C. The
+route from the upstairs room takes the east stair until step 20 (100 s),
+when the way out by it passes 60 °C at head height; from then on it takes
+the west stair and exit.*
+
+Four fire models are offered, and two more with the optional Flamescapes
+solver:
 
 | Model | What it does |
 | --- | --- |

@@ -964,6 +964,8 @@ export function RoutePanel({
               </Button>
               <p className="field__hint">
                 {exits.nodes.length} exit door{exits.nodes.length === 1 ? "" : "s"}, from {exitSourceText(exits.source)}.
+                {exits.finalSource &&
+                  ` The nearest is one of the ${exits.final.length} that lead out of the building (${exits.finalSource}).`}
                 {!points.start && " Set a start first."}
               </p>
             </>
@@ -1240,6 +1242,12 @@ function RerouteResult({ dynamicPath, step }) {
           <dt className="result__label">Cost</dt>
           <dd className="result__value result__value--lead">{dynamicPath.cost?.toFixed(1) ?? "-"}</dd>
         </div>
+        {!unsafe && (
+          <div className="result__item">
+            <dt className="result__label">Exit</dt>
+            <dd className="result__value">{dynamicPath.otherExit ? "another exit" : "the one picked"}</dd>
+          </div>
+        )}
         <div className="result__item">
           <dt className="result__label">Last checked</dt>
           <dd className="result__value">step {dynamicPath.step}</dd>
@@ -1478,7 +1486,7 @@ function exitSourceText(source) {
 
 function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
   const { graph, points, settings, setSettings, forecastPlan, fire, modelInfo, semantics } = studio;
-  const modelExits = settings.forecastExits === "model" && exits?.nodes.length > 0;
+  const modelExits = settings.forecastExits === "model" && exits?.final.length > 0;
   const ready = Boolean(graph && points.start && points.fire && (modelExits || points.exit));
   const zone = fireModelIn(settings, modelInfo) === "zone";
   // The fire room's IfcSpace name, from the model's own data (ifcSemantics.js).
@@ -1492,7 +1500,7 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
         and works out how long you can wait before leaving.
         {zone && " The fire is the two-zone room model chosen above: gas temperatures in degrees C, on a clock in seconds."}
       </p>
-      {exits?.nodes.length > 0 && (
+      {exits?.final.length > 0 && (
         <Choices
           legend="Exits"
           name="forecast-exits"
@@ -1501,8 +1509,8 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
           options={[
             {
               value: "model",
-              label: `All ${exits.nodes.length} exit door${exits.nodes.length === 1 ? "" : "s"}`,
-              description: `From ${exitSourceText(exits.source)}.`,
+              label: `All ${exits.final.length} exit${exits.final.length === 1 ? "" : "s"} out of the building`,
+              description: `From ${exits.finalSource || exitSourceText(exits.source)}.`,
             },
             { value: "picked", label: "The exit you picked", description: "Set in the Route step." },
           ]}
@@ -2067,6 +2075,22 @@ export function SimulatePanel({
                 : "Re-solved with burning nodes treated as impassable."
             }
           />
+          {exits?.final.length > 1 && (
+            <Choices
+              legend="Reroute towards"
+              name="reroute-exits"
+              value={settings.rerouteExits}
+              onChange={(rerouteExits) => setSettings({ rerouteExits })}
+              options={[
+                {
+                  value: "any",
+                  label: "Any exit out of the building",
+                  description: `The cheapest of the ${exits.final.length} and the one you picked, so the route can move to another stair and door as the fire grows.`,
+                },
+                { value: "picked", label: "The exit you picked", description: "Only the path to it changes." },
+              ]}
+            />
+          )}
           <Slider
             label="Hazard weight"
             value={settings.hazardAlpha}

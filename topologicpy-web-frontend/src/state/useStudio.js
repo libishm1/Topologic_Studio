@@ -45,6 +45,8 @@ export const DEFAULT_SETTINGS = {
   fireMaxSteps: 60,
   fireDelayMs: 120,
   reroute: true,
+  // The rerouted route goes to "any" exit out of the building, or only the "picked" one.
+  rerouteExits: "any",
   rerouteInterval: 5,
   hazardAlpha: 0.5,
   lethalityThreshold: null,

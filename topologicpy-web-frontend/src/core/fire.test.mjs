@@ -95,3 +95,24 @@ test("when the fire cuts every route the drawn route is not reported as found (W
   assert.ok(last.path.length > 0, "the least-hazard route is still drawn");
   assert.match(last.note, /not a safe route/);
 });
+
+test("with other exits the rerouted route leaves by one the fire has not cut", async () => {
+  // A corridor 0..10: the start at 6, the picked exit at 10, another at 0.
+  // The fire at 9 cuts the way to 10 at once.
+  const run = (exits) => {
+    const paths = [];
+    return new Promise((resolve) =>
+      runFire(
+        chain(11),
+        { model: "flood", firePoint: [9, 0, 0], startPoint: [6, 0, 0], exitPoint: [10, 0, 0], exits, maxSteps: 2, delayMs: 0, reroute: true, interval: 1 },
+        { onMessage: (m) => m.type === "path_update" && paths.push(m), onDone: () => resolve(paths) },
+      ),
+    );
+  };
+  const alone = await run(null);
+  assert.equal(alone[0].found, false);
+  const either = await run([0]);
+  assert.equal(either[0].found, true);
+  assert.equal(either[0].exit_node, 0);
+  assert.deepEqual(either[0].node_ids, [6, 5, 4, 3, 2, 1, 0]);
+});

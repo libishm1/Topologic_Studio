@@ -215,6 +215,72 @@ export function astar(graph, start, end, { weights, useWalls = true, blocked } =
   return { nodes, cost: dist[end] };
 }
 
+/**
+ * A* to whichever of several ends is cheapest to reach, as astar otherwise.
+ * The heuristic is the straight-line distance to the nearest end; the least
+ * of consistent heuristics is consistent, so the route is still optimal.
+ * Kept apart from astar so the one-end search pays nothing for it.
+ *
+ * @returns {{nodes: number[], cost: number, end: number}|null}
+ */
+export function astarToAny(graph, start, ends, { weights, useWalls = true, blocked } = {}) {
+  const { indptr, neighbours, edgeIds, n } = csr(graph);
+  const w = weights || edgeLengths(graph);
+  const block = blocked || (useWalls ? graph.blocked : null);
+  const P = graph.nodes;
+  const targets = ends.filter((e) => e >= 0);
+  if (!targets.length) return null;
+  const goal = new Uint8Array(n);
+  for (const e of targets) goal[e] = 1;
+  const G = Float64Array.from(targets.flatMap((e) => [P[e * 3], P[e * 3 + 1], P[e * 3 + 2]]));
+  const h = (i) => {
+    const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+    let best = Infinity;
+    for (let k = 0; k < G.length; k += 3) {
+      const d = Math.hypot(x - G[k], y - G[k + 1], z - G[k + 2]);
+      if (d < best) best = d;
+    }
+    return best;
+  };
+
+  const dist = new Float64Array(n).fill(Infinity);
+  const prev = new Int32Array(n).fill(-1);
+  const closed = new Uint8Array(n);
+  dist[start] = 0;
+  const heap = new Heap();
+  heap.push(h(start), start);
+  let reached = -1;
+  while (heap.size) {
+    const u = heap.pop();
+    if (closed[u]) continue;
+    if (goal[u]) {
+      reached = u;
+      break;
+    }
+    closed[u] = 1;
+    for (let k = indptr[u]; k < indptr[u + 1]; k += 1) {
+      const e = edgeIds[k];
+      if (block?.[e]) continue;
+      const v = neighbours[k];
+      if (closed[v]) continue;
+      const nd = dist[u] + w[e];
+      if (nd < dist[v]) {
+        dist[v] = nd;
+        prev[v] = u;
+        heap.push(nd + h(v), v);
+      }
+    }
+  }
+  if (reached < 0) return null;
+  const nodes = [reached];
+  for (let c = reached; c !== start; ) {
+    c = prev[c];
+    nodes.push(c);
+  }
+  nodes.reverse();
+  return { nodes, cost: dist[reached], end: reached };
+}
+
 /** Shortest distance from `source` to every node over open links (Dijkstra). */
 export function distancesFrom(graph, source, { blocked = null } = {}) {
   const { indptr, neighbours, edgeIds, n } = csr(graph);

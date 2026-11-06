@@ -28,7 +28,7 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 255 tests;
+  - `npm test` in `topologicpy-web-frontend`: 259 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
@@ -60,10 +60,7 @@
    2. **Smoke and gas measures:** done (3f9a4f2). See This round and `wiki/research/tenability-index-2026-11-06.md`.
    2b. **Asked for during the video (2026-11-06), not built:**
       - **Shelter areas outside the building:** identify safe assembly areas outside when there is a fire. Read the guidance first (distance from the facade, clear of exits and fire-service access, upwind), then propose the method before building it.
-      - **"Nearest exit" stops at a flat's own door in the Vienna model.**
-        - **Why:** the model flags 32 flat and stair doors FireExit TRUE, so the nearest exit from any flat is its own front door, and the code check counts those doors as exits too.
-        - **The street exits:** the doors flagged IsExternal, or bounded by external space, at the lowest level.
-        - **Next:** tell final exits apart from doors onto escape routes (external flag, external boundary, floor on one side) and route to final exits by default. Check the code check's exit counts afterwards.
+      - **"Nearest exit" stopped at a flat's own door in the Vienna model:** fixed this evening (see This round). The code check still counts every flagged exit door; whether it should count only the exits out of the building (with stairs as the upper storeys' exits) is open.
       - **Ignition by context:** the video picked the fire's context (cooking, electrical, gas) by hand from the ranked list. A "Context" choice in Likely ignition points would make this one click.
    3. **Questions answered but not decided:**
       - fire replay from a cache (IndexedDB, keyed by model, graph and fire inputs);
@@ -111,6 +108,23 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
    - **Before a paper:** read Utkucu et al. 2024 (doi:10.1016/j.aei.2024.102503) in full. It is the closest precedent for fusing names, rules and geometry, so the claim must stay narrow: ignition-relevant furniture sub-types, leave-buildings-out, in the browser, open weights with provenance.
 
 Before any deploy: the gates above, then the live check, then update this file.
+
+## This round (2026-11-06, evening)
+
+- **README animations (fbdaed5, live):** two GIFs of the Vienna runs (doors open with the heat view; the gas fire with the tenability index), made from the video's frames with `tools/frames-gif.mjs`. The encoder moved to `tools/gif.mjs`, shared with `tools/fire-gif.mjs`. A doors-closed GIF was dropped: filmed from below, it did not read.
+- **Exits out of the building, and rerouting to any of them** (the user asked for the route to try the next feasible exit when a stairwell is untenable, using fire escapes but "not every external door", so that the egress makes sense).
+  - **The rule** (`exitDoors` in `core/ifcSemantics.js`, field `final`):
+    - where the model says which doors are external (`external`: IsExternal TRUE or an EXTERNAL space boundary, read whatever FireExit says), the exits out are the external doors at street level (within 1.5 m of the lowest), and the fire exits at any level that are external and open onto no walkable floor;
+    - an external door above street level with floor beyond it (a balcony or terrace) is left out, and so is a flat's front door flagged FireExit;
+    - parts of the graph none of these reaches keep their exits; a model with no external doors keeps all its exit doors.
+  - **Vienna:** 35 exit doors, 21 external, two exits out: the street door, and a FireExit door at the back of the first floor that opens onto no floor (most likely the hillside at grade; not checked against drawings). From the top floor the nearest is now that fire exit (33.6 m); the street door is 53.8 m.
+  - **Vienna has one stairwell.** Its four IfcStairs are the four flights, and both exits are at its foot, 1.5 m apart, so no fire there makes a sensible switch between them from the upper floors. The user was told; the switching GIF uses the Office example (two stairs, an exit at each end).
+  - **Used by:** the nearest exit, hazard-aware rerouting (`runFire({exits})`, new setting **Reroute towards**, default any exit), the forecast's "All N exits out of the building" and the agent's "any exit". The code check is unchanged.
+  - **Search:** `astarToAny` in `core/route.js`, A* to the cheapest of several ends (heuristic: distance to the nearest). `astar` itself is untouched: a version that took a list was about 7% slower on one end (median 0.439 against 0.409 ms on a 150×150 lattice), so the two are kept apart.
+  - **On screen:** orange rings at the exits (`ViewerManager.setExitDoors`), a legend entry, and an "Exit: another exit" row on the reroute card.
+  - **Cache:** `IMPORT_SETTINGS` is 3, so cached models are read again for the new door field.
+  - **Tests:** 259 unit tests (new: `astarToAny`, rerouting to another exit, the exits rule, the door's external flag), and three new browser-suite checks on Vienna (two exits out, two rings, the nearest from the top floor is the fire exit).
+- **The rerouting GIF** (`docs/images/office-reroute.gif`, 1.3 MB): the Office example, a person upstairs at the east end, a Flamescapes class B fire at the foot of the east stair (8.6 MW peak), **Impassable above** 60 °C. The route takes the east stair until step 20 (100 s), then turns to the west stair and exit. Captured from the dev app with a caption injected into the page; the scripts are in the session scratchpad (`reroute/capture-reroute.mjs`). The switch came at step 20 in all five runs; the peak varied from 8.6 to 9.0 MW, as the GPU sometimes restarts on a coarser grid.
 
 ## This round (2026-11-06, afternoon)
 

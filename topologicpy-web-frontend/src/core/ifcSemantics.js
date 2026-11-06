@@ -12,6 +12,9 @@
  *   - else a door whose IfcRelSpaceBoundary is EXTERNAL: 8 of 18 files, and on
  *     the files with both signals every such door is also flagged.
  * FALSE is not evidence: ISSUE_159 sets IsExternal FALSE on all 47 doors.
+ * Each door also says whether it is external (IsExternal TRUE or an EXTERNAL
+ * boundary) whatever its FireExit, so the doors out of the building can be
+ * told from fire exits inside it (exitDoors' `final`).
  *
  * @param api      a web-ifc IfcAPI with the model open
  * @param modelID  its model id
@@ -97,6 +100,7 @@ export function ifcSemantics(api, modelID, W) {
       widthM: metres(width),
       heightM: metres(height),
       exit,
+      external: truthy(doorProp(id, "IsExternal")) || external.has(id),
     };
   });
   const roofSlabs = ids(W.IFCSLAB).filter((s) => val(line(s).PredefinedType) === "ROOF");
@@ -195,9 +199,21 @@ export function exitsPerPart(graph, flagged, fallback) {
  * failing any flag, doors with walkable floor on one side only (73% recall
  * and 69% precision against the flags on five models).
  *
+ * `final` holds the doors out of the building, for routing. A model may flag
+ * the doors onto an escape route as fire exits too: the Vienna model flags 32
+ * of its 81 doors, a flat's front door among them, so the nearest exit from a
+ * flat was its own front door. Where the model says which doors are external,
+ * the final exits are those at the level of the lowest (within STREET_BAND),
+ * and the fire exits at any level that are external and open onto no
+ * walkable floor (a fire escape to the outside, such as the Vienna model's
+ * first-floor door at the back). An external door above street level with
+ * floor beyond it opens onto a balcony or terrace and is left out. Large parts
+ * of the graph none of these reaches keep their exits; a model that says
+ * nothing about external doors keeps the exits above.
+ *
  * @param graphDoors  the graph's doors, [{itemId, node, sides}] (lattice.js doorReport)
  * @param semantics   ifcSemantics output, or null
- * @returns {{nodes: number[], doors: object[], source: string|null}}
+ * @returns {{nodes: number[], doors: object[], source: string|null, final: number[], finalSource: string|null}}
  */
 export function exitDoors(graphDoors, semantics, graph = null) {
   const doors = graphDoors || [];
@@ -220,9 +236,31 @@ export function exitDoors(graphDoors, semantics, graph = null) {
   }
   const seen = new Set();
   const unique = chosen.filter((d) => !seen.has(d.node) && seen.add(d.node));
+  const nodes = unique.map((d) => d.node);
+  let final = nodes;
+  let finalSource = null;
+  const outside = new Set((semantics?.doors || []).filter((d) => d.external).map((d) => d.id));
+  const external = doors.filter((d) => d.node >= 0 && outside.has(d.itemId));
+  if (external.length && graph?.nodes) {
+    const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"];
+    const height = (v) => graph.nodes[v * 3 + up];
+    const ground = Math.min(...external.map((d) => height(d.node)));
+    const openAir = (d) => d.sides?.[0] === 0 || d.sides?.[1] === 0;
+    const out = external.filter(
+      (d) => height(d.node) <= ground + STREET_BAND || (openAir(d) && /FireExit/.test(String(marked.get(d.itemId)?.exit))),
+    );
+    const leave = [...new Set(out.map((d) => d.node))];
+    final = [...leave, ...exitsPerPart(graph, leave, nodes)];
+    finalSource = "external doors at street level and fire exits to the open air";
+  }
   return {
-    nodes: unique.map((d) => d.node),
+    nodes,
     doors: unique.map((d) => ({ itemId: d.itemId, node: d.node, name: marked.get(d.itemId)?.name ?? null })),
     source,
+    final,
+    finalSource,
   };
 }
+
+/** How far above the lowest external door (m) another still opens at street level. */
+export const STREET_BAND = 1.5;

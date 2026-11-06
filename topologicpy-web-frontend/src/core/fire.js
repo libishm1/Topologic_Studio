@@ -26,7 +26,7 @@
  * principle violation. For degree 2 and up the two are identical, so results
  * stay comparable with Classic.
  */
-import { astar, csr, edgeLengths, snap } from "./route.js";
+import { astar, astarToAny, csr, edgeLengths, snap } from "./route.js";
 
 export const AMBIENT = 20;
 export const FIRE = 120;
@@ -122,6 +122,11 @@ export function hazardWeights(graph, temps, alpha, ambient = AMBIENT, span = 100
 /**
  * Run a fire simulation, calling onMessage with server-shaped messages and
  * onDone at the end. Returns a handle with close().
+ *
+ * `exits` (node ids), when given, are exits the rerouted route may take
+ * besides the picked one: each recompute goes to whichever is cheapest, so
+ * the route moves to another exit, by another stair, when the fire makes
+ * that cheaper. Its path_update says which (`exit_node`).
  */
 export function runFire(graph, opts, { onMessage, onDone } = {}) {
   const {
@@ -129,6 +134,7 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
     firePoint,
     startPoint = null,
     exitPoint = null,
+    exits = null,
     maxSteps = 60,
     delayMs = 120,
     useWalls = true,
@@ -147,6 +153,7 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
   const walker = startPoint ? snap(graph, startPoint) : null;
   const exit = exitPoint ? snap(graph, exitPoint) : null;
   const routing = reroute && walker !== null && exit !== null;
+  const targets = exits?.length ? [...new Set([exit, ...exits])] : exit;
   const m = graph.edges.length / 2;
   let lastPath = "";
   let lastRecompute = -1e9;
@@ -156,14 +163,15 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
   const pointsOf = (nodes) => nodes.map((i) => [graph.nodes[i * 3], graph.nodes[i * 3 + 1], graph.nodes[i * 3 + 2]]);
   // `avoid` marks the nodes a straightened drawing of the route must keep
   // clear of (src/core/straighten.js): burning, or above ambient.
+  const search = (opts) => (Array.isArray(targets) ? astarToAny(graph, walker, targets, opts) : astar(graph, walker, exit, opts));
   const rerouteNow = (step, weights, blocked, avoid) => {
-    let result = astar(graph, walker, exit, { weights, blocked });
+    let result = search({ weights, blocked });
     let found = Boolean(result);
     let note = null;
     if (!result && blocked) {
       // Keep the walls; a route that needs the fire is drawn but is not a
       // safe route, so it is not reported as found (review finding W4).
-      result = astar(graph, walker, exit, { weights, blocked: walls });
+      result = search({ weights, blocked: walls });
       if (result) note = "The fire has cut every route; the least-hazard one is drawn, but it is not a safe route.";
     }
     const key = result ? result.nodes.join(",") : "";
@@ -177,9 +185,10 @@ export function runFire(graph, opts, { onMessage, onDone } = {}) {
       node_ids: result ? result.nodes : [],
       avoid,
       cost: result ? Math.round(result.cost * 1000) / 1000 : null,
+      exit_node: result ? (result.end ?? exit) : null,
       changed,
       engine: "browser",
-      note: note || (found ? null : "No route to the exit."),
+      note: note || (found ? null : Array.isArray(targets) ? "No route to any exit." : "No route to the exit."),
     });
   };
 

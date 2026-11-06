@@ -53,6 +53,7 @@ const OVERLAY = {
   flames: "flames",
   embers: "embers",
   smoke: "smoke",
+  exits: "exits",
 };
 
 /** A soft round sprite for glowing particles, drawn once on a canvas. */
@@ -80,7 +81,7 @@ function glowColor(target, T) {
 }
 
 /** Overlays the section cut also clips; routes and markers stay whole. */
-const CLIPPED = new Set([OVERLAY.outlines, OVERLAY.graph, OVERLAY.navGraph]);
+const CLIPPED = new Set([OVERLAY.outlines, OVERLAY.graph, OVERLAY.navGraph, OVERLAY.exits]);
 
 
 
@@ -1316,6 +1317,29 @@ export class ViewerManager {
     const segments = new THREE.LineSegments(geometry, material);
     segments.renderOrder = 900;
     this._setOverlay(OVERLAY.navGraph, segments);
+  }
+
+  /**
+   * The exits out of the building (ifcSemantics.js exitDoors' `final`) as
+   * small rings in the exit marker's colour, so a route that moves to another
+   * exit as the fire grows is seen to.
+   */
+  setExitDoors(points) {
+    if (!points?.length) {
+      this._setOverlay(OVERLAY.exits, null);
+      return;
+    }
+    const rings = new THREE.InstancedMesh(
+      new THREE.TorusGeometry(0.34, 0.07, 8, 28),
+      new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.9, depthTest: false, depthWrite: false }),
+      points.length,
+    );
+    const flat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+    const one = new THREE.Vector3(1, 1, 1);
+    const matrix = new THREE.Matrix4();
+    points.forEach((p, i) => rings.setMatrixAt(i, matrix.compose(new THREE.Vector3(p[0], p[1], p[2]), flat, one)));
+    rings.renderOrder = 950;
+    this._setOverlay(OVERLAY.exits, rings);
   }
 
   /** Navigation's route, drawn like ours in its own overlay. */

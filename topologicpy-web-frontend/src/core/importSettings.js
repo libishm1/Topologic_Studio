@@ -12,9 +12,10 @@
  * Bump when the importer settings below or in ViewerManager, or what
  * core/ifcSemantics.js reads, change: it is part of every cache key, so models
  * converted the old way are converted again. 2: property sets, materials and
- * types left out of the fragments; semantics stored with them.
+ * types left out of the fragments; semantics stored with them. 3: doors say
+ * whether they are external (the final exits).
  */
-export const IMPORT_SETTINGS = 2;
+export const IMPORT_SETTINGS = 3;
 
 /** What produced a fragments buffer; cache keys and prepared examples carry it. */
 export function converterId(fragmentsVersion, webIfcVersion) {

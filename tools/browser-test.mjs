@@ -704,9 +704,10 @@ if (await trainBtn.isEnabled()) {
 
 console.log("\n[5c] Plan with the forecast");
 // The exit doors come from the IFC's own flags, read by the import worker
-// (src/core/ifcSemantics.js); the Duplex flags four doors IsExternal.
+// (src/core/ifcSemantics.js); the Duplex flags four doors IsExternal. The
+// forecast offers the exits out of the building among them.
 const exitChoice = await page
-  .getByText(/^All \d+ exit doors?$/)
+  .getByText(/^All \d+ exits? out of the building$/)
   .first()
   .textContent({ timeout: 15000 })
   .catch(() => null);
@@ -1080,6 +1081,25 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
       console.log(`    Vienna apartment building: ${JSON.stringify(stats)}`);
       record(parseFloat(stats.Reachable) >= 90, "  and its graph's largest part holds at least 90% of it", stats.Reachable);
       await shot(page, "example-vienna");
+      // Of its 35 exit doors, two lead out of the building: the street door
+      // and the first-floor fire exit at the back; the flat doors flagged
+      // FireExit do not. From the top floor the nearest is the fire exit.
+      await page.getByRole("tab", { name: /^Route/ }).click();
+      const hint = await page.locator(".panel__scroll").getByText(/exit doors?, from/).first().textContent({ timeout: 10000 }).catch(() => "");
+      record(/one of the 2 that lead out of the building/.test(hint), "  and two of its exit doors lead out of the building", hint.replace(/\s+/g, " ").slice(0, 120));
+      const rings = await page.evaluate(() => window.__viewer?.overlays?.get("exits")?.count ?? null);
+      record(rings === 2, "  drawn as two rings", String(rings));
+      await page.getByText("Place without the mouse", { exact: true }).click();
+      await page.getByLabel("Point", { exact: true }).selectOption("start");
+      for (const [axis, value] of [["x", -10.6], ["y", 12.93], ["z", 3.72]]) {
+        await page.getByLabel(axis, { exact: true }).fill(String(value));
+        await page.getByLabel(axis, { exact: true }).blur();
+      }
+      await page.getByRole("button", { name: "Place start" }).click();
+      await page.getByRole("button", { name: "Use the nearest exit door" }).click();
+      await page.waitForTimeout(300);
+      const exitAt = await page.evaluate(() => window.__viewer?.markers?.exit?.position?.toArray().map((x) => Math.round(x * 100) / 100));
+      record(Math.hypot(exitAt[0] + 3.57, exitAt[2] + 3.01) < 0.5, "  and the nearest from the top floor is the fire exit, not a flat door", JSON.stringify(exitAt));
     }
   }
 }

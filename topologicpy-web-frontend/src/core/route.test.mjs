@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { astar, findRoute, snap } from "./route.js";
+import { astar, astarToAny, findRoute, snap } from "./route.js";
 
 /** A w x h unit lattice (4-neighbour) starting at x = ox, z up. */
 function lattice(w, h, ox = 0) {
@@ -32,6 +32,28 @@ test("A* finds the Manhattan optimum on a unit lattice", () => {
   const r = astar(g, 0, 143);
   assert.equal(r.cost, 22);
   assert.equal(r.nodes.length, 23);
+});
+
+test("A* to several ends stops at the cheapest; one end in a list is the same route", () => {
+  const g = lattice(10, 1);
+  const r = astarToAny(g, 3, [0, 9]);
+  assert.equal(r.end, 0);
+  assert.equal(r.cost, 3);
+  // The link 1-2 closed: the nearer end is cut off, so the other.
+  g.blocked[1] = 1;
+  const far = astarToAny(g, 3, [0, 9]);
+  assert.equal(far.end, 9);
+  assert.equal(far.cost, 6);
+  const one = astarToAny(g, 3, [9]);
+  assert.deepEqual({ nodes: one.nodes, cost: one.cost }, astar(g, 3, 9));
+  assert.equal(astarToAny(g, 3, []), null);
+  assert.equal(astarToAny(g, 3, [0]), null);
+  // On a lattice, the same cost as the cheaper of the one-end searches.
+  const big = lattice(12, 12);
+  for (const ends of [[0, 143], [11, 132], [60, 70, 143]]) {
+    const best = Math.min(...ends.map((e) => astar(big, 77, e).cost));
+    assert.equal(astarToAny(big, 77, ends).cost, best);
+  }
 });
 
 test("a blocked link forces a detour", () => {

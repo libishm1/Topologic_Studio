@@ -140,7 +140,11 @@ export function MethodsDialog({ open, onClose, studio }) {
                   <dd>
                     A* with the straight-line distance as its guide, then drawn straight as TopologicPy&apos;s
                     Wire.Straighten does, never longer than the grid route and checked against the walls at
-                    points at most a quarter of a grid step apart.
+                    points at most a quarter of a grid step apart. The nearest exit, rerouting, the forecast and
+                    the agent use the exits out of the building: where the model says which doors are external,
+                    those at street level and the fire exits that open onto no walkable floor, so a flat&apos;s
+                    front door flagged as a fire exit, or a balcony door, is not one. Rerouting searches to the
+                    cheapest of them at once (A* to several ends, guided by the nearest).
                   </dd>
                 </div>
                 <div className="methods__card">
