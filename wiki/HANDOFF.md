@@ -1,8 +1,9 @@
-# Handoff: Topologic Studio Next (2026-11-06, afternoon)
+# Handoff: Topologic Studio Next (2026-11-07)
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at 7e009e6 (the exits out of the building and rerouting to any of them), with README commits fbdaed5 and 7130fac, which need no deploy.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at ba32e6d (0ba7352: the cause choice, exits in the code check, kept runs, door states; ba32e6d: sprinkler research and `Sprinklers.lean`).
+  - **Live check of ba32e6d:** 0 failed steps, with Render awake; the replay (4.0 s) and the as-built doors (14 of 81) pass live. Before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 7e009e6:** 0 failed steps, with Render awake; before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 3f9a4f2:** 0 failed steps, with Render awake.
   - **Deployed 2026-11-06:**
@@ -29,16 +30,21 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 259 tests;
+  - `npm test` in `topologicpy-web-frontend`: 268 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
   - the live check after the deploy;
   - the Worker's own tests: `node --test test/index.test.mjs` in `cloudflare/describe-worker` (8 tests);
   - after any solver change, `node tools/flamescapes-gpu-check.mjs --phase full --quick` (CPU and GPU agreement, now including soot, CO2 and O2) and `--phase timing`.
-- **Lean:** unchanged this evening; 28 modules, 1297 theorems.
+- **Lean:** 29 modules, 1325 theorems; `Sprinklers.lean` added on 2026-11-07 (28 theorems, standard axioms only).
 
-## Resume here (2026-11-06)
+## Resume here (2026-11-07)
+
+00. **Asked for on 2026-11-07:**
+   - **Sprinklers and suppression: research and Lean done, nothing built.** Read `wiki/research/fire-suppression-sprinklers-2026-11-07.md` (summary, plan, the user's decisions in its section 10) and its companion reports. The user's rules: off by default, behind switches, no cost when off, same or better speed when on, must run on Vienna in the browser. Order: sprinkler record, IFC reading and per-room layout with a rule report; then activation (card only); then Evans; then the spray zone. Time each step with `tools/flamescapes-gpu-check.mjs --phase timing` and `tools/fire-bench.mjs`, switch off and on.
+   - **Branch tidy-up, waiting on the user.** All four GitHub branches were fully merged into `main` and no PR was open. Deleting `next/studio-2` (tip 0f68573) and `codex/wiki-hitl-testing-docs` (tip d56730e) on GitHub, and the merged local branches, was refused by the permission system as destructive. The user can run: `git push origin --delete next/studio-2 codex/wiki-hitl-testing-docs`, then `git branch -d codex/wiki-hitl-testing-docs next/studio-2 worktree-agent-a5564f61ecc07c56c worktree-agent-a6e3e35eb51c00dc1 worktree-agent-ab4bdc24cb476c1b2 worktree-agent-ab4f7303ef3afd806` and `git branch -f main origin/main`. Restore a deleted branch with `git push origin <tip>:refs/heads/<name>`. The worktrees under the Classic checkout (`TopologicStudio/.claude/worktrees`) and `TopologicStudio_push_20260311_100658` were left alone (Classic is not to be modified); their branches are merged too.
+   - **Outdoor assembly points:** a check is proposed in section 7 of the sprinkler note; the user decides.
 
 0. **In order, as the user asked on 2026-11-06:**
    1. **Cloudflare: the user's steps, then the deploy.**
@@ -61,11 +67,9 @@
    2. **Smoke and gas measures:** done (3f9a4f2). See This round and `wiki/research/tenability-index-2026-11-06.md`.
    2b. **Asked for during the video (2026-11-06), not built:**
       - **Shelter areas outside the building:** identify safe assembly areas outside when there is a fire. Read the guidance first (distance from the facade, clear of exits and fire-service access, upwind), then propose the method before building it.
-      - **"Nearest exit" stopped at a flat's own door in the Vienna model:** fixed this evening (see This round). The code check still counts every flagged exit door; whether it should count only the exits out of the building (with stairs as the upper storeys' exits) is open.
-      - **Ignition by context:** the video picked the fire's context (cooking, electrical, gas) by hand from the ranked list. A "Context" choice in Likely ignition points would make this one click.
-   3. **Questions answered but not decided:**
-      - fire replay from a cache (IndexedDB, keyed by model, graph and fire inputs);
-      - door states: an "as built" mode from SelfClosing and "-C" fire ratings, a seeded random mode, and later an ensemble.
+      - **"Nearest exit" stopped at a flat's own door in the Vienna model:** fixed (7e009e6); the code check now counts the exits out of the building and the stairs (0ba7352).
+      - **Ignition by context:** done (0ba7352), the Cause choice.
+   3. **Done on 2026-11-07 (0ba7352):** kept runs (replay from IndexedDB) and door states (as built, random). Left: a door ensemble (several seeds, the spread of results).
    4. **Training** (IFCNet retraining, on Nebius, Vast.ai or a free offer): later, by the user's choice.
       - **Wanted in the data:** the user asked to use "all of these models", the list on github.com/bimdata/BIMData-Research-and-Development, page `pages/IFC_FILES.md`. It holds 100 IFC files (3.7 GB, 40 models) from seven sources: DURAARK at TIB, the Open IFC Model Repository, BIMcollab examples, Schependomlaan, IFCCompressor, NIBS common BIM files and markusplassen.no. The repository itself has no licence and holds screenshots only.
       - **Check each source's licence first.**
@@ -115,6 +119,22 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
    - **Before a paper:** read Utkucu et al. 2024 (doi:10.1016/j.aei.2024.102503) in full. It is the closest precedent for fusing names, rules and geometry, so the claim must stay narrow: ignition-relevant furniture sub-types, leave-buildings-out, in the browser, open weights with provenance.
 
 Before any deploy: the gates above, then the live check, then update this file.
+
+## This round (2026-11-07)
+
+- **Pending tasks built (0ba7352):**
+  - **Cause** in Likely ignition points (`core/ignitionContexts.js`): a gas fire at a cooktop starts as class B; "deliberate" brings in the accelerant scenario.
+  - **Code check exits:** the exits out of the building plus the stairs. A storey with exit doors whose places reach none on that storey leave by a stair (a second pass), so Vienna's storey 1 has 315 places with no exit (325 before) rather than 1,910. Vienna's single stairwell now fails the two-exit rule from the third storey up (Group B values); the README says so.
+  - **Kept runs** (`core/runCache.js`): IndexedDB, keyed by `RUN_CACHE_VERSION`, the converter id, fingerprints of the graph and the scene, and the run's inputs; 256 MB, least recently used first; runs over 96 MB not kept. **Bump `RUN_CACHE_VERSION` with any solver change.** The browser suite checks a replay (4 s).
+  - **Doors** (`core/doorStates.js`): as built (SelfClosing, or -C in an EN 13501-2 class: 14 of Vienna's 81, rated EI2 30-C or EI2 30-C-Sm) and random with a seed. `IMPORT_SETTINGS` is 4.
+- **Sprinkler research (ba32e6d and the summary note):** three agents (codes, physics, open IFC MEP models) and a fourth (smoke transport) at the user's request. Key points:
+  - the SBC 2024 text could not be read (protected viewer; the English text is sold), so the triggers are IBC/IFC 2021 values to be confirmed;
+  - the coarse grid delays activation, so activation is to be read two ways (top cell, and CFAST's layer plus Alpert);
+  - Evans's correlation is the first suppression model; Fire-X-style evaporation second;
+  - IFC gives no RTI or C for a sprinkler; defaults by class are needed.
+
+  DOIs in the two reports were checked at Crossref by the agents and again here; Flamescapes' DOI (10.1145/3842518) still returns 404 at doi.org.
+- **Lean:** `Sprinklers.lean`, 28 theorems (layout, the link's step and its exact form, activation time, Evans), all on the standard axioms.
 
 ## This round (2026-11-06, evening)
 
