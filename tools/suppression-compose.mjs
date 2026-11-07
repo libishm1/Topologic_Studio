@@ -50,10 +50,12 @@ async function run(caseName, mode) {
   const byStep = new Map(meta.steps.map((s) => [s.step, s]));
   const have = (k) => byStep.has(k) && existsSync(png(k));
   const last = Math.max(...byStep.keys());
-  let at = [...Array(last + 1).keys()].find(have);
+  // From step 1: step 0 is on screen while the solver builds its grid,
+  // before its first frame, and can still show the last run's heads.
+  let at = [...Array(last + 1).keys()].find((k) => k >= FIRST_STEP && have(k));
   if (at === undefined) return null;
   const files = [], steps = [];
-  for (let k = 0; k <= last; k += 1) {
+  for (let k = FIRST_STEP; k <= last; k += 1) {
     if (have(k)) at = k;
     files.push(png(at));
     steps.push(byStep.get(at));
@@ -61,6 +63,7 @@ async function run(caseName, mode) {
   const readings = [...byStep.values()].sort((a, b) => a.step - b.step);
   return { mode, files, steps, readings };
 }
+const FIRST_STEP = 1;
 const b64 = async (file) => `data:image/png;base64,${(await readFile(file)).toString("base64")}`;
 
 const browser = await chromium.launch({ executablePath: CHROME });
@@ -89,7 +92,8 @@ await page.evaluate(() => {
         g.fillText(subtitle, w - 20 - g.measureText(subtitle).width, 34);
       }
     }
-    const cols = panels.length > 2 ? 2 : panels.length, rows = Math.ceil(panels.length / cols);
+    // Four panels two by two; up to three in one row.
+    const cols = panels.length === 4 ? 2 : panels.length, rows = Math.ceil(panels.length / cols);
     const pw = w / cols, ph = (h - head - foot) / rows;
     for (let k = 0; k < panels.length; k += 1) {
       const p = panels[k];
@@ -168,7 +172,12 @@ await page.evaluate(() => {
     g.fillStyle = "#cbd5e1";
     lines.forEach((t, i) => g.fillText(t, 50, 130 + i * 32));
     if (bars) {
-      const top = 130 + lines.length * 32 + 20, rowH = 34, mid = w * 0.55, scale = (w * 0.38) / 100;
+      // Labels in their own column; the bars diverge from zero in the middle
+      // of the rest, each value written on the other side of zero.
+      g.font = font(15, 400);
+      const labelW = Math.max(...bars.map((b) => g.measureText(b.label).width));
+      const left = 50 + labelW + 30, right = w - 50;
+      const top = 130 + lines.length * 32 + 20, rowH = 34, mid = (left + right) / 2, scale = (mid - left) / 100;
       g.strokeStyle = "#475569";
       g.beginPath();
       g.moveTo(mid, top - 10);
@@ -183,7 +192,8 @@ await page.evaluate(() => {
         const v = Math.max(-100, Math.min(100, b.value));
         g.fillRect(v < 0 ? mid + v * scale : mid, y + 4, Math.abs(v) * scale, 20);
         g.fillStyle = "#f8fafc";
-        g.fillText(`${b.value > 0 ? "+" : ""}${Math.round(b.value)} %`, v < 0 ? mid + v * scale - 58 : mid + v * scale + 8, y + 19);
+        const text = `${b.value > 0 ? "+" : ""}${Math.round(b.value)} %`;
+        g.fillText(text, v < 0 ? mid + 8 : mid - 8 - g.measureText(text).width, y + 19);
       });
     }
     if (note) {
@@ -193,25 +203,35 @@ await page.evaluate(() => {
     }
     return c.toDataURL("image/png");
   };
-  /** Plays frames [{src, ms}] on the canvas while MediaRecorder records it; resolves with base64 MP4. */
-  window.record = async (frames, w, h) => {
+  // The video, recorded from the canvas by MediaRecorder, its frames sent
+  // one at a time (all at once, a few hundred MB of PNGs, crash the page):
+  // each is drawn when the one before has been on screen for its time.
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  let rec = null, chunks = [], done = null, until = 0;
+  window.recStart = (w, h) => {
     c.width = w;
     c.height = h;
-    const imgs = await Promise.all(frames.map((f) => load(f.src)));
-    const stream = c.captureStream(30);
-    const rec = new MediaRecorder(stream, { mimeType: "video/mp4;codecs=avc1.42E01E", videoBitsPerSecond: 6e6 });
-    const chunks = [];
+    rec = new MediaRecorder(c.captureStream(30), { mimeType: "video/mp4;codecs=avc1.42E01E", videoBitsPerSecond: 6e6 });
+    chunks = [];
     rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-    const done = new Promise((res) => (rec.onstop = res));
+    done = new Promise((res) => (rec.onstop = res));
     rec.start(250);
-    for (let i = 0; i < imgs.length; i += 1) {
-      g.drawImage(imgs[i], 0, 0, w, h);
-      await new Promise((r) => setTimeout(r, frames[i].ms));
-    }
+    until = 0;
+  };
+  window.recFrame = async (src, ms) => {
+    const img = await load(src);
+    const wait = until - performance.now();
+    if (wait > 0) await sleep(wait);
+    g.drawImage(img, 0, 0, c.width, c.height);
+    until = performance.now() + ms;
+  };
+  /** Ends the recording once the last frame has had its time; resolves with base64 MP4. */
+  window.recStop = async () => {
+    const wait = until - performance.now();
+    if (wait > 0) await sleep(wait);
     rec.stop();
     await done;
-    const blob = new Blob(chunks, { type: "video/mp4" });
-    const buf = new Uint8Array(await blob.arrayBuffer());
+    const buf = new Uint8Array(await new Blob(chunks, { type: "video/mp4" }).arrayBuffer());
     let s = "";
     for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000));
     return btoa(s);
@@ -277,10 +297,10 @@ if (modes.length > 1) {
 
 // 3. Fire classes, 4. the NIBS Office: no sprinklers against wetting; and
 // 5. a server room: no system, sprinklers, and the systems by room use.
-for (const [caseName, gifName, title, subtitle, modeList] of [
+for (const [caseName, gifName, title, subtitle, modeList, labels = {}] of [
   ["duplex-B", "suppression-classes.gif", "A heptane item: no sprinklers against wetting", "Duplex living room, class B first item", ["none", "wetting"]],
   ["office-A", "suppression-office.gif", "An office fire: no sprinklers against wetting", "NIBS Office, class A", ["none", "wetting"]],
-  ["office-C", "suppression-systems.gif", "A server room fire: sprinklers, then a clean agent", "NIBS Office server room, class C (electrical equipment)", ["none", "wetting", "systems"]],
+  ["office-C", "suppression-systems.gif", "A server room fire: sprinklers, then a clean agent", "NIBS Office server room, class C (electrical equipment)", ["none", "wetting", "systems"], { none: "No system", wetting: "Sprinklers (wetting)" }],
 ]) {
   const pair = (await Promise.all(modeList.map((m) => run(caseName, m)))).filter(Boolean);
   if (pair.length < 2) continue;
@@ -292,7 +312,7 @@ for (const [caseName, gifName, title, subtitle, modeList] of [
       w: W, h: H, title, subtitle,
       panels: await Promise.all(pair.map(async (r) => {
         const s = r.steps[Math.min(i, r.steps.length - 1)];
-        return { src: await b64(r.files[i]), label: MODE_LABEL[r.mode], colour: MODE_COLOUR[r.mode], time: s.time, hrr: s.hrrKw, open: r.mode === "none" ? null : s.open };
+        return { src: await b64(r.files[i]), label: labels[r.mode] ?? MODE_LABEL[r.mode], colour: MODE_COLOUR[r.mode], time: s.time, hrr: s.hrrKw, open: r.mode === "none" ? null : s.open };
       })),
       chart: { tmax, now: pair[0].steps[Math.min(i, pair[0].steps.length - 1)].time, series: pair.map(series) },
     })));
@@ -312,8 +332,9 @@ if (video.length) {
     for (const slide of a.slides) tail.push({ png: toPng(await page.evaluate((o) => window.card(o), { w: W, h: H, ...slide })), ms: slide.ms || 6000 });
   }
   const all = [...cards, ...video, ...tail];
-  const srcs = all.map((f) => ({ src: `data:image/png;base64,${f.png.toString("base64")}`, ms: f.ms }));
-  const mp4 = await page.evaluate(([frames, w, h]) => window.record(frames, w, h), [srcs, W, H]);
+  await page.evaluate(([w, h]) => window.recStart(w, h), [W, H]);
+  for (const f of all) await page.evaluate(([src, ms]) => window.recFrame(src, ms), [`data:image/png;base64,${f.png.toString("base64")}`, f.ms]);
+  const mp4 = await page.evaluate(() => window.recStop());
   await writeFile(path.join(OUT, "suppression-analysis.mp4"), Buffer.from(mp4, "base64"));
   console.log(`wrote suppression-analysis.mp4: ${all.length} frames, ${(all.reduce((s, f) => s + f.ms, 0) / 1000).toFixed(0)} s, ${(Buffer.from(mp4, "base64").length / 1e6).toFixed(1)} MB`);
 }

@@ -1601,6 +1601,10 @@ export default function App() {
       systemRooms: payload.systems?.rooms ?? null,
       systemUnits: payload.systems ? (systemsPlan?.units ?? null) : null,
     };
+    // The last run's open heads, spray and flooded rooms go now, not when
+    // this run's first frame arrives (building its grid takes seconds).
+    if (sprinklerPoints) viewerRef.current?.setSprinklers?.(sprinklerPoints, new Set(), sprinklerDrops);
+    if (run.systemRooms) viewerRef.current?.setSystemRooms?.(run.systemRooms, null, run.systemUnits);
     // Where this run is kept in the browser (core/runCache.js): the graph,
     // the scene's geometry (every 16th word) and the run's inputs.
     const storeKey = settings.flamescapesKeepRuns

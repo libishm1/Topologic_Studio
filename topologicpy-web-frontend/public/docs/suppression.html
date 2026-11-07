@@ -50,11 +50,15 @@
 
   <main id="main">
     <h1>Fire suppression</h1>
-    <p class="lead">Sprinklers and portable extinguishers are in the Simulate step, the sprinklers under the Flamescapes models. Both are off by default; off, a run is exactly as before, at the same speed.</p>
+    <p class="lead">Sprinklers, suppression systems by room use and portable extinguishers are in the Simulate step, the sprinklers and systems under the Flamescapes models. All are off by default; off, a run is exactly as before, at the same speed.</p>
 
     <figure>
       <img src="media/suppression-workflow.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="Switching sprinklers on: the heads laid out in the rooms, a fire started, and the heads near it opening and spraying.">
       <figcaption>Switching <span class="label">Sprinklers</span> on lays out the heads; a Flamescapes fire then opens the heads its hot gas reaches, and the open heads spray.</figcaption>
+    </figure>
+    <figure>
+      <video src="media/suppression-analysis.mp4" controls preload="metadata" style="width: 100%; height: auto"></video>
+      <figcaption>An 84 s video, recorded from the app: the fires on this page side by side, then the results and what is not working yet.</figcaption>
     </figure>
 
     <h2 id="switching-on">Switching sprinklers on</h2>
@@ -123,6 +127,10 @@
       <img src="media/suppression-compare.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="The same fire four times, side by side: with no sprinklers, with Evans's cap, with the spray, and with the water wetting the fuel.">
       <figcaption>The same fire with no sprinklers, with Evans's cap, with the spray, and with wetting, side by side.</figcaption>
     </figure>
+    <figure>
+      <img src="media/suppression-office.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="An open office fire in the NIBS Office over 180 s, with no sprinklers and with wetting: two heads open near the fire and hold it below 1 MW.">
+      <figcaption>An open office fire over 180 s. With no sprinklers it grows to several megawatts, in spikes that are the solver's pyrolysis gas gathering and flashing; with them, the first head opens at 61 s and the fire stays below 1 MW. One run each: a single run's numbers are not to be quoted.</figcaption>
+    </figure>
 
     <h2 id="fire-class">Water by fire class</h2>
     <p>Sprinkler drops, about 1 mm across, are too large to put a flame out in the gas: a spray must take about 0.4 of the flame's heat per unit volume and push down with 0.7 of its upward force (Rasbash 1986). Sprinkler water works by cooling the burning surface below its fire point, where it reaches it. What that means depends on what burns first.</p>
@@ -141,6 +149,10 @@
       </table>
     </div>
     <p>The room's class A contents round such an item are wetted and capped as usual, and the Sprinklers section says why when one of these burns first. These items also no longer start with wood's 10 % water, which changes runs of classes B, D, K and L with or without sprinklers. Not modelled: the oil's eruption (no study measured the oil thrown out) and the metal's reaction with water (the hydrogen needs a fuel kind the solver does not have).</p>
+    <figure>
+      <img src="media/suppression-classes.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="A heptane item burning in the Duplex living room, with no sprinklers and with wetting: the pool is not wetted, the room's other contents are.">
+      <figcaption>A heptane item as the first to burn. The water does not reach the pool, but it wets the room's other contents, so the fire stays smaller.</figcaption>
+    </figure>
 
     <h2 id="validation">Validation against measured tests</h2>
     <p>The activation model was checked against full-scale tests from NIST reports (<code>tools/sprinkler-validation.mjs</code>). A prescribed heat-release burner was added to the CPU solver for this; without it the fields are bit-identical to the unchanged solver. Each test is a box built from its data, on cells of about 0.3 m (0.507 m for UL/NFPRF), with the heads at their measured positions and their measured RTI and C, run at the app's surface coefficient of 200 W/(m² K) and at 25 W/(m² K).</p>
@@ -201,12 +213,27 @@
     <p>After a fire, one person near it sets off when they see it (30 s), or after detection, the alarm and the median pre-movement time. They walk to the nearest suitable unit, ready it (13.4 s, or 7.2 s if trained) and attack from 1.8 m. The heat release then, from the Flamescapes run or else from the two-zone settings' t-squared fire (the result says which), is judged against what the unit's rating can put out: put out, not put out, or cannot tell.</p>
     <p>On the Duplex, a person who sets off on seeing the fire attacks at 58 s against 37 kW (put out); one who waits for the alarm attacks at 222 s against 547 kW (cannot tell: between 80 and 900 kW for a 2-A unit). Not yet modelled: the unit's effect on the fire in the run, mounting heights, and the rule for units on the escape route.</p>
 
-    <h2 id="systems">Suppression systems (coming next)</h2>
-    <p>Water, a clean agent in a server room, and foam.</p>
+    <h2 id="systems">Suppression systems by room use</h2>
+    <p><span class="label">Systems by room use</span>, under the Flamescapes models and off by default, gives each room its system from its name and the building's occupancy. The occupancy is the performance check's occupants setting, shared with it.</p>
+    <ul>
+      <li><span class="label">Apartments and hotels (Group R):</span> water sprinklers in every room, whatever its name (SBC 801-CR-2018 903.2.8).</li>
+      <li><span class="label">Server, computer, telecom, electrical and UPS or battery rooms:</span> a clean agent, HFC-227ea (FM-200), at NFPA 2001's class C design concentration of 7 %. The room keeps its sprinklers, as NFPA 75 asks; <span class="label">Agent only</span> leaves them out, which needs the fire official's approval. A computer lab or classroom is a room of desks and stays on sprinklers.</li>
+      <li><span class="label">Generator, fuel, oil, flammable-liquid and hazardous storage rooms:</span> foam-water sprinklers at 6.5 L/(min m²) (NFPA 11), since water does not put out a burning pool.</li>
+      <li><span class="label">Every other room:</span> water.</li>
+    </ul>
+    <p>The agent's mass is W = (V / s) C / (100 - C), with s = 0.1269 + 0.000513 t m³/kg at the room's temperature t. The special rooms also get an extinguisher of their own at the door: carbon dioxide at IT, telecom and electrical rooms, class B foam at fuel rooms, class K at kitchens. The ABC powder units on the routes come from Extinguishers. The NIBS Office gets 89 water and 9 clean agent rooms (330 kg of agent), and the Clinic 250 water, 10 clean agent and 2 foam rooms. The Duplex, as apartments, gets water only.</p>
+    <p>In a run, a clean agent room is released 30 s after a detector in each of two zones under its ceiling responds. The agent rises linearly to 7 % over 10 s and holds for 10 minutes. At or above 5.2 % (6.62 % over a liquid's vapour, the heptane cup-burner value), gas combustion and the oxidation of solid fuel in the room stop, while pyrolysis and evaporation go on, so hot fuel can burn again outside the room or once the agent is gone. In a foam room, after one detector and 30 s, the blanket cuts a pool's evaporation linearly to a tenth at control and to nothing at extinguishment (1.05 and 3.2 L/m² of solution delivered, from Back and Farley's tests: about 10 and 30 s), and the solution's water wets the room's ordinary fuel as sprinkler water does. The view outlines the rooms in teal (agent) and amber (foam) and fills them once released; the run card says when each saw smoke, was released and acted.</p>
     <figure>
-      <img src="media/suppression-systems.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="Suppression systems: water sprinklers, a clean agent in a server room, and foam.">
-      <figcaption>Suppression systems: water, a clean agent in a server room, and foam.</figcaption>
+      <img src="media/suppression-systems.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="A server room fire in the NIBS Office three times: with no system, with sprinklers, and with the clean agent, the room filling teal once the agent is released.">
+      <figcaption>A server room fire with no system, with sprinklers, and with the clean agent: the room fills teal once the agent is released.</figcaption>
     </figure>
+    <p>Tested with <code>tools/systems-check.mjs</code> (CPU solver, 180 s, the mean of three contents seeds), as heat released against no system:</p>
+    <ul>
+      <li>Server rooms (class C): sprinklers cut it by 65 % in the Office and 28 % in the Clinic; the clean agent by 95 % and 93 %, acting at 42 s. With the sprinklers kept, no head opened: the agent acted first.</li>
+      <li>A heptane spill kept alight in the Clinic's store: sprinklers 26 %, foam 41 %.</li>
+      <li>Class A fires on sprinklers: 49 % in an Office conference room, 66 % in a Clinic one, 72 % in the Duplex's living room.</li>
+    </ul>
+    <p>Not modelled: the agent's cooling, its dilution of oxygen and its decomposition products (HF), and leakage during the hold; doors are not closed by the release. The 30 s agent delay is specification practice (the code sets no number), the foam's 30 s delay is assumed, and the foam times are extrapolated from one test series. Some 2022 NFPA clause numbers come from the committees' public draft reports. The sources, values and doubts are in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/suppression-systems-by-room-2026-11-07.md">suppression systems note</a>.</p>
 
     <h2 id="proofs">What is proved</h2>
     <p>Six Lean 4 modules back the suppression work, each on Lean's standard axioms only. Each module's header maps every theorem to the function it backs and lists what it leaves out.</p>
@@ -231,8 +258,12 @@
       <li>Bittern (2004), chair fire tests at the University of Canterbury, as given in NIST's FDS Validation Guide.</li>
       <li>Rasbash (1986), on water sprays and flames, as cited in the water by fire class note.</li>
       <li>Wrede et al. (2025), <em>Fire-X: Extinguishing Fire with Stoichiometric Heat Release</em>, <a href="https://doi.org/10.1145/3763338">doi:10.1145/3763338</a>, CC BY 4.0, for the evaporation.</li>
+      <li>NFPA 2001 (clean agents), NFPA 11 (foam), NFPA 75 and 76 (IT and telecommunications rooms), and SBC 801-CR-2018 Sections 903.2.8, 903.3.1.1.1 and 904, cited by clause number; the NFPA 2022 and 2025 clauses as printed in the committees' public draft reports.</li>
+      <li>Zegers, Williams, Fisher, Fleming and Sheinson (2000). Suppression of nonpremixed flames by fluorinated ethanes and propanes. <em>Combustion and Flame</em>. <a href="https://doi.org/10.1016/S0010-2180(99)00162-5">doi:10.1016/S0010-2180(99)00162-5</a>.</li>
+      <li>Back and Farley (2020). Evaluation of the fire protection effectiveness of fluorine free firefighting foams. Fire Protection Research Foundation.</li>
+      <li>Back (2023, online 2020). An evaluation of the firefighting effectiveness of fluorine-free foams. <em>Fire Technology</em>. <a href="https://doi.org/10.1007/s10694-020-01051-4">doi:10.1007/s10694-020-01051-4</a>.</li>
     </ul>
-    <p>The NIST reports are US Government works. The digitised measurements and validation inputs come from NIST's firemodels repositories and are kept with NIST's notice in the repository's <code>benchmark/validation/</code>. The design and the departures from it are in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/fire-suppression-sprinklers-2026-11-07.md">sprinkler note</a>, and the extinguisher and water-by-class research in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/extinguishers-2026-11-07.md">extinguisher note</a> and the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/water-by-fire-class-2026-11-07.md">water by fire class note</a>.</p>
+    <p>The NIST reports are US Government works. The digitised measurements and validation inputs come from NIST's firemodels repositories and are kept with NIST's notice in the repository's <code>benchmark/validation/</code>. The design and the departures from it are in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/fire-suppression-sprinklers-2026-11-07.md">sprinkler note</a>, and the extinguisher, water-by-class and systems research in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/extinguishers-2026-11-07.md">extinguisher note</a>, the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/water-by-fire-class-2026-11-07.md">water by fire class note</a> and the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/suppression-systems-by-room-2026-11-07.md">suppression systems note</a>.</p>
 
     <nav class="pager" aria-label="Previous and next page">
       <a href="fire-and-smoke.html">Previous: Fire and smoke</a>

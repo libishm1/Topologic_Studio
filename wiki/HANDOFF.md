@@ -4,7 +4,7 @@
 
 - **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at ea2ec33 (released 2026-11-07 at the user's request: the performance check, a6442e5 and 06b4b7f, and the sprinklers, ea2ec33). The backend did not change, so Render was not redeployed.
   - **Live check of ea2ec33:** 0 failed steps, 0 console errors, with Render awake.
-  - **Committed after it, not deployed:** fc71f77 (the interface: hints as one line, the phone layout) and the second round of the sprinkler work (the commit after it); the next release.
+  - **Committed after it, not deployed (the next release):** fc71f77 (the interface: hints as one line, the phone layout), c880a4b (the second round of the sprinkler work), 8b3b646 (sprinkler fixes; the Office and Clinic examples), 3144a8e (README and the /docs/ guide), de743ad and 6d03f01 (suppression systems by room use; the spray drawn as a cone), and the suppression GIFs and video.
   - **Live check of ba32e6d:** 0 failed steps, with Render awake; the replay (4.0 s) and the as-built doors (14 of 81) pass live. Before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 7e009e6:** 0 failed steps, with Render awake; before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 3f9a4f2:** 0 failed steps, with Render awake.
@@ -32,7 +32,7 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 348 tests;
+  - `npm test` in `topologicpy-web-frontend`: 358 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
@@ -138,6 +138,9 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
 Before any deploy: the gates above, then the live check, then update this file.
 
 ## This round (2026-11-07)
+
+- **Suppression systems by room use** (the user: water in apartments, powder at strategic places, FM-200 in electrical and server rooms, foam in generator rooms, tested on the commercial types; de743ad engine by an agent, reviewed; 6d03f01 interface). `core/suppressionSystems.js` assigns each room water, clean agent (HFC-227ea at 7 %, sprinklers kept unless "Agent only"), foam or none by name and the performance check's occupancy (Group R: water only), sizes the agent and lists each special room's own extinguisher (CO2, class B foam, class K); the solver (CPU and WGSL) floods a room after cross-zoned detection and 30 s, or blankets a pool with foam. Zero cost off (bit-identical, measured on both backends). `tools/systems-check.mjs` (`benchmark/results/2026-11-07-systems-check.txt`): server rooms 65 and 28 % less heat with sprinklers, 95 and 93 % with the agent; a heptane spill 26 % with sprinklers, 41 % with foam; checked again by hand on one seed (58 and 94 %). Sources in `wiki/research/suppression-systems-by-room-2026-11-07.md` (SBC cited by number and value only). Not modelled: agent cooling, oxygen dilution, HF, leakage, doors closing on release.
+- **GIFs and video** (`tools/suppression-media.mjs` captures the app per fire step from a production build, never the dev server; `tools/suppression-compose.mjs` composes GIFs and an MP4 with MediaRecorder; no ffmpeg). Found while making them: the spray was drawn as one helix per head (all three droplet seeds came from one golden-ratio step; now Roberts's R3), the capture's first frame read the last run's card and its final frame overwrote step 0, the page kept the last case's settings, and the video crashed the page when all frames were sent at once. The headless page crashed at the end of 2 of 3 early spray runs and not since; the capture retries a crashed page once.
 
 - **Sprinkler testing on several models and fires** (the user: "test the sprinklers for different IFC models and fires; why are the sprinklers on the roof above the Duplex?"; 8b3b646). Found and fixed: heads hung above roofs and terraces (every IfcSpace was a room with its top as the ceiling: the Duplex's "Roof" space, Vienna's terraces and balconies, the Clinic's six "ROOF" spaces; `roomsFromSpaces` now looks up for the real slab and leaves out spaces outside the building); the NIBS Office never burned (no floor slabs; `core/spaceFloors.js` gives the fire grid the spaces' bottoms). Measured (`tools/sprinkler-check.mjs`, `tools/sprinkler-seeds.mjs`): wetting cut most fires by 20 to 79 %, Evans's cap and the spray ranged from 40 % less to 78 % more, and a fire's own scatter is large (the same Duplex fire released 137 to 272 MJ with three contents layouts; a Clinic room 138 to 547 MJ). In the Clinic's large rooms heads opened late (63 to 68 s) and no mode helped: the late activation the validation found. Wetting is now the default mode. The NIBS Office and Clinic are site examples. The remaining merged branches were pruned one at a time: six local ones and `codex/wiki-hitl-testing-docs` on GitHub; `next/studio-2` on GitHub is left for a later pass, as the user asked.
 

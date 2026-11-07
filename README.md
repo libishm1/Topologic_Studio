@@ -357,14 +357,17 @@ with `tools/frames-gif.mjs`.
 
 ### Fire suppression
 
-Sprinklers and portable extinguishers are in the Simulate step, the
-sprinklers under the Flamescapes models. Both are off by default; off, a run
-is exactly as before, at the same speed.
+Sprinklers, suppression systems by room use and portable extinguishers are in
+the Simulate step, the sprinklers and systems under the Flamescapes models.
+All are off by default; off, a run is exactly as before, at the same speed.
 
-![Switching sprinklers on: the heads laid out in the rooms, a fire started, and the heads near it opening and spraying](docs/images/suppression-workflow.gif)
+![Switching sprinklers on: the heads laid out in the rooms, a fire started, and the heads near it opening and spraying](topologicpy-web-frontend/public/docs/media/suppression-workflow.gif)
 
 *Switching **Sprinklers** on lays out the heads; a Flamescapes fire then opens
 the heads its hot gas reaches, and the open heads spray.*
+
+An 84 s video, recorded from the app, compares the fires below and sums up
+the results: [suppression-analysis.mp4](topologicpy-web-frontend/public/docs/media/suppression-analysis.mp4).
 
 **Where the heads come from.** From the IFC where it has them
 (`IfcFireSuppressionTerminal`, or an IFC2x3 flow terminal typed as one, with
@@ -421,10 +424,17 @@ opened late (63 to 68 s, when the fire was already large) and no mode helped. A 
 mislead: the fire's own scatter is large (see
 [Technical notes](#sprinkler-activation-and-its-validation)).
 
-![The same fire four times, side by side: with no sprinklers, with Evans's cap, with the spray, and with the water wetting the fuel](docs/images/suppression-compare.gif)
+![The same fire four times, side by side: with no sprinklers, with Evans's cap, with the spray, and with the water wetting the fuel](topologicpy-web-frontend/public/docs/media/suppression-compare.gif)
 
 *The same fire with no sprinklers, with Evans's cap, with the spray, and
 with wetting, side by side.*
+
+![An open office fire in the NIBS Office over 180 s, with no sprinklers and with wetting: two heads open near the fire and hold it below 1 MW](topologicpy-web-frontend/public/docs/media/suppression-office.gif)
+
+*An open office fire over 180 s. With no sprinklers it grows to several
+megawatts, in spikes that are the solver's pyrolysis gas gathering and
+flashing; with them, the first head opens at 61 s and the fire stays below
+1 MW. One run each: a single run's numbers are not to be quoted.*
 
 **Water by fire class.** Sprinkler drops, about 1 mm across, are too large to
 put a flame out in the gas; sprinkler water works by cooling the burning
@@ -434,6 +444,11 @@ cooking oil (K), magnesium (D) and a lithium-ion pack (L) are not, and the
 panel says why: the water sinks through the pool, erupts the oil, feeds the
 metal hydrogen, or does not reach the cells. The room's class A contents
 round them are wetted and capped as usual.
+
+![A heptane item burning in the Duplex living room, with no sprinklers and with wetting: the pool is not wetted, the room's other contents are](topologicpy-web-frontend/public/docs/media/suppression-classes.gif)
+
+*A heptane item as the first to burn. The water does not reach the pool, but
+it wets the room's other contents, so the fire stays smaller.*
 
 **A second model.** In the Model step, an MEP or structural IFC of the same
 building is drawn in the first one's frame through the two files'
@@ -454,12 +469,53 @@ fire attacks at 58 s against 37 kW (put out), and one who waits for the
 alarm attacks at 222 s against 547 kW (cannot tell). The attempt does not yet
 change the fire in the run.
 
-**Suppression systems (coming next).** Water, a clean agent in a server room,
-and foam.
+**Suppression systems by room use** (off by default, under the Flamescapes
+models). Each room gets its system from its name and the building's occupancy,
+which is the performance check's occupants setting:
 
-![Suppression systems: water sprinklers, a clean agent in a server room, and foam](docs/images/suppression-systems.gif)
+- Apartments and hotels (Group R): water sprinklers in every room (SBC
+  801-CR-2018 903.2.8).
+- Server, computer, telecom, electrical and UPS or battery rooms: a clean
+  agent, HFC-227ea (FM-200), at NFPA 2001's class C design concentration of
+  7 %. The room keeps its sprinklers (NFPA 75); **Agent only** leaves them
+  out, which needs the fire official's approval.
+- Generator, fuel, oil, flammable-liquid and hazardous storage rooms:
+  foam-water sprinklers at 6.5 L/(min m²) (NFPA 11).
+- Every other room: water.
 
-*Suppression systems: water, a clean agent in a server room, and foam.*
+The special rooms also get an extinguisher of their own at the door: carbon
+dioxide at IT, telecom and electrical rooms, class B foam at fuel rooms, and
+class K at kitchens. The ABC powder units on the routes come from
+Extinguishers. The NIBS Office gets 89 water rooms and 9 clean agent rooms
+(330 kg of agent). The Clinic gets 250 water, 10 clean agent and 2 foam rooms
+(its hazardous and flammable stores). The Duplex, as apartments, gets water
+only.
+
+In a run, a clean agent room is released once a detector in each of two zones
+under its ceiling sees smoke and 30 s have passed. The agent rises to 7 % over
+10 s and holds for 10 minutes. At 5.2 % (6.62 % over a liquid's vapour),
+flames and smouldering in the room stop, but hot fuel goes on giving off
+vapour. The room is taken as closed and well mixed: the agent does not cool
+the room or dilute its oxygen, and the release does not close the model's
+doors. In a foam room, the blanket cuts a pool's evaporation to a tenth in
+about 10 s and to nothing in about 30 s (Back and Farley 2020), and the
+solution's water wets the room's ordinary fuel.
+
+The systems were tested in server room fires (class C, 180 s, the mean of
+three contents seeds, `tools/systems-check.mjs`):
+
+- Sprinklers cut the heat released by 65 % in the Office and 28 % in the
+  Clinic.
+- The clean agent cut it by 95 % and 93 %, acting at 42 s.
+
+In the Clinic's store, a heptane spill kept alight lost 26 % of its heat to
+sprinklers and 41 % to foam. The sources and every value are in
+`wiki/research/suppression-systems-by-room-2026-11-07.md`.
+
+![A server room fire in the NIBS Office three times: with no system, with sprinklers, and with the clean agent, the room filling teal once the agent is released](topologicpy-web-frontend/public/docs/media/suppression-systems.gif)
+
+*A server room fire with no system, with sprinklers, and with the clean
+agent: the room fills teal once the agent is released.*
 
 ### Checks: the code check and the performance check
 

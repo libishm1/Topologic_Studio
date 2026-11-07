@@ -51,8 +51,14 @@ const VERBOSE = args.includes("--verbose");
 const browser = await chromium.launch({ executablePath: CHROME, headless: !args.includes("--headed") });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: "light" });
 
-/** The 3D view as a PNG: a clip of the page, which does not wait for the view to hold still. */
-async function shot(page, file) {
+/**
+ * The 3D view as a PNG: a clip of the page, which does not wait for the
+ * view to hold still, taken after the view has drawn again (`settle` ms
+ * more: a new run's first step, which the last run's spray must leave).
+ */
+async function shot(page, file, settle = 0) {
+  if (settle) await page.waitForTimeout(settle);
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   const box = await page.locator(".viewport").boundingBox();
   await page.screenshot({ path: file, clip: box, timeout: 60000 });
 }
@@ -66,6 +72,15 @@ async function openCase(name, spec) {
     if (VERBOSE || m.type() === "error" || m.type() === "warning") console.log(`  [page ${m.type()}] ${m.text().slice(0, 200)}`);
   });
   page.on("crash", () => console.log("  PAGE CRASHED"));
+  // The app keeps its settings in the browser: each case starts from the
+  // defaults, or the switches clicked below would turn the last case's off.
+  await page.addInitScript(() => {
+    try {
+      localStorage.clear();
+    } catch {
+      // Blocked storage starts from the defaults anyway.
+    }
+  });
   await page.goto(URL_DEBUG, { waitUntil: "load" });
   await page.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 });
   // The composer draws its own labels: no toasts, hints or view overlays.
@@ -176,7 +191,7 @@ async function capture(page, dir, mode, spec) {
     }
     if (s.step === 0 && (s.time == null || s.time > 10)) Object.assign(s, { time: null, hrrKw: null, open: 0 });
     if (s.step > last) {
-      await shot(page, path.join(frames, `${String(s.step).padStart(3, "0")}.png`));
+      await shot(page, path.join(frames, `${String(s.step).padStart(3, "0")}.png`), last < 0 ? 400 : 0);
       steps.push({ step: s.step, time: s.time, hrrKw: s.hrrKw, open: s.open });
       if (VERBOSE) console.log(`    step ${s.step}: ${s.time} s, ${s.hrrKw} kW, ${s.open} open, heap ${s.heapMb} MB`);
       last = s.step;
