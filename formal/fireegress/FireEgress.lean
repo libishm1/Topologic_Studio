@@ -28,3 +28,5 @@ import FireEgress.DuctMixing
 import FireEgress.SafeEscape
 import FireEgress.Sprinklers
 import FireEgress.Performance
+import FireEgress.DoorQueue
+import FireEgress.PreMovement

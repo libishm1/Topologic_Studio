@@ -1,7 +1,7 @@
 /** The performance-based ("simulated fire") egress check (performanceCheck.js). */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Z99, erf, lognormalCdf, lognormalFromPercentiles, performanceCheck } from "./performanceCheck.js";
+import { DOOR_BOUNDARY, DOOR_FLOW, Z99, doorCapacity, doorQueues, erf, lognormalCdf, lognormalFromPercentiles, performanceCheck, walkTree, weibullCdf, weibullQuantile } from "./performanceCheck.js";
 import { smokeDetection } from "./forecast.js";
 
 const close = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} vs ${b}`);
@@ -96,4 +96,100 @@ test("a forecast that ends before the required start cannot tell for the places 
   assert.match(r.storeys[0].text, /plan one of at least 363 s/);
   // A place that becomes unsafe well within the forecast still fails.
   assert.equal(performanceCheck(g, Float64Array.from([120, 119.5, 40, 0, 0]), opts).status, "fail");
+});
+
+test("the Weibull's quantile inverts its distribution function, and the measured clusters keep their published percentiles", async () => {
+  const { MEASURED_PRE, measuredOf } = await import("./rsetPresets.js");
+  for (const m of MEASURED_PRE) {
+    for (const p of [0.01, 0.5, 0.99]) close(weibullCdf(weibullQuantile(p, m), m), p, 1e-12);
+  }
+  // Business cluster 1: median 102 s, 99th percentile 500 s (rset-components-2026-11-07.md 3.6).
+  const office = measuredOf("business-1");
+  close(weibullQuantile(0.5, office), 102.5, 0.5);
+  close(weibullQuantile(0.99, office), 500, 1);
+  assert.equal(weibullCdf(0, office), 0);
+  assert.equal(weibullCdf(Infinity, office), 1);
+});
+
+/** A corridor 1 m a node: the exit at 0, a door at 1 passing `rate` persons a second, places 2 to n - 1. */
+function doorway(n, rate) {
+  const g = corridor(n);
+  g.kinds[1] = 2;
+  const width = 2 * DOOR_BOUNDARY + rate / DOOR_FLOW;
+  close(doorCapacity(width), rate, 1e-12);
+  const widths = new Float64Array(n + 2);
+  widths[1] = width;
+  return { g, widths };
+}
+
+test("a door passing one person a second holds a crowd that sets off together for as long as it takes to pass", () => {
+  // Places 2 to 5, 10 people each (1 m² a node, 0.1 m² each); a narrow pre-movement, so all set off at about 90 s.
+  const { g, widths } = doorway(6, 1);
+  const deadlines = Float64Array.from([1000, 1000, 1000, 1000, 1000, 1000, -Infinity, -Infinity]);
+  const opts = { levels: [0], exits: [0], horizon: 1200, step: 1, speed: 1, detection: 30, alarm: 0, pre1: 59, pre99: 61 };
+  const free = performanceCheck(g, deadlines, opts);
+  assert.equal(free.queues, null);
+  assert.equal(free.storeys[0].worstWait, null);
+  const r = performanceCheck(g, deadlines, { ...opts, queues: { occupantArea: 0.1, cellArea: 1, widths } });
+  assert.equal(r.queues.doors, 1);
+  // Ten at the exit itself, who pass no door.
+  close(r.queues.occupants, 50, 1e-9);
+  close(r.queues.busiest.persons, 40, 1e-6);
+  // Forty people through one a second: the last start waits about 40 s less the walk it had over the others.
+  const w = r.storeys[0].worstWait;
+  assert.ok(w > 30 && w < 45, `worst wait ${w}`);
+  // The wait enters RSET: the worst margin falls by it.
+  close(free.storeys[0].worstMargin - r.storeys[0].worstMargin, w, 1e-9);
+  // A deadline that covers the walk but not the queue fails.
+  const tight = Float64Array.from([1000, 1000, 120, 120, 120, 120, -Infinity, -Infinity]);
+  assert.equal(performanceCheck(g, tight, opts).status, "pass");
+  assert.equal(performanceCheck(g, tight, { ...opts, queues: { occupantArea: 0.1, cellArea: 1, widths } }).status, "fail");
+});
+
+test("queues pass everyone a door receives, upstream doors first, and a later start never leaves earlier", () => {
+  // Two doors in a row: 1 (0.5 a second) and 3 (2 a second); places 2 and 4 to 7.
+  const g = corridor(8);
+  g.kinds[1] = 2;
+  g.kinds[3] = 2;
+  const capacity = new Float64Array(10);
+  capacity[1] = 0.5;
+  capacity[3] = 2;
+  const occupants = new Float64Array(10);
+  for (const v of [2, 4, 5, 6, 7]) occupants[v] = 3;
+  const tree = walkTree(g, [0], { speed: 1 });
+  const d = lognormalFromPercentiles(20, 80);
+  const q = doorQueues(tree, { occupants, capacity, cue: 10, cdf: (t) => lognormalCdf(t, d), support: [5, 200] });
+  const at = (node) => q.doors.find((x) => x.node === node);
+  close(at(3).persons, 12, 1e-9);
+  close(at(1).persons, 15, 1e-9);
+  let last = -Infinity;
+  for (let s = 0; s < 200; s += 0.7) {
+    const t = q.exitTime(7, s);
+    assert.ok(t >= last && t >= s + tree.time[7], `exit ${t} at start ${s}`);
+    last = t;
+  }
+});
+
+test("the share who never respond is never counted as starting in time, and the measured spread is judged beside the design", () => {
+  const g = corridor(4);
+  const deadlines = Float64Array.from([5000, 5000, 5000, 5000, -Infinity, -Infinity]);
+  const opts = { levels: [0], exits: [0], horizon: 6000, step: 1, detection: 30, alarm: 0, pre1: 30, pre99: 120 };
+  const all = performanceCheck(g, deadlines, opts);
+  assert.ok(all.storeys[0].share > 0.999);
+  const some = performanceCheck(g, deadlines, { ...opts, noResponse: 0.04 });
+  close(some.noResponse, 0.04, 1e-12);
+  assert.ok(some.storeys[0].share <= 0.96 + 1e-12);
+  close(some.storeys[0].share, 0.96, 1e-6);
+  assert.match(some.storeys[0].text, /4 % never respond/);
+  // The verdict stays on the design values; the measured spread (99th percentile 500 s) is judged apart.
+  const office = { scale: 139.3, shape: 1.195, label: "Offices" };
+  const tight = Float64Array.from([300, 300, 300, 300, -Infinity, -Infinity]);
+  const r = performanceCheck(g, tight, { ...opts, measured: office });
+  assert.equal(r.status, "pass");
+  assert.equal(r.measured.status, "fail");
+  close(r.measured.p99, 500, 1);
+  assert.equal(r.storeys[0].measured.fail, 4);
+  assert.ok(r.storeys[0].measured.share < r.storeys[0].share);
+  assert.equal(r.curves.design.length, 65);
+  close(r.curves.measured.at(-1)[1], weibullCdf(r.curves.tMax, office), 1e-12);
 });

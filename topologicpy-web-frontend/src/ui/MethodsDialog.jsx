@@ -154,12 +154,19 @@ export function MethodsDialog({ open, onClose, studio }) {
                     801-CR-2018 and IBC 2021, so a pass meets both. The performance check compares each place&apos;s escape
                     deadline from the forecast (ASET, under the ISO 13571 dose limit) with detection, alarm and pre-movement
                     time (RSET; pre-movement a log-normal through its 1st and 99th percentiles, as PD 7974-6 tabulates,
-                    with presets from PD 7974-6, ISO/TR 16738, the ABCB data sheets and C/VM2). With a Flamescapes fire,
-                    detection is when the smoke at head height first reaches 0.097 optical density per metre (C/VM2), no
-                    earlier than a ceiling detector. The base case asks ASET at least twice RSET, and at least 30 s over it
-                    (SFEG 2025, the Italian fire code). A pass at the 99th percentile means at least 99 % of the occupants there start
-                    in time, and a pass on the deadline map is a pass on the exact deadline (Performance.lean). It judges
-                    one fire scenario.
+                    with presets from PD 7974-6, ISO/TR 16738, the ABCB data sheets and C/VM2), plus any queue at the doors.
+                    With a Flamescapes fire, detection is when the smoke reaches 0.097 optical density per metre (C/VM2) at
+                    virtual detectors under the ceiling, 7 m from the fire or as far as its room allows. Occupants at the area per
+                    occupant walk to the nearest exit and pass each door at 1.32 persons a second per metre of effective
+                    width (C/VM2 3.5.3), first come first served (Lindley&apos;s recursion on time bins); the wait counts in
+                    RSET as in a hand calculation. The share who never respond (ABCB) is never counted as starting in time,
+                    and a measured spread (Lovreglio et al. 2019, Weibull) is judged beside the design values. The base case
+                    asks ASET at least twice RSET, and at least 30 s over it (SFEG 2025, the Italian fire code); the
+                    sensitivity cases, the exit nearest the fire blocked and the first detector failing, 1.2 times. A pass at
+                    the 99th percentile means at least 99 % of those who respond start in time, a pass on the deadline map is
+                    a pass on the exact deadline, a door never passes more than its capacity, a later start never leaves a
+                    door earlier, and the report of several fires passes only if every case does (Performance.lean,
+                    DoorQueue.lean, PreMovement.lean).
                   </dd>
                 </div>
                 <div className="methods__card">

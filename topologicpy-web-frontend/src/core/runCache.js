@@ -14,7 +14,8 @@
  */
 
 /** Bump with any change to what the solver computes or how a frame is laid out. */
-export const RUN_CACHE_VERSION = 1;
+// 2 (2026-11-07): frames carry the ceiling detectors (flamescapesRun.js ceilingDetectors).
+export const RUN_CACHE_VERSION = 2;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 

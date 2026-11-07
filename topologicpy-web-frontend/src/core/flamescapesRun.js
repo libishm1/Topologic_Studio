@@ -303,6 +303,81 @@ export function readNodes(sim, cells, out = null) {
 /** O2 in air, % by volume, as the solver's air (Y_O2 0.232, the rest N2) reads. */
 export const AIR_O2_PERCENT = (0.232 / 0.032 / (0.232 / 0.032 + 0.768 / 0.028)) * 100;
 
+/** How far from the fire C/VM2 puts the first smoke detector, m (Table 3.2.2.2). */
+export const DETECTOR_RADIUS = 7.0;
+
+/**
+ * Virtual smoke detectors under the ceiling round the fire, where NZ C/VM2
+ * (Table 3.2.2.2) puts a design's first detector: 7.0 m from the fire in
+ * plan, or nearer when the room is smaller (its note 1). Along `rays`
+ * directions a ray walks out from the ignition cell through the cells 1.5 m
+ * above the fire's floor, and stops at the radius, before a solid cell (a
+ * wall) or where the ceiling steps by more than a cell (a door's lintel or a
+ * downstand: the edge of the fire's ceiling space). The detector is the top
+ * open cell of that column, its centre half a cell below the ceiling (C/VM2
+ * asks at least 25 mm). Only the rays that get as far as the farthest one,
+ * within a cell, keep a detector: a wall beside the fire makes the room no
+ * smaller, so a ray it stops at once does not put a detector over the
+ * plume, which would time detection too early.
+ *
+ * @returns {{cells: Int32Array, distance: Float32Array}} grid cells and their distances from the fire (m)
+ */
+export function ceilingDetectors(scene, { radius = DETECTOR_RADIUS, rays = 16 } = {}) {
+  const none = { cells: new Int32Array(0), distance: new Float32Array(0) };
+  if (!scene.ignition) return none;
+  const { grid: g, solid } = scene;
+  const at = (i, j, k) => i + g.nx * (j + g.ny * k);
+  const c0 = scene.ignition.cell;
+  const i0 = c0 % g.nx, j0 = Math.floor(c0 / g.nx) % g.ny, k0 = Math.floor(c0 / (g.nx * g.ny));
+  const head = Math.min(g.ny - 1, j0 + Math.max(1, Math.round(1.5 / g.h)));
+  // The top open cell's height in a column, climbing from head height; -1 where a wall stands at head height.
+  const top = (i, k) => {
+    if (solid[at(i, head, k)]) return -1;
+    let j = head;
+    while (j + 1 < g.ny && !solid[at(i, j + 1, k)]) j += 1;
+    return j;
+  };
+  const ceiling = top(i0, k0);
+  if (ceiling < 0) return none;
+  const stride = 0.5 * g.h;
+  const steps = Math.ceil(radius / stride);
+  const ends = [];
+  for (let r = 0; r < rays; r += 1) {
+    const angle = (2 * Math.PI * r) / rays;
+    const di = Math.cos(angle), dk = Math.sin(angle);
+    let found = -1, far = 0;
+    for (let s = 0; s <= steps; s += 1) {
+      const d = Math.min(radius, s * stride);
+      const i = Math.floor(i0 + 0.5 + (di * d) / g.h), k = Math.floor(k0 + 0.5 + (dk * d) / g.h);
+      if (i < 0 || k < 0 || i >= g.nx || k >= g.nz) break;
+      const j = top(i, k);
+      if (j < 0 || Math.abs(j - ceiling) > 1) break;
+      found = at(i, j, k);
+      far = d;
+    }
+    if (found >= 0) ends.push([found, far]);
+  }
+  const farthest = ends.reduce((m, [, d]) => Math.max(m, d), 0);
+  const seen = new Set();
+  const cells = [], distance = [];
+  for (const [cell, d] of ends) {
+    if (d < farthest - g.h - 1e-9 || seen.has(cell)) continue;
+    seen.add(cell);
+    cells.push(cell);
+    distance.push(d);
+  }
+  return { cells: Int32Array.from(cells), distance: Float32Array.from(distance) };
+}
+
+/** Node cells followed by detector cells, to be read in one go. */
+export function withDetectors(cells, detectors) {
+  if (!detectors.length) return cells;
+  const all = new Int32Array(cells.length + detectors.length);
+  all.set(cells);
+  all.set(detectors, cells.length);
+  return all;
+}
+
 /** Up to `max` particles in the viewer frame: [x, y, z] triples, temperatures (K) and kinds. */
 export function particleSnapshot(sim, max = 3000) {
   const pr = sim.parts;
@@ -377,8 +452,11 @@ export function smokeCloud(grid, rho, Y, kind, { block = 2, min = 0.03 } = {}) {
 /**
  * Run the solver to `horizon` seconds, calling onFrame every `frameSeconds`
  * with the node readings, the frame's mean heat release rate (kW), the
- * particles and, with `smoke`, the smoke cloud (smokeCloud). Returns the
- * frames stacked: T, vis, co, soot, co2, o2 as Float32Array(K n).
+ * particles and, with `smoke`, the smoke cloud (smokeCloud), and the
+ * visibility at the virtual ceiling detectors (ceilingDetectors) as
+ * `detectors`. Returns the frames stacked: T, vis, co, soot, co2, o2 as
+ * Float32Array(K n), the detectors' visibility as Float32Array(K D), and
+ * `detectorDistance`.
  */
 export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
@@ -386,6 +464,8 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
   if (profileInto) sim.profile = profileInto;
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
+  const detectors = ceilingDetectors(scene);
+  const D = detectors.cells.length;
   const K = Math.max(1, Math.round(horizon / frameSeconds));
   // With keep, every frame is stacked (K x n); without, one frame's buffers
   // are reused and onFrame must copy what it keeps (the worker does).
@@ -396,6 +476,7 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
   const soot = new Float32Array(rows * n);
   const co2 = new Float32Array(rows * n);
   const o2 = new Float32Array(rows * n);
+  const detectorVis = new Float32Array(rows * D);
   const hrr = new Float32Array(K);
   let released = 0;
   for (let k = 0; k < K; k += 1) {
@@ -407,6 +488,8 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
     const row = keep ? k : 0;
     const at = (a) => a.subarray(row * n, (row + 1) * n);
     const frame = readNodes(sim, cells, { T: at(T), vis: at(vis), co: at(co), soot: at(soot), co2: at(co2), o2: at(o2) });
+    const atDetectors = detectorVis.subarray(row * D, (row + 1) * D);
+    if (D) atDetectors.set(readNodes(sim, detectors.cells).vis);
     hrr[k] = (sim.stats.released - released) / frameSeconds / 1000;
     released = sim.stats.released;
     onFrame?.({
@@ -418,6 +501,7 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
       soot: frame.soot,
       co2: frame.co2,
       o2: frame.o2,
+      detectors: atDetectors,
       hrr: hrr[k],
       maxT: sim.stats.maxT - KELVIN,
       embers: sim.stats.embersSpawned,
@@ -428,6 +512,6 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
     });
   }
   const inGrid = cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0);
-  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid };
-  return keep ? { ...out, T, vis, co, soot, co2, o2 } : out;
+  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid, detectorDistance: detectors.distance };
+  return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
 }

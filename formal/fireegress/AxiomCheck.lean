@@ -323,3 +323,31 @@ import FireEgress
 #print axioms FireEgress.SafeEscape.G3_no_escape_from_p
 #print axioms FireEgress.SafeEscape.arrival_mask_traps
 #print axioms FireEgress.SafeEscape.legacy_reward_prefers_staying
+
+-- The queue at each door and pre-movement, performanceCheck.js and rsetPresets.js (2026-11-07): one line per theorem.
+#print axioms FireEgress.DoorQueue.queue_zero
+#print axioms FireEgress.DoorQueue.queue_succ
+#print axioms FireEgress.DoorQueue.queue_nonneg
+#print axioms FireEgress.DoorQueue.out_le
+#print axioms FireEgress.DoorQueue.out_nonneg
+#print axioms FireEgress.DoorQueue.conservation
+#print axioms FireEgress.DoorQueue.queue_mono
+#print axioms FireEgress.DoorQueue.queue_le_window
+#print axioms FireEgress.DoorQueue.clears
+#print axioms FireEgress.DoorQueue.exit_mono
+#print axioms FireEgress.DoorQueue.exit_clears
+#print axioms FireEgress.DoorQueue.requiredQ_iff
+#print axioms FireEgress.DoorQueue.requiredQ_zero
+#print axioms FireEgress.DoorQueue.requiredQ_mono
+#print axioms FireEgress.DoorQueue.queued_share_le
+#print axioms FireEgress.DoorQueue.safe_starts_downward
+#print axioms FireEgress.PreMovement.weibull_cdf_quantile
+#print axioms FireEgress.PreMovement.weibull_mono
+#print axioms FireEgress.PreMovement.weibull_nonneg
+#print axioms FireEgress.PreMovement.weibull_le_one
+#print axioms FireEgress.PreMovement.responding_le
+#print axioms FireEgress.PreMovement.responding_mono
+#print axioms FireEgress.PreMovement.responding_pass
+#print axioms FireEgress.PreMovement.detection_more_detectors
+#print axioms FireEgress.PreMovement.detection_le
+#print axioms FireEgress.PreMovement.report_pass_iff

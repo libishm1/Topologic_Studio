@@ -23,9 +23,9 @@ import { isCancelled, workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats, reachablePct } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
-import { earliestArrival } from "./core/forecast.js";
+import { DETECTOR_VISIBILITY, earliestArrival, firstDetection } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
-import { floorLevels } from "./core/lattice.js";
+import { KIND_DOOR, floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
@@ -38,7 +38,9 @@ import { FIRE_CLASSES, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_RUNS, farthestFromExits, nodeAlong, stagesFor } from "./core/guided.js";
 import { describeFacts } from "./core/describeFacts.js";
-import { codeCheck } from "./core/codeCheck.js";
+import { EGRESS_B, codeCheck, storeysOf } from "./core/codeCheck.js";
+import * as reportPages from "./core/perfReport.js";
+import * as rsetPresets from "./core/rsetPresets.js";
 import { measureView } from "./core/measures.js";
 import { tenabilityTracker } from "./core/tenability.js";
 import { fieldNote, nextHint } from "./core/fieldNotes.js";
@@ -92,6 +94,9 @@ const TopologyViewer = lazy(() => import("./viewer/TopologyViewer.jsx"));
 // when someone opens the page. A failed load is kept by React.lazy, so a
 // retry needs a new one.
 const loadMethods = () => lazy(() => import("./ui/MethodsDialog.jsx").then((m) => ({ default: m.MethodsDialog })));
+// The performance-based check loads when first used; its presets and report
+// are small and already on the page with the panel.
+const loadPerf = () => import("./core/performanceCheck.js").then((check) => [check, rsetPresets, reportPages]);
 
 // The inspector is the workflow, one step per panel (src/ui/Panels.jsx).
 // Methods (what was proved, the limits, the server) opens from the header.
@@ -1323,6 +1328,8 @@ export default function App() {
           peak: stored.frames.reduce((m, f) => Math.max(m, f.hrr || 0), 0),
           embers: last.embers,
           spots: last.spots,
+          detectors: last.detectors?.length ?? 0,
+          detectedAt: firstDetection(stored.frames),
           horizon: payload.horizon,
           embersOn: payload.embers,
           extras: payload.extras,
@@ -1359,6 +1366,9 @@ export default function App() {
           spots: progress.spots,
           embersOn: payload.embers,
           horizon: payload.horizon,
+          // The ceiling detectors round the fire (flamescapesRun.js ceilingDetectors) and when the first responds.
+          detectors: progress.detectors?.length ?? 0,
+          detectedAt: c.combustion?.detectedAt ?? (progress.detectors?.some((s) => s <= DETECTOR_VISIBILITY) ? progress.time : null),
         },
       }));
     }).then(
@@ -1928,43 +1938,230 @@ export default function App() {
   }, [graph, exits, levels, studio.semantics, settings.codeSprinklered, settings.useWalls, reportError, markFound, markUsed, notes.used]);
 
   // The performance-based check (core/performanceCheck.js): the forecast's
-  // escape-deadline map against detection, alarm and pre-movement. Kept with
-  // the plan it was made on, so a new plan asks for it again.
+  // escape-deadline map against detection, alarm and pre-movement, with the
+  // queues at doors, the share who never respond and a measured spread
+  // beside. Kept with the plan it was made on, so a new plan asks for it
+  // again. Each check also joins the report (core/perfReport.js), which
+  // gathers fires until the graph changes or it is cleared.
   const [perfState, setPerfState] = useState({ result: null, plan: null });
   const perf = perfState.plan && perfState.plan === forecastPlan.result ? perfState.result : null;
-  const runPerformanceCheck = useCallback(async () => {
-    const plan = forecastPlan.result;
-    if (!graph || !deadlines || !plan) return;
-    try {
-      const [{ performanceCheck }, { criterionOf }] = await Promise.all([import("./core/performanceCheck.js"), import("./core/rsetPresets.js")]);
-      const planExits =
-        settings.forecastExits === "model" && exits?.final.length ? exits.final : points.exit ? [snap(graph, points.exit)] : [];
-      // Detection from the Flamescapes run's smoke when asked and it has some
-      // (forecast.js smokeDetection); else the time set.
+  const [perfReportState, setPerfReport] = useState({ graph: null, entries: [] });
+  const perfReport = useMemo(() => (perfReportState.graph === graph ? perfReportState.entries : []), [perfReportState, graph]);
+  // Fires added in a batch: { done, total } while it runs.
+  const [perfBatch, setPerfBatch] = useState(null);
+  const perfBatchStopRef = useRef(false);
+  const planExitNodes = useCallback(
+    () => (settings.forecastExits === "model" && exits?.final.length ? exits.final : points.exit && graph ? [snap(graph, points.exit)] : []),
+    [settings.forecastExits, exits, points.exit, graph],
+  );
+  // A report entry's name: the fire's storey and how it was placed, and the model.
+  const fireLabel = useCallback(
+    (node, how) => {
+      const storey = node >= 0 ? storeysOf(graph, levels)[node] : -1;
+      const model =
+        { flamescapes: "Flamescapes", "flamescapes-embers": "Flamescapes with embers", zone: "two-zone rooms", temperature: "heat diffusion", flood: "spread along links", radial: "distance bands" }[
+          fireModel
+        ] || fireModel;
+      return { label: `Fire on ${storey >= 0 ? `storey ${storey + 1}` : "the model"}${how ? `, ${how}` : ""}`, model: `Fire model: ${model}` };
+    },
+    [graph, levels, fireModel],
+  );
+  /** The check's options for one plan of the forecast, from the settings. */
+  const perfCase = useCallback(
+    (presets, plan, planExits) => {
+      const criterion = presets.criterionOf(settings.perfCriterion);
+      const sensitivity = presets.criterionOf("sensitivity");
       const fromRun = settings.perfDetectionFromRun && Number.isFinite(plan.detection);
-      const criterion = criterionOf(settings.perfCriterion);
-      const result = performanceCheck(graph, deadlines, {
+      const measured = presets.measuredOf(settings.perfMeasured);
+      // Door widths where the IFC gives them; the stricter code minimum elsewhere.
+      let widths = null;
+      if (settings.perfQueues) {
+        const byId = new Map((studio.semantics?.doors || []).map((d) => [d.id, d.widthM]));
+        widths = new Float64Array(graph.nodes.length / 3);
+        for (const d of graph.doors || []) {
+          const w = byId.get(d.itemId);
+          if (w > 0) widths[d.node] = w;
+        }
+      }
+      return {
+        criterion,
+        sensitivity,
+        fromCeiling: fromRun && plan.detectionAt === "ceiling",
+        detectionFrom: fromRun ? (plan.detectionAt === "ceiling" ? "ceiling" : "run") : !settings.perfDetectionFromRun ? "set" : isFlamescapes(plan.model) ? "not in the run" : "no run",
         levels,
         exits: planExits,
         horizon: plan.horizon,
         step: plan.mapStep ?? 0,
-        speed: forecastPlan.inputs?.walkSpeed ?? settings.walkSpeed,
+        speed: forecastPlan.result === plan ? (forecastPlan.inputs?.walkSpeed ?? settings.walkSpeed) : settings.walkSpeed,
         detection: fromRun ? plan.detection : settings.perfDetection,
         alarm: settings.perfAlarm,
         pre1: settings.perfPre1,
         pre99: settings.perfPre99,
-        factor: criterion.factor,
-        margin: criterion.margin,
+        noResponse: settings.perfNoResponse / 100,
+        measured: measured ? { scale: measured.scale, shape: measured.shape, label: measured.label } : null,
+        queues: settings.perfQueues ? { occupantArea: settings.perfOccupantArea, cellArea: (graph.spacing || 0.5) ** 2, widths, defaultWidth: EGRESS_B.doorWidth.value } : null,
         useWalls: settings.useWalls,
-      });
-      // Where detection came from, for the card.
-      const detectionFrom = fromRun ? "run" : !settings.perfDetectionFromRun ? "set" : isFlamescapes(plan.model) ? "not in the run" : "no run";
-      setPerfState({ result: { ...result, detectionFrom, criterion }, plan });
+      };
+    },
+    [graph, levels, settings, studio.semantics, forecastPlan.result, forecastPlan.inputs],
+  );
+  /** A plan's cases into the report, replacing an entry for the same plan. */
+  const addToReport = useCallback(
+    (entry) =>
+      setPerfReport((current) => ({
+        graph,
+        entries: [...(current.graph === graph ? current.entries : []).filter((e) => e.plan !== entry.plan), entry],
+      })),
+    [graph],
+  );
+  const runPerformanceCheck = useCallback(async () => {
+    const plan = forecastPlan.result;
+    if (!graph || !deadlines || !plan) return;
+    try {
+      const [{ performanceCheck }, presets, report] = await loadPerf();
+      const { detectionFrom, ...opts } = perfCase(presets, plan, planExitNodes());
+      const cases = report.planCases(performanceCheck, graph, plan, opts);
+      const result = { ...cases[0].result, detectionFrom, criterion: opts.criterion, cases, detectors: plan.detectors, blockedAsked: settings.perfBlockedExit };
+      setPerfState({ result, plan });
+      addToReport({ plan, ...fireLabel(points.fire ? snap(graph, points.fire) : -1, "as planned"), detectionFrom, cases });
       markUsed("performanceCheck");
     } catch (error) {
       reportError(error, "Performance check");
     }
-  }, [graph, deadlines, forecastPlan.result, forecastPlan.inputs, exits, points.exit, levels, settings, reportError, markUsed]);
+  }, [graph, deadlines, forecastPlan.result, perfCase, planExitNodes, points.fire, fireLabel, addToReport, settings.perfBlockedExit, reportError, markUsed]);
+
+  // More fires for the report, with a graph or two-zone fire (a Flamescapes
+  // run takes minutes a fire: move the fire and plan again instead): on each
+  // storey, one at the place nearest an exit (at least 3 m from it, so it
+  // can block it) and one at the place farthest from every exit, at most
+  // eight, each planned with its deadline map in the forecast worker.
+  const addPerfFires = useCallback(async () => {
+    const exitNodes = planExitNodes();
+    if (!graph || isFlamescapes(fireModel) || !exitNodes.length || perfBatch) return;
+    const problem = planSettingsProblem(settings);
+    if (problem) {
+      toast(problem, { title: "Check the plan's settings", variant: "warning" });
+      return;
+    }
+    try {
+      const [{ performanceCheck, walkToExit }, presets, report] = await loadPerf();
+      const storeyOf = storeysOf(graph, levels);
+      const kinds = graph.kinds || new Uint8Array(graph.nodes.length / 3);
+      // Metres, at 1 m/s.
+      const walk = walkToExit(graph, exitNodes, { speed: 1, blocked: settings.useWalls ? graph.blocked : null });
+      const near = new Map(), far = new Map();
+      for (let v = 0; v < walk.length; v += 1) {
+        const s = storeyOf[v];
+        if (s < 0 || kinds[v] === KIND_DOOR || !(walk[v] < Infinity)) continue;
+        if (walk[v] >= 3 && (!near.has(s) || walk[v] < walk[near.get(s)])) near.set(s, v);
+        if (!far.has(s) || walk[v] > walk[far.get(s)]) far.set(s, v);
+      }
+      const origins = [];
+      for (const s of [...far.keys()].sort((a, b) => a - b)) {
+        if (near.has(s)) origins.push({ node: near.get(s), how: "next to an exit" });
+        if (far.get(s) !== near.get(s)) origins.push({ node: far.get(s), how: "farthest from the exits" });
+      }
+      const chosen = origins.slice(0, 8);
+      if (origins.length > chosen.length) toast(`Eight fires of ${origins.length}: the lowest storeys first.`, { variant: "info", ttl: 4000 });
+      perfBatchStopRef.current = false;
+      setPerfBatch({ done: 0, total: chosen.length });
+      for (const [i, origin] of chosen.entries()) {
+        if (perfBatchStopRef.current) break;
+        const zone = fireModel === "zone" ? zoneInputs() : null;
+        const plan = await forecastJob(
+          {
+            graph: { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
+            start: points.start ? snap(graph, points.start) : origin.node,
+            exits: exitNodes,
+            seed: origin.node,
+            model: fireModel,
+            steps: settings.fireMaxSteps,
+            secondsPerStep: settings.forecastSecondsPerStep,
+            threshold: zone ? settings.zoneUntenableC : settings.untenableAbove,
+            speed: settings.walkSpeed,
+            depart: settings.departAfter,
+            limit: settings.doseLimit,
+            useWalls: settings.useWalls,
+            withMap: true,
+            blockNearExit: settings.perfBlockedExit,
+            zone: zone?.zone,
+          },
+          zone?.transfers || [],
+        );
+        const { detectionFrom, ...opts } = perfCase(presets, plan, exitNodes);
+        addToReport({ plan, ...fireLabel(origin.node, origin.how), detectionFrom, cases: report.planCases(performanceCheck, graph, plan, opts) });
+        setPerfBatch({ done: i + 1, total: chosen.length });
+      }
+      markUsed("performanceFires");
+    } catch (error) {
+      if (!isCancelled(error)) reportError(error, "Adding fires to the report");
+    } finally {
+      setPerfBatch(null);
+    }
+  }, [graph, fireModel, planExitNodes, perfBatch, settings, levels, points.start, zoneInputs, forecastJob, perfCase, fireLabel, addToReport, toast, reportError, markUsed]);
+  const stopPerfFires = useCallback(() => {
+    perfBatchStopRef.current = true;
+    forecastRef.current?.cancel();
+  }, []);
+  const clearPerfReport = useCallback(() => setPerfReport({ graph: null, entries: [] }), []);
+
+  // The report as a standalone HTML page: every fire and case, the inputs
+  // with their sources, and what the check does not show.
+  const downloadPerfReport = useCallback(async () => {
+    if (!perfReport.length) return;
+    try {
+      const [{ DOOR_FLOW }, presets, report] = await loadPerf();
+      const preset = presets.presetOf(settings.perfOccupancy);
+      const criterion = presets.criterionOf(settings.perfCriterion);
+      const sensitivity = presets.criterionOf("sensitivity");
+      const measured = presets.measuredOf(settings.perfMeasured);
+      const detection = settings.perfDetectionFromRun
+        ? "From a Flamescapes run: virtual smoke detectors under the ceiling, 7.0 m from the fire or as far as its room allows, at an optical density of 0.097 per metre (runs kept from before read it at head height); with other fire models the time set"
+        : `${settings.perfDetection} s after ignition, as set`;
+      const meta = {
+        title: "Performance-based egress report",
+        model: file?.name ? `Model: ${file.name}` : "Model",
+        date: new Date().toLocaleString(),
+        inputs: [
+          ["Occupants", preset.label, preset.source],
+          ["Occupant load", `${settings.perfOccupantArea} m² of walkable floor per occupant`, preset.load],
+          ["Detection", detection, "NZ C/VM2 2nd edition (2025) Table 3.2.2.2"],
+          ["Alarm", `${settings.perfAlarm} s after detection`, "C/VM2 3.3.1.1 and ABCB FSVM 1.1.3 (30 s); SFEG 2025 4.2 (120 s for a staged alarm)"],
+          ["Pre-movement, design", `${settings.perfPre1} s and ${settings.perfPre99} s at the 1st and 99th percentiles, a log-normal through both`, preset.source],
+          ["Pre-movement, measured (beside)", measured ? `${measured.label}: a Weibull of scale ${measured.scale} s and shape ${measured.shape}` : "none", measured?.source || ""],
+          ["Never respond", `${settings.perfNoResponse} %`, presets.NO_RESPONSE_SOURCE],
+          [
+            "Queues at doors",
+            settings.perfQueues
+              ? `On: ${DOOR_FLOW.toFixed(2)} persons a second per metre of effective width (the clear width less 0.15 m a side); doors with no width in the IFC at ${EGRESS_B.doorWidth.value} m; everyone walks to the nearest exit with no fire`
+              : "Off",
+            "C/VM2 3.5.3, after the SFPE hydraulic model",
+          ],
+          ["Criterion", criterion.label, criterion.source],
+          ["Sensitivity cases", sensitivity.label, sensitivity.source],
+          ["Tenability", `ISO 13571 fractional effective dose up to ${settings.doseLimit}; walking at ${settings.walkSpeed} m/s`, "The forecast's settings (Simulate step)"],
+        ],
+        limits: [
+          "The fire models are not validated for engineering use: the results rank places and times under the model, not a compliance demonstration.",
+          "The deadline map gives each place the best route with foresight of the fire; the queues send everyone to the nearest exit with no fire; walking is not slowed by smoke and every occupant walks at one speed.",
+          "Time spent queueing is added to RSET, as in a hand calculation (C/VM2 Eq. 3.1); the dose taken while queueing is not reckoned apart, and stairs' flow is not modelled, only doors'.",
+          "The occupant load is spread over the walkable floor, which is less than the gross area the codes divide, so it is a lower bound.",
+          "No Saudi numeric criterion was found: the criteria are Singapore SFEG 2025's, the Italian fire code's and PD 7974-6's, offered under SBC 801-CR-2018 104.9.",
+          "People with disabilities, assisted evacuation and the M3 management level are not modelled; the room of fire origin is judged like any other place.",
+        ],
+      };
+      const blob = new Blob([report.reportHtml(perfReport, meta)], { type: "text/html" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(file?.name || "model").replace(/\.ifc(\.gz)?$/i, "")}-performance-report.html`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    } catch (error) {
+      reportError(error, "Downloading the report");
+    }
+  }, [perfReport, settings, file, reportError]);
   const showTravel = useCallback(
     (on) => {
       const viewer = viewerRef.current;
@@ -2237,6 +2434,9 @@ export default function App() {
         // CO2 and O2 when the run recorded them: the plan's doses then use them (core/tenability.js).
         const extras = Boolean(run.frames[0]?.co2 && run.frames[0]?.o2);
         const co2 = extras ? new Float32Array(K * n) : null, o2 = extras ? new Float32Array(K * n) : null;
+        // The ceiling detectors' visibility, when the run read them (runs kept before did not).
+        const D = run.frames.every((f) => f.detectors?.length) ? run.frames[0].detectors.length : 0;
+        const detectors = D ? new Float32Array(K * D) : null;
         run.frames.forEach((f, k) => {
           T.set(f.T, k * n);
           vis.set(f.vis, k * n);
@@ -2245,6 +2445,7 @@ export default function App() {
             co2.set(f.co2, k * n);
             o2.set(f.o2, k * n);
           }
+          if (D) detectors.set(f.detectors, k * D);
         });
         frames = {
           n,
@@ -2254,6 +2455,7 @@ export default function App() {
           vis,
           co,
           ...(extras ? { co2, o2 } : {}),
+          ...(D ? { detectors, detectorCount: D } : {}),
           smoke: settings.flamescapesSmoke,
           visibilityLimit: settings.flamescapesVisibility,
           // What the grid covered, for the plan card (review 3).
@@ -2277,6 +2479,8 @@ export default function App() {
           useWalls: settings.useWalls,
           // The map is the slow part; it is made only when it will be drawn.
           withMap: settings.showDeadlineMap,
+          // A second map with the exit nearest the fire blocked, for the performance check.
+          blockNearExit: settings.perfBlockedExit,
           zone: zone?.zone,
           frames,
         },
@@ -2965,6 +3169,13 @@ export default function App() {
                   perf={perf}
                   perfReady={Boolean(deadlines)}
                   onPerformanceCheck={runPerformanceCheck}
+                  perfReport={perfReport}
+                  perfBatch={perfBatch}
+                  perfCanAddFires={Boolean(graph) && !isFlamescapes(fireModel) && planExitNodes().length > 0}
+                  onAddPerfFires={addPerfFires}
+                  onStopPerfFires={stopPerfFires}
+                  onDownloadPerfReport={downloadPerfReport}
+                  onClearPerfReport={clearPerfReport}
                 />
               )}
               {activeTab === "simulate" && (

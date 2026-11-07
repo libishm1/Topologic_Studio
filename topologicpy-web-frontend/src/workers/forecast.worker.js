@@ -21,7 +21,19 @@ import { buildForecast, planWithForecast } from "../core/forecast.js";
 import { doseDeadline, doseDeadlineMap, escapeDeadlines } from "../core/deadline.js";
 import { buildRoomGraph } from "../core/rooms.js";
 import { GROWTH, buildZoneForecast, fireRoomOf, roomTemperatureFrames, simulateRooms } from "../core/zone.js";
-import { forecastFromFrames, smokeDetection } from "../core/forecast.js";
+import { ceilingDetection, forecastFromFrames, smokeDetection } from "../core/forecast.js";
+
+/** Exit nodes this close (m) to the one nearest the fire are the same exit: the other leaf of a double door. */
+const SAME_EXIT_M = 2;
+
+/** The exits left when the one nearest the fire (and any within SAME_EXIT_M of it) is blocked, and that exit. */
+function withoutNearestExit(nodes, exits, seed) {
+  const dist = (a, b) => Math.hypot(nodes[a * 3] - nodes[b * 3], nodes[a * 3 + 1] - nodes[b * 3 + 1], nodes[a * 3 + 2] - nodes[b * 3 + 2]);
+  let near = -1;
+  for (const e of exits) if (near < 0 || dist(e, seed) < dist(near, seed)) near = e;
+  const rest = exits.filter((e) => dist(e, near) > SAME_EXIT_M);
+  return { blocked: near, rest };
+}
 
 /** The room graph, or a plain error when the model's spaces give no rooms. */
 function roomGraphFor(graph, zone) {
@@ -62,10 +74,10 @@ self.onmessage = (event) => {
       return;
     }
     const t0 = performance.now();
-    const { graph: g, start, exits, seed, model, steps, secondsPerStep, threshold, speed, depart, limit, useWalls, withMap, zone, frames } = payload;
+    const { graph: g, start, exits, seed, model, steps, secondsPerStep, threshold, speed, depart, limit, useWalls, withMap, blockNearExit, zone, frames } = payload;
     const graph = { nodes: g.nodes, edges: g.edges, blocked: g.blocked };
     const blocked = useWalls ? graph.blocked : null;
-    let forecast, zoneSummary = null, coverage = null, detection = null;
+    let forecast, zoneSummary = null, coverage = null, detection = null, ceiling = null;
     if (model === "zone") {
       const rooms = roomGraphFor(graph, zone);
       forecast = buildZoneForecast(graph, rooms, {
@@ -82,8 +94,10 @@ self.onmessage = (event) => {
       if (!frames) throw new Error("Run the Flamescapes fire first.");
       forecast = forecastFromFrames(frames, { threshold, smoke: frames.smoke, visibilityLimit: frames.visibilityLimit });
       coverage = { clipped: Boolean(frames.clipped), inGrid: frames.inGrid ?? 1 };
-      // For the performance check (core/performanceCheck.js).
-      detection = smokeDetection(frames);
+      // For the performance check (core/performanceCheck.js): the ceiling
+      // detectors when the run read them, else smoke at head height.
+      ceiling = ceilingDetection(frames);
+      detection = ceiling ? ceiling.first : smokeDetection(frames);
     } else {
       forecast = buildForecast(graph, { model, seed, steps, dt: secondsPerStep, threshold, blocked });
     }
@@ -93,6 +107,10 @@ self.onmessage = (event) => {
     const leaveBy = doseDeadline(graph, start, { exits, forecast, limit, speed, blocked, tolerance: 0.1 });
     const tPlan = performance.now();
     const map = withMap ? doseDeadlineMap(graph, { exits, forecast, limit, speed, blocked }) : null;
+    // A second map with the exit nearest the fire blocked, for the
+    // performance check's sensitivity case (SFEG 2025 test 5), when asked.
+    const cut = withMap && blockNearExit && exits.length > 1 ? withoutNearestExit(graph.nodes, exits, seed) : null;
+    const mapBlocked = cut?.rest.length ? doseDeadlineMap(graph, { exits: cut.rest, forecast, limit, speed, blocked }) : null;
     const tMap = performance.now();
     const result = {
       model,
@@ -113,9 +131,18 @@ self.onmessage = (event) => {
       zone: zoneSummary,
       coverage,
       detection,
+      detectionAt: ceiling ? "ceiling" : detection === null ? null : "head height",
+      detectionSlowest: ceiling?.slowest ?? null,
+      detectors: ceiling?.count ?? 0,
+      deadlinesBlocked: mapBlocked?.deadline ?? null,
+      blockedExit: mapBlocked ? cut.blocked : null,
+      exitsLeft: mapBlocked ? cut.rest : null,
       ms: { forecast: tForecast - t0, plan: tPlan - tForecast, map: tMap - tPlan, total: tMap - t0 },
     };
-    self.postMessage({ id, ok: true, result }, map ? [map.deadline.buffer] : []);
+    const transfers = [];
+    if (map) transfers.push(map.deadline.buffer);
+    if (mapBlocked) transfers.push(mapBlocked.deadline.buffer);
+    self.postMessage({ id, ok: true, result }, transfers);
   } catch (error) {
     self.postMessage({ id, ok: false, error: error?.message || String(error) });
   }

@@ -271,6 +271,26 @@ an axiom print (967 in the modules of the first six batches, 317 in AxiomCheck.l
 or none (`axioms-all-2026-11-05.txt`, regenerated from this build's log and AxiomCheck.lean's
 output, with every earlier line kept in order), no `sorry`, no warnings.
 
+## Ninth batch: sprinklers and the performance check (2026-11-07)
+
+Sprinklers.lean (28 theorems) backs the sprinkler research (layout, the link's step and its exact
+form, activation time, Evans). Performance.lean (14) backs `performanceCheck.js`: the fitted
+log-normal, the share that starts in time, soundness on the conservative deadline map, and the
+ratio criterion as a margin of `f - 1` times RSET. Two modules added the same day back its second
+round, [wiki/research/rset-components-2026-11-07.md](../../wiki/research/rset-components-2026-11-07.md):
+
+| Module | What is proved | What is not covered |
+|---|---|---|
+| DoorQueue.lean (16) | Lindley's recursion on time bins, as `doorQueues` runs it: the queue is never negative, a bin passes at most `c Δ` and never a negative number, departures and arrivals balance (`conservation`), more arrivals never shorten the queue (`queue_mono`); what arrived by bin `b` has left by bin `b + ⌈Q(b+1)/(cΔ)⌉` (`clears`, `exit_clears`) and that bound never falls as `b` grows (`exit_mono`). The wait `W` enters the check as `required(τ + W) + W`, which is exactly ASET - RSET ≥ m and ASET ≥ f RSET with RSET = base + τ + W (`requiredQ_iff`, `requiredQ_zero`, `requiredQ_mono`); queues never raise the share that starts in time, and the safe starts are a down-set (`queued_share_le`, `safe_starts_downward`). | Floating point; the walk tree and the door order (the unit tests check them); the dose taken while queueing, which the check does not reckon. |
+| PreMovement.lean (10) | The Weibull's quantile inverts its distribution function, which is monotone and in `[0, 1]` (`weibull_cdf_quantile`, `weibull_mono`, `weibull_nonneg`, `weibull_le_one`); with a share `q` that never responds, the share that starts in time is at most `1 - q` and at most the responders', is monotone, and a pass at the responders' percentile `s` gives at least `(1 - q) s` (`responding_le`, `responding_mono`, `responding_pass`); more detectors never detect later (`detection_more_detectors`, `detection_le`); the report's worst margin is at least 0 exactly when every case's is (`report_pass_iff`). | The fits themselves (Lovreglio et al. 2019's tables); where the detectors sit, which is geometry the unit tests check. |
+
+What the proofs found. `weibull_nonneg` needs a scale of at least 0, which the clusters have; the
+statement without it is false (a negative scale and shape 1 give a negative value).
+
+Full build on 2026-11-07 after this batch: 32 modules, 1365 theorems and lemmas (counted as above),
+no `sorry`, no warnings; the 26 new theorems' axiom prints are in `AxiomCheck.lean`, which now prints
+343 results, every one on Lean's standard axioms (`axioms-all-2026-11-07.txt`).
+
 ## Building
 
 Lake caches are gigabytes, so build outside OneDrive. Keep the working copy

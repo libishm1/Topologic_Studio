@@ -166,23 +166,39 @@ limit is the stricter of the Saudi Fire Code SBC 801-CR-2018 and the
 International Building Code 2021, so a pass meets both, and every result
 names both clauses. **Performance check (with the fire)** reads the escape
 deadlines of a forecast (Simulate step, **Plan with the forecast**): a place
-passes when someone there can wait for detection, the alarm and the 99th
-percentile of pre-movement time, and still get out with a dose under the
-limit. Presets give the alarm and pre-movement times for offices,
-classrooms, apartments, hotels and assembly (PD 7974-6, ISO/TR 16738, the
-Australian FSVM data sheets and New Zealand's C/VM2). With a Flamescapes
-fire, detection is when the smoke first reaches a smoke detector's optical
-density (0.097 per metre, C/VM2). The criterion is a base case, ASET at
+passes when someone there can wait for detection, the alarm, the 99th
+percentile of pre-movement time and any queue at the doors, and still get
+out with a dose under the limit. Presets give the alarm and pre-movement
+times, the share of occupants who never respond and the floor area per
+occupant for offices, classrooms, apartments, hotels and assembly (PD
+7974-6, ISO/TR 16738, the Australian FSVM data sheets, New Zealand's C/VM2
+and IBC 2021 Table 1004.5). With a Flamescapes fire, detection is when the
+smoke reaches a smoke detector's optical density (0.097 per metre, C/VM2) at
+virtual detectors under the ceiling, 7 m from the fire or as far as its room
+allows.
+Occupants on every place walk to the nearest exit and queue at each door at
+1.32 persons a second per metre of effective width (C/VM2 3.5.3), with the
+door widths from the IFC. A measured pre-movement spread (the Weibull fits
+of Lovreglio et al. 2019) is judged beside the design log-normal and drawn
+with it, without changing the verdict. The criterion is a base case, ASET at
 least twice RSET and at least 30 s over it (Singapore SFEG 2025, the Italian
 fire code), a sensitivity case at 1.2 times, or the 99th percentile alone. It
-reports, per storey, the worst margin, the least ASET/RSET and the share of
-occupants who start in time. It is evidence for an alternative method (SBC
-801-CR-2018 Section 104.9) beside the code check, not a replacement for it,
-and it judges one fire scenario at a time. Its claims are proved in Lean
-(`Performance.lean`): a pass at the 99th percentile means at least 99 % of
-occupants start in time, the factor on RSET is a margin of at least the
-factor less one times RSET, and a pass on the conservative deadline map is a
-pass on the exact deadline.
+reports, per storey, the worst margin, the least ASET/RSET, the share of
+occupants who start in time and the longest wait at the doors. Every check
+joins a report of fires: **Add fires on every storey** plans two more fires a
+storey (one next to an exit, one farthest from the exits), each check adds
+the sensitivity cases its plan allows (the exit nearest the fire blocked; the
+first detector failing), and **Download the report** saves every fire, case,
+input and source as one page. It is evidence for an alternative method (SBC
+801-CR-2018 Section 104.9) beside the code check, not a replacement for it.
+Its claims are proved in Lean (`Performance.lean`, `DoorQueue.lean`,
+`PreMovement.lean`): a pass at the 99th percentile means at least 99 % of
+those who respond start in time, the factor on RSET is a margin of at least
+the factor less one times RSET, a pass on the conservative deadline map is a
+pass on the exact deadline, the door queues never pass more than a door's
+capacity and have cleared everyone by the time the check reads, a later
+start never leaves a door earlier, and the report passes only when every
+case of every fire does.
 
 ### Step 4, Simulate: what a fire changes
 
@@ -589,7 +605,7 @@ windows (`studio`, `studio stop`, `studio status`, `studio test`), and
 | Speed, accuracy and robustness benchmark on 38 public models | `node tools/benchmark.mjs` | see [benchmark/README.md](benchmark/README.md) |
 | Speed and sanity of all six fire models, Flamescapes timed per stage | `node tools/fire-bench.mjs [model.ifc ...]` | repository root; results in `benchmark/results/` |
 | The Flamescapes solver on one IFC | `node tools/flamescapes-check.mjs [model.ifc] [--embers]` | repository root |
-| Lean 4 proofs (27 modules, over 1,260 theorems, including Fire-X, Flamescapes, its browser port and the ventilation ducts) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
+| Lean 4 proofs (32 modules, over 1,360 theorems, including Fire-X, Flamescapes, its browser port, the ventilation ducts, sprinklers and the performance check) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
 | This README's screenshots | `node tools/readme-shots.mjs` | repository root, with the app running |
 
 The browser suite drives the installed Chrome (no browser download) through

@@ -10,7 +10,7 @@
  */
 import { chromium } from "playwright-core";
 import { mkdir, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -768,6 +768,39 @@ if (await planBtn.isEnabled().catch(() => false)) {
     );
     const perfVerdict = perfText.match(/(Pass|Fail|Cannot tell)\. Occupants[^\n]*/)?.[0];
     if (perfVerdict) console.log(`    performance: ${perfVerdict.slice(0, 220)}`);
+    // Queues at doors, the measured spread beside the design and the chart of
+    // both, by default; the check joins the report (2026-11-07).
+    const chart = await page.locator('svg[aria-label^="Share of occupants who have started"]').count();
+    record(
+      /Queues: \d+ occupants; the last to start waits up to \d+ s/.test(perfText) && /With the measured spread/.test(perfText) && chart > 0 && /Report: 1 fire\b/.test(perfText),
+      "the check adds queues at doors and the measured pre-movement beside the design, and starts a report",
+      (perfText.match(/Queues: [^.]*\./) || ["no queue line"])[0],
+    );
+    // More fires for the report, on every storey, each planned in the worker.
+    const tFires = Date.now();
+    await page.getByRole("button", { name: "Add fires on every storey" }).click();
+    await page
+      .waitForFunction(() => /Report: [2-9] fires/.test(document.querySelector(".panel__scroll")?.innerText || "") && !/Planning fire \d+ of/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, {
+        timeout: 120000,
+      })
+      .catch(() => {});
+    const reportText = await page.locator(".panel__scroll").first().innerText().catch(() => "");
+    const fires = Number(reportText.match(/Report: (\d+) fires/)?.[1] || 0);
+    record(fires >= 2, "fires on every storey join one report", `${fires} fires in ${((Date.now() - tFires) / 1000).toFixed(1)}s`);
+    if (fires >= 2) timing("performance report, fires added", Date.now() - tFires);
+    const [reportDownload] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30000 }).catch(() => null),
+      page.getByRole("button", { name: "Download the report" }).click().catch(() => {}),
+    ]);
+    const reportName = reportDownload?.suggestedFilename() || "";
+    const reportPath = reportDownload ? await reportDownload.path().catch(() => null) : null;
+    const reportHtml = reportPath ? readFileSync(reportPath, "utf8") : "";
+    record(
+      /-performance-report\.html$/.test(reportName) && new RegExp(`Verdict over ${fires} fires`).test(reportHtml) && /Inputs and sources/.test(reportHtml),
+      "the report downloads as one page with every fire, its inputs and sources",
+      reportName || "no download",
+    );
+    await shot(page, "performance-report");
     await page.getByRole("tab", { name: /^Simulate/ }).click();
   }
 } else {
@@ -878,6 +911,9 @@ if (await fsToggle.isVisible().catch(() => false)) {
   // The smoke, gas and tenability measures (core/tenability.js, core/measures.js; 2026-11-06).
   const measuresLine = card.split("\n").find((l) => /^heat, smoke, CO/.test(l.trim())) || "";
   record(/CO₂, O₂/.test(measuresLine), "the run records soot, CO₂ and O₂ too", measuresLine.trim() || "no measures line");
+  // Virtual smoke detectors under the ceiling round the fire (flamescapesRun.js ceilingDetectors, 2026-11-07).
+  const detectorLine = card.split("\n").find((l) => /under the ceiling, 7 m from the fire/.test(l)) || "";
+  record(/^\d+ under the ceiling/.test(detectorLine.trim()), "the run reads smoke at ceiling detectors round the fire", detectorLine.trim() || "no detector line");
   const showGroup = page.getByRole("group", { name: "Show on the graph", exact: true });
   await showGroup.getByRole("button", { name: "Tenability" }).click().catch(() => {});
   await page.waitForTimeout(400);

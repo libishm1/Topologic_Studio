@@ -438,6 +438,14 @@ export function forecastFromFrames(frames, { threshold = 60, smoke = true, visib
 
 /** Optical density per metre at which C/VM2 has a smoke detector respond (Table 3.2.2.2). */
 export const DETECTOR_OPTICAL_DENSITY = 0.097;
+/** The same as visibility of light-reflecting signs, C / (OD ln 10) with C = 3: 13.4 m. */
+export const DETECTOR_VISIBILITY = 3 / (DETECTOR_OPTICAL_DENSITY * Math.LN10);
+
+/** When the first of a frame list's ceiling detectors responds (s), null if none does or none was read. */
+export function firstDetection(frameList) {
+  for (const f of frameList) if (f.detectors?.some((s) => s <= DETECTOR_VISIBILITY)) return f.time;
+  return null;
+}
 
 /**
  * When the frames' smoke would set off a smoke detector: the end of the
@@ -457,4 +465,33 @@ export function smokeDetection(frames, { opticalDensity = DETECTOR_OPTICAL_DENSI
     for (let v = 0; v < n; v += 1) if (vis[row + v] <= limit) return (k + 1) * frameSeconds;
   }
   return null;
+}
+
+/**
+ * Detection at the run's virtual ceiling detectors (flamescapesRun.js
+ * ceilingDetectors: 7.0 m from the fire under the ceiling, or at a nearer
+ * wall), at the same optical density: `first`, the end of the first frame
+ * in which any detector reaches it, and `slowest`, when the last one does,
+ * the detector in the direction the smoke reaches last, which stands in for
+ * the first detector failing (Singapore SFEG 2025, sensitivity test 6).
+ * Each is null if not within the frames. Null when the frames carry no
+ * detectors (a run kept before they were read); then smokeDetection.
+ *
+ * @param {object} frames  detectors: Float32Array(K D) of visibility (m), detectorCount D
+ */
+export function ceilingDetection(frames, { opticalDensity = DETECTOR_OPTICAL_DENSITY, signConstant = 3 } = {}) {
+  const { detectors, detectorCount: D, K, frameSeconds } = frames;
+  if (!detectors || !(D > 0)) return null;
+  const limit = signConstant / (opticalDensity * Math.LN10);
+  const when = new Float64Array(D).fill(Infinity);
+  for (let k = 0; k < K; k += 1) {
+    for (let d = 0; d < D; d += 1) if (when[d] === Infinity && detectors[k * D + d] <= limit) when[d] = (k + 1) * frameSeconds;
+  }
+  let first = Infinity, slowest = -Infinity, responded = 0;
+  for (const t of when) {
+    first = Math.min(first, t);
+    slowest = Math.max(slowest, t);
+    if (t < Infinity) responded += 1;
+  }
+  return { first: first < Infinity ? first : null, slowest: slowest < Infinity ? slowest : null, count: D, responded };
 }

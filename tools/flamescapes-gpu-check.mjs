@@ -336,6 +336,15 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
     };
     const extras = { soot: agree("soot"), co2: agree("co2"), o2: agree("o2"), co: agree("co") };
     for (const [k, x] of Object.entries(extras)) if (x) log(`node ${k}: CPU mean ${x.meanCpu.toFixed(3)}, GPU mean ${x.meanGpu.toFixed(3)}, RMS ${x.rms.toFixed(3)}, correlation ${x.correlation.toFixed(3)}`);
+    // The ceiling detectors (2026-11-07), read after the nodes on the GPU: their
+    // visibility, and when the first reaches C/VM2's 0.097 per metre (13.4 m).
+    const firstAlarm = (f) => {
+      const D = f.detectorVis ? f.detectorVis.length / K : 0;
+      for (let k = 0; k < K; k += 1) for (let d = 0; d < D; d += 1) if (f.detectorVis[k * D + d] <= 3 / (0.097 * Math.LN10)) return (k + 1) * 5;
+      return null;
+    };
+    const detectors = { count: cpu.frames.detectorVis ? cpu.frames.detectorVis.length / K : 0, vis: agree("detectorVis"), firstCpu: firstAlarm(cpu.frames), firstGpu: firstAlarm(gpu.frames) };
+    log(`ceiling detectors: ${detectors.count}, first alarm CPU ${detectors.firstCpu} s, GPU ${detectors.firstGpu} s`);
     const untenable = [];
     for (let v = 0; v < n; v += 1) untenable.push(Math.abs(Math.min(cpu.forecast.untenable[v], horizon) - Math.min(gpu.forecast.untenable[v], horizon)));
     untenable.sort((a, b) => a - b);
@@ -348,6 +357,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
       peakHrr: { cpu: Math.max(...cpu.frames.hrr), gpu: Math.max(...gpu.frames.hrr) },
       nodeT: { rms: Math.sqrt(se / m), correlation: corr },
       extras,
+      detectors,
       smokyAgreement: smokyAgree / m,
       untenable: { cpu: closes(cpu.forecast), gpu: closes(gpu.forecast), medianAbsDiff: untenable[untenable.length >> 1], maxAbsDiff: untenable.at(-1) },
       ms: { cpu: cpu.ms, gpu: gpu.ms },
@@ -546,6 +556,7 @@ if (report.full) {
   console.log(`  peak HRR kW   CPU ${f(r.peakHrr.cpu, 1)}  GPU ${f(r.peakHrr.gpu, 1)}`);
   console.log(`  node T: RMS difference ${f(r.nodeT.rms)} C, correlation ${f(r.nodeT.correlation, 4)}; vis < 10 m agreement ${f(100 * r.smokyAgreement, 1)} %`);
   console.log(`  untenable nodes CPU ${r.untenable.cpu}  GPU ${r.untenable.gpu}; |untenable time difference| median ${f(r.untenable.medianAbsDiff, 0)} s, max ${f(r.untenable.maxAbsDiff, 0)} s`);
+  if (r.detectors?.count) console.log(`  ceiling detectors ${r.detectors.count}: visibility RMS difference ${f(r.detectors.vis.rms)} m, correlation ${f(r.detectors.vis.correlation, 4)}; first alarm CPU ${r.detectors.firstCpu ?? "none"} s, GPU ${r.detectors.firstGpu ?? "none"} s`);
   console.log(`  run time CPU ${f(r.ms.cpu / 1000, 1)} s  GPU ${f(r.ms.gpu / 1000, 1)} s`);
   console.log("  time s | HRR kW CPU / GPU | mean node T C CPU / GPU | max node T C CPU / GPU | nodes vis<10 m CPU / GPU | particles CPU / GPU");
   for (const s of r.series) console.log(`  ${String(s.time).padStart(5)}  | ${f(s.hrrCpu, 1).padStart(7)} / ${f(s.hrrGpu, 1).padStart(7)} | ${f(s.meanTCpu, 1).padStart(6)} / ${f(s.meanTGpu, 1).padStart(6)} | ${f(s.maxTCpu, 1).padStart(6)} / ${f(s.maxTGpu, 1).padStart(6)} | ${String(s.smokyCpu).padStart(3)} / ${String(s.smokyGpu).padStart(3)} | ${s.partsCpu} / ${s.partsGpu}`);

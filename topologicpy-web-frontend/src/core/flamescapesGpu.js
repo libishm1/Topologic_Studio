@@ -34,7 +34,7 @@
  */
 
 import { DEFAULTS, NS, createSolver } from "./flamescapes.js";
-import { KELVIN, headCells, smokeCloud, runScene as cpuRunScene } from "./flamescapesRun.js";
+import { KELVIN, ceilingDetectors, headCells, smokeCloud, withDetectors, runScene as cpuRunScene } from "./flamescapesRun.js";
 import {
   AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
   PARTICLE_FLOATS, SWEEP_BYTES, WG, buildShader,
@@ -628,13 +628,16 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   if (!supported(sim)) return cpuRunScene(scene, opts);
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
+  // The ceiling detectors are read with the nodes, after them.
+  const detectors = ceilingDetectors(scene);
+  const D = detectors.cells.length;
   const K = Math.max(1, Math.round(horizon / frameSeconds));
   let gpu;
   const { device } = ctx;
   device.pushErrorScope("out-of-memory");
   device.pushErrorScope("validation");
   try {
-    gpu = new GpuSim(ctx, sim, { nodeCells: cells, snapMax: particles || 0, slots: Math.ceil(frameSeconds / dt) + 2 });
+    gpu = new GpuSim(ctx, sim, { nodeCells: withDetectors(cells, detectors.cells), snapMax: particles || 0, slots: Math.ceil(frameSeconds / dt) + 2 });
   } catch {
     gpu = null;
   }
@@ -652,6 +655,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const soot = new Float32Array(rows * n);
   const co2 = new Float32Array(rows * n);
   const o2 = new Float32Array(rows * n);
+  const detectorVis = new Float32Array(rows * D);
   const hrr = new Float32Array(K);
   const stats = { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: sim.P.ambient, released: 0, radiated: 0, sweeps: 0 };
   try {
@@ -664,12 +668,14 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       const frame = await gpu.readFrame({ particles: Boolean(particles), smoke });
       if (shouldStop?.()) return null;
       const row = keep ? k : 0;
-      T.set(frame.T, row * n);
-      vis.set(frame.vis, row * n);
-      co.set(frame.co, row * n);
-      soot.set(frame.soot, row * n);
-      co2.set(frame.co2, row * n);
-      o2.set(frame.o2, row * n);
+      const nodesOf = (a) => (D ? a.subarray(0, n) : a);
+      T.set(nodesOf(frame.T), row * n);
+      vis.set(nodesOf(frame.vis), row * n);
+      co.set(nodesOf(frame.co), row * n);
+      soot.set(nodesOf(frame.soot), row * n);
+      co2.set(nodesOf(frame.co2), row * n);
+      o2.set(nodesOf(frame.o2), row * n);
+      if (D) detectorVis.set(frame.vis.subarray(n, n + D), row * D);
       hrr[k] = frame.released / frameSeconds / 1000;
       stats.released += frame.released;
       stats.burnt += frame.burnt;
@@ -688,6 +694,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
         soot: soot.subarray(row * n, (row + 1) * n),
         co2: co2.subarray(row * n, (row + 1) * n),
         o2: o2.subarray(row * n, (row + 1) * n),
+        detectors: detectorVis.subarray(row * D, (row + 1) * D),
         hrr: hrr[k],
         maxT: stats.maxT - KELVIN,
         embers: stats.embersSpawned,
@@ -700,6 +707,6 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   } finally {
     gpu.destroy();
   }
-  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0) };
-  return keep ? { ...out, T, vis, co, soot, co2, o2 } : out;
+  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance };
+  return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
 }

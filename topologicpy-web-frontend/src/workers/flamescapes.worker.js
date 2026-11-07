@@ -112,7 +112,8 @@ self.onmessage = async (event) => {
         // Copies: the solver reuses its frame buffers for the next frame.
         // Soot, CO2 and O2 only when asked for (payload.extras): the page
         // keeps every frame, and they double what each one holds.
-        const out = { ...frame, type: "frame", T: frame.T.slice(), vis: frame.vis.slice(), co: frame.co.slice() };
+        // The ceiling detectors' visibility (a few numbers) goes with every frame.
+        const out = { ...frame, type: "frame", T: frame.T.slice(), vis: frame.vis.slice(), co: frame.co.slice(), detectors: frame.detectors?.slice() ?? null };
         if (payload.extras && frame.soot) {
           out.soot = frame.soot.slice();
           out.co2 = frame.co2.slice();
@@ -123,6 +124,7 @@ self.onmessage = async (event) => {
           delete out.o2;
         }
         const transfers = [out.T.buffer, out.vis.buffer, out.co.buffer, ...(out.soot ? [out.soot.buffer, out.co2.buffer, out.o2.buffer] : [])];
+        if (out.detectors) transfers.push(out.detectors.buffer);
         if (out.particles) transfers.push(out.particles.positions.buffer, out.particles.temps.buffer, out.particles.kinds.buffer);
         if (out.smoke) transfers.push(out.smoke.positions.buffer, out.smoke.opacity.buffer);
         self.postMessage({ id, progress: out }, transfers);

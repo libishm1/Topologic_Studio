@@ -67,6 +67,15 @@ export const DEFAULT_SETTINGS = {
   perfPre1: 60,
   perfPre99: 180,
   perfCriterion: "base",
+  // The share who never respond (per cent), the area per occupant (m²) for
+  // the queues at doors, the measured pre-movement shown beside the design
+  // (MEASURED_PRE), whether doors queue, and whether planning also maps the
+  // deadlines with the exit nearest the fire blocked (a second map: off).
+  perfNoResponse: 0,
+  perfOccupantArea: 9,
+  perfMeasured: "business-1",
+  perfQueues: true,
+  perfBlockedExit: false,
   // The shielded learner escapes by "any" exit door or the "chosen" one.
   rlExits: "any",
   rlEpisodes: 400,

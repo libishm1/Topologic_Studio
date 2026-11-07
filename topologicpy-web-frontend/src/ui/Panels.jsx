@@ -18,7 +18,8 @@ import { FIRE_CLASSES, FIRE_CLASS_KEYS } from "../core/fireClasses.js";
 import { GAS_MEASURES, SHOW_GROUPS, SMOKE_MEASURES } from "../core/measures.js";
 import { IGNITION_CONTEXTS } from "../core/ignitionContexts.js";
 import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
-import { RSET_CRITERIA, RSET_PRESETS, criterionOf, presetOf } from "../core/rsetPresets.js";
+import { MEASURED_PRE, NO_RESPONSE_SOURCE, RSET_CRITERIA, RSET_PRESETS, criterionOf, measuredOf, presetOf } from "../core/rsetPresets.js";
+import { worstStatus } from "../core/perfReport.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
@@ -914,30 +915,90 @@ function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
  * the forecast's escape deadlines against detection, alarm and pre-movement,
  * per storey. Evidence for an alternative method, beside the code check.
  */
-function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo }) {
+/** The share of occupants started by t seconds after the alarm, design and measured, with their 99th percentiles. */
+function PreMovementChart({ curves, measuredLabel }) {
+  const W = 300, H = 128;
+  const pad = { l: 30, r: 10, t: 8, b: 26 };
+  const x = (t) => pad.l + (t / curves.tMax) * (W - pad.l - pad.r);
+  const y = (p) => H - pad.b - p * (H - pad.t - pad.b);
+  const path = (pts) => pts.map(([t, p], i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(p).toFixed(1)}`).join("");
+  // Ticks every round number of seconds, four or five of them.
+  const unit = [30, 60, 120, 300, 600, 1200, 1800, 3600].find((u) => curves.tMax / u <= 5) || 7200;
+  const ticks = Array.from({ length: Math.floor(curves.tMax / unit) + 1 }, (_, i) => i * unit);
+  const label = `Share of occupants who have started, by seconds after the alarm: design log-normal, 99th percentile ${Math.round(curves.p99)} s${
+    curves.measured ? `; measured Weibull, 99th percentile ${Math.round(curves.measuredP99)} s` : ""
+  }.`;
+  return (
+    <figure className="perf-chart" style={{ margin: "var(--space-2) 0" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} style={{ width: "100%", height: "auto", display: "block" }}>
+        {[0, 0.5, 1].map((p) => (
+          <g key={p}>
+            <line x1={pad.l} x2={W - pad.r} y1={y(p)} y2={y(p)} stroke="currentColor" strokeOpacity={p ? 0.15 : 0.5} />
+            <text x={pad.l - 4} y={y(p) + 3} textAnchor="end" fontSize="9" fill="currentColor" fillOpacity="0.7">
+              {p * 100} %
+            </text>
+          </g>
+        ))}
+        {ticks.map((t) => (
+          <text key={t} x={x(t)} y={H - pad.b + 11} textAnchor="middle" fontSize="9" fill="currentColor" fillOpacity="0.7">
+            {t}
+          </text>
+        ))}
+        <text x={(pad.l + W - pad.r) / 2} y={H - 3} textAnchor="middle" fontSize="9" fill="currentColor" fillOpacity="0.7">
+          seconds after the alarm
+        </text>
+        <line x1={x(curves.p99)} x2={x(curves.p99)} y1={pad.t} y2={y(0)} stroke="var(--viz-path)" strokeOpacity="0.6" strokeDasharray="2 2" />
+        <path d={path(curves.design)} fill="none" stroke="var(--viz-path)" strokeWidth="2" />
+        {curves.measured && (
+          <>
+            <line x1={x(curves.measuredP99)} x2={x(curves.measuredP99)} y1={pad.t} y2={y(0)} stroke="var(--viz-fire)" strokeOpacity="0.6" strokeDasharray="2 2" />
+            <path d={path(curves.measured)} fill="none" stroke="var(--viz-fire)" strokeWidth="2" strokeDasharray="6 3" />
+          </>
+        )}
+      </svg>
+      <figcaption className="field__hint">
+        <span style={{ color: "var(--viz-path)" }}>Solid</span>: the design log-normal (99th percentile {Math.round(curves.p99)} s).
+        {curves.measured && (
+          <>
+            {" "}
+            <span style={{ color: "var(--viz-fire)" }}>Dashed</span>: {measuredLabel}, measured (99th percentile {Math.round(curves.measuredP99)} s).
+          </>
+        )}{" "}
+        Dotted lines mark the 99th percentiles; a curve that levels off below 100 % is the share who never respond.
+      </figcaption>
+    </figure>
+  );
+}
+
+function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, report, batch, canAddFires, onAddFires, onStopFires, onDownloadReport, onClearReport }) {
   const tone = { pass: "ok", fail: "warn" };
   const mark = { pass: "Pass", fail: "Fail", "cannot tell": "Cannot tell" };
   const preset = presetOf(settings.perfOccupancy);
   const criterion = criterionOf(settings.perfCriterion);
+  const measured = measuredOf(settings.perfMeasured);
   const choose = (id) => {
     const p = presetOf(id);
     setSettings({ perfOccupancy: id, ...(p.values || {}) });
   };
-  // Typing a preset's time makes it custom: the times no longer are the preset's.
+  // Typing a preset's value makes it custom: the values no longer are the preset's.
   const set = (key) => (v) => setSettings({ [key]: Math.max(0, v ?? 0), perfOccupancy: "custom" });
   const badPre = !(settings.perfPre1 > 0 && settings.perfPre99 > settings.perfPre1);
+  const badArea = settings.perfQueues && !(settings.perfOccupantArea > 0);
   const detectedBy = {
-    run: "from the run's smoke",
-    "not in the run": "as set: the run's smoke never reached a detector's threshold at head height",
+    ceiling: `from the run's ${perf?.detectors || ""} ceiling detectors`.replace("  ", " "),
+    run: "from the run's smoke at head height (a run kept from before the ceiling detectors)",
+    "not in the run": "as set: the run's smoke never reached a detector's threshold",
     "no run": "as set: only a Flamescapes run gives smoke to detect",
     set: "as set",
   };
+  const seconds = (x) => (x === -Infinity ? "no safe time" : Number.isFinite(x) ? `${Math.round(x)} s` : "");
+  const status = report.length ? worstStatus(report.flatMap((e) => e.cases.map((c) => c.result?.status ?? "cannot tell"))) : null;
   return (
     <Section title="Performance check (with the fire)" defaultOpen={false}>
       <p className="field__hint">
-        Performance-based: each place passes when someone there can wait for detection, the alarm and the 99th percentile of
-        pre-movement time, and still get out with a dose under the limit, with the margin the criterion asks. It reads the
-        escape-deadline map of the forecast (Simulate step, Plan with the forecast), so it judges one fire scenario. Evidence for an
+        Performance-based: each place passes when someone there can wait for detection, the alarm, the 99th percentile of pre-movement
+        time and any queue at the doors, and still get out with a dose under the limit, with the margin the criterion asks. It reads the
+        escape-deadline map of the forecast (Simulate step, Plan with the forecast); every check joins a report of fires. Evidence for an
         alternative method (SBC 801-CR-2018 104.9) beside the code check, not a replacement for it.
       </p>
       <SelectField label="Occupants" value={settings.perfOccupancy} onChange={choose} options={RSET_PRESETS.map((p) => ({ value: p.id, label: p.label }))} hint={preset.source} />
@@ -945,7 +1006,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo })
         label="Detection from the fire run's smoke"
         checked={settings.perfDetectionFromRun}
         onChange={(perfDetectionFromRun) => setSettings({ perfDetectionFromRun })}
-        hint="With a Flamescapes fire: when the smoke first reaches a smoke detector's optical density, 0.097 per metre (NZ C/VM2 Table 3.2.2.2), read at head height, so no earlier than a ceiling detector. Otherwise the time below."
+        hint="With a Flamescapes fire: when the smoke reaches a smoke detector's optical density, 0.097 per metre, at virtual detectors under the ceiling 7.0 m from the fire, or as far as its room allows (NZ C/VM2 Table 3.2.2.2). Otherwise the time below."
       />
       <div className="grid-2">
         <NumberField label="Detection (s)" value={settings.perfDetection} min={0} max={1800} step={5} onChange={(v) => setSettings({ perfDetection: Math.max(0, v ?? 0) })} />
@@ -955,15 +1016,39 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo })
         <NumberField label="Pre-movement, 1st percentile (s)" value={settings.perfPre1} min={1} max={3600} step={5} onChange={set("perfPre1")} />
         <NumberField label="Pre-movement, 99th percentile (s)" value={settings.perfPre99} min={2} max={7200} step={5} onChange={set("perfPre99")} />
       </div>
+      <NumberField label="Never respond (%)" value={settings.perfNoResponse} min={0} max={50} step={1} onChange={set("perfNoResponse")} hint={NO_RESPONSE_SOURCE} />
+      <SelectField
+        label="Measured pre-movement, shown beside"
+        value={measured ? measured.id : "none"}
+        onChange={(perfMeasured) => setSettings({ perfMeasured })}
+        options={[...MEASURED_PRE.map((m) => ({ value: m.id, label: m.label })), { value: "none", label: "None" }]}
+        hint={measured ? `${measured.source} Judged the same way and reported beside the design values, not in the verdict.` : "Only the design values."}
+      />
+      <Toggle
+        label="Queues at doors"
+        checked={settings.perfQueues}
+        onChange={(perfQueues) => setSettings({ perfQueues })}
+        hint="Occupants on every place walk to the nearest exit and queue at each door on the way: 1.32 persons a second per metre of the door's width less 0.15 m a side (NZ C/VM2 3.5.3). Widths from the IFC; 0.813 m where it gives none."
+      />
+      {settings.perfQueues && (
+        <NumberField label="Floor area per occupant (m²)" value={settings.perfOccupantArea} min={0.3} max={100} step={0.5} onChange={set("perfOccupantArea")} hint={preset.load} />
+      )}
+      <Toggle
+        label="Also with the exit nearest the fire blocked"
+        checked={settings.perfBlockedExit}
+        onChange={(perfBlockedExit) => setSettings({ perfBlockedExit })}
+        hint="Planning makes a second deadline map without that exit, about doubling the map's time; judged as a sensitivity case (SFEG 2025 test 5). Plan again after switching it on."
+      />
       <SelectField
         label="Criterion"
         value={criterion.id}
         onChange={(perfCriterion) => setSettings({ perfCriterion })}
         options={RSET_CRITERIA.map((c) => ({ value: c.id, label: c.label }))}
-        hint={criterion.source}
+        hint={`${criterion.source} Sensitivity cases are judged at 1.2.`}
       />
       {badPre && <Notice tone="warning">The 99th percentile must be longer than the 1st, and both above zero.</Notice>}
-      <Button block disabled={!ready || badPre} onClick={onRun}>
+      {badArea && <Notice tone="warning">Set the floor area per occupant above zero.</Notice>}
+      <Button block disabled={!ready || badPre || badArea} onClick={onRun}>
         Check against the fire
       </Button>
       {!ready && (
@@ -979,22 +1064,112 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo })
           <Notice tone={perf.status === "pass" ? "neutral" : "warning"}>
             <strong>{mark[perf.status]}.</strong> Occupants must be able to set off up to {Math.round(perf.start)} s after ignition
             {perf.factor > 1 ? " beside an exit, and later farther away" : ""}: detection at {Math.round(perf.detection)} s,{" "}
-            {detectedBy[perf.detectionFrom] || "as set"}; the alarm at {Math.round(perf.cue)} s; then pre-movement. {perf.criterion?.label}.
+            {detectedBy[perf.detectionFrom] || "as set"}; the alarm at {Math.round(perf.cue)} s; then pre-movement
+            {perf.queues ? " and the queues at doors" : ""}. {perf.criterion?.label}.
           </Notice>
           <ul className="code-list">
             {perf.storeys.map((s) => (
               <li key={s.index} className="code-list__storey" data-tone={tone[s.status] || "neutral"}>
                 <span className="pill">{mark[s.status]}</span> <strong>{s.name}</strong> <span className="field__hint">{s.text}.</span>
+                {s.worstWait !== null && (
+                  <span className="field__hint">
+                    {" "}
+                    Queues: {Math.round(s.occupants)} occupants; the last to start waits up to {Math.round(s.worstWait)} s at the doors.
+                  </span>
+                )}
+                {s.measured && (
+                  <span className="field__hint">
+                    {" "}
+                    With the measured spread: {mark[s.measured.status].toLowerCase()}
+                    {s.measured.fail ? `, ${s.measured.fail} of ${s.judged} places short` : ""}; {(100 * s.measured.share).toFixed(1)} % start in time.
+                  </span>
+                )}
               </li>
             ))}
           </ul>
+          {perf.queues?.busiest && perf.queues.busiest.wait > 0 && (
+            <p className="field__hint">
+              The busiest door passes {Math.round(perf.queues.busiest.persons)} people at {perf.queues.busiest.capacity.toFixed(2)} a second and holds them up to{" "}
+              {Math.round(perf.queues.busiest.wait)} s; its queue clears {Math.round(perf.queues.busiest.clears)} s after ignition.
+            </p>
+          )}
+          <PreMovementChart curves={perf.curves} measuredLabel={perf.measured?.label || ""} />
+          {perf.cases?.length > 1 && (
+            <ul className="code-list">
+              {perf.cases.slice(1).map((c) => (
+                <li key={c.id} className="code-list__storey" data-tone={tone[c.result?.status] || "neutral"}>
+                  <span className="pill">{mark[c.result?.status ?? "cannot tell"]}</span> <strong>{c.label}</strong>{" "}
+                  <span className="field__hint">
+                    {c.result ? `${c.criterion}; detection at ${Math.round(c.detection)} s; the worst storey: ${c.result.storeys.find((s) => s.status === c.result.status)?.text ?? ""}.` : `${c.note}.`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {perf.blockedAsked && !perf.cases?.some((c) => c.id === "exit-blocked") && (
+            <p className="field__hint">The case with an exit blocked needs a plan made with that switch on and at least two exits: plan again.</p>
+          )}
           <p className="field__hint">
             ASET from the forecast (ISO 13571 dose against the limit set under Clock, speed and limits), RSET as detection, alarm,
-            pre-movement (a log-normal through the two percentiles, PD 7974-6) and the walk with no fire. The margin is ASET less RSET
-            at the 99th percentile. One scenario, one walking speed, no queues; the room of fire origin is judged like any other place.
-            A design report would add more fires (one near an exit, a faster one, a failed detector), a blocked exit and slower occupants.
+            pre-movement (a log-normal through the two percentiles, PD 7974-6), the walk with no fire and any queue. The margin is ASET less
+            RSET at the 99th percentile. One walking speed; time in a queue is added to RSET as in a hand calculation, without its own dose;
+            the room of fire origin is judged like any other place.
           </p>
         </>
+      )}
+      {(report.length > 0 || canAddFires) && (
+        <div className="perf-report">
+          <h4 className="choices__legend">Report: {report.length} fire{report.length === 1 ? "" : "s"}{status ? `, ${mark[status].toLowerCase()} overall` : ""}</h4>
+          {report.length > 0 && (
+            <ul className="code-list">
+              {report.map((e, i) => (
+                <li key={i} className="code-list__storey" data-tone={tone[worstStatus(e.cases.map((c) => c.result?.status ?? "cannot tell"))] || "neutral"}>
+                  <strong>{e.label}</strong>{" "}
+                  <span className="field__hint">
+                    {e.cases
+                      .map((c) => {
+                        const worst = c.result?.storeys.reduce((m, s) => Math.min(m, s.worstMargin), Infinity);
+                        return `${c.id === "base" ? "base case" : c.id === "exit-blocked" ? "exit blocked" : "detector fails"}: ${mark[c.result?.status ?? "cannot tell"].toLowerCase()}${
+                          c.result ? ` (worst margin ${seconds(worst)})` : ""
+                        }`;
+                      })
+                      .join("; ")}
+                    .
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {batch ? (
+            <div className="grid-2">
+              <p className="field__hint">
+                Planning fire {Math.min(batch.done + 1, batch.total)} of {batch.total}…
+              </p>
+              <Button size="sm" variant="ghost" onClick={onStopFires}>
+                Stop
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" block disabled={!canAddFires || badPre || badArea} onClick={onAddFires}>
+              Add fires on every storey
+            </Button>
+          )}
+          <p className="field__hint">
+            {canAddFires
+              ? "Two fires a storey, one next to an exit and one farthest from the exits (at most eight), each planned with its own deadline map and checked with the settings above."
+              : "With a Flamescapes fire a run takes minutes: move the fire, plan again and check; each fire joins the report."}
+          </p>
+          {report.length > 0 && (
+            <div className="grid-2">
+              <Button size="sm" onClick={onDownloadReport}>
+                Download the report
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onClearReport}>
+                Clear the report
+              </Button>
+            </div>
+          )}
+        </div>
       )}
     </Section>
   );
@@ -1018,6 +1193,13 @@ export function RoutePanel({
   perf,
   perfReady,
   onPerformanceCheck,
+  perfReport = [],
+  perfBatch = null,
+  perfCanAddFires = false,
+  onAddPerfFires,
+  onStopPerfFires,
+  onDownloadPerfReport,
+  onClearPerfReport,
 }) {
   const { graph, points, pickMode, path, pathBusy, comparison, alternatives, settings, setSettings, capabilities } =
     studio;
@@ -1178,7 +1360,21 @@ export function RoutePanel({
         )}
       </Section>
       <CodeCheck code={code} settings={settings} setSettings={setSettings} onRun={onCodeCheck} onShow={onShowTravel} ready={Boolean(graph)} />
-      <PerformanceCheck perf={perf} settings={settings} setSettings={setSettings} onRun={onPerformanceCheck} ready={perfReady} onGoTo={onGoTo} />
+      <PerformanceCheck
+        perf={perf}
+        settings={settings}
+        setSettings={setSettings}
+        onRun={onPerformanceCheck}
+        ready={perfReady}
+        onGoTo={onGoTo}
+        report={perfReport}
+        batch={perfBatch}
+        canAddFires={perfCanAddFires}
+        onAddFires={onAddPerfFires}
+        onStopFires={onStopPerfFires}
+        onDownloadReport={onDownloadPerfReport}
+        onClearReport={onClearPerfReport}
+      />
     </>
   );
 }
@@ -1807,6 +2003,15 @@ function CombustionStatus({ combustion, running }) {
             {combustion.extras ? "heat, smoke, CO, CO₂, O₂" : combustion.extrasDropped ? "heat, smoke, CO (the rest would not fit in memory)" : "heat, smoke, CO"}
           </dd>
         </div>
+        {combustion.detectors > 0 && (
+          <div className="result__item">
+            <dt className="result__label">Smoke detectors</dt>
+            <dd className="result__value">
+              {combustion.detectors} under the ceiling, 7 m from the fire or as far as its room allows:{" "}
+              {combustion.detectedAt !== null && combustion.detectedAt !== undefined ? `the first responds at ${Math.round(combustion.detectedAt)} s` : "none has responded"}
+            </dd>
+          </div>
+        )}
         {combustion.grid && (
           <div className="result__item">
             <dt className="result__label">Grid</dt>
