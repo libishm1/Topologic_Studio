@@ -152,19 +152,18 @@ function diagonal(points) {
  *   useWalls     respect links blocked by walls (default true)
  * @returns {{limits, building, storeys, doors, travel: Float64Array, limit: number}}
  */
-export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], exitDoors = [], sprinklered = false, useWalls = true } = {}) {
-  const L = EGRESS_B;
+const sortedFloors = (levels) => (levels.length ? levels.slice().sort((a, b) => a - b) : [0]);
+
+/**
+ * The storey of every node off the stairs (the highest floor at or below it,
+ * within 0.5 m), and -1 on the stairs. Shared with the performance check.
+ */
+export function storeysOf(graph, levels = []) {
   const n = graph.nodes.length / 3;
   const up = upIndex(graph.upAxis || "y");
   const lift = graph.agentHeight || 0;
   const kinds = graph.kinds || new Uint8Array(n);
-  const blocked = useWalls ? graph.blocked : null;
-  const { indptr, neighbours, edgeIds } = csr(graph);
-  const lengths = edgeLengths(graph);
-  const limit = sprinklered ? L.travel.sprinklered : L.travel.unsprinklered;
-  const floors = levels.length ? levels.slice().sort((a, b) => a - b) : [0];
-
-  // Storey of every node off the stairs: the highest floor at or below it.
+  const floors = sortedFloors(levels);
   const storeyOf = new Int32Array(n).fill(-1);
   for (let v = 0; v < n; v += 1) {
     if (kinds[v] === KIND_STAIR) continue;
@@ -173,6 +172,20 @@ export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], ex
     for (let i = 0; i < floors.length; i += 1) if (floors[i] <= h + 0.5) s = i;
     storeyOf[v] = s;
   }
+  return storeyOf;
+}
+
+export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], exitDoors = [], sprinklered = false, useWalls = true } = {}) {
+  const L = EGRESS_B;
+  const n = graph.nodes.length / 3;
+  const up = upIndex(graph.upAxis || "y");
+  const kinds = graph.kinds || new Uint8Array(n);
+  const blocked = useWalls ? graph.blocked : null;
+  const { indptr, neighbours, edgeIds } = csr(graph);
+  const lengths = edgeLengths(graph);
+  const limit = sprinklered ? L.travel.sprinklered : L.travel.unsprinklered;
+  const floors = sortedFloors(levels);
+  const storeyOf = storeysOf(graph, levels);
 
   // Stairs as exits: the stair nodes' connected pieces, each one exit.
   const stairPiece = new Int32Array(n).fill(-1);

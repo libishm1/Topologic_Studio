@@ -148,6 +148,21 @@ export function MethodsDialog({ open, onClose, studio }) {
                   </dd>
                 </div>
                 <div className="methods__card">
+                  <dt>Code check and performance check</dt>
+                  <dd>
+                    The code check takes, for each egress limit for offices, the stricter of the Saudi Fire Code SBC
+                    801-CR-2018 and IBC 2021, so a pass meets both. The performance check compares each place&apos;s escape
+                    deadline from the forecast (ASET, under the ISO 13571 dose limit) with detection, alarm and pre-movement
+                    time (RSET; pre-movement a log-normal through its 1st and 99th percentiles, as PD 7974-6 tabulates,
+                    with presets from PD 7974-6, ISO/TR 16738, the ABCB data sheets and C/VM2). With a Flamescapes fire,
+                    detection is when the smoke at head height first reaches 0.097 optical density per metre (C/VM2), no
+                    earlier than a ceiling detector. The base case asks ASET at least twice RSET, and at least 30 s over it
+                    (SFEG 2025, the Italian fire code). A pass at the 99th percentile means at least 99 % of the occupants there start
+                    in time, and a pass on the deadline map is a pass on the exact deadline (Performance.lean). It judges
+                    one fire scenario.
+                  </dd>
+                </div>
+                <div className="methods__card">
                   <dt>Fire spread</dt>
                   <dd>
                     A heat index that relaxes toward its neighbours, a spread one link per step, or distance

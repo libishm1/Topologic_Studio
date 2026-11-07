@@ -435,3 +435,26 @@ export function forecastFromFrames(frames, { threshold = 60, smoke = true, visib
   for (let v = 0; v < n; v += 1) closes[v] = Math.min(untenable[v], horizon);
   return { n, K, stride, dt: frameSeconds, frameSeconds: stride * frameSeconds, horizon, rate, untenable, closes, threshold, model: "flamescapes" };
 }
+
+/** Optical density per metre at which C/VM2 has a smoke detector respond (Table 3.2.2.2). */
+export const DETECTOR_OPTICAL_DENSITY = 0.097;
+
+/**
+ * When the frames' smoke would set off a smoke detector: the end of the
+ * first frame in which any node's visibility is at or below C / (OD ln 10),
+ * the extinction of an optical density OD per metre, with C = 3 as the
+ * visibility was read (flamescapesRun.js SIGN_CONSTANT); 13.4 m at C/VM2's
+ * 0.097 per metre, 25.7 mg/m^3 of soot. Null if none is within the frames.
+ * Nodes are read at head height, below the ceiling where a detector sits,
+ * and the frame's end is taken, so the time is never earlier than the
+ * frames show: on the safe side for an escape time.
+ */
+export function smokeDetection(frames, { opticalDensity = DETECTOR_OPTICAL_DENSITY, signConstant = 3 } = {}) {
+  const { n, K, frameSeconds, vis } = frames;
+  const limit = signConstant / (opticalDensity * Math.LN10);
+  for (let k = 0; k < K; k += 1) {
+    const row = k * n;
+    for (let v = 0; v < n; v += 1) if (vis[row + v] <= limit) return (k + 1) * frameSeconds;
+  }
+  return null;
+}

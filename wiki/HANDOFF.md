@@ -30,14 +30,14 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 268 tests;
+  - `npm test` in `topologicpy-web-frontend`: 274 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
   - the live check after the deploy;
   - the Worker's own tests: `node --test test/index.test.mjs` in `cloudflare/describe-worker` (8 tests);
   - after any solver change, `node tools/flamescapes-gpu-check.mjs --phase full --quick` (CPU and GPU agreement, now including soot, CO2 and O2) and `--phase timing`.
-- **Lean:** 29 modules, 1325 theorems; `Sprinklers.lean` added on 2026-11-07 (28 theorems, standard axioms only).
+- **Lean:** 30 modules, 1339 theorems; `Sprinklers.lean` (28 theorems) and `Performance.lean` (14) added on 2026-11-07, standard axioms only.
 
 ## Resume here (2026-11-07)
 
@@ -49,6 +49,7 @@
      - release the sprinkler and suppression work as a whole once it is built, not step by step;
      - the university building's egress waits for a future session;
      - codes: pass SBC 801-CR-2018, with IBC 2021 where stricter, until the user obtains SBC 2024. Done for the code check (`EGRESS_B` in `core/codeCheck.js`, both tables kept: `SBC2018_B`, `IBC2021_B`). Committed to `next/browser-core` but **not deployed**: main stays at the last release until the sprinkler work is built and released as a whole.
+   - **Simulated-fire (performance-based) compliance check: built, committed, not deployed.** Route step, "Performance check (with the fire)", beside the code check. It reads the forecast's escape-deadline map (Plan with the forecast, map on) and judges each storey against detection, alarm and pre-movement (`core/performanceCheck.js`, `core/rsetPresets.js`, `Performance.lean`; values and sources in `wiki/research/rset-components-2026-11-07.md`). The user's references (SinaPf's BIM-based fire code checker, IAAC's IFCore checker, and Mohammadi, Abolkhair and Altassan 2026, Sustainability 18(16) 8023, doi:10.3390/su18168023, checked at Crossref: a Solibri rule check of SBC 201-CR-2024 egress on a three-storey R-1 hotel) are rule checkers on the IFC; this check is the performance-based side they do not cover. **Left:** virtual ceiling detectors at C/VM2's 7 m radius instead of head height; a data-based pre-movement (Lovreglio 2019 Weibull) beside the design log-normal; the ABCB "no response" share; several fire scenarios in one report (SFEG's sensitivity set); queues at doors.
    - **Smoke transport (report in `wiki/research/smoke-transport-2026-11-07.md`).** Three solver gaps were confirmed in `flamescapes.js`:
      - no thermal expansion in the projection;
      - one 200 W/(m² K) gas-solid coefficient for fuel and walls alike;
@@ -136,6 +137,12 @@ Before any deploy: the gates above, then the live check, then update this file.
 
 ## This round (2026-11-07)
 
+- **Performance check (with the fire):**
+  - **Rule:** a place passes when its escape deadline L (the dose-limited map, never later than the exact deadline) allows detection, the alarm and the 99th percentile of pre-movement (a log-normal through PD 7974-6's two percentiles), with the criterion's factor on RSET and margin. The criteria are: the base case, ASET/RSET at least 2 and at least 30 s over (SFEG 2025 Table 10.4, Italian code M.3.2.2; the default); a sensitivity case, 1.2; or the 99th percentile alone.
+  - **Forecast too short:** where the deadline is bound by the end of the forecast rather than the fire, the check says "cannot tell" and how long a forecast it needs.
+  - **Presets:** office (the default), classroom, apartments, the flat of origin, hotel and assembly.
+  - **Detection:** taken from a Flamescapes run when there is one (`forecast.js smokeDetection`: OD 0.097/m, read at head height, the frame's end); otherwise the time set.
+  - **Duplex probe** (graph fire, placeholder times): storey 1 had 304 fail and 600 cannot tell (it needs a 368 s forecast); storey 2 failed with deadlines near 281 s.
 - **Pending tasks built (0ba7352):**
   - **Cause** in Likely ignition points (`core/ignitionContexts.js`): a gas fire at a cooktop starts as class B; "deliberate" brings in the accelerant scenario.
   - **Code check exits:** the exits out of the building plus the stairs. A storey with exit doors whose places reach none on that storey leave by a stair (a second pass), so Vienna's storey 1 has 315 places with no exit (325 before) rather than 1,910. Vienna's single stairwell now fails the two-exit rule from the third storey up (Group B values); the README says so.

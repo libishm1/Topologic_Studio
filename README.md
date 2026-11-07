@@ -159,6 +159,31 @@ server). **Alternative routes** look for other ways out: *Different space*
 keeps routes that do not run along one already found, and *Yen* lists the next
 cheapest routes exactly.
 
+**Code check** tests each storey's egress for offices (occupancy group B):
+the walk to the nearest exit, the number of exits for the occupant load and
+their separation, door widths, and whether the building is high-rise. Each
+limit is the stricter of the Saudi Fire Code SBC 801-CR-2018 and the
+International Building Code 2021, so a pass meets both, and every result
+names both clauses. **Performance check (with the fire)** reads the escape
+deadlines of a forecast (Simulate step, **Plan with the forecast**): a place
+passes when someone there can wait for detection, the alarm and the 99th
+percentile of pre-movement time, and still get out with a dose under the
+limit. Presets give the alarm and pre-movement times for offices,
+classrooms, apartments, hotels and assembly (PD 7974-6, ISO/TR 16738, the
+Australian FSVM data sheets and New Zealand's C/VM2). With a Flamescapes
+fire, detection is when the smoke first reaches a smoke detector's optical
+density (0.097 per metre, C/VM2). The criterion is a base case, ASET at
+least twice RSET and at least 30 s over it (Singapore SFEG 2025, the Italian
+fire code), a sensitivity case at 1.2 times, or the 99th percentile alone. It
+reports, per storey, the worst margin, the least ASET/RSET and the share of
+occupants who start in time. It is evidence for an alternative method (SBC
+801-CR-2018 Section 104.9) beside the code check, not a replacement for it,
+and it judges one fire scenario at a time. Its claims are proved in Lean
+(`Performance.lean`): a pass at the 99th percentile means at least 99 % of
+occupants start in time, the factor on RSET is a margin of at least the
+factor less one times RSET, and a pass on the conservative deadline map is a
+pass on the exact deadline.
+
 ### Step 4, Simulate: what a fire changes
 
 Press **Set** beside Fire origin (or F), click where the fire starts, and press

@@ -744,6 +744,31 @@ if (await planBtn.isEnabled().catch(() => false)) {
     record(legendShown || MOBILE, "the escape-deadline map has a legend", MOBILE ? "legend folded on a phone" : undefined);
     await page.locator('[aria-label="Plan with the forecast"]').scrollIntoViewIfNeeded().catch(() => {});
     await shot(page, "forecast-plan");
+    // The performance-based check (core/performanceCheck.js, 2026-11-07):
+    // the plan's escape deadlines against detection, alarm and pre-movement,
+    // a verdict per storey.
+    await page.getByRole("tab", { name: /^Route/ }).click();
+    await page.getByText("Performance check (with the fire)", { exact: true }).click();
+    await page.getByRole("button", { name: "Check against the fire" }).click();
+    // The check loads its modules on demand: wait for its verdict.
+    await page
+      .waitForFunction(() => /Occupants must be able to set off/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 20000 })
+      .catch(() => {});
+    const perfText = await page
+      .locator(".panel__scroll")
+      .first()
+      .innerText()
+      .catch(() => "");
+    const perfStoreys = (perfText.match(/(Pass|Fail|Cannot tell) Storey \d/g) || []).length;
+    // The office preset and the base-case criterion by default; a graph fire has no smoke, so detection is the time set.
+    record(
+      perfStoreys > 0 && /Occupants must be able to set off up to \d+ s/.test(perfText) && /only a Flamescapes run gives smoke/.test(perfText) && /Base case/.test(perfText),
+      "the plan's deadlines are checked against detection, alarm and pre-movement, per storey",
+      `${perfStoreys} storeys`,
+    );
+    const perfVerdict = perfText.match(/(Pass|Fail|Cannot tell)\. Occupants[^\n]*/)?.[0];
+    if (perfVerdict) console.log(`    performance: ${perfVerdict.slice(0, 220)}`);
+    await page.getByRole("tab", { name: /^Simulate/ }).click();
   }
 } else {
   record(false, "Plan with the forecast was enabled", "needs start, exit and fire origin");

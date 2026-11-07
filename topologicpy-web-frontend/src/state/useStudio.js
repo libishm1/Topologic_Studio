@@ -56,6 +56,17 @@ export const DEFAULT_SETTINGS = {
   rlMethod: "shielded",
   // The egress code check (core/codeCheck.js): whether the building is sprinklered.
   codeSprinklered: false,
+  // The performance-based check (core/performanceCheck.js): the occupancy
+  // preset (core/rsetPresets.js) and its times, seconds; detection from the
+  // Flamescapes run's smoke when it has one, else the time set; and the
+  // criterion (RSET_CRITERIA).
+  perfOccupancy: "office",
+  perfDetectionFromRun: true,
+  perfDetection: 60,
+  perfAlarm: 30,
+  perfPre1: 60,
+  perfPre99: 180,
+  perfCriterion: "base",
   // The shielded learner escapes by "any" exit door or the "chosen" one.
   rlExits: "any",
   rlEpisodes: 400,

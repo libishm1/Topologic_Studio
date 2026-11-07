@@ -18,6 +18,7 @@ import { FIRE_CLASSES, FIRE_CLASS_KEYS } from "../core/fireClasses.js";
 import { GAS_MEASURES, SHOW_GROUPS, SMOKE_MEASURES } from "../core/measures.js";
 import { IGNITION_CONTEXTS } from "../core/ignitionContexts.js";
 import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
+import { RSET_CRITERIA, RSET_PRESETS, criterionOf, presetOf } from "../core/rsetPresets.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
@@ -854,7 +855,7 @@ function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
         label="The building has automatic sprinklers"
         checked={settings.codeSprinklered}
         onChange={(codeSprinklered) => setSettings({ codeSprinklered })}
-        hint="Sprinklers allow longer walks (91.44 m against 60.96 m) and exits closer together (1/3 of the diagonal against 1/2)."
+        hint="Sprinklers allow longer walks (90 m against 60 m) and exits closer together (1/3 of the diagonal against 1/2)."
       />
       <Button block disabled={!ready} onClick={onRun}>
         Check the egress
@@ -908,6 +909,97 @@ function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
   );
 }
 
+/**
+ * The performance-based ("simulated fire") check (core/performanceCheck.js):
+ * the forecast's escape deadlines against detection, alarm and pre-movement,
+ * per storey. Evidence for an alternative method, beside the code check.
+ */
+function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo }) {
+  const tone = { pass: "ok", fail: "warn" };
+  const mark = { pass: "Pass", fail: "Fail", "cannot tell": "Cannot tell" };
+  const preset = presetOf(settings.perfOccupancy);
+  const criterion = criterionOf(settings.perfCriterion);
+  const choose = (id) => {
+    const p = presetOf(id);
+    setSettings({ perfOccupancy: id, ...(p.values || {}) });
+  };
+  // Typing a preset's time makes it custom: the times no longer are the preset's.
+  const set = (key) => (v) => setSettings({ [key]: Math.max(0, v ?? 0), perfOccupancy: "custom" });
+  const badPre = !(settings.perfPre1 > 0 && settings.perfPre99 > settings.perfPre1);
+  const detectedBy = {
+    run: "from the run's smoke",
+    "not in the run": "as set: the run's smoke never reached a detector's threshold at head height",
+    "no run": "as set: only a Flamescapes run gives smoke to detect",
+    set: "as set",
+  };
+  return (
+    <Section title="Performance check (with the fire)" defaultOpen={false}>
+      <p className="field__hint">
+        Performance-based: each place passes when someone there can wait for detection, the alarm and the 99th percentile of
+        pre-movement time, and still get out with a dose under the limit, with the margin the criterion asks. It reads the
+        escape-deadline map of the forecast (Simulate step, Plan with the forecast), so it judges one fire scenario. Evidence for an
+        alternative method (SBC 801-CR-2018 104.9) beside the code check, not a replacement for it.
+      </p>
+      <SelectField label="Occupants" value={settings.perfOccupancy} onChange={choose} options={RSET_PRESETS.map((p) => ({ value: p.id, label: p.label }))} hint={preset.source} />
+      <Toggle
+        label="Detection from the fire run's smoke"
+        checked={settings.perfDetectionFromRun}
+        onChange={(perfDetectionFromRun) => setSettings({ perfDetectionFromRun })}
+        hint="With a Flamescapes fire: when the smoke first reaches a smoke detector's optical density, 0.097 per metre (NZ C/VM2 Table 3.2.2.2), read at head height, so no earlier than a ceiling detector. Otherwise the time below."
+      />
+      <div className="grid-2">
+        <NumberField label="Detection (s)" value={settings.perfDetection} min={0} max={1800} step={5} onChange={(v) => setSettings({ perfDetection: Math.max(0, v ?? 0) })} />
+        <NumberField label="Alarm after it (s)" value={settings.perfAlarm} min={0} max={1800} step={5} onChange={set("perfAlarm")} />
+      </div>
+      <div className="grid-2">
+        <NumberField label="Pre-movement, 1st percentile (s)" value={settings.perfPre1} min={1} max={3600} step={5} onChange={set("perfPre1")} />
+        <NumberField label="Pre-movement, 99th percentile (s)" value={settings.perfPre99} min={2} max={7200} step={5} onChange={set("perfPre99")} />
+      </div>
+      <SelectField
+        label="Criterion"
+        value={criterion.id}
+        onChange={(perfCriterion) => setSettings({ perfCriterion })}
+        options={RSET_CRITERIA.map((c) => ({ value: c.id, label: c.label }))}
+        hint={criterion.source}
+      />
+      {badPre && <Notice tone="warning">The 99th percentile must be longer than the 1st, and both above zero.</Notice>}
+      <Button block disabled={!ready || badPre} onClick={onRun}>
+        Check against the fire
+      </Button>
+      {!ready && (
+        <p className="field__hint">
+          Plan with the forecast first, with the escape-deadline map on.{" "}
+          <Button size="sm" variant="ghost" onClick={() => onGoTo?.("simulate")}>
+            Go to Simulate
+          </Button>
+        </p>
+      )}
+      {perf && (
+        <>
+          <Notice tone={perf.status === "pass" ? "neutral" : "warning"}>
+            <strong>{mark[perf.status]}.</strong> Occupants must be able to set off up to {Math.round(perf.start)} s after ignition
+            {perf.factor > 1 ? " beside an exit, and later farther away" : ""}: detection at {Math.round(perf.detection)} s,{" "}
+            {detectedBy[perf.detectionFrom] || "as set"}; the alarm at {Math.round(perf.cue)} s; then pre-movement. {perf.criterion?.label}.
+          </Notice>
+          <ul className="code-list">
+            {perf.storeys.map((s) => (
+              <li key={s.index} className="code-list__storey" data-tone={tone[s.status] || "neutral"}>
+                <span className="pill">{mark[s.status]}</span> <strong>{s.name}</strong> <span className="field__hint">{s.text}.</span>
+              </li>
+            ))}
+          </ul>
+          <p className="field__hint">
+            ASET from the forecast (ISO 13571 dose against the limit set under Clock, speed and limits), RSET as detection, alarm,
+            pre-movement (a log-normal through the two percentiles, PD 7974-6) and the walk with no fire. The margin is ASET less RSET
+            at the 99th percentile. One scenario, one walking speed, no queues; the room of fire origin is judged like any other place.
+            A design report would add more fires (one near an exit, a faster one, a failed detector), a blocked exit and slower occupants.
+          </p>
+        </>
+      )}
+    </Section>
+  );
+}
+
 export function RoutePanel({
   studio,
   onPick,
@@ -923,6 +1015,9 @@ export function RoutePanel({
   code,
   onCodeCheck,
   onShowTravel,
+  perf,
+  perfReady,
+  onPerformanceCheck,
 }) {
   const { graph, points, pickMode, path, pathBusy, comparison, alternatives, settings, setSettings, capabilities } =
     studio;
@@ -1083,6 +1178,7 @@ export function RoutePanel({
         )}
       </Section>
       <CodeCheck code={code} settings={settings} setSettings={setSettings} onRun={onCodeCheck} onShow={onShowTravel} ready={Boolean(graph)} />
+      <PerformanceCheck perf={perf} settings={settings} setSettings={setSettings} onRun={onPerformanceCheck} ready={perfReady} onGoTo={onGoTo} />
     </>
   );
 }

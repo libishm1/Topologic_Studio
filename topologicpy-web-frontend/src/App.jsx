@@ -1926,6 +1926,45 @@ export default function App() {
       reportError(error, "Code check");
     }
   }, [graph, exits, levels, studio.semantics, settings.codeSprinklered, settings.useWalls, reportError, markFound, markUsed, notes.used]);
+
+  // The performance-based check (core/performanceCheck.js): the forecast's
+  // escape-deadline map against detection, alarm and pre-movement. Kept with
+  // the plan it was made on, so a new plan asks for it again.
+  const [perfState, setPerfState] = useState({ result: null, plan: null });
+  const perf = perfState.plan && perfState.plan === forecastPlan.result ? perfState.result : null;
+  const runPerformanceCheck = useCallback(async () => {
+    const plan = forecastPlan.result;
+    if (!graph || !deadlines || !plan) return;
+    try {
+      const [{ performanceCheck }, { criterionOf }] = await Promise.all([import("./core/performanceCheck.js"), import("./core/rsetPresets.js")]);
+      const planExits =
+        settings.forecastExits === "model" && exits?.final.length ? exits.final : points.exit ? [snap(graph, points.exit)] : [];
+      // Detection from the Flamescapes run's smoke when asked and it has some
+      // (forecast.js smokeDetection); else the time set.
+      const fromRun = settings.perfDetectionFromRun && Number.isFinite(plan.detection);
+      const criterion = criterionOf(settings.perfCriterion);
+      const result = performanceCheck(graph, deadlines, {
+        levels,
+        exits: planExits,
+        horizon: plan.horizon,
+        step: plan.mapStep ?? 0,
+        speed: forecastPlan.inputs?.walkSpeed ?? settings.walkSpeed,
+        detection: fromRun ? plan.detection : settings.perfDetection,
+        alarm: settings.perfAlarm,
+        pre1: settings.perfPre1,
+        pre99: settings.perfPre99,
+        factor: criterion.factor,
+        margin: criterion.margin,
+        useWalls: settings.useWalls,
+      });
+      // Where detection came from, for the card.
+      const detectionFrom = fromRun ? "run" : !settings.perfDetectionFromRun ? "set" : isFlamescapes(plan.model) ? "not in the run" : "no run";
+      setPerfState({ result: { ...result, detectionFrom, criterion }, plan });
+      markUsed("performanceCheck");
+    } catch (error) {
+      reportError(error, "Performance check");
+    }
+  }, [graph, deadlines, forecastPlan.result, forecastPlan.inputs, exits, points.exit, levels, settings, reportError, markUsed]);
   const showTravel = useCallback(
     (on) => {
       const viewer = viewerRef.current;
@@ -2923,6 +2962,9 @@ export default function App() {
                   code={{ ...code, shown: code.shown && graphColours === "travel" }}
                   onCodeCheck={runCodeCheck}
                   onShowTravel={showTravel}
+                  perf={perf}
+                  perfReady={Boolean(deadlines)}
+                  onPerformanceCheck={runPerformanceCheck}
                 />
               )}
               {activeTab === "simulate" && (
