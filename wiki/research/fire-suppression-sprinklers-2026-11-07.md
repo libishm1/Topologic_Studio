@@ -5,7 +5,7 @@ Status: research and plan, for the user's review before any of it is built. Noth
 - `sprinkler-codes-2026-11-07.md`: when the codes require sprinklers, NFPA 13 placement, hydraulics, response classes, outdoor assembly points (59-row value table with sources);
 - `sprinkler-physics-2026-11-07.md`: activation, the coarse-grid problem, suppression models, data per sprinkler, the spray, validation data, statements to prove;
 - `sprinkler-ifc-mep-2026-11-07.md`: open IFC models with fire protection, the IFC schema, federation of an MEP model;
-- `smoke-transport-2026-11-07.md`: smoke under ceilings, ducts, open and closed buildings, stack effect (pending, see section 8).
+- `smoke-transport-2026-11-07.md`: smoke under ceilings, ducts, open and closed buildings, stack effect, checks for the solver.
 
 Earlier notes: `fire-suppression-note-2026-11-05.md`, `sbc-firefighting-future-notes-2026-11-05.md`.
 
@@ -33,7 +33,15 @@ Earlier notes: `fire-suppression-note-2026-11-05.md`, `sbc-firefighting-future-n
   - **903.3.2:** quick-response or residential sprinklers in dwelling and sleeping units of Groups I-1 and R, and in NFPA 13 light-hazard occupancies;
   - **903.3.3:** sprinklers under kiosks and equipment wider than 1,200 mm.
 
-The triggers below are therefore SBC 2018 values (where read) or IBC/IFC 2021 values. Both are **to be confirmed against SBC 801-CR-2024 and SBC 201-2024** before the app cites them as the current code.
+**The user's rule (2026-11-07): it has to pass SBC 2018, using IBC 2021 where it is stricter, until the SBC 2024 text is obtained.** The egress code check now applies, for each limit, the stricter of SBC 801-CR-2018 and IBC 2021 (`core/codeCheck.js`, `EGRESS_B`), so a pass meets both:
+
+- travel distance 60 m, or 90 m with sprinklers (SBC);
+- 9 m² per occupant (SBC);
+- single exit within 22.86 m (IBC), or 30 m with sprinklers (SBC);
+- doors 813 mm (IBC);
+- high-rise above 22.86 m (IBC).
+
+The sprinkler rules follow the same rule: SBC 801-CR-2018 Section 903 where read, IBC/IFC 2021 where stricter or where SBC 2018 was not read.
 
 | Where | Requirement (IBC/IFC 2021) | Clause |
 |---|---|---|
@@ -123,7 +131,37 @@ No code or fire service guidance found sets a distance for an assembly point. Th
 
 ## 8. Smoke under ceilings, ducts, open and closed buildings
 
-Pending the smoke-transport report. The solver already computes buoyant flow, so hot smoke rising and pooling under ceilings is computed, not assumed; the two-zone room model gives layer height and temperature; the ventilation option moves smoke between air terminals. Not modelled: the stack effect in tall buildings and wind.
+The full report is `smoke-transport-2026-11-07.md`. The solver already computes buoyant flow, so hot smoke rising and pooling under ceilings is computed, not assumed. The report found three gaps in the code that probably matter more for smoke transport than the cell size. **All three were confirmed here in `flamescapes.js`:**
+
+- **G1, no thermal expansion.** The pressure projection drives the plain velocity divergence to zero (`project`, Line 33): heated gas takes up no extra volume. A sealed room never pressurises, and an open room pushes no extra volume out of its door. In the Yamana and Tanaka closed-room filling model, leaving out expansion makes the layer reach head height 1.19 to 1.71 times later for layers of 350 to 500 K: late, the unsafe direction. Numerical diffusion partly offsets it; only a run can give the net effect.
+- **G2, strong heat loss to walls.** One gas-solid coefficient, 200 W/(m² K) (`DEFAULTS.convection`), serves fuel and walls alike. It was raised from the paper's range so that fuel ignites. For a ceiling layer the FDS correlations give about 5 to 10, so the hot layer probably runs cooler than the MQH correlation predicts.
+- **G3, open domain sides.** The grid's sides are open to still air (pressure zero). Where a large model is clipped round the fire, a "closed building" is therefore not closed at the clip.
+
+**Resolution.** At 0.29 to 0.4 m cells, D*/dx is about 1 at 100 kW and 2.4 to 3.3 at 1 MW, against 3 to 12 in most FDS validation runs. FDS's published error statistics are a floor for this solver, not an estimate of its error.
+
+**Ducts.** The current option shows how far ducts could carry smoke, but not the worst concentration: it spreads the fire room's smoke over every air terminal, and it has no fan state, transit delay or duct heat loss.
+
+**Open and closed buildings.** The stack effect, wind as a boundary pressure, and a backdraft warning (unburnt fuel above about 7 to 10 % when a door opens) are reliable enough to add. In Riyadh's summer the stack effect runs in reverse, about -0.77 Pa per metre from the neutral plane.
+
+**Checks first, before any change to the physics** (report section 7). They need a prescribed-heat-release burner, which the solver does not have yet.
+
+1. C1: a closed box, then NIST/NRC Test 1 (410 kW, door closed). An energy budget, and the layer against Yamana and Tanaka, ASET, Beyler and the measurements; this sizes G1 and G2.
+2. C3: the Steckler compartment (neutral plane, outflow, mass in and out).
+3. C4: the NBS multi-room tests, then the ATF corridors (smoke arrival along a corridor, the quantity that drives the routes).
+
+The candidate improvements, ordered by value per cost:
+
+- the burner and diagnostics;
+- a separate wall coefficient;
+- thermal expansion;
+- zone pressure with door leakage;
+- duct realism;
+- the stack effect and wind;
+- a shaft network;
+- the backdraft warning;
+- closing the clip faces.
+
+Each is off by default and skips its code path, following the user's performance rule. Six Lean statements (L1 to L6) are specified; layer descent in the two-zone model is already proved (`Zone.lean`, `layer_antitone`).
 
 ## 9. Lean: proved before implementation
 
@@ -147,7 +185,7 @@ Each step behind its switch, with the timing check before and after, and its Lea
 
 **Decisions for the user:**
 
-- whether to use the SBC 801-CR-2018 values (and IBC/IFC 2021 where 2018 was not read) as provisional until the SBC 801-CR-2024 and SBC 201-2024 texts are obtained (the English editions are sold);
+- decided (2026-11-07): pass SBC 801-CR-2018, with IBC 2021 where stricter, until the SBC 2024 texts are obtained;
 - the university building: deferred by the user to a future session (2026-11-07); then, which drawings or IFC can be used, and whether they may be committed or must stay local;
 - the assembly-point check as proposed in section 7;
 - whether the first release shows placed heads only (step 1) before any simulation.

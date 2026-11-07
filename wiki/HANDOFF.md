@@ -47,7 +47,14 @@
    - **Outdoor assembly points:** a check is proposed in section 7 of the sprinkler note; the user decides.
    - **The user's decisions (2026-11-07):**
      - release the sprinkler and suppression work as a whole once it is built, not step by step;
-     - the university building's egress waits for a future session.
+     - the university building's egress waits for a future session;
+     - codes: pass SBC 801-CR-2018, with IBC 2021 where stricter, until the user obtains SBC 2024. Done for the code check (`EGRESS_B` in `core/codeCheck.js`, both tables kept: `SBC2018_B`, `IBC2021_B`). Committed to `next/browser-core` but **not deployed**: main stays at the last release until the sprinkler work is built and released as a whole.
+   - **Smoke transport (report in `wiki/research/smoke-transport-2026-11-07.md`).** Three solver gaps were confirmed in `flamescapes.js`:
+     - no thermal expansion in the projection;
+     - one 200 W/(m² K) gas-solid coefficient for fuel and walls alike;
+     - open grid sides, so a clipped model leaks.
+
+     The README and the in-app limits now state the first and third. The checks to run first are C1 (closed box, NIST/NRC Test 1), C3 (Steckler) and C4 (NBS multi-room, ATF corridors); each needs a prescribed-heat-release burner first.
    - **SBC documents:**
      - The current edition is SBC 801-CR-2024. Its open table of contents is on sbc.gov.sa (`/ar/BC/Documents/tableofcontent2024/SBC 801/`); the full text is sold and was not obtained.
      - The user's Google Drive holds SBC 801-CR-2018, an 848-page licensed copy stamped for internal use only. It was read locally for Section 903, and values from it are in the sprinkler note. **Never commit it or quote its text**; cite clause numbers and values only.

@@ -1898,8 +1898,8 @@ export default function App() {
   // ------------------------------------------------- egress code check
 
   // Walking distance, exits per storey, separation, door widths and
-  // high-rise, against IBC 2021's limits for offices, to be confirmed
-  // against SBC 201 (core/codeCheck.js). Kept with the graph it was made on.
+  // high-rise, against the stricter of SBC 801-CR-2018 and IBC 2021 for offices
+  // (core/codeCheck.js). Kept with the graph it was made on.
   const [codeState, setCodeState] = useState({ result: null, graph: null, shown: false });
   const code = codeState.graph === graph ? codeState : { result: null, graph: null, shown: false };
   const runCodeCheck = useCallback(() => {
@@ -2767,7 +2767,7 @@ export default function App() {
                       max: code.result.limit,
                       title: "Walk to an exit: distance to spare",
                       unit: "m",
-                      note: `Red: at or over the ${code.result.limit.toFixed(1)} m travel distance (IBC 2021 Table 1017.2, to be confirmed against SBC 201).`,
+                      note: `Red: at or over the ${code.result.limit.toFixed(1)} m travel distance (Table 1017.2, the stricter of SBC 801-CR-2018 and IBC 2021).`,
                       noneNote: "Grey: reaches no exit on its storey.",
                     }
                   : null

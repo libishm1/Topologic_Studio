@@ -835,8 +835,8 @@ function RouteResult({ path }) {
 /**
  * The egress code check (core/codeCheck.js): per storey, the walk to an exit,
  * the exits against the occupant load and their separation; the exit doors'
- * widths; high-rise. IBC 2021's values for offices, to be confirmed against
- * SBC 201, whose text is not open.
+ * widths; high-rise. For offices, the stricter of SBC 801-CR-2018 (Chapter 10)
+ * and IBC 2021 for each limit; SBC 2024 to replace the 2018 values.
  */
 function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
   const result = code?.result;
@@ -845,10 +845,10 @@ function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
   return (
     <Section title="Code check" defaultOpen={false}>
       <p className="field__hint">
-        Offices (occupancy group B), against the International Building Code 2021, which the Saudi Building Code SBC 201-2024 appears to follow. The
-        SBC&apos;s own text is not open, so every limit is to be confirmed against SBC 201. Distances are walked on the graph to the nearest exit door, or,
-        above and below it, to the nearest stair; the occupant load uses the walkable area, a lower bound. Exit doors come from the IFC&apos;s exit flags,
-        which some exporters set on every door along an escape route: then exits are counted too generously.
+        Offices (occupancy group B). Each limit is the stricter of the Saudi Fire Code SBC 801-CR-2018 (Chapter 10, means of egress) and the
+        International Building Code 2021, so a pass meets both; SBC 2024 replaces the 2018 values when its text is available, and the high-rise
+        provisions are the IBC&apos;s until SBC 201 is read. Distances are walked on the graph to the nearest exit out of the building, or, above and
+        below it, to the nearest stair; the occupant load uses the walkable area, a lower bound.
       </p>
       <Toggle
         label="The building has automatic sprinklers"
@@ -1210,8 +1210,10 @@ const FLAMESCAPES_MODELS = [
 const FLAMESCAPES_LIMITS =
   "A browser version of a graphics fire solver: grid cells of 0.2 to 0.45 m, not centimetres, so flames and " +
   "thin walls are coarse; room contents are a statistical fire load, not the model's furniture; walls and slabs " +
-  "do not burn; doors open, windows closed. It shows how heat and smoke may move through this building; it is " +
-  "not a calibrated fire engineering model.";
+  "do not burn; doors and windows as set above. The flow is incompressible, so heated gas takes no extra volume " +
+  "and smoke may reach head height later than it would; the grid's sides are open to outside air, so a large " +
+  "model clipped round the fire is never fully closed. It shows how heat and smoke may move through this " +
+  "building; it is not a calibrated fire engineering model.";
 
 const ZONE_GROWTH = [
   { value: "slow", label: "Slow (1 MW in 600 s)" },

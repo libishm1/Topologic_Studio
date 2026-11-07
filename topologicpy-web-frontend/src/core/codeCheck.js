@@ -4,13 +4,17 @@
  * the occupant load, exit separation, exit door widths, and whether the
  * building is high-rise.
  *
- * The values are IBC 2021's. The Saudi Building Code SBC 201-2024 appears to
- * follow IBC 2021 (its table of contents keeps IBC 2021's numbering), but its
- * English text is sold, not open, and its Arabic text opens only in a
- * protected viewer, so none of its values could be read. Every limit here is
- * therefore "IBC 2021, to be confirmed against SBC 201"
- * (wiki/research/tall-office-sbc-egress-2026-11-05.md). Each check reports
- * pass, fail or cannot tell, with its clause.
+ * Each limit is the stricter of two codes, so a pass meets both (the user's
+ * rule, 2026-11-07: it has to pass SBC 2018, with IBC 2021 where it is
+ * stricter):
+ * - the Saudi Fire Code SBC 801-CR-2018, Chapter 10 (means of egress), read
+ *   in a licensed copy and cited by clause and value only;
+ * - the International Building Code 2021, which the current SBC 2024 edition
+ *   appears to follow (its table of contents keeps IBC 2021's sections).
+ * SBC 801-CR-2024 replaces the 2018 values when its text is available. The
+ * high-rise provisions are SBC 201's, which was not read, so they are IBC
+ * 2021's (wiki/research/fire-suppression-sprinklers-2026-11-07.md). Each check
+ * reports pass, fail or cannot tell, with the clauses of both codes.
  *
  * What the graph measures, and what it assumes:
  * - An exit is entered at an exit door on the storey that has them (the
@@ -30,26 +34,84 @@ const KIND_DOOR = 2;
 /** Exit entrances closer than this (m) are one exit: double doors, two doors into one lobby. */
 const MERGE_M = 2;
 
-/** The limits for Group B, with their clauses (IBC 2021; to be confirmed against SBC 201-2024). */
+/** Group B limits of SBC 801-CR-2018, Chapter 10, with their clauses. */
+export const SBC2018_B = Object.freeze({
+  occupantArea: { value: 9, clause: "SBC 801-CR-2018 Table 1004.1.2: business areas, 9 m² gross per occupant" },
+  travel: { unsprinklered: 60, sprinklered: 90, clause: "SBC 801-CR-2018 Table 1017.2: Group B, 60 m, 90 m with sprinklers" },
+  exitsPerStorey: { rows: [[500, 2], [1000, 3], [Infinity, 4]], clause: "SBC 801-CR-2018 Table 1006.3.1: 1 to 500 occupants 2 exits, 501 to 1,000 3, more 4" },
+  singleExit: {
+    first: { occupants: 49, travel: 23 },
+    second: { occupants: 29, travel: 23 },
+    sprinkleredTravel: 30,
+    clause: "SBC 801-CR-2018 Table 1006.3.2(2): one exit for Group B only on the first storey (49 occupants) or second (29), within 23 m (30 m with sprinklers)",
+  },
+  separation: { unsprinklered: 1 / 2, sprinklered: 1 / 3, clause: "SBC 801-CR-2018 1007.1.1: 1/2 of the diagonal, 1/3 with sprinklers" },
+  doorWidth: { value: 0.8, clause: "SBC 801-CR-2018 1010.1.1: 800 mm clear" },
+  highRise: { value: 23, clause: "SBC 801-CR-2018 Chapter 2: an occupied floor more than 23 m above the lowest Civil Defense vehicle access" },
+});
+
+/** Group B limits of IBC 2021, with their clauses. */
 export const IBC2021_B = Object.freeze({
-  source: "IBC 2021, to be confirmed against SBC 201-2024",
-  occupantArea: { value: 13.94, clause: "Table 1004.5: business areas, 150 sq ft (13.94 m²) gross per occupant" },
-  travel: { unsprinklered: 60.96, sprinklered: 91.44, clause: "Table 1017.2: Group B, 200 ft (60.96 m), 300 ft (91.44 m) with sprinklers" },
-  exitsPerStorey: { rows: [[500, 2], [1000, 3], [Infinity, 4]], clause: "Table 1006.3.3: 1 to 500 occupants 2 exits, 501 to 1,000 3, more 4" },
+  occupantArea: { value: 13.94, clause: "IBC 2021 Table 1004.5: 150 sq ft (13.94 m²) gross" },
+  travel: { unsprinklered: 60.96, sprinklered: 91.44, clause: "IBC 2021 Table 1017.2: 200 ft (60.96 m), 300 ft (91.44 m) with sprinklers" },
+  exitsPerStorey: { rows: [[500, 2], [1000, 3], [Infinity, 4]], clause: "IBC 2021 Table 1006.3.3" },
   singleExit: {
     first: { occupants: 49, travel: 22.86 },
     second: { occupants: 29, travel: 22.86 },
-    clause: "Table 1006.3.4(2): one exit for Group B only on the first storey (49 occupants) or second (29), within 75 ft (22.86 m); not from the third storey up",
+    sprinkleredTravel: 30.48,
+    clause: "IBC 2021 Table 1006.3.4(2): within 75 ft (22.86 m), 100 ft (30.48 m) with sprinklers; not from the third storey up",
   },
-  separation: { unsprinklered: 1 / 2, sprinklered: 1 / 3, clause: "1007.1.1: exits at least 1/2 of the area's diagonal apart, 1/3 with sprinklers" },
-  doorWidth: { value: 0.813, clause: "1010.1.1: 32 in (813 mm) clear" },
-  highRise: { value: 22.86, clause: "Section 202: an occupied floor more than 75 ft (22.86 m) above the lowest fire department vehicle access" },
+  separation: { unsprinklered: 1 / 2, sprinklered: 1 / 3, clause: "IBC 2021 1007.1.1" },
+  doorWidth: { value: 0.813, clause: "IBC 2021 1010.1.1: 32 in (813 mm) clear" },
+  highRise: { value: 22.86, clause: "IBC 2021 Section 202: more than 75 ft (22.86 m) above the lowest fire department vehicle access" },
   highRiseProvisions: [
-    { above: 22.86, text: "smokeproof exit enclosures (403.5.4) and luminous egress path markings (403.5.5, 1025)" },
-    { above: 36.58, text: "at least two fire service access elevators (403.6.1, above 120 ft)" },
-    { above: 128.0, text: "an additional exit stair, unless occupant evacuation elevators are provided (403.5.2, above 420 ft)" },
+    { above: 22.86, text: "smokeproof exit enclosures (IBC 2021 403.5.4) and luminous egress path markings (403.5.5, 1025); SBC 201 not read" },
+    { above: 36.58, text: "at least two fire service access elevators (IBC 2021 403.6.1, above 120 ft); SBC 201 not read" },
+    { above: 128.0, text: "an additional exit stair, unless occupant evacuation elevators are provided (IBC 2021 403.5.2, above 420 ft); SBC 201 not read" },
   ],
 });
+
+/**
+ * The stricter of two codes' limits, so a pass meets both: a smaller area per
+ * occupant, travel distance or high-rise height, a larger door width,
+ * separation or number of exits. Each clause names both codes.
+ */
+export function stricter(a, b, source) {
+  const lo = Math.min;
+  const hi = Math.max;
+  const both = (x, y) => `${x.clause}; ${y.clause}`;
+  const highRise = lo(a.highRise.value, b.highRise.value);
+  return Object.freeze({
+    source,
+    occupantArea: { value: lo(a.occupantArea.value, b.occupantArea.value), clause: both(a.occupantArea, b.occupantArea) },
+    travel: {
+      unsprinklered: lo(a.travel.unsprinklered, b.travel.unsprinklered),
+      sprinklered: lo(a.travel.sprinklered, b.travel.sprinklered),
+      clause: both(a.travel, b.travel),
+    },
+    exitsPerStorey: {
+      rows: a.exitsPerStorey.rows.map(([upTo, n], k) => [upTo, hi(n, b.exitsPerStorey.rows[k][1])]),
+      clause: both(a.exitsPerStorey, b.exitsPerStorey),
+    },
+    singleExit: {
+      first: { occupants: lo(a.singleExit.first.occupants, b.singleExit.first.occupants), travel: lo(a.singleExit.first.travel, b.singleExit.first.travel) },
+      second: { occupants: lo(a.singleExit.second.occupants, b.singleExit.second.occupants), travel: lo(a.singleExit.second.travel, b.singleExit.second.travel) },
+      sprinkleredTravel: lo(a.singleExit.sprinkleredTravel, b.singleExit.sprinkleredTravel),
+      clause: both(a.singleExit, b.singleExit),
+    },
+    separation: {
+      unsprinklered: hi(a.separation.unsprinklered, b.separation.unsprinklered),
+      sprinklered: hi(a.separation.sprinklered, b.separation.sprinklered),
+      clause: both(a.separation, b.separation),
+    },
+    doorWidth: { value: hi(a.doorWidth.value, b.doorWidth.value), clause: both(a.doorWidth, b.doorWidth) },
+    highRise: { value: highRise, clause: both(a.highRise, b.highRise) },
+    highRiseProvisions: b.highRiseProvisions.map((p, k) => (k === 0 ? { ...p, above: highRise } : p)),
+  });
+}
+
+/** The limits the check applies: SBC 801-CR-2018 and IBC 2021, the stricter of each. */
+export const EGRESS_B = stricter(SBC2018_B, IBC2021_B, "the stricter of SBC 801-CR-2018 and IBC 2021; SBC 801-CR-2024 replaces the 2018 values when available");
 
 /** Indices of the axis that is up. */
 const upIndex = (upAxis) => (upAxis === "z" ? 2 : upAxis === "x" ? 0 : 1);
@@ -91,7 +153,7 @@ function diagonal(points) {
  * @returns {{limits, building, storeys, doors, travel: Float64Array, limit: number}}
  */
 export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], exitDoors = [], sprinklered = false, useWalls = true } = {}) {
-  const L = IBC2021_B;
+  const L = EGRESS_B;
   const n = graph.nodes.length / 3;
   const up = upIndex(graph.upAxis || "y");
   const lift = graph.agentHeight || 0;
@@ -258,7 +320,7 @@ export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], ex
     // One exit is allowed only low down, for few people, close to it.
     const rank = s - groundIndex; // 0: the level of exit discharge (first storey); 1: the second
     const single = rank <= 0 ? L.singleExit.first : rank === 1 ? L.singleExit.second : null;
-    const oneAllowed = Boolean(single && occupants <= single.occupants && maxTravel <= single.travel && !unreached);
+    const oneAllowed = Boolean(single && occupants <= single.occupants && maxTravel <= (sprinklered ? L.singleExit.sprinkleredTravel : single.travel) && !unreached);
     const needed = oneAllowed ? 1 : required;
     // Exit separation: the two exits farthest apart, against the storey's diagonal.
     const spots = groups.map((g) => [g.reduce((a, p) => a + p[0], 0) / g.length, g.reduce((a, p) => a + p[1], 0) / g.length]);
