@@ -328,6 +328,12 @@ const ICON_PATHS = {
     </>
   ),
   close: <path d="M5 5l10 10M15 5 5 15" />,
+  flag: (
+    <>
+      <path d="M5 17.5V3" />
+      <path d="M5 3.5h10l-2.5 4 2.5 4H5" />
+    </>
+  ),
   book: (
     <>
       <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3H9v14H4.5A1.5 1.5 0 0 1 3 15.5Z" />

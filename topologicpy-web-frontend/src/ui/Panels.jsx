@@ -47,8 +47,15 @@ const coord = (p) => (p ? p.map((v) => v.toFixed(2)).join(", ") : "not set");
  * Separate parts are not necessarily a fault: the Duplex is two dwellings,
  * each with its own front door, and splits 51/49.
  */
-function PartsNotice({ stats }) {
+function PartsNotice({ stats, brief = false }) {
   if (!stats || stats.components < 2) return null;
+  if (brief) {
+    return (
+      <Notice tone="warning">
+        In {stats.components} parts; the largest holds {reachablePct(stats)}%. A route joins points in the same part only (why: Graph step).
+      </Notice>
+    );
+  }
   if (!graphIsSplit(stats)) {
     return (
       <Notice>
@@ -759,7 +766,7 @@ function GraphSummary({ graph, onGoTo }) {
           Graph step
         </button>
       </div>
-      {graphIsSplit(graph.stats) && <PartsNotice stats={graph.stats} />}
+      {graphIsSplit(graph.stats) && <PartsNotice stats={graph.stats} brief />}
     </div>
   );
 }
@@ -1329,11 +1336,9 @@ export function RoutePanel({
 
       <Section title="Alternative routes" badge={alternatives ? `${alternatives.routes.length} found` : null}>
         <p className="field__hint">
-          Is there a second way out? <strong>Different space</strong> keeps a route only if at most half of it
-          runs within 1.5 m of a route found before it, up to 1.5 times the shortest; it can stop before
-          finding every such route. <strong>Yen</strong>, the method of TopologicPy&apos;s{" "}
-          <code>KShortestPaths</code>, lists the next cheapest loopless routes exactly (proved), which are
-          usually the best route with a step moved.
+          Is there a second way out? <strong>Different space</strong>: routes that share at most half their length
+          with an earlier one, up to 1.5 times the shortest. <strong>Yen</strong>: the next cheapest routes exactly, often the
+          best route with a step moved.
         </p>
         <div className="grid-2">
           <NumberField
@@ -2255,7 +2260,7 @@ export function SimulatePanel({
           checked={settings.flamescapes}
           disabled={fire.running}
           onChange={(on) => setSettings(on ? { flamescapes: true, fireModel: "flamescapes" } : { flamescapes: false, fireModel: isFlamescapes(settings.fireModel) ? "temperature" : settings.fireModel })}
-          hint="Adds two fire models from the Flamescapes paper (Wrede, Wagner et al. 2026): fire and smoke, with or without embers. Heavier than the others: it runs on your GPU where the browser offers WebGPU, otherwise on one CPU core, for a minute or more."
+          hint="Fire and smoke from the Flamescapes paper (Wrede, Wagner et al. 2026), with or without embers. Heavier: on your GPU where the browser offers WebGPU, otherwise a minute or more on the CPU."
         />
         {flamescapes && (
           <>

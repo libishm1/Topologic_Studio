@@ -70,6 +70,8 @@ const SMOKE_IN_HEAT_VIEW = 0.35;
 // (and whenever the camera moves): the playback changes it about 8 times a second.
 const GPU_RUN_DRAW_RATE = 15;
 const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate";
+// How long a step is on screen, with nothing running, before its hint shows.
+const HINT_SETTLE_MS = 2500;
 
 /** Lowest and highest point of the egress geometry along the up axis. */
 function heightRange(geometry, upAxis) {
@@ -2473,6 +2475,16 @@ export default function App() {
     [tab, modelInfo, graph, path, settings.modelAppearance, points.fire, studio.loadState.busy, studio.graphBusy, fire.running, guided],
   );
   const hint = nextHint(hintState, { used: notes.used, dismissed: notes.dismissed, on: notes.hints });
+  // A hint shows only once the step has been on screen for a moment, so it
+  // does not flash past while the user moves on.
+  const hintKey = hint ? `${tab}:${hint.id}` : "";
+  const [settledHint, setSettledHint] = useState("");
+  useEffect(() => {
+    if (!hintKey) return undefined;
+    const timer = setTimeout(() => setSettledHint(hintKey), HINT_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [hintKey]);
+  const shownHint = hint && settledHint === hintKey ? hint : null;
   const takeHint = useCallback(
     (h) => {
       if (h.action?.tab) setTab(h.action.tab);
@@ -3311,7 +3323,9 @@ export default function App() {
             </div>
 
             <HintCard
-              hint={hint}
+              key={notes.latest && !guided ? `note:${notes.latest.teaser}` : shownHint?.id || "none"}
+              hint={shownHint}
+              step={tab}
               latest={guided ? null : notes.latest}
               onAction={takeHint}
               onDismiss={notes.dismiss}

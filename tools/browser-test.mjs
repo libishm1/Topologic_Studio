@@ -1363,9 +1363,10 @@ for (const [call, list] of byCall) {
   await openDuplex();
   const first = (await p.locator(".hint").innerText({ timeout: 10000 }).catch(() => "")).replace(/\s+/g, " ");
   record(/The model is only the start/.test(first), "a hint leads past the model step", first.slice(0, 90) || "no hint");
-  await p.locator(".hint").getByRole("button", { name: "Got it" }).click().catch(() => {});
+  await p.locator(".hint").getByRole("button", { name: "Dismiss hint" }).click().catch(() => {});
   await openDuplex();
-  await p.waitForTimeout(500);
+  // Longer than the delay before a hint shows (App.jsx HINT_SETTLE_MS).
+  await p.waitForTimeout(3500);
   const again = (await p.locator(".hint").innerText().catch(() => "")).replace(/\s+/g, " ");
   record(!/The model is only the start/.test(again), "  and once dismissed it does not come back", again.slice(0, 60) || "no hint shown");
   await fresh.close();

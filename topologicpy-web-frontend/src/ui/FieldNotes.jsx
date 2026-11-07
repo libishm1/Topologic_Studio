@@ -3,54 +3,63 @@
  * the card at the foot of the workflow panel, the header button with the
  * count of notes found, and the list of notes.
  */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import { FIELD_NOTES, FIELD_NOTE_COUNT } from "../core/fieldNotes.js";
 import { Button, Icon, Toggle } from "./primitives.jsx";
 
+/** How long a field note just found stays at the foot of the panel; it is kept in the list. */
+const FOUND_SHOWN_MS = 15000;
+
 /**
- * One card at the foot of the panel: a field note just found, else the hint
- * for this step, else nothing. Announced politely, never over the 3D view.
+ * One line at the foot of the panel: a field note just found, else the hint
+ * for this step, else nothing. The line opens to the full text on a click.
+ * Announced politely, never over the 3D view; an action that would go to the
+ * step already on screen is not offered.
  */
-export function HintCard({ hint, latest, onAction, onDismiss, onCloseLatest, onOpenNotes }) {
+export function HintCard({ hint, latest, step, onAction, onDismiss, onCloseLatest, onOpenNotes }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!latest || open) return undefined;
+    const timer = setTimeout(onCloseLatest, FOUND_SHOWN_MS);
+    return () => clearTimeout(timer);
+  }, [latest, open, onCloseLatest]);
+
   if (latest) {
     return (
       <div className="hint hint--found" role="status" aria-live="polite">
-        <div className="hint__head">
-          <Icon name="book" size={14} />
-          <strong>Field note found</strong>
-        </div>
-        <p className="hint__teaser">{latest.teaser}</p>
-        <p className="hint__text">{latest.text}</p>
-        <div className="hint__actions">
-          <Button size="sm" onClick={onOpenNotes}>
-            Open field notes
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onCloseLatest}>
-            Close
-          </Button>
-        </div>
+        <Icon name="flag" size={16} className="hint__icon" />
+        <button type="button" className="hint__text" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <span className="hint__line">
+            <strong>Field note found:</strong> {latest.teaser}
+          </span>
+          {open && <span className="hint__more">{latest.text}</span>}
+        </button>
+        <Button size="sm" variant="ghost" onClick={onOpenNotes}>
+          Notes
+        </Button>
+        <button type="button" className="hint__close" aria-label="Close the field note" onClick={onCloseLatest}>
+          <Icon name="close" size={14} />
+        </button>
       </div>
     );
   }
   if (!hint) return null;
+  const action = hint.action && hint.action.tab !== step ? hint.action : null;
   return (
     <div className="hint" role="status" aria-live="polite">
-      <div className="hint__head">
-        <Icon name="info" size={14} />
-        <strong>Hint</strong>
-      </div>
-      <p className="hint__text">{hint.text}</p>
-      <div className="hint__actions">
-        {hint.action && (
-          <Button size="sm" onClick={() => onAction(hint)}>
-            {hint.action.label}
-          </Button>
-        )}
-        <Button size="sm" variant="ghost" onClick={() => onDismiss(hint.id)}>
-          Got it
+      <Icon name="info" size={16} className="hint__icon" />
+      <button type="button" className="hint__text" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className={open ? "hint__more" : "hint__line"}>{hint.text}</span>
+      </button>
+      {action && (
+        <Button size="sm" variant="ghost" onClick={() => onAction(hint)}>
+          {action.label}
         </Button>
-      </div>
+      )}
+      <button type="button" className="hint__close" aria-label="Dismiss hint" onClick={() => onDismiss(hint.id)}>
+        <Icon name="close" size={14} />
+      </button>
     </div>
   );
 }
@@ -60,7 +69,7 @@ export function FieldNotesButton({ found, onOpen }) {
   const count = Object.keys(found || {}).length;
   return (
     <Button variant="ghost" onClick={onOpen} aria-haspopup="dialog" aria-label={`Field notes, ${count} of ${FIELD_NOTE_COUNT} found`}>
-      <Icon name="book" size={18} />
+      <Icon name="flag" size={18} />
       <span className="header__label">Field notes</span>
       <span className="field-notes__count mono">
         {count}/{FIELD_NOTE_COUNT}

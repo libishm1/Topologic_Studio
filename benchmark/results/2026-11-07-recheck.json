@@ -1,0 +1,3269 @@
+{
+ "date": "2026-11-07",
+ "machine": {
+  "cpu": "Intel(R) Core(TM) i7-14700",
+  "logicalCores": 28,
+  "memoryGB": 31.7,
+  "os": "Windows_NT 10.0.26100 (x64)",
+  "node": "v24.21.0"
+ },
+ "commit": "ea2ec334e9890e6cc7d2eb95d0b312fbbc77f2cf",
+ "dirty": false,
+ "settings": {
+  "app": {
+   "spacing": 0.5,
+   "agentHeight": 0.75,
+   "maxEdgeRise": 0.35,
+   "columnGap": 0.9,
+   "maxPoints": 40000,
+   "fireSteps": 60,
+   "secondsPerStep": 5,
+   "untenableAbove": 80,
+   "walkSpeed": 1.2,
+   "doseLimit": 0.3,
+   "rlEpisodes": 400,
+   "rlMaxSteps": 200,
+   "rlFireSpeed": 1,
+   "altCount": 3
+  },
+  "runs": 5,
+  "budget": 20,
+  "pairs": 20,
+  "altPairs": 5,
+  "rlPairs": 3,
+  "starts": 5,
+  "mapSamples": 12,
+  "geoPairs": 20,
+  "geoBudget": 240
+ },
+ "models": [
+  {
+   "name": "C20-Institute-Var-2",
+   "schema": "IFC4",
+   "bytes": 10934237,
+   "speed": {
+    "extractMs": 412.1,
+    "extractRuns": 5,
+    "extractWithFlagsMs": 873,
+    "latticeMs": 185.1,
+    "latticeRuns": 5,
+    "prepMs": 3.86,
+    "astarMs": 0.648,
+    "astarMaxMs": 2.36,
+    "routeMs": 0.72,
+    "yenMs": 23.93,
+    "yenMaxMs": 34.59,
+    "distinctMs": 41.9,
+    "distinctMaxMs": 50.91,
+    "straightenMs": 1.421,
+    "straightenMaxMs": 4.119,
+    "straightenColdMs": 12.76,
+    "rlMs": 110,
+    "rlMaxMs": 118.7,
+    "rlOneEpisodeMs": 89.2
+   },
+   "accuracy": {
+    "exits": {
+     "graphDoors": 77,
+     "flagged": 1,
+     "oneSided": {
+      "chosen": 0,
+      "truePositives": 0,
+      "precision": null,
+      "recall": 0
+     },
+     "roomOneSide": {
+      "chosen": 1,
+      "truePositives": 1,
+      "precision": 1,
+      "recall": 1
+     }
+    },
+    "front_temperature": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 17667,
+     "tradeoffs": 0
+    },
+    "map_temperature": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 0.72,
+     "gapMaxS": 7.3,
+     "gapMedianSteps": 3.44
+    },
+    "front_flood": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 17667,
+     "tradeoffs": 0
+    },
+    "map_flood": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 0.72,
+     "gapMaxS": 7.3,
+     "gapMedianSteps": 3.44
+    },
+    "surrogate": {
+     "surrogateMs": 18.59,
+     "fullMs": 44.33,
+     "conservative": true,
+     "lateNodes": 0,
+     "lowRates": 0,
+     "closingNodes": 2,
+     "earlierMedianS": 0,
+     "earlierMaxS": 0,
+     "surrogateOnlyClosing": 1905,
+     "deadlineEarlierMedianS": 0,
+     "deadlineEarlierMaxS": 259,
+     "deadlineLater": 0
+    },
+    "geodesic": {
+     "pairs": [
+      {
+       "floorKey": 8,
+       "euclid": 5.701,
+       "geodesic": 6.2754,
+       "status": "found",
+       "grid": 6.7394,
+       "straight": 6.6279,
+       "geodesicMs": 1,
+       "checks": 15,
+       "stretchGrid": 1.07394,
+       "stretchStraight": 1.05618
+      },
+      {
+       "floorKey": 128,
+       "euclid": 2,
+       "geodesic": 2,
+       "status": "direct",
+       "grid": 2,
+       "straight": 2,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 98,
+       "euclid": 8.259,
+       "geodesic": 8.8031,
+       "status": "found",
+       "grid": 13.9142,
+       "straight": 13.5265,
+       "geodesicMs": 2.1,
+       "checks": 142,
+       "stretchGrid": 1.58061,
+       "stretchStraight": 1.53657
+      },
+      {
+       "floorKey": 68,
+       "euclid": 20.396,
+       "geodesic": 22.1007,
+       "status": "found",
+       "grid": 30.9497,
+       "straight": 30.4497,
+       "geodesicMs": 5,
+       "checks": 870,
+       "stretchGrid": 1.4004,
+       "stretchStraight": 1.37777
+      },
+      {
+       "floorKey": 98,
+       "euclid": 19.344,
+       "geodesic": 20.0717,
+       "status": "found",
+       "grid": 21.3386,
+       "straight": 20.9601,
+       "geodesicMs": 1.5,
+       "checks": 245,
+       "stretchGrid": 1.06312,
+       "stretchStraight": 1.04427
+      },
+      {
+       "floorKey": 8,
+       "euclid": 13.13,
+       "geodesic": 13.8184,
+       "status": "found",
+       "grid": 26.5006,
+       "straight": 26.2329,
+       "geodesicMs": 0.7,
+       "checks": 234,
+       "stretchGrid": 1.91778,
+       "stretchStraight": 1.8984
+      },
+      {
+       "floorKey": 98,
+       "euclid": 2.5,
+       "geodesic": 2.9615,
+       "status": "found",
+       "grid": 3.2071,
+       "straight": 3.2071,
+       "geodesicMs": 0.1,
+       "checks": 5,
+       "stretchGrid": 1.08293,
+       "stretchStraight": 1.08293
+      },
+      {
+       "floorKey": 8,
+       "euclid": 6.727,
+       "geodesic": 8.1177,
+       "status": "found",
+       "grid": 9.4497,
+       "straight": 9.0935,
+       "geodesicMs": 0.2,
+       "checks": 42,
+       "stretchGrid": 1.1641,
+       "stretchStraight": 1.12021
+      },
+      {
+       "floorKey": 98,
+       "euclid": 23.548,
+       "geodesic": 23.577,
+       "status": "found",
+       "grid": 24.3251,
+       "straight": 24.0475,
+       "geodesicMs": 0.2,
+       "checks": 70,
+       "stretchGrid": 1.03173,
+       "stretchStraight": 1.01996
+      },
+      {
+       "floorKey": 38,
+       "euclid": 28.359,
+       "geodesic": 28.6305,
+       "status": "found",
+       "grid": 31.7683,
+       "straight": 31.3435,
+       "geodesicMs": 1.3,
+       "checks": 424,
+       "stretchGrid": 1.1096,
+       "stretchStraight": 1.09476
+      },
+      {
+       "floorKey": 38,
+       "euclid": 19.129,
+       "geodesic": 19.5809,
+       "status": "found",
+       "grid": 23.1243,
+       "straight": 22.437,
+       "geodesicMs": 0.5,
+       "checks": 116,
+       "stretchGrid": 1.18096,
+       "stretchStraight": 1.14587
+      },
+      {
+       "floorKey": 98,
+       "euclid": 28.714,
+       "geodesic": 29.4898,
+       "status": "found",
+       "grid": 33.3574,
+       "straight": 32.9215,
+       "geodesicMs": 4.5,
+       "checks": 693,
+       "stretchGrid": 1.13115,
+       "stretchStraight": 1.11637
+      },
+      {
+       "floorKey": 68,
+       "euclid": 15.692,
+       "geodesic": 17.1352,
+       "status": "found",
+       "grid": 19.3607,
+       "straight": 18.713,
+       "geodesicMs": 0.5,
+       "checks": 210,
+       "stretchGrid": 1.12988,
+       "stretchStraight": 1.09208
+      },
+      {
+       "floorKey": 68,
+       "euclid": 6.185,
+       "geodesic": 7.2532,
+       "status": "found",
+       "grid": 14.3607,
+       "straight": 14.0094,
+       "geodesicMs": 0.1,
+       "checks": 37,
+       "stretchGrid": 1.97991,
+       "stretchStraight": 1.93149
+      },
+      {
+       "floorKey": 68,
+       "euclid": 36.503,
+       "geodesic": 37.9327,
+       "status": "found",
+       "grid": 45.0645,
+       "straight": 44.3112,
+       "geodesicMs": 8,
+       "checks": 1666,
+       "stretchGrid": 1.18801,
+       "stretchStraight": 1.16815
+      },
+      {
+       "floorKey": 98,
+       "euclid": 28.16,
+       "geodesic": 30.1979,
+       "status": "found",
+       "grid": 33.4142,
+       "straight": 33.2485,
+       "geodesicMs": 5.3,
+       "checks": 1297,
+       "stretchGrid": 1.10651,
+       "stretchStraight": 1.10102
+      },
+      {
+       "floorKey": 38,
+       "euclid": 25.126,
+       "geodesic": 25.4618,
+       "status": "found",
+       "grid": 30.7929,
+       "straight": 30.5462,
+       "geodesicMs": 1.7,
+       "checks": 476,
+       "stretchGrid": 1.20938,
+       "stretchStraight": 1.19969
+      },
+      {
+       "floorKey": 8,
+       "euclid": 7.615,
+       "geodesic": 8.4073,
+       "status": "found",
+       "grid": 10.5228,
+       "straight": 9.8949,
+       "geodesicMs": 0.1,
+       "checks": 33,
+       "stretchGrid": 1.25162,
+       "stretchStraight": 1.17694
+      },
+      {
+       "floorKey": 38,
+       "euclid": 11.8,
+       "geodesic": 13.7567,
+       "status": "found",
+       "grid": 15.0355,
+       "straight": 14.287,
+       "geodesicMs": 0.4,
+       "checks": 137,
+       "stretchGrid": 1.09296,
+       "stretchStraight": 1.03855
+      },
+      {
+       "floorKey": 98,
+       "euclid": 29.039,
+       "geodesic": 29.3247,
+       "status": "found",
+       "grid": 30.0355,
+       "straight": 29.5293,
+       "geodesicMs": 1.1,
+       "checks": 187,
+       "stretchGrid": 1.02424,
+       "stretchStraight": 1.00698
+      }
+     ],
+     "leftFloor": 0,
+     "attempts": 52,
+     "floors": 13,
+     "ms": 78
+    }
+   },
+   "quality": {
+    "parts": 4,
+    "partsOver20": 4,
+    "largestShare": 0.848,
+    "reachableFromExits": 0.848,
+    "partsWithExit": 1,
+    "floorAreaM2": 2629,
+    "floorNodesPerM2": 4.647,
+    "latticeCoverage": 0.884
+   },
+   "stairs": {
+    "staircases": 8,
+    "ends": 28,
+    "endsLinked": 28,
+    "joinTwoLevels": 0,
+    "joinTwoByRise": 4,
+    "unlinked": 0,
+    "cores": 1,
+    "coreStairsAssumed": 0,
+    "levels": 5,
+    "levelsJoined": 5,
+    "multiLevelFloorPct": 84.4
+   },
+   "robustness": {
+    "webIfcMessages": 0,
+    "lacks": [],
+    "does": [
+     "exits from IfcRelSpaceBoundary.EXTERNAL",
+     "4 parts of 20+ nodes, largest 85%"
+    ]
+   },
+   "memory": {
+    "start": {
+     "maxRssMB": 110,
+     "heapMB": 30
+    },
+    "extract": {
+     "maxRssMB": 238,
+     "heapMB": 29
+    },
+    "lattice": {
+     "maxRssMB": 265,
+     "heapMB": 85
+    },
+    "quality": {
+     "maxRssMB": 265,
+     "heapMB": 89
+    },
+    "routes": {
+     "maxRssMB": 265,
+     "heapMB": 28
+    },
+    "map_temperature": {
+     "maxRssMB": 265,
+     "heapMB": 36
+    },
+    "map_flood": {
+     "maxRssMB": 293,
+     "heapMB": 58
+    },
+    "forecast": {
+     "maxRssMB": 296,
+     "heapMB": 42
+    },
+    "rl": {
+     "maxRssMB": 296,
+     "heapMB": 40
+    },
+    "geodesic": {
+     "maxRssMB": 296,
+     "heapMB": 76
+    },
+    "peakRssMB": 296
+   },
+   "graphHash": "b7c25a16b798f31fe769",
+   "graph": {
+    "nodes": 12461,
+    "edges": 37045,
+    "floorNodes": 12216,
+    "stairNodes": 168,
+    "doorNodes": 77,
+    "wallFaceNodes": 2920,
+    "blockedEdges": 1048,
+    "prunedNodes": 8,
+    "spacing": 0.5,
+    "coarsened": false,
+    "windingFallback": false,
+    "sections": 17,
+    "sectionSegments": 21608
+   },
+   "input": {
+    "floorMeshes": 5,
+    "floorTriangles": 316,
+    "stairMeshes": 596,
+    "doorMeshes": 165,
+    "doors": 77,
+    "wallMeshes": 166,
+    "spaceMeshes": 82,
+    "obstacleMeshes": 838,
+    "flaggedDoors": 1,
+    "flagSource": "IfcRelSpaceBoundary.EXTERNAL",
+    "storeys": 5,
+    "levels": [
+     0,
+     3,
+     6,
+     9,
+     12
+    ]
+   },
+   "exits": {
+    "count": 1,
+    "source": "IfcRelSpaceBoundary.EXTERNAL",
+    "flagged": 1
+   },
+   "pairs": {
+    "routes": 20,
+    "kind": "start to exit"
+   },
+   "routeLengths": {
+    "medianM": 31.4,
+    "maxM": 61
+   },
+   "yenRoutes": {
+    "found": [
+     3,
+     3,
+     3,
+     3,
+     3
+    ],
+    "budgetHits": 0
+   },
+   "distinctRoutes": {
+    "found": [
+     2,
+     2,
+     2,
+     2,
+     2
+    ],
+    "budgetHits": 0
+   },
+   "fireSeed": 6523,
+   "forecast": {
+    "temperature": {
+     "forecastMs": 44.33,
+     "coarsened": null,
+     "closingShare": 0,
+     "escapeDeadlinesMs": 6.33,
+     "canLeaveShare": 0.847,
+     "planMs": 5.58,
+     "planMaxMs": 12.71,
+     "doseDeadlineMs": 23.64,
+     "doseDeadlineMaxMs": 60.76,
+     "doseDeadlineMapMs": 1083,
+     "mapStepS": 0.2083,
+     "mapLayers": 1440,
+     "mapWork": 121615198
+    },
+    "flood": {
+     "forecastMs": 20.44,
+     "coarsened": null,
+     "closingShare": 0.153,
+     "escapeDeadlinesMs": 3.79,
+     "canLeaveShare": 0.847,
+     "planMs": 7.22,
+     "planMaxMs": 8.69,
+     "doseDeadlineMs": 22.92,
+     "doseDeadlineMaxMs": 56.58,
+     "doseDeadlineMapMs": 899.4,
+     "mapStepS": 0.2083,
+     "mapLayers": 1440,
+     "mapWork": 121615198
+    }
+   },
+   "rl": [
+    {
+     "reached": true,
+     "successRate": 0.037,
+     "policyReturn": -0.678,
+     "optimalReturn": -0.59,
+     "escapeSteps": 70
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 3.317,
+     "optimalReturn": 3.346,
+     "escapeSteps": 38
+    },
+    {
+     "reached": true,
+     "successRate": 0.2,
+     "policyReturn": 0.203,
+     "optimalReturn": 0.225,
+     "escapeSteps": 66
+    }
+   ],
+   "wallSeconds": 28.4
+  },
+  {
+   "name": "ISSUE_098_R8_F1_MAB_AR_M3_XX_XXX_MO_7000",
+   "schema": "IFC2X3",
+   "bytes": 72882778,
+   "speed": {
+    "extractMs": 4689.9,
+    "extractRuns": 5,
+    "extractWithFlagsMs": 41646.6,
+    "latticeMs": 2809.4,
+    "latticeRuns": 5,
+    "prepMs": 18.45,
+    "astarMs": 2.131,
+    "astarMaxMs": 6.171,
+    "routeMs": 2.562,
+    "yenMs": 39.65,
+    "yenMaxMs": 204.83,
+    "distinctMs": 29.19,
+    "distinctMaxMs": 58.2,
+    "straightenMs": 5.601,
+    "straightenMaxMs": 10.47,
+    "straightenColdMs": 55.93,
+    "rlMs": 109.4,
+    "rlMaxMs": 145.8,
+    "rlOneEpisodeMs": 90
+   },
+   "accuracy": {
+    "exits": {
+     "graphDoors": 1291,
+     "flagged": 0,
+     "oneSided": {
+      "chosen": 1163,
+      "truePositives": 0,
+      "precision": 0,
+      "recall": null
+     },
+     "roomOneSide": {
+      "chosen": 0,
+      "truePositives": 0,
+      "precision": null,
+      "recall": null
+     }
+    },
+    "front_temperature": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 662,
+     "tradeoffs": 0
+    },
+    "map_temperature": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 1.46,
+     "gapMaxS": 5.09,
+     "gapMedianSteps": 2.31
+    },
+    "front_flood": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 662,
+     "tradeoffs": 0
+    },
+    "map_flood": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 1.46,
+     "gapMaxS": 5.09,
+     "gapMedianSteps": 2.31
+    },
+    "surrogate": {
+     "surrogateMs": 108.34,
+     "fullMs": 254.69,
+     "conservative": true,
+     "lateNodes": 0,
+     "lowRates": 0,
+     "closingNodes": 2,
+     "earlierMedianS": 0,
+     "earlierMaxS": 0,
+     "surrogateOnlyClosing": 2575,
+     "deadlineEarlierMedianS": 0,
+     "deadlineEarlierMaxS": 274.5,
+     "deadlineLater": 0
+    },
+    "geodesic": {
+     "pairs": [
+      {
+       "floorKey": -280,
+       "euclid": 2.141,
+       "geodesic": 2.141,
+       "status": "direct",
+       "grid": 2.141,
+       "straight": 2.141,
+       "geodesicMs": 0.7,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -255,
+       "euclid": 66.371,
+       "geodesic": 78.7218,
+       "status": "found",
+       "grid": 109.8002,
+       "straight": 104.3891,
+       "geodesicMs": 138.6,
+       "checks": 33819,
+       "stretchGrid": 1.39479,
+       "stretchStraight": 1.32605
+      },
+      {
+       "floorKey": -279,
+       "euclid": 2.141,
+       "geodesic": 2.141,
+       "status": "direct",
+       "grid": 2.141,
+       "straight": 2.141,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -280,
+       "euclid": 4.282,
+       "geodesic": 4.282,
+       "status": "direct",
+       "grid": 4.282,
+       "straight": 4.282,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -283,
+       "euclid": 2.141,
+       "geodesic": 2.141,
+       "status": "direct",
+       "grid": 2.141,
+       "straight": 2.141,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -237,
+       "euclid": 2.718,
+       "geodesic": 2.7178,
+       "status": "direct",
+       "grid": 3.071,
+       "straight": 2.7178,
+       "geodesicMs": 0.1,
+       "checks": 1,
+       "stretchGrid": 1.12994,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -255,
+       "euclid": 44.25,
+       "geodesic": 57.9331,
+       "status": "found",
+       "grid": 112.4084,
+       "straight": 108.9142,
+       "geodesicMs": 30.1,
+       "checks": 6322,
+       "stretchGrid": 1.94031,
+       "stretchStraight": 1.88
+      },
+      {
+       "floorKey": -291,
+       "euclid": 59.106,
+       "geodesic": 70.7408,
+       "status": "found",
+       "grid": 113.0479,
+       "straight": 109.458,
+       "geodesicMs": 168.7,
+       "checks": 40863,
+       "stretchGrid": 1.59806,
+       "stretchStraight": 1.54731
+      },
+      {
+       "floorKey": -207,
+       "euclid": 12.111,
+       "geodesic": 12.1114,
+       "status": "direct",
+       "grid": 12.1114,
+       "straight": 12.1114,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -255,
+       "euclid": 18.23,
+       "geodesic": 19.8288,
+       "status": "found",
+       "grid": 23.199,
+       "straight": 22.771,
+       "geodesicMs": 0.7,
+       "checks": 119,
+       "stretchGrid": 1.16996,
+       "stretchStraight": 1.14838
+      },
+      {
+       "floorKey": -267,
+       "euclid": 3.385,
+       "geodesic": 3.3852,
+       "status": "direct",
+       "grid": 3.6549,
+       "straight": 3.3852,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.07967,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -213,
+       "euclid": 3.385,
+       "geodesic": 3.3852,
+       "status": "direct",
+       "grid": 3.6549,
+       "straight": 3.3852,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.07967,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -231,
+       "euclid": 2.772,
+       "geodesic": 2.7715,
+       "status": "direct",
+       "grid": 2.7715,
+       "straight": 2.7715,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -255,
+       "euclid": 5.459,
+       "geodesic": 5.4585,
+       "status": "direct",
+       "grid": 5.7959,
+       "straight": 5.4585,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.06181,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -283,
+       "euclid": 2.528,
+       "geodesic": 2.5275,
+       "status": "direct",
+       "grid": 2.6511,
+       "straight": 2.5275,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.04887,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -291,
+       "euclid": 103.697,
+       "geodesic": 119.9007,
+       "status": "found",
+       "grid": 163.6797,
+       "straight": 157.4434,
+       "geodesicMs": 771.4,
+       "checks": 127700,
+       "stretchGrid": 1.36513,
+       "stretchStraight": 1.31311
+      },
+      {
+       "floorKey": -286,
+       "euclid": 2.178,
+       "geodesic": 2.1785,
+       "status": "direct",
+       "grid": 2.1936,
+       "straight": 2.1785,
+       "geodesicMs": 0.1,
+       "checks": 1,
+       "stretchGrid": 1.00692,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -255,
+       "euclid": 18.48,
+       "geodesic": 20.6746,
+       "status": "found",
+       "grid": 31.0048,
+       "straight": 28.4916,
+       "geodesicMs": 2.4,
+       "checks": 531,
+       "stretchGrid": 1.49966,
+       "stretchStraight": 1.3781
+      },
+      {
+       "floorKey": -232,
+       "euclid": 2.739,
+       "geodesic": 2.7385,
+       "status": "direct",
+       "grid": 2.7385,
+       "straight": 2.7385,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": -206,
+       "euclid": 23.937,
+       "geodesic": 23.9372,
+       "status": "direct",
+       "grid": 25.3248,
+       "straight": 23.9372,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.05797,
+       "stretchStraight": 1
+      }
+     ],
+     "leftFloor": 8,
+     "attempts": 47,
+     "floors": 74,
+     "ms": 1296
+    }
+   },
+   "quality": {
+    "parts": 1474,
+    "partsOver20": 681,
+    "largestShare": 0.111,
+    "reachableFromExits": 0.589,
+    "partsWithExit": 351,
+    "floorAreaM2": 82813.8,
+    "floorNodesPerM2": 0.779,
+    "latticeCoverage": 0.889
+   },
+   "stairs": {
+    "staircases": 203,
+    "ends": 342,
+    "endsLinked": 178,
+    "joinTwoLevels": 34,
+    "joinTwoByRise": 16,
+    "unlinked": 28,
+    "cores": 41,
+    "coreStairsAssumed": 32,
+    "levels": 47,
+    "levelsJoined": 3,
+    "multiLevelFloorPct": 20.3
+   },
+   "robustness": {
+    "webIfcMessages": 0,
+    "lacks": [
+     "spaces",
+     "exit flags"
+    ],
+    "does": [
+     "grid coarsened to 1.51 m to fit 40,000 points",
+     "exits from one-sided door (fallback)",
+     "681 parts of 20+ nodes, largest 11%",
+     "164 of 342 stair ends not linked to a floor"
+    ]
+   },
+   "memory": {
+    "start": {
+     "maxRssMB": 110,
+     "heapMB": 30
+    },
+    "extract": {
+     "maxRssMB": 729,
+     "heapMB": 96
+    },
+    "lattice": {
+     "maxRssMB": 806,
+     "heapMB": 387
+    },
+    "quality": {
+     "maxRssMB": 806,
+     "heapMB": 143
+    },
+    "routes": {
+     "maxRssMB": 806,
+     "heapMB": 82
+    },
+    "map_temperature": {
+     "maxRssMB": 806,
+     "heapMB": 114
+    },
+    "map_flood": {
+     "maxRssMB": 806,
+     "heapMB": 135
+    },
+    "forecast": {
+     "maxRssMB": 806,
+     "heapMB": 100
+    },
+    "rl": {
+     "maxRssMB": 806,
+     "heapMB": 129
+    },
+    "geodesic": {
+     "maxRssMB": 806,
+     "heapMB": 193
+    },
+    "peakRssMB": 806
+   },
+   "graphHash": "db163770c83de5785f25",
+   "graph": {
+    "nodes": 67834,
+    "edges": 139141,
+    "floorNodes": 64471,
+    "stairNodes": 2119,
+    "doorNodes": 1244,
+    "wallFaceNodes": 32339,
+    "blockedEdges": 19884,
+    "prunedNodes": 1850,
+    "spacing": 1.514,
+    "coarsened": true,
+    "windingFallback": false,
+    "sections": 143,
+    "sectionSegments": 906285
+   },
+   "input": {
+    "floorMeshes": 886,
+    "floorTriangles": 39628,
+    "stairMeshes": 4107,
+    "doorMeshes": 8353,
+    "doors": 1458,
+    "wallMeshes": 8219,
+    "spaceMeshes": 0,
+    "obstacleMeshes": 8070,
+    "flaggedDoors": 0,
+    "flagSource": null,
+    "storeys": 28,
+    "levels": [
+     -29.86,
+     -26.26,
+     -24.45,
+     -21.55,
+     -19.69,
+     -16.5,
+     -14.79,
+     -11.59,
+     -8.21,
+     -6.59,
+     -4.95,
+     -3.29,
+     -1.19,
+     0.55,
+     2.22,
+     3.85,
+     5.53,
+     7.15,
+     8.86,
+     10.45,
+     12.01,
+     13.75,
+     15.31,
+     17.05,
+     18.72,
+     20.35,
+     21.99,
+     23.65,
+     26.95,
+     28.51,
+     30.25,
+     31.81,
+     33.55,
+     35.11,
+     36.85,
+     38.54,
+     40.15,
+     41.71,
+     43.45,
+     45.01,
+     46.75,
+     48.31,
+     50.05,
+     51.74,
+     53.35,
+     56.65,
+     58.38
+    ]
+   },
+   "exits": {
+    "count": 1120,
+    "source": "one-sided door (fallback)",
+    "flagged": 0
+   },
+   "pairs": {
+    "routes": 20,
+    "kind": "start to exit"
+   },
+   "routeLengths": {
+    "medianM": 146.6,
+    "maxM": 284.1
+   },
+   "yenRoutes": {
+    "found": [
+     3,
+     3,
+     3,
+     3,
+     3
+    ],
+    "budgetHits": 0
+   },
+   "distinctRoutes": {
+    "found": [
+     3,
+     3,
+     1,
+     3,
+     3
+    ],
+    "budgetHits": 0
+   },
+   "fireSeed": 29446,
+   "forecast": {
+    "temperature": {
+     "forecastMs": 254.69,
+     "coarsened": null,
+     "closingShare": 0,
+     "escapeDeadlinesMs": 12.51,
+     "canLeaveShare": 0.589,
+     "planMs": 5.55,
+     "planMaxMs": 7.22,
+     "doseDeadlineMs": 14.61,
+     "doseDeadlineMaxMs": 16.94,
+     "doseDeadlineMapMs": 1552.2,
+     "mapStepS": 0.6308,
+     "mapLayers": 476,
+     "mapWork": 145694596
+    },
+    "flood": {
+     "forecastMs": 101.08,
+     "coarsened": null,
+     "closingShare": 0.038,
+     "escapeDeadlinesMs": 12.68,
+     "canLeaveShare": 0.589,
+     "planMs": 7.98,
+     "planMaxMs": 8.48,
+     "doseDeadlineMs": 15.73,
+     "doseDeadlineMaxMs": 17.04,
+     "doseDeadlineMapMs": 1484.6,
+     "mapStepS": 0.6308,
+     "mapLayers": 476,
+     "mapWork": 145694596
+    }
+   },
+   "rl": [
+    {
+     "reached": false,
+     "successRate": 0,
+     "policyReturn": -9.806,
+     "optimalReturn": -6.474,
+     "escapeSteps": 180
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 2.649,
+     "optimalReturn": 2.657,
+     "escapeSteps": 45
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 9.365,
+     "optimalReturn": 9.365,
+     "escapeSteps": 4
+    }
+   ],
+   "wallSeconds": 112.3
+  },
+  {
+   "name": "ISSUE_129_N1540_17_EXE_MOD_448200_02_09_11SMC_IGC_V17",
+   "schema": "IFC2X3",
+   "bytes": 12233375,
+   "speed": {
+    "extractMs": 404.6,
+    "extractRuns": 5,
+    "extractWithFlagsMs": 464.2,
+    "latticeMs": 470.6,
+    "latticeRuns": 5,
+    "prepMs": 14.18,
+    "astarMs": 0.328,
+    "astarMaxMs": 1.823,
+    "routeMs": 0.637,
+    "yenMs": 8.47,
+    "yenMaxMs": 48.56,
+    "distinctMs": 20.32,
+    "distinctMaxMs": 35.72,
+    "straightenMs": 2.376,
+    "straightenMaxMs": 36.295,
+    "straightenColdMs": 30.44,
+    "rlMs": 96.2,
+    "rlMaxMs": 123.7,
+    "rlOneEpisodeMs": 63.7
+   },
+   "accuracy": {
+    "exits": {
+     "graphDoors": 0,
+     "flagged": 0,
+     "oneSided": {
+      "chosen": 0,
+      "truePositives": 0,
+      "precision": null,
+      "recall": null
+     },
+     "roomOneSide": {
+      "chosen": 0,
+      "truePositives": 0,
+      "precision": null,
+      "recall": null
+     }
+    },
+    "surrogate": {
+     "surrogateMs": 58.6,
+     "fullMs": 197.07,
+     "conservative": true,
+     "lateNodes": 0,
+     "lowRates": 0,
+     "closingNodes": 1,
+     "earlierMedianS": 0,
+     "earlierMaxS": 0,
+     "surrogateOnlyClosing": 2769
+    },
+    "geodesic": {
+     "pairs": [
+      {
+       "floorKey": 150,
+       "euclid": 13.437,
+       "geodesic": 13.5929,
+       "status": "found",
+       "grid": 40.0152,
+       "straight": 38.8674,
+       "geodesicMs": 2.7,
+       "checks": 92,
+       "stretchGrid": 2.94383,
+       "stretchStraight": 2.85939
+      },
+      {
+       "floorKey": 286,
+       "euclid": 2.562,
+       "geodesic": 2.5621,
+       "status": "direct",
+       "grid": 2.9446,
+       "straight": 2.9446,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.14926,
+       "stretchStraight": 1.14926
+      },
+      {
+       "floorKey": 214,
+       "euclid": 23.393,
+       "geodesic": 23.3931,
+       "status": "direct",
+       "grid": 35.0489,
+       "straight": 33.3541,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.49826,
+       "stretchStraight": 1.42581
+      },
+      {
+       "floorKey": 39,
+       "euclid": 6.445,
+       "geodesic": 6.4453,
+       "status": "direct",
+       "grid": 6.8437,
+       "straight": 6.4453,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.06181,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 24,
+       "euclid": 9.48,
+       "geodesic": 9.4802,
+       "status": "direct",
+       "grid": 9.4802,
+       "straight": 9.4802,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 25,
+       "euclid": 8.848,
+       "geodesic": 8.8482,
+       "status": "direct",
+       "grid": 8.8482,
+       "straight": 8.8482,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 39,
+       "euclid": 8.848,
+       "geodesic": 8.8482,
+       "status": "direct",
+       "grid": 8.8482,
+       "straight": 8.8482,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 25,
+       "euclid": 3.792,
+       "geodesic": 3.7921,
+       "status": "direct",
+       "grid": 3.7921,
+       "straight": 3.7921,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 490,
+       "euclid": 50.66,
+       "geodesic": 50.6598,
+       "status": "direct",
+       "grid": 57.1059,
+       "straight": 54.1196,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.12724,
+       "stretchStraight": 1.06829
+      },
+      {
+       "floorKey": 24,
+       "euclid": 4.424,
+       "geodesic": 4.4241,
+       "status": "direct",
+       "grid": 4.4241,
+       "straight": 4.4241,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 23,
+       "euclid": 8.313,
+       "geodesic": 8.3129,
+       "status": "direct",
+       "grid": 8.7398,
+       "straight": 8.3129,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.05136,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 25,
+       "euclid": 12.008,
+       "geodesic": 12.0083,
+       "status": "direct",
+       "grid": 12.0083,
+       "straight": 12.0083,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 214,
+       "euclid": 15.195,
+       "geodesic": 15.1947,
+       "status": "direct",
+       "grid": 16.7391,
+       "straight": 15.7299,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.10164,
+       "stretchStraight": 1.03522
+      },
+      {
+       "floorKey": 39,
+       "euclid": 105.554,
+       "geodesic": 105.5568,
+       "status": "found",
+       "grid": 106.07,
+       "straight": 105.565,
+       "geodesicMs": 3.7,
+       "checks": 129,
+       "stretchGrid": 1.00486,
+       "stretchStraight": 1.00008
+      },
+      {
+       "floorKey": 120,
+       "euclid": 11.394,
+       "geodesic": 11.6838,
+       "status": "found",
+       "grid": 14.4728,
+       "straight": 13.6481,
+       "geodesicMs": 0.2,
+       "checks": 24,
+       "stretchGrid": 1.23871,
+       "stretchStraight": 1.16812
+      },
+      {
+       "floorKey": 25,
+       "euclid": 10.112,
+       "geodesic": 10.1122,
+       "status": "direct",
+       "grid": 10.1122,
+       "straight": 10.1122,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 47,
+       "euclid": 49.398,
+       "geodesic": 49.3983,
+       "status": "direct",
+       "grid": 50.6061,
+       "straight": 49.5217,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.02445,
+       "stretchStraight": 1.0025
+      },
+      {
+       "floorKey": 553,
+       "euclid": 9.564,
+       "geodesic": 9.5641,
+       "status": "direct",
+       "grid": 10.0038,
+       "straight": 9.5641,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.04597,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 553,
+       "euclid": 4.558,
+       "geodesic": 4.5575,
+       "status": "direct",
+       "grid": 4.8392,
+       "straight": 4.5575,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.06181,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 23,
+       "euclid": 6.352,
+       "geodesic": 6.3517,
+       "status": "direct",
+       "grid": 6.5819,
+       "straight": 6.3517,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.03625,
+       "stretchStraight": 1
+      }
+     ],
+     "leftFloor": 4,
+     "attempts": 40,
+     "floors": 19,
+     "ms": 108
+    }
+   },
+   "quality": {
+    "parts": 118,
+    "partsOver20": 93,
+    "largestShare": 0.086,
+    "reachableFromExits": null,
+    "partsWithExit": 0,
+    "floorAreaM2": 14530.4,
+    "floorNodesPerM2": 2.688,
+    "latticeCoverage": 0.952
+   },
+   "stairs": {
+    "staircases": 13,
+    "ends": 18,
+    "endsLinked": 6,
+    "joinTwoLevels": 1,
+    "joinTwoByRise": 1,
+    "unlinked": 4,
+    "cores": 11,
+    "coreStairsAssumed": 4,
+    "levels": 17,
+    "levelsJoined": 2,
+    "multiLevelFloorPct": 0.1
+   },
+   "robustness": {
+    "webIfcMessages": 0,
+    "lacks": [
+     "spaces",
+     "doors"
+    ],
+    "does": [
+     "grid coarsened to 0.63 m to fit 40,000 points",
+     "no door nodes: rooms join only through openings in the wall geometry",
+     "no exits found: forecast planning, deadlines and the exit metrics are skipped",
+     "93 parts of 20+ nodes, largest 9%",
+     "12 of 18 stair ends not linked to a floor"
+    ]
+   },
+   "memory": {
+    "start": {
+     "maxRssMB": 110,
+     "heapMB": 30
+    },
+    "extract": {
+     "maxRssMB": 256,
+     "heapMB": 28
+    },
+    "lattice": {
+     "maxRssMB": 306,
+     "heapMB": 132
+    },
+    "quality": {
+     "maxRssMB": 306,
+     "heapMB": 101
+    },
+    "routes": {
+     "maxRssMB": 344,
+     "heapMB": 38
+    },
+    "forecast": {
+     "maxRssMB": 344,
+     "heapMB": 38
+    },
+    "rl": {
+     "maxRssMB": 344,
+     "heapMB": 89
+    },
+    "geodesic": {
+     "maxRssMB": 344,
+     "heapMB": 53
+    },
+    "peakRssMB": 344
+   },
+   "graphHash": "f720af01d15bacd1e241",
+   "graph": {
+    "nodes": 39313,
+    "edges": 123822,
+    "floorNodes": 39056,
+    "stairNodes": 257,
+    "doorNodes": 0,
+    "wallFaceNodes": 4422,
+    "blockedEdges": 1244,
+    "prunedNodes": 224,
+    "spacing": 0.632,
+    "coarsened": true,
+    "windingFallback": false,
+    "sections": 76,
+    "sectionSegments": 114390
+   },
+   "input": {
+    "floorMeshes": 142,
+    "floorTriangles": 29317,
+    "stairMeshes": 9,
+    "doorMeshes": 0,
+    "doors": 0,
+    "wallMeshes": 396,
+    "spaceMeshes": 0,
+    "obstacleMeshes": 333,
+    "flaggedDoors": 0,
+    "flagSource": null,
+    "storeys": 10,
+    "levels": [
+     0.88,
+     2.8,
+     5.45,
+     10.82,
+     13.77,
+     20.65,
+     24.25,
+     27.85,
+     31.45,
+     35.05,
+     38.6,
+     42.25,
+     45.85,
+     48.31,
+     51.22,
+     55.82,
+     61.89
+    ]
+   },
+   "exits": {
+    "count": 0,
+    "source": null,
+    "flagged": 0
+   },
+   "pairs": {
+    "routes": 20,
+    "kind": "random pairs (no exits)"
+   },
+   "routeLengths": {
+    "medianM": 27.4,
+    "maxM": 85.3
+   },
+   "yenRoutes": {
+    "found": [
+     3,
+     3,
+     3,
+     3,
+     3
+    ],
+    "budgetHits": 0
+   },
+   "distinctRoutes": {
+    "found": [
+     3,
+     1,
+     3,
+     1,
+     3
+    ],
+    "budgetHits": 0
+   },
+   "fireSeed": 14554,
+   "forecast": {
+    "temperature": {
+     "forecastMs": 197.07,
+     "coarsened": null,
+     "closingShare": 0,
+     "note": "no exits"
+    },
+    "flood": {
+     "forecastMs": 54.16,
+     "coarsened": null,
+     "closingShare": 0.07,
+     "note": "no exits"
+    }
+   },
+   "rl": [
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 6.215,
+     "optimalReturn": 6.548,
+     "escapeSteps": 19
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": -3.061,
+     "optimalReturn": -2.499,
+     "escapeSteps": 102
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 8.483,
+     "optimalReturn": 8.483,
+     "escapeSteps": 8
+    }
+   ],
+   "wallSeconds": 14.3
+  },
+  {
+   "name": "LargeBuilding",
+   "schema": "IFC2X3",
+   "bytes": 1292595,
+   "speed": {
+    "extractMs": 56.2,
+    "extractRuns": 5,
+    "extractWithFlagsMs": 158.7,
+    "latticeMs": 45.5,
+    "latticeRuns": 5,
+    "prepMs": 2.21,
+    "astarMs": 0.189,
+    "astarMaxMs": 0.741,
+    "routeMs": 0.233,
+    "yenMs": 1.4,
+    "yenMaxMs": 4.49,
+    "distinctMs": 2.97,
+    "distinctMaxMs": 5.08,
+    "straightenMs": 1.082,
+    "straightenMaxMs": 3.331,
+    "straightenColdMs": 5.37,
+    "rlMs": 18.1,
+    "rlMaxMs": 34.4,
+    "rlOneEpisodeMs": 14
+   },
+   "accuracy": {
+    "exits": {
+     "graphDoors": 18,
+     "flagged": 0,
+     "oneSided": {
+      "chosen": 10,
+      "truePositives": 0,
+      "precision": 0,
+      "recall": null
+     },
+     "roomOneSide": {
+      "chosen": 10,
+      "truePositives": 0,
+      "precision": 0,
+      "recall": null
+     }
+    },
+    "front_temperature": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 1585,
+     "tradeoffs": 0
+    },
+    "map_temperature": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 0.22,
+     "gapMaxS": 0.31,
+     "gapMedianSteps": 2.08
+    },
+    "front_flood": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 1557,
+     "tradeoffs": 0
+    },
+    "map_flood": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 0.17,
+     "gapMaxS": 0.31,
+     "gapMedianSteps": 1.62
+    },
+    "surrogate": {
+     "surrogateMs": 4.52,
+     "fullMs": 10.91,
+     "conservative": true,
+     "lateNodes": 0,
+     "lowRates": 0,
+     "closingNodes": 1,
+     "earlierMedianS": 0,
+     "earlierMaxS": 0,
+     "surrogateOnlyClosing": 784,
+     "deadlineEarlierMedianS": 145,
+     "deadlineEarlierMaxS": 293.5,
+     "deadlineLater": 0
+    },
+    "geodesic": {
+     "pairs": [
+      {
+       "floorKey": 53,
+       "euclid": 2.5,
+       "geodesic": 2.5,
+       "status": "direct",
+       "grid": 2.6213,
+       "straight": 2.5,
+       "geodesicMs": 0.4,
+       "checks": 1,
+       "stretchGrid": 1.04853,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 49,
+       "euclid": 12.855,
+       "geodesic": 12.855,
+       "status": "direct",
+       "grid": 13.7426,
+       "straight": 12.855,
+       "geodesicMs": 0.1,
+       "checks": 1,
+       "stretchGrid": 1.06905,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 49,
+       "euclid": 3.202,
+       "geodesic": 3.2016,
+       "status": "direct",
+       "grid": 3.3284,
+       "straight": 3.2016,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.03963,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 53,
+       "euclid": 13.647,
+       "geodesic": 13.6473,
+       "status": "direct",
+       "grid": 14.3284,
+       "straight": 13.6473,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.04991,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 9,
+       "euclid": 11.885,
+       "geodesic": 13.6699,
+       "status": "found",
+       "grid": 14.8746,
+       "straight": 14.444,
+       "geodesicMs": 3.1,
+       "checks": 247,
+       "stretchGrid": 1.08813,
+       "stretchStraight": 1.05663
+      },
+      {
+       "floorKey": 49,
+       "euclid": 3.606,
+       "geodesic": 3.6056,
+       "status": "direct",
+       "grid": 3.8284,
+       "straight": 3.6056,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.06181,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 53,
+       "euclid": 5.523,
+       "geodesic": 5.5227,
+       "status": "direct",
+       "grid": 5.7071,
+       "straight": 5.5227,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.03339,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 49,
+       "euclid": 5.494,
+       "geodesic": 5.494,
+       "status": "direct",
+       "grid": 6.1053,
+       "straight": 5.662,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.11126,
+       "stretchStraight": 1.03058
+      },
+      {
+       "floorKey": 49,
+       "euclid": 6.403,
+       "geodesic": 6.4031,
+       "status": "direct",
+       "grid": 6.6569,
+       "straight": 6.4031,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.03963,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 53,
+       "euclid": 12.659,
+       "geodesic": 12.659,
+       "status": "direct",
+       "grid": 13.3284,
+       "straight": 12.659,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.05288,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 9,
+       "euclid": 8.846,
+       "geodesic": 9.4598,
+       "status": "found",
+       "grid": 10.3238,
+       "straight": 9.9545,
+       "geodesicMs": 1.5,
+       "checks": 174,
+       "stretchGrid": 1.09133,
+       "stretchStraight": 1.05229
+      },
+      {
+       "floorKey": 9,
+       "euclid": 2.062,
+       "geodesic": 2.0616,
+       "status": "direct",
+       "grid": 2.2071,
+       "straight": 2.0616,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.0706,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 53,
+       "euclid": 10.92,
+       "geodesic": 10.9202,
+       "status": "direct",
+       "grid": 11.7426,
+       "straight": 10.9202,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.07532,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 53,
+       "euclid": 11.705,
+       "geodesic": 11.7047,
+       "status": "direct",
+       "grid": 12.6569,
+       "straight": 11.7047,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.08135,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 49,
+       "euclid": 2.5,
+       "geodesic": 2.5,
+       "status": "direct",
+       "grid": 2.6213,
+       "straight": 2.5,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.04853,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 49,
+       "euclid": 4.123,
+       "geodesic": 4.1231,
+       "status": "direct",
+       "grid": 4.4142,
+       "straight": 4.1231,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.0706,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 9,
+       "euclid": 2.566,
+       "geodesic": 2.5664,
+       "status": "direct",
+       "grid": 2.7871,
+       "straight": 2.5664,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.08601,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 49,
+       "euclid": 14.289,
+       "geodesic": 14.2891,
+       "status": "direct",
+       "grid": 14.4874,
+       "straight": 14.2891,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.01388,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 49,
+       "euclid": 14.116,
+       "geodesic": 14.1156,
+       "status": "direct",
+       "grid": 15.2782,
+       "straight": 14.1156,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.08236,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 49,
+       "euclid": 4.807,
+       "geodesic": 4.8075,
+       "status": "direct",
+       "grid": 4.9885,
+       "straight": 4.8075,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.03766,
+       "stretchStraight": 1
+      }
+     ],
+     "leftFloor": 0,
+     "attempts": 26,
+     "floors": 3,
+     "ms": 33
+    }
+   },
+   "quality": {
+    "parts": 4,
+    "partsOver20": 4,
+    "largestShare": 0.272,
+    "reachableFromExits": 0.53,
+    "partsWithExit": 2,
+    "floorAreaM2": 630.1,
+    "floorNodesPerM2": 4.547,
+    "latticeCoverage": 0.982
+   },
+   "stairs": {
+    "staircases": 0,
+    "ends": 0,
+    "endsLinked": 0,
+    "joinTwoLevels": 0,
+    "joinTwoByRise": 0,
+    "unlinked": 0,
+    "cores": 0,
+    "coreStairsAssumed": 0,
+    "levels": 2,
+    "levelsJoined": 1,
+    "multiLevelFloorPct": 0
+   },
+   "robustness": {
+    "webIfcMessages": 0,
+    "lacks": [
+     "stairs",
+     "exit flags"
+    ],
+    "does": [
+     "exits from one-sided door (fallback)",
+     "4 parts of 20+ nodes, largest 27%"
+    ]
+   },
+   "memory": {
+    "start": {
+     "maxRssMB": 110,
+     "heapMB": 30
+    },
+    "extract": {
+     "maxRssMB": 159,
+     "heapMB": 33
+    },
+    "lattice": {
+     "maxRssMB": 173,
+     "heapMB": 37
+    },
+    "quality": {
+     "maxRssMB": 173,
+     "heapMB": 28
+    },
+    "routes": {
+     "maxRssMB": 173,
+     "heapMB": 26
+    },
+    "map_temperature": {
+     "maxRssMB": 173,
+     "heapMB": 38
+    },
+    "map_flood": {
+     "maxRssMB": 173,
+     "heapMB": 49
+    },
+    "forecast": {
+     "maxRssMB": 173,
+     "heapMB": 28
+    },
+    "rl": {
+     "maxRssMB": 175,
+     "heapMB": 48
+    },
+    "geodesic": {
+     "maxRssMB": 193,
+     "heapMB": 85
+    },
+    "peakRssMB": 193
+   },
+   "graphHash": "d826f99bfc20f688bcaa",
+   "graph": {
+    "nodes": 2883,
+    "edges": 9603,
+    "floorNodes": 2865,
+    "stairNodes": 0,
+    "doorNodes": 18,
+    "wallFaceNodes": 390,
+    "blockedEdges": 98,
+    "prunedNodes": 0,
+    "spacing": 0.5,
+    "coarsened": false,
+    "windingFallback": false,
+    "sections": 3,
+    "sectionSegments": 3910
+   },
+   "input": {
+    "floorMeshes": 4,
+    "floorTriangles": 48,
+    "stairMeshes": 0,
+    "doorMeshes": 126,
+    "doors": 18,
+    "wallMeshes": 33,
+    "spaceMeshes": 8,
+    "obstacleMeshes": 168,
+    "flaggedDoors": 0,
+    "flagSource": null,
+    "storeys": 2,
+    "levels": [
+     0.15,
+     4.34
+    ]
+   },
+   "exits": {
+    "count": 10,
+    "source": "one-sided door (fallback)",
+    "flagged": 0
+   },
+   "pairs": {
+    "routes": 20,
+    "kind": "start to exit"
+   },
+   "routeLengths": {
+    "medianM": 9.7,
+    "maxM": 22.3
+   },
+   "yenRoutes": {
+    "found": [
+     3,
+     3,
+     3,
+     3,
+     3
+    ],
+    "budgetHits": 0
+   },
+   "distinctRoutes": {
+    "found": [
+     2,
+     1,
+     1,
+     2,
+     1
+    ],
+    "budgetHits": 0
+   },
+   "fireSeed": 1970,
+   "forecast": {
+    "temperature": {
+     "forecastMs": 10.91,
+     "coarsened": null,
+     "closingShare": 0,
+     "escapeDeadlinesMs": 0.86,
+     "canLeaveShare": 0.53,
+     "planMs": 1.34,
+     "planMaxMs": 2.5,
+     "doseDeadlineMs": 8.66,
+     "doseDeadlineMaxMs": 12.92,
+     "doseDeadlineMapMs": 280.4,
+     "mapStepS": 0.1042,
+     "mapLayers": 2880,
+     "mapWork": 63051837
+    },
+    "flood": {
+     "forecastMs": 4.64,
+     "coarsened": null,
+     "closingShare": 0.272,
+     "escapeDeadlinesMs": 0.81,
+     "canLeaveShare": 0.53,
+     "planMs": 1.37,
+     "planMaxMs": 2.46,
+     "doseDeadlineMs": 4.13,
+     "doseDeadlineMaxMs": 7.81,
+     "doseDeadlineMapMs": 178.3,
+     "mapStepS": 0.1042,
+     "mapLayers": 2880,
+     "mapWork": 63051837
+    }
+   },
+   "rl": [
+    {
+     "reached": false,
+     "successRate": 0,
+     "policyReturn": -10.119,
+     "optimalReturn": -9.426,
+     "escapeSteps": null
+    },
+    {
+     "reached": true,
+     "successRate": 0.388,
+     "policyReturn": 8.575,
+     "optimalReturn": 8.575,
+     "escapeSteps": 7
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 3.925,
+     "optimalReturn": 4.981,
+     "escapeSteps": 26
+    }
+   ],
+   "wallSeconds": 7.6
+  },
+  {
+   "name": "SampleHouse4",
+   "schema": "IFC4",
+   "bytes": 2322454,
+   "speed": {
+    "extractMs": 48.8,
+    "extractRuns": 5,
+    "extractWithFlagsMs": 166.4,
+    "latticeMs": 15.3,
+    "latticeRuns": 5,
+    "prepMs": 0.91,
+    "astarMs": 0.159,
+    "astarMaxMs": 0.291,
+    "routeMs": 0.196,
+    "yenMs": 1.48,
+    "yenMaxMs": 2.85,
+    "distinctMs": 2.13,
+    "distinctMaxMs": 5.43,
+    "straightenMs": 0.473,
+    "straightenMaxMs": 1.547,
+    "straightenColdMs": 2.74,
+    "rlMs": 15.7,
+    "rlMaxMs": 21.1,
+    "rlOneEpisodeMs": 13.6
+   },
+   "accuracy": {
+    "exits": {
+     "graphDoors": 3,
+     "flagged": 1,
+     "oneSided": {
+      "chosen": 0,
+      "truePositives": 0,
+      "precision": null,
+      "recall": 0
+     },
+     "roomOneSide": {
+      "chosen": 1,
+      "truePositives": 1,
+      "precision": 1,
+      "recall": 1
+     }
+    },
+    "front_temperature": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 795,
+     "tradeoffs": 0
+    },
+    "map_temperature": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 0.22,
+     "gapMaxS": 0.51,
+     "gapMedianSteps": 2.11
+    },
+    "front_flood": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 795,
+     "tradeoffs": 0
+    },
+    "map_flood": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 0.18,
+     "gapMaxS": 0.41,
+     "gapMedianSteps": 1.71
+    },
+    "surrogate": {
+     "surrogateMs": 1.72,
+     "fullMs": 3.92,
+     "conservative": true,
+     "lateNodes": 0,
+     "lowRates": 0,
+     "closingNodes": 1,
+     "earlierMedianS": 0,
+     "earlierMaxS": 0,
+     "surrogateOnlyClosing": 699,
+     "deadlineEarlierMedianS": 150,
+     "deadlineEarlierMaxS": 282.7,
+     "deadlineLater": 0
+    },
+    "geodesic": {
+     "pairs": [
+      {
+       "floorKey": 12,
+       "euclid": 8.062,
+       "geodesic": 11.2178,
+       "status": "found",
+       "grid": 12.4142,
+       "straight": 12.2348,
+       "geodesicMs": 2.5,
+       "checks": 223,
+       "stretchGrid": 1.10666,
+       "stretchStraight": 1.09066
+      },
+      {
+       "floorKey": 12,
+       "euclid": 7.616,
+       "geodesic": 7.6256,
+       "status": "found",
+       "grid": 8.1536,
+       "straight": 7.765,
+       "geodesicMs": 0.1,
+       "checks": 7,
+       "stretchGrid": 1.06924,
+       "stretchStraight": 1.01828
+      },
+      {
+       "floorKey": 12,
+       "euclid": 10.607,
+       "geodesic": 11.8618,
+       "status": "found",
+       "grid": 17.3071,
+       "straight": 17.0271,
+       "geodesicMs": 0.2,
+       "checks": 65,
+       "stretchGrid": 1.45906,
+       "stretchStraight": 1.43545
+      },
+      {
+       "floorKey": 12,
+       "euclid": 5.565,
+       "geodesic": 5.5645,
+       "status": "direct",
+       "grid": 6.0159,
+       "straight": 5.6816,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.08111,
+       "stretchStraight": 1.02103
+      },
+      {
+       "floorKey": 12,
+       "euclid": 4.417,
+       "geodesic": 6.5025,
+       "status": "found",
+       "grid": 8.1018,
+       "straight": 7.9759,
+       "geodesicMs": 0.1,
+       "checks": 32,
+       "stretchGrid": 1.24595,
+       "stretchStraight": 1.22658
+      },
+      {
+       "floorKey": 12,
+       "euclid": 15.632,
+       "geodesic": 15.9004,
+       "status": "found",
+       "grid": 22.1742,
+       "straight": 21.8544,
+       "geodesicMs": 0.4,
+       "checks": 83,
+       "stretchGrid": 1.39457,
+       "stretchStraight": 1.37446
+      },
+      {
+       "floorKey": 12,
+       "euclid": 4.503,
+       "geodesic": 4.5025,
+       "status": "direct",
+       "grid": 4.6504,
+       "straight": 4.5112,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.03285,
+       "stretchStraight": 1.00194
+      },
+      {
+       "floorKey": 12,
+       "euclid": 4.086,
+       "geodesic": 4.1109,
+       "status": "found",
+       "grid": 20.4027,
+       "straight": 19.5643,
+       "geodesicMs": 0.4,
+       "checks": 129,
+       "stretchGrid": 4.96306,
+       "stretchStraight": 4.75912
+      },
+      {
+       "floorKey": 12,
+       "euclid": 6.893,
+       "geodesic": 6.8929,
+       "status": "direct",
+       "grid": 7.3117,
+       "straight": 6.8929,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.06075,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 12,
+       "euclid": 14.5,
+       "geodesic": 14.525,
+       "status": "found",
+       "grid": 26.0355,
+       "straight": 25.6051,
+       "geodesicMs": 1,
+       "checks": 216,
+       "stretchGrid": 1.79246,
+       "stretchStraight": 1.76283
+      },
+      {
+       "floorKey": 12,
+       "euclid": 12.971,
+       "geodesic": 13.1987,
+       "status": "found",
+       "grid": 19.2394,
+       "straight": 18.9519,
+       "geodesicMs": 0.3,
+       "checks": 184,
+       "stretchGrid": 1.45767,
+       "stretchStraight": 1.4359
+      },
+      {
+       "floorKey": 12,
+       "euclid": 3.606,
+       "geodesic": 4.5997,
+       "status": "found",
+       "grid": 18.7716,
+       "straight": 18.5892,
+       "geodesicMs": 0.1,
+       "checks": 57,
+       "stretchGrid": 4.08102,
+       "stretchStraight": 4.04136
+      },
+      {
+       "floorKey": 12,
+       "euclid": 14.329,
+       "geodesic": 15.1805,
+       "status": "found",
+       "grid": 20.3343,
+       "straight": 20.1498,
+       "geodesicMs": 0.4,
+       "checks": 172,
+       "stretchGrid": 1.3395,
+       "stretchStraight": 1.32735
+      },
+      {
+       "floorKey": 12,
+       "euclid": 5.21,
+       "geodesic": 11.1978,
+       "status": "found",
+       "grid": 24.5349,
+       "straight": 24.1538,
+       "geodesicMs": 0.7,
+       "checks": 392,
+       "stretchGrid": 2.19105,
+       "stretchStraight": 2.15701
+      },
+      {
+       "floorKey": 12,
+       "euclid": 3.855,
+       "geodesic": 3.8548,
+       "status": "direct",
+       "grid": 4.249,
+       "straight": 3.9631,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.10228,
+       "stretchStraight": 1.0281
+      },
+      {
+       "floorKey": 12,
+       "euclid": 6.021,
+       "geodesic": 9.1065,
+       "status": "found",
+       "grid": 25.3929,
+       "straight": 24.7274,
+       "geodesicMs": 0.6,
+       "checks": 306,
+       "stretchGrid": 2.78844,
+       "stretchStraight": 2.71536
+      },
+      {
+       "floorKey": 12,
+       "euclid": 4.388,
+       "geodesic": 4.8852,
+       "status": "found",
+       "grid": 14.5919,
+       "straight": 14.1046,
+       "geodesicMs": 0.3,
+       "checks": 162,
+       "stretchGrid": 2.98699,
+       "stretchStraight": 2.88722
+      },
+      {
+       "floorKey": 12,
+       "euclid": 7.762,
+       "geodesic": 11.288,
+       "status": "found",
+       "grid": 20.1,
+       "straight": 19.6883,
+       "geodesicMs": 0.2,
+       "checks": 119,
+       "stretchGrid": 1.78066,
+       "stretchStraight": 1.74419
+      },
+      {
+       "floorKey": 12,
+       "euclid": 4.95,
+       "geodesic": 5.0254,
+       "status": "found",
+       "grid": 26.8284,
+       "straight": 26.2117,
+       "geodesicMs": 0.2,
+       "checks": 124,
+       "stretchGrid": 5.33858,
+       "stretchStraight": 5.21586
+      },
+      {
+       "floorKey": 12,
+       "euclid": 13.145,
+       "geodesic": 16.1509,
+       "status": "found",
+       "grid": 17.2569,
+       "straight": 16.8843,
+       "geodesicMs": 0,
+       "checks": 31,
+       "stretchGrid": 1.06847,
+       "stretchStraight": 1.0454
+      }
+     ],
+     "leftFloor": 0,
+     "attempts": 21,
+     "floors": 1,
+     "ms": 24
+    }
+   },
+   "quality": {
+    "parts": 1,
+    "partsOver20": 1,
+    "largestShare": 1,
+    "reachableFromExits": 1,
+    "partsWithExit": 1,
+    "floorAreaM2": 146.6,
+    "floorNodesPerM2": 4.756,
+    "latticeCoverage": 0.936
+   },
+   "stairs": {
+    "staircases": 0,
+    "ends": 0,
+    "endsLinked": 0,
+    "joinTwoLevels": 0,
+    "joinTwoByRise": 0,
+    "unlinked": 0,
+    "cores": 0,
+    "coreStairsAssumed": 0,
+    "levels": 2,
+    "levelsJoined": 1,
+    "multiLevelFloorPct": 0
+   },
+   "robustness": {
+    "webIfcMessages": 0,
+    "lacks": [
+     "stairs"
+    ],
+    "does": [
+     "exits from Pset_DoorCommon.IsExternal"
+    ]
+   },
+   "memory": {
+    "start": {
+     "maxRssMB": 110,
+     "heapMB": 30
+    },
+    "extract": {
+     "maxRssMB": 179,
+     "heapMB": 52
+    },
+    "lattice": {
+     "maxRssMB": 179,
+     "heapMB": 49
+    },
+    "quality": {
+     "maxRssMB": 179,
+     "heapMB": 25
+    },
+    "routes": {
+     "maxRssMB": 179,
+     "heapMB": 21
+    },
+    "map_temperature": {
+     "maxRssMB": 179,
+     "heapMB": 44
+    },
+    "map_flood": {
+     "maxRssMB": 179,
+     "heapMB": 34
+    },
+    "forecast": {
+     "maxRssMB": 179,
+     "heapMB": 25
+    },
+    "rl": {
+     "maxRssMB": 179,
+     "heapMB": 33
+    },
+    "geodesic": {
+     "maxRssMB": 179,
+     "heapMB": 47
+    },
+    "peakRssMB": 179
+   },
+   "graphHash": "1631784eb00611e28ab4",
+   "graph": {
+    "nodes": 700,
+    "edges": 2121,
+    "floorNodes": 697,
+    "stairNodes": 0,
+    "doorNodes": 3,
+    "wallFaceNodes": 148,
+    "blockedEdges": 189,
+    "prunedNodes": 0,
+    "spacing": 0.5,
+    "coarsened": false,
+    "windingFallback": false,
+    "sections": 1,
+    "sectionSegments": 238
+   },
+   "input": {
+    "floorMeshes": 8,
+    "floorTriangles": 224,
+    "stairMeshes": 0,
+    "doorMeshes": 30,
+    "doors": 3,
+    "wallMeshes": 8,
+    "spaceMeshes": 4,
+    "obstacleMeshes": 42,
+    "flaggedDoors": 1,
+    "flagSource": "IsExternal",
+    "storeys": 2,
+    "levels": [
+     0.47,
+     2.97
+    ]
+   },
+   "exits": {
+    "count": 1,
+    "source": "Pset_DoorCommon.IsExternal",
+    "flagged": 1
+   },
+   "pairs": {
+    "routes": 20,
+    "kind": "start to exit"
+   },
+   "routeLengths": {
+    "medianM": 8.4,
+    "maxM": 18
+   },
+   "yenRoutes": {
+    "found": [
+     3,
+     3,
+     3,
+     3,
+     3
+    ],
+    "budgetHits": 0
+   },
+   "distinctRoutes": {
+    "found": [
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "budgetHits": 0
+   },
+   "fireSeed": 350,
+   "forecast": {
+    "temperature": {
+     "forecastMs": 3.92,
+     "coarsened": null,
+     "closingShare": 0.001,
+     "escapeDeadlinesMs": 0.71,
+     "canLeaveShare": 0.999,
+     "planMs": 1.26,
+     "planMaxMs": 1.34,
+     "doseDeadlineMs": 5.29,
+     "doseDeadlineMaxMs": 15.67,
+     "doseDeadlineMapMs": 117.6,
+     "mapStepS": 0.1042,
+     "mapLayers": 2880,
+     "mapWork": 13144313
+    },
+    "flood": {
+     "forecastMs": 2.29,
+     "coarsened": null,
+     "closingShare": 1,
+     "escapeDeadlinesMs": 0.71,
+     "canLeaveShare": 0.999,
+     "planMs": 1.48,
+     "planMaxMs": 1.88,
+     "doseDeadlineMs": 5.15,
+     "doseDeadlineMaxMs": 6.98,
+     "doseDeadlineMapMs": 53.4,
+     "mapStepS": 0.1042,
+     "mapLayers": 2880,
+     "mapWork": 13144313
+    }
+   },
+   "rl": [
+    {
+     "reached": true,
+     "successRate": 0.975,
+     "policyReturn": 7.409,
+     "optimalReturn": 7.496,
+     "escapeSteps": 12
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 9.8,
+     "optimalReturn": 9.8,
+     "escapeSteps": 2
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 7.49,
+     "optimalReturn": 7.577,
+     "escapeSteps": 12
+    }
+   ],
+   "wallSeconds": 5.6
+  },
+  {
+   "name": "duplex-apartment",
+   "schema": "IFC2X3",
+   "bytes": 2380763,
+   "speed": {
+    "extractMs": 60.7,
+    "extractRuns": 5,
+    "extractWithFlagsMs": 88.2,
+    "latticeMs": 33.5,
+    "latticeRuns": 5,
+    "prepMs": 1.82,
+    "astarMs": 0.21,
+    "astarMaxMs": 0.481,
+    "routeMs": 0.266,
+    "yenMs": 2.59,
+    "yenMaxMs": 4.04,
+    "distinctMs": 8.72,
+    "distinctMaxMs": 11.28,
+    "straightenMs": 0.93,
+    "straightenMaxMs": 2.965,
+    "straightenColdMs": 4.65,
+    "rlMs": 16,
+    "rlMaxMs": 22.4,
+    "rlOneEpisodeMs": 7.9
+   },
+   "accuracy": {
+    "exits": {
+     "graphDoors": 14,
+     "flagged": 4,
+     "oneSided": {
+      "chosen": 2,
+      "truePositives": 2,
+      "precision": 1,
+      "recall": 0.5
+     },
+     "roomOneSide": {
+      "chosen": 4,
+      "truePositives": 4,
+      "precision": 1,
+      "recall": 1
+     }
+    },
+    "front_temperature": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 1415,
+     "tradeoffs": 0
+    },
+    "map_temperature": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 1.15,
+     "gapMaxS": 1.69,
+     "gapMedianSteps": 10.99
+    },
+    "front_flood": {
+     "starts": 5,
+     "earliestEqualsFrontHead": 5,
+     "truncated": 0,
+     "maxLabels": 1330,
+     "tradeoffs": 0
+    },
+    "map_flood": {
+     "checked": 12,
+     "works": 12,
+     "notLater": 12,
+     "noMapDeparture": 0,
+     "gapMedianS": 0.37,
+     "gapMaxS": 1.69,
+     "gapMedianSteps": 3.59
+    },
+    "surrogate": {
+     "surrogateMs": 2.85,
+     "fullMs": 7.83,
+     "conservative": true,
+     "lateNodes": 0,
+     "lowRates": 0,
+     "closingNodes": 1,
+     "earlierMedianS": 0,
+     "earlierMaxS": 0,
+     "surrogateOnlyClosing": 789,
+     "deadlineEarlierMedianS": 155,
+     "deadlineEarlierMaxS": 285.4,
+     "deadlineLater": 0
+    },
+    "geodesic": {
+     "pairs": [
+      {
+       "floorKey": 9,
+       "euclid": 3.202,
+       "geodesic": 3.2016,
+       "status": "direct",
+       "grid": 3.3284,
+       "straight": 3.2016,
+       "geodesicMs": 0.4,
+       "checks": 1,
+       "stretchGrid": 1.03963,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 9,
+       "euclid": 6.23,
+       "geodesic": 6.3147,
+       "status": "found",
+       "grid": 7.4014,
+       "straight": 7.1233,
+       "geodesicMs": 0.6,
+       "checks": 17,
+       "stretchGrid": 1.17209,
+       "stretchStraight": 1.12806
+      },
+      {
+       "floorKey": 9,
+       "euclid": 5.831,
+       "geodesic": 6.7142,
+       "status": "found",
+       "grid": 10.1213,
+       "straight": 10.0099,
+       "geodesicMs": 1.1,
+       "checks": 117,
+       "stretchGrid": 1.50745,
+       "stretchStraight": 1.49085
+      },
+      {
+       "floorKey": 9,
+       "euclid": 5.45,
+       "geodesic": 5.4504,
+       "status": "direct",
+       "grid": 5.4504,
+       "straight": 5.4504,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 9,
+       "euclid": 5.636,
+       "geodesic": 5.6358,
+       "status": "direct",
+       "grid": 5.9199,
+       "straight": 5.8084,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.05041,
+       "stretchStraight": 1.03064
+      },
+      {
+       "floorKey": 40,
+       "euclid": 8.515,
+       "geodesic": 8.7385,
+       "status": "found",
+       "grid": 10.2426,
+       "straight": 10.1312,
+       "geodesicMs": 1.7,
+       "checks": 310,
+       "stretchGrid": 1.17212,
+       "stretchStraight": 1.15937
+      },
+      {
+       "floorKey": 40,
+       "euclid": 2.5,
+       "geodesic": 2.5,
+       "status": "direct",
+       "grid": 2.6213,
+       "straight": 2.5,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.04853,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 40,
+       "euclid": 12.51,
+       "geodesic": 12.7133,
+       "status": "found",
+       "grid": 13.8607,
+       "straight": 13.3852,
+       "geodesicMs": 2.8,
+       "checks": 230,
+       "stretchGrid": 1.09025,
+       "stretchStraight": 1.05284
+      },
+      {
+       "floorKey": 40,
+       "euclid": 6.933,
+       "geodesic": 7.2601,
+       "status": "found",
+       "grid": 8.3019,
+       "straight": 8.0644,
+       "geodesicMs": 92,
+       "checks": 1949,
+       "stretchGrid": 1.14349,
+       "stretchStraight": 1.11079
+      },
+      {
+       "floorKey": 9,
+       "euclid": 4.833,
+       "geodesic": 4.8332,
+       "status": "direct",
+       "grid": 5.2958,
+       "straight": 5.0714,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.09571,
+       "stretchStraight": 1.04929
+      },
+      {
+       "floorKey": 40,
+       "euclid": 2.242,
+       "geodesic": 2.2417,
+       "status": "direct",
+       "grid": 2.641,
+       "straight": 2.5451,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.17811,
+       "stretchStraight": 1.13537
+      },
+      {
+       "floorKey": 40,
+       "euclid": 4.031,
+       "geodesic": 4.2486,
+       "status": "found",
+       "grid": 6.3284,
+       "straight": 6.2016,
+       "geodesicMs": 0.2,
+       "checks": 104,
+       "stretchGrid": 1.48953,
+       "stretchStraight": 1.45967
+      },
+      {
+       "floorKey": 40,
+       "euclid": 7.649,
+       "geodesic": 7.6541,
+       "status": "found",
+       "grid": 8.1213,
+       "straight": 7.8079,
+       "geodesicMs": 0.1,
+       "checks": 42,
+       "stretchGrid": 1.06104,
+       "stretchStraight": 1.02009
+      },
+      {
+       "floorKey": 9,
+       "euclid": 3.808,
+       "geodesic": 3.8079,
+       "status": "direct",
+       "grid": 4.1213,
+       "straight": 3.8079,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.08231,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 9,
+       "euclid": 7.01,
+       "geodesic": 7.0106,
+       "status": "found",
+       "grid": 9.4472,
+       "straight": 8.9711,
+       "geodesicMs": 0.1,
+       "checks": 49,
+       "stretchGrid": 1.34757,
+       "stretchStraight": 1.27966
+      },
+      {
+       "floorKey": 9,
+       "euclid": 7.433,
+       "geodesic": 7.742,
+       "status": "found",
+       "grid": 8.1569,
+       "straight": 7.7687,
+       "geodesicMs": 0,
+       "checks": 5,
+       "stretchGrid": 1.05358,
+       "stretchStraight": 1.00344
+      },
+      {
+       "floorKey": 40,
+       "euclid": 2.675,
+       "geodesic": 2.6755,
+       "status": "direct",
+       "grid": 2.8367,
+       "straight": 2.6755,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.06028,
+       "stretchStraight": 1
+      },
+      {
+       "floorKey": 40,
+       "euclid": 3.803,
+       "geodesic": 4.5539,
+       "status": "found",
+       "grid": 6.4728,
+       "straight": 6.4728,
+       "geodesicMs": 1.3,
+       "checks": 319,
+       "stretchGrid": 1.42138,
+       "stretchStraight": 1.42138
+      },
+      {
+       "floorKey": 40,
+       "euclid": 3.692,
+       "geodesic": 3.6997,
+       "status": "found",
+       "grid": 4.1357,
+       "straight": 3.9802,
+       "geodesicMs": 1.1,
+       "checks": 118,
+       "stretchGrid": 1.11783,
+       "stretchStraight": 1.0758
+      },
+      {
+       "floorKey": 9,
+       "euclid": 3.606,
+       "geodesic": 3.6056,
+       "status": "direct",
+       "grid": 3.8284,
+       "straight": 3.6056,
+       "geodesicMs": 0,
+       "checks": 1,
+       "stretchGrid": 1.06181,
+       "stretchStraight": 1
+      }
+     ],
+     "leftFloor": 0,
+     "attempts": 38,
+     "floors": 2,
+     "ms": 117
+    }
+   },
+   "quality": {
+    "parts": 2,
+    "partsOver20": 2,
+    "largestShare": 0.513,
+    "reachableFromExits": 1,
+    "partsWithExit": 2,
+    "floorAreaM2": 299.3,
+    "floorNodesPerM2": 4.998,
+    "latticeCoverage": 0.937
+   },
+   "stairs": {
+    "staircases": 2,
+    "ends": 4,
+    "endsLinked": 4,
+    "joinTwoLevels": 2,
+    "joinTwoByRise": 2,
+    "unlinked": 0,
+    "cores": 2,
+    "coreStairsAssumed": 0,
+    "levels": 2,
+    "levelsJoined": 2,
+    "multiLevelFloorPct": 100
+   },
+   "robustness": {
+    "webIfcMessages": 0,
+    "lacks": [],
+    "does": [
+     "exits from Pset_DoorCommon.IsExternal",
+     "2 parts of 20+ nodes, largest 51%"
+    ]
+   },
+   "memory": {
+    "start": {
+     "maxRssMB": 110,
+     "heapMB": 30
+    },
+    "extract": {
+     "maxRssMB": 146,
+     "heapMB": 26
+    },
+    "lattice": {
+     "maxRssMB": 147,
+     "heapMB": 29
+    },
+    "quality": {
+     "maxRssMB": 147,
+     "heapMB": 35
+    },
+    "routes": {
+     "maxRssMB": 147,
+     "heapMB": 23
+    },
+    "map_temperature": {
+     "maxRssMB": 147,
+     "heapMB": 54
+    },
+    "map_flood": {
+     "maxRssMB": 180,
+     "heapMB": 52
+    },
+    "forecast": {
+     "maxRssMB": 180,
+     "heapMB": 28
+    },
+    "rl": {
+     "maxRssMB": 180,
+     "heapMB": 36
+    },
+    "geodesic": {
+     "maxRssMB": 180,
+     "heapMB": 32
+    },
+    "peakRssMB": 180
+   },
+   "graphHash": "633dec540209c7d800ed",
+   "graph": {
+    "nodes": 1540,
+    "edges": 4361,
+    "floorNodes": 1496,
+    "stairNodes": 30,
+    "doorNodes": 14,
+    "wallFaceNodes": 374,
+    "blockedEdges": 158,
+    "prunedNodes": 0,
+    "spacing": 0.5,
+    "coarsened": false,
+    "windingFallback": false,
+    "sections": 2,
+    "sectionSegments": 2439
+   },
+   "input": {
+    "floorMeshes": 20,
+    "floorTriangles": 528,
+    "stairMeshes": 196,
+    "doorMeshes": 44,
+    "doors": 14,
+    "wallMeshes": 75,
+    "spaceMeshes": 21,
+    "obstacleMeshes": 228,
+    "flaggedDoors": 4,
+    "flagSource": "IsExternal",
+    "storeys": 4,
+    "levels": [
+     0.14,
+     3.24
+    ]
+   },
+   "exits": {
+    "count": 4,
+    "source": "Pset_DoorCommon.IsExternal",
+    "flagged": 4
+   },
+   "pairs": {
+    "routes": 20,
+    "kind": "start to exit"
+   },
+   "routeLengths": {
+    "medianM": 12.8,
+    "maxM": 19.8
+   },
+   "yenRoutes": {
+    "found": [
+     3,
+     3,
+     3,
+     3,
+     3
+    ],
+    "budgetHits": 0
+   },
+   "distinctRoutes": {
+    "found": [
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "budgetHits": 0
+   },
+   "fireSeed": 753,
+   "forecast": {
+    "temperature": {
+     "forecastMs": 7.83,
+     "coarsened": null,
+     "closingShare": 0.001,
+     "escapeDeadlinesMs": 0.54,
+     "canLeaveShare": 0.999,
+     "planMs": 1.44,
+     "planMaxMs": 2.36,
+     "doseDeadlineMs": 3.87,
+     "doseDeadlineMaxMs": 17.73,
+     "doseDeadlineMapMs": 248.1,
+     "mapStepS": 0.1042,
+     "mapLayers": 2880,
+     "mapWork": 28644463
+    },
+    "flood": {
+     "forecastMs": 2.96,
+     "coarsened": null,
+     "closingShare": 0.513,
+     "escapeDeadlinesMs": 1.24,
+     "canLeaveShare": 0.999,
+     "planMs": 0.88,
+     "planMaxMs": 1.8,
+     "doseDeadlineMs": 4.55,
+     "doseDeadlineMaxMs": 6,
+     "doseDeadlineMapMs": 164.3,
+     "mapStepS": 0.1042,
+     "mapLayers": 2880,
+     "mapWork": 28644463
+    }
+   },
+   "rl": [
+    {
+     "reached": false,
+     "successRate": 1,
+     "policyReturn": 5.448,
+     "optimalReturn": 6.157,
+     "escapeSteps": 20
+    },
+    {
+     "reached": false,
+     "successRate": 0,
+     "policyReturn": -10.188,
+     "optimalReturn": -9.298,
+     "escapeSteps": null
+    },
+    {
+     "reached": true,
+     "successRate": 1,
+     "policyReturn": 4.577,
+     "optimalReturn": 5.049,
+     "escapeSteps": 30
+    }
+   ],
+   "wallSeconds": 7.2
+  }
+ ],
+ "totalMinutes": 2.9
+}

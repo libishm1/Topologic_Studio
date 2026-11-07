@@ -1200,17 +1200,19 @@ details.legend[open] > .legend__summary {
 
 /* ------------------------------------------------- field notes and hints */
 
-/* One card at the foot of the workflow panel, between the steps and the
- * status bar: a field note just found, or the hint for this step. */
+/* One line at the foot of the workflow panel, between the steps and the
+ * status bar: a field note just found, or the hint for this step. It opens
+ * to the full text on a click and otherwise keeps out of the panel's way. */
 .hint {
   flex-shrink: 0;
-  margin: 0 var(--space-3) var(--space-3);
-  padding: var(--space-3);
-  display: grid;
+  display: flex;
+  align-items: flex-start;
   gap: var(--space-2);
-  border: 1px solid var(--border);
+  max-height: 40vh;
+  overflow: auto;
+  padding: 6px var(--space-2) 6px var(--space-3);
+  border-top: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  border-radius: var(--radius);
   background: var(--surface-2);
   font-size: 13px;
 }
@@ -1220,29 +1222,63 @@ details.legend[open] > .legend__summary {
   background: var(--success-soft);
 }
 
-.hint__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.hint__icon {
+  flex-shrink: 0;
+  margin-top: 6px;
   color: var(--text-secondary);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-.hint__teaser,
 .hint__text {
-  margin: 0;
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.hint__teaser {
-  font-weight: 650;
+.hint__line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  padding-top: 6px;
 }
 
-.hint__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+.hint__more {
+  display: block;
+  padding: 6px 0;
+}
+
+.hint__close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.hint__close:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .hint__line {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
 }
 
 .field-notes__count {

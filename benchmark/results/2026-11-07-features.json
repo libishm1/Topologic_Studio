@@ -1,0 +1,95 @@
+{
+  "date": "2026-11-07T08:56:18.447Z",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i7-14700",
+    "cores": 28
+  },
+  "runs": 5,
+  "results": [
+    {
+      "model": "buildingsmart-sample-scene.ifc",
+      "nodes": 112,
+      "exits": 0,
+      "spaces": 2,
+      "ms": {
+        "sprinklerLayout": 1.47,
+        "requirement": 0.05
+      },
+      "sprinklerHeads": 3
+    },
+    {
+      "model": "courtyard-ring.ifc",
+      "nodes": 650,
+      "exits": 1,
+      "spaces": 0,
+      "ms": {
+        "forecast": 1.94,
+        "plan": 0.1,
+        "deadlineMap": 75.71,
+        "checkDesign": 0.38,
+        "checkMeasured": 0.28,
+        "checkQueues": 0.88,
+        "planCases": 0.32,
+        "reportHtml4": 0.02
+      },
+      "status": "fail"
+    },
+    {
+      "model": "duplex-apartment.ifc",
+      "nodes": 1540,
+      "exits": 4,
+      "spaces": 21,
+      "ms": {
+        "forecast": 3.8,
+        "plan": 0.25,
+        "deadlineMap": 224.06,
+        "checkDesign": 0.52,
+        "checkMeasured": 0.49,
+        "checkQueues": 2.71,
+        "planCases": 1.41,
+        "reportHtml4": 0.03,
+        "sprinklerLayout": 4.47,
+        "requirement": 0.07
+      },
+      "status": "fail",
+      "sprinklerHeads": 46
+    },
+    {
+      "model": "office-two-storey.ifc",
+      "nodes": 3374,
+      "exits": 2,
+      "spaces": 0,
+      "ms": {
+        "forecast": 7.89,
+        "plan": 0.47,
+        "deadlineMap": 429.63,
+        "checkDesign": 1.35,
+        "checkMeasured": 0.97,
+        "checkQueues": 5.28,
+        "planCases": 2.3,
+        "reportHtml4": 0.01
+      },
+      "status": "fail"
+    },
+    {
+      "model": "vienna-escape-route-model.ifc",
+      "nodes": 6846,
+      "exits": 2,
+      "spaces": 111,
+      "ms": {
+        "forecast": 18.23,
+        "plan": 0.14,
+        "deadlineMap": 1431.26,
+        "checkDesign": 1.89,
+        "checkMeasured": 2.52,
+        "checkQueues": 11.84,
+        "planCases": 5.18,
+        "reportHtml4": 0.03,
+        "sprinklerLayout": 22.21,
+        "requirement": 0.26
+      },
+      "status": "fail",
+      "sprinklerHeads": 173
+    }
+  ]
+}
