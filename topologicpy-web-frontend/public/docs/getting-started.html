@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting started: Topologic Studio guide</title>
+<meta name="description" content="Open a model in Topologic Studio, build the walkable graph and find the way out: the Model, Graph and Route steps, your own IFC files, phones and export to TopologicPy.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="../favicon.svg" alt="" width="26" height="26">Topologic Studio <span class="brand__tag">Guide</span></a>
+  <nav class="site-links" aria-label="Elsewhere">
+    <a href="../">Open the app</a>
+    <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Guide">
+    <p class="toc__label">Guide</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="getting-started.html" aria-current="page">Getting started</a>
+        <ul>
+          <li><a href="#quick-start">Quick start</a></li>
+          <li><a href="#model">Step 1, Model</a></li>
+          <li><a href="#graph">Step 2, Graph</a></li>
+          <li><a href="#route">Step 3, Route</a></li>
+          <li><a href="#your-files">Your own IFC files</a></li>
+          <li><a href="#phone">On a phone</a></li>
+          <li><a href="#export">Export to TopologicPy</a></li>
+          <li><a href="#shortcuts">Keyboard shortcuts</a></li>
+          <li><a href="#local">On your own computer</a></li>
+        </ul>
+      </li>
+      <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
+      <li><a href="suppression.html">Fire suppression</a></li>
+      <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
+    </ol>
+    <p class="toc__out"><a href="../">Open the app</a></p>
+  </nav>
+
+  <main id="main">
+    <h1>Getting started</h1>
+    <p class="lead">This page takes a first model from opening to its shortest way out. The fire, the sprinklers and the checks have pages of their own.</p>
+
+    <h2 id="quick-start">Quick start</h2>
+    <ol>
+      <li><a href="../">Open the app</a> and tap <span class="label">Duplex apartment</span> on the welcome screen, or drop an <code>.ifc</code> file on the page.</li>
+      <li>In the <span class="label">Graph</span> step, press <span class="label">Build egress graph</span>.</li>
+      <li>In the <span class="label">Route</span> step, press <span class="label">Set</span> beside Start (or <kbd>S</kbd>) and click a point on the graph, then press <span class="label">Use the nearest exit door</span> and <span class="label">Find egress route</span>.</li>
+      <li>In the <span class="label">Simulate</span> step, press <span class="label">Set</span> beside Fire origin (or <kbd>F</kbd>), click where the fire starts, and press <span class="label">Start fire</span>. The route moves away from the heat when it has to.</li>
+      <li>To go further, switch on the <span class="label">Flamescapes combustion solver (optional)</span> and then <span class="label">Sprinklers</span> in the Simulate step (see <a href="fire-and-smoke.html">Fire and smoke</a> and <a href="suppression.html">Fire suppression</a>), or run the checks in the Route step (see <a href="checks.html">Code and performance checks</a>).</li>
+    </ol>
+
+    <h3 id="guided-runs">Guided runs</h3>
+    <p>The welcome screen also offers guided runs. Studio opens the Duplex and takes each step itself, with a caption for each, then stops at the result. <em>The way out</em> builds the graph and finds the route from the room furthest from an exit; <em>A fire on the route</em> adds a fire part-way along it; <em>Smoke behind closed doors</em> runs the Flamescapes solver with every door closed. <span class="label">Stop</span> ends a run where it is.</p>
+
+    <figure>
+      <img src="media/welcome.jpg" width="1440" height="900" loading="lazy" alt="The welcome screen: a drop zone for an IFC file and the example buildings.">
+      <figcaption>The welcome screen: drop a file, open one, or pick an example.</figcaption>
+    </figure>
+
+    <h2 id="model">Step 1, Model: what is in the file</h2>
+    <figure>
+      <img src="media/duplex-model.jpg" width="1440" height="900" loading="lazy" alt="The Model step for the Duplex: 21 floors, 4 stairs, 14 doors and 57 walls, with 4 of the 14 doors marked as exits.">
+      <figcaption>The Model step for the Duplex: 21 floors, 4 stairs, 14 doors and 57 walls, with 4 of the 14 doors marked as exits.</figcaption>
+    </figure>
+    <p>Studio reads IFC2x3 and IFC4 files. The Model step counts the floors, stairs, doors and walls, the storeys and rooms (<code>IfcSpace</code>), and reports which doors are exits and which slabs are roofs (roofs are not walked on).</p>
+    <p>Exits come from the file's own data: a door marked <code>FireExit</code> or <code>IsExternal</code> in <code>Pset_DoorCommon</code>, or a door with an external space boundary. If the file marks none, Studio falls back to doors with floor on one side only and says so. The Duplex marks 4 of its 14 doors as external.</p>
+    <p>The first time you open a file it is converted and stored in your browser, so the next time it opens from the cache without being read again (up to 24 models or 512 MB; clear them under <span class="label">Local cache</span> in the Model step).</p>
+
+    <h3 id="identify">What the elements are</h3>
+    <p><span class="label">What the elements are</span> names every element: by its IFC class where the exporter typed it, and otherwise (furniture and appliances often arrive as <code>IfcBuildingElementProxy</code>) by its name, then by the size of its box. With the class hidden, these rules named 86% of 6,066 typed elements from 45 models correctly.</p>
+    <p><span class="label">Identify by shape</span> then runs IFCNet's point-cloud classifier (Emunds et al. 2021) in your browser on the elements only the box could place, and keeps its answer when it is at least 90% sure. The first use downloads 4.5 MB. The comparison with IFCNet, text embeddings and small language models is in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/ifc-identification-benchmark-2026-11-05.md">identification benchmark</a>.</p>
+
+    <h3 id="describe">Describe this model</h3>
+    <p><span class="label">Describe this model</span> writes a short plain description of the building, its ways out and its fire. A language model writes it from the facts Studio has already worked out (storeys, rooms, doors and exits, the walkable graph, the route, the fire's results) and from nothing else. The facts are listed under it before anything is written.</p>
+    <ul>
+      <li>On Chrome 148 or later on a desktop computer, Chrome's built-in model writes it on the computer, and nothing is sent.</li>
+      <li>On other browsers, a site deployed with the Cloudflare describer can send those facts, never the IFC, to a Workers AI model on Cloudflare's free allowance instead.</li>
+    </ul>
+
+    <h3 id="view">Showing the building</h3>
+    <p><span class="label">Show the building as</span> switches the model between Solid, Ghost (see-through, so the graph shows inside) and Hidden. The view buttons give top, front, side and isometric views, and <span class="label">Show</span> cuts the building at a storey. A <span class="label">Second model</span> (an MEP or structural IFC of the same building) can be added here; it is described under <a href="suppression.html#second-model">Fire suppression</a>.</p>
+
+    <h2 id="graph">Step 2, Graph: where a person can walk</h2>
+    <figure>
+      <img src="media/duplex-graph.jpg" width="1440" height="900" loading="lazy" alt="The walkable graph of the Duplex, drawn in blue through both storeys and down the stairs.">
+      <figcaption>The walkable graph of the Duplex through both storeys and down the stairs.</figcaption>
+    </figure>
+    <p><span class="label">Build egress graph</span> lays a grid of points over every floor, 0.5 m apart and turned to line up with the walls, and joins neighbouring points that a person could walk between. Walls cut 0.75 m above each floor block the links that cross them, doors join the rooms on either side, and each stair is walked along its flight. The whole graph is built in your browser, in a few hundredths of a second for the Duplex (1,597 points and 4,597 links).</p>
+    <p>The step reports how much of the building one can reach from its largest part. The Duplex is two homes side by side, so its graph is in two parts and the app says so: a route can only join two points in the same part.</p>
+    <p><span class="label">Graph settings</span> change the grid spacing, the largest step a person can climb, the agent's height, whether walls block links, and whether lifts and escalators join floors (off by default, as in an evacuation). <span class="label">Cross-check with TopologicPy</span> builds TopologicPy's own navigation graph on the server and reports how much of each graph the other covers.</p>
+
+    <h2 id="route">Step 3, Route: the shortest way out</h2>
+    <figure>
+      <img src="media/duplex-route.jpg" width="1440" height="900" loading="lazy" alt="A route from an upstairs room of the Duplex, down the stair and out of the front door, 18.8 m long.">
+      <figcaption>A route from an upstairs room, down the stair and out of the front door: 18.8 m.</figcaption>
+    </figure>
+    <p>Press <span class="label">Set</span> beside Start (or <kbd>S</kbd>) and click a point on the graph, then set the Exit the same way, or press <span class="label">Use the nearest exit door</span>. <span class="label">Find egress route</span> draws the shortest route and straightens it, so it reads as a person would walk it rather than as a zigzag across the grid. The result gives its length, the length on the grid before straightening, and its turns.</p>
+    <p>The nearest exit door is one of the doors out of the building, drawn as orange rings. Where the model says which doors are external, these are the external doors at street level and the fire exits that open onto no walkable floor. A flat's front door flagged as a fire exit leads only to the stair, and a balcony door leads nowhere, so neither counts: of the Vienna model's 35 exit doors, two lead out, the street door and a fire exit at the back of the first floor.</p>
+    <p>Without a mouse, <span class="label">Place without the mouse</span> puts the exit at any door from a list, or any point at typed coordinates. <span class="label">Route options</span> switch between the built-in A* search (in your browser) and TopologicPy's <code>TGraph</code> engine (on the server). <span class="label">Alternative routes</span> look for other ways out: <em>Different space</em> keeps routes that do not run along one already found, and <em>Yen</em> lists the next cheapest routes exactly.</p>
+    <p>The <span class="label">Code check</span> and the <span class="label">Performance check (with the fire)</span> are also in this step; see <a href="checks.html">Code and performance checks</a>.</p>
+
+    <h2 id="your-files">Using your own IFC files</h2>
+    <p>Studio works best on architectural models with slabs or floors, walls, doors and stairs. Some things that help, and what Studio does when they are missing:</p>
+    <ul>
+      <li><span class="label">Exits.</span> Mark exit doors with <code>FireExit</code> or <code>IsExternal</code> in <code>Pset_DoorCommon</code>, or give them an external space boundary. Otherwise Studio guesses from doors with floor on one side only, and tells you it did.</li>
+      <li><span class="label">Stairs.</span> Stairs are walked along their flights, including flights and treads aggregated into an <code>IfcStair</code>. A stair modelled without treads, or a room named as a stair, is walked along an assumed dog-leg line inside its footprint.</li>
+      <li><span class="label">Lifts and escalators</span> (<code>IfcTransportElement</code>, or rooms and objects named as lifts) join floors only when <span class="label">Use lifts and escalators</span> is on.</li>
+      <li><span class="label">Rooms</span> (<code>IfcSpace</code>) are needed for the two-zone fire model and for placing sprinklers per room. Where a model has few or no floor slabs (the NIBS Office walks on its spaces), the Flamescapes grid takes the spaces' floors as slabs.</li>
+      <li><span class="label">Up axis.</span> Most files are read correctly as they are; if the graph lies on a wall instead of a floor, change <span class="label">Up axis</span> in the graph settings.</li>
+      <li><span class="label">Separate parts.</span> If the Graph step reports several parts, a route cannot cross between them: check for missing doors, or raise <span class="label">Max vertical step</span> where a level change has no stair in the model.</li>
+    </ul>
+    <p>Files in the older IFC2X_FINAL schema, structural or MEP-only models and models with no floors are refused or give an empty graph, with a message saying why. A structural or MEP model can still be added as a second model.</p>
+
+    <h2 id="phone">On a phone</h2>
+    <figure class="portrait">
+      <img src="media/phone-route.jpg" width="780" height="1688" loading="lazy" alt="Studio on a phone: the Duplex route in the viewer above, the four steps and the route result below.">
+      <figcaption>On a phone the viewer sits above the steps.</figcaption>
+    </figure>
+    <p>On a narrow screen the viewer sits above the steps, and the panels scroll underneath. Tap <span class="label">Set</span> and then tap the graph to place a point, or use <span class="label">Place without the mouse</span> to pick an exit door from a list. The examples are the quickest start on a phone; your own files are converted on the phone itself, so a large model takes longer the first time and opens from the cache after that.</p>
+    <p>Measured on an emulated mid-range phone (4G, processor slowed four times, empty cache), opening the Duplex example until it can be used takes about 1 s, and opening the Duplex IFC file about 1.2 s.</p>
+
+    <h2 id="export">Exporting results to TopologicPy</h2>
+    <p><span class="label">Export for TopologicPy (JSON)</span>, in the Graph step and under a finished fire in the Simulate step, downloads the walkable graph in the JSON layout TopologicPy's <code>Graph.ExportToJSON</code> writes, so <code>Graph.ByJSONFile</code> reads it back (checked with topologicpy 0.9.86).</p>
+    <ul>
+      <li><span class="label">Vertices:</span> every node in the IFC's own world coordinates (metres, Z up, at floor level). The viewer's axis turn, the model's coordination matrix and the agent's lift are undone.</li>
+      <li><span class="label">Node attributes:</span> its kind (floor, stair, door, lift) and its place on the route. After a Flamescapes run they also hold the gas temperature, visibility, CO, soot, CO₂ and O₂ at head height for every frame, their extremes, the time the node became untenable, its tenability index and its asphyxiant and heat doses. After a graph fire model they hold whether the node was burning at the end.</li>
+      <li><span class="label">Edges:</span> source and target, kind, length in metres, and whether the edge is on the route.</li>
+      <li><span class="label">Graph properties:</span> the source file, the fire model and its settings (fire class, doors, windows, ventilation, grid and backend), the fire origin in IFC coordinates, the frame times and the heat release series.</li>
+    </ul>
+<pre><code>from topologicpy.Graph import Graph
+from topologicpy.Topology import Topology
+from topologicpy.Dictionary import Dictionary
+
+g = Graph.ByJSONFile(open("duplex-apartment-topologicpy.json"))
+first = Graph.Vertices(g)[0]
+print(Dictionary.PythonDictionary(Topology.Dictionary(first))["untenable_s"])</code></pre>
+    <p><span class="label">Export the run as a table (CSV)</span>, under a finished Flamescapes fire, writes one row per node per frame: its place and kind, the time, every reading and measure, the two doses and the tenability index, gzipped for a spreadsheet or a machine-learning dataset.</p>
+
+    <h2 id="shortcuts">Keyboard shortcuts</h2>
+    <div class="table-wrap" role="region" aria-labelledby="keys-caption" tabindex="0">
+      <table>
+        <caption id="keys-caption">Keyboard shortcuts</caption>
+        <thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>S</kbd></td><td>Set the start</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Set the exit</td></tr>
+          <tr><td><kbd>F</kbd></td><td>Set the fire origin</td></tr>
+          <tr><td><kbd>G</kbd></td><td>Show or hide the graph</td></tr>
+          <tr><td><kbd>M</kbd></td><td>Show or hide the building</td></tr>
+          <tr><td><kbd>B</kbd></td><td>Build or rebuild the graph</td></tr>
+          <tr><td><kbd>Enter</kbd></td><td>Find the route</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Cancel picking; close the Methods page</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="local">Running Studio on your own computer</h2>
+    <p>The app alone needs <a href="https://nodejs.org/">Node.js</a> 20.11 or later; everything that runs in the browser works without the server.</p>
+<pre><code>git clone https://github.com/libishm1/Topologic_Studio.git
+cd Topologic_Studio/topologicpy-web-frontend
+npm ci        # also copies web-ifc's WASM and the fragments worker into public/
+npm run dev   # http://localhost:5173</code></pre>
+    <p>The optional server needs Python 3.12 and TopologicPy 0.9.86 with <code>topologic-core</code> (0.9.87 removes <code>Graph</code>). The <a href="https://github.com/libishm1/Topologic_Studio#running-studio-on-your-own-computer">README</a> gives the steps and the tests.</p>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="index.html">Previous: Overview</a>
+      <a href="fire-and-smoke.html">Next: Fire and smoke</a>
+    </nav>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
+  </div>
+</footer>
+</body>
+</html>

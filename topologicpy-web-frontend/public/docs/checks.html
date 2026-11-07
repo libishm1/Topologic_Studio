@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code and performance checks: Topologic Studio guide</title>
+<meta name="description" content="Topologic Studio's prescriptive egress check against SBC 801-CR-2018 and IBC 2021, and its performance check with the fire: detection, alarm, pre-movement, queues at doors, ASET and RSET.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="../favicon.svg" alt="" width="26" height="26">Topologic Studio <span class="brand__tag">Guide</span></a>
+  <nav class="site-links" aria-label="Elsewhere">
+    <a href="../">Open the app</a>
+    <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Guide">
+    <p class="toc__label">Guide</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
+      <li><a href="suppression.html">Fire suppression</a></li>
+      <li><a href="checks.html" aria-current="page">Code and performance checks</a>
+        <ul>
+          <li><a href="#code">The code check</a></li>
+          <li><a href="#performance">The performance check</a></li>
+          <li><a href="#criterion">The rule and its criteria</a></li>
+          <li><a href="#rset">What RSET is made of</a></li>
+          <li><a href="#report">Several fires and the report</a></li>
+          <li><a href="#proved">What is proved</a></li>
+          <li><a href="#not-yet">Not covered yet</a></li>
+        </ul>
+      </li>
+      <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
+    </ol>
+    <p class="toc__out"><a href="../">Open the app</a></p>
+  </nav>
+
+  <main id="main">
+    <h1>Code and performance checks</h1>
+    <p class="lead">Both checks are in the Route step. The code check applies prescriptive egress limits; the performance check asks whether people can get out before the fire makes their way untenable.</p>
+
+    <h2 id="code">The code check</h2>
+    <p>The <span class="label">Code check</span> tests each storey's egress for offices (occupancy group B):</p>
+    <ul>
+      <li>the walk to the nearest exit;</li>
+      <li>the number of exits for the occupant load, and their separation;</li>
+      <li>door widths;</li>
+      <li>whether the building is high-rise.</li>
+    </ul>
+    <p>Each limit is the stricter of the Saudi Fire Code SBC 801-CR-2018 and the International Building Code 2021, so a pass meets both, and every result names both clauses. The exits it counts are the exits out of the building and the stairs; places on a storey that reach none of that storey's exit doors leave by a stair.</p>
+    <p>In the Vienna example, two doors lead out and there is one stairwell, so the storeys above the second fail the two-exit rule on Group B values. Residential buildings have their own single-exit rule, which is not yet checked.</p>
+    <div class="note">
+      <p>The current edition is SBC 801-CR-2024, whose text was not obtained. Until it is, the checks pass SBC 801-CR-2018, with IBC 2021 where it is stricter. This guide cites clause numbers and values only.</p>
+    </div>
+
+    <h2 id="performance">The performance check (with the fire)</h2>
+    <p>The <span class="label">Performance check (with the fire)</span> reads the escape deadlines of a forecast (Simulate step, <span class="label">Plan with the forecast</span>; see <a href="fire-and-smoke.html#forecast">Fire and smoke</a>). A place passes when someone there can wait for detection, the alarm, the 99th percentile of pre-movement time and any queue at the doors, and still get out with a dose under the limit.</p>
+    <p>It reports, per storey, the worst margin, the least ASET/RSET, the share of occupants who start in time and the longest wait at the doors. It is evidence for an alternative method (SBC 801-CR-2018 Section 104.9) beside the code check, not a replacement for it.</p>
+    <p>Rule checkers on the IFC, such as a Solibri check of SBC 201-CR-2024 egress on a three-storey hotel (Mohammadi, Abolkhair and Altassan 2026, Sustainability 18(16) 8023, <a href="https://doi.org/10.3390/su18168023">doi:10.3390/su18168023</a>), cover the prescriptive side. This check is the performance-based side they do not cover.</p>
+
+    <h3 id="criterion">The rule and its criteria</h3>
+    <p>For each place, the escape deadline L is read from the dose-limited map, which is never later than the exact deadline. The place passes when L allows detection, the alarm and the 99th percentile of pre-movement, with the criterion's factor on RSET and its margin. Three criteria are offered:</p>
+    <ul>
+      <li><span class="label">Base case (the default):</span> ASET at least twice RSET and at least 30 s over it (Singapore SFEG 2025 Table 10.4; the Italian fire code, M.3.2.2).</li>
+      <li><span class="label">Sensitivity case:</span> ASET at least 1.2 times RSET.</li>
+      <li><span class="label">The 99th percentile alone.</span></li>
+    </ul>
+    <p>Where a place's deadline is bound by the end of the forecast rather than by the fire, the check says "cannot tell" and how long a forecast it needs.</p>
+
+    <h3 id="rset">What RSET is made of</h3>
+    <dl>
+      <dt class="label">Presets</dt>
+      <dd><p>Office (the default), classroom, apartments, the flat of origin, hotel and assembly. Each gives the alarm and pre-movement times, the share of occupants who never respond and the floor area per occupant, from PD 7974-6, ISO/TR 16738, the Australian FSVM data sheets, New Zealand's C/VM2 and IBC 2021 Table 1004.5. The design pre-movement time is a log-normal through PD 7974-6's two percentiles.</p></dd>
+      <dt class="label">Detection</dt>
+      <dd><p>With a Flamescapes fire, detection is when the smoke reaches a smoke detector's optical density (0.097 per metre, C/VM2) at virtual detectors under the ceiling. Up to 16 are placed round the fire, 7 m from it (C/VM2) or as far as its room allows: a wall or a lintel ends the search. They are read every frame on the CPU and the GPU and shown on the run card. In the GPU check's test room, 9 detectors gave a visibility correlation of 0.994 between CPU and GPU and the first alarm at 40 s on both. Without a Flamescapes fire, the detection time is the one set.</p></dd>
+      <dt class="label">No response</dt>
+      <dd><p>Each preset carries the share of occupants who never respond, from the Australian guidance (0 % for offices and assembly, 1 % on an apartment fire floor and in hotels). They are never counted as starting in time, and the percentiles are those of the people who respond.</p></dd>
+      <dt class="label">Measured pre-movement</dt>
+      <dd><p>A measured spread, the Weibull fits of Lovreglio et al. (2019), is judged per storey beside the design log-normal and drawn with it, without changing the verdict.</p></dd>
+      <dt class="label">Queues at the doors</dt>
+      <dd><p>Occupants on every place, at the preset's floor area per occupant, walk to the nearest exit with no fire and queue at each door at 1.32 persons a second per metre of effective width (C/VM2 3.5.3), with the door widths from the IFC, doors upstream first (Lindley's recursion). The wait W of the 99th-percentile starter enters the requirement. The queues take 59 ms on Vienna and are computed only when the check is run.</p></dd>
+    </dl>
+
+    <h3 id="report">Several fires and the report</h3>
+    <p>Every check joins a report of fires. <span class="label">Add fires on every storey</span> plans two more fires a storey, one next to an exit and one farthest from the exits, for graph and two-zone fires; a Flamescapes run takes minutes, so for those you move the fire and plan again. Each check adds the sensitivity cases its plan allows: the exit nearest the fire blocked (from a second deadline map; off by default, since it about doubles the map's time) and the first detector failing. <span class="label">Download the report</span> saves every fire, case, input and source as one page. The report passes only when every case of every fire does.</p>
+
+    <h2 id="proved">What is proved</h2>
+    <p>The check's claims are proved in Lean 4 (<code>Performance.lean</code>, <code>DoorQueue.lean</code>, <code>PreMovement.lean</code>), on Lean's standard axioms only:</p>
+    <ul>
+      <li>a pass at the 99th percentile means at least 99 % of those who respond start in time;</li>
+      <li>the factor on RSET is a margin of at least the factor less one times RSET;</li>
+      <li>a pass on the conservative deadline map is a pass on the exact deadline;</li>
+      <li>the door queues never pass more than a door's capacity, and have cleared everyone by the time the check reads;</li>
+      <li>a later start never leaves a door earlier;</li>
+      <li>the report passes only when every case of every fire does.</li>
+    </ul>
+    <p><code>PreMovement.lean</code> also showed that the Weibull's value is non-negative only for a non-negative scale, which the measured clusters have.</p>
+
+    <h2 id="not-yet">Not covered yet</h2>
+    <ul>
+      <li>C/VM2's cap of 50 persons a minute through a self-closing leaf.</li>
+      <li>Stair flow, speed classes and the Australian disability increments.</li>
+      <li>A faster or smouldering fire as an automatic case.</li>
+      <li>Flamescapes fires added automatically to the report.</li>
+      <li>The residential single-exit rule in the code check, and occupancies other than group B.</li>
+    </ul>
+    <p>The values and their sources are in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/rset-components-2026-11-07.md">RSET components note</a>.</p>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="suppression.html">Previous: Fire suppression</a>
+      <a href="methods-and-proofs.html">Next: Methods, proofs and sources</a>
+    </nav>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
+  </div>
+</footer>
+</body>
+</html>

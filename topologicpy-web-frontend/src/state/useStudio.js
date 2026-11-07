@@ -157,9 +157,10 @@ export const DEFAULT_SETTINGS = {
   sprinklerSource: "auto",
   sprinklerHazard: "auto",
   sprinklerResponse: "quick",
-  // "wetting" by default: across 12 test fires on 4 models it was the only mode
-  // that cut every growing fire (20 to 79 % less heat; tools/sprinkler-check.mjs);
-  // Evans's cap and the spray ranged from 40 % less to 78 % more.
+  // "wetting" by default: across 12 test fires on 4 models it cut most fires by
+  // 20 to 79 % (tools/sprinkler-check.mjs); Evans's cap and the spray ranged
+  // from 40 % less to 78 % more. Where heads opened late (the Clinic's large
+  // rooms), no mode helped.
   sprinklerMode: "wetting",
   sprinklerOpenOn: "estimate",
   // The graph's colour while a run plays (core/measures.js): "heat", "smoke",

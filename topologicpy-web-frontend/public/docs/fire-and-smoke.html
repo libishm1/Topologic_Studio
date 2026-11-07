@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fire and smoke: Topologic Studio guide</title>
+<meta name="description" content="The Simulate step of Topologic Studio: six fire models, the Flamescapes combustion solver, smoke, gases and tenability, doors, fire classes, the escape-deadline forecast and the learned escape.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="../favicon.svg" alt="" width="26" height="26">Topologic Studio <span class="brand__tag">Guide</span></a>
+  <nav class="site-links" aria-label="Elsewhere">
+    <a href="../">Open the app</a>
+    <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Guide">
+    <p class="toc__label">Guide</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="fire-and-smoke.html" aria-current="page">Fire and smoke</a>
+        <ul>
+          <li><a href="#start">Starting a fire</a></li>
+          <li><a href="#models">The fire models</a></li>
+          <li><a href="#flamescapes">The Flamescapes solver</a></li>
+          <li><a href="#readings">Smoke, gases and tenability</a></li>
+          <li><a href="#doors">Doors, windows and ducts</a></li>
+          <li><a href="#classes">What burns first</a></li>
+          <li><a href="#forecast">The forecast</a></li>
+          <li><a href="#learned">A learned escape</a></li>
+          <li><a href="#vienna">A larger building</a></li>
+          <li><a href="#limits">Limits</a></li>
+        </ul>
+      </li>
+      <li><a href="suppression.html">Fire suppression</a></li>
+      <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
+    </ol>
+    <p class="toc__out"><a href="../">Open the app</a></p>
+  </nav>
+
+  <main id="main">
+    <h1>Fire and smoke</h1>
+    <p class="lead">The Simulate step starts a fire on the model, moves the route away from the heat, and forecasts when each place becomes untenable. Sprinklers and extinguishers are on the <a href="suppression.html">Fire suppression</a> page.</p>
+
+    <h2 id="start">Starting a fire and rerouting</h2>
+    <p>Press <span class="label">Set</span> beside Fire origin (or <kbd>F</kbd>), click where the fire starts, and press <span class="label">Start fire</span>. The fire spreads step by step on the graph while the route is checked every five steps and moved away from the heat when it has to be. It may move to any exit out of the building, by another stair if it must; <span class="label">Reroute towards</span>, under <span class="label">Rerouting and timing</span>, keeps it to the exit you picked instead.</p>
+    <figure>
+      <img src="media/office-reroute.gif" width="960" height="434" loading="lazy" alt="The two-storey Office example with a fire at the foot of its east stair: the route from an upstairs room first takes the east stair, then, once the way out by it is above 60 degrees C at head height, turns back along the upper corridor to the west stair and exit.">
+      <figcaption>The Office example, with a Flamescapes fire (class B) at the foot of the east stair and <span class="label">Impassable above</span> set to 60 °C. The route from the upstairs room takes the east stair until step 20 (100 s), when the way out by it passes 60 °C at head height; from then on it takes the west stair and exit. The switch came at step 20 in each of five runs.</figcaption>
+    </figure>
+
+    <h2 id="models">The fire models</h2>
+    <p>Four fire models are offered, and two more with the optional Flamescapes solver.</p>
+    <div class="table-wrap" role="region" aria-labelledby="models-caption" tabindex="0">
+      <table>
+        <caption id="models-caption">The six fire models</caption>
+        <thead><tr><th scope="col">Model</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Heat diffusion (default)</th><td>Each point relaxes towards its neighbours; walls slow the heat. Needed for heat-weighted rerouting.</td></tr>
+          <tr><th scope="row">Spread along links</th><td>The fire moves one link per step, so walls and doors shape the front.</td></tr>
+          <tr><th scope="row">Distance bands</th><td>Straight-line distance from the origin, ignoring walls.</td></tr>
+          <tr><th scope="row">Two-zone rooms</th><td>A smoke layer and its gas temperature in each room, in seconds and degrees C, spreading through open doors. Needs the model's rooms (<code>IfcSpace</code>).</td></tr>
+          <tr><th scope="row">Flamescapes: fire and smoke (optional)</th><td>The Flamescapes combustion solver on a 3D grid built from the IFC: buoyant gas flow, burning room contents, radiation and smoke, read at head height at every graph node.</td></tr>
+          <tr><th scope="row">Flamescapes: fire, smoke and embers (optional)</th><td>As above, with embers carried by the hot gas that can start spot fires away from the flame.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figure>
+      <img src="media/duplex-zone.jpg" width="1440" height="900" loading="lazy" alt="The two-zone room model on the Duplex: rooms upstairs shown hot in red, with the route still clear at step 53.">
+      <figcaption>Two-zone rooms on the Duplex: the rooms around the fire turn red as their smoke layer heats, on a clock in seconds.</figcaption>
+    </figure>
+
+    <h2 id="flamescapes">The Flamescapes solver</h2>
+    <p>The Flamescapes solver is a JavaScript version of the fire solver in <em>Flamescapes: Simulating the Wildlandfire Urban Interface</em> (Wrede, Wagner, Pałubicki, Michels and Pirk, ACM Transactions on Graphics 2026, CC BY 4.0), whose gas chemistry is that of <em>Fire-X</em> (Wrede et al. 2025, <a href="https://doi.org/10.1145/3763338">doi:10.1145/3763338</a>). No code from either paper is used: the solver is written from the papers, whose transcriptions, with the changes stated, are in the repository's <a href="https://github.com/libishm1/Topologic_Studio/tree/main/wiki/sources/papers">wiki/sources/papers</a>.</p>
+    <p>Switch it on with <span class="label">Flamescapes combustion solver (optional)</span> in the Simulate step. It runs in your browser: on the GPU through WebGPU where the browser offers it, otherwise on one CPU core at 2.8 to 2.9 times real time for the Duplex (34 to 36 ms a step, <code>tools/fire-bench.mjs</code>), several times faster on a GPU. Its frames play as they are computed, and the route reroutes on the gas temperature at head height.</p>
+    <p>A finished run is kept in the browser (at most 256 MB), so the same fire asked for again, after a reload too, plays from its kept frames instead of being computed; <span class="label">Forget kept runs</span> clears them.</p>
+
+    <h2 id="readings">Smoke, gases and tenability</h2>
+    <p><span class="label">Show on the graph</span> colours the nodes by one of four readings at head height:</p>
+    <ul>
+      <li><span class="label">Heat:</span> the gas temperature.</li>
+      <li><span class="label">Smoke:</span> the visibility, or the soot concentration, extinction coefficient, obscuration or optical density it comes from.</li>
+      <li><span class="label">Gases:</span> CO, CO₂ or O₂.</li>
+      <li><span class="label">Tenability index:</span> the largest share of a limit a node has reached, over its gas temperature, its visibility, and the asphyxiant and heat doses of ISO 13571 against a fractional effective dose of 0.3, so that 1 means untenable.</li>
+    </ul>
+    <p>The smoke the solver carries (its soot) is drawn as a grey cloud, faint in the heat view and full in the smoke view. The run card says whether embers are on, and how many were thrown and how many spot fires they lit.</p>
+
+    <h2 id="doors">Doors, windows and ducts</h2>
+    <p><span class="label">Doors</span> can be open, closed, as built or random. As built closes the doors the model says close themselves: <code>Pset_DoorCommon.SelfClosing</code>, or a fire rating whose EN 13501-2 class carries the self-closing mark -C (14 of the Vienna model's 81 doors, rated EI2 30-C or EI2 30-C-Sm). Random closes a share of the doors chosen with a seed, so a run can be repeated and compared with another seed.</p>
+    <p>Doors are open and windows closed unless the <span class="label">Doors</span> switch beside the fire controls or <span class="label">Windows</span> in the Flamescapes settings say otherwise. A closed door or window has no gaps: with everything closed on the Duplex, 0.0 g of 138 g of soot reached the outside air after 60 s, against 24 % with the doors open, the default (<code>tools/envelope-check.mjs</code>). A grid clipped round the fire lets smoke out at its sides, which the run card says.</p>
+    <p><span class="label">Ventilation: running</span> joins the model's air terminals through one well-mixed duct volume at an assumed 100 L/s a terminal, without reading which system each belongs to or the ducts themselves, so it shows the furthest the ducts could spread smoke.</p>
+
+    <h2 id="classes">What burns first, and where</h2>
+    <p>The first item takes the fuel of its fire class. The panel says which extinguishers suit the class and which are dangerous on it, for example water on cooking oil. Each class's heat of combustion, CO and soot yields, growth and ignition temperature come from a literature review and are cited in the source file <a href="https://github.com/libishm1/Topologic_Studio/blob/main/topologicpy-web-frontend/src/core/fireClasses.js">fireClasses.js</a>.</p>
+    <div class="table-wrap" role="region" aria-labelledby="classes-caption" tabindex="0">
+      <table>
+        <caption id="classes-caption">Fire classes</caption>
+        <thead><tr><th scope="col">Class</th><th scope="col">Fuel</th><th scope="col">Source of the class</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">A</th><td>Ordinary combustibles</td><td>NFPA 10</td></tr>
+          <tr><th scope="row">B</th><td>Flammable liquids</td><td>NFPA 10</td></tr>
+          <tr><th scope="row">C</th><td>Energised electrical equipment</td><td>NFPA 10</td></tr>
+          <tr><th scope="row">D</th><td>Metals</td><td>NFPA 10</td></tr>
+          <tr><th scope="row">K</th><td>Cooking oils</td><td>NFPA 10</td></tr>
+          <tr><th scope="row">L</th><td>Lithium-ion batteries</td><td>ISO 3941:2026</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><span class="label">Likely ignition points</span> finds where a fire most often starts in your model, from its appliances, furniture and rooms ranked by their share of fire deaths, and <span class="label">Start here</span> puts the fire there with its class. <span class="label">Cause</span> narrows the list to one cause (cooking, an electrical fault, gas or liquid fuel, heating, smoking or candles, lithium-ion batteries, waste, or a deliberate fire with an accelerant); a gas fire at a cooktop starts as class B rather than as cooking oil.</p>
+    <figure>
+      <img src="media/duplex-flamescapes.jpg" width="1440" height="900" loading="lazy" alt="The Duplex with a Flamescapes fire started at the cooking range, the top-ranked ignition point: the kitchen nodes warm at head height, the hazard-aware route has changed at step 40, and the panel shows class K's extinguishers, the heat release and the GPU it runs on.">
+      <figcaption>Flamescapes on the Duplex, started at the cooking range (class K) on the GPU: a pan fire of about 20 kW warms the kitchen at head height, and the route changes to avoid it.</figcaption>
+    </figure>
+
+    <h2 id="forecast">Planning with the forecast</h2>
+    <p><span class="label">Plan with the forecast</span> runs the fire to its end first, then routes with the state each point will be in when you would reach it. It reports the earliest safe route and how long you could wait before leaving, and colours the graph by escape deadline: for each point, the latest time to set off and still get out within the dose limit. The defaults are a fractional effective dose of 0.3, walking at 1.2 m/s, over a five-minute forecast; all of these can be changed under <span class="label">Clock, speed and limits</span>. With a Flamescapes run it plans on the same run, adding the CO dose of ISO 13571 to the heat dose.</p>
+    <figure>
+      <img src="media/duplex-forecast.jpg" width="1440" height="900" loading="lazy" alt="The escape-deadline map of the Duplex: the graph coloured from red (leave now) to yellow (time to spare), with the earliest safe route in teal.">
+      <figcaption>The escape-deadline map: red means leave now, yellow means time to spare; the earliest safe route is in teal.</figcaption>
+    </figure>
+    <p>The escape deadlines are what the <a href="checks.html#performance">performance check</a> reads.</p>
+
+    <h2 id="learned">A learned escape</h2>
+    <p><span class="label">Train an agent against this fire</span> trains an agent to find its own way out while the fire spreads. Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart.</p>
+    <ul>
+      <li><span class="label">Shielded (the default):</span> learns on (node, time) behind a shield that never lets it step where the fire will seal it in. It stops when it can prove its route is the earliest escape, by any exit door or the chosen one. Both properties are proved in Lean (<code>SafeEscape.lean</code>).</li>
+      <li><span class="label">Q-learning:</span> the earlier tabular Q-learning (after Jabi et al. 2019), kept for comparison.</li>
+    </ul>
+    <p>In a study of 848 runs on nine buildings (<a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/rl-egress-study-2026-11-05.md">the reinforcement learning study</a>, <code>tools/rl-bench.mjs</code>), most "failures" near the fire had no escape at all. Where one existed, the Q-learning's drawn path missed it in 15% of runs, mostly from the way its path was drawn. The shielded learner escaped in all of them, by the earliest route, certified, in a median 1.8 ms.</p>
+    <figure>
+      <img src="media/duplex-rl.jpg" width="1440" height="900" loading="lazy" alt="A trained agent's route out of the Duplex, as long as the shortest route (19.1 m), with its training success and its return against the best possible.">
+      <figcaption>A trained agent's route out of the Duplex, as long as the shortest route (19.1 m).</figcaption>
+    </figure>
+
+    <h2 id="vienna">A fire in a larger building</h2>
+    <p>The animations below repeat the Simulate step on the Vienna apartment building (TU Wien), seven levels and 111 rooms. Each is a 300 s Flamescapes run with embers, computed on the GPU in the browser. The fire starts in a flat's living-kitchen, and the person leaves from the top floor, 53.8 m down the stairwell to the street door. They were recorded before Studio counted the first-floor fire exit at the back, which is now the nearer way out, at 33.6 m.</p>
+    <figure>
+      <img src="media/vienna-doors-open.gif" width="720" height="326" loading="lazy" alt="The Vienna building with all doors open: an electrical fire grows in a living-kitchen, smoke spreads round the building, and the hazard-aware route in magenta leaves the shortest route in red near the fire.">
+      <figcaption>All doors open. An electrical fault (class C) grows through the flat and throws embers, which light spot fires. The graph shows the gas temperature at head height, and the hazard-aware route (magenta) leaves the shortest route (red) where the heat reaches it. With every door closed, the same fire on the same grid released under a quarter of the heat. The solver's heat release depends strongly on its grid, so these runs give no fire size to quote.</figcaption>
+    </figure>
+    <figure>
+      <img src="media/vienna-tenability.gif" width="720" height="326" loading="lazy" alt="A gas fire at the cooking range of the flat above, coloured by the tenability index: the floors near the fire turn red as their nodes become untenable.">
+      <figcaption>A gas fire (class B) at the cooking range of the flat above, doors open. The graph shows the tenability index: yellow as a node nears a limit, red once it is untenable.</figcaption>
+    </figure>
+    <p>The building model is by Fischer, Schranz, Urban, Pfeiffer and Flamm (TU Wien, 2024, <a href="https://doi.org/10.48436/wzp90-dmf60">doi:10.48436/wzp90-dmf60</a>), under CC BY 4.0. The animations were made from frames of the running app with <code>tools/frames-gif.mjs</code>.</p>
+
+    <h2 id="limits">Limits of the fire models</h2>
+    <ul>
+      <li><span class="label">A coarse grid.</span> Flamescapes in the browser is coarse. The paper resolves centimetres on a desktop GPU; here a cell is 0.2 to 0.45 m and a step 0.1 s. A surface layer of the fuel, a sub-grid rule for where an ember lands, the first item alight from the start, the paper's raised solid-gas heat transfer coefficient and exact integration of each reaction over a step stand in for what the paper resolves. It is not calibrated against room fire tests.</li>
+      <li><span class="label">What burns.</span> Walls and slabs do not burn. Room contents are a statistical fire load, and CO does not rise when the fire is short of air.</li>
+      <li><span class="label">Embers.</span> Indoors at these cells embers seldom land hot enough to light anything: in a 120 s fire in the Duplex they lit none.</li>
+      <li><span class="label">Pools.</span> A liquid pool (classes B and K) evaporates at most at its burning rate (Babrauskas 1983) and lights, but much of its vapour stays unburnt: a 1 m² heptane pool reached 0.3 MW after 30 s in a test room, against the 3.2 MW its burning rate allows.</li>
+      <li><span class="label">Large models.</span> Large models are clipped to the area round the fire, and the grid's sides are open to outside air, so a clipped building is never fully closed.</li>
+      <li><span class="label">Incompressible flow.</span> Heated gas takes up no extra volume, so a closed room never pressurises and smoke may reach head height later than it would.</li>
+      <li><span class="label">Temperature.</span> In the graph models the temperature is an index, scaled to read 20 to 120 degrees C, not a temperature a sensor would measure. Doses computed from it rank routes under the model; the ISO 13571 limits do not carry over.</li>
+      <li><span class="label">Time in steps.</span> The graph models count fire time in steps; the forecast converts steps to seconds with a factor you set. Fire growth is not calibrated.</li>
+      <li><span class="label">Waiting.</span> In the live simulation the evacuee waits while the fire grows, and each reroute starts from the original start. A route that has to pass through fire is drawn but reported as not safe. A route stays within one part of the graph.</li>
+      <li><span class="label">Walking.</span> Stairs are walked at level speed (reference tools use about half to nine tenths of it). The routes have no queues at doors, no slowing in smoke and no pre-movement time; the performance check adds pre-movement and queues at doors. An assumed stair has no known width, and a lift ride counts as walking its rise, with no wait for the car.</li>
+    </ul>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="getting-started.html">Previous: Getting started</a>
+      <a href="suppression.html">Next: Fire suppression</a>
+    </nav>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
+  </div>
+</footer>
+</body>
+</html>

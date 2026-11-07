@@ -1,0 +1,647 @@
+/* Topologic Studio guide: one stylesheet for every page in public/docs/.
+   Light and dark themes follow the reader's system setting. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --surface: #f4f6f8;
+  --surface-strong: #e8ecf0;
+  --fg: #1b1f23;
+  --muted: #4b5661;
+  --border: #d5dbe1;
+  --link: #0a58a8;
+  --link-visited: #5b3a9e;
+  --accent: #b23a1a;
+  --note-bg: #fff6e8;
+  --note-border: #c77700;
+  --focus: #1a73e8;
+  --code-bg: #eef1f4;
+  --radius: 8px;
+  --nav-width: 15.5rem;
+  --measure: 46rem;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111418;
+    --surface: #1a1f25;
+    --surface-strong: #242b33;
+    --fg: #e5e8eb;
+    --muted: #a8b2bc;
+    --border: #2f3740;
+    --link: #79b6ff;
+    --link-visited: #c3a6ff;
+    --accent: #ff8a65;
+    --note-bg: #2a2114;
+    --note-border: #e0a040;
+    --focus: #8ab4f8;
+    --code-bg: #1f252c;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+/* ------------------------------------------------------------ skip link */
+
+.skip {
+  position: absolute;
+  left: 0.75rem;
+  top: -3rem;
+  z-index: 10;
+  padding: 0.5rem 0.875rem;
+  background: var(--bg);
+  color: var(--link);
+  border: 2px solid var(--focus);
+  border-radius: var(--radius);
+}
+
+.skip:focus {
+  top: 0.75rem;
+}
+
+/* --------------------------------------------------------------- focus */
+
+a:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* --------------------------------------------------------------- links */
+
+a {
+  color: var(--link);
+  text-underline-offset: 0.15em;
+}
+
+a:visited {
+  color: var(--link-visited);
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* -------------------------------------------------------------- header */
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.25rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--fg);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.brand:visited {
+  color: var(--fg);
+}
+
+.brand img {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.brand__tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.site-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-size: 0.95rem;
+}
+
+.site-links a {
+  display: inline-block;
+  padding: 0.25rem 0;
+}
+
+/* -------------------------------------------------------------- layout */
+
+.layout {
+  display: grid;
+  grid-template-columns: var(--nav-width) minmax(0, 1fr);
+  gap: 2.5rem;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* -------------------------------------------------------------- the nav */
+
+.toc {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 1.75rem 0 2rem;
+  font-size: 0.95rem;
+}
+
+.toc__label {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.toc ol,
+.toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.toc li {
+  margin: 0;
+}
+
+.toc a {
+  display: block;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.toc a:visited {
+  color: var(--fg);
+}
+
+.toc a:hover {
+  background: var(--surface-strong);
+}
+
+.toc a[aria-current="page"] {
+  background: var(--surface-strong);
+  font-weight: 650;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.toc ul {
+  margin: 0.25rem 0 0.5rem 0.75rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.toc ul a {
+  padding: 0.2rem 0.5rem;
+  color: var(--muted);
+}
+
+.toc ul a:visited {
+  color: var(--muted);
+}
+
+.toc__out {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------------------------------------------------------------- main */
+
+main {
+  min-width: 0;
+  padding: 1.75rem 0 3rem;
+}
+
+main > * {
+  max-width: var(--measure);
+}
+
+main > figure,
+main > .table-wrap,
+main > .cards,
+main > .figure-row {
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.25;
+  font-weight: 650;
+  scroll-margin-top: 1rem;
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+  font-size: 2rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  margin: 2.5rem 0 0.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 1.45rem;
+}
+
+h3 {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+p,
+ul,
+ol,
+dl {
+  margin: 0 0 1rem;
+}
+
+li {
+  margin: 0.25rem 0;
+}
+
+.lead {
+  font-size: 1.15rem;
+  color: var(--fg);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+code {
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+  background: var(--code-bg);
+}
+
+kbd {
+  padding: 0.05em 0.4em;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+pre {
+  margin: 0 0 1rem;
+  padding: 0.875rem 1rem;
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  line-height: 1.5;
+}
+
+pre code {
+  padding: 0;
+  background: none;
+}
+
+/* A short label in bold, as the README uses. */
+.label {
+  font-weight: 650;
+}
+
+/* ------------------------------------------------------------- figures */
+
+figure {
+  margin: 1.5rem 0;
+}
+
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.93rem;
+  color: var(--muted);
+  max-width: var(--measure);
+}
+
+figure.portrait img {
+  max-width: min(100%, 20rem);
+}
+
+/* An animation that has not been added yet: its caption stays. */
+figure.pending img {
+  display: none;
+}
+
+figure.pending figcaption::before {
+  content: "Animation to come. ";
+  font-weight: 650;
+}
+
+.figure-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.figure-row figure {
+  margin: 0;
+}
+
+/* -------------------------------------------------------------- tables */
+
+.table-wrap {
+  margin: 0 0 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+caption {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  font-weight: 650;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+th,
+td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+thead th {
+  background: var(--surface);
+  font-weight: 650;
+}
+
+tbody tr:last-child th,
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- notes */
+
+.note {
+  margin: 1.25rem 0;
+  padding: 0.875rem 1rem;
+  border-left: 4px solid var(--note-border);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--note-bg);
+}
+
+.note > :last-child {
+  margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------- cards */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.cards li {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.cards h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.cards p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------- pagination */
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.pager a {
+  display: inline-block;
+  padding: 0.5rem 0;
+}
+
+/* -------------------------------------------------------------- footer */
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.site-footer > div {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.site-footer p {
+  margin: 0 0 0.5rem;
+}
+
+/* -------------------------------------------------------------- phones */
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding: 0 1rem;
+  }
+
+  .toc {
+    position: static;
+    max-height: none;
+    padding: 1rem 0 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .toc ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .toc a {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+  }
+
+  .toc a[aria-current="page"] {
+    box-shadow: inset 0 -3px 0 var(--accent);
+  }
+
+  /* The page's own sections are in its headings; on a phone the list of
+     pages is enough. */
+  .toc ul,
+  .toc__out {
+    display: none;
+  }
+
+  main {
+    padding-top: 1.25rem;
+  }
+
+  h1 {
+    font-size: 1.65rem;
+  }
+
+  h2 {
+    font-size: 1.3rem;
+  }
+
+  .site-header {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Text tables read as one card per row on a phone; each cell carries its
+   column's name in data-label. Number tables keep their columns and scroll. */
+@media (max-width: 600px) {
+  .stack table,
+  .stack caption,
+  .stack tbody,
+  .stack tr,
+  .stack th,
+  .stack td {
+    display: block;
+    width: 100%;
+  }
+
+  .stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .stack tbody tr {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stack tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .stack th,
+  .stack td {
+    padding: 0.2rem 0.75rem;
+    border-bottom: none;
+  }
+
+  .stack td.num {
+    text-align: left;
+  }
+
+  .stack td[data-label]::before {
+    content: attr(data-label) ": ";
+    font-weight: 650;
+    color: var(--muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media print {
+  .toc,
+  .site-header .site-links,
+  .skip,
+  .pager {
+    display: none;
+  }
+
+  .layout {
+    display: block;
+  }
+}

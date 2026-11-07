@@ -70,7 +70,7 @@
     "id": "nibs-clinic",
     "name": "Medical clinic (NIBS)",
     "file": "nibs-clinic.ifc",
-    "description": "A two-storey medical and dental clinic with 269 spaces: waiting areas, exam and dental rooms, communication and electrical rooms, a computer room and plant. Large: about 30 s to open the first time.",
+    "description": "A two-storey medical and dental clinic with 269 spaces: waiting areas, exam and dental rooms, communication and electrical rooms, a computer room and plant. Its graph is large (about 34,000 nodes) and takes a few seconds to build.",
     "credit": "BSI (2020) \"Medical-Dental Test Files,\" buildingSMART International (Community Sample Test Files), from the NIBS Common BIM Files Clinic (2011).",
     "source": "https://github.com/buildingsmart-community/Community-Sample-Test-Files",
     "licence": "CC-BY-4.0",

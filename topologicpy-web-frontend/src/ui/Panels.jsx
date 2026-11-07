@@ -2753,7 +2753,7 @@ export function SimulatePanel({
                   value={settings.sprinklerMode}
                   onChange={(sprinklerMode) => setSettings({ sprinklerMode })}
                   options={[
-                    { value: "wetting", label: "Sprays and wets the fuel it reaches (the default: it cut every test fire)" },
+                    { value: "wetting", label: "Sprays and wets the fuel it reaches (the default: it cut most test fires)" },
                     { value: "spray", label: "Caps the fuel under it (Evans 1993) and sprays: steam and cooling in the gas" },
                     { value: "evans", label: "Caps the fuel under it (Evans 1993) only" },
                     { value: "activation", label: "Only opens: the fire is left as it is" },

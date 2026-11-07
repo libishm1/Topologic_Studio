@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fire suppression: Topologic Studio guide</title>
+<meta name="description" content="Sprinklers and extinguishers in Topologic Studio: heads from the IFC or laid out by NFPA 13, activation by the RTI equation and Alpert's ceiling jet, Evans's cap, the spray and wetting, water by fire class, validation against NIST tests, and portable extinguishers.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="../favicon.svg" alt="" width="26" height="26">Topologic Studio <span class="brand__tag">Guide</span></a>
+  <nav class="site-links" aria-label="Elsewhere">
+    <a href="../">Open the app</a>
+    <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Guide">
+    <p class="toc__label">Guide</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
+      <li><a href="suppression.html" aria-current="page">Fire suppression</a>
+        <ul>
+          <li><a href="#switching-on">Switching sprinklers on</a></li>
+          <li><a href="#heads">Where the heads go</a></li>
+          <li><a href="#second-model">A second model</a></li>
+          <li><a href="#activation">When a head opens</a></li>
+          <li><a href="#open-head">What an open head does</a></li>
+          <li><a href="#fire-class">Water by fire class</a></li>
+          <li><a href="#validation">Validation</a></li>
+          <li><a href="#extinguishers">Extinguishers</a></li>
+          <li><a href="#systems">Suppression systems</a></li>
+          <li><a href="#proofs">What is proved</a></li>
+          <li><a href="#sources">Sources</a></li>
+        </ul>
+      </li>
+      <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
+    </ol>
+    <p class="toc__out"><a href="../">Open the app</a></p>
+  </nav>
+
+  <main id="main">
+    <h1>Fire suppression</h1>
+    <p class="lead">Sprinklers and portable extinguishers are in the Simulate step, the sprinklers under the Flamescapes models. Both are off by default; off, a run is exactly as before, at the same speed.</p>
+
+    <figure>
+      <img src="media/suppression-workflow.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="Switching sprinklers on: the heads laid out in the rooms, a fire started, and the heads near it opening and spraying.">
+      <figcaption>Switching <span class="label">Sprinklers</span> on lays out the heads; a Flamescapes fire then opens the heads its hot gas reaches, and the open heads spray.</figcaption>
+    </figure>
+
+    <h2 id="switching-on">Switching sprinklers on</h2>
+    <p>With the Flamescapes solver on, the <span class="label">Sprinklers</span> section of the Simulate step offers these choices:</p>
+    <ul>
+      <li><span class="label">Heads:</span> the IFC's (this model's, else a second model's), else placed per room; only the model's; or placed per room by NFPA 13.</li>
+      <li><span class="label">Hazard:</span> by room name (kitchens, plant and parking ordinary hazard 1, the rest light); light hazard (offices, homes, classrooms), 20.9 m² a head; ordinary hazard 1, 12.1 m² a head; or ordinary hazard 2, 12.1 m² a head with more water.</li>
+      <li><span class="label">Response:</span> quick response (RTI 50), required in light hazard rooms, or standard response (RTI 100).</li>
+      <li><span class="label">An open head:</span> sprays and wets the fuel it reaches (the default); caps the fuel under it (Evans 1993) and sprays; caps the fuel only; or only opens, leaving the fire as it is.</li>
+      <li><span class="label">Open the heads on:</span> the estimate (Alpert's ceiling jet under the fire's own ceiling) or the late bound (the grid's top cell, which reads the jet low).</li>
+    </ul>
+    <p>Off, nothing is laid out, no field is allocated beyond a 16-byte placeholder on the GPU, and a run keeps its kept-run key and its results. On, Vienna's run took 38.5 ms a step against 40.2 without.</p>
+
+    <h2 id="heads">Where the heads go</h2>
+    <h3 id="from-ifc">From the IFC</h3>
+    <p>Studio reads <code>IfcFireSuppressionTerminal</code> (IFC4), or an <code>IfcFlowTerminal</code> typed by <code>IfcFireSuppressionTerminalType</code> (IFC2x3), named as a sprinkler and not a hose reel or hydrant, with the Revit property sets' temperature rating and K-factor. The NIBS Office's MEP model, for example, gives 292 heads rated 57 °C with K 81.</p>
+
+    <h3 id="layout">Laid out per room by NFPA 13</h3>
+    <p>Without heads in the IFC, each <code>IfcSpace</code> room is taken from its mesh (its bottom faces and their minimum-area rectangle) and given heads at bay centres:</p>
+    <ul>
+      <li>at most 20.9 m² a head and 4.6 m apart for light hazard (12.1 m² for kitchens, plant rooms and car parks);</li>
+      <li>no more than half the spacing from a wall, and at least 1.8 m apart (heads closer than that are merged);</li>
+      <li>every point of the floor covered, checked on a 0.25 m sample, with extra heads where a bay centre is not clear of the walls, and both orientations of the bays tried.</li>
+    </ul>
+    <p>Heads hang under the slab or roof over each room: Studio looks straight up from five points of the room for the nearest slab or roof, which is the ceiling when it is lower than the space's top. A space with nothing over it, such as a terrace or a balcony, is taken as outside when no wall round it rises 1.5 m above its floor or its name says so, and gets no heads, with the reason. Models with no slabs at all keep the space's top. Shafts and spaces drawn over smaller rooms are reported, not laid out. Without rooms, the heads are placed on a lattice over the walkable floor. Vienna's heads are laid out in under 50 ms.</p>
+
+    <h3 id="rule-report">The rule report and the requirement</h3>
+    <p>Each room gets a rule report. Every rule cites SBC 801-CR-2018 903.3.1.1 and IBC 2021 903.3.1.1 with the NFPA 13-2019 clause; the obstruction rules say "cannot tell" until a structural or MEP model is added. The codes' requirement for sprinklers is checked for the occupancy chosen for the performance check: 903.2.8 (Group R throughout), 903.2.11.3 (a storey with 30 or more occupants at 16.764 m or more, IBC's 55 ft, against SBC's 17 m), high-rise, and the A-3 and E triggers.</p>
+    <div class="note">
+      <p>The current edition is SBC 801-CR-2024, whose text was not obtained (the English edition is sold). The checks follow SBC 801-CR-2018, with IBC 2021 where it is stricter. This guide cites clause numbers and values only.</p>
+    </div>
+
+    <h2 id="second-model">A second model and obstructions</h2>
+    <p>In the Model step, <span class="label">Second model (MEP, structure)</span> adds an MEP or structural IFC of the same building. It is converted and cached as the first is, and drawn in the first one's frame through the two models' coordination matrices, or through both files' <code>IfcMapConversion</code> when both have one. Studio then checks the units, the site placement, TrueNorth (as metadata only), the map conversions, the storeys matched by elevation (a storey outside the first model's range, such as a foundation level, is a note) and the share of the smaller plan the two have in common. A file with no geometry says so.</p>
+    <p>Measured: the NIBS Office with its HVAC model (292 sprinklers, all placed 5 cm under the architecture's ceilings, 4.7 s to add) and its structural model (356 beams, 96 % overlap, the foundation level noted); the Duplex with its MEP model (98 %); and the buildingSMART Simple-Scene building with its HVAC model and its plumbing, the latter through the two map conversions, checked by hand to 0.1 m. The second model's sprinklers feed the layout when the first has none.</p>
+    <p>Beams from either model, and ducts and cable trays from a second model, are checked as obstructions; pipes are left out of the beam rule. The rules are NFPA 13-2019 Table 10.2.7.1.2 (the beam rule, without interpolation), NFPA 13-2022 10.2.7.3.1.3 and .4 (the three times rule, structural members only in light and ordinary hazard) and NFPA 13-2019 9.5.5.3 (heads beneath obstructions wider than 1.2 m). A head that fails a rule moves within its bay to the nearest point meeting every rule, and wide obstructions get heads beneath. Without obstructions the layout is unchanged. 198 heads against 1,000 obstructions lay out in about 40 ms. A switch in the Flamescapes settings, <span class="label">Beams and ducts in the fire grid</span>, off by default, makes them solid (the NIBS Office: 999 items, 82 ms to extract).</p>
+
+    <h2 id="activation">When a head opens</h2>
+    <p>A Flamescapes run opens each head when its link reaches its rating, by the RTI equation with conduction to the mount. The link is stepped exactly on the gas, held at the mean of each frame's two readings, and the crossing time is found inside the frame. Two readings of the gas are kept:</p>
+    <ul>
+      <li><span class="label">The estimate</span> (the default) takes Alpert's ceiling jet for the frame's heat release, with the ignition cell as the plume's axis, for heads with a clear line to the plume's ceiling cell (walls and lintels part rooms), over the grid's layer.</li>
+      <li><span class="label">The late bound</span> reads the gas at the top cell of the head's column.</li>
+    </ul>
+    <p>The run card gives both times and the heat release at each, and the view shows the heads, blue once open. No IFC carries a head's RTI or C, so quick response is 50, standard 100 and C 0.4, as the panel says. In the test fires on the Duplex the first head opened 16 to 21 s after ignition by the estimate. Suppression starts at the end of the frame in which a head opened, so up to one frame late. The CPU and the GPU agree: a head over a 200 kW burner opens at 32.2 s on the CPU and 31.4 to 31.9 s on the GPU by the estimate, with 35.4 kg of water on both.</p>
+    <div class="note">
+      <p>Against measured tests the estimate opens heads late in rooms, up to twice as late or not at all, and heads behind beams may not open. For tenability the bias is conservative; for anything that starts on sprinkler flow, such as an alarm, it is not. See <a href="#validation">Validation</a>.</p>
+    </div>
+
+    <h2 id="open-head">What an open head does</h2>
+    <p>Where the head sprays, part of its water evaporates in the hot gas on the way down, at most what cools each cell to boiling (Fire-X's energy-limited evaporation on the grid); the steam joins the gas and dilutes the oxygen, and the drops drag on the gas. The rest reaches the floor. At sprinkler scale this direct effect is small: on the Duplex 0.14 of 37.7 kg evaporated in 60 s.</p>
+    <dl>
+      <dt class="label">Wetting (the default)</dt>
+      <dd><p>The water that reaches the fuel soaks into the fuel cell it ends on, a share of 0.52 of what reaches it, mixed in at 20 °C; the solver's drying then holds the surface near 100 °C. Fuel stacked below the top cell stays dry. The share was calibrated on a test room so that at 0.068 mm/s, the light hazard density, wetting burns as much covered fuel after the head opens as Evans's cap (7.4 kg, against 21.3 kg with no water). It then follows the water: 9.0 kg at 0.026 mm/s and 4.5 kg at 0.133 mm/s, where the cap gives 8.6 and 7.4 kg. CPU and GPU agree (54.3 and 52.9 MJ released in a 200 kW test case, against 72.5 and 66.7 MJ with no water).</p></dd>
+      <dt class="label">Evans's cap and the spray</dt>
+      <dd><p>Each covered cell's burning is capped at its rate when the head opened, decaying as Evans (1993) measured for the spray's density. Below 0.026 mm/s there is no cap. Evans's correlation gives the least reduction to expect. The head also sprays.</p></dd>
+      <dt class="label">Evans's cap only</dt>
+      <dd><p>The cap without the spray.</p></dd>
+      <dt class="label">Only opens</dt>
+      <dd><p>The heads open and the fire is left as it is, for reading activation times alone.</p></dd>
+    </dl>
+
+    <h3 id="which-mode">Which mode, and why wetting is the default</h3>
+    <p>In 12 test fires on the Duplex, Vienna, and the NIBS Office and Clinic (<code>tools/sprinkler-check.mjs</code>), wetting cut the heat released by 20 to 79 % in most fires, while Evans's cap and the spray ranged from 40 % less to 78 % more. In the Clinic's large rooms the heads opened late (63 to 68 s, when the fire was already large) and no mode helped: the late activation the validation found.</p>
+    <p>Single runs mislead. The same Duplex fire, with its room contents laid out three ways, released 137 to 272 MJ with no sprinklers; across the three, wetting cut 60 to 79 %, the spray changed the heat by +20 to -55 % and the cap by +11 to -38 % (<code>tools/sprinkler-seeds.mjs</code>). A run with the spray's drag off gave the same result, so the drag is not the cause. Part of the reason is that pyrolysis gas which does not burn where it is made gathers under the ceiling and can ignite at once, with or without sprinklers, so a single frame can peak higher with suppression than without. Studio's tests therefore check the fuel and the energy, and every covered cell's cap step by step, not one frame's heat release.</p>
+    <figure>
+      <img src="media/suppression-compare.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="The same fire four times, side by side: with no sprinklers, with Evans's cap, with the spray, and with the water wetting the fuel.">
+      <figcaption>The same fire with no sprinklers, with Evans's cap, with the spray, and with wetting, side by side.</figcaption>
+    </figure>
+
+    <h2 id="fire-class">Water by fire class</h2>
+    <p>Sprinkler drops, about 1 mm across, are too large to put a flame out in the gas: a spray must take about 0.4 of the flame's heat per unit volume and push down with 0.7 of its upward force (Rasbash 1986). Sprinkler water works by cooling the burning surface below its fire point, where it reaches it. What that means depends on what burns first.</p>
+    <div class="table-wrap stack" role="region" aria-labelledby="water-caption" tabindex="0">
+      <table>
+        <caption id="water-caption">What sprinkler water does to the first item, by fire class</caption>
+        <thead><tr><th scope="col">Class</th><th scope="col">What the water does</th><th scope="col">In the solver</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">A, ordinary combustibles</th><td data-label="What the water does">Cools the burning surface below its fire point.</td><td data-label="In the solver">Wetted and capped.</td></tr>
+          <tr><th scope="row">C, electrical</th><td data-label="What the water does">Once the circuit is dead, its plastic burns as a solid.</td><td data-label="In the solver">Wetted and capped.</td></tr>
+          <tr><th scope="row">B, heptane</th><td data-label="What the water does">Its fire point is below the water's temperature and it is lighter than water, so the water sinks through the pool, which keeps burning. Putting it out takes foam.</td><td data-label="In the solver">Neither wetted nor capped.</td></tr>
+          <tr><th scope="row">K, cooking oil</th><td data-label="What the water does">Water under hot oil turns to steam and throws the oil out. A NIST residential sprinkler put out one of two cooktop fires and spread oil both times.</td><td data-label="In the solver">Neither wetted nor capped.</td></tr>
+          <tr><th scope="row">D, magnesium</th><td data-label="What the water does">Water gives hydrogen and heat: 17.5 MJ and 0.11 kg of hydrogen per kg reacted.</td><td data-label="In the solver">Neither wetted nor capped.</td></tr>
+          <tr><th scope="row">L, lithium-ion pack</th><td data-label="What the water does">The water does not reach the cells.</td><td data-label="In the solver">Neither wetted nor capped.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The room's class A contents round such an item are wetted and capped as usual, and the Sprinklers section says why when one of these burns first. These items also no longer start with wood's 10 % water, which changes runs of classes B, D, K and L with or without sprinklers. Not modelled: the oil's eruption (no study measured the oil thrown out) and the metal's reaction with water (the hydrogen needs a fuel kind the solver does not have).</p>
+
+    <h2 id="validation">Validation against measured tests</h2>
+    <p>The activation model was checked against full-scale tests from NIST reports (<code>tools/sprinkler-validation.mjs</code>). A prescribed heat-release burner was added to the CPU solver for this; without it the fields are bit-identical to the unchanged solver. Each test is a box built from its data, on cells of about 0.3 m (0.507 m for UL/NFPRF), with the heads at their measured positions and their measured RTI and C, run at the app's surface coefficient of 200 W/(m² K) and at 25 W/(m² K).</p>
+    <ul>
+      <li><span class="label">Vettori 1998</span> (NISTIR 6253): a flat ceiling, a methane burner on fast, medium or slow growth, RTI 55, C 0.25, 68 °C.</li>
+      <li><span class="label">Vettori 2003</span> (NISTIR 7079): flat, sloped and beamed ceilings in a second room.</li>
+      <li><span class="label">Bittern 2004</span>: chair fires, from the FDS Validation Guide.</li>
+      <li><span class="label">UL/NFPRF Series I</span> (NISTIR 6196-1, 1998): a 7.6 m ceiling with flowing heads over a heptane spray burner.</li>
+      <li><span class="label">Evans 1993</span> (NISTIR 5254): heat release after activation, for the cap.</li>
+    </ul>
+
+    <h3 id="link">The link on measured gas</h3>
+    <p>Driven by the gas measured at Vettori's 1998 heads, the link opens at 0.81 to 1.18 of the measured time, median 1.00, in the 18 of 45 records that open within the record, and is never more than 19 % early. Another 18 run past the measured time without opening, mostly fast fires and wall and corner fires, where rows about 7 s apart and the thermocouple's lag under-read a fast-rising gas; the other 9 end before the measured time. The link model itself is sound.</p>
+
+    <h3 id="grid">On the fire grid</h3>
+    <div class="table-wrap stack" role="region" aria-labelledby="validation-caption" tabindex="0">
+      <table>
+        <caption id="validation-caption">Predicted over measured activation time, by the estimate, on the tabulated or measured fire curve</caption>
+        <thead>
+          <tr>
+            <th scope="col">Data set</th>
+            <th scope="col" class="num">Heads measured</th>
+            <th scope="col" class="num">Opened, 200 W/(m² K)</th>
+            <th scope="col" class="num">Median, 200</th>
+            <th scope="col" class="num">Opened, 25 W/(m² K)</th>
+            <th scope="col" class="num">Median, 25</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Vettori 1998, smooth, detached (9 tests)</th><td class="num" data-label="Heads measured">18</td><td class="num" data-label="Opened, 200 W/(m² K)">16</td><td class="num" data-label="Median, 200">1.68</td><td class="num" data-label="Opened, 25 W/(m² K)">18</td><td class="num" data-label="Median, 25">1.31</td></tr>
+          <tr><th scope="row">Vettori 2003, flat smooth (tests 1 to 4)</th><td class="num" data-label="Heads measured">12</td><td class="num" data-label="Opened, 200 W/(m² K)">12</td><td class="num" data-label="Median, 200">1.09</td><td class="num" data-label="Opened, 25 W/(m² K)">12</td><td class="num" data-label="Median, 25">0.86</td></tr>
+          <tr><th scope="row">Vettori 2003, flat, two beams (tests 13 to 16)</th><td class="num" data-label="Heads measured">9</td><td class="num" data-label="Opened, 200 W/(m² K)">0</td><td class="num" data-label="Median, 200">-</td><td class="num" data-label="Opened, 25 W/(m² K)">8</td><td class="num" data-label="Median, 25">1.28</td></tr>
+          <tr><th scope="row">Bittern, centre chair (8 tests)</th><td class="num" data-label="Heads measured">16</td><td class="num" data-label="Opened, 200 W/(m² K)">9</td><td class="num" data-label="Median, 200">1.18</td><td class="num" data-label="Opened, 25 W/(m² K)">16</td><td class="num" data-label="Median, 25">1.07</td></tr>
+          <tr><th scope="row">UL/NFPRF I-17, I-18, I-20, I-22</th><td class="num" data-label="Heads measured">16</td><td class="num" data-label="Opened, 200 W/(m² K)">16</td><td class="num" data-label="Median, 200">1.18</td><td class="num" data-label="Opened, 25 W/(m² K)">16</td><td class="num" data-label="Median, 25">1.16</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">"Opened" counts heads open within twice the measured time; the median is over those. The app runs at 200 W/(m² K).</p>
+    <p>Over the 29 runs on these curves at the app's coefficient, the estimate opened the first head within twice the measured time in 21, at 0.94 to 2.00 of the measured time (median 1.18), later than measured in 19 of the 21. Under UL/NFPRF's high open ceiling, the regime Alpert's correlation was built for, the first head opened at 0.98 to 1.11 of the measured time. The late bound opened 1 of the 110 measured heads within twice the measured time, so it is not shown as the time a head opens.</p>
+
+    <h3 id="why-late">Why the estimate is late in rooms</h3>
+    <ol>
+      <li><span class="label">Heat lost to the walls.</span> At 200 W/(m² K) the walls, floor and ceiling take most of the convective heat. In a box of the 1998 room's size, the gas held 1.26 MJ above ambient at 45 s of the 4.80 MJ the burner had put in as convection; at 25 W/(m² K) it held 4.30 MJ. Lowering the coefficient moved the 1998 median from 1.68 to 1.31 and Bittern's from 1.18 to 1.07.</li>
+      <li><span class="label">The coarse plume.</span> On 0.3 m cells a steady 100 kW plume did not behave as a plume: the mean excess on its axis 2.25 m up was 4.6 K, where Heskestad's centreline correlation gives about 85 to 105 K.</li>
+      <li><span class="label">The ceiling jet against the cell.</span> The jet is about 0.2 m thick here, while the top cell averages 0.3 m: it read a median of 25 °C at the measured activations in the 1998 room, where 114 °C was measured.</li>
+      <li><span class="label">Alpert's correlation in a closed room.</span> In these rooms the hot layer carries much of the heat that reaches the heads, and the grid's layer is too cool for the reasons above.</li>
+      <li><span class="label">Grid geometry.</span> Beams snap to whole cells, so heads behind the 2003 beams did not open, and distances are measured between cell centres.</li>
+    </ol>
+    <p>A finer grid (0.2 m) did not move the results towards the measurements. Changing the surface coefficient would change every Flamescapes run, so it is left open. Evans's decay is slower than 19 of the 23 decay constants measured in his own tables, so as a least reduction the cap holds on those data, except for one workstation and one crib run.</p>
+    <p>The results the analysis trusts least are the 1998 room's set-up (a sealed door, an assumed upper-floor height, a snapped I-beam), the assumed C of the 2003 heads, the flame column height chosen for the burner, Bittern's curves and modelling choices, and UL's head counts, which depend on the 200 s horizon and the spray model. The full results, R1 to R9, with the data sets, licences and DOI checks, are in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/sprinkler-validation-data-2026-11-07.md">sprinkler validation note</a>.</p>
+
+    <h2 id="extinguishers">Extinguishers</h2>
+    <p><span class="label">Extinguishers</span>, in the Simulate step and off by default, are read from the IFC by name (from the model or a second model), or placed on the walk by a greedy cover so that nowhere is more than 22.86 m from one. That distance is the stricter of SBC 801-CR-2018 Table 906.3(1) and NFPA 10 Table 6.2.1.1, measured as a walk on the graph; the placement check also applies the count rule and where extinguishers are required (906.1). On the Duplex, 4 units are placed in 215 ms and pass.</p>
+    <ul>
+      <li><span class="label">Hazard (NFPA 10):</span> light (offices, classrooms, hotels: 279 m² per A unit), ordinary (shops, car parks, workshops: 139 m²) or extra (kitchens, storage of flammables: 92.9 m², 4-A).</li>
+      <li><span class="label">The unit used:</span> ABC dry chemical 2.3 kg (2-A:10-B:C, 14 s of discharge) or 4.5 kg (4-A:80-B:C, 20 s), water 9.5 L (2-A, 60 s), foam 9.5 L (3-A:20-B, 50 s), or CO2 2 kg (34B, 8.5 s).</li>
+    </ul>
+    <p>After a fire, one person near it sets off when they see it (30 s), or after detection, the alarm and the median pre-movement time. They walk to the nearest suitable unit, ready it (13.4 s, or 7.2 s if trained) and attack from 1.8 m. The heat release then, from the Flamescapes run or else from the two-zone settings' t-squared fire (the result says which), is judged against what the unit's rating can put out: put out, not put out, or cannot tell.</p>
+    <p>On the Duplex, a person who sets off on seeing the fire attacks at 58 s against 37 kW (put out); one who waits for the alarm attacks at 222 s against 547 kW (cannot tell: between 80 and 900 kW for a 2-A unit). Not yet modelled: the unit's effect on the fire in the run, mounting heights, and the rule for units on the escape route.</p>
+
+    <h2 id="systems">Suppression systems (coming next)</h2>
+    <p>Water, a clean agent in a server room, and foam.</p>
+    <figure>
+      <img src="media/suppression-systems.gif" loading="lazy" onerror="this.parentElement.classList.add('pending')" alt="Suppression systems: water sprinklers, a clean agent in a server room, and foam.">
+      <figcaption>Suppression systems: water, a clean agent in a server room, and foam.</figcaption>
+    </figure>
+
+    <h2 id="proofs">What is proved</h2>
+    <p>Six Lean 4 modules back the suppression work, each on Lean's standard axioms only. Each module's header maps every theorem to the function it backs and lists what it leaves out.</p>
+    <ul>
+      <li><code>Sprinklers.lean</code> (28 theorems): the layout, the link's step and its exact form, the activation time, and Evans's cap.</li>
+      <li><code>Suppression.lean</code> (58): water is conserved down a column and over all heads; the evaporation step conserves energy and leaves the cell between boiling and its old temperature; steam never raises the oxygen's share; Evans's cap never rises. It also found that Fire-X's Eq. 30 is the case in which the latent heat is paid from the liquid, not the case of a cell pinned at boiling, as the plan had said.</li>
+      <li><code>Wetting.lean</code> (12): the wetting step conserves energy, cools a hotter surface and never warms it, and per column the water emitted is the water evaporated plus the water wetted plus the water left.</li>
+      <li><code>Obstructions.lean</code> (36): the beam table as the code builds it is contiguous, every distance gets exactly one row, and moving a head away from an obstruction never makes the beam rule stricter.</li>
+      <li><code>Extinguishers.lean</code> (47): adding a unit never lengthens a walk, and a pass on the graph is a pass of the straight-line check but not the converse. It found the count rule's comment wrong for the default ratings, which was then fixed.</li>
+      <li><code>Federation.lean</code> (16): a point of the second model is drawn where the first model draws it, through the coordination matrices or the map conversions.</li>
+    </ul>
+    <p>The full list is on the <a href="methods-and-proofs.html#lean">Methods, proofs and sources</a> page.</p>
+
+    <h2 id="sources">Sources</h2>
+    <ul>
+      <li>NFPA 13 (2019 and 2022 editions) for placement and obstructions; NFPA 10 for extinguishers; SBC 801-CR-2018 Sections 903 and 906 and IBC 2021 Section 903, cited by clause number.</li>
+      <li>Alpert's ceiling jet correlation and Heskestad's plume, as formalised in <code>FireDynamics.lean</code>.</li>
+      <li>Evans (1993). Sprinkler fire suppression algorithm for HAZARD. NISTIR 5254. <a href="https://doi.org/10.6028/NIST.IR.5254">doi:10.6028/NIST.IR.5254</a>.</li>
+      <li>Vettori (1998). Effect of an obstructed ceiling on activation time of a residential sprinkler. NISTIR 6253. <a href="https://doi.org/10.6028/NIST.IR.6253">doi:10.6028/NIST.IR.6253</a>.</li>
+      <li>Vettori (2003). Effect of beamed, sloped, and sloped beamed ceilings on the activation time of a residential sprinkler. NISTIR 7079. <a href="https://doi.org/10.6028/NIST.IR.7079">doi:10.6028/NIST.IR.7079</a>.</li>
+      <li>UL/NFPRF Series I (1998). Sprinkler, smoke and heat vent, draft curtain interaction. NISTIR 6196-1. <a href="https://doi.org/10.6028/NIST.IR.6196-1">doi:10.6028/NIST.IR.6196-1</a>.</li>
+      <li>Bittern (2004), chair fire tests at the University of Canterbury, as given in NIST's FDS Validation Guide.</li>
+      <li>Rasbash (1986), on water sprays and flames, as cited in the water by fire class note.</li>
+      <li>Wrede et al. (2025), <em>Fire-X: Extinguishing Fire with Stoichiometric Heat Release</em>, <a href="https://doi.org/10.1145/3763338">doi:10.1145/3763338</a>, CC BY 4.0, for the evaporation.</li>
+    </ul>
+    <p>The NIST reports are US Government works. The digitised measurements and validation inputs come from NIST's firemodels repositories and are kept with NIST's notice in the repository's <code>benchmark/validation/</code>. The design and the departures from it are in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/fire-suppression-sprinklers-2026-11-07.md">sprinkler note</a>, and the extinguisher and water-by-class research in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/extinguishers-2026-11-07.md">extinguisher note</a> and the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/water-by-fire-class-2026-11-07.md">water by fire class note</a>.</p>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="fire-and-smoke.html">Previous: Fire and smoke</a>
+      <a href="checks.html">Next: Code and performance checks</a>
+    </nav>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
+  </div>
+</footer>
+</body>
+</html>

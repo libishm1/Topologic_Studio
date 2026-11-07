@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Topologic Studio guide</title>
+<meta name="description" content="A guide to Topologic Studio: egress routes, fire and smoke, sprinklers and extinguishers, and code and performance checks on IFC building models, in the browser.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="../favicon.svg" alt="" width="26" height="26">Topologic Studio <span class="brand__tag">Guide</span></a>
+  <nav class="site-links" aria-label="Elsewhere">
+    <a href="../">Open the app</a>
+    <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Guide">
+    <p class="toc__label">Guide</p>
+    <ol>
+      <li><a href="index.html" aria-current="page">Overview</a>
+        <ul>
+          <li><a href="#what-it-does">What it does</a></li>
+          <li><a href="#the-guide">The guide</a></li>
+          <li><a href="#examples">The example buildings</a></li>
+          <li><a href="#where-it-runs">Where it runs</a></li>
+        </ul>
+      </li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
+      <li><a href="suppression.html">Fire suppression</a></li>
+      <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
+    </ol>
+    <p class="toc__out"><a href="../">Open the app</a></p>
+  </nav>
+
+  <main id="main">
+    <h1>Topologic Studio</h1>
+    <p class="lead">Topologic Studio opens a building model in the browser and works out how people get out of it. It reads an IFC file, turns its floors, stairs and doors into a walkable graph, finds the shortest way to an exit, and shows how a spreading fire and its smoke change that route and what sprinklers do to the fire.</p>
+    <p>There is nothing to install. <a href="../">Open the app</a>, then open your own IFC file or tap one of the seven example buildings.</p>
+
+    <figure>
+      <img src="media/duplex-fire.jpg" width="1440" height="900" alt="The Duplex example during a fire: the hazard-aware route in magenta runs from an upstairs room, down the stair and out of the front door, with the heat spreading from the foot of the stair.">
+      <figcaption>The Duplex apartment example with a fire at the foot of the stair. The panel on the right reports that the route changed at fire step 55 to keep clear of the heat.</figcaption>
+    </figure>
+
+    <div class="note">
+      <p>Studio is a research tool. Its fire models give an index of heat, not a calibrated temperature, so its results do not replace a fire engineer's egress assessment.</p>
+    </div>
+
+    <h2 id="what-it-does">What it does</h2>
+    <p>The panel on the right of the app walks through four steps. Each step opens with its one main button and puts the result right under it.</p>
+    <ol>
+      <li><span class="label">Model.</span> Studio reads IFC2x3 and IFC4 files, counts the floors, stairs, doors, walls, storeys and rooms, and finds the exit doors from the file's own data.</li>
+      <li><span class="label">Graph.</span> A grid of points 0.5 m apart, lined up with the walls, joined where a person could walk, through doors and along stairs.</li>
+      <li><span class="label">Route.</span> The shortest way out, straightened as a person would walk it, with alternative routes, the code check and the performance check.</li>
+      <li><span class="label">Simulate.</span> A fire on the graph or in a 3D combustion solver, its smoke and gases, sprinklers and extinguishers, a forecast of when each place becomes untenable, and a learned escape.</li>
+    </ol>
+    <p>Three things hold throughout:</p>
+    <ul>
+      <li><span class="label">On your device.</span> Opening, routing, alternative routes, fire spread, forecasts and reinforcement learning all run in the browser. The IFC file is sent to the server only if you ask for the TopologicPy cross-check.</li>
+      <li><span class="label">On a phone.</span> The examples open in about a second on an emulated mid-range phone, and the whole workflow fits a phone screen.</li>
+      <li><span class="label">With its assumptions.</span> Every result comes with its assumptions, the app's Methods page lists what has been proved in Lean 4, and the app tells you when a model cannot give an answer (for example two dwellings that no route joins).</li>
+    </ul>
+
+    <h2 id="the-guide">The guide</h2>
+    <ul class="cards">
+      <li>
+        <h3><a href="getting-started.html">Getting started</a></h3>
+        <p>A quick start, then the Model, Graph and Route steps, your own IFC files, phones, export to TopologicPy and shortcuts.</p>
+      </li>
+      <li>
+        <h3><a href="fire-and-smoke.html">Fire and smoke</a></h3>
+        <p>The six fire models, the Flamescapes solver, smoke and tenability, doors, fire classes, the forecast and the learned escape.</p>
+      </li>
+      <li>
+        <h3><a href="suppression.html">Fire suppression</a></h3>
+        <p>Sprinklers from the IFC or laid out by NFPA 13, when they open, what the water does by fire class, validation, and extinguishers.</p>
+      </li>
+      <li>
+        <h3><a href="checks.html">Code and performance checks</a></h3>
+        <p>The prescriptive egress check against SBC 801-CR-2018 and IBC 2021, and the performance check with the fire.</p>
+      </li>
+      <li>
+        <h3><a href="methods-and-proofs.html">Methods, proofs and sources</a></h3>
+        <p>How Studio works, what is tested and proved in Lean 4, the limits, the sources, and the credits and licences.</p>
+      </li>
+    </ul>
+
+    <h2 id="examples">The example buildings</h2>
+    <p>The examples are converted when the site is built, so they open from a small pre-converted file (81 KB for the Duplex, 862 KB for the 13.5 MB Vienna building) without the IFC reader starting at all.</p>
+    <div class="table-wrap stack" role="region" aria-labelledby="examples-caption" tabindex="0">
+      <table>
+        <caption id="examples-caption">The seven example buildings, their sources and licences</caption>
+        <thead>
+          <tr><th scope="col">Example</th><th scope="col">What it shows</th><th scope="col">Source and licence</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Duplex apartment (2.3 MB)</th>
+            <td data-label="What it shows">Two mirror-image homes over two storeys, each with its own stair and front door. Exit doors, rooms and stairs all come from the file.</td>
+            <td data-label="Source and licence">Common Building Information Model Files, NIBS buildingSMART alliance and U.S. Army ERDC, 2011 (<a href="https://www.wbdg.org/bim/cobie/common-bim-files">wbdg.org</a>). No licence stated; shown with credit.</td>
+          </tr>
+          <tr>
+            <th scope="row">Vienna apartment building, TU Wien (13.5 MB)</th>
+            <td data-label="What it shows">A real building in Vienna on seven levels, modelled from an approved permit project to test escape-route checks: 111 rooms, 81 doors (32 flagged as fire exits, most of them flat doors), one stairwell of four flights, and two ramps. Two doors lead out: the street door and a fire exit at the back of the first floor.</td>
+            <td data-label="Source and licence">Fischer, S., Schranz, C., Urban, H., Pfeiffer, D., Flamm, L. (2024). Real-World Test Model for Escape Route Analysis in IFC format (2.0.0). TU Wien. <a href="https://doi.org/10.48436/wzp90-dmf60">doi:10.48436/wzp90-dmf60</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; the file is unchanged.</td>
+          </tr>
+          <tr>
+            <th scope="row">Office building, NIBS (4.1 MB)</th>
+            <td data-label="What it shows">A two-storey office with 99 rooms: open offices, conference rooms, and server, telecom, electrical and UPS rooms. A model for sprinklers, extinguishers and the performance check.</td>
+            <td data-label="Source and licence">Office Building, Common Building Information Model Files, NIBS buildingSMART alliance and U.S. Army ERDC, 2011 (NBU_OfficeBuilding_Arch; <a href="https://www.wbdg.org/bim/cobie/common-bim-files">wbdg.org</a>). The publisher states no licence (the DURAARK repository at TIB, which holds the same file, lists CC0); shown with credit, removed on request.</td>
+          </tr>
+          <tr>
+            <th scope="row">Medical clinic, NIBS (13.0 MB)</th>
+            <td data-label="What it shows">A two-storey medical and dental clinic with 269 spaces: waiting areas, exam and dental rooms, communication and electrical rooms, a computer room and plant. Its graph is large (about 34,000 nodes) and takes a few seconds to build.</td>
+            <td data-label="Source and licence">BSI (2020) "Medical-Dental Test Files", buildingSMART International (<a href="https://github.com/buildingsmart-community/Community-Sample-Test-Files">Community Sample Test Files</a>), from the NIBS Common BIM Files Clinic (2011). <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</td>
+          </tr>
+          <tr>
+            <th scope="row">buildingSMART sample scene (224 KB)</th>
+            <td data-label="What it shows">buildingSMART's small IFC4 test building: three slabs, four walls, two spaces.</td>
+            <td data-label="Source and licence">"ifc silly sample scene", buildingSMART International, <a href="https://github.com/buildingSMART/Sample-Test-Files">Sample-Test-Files</a>. No licence file; shown with credit.</td>
+          </tr>
+          <tr>
+            <th scope="row">Office, two storeys (179 KB)</th>
+            <td data-label="What it shows">A corridor with ten rooms per floor, a stair and an exit at each end.</td>
+            <td data-label="Source and licence">Generated for Topologic Studio by <code>tools/make_example_ifcs.py</code>. CC0-1.0.</td>
+          </tr>
+          <tr>
+            <th scope="row">Courtyard ring (17 KB)</th>
+            <td data-label="What it shows">A corridor round a closed core with one exit, so every start has two ways out. Turned 30 degrees to test wall alignment.</td>
+            <td data-label="Source and licence">Generated for Topologic Studio by <code>tools/make_example_ifcs.py</code>. CC0-1.0.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="figure-row">
+      <figure>
+        <img src="media/example-office.jpg" width="1440" height="900" loading="lazy" alt="Office, two storeys: a route along the upper corridor and down the stair at the west end.">
+        <figcaption>Office: from an upstairs room along the corridor and down the stair (31.0 m).</figcaption>
+      </figure>
+      <figure>
+        <img src="media/example-courtyard.jpg" width="1440" height="900" loading="lazy" alt="Courtyard ring: two alternative routes round the core to the one exit.">
+        <figcaption>Courtyard ring: the two ways round the core, 23.5 m and 26.8 m.</figcaption>
+      </figure>
+      <figure>
+        <img src="media/example-buildingsmart.jpg" width="1440" height="900" loading="lazy" alt="buildingSMART sample scene: the walkable graph inside the small sample building.">
+        <figcaption>buildingSMART sample scene: its walkable graph (124 points, all reachable).</figcaption>
+      </figure>
+    </div>
+
+    <h2 id="where-it-runs">Where it runs</h2>
+    <p>Everything a first visit needs runs in the browser: opening and caching IFC files, the walkable graph, routes, the fire models and the optional Flamescapes solver (on the GPU through WebGPU where the browser offers it, else on one CPU core), sprinklers, extinguishers, the checks, the forecast and the learned escape.</p>
+    <p>An optional server, a FastAPI service around <a href="https://github.com/wassimj/topologicpy">TopologicPy</a>, adds TopologicPy's <code>TGraph</code> route engine and its k-shortest routes, a navigation cross-check (the IFC file is uploaded for this) and a viewer for TopologicPy's Topology JSON. On its free plan it sleeps after about 15 idle minutes, and the first request after that takes 30 to 50 s; everything in the browser keeps working while it wakes, or if it is never reached. <a href="methods-and-proofs.html#how-it-works">How it works</a> has the detail.</p>
+
+    <nav class="pager" aria-label="Next page">
+      <span></span>
+      <a href="getting-started.html">Next: Getting started</a>
+    </nav>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
+  </div>
+</footer>
+</body>
+</html>

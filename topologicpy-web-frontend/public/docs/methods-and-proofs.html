@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Methods, proofs and sources: Topologic Studio guide</title>
+<meta name="description" content="How Topologic Studio works, what is tested and what is proved in Lean 4, the limits of its models, its sources, and its credits and licences.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="../favicon.svg" alt="" width="26" height="26">Topologic Studio <span class="brand__tag">Guide</span></a>
+  <nav class="site-links" aria-label="Elsewhere">
+    <a href="../">Open the app</a>
+    <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Guide">
+    <p class="toc__label">Guide</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
+      <li><a href="suppression.html">Fire suppression</a></li>
+      <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="methods-and-proofs.html" aria-current="page">Methods, proofs and sources</a>
+        <ul>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#verified">What is verified</a></li>
+          <li><a href="#lean">What is proved in Lean</a></li>
+          <li><a href="#limits">Limits</a></li>
+          <li><a href="#sources">Sources</a></li>
+          <li><a href="#credits">Credits and licences</a></li>
+          <li><a href="#reading">Further reading</a></li>
+        </ul>
+      </li>
+    </ol>
+    <p class="toc__out"><a href="../">Open the app</a></p>
+  </nav>
+
+  <main id="main">
+    <h1>Methods, proofs and sources</h1>
+    <p class="lead">How Studio computes its results, how they are checked, where they stop, and whose work they build on. The app's own Methods page, opened from its header, gives the same account with the equations rendered.</p>
+
+    <figure>
+      <img src="media/methods.jpg" width="1440" height="900" loading="lazy" alt="The app's Methods and verification page: what Studio computes, what has been proved, limits, sources and shortcuts.">
+      <figcaption>The Methods page in the app: how each result is computed, which properties are machine-checked in Lean 4, the limits of each model, the sources, and the server status and keyboard shortcuts.</figcaption>
+    </figure>
+
+    <h2 id="how-it-works">How it works</h2>
+    <p>An IFC file is hashed (SHA-256) and looked up in a cache in the browser. On a miss, an import worker converts it to That Open fragments and reads the exit doors, storeys and roofs; on a hit, it opens without the IFC being read. A graph worker builds the wall-aligned walkable lattice, the stairs and the cores. In the page, A* finds the route, which is then straightened; a forecast worker computes time-dependent routes, the escape-deadline map and the two-zone model; a reinforcement learning worker trains the shielded learner, or the Q-learning, against the fire. An optional server receives the graph in the background.</p>
+<pre><code>IFC file
+  ├─ SHA-256 ─► IndexedDB cache (fragments + exit flags)
+  ├─ import worker: IFC → fragments, exit doors, storeys, roofs
+  ├─ viewer: fragments, floor, stair, door and wall geometry
+  ├─ graph worker: wall-aligned lattice, stairs, cores
+  ├─ page: A* + straightening, alternatives, fire spread
+  ├─ forecast worker: time-dependent routes, deadlines, zones
+  ├─ RL worker: the shielded learner or Q-learning
+  └─ optional server: TGraph routes, Navigation cross-check</code></pre>
+
+    <div class="table-wrap" role="region" aria-labelledby="where-caption" tabindex="0">
+      <table>
+        <caption id="where-caption">What runs where</caption>
+        <thead><tr><th scope="col">In your browser</th><th scope="col">On the server (optional)</th></tr></thead>
+        <tbody>
+          <tr><td>Opening and caching IFC files</td><td>TopologicPy <code>TGraph</code> route engine and its k-shortest routes</td></tr>
+          <tr><td>Building the walkable graph</td><td>Navigation cross-check (the IFC file is uploaded for this)</td></tr>
+          <tr><td>Routes, straightening and alternative routes</td><td>The Topology JSON viewer for TopologicPy files</td></tr>
+          <tr><td>Fire spread, rerouting and the forecast</td><td></td></tr>
+          <tr><td>The optional Flamescapes solver (WebGPU on your GPU where offered, else one CPU core)</td><td></td></tr>
+          <tr><td>Sprinklers, extinguishers, the code check and the performance check</td><td></td></tr>
+          <tr><td>Reinforcement learning</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The server is a FastAPI service around <a href="https://github.com/wassimj/topologicpy">TopologicPy</a>. When it is connected, the walkable graph (points and links, not the model) is uploaded in the background so the TopologicPy features can use it. On its free plan it sleeps after about 15 idle minutes, and the first request after that takes 30 to 50 s; everything in the browser keeps working while it wakes, or if it is never reached.</p>
+
+    <h2 id="verified">What is verified</h2>
+    <ul>
+      <li><span class="label">Unit and property tests.</span> 349 tests of the browser core on 2026-11-07, several of them property tests that check the same statements as the Lean proofs against the real functions.</li>
+      <li><span class="label">The real app.</span> A browser suite drives the installed Chrome through the whole workflow, on a desktop and a phone screen, and fails on any console error, uncaught exception or failed request.</li>
+      <li><span class="label">Speed and accuracy.</span> A benchmark on 38 public models measures speed and accuracy against an exact geodesic, with a stress suite of known bugs (<a href="https://github.com/libishm1/Topologic_Studio/blob/main/benchmark/README.md">benchmark</a>).</li>
+      <li><span class="label">Element names.</span> With the IFC class hidden, the naming rules named 86% of 6,066 typed elements from 45 models correctly.</li>
+      <li><span class="label">The learned escape.</span> In 848 runs on nine buildings, the shielded learner escaped wherever an escape existed, by the earliest route, in a median 1.8 ms; the Q-learning's drawn path missed in 15% of them.</li>
+      <li><span class="label">The GPU and the CPU.</span> The Flamescapes solver's two backends are compared on the same scenes, including soot, CO₂ and O₂, the ceiling detectors and sprinkler activation.</li>
+      <li><span class="label">Sprinklers against measured tests.</span> Activation against NIST's full-scale tests; see <a href="suppression.html#validation">Fire suppression</a>.</li>
+    </ul>
+
+    <h2 id="lean">What is proved in Lean</h2>
+    <p>37 Lean 4 modules hold 1,534 theorems and lemmas (2026-11-07), with no <code>sorry</code> and no warnings; every axiom print lists only Lean's standard axioms. Each module's header maps its theorems to the equation or the function they cover and lists what they leave out. The <a href="https://github.com/libishm1/Topologic_Studio/blob/main/formal/fireegress/README.md">proofs' README</a> gives every module, what it proves, what it does not cover, and where it shows in the app.</p>
+    <div class="table-wrap stack" role="region" aria-labelledby="lean-caption" tabindex="0">
+      <table>
+        <caption id="lean-caption">The Lean modules, by what they cover</caption>
+        <thead><tr><th scope="col">Topic</th><th scope="col">Modules</th><th scope="col">Among what is proved</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">The heat step, shaping and the heuristic</th><td data-label="Modules">Temperature, Shaping, Heuristic</td><td data-label="Among what is proved">The capped heat step cannot overshoot; shaping with zero terminal potential cannot reorder outcomes; the straight-line heuristic is consistent.</td></tr>
+          <tr><th scope="row">Fire and egress equations</th><td data-label="Modules">Dim, FireDynamics, Tenability, GraphNumerics</td><td data-label="Among what is proved">The equations of the methods review, each checked against a source first: units, monotonicity and inverses of t-squared fires, plumes, ceiling jets, flashover, the two-zone model, FED, ASET and RSET; and the diffusion numerics.</td></tr>
+          <tr><th scope="row">Routes and geometry</th><td data-label="Modules">AStar, Straighten, Segments, Lattice, Frames</td><td data-label="Among what is proved">A* returns a least-cost route; a straightened route is never longer; the segment test; the lattice's distance bounds; the IFC-to-viewer turn is a proper rotation.</td></tr>
+          <tr><th scope="row">Routing while the fire changes</th><td data-label="Modules">Yen, TimeDependent, MinDose</td><td data-label="Among what is proved">Yen's routes are the k shortest; time-dependent Dijkstra gives the earliest arrival; backward induction gives the least dose.</td></tr>
+          <tr><th scope="row">Learning, fronts, rounding and the forecast</th><td data-label="Modules">QLearning, Eikonal, FloatError, Forecast, Deadline</td><td data-label="Among what is proved">Value iteration converges; the forecast's coarsening is conservative; the deadline is the least solution of its recursion.</td></tr>
+          <tr><th scope="row">Surrogates, zones and cores</th><td data-label="Modules">Surrogate, Zone, Cores</td><td data-label="Among what is proved">The two-zone model's monotonicity properties; walking-line lengths; the closing margins.</td></tr>
+          <tr><th scope="row">The fire solver</th><td data-label="Modules">FireX, Flamescapes, FlamescapesPort, DuctMixing</td><td data-label="Among what is proved">Every equation of both papers' transcriptions as a definition with its units; the port's numerical schemes; the duct mixing.</td></tr>
+          <tr><th scope="row">The learned escape</th><td data-label="Modules">SafeEscape</td><td data-label="Among what is proved">The shield keeps an escape and its route is the earliest safe escape.</td></tr>
+          <tr><th scope="row">Sprinklers and the performance check</th><td data-label="Modules">Sprinklers, Performance, DoorQueue, PreMovement</td><td data-label="Among what is proved">The layout, the link and Evans's cap; the check's soundness, door queues and pre-movement.</td></tr>
+          <tr><th scope="row">Suppression</th><td data-label="Modules">Suppression</td><td data-label="Among what is proved">Water and energy balances of the spray, steam dilution, cooling and the cap.</td></tr>
+          <tr><th scope="row">Second model, obstructions, extinguishers and wetting</th><td data-label="Modules">Federation, Obstructions, Extinguishers, Wetting</td><td data-label="Among what is proved">The second model's frame, the obstruction rules, the extinguisher walk and count rules, and the wetting step's balances.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 id="found">What the proofs found</h3>
+    <p>Formalising found errors as well as confirming claims. Among them:</p>
+    <ul>
+      <li>two claims in the project's own methods review were false, and Lean proves the counterexamples;</li>
+      <li>the SFPE walking speed with its low-density switch at 0.54 persons/m² is not monotone;</li>
+      <li>the MQH flashover constants 740 and 6.85 differ by about 4 % in the flashover heat release;</li>
+      <li>the FED heat dose in kelvin instead of degrees C reaches 0.3 within 4 s instead of 564 min, a units trap the dimension type cannot see;</li>
+      <li>"0.25 m off walls" after straightening is not guaranteed, and the app's wording was corrected;</li>
+      <li>the extinguisher count rule's comment was wrong for the default ratings, and was fixed.</li>
+    </ul>
+    <p>Still outside the proofs: heaps, route reconstruction and the termination of the search loops, and floating point beyond <code>FloatError.lean</code>.</p>
+
+    <h2 id="limits">Limits to keep in mind</h2>
+    <ul>
+      <li><span class="label">A coarse grid.</span> Flamescapes in the browser is coarse. The paper resolves centimetres on a desktop GPU; here a cell is 0.2 to 0.45 m and a step 0.1 s. A surface layer of the fuel, a sub-grid rule for where an ember lands, the first item alight from the start, the paper's raised solid-gas heat transfer coefficient and exact integration of each reaction over a step stand in for what the paper resolves. It is not calibrated against room fire tests.</li>
+      <li><span class="label">Doors, windows and ducts.</span> Walls and slabs do not burn. Doors are open and windows closed unless the controls say otherwise; a closed door or window has no gaps. Ventilation joins the model's air terminals through one well-mixed duct volume at an assumed 100 L/s a terminal, so it shows the furthest the ducts could spread smoke.</li>
+      <li><span class="label">Contents, embers and pools.</span> Room contents are a statistical fire load, and CO does not rise when the fire is short of air. Indoors at these cells embers seldom land hot enough to light anything: in a 120 s fire in the Duplex they lit none. A 1 m² heptane pool reached 0.3 MW after 30 s in a test room, against the 3.2 MW its burning rate allows (Babrauskas 1983).</li>
+      <li><span class="label">Large models and smoke.</span> Large models are clipped to the area round the fire, and the grid's sides are open to outside air, so a clipped building is never fully closed. The flow is solved as incompressible: heated gas takes up no extra volume, so a closed room never pressurises and smoke may reach head height later than it would.</li>
+      <li><span class="label">Sprinkler timing.</span> On the fire grid the estimate opened the first head later than measured in rooms, up to twice as late or not at all, and heads behind beams may not open. For tenability the bias is conservative; for anything that starts on sprinkler flow, such as an alarm, it is not. An extinguisher attempt is judged but does not change the fire in the run.</li>
+      <li><span class="label">Temperature.</span> In the graph models the temperature is an index, scaled to read 20 to 120 degrees C, not a temperature a sensor would measure. Doses computed from it rank routes under the model; the ISO 13571 limits do not carry over.</li>
+      <li><span class="label">Time in steps.</span> The graph models count fire time in steps; the forecast converts steps to seconds with a factor you set. Fire growth is not calibrated.</li>
+      <li><span class="label">Waiting.</span> In the live simulation the evacuee waits while the fire grows, and each reroute starts from the original start. A route that has to pass through fire is drawn but reported as not safe. A route stays within one part of the graph.</li>
+      <li><span class="label">Walking.</span> Stairs are walked at level speed (reference tools use about half to nine tenths of it). The routes have no queues at doors, no slowing in smoke and no pre-movement time; the performance check adds pre-movement and queues at doors, but not stair flow or speed classes.</li>
+      <li><span class="label">Assumed stairs and lifts.</span> They are approximate: an assumed stair has no known width, and a lift ride counts as walking its rise, with no wait for the car.</li>
+    </ul>
+
+    <h2 id="sources">Sources</h2>
+    <h3 id="sources-fire">Fire, smoke and egress</h3>
+    <ul>
+      <li>Wrede, Wagner, Pałubicki, Michels and Pirk (2026). <em>Flamescapes: Simulating the Wildlandfire Urban Interface</em>. ACM Transactions on Graphics 45(6) 246. <a href="https://helgewrede.github.io/flamescapes/">Project page</a>; its DOI, 10.1145/3842518, was not yet registered on 2026-11-05. CC BY 4.0.</li>
+      <li>Wrede et al. (2025). <em>Fire-X: Extinguishing Fire with Stoichiometric Heat Release</em>. <a href="https://doi.org/10.1145/3763338">doi:10.1145/3763338</a>. CC BY 4.0.</li>
+      <li>Jabi et al. (2019). <em>The synergy of non-manifold topology and reinforcement learning for fire egress</em>. <a href="https://doi.org/10.5151/proceedings-ecaadesigradi2019_671">doi:10.5151/proceedings-ecaadesigradi2019_671</a>.</li>
+      <li>ISO 13571 for the asphyxiant and heat doses; EN 13501-2 for door fire classes; Babrauskas (1983) for pool burning rates.</li>
+      <li>NFPA 10 and ISO 3941:2026 for the fire classes; the classes' values come from a literature review cited in <a href="https://github.com/libishm1/Topologic_Studio/blob/main/topologicpy-web-frontend/src/core/fireClasses.js">fireClasses.js</a>, among them peer-reviewed calorimetry and cooktop studies.</li>
+    </ul>
+    <h3 id="sources-checks">The checks</h3>
+    <ul>
+      <li>SBC 801-CR-2018 and IBC 2021, cited by clause number; IBC 2021 Table 1004.5 for occupant load.</li>
+      <li>PD 7974-6, ISO/TR 16738, the Australian FSVM data sheets, and New Zealand's C/VM2 (2nd edition, 2025) for detection, alarm, pre-movement and door flow; Singapore SFEG 2025 and the Italian fire code for the criteria.</li>
+      <li>Lovreglio et al. (2019) for the measured pre-movement distributions.</li>
+    </ul>
+    <h3 id="sources-suppression">Suppression</h3>
+    <p>NFPA 13, NFPA 10, Evans (1993), Vettori (1998, 2003), UL/NFPRF (1998), Bittern (2004) and Rasbash (1986); the list with DOIs is on the <a href="suppression.html#sources">Fire suppression</a> page.</p>
+    <h3 id="sources-models">Models and data</h3>
+    <ul>
+      <li>Emunds, Pauen, Richter, Frisch and van Treeck (2021). <em>IFCNet: A Benchmark Dataset for IFC Entity Classification</em>. EG-ICE 2021. <a href="https://doi.org/10.48550/arXiv.2106.09712">doi:10.48550/arXiv.2106.09712</a>.</li>
+      <li>The example buildings, credited on the <a href="index.html#examples">Overview</a>.</li>
+    </ul>
+    <p>The full source list for the methods is on the app's Methods page.</p>
+
+    <h2 id="credits">Credits and licences</h2>
+    <ul>
+      <li><a href="https://github.com/wassimj/topologicpy">TopologicPy</a> (LGPL-3.0-or-later) by Wassim Jabi and contributors, for the server's graph engine and Navigation graph. The approach follows Jabi et al. (2019).</li>
+      <li><a href="https://github.com/ThatOpen">That Open Engine</a> (<code>@thatopen/components</code>, <code>@thatopen/fragments</code>, MIT) for the viewer and fragments, and <a href="https://github.com/ThatOpen/engine_web-ifc">web-ifc</a> (MPL-2.0) for reading IFC. <a href="https://threejs.org/">three.js</a>, <a href="https://react.dev/">React</a> and <a href="https://katex.org/">KaTeX</a> (all MIT).</li>
+      <li>Flamescapes and Fire-X (both CC BY 4.0) for the optional fire solver. Their transcriptions, with the changes stated, are in the repository's <a href="https://github.com/libishm1/Topologic_Studio/tree/main/wiki/sources/papers">wiki/sources/papers</a>. No code from them is used: their repositories hold project pages, and the solver here is written from the papers.</li>
+      <li>IFCNet: its code is MIT (<a href="https://github.com/RWTH-E3D/ifcnet-models">RWTH-E3D/ifcnet-models</a>). Its DGCNN weights, published by the authors at ifcnet.e3d.rwth-aachen.de with no stated licence, are shipped converted and pruned in <code>public/models/</code>, with credit (<a href="https://github.com/libishm1/Topologic_Studio/blob/main/topologicpy-web-frontend/public/models/NOTICE-ifcnet.md">NOTICE</a>), and will be removed if the authors ask. <a href="https://github.com/microsoft/onnxruntime">onnxruntime-web</a> (MIT) runs it, loaded from jsDelivr when first used.</li>
+      <li>The sprinkler validation data: NIST reports (NISTIR 6253, 7079, 6196-1 and 5254), US Government works, and the digitised measurements and validation inputs of NIST's firemodels repositories, kept with NIST's notice. The Bittern (2004) values come from the FDS Validation Guide.</li>
+      <li>The example buildings: the Duplex and the NIBS Office from the NIBS Common BIM Files (no licence stated; shown with credit, the Office removed on request), the Vienna building (TU Wien, CC BY 4.0), the Medical clinic (buildingSMART Community Sample Test Files, CC BY 4.0), the buildingSMART sample scene (no licence file; shown with credit), and two generated models (CC0-1.0); details on the <a href="index.html#examples">Overview</a>.</li>
+    </ul>
+    <p>Project licence: see the original version's <a href="https://github.com/libishm1/Topologic_Studio/blob/main/docs/README-classic.md#license-and-third-party-licenses">licence section</a>.</p>
+
+    <h2 id="reading">Further reading</h2>
+    <ul>
+      <li>The <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>, with running Studio locally, the tests and the server API.</li>
+      <li>The <a href="https://github.com/libishm1/Topologic_Studio/blob/main/formal/fireegress/README.md">Lean proofs' README</a>: what has been proved and where each proof shows in the app.</li>
+      <li>The <a href="https://github.com/libishm1/Topologic_Studio/tree/main/wiki/research">research notes</a>: the fire-egress methods review, the verified equations, the gap analysis, a study of open-source evacuation tools, and the sprinkler, extinguisher and performance-check notes.</li>
+      <li>The <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/HANDOFF.md">handoff</a>: the current state, the latest changes and the open work.</li>
+    </ul>
+
+    <nav class="pager" aria-label="Previous page">
+      <a href="checks.html">Previous: Code and performance checks</a>
+      <a href="index.html">Back to the overview</a>
+    </nav>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
+  </div>
+</footer>
+</body>
+</html>

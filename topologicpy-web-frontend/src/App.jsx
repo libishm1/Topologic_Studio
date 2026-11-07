@@ -3334,6 +3334,18 @@ export default function App() {
             <Icon name="book" size={18} />
             <span className="header__label">Methods</span>
           </Button>
+          {/* The guide (public/docs/), named in full: Vite's dev server answers docs/ with the app.
+              header__group--wide hides it at 900 px and below, where the header has no room. */}
+          <a
+            className="btn btn--ghost header__group--wide"
+            href={`${import.meta.env.BASE_URL}docs/index.html`}
+            target="_blank"
+            rel="noopener"
+            title="The guide to Studio, in a new tab"
+            style={{ textDecoration: "none" }}
+          >
+            Docs
+          </a>
           <Button
             icon
             variant="ghost"
