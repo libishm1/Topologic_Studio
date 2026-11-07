@@ -121,6 +121,7 @@ const MODES = [
 ];
 
 const NO_PLAN = { busy: false, result: null };
+const NO_LINKED = [];
 
 /**
  * The fields check what is typed, but settings saved before they did can be
@@ -393,7 +394,7 @@ export default function App() {
     const view = showRef.current;
     viewer.setSmokeCloud(frame.smoke || null, { strength: view.kind === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
     // The heads open by this frame (core/suppression.js).
-    if (run.sprinklerPoints) viewer.setSprinklers?.(run.sprinklerPoints, new Set(frame.sprinklers?.open || []));
+    if (run.sprinklerPoints) viewer.setSprinklers?.(run.sprinklerPoints, new Set(frame.sprinklers?.open || []), run.sprinklerDrops);
     if (view.kind === "smoke") viewer.setSmoke(frame.vis);
     else if (view.kind === "levels") viewer.setNodeLevels(view.levels(frame, view.key === "tenability" ? tenabilityOf(run, k) : null));
     else {
@@ -1193,6 +1194,99 @@ export default function App() {
     };
   }, [graph, settings, studio.semantics]);
 
+  // ---------------------------------------------------------- second models
+
+  // MEP or structural models beside the first (core/federation.js): drawn
+  // in its frame and checked against it; their sprinklers, ducts and beams
+  // feed the sprinkler layout and, when asked, the fire grid. Nothing is
+  // read until one is added; they go with the first model (kept per model).
+  const [linked, setLinked] = useState({ owner: null, list: NO_LINKED, busy: null });
+  const linkedList = linked.owner === modelInfo ? linked.list : NO_LINKED;
+  const linkedBusy = linked.owner === modelInfo ? linked.busy : null;
+  const mainName = file?.name || "the model";
+  const addLinkedModel = useCallback(
+    async (linkedFile) => {
+      const viewer = viewerRef.current;
+      if (!viewer || !modelInfo || !linkedFile) return;
+      const owner = modelInfo;
+      setLinked((current) => ({ owner, list: current.owner === owner ? current.list : NO_LINKED, busy: linkedFile.name }));
+      try {
+        const F = await import("./core/federation.js");
+        const main = studio.semantics;
+        const result = await viewer.loadLinkedIfc(linkedFile, { relativeFor: (semantics) => F.alignment(main, semantics) });
+        const check = F.federationCheck({ name: mainName, semantics: main, box: viewer.mainBox() }, { name: result.name, semantics: result.semantics, box: result.box }, { how: result.how });
+        const ids = result.categoryIds || {};
+        const entry = {
+          id: result.id,
+          name: result.name,
+          how: result.how,
+          check,
+          semantics: result.semantics,
+          sprinklers: result.semantics?.sprinklers?.length ?? 0,
+          beams: ids.beams?.length ?? 0,
+          ducts: ids.ducts?.length ?? 0,
+          // IFC2x3 writes ducts, pipes and trays alike as flow segments;
+          // the ducts and trays among them are told by name when read.
+          flowSegments: ids.flowSegments?.length ?? 0,
+          cables: ids.cableCarriers?.length ?? 0,
+        };
+        setLinked((current) => (current.owner !== owner ? current : { owner, busy: null, list: [...current.list.filter((m) => m.id !== entry.id), entry] }));
+        markUsed("linkedModel");
+      } catch (error) {
+        setLinked((current) => (current.owner !== owner ? current : { ...current, busy: null }));
+        if (!isCancelled(error)) reportError(error, "Adding a second model");
+      }
+    },
+    [modelInfo, mainName, studio.semantics, reportError, markUsed],
+  );
+  // Moved by hand so the plans' centres and lowest points meet, when the
+  // files were exported from different bases (the check's offset).
+  const alignLinkedModel = useCallback(
+    async (id) => {
+      const viewer = viewerRef.current;
+      const entry = linkedList.find((m) => m.id === id);
+      if (!viewer || !entry?.check.offset) return;
+      const F = await import("./core/federation.js");
+      const shift = entry.check.offset;
+      const box = viewer.shiftLinked(id, shift);
+      const check = F.federationCheck({ name: mainName, semantics: studio.semantics, box: viewer.mainBox() }, { name: entry.name, semantics: entry.semantics, box }, { how: entry.how });
+      check.checks.push({
+        id: "moved",
+        status: "warning",
+        text: `Moved by hand ${shift.map((v) => v.toFixed(2)).join(", ")} m so the plans meet: compare it with the drawings before trusting the sprinklers' places`,
+      });
+      const owner = modelInfo;
+      setLinked((current) => (current.owner !== owner ? current : { ...current, list: current.list.map((m) => (m.id === id ? { ...m, check, how: "hand, after the files' frames missed" } : m)) }));
+    },
+    [linkedList, mainName, studio.semantics, modelInfo],
+  );
+  const removeLinkedModel = useCallback(
+    (id) => {
+      viewerRef.current?.removeLinked(id);
+      const owner = modelInfo;
+      setLinked((current) => (current.owner !== owner ? current : { ...current, list: current.list.filter((m) => m.id !== id) }));
+    },
+    [modelInfo],
+  );
+
+  // Beams, ducts and cable trays (ViewerManager.overheadMeshes), read only
+  // while the sprinklers or the fire grid's beams and ducts are on.
+  const overheadKey =
+    graph && (settings.sprinklers || settings.flamescapesOverhead) ? `${mainName}|${linkedList.map((m) => m.id).join(",")}` : null;
+  const [overhead, setOverhead] = useState({ key: null, meshes: null });
+  useEffect(() => {
+    if (!overheadKey) return undefined;
+    let live = true;
+    viewerRef.current
+      ?.overheadMeshes()
+      .then((meshes) => live && setOverhead({ key: overheadKey, meshes }))
+      .catch(() => live && setOverhead({ key: overheadKey, meshes: [] }));
+    return () => {
+      live = false;
+    };
+  }, [overheadKey]);
+  const overheadMeshes = overhead.key === overheadKey ? overhead.meshes : null;
+
   // ------------------------------------------------------------ sprinklers
 
   // The heads a Flamescapes run can open (core/sprinklers.js): read from the
@@ -1218,14 +1312,48 @@ export default function App() {
         const heads = S.sprinklersFromIfc(listed, positions, { response: settings.sprinklerResponse, hazard: hazard || "light" });
         if (heads.length) fromIfc = { source: "ifc", heads, rooms: [], note: `${heads.length} of ${listed.length} sprinklers in the IFC have a position` };
       }
+      // Else a second model's (an MEP model), in this model's frame.
+      if (!fromIfc && settings.sprinklerSource !== "placed") {
+        const heads = [];
+        let count = 0;
+        const from = [];
+        for (const m of linkedList) {
+          const own = m.semantics?.sprinklers || [];
+          if (!own.length) continue;
+          count += own.length;
+          from.push(m.name);
+          const positions = (await viewerRef.current?.positionsOf?.(own.map((r) => r.id), { linked: m.id }).catch(() => null)) || new Map();
+          for (const h of S.sprinklersFromIfc(own, positions, { response: settings.sprinklerResponse, hazard: hazard || "light" })) heads.push({ ...h, id: `${m.name}:${h.id}` });
+        }
+        if (heads.length) fromIfc = { source: "ifc", heads, rooms: [], note: `${heads.length} of ${count} sprinklers in ${from.join(" and ")} have a position` };
+      }
+      // What hangs below the ceilings (this model's beams, a second model's
+      // ducts and trays), one record per element, for the obstruction rules.
+      const obstructions = [];
+      if (overheadMeshes?.length) {
+        const byItem = new Map();
+        for (const m of overheadMeshes) {
+          const key = `${m.source}:${m.itemId}`;
+          if (!byItem.has(key)) byItem.set(key, []);
+          byItem.get(key).push(m);
+        }
+        for (const [key, list] of byItem) {
+          const o = S.obstructionFromMesh(list, { upAxis });
+          if (o) obstructions.push({ ...o, itemId: key });
+        }
+      }
+      if (fromIfc && obstructions.length) {
+        const checked = S.checkObstructions(fromIfc.heads, obstructions, { upAxis });
+        fromIfc.obstructions = { status: checked.status, notes: checked.notes, failing: checked.heads.filter((h) => h.status === "fail").length, wide: checked.wide.length };
+      }
       let plan = fromIfc;
       if (!plan && settings.sprinklerSource !== "ifc") {
         const names = new Map((studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
         const rooms = geometry.spaces?.length ? S.roomsFromSpaces(geometry.spaces, { upAxis, names }) : null;
         const usable = rooms?.rooms ? rooms.rooms : rooms;
         if (usable?.length) {
-          const laid = S.layoutRooms(usable, { hazardFor: hazard ? () => hazard : undefined, response: settings.sprinklerResponse });
-          plan = { source: "rooms", ...laid };
+          const laid = S.layoutRooms(usable, { hazardFor: hazard ? () => hazard : undefined, response: settings.sprinklerResponse, obstructions: obstructions.length ? obstructions : null });
+          plan = { source: "rooms", ...laid, obstructionCount: obstructions.length };
         } else {
           const laid = S.layoutStoreys(graph, levels, hazard || "light", { response: settings.sprinklerResponse });
           plan = { source: "storeys", ...laid, rooms: (laid.storeys || []).map((st) => ({ ...st, id: st.index, name: `Storey ${st.index + 1}` })) };
@@ -1262,7 +1390,7 @@ export default function App() {
       setSprinklerState({ graph, plan: null, busy: false });
       reportError(error, "Laying out sprinklers");
     }
-  }, [graph, levels, settings.sprinklerHazard, settings.sprinklerResponse, settings.sprinklerSource, settings.perfOccupancy, settings.perfOccupantArea, studio.semantics, reportError, markUsed]);
+  }, [graph, levels, settings.sprinklerHazard, settings.sprinklerResponse, settings.sprinklerSource, settings.perfOccupancy, settings.perfOccupantArea, studio.semantics, linkedList, overheadMeshes, reportError, markUsed]);
   // On with the switch, and again when its choices change; off clears the heads.
   useEffect(() => {
     if (settings.sprinklers && graph && geometryRef.current) layOutSprinklers();
@@ -1309,7 +1437,11 @@ export default function App() {
       floors: clone(geometry.floors),
       roofs: clone(geometry.roofMeshes),
       stairs: clone(geometry.stairs),
-      obstacles: clone(windowsOpen ? (geometry.obstacles || []).filter((m) => !windowIds.has(m.itemId)) : geometry.obstacles),
+      obstacles: [
+        ...clone(windowsOpen ? (geometry.obstacles || []).filter((m) => !windowIds.has(m.itemId)) : geometry.obstacles),
+        // Beams, ducts and cable trays under the ceilings, when asked.
+        ...(settings.flamescapesOverhead && overheadMeshes?.length ? clone(overheadMeshes) : []),
+      ],
       ...(closedLeaves.length ? { doors: clone(closedLeaves) } : {}),
     };
     const transfers = Object.values(geo).flatMap((list) => list.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
@@ -1376,13 +1508,15 @@ export default function App() {
       settings.flamescapesVentilation,
       settings.flamescapesTerminalFlow,
       settings.flamescapesMeasures,
-      // Only a run with sprinklers adds them, so a run without keeps its kept-run key.
+      // Only a run with them adds the beams and ducts, and the sprinklers, so
+      // a run without keeps its kept-run key.
+      ...(settings.flamescapesOverhead && overheadMeshes?.length ? [["overhead", overheadMeshes.length, overheadMeshes.reduce((n, m) => n + m.indices.length, 0)]] : []),
       ...(payload.sprinklers
         ? [["sprinklers", settings.sprinklerMode, settings.sprinklerOpenOn, payload.sprinklers.heads.map((h) => [h.id, ...h.position.map((x) => Math.round(x * 100)), h.rti, h.c, h.activationC, h.flowLpm]).join(";")]]
         : []),
     ]);
     return { payload, transfers, key };
-  }, [graph, points.fire, settings, fireModel, studio.semantics, sprinklerPlan]);
+  }, [graph, points.fire, settings, fireModel, studio.semantics, sprinklerPlan, overheadMeshes]);
 
   // Start the Flamescapes solver, or return the run already made for the
   // same graph and inputs. Its frames collect in run.frames as they arrive;
@@ -1392,7 +1526,14 @@ export default function App() {
     const current = combustionRef.current;
     if (current && current.key === key && current.graph === graph && !current.failed) return current;
     flamescapesRef.current?.cancel();
-    const run = { key, graph, frames: [], done: false, failed: false, result: null, info: null, sprinklerPoints: payload.sprinklers?.heads.map((h) => h.position) ?? null };
+    const sprinklerPoints = payload.sprinklers?.heads.map((h) => h.position) ?? null;
+    // How far each head's spray falls: to the highest floor at least 1 m below it.
+    const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
+    const sprinklerDrops = sprinklerPoints?.map((p) => {
+      const below = levels.filter((l) => l <= p[up] - 1);
+      return below.length ? Math.min(12, p[up] - Math.max(...below)) : 2.4;
+    }) ?? null;
+    const run = { key, graph, frames: [], done: false, failed: false, result: null, info: null, sprinklerPoints, sprinklerDrops };
     // Where this run is kept in the browser (core/runCache.js): the graph,
     // the scene's geometry (every 16th word) and the run's inputs.
     const storeKey = settings.flamescapesKeepRuns
@@ -1519,7 +1660,7 @@ export default function App() {
     });
     combustionRef.current = run;
     return run;
-  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns]);
+  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns, levels]);
 
   const forgetRuns = useCallback(async () => {
     const { count, bytes } = await storedRuns();
@@ -2063,6 +2204,124 @@ export default function App() {
     () => (settings.forecastExits === "model" && exits?.final.length ? exits.final : points.exit && graph ? [snap(graph, points.exit)] : []),
     [settings.forecastExits, exits, points.exit, graph],
   );
+  // --------------------------------------------------------- extinguishers
+
+  // Portable extinguishers (core/extinguishers.js): the IFC's, told by name
+  // (here and in a second model), else placed on the walk by the travel
+  // rule; checked against SBC 801-CR-2018 906 and NFPA 10. Kept with the
+  // graph they were made on; nothing is read while the switch is off.
+  const [extinguisherState, setExtinguisherState] = useState({ graph: null, plan: null, busy: false });
+  const extinguisherPlan = extinguisherState.graph === graph ? extinguisherState.plan : null;
+  const occupancyGroup = { office: "B", classroom: "university", apartment: "R-2", "apartment-origin": "R-2", hotel: "R-1", assembly: "A-3" }[settings.perfOccupancy] ?? null;
+  const layOutExtinguishers = useCallback(async () => {
+    if (!graph) return;
+    setExtinguisherState({ graph, plan: null, busy: true });
+    try {
+      const E = await import("./core/extinguishers.js");
+      const viewer = viewerRef.current;
+      const hazard = settings.extinguisherHazard;
+      let sites = [];
+      let note = null;
+      if (settings.extinguisherSource !== "placed" && viewer?.extinguisherCandidates) {
+        const candidates = await viewer.extinguisherCandidates().catch(() => []);
+        const groups = new Map();
+        for (const r of candidates) {
+          if (!groups.has(r.linked)) groups.set(r.linked, []);
+          groups.get(r.linked).push({ itemId: r.itemId, name: r.name, ifcClass: r.type, predefinedType: r.predefined });
+        }
+        let found = 0;
+        for (const [linked, list] of groups) {
+          const records = E.extinguisherRecords(list);
+          found += records.length;
+          const positions = (await viewer.positionsOf(records.map((r) => r.itemId), linked ? { linked } : {}).catch(() => null)) || new Map();
+          for (const r of records) {
+            const p = positions.get(r.itemId);
+            if (p) sites.push({ node: snap(graph, p), rating: r.rating, unit: r.unit, name: r.name });
+          }
+        }
+        if (sites.length) note = `${sites.length} of ${found} in the IFC have a place`;
+      }
+      let source = sites.length ? "ifc" : "none";
+      let laid = null;
+      if (!sites.length && settings.extinguisherSource !== "ifc") {
+        laid = E.layoutExtinguishers(graph, { levels, hazard, exits: planExitNodes(), occupancy: occupancyGroup ?? undefined });
+        sites = laid.sites.map((s) => ({ node: s.node, rating: s.rating }));
+        source = "placed";
+      }
+      const check = sites.length || source === "none"
+        ? E.placementCheck(graph, sites.map((s) => ({ node: s.node, rating: s.rating ?? undefined })), { levels, hazard, occupancy: occupancyGroup ?? undefined })
+        : null;
+      setExtinguisherState({ graph, plan: { source, sites, check, note, notes: laid?.notes || [], api: E }, busy: false });
+      markUsed("extinguishers");
+    } catch (error) {
+      setExtinguisherState({ graph, plan: null, busy: false });
+      reportError(error, "Placing extinguishers");
+    }
+  }, [graph, levels, settings.extinguisherHazard, settings.extinguisherSource, occupancyGroup, planExitNodes, reportError, markUsed]);
+  useEffect(() => {
+    if (settings.extinguishers && graph) layOutExtinguishers();
+  }, [settings.extinguishers, layOutExtinguishers, graph]);
+  useEffect(() => {
+    const sites = settings.extinguishers && graph ? extinguisherPlan?.sites : null;
+    viewerRef.current?.setExtinguishers?.(sites?.length ? sites.map((s) => [graph.nodes[s.node * 3], graph.nodes[s.node * 3 + 1] - (graph.agentHeight || 0), graph.nodes[s.node * 3 + 2]]) : null);
+  }, [settings.extinguishers, extinguisherPlan, graph]);
+
+  // One responder's attempt on the fire on show (core/extinguishers.js
+  // attempt): from the fire's place, after they see it or after the alarm
+  // and the design pre-movement, to the nearest suitable unit and back to
+  // attack it; judged on the fire's heat release when they start, from the
+  // Flamescapes run, else a t-squared design fire (the two-zone settings).
+  const [attemptState, setAttemptState] = useState({ graph: null, result: null });
+  const extinguisherAttempt = attemptState.graph === graph ? attemptState.result : null;
+  const runExtinguisherAttempt = useCallback(() => {
+    if (!settings.extinguishers || !graph || !points.fire || !extinguisherPlan?.sites?.length) return;
+    const E = extinguisherPlan.api;
+    if (!E) return;
+    const fireNode = snap(graph, points.fire);
+    const run = combustionRef.current;
+    const frames = run && run.graph === graph && isFlamescapes(fireModel) ? run.frames : null;
+    let hrrAt, source, horizon = Infinity;
+    if (frames?.length) {
+      source = "the Flamescapes run";
+      horizon = frames[frames.length - 1].time;
+      hrrAt = (t) => {
+        let prev = { time: 0, hrr: 0 };
+        for (const f of frames) {
+          if (f.time >= t) return prev.hrr + ((f.hrr - prev.hrr) * (t - prev.time)) / Math.max(1e-9, f.time - prev.time);
+          prev = f;
+        }
+        return prev.hrr;
+      };
+    } else {
+      const growth = { slow: 600, medium: 300, fast: 150, ultrafast: 75 }[settings.zoneGrowth] ?? 300;
+      source = `a ${settings.zoneGrowth || "medium"} t-squared design fire (1 MW in ${growth} s, at most ${settings.zonePeakKw} kW)`;
+      hrrAt = (t) => Math.min(settings.zonePeakKw, 1000 * (t / growth) ** 2);
+    }
+    const median = Math.sqrt(Math.max(1, settings.perfPre1) * Math.max(1, settings.perfPre99));
+    const tGo = settings.extinguisherStart === "alarm" ? settings.perfDetection + settings.perfAlarm + median : 30;
+    try {
+      const out = E.attempt({
+        graph,
+        fireNode,
+        startNode: fireNode,
+        sites: extinguisherPlan.sites.map((s) => ({ node: s.node, ...(s.unit ? { unit: s.unit } : {}) })),
+        tGo,
+        speed: settings.walkSpeed,
+        unit: settings.extinguisherUnit,
+        tTake: settings.extinguisherTrained ? E.T_TAKE.instructed ?? 7.2 : E.T_TAKE.value,
+        hrrAt,
+        fireClass: isFlamescapes(fireModel) ? settings.flamescapesClass : "A",
+        exits: planExitNodes(),
+        useWalls: settings.useWalls,
+      });
+      const late = out.times?.tS > horizon;
+      setAttemptState({ graph, result: { ...out, source, tGo, late, horizon } });
+      markUsed("extinguisherAttempt");
+    } catch (error) {
+      setAttemptState({ graph, result: { outcome: "cannot tell", reasons: [{ id: "error", status: "cannot tell", text: error.message }], source, tGo } });
+    }
+  }, [settings.extinguishers, settings.extinguisherStart, settings.extinguisherUnit, settings.extinguisherTrained, settings.zoneGrowth, settings.zonePeakKw, settings.perfPre1, settings.perfPre99, settings.perfDetection, settings.perfAlarm, settings.walkSpeed, settings.flamescapesClass, settings.useWalls, graph, points.fire, extinguisherPlan, fireModel, planExitNodes, markUsed]);
+
   // A report entry's name: the fire's storey and how it was placed, and the model.
   const fireLabel = useCallback(
     (node, how) => {
@@ -2938,6 +3197,8 @@ export default function App() {
       items.push({ label: exits.finalSource ? "Exits out of the building (rings)" : "Exit doors (rings)", color: "var(--viz-exit)" });
     }
     if (points.fire) items.push({ label: "Fire origin (spike)", color: "var(--viz-fire)", dot: true });
+    if (settings.sprinklers && sprinklerPlan?.heads?.length) items.push({ label: "Sprinkler heads (blue once open, with their spray)", color: "#0284c7", dot: true });
+    if (settings.extinguishers && extinguisherPlan?.sites?.length) items.push({ label: "Extinguishers", color: "#dc2626", dot: true });
     if (alternatives?.routes.length > 1) {
       alternatives.routes.forEach((route, i) =>
         items.push({ label: `Route ${route.rank} (${route.length.toFixed(1)} m)`, color: routeColor(i) }),
@@ -2972,6 +3233,10 @@ export default function App() {
     planRoutesShown,
     graphColours,
     fire.model,
+    settings.sprinklers,
+    sprinklerPlan?.heads?.length,
+    settings.extinguishers,
+    extinguisherPlan?.sites?.length,
   ]);
 
   // ------------------------------------------------------------------ render
@@ -3264,6 +3529,10 @@ export default function App() {
                   onDescribeEngine={setDescribeEngine}
                   onOpenRooms={handleFile}
                   onExportRooms={exportLod1}
+                  linked={{ list: linkedList, busy: linkedBusy }}
+                  onAddLinked={addLinkedModel}
+                  onAlignLinked={alignLinkedModel}
+                  onRemoveLinked={removeLinkedModel}
                 />
               )}
               {activeTab === "graph" && (
@@ -3318,6 +3587,12 @@ export default function App() {
                   sprinklerPlan={settings.sprinklers ? sprinklerPlan : null}
                   sprinklerBusy={sprinklerState.busy}
                   onLayOutSprinklers={layOutSprinklers}
+                  overheadCount={overheadMeshes ? new Set(overheadMeshes.map((m) => `${m.source}:${m.itemId}`)).size : null}
+                  extinguisherPlan={settings.extinguishers ? extinguisherPlan : null}
+                  extinguisherBusy={extinguisherState.busy}
+                  onLayOutExtinguishers={layOutExtinguishers}
+                  extinguisherAttempt={settings.extinguishers ? extinguisherAttempt : null}
+                  onExtinguisherAttempt={runExtinguisherAttempt}
                 />
               )}
             </div>

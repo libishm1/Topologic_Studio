@@ -41,6 +41,9 @@ import {
   SUP,
 } from "./flamescapesGpu/kernels.js";
 
+/** A fuel's water rule (fireClasses.js waterResponse) as the bits the WGSL reads: 1 wets, 2 Evans's cap, 4 holds no water. */
+const waterFlags = (fuel) => (fuel?.water?.wets === false ? 0 : 1) + (fuel?.water?.evans === false ? 0 : 2) + (fuel?.water?.dry ? 4 : 0);
+
 const MAX_WG_PER_DIM = 65535;
 /** Conduction's passes, in the order that gives every solid cell the CPU's order of exchanges. */
 const CONDUCTION = ["conductPorous", "conduct_x0", "conduct_x1", "conduct_y0", "conduct_y1", "conduct_z0", "conduct_z1", "conduct_bx", "conduct_by", "conduct_bz"];
@@ -247,7 +250,7 @@ class GpuSim {
       const st = sim.stoich[k];
       const fuel = sim.fuels[k];
       const liquid = fuel.liquid;
-      return [st.o2, st.co2, st.co, st.soot, st.h2o, st.heat, fuel.ignitionTemperature + KELVIN, fuel.embers ? 1 : 0, liquid ? 1 : 0, liquid?.boiling ?? 0, liquid?.latent ?? 1, st.ash ?? 0, fuel.heatCapacity ?? P.fuelHeatCapacity, liquid?.mInf ?? -1, liquid?.kBeta ?? -1, 0];
+      return [st.o2, st.co2, st.co, st.soot, st.h2o, st.heat, fuel.ignitionTemperature + KELVIN, fuel.embers ? 1 : 0, liquid ? 1 : 0, liquid?.boiling ?? 0, liquid?.latent ?? 1, st.ash ?? 0, fuel.heatCapacity ?? P.fuelHeatCapacity, liquid?.mInf ?? -1, liquid?.kBeta ?? -1, waterFlags(fuel)];
     };
     this.paramF.set([...fuelRow(0), ...fuelRow(1)], PARAM_SCALARS);
     this.setParams({
@@ -268,7 +271,7 @@ class GpuSim {
       emberHC: P.emberHeatCapacity, pilotTemp: pilot?.temperature || 0, pilotPower: pilot?.power || 0,
       burnFlux: P.burningFlux,
       ductN: ducts ? ducts.cells.length : 0, ductSystems: ducts ? ducts.systems : 0, ductAt: io.ducts, ductFlow: ducts ? ducts.flow : 0,
-      time: this.time, supOn: suppression ? 1 : 0, sprayN: 0, supCol: SUP.fields * N, sprayEta: suppression?.eta ?? 0,
+      time: this.time, supOn: suppression ? 1 : 0, sprayN: 0, supCol: SUP.fields * N, sprayEta: suppression?.eta ?? 0, sprayWet: suppression?.wet ?? 0,
       speedFrom: this.speedFrom, ioSpeed: io.speed,
     });
     this.writeParams();
@@ -687,7 +690,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const D = detectors.cells.length;
   const spr = sprinklerRun(scene, sim, opts.sprinklers, opts.upAxis);
   const S = spr ? spr.sensors.length : 0;
-  const suppression = spr && spr.sup.mode !== "activation" ? { columns: spr.setup.heads.reduce((a, h) => a + h.columns.length / 2, 0), eta: spr.sup.eta } : null;
+  const suppression = spr && spr.sup.mode !== "activation" ? { columns: spr.setup.heads.reduce((a, h) => a + h.columns.length / 2, 0), eta: spr.sup.eta, wet: spr.sup.wet } : null;
   const K = Math.max(1, Math.round(horizon / frameSeconds));
   let gpu;
   const { device } = ctx;
@@ -783,7 +786,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   }
   const sprinklers = spr ? sprinklerResult(spr) : null;
   // The GPU keeps no tally of the spray's evaporation.
-  if (sprinklers) sprinklers.stats = { emitted: sprinklers.stats.emitted, evaporated: null, floor: null };
+  if (sprinklers) sprinklers.stats = { emitted: sprinklers.stats.emitted, evaporated: null, wetted: null, floor: null };
   const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance, sprinklers };
   return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
 }

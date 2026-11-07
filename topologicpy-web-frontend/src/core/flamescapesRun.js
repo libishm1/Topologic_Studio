@@ -460,7 +460,10 @@ export function smokeCloud(grid, rho, Y, kind, { block = 2, min = 0.03 } = {}) {
  */
 export function sprinklerRun(scene, sim, sprinklers, upAxis = "y") {
   if (!sprinklers?.heads?.length) return null;
-  const setup = sprinklerSetup(scene, sprinklers.heads, { upAxis, fuel: sim.fuelMass });
+  // A scene that burns only a prescribed burner (a validation run) has no
+  // first item: the plume the estimate reads rises from the burner's axis.
+  const plumeScene = scene.ignition || !sim.burner ? scene : { ...scene, ignition: { cell: sim.burner.axis } };
+  const setup = sprinklerSetup(plumeScene, sprinklers.heads, { upAxis, fuel: sim.fuelMass });
   return {
     setup,
     state: createActivation(setup, { ambient: sim.P.ambient }),
@@ -502,9 +505,11 @@ export function sprinklerResult(run) {
  * visibility at the virtual ceiling detectors (ceilingDetectors) as
  * `detectors`. Returns the frames stacked: T, vis, co, soot, co2, o2 as
  * Float32Array(K n), the detectors' visibility as Float32Array(K D), and
- * `detectorDistance`.
+ * `detectorDistance`. With `sensorGas` (validation runs), each frame's
+ * `sprinklers` also carries the gas at the heads' sensor cells, `gas`
+ * {T (K), u (m/s)}.
  */
-export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true, sprinklers = null } = {}) {
+export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true, sprinklers = null, sensorGas = false } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
   // Per-stage timing for the benchmark (tools/fire-bench.mjs).
   if (profileInto) sim.profile = profileInto;
@@ -546,6 +551,7 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
       const Tk = Float64Array.from(gas, (t) => t + KELVIN);
       const u = Float64Array.from(spr.sensors, (c) => (c >= 0 ? cellSpeed(sim, c) : 0));
       sprinkled = sprinklerFrame(spr, { t0: end - frameSeconds, t1: end, T: Tk, u, hrr: hrr[k] });
+      if (sensorGas) sprinkled.gas = { T: Tk, u };
     }
     onFrame?.({
       k,
@@ -557,7 +563,7 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
       co2: frame.co2,
       o2: frame.o2,
       detectors: atDetectors,
-      sprinklers: sprinkled && { opened: sprinkled.opened, open: sprinkled.open, water: sprinkled.water },
+      sprinklers: sprinkled && { opened: sprinkled.opened, open: sprinkled.open, water: sprinkled.water, ...(sprinkled.gas ? { gas: sprinkled.gas } : {}) },
       hrr: hrr[k],
       maxT: sim.stats.maxT - KELVIN,
       embers: sim.stats.embersSpawned,
@@ -569,5 +575,7 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
   }
   const inGrid = cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0);
   const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid, detectorDistance: detectors.distance, sprinklers: spr ? sprinklerResult(spr) : null };
+  // A prescribed burner's totals (J), only when the scene has one.
+  if (sim.burner) out.burner = { released: sim.burner.released, convective: sim.burner.convective, radiant: sim.burner.radiant, cells: sim.burner.cells.length };
   return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
 }

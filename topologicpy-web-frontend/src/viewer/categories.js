@@ -42,6 +42,14 @@ export const CATEGORY_PATTERNS = {
   // told apart by name (AIR_TERMINAL_NAME).
   airTerminals: /^IFCAIRTERMINAL$/i,
   flowTerminals: /^IFCFLOWTERMINAL$/i,
+  // What hangs below a ceiling, for the sprinklers' obstruction rules
+  // (core/sprinklers.js) and, when asked, the fire grid: beams, and in an
+  // MEP model ducts and cable trays (IFC2x3 writes them as flow segments
+  // and fittings, told apart by name in ViewerManager.overheadMeshes).
+  beams: /^IFC(BEAM|BEAMSTANDARDCASE)$/i,
+  ducts: /^IFC(DUCTSEGMENT|DUCTFITTING)$/i,
+  cableCarriers: /^IFC(CABLECARRIERSEGMENT|CABLECARRIERFITTING)$/i,
+  flowSegments: /^IFC(FLOWSEGMENT|FLOWFITTING)$/i,
 };
 
 /** An IFC2x3 flow terminal named as an air terminal (Revit and ArchiCAD family names). */

@@ -127,7 +127,90 @@ export function ifcSemantics(api, modelID, W) {
     spaces,
     sprinklers: sprinklerHeads(api, modelID, W, { ids, line, ownSets, typeOf }),
     lengthScale: scale,
+    frame: modelFrame(W, ids, line, scale),
   };
+}
+
+/**
+ * Where the file puts its building, for federating a second model with it
+ * (core/federation.js; MEP report section 6.4): the world placement of the
+ * site and the building (origin in metres, x and z axes), the model
+ * context's TrueNorth, and an IFC4 IfcMapConversion with its target CRS.
+ * Null where the file has none; a failed read is null too.
+ */
+function modelFrame(W, ids, line, scale) {
+  const point = (id) => (id ? (line(id)?.Coordinates || []).map((c) => Number(val(c)) || 0) : null);
+  const direction = (id) => (id ? (line(id)?.DirectionRatios || []).map((c) => Number(val(c)) || 0) : null);
+  const unit = (v) => {
+    const n = Math.hypot(...v);
+    return n > 0 ? v.map((c) => c / n) : v;
+  };
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  // An IfcLocalPlacement chain composed into origin and axes (columns x, y, z).
+  const world = (placementId) => {
+    let o = [0, 0, 0], x = [1, 0, 0], y = [0, 1, 0], z = [0, 0, 1];
+    const chain = [];
+    for (let p = placementId, guard = 0; p && guard < 32; guard += 1) {
+      const local = line(p);
+      chain.push(local?.RelativePlacement ? line(val(local.RelativePlacement)) : null);
+      p = val(local?.PlacementRelTo);
+    }
+    for (const axis of chain.reverse()) {
+      if (!axis) continue;
+      const loc = point(val(axis.Location)) || [0, 0, 0];
+      const az = unit(direction(val(axis.Axis)) || [0, 0, 1]);
+      const ref = direction(val(axis.RefDirection)) || [1, 0, 0];
+      const ax = unit(cross(cross(az, ref), az));
+      const ay = cross(az, ax);
+      const apply = (v) => [0, 1, 2].map((r) => x[r] * v[0] + y[r] * v[1] + z[r] * v[2]);
+      o = [0, 1, 2].map((r) => o[r] + apply([loc[0] || 0, loc[1] || 0, loc[2] || 0])[r]);
+      [x, y, z] = [apply(ax), apply(ay), apply(az)];
+    }
+    return { origin: o.map((c) => c * scale), xAxis: x, zAxis: z };
+  };
+  const placed = (type) => {
+    try {
+      const id = ids(type)[0];
+      const placement = id ? val(line(id).ObjectPlacement) : null;
+      return placement ? world(placement) : null;
+    } catch {
+      return null;
+    }
+  };
+  let trueNorth = null;
+  try {
+    for (const c of ids(W.IFCGEOMETRICREPRESENTATIONCONTEXT)) {
+      const context = line(c);
+      if (val(context.ContextType) && !/model/i.test(String(val(context.ContextType)))) continue;
+      const north = direction(val(context.TrueNorth));
+      if (north) {
+        trueNorth = unit(north.slice(0, 2));
+        break;
+      }
+    }
+  } catch {
+    trueNorth = null;
+  }
+  let map = null;
+  try {
+    const conversion = W.IFCMAPCONVERSION ? ids(W.IFCMAPCONVERSION)[0] : undefined;
+    if (conversion) {
+      const m = line(conversion);
+      const crs = val(m.TargetCRS) ? line(val(m.TargetCRS)) : null;
+      map = {
+        eastings: Number(val(m.Eastings)) || 0,
+        northings: Number(val(m.Northings)) || 0,
+        height: Number(val(m.OrthogonalHeight)) || 0,
+        xAxisAbscissa: val(m.XAxisAbscissa) == null ? 1 : Number(val(m.XAxisAbscissa)),
+        xAxisOrdinate: val(m.XAxisOrdinate) == null ? 0 : Number(val(m.XAxisOrdinate)),
+        scale: val(m.Scale) == null ? 1 : Number(val(m.Scale)),
+        crs: crs ? String(val(crs.Name) ?? "") : null,
+      };
+    }
+  } catch {
+    map = null;
+  }
+  return { site: placed(W.IFCSITE), building: placed(W.IFCBUILDING), trueNorth, map };
 }
 
 const PREFIXES = { EXA: 1e18, PETA: 1e15, TERA: 1e12, GIGA: 1e9, MEGA: 1e6, KILO: 1e3, HECTO: 1e2, DECA: 10, DECI: 1e-1, CENTI: 1e-2, MILLI: 1e-3, MICRO: 1e-6, NANO: 1e-9 };
@@ -432,7 +515,10 @@ function storeys(api, modelID, W, ids, line) {
       z += Number(val(c[2]) ?? 0) || 0;
       placement = val(local?.PlacementRelTo);
     }
-    return { id, name: val(storey.Name) ?? null, elevation: z * scale };
+    // The Elevation attribute too, for files that place no storey (the NIBS
+    // MEP exports): federation matches storeys by it (core/federation.js).
+    const declared = Number(val(storey.Elevation));
+    return { id, name: val(storey.Name) ?? null, elevation: z * scale, declared: Number.isFinite(declared) ? declared * scale : null };
   });
 }
 

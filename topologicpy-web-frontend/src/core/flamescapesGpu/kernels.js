@@ -92,6 +92,8 @@ export const PARAMS = [
   // gathered cells whose speed is read (sensor cells, from speedFrom on).
   ["time", "f32"], ["supOn", "u32"], ["sprayN", "u32"], ["supCol", "u32"],
   ["sprayEta", "f32"], ["speedFrom", "u32"], ["ioSpeed", "u32"],
+  // "wetting" mode: the share of the water left that soaks into each fuel cell.
+  ["sprayWet", "f32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -308,7 +310,7 @@ ${scalars.join("\n")}
   fuel: array<vec4<f32>, ${2 * FUEL_VEC4}>,
 }
 struct Particle { p: vec4<f32>, v: vec4<f32>, q: vec4<f32> }
-struct Fuel { o2: f32, co2: f32, co: f32, soot: f32, h2o: f32, heat: f32, ign: f32, embers: f32, liquid: f32, boiling: f32, latent: f32, ash: f32, cp: f32, mInf: f32, kBeta: f32 }
+struct Fuel { o2: f32, co2: f32, co: f32, soot: f32, h2o: f32, heat: f32, ign: f32, embers: f32, liquid: f32, boiling: f32, latent: f32, ash: f32, cp: f32, mInf: f32, kBeta: f32, water: f32 }
 struct Tri { b: u32, di: u32, dj: u32, dk: u32, f: vec3<f32> }
 
 @group(0) @binding(0) var<uniform> U: Params;
@@ -442,8 +444,10 @@ fn fuelOf(k: u32) -> Fuel {
   let b = U.fuel[${FUEL_VEC4}u * k + 1u];
   let l = U.fuel[${FUEL_VEC4}u * k + 2u];
   let e = U.fuel[${FUEL_VEC4}u * k + 3u];
-  return Fuel(a.x, a.y, a.z, a.w, b.x, b.y, b.z, b.w, l.x, l.y, l.z, l.w, e.x, e.y, e.z);
+  return Fuel(a.x, a.y, a.z, a.w, b.x, b.y, b.z, b.w, l.x, l.y, l.z, l.w, e.x, e.y, e.z, e.w);
 }
+/** A fuel's water rule (fireClasses.js waterResponse): 1 wets, 2 Evans's cap, 4 holds no water. */
+fn waterBit(f: Fuel, bit: u32) -> bool { return (u32(f.water + 0.5) & bit) != 0u; }
 fn skinOf(fuel: f32, area: f32) -> f32 { return min(fuel, U.skinDensity * area); }
 fn capOf(inertC: f32, fuel: f32, area: f32, moist: f32, cp: f32) -> f32 {
   return inertC + skinOf(fuel, area) * cp + moist * 4186.0;
@@ -1093,6 +1097,16 @@ ${perThread("spray", "U.sprayN", `
     let k = c / (U.nx * U.ny);
     vel[vAt(i, j, k)] -= (drag * m) / max(cf[ix(fRho, c)], 1e-6);
     c -= U.nx;
+  }
+  // Wetting ("wetting" mode): the column ends on the fuel's top surface; a
+  // share of the water left soaks into that cell, mixed in at 20 C.
+  if (U.sprayWet > 0.0 && m > 0.0 && c < U.nx * U.ny * U.nz && kindOf(c) == POROUS && cf[ix(fFuel, c)] > 0.0 && waterBit(fuelOf(ci[ix(iFuelKind, c)]), 1u)) {
+    let st = fuelOf(ci[ix(iFuelKind, c)]);
+    let moist = cf[ix(fMoist, c)];
+    let Cs = capOf(cf[ix(fInertC, c)], cf[ix(fFuel, c)], cf[ix(fArea, c)], moist, st.cp);
+    let dw = U.sprayWet * m;
+    cf[ix(fTs, c)] = (Cs * cf[ix(fTs, c)] + dw * 4186.0 * 293.15) / (Cs + dw * 4186.0);
+    cf[ix(fMoist, c)] = moist + dw;
   }`)}
 
 // ------------------------------------------------------------------ chemistry (Alg. 1 lines 24 to 27)
@@ -1140,7 +1154,7 @@ fn chemCell(c: u32) -> vec2<f32> {
           cap = st.mInf * size * area * dt;
         }
         var dv = min(min(skinOf(fuel, area), (C * (Ts - st.boiling)) / st.latent), cap);
-        dv *= evans(c, dv);
+        if (waterBit(st, 2u)) { dv *= evans(c, dv); }
         if (dv > 0.0) {
           fuel -= dv;
           Ts -= (dv * st.latent) / C;
@@ -1163,8 +1177,10 @@ fn chemCell(c: u32) -> vec2<f32> {
     let starved = 1.0 - min(1.0, yO / Y_O2_AIR);
     let kp = arrhenius(U.pyA, U.pyE, Ts) * (0.25 + 0.75 * starved);
     var dPy = max(0.0, skin - dOx) * omexp(max(0.0, kp) * dt);
-    // Evans's cap under an open sprinkler: both reactions scaled alike.
-    let f = evans(c, dOx + dPy);
+    // Evans's cap under an open sprinkler: both reactions scaled alike
+    // (solids only: fireClasses.js waterResponse).
+    var f = 1.0;
+    if (waterBit(st, 2u)) { f = evans(c, dOx + dPy); }
     dOx *= f;
     dPy *= f;
     if (dOx > 0.0) {
@@ -1193,7 +1209,7 @@ fn chemCell(c: u32) -> vec2<f32> {
     // Fresh fuel from the bulk replaces what reacted, at ambient temperature and with its water.
     let fresh = min(dOx + dPy, max(0.0, fuel - (skin - dOx - dPy)));
     if (fresh > 0.0) {
-      let water = fresh * U.moistFrac;
+      let water = select(fresh * U.moistFrac, 0.0, waterBit(st, 4u));
       let Cfresh = fresh * st.cp + water * 4186.0;
       moist += water;
       let Cnow = capOf(inertC, fuel, area, moist, st.cp);

@@ -1,0 +1,24 @@
+Room 5 x 4 x 2.7 m, class A, the head over the fire opens at 30 s; 150 s.
+Design density 0.0678 mm/s: Evans's tau 436 s.
+  free fire     covered fuel burnt after opening 21.325 kg, tau 96 s
+  Evans's cap   7.263 kg, tau 21 s
+  wetting 1.00e-2  12.876 kg, tau 40 s; 1.69 of 170.00 kg of water on the fuel
+  wetting 1.00e-1  11.476 kg, tau 32 s; 16.72 of 170.00 kg of water on the fuel
+  wetting 3.16e-1  8.477 kg, tau 74 s; 53.71 of 170.00 kg of water on the fuel
+  wetting 5.62e-1  7.245 kg, tau 74 s; 95.52 of 170.00 kg of water on the fuel
+  wetting 4.22e-1  8.026 kg, tau 76 s; 71.63 of 170.00 kg of water on the fuel
+  wetting 4.87e-1  7.800 kg, tau 66 s; 82.72 of 170.00 kg of water on the fuel
+  wetting 5.23e-1  7.231 kg, tau 63 s; 88.89 of 170.00 kg of water on the fuel
+  wetting 5.05e-1  7.798 kg, tau 76 s; 85.75 of 170.00 kg of water on the fuel
+  wetting 5.14e-1  7.549 kg, tau 76 s; 87.30 of 170.00 kg of water on the fuel
+  wetting 5.19e-1  7.355 kg, tau 84 s; 88.10 of 170.00 kg of water on the fuel
+
+Calibrated wetted share 5.210e-1.
+By density (Evans's crib table), covered fuel burnt after opening:
+  0.026 mm/s  wetting 8.985 kg (tau 77 s)  Evans's cap 8.609 kg (tau 35 s, his 2567 s)  free 21.325 kg
+  0.050 mm/s  wetting 8.165 kg (tau 85 s)  Evans's cap 7.301 kg (tau 28 s, his 766 s)  free 21.325 kg
+  0.068 mm/s  wetting 7.447 kg (tau 68 s)  Evans's cap 7.381 kg (tau 31 s, his 433 s)  free 21.325 kg
+  0.100 mm/s  wetting 6.057 kg (tau 74 s)  Evans's cap 7.113 kg (tau 29 s, his 212 s)  free 21.325 kg
+  0.133 mm/s  wetting 4.467 kg (tau 79 s)  Evans's cap 7.389 kg (tau 31 s, his 125 s)  free 21.325 kg
+
+391 s

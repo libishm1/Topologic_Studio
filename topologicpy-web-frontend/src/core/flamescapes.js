@@ -291,8 +291,10 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
       area[cell] += scene.ignition.area ?? P.itemArea;
     }
   }
-  // The surface layer starts with its share of the fuel's water.
-  for (let c = 0; c < N; c += 1) if (fuelMass[c] > 0) moisture[c] = Math.min(fuelMass[c], P.skinDensity * area[c]) * P.moisture;
+  // The surface layer starts with its share of the fuel's water (none for a
+  // liquid, metal or pack first item: fireClasses.js waterResponse).
+  const ownWater = fuels.map((f) => (f?.water?.dry ? 0 : P.moisture));
+  for (let c = 0; c < N; c += 1) if (fuelMass[c] > 0) moisture[c] = Math.min(fuelMass[c], P.skinDensity * area[c]) * ownWater[fuelKind[c]];
 
   const T = new Float32Array(N).fill(P.ambient);
   const Ts = new Float32Array(N).fill(P.ambient);
@@ -345,6 +347,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     time: 0,
     kindVersion: 0,
     pilot: scene.pilot || null,
+    // A prescribed heat release (createBurner); null in every app run.
+    burner: scene.burner ? createBurner(scene.burner, kind, grid) : null,
     ducts: scene.ducts?.cells?.length ? scene.ducts : null,
     // Open sprinklers (suppression.js createSuppression), set by the run;
     // declared here so every solver has one shape for the engine.
@@ -1040,7 +1044,7 @@ function chemistry(sim, dt) {
         if (sim.Ts[c] > fuel.liquid.boiling) {
           const skin0 = skinMass(sim, c);
           let dv = Math.min(skin0, (C * (sim.Ts[c] - fuel.liquid.boiling)) / fuel.liquid.latent, poolCap(fuel.liquid, sim.area[c], dt));
-          if (sup && sup.tau[c] > 0) dv *= evansFactor(sup, c, dv, sim.time, dt);
+          if (sup && sup.tau[c] > 0 && fuel.water?.evans !== false) dv *= evansFactor(sup, c, dv, sim.time, dt);
           if (dv > 0) {
             sim.fuelMass[c] -= dv;
             sim.Ts[c] -= (dv * fuel.liquid.latent) / C;
@@ -1068,8 +1072,9 @@ function chemistry(sim, dt) {
       const starved = 1 - Math.min(1, sim.Y[gcell * NS + SPECIES.O2] / Y_O2_AIR);
       const kp = arrhenius(P.pyrolysisA, P.pyrolysisE, sim.Ts[c]) * (0.25 + 0.75 * starved);
       let dPy = Math.max(0, skin - dOx) * (1 - survives(kp, dt));
-      // Evans's cap under an open sprinkler: both reactions scaled alike.
-      if (sup && sup.tau[c] > 0) {
+      // Evans's cap under an open sprinkler: both reactions scaled alike
+      // (solids only: fireClasses.js waterResponse).
+      if (sup && sup.tau[c] > 0 && fuel.water?.evans !== false) {
         const f = evansFactor(sup, c, dOx + dPy, sim.time, dt);
         dOx *= f;
         dPy *= f;
@@ -1098,7 +1103,7 @@ function chemistry(sim, dt) {
       // temperature and with its water: mixing it in costs the layer heat.
       const fresh = Math.min(dOx + dPy, Math.max(0, sim.fuelMass[c] - (skin - dOx - dPy)));
       if (fresh > 0) {
-        const water = fresh * P.moisture;
+        const water = fuel.water?.dry ? 0 : fresh * P.moisture;
         const Cfresh = fresh * fuelCp(sim, c) + water * 4186;
         sim.moisture[c] += water;
         const Cnow = solidCapacity(sim, c);
@@ -1167,7 +1172,8 @@ function spray(sim, dt) {
   const { nx, ny, h } = g;
   const e = WATER_CP * (T_BOIL - WATER_TEMPERATURE) + sim.P.latentHeat;
   const drag = Math.abs(sim.P.gravity) / (TERMINAL_SPEED * h * h);
-  let emitted = 0, evaporated = 0, floor = 0;
+  let emitted = 0, evaporated = 0, wetted = 0, floor = 0;
+  const wet = sup.wet || 0;
   for (const col of sup.columns) {
     let m = col.flux * dt;
     emitted += m;
@@ -1188,10 +1194,23 @@ function spray(sim, dt) {
       const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
       sim.v[vAt(g, i, j, k)] -= (drag * m) / Math.max(sim.rho[c], 1e-6);
     }
+    // Wetting: the column ends on the fuel's top surface (sprinklerSetup's
+    // columns stop at it) or the floor. A share of the water left soaks into
+    // that fuel cell's surface layer, mixed in at the water's temperature so
+    // the layer keeps its energy; fuel stacked below it stays dry (shielded).
+    if (wet > 0 && m > 0 && c >= 0 && sim.kind[c] !== SOLID && sim.fuelMass[c] > 0 && sim.fuels[sim.fuelKind[c]]?.water?.wets !== false) {
+      const dw = wet * m;
+      const Cs = solidCapacity(sim, c);
+      sim.Ts[c] = (Cs * sim.Ts[c] + dw * WATER_CP * WATER_TEMPERATURE) / (Cs + dw * WATER_CP);
+      sim.moisture[c] += dw;
+      m -= dw;
+      wetted += dw;
+    }
     floor += m;
   }
   sup.stats.emitted += emitted;
   sup.stats.evaporated += evaporated;
+  sup.stats.wetted = (sup.stats.wetted || 0) + wetted;
   sup.stats.floor += floor;
 }
 
@@ -1509,9 +1528,11 @@ function cullFlameFront(sim) {
  * surface layer is held at least at that temperature for `duration` seconds
  * (a design fire starts with its first item burning), after which the fire
  * must sustain itself. With `power` instead, a burner of that many watts
- * heats the item's surface for `duration` seconds.
+ * heats the item's surface for `duration` seconds. A prescribed burner
+ * (createBurner), when the scene has one, releases its heat here too.
  */
 function pilot(sim, dt) {
+  if (sim.burner) burnerStep(sim, dt);
   const pl = sim.pilot;
   if (!pl || sim.time >= pl.duration || !pl.cells.length) return;
   if (pl.temperature) {
@@ -1524,6 +1545,159 @@ function pilot(sim, dt) {
     if (C > 0) sim.Ts[c] += share / C;
     else sim.T[c] += share / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
   }
+}
+
+// ---------------------------------------------------------- burner
+
+/**
+ * Methane, a prescribed burner's default fuel: 50.0 MJ/kg and 2.72 kg CO2
+ * per kg, no CO or soot (Tewarson's table in the SFPE Handbook). Its oxygen
+ * is Huggett's, as for every fuel here (stoichiometry).
+ */
+export const METHANE = Object.freeze({ heatOfCombustion: 50.0e6, yields: Object.freeze({ co2: 2.72, co: 0, soot: 0 }) });
+
+/**
+ * A prescribed heat release, for checking the model against measured tests
+ * (tools/sprinkler-validation.mjs). Not the paper's, and no app run makes
+ * one. scene.burner = { cells, hrr, radiantFraction = 0.2, fuel = METHANE, rays = 16 }:
+ *   - hrr is a table [[t (s), Q (W)], ...], linear between its rows and
+ *     held at its end values outside them (as an FDS ramp); each step
+ *     releases the table's exact integral over the step;
+ *   - the convective part, (1 - radiantFraction) Q dt, heats the gas of
+ *     `cells` (the open cells over the burner's area: a flame volume),
+ *     shared equally, and with it go the products of burning Q dt / H_c of
+ *     `fuel` (oxygen at 417 kJ per mol O2, stoichiometry). The fuel enters
+ *     at ambient temperature, so each cell's gas enthalpy above ambient,
+ *     m c_p (T - T_amb), rises by exactly its share;
+ *   - the radiant part leaves the burner's axis cell along `rays`
+ *     directions (a Fibonacci sphere, turned each step), absorbed by soot on
+ *     the way and by the first solid it meets (march), as the gas's own
+ *     radiation is;
+ *   - all of Q dt counts as released heat (sim.stats.released), so the
+ *     frame heat release that the sprinklers' Alpert estimate reads
+ *     (runScene) includes the burner.
+ * The axis cell is the lowest-layer cell nearest the cells' centroid: the
+ * plume's axis for the sprinklers when the scene has no first item. With
+ * `rays` 0 the radiant part leaves the domain. CPU solver only: the GPU
+ * port does not run a burner. (buildScene's `burner` option is something
+ * else: the pilot that lights the first item.)
+ */
+export function createBurner(spec, kind, grid) {
+  const { nx, ny } = grid;
+  const cells = Int32Array.from((spec.cells || []).filter((c) => c >= 0 && c < kind.length && kind[c] !== SOLID));
+  if (!cells.length) throw new Error("A burner needs at least one open cell.");
+  const table = spec.hrr || [];
+  if (!table.length) throw new Error("A burner needs a heat release table.");
+  const times = Float64Array.from(table, (row) => row[0]);
+  const values = Float64Array.from(table, (row) => row[1]);
+  for (let q = 0; q < times.length; q += 1) {
+    if (!Number.isFinite(times[q]) || !Number.isFinite(values[q]) || values[q] < 0 || (q && times[q] < times[q - 1])) {
+      throw new Error("A burner's heat release table needs finite, non-negative values at non-decreasing times.");
+    }
+  }
+  // The table's integral at each row, J.
+  const cumulative = new Float64Array(times.length);
+  for (let q = 1; q < times.length; q += 1) cumulative[q] = cumulative[q - 1] + 0.5 * (values[q - 1] + values[q]) * (times[q] - times[q - 1]);
+  const radiantFraction = spec.radiantFraction ?? 0.2;
+  if (!(radiantFraction >= 0 && radiantFraction <= 1)) throw new Error("A burner's radiant fraction must be between 0 and 1.");
+  // The axis: the lowest layer's cell nearest the centroid of all the cells.
+  const ijk = (c) => [c % nx, Math.floor(c / nx) % ny, Math.floor(c / (nx * ny))];
+  let si = 0, sk = 0, low = Infinity;
+  for (const c of cells) {
+    const [i, j, k] = ijk(c);
+    si += i;
+    sk += k;
+    low = Math.min(low, j);
+  }
+  si /= cells.length;
+  sk /= cells.length;
+  let axis = cells[0], best = Infinity;
+  for (const c of cells) {
+    const [i, j, k] = ijk(c);
+    const d = (i - si) ** 2 + (k - sk) ** 2;
+    if (j === low && d < best) [axis, best] = [c, d];
+  }
+  const [ai, aj, ak] = ijk(axis);
+  const rays = Math.max(0, Math.round(spec.rays ?? 16));
+  const dirs = new Float64Array(rays * 3);
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let r = 0; r < rays; r += 1) {
+    const y = 1 - (2 * (r + 0.5)) / rays;
+    const s = Math.sqrt(1 - y * y);
+    dirs[r * 3] = s * Math.cos(golden * r);
+    dirs[r * 3 + 1] = y;
+    dirs[r * 3 + 2] = s * Math.sin(golden * r);
+  }
+  return {
+    cells,
+    axis,
+    origin: [ai + 0.5, aj + 0.5, ak + 0.5],
+    times,
+    values,
+    cumulative,
+    radiantFraction,
+    stoich: stoichiometry(spec.fuel || METHANE),
+    dirs,
+    dir: [0, 0, 0],
+    turn: 0,
+    // What it has given off so far, J.
+    released: 0,
+    convective: 0,
+    radiant: 0,
+  };
+}
+
+/** The integral of a burner's table from its first row to time t, J (burnerEnergy(b, t1) - burnerEnergy(b, t0) is released over [t0, t1]). */
+export function burnerEnergy(b, t) {
+  const { times: T, values: Q, cumulative: F } = b;
+  const n = T.length;
+  if (t <= T[0]) return (t - T[0]) * Q[0];
+  if (t >= T[n - 1]) return F[n - 1] + (t - T[n - 1]) * Q[n - 1];
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (T[mid] <= t) lo = mid;
+    else hi = mid;
+  }
+  const q = Q[lo] + ((t - T[lo]) / (T[hi] - T[lo])) * (Q[hi] - Q[lo]);
+  return F[lo] + 0.5 * (Q[lo] + q) * (t - T[lo]);
+}
+
+/** One step of the prescribed burner (createBurner): its heat, products and radiation over [time, time + dt]. */
+export function burnerStep(sim, dt) {
+  const b = sim.burner;
+  const E = burnerEnergy(b, sim.time + dt) - burnerEnergy(b, sim.time);
+  if (!(E > 0)) return;
+  const n = b.cells.length;
+  const convective = (1 - b.radiantFraction) * E;
+  const share = convective / n;
+  const fuel = E / b.stoich.heat / n;
+  const Ta = sim.P.ambient;
+  for (let q = 0; q < n; q += 1) {
+    const c = b.cells[q];
+    const excess = sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS) * (sim.T[c] - Ta);
+    addProducts(sim, c, b.stoich, fuel);
+    sim.T[c] = Ta + (excess + share) / (sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS));
+  }
+  const rays = b.dirs.length / 3;
+  const radiant = E - convective;
+  if (rays && radiant > 0) {
+    // The directions turn about the vertical by the golden angle each step,
+    // so the radiant heat spreads over the surfaces without random numbers.
+    b.turn += Math.PI * (3 - Math.sqrt(5));
+    const cos = Math.cos(b.turn), sin = Math.sin(b.turn);
+    for (let r = 0; r < rays; r += 1) {
+      const x = b.dirs[r * 3], z = b.dirs[r * 3 + 2];
+      b.dir[0] = cos * x - sin * z;
+      b.dir[1] = b.dirs[r * 3 + 1];
+      b.dir[2] = sin * x + cos * z;
+      march(sim, b.origin[0], b.origin[1], b.origin[2], b.dir, radiant / rays, b.axis, false);
+    }
+  }
+  b.released += E;
+  b.convective += convective;
+  b.radiant += radiant;
+  sim.stats.released += E;
 }
 
 /**

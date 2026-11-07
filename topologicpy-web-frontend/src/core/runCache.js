@@ -15,7 +15,9 @@
 
 /** Bump with any change to what the solver computes or how a frame is laid out. */
 // 2 (2026-11-07): frames carry the ceiling detectors (flamescapesRun.js ceilingDetectors).
-export const RUN_CACHE_VERSION = 2;
+// 3 (2026-11-07): water by fire class (fireClasses.js waterResponse): liquid,
+// metal and pack first items hold no water of their own and take no cap.
+export const RUN_CACHE_VERSION = 3;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 

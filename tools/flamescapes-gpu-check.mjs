@@ -470,7 +470,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
   if (phase === "all" || phase === "sprinklers") {
     const head = { id: "over", position: [2.5, 2.55, 2.0], footprint: { centre: [2.5, 2.0], axis: [1, 0], half: [2.3, 2.3] }, rti: 50, c: 0.4, activationC: 68, flowLpm: 85, coverage: 20.9 };
     out.sprinklers = [];
-    for (const mode of [null, "activation", "evans", "spray"]) {
+    for (const mode of [null, "activation", "evans", "spray", "wetting"]) {
       const o = { nodes: nodeArray, upAxis: "y", horizon, frameSeconds: 5, particles: 3000, sprinklers: mode ? { heads: [head], mode } : null };
       const row = { mode: mode || "none" };
       // A 200 kW burner under the first item, so the head opens within the run.

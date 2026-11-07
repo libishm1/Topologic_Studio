@@ -311,6 +311,39 @@ Full build on 2026-11-07 after this batch: 33 modules, 1423 theorems and lemmas,
 warnings; the 58 axiom prints are in `AxiomCheck.lean` (401 prints in all), every one on Lean's
 standard axioms or none (`axioms-all-2026-11-07.txt`).
 
+## Eleventh batch: federation, obstructions, extinguishers and wetting (2026-11-07)
+
+Four modules back four features of Studio Next added on 2026-11-07. Federation.lean was written by
+hand and is registered unchanged (its namespace is `Federation`); the other three were written
+against the code they name. Each module's header maps every theorem to the function it backs and
+lists what it leaves out. The 111 axiom prints of this batch are in `AxiomCheck.lean`, one line per
+theorem.
+
+| Module | What is proved | What is not covered |
+|---|---|---|
+| Federation.lean (16) | `federation.js`, a second IFC model drawn in the first one's frame: the viewer's link (the second model's coordination undone, the first's applied) draws a point of the second model where the first draws it, with the alignment of the two IFC frames in between where map conversions give one (`link_draws`, `linkAligned_draws`, `turn_conj`); one frame gives the identity, and translations give That Open's base minus own (`link_self`, `link_translate`); an IfcMapConversion scales plan distances by its scale and its inverse is exact (`mapConv_dist`, `mapInv_conv`, `mapConv_inv`, `relative_agrees`); `planOverlap`'s share lies in [0, 1] and is 1 for a plan inside the other (`overlap_le_left`, `share_mem`, `share_contained`). | That Open's coordination matrices themselves, the vertical part of a map conversion, floating point. |
+| Obstructions.lean (36) | The obstruction rules of `sprinklers.js` (`OBSTRUCTION_RULES`, `beamRuleRow`, `governing`, `meets`, `clearance`). The beam table as the code builds it, `from` and `below` in feet times 0.3048, is contiguous from 0 and its B never falls row by row (`beamRows_before`, `beamRows_contiguous`), so a distance in a row's half-open interval gets that row and no other (`beamRuleRow_eq`), every distance below 7 ft 6 in has a row (`beamRuleRow_row`), and moving a head away from an obstruction never makes the beam rule stricter (`beam_mono`, `beam_pass_mono`). The three times rule's `min(3 d, 0.61)` is monotone in d and at most 0.61, and a head meeting it at x meets it at every larger x (`three_times_mono`, `three_times_le`, `three_pass_mono`). `clearance`'s distances are exact for both rules (`clearance_beam`, `clearance_three`, `clearance_exact`); beyond `REACH` both rules pass (`reach_skip`); the least margin decides (`least_margin_iff`, `meets_mono`); the points nearer a convex footprint than a distance form a convex set, the shortcut `move` takes (`blocked_hull`). | The plan geometry (`distanceToConvex`, the hulls, the box index, the room scoping), the wide rule, obstructed construction, `move`'s search order, floating point (`EPS` enters as a parameter). |
+| Extinguishers.lean (47) | `extinguishers.js`, items 1 to 11 of [wiki/research/extinguishers-2026-11-07.md](../../wiki/research/extinguishers-2026-11-07.md) section 6.5. Adding a unit never lengthens a walk (`travel_mono_sites`); a walk is at least the straight line, so a pass on the graph is a pass of the radius check and not the converse (`graph_ge_euclid`, `radius_pass_not_graph`); a node within D less s / √2 passes for every floor point of its cells (`sample_corner`, `sample_margin`); `requiredCount` never rises with a higher rating or a larger area per unit (`count_rule_antitone`, `count_rule_pos`); greedy covers the storey with at most as many units as places when the candidates' balls cover it (`greedy_covers`, `greedy_card_le`, `greedy_layout`); t_s is monotone in each of its parts (`arrival_mono`); the size verdict never improves with a bigger fire, success at a later time of a growing fire implies success earlier, success is monotone in n_A, q_A and eta, and for a t² fire success holds exactly up to √(cap / alpha) (`judge_mono`, `success_antitone`, `failure_mono`, `success_mono_capacity`, `success_iff_tsq`, `judge_tsq`, `worked_example`); the time lost is at least t_take + t_d (`time_lost_nonneg`, `time_lost_nonneg_exits`); the cap at t_s + t_d is exactly epsilon r_c, and tau_x rises with t_d and epsilon (`decay_at_discharge_end`, `tau_mono`); the reached cells release at most the sum of r_c (tau_x + dt), and an extinguisher's cap never lies above a slower sprinkler cap it replaces (`reached_energy_le`, `cap_never_rises`); item 11 as a two-frame toy (`cap_not_global`). | That `walkFrom`'s Dijkstra computes the least walk (AStar.lean's label setting), storeys and stairs, Chvátal's H(m) bound, the lazy heap and its ties, the outcome beyond the size verdict and the reach test, tenability on the way, floating point. |
+| Wetting.lean (12) | The "wetting" mode of `spray` in `flamescapes.js` and its WGSL kernel: the mixing step conserves sensible energy exactly (`wet_energy`), the surface ends between the water's temperature and its own and never warms when it is the hotter (`wet_between`, `wet_cools`), adding the water to the moisture adds exactly `dw c_w` to `solidCapacity`, so the layer with its water keeps its energy (`wet_capacity`, `wet_energy_cell`), `0 ≤ dw ≤ m` (`wet_bounds`), and per column and over all columns the water emitted is the water evaporated plus the water wetted plus the water at the floor, each part non-negative (`column_budget_wet`, `spray_budget_wet`: Suppression.lean's `column_budget` with one final term). | The evaporation share per cell, the drag on the gas, the calibration of `WETTED_FRACTION`, which cell a column ends on, float32. |
+
+What the proofs found. The comment on `requiredCount` says the count never rises with a lighter
+hazard. That holds for a given rating only: with each hazard's least rating, the code's default
+when no rating is given, 1000 m² needs 4 units at ordinary hazard (2-A, 278 m² each) and 3 at
+extra (4-A, 371.6 m² each) (`count_default_rating_counterexample`). `decay_at_discharge_end` holds
+for every epsilon above 0; the code's range, below 1, is where tau_x is positive (`capFor_pos`).
+The greedy cover's guarantee does not use the greedy choice: any rule that takes a candidate
+covering a new place, and stops only when none does, covers the storey with at most as many units
+as places; the choice matters only for the H(m) bound, which is not proved. The fallback pass of
+`layoutExtinguishers` thins its candidates to one per metre in plan, which need not keep every
+uncovered place within a candidate's walking ball, so `greedy_covers` does not apply to it; the
+layout is checked again by `placementCheck`. `beam_mono` needs only that B never falls row by row;
+that `clearance` is exact needs the rows contiguous as well.
+
+Full build on 2026-11-07 after this batch: 37 modules, 1534 theorems and lemmas (counted as above),
+no `sorry`, no warnings; the 111 axiom prints of this batch are in `AxiomCheck.lean` (512 prints in
+all), every one on Lean's standard axioms or none (`axioms-all-2026-11-07.txt`, regenerated from
+AxiomCheck.lean's output with every earlier line kept in order).
+
 ## Building
 
 Lake caches are gigabytes, so build outside OneDrive. Keep the working copy

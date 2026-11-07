@@ -178,14 +178,45 @@ export function MethodsDialog({ open, onClose, studio }) {
                     IBC 2021 where stricter). In a Flamescapes run each link follows the RTI equation with conduction to its
                     mount, stepped exactly over each frame on the gas at the top cell of its column (a late bound: a coarse
                     cell reads the ceiling jet low) and, under the fire&apos;s own ceiling, on Alpert&apos;s jet for the
-                    run&apos;s heat release (CFAST&apos;s hybrid, the estimate). An open head caps every fuel cell under it at
+                    run&apos;s heat release (CFAST&apos;s hybrid, the estimate). Checked against measured tests (Vettori 1998
+                    and 2003, Bittern 2004, UL/NFPRF 1998): the link itself reproduces Vettori&apos;s activations when given the
+                    measured gas (median 1.00, 0.81 to 1.18), but on the grid the estimate is late in rooms (median 1.68 times
+                    the measured time in Vettori&apos;s 1998 room, 1.09 under his 2003 flat ceiling, 1.18 in Bittern&apos;s with 9
+                    of 16 heads opening) and close under UL&apos;s high open ceiling (first heads 0.98 to 1.11), and the late
+                    reading almost never opens: the walls take too much of the jet&apos;s heat and the plume is coarse. An open head caps every fuel cell under it at
                     its rate when the head opened times exp(-(t - t_act)/tau), tau = 3.0 w&apos;&apos;^-1.85 s for the spray
                     density (Evans 1993, conservative), and with the spray evaporates part of its water on the way down
-                    (Fire-X&apos;s energy-limited evaporation on the grid, 1 mm drops), the steam diluting the oxygen. The fuel
-                    is not wetted directly (uncalibrated on this grid). Proved: the link stays between its own, the gas&apos;s
-                    and the mount&apos;s temperatures, hotter gas never opens a head later, the cap never rises and lets
-                    through at most r (tau + dt), and the spray keeps its water and the gas&apos;s energy and never raises
-                    the oxygen&apos;s mole fraction (Sprinklers.lean, Suppression.lean).
+                    (Fire-X&apos;s energy-limited evaporation on the grid, 1 mm drops), the steam diluting the oxygen. In the
+                    wetting mode there is no cap: the water reaching the fuel&apos;s top surface soaks in (52 %, calibrated so
+                    the test room burns as much as under Evans&apos;s cap at 0.068 mm/s), holding the surface near 100 C while it
+                    lasts. With a structural or MEP model (step 1), beams and ducts are checked by NFPA 13&apos;s beam, three times
+                    and wide-obstruction rules, heads are moved clear of them or added beneath ones wider than 1.2 m, and, when
+                    asked, they are solid in the fire grid. Proved: the link stays between its own, the gas&apos;s and the
+                    mount&apos;s temperatures, hotter gas never opens a head later, the cap never rises and lets through at
+                    most r (tau + dt), and the spray keeps its water and the gas&apos;s energy and never raises the
+                    oxygen&apos;s mole fraction (Sprinklers.lean, Suppression.lean).
+                  </dd>
+                </div>
+                <div className="methods__card">
+                  <dt>Extinguishers</dt>
+                  <dd>
+                    Off by default. Read from the IFC by name, or placed on the walking graph by greedy cover so that nowhere is
+                    more than 22.86 m of walking from one (SBC 801-CR-2018 Table 906.3(1), NFPA 10 Table 6.2.1.1; the graph
+                    passes at 22.51 m, as its nodes sample the floor), with the count rule per storey. After a fire, one person
+                    near it sets off when they see it or after the alarm and pre-movement, walks to the nearest suitable unit,
+                    readies it (13.4 s, 7.2 s if trained) and attacks from 1.8 m; the fire&apos;s heat release then is compared
+                    with what the rating can put out (0.2 to 0.45 MW per A unit, times an operator factor of 0.2 to 1), so the
+                    answer is put out, not put out, or cannot tell. A unit&apos;s effect on the fire itself is not yet in the run.
+                  </dd>
+                </div>
+                <div className="methods__card">
+                  <dt>A second model</dt>
+                  <dd>
+                    An MEP or structural IFC of the same building, drawn in the first one&apos;s frame through their coordination
+                    matrices, or through both files&apos; IfcMapConversion when they have one, and checked as the buildingSMART
+                    practice suggests: units, site placement, TrueNorth (metadata only), storeys matched by elevation, and how
+                    much the two plans share. Its sprinklers, ducts and beams feed the sprinklers (Federation.lean: the link
+                    puts each point where the first model draws it; a map conversion scales distances by its scale).
                   </dd>
                 </div>
                 <div className="methods__card">

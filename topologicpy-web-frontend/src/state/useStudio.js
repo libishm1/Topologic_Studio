@@ -130,6 +130,10 @@ export const DEFAULT_SETTINGS = {
   // of every terminal), and the air each terminal moves (L/s, an assumption).
   flamescapesVentilation: "off",
   flamescapesTerminalFlow: 100,
+  // Beams, and a second model's ducts and cable trays, as solids in the fire
+  // grid (ViewerManager.overheadMeshes); off, the ceilings are as the walls
+  // and slabs make them.
+  flamescapesOverhead: false,
   // Sprinklers (core/sprinklers.js, core/suppression.js), off by default and
   // costing nothing off. The heads come from the IFC ("ifc"), are placed per
   // room by NFPA 13 ("placed"), or the IFC's when it has any ("auto"); the
@@ -138,6 +142,17 @@ export const DEFAULT_SETTINGS = {
   // the fire's ceiling) or the "late" bound (the grid), and they only open
   // ("activation"), cap the fuel ("evans", Evans 1993) or cap it and spray
   // ("spray", Fire-X's evaporation on the grid).
+  // Portable extinguishers (core/extinguishers.js), off by default and costing
+  // nothing off: read from the IFC by name ("auto": the IFC's, else placed on
+  // the walk by the 22.86 m rule), checked against SBC 801 906 and NFPA 10;
+  // after a fire, one responder's attempt with the chosen unit, setting off
+  // when they see the fire or after the alarm and the design pre-movement.
+  extinguishers: false,
+  extinguisherSource: "auto",
+  extinguisherHazard: "light",
+  extinguisherUnit: "abc-2.3",
+  extinguisherStart: "seen",
+  extinguisherTrained: false,
   sprinklers: false,
   sprinklerSource: "auto",
   sprinklerHazard: "auto",

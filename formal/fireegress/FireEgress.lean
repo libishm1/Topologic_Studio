@@ -31,3 +31,7 @@ import FireEgress.Performance
 import FireEgress.DoorQueue
 import FireEgress.PreMovement
 import FireEgress.Suppression
+import FireEgress.Federation
+import FireEgress.Obstructions
+import FireEgress.Extinguishers
+import FireEgress.Wetting

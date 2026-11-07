@@ -38,7 +38,15 @@
  *     provenance: { field: "ifc" | "default" | "user" } }
  * The storey fallback's heads (layoutStoreys) add provenance.ceiling =
  * "unknown": their up coordinate is the storey's floor, and the fire grid
- * gives the ceiling later.
+ * gives the ceiling later. Heads placed around obstructions add
+ * provenance.obstruction = "moved" | "beneath".
+ *
+ * Obstructions (beams, ducts, pipes, cable carriers, lights) from a
+ * structural or MEP model are checked by NFPA 13's beam rule, three times
+ * rule and wide-obstruction rule, and the room layout moves heads clear of
+ * them and adds heads beneath wide ones (checkObstructions, layoutRooms'
+ * `obstructions`; codes report section 3.4). Without them the obstructions
+ * check cannot tell.
  */
 
 import { EGRESS_B, storeysOf } from "./codeCheck.js";
@@ -308,8 +316,12 @@ function worst(checks) {
   for (const c of checks) if (RANK[c.status] > RANK[w]) w = c.status;
   return w;
 }
-/** The worst status of the checks the geometry settles: all but the obstructions, which need a structural or MEP model. */
-const placementOf = (checks) => worst(checks.filter((c) => c.id !== "obstructions"));
+/**
+ * The worst status of the checks the geometry settles: all but the
+ * obstructions check made with no structural or MEP model (OBSTRUCTIONS);
+ * one made with a model counts.
+ */
+const placementOf = (checks) => worst(checks.filter((c) => c !== OBSTRUCTIONS));
 
 // ------------------------------------------------------------------ rooms from IfcSpace
 
@@ -564,6 +576,7 @@ export const SAMPLE_STEP = 0.25;
 const DEFLECTOR_BELOW = SPRINKLER_DEFAULTS.deflectorBelowCeiling.value;
 const LINK_BELOW = SPRINKLER_DEFAULTS.linkBelowDeflector.value;
 
+/** The obstructions check with no structural or MEP model (checkObstructions makes the real one). */
 const OBSTRUCTIONS = {
   id: "obstructions",
   status: "cannot tell",
@@ -614,22 +627,41 @@ const OBSTRUCTIONS = {
  * "cannot tell" until obstructions can be checked; `placement` is the worst
  * of the other checks, the ones the geometry settles.
  *
+ * Given obstructions (checkObstructions' records), each room takes those
+ * over it (plan overlap with its floor, bottom between its floor and
+ * ceiling; obstructions are indexed on a grid first), and its heads are
+ * cleared of them (clearObstructions): a head failing the beam rule or the
+ * three times rule moves within its protection rectangle to the nearest
+ * point, in 0.05 m steps, that meets every rule; an obstruction wider than
+ * 1.2 m with no head beneath gets heads beneath it, after the room's
+ * others. The obstructions check is then a verdict on the heads as they
+ * stand ({id, status, text, clause, rules: beam, three-times, wide; moved,
+ * added, unresolved}) and counts in `placement`; heads moved or added say so
+ * in provenance.obstruction ("moved" | "beneath"). Under structural members
+ * that hang below the deflector the deflector check is obstructed
+ * construction's. With no obstructions given (null or empty) the output is
+ * as without the option.
+ *
  * @param {object[]} rooms  roomsFromSpaces' rooms
- * @param {{hazardFor?: (room) => string|null|undefined, response?: "quick"|"standard"}} opts
+ * @param {{hazardFor?: (room) => string|null|undefined, response?: "quick"|"standard", obstructions?: object[]}} opts
  *        hazardFor: the user's class for a room, or nothing for the name's
  *        (hazardOfRoom); response: for every room, else quick in light
- *        hazard and standard elsewhere
+ *        hazard and standard elsewhere; obstructions: the structural and MEP
+ *        model's (checkObstructions)
  * @returns {{heads: object[], rooms: object[], notes: string[]}}
  *          rooms: {id, name, hazard, hazardReason, hazardSource, area, floor,
  *          ceiling, heads (count), grid, checks: [{id, status, text, clause}],
  *          status, placement}; rooms not laid out carry partOf (the room
  *          they lie in) or a footprint check that says why
  */
-export function layoutRooms(rooms, { hazardFor = null, response = null } = {}) {
+export function layoutRooms(rooms, { hazardFor = null, response = null, obstructions = null } = {}) {
   const heads = [];
   const out = [];
   const usable = (rooms || []).filter((r) => r?.footprint && r.rect);
   const { gross, partOf } = overlaps(usable);
+  const model = Array.isArray(obstructions) && obstructions.length ? prepareObstructions(obstructions) : null;
+  const query = model ? boxIndex(model.list.map((o) => o.box)) : null;
+  const tally = { over: new Set(), moved: 0, added: 0, unresolved: 0 };
   for (const room of rooms || []) {
     if (!room?.footprint || !room.rect) {
       out.push({
@@ -681,6 +713,18 @@ export function layoutRooms(rooms, { hazardFor = null, response = null } = {}) {
     }
     const resp = response === "quick" || response === "standard" ? response : SPRINKLER_DEFAULTS.responseFor(hazard);
     const placed = layoutRoom(room, hazardOf(hazard), resp);
+    if (model) {
+      const obs = obstructionsOver(room, model.list, query);
+      const cleared = clearObstructions(room, hazardOf(hazard), placed, obs);
+      for (const o of obs) tally.over.add(o);
+      tally.moved += cleared.moved.length;
+      tally.added += cleared.added.length;
+      tally.unresolved += cleared.unresolved.length;
+      placed.heads = cleared.heads;
+      placed.checks = placed.checks.map((c) =>
+        c === OBSTRUCTIONS ? cleared.check : c.id === "deflector" && cleared.deflector ? cleared.deflector : c.id === "between" && cleared.between ? cleared.between : c,
+      );
+    }
     const provenance = {
       position: "default",
       hazard: user ? "user" : "default",
@@ -703,13 +747,24 @@ export function layoutRooms(rooms, { hazardFor = null, response = null } = {}) {
           response: resp,
           coverage: h.coverage,
           footprint: h.footprint,
-          provenance: { ...provenance },
+          provenance: h.obstruction ? { ...provenance, obstruction: h.obstruction } : { ...provenance },
         }),
       );
     });
     out.push({ ...base, heads: placed.heads.length, grid: placed.grid, checks: placed.checks, status: worst(placed.checks), placement: placementOf(placed.checks) });
   }
-  return { heads, rooms: out, notes: defaultNotes() };
+  const notes = defaultNotes();
+  if (model) {
+    const { list, dropped } = model;
+    notes.push(
+      `obstructions: ${list.length} given (${list.filter((o) => o.structural).length} structural), ${tally.over.size} over a room laid out` +
+        `${dropped.length ? `; ${dropped.length} left out with no plan area or heights` : ""}; ` +
+        `${tally.moved} head${tally.moved === 1 ? "" : "s"} moved clear of them, ${tally.added} added beneath obstructions wider than ${WIDE.width} m, ` +
+        `${tally.unresolved} not fixed (each room's obstructions check says which)`,
+      "obstructions: the beam rule's rows from 4 ft on rest on one source; pipes take the three times rule only, and in light and ordinary hazard it takes structural members only",
+    );
+  }
+  return { heads, rooms: out, notes };
 }
 
 function defaultNotes() {
@@ -1182,6 +1237,842 @@ function headRecord({ id, source, position, room = null, roomName = null, hazard
     footprint,
     provenance,
   };
+}
+
+// ------------------------------------------------------------------ obstructions
+
+const FT = 0.3048;
+
+/**
+ * NFPA 13's obstruction rules for standard spray heads, as the codes report
+ * gives them (wiki/research/sprinkler-codes-2026-11-07.md, section 3.4 and
+ * rows 33 to 38). Each clause is cited in the edition its source cites.
+ *
+ * beam        NFPA 13-2019 Table 10.2.7.1.2 (row 37): for the horizontal
+ *             distance A from the sprinkler to the side of an obstruction,
+ *             the largest height B of the deflector above the obstruction's
+ *             bottom. No interpolation: a row runs from its A up to, not
+ *             including, the next row's. A is in feet, converted exactly
+ *             (1 ft = 0.3048 m); B is the report's metric figure. Beyond
+ *             7 ft 6 in (2.286 m) the table sets no limit. The rows from 4 ft
+ *             on rest on one source (partly confirmed).
+ * threeTimes  NFPA 13-2022 10.2.7.3.1.3 (row 35): an obstruction entirely
+ *             below the deflector, within 18 in (457 mm) of it, at least 3 ×
+ *             its largest dimension away, never more than 24 in (610 mm)
+ *             required; 10.2.7.3.1.4 (row 36, one source): in light and
+ *             ordinary hazard only structural members are subject to it.
+ * wide        NFPA 13-2019 9.5.5.3 (row 38): sprinklers beneath fixed
+ *             obstructions wider than 4 ft (1.2 m), 1 to 12 in below them;
+ *             noncombustible ones whose bottom is 24 in (610 mm) or less above
+ *             the floor are exempt (section 3.4).
+ * obstructed  NFPA 13-2019 10.2.6.1.2 (row 34): under structural members,
+ *             the deflector at or above their bottom at most 22 in (559 mm)
+ *             below the deck, with the beam rule; or 1 to 6 in (25 to
+ *             152 mm) below the members; or one sprinkler in each bay.
+ * kinds       the obstruction kinds; `beamKinds` are those the beam rule
+ *             takes. Pipes take the three times rule only (the report's
+ *             examples for it: columns, pipes, light fixtures, truss webs),
+ *             so a branch line beside its own head does not fail the beam
+ *             rule.
+ */
+export const OBSTRUCTION_RULES = Object.freeze({
+  beam: Object.freeze({
+    rows: Object.freeze(
+      [
+        [0, 1, 0, "less than 1 ft (0.3 m)", "0 in (0 mm)", "yes"],
+        [1, 1.5, 0.065, "1 ft to less than 1 ft 6 in", "2½ in (65 mm)", "yes"],
+        [1.5, 2, 0.09, "1 ft 6 in to less than 2 ft", "3½ in (90 mm)", "yes"],
+        [2, 2.5, 0.14, "2 ft to less than 2 ft 6 in", "5½ in (140 mm)", "yes"],
+        [2.5, 3, 0.19, "2 ft 6 in to less than 3 ft", "7½ in (190 mm)", "yes"],
+        [3, 3.5, 0.24, "3 ft to less than 3 ft 6 in", "9½ in (240 mm)", "yes"],
+        [3.5, 4, 0.3, "3 ft 6 in to less than 4 ft", "12 in (300 mm)", "yes"],
+        [4, 4.5, 0.35, "4 ft to less than 4 ft 6 in", "14 in (350 mm)", "partly"],
+        [4.5, 5, 0.415, "4 ft 6 in to less than 5 ft", "16½ in (415 mm)", "partly"],
+        [5, 5.5, 0.45, "5 ft to less than 5 ft 6 in", "18 in (450 mm)", "partly"],
+        [5.5, 6, 0.5, "5 ft 6 in to less than 6 ft", "20 in (500 mm)", "partly"],
+        [6, 6.5, 0.6, "6 ft to less than 6 ft 6 in", "24 in (600 mm)", "partly"],
+        [6.5, 7, 0.75, "6 ft 6 in to less than 7 ft", "30 in (750 mm)", "partly"],
+        [7, 7.5, 0.875, "7 ft to less than 7 ft 6 in", "35 in (875 mm)", "partly"],
+      ].map(([from, below, max, a, b, confirmed]) => Object.freeze({ from: from * FT, below: below * FT, max, a, b, confirmed })),
+    ),
+    reach: 7.5 * FT,
+    clause:
+      "NFPA 13-2019 Table 10.2.7.1.2 (2016: Table 8.6.5.1.2): beam rule, for the horizontal distance A from the sprinkler to the side of an obstruction a maximum height B of the deflector above the obstruction's bottom, no interpolation (rows from 4 ft on one source, partly confirmed)",
+  }),
+  threeTimes: Object.freeze({
+    factor: 3,
+    cap: 0.61,
+    depth: 0.457,
+    clause:
+      "NFPA 13-2022 10.2.7.3.1.3: three times rule, for obstructions entirely below the deflector within 18 in (457 mm) of it, at least 3 × the obstruction's largest dimension away, never more than 24 in (610 mm) required",
+    structural: "NFPA 13-2022 10.2.7.3.1.4: in light and ordinary hazard only structural members are subject to the three times rule (one source, partly confirmed)",
+  }),
+  wide: Object.freeze({
+    width: 1.2,
+    floor: 0.61,
+    clause:
+      "NFPA 13-2019 9.5.5.3: sprinklers beneath fixed obstructions wider than 4 ft (1.2 m), such as ducts and decks, 1 to 12 in below them; noncombustible ones whose bottom is 24 in (610 mm) or less above the floor are exempt",
+  }),
+  obstructed: Object.freeze({
+    deck: 0.559,
+    clause:
+      "NFPA 13-2019 10.2.6.1.2: obstructed construction, the deflector at or above the members' bottom at most 22 in (559 mm) below the deck, with the beam rule; or 1 to 6 in (25 to 152 mm) below the members; or one sprinkler in each bay",
+  }),
+  kinds: Object.freeze(["beam", "duct", "pipe", "cable", "light", "other"]),
+  beamKinds: Object.freeze(["beam", "duct", "cable", "light", "other"]),
+});
+
+const BEAM = OBSTRUCTION_RULES.beam;
+const THREE = OBSTRUCTION_RULES.threeTimes;
+const WIDE = OBSTRUCTION_RULES.wide;
+const KINDS = new Set(OBSTRUCTION_RULES.kinds);
+const BEAM_KINDS = new Set(OBSTRUCTION_RULES.beamKinds);
+const KIND_NAME = { beam: "beam", duct: "duct", pipe: "pipe", cable: "cable carrier", light: "light", other: "obstruction" };
+/** How far from a head an obstruction can matter (m): the beam rule's last row. */
+const REACH = Math.max(BEAM.reach, THREE.cap);
+/** A head failing an obstruction rule is moved in steps of this much along each axis of its rectangle (m). */
+const MOVE_STEP = 0.05;
+
+/** The beam rule's row for a horizontal distance A (m), or null at 7 ft 6 in (2.286 m) and beyond. */
+export function beamRuleRow(A) {
+  if (!(A >= 0)) return null;
+  for (const row of BEAM.rows) if (A < row.below) return row;
+  return null;
+}
+
+/**
+ * An obstruction record from an element's mesh, or its meshes, in the viewer
+ * frame: the convex hull of its vertices projected to plan, and its lowest
+ * and highest points along the up axis. Where indices are given, only the
+ * vertices the triangles use count. The viewer makes these from IfcBeam
+ * (structural) and from an MEP model's IfcDuctSegment, IfcDuctFitting,
+ * IfcPipeSegment and IfcCableCarrierSegment (IFC2x3: IfcFlowSegment,
+ * IfcFlowFitting). A bent fitting's hull also takes in the inside of its
+ * bend.
+ *
+ * @param {{itemId, positions: Float32Array, indices?: Uint32Array, kind?, structural?}|object[]} mesh
+ *        one mesh, or several of one element
+ * @param {{kind?: string, structural?: boolean, upAxis?: string}} opts
+ *        kind: one of OBSTRUCTION_RULES.kinds ("other" if not), else the
+ *        first mesh's; structural: else the first mesh's, else true for a
+ *        beam only
+ * @returns {{itemId, kind, structural: boolean, footprint: number[][], bottom: number, top: number}|null}
+ *          footprint: [[a, b], ...] counter-clockwise in plan; null when the
+ *          plan projection has no area
+ */
+export function obstructionFromMesh(mesh, { kind = null, structural = null, upAxis = "y" } = {}) {
+  const meshes = (Array.isArray(mesh) ? mesh : [mesh]).filter((m) => m?.positions);
+  if (!meshes.length) return null;
+  kind = kind ?? meshes[0].kind ?? "other";
+  structural = structural ?? meshes[0].structural ?? null;
+  const up = upIndex(upAxis);
+  const [h0, h1] = planAxes(upAxis);
+  const points = [];
+  let bottom = Infinity, top = -Infinity;
+  for (const { positions: p, indices: ix } of meshes) {
+    const n = Math.floor(p.length / 3);
+    let used = null;
+    if (ix?.length) {
+      used = new Uint8Array(n);
+      for (let t = 0; t < ix.length; t += 1) if (ix[t] < n) used[ix[t]] = 1;
+    }
+    for (let v = 0; v < n; v += 1) {
+      if (used && !used[v]) continue;
+      const a = p[v * 3 + h0], b = p[v * 3 + h1], y = p[v * 3 + up];
+      if (!Number.isFinite(a) || !Number.isFinite(b) || !Number.isFinite(y)) continue;
+      points.push([a, b]);
+      if (y < bottom) bottom = y;
+      if (y > top) top = y;
+    }
+  }
+  const hull = convexHull(points);
+  if (hull.length < 3) return null;
+  const k = KINDS.has(kind) ? kind : "other";
+  return {
+    itemId: meshes[0].itemId ?? null,
+    kind: k,
+    structural: structural == null ? k === "beam" : Boolean(structural),
+    footprint: hull.map(([a, b]) => [a, b]),
+    bottom,
+    top,
+  };
+}
+
+/** Obstruction records checked and measured once: hull (counter-clockwise), box, plan width, depth. */
+function prepareObstructions(obstructions) {
+  const list = [], dropped = [];
+  (obstructions || []).forEach((o, i) => {
+    const points = Array.isArray(o?.footprint) ? o.footprint.filter((p) => Number.isFinite(p?.[0]) && Number.isFinite(p?.[1])) : [];
+    const hull = points.length >= 3 ? convexHull(points) : [];
+    if (hull.length < 3 || !Number.isFinite(o.bottom) || !Number.isFinite(o.top) || o.top < o.bottom) {
+      dropped.push(o?.itemId ?? i);
+      return;
+    }
+    const box = [Infinity, -Infinity, Infinity, -Infinity];
+    for (const [a, b] of hull) {
+      box[0] = Math.min(box[0], a);
+      box[1] = Math.max(box[1], a);
+      box[2] = Math.min(box[2], b);
+      box[3] = Math.max(box[3], b);
+    }
+    const kind = KINDS.has(o.kind) ? o.kind : "other";
+    list.push({
+      item: o.itemId ?? `obstruction:${i}`,
+      kind,
+      structural: o.structural == null ? kind === "beam" : Boolean(o.structural),
+      hull,
+      box,
+      width: convexWidth(hull),
+      depth: o.top - o.bottom,
+      bottom: o.bottom,
+      top: o.top,
+    });
+  });
+  return { list, dropped };
+}
+
+/**
+ * A bucket grid over boxes [x0, x1, y0, y1]: query(box) gives the indices of
+ * the boxes that overlap it, each once, in index order. The grid has at most
+ * about 256 cells a side; a box over more than 4096 cells is always checked.
+ */
+function boxIndex(boxes) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const b of boxes) {
+    x0 = Math.min(x0, b[0]);
+    x1 = Math.max(x1, b[1]);
+    y0 = Math.min(y0, b[2]);
+    y1 = Math.max(y1, b[3]);
+  }
+  const cell = Math.max(2, (x1 - x0) / 256, (y1 - y0) / 256);
+  const span = (lo, hi, o) => [Math.max(0, Math.floor((lo - o) / cell)), Math.max(0, Math.floor((hi - o) / cell))];
+  const cells = new Map(), big = [];
+  const key = (i, j) => i * 65536 + j;
+  boxes.forEach((b, k) => {
+    const [i0, i1] = span(b[0], b[1], x0), [j0, j1] = span(b[2], b[3], y0);
+    if ((i1 - i0 + 1) * (j1 - j0 + 1) > 4096) {
+      big.push(k);
+      return;
+    }
+    for (let i = i0; i <= i1; i += 1) {
+      for (let j = j0; j <= j1; j += 1) {
+        const c = key(i, j);
+        if (!cells.has(c)) cells.set(c, []);
+        cells.get(c).push(k);
+      }
+    }
+  });
+  const seen = new Int32Array(boxes.length).fill(-1);
+  let stamp = 0;
+  const overlaps = (b, q) => b[0] <= q[1] && b[1] >= q[0] && b[2] <= q[3] && b[3] >= q[2];
+  return (q) => {
+    stamp += 1;
+    const out = [];
+    const take = (k) => {
+      if (seen[k] === stamp) return;
+      seen[k] = stamp;
+      if (overlaps(boxes[k], q)) out.push(k);
+    };
+    if (boxes.length && q[1] >= x0 && q[0] <= x1 && q[3] >= y0 && q[2] <= y1) {
+      const [i0, i1] = span(Math.max(q[0], x0), Math.min(q[1], x1), x0), [j0, j1] = span(Math.max(q[2], y0), Math.min(q[3], y1), y0);
+      for (let i = i0; i <= i1; i += 1) for (let j = j0; j <= j1; j += 1) for (const k of cells.get(key(i, j)) || []) take(k);
+    }
+    for (const k of big) take(k);
+    return out.sort((a, b) => a - b);
+  };
+}
+
+/** Whether plan point (x, y) lies in a counter-clockwise convex polygon, boundary included. */
+function inConvex(P, x, y) {
+  for (let i = 0; i < P.length; i += 1) {
+    const [ax, ay] = P[i], [bx, by] = P[(i + 1) % P.length];
+    if ((bx - ax) * (y - ay) - (by - ay) * (x - ax) < -1e-9) return false;
+  }
+  return true;
+}
+
+/** The plan distance from (x, y) to a convex polygon, 0 inside it. */
+function distanceToConvex(P, x, y) {
+  if (inConvex(P, x, y)) return 0;
+  let d = Infinity;
+  for (let i = 0; i < P.length; i += 1) {
+    const [ax, ay] = P[i], [bx, by] = P[(i + 1) % P.length];
+    d = Math.min(d, distanceToSegment(x, y, [ax, ay, bx, by]));
+  }
+  return d;
+}
+
+/** A convex polygon's width: the least distance between two parallel lines that hold it. */
+function convexWidth(P) {
+  let w = Infinity;
+  for (let i = 0; i < P.length; i += 1) {
+    const [ax, ay] = P[i], [bx, by] = P[(i + 1) % P.length];
+    const len = Math.hypot(bx - ax, by - ay);
+    if (len < 1e-12) continue;
+    let far = 0;
+    for (const [x, y] of P) far = Math.max(far, Math.abs((bx - ax) * (y - ay) - (by - ay) * (x - ax)) / len);
+    w = Math.min(w, far);
+  }
+  return Number.isFinite(w) ? w : 0;
+}
+
+/** Whether two convex polygons overlap by more than a sliver (separating axes). */
+function convexOverlap(P, Q) {
+  for (const S of [P, Q]) {
+    for (let i = 0; i < S.length; i += 1) {
+      const [ax, ay] = S[i], [bx, by] = S[(i + 1) % S.length];
+      const len = Math.hypot(bx - ax, by - ay);
+      if (len < 1e-12) continue;
+      const nx = (ay - by) / len, ny = (bx - ax) / len;
+      let p0 = Infinity, p1 = -Infinity, q0 = Infinity, q1 = -Infinity;
+      for (const [x, y] of P) {
+        const t = x * nx + y * ny;
+        p0 = Math.min(p0, t);
+        p1 = Math.max(p1, t);
+      }
+      for (const [x, y] of Q) {
+        const t = x * nx + y * ny;
+        q0 = Math.min(q0, t);
+        q1 = Math.max(q1, t);
+      }
+      if (Math.min(p1, q1) - Math.max(p0, q0) <= 1e-6) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The obstructions over a room: their plan overlaps its floor triangles,
+ * and their bottom lies between its floor and its ceiling.
+ */
+function obstructionsOver(room, list, query) {
+  const T = room.footprint;
+  const box = [Infinity, -Infinity, Infinity, -Infinity];
+  for (let k = 0; k < T.length; k += 2) {
+    box[0] = Math.min(box[0], T[k]);
+    box[1] = Math.max(box[1], T[k]);
+    box[2] = Math.min(box[2], T[k + 1]);
+    box[3] = Math.max(box[3], T[k + 1]);
+  }
+  const out = [];
+  for (const i of query(box)) {
+    const o = list[i];
+    if (o.bottom < room.floor - EPS || o.bottom > room.ceiling + EPS) continue;
+    for (let k = 0; k < T.length; k += 6) {
+      if (Math.max(T[k], T[k + 2], T[k + 4]) < o.box[0] || Math.min(T[k], T[k + 2], T[k + 4]) > o.box[1]) continue;
+      if (Math.max(T[k + 1], T[k + 3], T[k + 5]) < o.box[2] || Math.min(T[k + 1], T[k + 3], T[k + 5]) > o.box[3]) continue;
+      if (convexOverlap(o.hull, [[T[k], T[k + 1]], [T[k + 2], T[k + 3]], [T[k + 4], T[k + 5]]])) {
+        out.push(o);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * The obstructions that govern one head, at plan point (a, b) with its
+ * deflector at height d: for the beam rule, the one with the least margin
+ * B allowed less B measured; for the three times rule, the one with the
+ * least margin distance less distance required. An obstruction counts when
+ * its bottom is below the deflector and its top at most 18 in (457 mm)
+ * below it (one lower is clear of the spray's pattern; the wide rule may
+ * still need heads beneath it). The beam rule takes it within 7 ft 6 in;
+ * the three times rule when it lies entirely below the deflector, and, in
+ * light and ordinary hazard, only when it is structural (`exempt` counts
+ * the others).
+ */
+function governing(a, b, d, hazard, obs) {
+  const structuralOnly = Boolean(HAZARDS[hazard]);
+  let beam = null, three = null, exempt = 0;
+  for (const o of obs) {
+    if (a < o.box[0] - REACH || a > o.box[1] + REACH || b < o.box[2] - REACH || b > o.box[3] + REACH) continue;
+    const below = d - o.top;
+    const B = d - o.bottom;
+    if (below > THREE.depth + EPS || B <= EPS) continue;
+    const A = distanceToConvex(o.hull, a, b);
+    if (A >= REACH) continue;
+    if (BEAM_KINDS.has(o.kind) && A < BEAM.reach) {
+      const row = beamRuleRow(A);
+      const margin = row.max - B;
+      if (!beam || margin < beam.margin) beam = { o, A, B, row, margin };
+    }
+    if (below > EPS) {
+      if (structuralOnly && !o.structural) {
+        exempt += 1;
+        continue;
+      }
+      const dimension = Math.max(o.depth, o.width);
+      const required = Math.min(THREE.factor * dimension, THREE.cap);
+      const margin = A - required;
+      if (!three || margin < three.margin) three = { o, distance: A, required, dimension, below, margin };
+    }
+  }
+  return { beam, three, exempt };
+}
+
+const meets = (g) => (!g.beam || g.beam.margin >= -EPS) && (!g.three || g.three.margin >= -EPS);
+const nameOf = (o) => `${KIND_NAME[o.kind]} ${o.item}`;
+
+/**
+ * The plan distance a head with its deflector at d keeps from obstruction o
+ * to meet both rules there, as `governing` judges them (0: no limit). The
+ * beam table's B grows row by row, so the beam rule's limit is the A of the
+ * first row that allows the head's B, or 7 ft 6 in where none does.
+ */
+function clearance(o, d, structuralOnly) {
+  const below = d - o.top, B = d - o.bottom;
+  if (below > THREE.depth + EPS || B <= EPS) return 0;
+  let need = 0;
+  if (BEAM_KINDS.has(o.kind)) {
+    const row = BEAM.rows.find((r) => r.max >= B - EPS);
+    need = row ? row.from : BEAM.reach;
+  }
+  if (below > EPS && !(structuralOnly && !o.structural)) need = Math.max(need, Math.min(THREE.factor * Math.max(o.depth, o.width), THREE.cap) - EPS);
+  return need;
+}
+
+/** One head's verdicts from `governing`, in the module's check style. */
+function verdicts(g, hazard) {
+  const structuralOnly = Boolean(HAZARDS[hazard]);
+  const beamClause = withCodes(BEAM.clause);
+  const threeClause = withCodes(THREE.clause, ...(structuralOnly ? [THREE.structural] : []));
+  const beam = g.beam
+    ? {
+        status: g.beam.margin >= -EPS ? "pass" : "fail",
+        text: `${nameOf(g.beam.o)}: ${g.beam.A.toFixed(2)} m to its side (${g.beam.row.a}), the deflector ${g.beam.B.toFixed(3)} m above its bottom; at most ${g.beam.row.b}`,
+        clause: beamClause,
+        A: g.beam.A,
+        B: g.beam.B,
+        maxB: g.beam.row.max,
+        item: g.beam.o.item,
+      }
+    : {
+        status: "pass",
+        text: `no beam, duct, cable carrier, light or other obstruction within ${BEAM.reach.toFixed(3)} m (7 ft 6 in) with its bottom below the deflector`,
+        clause: beamClause,
+        A: null,
+        B: null,
+        maxB: null,
+        item: null,
+      };
+  const t = g.three;
+  const exempt = g.exempt ? `; ${g.exempt} non-structural item${g.exempt === 1 ? "" : "s"} below the deflector not subject to it` : "";
+  const threeTimes = t
+    ? {
+        status: t.margin >= -EPS ? "pass" : "fail",
+        text: `${nameOf(t.o)}, ${t.dimension.toFixed(3)} m at its largest, its top ${t.below.toFixed(3)} m below the deflector: ${t.distance.toFixed(2)} m away; at least ${t.required.toFixed(3)} m${exempt}`,
+        clause: threeClause,
+        distance: t.distance,
+        required: t.required,
+        dimension: t.dimension,
+        item: t.o.item,
+        exempt: g.exempt,
+      }
+    : {
+        status: "pass",
+        text: `no ${structuralOnly ? "structural member" : "obstruction"} entirely below the deflector within 18 in (457 mm) of it, within ${REACH.toFixed(3)} m${exempt}`,
+        clause: threeClause,
+        distance: null,
+        required: null,
+        dimension: null,
+        item: null,
+        exempt: g.exempt,
+      };
+  return { status: worst([beam, threeTimes]), beam, threeTimes };
+}
+
+/**
+ * The wide rule over one room, or over no room: each obstruction wider than
+ * 1.2 m (its plan width, across its run) whose bottom is below the deflector
+ * of a head of the room needs a head beneath it, one whose plan point lies
+ * in its footprint with the deflector at or below its bottom. Without a
+ * room the floor beneath is not known: a wide obstruction with a head within
+ * 12 in (305 mm) below it passes, any other cannot be told.
+ *
+ * @param {object[]} obs  prepared obstructions
+ * @param {{id, a, b, d}[]} hs  heads: plan point and deflector height
+ * @param {object|null} room
+ */
+function wideVerdicts(obs, hs, room) {
+  const out = [];
+  const clause = withCodes(WIDE.clause);
+  for (const o of obs) {
+    if (o.width <= WIDE.width + EPS) continue;
+    if (room && !hs.some((h) => h.d > o.bottom + EPS)) continue;
+    const beneath = hs.filter((h) => h.d <= o.bottom + EPS && (room || h.d >= o.bottom - DEFLECTOR.max - EPS) && inConvex(o.hull, h.a, h.b));
+    const what = `${nameOf(o)}, ${o.width.toFixed(2)} m wide`;
+    const base = { item: o.item, room: room?.id ?? null, width: o.width, bottom: o.bottom, beneath: beneath.map((h) => h.id), clause };
+    if (beneath.length) out.push({ ...base, status: "pass", text: `${what}: ${beneath.length} head${beneath.length === 1 ? "" : "s"} beneath it` });
+    else if (!room) out.push({ ...base, status: "cannot tell", text: `${what}: no head within 12 in (305 mm) below it, and no room to tell whether it is over a covered floor` });
+    else if (o.bottom - room.floor <= WIDE.floor + EPS) {
+      out.push({ ...base, status: "cannot tell", text: `${what}, its bottom ${(o.bottom - room.floor).toFixed(2)} m above the floor: exempt if noncombustible` });
+    } else out.push({ ...base, status: "fail", text: `${what}: no head beneath it` });
+  }
+  return out;
+}
+
+/**
+ * NFPA 13's obstruction rules for heads (see OBSTRUCTION_RULES): per head
+ * the beam rule and the three times rule against the obstructions near it,
+ * and the wide rule per room.
+ *
+ * The obstruction record, in the viewer frame (obstructionFromMesh makes it
+ * from a mesh):
+ *   { itemId,
+ *     kind: "beam" | "duct" | "pipe" | "cable" | "light" | "other",
+ *     structural: boolean   IfcBeam true, MEP items false (by default true
+ *                           for a beam only),
+ *     footprint: [[a, b], ...]  its plan polygon, convex, in the heads' plan
+ *                           frame (x and z when y is up),
+ *     bottom, top           its lowest and highest points along the up axis }
+ * A head's deflector is linkBelowDeflector (0.03 m) above its position, the
+ * link point (SPRINKLER_DEFAULTS); pass 0 for records whose position is the
+ * deflector. A is the plan distance from the head to the obstruction's
+ * footprint (0 under it), B the deflector's height above its bottom; the
+ * three times rule's largest dimension is the larger of its depth and its
+ * plan width (the narrowest extent of its footprint, across its run). A head
+ * whose hazard is none of HAZARDS takes every obstruction under the three
+ * times rule, not only structural members.
+ *
+ * Given rooms (roomsFromSpaces), a head whose `room` is among them is
+ * checked against the obstructions over that room only (plan overlap with
+ * its floor, bottom between its floor and ceiling), not those behind its
+ * walls, and the wide rule is checked per room on that room's heads;
+ * without rooms, each head against every obstruction within 7 ft 6 in, and
+ * the wide rule cannot tell what lies over a covered floor.
+ *
+ * @param {object[]} heads  head records (id, position, room, hazard)
+ * @param {object[]|null} obstructions  obstruction records; none given: every verdict "cannot tell"
+ * @param {{rooms?: object[], upAxis?: string, linkBelowDeflector?: number}} opts
+ * @returns {{heads: object[], wide: object[], status: string, notes: string[]}}
+ *          heads: {id, room, status, beam: {status, text, clause, A, B, maxB, item},
+ *          threeTimes: {status, text, clause, distance, required, dimension, item, exempt}};
+ *          wide: {item, room, width, bottom, beneath (head ids), status, text, clause};
+ *          statuses "pass" | "fail" | "cannot tell", as the room checks
+ */
+export function checkObstructions(heads, obstructions, { rooms = null, upAxis = "y", linkBelowDeflector = LINK_BELOW } = {}) {
+  const up = upIndex(upAxis);
+  const [h0, h1] = planAxes(upAxis);
+  const given = Array.isArray(obstructions) && obstructions.length > 0;
+  const { list, dropped } = prepareObstructions(given ? obstructions : []);
+  const query = boxIndex(list.map((o) => o.box));
+  const scopes = new Map();
+  for (const r of rooms || []) if (r?.footprint && r.rect && !scopes.has(r.id)) scopes.set(r.id, { room: r, obs: null, heads: [] });
+  const over = (s) => s.obs ?? (s.obs = obstructionsOver(s.room, list, query));
+  const loose = [];
+  const out = [];
+  for (const head of heads || []) {
+    const p = head?.position;
+    if (!given || !p || !Number.isFinite(p[h0]) || !Number.isFinite(p[h1]) || !Number.isFinite(p[up])) {
+      const text = given ? "the head has no position" : "no structural or MEP model: obstructions were not checked";
+      const none = { status: "cannot tell", text, clause: OBSTRUCTIONS.clause };
+      out.push({ id: head?.id ?? null, room: head?.room ?? null, status: "cannot tell", beam: { ...none, A: null, B: null, maxB: null, item: null }, threeTimes: { ...none, distance: null, required: null, dimension: null, item: null, exempt: 0 } });
+      continue;
+    }
+    const a = p[h0], b = p[h1], d = p[up] + linkBelowDeflector;
+    const scope = scopes.get(head.room);
+    const obs = scope ? over(scope) : query([a - REACH, a + REACH, b - REACH, b + REACH]).map((k) => list[k]);
+    out.push({ id: head.id, room: head.room ?? null, ...verdicts(governing(a, b, d, head.hazard, obs), head.hazard) });
+    (scope ? scope.heads : loose).push({ id: head.id, a, b, d });
+  }
+  const wide = [];
+  if (given) {
+    if (scopes.size) for (const s of scopes.values()) if (s.heads.length) wide.push(...wideVerdicts(over(s), s.heads, s.room));
+    if (!scopes.size) wide.push(...wideVerdicts(list, loose, null));
+  }
+  const notes = [];
+  if (given) {
+    notes.push(`${list.length} obstruction${list.length === 1 ? "" : "s"} (${list.filter((o) => o.structural).length} structural)${dropped.length ? `; ${dropped.length} left out with no plan area or heights` : ""}`);
+    if (scopes.size && loose.length) notes.push(`${loose.length} head${loose.length === 1 ? "" : "s"} in no given room: the wide rule was not checked for ${loose.length === 1 ? "it" : "them"}`);
+  }
+  return { heads: out, wide, status: worst([...out, ...wide]), notes };
+}
+
+/**
+ * A room's heads cleared of its obstructions (see layoutRooms). A head that
+ * fails the beam rule or the three times rule moves within its protection
+ * rectangle, in steps of 0.05 m along both of its axes, to the nearest point
+ * that meets both while it still reaches the whole rectangle within S/2,
+ * stays in the room at least 0.102 m from the walls, and keeps 1.8 m from
+ * the other heads of its level; the rectangles do not change, so spacing,
+ * wall distances, area and coverage hold as before. A wide obstruction with
+ * no head beneath gets the rectangle rule's heads under the part of it over
+ * the room, their deflectors 0.1 m below its bottom; a head beneath is
+ * shielded by it from the ceiling's heads, so the 1.8 m rule is kept within
+ * each level only.
+ *
+ * @returns {{heads: object[], check: object, deflector: object|null, between: object|null,
+ *           moved: object[], added: object[], unresolved: string[]}}
+ *          heads: {position, coverage, footprint, obstruction: null | "moved" | "beneath"};
+ *          moved: {head, items, rules, by (m), from, to (plan points)};
+ *          added: {head, item, position}; deflector and between replace the
+ *          room's checks of those ids where not null
+ */
+function clearObstructions(room, H, placed, obs) {
+  const up = upIndex(room.upAxis);
+  const [h0, h1] = planAxes(room.upAxis);
+  const reach = H.maxSpacing.value / 2;
+  const wallMin = H.wallMin.value;
+  const ceilingDeflector = room.ceiling - DEFLECTOR_BELOW;
+  const inside = footprintTest(room.footprint);
+  const walls = wallEdges(room.footprint, inside);
+  const clear = (a, b) => {
+    if (!inside(a, b)) return false;
+    for (const w of walls) if (distanceToSegment(a, b, w) < wallMin - 1e-9) return false;
+    return true;
+  };
+  const heads = placed.heads.map((h) => ({ ...h, a: h.position[h0], b: h.position[h1], d: ceilingDeflector, level: "ceiling", under: null, obstruction: null }));
+  const idOf = (k) => `${room.id}/${k + 1}`;
+  const moved = [], added = [], unresolved = [];
+  const apart = (k, a, b) => heads.every((g, j) => j === k || g.level !== heads[k].level || Math.hypot(g.a - a, g.b - b) >= H.minBetween.value - 1e-9);
+
+  // Move head k to the nearest point of its rectangle that meets every rule.
+  const move = (k) => {
+    const h = heads[k];
+    const { centre: [c0, c1], axis: [ux, uy], half: [hu, hv] } = h.footprint;
+    const vx = -uy, vy = ux;
+    const u0 = (h.a - c0) * ux + (h.b - c1) * uy, v0 = (h.a - c0) * vx + (h.b - c1) * vy;
+    const steps = (x0, half) => {
+      const lo = Math.max(-half, half - reach), hi = Math.min(half, reach - half);
+      if (lo > hi + 1e-9 || x0 < lo - 1e-9 || x0 > hi + 1e-9) return [x0];
+      const out = [x0];
+      for (let i = 1; x0 - i * MOVE_STEP >= lo - 1e-9 || x0 + i * MOVE_STEP <= hi + 1e-9; i += 1) {
+        if (x0 - i * MOVE_STEP >= lo - 1e-9) out.push(x0 - i * MOVE_STEP);
+        if (x0 + i * MOVE_STEP <= hi + 1e-9) out.push(x0 + i * MOVE_STEP);
+      }
+      for (const end of [lo, hi]) if (!out.some((x) => Math.abs(x - end) < 1e-9)) out.push(end);
+      return out;
+    };
+    const us = steps(u0, hu), vs = steps(v0, hv);
+    const at = (u, v) => [c0 + u * ux + v * vx, c1 + u * uy + v * vy];
+    const corners = [at(Math.min(...us), Math.min(...vs)), at(Math.max(...us), Math.min(...vs)), at(Math.max(...us), Math.max(...vs)), at(Math.min(...us), Math.max(...vs))];
+    const region = [Math.min(...corners.map((p) => p[0])), Math.max(...corners.map((p) => p[0])), Math.min(...corners.map((p) => p[1])), Math.max(...corners.map((p) => p[1]))];
+    // The distance each obstruction asks of this head, and the box beyond
+    // which it asks nothing; where one blocks all four corners of the
+    // region, it blocks all of it (the points nearer a convex polygon than
+    // a distance are a convex set), and no point will do.
+    const needs = [];
+    for (const o of obs) {
+      const need = clearance(o, h.d, Boolean(HAZARDS[H.id]));
+      if (!(need > 0)) continue;
+      const box = [o.box[0] - need, o.box[1] + need, o.box[2] - need, o.box[3] + need];
+      if (box[1] < region[0] || box[0] > region[1] || box[3] < region[2] || box[2] > region[3]) continue;
+      if (corners.every(([a, b]) => distanceToConvex(o.hull, a, b) < need)) return null;
+      needs.push({ o, need, box });
+    }
+    const blocked = (a, b) => {
+      for (let i = 0; i < needs.length; i += 1) {
+        const n = needs[i];
+        if (a < n.box[0] || a > n.box[1] || b < n.box[2] || b > n.box[3] || distanceToConvex(n.o.hull, a, b) >= n.need) continue;
+        // The last obstruction to block is tried first next time.
+        if (i) needs.unshift(...needs.splice(i, 1));
+        return true;
+      }
+      return false;
+    };
+    const near = needs.map((n) => n.o);
+    const tries = [];
+    for (const u of us) for (const v of vs) if (u !== u0 || v !== v0) tries.push([Math.hypot(u - u0, v - v0), u, v]);
+    tries.sort((p, q) => p[0] - q[0] || p[1] - q[1] || p[2] - q[2]);
+    for (const [by, u, v] of tries) {
+      const [a, b] = at(u, v);
+      if (blocked(a, b) || !clear(a, b) || !apart(k, a, b) || (h.under && !inConvex(h.under.hull, a, b))) continue;
+      if (!meets(governing(a, b, h.d, H.id, near))) continue;
+      const from = [h.a, h.b];
+      h.a = a;
+      h.b = b;
+      h.position = h.position.slice();
+      h.position[h0] = a;
+      h.position[h1] = b;
+      h.obstruction = h.obstruction || "moved";
+      return { by, from, to: [a, b] };
+    }
+    return null;
+  };
+  let underMembers = false;
+  const fix = (k) => {
+    const g = governing(heads[k].a, heads[k].b, heads[k].d, H.id, obs);
+    if (meets(g)) return;
+    const failing = [g.beam && g.beam.margin < -EPS ? ["beam rule", g.beam.o] : null, g.three && g.three.margin < -EPS ? ["three times rule", g.three.o] : null].filter(Boolean);
+    const done = move(k);
+    if (done) {
+      moved.push({ head: idOf(k), items: failing.map(([, o]) => o.item), rules: failing.map(([rule]) => rule), by: done.by, from: done.from, to: done.to });
+      return;
+    }
+    if (failing.some(([, o]) => o.structural)) underMembers = true;
+    unresolved.push(`head ${idOf(k)}: no point of its protection rectangle meets ${failing.map(([rule, o]) => `the ${rule} for ${nameOf(o)}`).join(" and ")}`);
+  };
+  for (let k = 0; k < heads.length; k += 1) fix(k);
+
+  // Heads beneath wide obstructions (the exempt ones near the floor aside).
+  for (const o of obs) {
+    if (o.width <= WIDE.width + EPS || o.bottom >= ceilingDeflector - EPS || o.bottom - room.floor <= WIDE.floor + EPS) continue;
+    if (heads.some((h) => h.d <= o.bottom + EPS && inConvex(o.hull, h.a, h.b))) continue;
+    const under = headsBeneath(o, H, inside, clear);
+    if (!under.heads.length) {
+      unresolved.push(`${nameOf(o)}: wider than ${WIDE.width} m, but no point of the room's floor sampled every ${SAMPLE_STEP} m lies beneath it`);
+      continue;
+    }
+    const d = o.bottom - DEFLECTOR_BELOW;
+    for (const u of under.heads) {
+      const position = [0, 0, 0];
+      position[h0] = u.a;
+      position[h1] = u.b;
+      position[up] = d - LINK_BELOW;
+      heads.push({ position, coverage: u.coverage, footprint: u.footprint, a: u.a, b: u.b, d, level: `beneath ${o.item}`, under: o, obstruction: "beneath" });
+      added.push({ head: idOf(heads.length - 1), item: o.item, position });
+    }
+    if (under.status === "fail") unresolved.push(`${nameOf(o)}: the heads beneath it fail the rectangle rule (${under.failing.join(", ")})`);
+  }
+  for (let k = heads.length - added.length; k < heads.length; k += 1) fix(k);
+
+  // The check, on the heads as they now stand.
+  const per = heads.map((h, k) => ({ id: idOf(k), ...verdicts(governing(h.a, h.b, h.d, H.id, obs), H.id) }));
+  const wide = wideVerdicts(obs, heads.map((h, k) => ({ id: idOf(k), a: h.a, b: h.b, d: h.d })), room);
+  const check = obstructionCheck(obs, per, wide, moved, added, unresolved, underMembers);
+
+  // Under structural members hanging below the deflector the construction
+  // is obstructed: the deflector rule is the second option of 10.2.6.1.2.
+  const members = obs.filter((o) => o.structural && o.bottom < ceilingDeflector - EPS && o.top >= ceilingDeflector - THREE.depth - EPS);
+  const deflector = members.length
+    ? {
+        id: "deflector",
+        status: DEFLECTOR_BELOW <= OBSTRUCTION_RULES.obstructed.deck + EPS ? "pass" : "fail",
+        text: `deflector ${DEFLECTOR_BELOW} m below the space's top, taken as the deck; ${members.length} structural member${members.length === 1 ? " reaches" : "s reach"} below it: obstructed construction, the deflector above their bottom at most ${OBSTRUCTION_RULES.obstructed.deck} m below the deck, with the beam rule`,
+        clause: withCodes(OBSTRUCTION_RULES.obstructed.clause),
+      }
+    : null;
+  // The closest pair of ceiling heads, after the moves.
+  let between = null;
+  if (moved.length) {
+    const ceiling = heads.filter((h) => h.level === "ceiling");
+    let closest = Infinity, close = 0;
+    for (let i = 0; i < ceiling.length; i += 1) {
+      for (let j = i + 1; j < ceiling.length; j += 1) {
+        const dd = Math.hypot(ceiling[i].a - ceiling[j].a, ceiling[i].b - ceiling[j].b);
+        closest = Math.min(closest, dd);
+        if (dd < H.minBetween.value - 1e-9) close += 1;
+      }
+    }
+    if (ceiling.length > 1) {
+      between = {
+        id: "between",
+        status: close ? "fail" : "pass",
+        text: close
+          ? `${close} pair${close === 1 ? "" : "s"} of heads closer than ${H.minBetween.value} m (closest ${closest.toFixed(2)} m)`
+          : `heads ${closest.toFixed(2)} m apart at the closest; at least ${H.minBetween.value} m`,
+        clause: withCodes(H.minBetween.clause),
+      };
+    }
+  }
+  return {
+    heads: heads.map((h) => ({ position: h.position, coverage: h.coverage, footprint: h.footprint, obstruction: h.obstruction })),
+    check,
+    deflector,
+    between,
+    moved,
+    added,
+    unresolved,
+  };
+}
+
+/**
+ * The rectangle rule's heads under the part of a wide obstruction over the
+ * room: its minimum-area rectangle sampled every SAMPLE_STEP, the samples
+ * under it and in the room bounding the part, and each bay's head at its
+ * centre, or, where that is not clear of the walls or not under it, at the
+ * clear sample of the bay nearest its centre.
+ */
+function headsBeneath(o, H, inside, clear) {
+  const rect = minAreaRect(o.hull.flat());
+  if (!rect) return { heads: [], status: "n/a", failing: [] };
+  const { centre: [c0, c1], axis: [ux, uy], half: [hu, hv] } = rect;
+  const vx = -uy, vy = ux;
+  const ni = Math.max(1, Math.ceil((2 * hu) / SAMPLE_STEP)), nj = Math.max(1, Math.ceil((2 * hv) / SAMPLE_STEP));
+  const su = (2 * hu) / ni, sv = (2 * hv) / nj;
+  const at = (u, v) => [c0 + u * ux + v * vx, c1 + u * uy + v * vy];
+  const samples = [];
+  for (let j = 0; j < nj; j += 1) {
+    for (let i = 0; i < ni; i += 1) {
+      const u = -hu + (i + 0.5) * su, v = -hv + (j + 0.5) * sv;
+      const [a, b] = at(u, v);
+      if (inConvex(o.hull, a, b) && inside(a, b)) samples.push({ u, v, a, b, clear: clear(a, b) });
+    }
+  }
+  if (!samples.length) return { heads: [], status: "n/a", failing: [] };
+  const u0 = Math.max(-hu, Math.min(...samples.map((s) => s.u)) - su / 2), u1 = Math.min(hu, Math.max(...samples.map((s) => s.u)) + su / 2);
+  const v0 = Math.max(-hv, Math.min(...samples.map((s) => s.v)) - sv / 2), v1 = Math.min(hv, Math.max(...samples.map((s) => s.v)) + sv / 2);
+  const grid = layoutRectangle(u1 - u0, v1 - v0, H.id);
+  const { nx, dx, dy } = grid;
+  const heads = [];
+  grid.heads.forEach(([x, y], k) => {
+    const bi = k % nx, bj = Math.floor(k / nx);
+    const bay = [u0 + bi * dx, u0 + (bi + 1) * dx, v0 + bj * dy, v0 + (bj + 1) * dy];
+    let [a, b] = at(u0 + x, v0 + y);
+    if (!(inConvex(o.hull, a, b) && clear(a, b))) {
+      const mine = samples.filter((s) => s.u >= bay[0] - 1e-9 && s.u <= bay[1] + 1e-9 && s.v >= bay[2] - 1e-9 && s.v <= bay[3] + 1e-9);
+      if (!mine.length) return;
+      const pool = mine.some((s) => s.clear) ? mine.filter((s) => s.clear) : mine;
+      let best = pool[0], bestD = Infinity;
+      for (const s of pool) {
+        const dd = Math.hypot(s.u - (u0 + x), s.v - (v0 + y));
+        if (dd < bestD - 1e-12) (best = s), (bestD = dd);
+      }
+      [a, b] = [best.a, best.b];
+    }
+    heads.push({ a, b, coverage: dx * dy, footprint: { centre: at(u0 + x, v0 + y), axis: [ux, uy], half: [dx / 2, dy / 2] } });
+  });
+  return { heads, status: grid.status, failing: grid.checks.filter((c) => c.status === "fail").map((c) => c.id) };
+}
+
+/** The room's obstruction check from the heads' verdicts and the wide rule's (see layoutRooms). */
+function obstructionCheck(obs, per, wide, moved, added, unresolved, underMembers) {
+  const plural = (k, word) => `${k} ${word}${k === 1 ? "" : "s"}`;
+  const clause = withCodes(BEAM.clause, THREE.clause, THREE.structural, WIDE.clause);
+  const summary = (key, label) => {
+    const list = per.map((h) => ({ id: h.id, ...h[key] }));
+    const failing = list.filter((v) => v.status === "fail");
+    const margin = (v) => (key === "beam" ? (v.A == null ? Infinity : v.maxB - v.B) : v.distance == null ? Infinity : v.distance - v.required);
+    let tight = null;
+    for (const v of failing.length ? failing : list) if (margin(v) < Infinity && (!tight || margin(v) < margin(tight))) tight = v;
+    const status = worst(list);
+    const text = failing.length
+      ? `${failing.length} of ${list.length} heads do not meet the ${label}; worst, head ${tight.id}: ${tight.text}`
+      : tight
+        ? `every head meets the ${label}; closest, head ${tight.id}: ${tight.text}`
+        : `every head meets the ${label}: ${list[0]?.text ?? "no head"}`;
+    return { id: key === "beam" ? "beam" : "three-times", status, text, clause: list[0]?.clause ?? clause, ...(tight ? { head: tight.id, item: tight.item } : {}), measured: tight ? (key === "beam" ? { A: tight.A, B: tight.B, maxB: tight.maxB } : { distance: tight.distance, required: tight.required, dimension: tight.dimension }) : null };
+  };
+  const rules = [summary("beam", "beam rule"), summary("threeTimes", "three times rule")];
+  const wideFail = wide.filter((w) => w.status !== "pass");
+  rules.push({
+    id: "wide",
+    status: wide.length ? worst(wide) : "pass",
+    text: wide.length
+      ? wideFail.length
+        ? `${wideFail.length} of ${wide.length} obstructions wider than ${WIDE.width} m without a head beneath: ${wideFail.map((w) => w.text).join("; ")}`
+        : `${plural(wide.length, "obstruction")} wider than ${WIDE.width} m, each with heads beneath${added.length ? ` (${plural(added.length, "head")} added)` : ""}`
+      : `no obstruction wider than ${WIDE.width} m below the deflectors`,
+    clause: withCodes(WIDE.clause, DEFLECTOR.clause),
+    obstructions: wide,
+  });
+  const status = obs.length ? worst(rules) : "pass";
+  const structural = obs.filter((o) => o.structural).length;
+  const actions = [
+    moved.length ? `${plural(moved.length, "head")} moved clear` : null,
+    added.length ? `${plural(added.length, "head")} added beneath` : null,
+    unresolved.length ? `${unresolved.length} not fixed: ${unresolved.slice(0, 3).join("; ")}${unresolved.length > 3 ? `; and ${unresolved.length - 3} more` : ""}` : null,
+    underMembers
+      ? "under structural members, heads 1 to 6 in (25 to 152 mm) below them at most 22 in (559 mm) below the deck, or one in each bay between them, are the other options of NFPA 13-2019 10.2.6.1.2"
+      : null,
+  ].filter(Boolean);
+  const text = obs.length
+    ? `${plural(obs.length, "obstruction")} over the room (${structural} structural): ` +
+      rules.map((r) => (r.status === "pass" ? `${r.id === "wide" ? "wide rule" : r.id === "beam" ? "beam rule" : "three times rule"} met` : r.text)).join("; ") +
+      (actions.length ? `; ${actions.join("; ")}` : "")
+    : "no beam, duct, pipe, cable carrier, light or other obstruction of the model lies over the room";
+  return { id: "obstructions", status, text, clause, rules, moved, added, unresolved, obstructions: obs.map((o) => o.item) };
 }
 
 // ------------------------------------------------------------------ fallback: no rooms

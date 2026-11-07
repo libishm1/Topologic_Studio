@@ -31,8 +31,10 @@
  *     the local spray density w'' (mm/s, all open heads over the cell
  *     added; Sprinklers.lean evansTau; Suppression.lean evansCap_antitone,
  *     evansCap_sum: the cap never rises and its sum is at most r (tau + dt);
- *     evans_cells: the covered cells' total stays under one envelope). Below 0.026 mm/s
- *     Evans found no measurable effect, and the cell is left alone. Evans
+ *     evans_cells: the covered cells' total stays under one envelope). Below 0.026 mm/s,
+ *     the lowest density in Evans's fit, the cell is left alone: Walton's
+ *     runs at 0.013 and 0.014 mm/s showed no measurable effect and Evans
+ *     left them out (NISTIR 5254, with one at 0.039 mm/s on the 610 mm crib). Evans
  *     is calibrated on full-scale furnishings and is conservative: the
  *     least reduction to expect.
  *   - The spray (section 7.2, Fire-X's energy-limited evaporation on the
@@ -46,9 +48,19 @@
  *     reaches the floor, so the water emitted is the water evaporated plus
  *     the water at the floor (spray_budget_merged: heads sharing a column
  *     are one entry).
- *     The fuel is not wetted: on this grid wetting would stop a covered
- *     cell faster than Evans allows, and its wetted fraction is not
- *     calibrated.
+ *     The fuel is not wetted in this mode.
+ *   - Wetting ("wetting" mode, in place of Evans's cap): the spray as above,
+ *     and in each fuel cell the water passes, a share WETTED_FRACTION of
+ *     what is left soaks into the fuel's surface layer (its `moisture`),
+ *     mixed in at the water's temperature so the layer keeps its energy.
+ *     The solver's own drying then holds the surface near 100 C while the
+ *     water lasts, which slows its pyrolysis and oxidation: the water, not an
+ *     envelope, slows the fire. On a 0.35 m grid a fully wetted cell would
+ *     stop at once, far faster than any of Evans's furnishings, so the share
+ *     is calibrated (tools/wetting-calibrate.mjs) to Evans's decay at the
+ *     light hazard design density on the test room; at other densities it
+ *     follows from the water, not from Evans's fit. Emitted water =
+ *     evaporated + wetted + at the floor.
  */
 const GAS = 0;
 const POROUS = 1;
@@ -71,7 +83,17 @@ export const DROPLET_EVAPORATION = -Math.log(1 - 0.017) / (300 * 0.35);
 export const TERMINAL_SPEED = 5;
 /** CFAST's least gas speed at a link (m/s): a link in still hot gas still heats. */
 export const SPEED_FLOOR = 0.1;
-/** Below this spray density (mm/s) Evans saw no effect on burning cribs. */
+/** The lowest spray density (mm/s) in Evans's fit; below it the cap is off (outside the data). */
+/**
+ * The share of the water reaching a fuel cell's top surface that soaks in,
+ * in "wetting" mode (the rest runs off to the floor). Calibrated on the test
+ * room (tools/wetting-calibrate.mjs, benchmark/results/2026-11-07-wetting-calibration.txt):
+ * at 0.068 mm/s (NFPA 13 light hazard) wetting burns as much of the covered
+ * fuel in the 120 s after the head opens as Evans's cap does (7.4 kg, against
+ * 21.3 kg with no water). At other densities it follows the water: 9.0 kg at
+ * 0.026 mm/s and 4.5 kg at 0.133 mm/s, where the cap gives 8.6 and 7.4 kg.
+ */
+export const WETTED_FRACTION = 0.52;
 export const EVANS_MIN_DENSITY = 0.026;
 
 /** Evans's decay time (s) at spray density w (mm/s): 3.0 w^-1.85 (Sprinklers.lean evansTau). */
@@ -293,10 +315,11 @@ export function activationFrame(setup, state, { t0, t1, T, u, hrr, reading = "es
  * over each covered cell, and the spray's columns (top cell, open cells,
  * water kg/s), one entry per column however many heads cover it.
  */
-export function createSuppression(N, { mode = "spray", eta = DROPLET_EVAPORATION } = {}) {
+export function createSuppression(N, { mode = "spray", eta = DROPLET_EVAPORATION, wet = mode === "wetting" ? WETTED_FRACTION : 0 } = {}) {
   return {
     mode,
     eta,
+    wet,
     tau: new Float32Array(N),
     tAct: new Float32Array(N),
     rate: new Float32Array(N).fill(-1),
@@ -304,7 +327,7 @@ export function createSuppression(N, { mode = "spray", eta = DROPLET_EVAPORATION
     columns: [],
     columnAt: new Map(),
     open: [],
-    stats: { emitted: 0, evaporated: 0, floor: 0 },
+    stats: { emitted: 0, evaporated: 0, wetted: 0, floor: 0 },
   };
 }
 
@@ -326,7 +349,8 @@ export function openHeads(sup, setup, opened) {
     sup.open.push(h);
     if (sup.mode === "activation") continue;
     const w = headDensity(head);
-    for (const c of head.covered) {
+    // Evans's cap in "evans" and "spray" modes; "wetting" leaves it to the water.
+    for (const c of sup.mode === "wetting" ? [] : head.covered) {
       sup.density[c] += w;
       const tau = sup.density[c] >= EVANS_MIN_DENSITY ? evansTau(sup.density[c]) : 0;
       if (tau > 0 && sup.tau[c] === 0) {
@@ -337,7 +361,7 @@ export function openHeads(sup, setup, opened) {
       sup.tau[c] = tau;
       touched.add(c);
     }
-    if (sup.mode !== "spray" || !head.columns.length) continue;
+    if ((sup.mode !== "spray" && sup.mode !== "wetting") || !head.columns.length) continue;
     const share = headFlow(head) / (head.columns.length / 2);
     for (let q = 0; q < head.columns.length; q += 2) {
       const top = head.columns[q];

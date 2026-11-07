@@ -1,0 +1,4251 @@
+{
+ "description": "The subset of the 2026-11-07 sprinkler validation data (wiki/research/sprinkler-validation-data-2026-11-07.md) that tools/sprinkler-validation.mjs runs: four data sets, each with its enclosure, fire, heads and the measured activation times of the chosen tests. Every leaf is {value, source}; units are in the field names (_m, _s, _C, _kW, _m05_s05 = (m s)^1/2, _m05_per_s05 = (m/s)^1/2). The link replay records and the Evans tables used by topologicpy-web-frontend/src/core/suppression.validation.test.mjs are in topologicpy-web-frontend/src/core/suppression.validation.json, with the same notice.",
+ "generated": "2026-11-07",
+ "notice": {
+  "credit": "Measurements and test descriptions from the National Institute of Standards and Technology (NIST): NIST reports (US Government works, not subject to copyright in the United States, 17 U.S.C. 105) and NIST's firemodels repositories (github.com/firemodels/exp at 704e0d9, github.com/firemodels/fds at b7dc77f, github.com/firemodels/cfast), whose licence notice follows. Bittern 2004 numbers come only through those NIST repositories (FDS Validation Guide, FDS inputs, exp CSV); the thesis was not read.",
+  "changes": "Changed on 2026-11-07 by Topologic Studio: values selected from the reports, FDS inputs, CFAST inputs and exp CSVs, units put in field names, coordinates kept in each data set's stated frame, some values derived (marked 'derived' in their source). No measured value was altered.",
+  "firemodels_licence": "NIST-developed software is provided by NIST as a public service. You may use, copy and distribute copies of the software in any medium, provided that you keep intact this entire notice. You may improve, modify and create derivative works of the software or any portion of the software, and you may copy and distribute such modifications or works. Modified works should carry a notice stating that you changed the software and should note the date and nature of any such change. Please explicitly acknowledge the National Institute of Standards and Technology as the source of the software.\n\nNIST-developed software is expressly provided “AS IS.” NIST MAKES NO WARRANTY OF ANY KIND, EXPRESS, IMPLIED, IN FACT OR ARISING BY OPERATION OF LAW, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT AND DATA ACCURACY. NIST NEITHER REPRESENTS NOR WARRANTS THAT THE OPERATION OF THE SOFTWARE WILL BE UNINTERRUPTED OR ERROR-FREE, OR THAT ANY DEFECTS WILL BE CORRECTED. NIST DOES NOT WARRANT OR MAKE ANY REPRESENTATIONS REGARDING THE USE OF THE SOFTWARE OR THE RESULTS THEREOF, INCLUDING BUT NOT LIMITED TO THE CORRECTNESS, ACCURACY, RELIABILITY, OR USEFULNESS OF THE SOFTWARE.\n\nYou are solely responsible for determining the appropriateness of using and distributing the software and you assume all risks associated with its use, including but not limited to the risks and costs of program errors, compliance with applicable laws, damage to or loss of data, programs or equipment, and the unavailability or interruption of operation. This software is not intended to be used in any situation where a failure could cause risk of injury or damage to property. The software developed by NIST employees is not subject to copyright protection within the United States."
+ },
+ "sources": {
+  "NISTIR6253": {
+   "citation": "Vettori, R.L. (1998) Effect of an Obstructed Ceiling on the Activation Time of a Residential Sprinkler. NISTIR 6253, NIST.",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir6253.pdf",
+   "doi": "10.6028/NIST.IR.6253",
+   "licence": "US Government work (NIST/NBS staff); not subject to copyright protection in the United States (17 U.S.C. 105). Free to reuse; cite NIST. Appendix A reproduces a UL test report (UL Project 96NK9527); only numbers taken from it."
+  },
+  "NISTIR7079": {
+   "citation": "Vettori, R.L. (2003) Effect of Beamed, Sloped, and Sloped Beamed Ceilings on the Activation Time of a Residential Sprinkler. NISTIR 7079, NIST.",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir7079.pdf",
+   "doi": "10.6028/NIST.IR.7079",
+   "licence": "US Government work (NIST/NBS staff); not subject to copyright protection in the United States (17 U.S.C. 105). Free to reuse; cite NIST."
+  },
+  "NISTIR6196-1": {
+   "citation": "McGrattan, K.B., Hamins, A., Stroup, D.W. (1998) Sprinkler, Smoke & Heat Vent, Draft Curtain Interaction: Large Scale Experiments and Model Development. NISTIR 6196-1, NIST.",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir6196-1.pdf",
+   "doi": "10.6028/NIST.IR.6196-1",
+   "licence": "US Government work (NIST/NBS staff); not subject to copyright protection in the United States (17 U.S.C. 105). Free to reuse; cite NIST."
+  },
+  "FDSVG": {
+   "citation": "McGrattan, K. et al. FDS Validation Guide (NIST SP 1018-3), LaTeX source Manuals/FDS_Validation_Guide/Experiment_Chapter.tex and Ceiling_Jet_Chapter.tex at firemodels/fds@b7dc77f786077265ceccc35b32323a06430c9357",
+   "doi": "10.6028/NIST.SP.1018 (Crossref returns the FDS version 4 record, 2006; not the current edition)",
+   "licence": "NIST software/data licence notice in LICENSE.md: NIST-developed material is not subject to copyright protection in the United States; use, copy, modify and distribute with the notice kept and NIST acknowledged; provided AS IS."
+  },
+  "FDSIN": {
+   "citation": "FDS validation input files, Validation/<set>/FDS_Input_Files/*.fds at firemodels/fds@b7dc77f786077265ceccc35b32323a06430c9357",
+   "licence": "NIST software/data licence notice in LICENSE.md: NIST-developed material is not subject to copyright protection in the United States; use, copy, modify and distribute with the notice kept and NIST acknowledged; provided AS IS."
+  },
+  "EXP": {
+   "citation": "Fire Research Division Experimental Database, github.com/firemodels/exp at firemodels/exp@704e0d91f15088ae41c6a30a662a7524bf5ff4e8",
+   "licence": "NIST software/data licence notice in LICENSE.md: NIST-developed material is not subject to copyright protection in the United States; use, copy, modify and distribute with the notice kept and NIST acknowledged; provided AS IS. (exp/LICENSE.md, same text as fds)."
+  },
+  "CFASTIN": {
+   "citation": "CFAST validation inputs Validation/Vettori_Flat/Test_N.in, firemodels/cfast master (raw files fetched 2026-11-07)",
+   "licence": "NIST software/data licence notice in LICENSE.md: NIST-developed material is not subject to copyright protection in the United States; use, copy, modify and distribute with the notice kept and NIST acknowledged; provided AS IS. (cfast/LICENSE.md)"
+  },
+  "BITTERN2004": {
+   "citation": "Bittern, A. (2004) Analysis of FDS Predicted Sprinkler Activation Times with Experiments. Fire Engineering Research Report, University of Canterbury.",
+   "url": "https://ir.canterbury.ac.nz/handle/10092/14748",
+   "licence": "Unknown (university repository; could not be opened). Treat as copyrighted."
+  }
+ },
+ "datasets": {
+  "vettori_flat_1998": {
+   "id": "vettori_flat_1998",
+   "title": "Vettori flat ceiling: residential pendent heads, smooth or joisted ceiling, t-squared methane burner (NISTIR 6253)",
+   "sources": ["NISTIR6253","FDSVG","FDSIN","EXP","CFASTIN"],
+   "licence": "All sources NIST: public domain in the US (report) and NIST licence notice (repositories).",
+   "frame": "FDS input frame: x along the 9.2 m length, y across the 5.6 m width, z up from the floor; origin at the corner where the corner burner sits (FDS Vettori_*.fds).",
+   "enclosure": {
+    "length_x_m": {
+     "value": 9.2,
+     "source": "NISTIR 6253 sec. 2 and Fig. 1"
+    },
+    "width_y_m": {
+     "value": 5.6,
+     "source": "NISTIR 6253 sec. 2 and Fig. 1"
+    },
+    "ceiling_height_smooth_m": {
+     "value": 2.44,
+     "source": "8 ft; NISTIR 6253 sec. 2 says 2.4 m; 2.44 m from the 0.9 m-below-ceiling TC being at '1.54 m elevation' (Tables 4-5) and FDS mesh top 2.44 m"
+    },
+    "ceiling_type": {
+     "value": "smooth: 12.7 mm gypsum board over the joists; obstructed: gypsum removed exposing 0.038 m x 0.24 m wood joists at 0.41 m on centre spanning the 5.6 m width (joists along y), plywood deck on top; effective floor-to-deck height 2.7 m",
+     "source": "NISTIR 6253 sec. 2 and 4.2; FDSIN joist OBSTs x every 0.4048 m"
+    },
+    "joists": {
+     "width_m": {
+      "value": 0.038,
+      "source": "NISTIR 6253 sec. 2"
+     },
+     "depth_m": {
+      "value": 0.24,
+      "source": "NISTIR 6253 sec. 2"
+     },
+     "spacing_on_centre_m": {
+      "value": 0.41,
+      "source": "NISTIR 6253 sec. 2"
+     },
+     "deck_height_m": {
+      "value": 2.64,
+      "source": "FDSIN obstructed mesh top 2.64 m (report: effective height 2.7 m, sec. 4.2)"
+     }
+    },
+    "steel_I_beam": {
+     "value": {
+      "width_m": 0.1,
+      "depth_m": 0.18,
+      "runs_along": "x (full 9.2 m)",
+      "y_m": [2.72,2.8],
+      "z_m": [2.22,2.4]
+     },
+     "source": "NISTIR 6253 sec. 2 (0.10 x 0.18 m I beam along the length, supporting the joists); position from FDSIN OBST (present in smooth and obstructed inputs). It separates heads 1-2 from heads 3-4."
+    },
+    "door": {
+     "value": {
+      "width_m": 0.91,
+      "height_m": 2.1,
+      "state": "closed in all 45 tests",
+      "gap_under_door_m": 0.025,
+      "location": "x = 9.2 m wall, starting 1.6 m from the y = 0 wall (Fig. 1)"
+     },
+     "source": "NISTIR 6253 sec. 2 and Fig. 1; CFAST inputs model it as a closed 0.91 x 2.1 m vent plus a 0.91 x 0.025 m slot"
+    },
+    "stairwell_opening": {
+     "value": {
+      "x_m": [8.3,9.2],
+      "y_m": [2.9,5.6],
+      "leads_to": "upper floor of the same plan, no vent"
+     },
+     "source": "NISTIR 6253 sec. 2 and Fig. 1 (0.9 x 2.7 m stair). FDSIN puts an OPEN vent there at z = 2.64 m (active only in the obstructed inputs); CFAST uses a 1.5588 m2 ceiling vent to outside"
+    },
+    "walls_floor": {
+     "value": "wood frame with 12.7 mm gypsum board; concrete floor",
+     "source": "NISTIR 6253 sec. 2"
+    }
+   },
+   "fire": {
+    "fuel": {
+     "value": "methane, >= 98 % (technical grade), piloted",
+     "source": "NISTIR 6253 sec. 2.3"
+    },
+    "burner_size_m": {
+     "value": {
+      "x": 0.7,
+      "y": 1,
+      "height": 0.31
+     },
+     "source": "NISTIR 6253 sec. 2.3 (0.7 x 1.0 x 0.31 m); FDS uses a 0.6 x 0.6 m HRRPUA vent on a 0.7 x 1.0 x 0.3 m block"
+    },
+    "fire_to_ceiling_m": {
+     "value": 2.1,
+     "source": "NISTIR 6253 abstract (burner 2.1 m below the ceiling)"
+    },
+    "positions": {
+     "value": {
+      "detached": "block x 4.30-5.00, y 1.00-2.00",
+      "wall": "block x 4.30-5.00, y 0-1.00 (0.7 m side on the wall)",
+      "corner": "block x 0-0.70, y 0-1.00"
+     },
+     "source": "FDSIN OBST per position; Fig. 1 and 5 of NISTIR 6253"
+    },
+    "nominal_t_squared_alpha_kW_per_s2": {
+     "value": {
+      "fast": 0.0468,
+      "medium": 0.0117,
+      "slow": 0.00293
+     },
+     "source": "NISTIR 6253 sec. 2.3 (1055 kW at 150, 300, 600 s); calibration Fig. 4 follows these curves"
+    },
+    "tabulated_ramp_kW": {
+     "fast": {
+      "value": [[0,0],[5,57],[10,74.9],[15,109.7],[20,126.6],[25,163.5],[30,173],[35,192],[40,196.2],[45,216.2],[50,271.1],[55,309.1],[60,378.7],[65,443],[70,514.7],[75,591.7],[80,673],[85,759.5],[90,852.3],[95,949.3],[100,1052.7]],
+      "source": "FDSIN Vettori_SMOOTH_OPEN_FAST.fds RAMP x HRRPUA 2930 kW/m2 x 0.36 m2 burner vent (same values as FDS VG Table Vettori_Ramps and the CFAST inputs)"
+     },
+     "medium": {
+      "value": [[0,0],[5,9.5],[10,20],[15,25.3],[20,33.8],[25,42.2],[30,50.6],[35,59.1],[40,66.5],[45,77],[50,83.3],[55,93.9],[60,104.4],[65,117.1],[70,124.5],[75,134],[80,143.5],[85,152.9],[90,162.4],[95,169.8],[100,174],[105,181.4],[110,192],[115,209.9],[120,239.4],[125,258.4],[130,279.5],[135,301.7],[140,324.9],[145,349.1],[150,373.4],[155,398.7],[160,424],[165,450.4],[170,478.9],[175,508.4],[180,536.9],[185,567.5],[190,599.1],[195,630.8],[200,663.5],[205,663.5],[210,663.5],[215,663.5],[220,663.5],[225,663.5],[230,663.5],[235,663.5],[240,663.5],[245,663.5],[250,663.5],[255,663.5],[260,663.5],[265,663.5],[270,663.5],[275,663.5],[280,663.5],[285,663.5],[290,663.5],[295,663.5],[300,663.5],[305,663.5],[310,663.5],[315,663.5],[320,663.5],[325,663.5],[330,663.5],[335,663.5],[340,663.5],[345,663.5],[350,663.5],[355,663.5],[360,663.5],[365,663.5],[370,663.5]],
+      "source": "FDSIN Vettori_SMOOTH_OPEN_MED.fds RAMP x HRRPUA 2930 kW/m2 x 0.36 m2 burner vent (same values as FDS VG Table Vettori_Ramps and the CFAST inputs)"
+     },
+     "slow": {
+      "value": [[0,0],[5,6.3],[10,9.5],[15,12.7],[20,15.8],[25,20],[30,23.2],[35,26.4],[40,29.5],[45,32.7],[50,34.8],[55,41.1],[60,42.2],[65,49.6],[70,51.7],[75,55.9],[80,62.2],[85,65.4],[90,68.6],[95,74.9],[100,78.1],[105,80.2],[110,85.4],[115,86.5],[120,93.9],[125,97],[130,100.2],[135,105.5],[140,108.6],[145,111.8],[150,115],[155,121.3],[160,124.5],[165,129.7],[170,137.1],[175,143.5],[180,147.7],[185,155.1],[190,163.5],[195,170.9],[200,179.3],[205,186.7],[210,195.1],[215,203.6],[220,213.1],[225,221.5],[230,231],[235,239.4],[240,250],[245,258.4],[250,269],[255,278.5],[260,290.1],[265,299.6],[270,311.2],[275,320.7],[280,333.3],[285,343.9],[290,354.4],[295,367.1],[300,377.6],[305,390.3],[310,401.9],[315,414.5],[320,427.2],[325,439.9],[330,452.5],[335,466.2],[340,478.9],[345,491.5],[350,506.3],[355,520],[360,533.7],[365,547.4],[370,562.2]],
+      "source": "FDSIN Vettori_SMOOTH_OPEN_SLOW.fds RAMP x HRRPUA 2930 kW/m2 x 0.36 m2 burner vent (same values as FDS VG Table Vettori_Ramps and the CFAST inputs)"
+     }
+    },
+    "ramp_discrepancy": {
+     "value": "The FDS/CFAST tabulated ramps are about 2 to 2.5 times the nominal alpha t^2 at the activation times (fast: 196 kW vs 75 kW at 40 s; reaches 1053 kW at 100 s, not 150 s). The FDS VG calls them 'the actual heat release rate'; NISTIR 6253 gives no per-test HRR. Origin not found.",
+     "source": "comparison of FDS VG Table Vettori_Ramps with NISTIR 6253 sec. 2.3 and Fig. 4"
+    },
+    "burner_shutoff": {
+     "value": "not stated in NISTIR 6253; in the companion NISTIR 7079 series gas was shut off at the first activation (2-4 s). Later activations may be after shut-off.",
+     "source": "NISTIR 7079 sec. 7.2"
+    }
+   },
+   "sprinkler": {
+    "type": {
+     "value": "quick-response residential pendent, 3 mm glass bulb, one manufacturer and model",
+     "source": "NISTIR 6253 sec. 2.2 and App. A"
+    },
+    "RTI_m05_s05": {
+     "value": 55,
+     "source": "NISTIR 6253 sec. 2.2 (55 (m s)^1/2, 100 (ft s)^1/2); UL App. A: mean 55.78 frame arms perpendicular to flow, 64.29 at 25 deg; FDS inputs use 56",
+     "alt": {
+      "UL_perpendicular": 55.78,
+      "UL_25deg": 64.29,
+      "FDS_input": 56
+     }
+    },
+    "C_m05_per_s05": {
+     "value": 0.25,
+     "source": "NISTIR 6253 App. A (UL 96NK9527): prolonged plunge at 128 C, all three samples operated at zero velocity (804, 252, 724 s), so C = 0.25 assigned per ISO 6182-1 note. FDS inputs set no C (FDS default 0)."
+    },
+    "activation_C": {
+     "value": 68,
+     "source": "NISTIR 6253 sec. 2.2 (68 +- 2.4 C)",
+     "tolerance_C": 2.4
+    },
+    "link_below_ceiling_m": {
+     "value": {
+      "smooth": 0.025,
+      "obstructed_below_joist_bottom": 0.037,
+      "obstructed_below_deck": 0.27
+     },
+     "source": "NISTIR 6253 sec. 2.2 and 4.2 (bulb centre 25 mm below gypsum; 37 mm below joists; 0.27 m below the deck). FDSIN places heads at z = 2.375 m in both."
+    },
+    "flowing": {
+     "value": false,
+     "source": "NISTIR 6253 sec. 2.2: dry pipe with 25 ml water, air at ~100 kPa; pressure switch timed activation to +-0.1 s"
+    },
+    "positions_xy_m": {
+     "value": {
+      "1": [2.4,1.4],
+      "2": [6.8,1.4],
+      "3": [6.8,4.2],
+      "4": [2.4,4.2]
+     },
+     "source": "FDSIN DEVC; NISTIR 6253 Fig. 1 (2.4 m and 4.4 m along x; 1.4 m and 2.8 m across)"
+    },
+    "head_note": {
+     "value": "Velocity probes only at heads 1 and 2 (25, 75, 125, 250 mm below ceiling); 12 TCs per head 0-900 mm below ceiling.",
+     "source": "NISTIR 6253 sec. 2.1"
+    }
+   },
+   "uncertainty": {
+    "value": {
+     "temperature_C": 2.2,
+     "velocity_m_per_s": 0.1,
+     "activation_s": 0.1
+    },
+    "source": "NISTIR 6253 sec. 2.1-2.2 (standard uncertainties)"
+   },
+   "chosen": {
+    "value": [1,2,3,6,7,8,11,12,13],
+    "source": "smooth ceiling, detached burner (data note section 9: 6-8 and 11-13; 1-3 added, the fast ramp)"
+   },
+   "tests": [
+    {
+     "test": 1,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "fast",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_FAST.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 16.6,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_1.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 1,
+       "time_s": 46
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 46.4,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-1-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 116,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.21,
+        "source": "EXP Vettori_Flat_Ceiling_Test_01.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 100.8,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 231.6,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 51,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-1-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 114.4,
+        "source": "EXP Vettori_Flat_Ceiling_Test_01.csv TC_2_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 0.82,
+        "source": "EXP Vettori_Flat_Ceiling_Test_01.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 121.7,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 278.7,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 41,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 69,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    },
+    {
+     "test": 2,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "fast",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_FAST.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 19,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_2.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 1,
+       "time_s": 43
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 43.3,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-2-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 118,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.63,
+        "source": "EXP Vettori_Flat_Ceiling_Test_02.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 87.7,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 209.4,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 46.3,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-2-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 128.5,
+        "source": "EXP Vettori_Flat_Ceiling_Test_02.csv TC_2_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.06,
+        "source": "EXP Vettori_Flat_Ceiling_Test_02.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 100.3,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 230.5,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 38,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 68,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    },
+    {
+     "test": 3,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "fast",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_FAST.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 20.8,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_3.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 1,
+       "time_s": 41
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 41,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-3-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 108,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.53,
+        "source": "EXP Vettori_Flat_Ceiling_Test_03.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 78.7,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 200.2,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 44.3,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-3-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 131.8,
+        "source": "EXP Vettori_Flat_Ceiling_Test_03.csv TC_2_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 2.03,
+        "source": "EXP Vettori_Flat_Ceiling_Test_03.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 91.8,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 213.4,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 40,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 72,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    },
+    {
+     "test": 6,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "medium",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_MED.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 17.1,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_6.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 1,
+       "time_s": 88
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 88.2,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-6-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 102,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.68,
+        "source": "EXP Vettori_Flat_Ceiling_Test_06.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 91,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 159,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 92.8,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-6-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 125.3,
+        "source": "EXP Vettori_Flat_Ceiling_Test_06.csv TC_2_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.38,
+        "source": "EXP Vettori_Flat_Ceiling_Test_06.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 100.8,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 166.6,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 52,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 77,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    },
+    {
+     "test": 7,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "medium",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_MED.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 21.6,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_7.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 1,
+       "time_s": 67
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 67,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-7-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 108,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.65,
+        "source": "EXP Vettori_Flat_Ceiling_Test_07.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 52.5,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 120,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 68.2,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-7-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 128.2,
+        "source": "EXP Vettori_Flat_Ceiling_Test_07.csv TC_2_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.6,
+        "source": "EXP Vettori_Flat_Ceiling_Test_07.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 54.4,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 121.8,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 50,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 73,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    },
+    {
+     "test": 8,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "medium",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_MED.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 21.8,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_8.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 1,
+       "time_s": 78
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 77.6,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-8-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 111,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.47,
+        "source": "EXP Vettori_Flat_Ceiling_Test_08.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 70.5,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 138.9,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 79,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-8-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 126,
+        "source": "EXP Vettori_Flat_Ceiling_Test_08.csv TC_2_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.24,
+        "source": "EXP Vettori_Flat_Ceiling_Test_08.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 73,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 141.6,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 53,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 74,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    },
+    {
+     "test": 11,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "slow",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_SLOW.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 18.1,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_11.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 2,
+       "time_s": 100
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 100.4,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-11-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 108.9,
+        "source": "EXP Vettori_Flat_Ceiling_Test_11.csv TC_1_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.57,
+        "source": "EXP Vettori_Flat_Ceiling_Test_11.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 29.5,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 78.2,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 100.2,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-11-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 118,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.78,
+        "source": "EXP Vettori_Flat_Ceiling_Test_11.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 29.4,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 78.1,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 55,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 75,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    },
+    {
+     "test": 12,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "slow",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_SLOW.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 21,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_12.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 1,
+       "time_s": 117
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 116.6,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-12-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 100,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.1,
+        "source": "EXP Vettori_Flat_Ceiling_Test_12.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 39.8,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 88.9,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 127.3,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-12-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 108.7,
+        "source": "EXP Vettori_Flat_Ceiling_Test_12.csv TC_2_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.61,
+        "source": "EXP Vettori_Flat_Ceiling_Test_12.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 47.5,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 98.5,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 52,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 73,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    },
+    {
+     "test": 13,
+     "ceiling": "smooth",
+     "burner_position": "detached",
+     "growth": "slow",
+     "fds_input": {
+      "value": "Vettori_SMOOTH_OPEN_SLOW.fds",
+      "source": "FDSIN Vettori_Flat_Ceiling"
+     },
+     "ambient_C": {
+      "value": 22,
+      "source": "CFASTIN Validation/Vettori_Flat/Test_13.in INTERIOR_TEMPERATURE"
+     },
+     "burner_centre_xy_m": {
+      "value": [4.65,1.5],
+      "source": "derived: centre of FDS burner OBST [4.3, 5.0, 1.0, 2.0, 0.0, 0.3]"
+     },
+     "first_activation": {
+      "value": {
+       "head": 1,
+       "time_s": 116
+      },
+      "source": "NISTIR 6253 Table 1"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "r_from_burner_centre_m": {
+        "value": 2.25,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 116.2,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-13-1 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 93,
+        "source": "NISTIR 6253 Table 3 (TC at the head, 25 mm below ceiling)"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.23,
+        "source": "EXP Vettori_Flat_Ceiling_Test_13.csv |BDP_1_01| (bi-directional probe 25 mm below ceiling at head 1), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 39.6,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 88.3,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 121.3,
+        "source": "EXP Vettori_Flat_Ceiling_Act.csv column Time-13-2 (Appendix B of NISTIR 6253 / Table 1)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 106.8,
+        "source": "EXP Vettori_Flat_Ceiling_Test_13.csv TC_2_02 (25 mm below ceiling) linearly interpolated; ~7 s sampling"
+       },
+       "ceiling_jet_speed_at_activation_m_per_s": {
+        "value": 1.08,
+        "source": "EXP Vettori_Flat_Ceiling_Test_13.csv |BDP_2_01| (bi-directional probe 25 mm below ceiling at head 2), linearly interpolated; ~7 s sampling; +-0.1 m/s probe uncertainty"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 43.1,
+         "source": "derived: alpha t^2, alpha from NISTIR 6253 sec. 2.3"
+        },
+        "fds_ramp": {
+         "value": 94.7,
+         "source": "derived: FDS/CFAST ramp (FDS VG Table Vettori_Ramps) at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "r_from_burner_centre_m": {
+        "value": 3.45,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      },
+      {
+       "head": 4,
+       "r_from_burner_centre_m": {
+        "value": 3.51,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "not in EXP Act.csv: no activation recorded (burner shut off after first activation is likely)"
+       }
+      }
+     ],
+     "avg_T_at_1p54m_elevation_at_activation_C": {
+      "value": 53,
+      "source": "NISTIR 6253 Table 4 (mean of the four 900 mm-below-ceiling TCs)"
+     },
+     "avg_T_at_1p89m_elevation_at_activation_C": {
+      "value": 71,
+      "source": "NISTIR 6253 Table 5 (mean of the four 550 mm-below-ceiling TCs)"
+     }
+    }
+   ],
+   "gaps": [
+    "No per-test measured HRR; the two ramp sources disagree (see fire.ramp_discrepancy).",
+    "No velocity at heads 3 and 4; velocity CSV samples are ~7 s apart.",
+    "Burner shut-off time after first activation not given in NISTIR 6253."
+   ]
+  },
+  "vettori_sloped_2003": {
+   "id": "vettori_sloped_2003",
+   "title": "Vettori sloped and beamed ceilings: residential pendent heads, flat/13/24 deg, smooth or two beams (NISTIR 7079)",
+   "sources": ["NISTIR7079","FDSVG","FDSIN","EXP"],
+   "licence": "All sources NIST (public domain report; NIST licence notice for repositories).",
+   "frame": "FDS input frame: x along the 7.3 m width (front wall), y from the front (door) wall y = 0 to the rear wall y = 5.5 m, z up. Sloped cases raise the front (y = 0) edge of the ceiling.",
+   "enclosure": {
+    "width_x_m": {
+     "value": 7.3,
+     "source": "NISTIR 7079 sec. 2"
+    },
+    "depth_y_m": {
+     "value": 5.5,
+     "source": "NISTIR 7079 sec. 2"
+    },
+    "ceiling_height_flat_m": {
+     "value": 2.45,
+     "source": "NISTIR 7079 Fig. 5 (2.45 m; text says 2.4 m); FDSIN mesh top 2.45 m"
+    },
+    "slope": {
+     "value": {
+      "13deg": "front edge raised 1.25 m (front wall 3.70 m)",
+      "24deg": "front edge raised 2.5 m (front wall 4.95 m)",
+      "direction": "ceiling slopes down from the front (door) wall to the rear wall"
+     },
+     "source": "NISTIR 7079 sec. 2 and Fig. 5; FDSIN"
+    },
+    "beams": {
+     "value": {
+      "count": 2,
+      "width_m": 0.2,
+      "depth_m": 0.25,
+      "runs": "front to rear (along y)",
+      "x_m": [[2.3,2.5],[4.8,5]],
+      "bays_m": 2.3
+     },
+     "source": "NISTIR 7079 sec. 2 (0.20 x 0.25 m, three equal 2.3 m bays); x from FDSIN"
+    },
+    "door": {
+     "value": {
+      "width_m": 1,
+      "height_m": 2.1,
+      "state": "open",
+      "x_m": [3.15,4.15],
+      "wall": "front, y = 0"
+     },
+     "source": "NISTIR 7079 sec. 2 (1 m x 2.1 m entrance); FDSIN OPEN vent (2.2 m tall)"
+    },
+    "walls_floor": {
+     "value": "wood frame, 12.7 mm gypsum walls and ceiling, 12.7 mm plywood floor",
+     "source": "NISTIR 7079 sec. 2"
+    }
+   },
+   "fire": {
+    "fuel": {
+     "value": "methane >= 95 %, piloted rectangular burner 0.7 x 1.0 m, 0.3 m high",
+     "source": "NISTIR 7079 sec. 2.3"
+    },
+    "nominal_t_squared_alpha_kW_per_s2": {
+     "value": {
+      "fast": 0.0468,
+      "slow": 0.00293
+     },
+     "source": "NISTIR 7079 sec. 2.3; Fig. 10 calibration"
+    },
+    "tabulated_ramp": {
+     "value": "same FAST and SLOW tables as the flat-ceiling set (HRRPUA 2930 x 0.36 m2)",
+     "source": "FDSIN; FDS VG sec. Vettori Sloped"
+    },
+    "positions": {
+     "value": {
+      "detached": "block x 3.3-4.0, y 2.25-3.25",
+      "wall": "block x 3.3-4.0, y 4.5-5.5 (rear wall)",
+      "corner": "block x 6.6-7.3, y 0-1.0 (front right)"
+     },
+     "source": "FDSIN OBST; Vettori_Sloped_Naming.txt"
+    },
+    "burner_shutoff": {
+     "value": "gas shut off at first activation, taking 2-4 s; further heads often opened in that time",
+     "source": "NISTIR 7079 sec. 7.2"
+    }
+   },
+   "sprinkler": {
+    "type": {
+     "value": "quick-response residential pendent, glass bulb, fully exposed",
+     "source": "NISTIR 7079 sec. 2.2"
+    },
+    "RTI_m05_s05": {
+     "value": 56,
+     "source": "NISTIR 7079 sec. 2.2 (56 (m s)^1/2, 100 (ft s)^1/2)"
+    },
+    "C_m05_per_s05": {
+     "value": null,
+     "source": "not reported in NISTIR 7079; FDS inputs set none (default 0). If the same model as NISTIR 6253, C = 0.25 (not confirmed)"
+    },
+    "activation_C": {
+     "value": 68,
+     "source": "NISTIR 7079 sec. 2.2 (68 +- 2.4 C)"
+    },
+    "link_below_ceiling_m": {
+     "value": 0.025,
+     "source": "NISTIR 7079 sec. 2.2 (bulb centre 25 mm below the gypsum ceiling)"
+    },
+    "flowing": {
+     "value": false,
+     "source": "NISTIR 7079 sec. 2.2 (air-pressurised, 25 ml water)"
+    },
+    "positions_xy_m": {
+     "value": {
+      "1": [1.85,1.25],
+      "2": [5.5,1.25],
+      "3": [5.5,4.25],
+      "4": [1.85,4.25]
+     },
+     "source": "FDSIN; heads keep the same plan position relative to the floor as the slope changes (Tables 1-2 of the report give the along-slope shifts)"
+    },
+    "height_m": {
+     "value": {
+      "flat": 2.425,
+      "13deg": {
+       "1,2": 3.375,
+       "3,4": 2.695
+      },
+      "24deg": {
+       "1,2": 4.325,
+       "3,4": 2.975
+      }
+     },
+     "source": "FDSIN DEVC z; NISTIR 7079 Tables 1-2 (+0.95/+1.90 m for heads 1-2, +0.27/+0.55 m for 3-4)"
+    }
+   },
+   "uncertainty": {
+    "value": {
+     "activation_relative": 0.16,
+     "temperature_relative": 0.23,
+     "velocity_relative": 0.25,
+     "hrr_relative": 0.24
+    },
+    "source": "NISTIR 7079 Table 4 (expanded, k = 2)"
+   },
+   "chosen": {
+    "value": [1,2,3,4,13,14,15,16],
+    "source": "flat ceiling, detached burner, smooth (1-4) and two beams (13-16) (data note section 9)"
+   },
+   "tests": [
+    {
+     "test": 1,
+     "code": "FSFD",
+     "slope_deg": 0,
+     "ceiling": "smooth",
+     "growth": "fast",
+     "burner_position": "detached",
+     "fds_input": {
+      "value": "Vettori_Sloped_FSFD.fds",
+      "source": "FDSIN Vettori_Sloped_Ceiling"
+     },
+     "ambient_C": {
+      "value": 20,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "ignition_time_in_data_file_s": {
+      "value": 82,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "burner_centre_xy_m": {
+      "value": [3.65,2.75],
+      "source": "derived: centre of FDS burner OBST [3.3, 4.0, 2.25, 3.25, 0.0, 0.3]"
+     },
+     "ceiling_top_of_domain_m": {
+      "value": 2.45,
+      "source": "FDSIN mesh top (front-wall ceiling height for sloped cases)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "xyz_m": {
+        "value": [1.85,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSFD.fds DEVC SPK_1"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 71,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 1' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 114.6,
+        "source": "EXP Vettori_Sloped_01.csv TC_1_1 (25 mm below ceiling) at t = 71 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 75.9
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 235.9,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 530.1,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "xyz_m": {
+        "value": [5.5,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSFD.fds DEVC SPK_2"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 70,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 2' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 130,
+        "source": "EXP Vettori_Sloped_01.csv TC_2_1 (25 mm below ceiling) at t = 70 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 46.8
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 229.3,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 514.7,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "xyz_m": {
+        "value": [5.5,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSFD.fds DEVC SPK_3"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 3' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 4,
+       "xyz_m": {
+        "value": [1.85,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSFD.fds DEVC SPK_4"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 4' (= Time Elapsed - Ignition Time)"
+       }
+      }
+     ]
+    },
+    {
+     "test": 2,
+     "code": "FSFD",
+     "slope_deg": 0,
+     "ceiling": "smooth",
+     "growth": "fast",
+     "burner_position": "detached",
+     "fds_input": {
+      "value": "Vettori_Sloped_FSFD.fds",
+      "source": "FDSIN Vettori_Sloped_Ceiling"
+     },
+     "ambient_C": {
+      "value": 20,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "ignition_time_in_data_file_s": {
+      "value": 92,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "burner_centre_xy_m": {
+      "value": [3.65,2.75],
+      "source": "derived: centre of FDS burner OBST [3.3, 4.0, 2.25, 3.25, 0.0, 0.3]"
+     },
+     "ceiling_top_of_domain_m": {
+      "value": 2.45,
+      "source": "FDSIN mesh top (front-wall ceiling height for sloped cases)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "xyz_m": {
+        "value": [1.85,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSFD.fds DEVC SPK_1"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 60,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 1' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 125.3,
+        "source": "EXP Vettori_Sloped_02.csv TC_1_1 (25 mm below ceiling) at t = 60 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 88.2
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 168.5,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 378.7,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "xyz_m": {
+        "value": [5.5,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSFD.fds DEVC SPK_2"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 2' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 3,
+       "xyz_m": {
+        "value": [5.5,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSFD.fds DEVC SPK_3"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 66,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 3' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 119.6,
+        "source": "EXP Vettori_Sloped_02.csv TC_3_1 (25 mm below ceiling) at t = 66 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 84.9
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 203.9,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 457.4,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 4,
+       "xyz_m": {
+        "value": [1.85,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSFD.fds DEVC SPK_4"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 66,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 4' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 158.8,
+        "source": "EXP Vettori_Sloped_02.csv TC_4_1 (25 mm below ceiling) at t = 66 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 93.6
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 203.9,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 457.4,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "test": 3,
+     "code": "FSSD",
+     "slope_deg": 0,
+     "ceiling": "smooth",
+     "growth": "slow",
+     "burner_position": "detached",
+     "fds_input": {
+      "value": "Vettori_Sloped_FSSD.fds",
+      "source": "FDSIN Vettori_Sloped_Ceiling"
+     },
+     "ambient_C": {
+      "value": 21,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "ignition_time_in_data_file_s": {
+      "value": 113,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "burner_centre_xy_m": {
+      "value": [3.65,2.75],
+      "source": "derived: centre of FDS burner OBST [3.3, 4.0, 2.25, 3.25, 0.0, 0.3]"
+     },
+     "ceiling_top_of_domain_m": {
+      "value": 2.45,
+      "source": "FDSIN mesh top (front-wall ceiling height for sloped cases)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "xyz_m": {
+        "value": [1.85,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSSD.fds DEVC SPK_1"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 206,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 1' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 117.9,
+        "source": "EXP Vettori_Sloped_03.csv TC_1_1 (25 mm below ceiling) at t = 206 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 77
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 124.3,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 188.4,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "xyz_m": {
+        "value": [5.5,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSSD.fds DEVC SPK_2"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 218,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 2' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 96.3,
+        "source": "EXP Vettori_Sloped_03.csv TC_2_1 (25 mm below ceiling) at t = 218 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 52.8
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 139.2,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 209.3,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "xyz_m": {
+        "value": [5.5,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSSD.fds DEVC SPK_3"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 207,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 3' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 137,
+        "source": "EXP Vettori_Sloped_03.csv TC_3_1 (25 mm below ceiling) at t = 207 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 80.6
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 125.5,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 190.1,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 4,
+       "xyz_m": {
+        "value": [1.85,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSSD.fds DEVC SPK_4"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 208,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 4' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 130.7,
+        "source": "EXP Vettori_Sloped_03.csv TC_4_1 (25 mm below ceiling) at t = 208 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 16.3
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 126.8,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 191.8,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "test": 4,
+     "code": "FSSD",
+     "slope_deg": 0,
+     "ceiling": "smooth",
+     "growth": "slow",
+     "burner_position": "detached",
+     "fds_input": {
+      "value": "Vettori_Sloped_FSSD.fds",
+      "source": "FDSIN Vettori_Sloped_Ceiling"
+     },
+     "ambient_C": {
+      "value": 22,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "ignition_time_in_data_file_s": {
+      "value": 109,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "burner_centre_xy_m": {
+      "value": [3.65,2.75],
+      "source": "derived: centre of FDS burner OBST [3.3, 4.0, 2.25, 3.25, 0.0, 0.3]"
+     },
+     "ceiling_top_of_domain_m": {
+      "value": 2.45,
+      "source": "FDSIN mesh top (front-wall ceiling height for sloped cases)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "xyz_m": {
+        "value": [1.85,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSSD.fds DEVC SPK_1"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 212,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 1' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 110.2,
+        "source": "EXP Vettori_Sloped_04.csv TC_1_1 (25 mm below ceiling) at t = 212 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 42.9
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 131.7,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 198.5,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "xyz_m": {
+        "value": [5.5,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSSD.fds DEVC SPK_2"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 211,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 2' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 44.5,
+        "source": "EXP Vettori_Sloped_04.csv TC_2_1 (25 mm below ceiling) at t = 211 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 4.3,
+        "suspect": "reading below the 68 C rating at activation, or no wetting drop after it: TC or time base doubtful for this head; do not use"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 130.4,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 196.8,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 3,
+       "xyz_m": {
+        "value": [5.5,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSSD.fds DEVC SPK_3"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 214,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 3' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 131.3,
+        "source": "EXP Vettori_Sloped_04.csv TC_3_1 (25 mm below ceiling) at t = 214 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 82.3
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 134.2,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 201.9,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 4,
+       "xyz_m": {
+        "value": [1.85,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FSSD.fds DEVC SPK_4"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 4' (= Time Elapsed - Ignition Time)"
+       }
+      }
+     ]
+    },
+    {
+     "test": 13,
+     "code": "FOFD",
+     "slope_deg": 0,
+     "ceiling": "obstructed (two beams)",
+     "growth": "fast",
+     "burner_position": "detached",
+     "fds_input": {
+      "value": "Vettori_Sloped_FOFD.fds",
+      "source": "FDSIN Vettori_Sloped_Ceiling"
+     },
+     "ambient_C": {
+      "value": 21,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "ignition_time_in_data_file_s": {
+      "value": 96,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "burner_centre_xy_m": {
+      "value": [3.65,2.75],
+      "source": "derived: centre of FDS burner OBST [3.3, 4.0, 2.25, 3.25, 0.0, 0.3]"
+     },
+     "ceiling_top_of_domain_m": {
+      "value": 2.45,
+      "source": "FDSIN mesh top (front-wall ceiling height for sloped cases)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "xyz_m": {
+        "value": [1.85,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOFD.fds DEVC SPK_1"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 76,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 1' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 164.5,
+        "source": "EXP Vettori_Sloped_13.csv TC_1_1 (25 mm below ceiling) at t = 76 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 110
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 270.3,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 608,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "xyz_m": {
+        "value": [5.5,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOFD.fds DEVC SPK_2"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 2' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 3,
+       "xyz_m": {
+        "value": [5.5,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOFD.fds DEVC SPK_3"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 76,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 3' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 179.2,
+        "source": "EXP Vettori_Sloped_13.csv TC_3_1 (25 mm below ceiling) at t = 76 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 29.3
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 270.3,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 608,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 4,
+       "xyz_m": {
+        "value": [1.85,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOFD.fds DEVC SPK_4"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 83,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 4' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 138.8,
+        "source": "EXP Vettori_Sloped_13.csv TC_4_1 (25 mm below ceiling) at t = 83 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": -0.3,
+        "suspect": "reading below the 68 C rating at activation, or no wetting drop after it: TC or time base doubtful for this head; do not use"
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 322.4,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 724.9,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "test": 14,
+     "code": "FOFD",
+     "slope_deg": 0,
+     "ceiling": "obstructed (two beams)",
+     "growth": "fast",
+     "burner_position": "detached",
+     "fds_input": {
+      "value": "Vettori_Sloped_FOFD.fds",
+      "source": "FDSIN Vettori_Sloped_Ceiling"
+     },
+     "ambient_C": {
+      "value": 22,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "ignition_time_in_data_file_s": {
+      "value": 95,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "burner_centre_xy_m": {
+      "value": [3.65,2.75],
+      "source": "derived: centre of FDS burner OBST [3.3, 4.0, 2.25, 3.25, 0.0, 0.3]"
+     },
+     "ceiling_top_of_domain_m": {
+      "value": 2.45,
+      "source": "FDSIN mesh top (front-wall ceiling height for sloped cases)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "xyz_m": {
+        "value": [1.85,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOFD.fds DEVC SPK_1"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 84,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 1' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 185.9,
+        "source": "EXP Vettori_Sloped_14.csv TC_1_1 (25 mm below ceiling) at t = 84 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 46.9
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 330.2,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 742.2,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 2,
+       "xyz_m": {
+        "value": [5.5,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOFD.fds DEVC SPK_2"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 2' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 3,
+       "xyz_m": {
+        "value": [5.5,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOFD.fds DEVC SPK_3"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 79,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 3' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 177.1,
+        "source": "EXP Vettori_Sloped_14.csv TC_3_1 (25 mm below ceiling) at t = 79 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 103.4
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 292.1,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 656.7,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 4,
+       "xyz_m": {
+        "value": [1.85,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOFD.fds DEVC SPK_4"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 79,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 4' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 160.9,
+        "source": "EXP Vettori_Sloped_14.csv TC_4_1 (25 mm below ceiling) at t = 79 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 94.9
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 292.1,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 656.7,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "test": 15,
+     "code": "FOSD",
+     "slope_deg": 0,
+     "ceiling": "obstructed (two beams)",
+     "growth": "slow",
+     "burner_position": "detached",
+     "fds_input": {
+      "value": "Vettori_Sloped_FOSD.fds",
+      "source": "FDSIN Vettori_Sloped_Ceiling"
+     },
+     "ambient_C": {
+      "value": 23,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "ignition_time_in_data_file_s": {
+      "value": 156,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "burner_centre_xy_m": {
+      "value": [3.65,2.75],
+      "source": "derived: centre of FDS burner OBST [3.3, 4.0, 2.25, 3.25, 0.0, 0.3]"
+     },
+     "ceiling_top_of_domain_m": {
+      "value": 2.45,
+      "source": "FDSIN mesh top (front-wall ceiling height for sloped cases)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "xyz_m": {
+        "value": [1.85,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOSD.fds DEVC SPK_1"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 1' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 2,
+       "xyz_m": {
+        "value": [5.5,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOSD.fds DEVC SPK_2"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 2' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 3,
+       "xyz_m": {
+        "value": [5.5,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOSD.fds DEVC SPK_3"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 216,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 3' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 138.7,
+        "source": "EXP Vettori_Sloped_15.csv TC_3_1 (25 mm below ceiling) at t = 216 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 92.9
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 136.7,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 205.5,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      },
+      {
+       "head": 4,
+       "xyz_m": {
+        "value": [1.85,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOSD.fds DEVC SPK_4"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 215,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 4' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 140.3,
+        "source": "EXP Vettori_Sloped_15.csv TC_4_1 (25 mm below ceiling) at t = 215 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 85.7
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 135.4,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 203.6,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "test": 16,
+     "code": "FOSD",
+     "slope_deg": 0,
+     "ceiling": "obstructed (two beams)",
+     "growth": "slow",
+     "burner_position": "detached",
+     "fds_input": {
+      "value": "Vettori_Sloped_FOSD.fds",
+      "source": "FDSIN Vettori_Sloped_Ceiling"
+     },
+     "ambient_C": {
+      "value": 23,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "ignition_time_in_data_file_s": {
+      "value": 157,
+      "source": "EXP Vettori_Sloped_Guide.csv"
+     },
+     "burner_centre_xy_m": {
+      "value": [3.65,2.75],
+      "source": "derived: centre of FDS burner OBST [3.3, 4.0, 2.25, 3.25, 0.0, 0.3]"
+     },
+     "ceiling_top_of_domain_m": {
+      "value": 2.45,
+      "source": "FDSIN mesh top (front-wall ceiling height for sloped cases)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "xyz_m": {
+        "value": [1.85,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOSD.fds DEVC SPK_1"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 1' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 2,
+       "xyz_m": {
+        "value": [5.5,1.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOSD.fds DEVC SPK_2"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 2' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 3,
+       "xyz_m": {
+        "value": [5.5,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOSD.fds DEVC SPK_3"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.38,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": null,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 3' (= Time Elapsed - Ignition Time)"
+       }
+      },
+      {
+       "head": 4,
+       "xyz_m": {
+        "value": [1.85,4.25,2.425],
+        "source": "FDSIN Vettori_Sloped_FOSD.fds DEVC SPK_4"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.34,
+        "source": "derived: FDS burner OBST centre to head (x,y)"
+       },
+       "activation_s": {
+        "value": 221,
+        "source": "EXP Vettori_Sloped_Guide.csv 'Activation 4' (= Time Elapsed - Ignition Time)"
+       },
+       "gas_T_at_head_at_activation_C": {
+        "value": 137.6,
+        "source": "EXP Vettori_Sloped_16.csv TC_4_1 (25 mm below ceiling) at t = 221 s (last 1 s sample at or before activation); time base from ignition, confirmed by the TC wetting drop 1-2 s after most activations",
+        "wetting_drop_within_4s_C": 79.8
+       },
+       "hrr_at_activation_kW": {
+        "nominal_t_squared": {
+         "value": 143.1,
+         "source": "derived: alpha t^2 (NISTIR 7079 sec. 2.3)"
+        },
+        "fds_ramp": {
+         "value": 214.8,
+         "source": "derived: FDS ramp at t_act"
+        }
+       }
+      }
+     ]
+    }
+   ],
+   "gaps": [
+    "Ceiling-jet velocities were measured (25 mm below ceiling) but are not in the exp CSVs; only Fig. 17 of the report shows one test.",
+    "C factor not reported.",
+    "No per-test HRR measurement."
+   ]
+  },
+  "bittern_2004": {
+   "id": "bittern_2004",
+   "title": "Bittern 2004 chair fires: two non-flowing heads, gypsum room 8 x 4 x 2.4 m, door open or closed",
+   "sources": ["FDSVG","FDSIN","EXP","BITTERN2004","WADE2007","HOPKIN2018"],
+   "licence": "Numbers from NIST repositories (NIST licence notice). The underlying thesis (University of Canterbury) and the Wade et al. 2007 / Hopkin et al. 2018 papers were not read; their licences are copyrighted or unknown.",
+   "frame": "Room frame: x along the 8.0 m length, y across 4.0 m, origin at the inner corner of the door wall (FDS input minus 0.1 m). The FDS input is the FDS VG sketch rotated 180 deg: head 1 is the one 2.0 m from the corner-chair end.",
+   "enclosure": {
+    "length_x_m": {
+     "value": 8,
+     "source": "FDS VG Fig. bit_plan; FDSIN mesh 0.1-8.1"
+    },
+    "width_y_m": {
+     "value": 4,
+     "source": "FDS VG Fig. bit_plan"
+    },
+    "ceiling_height_m": {
+     "value": 2.4,
+     "source": "FDSIN mesh top; Bittern abstract (8 x 4 x 2.4 m)"
+    },
+    "ceiling_type": {
+     "value": "smooth, flat, 10 mm gypsum plasterboard on timber frame",
+     "source": "FDS VG sec. Bittern"
+    },
+    "door": {
+     "value": {
+      "width_m": 0.8,
+      "height_m": 2.1,
+      "wall": "x = 0",
+      "y_m": [0.2,1],
+      "open_tests": "1-10",
+      "closed_tests": "12-22 (leakage 0.053 m2 spread over the door, modelling assumption)"
+     },
+     "source": "FDS VG sec. Bittern; door position from FDSIN VENT (x = 0.1, y 0.3-1.1)"
+    },
+    "floor": {
+     "value": "concrete",
+     "source": "FDS VG modelling notes"
+    }
+   },
+   "fire": {
+    "fuel": {
+     "value": "single upholstered chair, flexible polyurethane foam slabs ~0.5 x 0.4 x 0.1 m; ignited on the seat with a solid petroleum lighter",
+     "source": "FDS VG sec. Bittern"
+    },
+    "positions": {
+     "value": {
+      "center": [4,2],
+      "corner": [7.8,0.25]
+     },
+     "source": "derived from FDSIN chair OBSTs (room frame)"
+    },
+    "radiative_fraction": {
+     "value": 0.46,
+     "source": "FDS VG modelling notes (polyurethane), not measured"
+    }
+   },
+   "sprinkler_types": {
+    "value": {
+     "Res A": {
+      "RTI_m05_s05": 36,
+      "C_m05_per_s05": 0.4,
+      "activation_C": 68,
+      "description": "residential, 3 mm glass bulb"
+     },
+     "Res B": {
+      "RTI_m05_s05": 36,
+      "C_m05_per_s05": 0.4,
+      "activation_C": 68,
+      "description": "residential, 3 mm glass bulb"
+     },
+     "SS68": {
+      "RTI_m05_s05": 95,
+      "C_m05_per_s05": 0.4,
+      "activation_C": 68,
+      "description": "standard response, 5 mm glass bulb"
+     },
+     "SS93": {
+      "RTI_m05_s05": 95,
+      "C_m05_per_s05": 0.4,
+      "activation_C": 93,
+      "description": "standard response, 5 mm glass bulb"
+     }
+    },
+    "source": "FDS VG Table Bittern_Sprinklers"
+   },
+   "chosen": {
+    "value": [3,4,8,10,12,13,14,15],
+    "source": "centre chair, door open (3, 4, 8, 10) and closed (12-15) (data note section 9)"
+   },
+   "tests": [
+    {
+     "test": 3,
+     "door": "open",
+     "fire_position": "center",
+     "ambient_C": {
+      "value": 25.5,
+      "source": "FDS VG Table bit_sum (T0)"
+     },
+     "fire_centre_xy_m": {
+      "value": [4,2],
+      "source": "derived: centre of FDSIN chair OBST minus 0.1 m offset"
+     },
+     "fire_top_height_m": {
+      "value": 0.65,
+      "source": "FDSIN chair OBST top (FDS VG: fire 0.65 m above floor)"
+     },
+     "fire_area_m2": {
+      "value": 0.2,
+      "source": "FDSIN chair top face 0.4 x 0.5 m (FDS VG)"
+     },
+     "hrr_curve_kW": {
+      "value": [[0,0.5],[9.68,0.5],[11.13,5.2],[29.03,5.2],[39.68,4.8],[53.23,5.2],[62.42,4.8],[67.26,10],[92.42,10],[93.87,15.3],[99.19,14.7],[99.68,19.5],[106.94,20.1],[108.39,24.7],[117.1,24.7],[118.55,27.6],[122.9,29.1],[124.84,29.5],[128.23,34.3],[133.55,34.3],[135.48,39.5],[142.26,48.1],[149.03,54.3],[153.87,60.5],[159.19,65.8],[164.52,72.8],[170.32,80],[174.19,87.6],[176.61,91],[180,97.1],[183.39,102.4],[186.29,103.4],[188.71,104.3],[195.48,100.4],[196.94,106.7],[199.84,108.1],[203.23,109.5],[207.58,116.3],[214.35,122.9],[218.23,123.3],[222.1,127.7],[226.94,124.2],[231.29,129.9],[234.19,129.5],[236.61,126.6],[240,128.6],[242.9,132.9],[246.29,125.3]],
+      "source": "FDSIN BITTERN_3.fds RAMP FIRE_RAMP_Q x HRRPUA 664.3 kW/m2 x 0.2 m2; the HRR was estimated from measured chair mass loss x heat of combustion (FDS VG)"
+     },
+     "peak_hrr_kW": {
+      "value": 132.9,
+      "source": "derived from hrr_curve_kW"
+     },
+     "heat_of_combustion_MJ_per_kg": {
+      "value": 21.9,
+      "source": "FDS VG (cone calorimeter; tests 1-10 and 12-22)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [6,2],
+        "source": "FDSIN BITTERN_3.fds DEVC SPRK_001 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 192,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-3-1 = 192"
+       },
+       "hrr_at_activation_kW": {
+        "value": 102.4,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      },
+      {
+       "head": 2,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [2,2],
+        "source": "FDSIN BITTERN_3.fds DEVC SPRK_002 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 192,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-3-2 = 192"
+       },
+       "hrr_at_activation_kW": {
+        "value": 102.4,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      }
+     ]
+    },
+    {
+     "test": 4,
+     "door": "open",
+     "fire_position": "center",
+     "ambient_C": {
+      "value": 25.7,
+      "source": "FDS VG Table bit_sum (T0)"
+     },
+     "fire_centre_xy_m": {
+      "value": [4,2],
+      "source": "derived: centre of FDSIN chair OBST minus 0.1 m offset"
+     },
+     "fire_top_height_m": {
+      "value": 0.65,
+      "source": "FDSIN chair OBST top (FDS VG: fire 0.65 m above floor)"
+     },
+     "fire_area_m2": {
+      "value": 0.2,
+      "source": "FDSIN chair top face 0.4 x 0.5 m (FDS VG)"
+     },
+     "hrr_curve_kW": {
+      "value": [[0,0],[30.94,0.5],[31.42,5.7],[50.17,5.7],[60.01,5.7],[72.67,5.7],[73.62,10.8],[78.78,10.8],[83.94,11.4],[91.92,15.5],[98.48,16],[102.71,21.2],[108.81,21.7],[114.43,21.2],[114.91,26.3],[117.73,29.9],[125.69,26.8],[126.64,31.5],[131.34,36.1],[135.1,37.2],[139.33,42.3],[142.62,46.4],[148.25,48.9],[150.14,52.1],[155.3,56.7],[161.87,58.7],[164.23,64],[166.59,69],[172.22,71.7],[175.04,74.3],[178.8,78.4],[182.09,82],[185.38,85.7],[189.61,88.7],[192.43,94.4],[196.19,98.5],[201.35,100.1],[205.13,108.8],[207.95,111.5],[214.52,114],[222.98,124.3],[226.26,125.4],[230.02,127.5],[232.83,127.5],[236.6,132.5],[241.76,136.6],[249.74,141.9],[253.98,149],[260.07,148],[266.17,147.6],[271.32,146.5],[274.16,155.8],[277.44,158.3],[281.66,157.2],[283.99,153.7],[286.79,148.5],[289.12,142.8],[290.49,130],[292.33,114.5],[293.23,99],[293.65,80.4],[294.07,61.4],[294.95,41.3],[295.36,19.2],[295.8,7.8],[300.02,7.8]],
+      "source": "FDSIN BITTERN_4.fds RAMP FIRE_RAMP_Q x HRRPUA 791.7 kW/m2 x 0.2 m2; the HRR was estimated from measured chair mass loss x heat of combustion (FDS VG)"
+     },
+     "peak_hrr_kW": {
+      "value": 158.3,
+      "source": "derived from hrr_curve_kW"
+     },
+     "heat_of_combustion_MJ_per_kg": {
+      "value": 21.9,
+      "source": "FDS VG (cone calorimeter; tests 1-10 and 12-22)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "type": {
+        "value": "SS68 (standard response, 5 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [6,2],
+        "source": "FDSIN BITTERN_4.fds DEVC SPRK_001 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 95,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=95.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 226,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-4-1 = 226"
+       },
+       "hrr_at_activation_kW": {
+        "value": 125.3,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      },
+      {
+       "head": 2,
+       "type": {
+        "value": "SS68 (standard response, 5 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [2,2],
+        "source": "FDSIN BITTERN_4.fds DEVC SPRK_002 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 95,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=95.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 226,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-4-2 = 226"
+       },
+       "hrr_at_activation_kW": {
+        "value": 125.3,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      }
+     ]
+    },
+    {
+     "test": 8,
+     "door": "open",
+     "fire_position": "center",
+     "ambient_C": {
+      "value": 27.9,
+      "source": "FDS VG Table bit_sum (T0)"
+     },
+     "fire_centre_xy_m": {
+      "value": [4,2],
+      "source": "derived: centre of FDSIN chair OBST minus 0.1 m offset"
+     },
+     "fire_top_height_m": {
+      "value": 0.65,
+      "source": "FDSIN chair OBST top (FDS VG: fire 0.65 m above floor)"
+     },
+     "fire_area_m2": {
+      "value": 0.2,
+      "source": "FDSIN chair top face 0.4 x 0.5 m (FDS VG)"
+     },
+     "hrr_curve_kW": {
+      "value": [[0,0],[46.34,0.3],[47.51,5.1],[56.85,5.1],[58.41,10.2],[66.2,10.2],[70.87,10.5],[76.71,10.5],[88.79,10.2],[89.56,14.6],[96.57,15.3],[99.3,16.2],[103.19,20.2],[108.26,20.2],[111.76,25.3],[122.66,25.3],[127.73,25.6],[130.45,29.4],[134.74,30.1],[139.02,30.1],[144.47,34.5],[149.53,39.2],[153.43,42.6],[157.32,46.6],[159.27,54.1],[161.99,59.5],[165.5,64.9],[169,72.3],[173.29,78.4],[176.79,85.6],[178.35,87.5],[182.63,88.2],[187.31,90.3],[188.08,94.6],[191.59,98],[195.87,98.7],[199.38,99],[201.71,101.7],[202.88,98.7],[202.89,76.4],[203.27,50.4]],
+      "source": "FDSIN BITTERN_8.fds RAMP FIRE_RAMP_Q x HRRPUA 508.75 kW/m2 x 0.2 m2; the HRR was estimated from measured chair mass loss x heat of combustion (FDS VG)"
+     },
+     "peak_hrr_kW": {
+      "value": 101.7,
+      "source": "derived from hrr_curve_kW"
+     },
+     "heat_of_combustion_MJ_per_kg": {
+      "value": 21.9,
+      "source": "FDS VG (cone calorimeter; tests 1-10 and 12-22)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [6,2],
+        "source": "FDSIN BITTERN_8.fds DEVC SPRK_001 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 182,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-8-1 = 182"
+       },
+       "hrr_at_activation_kW": {
+        "value": 88.1,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      },
+      {
+       "head": 2,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [2,2],
+        "source": "FDSIN BITTERN_8.fds DEVC SPRK_002 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 187,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-8-2 = 187"
+       },
+       "hrr_at_activation_kW": {
+        "value": 90.1,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      }
+     ]
+    },
+    {
+     "test": 10,
+     "door": "open",
+     "fire_position": "center",
+     "ambient_C": {
+      "value": 29.4,
+      "source": "FDS VG Table bit_sum (T0)"
+     },
+     "fire_centre_xy_m": {
+      "value": [4,2],
+      "source": "derived: centre of FDSIN chair OBST minus 0.1 m offset"
+     },
+     "fire_top_height_m": {
+      "value": 0.65,
+      "source": "FDSIN chair OBST top (FDS VG: fire 0.65 m above floor)"
+     },
+     "fire_area_m2": {
+      "value": 0.2,
+      "source": "FDSIN chair top face 0.4 x 0.5 m (FDS VG)"
+     },
+     "hrr_curve_kW": {
+      "value": [[0,0],[25.45,0.3],[27.08,5],[44.85,5.4],[56.56,5.4],[63.02,5.4],[64.25,10.1],[71.52,10.7],[72.75,16.2],[82.44,15.7],[87.29,15.7],[89.33,20.8],[97.81,21.5],[99.03,23.2],[103.88,25.4],[112.77,26.5],[117.21,26.5],[121.67,31.2],[126.12,32.2],[129.76,34.7],[134.63,41.2],[141.91,44.8],[145.16,49.1],[151.24,56.2],[154.89,61.6],[158.55,68.4],[162.2,74.1],[165.86,79.9],[168.7,85.3],[172.76,90.3],[176,94.2],[182.88,96],[185.31,98.9],[192.17,98.1],[198.66,105.7],[201.9,107.1]],
+      "source": "FDSIN BITTERN_10.fds RAMP FIRE_RAMP_Q x HRRPUA 535.5 kW/m2 x 0.2 m2; the HRR was estimated from measured chair mass loss x heat of combustion (FDS VG)"
+     },
+     "peak_hrr_kW": {
+      "value": 107.1,
+      "source": "derived from hrr_curve_kW"
+     },
+     "heat_of_combustion_MJ_per_kg": {
+      "value": 21.9,
+      "source": "FDS VG (cone calorimeter; tests 1-10 and 12-22)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "type": {
+        "value": "Res A (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [6,2],
+        "source": "FDSIN BITTERN_10.fds DEVC SPRK_001 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 183,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-10-1 = 183"
+       },
+       "hrr_at_activation_kW": {
+        "value": 96.1,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      },
+      {
+       "head": 2,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [2,2],
+        "source": "FDSIN BITTERN_10.fds DEVC SPRK_002 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 184,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-10-2 = 184"
+       },
+       "hrr_at_activation_kW": {
+        "value": 97.3,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      }
+     ]
+    },
+    {
+     "test": 12,
+     "door": "closed",
+     "fire_position": "center",
+     "ambient_C": {
+      "value": 24,
+      "source": "FDS VG Table bit_sum (T0)"
+     },
+     "fire_centre_xy_m": {
+      "value": [4,2],
+      "source": "derived: centre of FDSIN chair OBST minus 0.1 m offset"
+     },
+     "fire_top_height_m": {
+      "value": 0.65,
+      "source": "FDSIN chair OBST top (FDS VG: fire 0.65 m above floor)"
+     },
+     "fire_area_m2": {
+      "value": 0.2,
+      "source": "FDSIN chair top face 0.4 x 0.5 m (FDS VG)"
+     },
+     "hrr_curve_kW": {
+      "value": [[0,0],[9.83,0.4],[13.08,5.2],[16.38,0],[48.05,0],[49.12,4.8],[68.23,4.8],[81.88,4.8],[88.98,5.2],[89.51,9.6],[115.72,10],[116.25,14.4],[124.43,14.8],[125.51,19.4],[134.25,19.4],[134.78,23.4],[140.78,24.2],[152.25,24.2],[152.77,28.6],[159.31,33.8],[163.12,36.6],[165.84,38.2],[169.1,43.4],[174.55,45],[177.8,52.8],[183.25,55.6],[187.04,63.2],[188.66,67.2],[190.83,72.4],[195.72,77.2],[199.52,83.7],[203.85,92.2],[209.29,97.4],[212.54,104.2],[217.45,106.6],[221.8,109.4],[226.16,111.8],[229.97,115],[234.88,116.2],[239.26,113.4],[243.64,110.2],[247.48,107],[249.13,102.2],[249.69,99],[251.85,105.4],[252.37,111.4],[253.45,115.8],[254.52,119.9],[256.18,115.4],[258.9,117.5],[264.37,115.4],[267.12,111],[268.2,114.6],[272.04,109.8],[273.15,104.2],[274.26,98.6],[276.98,103],[278.59,109],[281.85,113],[283.47,119.5],[285.08,125.1],[286.7,130],[289.96,133.6],[290.56,119.5],[291.73,99.4],[291.86,67.6],[295.14,65.6],[297.86,67.6],[301.13,70.4]],
+      "source": "FDSIN BITTERN_12.fds RAMP FIRE_RAMP_Q x HRRPUA 667.8 kW/m2 x 0.2 m2; the HRR was estimated from measured chair mass loss x heat of combustion (FDS VG)"
+     },
+     "peak_hrr_kW": {
+      "value": 133.6,
+      "source": "derived from hrr_curve_kW"
+     },
+     "heat_of_combustion_MJ_per_kg": {
+      "value": 20.4,
+      "source": "FDS VG (cone calorimeter; tests 1-10 and 12-22)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "type": {
+        "value": "SS68 (standard response, 5 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [6,2],
+        "source": "FDSIN BITTERN_12.fds DEVC SPRK_001 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 95,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=95.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 246,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-12-1 = 246"
+       },
+       "hrr_at_activation_kW": {
+        "value": 108.2,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      },
+      {
+       "head": 2,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [2,2],
+        "source": "FDSIN BITTERN_12.fds DEVC SPRK_002 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 228,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-12-2 = 228"
+       },
+       "hrr_at_activation_kW": {
+        "value": 113.3,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      }
+     ]
+    },
+    {
+     "test": 13,
+     "door": "closed",
+     "fire_position": "center",
+     "ambient_C": {
+      "value": 24.5,
+      "source": "FDS VG Table bit_sum (T0)"
+     },
+     "fire_centre_xy_m": {
+      "value": [4,2],
+      "source": "derived: centre of FDSIN chair OBST minus 0.1 m offset"
+     },
+     "fire_top_height_m": {
+      "value": 0.65,
+      "source": "FDSIN chair OBST top (FDS VG: fire 0.65 m above floor)"
+     },
+     "fire_area_m2": {
+      "value": 0.2,
+      "source": "FDSIN chair top face 0.4 x 0.5 m (FDS VG)"
+     },
+     "hrr_curve_kW": {
+      "value": [[0,0],[59.15,0.6],[60.09,5.2],[71.83,5.2],[72.77,10.7],[77.93,11.2],[78.87,15.8],[86.85,15.8],[101.88,16.3],[103.29,20.5],[111.27,20.9],[115.49,21.3],[116.9,26],[123,26],[127.23,31.5],[132.39,30.6],[134.27,35.2],[139.44,41.2],[144.13,46.3],[149.77,52.8],[153.05,60.2],[157.28,63.4],[161.03,68.5],[164.79,73.6],[169.95,79.6],[172.3,84.2],[177.46,90.6],[183.57,94.8],[189.2,99.9],[194.37,102.7],[200.47,105.4],[205.63,110.9],[213.15,113.3],[218.31,129],[221.6,138.2],[227.23,141.4],[231.46,149.3],[233.8,147.1],[237.09,141.5],[238.5,136]],
+      "source": "FDSIN BITTERN_13.fds RAMP FIRE_RAMP_Q x HRRPUA 746.45 kW/m2 x 0.2 m2; the HRR was estimated from measured chair mass loss x heat of combustion (FDS VG)"
+     },
+     "peak_hrr_kW": {
+      "value": 149.3,
+      "source": "derived from hrr_curve_kW"
+     },
+     "heat_of_combustion_MJ_per_kg": {
+      "value": 20.4,
+      "source": "FDS VG (cone calorimeter; tests 1-10 and 12-22)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "type": {
+        "value": "SS68 (standard response, 5 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [6,2],
+        "source": "FDSIN BITTERN_13.fds DEVC SPRK_001 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 95,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=95.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 204,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-13-1 = 204"
+       },
+       "hrr_at_activation_kW": {
+        "value": 109.2,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      },
+      {
+       "head": 2,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [2,2],
+        "source": "FDSIN BITTERN_13.fds DEVC SPRK_002 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 194,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-13-2 = 194"
+       },
+       "hrr_at_activation_kW": {
+        "value": 102.5,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      }
+     ]
+    },
+    {
+     "test": 14,
+     "door": "closed",
+     "fire_position": "center",
+     "ambient_C": {
+      "value": 24.2,
+      "source": "FDS VG Table bit_sum (T0)"
+     },
+     "fire_centre_xy_m": {
+      "value": [4,2],
+      "source": "derived: centre of FDSIN chair OBST minus 0.1 m offset"
+     },
+     "fire_top_height_m": {
+      "value": 0.65,
+      "source": "FDSIN chair OBST top (FDS VG: fire 0.65 m above floor)"
+     },
+     "fire_area_m2": {
+      "value": 0.2,
+      "source": "FDSIN chair top face 0.4 x 0.5 m (FDS VG)"
+     },
+     "hrr_curve_kW": {
+      "value": [[0,0],[9.39,0],[10.35,6.5],[18.8,5.2],[37.57,4.5],[38.97,0],[62.91,0],[63.87,4.8],[71.85,5.2],[72.8,10],[90.65,10.5],[97.69,10.5],[99.11,14.9],[102.88,20.2],[111.8,20.2],[115.56,20.6],[116.99,25.8],[121.68,25.8],[134.36,25.4],[136.25,30.6],[141.43,34.3],[147.07,36.3],[151.31,41.6],[156.02,44.8],[161.2,49.6],[166.85,55.3],[172.04,62.2],[180.51,68.2],[187.59,77.9],[191.83,83.5],[197.01,89.1],[203.6,94.8],[206.9,97.3],[212.53,96.8],[217.69,96.5],[221.47,101.7],[223.35,103.7],[228.99,104.5],[233.71,113.4],[238.42,118.2],[244.05,115.4],[250.62,115.4],[252.95,108.5]],
+      "source": "FDSIN BITTERN_14.fds RAMP FIRE_RAMP_Q x HRRPUA 591.05 kW/m2 x 0.2 m2; the HRR was estimated from measured chair mass loss x heat of combustion (FDS VG)"
+     },
+     "peak_hrr_kW": {
+      "value": 118.2,
+      "source": "derived from hrr_curve_kW"
+     },
+     "heat_of_combustion_MJ_per_kg": {
+      "value": 20.4,
+      "source": "FDS VG (cone calorimeter; tests 1-10 and 12-22)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "type": {
+        "value": "SS68 (standard response, 5 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [6,2],
+        "source": "FDSIN BITTERN_14.fds DEVC SPRK_001 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 95,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=95.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 203,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-14-1 = 203"
+       },
+       "hrr_at_activation_kW": {
+        "value": 94.3,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      },
+      {
+       "head": 2,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [2,2],
+        "source": "FDSIN BITTERN_14.fds DEVC SPRK_002 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 187,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-14-2 = 187"
+       },
+       "hrr_at_activation_kW": {
+        "value": 77.1,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      }
+     ]
+    },
+    {
+     "test": 15,
+     "door": "closed",
+     "fire_position": "center",
+     "ambient_C": {
+      "value": 23.7,
+      "source": "FDS VG Table bit_sum (T0)"
+     },
+     "fire_centre_xy_m": {
+      "value": [4,2],
+      "source": "derived: centre of FDSIN chair OBST minus 0.1 m offset"
+     },
+     "fire_top_height_m": {
+      "value": 0.65,
+      "source": "FDSIN chair OBST top (FDS VG: fire 0.65 m above floor)"
+     },
+     "fire_area_m2": {
+      "value": 0.2,
+      "source": "FDSIN chair top face 0.4 x 0.5 m (FDS VG)"
+     },
+     "hrr_curve_kW": {
+      "value": [[0,0],[102.88,0],[103.94,5.2],[119.73,4.9],[120.8,9.6],[133.86,9.6],[139.29,14.5],[146.37,14.1],[161.6,14.8],[164.31,18.8],[170.84,19.2],[177.36,23.7],[187.13,28.5],[193.65,33.3],[199.62,37.8],[203.95,42.9],[208.83,48.9],[215.34,53.7],[222.92,65],[229.42,72.2],[234.3,77.8],[244.07,85.5],[246.29,73.8],[250.6,84.6],[253.82,95.8],[257.07,100.3],[264.14,103.1],[266.79,121.6],[269.5,124.4],[271.15,119.1],[274.98,113.5],[281.52,112.4],[286.96,113.5],[290.28,99.9],[295.7,106],[300.01,116.7],[303.79,124.8],[305.96,128],[309.78,124.4],[313.61,119.9],[316.35,113.5],[319.1,106.7]],
+      "source": "FDSIN BITTERN_15.fds RAMP FIRE_RAMP_Q x HRRPUA 639.85 kW/m2 x 0.2 m2; the HRR was estimated from measured chair mass loss x heat of combustion (FDS VG)"
+     },
+     "peak_hrr_kW": {
+      "value": 128,
+      "source": "derived from hrr_curve_kW"
+     },
+     "heat_of_combustion_MJ_per_kg": {
+      "value": 20.4,
+      "source": "FDS VG (cone calorimeter; tests 1-10 and 12-22)"
+     },
+     "heads": [
+      {
+       "head": 1,
+       "type": {
+        "value": "SS68 (standard response, 5 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [6,2],
+        "source": "FDSIN BITTERN_15.fds DEVC SPRK_001 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 95,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=95.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 270,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-15-1 = 270"
+       },
+       "hrr_at_activation_kW": {
+        "value": 122.8,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      },
+      {
+       "head": 2,
+       "type": {
+        "value": "Res B (residential, 3 mm glass bulb)",
+        "source": "FDS VG Table bit_sum and Table Bittern_Sprinklers"
+       },
+       "xy_m": {
+        "value": [2,2],
+        "source": "FDSIN BITTERN_15.fds DEVC SPRK_002 minus the 0.1 m wall offset"
+       },
+       "link_below_ceiling_m": {
+        "value": 0.02,
+        "source": "FDSIN z = 2.38 under a 2.4 m ceiling; FDS VG: 2 cm offset chosen from bulb length (modelling choice)"
+       },
+       "r_from_fire_centre_m": {
+        "value": 2,
+        "source": "derived: chair centre to head"
+       },
+       "RTI_m05_s05": {
+        "value": 36,
+        "source": "FDS VG Table Bittern_Sprinklers (manufacturer data or estimate from comparable heads); FDSIN PROP RTI=36.0"
+       },
+       "C_m05_per_s05": {
+        "value": 0.4,
+        "source": "FDS VG Table Bittern_Sprinklers (chosen by sensitivity analysis in Bittern 2004; not measured)"
+       },
+       "activation_C": {
+        "value": 68,
+        "source": "FDS VG Table Bittern_Sprinklers"
+       },
+       "flowing": {
+        "value": false,
+        "source": "FDS VG: not charged with water; pressure gauge upstream indicated activation"
+       },
+       "activation_s": {
+        "value": 253,
+        "source": "FDS VG Table bit_sum; EXP bittern_acts.csv Time-15-2 = 253"
+       },
+       "hrr_at_activation_kW": {
+        "value": 93,
+        "source": "derived: FDS HRR ramp (from measured mass loss) at t_act"
+       }
+      }
+     ]
+    }
+   ],
+   "gaps": [
+    "Thesis not reachable (HTTP 403): no gas temperatures at the heads, no layer temperatures, no measured head offset.",
+    "C = 0.4 is a modelling choice from a sensitivity study, not a measurement; the thesis abstract says C changed FDS times by up to 50 %.",
+    "Test 20 head 2 did not activate (DNA).",
+    "The HRR curves (from chair mass loss) give low heat release at activation in several tests (18-60 kW in tests 16, 17, 20 and 22 for the near head), which is hard to square with a 68 C residential link opening 2.5 m away; the mass-loss HRR may lag or under-read early burning, or the time origins may differ. Not resolvable without the thesis."
+   ]
+  },
+  "ul_nfprf_1998_series_I": {
+   "id": "ul_nfprf_1998_series_I",
+   "title": "UL/NFPRF heptane spray burner Series I: 4.4-6 MW under a 7.6 m ceiling, 49 flowing standard heads, vent and draft curtains",
+   "sources": [
+    "NISTIR6196-1",
+    "FDSVG",
+    "FDSIN",
+    "EXP"
+   ],
+   "licence": "NIST report (public domain) and NIST repositories (licence notice).",
+   "frame": "FDS input frame (x east, y north, metres; z up from floor). Heads on a 3.05 m grid from x = 10.69 to 28.98 m, y = 4.52 to 22.81 m.",
+   "enclosure": {
+    "test_cell_m": {
+     "value": [37,37],
+     "source": "NISTIR 6196-1 sec. 3.1.1"
+    },
+    "ceiling_m": {
+     "value": {
+      "plan": [30.5,30.5],
+      "height": 7.6,
+      "material": "16 mm ceiling tiles (k 0.0611 W/m K, rho 313, c 753 J/kg K)"
+     },
+     "source": "NISTIR 6196-1 sec. 3.1.1-3.1.2; FDSIN"
+    },
+    "draft_curtains": {
+     "value": {
+      "depth_m": 1.8,
+      "enclosed_area_m2": 450,
+      "fds_box_xy_m": [[9.4,29.8],[4,25.6]],
+      "tests": "I-1 to I-16"
+     },
+     "source": "NISTIR 6196-1 sec. 3.1.2; FDSIN OBST"
+    },
+    "vent": {
+     "value": {
+      "size_m": [1.2,2.4],
+      "fds_xy_m": [[23.8,25],[17,19.4]],
+      "recess_m": 0.3
+     },
+     "source": "NISTIR 6196-1 sec. 3.1.4; FDSIN HOLE"
+    },
+    "exhaust": {
+     "value": "facility exhaust >= 11 m3/s during heptane tests; inlets 3 m above floor",
+     "source": "NISTIR 6196-1 sec. 3.1.1"
+    },
+    "branch_lines": {
+     "value": "2 in Sch 40 pipe, centreline 0.22 m below ceiling, running N-S, 3 m apart; manifolds 1.04 m below ceiling",
+     "source": "NISTIR 6196-1 sec. 3.1.3"
+    }
+   },
+   "fire": {
+    "fuel": {
+     "value": "heptane spray from atomising nozzles on a 1 m x 1 m pipe square, 0.6 m above floor (FDS: 0.5 m)",
+     "source": "NISTIR 6196-1 sec. 3.1.5; FDSIN"
+    },
+    "positions_xy_m": {
+     "value": {
+      "A": [24.41,18.24],
+      "B": [24.41,21.28],
+      "C": [27.46,18.24],
+      "D": [18.31,12.14]
+     },
+     "source": "FDSIN nozzle centroids; all four sit at the centre of a square of four heads (r = 2.15 m)"
+    },
+    "convective_fraction": {
+     "value": 0.65,
+     "source": "NISTIR 6196-1 sec. 3.1.5 (0.65 +- 0.02, calorimeter)"
+    },
+    "control_curve": {
+     "value": "Q = 10 MW (t / 75 s)^2, i.e. alpha = 1.78 kW/s2 (I-16: tau = 150 s, 0.44 kW/s2)",
+     "source": "NISTIR 6196-1 sec. 3.1.5"
+    }
+   },
+   "sprinkler": {
+    "type": {
+     "value": "Central ELO-231 upright, extra large orifice (0.64 in)",
+     "source": "NISTIR 6196-1 sec. 3.1.3"
+    },
+    "RTI_m05_s05": {
+     "value": 148,
+     "source": "NISTIR 6196-1 sec. 3.1.3 (UL measured, 268 (ft s)^1/2)"
+    },
+    "C_m05_per_s05": {
+     "value": 0.7,
+     "source": "NISTIR 6196-1 sec. 3.1.3 (UL, 1.3 (ft/s)^1/2)"
+    },
+    "activation_C": {
+     "value": 74,
+     "source": "NISTIR 6196-1 sec. 3.1.3 (manufacturer)"
+    },
+    "link_below_ceiling_m": {
+     "value": 0.11,
+     "source": "NISTIR 6196-1 sec. 3.1.3 (deflector 0.08 m, thermal element 0.11 m; FDSIN z = 7.46, 0.14 m)"
+    },
+    "flowing": {
+     "value": true,
+     "source": "NISTIR 6196-1 sec. 3.1.3 (wet branch lines)"
+    },
+    "K_factor": {
+     "value": {
+      "gpm_per_psi05": 11.4,
+      "L_per_min_per_bar05": 164
+     },
+     "source": "NISTIR 6196-1 footnote 4 (11.4); SI value derived (x 14.4)"
+    },
+    "pressure_kPa": {
+     "value": 131,
+     "source": "NISTIR 6196-1 sec. 3.1.3 (19 psi)"
+    },
+    "flow_per_head_L_per_min": {
+     "value": 189.3,
+     "source": "FDSIN PROP K-11 FLOW_RATE (= 50 gpm; 11.4 x sqrt(19) = 49.7 gpm)"
+    },
+    "density_mm_per_s": {
+     "value": 0.34,
+     "source": "NISTIR 6196-1 sec. 3.1.3 (0.34 L/(s m2), 0.50 gpm/ft2)"
+    },
+    "spacing_m": {
+     "value": [3.05,3.05],
+     "source": "NISTIR 6196-1 sec. 3.1.2 (10 ft x 10 ft); FDSIN"
+    },
+    "heads": {
+     "value": 49,
+     "source": "NISTIR 6196-1 sec. 3.1.2 (7 x 7)"
+    },
+    "activation_detection": {
+     "value": "thermocouple beside each head; the sudden drop when it is wetted marks activation (2 s scan in the report, 4 s rows in the exp CSV)",
+     "source": "NISTIR 6196-1 sec. 3.1.6; FDS VG Ceiling_Jet_Chapter (UL/NFPRF)"
+    },
+    "positions_xyz_m": {
+     "value": {
+      "50": [28.98,13.66,7.46],
+      "51": [28.98,16.71,7.46],
+      "52": [28.98,19.76,7.46],
+      "53": [28.98,22.81,7.46],
+      "54": [25.93,13.66,7.46],
+      "55": [25.93,16.71,7.46],
+      "56": [25.93,19.76,7.46],
+      "57": [25.93,22.81,7.46],
+      "58": [22.88,13.66,7.46],
+      "59": [22.88,16.71,7.46],
+      "60": [22.88,19.76,7.46],
+      "61": [22.88,22.81,7.46],
+      "62": [19.84,13.66,7.46],
+      "63": [19.84,16.71,7.46],
+      "64": [19.84,19.76,7.46],
+      "65": [19.84,22.81,7.46],
+      "72": [28.98,4.52,7.46],
+      "73": [28.98,7.57,7.46],
+      "74": [28.98,10.62,7.46],
+      "75": [25.93,4.52,7.46],
+      "76": [25.93,7.57,7.46],
+      "77": [25.93,10.62,7.46],
+      "78": [22.88,4.52,7.46],
+      "79": [22.88,7.57,7.46],
+      "80": [22.88,10.62,7.46],
+      "81": [19.84,4.52,7.46],
+      "82": [19.84,7.57,7.46],
+      "83": [19.84,10.62,7.46],
+      "84": [16.79,4.52,7.46],
+      "85": [16.79,7.57,7.46],
+      "86": [16.79,10.62,7.46],
+      "87": [16.79,13.66,7.46],
+      "88": [16.79,16.71,7.46],
+      "89": [16.79,19.76,7.46],
+      "90": [16.79,22.81,7.46],
+      "91": [13.74,4.52,7.46],
+      "92": [13.74,7.57,7.46],
+      "93": [13.74,10.62,7.46],
+      "94": [13.74,13.66,7.46],
+      "95": [13.74,16.71,7.46],
+      "96": [13.74,19.76,7.46],
+      "97": [13.74,22.81,7.46],
+      "98": [10.69,4.52,7.46],
+      "99": [10.69,7.57,7.46],
+      "100": [10.69,10.62,7.46],
+      "101": [10.69,13.66,7.46],
+      "102": [10.69,16.71,7.46],
+      "103": [10.69,19.76,7.46],
+      "104": [10.69,22.81,7.46]
+     },
+     "source": "FDSIN UL_NFPRF_1_01.fds DEVC Spr_N (N = nearest TC channel)"
+    }
+   },
+   "chosen": {
+    "value": ["I-17","I-18","I-20","I-22"],
+    "source": "no draft curtains, 4 to 6 activations (data note section 9)"
+   },
+   "tests": [
+    {
+     "test": "I-17",
+     "burner_position": "B",
+     "vent_operation": {
+      "value": "100 C link (DNO)",
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "draft_curtains": {
+      "value": false,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "burner_centre_xy_m": {
+      "value": [24.41,21.28],
+      "source": "derived: centroid of the FDSIN spray nozzles for this test"
+     },
+     "hrr": {
+      "plateau_MW": {
+       "value": 4.6,
+       "source": "NISTIR 6196-1 Table 1 (size when the fuel flow was levelled off)"
+      },
+      "plateau_reached_s": {
+       "value": 50,
+       "source": "NISTIR 6196-1 Table 1"
+      },
+      "law": {
+       "value": "Q = Qp (t/tp)^2 for t < tp, then Qp (the FDS form: nozzle FLOW_TAU = -tp); the report's control curve is Q = 10 MW (t/75 s)^2 (150 s in I-16), followed manually until the plateau or first activation",
+       "source": "NISTIR 6196-1 sec. 3.1.5; FDSIN PROP 'nozzle' FLOW_TAU=-50."
+      }
+     },
+     "ambient_C": {
+      "value": 18,
+      "source": "FDSIN TMPA (not checked against the report)"
+     },
+     "first_activation_s": {
+      "value": 58,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "number_activated": {
+      "value": 4,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "activation_sequence_s": {
+      "value": [58,60,64,80,662,694],
+      "source": "EXP UL_NFPRF_Actuated_Sprinklers.csv column Act17: time at which the running count reached 1, 2, ... (1 s resolution)"
+     },
+     "number_activated_exp_csv": {
+      "value": 6,
+      "source": "EXP UL_NFPRF_Actuated_Sprinklers.csv final count"
+     },
+     "first_four_heads": [
+      {
+       "head": 56,
+       "xyz_m": {
+        "value": [25.93,19.76,7.46],
+        "source": "FDSIN DEVC Spr_56"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 58,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-17-56"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 159.7,
+        "source": "EXP UL_NFPRF_1_17_TC.csv channel 56 (TC nearest the head, 0.10 m below ceiling) at t = 56 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 57,
+       "xyz_m": {
+        "value": [25.93,22.81,7.46],
+        "source": "FDSIN DEVC Spr_57"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 64,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-17-57"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 161.9,
+        "source": "EXP UL_NFPRF_1_17_TC.csv channel 57 (TC nearest the head, 0.10 m below ceiling) at t = 60 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 60,
+       "xyz_m": {
+        "value": [22.88,19.76,7.46],
+        "source": "FDSIN DEVC Spr_60"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 60,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-17-60"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 150.9,
+        "source": "EXP UL_NFPRF_1_17_TC.csv channel 60 (TC nearest the head, 0.10 m below ceiling) at t = 56 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 61,
+       "xyz_m": {
+        "value": [22.88,22.81,7.46],
+        "source": "FDSIN DEVC Spr_61"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 80,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-17-61"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 141.2,
+        "source": "EXP UL_NFPRF_1_17_TC.csv channel 61 (TC nearest the head, 0.10 m below ceiling) at t = 76 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      }
+     ]
+    },
+    {
+     "test": "I-18",
+     "burner_position": "C",
+     "vent_operation": {
+      "value": "100 C link (DNO)",
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "draft_curtains": {
+      "value": false,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "burner_centre_xy_m": {
+      "value": [27.46,18.24],
+      "source": "derived: centroid of the FDSIN spray nozzles for this test"
+     },
+     "hrr": {
+      "plateau_MW": {
+       "value": 3.7,
+       "source": "NISTIR 6196-1 Table 1 (size when the fuel flow was levelled off)"
+      },
+      "plateau_reached_s": {
+       "value": 50,
+       "source": "NISTIR 6196-1 Table 1"
+      },
+      "law": {
+       "value": "Q = Qp (t/tp)^2 for t < tp, then Qp (the FDS form: nozzle FLOW_TAU = -tp); the report's control curve is Q = 10 MW (t/75 s)^2 (150 s in I-16), followed manually until the plateau or first activation",
+       "source": "NISTIR 6196-1 sec. 3.1.5; FDSIN PROP 'nozzle' FLOW_TAU=-50."
+      }
+     },
+     "ambient_C": {
+      "value": 18,
+      "source": "FDSIN TMPA (not checked against the report)"
+     },
+     "first_activation_s": {
+      "value": 58,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "number_activated": {
+      "value": 4,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "activation_sequence_s": {
+      "value": [58,62,64,78],
+      "source": "EXP UL_NFPRF_Actuated_Sprinklers.csv column Act18: time at which the running count reached 1, 2, ... (1 s resolution)"
+     },
+     "number_activated_exp_csv": {
+      "value": 4,
+      "source": "EXP UL_NFPRF_Actuated_Sprinklers.csv final count"
+     },
+     "first_four_heads": [
+      {
+       "head": 51,
+       "xyz_m": {
+        "value": [28.98,16.71,7.46],
+        "source": "FDSIN DEVC Spr_51"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 58,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-18-51"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 161.9,
+        "source": "EXP UL_NFPRF_1_18_TC.csv channel 51 (TC nearest the head, 0.10 m below ceiling) at t = 54 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 52,
+       "xyz_m": {
+        "value": [28.98,19.76,7.46],
+        "source": "FDSIN DEVC Spr_52"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 62,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-18-52"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 146,
+        "source": "EXP UL_NFPRF_1_18_TC.csv channel 52 (TC nearest the head, 0.10 m below ceiling) at t = 58 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 55,
+       "xyz_m": {
+        "value": [25.93,16.71,7.46],
+        "source": "FDSIN DEVC Spr_55"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 64,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-18-55"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 142.5,
+        "source": "EXP UL_NFPRF_1_18_TC.csv channel 55 (TC nearest the head, 0.10 m below ceiling) at t = 62 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 56,
+       "xyz_m": {
+        "value": [25.93,19.76,7.46],
+        "source": "FDSIN DEVC Spr_56"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 78,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-18-56"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 133.2,
+        "source": "EXP UL_NFPRF_1_18_TC.csv channel 56 (TC nearest the head, 0.10 m below ceiling) at t = 74 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      }
+     ]
+    },
+    {
+     "test": "I-20",
+     "burner_position": "A",
+     "vent_operation": {
+      "value": "74 C link (1:20)",
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "draft_curtains": {
+      "value": false,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "burner_centre_xy_m": {
+      "value": [24.41,18.24],
+      "source": "derived: centroid of the FDSIN spray nozzles for this test"
+     },
+     "hrr": {
+      "plateau_MW": {
+       "value": 4.2,
+       "source": "NISTIR 6196-1 Table 1 (size when the fuel flow was levelled off)"
+      },
+      "plateau_reached_s": {
+       "value": 50,
+       "source": "NISTIR 6196-1 Table 1"
+      },
+      "law": {
+       "value": "Q = Qp (t/tp)^2 for t < tp, then Qp (the FDS form: nozzle FLOW_TAU = -tp); the report's control curve is Q = 10 MW (t/75 s)^2 (150 s in I-16), followed manually until the plateau or first activation",
+       "source": "NISTIR 6196-1 sec. 3.1.5; FDSIN PROP 'nozzle' FLOW_TAU=-50."
+      }
+     },
+     "ambient_C": {
+      "value": 18,
+      "source": "FDSIN TMPA (not checked against the report)"
+     },
+     "first_activation_s": {
+      "value": 54,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "number_activated": {
+      "value": 4,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "activation_sequence_s": {
+      "value": [54,84,106,196],
+      "source": "EXP UL_NFPRF_Actuated_Sprinklers.csv column Act20: time at which the running count reached 1, 2, ... (1 s resolution)"
+     },
+     "number_activated_exp_csv": {
+      "value": 4,
+      "source": "EXP UL_NFPRF_Actuated_Sprinklers.csv final count"
+     },
+     "first_four_heads": [
+      {
+       "head": 55,
+       "xyz_m": {
+        "value": [25.93,16.71,7.46],
+        "source": "FDSIN DEVC Spr_55"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 54,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-20-55"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 175.3,
+        "source": "EXP UL_NFPRF_1_20_TC.csv channel 55 (TC nearest the head, 0.10 m below ceiling) at t = 52 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 56,
+       "xyz_m": {
+        "value": [25.93,19.76,7.46],
+        "source": "FDSIN DEVC Spr_56"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 84,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-20-56"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 139.6,
+        "source": "EXP UL_NFPRF_1_20_TC.csv channel 56 (TC nearest the head, 0.10 m below ceiling) at t = 80 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 59,
+       "xyz_m": {
+        "value": [22.88,16.71,7.46],
+        "source": "FDSIN DEVC Spr_59"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 106,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-20-59"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 108.1,
+        "source": "EXP UL_NFPRF_1_20_TC.csv channel 59 (TC nearest the head, 0.10 m below ceiling) at t = 104 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 60,
+       "xyz_m": {
+        "value": [22.88,19.76,7.46],
+        "source": "FDSIN DEVC Spr_60"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 196,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-20-60"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 123.7,
+        "source": "EXP UL_NFPRF_1_20_TC.csv channel 60 (TC nearest the head, 0.10 m below ceiling) at t = 192 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      }
+     ]
+    },
+    {
+     "test": "I-22",
+     "burner_position": "D",
+     "vent_operation": {
+      "value": "100 C link (DNO)",
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "draft_curtains": {
+      "value": false,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "burner_centre_xy_m": {
+      "value": [18.31,12.14],
+      "source": "derived: centroid of the FDSIN spray nozzles for this test"
+     },
+     "hrr": {
+      "plateau_MW": {
+       "value": 4.6,
+       "source": "NISTIR 6196-1 Table 1 (size when the fuel flow was levelled off)"
+      },
+      "plateau_reached_s": {
+       "value": 50,
+       "source": "NISTIR 6196-1 Table 1"
+      },
+      "law": {
+       "value": "Q = Qp (t/tp)^2 for t < tp, then Qp (the FDS form: nozzle FLOW_TAU = -tp); the report's control curve is Q = 10 MW (t/75 s)^2 (150 s in I-16), followed manually until the plateau or first activation",
+       "source": "NISTIR 6196-1 sec. 3.1.5; FDSIN PROP 'nozzle' FLOW_TAU=-50."
+      }
+     },
+     "ambient_C": {
+      "value": 18,
+      "source": "FDSIN TMPA (not checked against the report)"
+     },
+     "first_activation_s": {
+      "value": 60,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "number_activated": {
+      "value": 6,
+      "source": "NISTIR 6196-1 Table 1"
+     },
+     "activation_sequence_s": {
+      "value": [60,62,64,68,243,265],
+      "source": "EXP UL_NFPRF_Actuated_Sprinklers.csv column Act22: time at which the running count reached 1, 2, ... (1 s resolution)"
+     },
+     "number_activated_exp_csv": {
+      "value": 6,
+      "source": "EXP UL_NFPRF_Actuated_Sprinklers.csv final count"
+     },
+     "first_four_heads": [
+      {
+       "head": 62,
+       "xyz_m": {
+        "value": [19.84,13.66,7.46],
+        "source": "FDSIN DEVC Spr_62"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 64,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-22-62"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 162.9,
+        "source": "EXP UL_NFPRF_1_22_TC.csv channel 62 (TC nearest the head, 0.10 m below ceiling) at t = 60 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 83,
+       "xyz_m": {
+        "value": [19.84,10.62,7.46],
+        "source": "FDSIN DEVC Spr_83"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.16,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 60,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-22-83"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 153.1,
+        "source": "EXP UL_NFPRF_1_22_TC.csv channel 83 (TC nearest the head, 0.05 m below ceiling) at t = 56 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 86,
+       "xyz_m": {
+        "value": [16.79,10.62,7.46],
+        "source": "FDSIN DEVC Spr_86"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 62,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-22-86"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 154,
+        "source": "EXP UL_NFPRF_1_22_TC.csv channel 86 (TC nearest the head, 0.05 m below ceiling) at t = 60 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      },
+      {
+       "head": 87,
+       "xyz_m": {
+        "value": [16.79,13.66,7.46],
+        "source": "FDSIN DEVC Spr_87"
+       },
+       "r_from_burner_centre_m": {
+        "value": 2.15,
+        "source": "derived"
+       },
+       "activation_s": {
+        "value": 68,
+        "source": "EXP UL_NFPRF_Act_Times.csv Time-22-87"
+       },
+       "gas_T_near_head_at_activation_C": {
+        "value": 142.5,
+        "source": "EXP UL_NFPRF_1_22_TC.csv channel 87 (TC nearest the head, 0.05 m below ceiling) at t = 64 s, the last sample before the wetting drop that marks activation; 4 s spacing in the CSV; may be cooled by earlier heads' spray"
+       }
+      }
+     ]
+    }
+   ],
+   "gaps": [
+    "Per-head activation times beyond the first four are only in the report's plan figures (Figs. 4-11), not transcribed.",
+    "Several final counts in the exp CSV differ from Table 1 (see number_activated vs number_activated_exp_csv).",
+    "I-11 has no sprinkler data.",
+    "Ambient temperature taken from the FDS inputs (18 C) and not checked in the report."
+   ]
+  }
+ }
+}

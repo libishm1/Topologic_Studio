@@ -2,6 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EVANS_MIN_DENSITY, alpert, createSuppression, crossing, evansFactor, evansTau, linkStep, openHeads } from "./suppression.js";
+import { waterResponse } from "./fireClasses.js";
 import { MATERIAL } from "./voxelize.js";
 import { buildScene, readNodes, runScene, sprinklerFrame, sprinklerRun } from "./flamescapesRun.js";
 import { cellSpeed, createSolver, step } from "./flamescapes.js";
@@ -152,4 +153,54 @@ test("every covered fuel cell stays under Evans's cap in every step after its he
     sprinklerFrame(spr, { t0: end - 5, t1: end, T, u, hrr: sim.stats.hrr / 1000 });
   }
   assert.ok(checked > 1000, `${checked} cell steps checked`);
+});
+
+test("wetting: water soaks into the fuel it reaches, the water balances, the fire burns less, and no cap is set", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  const make = () => buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.35, maxCell: 0.35, contentsFuel, ignitionFuel, item });
+  const nodes = Float32Array.from([2.5, 0.75, 2, 1, 0.75, 1, 4.5, 0.75, 3.5]);
+  const run = (sprinklers) => runScene(make(), { nodes, horizon: 90, frameSeconds: 5, particles: 0, sprinklers });
+  const none = run(null);
+  const wet = run({ heads: HEADS, mode: "wetting" });
+  assert.ok(wet.sprinklers.heads[0].estimate !== null, "the head over the fire opens");
+  const st = wet.sprinklers.stats;
+  assert.ok(st.wetted > 0, `water on the fuel: ${st.wetted} kg`);
+  close(st.evaporated + st.wetted + st.floor, st.emitted, 1e-6 * st.emitted, "emitted = evaporated + wetted + floor:");
+  assert.ok(wet.stats.burnt < none.stats.burnt, `burnt ${wet.stats.burnt} kg against ${none.stats.burnt} kg`);
+  // No Evans cap in this mode: the suppression record's decay times stay zero.
+  const sup = createSuppression(10, { mode: "wetting" });
+  assert.ok(sup.wet > 0);
+  const setup = { heads: [{ sensor: 0, covered: [1, 2], columns: [5, 3], flowLpm: 85, coverage: 20.9 }] };
+  openHeads(sup, setup, [{ head: 0, time: 10 }]);
+  assert.deepEqual(Array.from(sup.tau), new Array(10).fill(0));
+  assert.equal(sup.columns.length, 1);
+});
+
+test("water by fire class: a cooking-oil, metal or pack first item is not wetted and takes no cap; class A contents are", () => {
+  for (const cls of ["A", "B", "C", "D", "K", "L"]) {
+    const w = waterResponse(fuelsFor(cls).ignitionFuel);
+    const solid = cls === "A" || cls === "C";
+    assert.equal(w.wets, solid, `${cls} wets`);
+    assert.equal(w.evans, solid, `${cls} takes Evans's cap`);
+    assert.equal(w.dry, !solid, `${cls} holds no water of its own`);
+    if (!solid) assert.ok(w.note, `${cls} says why`);
+  }
+  // A cooking-oil item under an open head, wetting: the pan cell gets no
+  // water, its own water is none, and it is never capped; the room's class
+  // A contents under the head do get wetted.
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("K");
+  const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.35, maxCell: 0.35, contentsFuel, ignitionFuel, item });
+  const sim = createSolver(scene, { contentsFuel, ignitionFuel, seed: 1, maxParticles: 0 });
+  const pan = scene.ignition.cell;
+  assert.equal(sim.moisture[pan], 0, "the oil holds no water of its own");
+  const spr = sprinklerRun(scene, sim, { heads: HEADS, mode: "wetting" });
+  sim.suppression = spr.sup;
+  openHeads(spr.sup, spr.setup, [{ head: 0, time: 0 }]);
+  const before = Float32Array.from(sim.moisture);
+  for (let k = 0; k < 40; k += 1) step(sim, sim.P.dt);
+  assert.ok(sim.moisture[pan] <= before[pan] + 1e-12, `the pan took no water: ${sim.moisture[pan]}`);
+  let wettedContents = 0;
+  for (const c of spr.setup.heads[0].covered) if (c !== pan && sim.moisture[c] > before[c] + 1e-9) wettedContents += 1;
+  assert.ok(wettedContents > 0, "class A contents under the head are wetted");
+  assert.ok(spr.sup.stats.wetted > 0);
 });

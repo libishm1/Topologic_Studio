@@ -27,6 +27,7 @@ import { AIR_TERMINAL_NAME, aggregatedParts, collectCategoryIds, elementRecords,
 import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
 import { coreItems } from "../core/cores.js";
 import { centroidOf } from "../core/centroid.js";
+import { linkMatrix } from "../core/federation.js";
 
 /** Categories that are not building elements: the spatial structure, openings, annotations. */
 const NOT_ELEMENTS = /^IFC(PROJECT|SITE|BUILDING|BUILDINGSTOREY|OPENINGELEMENT|ANNOTATION|GRID|VIRTUALELEMENT|GRIDAXIS)$|TYPE$/i;
@@ -55,7 +56,44 @@ const OVERLAY = {
   smoke: "smoke",
   exits: "exits",
   sprinklers: "sprinklers",
+  spray: "spray",
+  extinguishers: "extinguishers",
 };
+
+// The spray drawn under each open head: droplets per head, their fall speed
+// on screen (m/s; real drops fall at about 5 m/s, TERMINAL_SPEED) and the
+// cone's spread (radius per metre fallen; a standard pendent throws about
+// 45 degrees either side).
+const SPRAY_DROPLETS = 320;
+const SPRAY_SPEED = 3.5;
+const SPRAY_SPREAD = 0.9;
+
+/** Droplets falling from `position` (a head) through `drop` metres, placed by their shader from the time alone. */
+const SPRAY_VERTEX = `
+uniform float time;
+uniform float speed;
+uniform float spread;
+attribute vec3 seed;
+attribute float drop;
+varying float vFade;
+void main() {
+  float f = fract(seed.z + time * speed / max(drop, 0.5));
+  float d = f * drop;
+  float r = seed.y * spread * d;
+  vec3 p = position + vec3(cos(seed.x) * r, -d, sin(seed.x) * r);
+  vFade = 1.0 - 0.7 * f;
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  gl_PointSize = clamp(120.0 / -mv.z, 2.5, 8.0);
+  gl_Position = projectionMatrix * mv;
+}`;
+const SPRAY_FRAGMENT = `
+uniform vec3 colour;
+varying float vFade;
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  if (dot(c, c) > 0.25) discard;
+  gl_FragColor = vec4(colour, 0.9 * vFade);
+}`;
 
 /** A soft round sprite for glowing particles, drawn once on a canvas. */
 function glowTexture() {
@@ -82,6 +120,9 @@ function glowColor(target, T) {
 }
 
 /** Overlays the section cut also clips; routes and markers stay whole. */
+// An IFC2x3 flow segment or fitting that is a duct or a cable tray, by name.
+const OVERHEAD_FLOW_NAME = /duct|cable ?tray|cable ?carrier|trunking|kanal|luftkanal/i;
+
 const CLIPPED = new Set([OVERLAY.outlines, OVERLAY.graph, OVERLAY.navGraph, OVERLAY.exits]);
 
 
@@ -151,6 +192,8 @@ export class ViewerManager {
     this.categoryIds = null;
     // A LOD1 model drawn without an IFC (loadLod1): its egress geometry.
     this.lod1 = null;
+    // Second models in the first one's frame (loadLinkedIfc), by id.
+    this.linked = new Map();
 
     this.overlays = new Map();
     this.markers = {};
@@ -690,6 +733,120 @@ export class ViewerManager {
   }
 
   /**
+   * A second model beside the first (core/federation.js): an MEP model's
+   * sprinklers and ducts, or a structural model's beams. Converted and
+   * cached as the first is, and drawn in the first one's frame: through
+   * their coordination matrices, and through the files' map conversions
+   * when both have one (`relativeFor(semantics)` returns that alignment).
+   * It is never walked on: the graph, the fire's walls and the picks stay
+   * the first model's. Several can be linked; all go with the first model.
+   *
+   * @returns {{id, name, semantics, box, categoryIds, how}}
+   */
+  async loadLinkedIfc(file, { onProgress, signal, relativeFor = null } = {}) {
+    if (!this.ready || !this.model || this.lod1) throw new Error("Open an IFC model first: a second model is placed in its frame.");
+    const owner = this.model;
+    const current = () => {
+      if (signal?.aborted || this.model !== owner || this.disposed) throw new Error("cancelled");
+    };
+    const report = (stage, detail) => onProgress?.({ stage, detail });
+    report("reading", file.name);
+    const { key, buffer } = await hashFile(file);
+    current();
+    const record = await readCached(key);
+    current();
+    let bytes = record?.buffer ?? null;
+    let semantics;
+    let load;
+    if (!bytes) {
+      report("converting", "Converting the second model");
+      const job = await this._importJob(buffer, file.name, { onProgress: (p) => report("converting", p), signal });
+      current();
+      if (!job.fragments) throw new Error("This browser cannot convert a second model in a worker; try a desktop browser.");
+      bytes = job.fragments;
+      semantics = job.semantics;
+      load = bytes.slice();
+      const reading = semantics;
+      void writeCached(key, bytes, { name: file.name, bytes: file.size })
+        .then((written) => written && reading?.then((s) => writeCachedSemantics(key, s)))
+        .catch(() => {});
+    } else {
+      load = bytes;
+      semantics = record.semantics
+        ? Promise.resolve(record.semantics)
+        : (await this._importJob(buffer, file.name, { signal, convert: false })).semantics;
+    }
+    const id = `linked:${file.name}-${key.slice(0, 8)}`;
+    this.removeLinked(id);
+    report("rendering", "Drawing the second model");
+    const model = await this.fragments.core.load(load, { modelId: id, raw: false });
+    try {
+      current();
+    } catch (error) {
+      Promise.resolve().then(() => this.fragments?.core?.disposeModel?.(id)).catch(() => {});
+      throw error;
+    }
+    const read = await semantics.catch(() => null);
+    const [mainMatrix, linkedMatrix] = await Promise.all([this.getCoordinationMatrix(), model.getCoordinationMatrix().then((m) => (m?.elements ? Array.from(m.elements) : null)).catch(() => null)]);
+    const { how, relative } = relativeFor ? relativeFor(read) : { how: "placements", relative: null };
+    const matrix = linkMatrix(mainMatrix, linkedMatrix, relative || undefined);
+    const object = model.object;
+    object.matrixAutoUpdate = false;
+    object.matrix.fromArray(matrix);
+    object.updateMatrixWorld(true);
+    model.graphicsQuality = 1;
+    model.frozen = false;
+    if (this.world.camera.three && model.useCamera) model.useCamera(this.world.camera.three);
+    this.world.scene.three.add(object);
+    if (this._section) this._applyClip(object);
+    const categoryIds = await collectCategoryIds(model).catch(() => ({}));
+    if (categoryIds.spaces?.length && model.setVisible) await model.setVisible(categoryIds.spaces, false).catch(() => {});
+    await this.fragments.core.update(true);
+    current();
+    const entry = { id, name: file.name, model, object, semantics: read, categoryIds, how, matrix };
+    this.linked.set(id, entry);
+    const box = model.box;
+    return { id, name: file.name, semantics: read, categoryIds, how, box: box && !box.isEmpty() ? { min: box.min.toArray(), max: box.max.toArray() } : null };
+  }
+
+  /** Move a linked model by a translation in the viewer frame (aligning it by hand). */
+  shiftLinked(id, [dx, dy, dz]) {
+    const entry = this.linked.get(id);
+    if (!entry) return null;
+    entry.matrix[12] += dx;
+    entry.matrix[13] += dy;
+    entry.matrix[14] += dz;
+    entry.object.matrix.fromArray(entry.matrix);
+    entry.object.updateMatrixWorld(true);
+    void this.fragments.core.update(true);
+    const box = entry.model.box;
+    return box && !box.isEmpty() ? { min: box.min.toArray(), max: box.max.toArray() } : null;
+  }
+
+  removeLinked(id) {
+    const entry = this.linked.get(id);
+    if (!entry) return;
+    this.world?.scene?.three?.remove(entry.object);
+    try {
+      this.fragments?.core?.disposeModel?.(entry.model.modelId);
+    } catch {
+      /* already gone */
+    }
+    this.linked.delete(id);
+  }
+
+  /**
+   * The first model's box in the viewer frame, for the federation check:
+   * the fragments model's whole box, as a linked model's is measured (the
+   * drawn meshes are only those streamed so far).
+   */
+  mainBox() {
+    const whole = this.model?.box;
+    const box = whole && !whole.isEmpty() ? whole : this._modelBox();
+    return box ? { min: box.min.toArray(), max: box.max.toArray() } : null;
+  }
+
+  /**
    * Run a job in src/workers/ifc-import.worker.js, with the importer settings
    * `init` gave the IfcLoader.
    *
@@ -997,6 +1154,7 @@ export class ViewerManager {
   }
 
   clearModel() {
+    for (const id of [...this.linked.keys()]) this.removeLinked(id);
     if (this.lod1 && this.modelObject) {
       for (const mesh of [...this.modelObject.children]) {
         this.world?.meshes?.delete?.(mesh);
@@ -1164,11 +1322,14 @@ export class ViewerManager {
   }
 
   /** Centroids (viewer frame) of some items' geometry, as a Map itemId -> [x, y, z]. */
-  async positionsOf(itemIds) {
+  async positionsOf(itemIds, { linked = null } = {}) {
     const out = new Map();
     if (!itemIds?.length || this.lod1) return out;
-    const world = this.modelObject?.matrixWorld?.clone() || null;
-    const meshes = await extractMeshes(this.model, itemIds, world);
+    const entry = linked ? this.linked.get(linked) : null;
+    if (linked && !entry) return out;
+    const model = entry ? entry.model : this.model;
+    const world = (entry ? entry.object : this.modelObject)?.matrixWorld?.clone() || null;
+    const meshes = await extractMeshes(model, itemIds, world);
     const byItem = new Map();
     for (const mesh of meshes) {
       if (!byItem.has(mesh.itemId)) byItem.set(mesh.itemId, []);
@@ -1179,6 +1340,70 @@ export class ViewerManager {
       if (c) out.set(itemId, c);
     }
     return out;
+  }
+
+  /**
+   * What hangs below the ceilings, for the sprinkler obstruction rules and,
+   * when asked, the fire grid: the first model's beams, and each linked
+   * model's beams, ducts and cable trays (an IFC2x3 flow segment or fitting
+   * counts when its name says duct or cable tray). Pipes are left out: in
+   * light and ordinary hazard only structural members fall under the three
+   * times rule, and a sprinkler's own branch line is a pipe. Meshes in the
+   * viewer frame, each with its item id, kind and whether it is structural.
+   */
+  async overheadMeshes() {
+    const out = [];
+    const take = async (model, object, ids, source) => {
+      const world = object?.matrixWorld?.clone() || null;
+      const beams = await extractMeshes(model, ids.beams || [], world).catch(() => []);
+      for (const m of beams) out.push({ ...m, kind: "beam", structural: true, source });
+      const ducts = await extractMeshes(model, ids.ducts || [], world).catch(() => []);
+      for (const m of ducts) out.push({ ...m, kind: "duct", structural: false, source });
+      const trays = await extractMeshes(model, ids.cableCarriers || [], world).catch(() => []);
+      for (const m of trays) out.push({ ...m, kind: "cable", structural: false, source });
+      const flows = await elementRecords(model, ids.flowSegments || []).catch(() => []);
+      const named = flows.filter((r) => OVERHEAD_FLOW_NAME.test(r.name || ""));
+      const flowMeshes = await extractMeshes(model, named.map((r) => r.itemId), world).catch(() => []);
+      const kindOf = new Map(named.map((r) => [r.itemId, /cable/i.test(r.name) ? "cable" : "duct"]));
+      for (const m of flowMeshes) out.push({ ...m, kind: kindOf.get(m.itemId) || "duct", structural: false, source });
+    };
+    if (this.model && this.categoryIds) await take(this.model, this.modelObject, this.categoryIds, "main");
+    for (const entry of this.linked.values()) await take(entry.model, entry.object, entry.categoryIds || {}, entry.name);
+    return out;
+  }
+
+  /**
+   * Elements that may be portable extinguishers (core/extinguishers.js
+   * extinguisherRecords tells them by name): this model's and each linked
+   * model's proxies, flow terminals and furnishings, with their names, and
+   * which model they are in (`linked`: its id, or null).
+   */
+  async extinguisherCandidates() {
+    const out = [];
+    const take = async (model, ids, linked) => {
+      const list = [...new Set([...(ids.proxies || []), ...(ids.flowTerminals || []), ...(ids.ignition || [])])];
+      for (const r of await elementRecords(model, list).catch(() => [])) out.push({ ...r, linked });
+    };
+    if (this.model && this.categoryIds) await take(this.model, this.categoryIds, null);
+    for (const entry of this.linked.values()) await take(entry.model, entry.categoryIds || {}, entry.id);
+    return out;
+  }
+
+  /** Extinguishers as small red markers, or none. */
+  setExtinguishers(points) {
+    if (!points?.length) {
+      this._setOverlay(OVERLAY.extinguishers, null);
+      return;
+    }
+    const marks = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(0.09, 0.09, 0.5, 10),
+      new THREE.MeshBasicMaterial({ color: 0xdc2626, depthTest: false, depthWrite: false, transparent: true, opacity: 0.95 }),
+      points.length,
+    );
+    const matrix = new THREE.Matrix4();
+    points.forEach((p, i) => marks.setMatrixAt(i, matrix.makeTranslation(p[0], p[1] + 0.25, p[2])));
+    marks.renderOrder = 940;
+    this._setOverlay(OVERLAY.extinguishers, marks);
   }
 
   // --------------------------------------------------------------- overlays
@@ -1348,10 +1573,11 @@ export class ViewerManager {
    * points: slate while shut, blue once open (`open`, a set of indices).
    * The instances keep their order, so a frame only recolours them.
    */
-  setSprinklers(points, open = null) {
+  setSprinklers(points, open = null, drops = null) {
     if (!points?.length) {
       this._setOverlay(OVERLAY.sprinklers, null);
       this._sprinklers = null;
+      this._setSpray(null);
       return;
     }
     const shut = new THREE.Color(0x64748b), opened = new THREE.Color(0x0284c7);
@@ -1370,6 +1596,56 @@ export class ViewerManager {
     }
     for (let i = 0; i < points.length; i += 1) heads.setColorAt(i, open?.has(i) ? opened : shut);
     if (heads.instanceColor) heads.instanceColor.needsUpdate = true;
+    this._setSpray(points, open, drops);
+  }
+
+  /**
+   * The spray under the open heads: droplets falling in a cone to the floor
+   * below each (`drops`, metres; 2.4 m where not given), moved by their
+   * shader from the time alone, so the page does no work per frame. Rebuilt
+   * only when the set of open heads changes; nothing while none is open.
+   */
+  _setSpray(points, open = null, drops = null) {
+    const list = points && open?.size ? [...open].filter((i) => points[i]).sort((a, b) => a - b) : [];
+    const key = list.join(",");
+    if (key === this._sprayKey && (list.length === 0 || this.overlays.has(OVERLAY.spray))) return;
+    this._sprayKey = key;
+    if (!list.length) {
+      this._setOverlay(OVERLAY.spray, null);
+      return;
+    }
+    const n = list.length * SPRAY_DROPLETS;
+    const head = new Float32Array(n * 3), seed = new Float32Array(n * 3), drop = new Float32Array(n);
+    let q = 0;
+    for (const i of list) {
+      const fall = drops?.[i] > 0 ? drops[i] : 2.4;
+      for (let k = 0; k < SPRAY_DROPLETS; k += 1, q += 1) {
+        head.set(points[i], q * 3);
+        // A fixed scatter (golden-ratio steps), the same picture every time.
+        seed[q * 3] = k * 2.399963;
+        seed[q * 3 + 1] = Math.sqrt((k * 0.618034) % 1);
+        seed[q * 3 + 2] = (k * 0.381966 + i * 0.137) % 1;
+        drop[q] = fall;
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(head, 3));
+    geometry.setAttribute("seed", new THREE.BufferAttribute(seed, 3));
+    geometry.setAttribute("drop", new THREE.BufferAttribute(drop, 1));
+    const material = new THREE.ShaderMaterial({
+      uniforms: { time: { value: 0 }, speed: { value: SPRAY_SPEED }, spread: { value: SPRAY_SPREAD }, colour: { value: new THREE.Color(0x0284c7) } },
+      vertexShader: SPRAY_VERTEX,
+      fragmentShader: SPRAY_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+    });
+    const spray = new THREE.Points(geometry, material);
+    spray.frustumCulled = false;
+    spray.renderOrder = 935;
+    spray.onBeforeRender = () => {
+      material.uniforms.time.value = performance.now() / 1000;
+    };
+    this._setOverlay(OVERLAY.spray, spray);
   }
 
   /** Navigation's route, drawn like ours in its own overlay. */

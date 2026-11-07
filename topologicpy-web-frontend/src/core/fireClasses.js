@@ -30,6 +30,12 @@
  *   growth            the t-squared class the sources give (for the panel and
  *                     the two-zone model; the solver grows the fire itself)
  *   item              the first item: mass (kg) and exposed area (m^2), ours
+ *   water             what sprinkler water does to the item (waterResponse;
+ *                     wiki/research/water-by-fire-class-2026-11-07.md): whether
+ *                     it soaks in and cools the surface ("wets"), whether
+ *                     Evans's cap, measured on wetted furniture and cribs,
+ *                     applies ("evans"), and whether the item holds no water
+ *                     of its own ("dry"); a note for the panel
  *
  * What the solver does not model: CO rising to 0.2 kg/kg under-ventilated
  * (gannbryner), hydrogen halides from appliances (hietaniemi2001vtt) and HF
@@ -39,6 +45,23 @@
 /** CO2 per kg burnt from a fuel's carbon mass fraction, after CO and soot. */
 export function co2FromCarbon(carbon, co, soot) {
   return (44 / 12) * Math.max(0, carbon - (12 / 28) * co - soot);
+}
+
+/**
+ * What sprinkler water does to a burning item (water-by-fire-class-2026-11-07.md):
+ * sprinkler drops are too large to put a flame out in the gas (Rasbash 1986);
+ * water works by cooling the burning surface below its fire point, so only
+ * where it reaches the surface and the fire point is above the water's
+ * temperature. Solids (A, and C once the circuit is dead) are wetted and
+ * take Evans's cap; a liquid lighter than water with a fire point below it
+ * (heptane), cooking oil (it erupts), metals (water feeds them hydrogen) and
+ * lithium-ion packs (water does not reach the cells) are neither, and hold
+ * none of wood's water.
+ */
+const NOT_WETTED = { wets: false, evans: false, dry: true };
+export function waterResponse(fuel) {
+  const w = fuel?.water || {};
+  return { wets: w.wets !== false, evans: w.evans !== false, dry: w.dry === true, note: w.note || null };
 }
 
 const fuel = (heatMJ, carbon, co, soot, extra = {}) => ({
@@ -78,7 +101,15 @@ export const FIRE_CLASSES = {
     // n-heptane, the standard test liquid: boils at 98.4 C, 0.317 MJ/kg to evaporate,
     // and burns at most m''_inf (1 - exp(-k beta D)) per m^2 of pool, with
     // m''_inf 0.101 kg/(m^2 s) and k beta 1.1 /m (3.2 MW for this 1 m^2 pool).
-    fuel: fuel(44.1, 0.839, 0.022, 0.072, { liquid: { boiling: 371.6, latent: 3.17e5, mInf: 0.101, kBeta: 1.1 }, embers: false, ignitionTemperature: 250 }),
+    fuel: fuel(44.1, 0.839, 0.022, 0.072, {
+      liquid: { boiling: 371.6, latent: 3.17e5, mInf: 0.101, kBeta: 1.1 },
+      embers: false,
+      ignitionTemperature: 250,
+      water: {
+        ...NOT_WETTED,
+        note: "Heptane's fire point is below the water's temperature and it is lighter than water: the water sinks through the pool, which keeps burning. Sprinklers protect what is round it; putting it out takes foam (Rasbash 1986).",
+      },
+    }),
     growth: { class: "ultra-fast", alpha: 0.1876, note: "a spill or pool; gasoline burns at 0.055 kg/m2s in large pools" },
     item: { mass: 4, area: 1 },
     agents: {
@@ -101,7 +132,13 @@ export const FIRE_CLASSES = {
     short: "C",
     iso: "none (electrical is not an ISO 3941 class; the burning plastics are A)",
     examples: "Refrigerator-freezers, dishwashers, washing machines and dryers, televisions and electronics, distribution boards",
-    fuel: fuel(30.3, 0.857, 0.056, 0.056, { embers: false, ignitionTemperature: 390 }),
+    fuel: fuel(30.3, 0.857, 0.056, 0.056, {
+      embers: false,
+      ignitionTemperature: 390,
+      water: {
+        note: "What burns is the equipment's plastic, wetted and capped here as class A; while the circuit is live, water puts the people using it at risk of a shock, and the item can re-ignite until it is cut off.",
+      },
+    }),
     fuelClass: "A",
     growth: { class: "medium", alpha: 0.0117, note: "refrigerators slow, televisions fast, after minutes of smouldering" },
     item: { mass: 10, area: 1 },
@@ -126,7 +163,19 @@ export const FIRE_CLASSES = {
     examples: "Magnesium parts and swarf, sodium and potassium in laboratories, lithium metal primary cells (not lithium-ion)",
     // Mg + 1/2 O2 -> MgO: 601.6 kJ / mol over 24.305 g / mol; the oxide stays as ash.
     // Magnesium's own specific heat, 24.87 J/(mol K) over 24.305 g/mol.
-    fuel: { heatOfCombustion: 24.75e6, o2: 0.658, ash: 1.658, heatCapacity: 1023, yields: { co2: 0, co: 0, soot: 0 }, embers: false, ignitionTemperature: 473 },
+    fuel: {
+      heatOfCombustion: 24.75e6,
+      o2: 0.658,
+      ash: 1.658,
+      heatCapacity: 1023,
+      yields: { co2: 0, co: 0, soot: 0 },
+      embers: false,
+      ignitionTemperature: 473,
+      water: {
+        ...NOT_WETTED,
+        note: "Water on burning magnesium gives hydrogen and heat (17.5 MJ and 0.11 kg of hydrogen per kg of water reacted): it feeds the fire and risks an explosion. The run credits the water nothing here; the reaction is not modelled.",
+      },
+    },
     growth: { class: null, alpha: null, note: "no t-squared characterisation found" },
     item: { mass: 2, area: 0.2 },
     agents: {
@@ -149,7 +198,15 @@ export const FIRE_CLASSES = {
     // nearest row of the SFPE table (0.039 kg/(m^2 s), k beta 0.7 /m), stands
     // in. For this pan it gives about 19 kW, the low end of the 20 to 110 kW
     // that pan fires reach (growth, below).
-    fuel: fuel(37.4, 0.774, 0.021, 0.069, { liquid: { boiling: 663, latent: 2.5e5, mInf: 0.039, kBeta: 0.7 }, embers: false, ignitionTemperature: 390 }),
+    fuel: fuel(37.4, 0.774, 0.021, 0.069, {
+      liquid: { boiling: 663, latent: 2.5e5, mInf: 0.039, kBeta: 0.7 },
+      embers: false,
+      ignitionTemperature: 390,
+      water: {
+        ...NOT_WETTED,
+        note: "Water on oil above about 210 C turns to steam under it and throws burning oil out (a NIST residential sprinkler on a cooktop fire put out one of two, spreading oil both times). The run credits the water nothing on the pan; the eruption is not modelled.",
+      },
+    }),
     growth: { class: "ultra-fast", alpha: 0.1876, note: "a pan fire peaks at 20 to 110 kW within 40 s and spreads to cabinets ultra-fast" },
     item: { mass: 2, area: 0.07 },
     agents: {
@@ -177,7 +234,14 @@ export const FIRE_CLASSES = {
     iso: "L (ISO 3941:2026)",
     examples: "E-bike and e-scooter packs, power banks, phones and laptops, battery storage",
     // Not a single fuel: heat scales with stored energy; burnt as appliance plastics here.
-    fuel: fuel(30.3, 0.857, 0.056, 0.056, { embers: false, ignitionTemperature: 300 }),
+    fuel: fuel(30.3, 0.857, 0.056, 0.056, {
+      embers: false,
+      ignitionTemperature: 300,
+      water: {
+        ...NOT_WETTED,
+        note: "Ceiling water does not reach the cells inside a pack: it cools what is round it and slows spread, but does not stop the burning pack, which can re-ignite minutes to days later (FM Global; Xu et al. 2022).",
+      },
+    }),
     growth: { class: "ultra-fast", alpha: 0.1876, note: "an e-scooter in a closed bedroom reached flashover within 30 s of visible smoke" },
     item: { mass: 3, area: 0.3 },
     agents: {

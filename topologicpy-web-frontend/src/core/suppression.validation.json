@@ -1,0 +1,786 @@
+{
+ "description": "Measured data for src/core/suppression.validation.test.mjs: the gas at Vettori's heads 1 and 2 (smooth ceiling, NISTIR 6253) for the link replay, and Evans's decay constants (NISTIR 5254 Tables 1 and 2) for the cap. Drawn from the same sources as benchmark/validation/sprinkler-tests.json (see wiki/research/sprinkler-validation-data-2026-11-07.md).",
+ "generated": "2026-11-07",
+ "notice": {
+  "credit": "Measurements and test descriptions from the National Institute of Standards and Technology (NIST): NIST reports (US Government works, not subject to copyright in the United States, 17 U.S.C. 105) and NIST's firemodels repositories (github.com/firemodels/exp at 704e0d9, github.com/firemodels/fds at b7dc77f, github.com/firemodels/cfast), whose licence notice follows. Bittern 2004 numbers come only through those NIST repositories (FDS Validation Guide, FDS inputs, exp CSV); the thesis was not read.",
+  "changes": "Changed on 2026-11-07 by Topologic Studio: values selected from the reports, FDS inputs, CFAST inputs and exp CSVs, units put in field names, coordinates kept in each data set's stated frame, some values derived (marked 'derived' in their source). No measured value was altered.",
+  "firemodels_licence": "NIST-developed software is provided by NIST as a public service. You may use, copy and distribute copies of the software in any medium, provided that you keep intact this entire notice. You may improve, modify and create derivative works of the software or any portion of the software, and you may copy and distribute such modifications or works. Modified works should carry a notice stating that you changed the software and should note the date and nature of any such change. Please explicitly acknowledge the National Institute of Standards and Technology as the source of the software.\n\nNIST-developed software is expressly provided “AS IS.” NIST MAKES NO WARRANTY OF ANY KIND, EXPRESS, IMPLIED, IN FACT OR ARISING BY OPERATION OF LAW, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT AND DATA ACCURACY. NIST NEITHER REPRESENTS NOR WARRANTS THAT THE OPERATION OF THE SOFTWARE WILL BE UNINTERRUPTED OR ERROR-FREE, OR THAT ANY DEFECTS WILL BE CORRECTED. NIST DOES NOT WARRANT OR MAKE ANY REPRESENTATIONS REGARDING THE USE OF THE SOFTWARE OR THE RESULTS THEREOF, INCLUDING BUT NOT LIMITED TO THE CORRECTNESS, ACCURACY, RELIABILITY, OR USEFULNESS OF THE SOFTWARE.\n\nYou are solely responsible for determining the appropriateness of using and distributing the software and you assume all risks associated with its use, including but not limited to the risks and costs of program errors, compliance with applicable laws, damage to or loss of data, programs or equipment, and the unavailability or interruption of operation. This software is not intended to be used in any situation where a failure could cause risk of injury or damage to property. The software developed by NIST employees is not subject to copyright protection within the United States."
+ },
+ "sources": {
+  "NISTIR6253": {
+   "citation": "Vettori, R.L. (1998) Effect of an Obstructed Ceiling on the Activation Time of a Residential Sprinkler. NISTIR 6253, NIST.",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir6253.pdf",
+   "doi": "10.6028/NIST.IR.6253",
+   "licence": "US Government work (NIST/NBS staff); not subject to copyright protection in the United States (17 U.S.C. 105). Free to reuse; cite NIST. Appendix A reproduces a UL test report (UL Project 96NK9527); only numbers taken from it."
+  },
+  "EXP": {
+   "citation": "Fire Research Division Experimental Database, github.com/firemodels/exp at firemodels/exp@704e0d91f15088ae41c6a30a662a7524bf5ff4e8",
+   "licence": "NIST software/data licence notice in LICENSE.md: NIST-developed material is not subject to copyright protection in the United States; use, copy, modify and distribute with the notice kept and NIST acknowledged; provided AS IS. (exp/LICENSE.md, same text as fds)."
+  },
+  "CFASTIN": {
+   "citation": "CFAST validation inputs Validation/Vettori_Flat/Test_N.in, firemodels/cfast master (raw files fetched 2026-11-07)",
+   "licence": "NIST software/data licence notice in LICENSE.md: NIST-developed material is not subject to copyright protection in the United States; use, copy, modify and distribute with the notice kept and NIST acknowledged; provided AS IS. (cfast/LICENSE.md)"
+  },
+  "NISTIR5254": {
+   "citation": "Evans, D.D. (1993) Sprinkler Fire Suppression Algorithm for HAZARD. NISTIR 5254, NIST.",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir5254.pdf",
+   "doi": "10.6028/NIST.IR.5254",
+   "licence": "US Government work (NIST/NBS staff); not subject to copyright protection in the United States (17 U.S.C. 105). Free to reuse; cite NIST."
+  },
+  "NISTIR4833": {
+   "citation": "Madrzykowski, D., Vettori, R.L. (1992) A Sprinkler Fire Suppression Algorithm for the GSA Engineering Fire Assessment System. NISTIR 4833, NIST.",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir4833.pdf",
+   "doi": "10.6028/NIST.IR.4833",
+   "licence": "US Government work (NIST/NBS staff); not subject to copyright protection in the United States (17 U.S.C. 105). Free to reuse; cite NIST."
+  },
+  "NBSIR88-3696": {
+   "citation": "Walton, W.D. (1988) Suppression of Wood Crib Fires with Sprinkler Sprays: Test Results. NBSIR 88-3696, NBS.",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nbsir88-3696.pdf",
+   "doi": "10.6028/NBS.IR.88-3696",
+   "licence": "US Government work (NIST/NBS staff); not subject to copyright protection in the United States (17 U.S.C. 105). Free to reuse; cite NIST."
+  }
+ },
+ "vettori_link_records": {
+  "source": "EXP Vettori_Flat_Ceiling_Test_NN.csv (firemodels/exp@704e0d9): TIME, TC_n_02 (thermocouple 25 mm below the ceiling at head n) and |BDP_n_01| (bi-directional probe 25 mm below the ceiling); ambient from the CFAST inputs; activation times from Vettori_Flat_Ceiling_Act.csv (NISTIR 6253 Appendix B). Rows as digitised (about 7 s apart in most tests); gas rounded to 0.1 C, speed to 0.01 m/s.",
+  "head": {
+   "RTI_m05_s05": 55,
+   "C_m05_per_s05": 0.25,
+   "activation_C": 68,
+   "source": "NISTIR 6253 sec. 2.2 and App. A (UL plunge tests: RTI 55.8, C 0.25)"
+  },
+  "tests": [
+   {
+    "test": 1,
+    "burner_position": "detached",
+    "growth": "fast",
+    "ambient_C": 16.6,
+    "file": "Vettori_Flat_Ceiling_Test_01.csv",
+    "time_s": [0,6.13,12.99,19.72,26.64,33.43,40.3,47.2,53.9,60.9],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 46.4,
+      "gas_C": [16.8,17.1,39.7,58.6,70.2,82.6,107.3,117.6,129.8,113.5],
+      "speed_m_per_s": [0,1.47,1.34,1.51,1.78,1.57,1.21,1.21,0.76,0.22]
+     },
+     {
+      "head": 2,
+      "activation_s": 51,
+      "gas_C": [16.8,23.7,49,72.9,85.5,94.4,116.7,125.4,105.9,100],
+      "speed_m_per_s": [0,1.19,1.09,1.57,1.32,1.13,1.48,1.3,0.45,0.4]
+     }
+    ]
+   },
+   {
+    "test": 2,
+    "burner_position": "detached",
+    "growth": "fast",
+    "ambient_C": 19,
+    "file": "Vettori_Flat_Ceiling_Test_02.csv",
+    "time_s": [0,0.26,7.16,14.02,20.78,27.7,34.48,41.4,48.2,55],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 43.3,
+      "gas_C": [19,19,23.4,42.3,59,75.2,90.8,115.5,122.9,124.8],
+      "speed_m_per_s": [0,0.23,1.1,1.16,1.3,1.1,1.66,1.81,1.15,1.01]
+     },
+     {
+      "head": 2,
+      "activation_s": 46.3,
+      "gas_C": [19.3,19.5,31.7,49.1,73.2,86.8,107.8,120.8,131.6,134.6],
+      "speed_m_per_s": [0,0.21,1.01,1.3,0.7,1.42,1.22,1.46,0.91,0.78]
+     }
+    ]
+   },
+   {
+    "test": 3,
+    "burner_position": "detached",
+    "growth": "fast",
+    "ambient_C": 20.8,
+    "file": "Vettori_Flat_Ceiling_Test_03.csv",
+    "time_s": [0,5.24,12.08,18.83,25.73,32.48,39.4,46.2,53],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 41,
+      "gas_C": [20.9,26.2,43.3,64.2,74.9,92.8,108.2,107.8,146.8],
+      "speed_m_per_s": [0,1.02,1.19,1.37,1.48,1.28,1.62,1.24,1.68]
+     },
+     {
+      "head": 2,
+      "activation_s": 44.3,
+      "gas_C": [20.9,38,58.1,68.2,91.7,106.5,121.4,135.9,156.7],
+      "speed_m_per_s": [0,1.08,1.27,1.22,1.34,1.12,1.31,2.31,1.7]
+     }
+    ]
+   },
+   {
+    "test": 6,
+    "burner_position": "detached",
+    "growth": "medium",
+    "ambient_C": 17.1,
+    "file": "Vettori_Flat_Ceiling_Test_06.csv",
+    "time_s": [0,2.73,9.62,16.4,23.3,30.2,36.9,43.9,50.6,57.5,64.3,71.1,78.1,84.8,91.8,98.5],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 88.2,
+      "gas_C": [17.6,17.6,18.5,30,38.3,49.6,55.3,62.1,65.1,71.6,77.1,82.9,89.2,99.7,105.2,123.5],
+      "speed_m_per_s": [0,0.2,0.96,0.88,1.17,1.2,1.4,0.77,1.54,0.9,1.15,1.04,1.36,1.79,1.57,1.2]
+     },
+     {
+      "head": 2,
+      "activation_s": 92.8,
+      "gas_C": [17.7,17.9,25.6,44.2,47.6,49.7,62.1,57.5,74.6,76,92.4,97.4,117,117.3,125.5,124],
+      "speed_m_per_s": [0,0.15,0.92,0.98,1.06,0.84,1.36,0.7,1.17,0.88,1.11,1.38,1.23,1.15,1.4,1.29]
+     }
+    ]
+   },
+   {
+    "test": 7,
+    "burner_position": "detached",
+    "growth": "medium",
+    "ambient_C": 21.6,
+    "file": "Vettori_Flat_Ceiling_Test_07.csv",
+    "time_s": [0,4.5,11.3,18,25,31.8,38.7,45.5,52.3,59.3,66,73,79.8],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 67,
+      "gas_C": [21.5,21.6,29.5,45,54.4,62.3,69.1,82,90.9,98.7,108.4,108,119.3],
+      "speed_m_per_s": [0,0.94,1.02,1.14,1.04,1.11,1.24,1.29,1.05,1.42,1.72,1.26,1.24]
+     },
+     {
+      "head": 2,
+      "activation_s": 68.2,
+      "gas_C": [21.7,21.9,41.9,47.3,58.5,66.7,75.1,95.6,92.9,110.9,127.4,130,128.3],
+      "speed_m_per_s": [0,0.77,1.13,0.89,1.09,1.11,1.5,1.1,1.4,1.5,1.52,1.79,0.65]
+     }
+    ]
+   },
+   {
+    "test": 8,
+    "burner_position": "detached",
+    "growth": "medium",
+    "ambient_C": 21.8,
+    "file": "Vettori_Flat_Ceiling_Test_08.csv",
+    "time_s": [5.7,12.48,19.4,26.2,33,39.9,46.7,53.6,60.4,67.1,74.1,80.9,87.8],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 77.6,
+      "gas_C": [21.7,27.8,42.3,49.1,55.8,65.4,70.2,75.2,86,96.1,105.2,116.5,119.5],
+      "speed_m_per_s": [0.97,1.13,1.19,0.77,0.98,1.1,1.43,1.3,0.95,1.76,1.25,1.68,1.08]
+     },
+     {
+      "head": 2,
+      "activation_s": 79,
+      "gas_C": [21.8,39.2,47.1,55.4,71.8,73,78.4,85.9,99.2,107,115.8,130,121.1],
+      "speed_m_per_s": [0.76,0.96,1.29,1.41,0.91,1.06,0.79,1.04,0.97,1.25,1.18,1.26,1.11]
+     }
+    ]
+   },
+   {
+    "test": 11,
+    "burner_position": "detached",
+    "growth": "slow",
+    "ambient_C": 18.1,
+    "file": "Vettori_Flat_Ceiling_Test_11.csv",
+    "time_s": [0,5.3,12.2,19,25.9,32.7,39.5,46.4,53.2,59.9,66.9,73.7,80.6,87.4,94.2,101.1],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 100.4,
+      "gas_C": [17.8,17.8,31.1,40.8,48.6,51.4,57,62.6,68.3,70.4,79.4,84.2,90.8,98.3,101.4,109.7],
+      "speed_m_per_s": [0,0.95,0.9,1.08,0.72,1,1.35,0.84,0.94,1.48,1.17,1.04,1.44,1.12,0.97,1.63]
+     },
+     {
+      "head": 2,
+      "activation_s": 100.2,
+      "gas_C": [17.6,17.7,37.1,45.2,47.5,51.2,59.1,66.7,76.1,78.1,89.9,94.1,95.5,101.3,107.4,119.2],
+      "speed_m_per_s": [0,0.97,0.8,1.18,0.88,1.11,0.89,1.15,1.21,0.86,1.19,1.2,1.12,1.47,1.27,1.86]
+     }
+    ]
+   },
+   {
+    "test": 12,
+    "burner_position": "detached",
+    "growth": "slow",
+    "ambient_C": 21,
+    "file": "Vettori_Flat_Ceiling_Test_12.csv",
+    "time_s": [0,1.2,8.1,14.9,21.9,28.6,35.4,42.3,49.1,56.1,62.9,69.7,76.6,83.4,90.1,97,103.9,110.7,117.5,124.3,131.2,138.1],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 116.6,
+      "gas_C": [20.6,20.9,22.2,30,37.1,44.2,47.5,48.7,51.5,59.1,62.2,68,69.3,74.4,78.7,87.8,94.1,99.7,100,94.1,100.1,107.6],
+      "speed_m_per_s": [0,0.12,0.82,0.85,0.93,0.69,1,0.69,1.04,0.89,0.96,1.07,0.69,1.24,0.92,1.57,1.62,0.79,1.15,1.36,0.92,1.03]
+     },
+     {
+      "head": 2,
+      "activation_s": 127.3,
+      "gas_C": [20.6,20.5,25.7,39.1,41.4,45,54.7,53.9,58.6,65.7,64.6,72.8,75.7,80.9,93.8,94,94.5,100.4,111,108,109.6,119.2],
+      "speed_m_per_s": [0,0.11,0.81,0.96,0.63,1.03,0.71,0.83,0.95,0.83,0.93,0.92,0.92,0.82,1.27,1.19,1.14,1.23,0.82,1.51,1.74,0.75]
+     }
+    ]
+   },
+   {
+    "test": 13,
+    "burner_position": "detached",
+    "growth": "slow",
+    "ambient_C": 22,
+    "file": "Vettori_Flat_Ceiling_Test_13.csv",
+    "time_s": [0,5.2,12.2,18.9,25.9,32.6,39.4,46.3,53.1,60.1,66.8,73.6,80.5,87.3,94.1,101,107.8,114.7,121.5,128.2],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 116.2,
+      "gas_C": [21.7,21.7,25.5,34,37.8,43.8,46.4,50.7,53.6,59.4,63.2,70,78.8,80.8,86.1,84.5,91,92.9,93.6,94.8],
+      "speed_m_per_s": [0,0.75,0.69,0.92,0.74,0.59,0.8,1.02,0.86,0.9,1.04,1.19,0.78,1.26,1.27,1.38,1.28,1.27,1.11,1.21]
+     },
+     {
+      "head": 2,
+      "activation_s": 121.3,
+      "gas_C": [22.1,22.2,30.7,39.4,45.8,47.3,50.6,54.8,59.1,70.2,72.7,79.6,82.8,84.8,86.5,95.3,99.6,101.4,107,106.5],
+      "speed_m_per_s": [0,0.74,1.06,0.89,0.65,0.83,0.91,0.67,0.94,0.83,1.22,0.89,1.11,1.05,1.16,1.23,1.29,0.73,1.09,1.52]
+     }
+    ]
+   },
+   {
+    "test": 16,
+    "burner_position": "wall",
+    "growth": "fast",
+    "ambient_C": 20.7,
+    "file": "Vettori_Flat_Ceiling_Test_16.csv",
+    "time_s": [0,2.51,9.43,16.3,23.06,30.01,36.79,43.7],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 47,
+      "gas_C": [21.2,21.2,24.2,42.3,60.4,71.6,89.4,109.7],
+      "speed_m_per_s": [0,0,1.14,1.11,1.55,1.18,1.63,1.54]
+     },
+     {
+      "head": 2,
+      "activation_s": 41.9,
+      "gas_C": [21.1,21,35.6,52.9,70,88.9,112,147.4],
+      "speed_m_per_s": [0,0.18,1.1,1.26,1.4,1.8,1.63,2.27]
+     }
+    ]
+   },
+   {
+    "test": 17,
+    "burner_position": "wall",
+    "growth": "fast",
+    "ambient_C": 20.4,
+    "file": "Vettori_Flat_Ceiling_Test_17.csv",
+    "time_s": [0,0.29,7.19,14.05,20.75,27.7,34.48,41.4],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 40.3,
+      "gas_C": [20.3,20.6,22,48.2,56.1,76.2,100.7,116.7],
+      "speed_m_per_s": [0,0.12,1.33,0.9,1.48,1.17,1.28,1.74]
+     },
+     {
+      "head": 2,
+      "activation_s": 43.7,
+      "gas_C": [20.2,20.6,28.5,57.4,71,90.4,110.7,123.1],
+      "speed_m_per_s": [0,0.13,0.87,1.24,1.74,1.52,1.84,1.99]
+     }
+    ]
+   },
+   {
+    "test": 18,
+    "burner_position": "wall",
+    "growth": "fast",
+    "ambient_C": 20.3,
+    "file": "Vettori_Flat_Ceiling_Test_18.csv",
+    "time_s": [0,0.32,7.21,14.05,20.81,27.76,34.54],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 42.3,
+      "gas_C": [19.6,19.9,20.3,42,62.7,79.2,108.2],
+      "speed_m_per_s": [0,0.11,0.87,1.54,1.59,1.95,0.87]
+     },
+     {
+      "head": 2,
+      "activation_s": 38.8,
+      "gas_C": [19.7,20,33.4,57.1,68.7,94.3,118],
+      "speed_m_per_s": [0,0.09,0.95,1.72,1.69,1.64,2]
+     }
+    ]
+   },
+   {
+    "test": 21,
+    "burner_position": "wall",
+    "growth": "medium",
+    "ambient_C": 21.1,
+    "file": "Vettori_Flat_Ceiling_Test_21.csv",
+    "time_s": [0,1.7,8.49,15.4,22.2,29,36,42.7,49.6,56.4,63.2,70.2],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 71.5,
+      "gas_C": [21.2,21.2,21.8,34.8,41.1,56.2,63.3,70.9,76.4,89.6,99.1,105.8],
+      "speed_m_per_s": [0,0.08,0.61,1.05,0.73,1.29,1.39,0.81,1.22,0.97,1.21,1.71]
+     },
+     {
+      "head": 2,
+      "activation_s": 70.1,
+      "gas_C": [21.5,21.9,28.3,50.5,50.6,57.4,67.8,84.9,88.9,100.2,110.2,113.6],
+      "speed_m_per_s": [0,0.13,1.19,1.26,0.67,1.34,1.29,1.42,1.55,1.35,1.66,1.83]
+     }
+    ]
+   },
+   {
+    "test": 22,
+    "burner_position": "wall",
+    "growth": "medium",
+    "ambient_C": 21.7,
+    "file": "Vettori_Flat_Ceiling_Test_22.csv",
+    "time_s": [0,2.77,9.56,16.5,23.3,30,37,43.8,50.7,57.5,64.3,71.2],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 70.7,
+      "gas_C": [21.7,21.6,22.8,35.9,44.2,54.4,64.6,75,80.4,92.3,104.3,106.6],
+      "speed_m_per_s": [0,0.13,1.03,1.22,0.94,1.03,1.12,1.43,1.54,1.52,1.64,1.15]
+     },
+     {
+      "head": 2,
+      "activation_s": 75.7,
+      "gas_C": [22,21.4,29.6,43,48.4,64.4,73.4,77.2,88.7,102.3,108.4,123.9],
+      "speed_m_per_s": [0,0.11,0.92,1.06,1.57,1.14,1.59,1.47,1.48,1.79,1.63,1.09]
+     }
+    ]
+   },
+   {
+    "test": 23,
+    "burner_position": "wall",
+    "growth": "medium",
+    "ambient_C": 21.8,
+    "file": "Vettori_Flat_Ceiling_Test_23.csv",
+    "time_s": [0,1.67,8.46,15.4,22.2,29,35.9,42.7,49.7,56.4,63.2,70.2],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 67.7,
+      "gas_C": [21.9,21.7,23.4,38.2,44.8,56.4,66.5,73.5,81.3,90.9,101.6,110.3],
+      "speed_m_per_s": [0,0.13,0.55,1.07,1.41,1.11,1.41,1.43,1.04,0.83,1.27,0.7]
+     },
+     {
+      "head": 2,
+      "activation_s": 75.4,
+      "gas_C": [22.3,21.9,27,45.5,51.1,57.3,70.3,80.1,87.8,98.1,105.7,114.5],
+      "speed_m_per_s": [0,0.12,0.82,0.84,1.01,1.23,1.72,1.49,1.51,1.28,1.47,1.66]
+     }
+    ]
+   },
+   {
+    "test": 26,
+    "burner_position": "wall",
+    "growth": "slow",
+    "ambient_C": 21.5,
+    "file": "Vettori_Flat_Ceiling_Test_26.csv",
+    "time_s": [0,2.7,9.5,16.3,23.3,30,37,43.7,50.5,57.4,64.3,71.2,77.9,84.7,91.7,98.5,105.3,112.2,119,125.9,132.7],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 129.2,
+      "gas_C": [21.3,21.3,22.4,29.3,36.9,37.6,43.4,49.1,51.3,55.4,60.1,66.3,70,75.8,81.4,80.1,88.9,93.5,96.2,102.2,87],
+      "speed_m_per_s": [0,0,0.36,0.91,0.79,0.81,0.93,0.98,1.4,0.94,1.11,0.58,0.83,1.37,1.2,1.12,1.43,0.98,1.65,1.17,1.02]
+     },
+     {
+      "head": 2,
+      "activation_s": 138.9,
+      "gas_C": [21.2,21.4,24.3,33.1,39.1,40.2,48,50.9,54.7,60.6,65.6,71.5,72.2,81,83.7,87.1,100.5,102.5,98.1,105.6,116.1],
+      "speed_m_per_s": [0,0.12,1.08,0.99,1.03,0.99,0.94,0.54,1.1,1.26,0.82,1.3,1.45,1.04,1.34,1.44,0.92,0.98,1.55,1.27,0.95]
+     }
+    ]
+   },
+   {
+    "test": 27,
+    "burner_position": "wall",
+    "growth": "slow",
+    "ambient_C": 22.5,
+    "file": "Vettori_Flat_Ceiling_Test_27.csv",
+    "time_s": [0,3,9.8,16.6,23.5,30.3,37.3,44,50.8,57.8,64.6,71.5,78.3,85.1,92,98.8,105.6,112.6,119.4,126.3],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 115.9,
+      "gas_C": [22.1,22.1,24.7,32.9,36.8,41.8,45.8,49,53,55.7,61.1,70.1,73.4,78.4,83.9,85.1,93.7,98.6,53,42.6],
+      "speed_m_per_s": [0,0.12,0.51,0.79,0.86,0.77,0.95,1.1,0.8,0.99,1.25,1.12,0.86,0.87,1.15,1.45,0.73,0.73,1.37,1.14]
+     },
+     {
+      "head": 2,
+      "activation_s": 132.2,
+      "gas_C": [22.2,21.6,25.5,32.2,38.1,43.6,50.9,51,55,61.8,68.6,71.7,75.4,76.5,85.8,90.4,96.5,100,100,110.9],
+      "speed_m_per_s": [0,0.11,0.59,0.94,1.03,0.9,1.17,1.36,1.22,1.09,1.12,1.33,1.19,1.51,1.47,1.81,1.29,1.48,1.46,1.23]
+     }
+    ]
+   },
+   {
+    "test": 28,
+    "burner_position": "wall",
+    "growth": "slow",
+    "ambient_C": 22.7,
+    "file": "Vettori_Flat_Ceiling_Test_28.csv",
+    "time_s": [0,4.6,11.5,18.2,25.2,32,38.9,45.6,52.5,59.4,66.2,73.1,79.9,86.7,93.6,100.4,107.2,114.1,120.9],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 124,
+      "gas_C": [22.3,22.8,26.3,33.1,38.9,44,45.9,48.9,55.5,59.9,63.9,71.5,73.1,78.2,84.5,84.6,90.1,94.1,100],
+      "speed_m_per_s": [0,0.49,0.77,0.71,0.95,0.41,0.87,1.27,0.91,1.52,1.29,1.1,0.95,1.12,1.49,0.89,1.27,0.68,1.41]
+     },
+     {
+      "head": 2,
+      "activation_s": 125.9,
+      "gas_C": [22.4,22,30.7,37.1,41.6,43.1,47.1,47.4,57.5,68,66.5,75.2,77.6,81.8,84.6,88,98.3,101,109],
+      "speed_m_per_s": [0,0.68,0.74,0.81,0.71,1.06,0.82,1.3,1.3,0.87,1.33,1.25,1.43,1.22,1.54,0.99,0.83,1.55,1.9]
+     }
+    ]
+   },
+   {
+    "test": 31,
+    "burner_position": "corner",
+    "growth": "fast",
+    "ambient_C": 20.2,
+    "file": "Vettori_Flat_Ceiling_Test_31.csv",
+    "time_s": [0,2.35,9.24,16.08,22.84,29.9,36.68],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 34.9,
+      "gas_C": [20.6,20.6,27.7,59.9,80.9,105.8,126.6],
+      "speed_m_per_s": [0,0.13,1.25,1.65,1.9,2.22,2.82]
+     }
+    ]
+   },
+   {
+    "test": 32,
+    "burner_position": "corner",
+    "growth": "fast",
+    "ambient_C": 21.9,
+    "file": "Vettori_Flat_Ceiling_Test_32.csv",
+    "time_s": [0,5.24,12.05,18.8,25.7,32.48],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 29,
+      "gas_C": [21.5,21.8,76.8,88.3,131.1,96.9],
+      "speed_m_per_s": [0,1.48,1.62,2.37,2.36,2.19]
+     }
+    ]
+   },
+   {
+    "test": 33,
+    "burner_position": "corner",
+    "growth": "fast",
+    "ambient_C": 21.7,
+    "file": "Vettori_Flat_Ceiling_Test_33.csv",
+    "time_s": [0,4.21,11.05,17.81,24.76,31.54],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 28.5,
+      "gas_C": [21.6,21.9,74,100.9,116.2,165.2],
+      "speed_m_per_s": [0,1.56,1.98,2.11,2.33,2.1]
+     }
+    ]
+   },
+   {
+    "test": 36,
+    "burner_position": "corner",
+    "growth": "medium",
+    "ambient_C": 22.3,
+    "file": "Vettori_Flat_Ceiling_Test_36.csv",
+    "time_s": [0,6.51,13.5,20.3,27.1,34,40.8,47.7,54.5],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 54.1,
+      "gas_C": [22.2,22.3,41.1,71.4,80.8,88.1,103.6,102.8,125.8],
+      "speed_m_per_s": [0,0.82,1.64,1.8,1.77,1.78,1.15,1.57,2.45]
+     }
+    ]
+   },
+   {
+    "test": 37,
+    "burner_position": "corner",
+    "growth": "medium",
+    "ambient_C": 22.3,
+    "file": "Vettori_Flat_Ceiling_Test_37.csv",
+    "time_s": [0,5.68,12.6,19.4,26.2,33.2,40,46.8],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 47.2,
+      "gas_C": [21.8,22.1,46.5,71.9,80.8,82,87.7,115.5],
+      "speed_m_per_s": [0,0.88,1.62,1.82,1.51,1.77,2.17,1.31]
+     }
+    ]
+   },
+   {
+    "test": 38,
+    "burner_position": "corner",
+    "growth": "medium",
+    "ambient_C": 22.3,
+    "file": "Vettori_Flat_Ceiling_Test_38.csv",
+    "time_s": [0,1.75,8.57,15.5,22.3,29.1,36.1,42.8,49.7,56.5],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 53.7,
+      "gas_C": [21.3,21.4,34.1,57.7,71.4,84.5,93.4,96.4,130.7,140.6],
+      "speed_m_per_s": [0,0.51,1.25,1.48,2,1.64,1.79,1.54,2.18,2.03]
+     }
+    ]
+   },
+   {
+    "test": 41,
+    "burner_position": "corner",
+    "growth": "slow",
+    "ambient_C": 21.6,
+    "file": "Vettori_Flat_Ceiling_Test_41.csv",
+    "time_s": [0,4.2,11.2,17.9,24.9,31.7,38.5,45.4,52.2,59.1,65.9,72.7,79.6,86.4,93.2,100.1],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 98.7,
+      "gas_C": [21.3,21.4,33.4,51.4,56.3,64.8,72.1,69.5,79.5,90.1,101.9,101,108.8,108.2,110.6,119.3],
+      "speed_m_per_s": [0,0.45,1.3,1.31,1.24,1.65,1.79,1.86,1.52,1.5,1.83,1.57,1.77,1.69,1.54,1.74]
+     }
+    ]
+   },
+   {
+    "test": 42,
+    "burner_position": "corner",
+    "growth": "slow",
+    "ambient_C": 22.4,
+    "file": "Vettori_Flat_Ceiling_Test_42.csv",
+    "time_s": [0,2.4,9.2,16.2,23,29.9,36.7,43.5,50.4,57.2,64.2,70.9,77.7,84.6],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 83.6,
+      "gas_C": [21.9,22,31.6,43.2,54,58.2,70.4,71.2,75.6,91,106.3,97.8,99.5,113.9],
+      "speed_m_per_s": [0,0.34,0.91,1.13,1.76,1.96,1.26,1.41,1.66,1.18,1.96,1.72,1.9,1.55]
+     }
+    ]
+   },
+   {
+    "test": 43,
+    "burner_position": "corner",
+    "growth": "slow",
+    "ambient_C": 21.6,
+    "file": "Vettori_Flat_Ceiling_Test_43.csv",
+    "time_s": [0,3.4,10.2,17.2,23.9,30.9,37.6,44.4,51.3,58.1,65.1,71.9,78.7,85.6],
+    "heads": [
+     {
+      "head": 1,
+      "activation_s": 83.7,
+      "gas_C": [21.1,21.4,27.4,44.2,53.5,61.8,69.9,72.7,74.4,87.8,96.7,101.2,102.1,111.3],
+      "speed_m_per_s": [0,0.14,0.88,1.12,1.27,1.35,1.42,1.71,1.49,1.14,1.5,1.94,1.74,1.48]
+     }
+    ]
+   }
+  ]
+ },
+ "evans": {
+  "fit": {
+   "value": "tau = 3.0 w^-1.85 s (w in mm/s), furnishings; the cap in suppression.js (evansTau)",
+   "source": "NISTIR 5254 eq. 4"
+  },
+  "table1_furnishings": [
+   {
+    "item": "Sofa (vinyl covered, polyurethane foam cushioned)",
+    "density_mm_per_s": 0.07,
+    "hrr_at_activation_kW": [280],
+    "decay_s": [9.1],
+    "source": "NISTIR 5254 Table 1"
+   },
+   {
+    "item": "Workstation II (partitions, wooden desk, ABS bucket chair, terminal, papers, books)",
+    "density_mm_per_s": 0.07,
+    "hrr_at_activation_kW": [700],
+    "decay_s": [21.3],
+    "source": "NISTIR 5254 Table 1"
+   },
+   {
+    "item": "Papercart (canvas hamper, shredded paper in polyethylene bags)",
+    "density_mm_per_s": 0.07,
+    "hrr_at_activation_kW": [700],
+    "decay_s": [21.7],
+    "source": "NISTIR 5254 Table 1"
+   },
+   {
+    "item": "Executive Office (wooden desk, PU-foam chair, neoprene-padded chair, terminal, papers)",
+    "density_mm_per_s": 0.07,
+    "hrr_at_activation_kW": [545],
+    "decay_s": [30.4],
+    "source": "NISTIR 5254 Table 1"
+   },
+   {
+    "item": "Office II (wooden desk, reference table, terminal, recycling box, papers)",
+    "density_mm_per_s": 0.07,
+    "hrr_at_activation_kW": [425],
+    "decay_s": [41.3],
+    "source": "NISTIR 5254 Table 1"
+   },
+   {
+    "item": "Office I (wooden desk, reference table, terminal, boxes of paper, books, files)",
+    "density_mm_per_s": 0.07,
+    "hrr_at_activation_kW": [1085,950],
+    "decay_s": [230],
+    "source": "NISTIR 5254 Table 1"
+   },
+   {
+    "item": "Workstation I (partitions, wooden desk, ABS bucket chair, terminal, papers)",
+    "density_mm_per_s": 0.07,
+    "hrr_at_activation_kW": [1310,1365],
+    "decay_s": [713],
+    "source": "NISTIR 5254 Table 1"
+   },
+   {
+    "item": "Square base wood crib (0.61 m cube, 6 sticks/layer, 16 layers, 38 x 38 x 610 mm)",
+    "density_mm_per_s": 0.07,
+    "hrr_at_activation_kW": [715,650],
+    "decay_s": [375,560],
+    "source": "NISTIR 5254 Table 1"
+   }
+  ],
+  "table2_cribs": [
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.026,
+    "density_walton_mm_per_min": 1.59,
+    "hrr_at_activation_kW": 198,
+    "decay_s": 543,
+    "decay_range_s": [499,575],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.039,
+    "density_walton_mm_per_min": 2.36,
+    "hrr_at_activation_kW": 257,
+    "decay_s": 391,
+    "decay_range_s": [358,423],
+    "source": "NISTIR 5254 Table 2; density read from Walton Table 1"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.041,
+    "density_walton_mm_per_min": 2.49,
+    "hrr_at_activation_kW": 232,
+    "decay_s": 195,
+    "decay_range_s": [152,217],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.053,
+    "density_walton_mm_per_min": 3.18,
+    "hrr_at_activation_kW": 217,
+    "decay_s": 380,
+    "decay_range_s": [326,402],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.057,
+    "density_walton_mm_per_min": 3.42,
+    "hrr_at_activation_kW": 232,
+    "decay_s": 239,
+    "decay_range_s": [217,271],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.067,
+    "density_walton_mm_per_min": 4.03,
+    "hrr_at_activation_kW": 181,
+    "decay_s": 95,
+    "decay_range_s": [76,95],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.081,
+    "density_walton_mm_per_min": 4.85,
+    "hrr_at_activation_kW": 200,
+    "decay_s": 44,
+    "decay_range_s": [32,44],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.085,
+    "density_walton_mm_per_min": 5.13,
+    "hrr_at_activation_kW": 189,
+    "decay_s": 57,
+    "decay_range_s": [33,57],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.088,
+    "density_walton_mm_per_min": 5.3,
+    "hrr_at_activation_kW": 256,
+    "decay_s": 83,
+    "decay_range_s": [65,87],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 305,
+    "density_mm_per_s": 0.133,
+    "density_walton_mm_per_min": 7.99,
+    "hrr_at_activation_kW": 220,
+    "decay_s": 44,
+    "decay_range_s": [22,65],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 610,
+    "density_mm_per_s": 0.066,
+    "density_walton_mm_per_min": 3.95,
+    "hrr_at_activation_kW": 387,
+    "decay_s": 478,
+    "decay_range_s": [456,521],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 610,
+    "density_mm_per_s": 0.081,
+    "density_walton_mm_per_min": 4.85,
+    "hrr_at_activation_kW": 439,
+    "decay_s": 326,
+    "decay_range_s": [304,347],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 610,
+    "density_mm_per_s": 0.084,
+    "density_walton_mm_per_min": 5.05,
+    "hrr_at_activation_kW": 413,
+    "decay_s": 282,
+    "decay_range_s": [250,304],
+    "source": "NISTIR 5254 Table 2"
+   },
+   {
+    "crib_height_mm": 610,
+    "density_mm_per_s": 0.126,
+    "density_walton_mm_per_min": 7.58,
+    "hrr_at_activation_kW": 426,
+    "decay_s": 108,
+    "decay_range_s": [76,119],
+    "source": "NISTIR 5254 Table 2"
+   }
+  ]
+ }
+}

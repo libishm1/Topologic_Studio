@@ -14,7 +14,7 @@ import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
-import { FIRE_CLASSES, FIRE_CLASS_KEYS } from "../core/fireClasses.js";
+import { FIRE_CLASSES, FIRE_CLASS_KEYS, waterResponse } from "../core/fireClasses.js";
 import { GAS_MEASURES, SHOW_GROUPS, SMOKE_MEASURES } from "../core/measures.js";
 import { IGNITION_CONTEXTS } from "../core/ignitionContexts.js";
 import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
@@ -397,6 +397,10 @@ export function ModelPanel({
   onDescribeEngine,
   onOpenRooms,
   onExportRooms,
+  linked,
+  onAddLinked,
+  onAlignLinked,
+  onRemoveLinked,
 }) {
   const { modelInfo, file, settings, setSettings, cacheInfo } = studio;
   const rooms = modelInfo?.lod1;
@@ -486,6 +490,10 @@ export function ModelPanel({
             ))}
           </ul>
         </Section>
+      )}
+
+      {modelInfo && !rooms && linked && (
+        <LinkedModels linked={linked} onAdd={onAddLinked} onAlign={onAlignLinked} onRemove={onRemoveLinked} />
       )}
 
       <Section title="Rooms models (LOD1)" defaultOpen={false}>
@@ -753,6 +761,155 @@ function NavigationCheckSection({ studio, onRun }) {
   );
 }
 
+const FEDERATION_WORDS = { aligned: ["ok", "Aligned"], check: ["warn", "Check"], offset: ["bad", "Offset"], "no geometry": ["bad", "No geometry"] };
+const CHECK_TONES = { ok: "ok", warning: "warn", note: "plan", "cannot tell": "plan" };
+
+/**
+ * Second models beside the first (core/federation.js): an MEP model's
+ * sprinklers and ducts, a structural model's beams. Each with the checks of
+ * the MEP report's section 6.4, what it brings, and a way to move it onto
+ * the first when their plans miss.
+ */
+function LinkedModels({ linked, onAdd, onAlign, onRemove }) {
+  const { list, busy } = linked;
+  return (
+    <Section title="Second model (MEP, structure)" defaultOpen={false} badge={list.length ? `${list.length} added` : null}>
+      <p className="field__hint">
+        An MEP or structural IFC of the same building. It is drawn in this model&apos;s frame and checked against it; its sprinklers, ducts and beams are
+        used by the sprinklers in step 4. The graph and the fire&apos;s walls stay this model&apos;s.
+      </p>
+      <FileButton accept=".ifc" onFile={onAdd} disabled={Boolean(busy)}>
+        {busy ? `Adding ${busy}...` : "Add a model"}
+      </FileButton>
+      {list.map((m) => {
+        const [tone, word] = FEDERATION_WORDS[m.check.status] || ["plan", m.check.status];
+        const brings = [
+          m.sprinklers && `${m.sprinklers} sprinklers`,
+          m.beams && `${m.beams} beams`,
+          m.ducts && `${m.ducts} ducts`,
+          m.cables && `${m.cables} cable trays`,
+          m.flowSegments && `${m.flowSegments.toLocaleString()} flow segments and fittings (ducts and trays among them by name)`,
+        ].filter(Boolean);
+        return (
+          <div key={m.id} className="linked-model">
+            <div className="summary__row">
+              <span className="linked-model__name" title={m.name}>
+                <strong>{m.name}</strong>
+              </span>
+              <span className={`pill pill--${tone}`}>{word}</span>
+            </div>
+            <p className="field__hint">
+              Placed by {m.how}. {brings.length ? `Brings ${brings.join(", ")}.` : "Nothing the sprinklers use."}
+            </p>
+            <ul className="code-list">
+              {m.check.checks.map((c) => (
+                <li key={c.id} data-tone={CHECK_TONES[c.status] || "plan"}>
+                  {c.text}
+                </li>
+              ))}
+            </ul>
+            <div className="button-row">
+              {m.check.offset && (
+                <Button size="sm" onClick={() => onAlign(m.id)}>
+                  Move it onto this model
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => onRemove(m.id)}>
+                Remove
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+    </Section>
+  );
+}
+
+const EXTINGUISHER_UNITS = [
+  { value: "abc-2.3", label: "ABC dry chemical, 2.3 kg (2-A:10-B:C), 14 s" },
+  { value: "abc-4.5", label: "ABC dry chemical, 4.5 kg (4-A:80-B:C), 20 s" },
+  { value: "water-9.5", label: "Water, 9.5 L (2-A), 60 s" },
+  { value: "foam-9.5", label: "Foam, 9.5 L (3-A:20-B), 50 s" },
+  { value: "co2-2", label: "CO2, 2 kg (34B), 8.5 s" },
+];
+const OUTCOME_WORDS = { success: ["ok", "Put out"], "cannot tell": ["plan", "Cannot tell"], failure: ["bad", "Not put out"] };
+const kwText = (x) => (x >= 1000 ? `${(x / 1000).toFixed(2)} MW` : `${Math.round(x)} kW`);
+
+/** The extinguishers placed or read, and the placement check (core/extinguishers.js). */
+function ExtinguisherLayout({ plan, busy, onRedo }) {
+  if (busy) return <p className="field__hint">Placing the extinguishers…</p>;
+  if (!plan) return null;
+  const check = plan.check;
+  const where = plan.source === "ifc" ? "read from the IFC" : plan.source === "placed" ? "placed on the walk by the travel rule" : "none found in the IFC";
+  const failing = (check?.storeys || []).filter((s) => s.status === "fail");
+  return (
+    <div className="sprinkler-layout">
+      <Notice tone={check?.status === "fail" ? "warning" : "neutral"}>
+        <strong>{plan.sites.length} extinguishers</strong>, {where}
+        {plan.note ? ` (${plan.note})` : ""}.
+        {check && ` The check: ${check.status}. Every place within ${check.limit} m of walking to one (${check.passWithin?.toFixed?.(2) ?? check.passWithin} m on this graph, as its nodes sample the floor).`}
+      </Notice>
+      {failing.length > 0 && (
+        <ul className="code-list">
+          {failing.slice(0, 6).map((s, i) => (
+            <li key={i} className="code-list__storey" data-tone="warn">
+              <span className="pill">Fail</span> <strong>{s.name || `Storey ${i + 1}`}</strong>{" "}
+              <span className="field__hint">
+                {(s.checks || [])
+                  .filter((c) => c.status !== "pass")
+                  .map((c) => c.text)
+                  .join("; ")}
+                .
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Button size="sm" onClick={onRedo}>
+        Place again
+      </Button>
+    </div>
+  );
+}
+
+/** One person's attempt with an extinguisher on the fire on show (core/extinguishers.js attempt). */
+function ExtinguisherAttempt({ attempt }) {
+  if (!attempt) return null;
+  const [tone, word] = OUTCOME_WORDS[attempt.outcome] || ["plan", attempt.outcome];
+  const t = attempt.times || {};
+  const s = (x) => (Number.isFinite(x) ? `${Math.round(x)} s` : "-");
+  return (
+    <div className="linked-model">
+      <div className="summary__row">
+        <strong>The attempt</strong>
+        <span className={`pill pill--${tone}`}>{word}</span>
+      </div>
+      {attempt.attempted !== false && Number.isFinite(t.tS) && (
+        <p className="field__hint">
+          Sets off at {s(attempt.tGo)}, reaches the extinguisher at {s(attempt.tGo + (t.toExtinguisher || 0))}, readies it, and starts at {s(t.tS)}
+          {Number.isFinite(attempt.hrr) ? ` against ${kwText(attempt.hrr)}` : ""}
+          {attempt.capacity?.units === "kW"
+            ? `; the unit puts out up to ${kwText(attempt.capacity.low)} for sure and nothing above ${kwText(attempt.capacity.high)}`
+            : attempt.capacity?.units === "m²"
+              ? `; the unit puts out up to ${attempt.capacity.low.toFixed(2)} m² of burning liquid for sure, nothing above ${attempt.capacity.high.toFixed(2)} m²`
+              : ""}
+          .
+          {Number.isFinite(attempt.timeLost) ? ` Time lost against leaving at once: ${s(attempt.timeLost)}.` : ""}
+        </p>
+      )}
+      {attempt.late && <p className="field__hint">The run ended at {s(attempt.horizon)}, before the attack: its last heat release is used.</p>}
+      <ul className="code-list">
+        {(attempt.reasons || []).map((r, i) => (
+          <li key={i} data-tone={r.status === "pass" ? "ok" : r.status === "fail" ? "warn" : "plan"}>
+            {r.text.replace(/ at t_s\b/g, " when the attack starts").replace(/\bt_s\b/g, "the attack's start")}
+          </li>
+        ))}
+      </ul>
+      <p className="field__hint">The fire: {attempt.source}. Its size a rating can put out is uncertain (0.2 to 0.45 MW per A unit, and the operator), so the answer is put out, not put out, or cannot tell between.</p>
+    </div>
+  );
+}
+
 /** The graph in one line, at the top of the steps that use it. */
 function GraphSummary({ graph, onGoTo }) {
   if (!graph) return null;
@@ -922,7 +1079,12 @@ function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
  * the forecast's escape deadlines against detection, alarm and pre-movement,
  * per storey. Evidence for an alternative method, beside the code check.
  */
-const SPRINKLER_MODES = { activation: "they only open", evans: "they cap the fuel (Evans 1993)", spray: "they cap the fuel and spray (Fire-X's evaporation)" };
+const SPRINKLER_MODES = {
+  activation: "they only open",
+  evans: "they cap the fuel (Evans 1993)",
+  spray: "they cap the fuel and spray (Fire-X's evaporation)",
+  wetting: "they spray and wet the fuel (calibrated to Evans at 0.07 mm/s)",
+};
 const SPRINKLER_SOURCES = { ifc: "from the IFC", rooms: "placed per room (NFPA 13)", storeys: "on a lattice over the floor (no rooms)" };
 
 /** A run's sprinklers in a line: heads, when the first opened by both readings, how many opened, and the water. */
@@ -2035,7 +2197,14 @@ function CombustionStatus({ combustion, running }) {
         {combustion.sprinklers && (
           <div className="result__item">
             <dt className="result__label">Sprinklers</dt>
-            <dd className="result__value">{sprinklerLine(combustion.sprinklers, combustion.sprinklerSummary)}</dd>
+            <dd className="result__value">
+              {sprinklerLine(combustion.sprinklers, combustion.sprinklerSummary)}
+              <span className="field__hint">
+                {" "}
+                Against measured tests the estimate opens heads late in rooms, up to about twice the measured time or not at all, and within about
+                10 % under a high open ceiling; heads behind beams may not open. The late bound is not a time to quote.
+              </span>
+            </dd>
           </div>
         )}
         {combustion.detectors > 0 && (
@@ -2064,7 +2233,9 @@ function CombustionStatus({ combustion, running }) {
             : combustion.restarted
               ? " The GPU stopped partway, so the fire started again on the CPU."
               : ""}
-          {combustion.clipped ? " The model is larger than the grid allows, so the grid covers the area round the fire; nodes outside it read as clear air." : ""}
+          {combustion.clipped
+            ? " The model is larger than the grid allows, so the grid covers the area round the fire; its sides are open to outside air, so smoke that reaches them leaves the run even where they cut through the building, and nodes outside it read as clear air."
+            : ""}
         </p>
       )}
     </section>
@@ -2135,8 +2306,9 @@ function SprinklerLayout({ plan, busy, onRedo }) {
   const tone = { pass: "ok", fail: "warn", required: "warn" };
   if (busy) return <p className="field__hint">Laying out the sprinklers…</p>;
   if (!plan) return null;
-  // Rooms laid out, judged by their placement rules: obstructions cannot be
-  // told without a structural or MEP model, for every room alike.
+  // Rooms laid out, judged by their placement rules; obstructions (beams,
+  // ducts) only when a structural or MEP model gave them (step 1), else the
+  // check cannot be told for every room alike.
   const all = plan.rooms || [];
   const rooms = all.filter((r) => r.status !== "n/a");
   const skipped = all.length - rooms.length;
@@ -2158,7 +2330,10 @@ function SprinklerLayout({ plan, busy, onRedo }) {
         {plan.note ? ` (${plan.note})` : ""}.
         {rooms.length > 0 && ` ${rooms.length - failing.length - open.length} meet every placement rule, ${failing.length} fail one, ${open.length} cannot be told.`}
         {skipped > 0 && ` ${skipped} spaces not laid out (shafts, or spaces drawn over smaller rooms).`}
-        {rooms.length > 0 && " Obstructions (beams, ducts) are not checked without a structural or MEP model."}
+        {rooms.length > 0 && !plan.obstructionCount && " Obstructions (beams, ducts) are not checked without a structural or MEP model (step 1)."}
+        {plan.obstructionCount > 0 && ` Checked against ${plan.obstructionCount} beams and ducts (NFPA 13's beam, three times and wide rules).`}
+        {plan.obstructions &&
+          ` Against ${plan.obstructions.notes?.[0] || "the beams and ducts"}: ${plan.obstructions.failing} heads fail the beam or three times rule${plan.obstructions.wide ? `, ${plan.obstructions.wide} obstructions wider than 1.2 m` : ""}.`}
       </Notice>
       {(plan.requirement || []).length > 0 && (
         <ul className="code-list">
@@ -2169,6 +2344,11 @@ function SprinklerLayout({ plan, busy, onRedo }) {
           ))}
         </ul>
       )}
+      {(plan.notes || []).filter((n) => /^obstructions:/.test(n)).map((n) => (
+        <p key={n} className="field__hint">
+          {n[0].toUpperCase() + n.slice(1)}.
+        </p>
+      ))}
       {failing.length + open.length > 0 && (
         <ul className="code-list">
           {[...failing, ...open].slice(0, 8).map((r) => (
@@ -2176,7 +2356,7 @@ function SprinklerLayout({ plan, busy, onRedo }) {
               <span className="pill">{mark[r.status] || r.status}</span> <strong>{r.name || `Room ${r.id}`}</strong>{" "}
               <span className="field__hint">
                 {(r.checks || [])
-                  .filter((c) => c.status !== "pass" && c.id !== "obstructions")
+                  .filter((c) => c.status !== "pass" && (c.id !== "obstructions" || plan.obstructionCount > 0))
                   .map((c) => c.text)
                   .join("; ")}
                 .
@@ -2213,6 +2393,12 @@ export function SimulatePanel({
   sprinklerPlan = null,
   sprinklerBusy = false,
   onLayOutSprinklers,
+  overheadCount = null,
+  extinguisherPlan = null,
+  extinguisherBusy = false,
+  onLayOutExtinguishers,
+  extinguisherAttempt = null,
+  onExtinguisherAttempt,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo, semantics } = studio;
   const doorsNow = doorsLabel(settings.flamescapesDoors, { seed: settings.flamescapesDoorSeed, share: settings.flamescapesDoorShare });
@@ -2316,7 +2502,7 @@ export function SimulatePanel({
                     ? `The doors the model says close themselves are closed: SelfClosing, or a fire rating with -C (EN 13501-2); ${selfClosingCount} of ${semantics?.doors?.length ?? 0} doors here. The rest stand open.`
                     : settings.flamescapesDoors === "random"
                       ? "Each door is closed with the share above, drawn with the seed: the same seed closes the same doors, so runs can be repeated and compared."
-                      : "Smoke and heat pass through every doorway. Close them to see what shut doors hold back; routes use the doors either way."}
+                      : "Smoke and heat pass through every doorway, the outside doors too, so smoke also leaves the building through them. Close them to see what shut doors hold back; routes use the doors either way."}
               </p>
             </div>
             <Segmented
@@ -2456,6 +2642,16 @@ export function SimulatePanel({
                 { value: "running", label: "Running: the ducts carry the air between the model's air terminals" },
               ]}
             />
+            <Toggle
+              label="Beams and ducts in the fire grid"
+              checked={settings.flamescapesOverhead}
+              onChange={(flamescapesOverhead) => setSettings({ flamescapesOverhead })}
+              hint={
+                overheadCount === null
+                  ? "Beams, and a second model's ducts and cable trays (step 1), as solids under the ceilings: they hold back the ceiling jet a sprinkler reads."
+                  : `${overheadCount} beams, ducts and cable trays found; they hold back the ceiling jet a sprinkler reads.`
+              }
+            />
             {settings.flamescapesVentilation === "running" && (
               <NumberField
                 label="Air through each terminal (L/s)"
@@ -2467,7 +2663,9 @@ export function SimulatePanel({
               />
             )}
             <p className="field__hint">
-              For the smoke only: a route still goes through every door. Closed doors and windows do not leak or burn. Running ventilation joins
+              For the smoke only: a route still goes through every door. A closed door or window is airtight and never breaks or burns through, so
+              smoke leaves the building only through open doorways and open windows. Real ones leak at their gaps and glass can fail in a hot layer,
+              so a run with everything closed keeps the most smoke in its rooms. Running ventilation joins
               every air terminal in the model (IfcAirTerminal) through one well-mixed duct volume, the case that spreads smoke furthest: which
               system a terminal belongs to is not read, and 100 L/s a terminal is an assumption, not a measured value.
             </p>
@@ -2512,6 +2710,12 @@ export function SimulatePanel({
               onChange={(sprinklers) => setSettings({ sprinklers })}
               hint="Off by default. Off, nothing is laid out and a run is exactly as before, at the same speed. On, the heads are read from the IFC or placed per room by NFPA 13, and a Flamescapes run opens them as the fire heats their links."
             />
+            {settings.sprinklers && waterResponse(FIRE_CLASSES[settings.flamescapesClass]?.fuel).note && (
+              <Notice tone="warning">
+                <strong>{FIRE_CLASSES[settings.flamescapesClass].label}:</strong> {waterResponse(FIRE_CLASSES[settings.flamescapesClass].fuel).note} The
+                room&apos;s other contents are wetted and capped as usual.
+              </Notice>
+            )}
             {settings.sprinklers && (
               <>
                 <SelectField
@@ -2519,7 +2723,7 @@ export function SimulatePanel({
                   value={settings.sprinklerSource}
                   onChange={(sprinklerSource) => setSettings({ sprinklerSource })}
                   options={[
-                    { value: "auto", label: "The model's, if it has any; else placed per room" },
+                    { value: "auto", label: "The IFC's (this model's, else a second model's); else placed per room" },
                     { value: "ifc", label: "Only the model's (IfcFireSuppressionTerminal)" },
                     { value: "placed", label: "Placed per room by NFPA 13" },
                   ]}
@@ -2551,6 +2755,7 @@ export function SimulatePanel({
                   options={[
                     { value: "spray", label: "Caps the fuel under it and sprays: steam and cooling in the gas" },
                     { value: "evans", label: "Caps the fuel under it (Evans 1993) only" },
+                    { value: "wetting", label: "Sprays and wets the fuel it reaches, no cap: water, not an envelope, slows the fire" },
                     { value: "activation", label: "Only opens: the fire is left as it is" },
                   ]}
                 />
@@ -2577,6 +2782,64 @@ export function SimulatePanel({
             )}
           </Disclosure>
         )}
+
+        <Disclosure summary="Extinguishers">
+          <Toggle
+            label="Extinguishers"
+            checked={settings.extinguishers}
+            onChange={(extinguishers) => setSettings({ extinguishers })}
+            hint="Off by default. On, the model's portable extinguishers are read from the IFC by name, or placed on the walk so that nowhere is more than 22.86 m from one, and checked against SBC 801-CR-2018 906 and NFPA 10. After a fire, one person near it can try to put it out."
+          />
+          {settings.extinguishers && (
+            <>
+              <SelectField
+                label="Extinguishers"
+                value={settings.extinguisherSource}
+                onChange={(extinguisherSource) => setSettings({ extinguisherSource })}
+                options={[
+                  { value: "auto", label: "The IFC's (this model's, else a second model's); else placed on the walk" },
+                  { value: "ifc", label: "Only the IFC's" },
+                  { value: "placed", label: "Placed on the walk (22.86 m rule)" },
+                ]}
+              />
+              <SelectField
+                label="Hazard (NFPA 10)"
+                value={settings.extinguisherHazard}
+                onChange={(extinguisherHazard) => setSettings({ extinguisherHazard })}
+                options={[
+                  { value: "light", label: "Light: offices, classrooms, hotels (279 m² per A unit)" },
+                  { value: "ordinary", label: "Ordinary: shops, car parks, workshops (139 m²)" },
+                  { value: "extra", label: "Extra: kitchens, storage of flammables (92.9 m², 4-A)" },
+                ]}
+              />
+              <ExtinguisherLayout plan={extinguisherPlan} busy={extinguisherBusy} onRedo={onLayOutExtinguishers} />
+              <SelectField
+                label="The unit used"
+                value={settings.extinguisherUnit}
+                onChange={(extinguisherUnit) => setSettings({ extinguisherUnit })}
+                options={EXTINGUISHER_UNITS}
+              />
+              <SelectField
+                label="The person sets off"
+                value={settings.extinguisherStart}
+                onChange={(extinguisherStart) => setSettings({ extinguisherStart })}
+                options={[
+                  { value: "seen", label: "When they see the fire (30 s after ignition)" },
+                  { value: "alarm", label: "After detection, the alarm and the median pre-movement (Route step, performance check)" },
+                ]}
+              />
+              <Toggle
+                label="Trained to use it (7.2 s to ready it, not 13.4 s)"
+                checked={settings.extinguisherTrained}
+                onChange={(extinguisherTrained) => setSettings({ extinguisherTrained })}
+              />
+              <Button size="sm" onClick={onExtinguisherAttempt} disabled={!extinguisherPlan?.sites?.length || !studio.points.fire}>
+                Try to put the fire out
+              </Button>
+              <ExtinguisherAttempt attempt={extinguisherAttempt} />
+            </>
+          )}
+        </Disclosure>
 
         <Disclosure summary="Rerouting and timing">
           <Toggle

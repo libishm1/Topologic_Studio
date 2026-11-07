@@ -283,7 +283,32 @@ oxygen. The heads show in the view, blue once open. In the test fires on the
 Duplex the first head opened 16 to 21 s after ignition by the estimate;
 Vienna's 173 heads are laid out in under 50 ms and its runs take no longer
 with them. No IFC carries a head's RTI or C, so quick response is 50, standard
-100 and C 0.4, as the panel says.
+100 and C 0.4, as the panel says. Open heads are drawn spraying.
+
+Checked against measured tests (Vettori 1998 and 2003, Bittern 2004, UL/NFPRF
+1998; `tools/sprinkler-validation.mjs`): the link reproduces Vettori's
+activations when given the measured gas (median 1.00), but on the fire grid
+the estimate is late in rooms (about 1.1 to 1.7 times the measured time, some
+heads not opening) and close under a high open ceiling, because the solver's
+walls take much of the ceiling jet's heat. The run card says so.
+
+A **second model** (Model step), an MEP or structural IFC of the same
+building, is drawn in the first one's frame through the two files'
+coordination, or their map conversions when both have one, and checked
+(units, site placement, storeys by elevation, how much the plans share). Its
+sprinklers feed the layout, and beams and ducts are checked by NFPA 13's
+beam, three times and wide-obstruction rules, with heads moved clear of them
+or added beneath; a switch makes them solid in the fire grid. A **wetting**
+mode lets the water soak into the fuel it reaches instead of Evans's cap
+(calibrated to the cap at the light hazard density), and what water does
+depends on the fire class: solids are wetted, while heptane, cooking oil,
+magnesium and lithium-ion packs are not, and the panel says why (the water
+sinks through the pool, erupts the oil, feeds the metal hydrogen, or does not
+reach the cells). **Extinguishers** (off by default) are read from the IFC by
+name or placed on the walk so nowhere is more than 22.86 m from one (SBC
+801-CR-2018 906, NFPA 10), and after a fire one person's attempt is judged
+against what the unit's rating can put out: put out, not put out, or cannot
+tell.
 
 **What burns first.** The first item takes the fuel of its fire class: NFPA 10
 classes A (ordinary combustibles), B (flammable liquids), C (energised
@@ -630,7 +655,7 @@ windows (`studio`, `studio stop`, `studio status`, `studio test`), and
 | Speed, accuracy and robustness benchmark on 38 public models | `node tools/benchmark.mjs` | see [benchmark/README.md](benchmark/README.md) |
 | Speed and sanity of all six fire models, Flamescapes timed per stage | `node tools/fire-bench.mjs [model.ifc ...]` | repository root; results in `benchmark/results/` |
 | The Flamescapes solver on one IFC | `node tools/flamescapes-check.mjs [model.ifc] [--embers]` | repository root |
-| Lean 4 proofs (33 modules, over 1,420 theorems, including Fire-X, Flamescapes, its browser port, the ventilation ducts, sprinklers and suppression, and the performance check) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
+| Lean 4 proofs (37 modules, over 1,530 theorems, including Fire-X, Flamescapes, its browser port, the ventilation ducts, sprinklers and suppression, a second model, the obstruction rules, extinguishers and wetting, and the performance check) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
 | This README's screenshots | `node tools/readme-shots.mjs` | repository root, with the app running |
 
 The browser suite drives the installed Chrome (no browser download) through

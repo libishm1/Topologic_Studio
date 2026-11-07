@@ -7,6 +7,7 @@
  * tools/shots/ so the UI can be eyeballed afterwards.
  *
  *   node tools/browser-test.mjs [--url http://127.0.0.1:5173] [--ifc path.ifc] [--headed]
+ *                              [--linked mep.ifc]   a second model of the --ifc building
  */
 import { chromium } from "playwright-core";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -970,6 +971,27 @@ if (await fsToggle.isVisible().catch(() => false)) {
   record(false, "the Flamescapes toggle is offered in the Simulate step");
 }
 
+// ---- 5f. extinguishers -------------------------------------------------------
+//
+// Off by default; on, the Duplex (no extinguishers in its IFC) gets units
+// placed on the walk by the 22.86 m rule and checked, and one person's
+// attempt on the fire on show reads put out, not put out or cannot tell.
+console.log("\n[5f] Extinguishers");
+await page.getByRole("tab", { name: /^Simulate/ }).click();
+await page.locator("summary", { hasText: /^Extinguishers$/ }).first().click().catch(() => {});
+const extSwitch = page.locator(".toggle__label", { hasText: /^Extinguishers$/ });
+const tExt = Date.now();
+await extSwitch.first().click().catch(() => {});
+await page.waitForFunction(() => /\d+ extinguishers/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 60000 }).catch(() => {});
+timing("Extinguishers placed and checked (switch to result)", Date.now() - tExt);
+const extText = await page.locator(".panel__scroll").first().innerText().catch(() => "");
+const extLine = extText.match(/\d+ extinguishers[^\n]*/)?.[0] || "";
+record(/\d+ extinguishers, placed on the walk by the travel rule\. The check: pass/.test(extLine), "extinguishers are placed on the walk and pass the 22.86 m check", extLine.slice(0, 160) || "no layout");
+await page.getByRole("button", { name: "Try to put the fire out" }).click().catch(() => {});
+const attemptCard = (await page.locator(".linked-model", { hasText: "The attempt" }).innerText().catch(() => "")).replace(/\s+/g, " ");
+record(/The attempt (Put out|Not put out|Cannot tell)/.test(attemptCard) && /starts at \d+ s/.test(attemptCard), "  one person's attempt says when they start and whether it is put out", attemptCard.slice(0, 160) || "no card");
+await extSwitch.first().click().catch(() => {});
+
 // ---- 6. theme, panels, topology mode ----------------------------------------
 
 console.log("\n[6] UI surfaces");
@@ -1369,6 +1391,46 @@ for (const [call, list] of byCall) {
   await p.waitForTimeout(3500);
   const again = (await p.locator(".hint").innerText().catch(() => "")).replace(/\s+/g, " ");
   record(!/The model is only the start/.test(again), "  and once dismissed it does not come back", again.slice(0, 60) || "no hint shown");
+  await fresh.close();
+}
+
+// A second model (core/federation.js), with --linked <file>: an MEP or
+// structural IFC of the --ifc building, added beside it in the Model step,
+// checked against it, and, when it has sprinklers, used for the heads.
+const LINKED = argOf("--linked", null);
+if (LINKED && existsSync(LINKED)) {
+  console.log("\n[9] A second model");
+  const fresh = await browser.newContext({ viewport: { width: 1600, height: 950 } });
+  const p = await fresh.newPage();
+  p.on("pageerror", (error) => pageErrors.push(error.message));
+  await p.goto(URL_BASE, { waitUntil: "load", timeout: 60000 });
+  await p.waitForFunction(() => !document.body.innerText.includes("Starting the 3D engine"), null, { timeout: 90000 }).catch(() => {});
+  await p.locator('input[type="file"][accept=".ifc"]').first().setInputFiles(IFC);
+  await p.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Build egress graph/.test(b.textContent) && !b.disabled), null, { timeout: 180000 }).catch(() => {});
+  await p.getByRole("tab", { name: /^Model/ }).click();
+  // A Section: a header button that opens its body.
+  await p.getByRole("button", { name: /^Second model/ }).first().click().catch(() => {});
+  const t0 = Date.now();
+  await p.locator("section.section", { has: p.getByRole("button", { name: /^Second model/ }) }).locator('input[type="file"]').first().setInputFiles(LINKED).catch(() => {});
+  await p.waitForSelector(".linked-model", { timeout: 300000 }).catch(() => {});
+  timing("Add a second model (choose to checked)", Date.now() - t0);
+  const card = (await p.locator(".linked-model").first().innerText().catch(() => "")).replace(/\s+/g, " ");
+  record(/(Aligned|Check)/.test(card) && /Placed by/.test(card), "a second model is placed in the first one's frame and checked", card.slice(0, 200) || "no card");
+  record(/plans overlap \(/.test(card) && /storeys? match by elevation/.test(card), "  its plan overlaps and its storeys match by elevation", card.match(/The plans overlap[^.]*|\d+ storeys match[^;.]*/g)?.join("; ") || card.slice(0, 120));
+  const heads = Number(card.match(/Brings (\d+) sprinklers/)?.[1] || 0);
+  if (heads) {
+    await p.getByRole("tab", { name: /^Graph/ }).click();
+    await p.getByRole("button", { name: /Build egress graph|Rebuild graph/ }).first().click();
+    await p.waitForFunction(() => /nodes/.test(document.querySelector(".statusbar")?.innerText || ""), null, { timeout: 120000 }).catch(() => {});
+    await p.getByRole("tab", { name: /^Simulate/ }).click();
+    await p.getByText("Flamescapes combustion solver (optional)", { exact: true }).click().catch(() => {});
+    await p.locator("summary", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
+    await p.locator(".toggle__label", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
+    await p.waitForFunction(() => /\d+ sprinkler heads/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 60000 }).catch(() => {});
+    const line = ((await p.locator(".panel__scroll").first().innerText().catch(() => "")).match(/\d+ sprinkler heads[^\n]*/)?.[0] || "").trim();
+    const name = path.basename(LINKED);
+    record(line.includes(name) && Number(line.match(/^(\d+)/)?.[1]) > 0, "  the heads come from the second model, in place", line.slice(0, 200) || "no layout");
+  }
   await fresh.close();
 }
 

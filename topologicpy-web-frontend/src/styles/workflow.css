@@ -1401,3 +1401,48 @@ details.legend[open] > .legend__summary {
 .human-check {
   margin-top: var(--space-2);
 }
+
+/* ------------------------------------------------- second models */
+
+.linked-model {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.linked-model__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linked-model .code-list {
+  gap: 4px;
+}
+
+.linked-model .code-list li[data-tone="warn"] {
+  color: var(--warning-text);
+}
+
+.linked-model .code-list li[data-tone="plan"] {
+  color: var(--text-secondary);
+}
+
+.pill--warn {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.pill--bad {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

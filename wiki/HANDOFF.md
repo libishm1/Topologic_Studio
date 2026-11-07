@@ -2,7 +2,9 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` = `next/browser-core` at ba32e6d (0ba7352: the cause choice, exits in the code check, kept runs, door states; ba32e6d: sprinkler research and `Sprinklers.lean`).
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at ea2ec33 (released 2026-11-07 at the user's request: the performance check, a6442e5 and 06b4b7f, and the sprinklers, ea2ec33). The backend did not change, so Render was not redeployed.
+  - **Live check of ea2ec33:** 0 failed steps, 0 console errors, with Render awake.
+  - **Committed after it, not deployed:** fc71f77 (the interface: hints as one line, the phone layout) and the second round of the sprinkler work (the commit after it); the next release.
   - **Live check of ba32e6d:** 0 failed steps, with Render awake; the replay (4.0 s) and the as-built doors (14 of 81) pass live. Before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 7e009e6:** 0 failed steps, with Render awake; before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 3f9a4f2:** 0 failed steps, with Render awake.
@@ -30,19 +32,19 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 311 tests;
+  - `npm test` in `topologicpy-web-frontend`: 348 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
   - the live check after the deploy;
   - the Worker's own tests: `node --test test/index.test.mjs` in `cloudflare/describe-worker` (8 tests);
   - after any solver change, `node tools/flamescapes-gpu-check.mjs --phase full --quick` (CPU and GPU agreement, now including soot, CO2 and O2) and `--phase timing`.
-- **Lean:** 33 modules, 1423 theorems; `Sprinklers.lean` (28 theorems), `Performance.lean` (14), `DoorQueue.lean` (16), `PreMovement.lean` (10) and `Suppression.lean` (58) added on 2026-11-07, standard axioms only (`formal/fireegress/axioms-all-2026-11-07.txt`).
+- **Lean:** 37 modules, 1534 theorems; on 2026-11-07 `Sprinklers.lean` (28), `Performance.lean` (14), `DoorQueue.lean` (16), `PreMovement.lean` (10), `Suppression.lean` (58), then `Federation.lean` (16), `Obstructions.lean` (36), `Extinguishers.lean` (47) and `Wetting.lean` (12), standard axioms only (`formal/fireegress/axioms-all-2026-11-07.txt`, 512 prints). `Extinguishers.lean` found the count rule's comment wrong for default ratings (`count_default_rating_counterexample`); fixed.
 
 ## Resume here (2026-11-07)
 
 00. **Asked for on 2026-11-07:**
-   - **Sprinklers and suppression: built (the plan's steps 1 to 4), committed, not deployed.** Simulate step, under the Flamescapes models: a **Sprinklers** switch, off by default (zero cost off, measured). Heads from the IFC (`core/ifcSemantics.js` `sprinklers`, `IMPORT_SETTINGS` 5) or placed per room by NFPA 13 (`core/sprinklers.js`), a rule report and the codes' requirement; in a run, activation on two readings, Evans's cap and the spray (`core/suppression.js`, `flamescapes.js` `spray`, WGSL `evans` and `spray`); the run card and the view show the heads. Read the "As implemented" section of `wiki/research/fire-suppression-sprinklers-2026-11-07.md` first: it lists the departures from the plan (no forced flame cull; Evans bounds fuel and energy, not a frame's peak; the spray's direct effect is small) and what is left (MEP federation, obstructions, wetting, validation against Vettori, Bittern and the NIST tests, extinguishers). The user's rules still hold: release as a whole, Vienna on the web (173 heads in 45 ms; runs no slower).
+   - **Sprinklers and suppression: released (ea2ec33); the second round committed, not deployed.** The user asked for the five items the first round left: a second (MEP or structural) model (`core/federation.js`, `ViewerManager.loadLinkedIfc`, Model step), beams and ducts as obstructions (`sprinklers.js` `checkObstructions`), water wetting the fuel (sprinkler mode "wetting", `WETTED_FRACTION` 0.52 from `tools/wetting-calibrate.mjs`), validation against Vettori, Bittern and UL/NFPRF (`tools/sprinkler-validation.mjs`: the estimate is late in rooms, mostly from the solver's 200 W/(m² K) surface coefficient, which is the user's decision to change), and extinguishers (`core/extinguishers.js`, Simulate step). Also water by fire class (`fireClasses.js` `waterResponse`; the user asked how the flame reacts by its type), the spray drawn under open heads, and the doors and windows wording (closed is airtight; `tools/envelope-check.mjs`). Read the "Second round" section of `wiki/research/fire-suppression-sprinklers-2026-11-07.md` first, then `sprinkler-validation-data-2026-11-07.md` (R1 to R9), `extinguishers-2026-11-07.md` and `water-by-fire-class-2026-11-07.md`.
    - **Branch tidy-up, waiting on the user.** All four GitHub branches were fully merged into `main` and no PR was open. Deleting `next/studio-2` (tip 0f68573) and `codex/wiki-hitl-testing-docs` (tip d56730e) on GitHub, and the merged local branches, was refused by the permission system as destructive. The user can run: `git push origin --delete next/studio-2 codex/wiki-hitl-testing-docs`, then `git branch -d codex/wiki-hitl-testing-docs next/studio-2 worktree-agent-a5564f61ecc07c56c worktree-agent-a6e3e35eb51c00dc1 worktree-agent-ab4bdc24cb476c1b2 worktree-agent-ab4f7303ef3afd806` and `git branch -f main origin/main`. Restore a deleted branch with `git push origin <tip>:refs/heads/<name>`. The worktrees under the Classic checkout (`TopologicStudio/.claude/worktrees`) and `TopologicStudio_push_20260311_100658` were left alone (Classic is not to be modified); their branches are merged too.
    - **Outdoor assembly points:** a check is proposed in section 7 of the sprinkler note; the user decides.
    - **The user's decisions (2026-11-07):**
@@ -136,6 +138,12 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
 Before any deploy: the gates above, then the live check, then update this file.
 
 ## This round (2026-11-07)
+
+- **Released ea2ec33** (the user: "release it now"): unit tests and lint, then `main` fast-forwarded; Pages built in about 3 minutes; the live check had 0 failed steps.
+- **Performance of the release** (`benchmark/results/2026-11-07*.json`): the corpus benchmark with five repeats on the models that looked slower in the quick run is the same as or faster than 2026-10-28 (Yen on the largest model 52 to 40 ms); `tools/feature-bench.mjs` (new) times the plan's deadline maps (Vienna 1.43 s, the slow part), the performance check (1.9 ms; 11.8 ms with door queues) and the sprinkler layout (22 ms); the spray stage costs 0.01 ms a step.
+- **Interface** (fc71f77; the user: hints "should not be in the way"): hints and found field notes are one line (47 to 58 px, were 200), wait 2.5 s, never offer the step on screen; the phone page was 412 px wide on a 390 px screen (the header's minimum width set the shell's grid); the graph-parts warning is one sentence outside the Graph step.
+- **Second round of the sprinkler work** (the user's five items, then two questions mid-way): see Resume here. Agents wrote the obstruction rules, the validation harness and its burner, the extinguisher module, the Lean modules and three research notes; each diff was reviewed. Measured: NIBS Office with its HVAC model, 292 heads 5 cm under the architecture's ceilings; Simple-Scene plumbing through two map conversions, checked by hand to 0.1 m; wetting CPU 54.3 and GPU 52.9 MJ against 72.5 and 66.7 with no water; Duplex extinguishers 4 placed in 215 ms.
+- **Asked mid-way:** a sprinkler animation (built: droplets in a cone under each open head, moved by the shader); whether the water wets the flame (no: drops cool the fuel's surface, not the flame; now by fire class); whether smoke leaks with doors and windows closed (no: closed is airtight; measured 0.0 g of 138 g of soot outside on the Duplex after 60 s; with the doors open, the default, 24 %; a grid clipped round the fire lets smoke out at its sides, which the run card now says).
 
 - **Sprinklers and suppression, steps 1 to 4 (the user: "work through 1 to 4"):**
   - **Placement and IFC** (an agent; reviewed): `core/sprinklers.js` and its 19 tests; IFC4 and IFC2x3 sprinklers with the Revit sets; per-room NFPA 13 layout with extra heads where a bay centre is not clear of the walls, both orientations, merges under 1.8 m, coverage on a 0.25 m sample; storey lattice without rooms; requirement report (903.2.8, 903.2.11.3 at 16.764 m, high-rise, A-3, E). Panels count rooms by `placement` (obstructions are always "cannot tell").
