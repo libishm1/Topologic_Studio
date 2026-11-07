@@ -26,3 +26,4 @@ import FireEgress.Flamescapes
 import FireEgress.FlamescapesPort
 import FireEgress.DuctMixing
 import FireEgress.SafeEscape
+import FireEgress.Sprinklers
