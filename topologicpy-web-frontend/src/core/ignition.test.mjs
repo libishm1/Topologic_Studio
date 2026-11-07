@@ -5,7 +5,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CONFIDENCE, matchElement, rankIgnitionPoints, scenarioWeight, centroidOf } from "./ignition.js";
+import { CONFIDENCE, IGNITION_CONTEXTS, matchElement, rankIgnitionPoints, scenariosFor, scenarioWeight, centroidOf } from "./ignition.js";
 import { IGNITION_SCENARIOS } from "./ignitionCatalog.js";
 import { FIRE_CLASSES } from "./fireClasses.js";
 
@@ -74,4 +74,31 @@ test("every scenario's fire class is one the solver offers, and its patterns com
   for (const s of lithium) assert.equal(s.fireClass, "L", s.id);
   assert.deepEqual(centroidOf([{ positions: Float32Array.from([0, 0, 0, 2, 4, 6]) }]), [1, 2, 3]);
   assert.equal(centroidOf([]), null);
+});
+
+test("each cause names real scenarios, and every scenario has a cause", () => {
+  const ids = new Set(IGNITION_SCENARIOS.map((s) => s.id));
+  const covered = new Set();
+  for (const c of IGNITION_CONTEXTS) for (const id of c.scenarios || []) {
+    assert.ok(ids.has(id), `${c.id}: ${id}`);
+    covered.add(id);
+  }
+  for (const id of ids) assert.ok(covered.has(id), `no cause lists ${id}`);
+  assert.equal(scenariosFor("any").length, IGNITION_SCENARIOS.length);
+});
+
+test("a gas fire at the cooktop starts as class B; the deliberate cause brings in the accelerant", () => {
+  const cooktop = { itemId: 1, type: "IFCBUILDINGELEMENTPROXY", name: "M_Cook Top-4 Unit:Standard:123", predefined: "", position: at };
+  const [gas] = rankIgnitionPoints([cooktop], [], { context: "gas" });
+  assert.equal(gas.scenario.id, "cooking-range");
+  assert.equal(gas.scenario.fireClass, "B");
+  assert.equal(gas.scenario.label, "Gas hob or oven");
+  // The catalogue itself is untouched.
+  assert.equal(byId("cooking-range").fireClass, "K");
+  assert.deepEqual(rankIgnitionPoints([cooktop], [], { context: "electrical" }), []);
+  const lobby = { itemId: 9, name: "Eingang", position: at };
+  assert.equal(rankIgnitionPoints([], [lobby]).length, 0, "left out of the ranked list");
+  const [arson] = rankIgnitionPoints([], [lobby], { context: "deliberate" });
+  assert.equal(arson.scenario.id, "intentional-accelerant");
+  assert.equal(arson.byRoom, true);
 });

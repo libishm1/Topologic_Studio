@@ -868,6 +868,24 @@ if (await fsToggle.isVisible().catch(() => false)) {
   const legendFs = await page.getByText("Gas temperature at head height (°C)", { exact: true }).isVisible().catch(() => false);
   record(legendFs || MOBILE, "the graph is coloured by gas temperature at head height", MOBILE ? "legend folded on a phone" : undefined);
   await shot(page, "flamescapes-run");
+  // Kept runs (core/runCache.js, 2026-11-07): after another run, this one
+  // asked for again plays from the browser's store, not from memory.
+  const startFs = async () => {
+    await page.getByRole("button", { name: /^Start fire$/ }).scrollIntoViewIfNeeded();
+    await page.getByRole("button", { name: /^Start fire$/ }).click();
+    await page.waitForFunction(() => /Flamescapes run complete/.test(document.querySelector('[aria-label="Flamescapes run"]')?.innerText || ""), null, { timeout: 240000 }).catch(() => {});
+    await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent)), null, { timeout: 180000 }).catch(() => {});
+  };
+  await page.waitForTimeout(6000);
+  const burns = page.getByLabel("What burns first");
+  const firstClass = await burns.inputValue().catch(() => "A");
+  await burns.selectOption(firstClass === "B" ? "A" : "B").catch(() => {});
+  await startFs();
+  await burns.selectOption(firstClass).catch(() => {});
+  const tReplay = Date.now();
+  await startFs();
+  const replayCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
+  record(/Played from this browser/.test(replayCard), "the same run asked for again plays from the browser's kept runs", `${((Date.now() - tReplay) / 1000).toFixed(1)}s`);
   // Back to the default, so later steps see the page as before.
   await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
   await fsToggle.click();
@@ -1100,6 +1118,16 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
       await page.waitForTimeout(300);
       const exitAt = await page.evaluate(() => window.__viewer?.markers?.exit?.position?.toArray().map((x) => Math.round(x * 100) / 100));
       record(Math.hypot(exitAt[0] + 3.57, exitAt[2] + 3.01) < 0.5, "  and the nearest from the top floor is the fire exit, not a flat door", JSON.stringify(exitAt));
+      // Doors as built (core/doorStates.js, 2026-11-07): the 14 doors whose
+      // EN 13501-2 class carries -C (EI2 30-C, EI2 30-C-Sm) close themselves.
+      await page.getByRole("tab", { name: /^Simulate/ }).click();
+      const solver = page.getByText("Flamescapes combustion solver (optional)", { exact: true });
+      await solver.click();
+      await page.getByRole("group", { name: "Doors", exact: true }).getByRole("button", { name: "As built" }).click();
+      const asBuilt = await page.getByText(/close themselves are closed/).first().textContent({ timeout: 10000 }).catch(() => "");
+      record(/14 of 81 doors here/.test(asBuilt), "  and its self-closing doors are read for an as-built run", (asBuilt.match(/\d+ of \d+ doors here/) || ["not shown"])[0]);
+      await page.getByRole("group", { name: "Doors", exact: true }).getByRole("button", { name: "Open" }).click();
+      await solver.click();
     }
   }
 }

@@ -13,9 +13,10 @@
  * core/ifcSemantics.js reads, change: it is part of every cache key, so models
  * converted the old way are converted again. 2: property sets, materials and
  * types left out of the fragments; semantics stored with them. 3: doors say
- * whether they are external (the final exits).
+ * whether they are external (the final exits). 4: doors' fire rating and
+ * whether they close themselves.
  */
-export const IMPORT_SETTINGS = 3;
+export const IMPORT_SETTINGS = 4;
 
 /** What produced a fragments buffer; cache keys and prepared examples carry it. */
 export function converterId(fragmentsVersion, webIfcVersion) {

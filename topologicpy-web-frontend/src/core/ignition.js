@@ -22,6 +22,9 @@
  */
 
 import { IGNITION_SCENARIOS } from "./ignitionCatalog.js";
+import { IGNITION_CONTEXTS } from "./ignitionContexts.js";
+
+export { IGNITION_CONTEXTS };
 
 export const CONFIDENCE = { typed: 1, entityAndName: 0.9, name: 0.7, room: 0.4 };
 /** Weight for a scenario with no death share in the review (flagged in the result). */
@@ -64,17 +67,31 @@ export function matchElement(s, record) {
   return best;
 }
 
+/** The catalogue's scenarios for a context, with its class and labels applied. */
+export function scenariosFor(context = "any", scenarios = IGNITION_SCENARIOS) {
+  const c = IGNITION_CONTEXTS.find((x) => x.id === context);
+  if (!c?.scenarios) return scenarios;
+  return scenarios
+    .filter((s) => c.scenarios.includes(s.id))
+    .map((s) => ({ ...s, ...(c.fireClass ? { fireClass: c.fireClass } : {}), ...(c.labels?.[s.id] ? { label: c.labels[s.id] } : {}) }));
+}
+
 /**
  * Rank candidate ignition points.
  *
  * @param {Array} records  elements: {itemId, type (IFC class), name, predefined, position: [x, y, z]}
  * @param {Array} rooms    IfcSpace rooms: {itemId, name, position}
- * @param {object} opts    occupancy: "residential" | "non-residential"; limit; scenarios (for tests)
+ * @param {object} opts    occupancy: "residential" | "non-residential"; context (IGNITION_CONTEXTS id);
+ *                         limit; scenarios (for tests)
  * @returns {Array} [{scenario, itemId, name, position, confidence, weight, estimated, score, byRoom}]
  */
-export function rankIgnitionPoints(records, rooms = [], { occupancy = "residential", limit = 8, scenarios = IGNITION_SCENARIOS, skip = ["intentional-accelerant"] } = {}) {
+export function rankIgnitionPoints(
+  records,
+  rooms = [],
+  { occupancy = "residential", context = "any", limit = 8, scenarios = IGNITION_SCENARIOS, skip = context === "deliberate" ? [] : ["intentional-accelerant"] } = {},
+) {
   const found = [];
-  for (const s of scenarios) {
+  for (const s of scenariosFor(context, scenarios)) {
     if (skip.includes(s.id)) continue;
     const matched = [];
     for (const record of records) {

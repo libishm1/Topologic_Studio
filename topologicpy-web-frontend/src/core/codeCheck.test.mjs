@@ -46,6 +46,24 @@ test("walking distance to the nearest exit entrance: the exit door below, the st
   assert.equal(r.limit, IBC2021_B.travel.unsprinklered);
 });
 
+test("on a storey with an exit door, a part that reaches it only by a stair leaves by the stair", () => {
+  // Two corridors on one storey (levels say so) 1.2 m apart in height, joined
+  // only by a stair: the exit door is on the upper one.
+  const nodes = [], kinds = [], edges = [];
+  for (let x = 0; x < 6; x += 1) nodes.push(x, 0.75, 0), kinds.push(0);
+  for (let x = 0; x < 6; x += 1) nodes.push(x, 1.95, 4), kinds.push(0);
+  for (let x = 1; x < 6; x += 1) edges.push(x - 1, x, 6 + x - 1, 6 + x);
+  nodes.push(5, 1.35, 2), kinds.push(1);
+  edges.push(5, 12, 12, 11);
+  const graph = { nodes: Float32Array.from(nodes), edges: Uint32Array.from(edges), kinds: Uint8Array.from(kinds), upAxis: "y", agentHeight: 0.75, spacing: 1 };
+  const r = codeCheck(graph, { exits: [6], levels: [0] });
+  const [storey] = r.storeys;
+  assert.equal(storey.checks.find((c) => c.id === "unreached"), undefined, "every place reaches an exit");
+  assert.equal(r.travel[0], 5, "the lower corridor walks to the stair at x = 5");
+  assert.equal(r.travel[11], 5, "the upper one to the door at x = 0");
+  assert.equal(storey.exits, 2);
+});
+
 test("too far, too few exits and exits too close fail; sprinklers relax the limits", () => {
   // 70 m corridors: over the 60.96 m limit without sprinklers, within 91.44 m with them.
   const long = building({ length: 71, storeys: 1 });

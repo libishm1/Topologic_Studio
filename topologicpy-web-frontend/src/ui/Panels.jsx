@@ -16,6 +16,8 @@ import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS } from "../core/fireClasses.js";
 import { GAS_MEASURES, SHOW_GROUPS, SMOKE_MEASURES } from "../core/measures.js";
+import { IGNITION_CONTEXTS } from "../core/ignitionContexts.js";
+import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
@@ -1663,6 +1665,11 @@ function CombustionStatus({ combustion, running }) {
         <Icon name={done ? "check" : "info"} size={16} />
         {done ? "Flamescapes run complete" : running ? "Flamescapes is computing" : "Flamescapes run"}
       </h3>
+      {combustion.replayed && (
+        <p className="result__note">
+          Played from this browser&apos;s kept runs (computed {new Date(combustion.replayed).toLocaleString()}), not computed again.
+        </p>
+      )}
       <dl className="result__grid">
         <div className="result__item">
           <dt className="result__label">Simulated</dt>
@@ -1728,7 +1735,7 @@ function CombustionStatus({ combustion, running }) {
 
 /** Likely ignition points: the review's scenarios matched in this model, ranked. */
 function IgnitionPoints({ ignition, onFind, onUse, disabled }) {
-  const { busy, candidates, occupancy } = ignition || {};
+  const { busy, candidates, occupancy, context } = ignition || {};
   const pct = (x) => (x == null ? "unknown" : `${(x * 100).toFixed(x < 0.01 ? 1 : 0)}%`);
   return (
     <Disclosure summary="Likely ignition points">
@@ -1740,13 +1747,20 @@ function IgnitionPoints({ ignition, onFind, onUse, disabled }) {
       <SelectField
         label="Occupancy"
         value={occupancy || "residential"}
-        onChange={(value) => onFind(value)}
+        onChange={(value) => onFind(value, context)}
         options={[
           { value: "residential", label: "Residential" },
           { value: "non-residential", label: "Non-residential" },
         ]}
       />
-      <Button block busy={busy} disabled={disabled} onClick={() => onFind(occupancy)}>
+      <SelectField
+        label="Cause"
+        value={context || "any"}
+        onChange={(value) => onFind(occupancy, value)}
+        options={IGNITION_CONTEXTS.map((c) => ({ value: c.id, label: c.label }))}
+        hint="Narrows the list to one cause; a gas fire starts as class B, whatever the appliance."
+      />
+      <Button block busy={busy} disabled={disabled} onClick={() => onFind(occupancy, context)}>
         Find in this model
       </Button>
       {candidates && !candidates.length && (
@@ -1793,8 +1807,11 @@ export function SimulatePanel({
   onGoTo,
   onExportTopologic,
   onExportTable,
+  onForgetRuns,
 }) {
-  const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo } = studio;
+  const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo, semantics } = studio;
+  const doorsNow = doorsLabel(settings.flamescapesDoors, { seed: settings.flamescapesDoorSeed, share: settings.flamescapesDoorShare });
+  const selfClosingCount = (semantics?.doors || []).filter((d) => d.selfClosing).length;
   const ready = Boolean(graph);
   const rooms = hasRooms(modelInfo);
   const fireModel = fireModelIn(settings, modelInfo);
@@ -1865,27 +1882,36 @@ export function SimulatePanel({
               </div>
               {/* Never locked: a run that is playing keeps its doors, and the
                   switch sets the next run's, with a restart offered at once. */}
-              <Segmented
-                label="Doors"
-                value={settings.flamescapesDoors}
-                onChange={(flamescapesDoors) => setSettings({ flamescapesDoors })}
-                options={[
-                  { value: "open", label: "Open" },
-                  { value: "closed", label: "Closed" },
-                ]}
-              />
-              {fire.running && fire.doors && fire.doors !== settings.flamescapesDoors && (
+              <Segmented label="Doors" value={settings.flamescapesDoors} onChange={(flamescapesDoors) => setSettings({ flamescapesDoors })} options={DOOR_MODES} />
+              {settings.flamescapesDoors === "random" && (
+                <div className="grid-2">
+                  <NumberField
+                    label="Closed (%)"
+                    value={Math.round(settings.flamescapesDoorShare * 100)}
+                    min={0}
+                    max={100}
+                    step={5}
+                    onChange={(v) => setSettings({ flamescapesDoorShare: Math.min(1, Math.max(0, (v ?? 50) / 100)) })}
+                  />
+                  <NumberField label="Seed" value={settings.flamescapesDoorSeed} min={1} max={9999} step={1} onChange={(v) => setSettings({ flamescapesDoorSeed: Math.max(1, Math.round(v ?? 1)) })} />
+                </div>
+              )}
+              {fire.running && fire.doors && fire.doors !== doorsNow && (
                 <Notice tone="neutral">
                   This fire is running with the doors {fire.doors}.{" "}
                   <Button size="sm" onClick={onStartFire}>
-                    Restart the fire with the doors {settings.flamescapesDoors}
+                    Restart the fire with the doors {doorsNow}
                   </Button>
                 </Notice>
               )}
               <p className="field__hint">
                 {settings.flamescapesDoors === "closed"
                   ? "Each door's leaf fills its opening, so the smoke stays in the rooms it starts in until it finds another way. Routes still pass through every door."
-                  : "Smoke and heat pass through every doorway. Close them to see what shut doors hold back; routes use the doors either way."}
+                  : settings.flamescapesDoors === "asbuilt"
+                    ? `The doors the model says close themselves are closed: SelfClosing, or a fire rating with -C (EN 13501-2); ${selfClosingCount} of ${semantics?.doors?.length ?? 0} doors here. The rest stand open.`
+                    : settings.flamescapesDoors === "random"
+                      ? "Each door is closed with the share above, drawn with the seed: the same seed closes the same doors, so runs can be repeated and compared."
+                      : "Smoke and heat pass through every doorway. Close them to see what shut doors hold back; routes use the doors either way."}
               </p>
             </div>
             <Segmented
@@ -2060,6 +2086,15 @@ export function SimulatePanel({
               onChange={(flamescapesMeasures) => setSettings({ flamescapesMeasures })}
               hint="For the smoke and gas measures, the tenability index's CO₂ and O₂ terms, and the exports. The solver works them out anyway; recording them doubles what each stored frame holds, so a run past 64 MB of frames keeps temperature, visibility and CO only, and its card says so."
             />
+            <Toggle
+              label="Keep finished runs in this browser"
+              checked={settings.flamescapesKeepRuns}
+              onChange={(flamescapesKeepRuns) => setSettings({ flamescapesKeepRuns })}
+              hint="The same fire on the same model, asked for again (after a reload too), plays from its kept frames instead of being computed. At most 256 MB; the runs used least recently go first."
+            />
+            <Button size="sm" onClick={onForgetRuns}>
+              Forget kept runs
+            </Button>
             <p className="field__hint">{FLAMESCAPES_LIMITS}</p>
           </Disclosure>
         )}

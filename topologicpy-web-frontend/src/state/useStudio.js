@@ -101,6 +101,9 @@ export const DEFAULT_SETTINGS = {
   flamescapesGrid: "speed",
   // Openings for the smoke: doors "open" or "closed"; windows "closed" or "open".
   flamescapesDoors: "open",
+  // With random doors (core/doorStates.js): the share closed and the seed that picks them.
+  flamescapesDoorShare: 0.5,
+  flamescapesDoorSeed: 1,
   flamescapesWindows: "closed",
   // Ventilation through the model's air terminals: "off" (fans stopped and
   // dampers shut, as a fire alarm does) or "running" (the ducts mix the air
@@ -115,6 +118,8 @@ export const DEFAULT_SETTINGS = {
   // Record soot, CO2 and O2 too (core/tenability.js); off, or past the
   // memory budget, a run keeps temperature, visibility and CO only.
   flamescapesMeasures: true,
+  // Keep finished Flamescapes runs in the browser and replay them (core/runCache.js).
+  flamescapesKeepRuns: true,
 
   showGraph: true,
   modelAppearance: "solid",
@@ -147,6 +152,8 @@ export const PLAN_SETTINGS = [
   "flamescapesSmoke",
   "flamescapesVisibility",
   "flamescapesDoors",
+  "flamescapesDoorShare",
+  "flamescapesDoorSeed",
   "flamescapesWindows",
   "flamescapesVentilation",
   "flamescapesTerminalFlow",

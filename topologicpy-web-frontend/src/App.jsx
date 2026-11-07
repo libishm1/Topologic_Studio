@@ -29,6 +29,8 @@ import { floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
+import { RUN_CACHE_VERSION, clearRuns, fingerprint, readRun, storedRuns, writeRun } from "./core/runCache.js";
+import { closedDoorIds, doorsLabel } from "./core/doorStates.js";
 import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
 import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
@@ -1194,15 +1196,33 @@ export default function App() {
     const ids = viewerRef.current?.categoryIds || {};
     const windowIds = new Set(ids.windows || []);
     const windowsOpen = settings.flamescapesWindows === "open";
-    const doorsClosed = settings.flamescapesDoors === "closed";
+    // The doors this run closes (core/doorStates.js); a rooms model's
+    // openings (doorways with no leaf) stay open.
+    const leaves = (geometry.doors || []).filter((m) => m.kind !== "opening");
+    const shut = closedDoorIds(
+      leaves.map((m) => m.itemId),
+      settings.flamescapesDoors,
+      {
+        selfClosing: new Set((studio.semantics?.doors || []).filter((d) => d.selfClosing).map((d) => d.id)),
+        seed: settings.flamescapesDoorSeed,
+        share: settings.flamescapesDoorShare,
+      },
+    );
+    const closedLeaves = leaves.filter((m) => shut.has(m.itemId));
+    const doorCount = new Set((geometry.doors || []).map((m) => m.itemId)).size;
+    const doorWords =
+      settings.flamescapesDoors === "asbuilt"
+        ? `as built (${shut.size} closed)`
+        : settings.flamescapesDoors === "random"
+          ? `random (${shut.size} closed, seed ${settings.flamescapesDoorSeed})`
+          : settings.flamescapesDoors;
     const geo = {
       walls: clone(geometry.walls),
       floors: clone(geometry.floors),
       roofs: clone(geometry.roofMeshes),
       stairs: clone(geometry.stairs),
       obstacles: clone(windowsOpen ? (geometry.obstacles || []).filter((m) => !windowIds.has(m.itemId)) : geometry.obstacles),
-      // A rooms model's openings (doorways with no leaf) stay open.
-      ...(doorsClosed ? { doors: clone((geometry.doors || []).filter((m) => m.kind !== "opening")) } : {}),
+      ...(closedLeaves.length ? { doors: clone(closedLeaves) } : {}),
     };
     const transfers = Object.values(geo).flatMap((list) => list.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
     const { contentsFuel, ignitionFuel, item } = fuelsFor(settings.flamescapesClass);
@@ -1224,8 +1244,8 @@ export default function App() {
       extras: settings.flamescapesMeasures && ((graph.nodes.length / 3) * frames * 12) <= 64 * 2 ** 20,
       extrasWanted: settings.flamescapesMeasures,
       openings: {
-        doors: doorsClosed ? "closed" : "open",
-        doorCount: new Set((geometry.doors || []).map((m) => m.itemId)).size,
+        doors: doorWords,
+        doorCount,
         windows: windowsOpen ? "open" : "closed",
         windowCount: windowIds.size,
         terminals: (geometry.terminals || []).length,
@@ -1257,13 +1277,15 @@ export default function App() {
       settings.flamescapesBackend,
       settings.flamescapesGrid,
       settings.flamescapesDoors,
+      // The doors closed, so a random or as-built set is part of the run.
+      [...shut].sort((a, b) => a - b).join(","),
       settings.flamescapesWindows,
       settings.flamescapesVentilation,
       settings.flamescapesTerminalFlow,
       settings.flamescapesMeasures,
     ]);
     return { payload, transfers, key };
-  }, [graph, points.fire, settings, fireModel]);
+  }, [graph, points.fire, settings, fireModel, studio.semantics]);
 
   // Start the Flamescapes solver, or return the run already made for the
   // same graph and inputs. Its frames collect in run.frames as they arrive;
@@ -1274,7 +1296,43 @@ export default function App() {
     if (current && current.key === key && current.graph === graph && !current.failed) return current;
     flamescapesRef.current?.cancel();
     const run = { key, graph, frames: [], done: false, failed: false, result: null, info: null };
-    run.promise = flamescapesJob(payload, transfers, (progress) => {
+    // Where this run is kept in the browser (core/runCache.js): the graph,
+    // the scene's geometry (every 16th word) and the run's inputs.
+    const storeKey = settings.flamescapesKeepRuns
+      ? [
+          RUN_CACHE_VERSION,
+          CONVERTER,
+          fingerprint([graph.nodes, graph.edges, graph.blocked]),
+          fingerprint(Object.values(payload.geometry).flatMap((list) => list.map((m) => m.positions)), 16),
+          key,
+        ].join("|")
+      : null;
+    // A kept run: its frames at once, and its card as it ended.
+    const replay = (stored) => {
+      run.info = stored.info;
+      for (const frame of stored.frames) run.frames.push(frame);
+      run.done = true;
+      run.result = stored.result;
+      const last = stored.frames.at(-1) || {};
+      studio.setFire((c) => ({
+        ...c,
+        combustion: {
+          ...stored.info,
+          time: last.time ?? 0,
+          hrr: last.hrr ?? 0,
+          peak: stored.frames.reduce((m, f) => Math.max(m, f.hrr || 0), 0),
+          embers: last.embers,
+          spots: last.spots,
+          horizon: payload.horizon,
+          embersOn: payload.embers,
+          extras: payload.extras,
+          extrasDropped: payload.extrasWanted && !payload.extras,
+          replayed: stored.savedAt,
+        },
+      }));
+      return stored.result;
+    };
+    const compute = () => flamescapesJob(payload, transfers, (progress) => {
       if (progress.type === "scene") {
         // A second scene is a restart on the CPU after the GPU stopped: the
         // frames so far came from the abandoned run (a playback waiting on
@@ -1328,9 +1386,27 @@ export default function App() {
         throw error;
       },
     );
+    run.promise = (storeKey ? readRun(storeKey) : Promise.resolve(null)).then((stored) => {
+      if (stored) return replay(stored);
+      return compute().then((result) => {
+        // Kept once the browser is idle: copying the frames takes a moment.
+        if (storeKey) {
+          const keep = () => void writeRun(storeKey, { info: run.info, frames: run.frames, result });
+          if (typeof requestIdleCallback === "function") requestIdleCallback(keep, { timeout: 5000 });
+          else setTimeout(keep, 1000);
+        }
+        return result;
+      });
+    });
     combustionRef.current = run;
     return run;
-  }, [combustionInputs, flamescapesJob, graph, studio]);
+  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns]);
+
+  const forgetRuns = useCallback(async () => {
+    const { count, bytes } = await storedRuns();
+    await clearRuns();
+    toast(count ? `Forgot ${count} kept run${count === 1 ? "" : "s"} (${(bytes / 2 ** 20).toFixed(1)} MB).` : "No runs were kept.", { variant: "info", ttl: 3500 });
+  }, [toast]);
 
   // The graph, the route and the fire's results per node, as the JSON
   // TopologicPy reads with Graph.ByJSONFile (src/core/topologicExport.js),
@@ -1473,16 +1549,16 @@ export default function App() {
 
   // Likely ignition points (src/core/ignition.js): the model's appliances,
   // furniture and rooms ranked by the ignition-source review.
-  const [ignitionState, setIgnition] = useState({ busy: false, candidates: null, occupancy: "residential", graphKey: null });
+  const [ignitionState, setIgnition] = useState({ busy: false, candidates: null, occupancy: "residential", context: "any", graphKey: null });
   // A token per graph: candidates found for another graph are not shown, and
   // the old graph's arrays are not kept alive by them (review 13).
   const graphKey = useMemo(() => ({ graph: Boolean(graph) }), [graph]);
   const ignition = ignitionState.graphKey === graphKey ? ignitionState : { ...ignitionState, candidates: null };
   const findIgnition = useCallback(
-    async (occupancy = ignition.occupancy) => {
+    async (occupancy = ignition.occupancy, context = ignition.context) => {
       const viewer = viewerRef.current;
       if (!viewer || !graph) return;
-      setIgnition((c) => ({ ...c, busy: true, occupancy }));
+      setIgnition((c) => ({ ...c, busy: true, occupancy, context }));
       try {
         const { records, rooms } = await viewer.ignitionData();
         // Rooms are placed at their meshes' centroid (extracted with the graph).
@@ -1494,18 +1570,18 @@ export default function App() {
         const placedRooms = rooms.map((r) => ({ ...r, position: centroidOf(spaceMeshes.get(r.itemId)) })).filter((r) => r.position);
         // The catalogue (about 35 KB) loads only when the list is asked for.
         const { rankIgnitionPoints } = await import("./core/ignition.js");
-        const ranked = rankIgnitionPoints(records, placedRooms, { occupancy, limit: 8 });
+        const ranked = rankIgnitionPoints(records, placedRooms, { occupancy, context, limit: 8 });
         const positions = await viewer.positionsOf(ranked.filter((c) => !c.byRoom).map((c) => c.itemId));
         const candidates = ranked
           .map((c) => ({ ...c, position: c.byRoom ? c.position : positions.get(c.itemId) }))
           .filter((c) => c.position);
-        setIgnition({ busy: false, candidates, occupancy, graphKey });
+        setIgnition({ busy: false, candidates, occupancy, context, graphKey });
       } catch (error) {
         setIgnition((c) => ({ ...c, busy: false, candidates: [] }));
         reportError(error, "Finding likely ignition points");
       }
     },
-    [graph, graphKey, ignition.occupancy, reportError],
+    [graph, graphKey, ignition.occupancy, ignition.context, reportError],
   );
   const useIgnition = useCallback(
     (candidate) => {
@@ -1619,7 +1695,7 @@ export default function App() {
       combustion: combustion ? current.combustion : null,
       // The doors this Flamescapes run was started with: the switch may change
       // while it plays, for the next run (SimulatePanel offers a restart).
-      doors: combustion ? settings.flamescapesDoors : null,
+      doors: combustion ? doorsLabel(settings.flamescapesDoors, { seed: settings.flamescapesDoorSeed, share: settings.flamescapesDoorShare }) : null,
     }));
 
     // Every model reroutes now: temperature by hazard cost, flood and radial by
@@ -1829,10 +1905,14 @@ export default function App() {
   const runCodeCheck = useCallback(() => {
     if (!graph) return;
     try {
+      // Exits are the doors out of the building and, on the storeys above,
+      // the stairs (IBC 202: a flat's front door is exit access, not an exit).
+      const out = new Set(exits?.final || []);
+      const outItems = new Set((graph.doors || []).filter((d) => out.has(d.node)).map((d) => d.itemId));
       const result = codeCheck(graph, {
-        exits: exits?.nodes || [],
+        exits: exits?.final || [],
         levels,
-        exitDoors: (studio.semantics?.doors || []).filter((d) => d.exit),
+        exitDoors: (studio.semantics?.doors || []).filter((d) => outItems.has(d.id)),
         sprinklered: settings.codeSprinklered,
         useWalls: settings.useWalls,
       });
@@ -2862,6 +2942,7 @@ export default function App() {
                   onGoTo={setTab}
                   onExportTopologic={exportTopologic}
                   onExportTable={exportTable}
+                  onForgetRuns={forgetRuns}
                 />
               )}
             </div>

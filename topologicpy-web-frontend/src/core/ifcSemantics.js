@@ -21,6 +21,7 @@
  * @param W        the web-ifc module (for the type constants)
  */
 import { componentLabels } from "./route.js";
+import { selfClosingRating } from "./doorStates.js";
 
 const val = (a) => (a && typeof a === "object" && "value" in a ? a.value : a);
 const truthy = (v) => v === true || v === "T" || v === ".T." || v === "TRUE" || v === 1;
@@ -83,6 +84,10 @@ export function ifcSemantics(api, modelID, W) {
   // door flows (src/core/rooms.js).
   const scale = lengthScale(api, modelID, W, ids, line);
   const metres = (v) => (typeof v === "number" && v > 0 ? v * scale : null);
+  const rating = (id) => {
+    const v = doorProp(id, "FireRating");
+    return v == null || String(v).trim() === "" ? null : String(v).trim();
+  };
   const doors = ids(W.IFCDOOR).map((id) => {
     const door = line(id);
     let exit = null;
@@ -101,6 +106,9 @@ export function ifcSemantics(api, modelID, W) {
       heightM: metres(height),
       exit,
       external: truthy(doorProp(id, "IsExternal")) || external.has(id),
+      // For the "as built" doors of a Flamescapes run (core/doorStates.js).
+      fireRating: rating(id),
+      selfClosing: truthy(doorProp(id, "SelfClosing")) || selfClosingRating(rating(id)),
     };
   });
   const roofSlabs = ids(W.IFCSLAB).filter((s) => val(line(s).PredefinedType) === "ROOF");

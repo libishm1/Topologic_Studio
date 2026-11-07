@@ -179,27 +179,45 @@ export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], ex
     }
     return top;
   };
-  for (const map of entrances) {
-    for (const [v, id] of map) {
-      travel[v] = 0;
-      nearest[v] = id;
-      push(0, v);
+  const seed = (v, id) => {
+    travel[v] = 0;
+    nearest[v] = id;
+    push(0, v);
+  };
+  const spread = () => {
+    while (heap.length) {
+      const [d, v] = pop();
+      if (d > travel[v]) continue;
+      for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
+        const w = neighbours[k];
+        if (storeyOf[w] !== storeyOf[v] || (blocked && blocked[edgeIds[k]])) continue;
+        const nd = d + lengths[edgeIds[k]];
+        if (nd < travel[w]) {
+          travel[w] = nd;
+          nearest[w] = nearest[v];
+          push(nd, w);
+        }
+      }
     }
-  }
-  while (heap.length) {
-    const [d, v] = pop();
-    if (d > travel[v]) continue;
-    for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
-      const w = neighbours[k];
-      if (storeyOf[w] !== storeyOf[v] || (blocked && blocked[edgeIds[k]])) continue;
-      const nd = d + lengths[edgeIds[k]];
-      if (nd < travel[w]) {
-        travel[w] = nd;
-        nearest[w] = nearest[v];
-        push(nd, w);
+  };
+  for (const map of entrances) for (const [v, id] of map) seed(v, id);
+  spread();
+  // On a storey with exit doors, a part that reaches none of them on the
+  // storey (a lower level the storey also holds, reached by a stair) leaves
+  // by the stair: an exit stair is an exit too (IBC 202).
+  for (const s of discharge) {
+    for (let v = 0; v < n; v += 1) {
+      if (storeyOf[v] !== s || Number.isFinite(travel[v])) continue;
+      for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
+        const w = neighbours[k];
+        if (kinds[w] === KIND_STAIR && !(blocked && blocked[edgeIds[k]])) {
+          entrances[s].set(v, `stair ${stairPiece[w]}`);
+          seed(v, `stair ${stairPiece[w]}`);
+        }
       }
     }
   }
+  spread();
 
   // Per storey.
   const cell = (graph.spacing || 0.5) ** 2;
