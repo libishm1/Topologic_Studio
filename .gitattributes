@@ -4,3 +4,5 @@
 # Third-party example kept byte for byte as published, so it matches the
 # SHA-256 in public/examples/index.json and the TU Wien record: no line-ending changes.
 topologicpy-web-frontend/public/examples/vienna-escape-route-model.ifc -text
+topologicpy-web-frontend/public/examples/nibs-office.ifc -text
+topologicpy-web-frontend/public/examples/nibs-clinic.ifc -text

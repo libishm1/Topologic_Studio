@@ -157,7 +157,10 @@ export const DEFAULT_SETTINGS = {
   sprinklerSource: "auto",
   sprinklerHazard: "auto",
   sprinklerResponse: "quick",
-  sprinklerMode: "spray",
+  // "wetting" by default: across 12 test fires on 4 models it was the only mode
+  // that cut every growing fire (20 to 79 % less heat; tools/sprinkler-check.mjs);
+  // Evans's cap and the spray ranged from 40 % less to 78 % more.
+  sprinklerMode: "wetting",
   sprinklerOpenOn: "estimate",
   // The graph's colour while a run plays (core/measures.js): "heat", "smoke",
   // "gases" or "tenability", and which smoke or gas measure.

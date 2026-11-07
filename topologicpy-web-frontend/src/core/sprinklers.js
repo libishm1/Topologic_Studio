@@ -351,15 +351,30 @@ const MIN_ROOM_WIDTH = 0.6;
  * not cover) stay in the list with footprint null and a `problem`, and
  * layoutRooms reports them.
  *
+ * With `overhead` (the model's slabs and roofs), the ceiling is checked
+ * against what is really over the room: looking straight up from five points
+ * of its footprint, from 1 m over its floor, the nearest slab or roof face
+ * is the ceiling when it is lower than the space's top. A space with nothing
+ * over it and no wall round it rising 1.5 m over its floor (`walls`) is
+ * outside the building, no room to sprinkler: the Duplex's "Roof" space,
+ * drawn on top of the roof, put eight heads 2.9 m above it. So is one with
+ * nothing over it named as an outdoor area (roof, terrace, balcony ...),
+ * whatever walls stand near: the NIBS Clinic's "ROOF" spaces stand beside
+ * its taller block. It stays in the list with a `problem`. With walls round
+ * it, the model just has no slab there (the NIBS Office has none: its floors
+ * are the spaces' bottoms), and the space's top stays the ceiling.
+ *
  * @param {Array<{itemId, positions: Float32Array, indices: Uint32Array}>} spaceMeshes  viewer frame
- * @param {{upAxis?: string, names?: Map|object}} opts  names: itemId -> room name
+ * @param {{upAxis?: string, names?: Map|object, overhead?: Array<{positions, indices}>, walls?: Array<{positions}>}} opts  names: itemId -> room name
  * @returns {Array<{id, name, upAxis, floor, ceiling, footprint: Float64Array|null, area: number,
  *           rect: {centre: number[], axis: number[], half: number[]}|null, problem: string|null}>}
  *          footprint: plan triangles, six numbers each
  */
-export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null } = {}) {
+export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overhead = null, walls = null } = {}) {
   const up = upIndex(upAxis);
   const [h0, h1] = planAxes(upAxis);
+  const above = overhead?.length ? overheadIndex(overhead, up, h0, h1) : null;
+  const wallBoxes = above && walls?.length ? meshBoxes(walls, up, h0, h1) : null;
   const nameOf = (id) => (names instanceof Map ? names.get(id) : names?.[id]) ?? null;
   const groups = new Map();
   (spaceMeshes || []).forEach((mesh, i) => {
@@ -419,11 +434,111 @@ export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null } = {}
       room.problem = `${(2 * rect.half[1]).toFixed(2)} m wide, less than ${MIN_ROOM_WIDTH} m: a shaft or a sliver, which the room rules do not cover`;
       continue;
     }
+    if (above) {
+      // What is really over the room: the nearest slab or roof face above
+      // each of five points of the footprint (its centre and four points
+      // half way to the rectangle's corners).
+      const { centre: o, axis: x, half } = rect;
+      const y = [-x[1], x[0]];
+      const hits = [];
+      for (const [a, b] of [[0, 0], [0.5, 0.5], [-0.5, 0.5], [0.5, -0.5], [-0.5, -0.5]]) {
+        const pa = o[0] + a * half[0] * x[0] + b * half[1] * y[0];
+        const pb = o[1] + a * half[0] * x[1] + b * half[1] * y[1];
+        const z = above(pa, pb, lo + CEILING_SEARCH_FROM);
+        if (z < Infinity) hits.push(z);
+      }
+      if (!hits.length) {
+        // Walls round it rising well over its floor: a room whose slab is
+        // not in the model. None: a space outside the building.
+        const reach = Math.hypot(half[0], half[1]) + WALL_MARGIN;
+        const enclosed = (wallBoxes || []).some((w) => w.top >= lo + WALL_ENCLOSES && w.a1 >= o[0] - reach && w.a0 <= o[0] + reach && w.b1 >= o[1] - reach && w.b0 <= o[1] + reach);
+        // Named as an outdoor area: the walls nearby are a taller block's
+        // (the NIBS Clinic's six "ROOF" spaces stand beside its upper storeys).
+        if (!enclosed || OUTSIDE_NAME.test(room.name || "")) {
+          room.problem = !enclosed
+            ? "nothing over it and no wall round it (a space drawn on the roof, a terrace or a balcony): outside the building, no ceiling to hang heads from"
+            : "nothing over it, and named as an outdoor area (a roof, terrace or balcony): outside the building, no ceiling to hang heads from";
+          room.outside = true;
+          continue;
+        }
+      } else {
+        hits.sort((p, q) => p - q);
+        const over = hits[Math.floor(hits.length / 2)];
+        if (over < room.ceiling - 0.02) room.ceiling = over;
+      }
+    }
     room.footprint = Float64Array.from(tris);
     room.area = area;
     room.rect = rect;
   }
   return rooms;
+}
+
+/** How far over a room's floor the search for its ceiling starts (m): past its own floor slab. */
+const CEILING_SEARCH_FROM = 1.0;
+/** A wall encloses a room when it rises this far over its floor (m), within its footprint's reach plus WALL_MARGIN. */
+const WALL_ENCLOSES = 1.5;
+const WALL_MARGIN = 0.5;
+/** A space named as an outdoor area: with nothing over it, outside the building whatever walls stand near. */
+const OUTSIDE_NAME = /\b(roof|rooftop|terrace|terrasse|balcon|balcony|balkon|deck|patio|veranda|loggia|outdoor|exterior|dach)/i;
+
+/** Plan boxes and tops of meshes, for the wall test. */
+function meshBoxes(meshes, up, h0, h1) {
+  return meshes
+    .filter((m) => m?.positions)
+    .map((m) => {
+      const p = m.positions;
+      let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity, top = -Infinity;
+      for (let o = 0; o + 2 < p.length; o += 3) {
+        a0 = Math.min(a0, p[o + h0]);
+        a1 = Math.max(a1, p[o + h0]);
+        b0 = Math.min(b0, p[o + h1]);
+        b1 = Math.max(b1, p[o + h1]);
+        top = Math.max(top, p[o + up]);
+      }
+      return { a0, a1, b0, b1, top };
+    });
+}
+
+/**
+ * The lowest face of the given meshes straight above plan point (a, b) and
+ * at least at height `from`, or Infinity: a vertical ray against their
+ * triangles, the meshes first culled by their plan boxes.
+ */
+function overheadIndex(meshes, up, h0, h1) {
+  const boxes = meshes
+    .filter((m) => m?.positions && m?.indices)
+    .map((m) => {
+      const p = m.positions;
+      let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity, top = -Infinity;
+      for (let o = 0; o + 2 < p.length; o += 3) {
+        a0 = Math.min(a0, p[o + h0]);
+        a1 = Math.max(a1, p[o + h0]);
+        b0 = Math.min(b0, p[o + h1]);
+        b1 = Math.max(b1, p[o + h1]);
+        top = Math.max(top, p[o + up]);
+      }
+      return { m, a0, a1, b0, b1, top };
+    });
+  return (a, b, from) => {
+    let best = Infinity;
+    for (const { m, a0, a1, b0, b1, top } of boxes) {
+      if (a < a0 || a > a1 || b < b0 || b > b1 || top < from) continue;
+      const p = m.positions, ix = m.indices;
+      for (let t = 0; t + 2 < ix.length; t += 3) {
+        const i = ix[t] * 3, j = ix[t + 1] * 3, k = ix[t + 2] * 3;
+        const ax = p[i + h0], ay = p[i + h1], bx = p[j + h0], by = p[j + h1], cx = p[k + h0], cy = p[k + h1];
+        const d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
+        if (Math.abs(d) < 1e-12) continue;
+        const u = ((by - cy) * (a - cx) + (cx - bx) * (b - cy)) / d;
+        const v = ((cy - ay) * (a - cx) + (ax - cx) * (b - cy)) / d;
+        if (u < -1e-9 || v < -1e-9 || u + v > 1 + 1e-9) continue;
+        const z = u * p[i + up] + v * p[j + up] + (1 - u - v) * p[k + up];
+        if (z >= from && z < best) best = z;
+      }
+    }
+    return best;
+  };
 }
 
 const triArea = (T, k) => Math.abs((T[k + 2] - T[k]) * (T[k + 5] - T[k + 1]) - (T[k + 4] - T[k]) * (T[k + 3] - T[k + 1])) / 2;
@@ -670,8 +785,9 @@ export function layoutRooms(rooms, { hazardFor = null, response = null, obstruct
         hazard: null,
         area: 0,
         heads: 0,
-        checks: [{ id: "footprint", status: "cannot tell", text: room?.problem || "no usable footprint", clause: CODES }],
-        status: "cannot tell",
+        checks: [{ id: "footprint", status: room?.outside ? "n/a" : "cannot tell", text: room?.problem || "no usable footprint", clause: CODES }],
+        // A space outside the building is not a room to sprinkler at all.
+        status: room?.outside ? "n/a" : "cannot tell",
       });
       continue;
     }

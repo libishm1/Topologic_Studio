@@ -492,3 +492,28 @@ test("requirement: with nothing given, it cannot tell", () => {
   assert.equal(r.triggers.find((t) => t.id === "group-r").status, "cannot tell");
   assert.equal(r.triggers.find((t) => t.id === "tall").status, "cannot tell");
 });
+
+test("a space with nothing over it and no wall round it gets no heads; a slab lower than a space's top is its ceiling", () => {
+  // The Duplex's "Roof" space, drawn on top of the roof, put eight heads 2.9 m above it.
+  const names = new Map([[1, "Living"], [2, "Roof"], [3, "No slab in the model"]]);
+  const spaces = [
+    roomMesh(1, [[0, 0, 5, 4]], { y0: 0, y1: 3 }),
+    roomMesh(2, [[0, 0, 5, 4]], { y0: 3.2, y1: 6.2 }),
+    roomMesh(3, [[10, 0, 14, 4]], { y0: 0, y1: 2.6 }),
+  ];
+  const overhead = [roomMesh("slab", [[-0.2, -0.2, 5.2, 4.2]], { y0: 2.7, y1: 3.2 })];
+  const walls = [roomMesh("wall-a", [[-0.2, -0.2, 5.2, 0]], { y0: 0, y1: 3.4 }), roomMesh("wall-b", [[9.8, -0.2, 14.2, 0]], { y0: 0, y1: 2.6 })];
+  // Without them, as before: every space's top is its ceiling.
+  const plain = roomsFromSpaces(spaces, { names });
+  assert.deepEqual(plain.map((r) => [Math.round(r.ceiling * 100) / 100, r.problem]), [[3, null], [6.2, null], [2.6, null]]);
+  const rooms = roomsFromSpaces(spaces, { names, overhead, walls });
+  assert.equal(rooms[0].problem, null);
+  assert.ok(near(rooms[0].ceiling, 2.7, 1e-5), `the slab's underside is the ceiling: ${rooms[0].ceiling}`);
+  assert.match(rooms[1].problem || "", /nothing over it/);
+  assert.equal(rooms[2].problem, null, "walls round it: a room whose slab is not in the model");
+  assert.ok(near(rooms[2].ceiling, 2.6, 1e-5));
+  const laid = layoutRooms(rooms);
+  assert.ok(!laid.heads.some((h) => h.room === 2), "no heads on the roof");
+  const living = laid.heads.filter((h) => h.room === 1);
+  assert.ok(living.length > 0 && living.every((h) => h.position[1] < 2.7), "heads hang under the slab");
+});

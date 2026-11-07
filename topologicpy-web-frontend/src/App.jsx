@@ -23,6 +23,7 @@ import { isCancelled, workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats, reachablePct } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
+import { floorsFromSpaces, slabsMissing } from "./core/spaceFloors.js";
 import { DETECTOR_VISIBILITY, earliestArrival, firstDetection } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
 import { KIND_DOOR, floorLevels } from "./core/lattice.js";
@@ -1349,7 +1350,10 @@ export default function App() {
       let plan = fromIfc;
       if (!plan && settings.sprinklerSource !== "ifc") {
         const names = new Map((studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
-        const rooms = geometry.spaces?.length ? S.roomsFromSpaces(geometry.spaces, { upAxis, names }) : null;
+        // The slabs and roofs over the rooms: a space with none over it (drawn
+        // on the roof) gets no heads, and heads hang under the real ceiling.
+        const overhead = [...(geometry.floors || []), ...(geometry.roofMeshes || [])];
+        const rooms = geometry.spaces?.length ? S.roomsFromSpaces(geometry.spaces, { upAxis, names, overhead, walls: geometry.walls }) : null;
         const usable = rooms?.rooms ? rooms.rooms : rooms;
         if (usable?.length) {
           const laid = S.layoutRooms(usable, { hazardFor: hazard ? () => hazard : undefined, response: settings.sprinklerResponse, obstructions: obstructions.length ? obstructions : null });
@@ -1434,7 +1438,14 @@ export default function App() {
           : settings.flamescapesDoors;
     const geo = {
       walls: clone(geometry.walls),
-      floors: clone(geometry.floors),
+      // A model whose floors are its spaces' bottoms (no slabs) gets them as
+      // floor slabs, or the fire would have no floor to stand its contents on.
+      floors: [
+        ...clone(geometry.floors),
+        ...(geometry.spaces?.length && slabsMissing(geometry.floors, geometry.spaces, { upAxis: graph.upAxis || "y" })
+          ? floorsFromSpaces(geometry.spaces, { upAxis: graph.upAxis || "y" })
+          : []),
+      ],
       roofs: clone(geometry.roofMeshes),
       stairs: clone(geometry.stairs),
       obstacles: [

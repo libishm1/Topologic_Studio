@@ -2329,7 +2329,7 @@ function SprinklerLayout({ plan, busy, onRedo }) {
         <strong>{plan.heads.length} sprinkler heads</strong>, {where}
         {plan.note ? ` (${plan.note})` : ""}.
         {rooms.length > 0 && ` ${rooms.length - failing.length - open.length} meet every placement rule, ${failing.length} fail one, ${open.length} cannot be told.`}
-        {skipped > 0 && ` ${skipped} spaces not laid out (shafts, or spaces drawn over smaller rooms).`}
+        {skipped > 0 && ` ${skipped} spaces not laid out (shafts, spaces drawn over smaller rooms, or outside the building: roofs, terraces, balconies).`}
         {rooms.length > 0 && !plan.obstructionCount && " Obstructions (beams, ducts) are not checked without a structural or MEP model (step 1)."}
         {plan.obstructionCount > 0 && ` Checked against ${plan.obstructionCount} beams and ducts (NFPA 13's beam, three times and wide rules).`}
         {plan.obstructions &&
@@ -2753,9 +2753,9 @@ export function SimulatePanel({
                   value={settings.sprinklerMode}
                   onChange={(sprinklerMode) => setSettings({ sprinklerMode })}
                   options={[
-                    { value: "spray", label: "Caps the fuel under it and sprays: steam and cooling in the gas" },
+                    { value: "wetting", label: "Sprays and wets the fuel it reaches (the default: it cut every test fire)" },
+                    { value: "spray", label: "Caps the fuel under it (Evans 1993) and sprays: steam and cooling in the gas" },
                     { value: "evans", label: "Caps the fuel under it (Evans 1993) only" },
-                    { value: "wetting", label: "Sprays and wets the fuel it reaches, no cap: water, not an envelope, slows the fire" },
                     { value: "activation", label: "Only opens: the fire is left as it is" },
                   ]}
                 />

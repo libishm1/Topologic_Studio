@@ -35,6 +35,7 @@ import { buildZoneForecast } from "../topologicpy-web-frontend/src/core/zone.js"
 import { buildScene, forecastFromFrames, runScene } from "../topologicpy-web-frontend/src/core/flamescapesRun.js";
 import { layoutRooms, roomsFromSpaces } from "../topologicpy-web-frontend/src/core/sprinklers.js";
 import { fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
+import { floorsFromSpaces, slabsMissing } from "../topologicpy-web-frontend/src/core/spaceFloors.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -132,7 +133,7 @@ for (const file of models) {
   if (withSprinklers && geo.spaces.length) {
     const t1 = performance.now();
     const names = new Map((geo.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
-    heads = layoutRooms(roomsFromSpaces(geo.spaces, { upAxis: "y", names })).heads;
+    heads = layoutRooms(roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], walls: geo.walls })).heads;
     row.sprinklerLayout = { heads: heads.length, ms: ms(t1) };
     console.log(`  ${"sprinkler layout".padEnd(19)} ${heads.length} heads in ${ms(t1).toFixed(0)} ms`);
   }
@@ -140,7 +141,7 @@ for (const file of models) {
     const key = sprinklers ? "flamescapes-sprinklers" : embers ? "flamescapes-embers" : "flamescapes";
     try {
       const t1 = performance.now();
-      const scene = buildScene(geo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item });
+      const scene = buildScene(slabsMissing(geo.floors, geo.spaces) ? { ...geo, floors: [...geo.floors, ...floorsFromSpaces(geo.spaces)] } : geo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item });
       const setupMs = ms(t1);
       if (!scene.ignition) {
         row.methods[key] = { skipped: "no place for the first item at the fire origin" };

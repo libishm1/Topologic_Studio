@@ -55,5 +55,25 @@
     "doors": 1,
     "slabs": 4,
     "stairs": 0
+  },
+  {
+    "id": "nibs-office",
+    "name": "Office building (NIBS)",
+    "file": "nibs-office.ifc",
+    "description": "A two-storey office with 99 rooms: open offices, conference rooms, server, telecom, electrical and UPS rooms. Try sprinklers, extinguishers and the performance check.",
+    "credit": "Office Building, Common Building Information Model Files, National Institute of Building Sciences (NIBS) buildingSMART alliance and U.S. Army ERDC, 2011 (NBU_OfficeBuilding_Arch).",
+    "source": "https://www.wbdg.org/bim/cobie/common-bim-files",
+    "licence": "Publisher states no licence (the DURAARK repository at TIB, which holds the same file, lists CC0); shown with credit, removed on request.",
+    "bytes": 4099307
+  },
+  {
+    "id": "nibs-clinic",
+    "name": "Medical clinic (NIBS)",
+    "file": "nibs-clinic.ifc",
+    "description": "A two-storey medical and dental clinic with 269 spaces: waiting areas, exam and dental rooms, communication and electrical rooms, a computer room and plant. Large: about 30 s to open the first time.",
+    "credit": "BSI (2020) \"Medical-Dental Test Files,\" buildingSMART International (Community Sample Test Files), from the NIBS Common BIM Files Clinic (2011).",
+    "source": "https://github.com/buildingsmart-community/Community-Sample-Test-Files",
+    "licence": "CC-BY-4.0",
+    "bytes": 13003205
   }
 ]
