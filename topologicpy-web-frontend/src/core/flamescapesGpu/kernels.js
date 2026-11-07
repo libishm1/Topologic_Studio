@@ -87,6 +87,11 @@ export const PARAMS = [
   ["emberEmis", "f32"], ["emberHC", "f32"], ["pilotTemp", "f32"], ["pilotPower", "f32"],
   ["burnFlux", "f32"], ["ductN", "u32"], ["ductSystems", "u32"], ["ductAt", "u32"],
   ["ductFlow", "f32"],
+  // Sprinklers (suppression.js): the step's start time, Evans on, the spray's
+  // columns (count and offset in `sup`), its evaporation coefficient, and the
+  // gathered cells whose speed is read (sensor cells, from speedFrom on).
+  ["time", "f32"], ["supOn", "u32"], ["sprayN", "u32"], ["supCol", "u32"],
+  ["sprayEta", "f32"], ["speedFrom", "u32"], ["ioSpeed", "u32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -123,7 +128,15 @@ export const WG = 64;
  * buffer again as plain u32, for kernels that only read it: an atomicLoad is a
  * read-modify-write on some backends (D3D12), a plain load is not.
  */
-export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13 });
+export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13, sup: 14 });
+/**
+ * The `sup` buffer (binding 14), only as large as a run with sprinklers
+ * needs (16 bytes otherwise, never read): per cell Evans's decay time
+ * (0: not covered), its head's opening time and its rate when it opened
+ * (-1: armed), then from U.supCol four words per spray column: top cell,
+ * open cells below it, water (kg/s), unused.
+ */
+export const SUP = Object.freeze({ tau: 0, tAct: 1, rate: 2, fields: 3, column: 4 });
 /** Bytes of the sweep-index uniform binding. */
 export const SWEEP_BYTES = 16;
 
@@ -155,7 +168,8 @@ export const KERNELS = {
   vortForce: { uses: [0, 1, 3], threads: cells },
   vortApply: { uses: [0, 1, 4], threads: faces },
   diffuse: { uses: [0, 1, 2, 3, 5], threads: cells },
-  chemistry: { uses: [0, 1, 2, 3, 10, 13], threads: cells },
+  chemistry: { uses: [0, 1, 2, 3, 10, 13, 14], threads: cells },
+  spray: { uses: [0, 1, 2, 3, 4, 14], threads: (d) => d.sprayCols || 0 },
   reduceFinish: { uses: [0, 10], threads: () => WG },
   cullFlameFront: { uses: [0, 3, 7, 9], threads: particles },
   conductPorous: { uses: [0, 1, 2, 3], threads: cells },
@@ -177,7 +191,7 @@ export const KERNELS = {
   projectUpdate: { uses: [0, 1, 3, 4], threads: faces },
   compact: { uses: [0, 7, 8, 9], threads: particles },
   compactFinish: { uses: [0, 9], threads: one, wg: 1 },
-  gather: { uses: [0, 1, 2, 11], threads: (d) => d.nNodes },
+  gather: { uses: [0, 1, 2, 4, 11], threads: (d) => d.nNodes },
   peakTemperature: { uses: [0, 1, 3, 9], threads: cells },
   snapshot: { uses: [0, 7, 9, 11], threads: (d) => d.snapMax },
 };
@@ -312,6 +326,7 @@ struct Tri { b: u32, di: u32, dj: u32, dk: u32, f: vec3<f32> }
 struct Sweep { s: u32, pad0: u32, pad1: u32, pad2: u32 }
 @group(0) @binding(12) var<uniform> SW: Sweep;
 @group(0) @binding(13) var<storage, read_write> atomPlain: array<u32>;
+@group(0) @binding(14) var<storage, read_write> sup: array<f32>;
 
 var<workgroup> wsum: array<vec4<f32>, 64>;
 var<workgroup> wmax: array<u32, 64>;
@@ -1023,6 +1038,63 @@ ${perCell("diffuse", `
   for (var s = 0u; s < NS; s++) { Y[c * NS + s] = y[s]; }
   cf[ix(fT, c)] = T;`)}
 
+// ------------------------------------------------------------------ sprinklers (suppression.js)
+
+/**
+ * Evans's cap on cell c this step: the factor (at most 1) for its reactions
+ * of total loss (kg) uncapped. Armed (rate -1): this step's rate is read
+ * and nothing is capped; a cell not reacting then has rate 0 and never
+ * ignites. The CPU's evansFactor.
+ */
+fn evans(c: u32, loss: f32) -> f32 {
+  if (U.supOn == 0u) { return 1.0; }
+  let tau = sup[c];
+  if (!(tau > 0.0)) { return 1.0; }
+  let r = sup[2u * U.N + c];
+  if (r < 0.0) {
+    sup[2u * U.N + c] = max(0.0, loss) / U.dt;
+    return 1.0;
+  }
+  if (!(loss > 0.0)) { return 1.0; }
+  let allowed = r * exp(-(U.time - sup[U.N + c]) / tau) * U.dt;
+  return select(1.0, allowed / loss, loss > allowed);
+}
+
+/**
+ * The spray, one thread per column (no two columns share a cell or a
+ * face): down its open cells the water evaporates a share
+ * 1 - exp(-eta (T - T_boil) h) of what is left, at most what cools the cell
+ * to boiling; the gas keeps its energy with the vapour carrying its own
+ * heat, the steam joins it, and the water drags the gas down. The CPU's
+ * spray (flamescapes.js).
+ */
+${perThread("spray", "U.sprayN", `
+  let base = U.supCol + 4u * t;
+  var c = bitcast<u32>(sup[base]);
+  let count = bitcast<u32>(sup[base + 1u]);
+  var m = sup[base + 2u] * U.dt;
+  let TB = 373.15;
+  let e = 4186.0 * (TB - 293.15) + U.latent;
+  let drag = abs(U.gravity) / (5.0 * U.h * U.h);
+  for (var n = 0u; n < count; n++) {
+    if (!(m > 0.0) || kindOf(c) == SOLID) { break; }
+    let T = cf[ix(fT, c)];
+    if (T > TB) {
+      let Cg = gasCap(c);
+      let dv = min(omexp(U.sprayEta * (T - TB) * U.h) * m, (Cg * (T - TB)) / e);
+      if (dv > 0.0) {
+        cf[ix(fT, c)] = (Cg * T - dv * (e - 1864.0 * TB)) / (Cg + 1864.0 * dv);
+        addGas(c, 3u, dv);
+        m -= dv;
+      }
+    }
+    let i = c % U.nx;
+    let j = (c / U.nx) % U.ny;
+    let k = c / (U.nx * U.ny);
+    vel[vAt(i, j, k)] -= (drag * m) / max(cf[ix(fRho, c)], 1e-6);
+    c -= U.nx;
+  }`)}
+
 // ------------------------------------------------------------------ chemistry (Alg. 1 lines 24 to 27)
 
 /**
@@ -1067,7 +1139,8 @@ fn chemCell(c: u32) -> vec2<f32> {
           if (st.kBeta > 0.0) { size = 1.0 - exp(-st.kBeta * sqrt(4.0 * area / 3.14159265)); }
           cap = st.mInf * size * area * dt;
         }
-        let dv = min(min(skinOf(fuel, area), (C * (Ts - st.boiling)) / st.latent), cap);
+        var dv = min(min(skinOf(fuel, area), (C * (Ts - st.boiling)) / st.latent), cap);
+        dv *= evans(c, dv);
         if (dv > 0.0) {
           fuel -= dv;
           Ts -= (dv * st.latent) / C;
@@ -1089,7 +1162,11 @@ fn chemCell(c: u32) -> vec2<f32> {
     dOx = min(dOx, o2 / st.o2);
     let starved = 1.0 - min(1.0, yO / Y_O2_AIR);
     let kp = arrhenius(U.pyA, U.pyE, Ts) * (0.25 + 0.75 * starved);
-    let dPy = max(0.0, skin - dOx) * omexp(max(0.0, kp) * dt);
+    var dPy = max(0.0, skin - dOx) * omexp(max(0.0, kp) * dt);
+    // Evans's cap under an open sprinkler: both reactions scaled alike.
+    let f = evans(c, dOx + dPy);
+    dOx *= f;
+    dPy *= f;
     if (dOx > 0.0) {
       fuel -= dOx;
       // A metal's oxide stays as ash (MgO, about 900 J/(kg K)).
@@ -1420,7 +1497,21 @@ ${perThread("gather", "U.nNodes", `
   io[U.ioOut + 2u * U.nNodes + t] = bitcast<u32>(co);
   io[U.ioOut + 3u * U.nNodes + t] = bitcast<u32>(soot);
   io[U.ioOut + 4u * U.nNodes + t] = bitcast<u32>(co2);
-  io[U.ioOut + 5u * U.nNodes + t] = bitcast<u32>(o2);`)}
+  io[U.ioOut + 5u * U.nNodes + t] = bitcast<u32>(o2);
+  // The sprinklers' sensor cells, last in the list: the speed at the cell's centre.
+  if (t >= U.speedFrom) {
+    var speed = 0.0;
+    if (c != NO_CELL) {
+      let i = c % U.nx;
+      let j = (c / U.nx) % U.ny;
+      let k = c / (U.nx * U.ny);
+      let a = 0.5 * (vel[uAt(i, j, k)] + vel[uAt(i + 1u, j, k)]);
+      let b = 0.5 * (vel[vAt(i, j, k)] + vel[vAt(i, j + 1u, k)]);
+      let d = 0.5 * (vel[wAt(i, j, k)] + vel[wAt(i, j, k + 1u)]);
+      speed = sqrt(a * a + b * b + d * d);
+    }
+    io[U.ioSpeed + t - U.speedFrom] = bitcast<u32>(speed);
+  }`)}
 
 @compute @workgroup_size(64)
 fn peakTemperature(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>,

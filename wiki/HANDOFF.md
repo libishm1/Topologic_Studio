@@ -30,19 +30,19 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 283 tests;
+  - `npm test` in `topologicpy-web-frontend`: 311 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
   - the live check after the deploy;
   - the Worker's own tests: `node --test test/index.test.mjs` in `cloudflare/describe-worker` (8 tests);
   - after any solver change, `node tools/flamescapes-gpu-check.mjs --phase full --quick` (CPU and GPU agreement, now including soot, CO2 and O2) and `--phase timing`.
-- **Lean:** 32 modules, 1365 theorems; `Sprinklers.lean` (28 theorems), `Performance.lean` (14), `DoorQueue.lean` (16) and `PreMovement.lean` (10) added on 2026-11-07, standard axioms only (`formal/fireegress/axioms-all-2026-11-07.txt`).
+- **Lean:** 33 modules, 1423 theorems; `Sprinklers.lean` (28 theorems), `Performance.lean` (14), `DoorQueue.lean` (16), `PreMovement.lean` (10) and `Suppression.lean` (58) added on 2026-11-07, standard axioms only (`formal/fireegress/axioms-all-2026-11-07.txt`).
 
 ## Resume here (2026-11-07)
 
 00. **Asked for on 2026-11-07:**
-   - **Sprinklers and suppression: research and Lean done, nothing built.** Read `wiki/research/fire-suppression-sprinklers-2026-11-07.md` (summary, plan, the user's decisions in its section 10) and its companion reports. The user's rules: off by default, behind switches, no cost when off, same or better speed when on, must run on Vienna in the browser. Order: sprinkler record, IFC reading and per-room layout with a rule report; then activation (card only); then Evans; then the spray zone. Time each step with `tools/flamescapes-gpu-check.mjs --phase timing` and `tools/fire-bench.mjs`, switch off and on.
+   - **Sprinklers and suppression: built (the plan's steps 1 to 4), committed, not deployed.** Simulate step, under the Flamescapes models: a **Sprinklers** switch, off by default (zero cost off, measured). Heads from the IFC (`core/ifcSemantics.js` `sprinklers`, `IMPORT_SETTINGS` 5) or placed per room by NFPA 13 (`core/sprinklers.js`), a rule report and the codes' requirement; in a run, activation on two readings, Evans's cap and the spray (`core/suppression.js`, `flamescapes.js` `spray`, WGSL `evans` and `spray`); the run card and the view show the heads. Read the "As implemented" section of `wiki/research/fire-suppression-sprinklers-2026-11-07.md` first: it lists the departures from the plan (no forced flame cull; Evans bounds fuel and energy, not a frame's peak; the spray's direct effect is small) and what is left (MEP federation, obstructions, wetting, validation against Vettori, Bittern and the NIST tests, extinguishers). The user's rules still hold: release as a whole, Vienna on the web (173 heads in 45 ms; runs no slower).
    - **Branch tidy-up, waiting on the user.** All four GitHub branches were fully merged into `main` and no PR was open. Deleting `next/studio-2` (tip 0f68573) and `codex/wiki-hitl-testing-docs` (tip d56730e) on GitHub, and the merged local branches, was refused by the permission system as destructive. The user can run: `git push origin --delete next/studio-2 codex/wiki-hitl-testing-docs`, then `git branch -d codex/wiki-hitl-testing-docs next/studio-2 worktree-agent-a5564f61ecc07c56c worktree-agent-a6e3e35eb51c00dc1 worktree-agent-ab4bdc24cb476c1b2 worktree-agent-ab4f7303ef3afd806` and `git branch -f main origin/main`. Restore a deleted branch with `git push origin <tip>:refs/heads/<name>`. The worktrees under the Classic checkout (`TopologicStudio/.claude/worktrees`) and `TopologicStudio_push_20260311_100658` were left alone (Classic is not to be modified); their branches are merged too.
    - **Outdoor assembly points:** a check is proposed in section 7 of the sprinkler note; the user decides.
    - **The user's decisions (2026-11-07):**
@@ -136,6 +136,14 @@ The user accepted three steps for floor-plan drawings to LOD1. Step 1 is half-bu
 Before any deploy: the gates above, then the live check, then update this file.
 
 ## This round (2026-11-07)
+
+- **Sprinklers and suppression, steps 1 to 4 (the user: "work through 1 to 4"):**
+  - **Placement and IFC** (an agent; reviewed): `core/sprinklers.js` and its 19 tests; IFC4 and IFC2x3 sprinklers with the Revit sets; per-room NFPA 13 layout with extra heads where a bay centre is not clear of the walls, both orientations, merges under 1.8 m, coverage on a 0.25 m sample; storey lattice without rooms; requirement report (903.2.8, 903.2.11.3 at 16.764 m, high-rise, A-3, E). Panels count rooms by `placement` (obstructions are always "cannot tell").
+  - **Activation** (`core/suppression.js`): per frame, gas held at the mean of the frame's readings, exact link step, crossing inside the frame; estimate = Alpert under the fire's ceiling (line of sight from the plume's ceiling cell) with the ignition cell as the axis, late bound = the top cell. Sensors read after the ceiling detectors; the GPU's `gather` adds their speed (`speedFrom`, `ioSpeed`).
+  - **Evans and the spray**: `sup` buffer (binding 14, 16 bytes when off); `chemistry` caps the fuel (`evans`), the `spray` kernel runs one thread per column after `chemistry`. CPU and GPU agree on activation (32.2 against 31.4 to 31.9 s in `tools/flamescapes-gpu-check.mjs --phase sprinklers`) and water (35.4 kg).
+  - **Found while building**: the forced flame cull removed (it, not the water, was putting the fire out); a cold covered cell now reads rate 0 and never ignites (it used to stay armed); the solver's pyrolysis gas can gather and flash, with or without sprinklers, so tests check fuel, energy and the per-cell cap, not a frame's peak; `sim.suppression` declared in `createSolver` so the engine keeps one object shape.
+  - **Lean**: `Suppression.lean` (58), an agent; items 8 to 15; X30 is the case e = 0, not T' = T_B.
+  - **Tools**: `fire-bench.mjs --sprinklers`; the GPU check's `sprinklers` phase and detector comparison; the browser suite's sprinkler step (46 heads in the Duplex's 21 rooms; the first opens at 21 s by the estimate in its 30 s run). Prepared examples must be rebuilt after `IMPORT_SETTINGS` changes (`npm run prepare-examples`; the build does it).
 
 - **Performance check, second round (the user's five follow-ups):**
   - **Ceiling detectors:** `flamescapesRun.js` `ceilingDetectors`: 16 rays from the ignition cell at 1.5 m above its floor, each stopping at 7.0 m, before a wall, or where the ceiling steps by more than a cell (a lintel); the detector is the top open cell under the ceiling there, and only the rays that reach the farthest distance (within a cell) keep one. The first version took every ray's end, so a wall beside the fire put a detector over the plume and the Duplex run detected at 4 s; the browser suite caught it. Read with the nodes each frame on the CPU and the GPU (`withDetectors`), forwarded by the worker, shown on the run card ("Smoke detectors"), and timed by `forecast.js` `ceilingDetection` (first and slowest). `RUN_CACHE_VERSION` is 2, since frames carry the detectors.

@@ -36,7 +36,8 @@
  * 10 m for large spaces).
  */
 
-import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, createSolver, step } from "./flamescapes.js";
+import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, cellSpeed, createSolver, step } from "./flamescapes.js";
+import { activationFrame, activationSummary, createActivation, createSuppression, openHeads, sprinklerSetup } from "./suppression.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, toLocal, volumeFractions } from "./voxelize.js";
 // The CO dose and the forecast from frames live in forecast.js, so the
 // forecast worker does not load the solver; re-exported here.
@@ -450,6 +451,51 @@ export function smokeCloud(grid, rho, Y, kind, { block = 2, min = 0.03 } = {}) {
 }
 
 /**
+ * The sprinklers of a run (suppression.js), or null when it has none: the
+ * heads on the grid, their links, and the suppression state the solver
+ * reads (sim.suppression for the CPU; the GPU copies it). Nothing of this
+ * exists, and no step does any of its work, when the run has no sprinklers.
+ *
+ * @param {object} sprinklers  { heads (sprinklers.js records), mode: "activation" | "evans" | "spray", openOn: "estimate" | "late" }
+ */
+export function sprinklerRun(scene, sim, sprinklers, upAxis = "y") {
+  if (!sprinklers?.heads?.length) return null;
+  const setup = sprinklerSetup(scene, sprinklers.heads, { upAxis, fuel: sim.fuelMass });
+  return {
+    setup,
+    state: createActivation(setup, { ambient: sim.P.ambient }),
+    sup: createSuppression(sim.N, { mode: sprinklers.mode || "spray" }),
+    sensors: Int32Array.from(setup.heads.map((h) => h.sensor)),
+    reading: sprinklers.openOn === "late" ? "late" : "estimate",
+  };
+}
+
+/**
+ * One frame of the sprinklers: their links step on the gas at their sensor
+ * cells (K) and its speed (m/s), and the heads that open are opened in the
+ * suppression state. Returns what the frame reports.
+ */
+export function sprinklerFrame(run, { t0, t1, T, u, hrr }) {
+  const opened = activationFrame(run.setup, run.state, { t0, t1, T, u, hrr, reading: run.reading });
+  const changed = opened.length ? openHeads(run.sup, run.setup, opened) : null;
+  return { opened, changed, open: run.sup.open.slice(), water: run.sup.columns.reduce((a, c) => a + c.flux, 0) };
+}
+
+/** What a run's sprinklers came to, for its card. */
+export function sprinklerResult(run) {
+  return {
+    mode: run.sup.mode,
+    reading: run.reading,
+    heads: activationSummary(run.setup, run.state),
+    open: run.sup.open.slice(),
+    covered: run.sup.tau.reduce((a, t) => a + (t > 0 ? 1 : 0), 0),
+    columns: run.sup.columns.length,
+    stats: { ...run.sup.stats },
+    plumeHeight: run.setup.plume?.H ?? null,
+  };
+}
+
+/**
  * Run the solver to `horizon` seconds, calling onFrame every `frameSeconds`
  * with the node readings, the frame's mean heat release rate (kW), the
  * particles and, with `smoke`, the smoke cloud (smokeCloud), and the
@@ -458,10 +504,12 @@ export function smokeCloud(grid, rho, Y, kind, { block = 2, min = 0.03 } = {}) {
  * Float32Array(K n), the detectors' visibility as Float32Array(K D), and
  * `detectorDistance`.
  */
-export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true } = {}) {
+export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true, sprinklers = null } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
   // Per-stage timing for the benchmark (tools/fire-bench.mjs).
   if (profileInto) sim.profile = profileInto;
+  const spr = sprinklerRun(scene, sim, sprinklers, upAxis);
+  if (spr) sim.suppression = spr.sup;
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
   const detectors = ceilingDetectors(scene);
@@ -492,6 +540,13 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
     if (D) atDetectors.set(readNodes(sim, detectors.cells).vis);
     hrr[k] = (sim.stats.released - released) / frameSeconds / 1000;
     released = sim.stats.released;
+    let sprinkled = null;
+    if (spr) {
+      const gas = readNodes(sim, spr.sensors).T;
+      const Tk = Float64Array.from(gas, (t) => t + KELVIN);
+      const u = Float64Array.from(spr.sensors, (c) => (c >= 0 ? cellSpeed(sim, c) : 0));
+      sprinkled = sprinklerFrame(spr, { t0: end - frameSeconds, t1: end, T: Tk, u, hrr: hrr[k] });
+    }
     onFrame?.({
       k,
       time: end,
@@ -502,6 +557,7 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
       co2: frame.co2,
       o2: frame.o2,
       detectors: atDetectors,
+      sprinklers: sprinkled && { opened: sprinkled.opened, open: sprinkled.open, water: sprinkled.water },
       hrr: hrr[k],
       maxT: sim.stats.maxT - KELVIN,
       embers: sim.stats.embersSpawned,
@@ -512,6 +568,6 @@ export function runScene(scene, { nodes, agentHeight = 0.75, headHeight = 1.8, h
     });
   }
   const inGrid = cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0);
-  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid, detectorDistance: detectors.distance };
+  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid, detectorDistance: detectors.distance, sprinklers: spr ? sprinklerResult(spr) : null };
   return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
 }

@@ -947,6 +947,22 @@ if (await fsToggle.isVisible().catch(() => false)) {
   await startFs();
   const replayCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
   record(/Played from this browser/.test(replayCard), "the same run asked for again plays from the browser's kept runs", `${((Date.now() - tReplay) / 1000).toFixed(1)}s`);
+  // Sprinklers (core/sprinklers.js, core/suppression.js, 2026-11-07): off by
+  // default; on, the Duplex's rooms get heads by NFPA 13 with a rule report,
+  // and a run reports when they open.
+  await page.locator("summary", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
+  const sprinklerSwitch = page.locator(".toggle__label", { hasText: /^Sprinklers$/ });
+  await sprinklerSwitch.first().click().catch(() => {});
+  await page.waitForFunction(() => /\d+ sprinkler heads/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 30000 }).catch(() => {});
+  const layoutText = await page.locator(".panel__scroll").first().innerText().catch(() => "");
+  const layoutLine = layoutText.match(/\d+ sprinkler heads[^\n]*/)?.[0] || "";
+  record(/\d+ sprinkler heads, placed by NFPA 13 in \d+ rooms/.test(layoutLine), "sprinklers are laid out per room by NFPA 13, with a rule report", layoutLine.slice(0, 160) || "no layout");
+  const tSpr = Date.now();
+  await startFs();
+  const sprCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
+  const sprLine = sprCard.split("\n").find((l) => /^\d+ heads placed per room/.test(l.trim())) || "";
+  record(/the first opens at .* by the estimate/.test(sprLine), "a run with sprinklers says when the heads open by both readings", `${sprLine.trim().slice(0, 180) || "no sprinkler line"} (${((Date.now() - tSpr) / 1000).toFixed(1)}s)`);
+  await sprinklerSwitch.first().click().catch(() => {});
   // Back to the default, so later steps see the page as before.
   await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
   await fsToggle.click();

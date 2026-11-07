@@ -170,6 +170,25 @@ export function MethodsDialog({ open, onClose, studio }) {
                   </dd>
                 </div>
                 <div className="methods__card">
+                  <dt>Sprinklers</dt>
+                  <dd>
+                    Off by default. The heads come from the IFC where it has them, else are placed per room by NFPA 13
+                    (at most 20.9 m² and 4.6 m apart for light hazard, 12.1 m² for ordinary, half the spacing from a wall,
+                    1.8 m apart), with a rule report and the codes&apos; requirement for sprinklers (SBC 801-CR-2018 903,
+                    IBC 2021 where stricter). In a Flamescapes run each link follows the RTI equation with conduction to its
+                    mount, stepped exactly over each frame on the gas at the top cell of its column (a late bound: a coarse
+                    cell reads the ceiling jet low) and, under the fire&apos;s own ceiling, on Alpert&apos;s jet for the
+                    run&apos;s heat release (CFAST&apos;s hybrid, the estimate). An open head caps every fuel cell under it at
+                    its rate when the head opened times exp(-(t - t_act)/tau), tau = 3.0 w&apos;&apos;^-1.85 s for the spray
+                    density (Evans 1993, conservative), and with the spray evaporates part of its water on the way down
+                    (Fire-X&apos;s energy-limited evaporation on the grid, 1 mm drops), the steam diluting the oxygen. The fuel
+                    is not wetted directly (uncalibrated on this grid). Proved: the link stays between its own, the gas&apos;s
+                    and the mount&apos;s temperatures, hotter gas never opens a head later, the cap never rises and lets
+                    through at most r (tau + dt), and the spray keeps its water and the gas&apos;s energy and never raises
+                    the oxygen&apos;s mole fraction (Sprinklers.lean, Suppression.lean).
+                  </dd>
+                </div>
+                <div className="methods__card">
                   <dt>Fire spread</dt>
                   <dd>
                     A heat index that relaxes toward its neighbours, a spread one link per step, or distance

@@ -54,6 +54,7 @@ const OVERLAY = {
   embers: "embers",
   smoke: "smoke",
   exits: "exits",
+  sprinklers: "sprinklers",
 };
 
 /** A soft round sprite for glowing particles, drawn once on a canvas. */
@@ -1340,6 +1341,35 @@ export class ViewerManager {
     points.forEach((p, i) => rings.setMatrixAt(i, matrix.compose(new THREE.Vector3(p[0], p[1], p[2]), flat, one)));
     rings.renderOrder = 950;
     this._setOverlay(OVERLAY.exits, rings);
+  }
+
+  /**
+   * Sprinkler heads (src/core/sprinklers.js), small spheres at their link
+   * points: slate while shut, blue once open (`open`, a set of indices).
+   * The instances keep their order, so a frame only recolours them.
+   */
+  setSprinklers(points, open = null) {
+    if (!points?.length) {
+      this._setOverlay(OVERLAY.sprinklers, null);
+      this._sprinklers = null;
+      return;
+    }
+    const shut = new THREE.Color(0x64748b), opened = new THREE.Color(0x0284c7);
+    let heads = this._sprinklers;
+    if (!heads || heads.count !== points.length || !heads.parent) {
+      heads = new THREE.InstancedMesh(
+        new THREE.SphereGeometry(0.11, 12, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, depthWrite: false, transparent: true, opacity: 0.95 }),
+        points.length,
+      );
+      const matrix = new THREE.Matrix4();
+      points.forEach((p, i) => heads.setMatrixAt(i, matrix.makeTranslation(p[0], p[1], p[2])));
+      heads.renderOrder = 940;
+      this._setOverlay(OVERLAY.sprinklers, heads);
+      this._sprinklers = heads;
+    }
+    for (let i = 0; i < points.length; i += 1) heads.setColorAt(i, open?.has(i) ? opened : shut);
+    if (heads.instanceColor) heads.instanceColor.needsUpdate = true;
   }
 
   /** Navigation's route, drawn like ours in its own overlay. */

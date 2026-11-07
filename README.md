@@ -260,6 +260,31 @@ with another seed. A finished run is kept in the browser (at most 256 MB), so
 the same fire asked for again, after a reload too, plays from its kept frames
 instead of being computed; **Forget kept runs** clears them.
 
+**Sprinklers** (off by default; off, a run is exactly as before, at the same
+speed) come from the IFC where it has them (`IfcFireSuppressionTerminal`,
+or an IFC2x3 flow terminal typed as one, with the Revit property sets'
+temperature rating and K-factor), else are placed per room by NFPA 13 on the
+model's IfcSpace rooms: at most 20.9 m² and 4.6 m apart for light hazard
+(12.1 m² for kitchens, plant rooms and car parks), no more than half the
+spacing from a wall, at least 1.8 m apart, every point of the floor covered.
+Each room gets a rule report with the clauses of SBC 801-CR-2018 903.3 and
+NFPA 13, and the codes' requirement for sprinklers is checked for the
+building's occupancy (Group R throughout, a storey with 30 or more occupants
+at 16.8 m or more, high-rise). A Flamescapes run then opens each head when
+its link reaches its rating: the RTI equation with conduction to the mount,
+stepped exactly on the gas at the top cell of its column (the late bound)
+and, under the fire's own ceiling, on Alpert's ceiling jet for the run's
+heat release (the estimate); the run card gives both times and the heat
+release at each. An open head caps the fuel under it as Evans measured for
+the spray's density (1993: the least reduction to expect) and, with the
+spray on, evaporates part of its water in the hot gas on the way down
+(Fire-X's energy-limited evaporation on the grid), the steam diluting the
+oxygen. The heads show in the view, blue once open. In the test fires on the
+Duplex the first head opened 16 to 21 s after ignition by the estimate;
+Vienna's 173 heads are laid out in under 50 ms and its runs take no longer
+with them. No IFC carries a head's RTI or C, so quick response is 50, standard
+100 and C 0.4, as the panel says.
+
 **What burns first.** The first item takes the fuel of its fire class: NFPA 10
 classes A (ordinary combustibles), B (flammable liquids), C (energised
 electrical equipment), D (metals) and K (cooking oils), and class L
@@ -605,7 +630,7 @@ windows (`studio`, `studio stop`, `studio status`, `studio test`), and
 | Speed, accuracy and robustness benchmark on 38 public models | `node tools/benchmark.mjs` | see [benchmark/README.md](benchmark/README.md) |
 | Speed and sanity of all six fire models, Flamescapes timed per stage | `node tools/fire-bench.mjs [model.ifc ...]` | repository root; results in `benchmark/results/` |
 | The Flamescapes solver on one IFC | `node tools/flamescapes-check.mjs [model.ifc] [--embers]` | repository root |
-| Lean 4 proofs (32 modules, over 1,360 theorems, including Fire-X, Flamescapes, its browser port, the ventilation ducts, sprinklers and the performance check) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
+| Lean 4 proofs (33 modules, over 1,420 theorems, including Fire-X, Flamescapes, its browser port, the ventilation ducts, sprinklers and suppression, and the performance check) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
 | This README's screenshots | `node tools/readme-shots.mjs` | repository root, with the app running |
 
 The browser suite drives the installed Chrome (no browser download) through

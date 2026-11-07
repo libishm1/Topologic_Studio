@@ -329,6 +329,49 @@ export const PROOFS = [
     status: "Proved",
   },
   {
+    property: "A queue at a door never passes more people than the door can, and has passed everyone by the time the check reads",
+    meaning:
+      "In the performance check, each door passes at most its capacity c in a time bin of length Δ (Lindley's recursion). What arrived up to bin b has left by the end of bin b + ⌈Q/(cΔ)⌉, that bound never falls for a later arrival, and the time spent queueing enters the check exactly as ASET at least f times RSET and at least the margin over it, with RSET counting the wait.",
+    tex: [
+      String.raw`Q_{b+1} = \max(0,\ Q_b + a_b - c\,\Delta)`,
+      String.raw`\textstyle\sum_{j \le b} a_j`,
+      String.raw`\quad \le \textstyle\sum_{j < \text{exit}(b)} \text{out}_j`,
+      String.raw`\text{exit}(b) = b + 1`,
+      String.raw`\quad + \lceil Q_{b+1}/(c\,\Delta) \rceil`,
+      String.raw`L \ge \text{req}(\tau + W) + W`,
+      String.raw`\quad \iff f\,(\text{base} + \tau + W) \le L + \tau`,
+    ],
+    files: ["DoorQueue", "PreMovement"],
+    status: "Proved",
+  },
+  {
+    property: "A sprinkler opens no later in hotter gas, and an open head's cap on the fuel never rises",
+    meaning:
+      "The link's exact step never leaves the range of its own, the gas's and the mount's temperatures, for any step length, and gas at least as hot never opens a head later. Under an open head each fuel cell is held to its rate when the head opened times exp(-(t - t_act)/tau), tau from Evans's spray density; the cap never rises, and the heat it lets through after opening is at most the rate times (tau + dt).",
+    tex: [
+      String.raw`T_l' = T_\infty + (T_l - T_\infty)\,e^{-(a+b)\,\Delta t}`,
+      String.raw`a = \sqrt{u}/\mathrm{RTI},\ b = C/\mathrm{RTI}`,
+      String.raw`\tau = 3.0\,w''^{-1.85}`,
+      String.raw`\textstyle\sum_n r\,e^{-n\,\Delta t/\tau}\,\Delta t \le r\,(\tau + \Delta t)`,
+    ],
+    files: ["Sprinklers", "Suppression"],
+    status: "Proved",
+  },
+  {
+    property: "The sprinklers' spray keeps its water and the gas's energy, and only dilutes the oxygen",
+    meaning:
+      "Down each column the water emitted equals the water evaporated plus the water reaching the floor, and the flux never grows downward. Evaporation conserves the energy, the vapour carrying its own heat, never cools a cell below boiling, keeps every mass fraction between 0 and 1, and never raises the oxygen's mole fraction. At a fixed temperature, steam scales the gas burn down by the dilution factor.",
+    tex: [
+      String.raw`m_0 = \textstyle\sum_j e_j + m_n`,
+      String.raw`C_g T = (C_g + c_v\,dv)\,T'`,
+      String.raw`\quad + dv\,(e - c_v T_B)`,
+      String.raw`T_B \le T' \le T`,
+      String.raw`X_{O_2}' \le X_{O_2}`,
+    ],
+    files: ["Suppression"],
+    status: "Proved",
+  },
+  {
     property: "The shielded learner never walks into the fire, and stops only at the earliest escape",
     meaning:
       "D(w) is the last time step at which node w can still be left for an exit before the fire closes the way. The shield allows a move into w at step t only if t + 1 is at most D(w). Every walk inside the shield reaches an exit whenever any escape exists, and the shield is never empty while one does. When a learning trial changes no value, the route it walked is the earliest escape.",

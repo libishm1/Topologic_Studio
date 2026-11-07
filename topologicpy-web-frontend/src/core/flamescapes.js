@@ -53,6 +53,7 @@
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
+import { T_BOIL, TERMINAL_SPEED, VAPOUR_CP, WATER_CP, WATER_TEMPERATURE, evansFactor } from "./suppression.js";
 
 export const R_GAS = 8.314462618; // J / (mol K)
 export const SIGMA = 5.670374419e-8; // W / (m^2 K^4)
@@ -345,6 +346,9 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     kindVersion: 0,
     pilot: scene.pilot || null,
     ducts: scene.ducts?.cells?.length ? scene.ducts : null,
+    // Open sprinklers (suppression.js createSuppression), set by the run;
+    // declared here so every solver has one shape for the engine.
+    suppression: null,
     stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0 },
   };
 }
@@ -984,6 +988,8 @@ function diffuse(sim, dt) {
 function chemistry(sim, dt) {
   const { P, grid: g } = sim;
   const { nx, ny, nz } = g;
+  // Open sprinklers cap the fuel under them (suppression.js; null when off).
+  const sup = sim.suppression;
   sim.burning.fill(0);
   if (!sim.solidLoss) sim.solidLoss = new Float32Array(sim.N);
   sim.solidLoss.fill(0);
@@ -1033,7 +1039,8 @@ function chemistry(sim, dt) {
       if (fuel.liquid) {
         if (sim.Ts[c] > fuel.liquid.boiling) {
           const skin0 = skinMass(sim, c);
-          const dv = Math.min(skin0, (C * (sim.Ts[c] - fuel.liquid.boiling)) / fuel.liquid.latent, poolCap(fuel.liquid, sim.area[c], dt));
+          let dv = Math.min(skin0, (C * (sim.Ts[c] - fuel.liquid.boiling)) / fuel.liquid.latent, poolCap(fuel.liquid, sim.area[c], dt));
+          if (sup && sup.tau[c] > 0) dv *= evansFactor(sup, c, dv, sim.time, dt);
           if (dv > 0) {
             sim.fuelMass[c] -= dv;
             sim.Ts[c] -= (dv * fuel.liquid.latent) / C;
@@ -1060,7 +1067,13 @@ function chemistry(sim, dt) {
       // Pyrolysis, Eq. 14: suppressed as oxygen becomes available.
       const starved = 1 - Math.min(1, sim.Y[gcell * NS + SPECIES.O2] / Y_O2_AIR);
       const kp = arrhenius(P.pyrolysisA, P.pyrolysisE, sim.Ts[c]) * (0.25 + 0.75 * starved);
-      const dPy = Math.max(0, skin - dOx) * (1 - survives(kp, dt));
+      let dPy = Math.max(0, skin - dOx) * (1 - survives(kp, dt));
+      // Evans's cap under an open sprinkler: both reactions scaled alike.
+      if (sup && sup.tau[c] > 0) {
+        const f = evansFactor(sup, c, dOx + dPy, sim.time, dt);
+        dOx *= f;
+        dPy *= f;
+      }
       if (dOx > 0) {
         sim.fuelMass[c] -= dOx;
         // A metal's oxide stays as ash (MgO, about 900 J/(kg K)).
@@ -1132,6 +1145,64 @@ function chemistry(sim, dt) {
   sim.stats.hrr = released / dt;
   sim.stats.released += released;
   sim.stats.burnt += burnt;
+}
+
+/**
+ * The sprinklers' spray (suppression.js; sprinkler-physics-2026-11-07.md
+ * 7.2): down each column under an open head, a share of the water left
+ * evaporates in each cell, 1 - exp(-eta (T - T_boil) h), at most what cools
+ * the cell to boiling. The steam joins the gas and the gas keeps its energy,
+ * the vapour carrying its own heat (Suppression.lean evaporate_energy:
+ * C T = (C + c_v dv) T' + dv (e - c_v T_boil)); the falling water drags the
+ * gas down, (water / (v_t h^2 rho)) g; what is left reaches the floor.
+ * Flame-front particles are left to the solver's own cull (where combustion
+ * stops): culling them in every sprayed cell, as the plan first proposed,
+ * put the flame out by fiat, halving a test fire's heat while the water
+ * absorbed a few hundredths of it.
+ */
+function spray(sim, dt) {
+  const sup = sim.suppression;
+  if (!sup || !sup.columns.length) return;
+  const g = sim.grid;
+  const { nx, ny, h } = g;
+  const e = WATER_CP * (T_BOIL - WATER_TEMPERATURE) + sim.P.latentHeat;
+  const drag = Math.abs(sim.P.gravity) / (TERMINAL_SPEED * h * h);
+  let emitted = 0, evaporated = 0, floor = 0;
+  for (const col of sup.columns) {
+    let m = col.flux * dt;
+    emitted += m;
+    let c = col.top;
+    for (let n = 0; n < col.count && m > 0; n += 1, c -= nx) {
+      if (sim.kind[c] === SOLID) break;
+      const T = sim.T[c];
+      if (T > T_BOIL) {
+        const Cg = sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V;
+        const dv = Math.min((1 - Math.exp(-sup.eta * (T - T_BOIL) * h)) * m, (Cg * (T - T_BOIL)) / e);
+        if (dv > 0) {
+          sim.T[c] = (Cg * T - dv * (e - VAPOUR_CP * T_BOIL)) / (Cg + VAPOUR_CP * dv);
+          addGas(sim, c, SPECIES.H2O, dv);
+          m -= dv;
+          evaporated += dv;
+        }
+      }
+      const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
+      sim.v[vAt(g, i, j, k)] -= (drag * m) / Math.max(sim.rho[c], 1e-6);
+    }
+    floor += m;
+  }
+  sup.stats.emitted += emitted;
+  sup.stats.evaporated += evaporated;
+  sup.stats.floor += floor;
+}
+
+/** The gas speed at a cell's centre from its six faces (m/s), for a sprinkler's link. */
+export function cellSpeed(sim, c) {
+  const g = sim.grid;
+  const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+  const u = 0.5 * (sim.u[uAt(g, i, j, k)] + sim.u[uAt(g, i + 1, j, k)]);
+  const v = 0.5 * (sim.v[vAt(g, i, j, k)] + sim.v[vAt(g, i, j + 1, k)]);
+  const w = 0.5 * (sim.w[wAt(g, i, j, k)] + sim.w[wAt(g, i, j, k + 1)]);
+  return Math.hypot(u, v, w);
 }
 
 const scratch = new Float64Array(NS);
@@ -1486,6 +1557,7 @@ const STAGES = [
   ["diffuse", diffuse],
   ["ducts", ducts],
   ["chemistry", chemistry],
+  ["spray", spray],
   ["cullFlameFront", (sim) => cullFlameFront(sim)],
   ["conduct", conduct],
   ["density2", (sim) => updateDensity(sim)],

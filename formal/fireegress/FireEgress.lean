@@ -30,3 +30,4 @@ import FireEgress.Sprinklers
 import FireEgress.Performance
 import FireEgress.DoorQueue
 import FireEgress.PreMovement
+import FireEgress.Suppression

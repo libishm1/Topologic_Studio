@@ -130,6 +130,20 @@ export const DEFAULT_SETTINGS = {
   // of every terminal), and the air each terminal moves (L/s, an assumption).
   flamescapesVentilation: "off",
   flamescapesTerminalFlow: 100,
+  // Sprinklers (core/sprinklers.js, core/suppression.js), off by default and
+  // costing nothing off. The heads come from the IFC ("ifc"), are placed per
+  // room by NFPA 13 ("placed"), or the IFC's when it has any ("auto"); the
+  // rooms' hazard by name ("auto") or one for all; quick or standard
+  // response. A run opens them on the "estimate" (Alpert's ceiling jet under
+  // the fire's ceiling) or the "late" bound (the grid), and they only open
+  // ("activation"), cap the fuel ("evans", Evans 1993) or cap it and spray
+  // ("spray", Fire-X's evaporation on the grid).
+  sprinklers: false,
+  sprinklerSource: "auto",
+  sprinklerHazard: "auto",
+  sprinklerResponse: "quick",
+  sprinklerMode: "spray",
+  sprinklerOpenOn: "estimate",
   // The graph's colour while a run plays (core/measures.js): "heat", "smoke",
   // "gases" or "tenability", and which smoke or gas measure.
   flamescapesShow: "heat",

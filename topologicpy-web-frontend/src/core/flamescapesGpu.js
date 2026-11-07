@@ -34,10 +34,11 @@
  */
 
 import { DEFAULTS, NS, createSolver } from "./flamescapes.js";
-import { KELVIN, ceilingDetectors, headCells, smokeCloud, withDetectors, runScene as cpuRunScene } from "./flamescapesRun.js";
+import { KELVIN, ceilingDetectors, headCells, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, withDetectors, runScene as cpuRunScene } from "./flamescapesRun.js";
 import {
   AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
   PARTICLE_FLOATS, SWEEP_BYTES, WG, buildShader,
+  SUP,
 } from "./flamescapesGpu/kernels.js";
 
 const MAX_WG_PER_DIM = 65535;
@@ -127,9 +128,12 @@ class GpuSim {
   /**
    * sim: a CPU solver state from createSolver (uploaded as the initial state).
    * opts: nodeCells (Int32Array, -1 outside), snapMax (particles per snapshot),
-   *       slots (steps per frame to keep separately).
+   *       slots (steps per frame to keep separately); for sprinklers,
+   *       speedFrom (the first of nodeCells whose gas speed is read: the
+   *       heads' sensor cells, last) and suppression ({columns, eta}: the
+   *       `sup` buffer for Evans and the spray; null for none).
    */
-  constructor(ctx, sim, { nodeCells = new Int32Array(0), snapMax = 0, slots = 64 } = {}) {
+  constructor(ctx, sim, { nodeCells = new Int32Array(0), snapMax = 0, slots = 64, speedFrom = null, suppression = null } = {}) {
     const { device, kernels } = ctx;
     this.ctx = ctx;
     this.device = device;
@@ -174,8 +178,14 @@ class GpuSim {
     // Six readings a node (gather): T, vis, co, soot, co2, o2.
     io.snap = io.out + 6 * d.nNodes;
     io.ducts = io.snap + 1 + 5 * d.snapMax;
-    io.size = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
+    // The sensor cells' gas speeds (gather), when the run has sprinklers.
+    this.speedFrom = speedFrom ?? d.nNodes;
+    this.nSpeed = d.nNodes - this.speedFrom;
+    io.speed = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
+    io.size = io.speed + this.nSpeed;
     this.io = io;
+    this.suppressionOn = Boolean(suppression);
+    d.sprayCols = 0;
     const red = { rad: 2 * this.nPart, steps: 3 * this.nPart };
     red.size = red.steps + 4 * this.slots;
     this.red = red;
@@ -193,6 +203,8 @@ class GpuSim {
       parts: Math.max(1, d.cap) * PARTICLE_FLOATS * 4,
       red: red.size * 4,
       io: io.size * 4,
+      // Evans's three fields per cell and the spray's columns; nothing without sprinklers.
+      sup: suppression ? (SUP.fields * N + SUP.column * Math.max(1, suppression.columns)) * 4 : 16,
     };
     for (const [name, bytes] of Object.entries(sizes)) if (bytes > limit) throw new RangeError(`Flamescapes GPU: ${name} needs ${bytes} bytes, the device binds ${limit}`);
     this.buf = {
@@ -209,12 +221,13 @@ class GpuSim {
       red: make("red", sizes.red),
       io: make("io", sizes.io),
       sweep: device.createBuffer({ label: "sweep index", size: this.sweepStride * this.gsSlots, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }),
+      sup: make("sup", sizes.sup),
     };
     // Sweep s's index at offset s * sweepStride, bound at that dynamic offset.
     const index = new Uint32Array((this.sweepStride / 4) * this.gsSlots);
     for (let s = 0; s < this.gsSlots; s += 1) index[(s * this.sweepStride) / 4] = s;
     device.queue.writeBuffer(this.buf.sweep, 0, index);
-    const byBinding = [this.buf.U, this.buf.cf, this.buf.Y, this.buf.ci, this.buf.vel, this.buf.snap, this.buf.atom, this.buf.parts, this.buf.partsB, this.buf.ctr, this.buf.red, this.buf.io, this.buf.sweep, this.buf.atom];
+    const byBinding = [this.buf.U, this.buf.cf, this.buf.Y, this.buf.ci, this.buf.vel, this.buf.snap, this.buf.atom, this.buf.parts, this.buf.partsB, this.buf.ctr, this.buf.red, this.buf.io, this.buf.sweep, this.buf.atom, this.buf.sup];
     this.groups = {};
     for (const [name, k] of Object.entries(kernels)) {
       this.groups[name] = device.createBindGroup({
@@ -223,7 +236,7 @@ class GpuSim {
         entries: k.uses.map((binding) => ({ binding, resource: binding === B.sweep ? { buffer: byBinding[binding], size: SWEEP_BYTES } : { buffer: byBinding[binding] } })),
       });
     }
-    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + CTR_SIZE + this.gsSlots + 4 * this.slots + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
 
     // ---- parameters
     this.paramBytes = new ArrayBuffer(PARAM_BYTES);
@@ -255,6 +268,8 @@ class GpuSim {
       emberHC: P.emberHeatCapacity, pilotTemp: pilot?.temperature || 0, pilotPower: pilot?.power || 0,
       burnFlux: P.burningFlux,
       ductN: ducts ? ducts.cells.length : 0, ductSystems: ducts ? ducts.systems : 0, ductAt: io.ducts, ductFlow: ducts ? ducts.flow : 0,
+      time: this.time, supOn: suppression ? 1 : 0, sprayN: 0, supCol: SUP.fields * N, sprayEta: suppression?.eta ?? 0,
+      speedFrom: this.speedFrom, ioSpeed: io.speed,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -298,6 +313,11 @@ class GpuSim {
     ci.set(sim.burning, CI.burning * N);
     if (sim.fuelVapourKind) ci.set(sim.fuelVapourKind, CI.vapour * N);
     q.writeBuffer(this.buf.ci, 0, ci);
+    if (this.suppressionOn) {
+      const sup = new Float32Array(SUP.fields * N);
+      sup.fill(-1, SUP.rate * N);
+      q.writeBuffer(this.buf.sup, 0, sup);
+    }
     const vel = new Float32Array(d.nu + d.nv + d.nw);
     vel.set(sim.u, 0);
     vel.set(sim.v, d.nu);
@@ -372,7 +392,7 @@ class GpuSim {
     const P = this.sim.P;
     // The projection stops once a sweep would move the flow by less than this (the CPU's settle).
     const settle = ((P.projectionTolerance ?? 0) * this.sim.rho0 * this.sim.grid.h) / dt;
-    this.setParams({ dt, stepNo: this.stepCount, slot, settle });
+    this.setParams({ dt, stepNo: this.stepCount, slot, settle, time: this.time });
     this.writeParams();
     const enc = device.createCommandEncoder();
     enc.clearBuffer(buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4);
@@ -426,6 +446,7 @@ class GpuSim {
     if (this.ducts) this.dispatch(pass, "ducts");
     this.dispatch(pass, "chemistry");
     this.dispatch(pass, "reduceFinish");
+    if (d.sprayCols) this.dispatch(pass, "spray");
     if (this.particlesOn) this.dispatch(pass, "cullFlameFront");
     for (const name of CONDUCTION) this.dispatch(pass, name);
     this.dispatch(pass, "densityBoundaries");
@@ -469,10 +490,13 @@ class GpuSim {
     if (snap) this.dispatch(pass, "snapshot");
     pass.end();
     const nodeBytes = 6 * d.nNodes * 4;
+    const speedBytes = this.nSpeed * 4;
     const stepBytes = 4 * this.slots * 4;
     let o = 0;
     if (nodeBytes) enc.copyBufferToBuffer(buf.io, this.io.out * 4, this.staging, o, nodeBytes);
     o += nodeBytes;
+    if (speedBytes) enc.copyBufferToBuffer(buf.io, this.io.speed * 4, this.staging, o, speedBytes);
+    o += speedBytes;
     enc.copyBufferToBuffer(buf.ctr, 0, this.staging, o, CTR_SIZE * 4);
     o += CTR_SIZE * 4;
     enc.copyBufferToBuffer(buf.atom, AT_FIELDS * d.N * 4, this.staging, o, this.gsSlots * 4);
@@ -510,7 +534,8 @@ class GpuSim {
     const soot = f.slice(3 * n, 4 * n);
     const co2 = f.slice(4 * n, 5 * n);
     const o2 = f.slice(5 * n, 6 * n);
-    let at = 6 * n;
+    const speed = f.slice(6 * n, 6 * n + this.nSpeed);
+    let at = 6 * n + this.nSpeed;
     const counters = u.slice(at, at + CTR_SIZE);
     at += CTR_SIZE;
     const sweeps = this.stepCount > 0 ? this.sweepsFrom(f.subarray(at, at + this.gsSlots)) : 0;
@@ -530,7 +555,7 @@ class GpuSim {
     else if (particles) snapshot = { positions: new Float32Array(0), temps: new Float32Array(0), kinds: new Uint8Array(0) };
     this.slot = 0;
     return {
-      T, vis, co, soot, co2, o2, released, burnt, radiated, maxT, lastReleased,
+      T, vis, co, soot, co2, o2, speed, released, burnt, radiated, maxT, lastReleased,
       particleCount: counters[CTR.count] > d.cap ? d.cap : counters[CTR.count],
       embersSpawned: counters[CTR.embers],
       spotIgnitions: counters[CTR.spots],
@@ -601,6 +626,34 @@ class GpuSim {
     return this.device.queue.onSubmittedWorkDone();
   }
 
+  /**
+   * Heads opened (suppression.js openHeads): copy Evans's decay times and
+   * opening times, and the spray's columns. The rates stay on the GPU: every
+   * cell starts armed, and its first covered step reads its own.
+   */
+  applySuppression(sup, changed) {
+    if (!this.suppressionOn) return;
+    const q = this.device.queue;
+    const N = this.dims.N;
+    if (changed.touched.length) {
+      q.writeBuffer(this.buf.sup, SUP.tau * N * 4, sup.tau);
+      q.writeBuffer(this.buf.sup, SUP.tAct * N * 4, sup.tAct);
+    }
+    const cols = sup.columns;
+    if (cols.length) {
+      const records = new ArrayBuffer(cols.length * SUP.column * 4);
+      const u = new Uint32Array(records), f = new Float32Array(records);
+      cols.forEach((col, k) => {
+        u[k * SUP.column] = col.top;
+        u[k * SUP.column + 1] = col.count;
+        f[k * SUP.column + 2] = col.flux;
+      });
+      q.writeBuffer(this.buf.sup, SUP.fields * N * 4, records);
+      this.dims.sprayCols = cols.length;
+      this.setParams({ sprayN: cols.length });
+    }
+  }
+
   destroy() {
     for (const b of Object.values(this.buf)) b.destroy();
     this.staging.destroy();
@@ -628,16 +681,26 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   if (!supported(sim)) return cpuRunScene(scene, opts);
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
-  // The ceiling detectors are read with the nodes, after them.
+  // The ceiling detectors are read with the nodes, after them, then the
+  // sprinklers' sensor cells (with their gas speed).
   const detectors = ceilingDetectors(scene);
   const D = detectors.cells.length;
+  const spr = sprinklerRun(scene, sim, opts.sprinklers, opts.upAxis);
+  const S = spr ? spr.sensors.length : 0;
+  const suppression = spr && spr.sup.mode !== "activation" ? { columns: spr.setup.heads.reduce((a, h) => a + h.columns.length / 2, 0), eta: spr.sup.eta } : null;
   const K = Math.max(1, Math.round(horizon / frameSeconds));
   let gpu;
   const { device } = ctx;
   device.pushErrorScope("out-of-memory");
   device.pushErrorScope("validation");
   try {
-    gpu = new GpuSim(ctx, sim, { nodeCells: withDetectors(cells, detectors.cells), snapMax: particles || 0, slots: Math.ceil(frameSeconds / dt) + 2 });
+    gpu = new GpuSim(ctx, sim, {
+      nodeCells: withDetectors(withDetectors(cells, detectors.cells), spr ? spr.sensors : new Int32Array(0)),
+      snapMax: particles || 0,
+      slots: Math.ceil(frameSeconds / dt) + 2,
+      speedFrom: n + D,
+      suppression,
+    });
   } catch {
     gpu = null;
   }
@@ -668,7 +731,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       const frame = await gpu.readFrame({ particles: Boolean(particles), smoke });
       if (shouldStop?.()) return null;
       const row = keep ? k : 0;
-      const nodesOf = (a) => (D ? a.subarray(0, n) : a);
+      const nodesOf = (a) => (D + S ? a.subarray(0, n) : a);
       T.set(nodesOf(frame.T), row * n);
       vis.set(nodesOf(frame.vis), row * n);
       co.set(nodesOf(frame.co), row * n);
@@ -685,6 +748,16 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       stats.embersSpawned = frame.embersSpawned;
       stats.spotIgnitions = frame.spotIgnitions;
       stats.sweeps = frame.sweeps;
+      // Sprinklers: the links step on the sensor cells' gas, heads that open
+      // go to the GPU for the next frame. The water the open heads delivered
+      // this frame is counted here; its evaporation stays on the GPU.
+      let sprinkled = null;
+      if (spr) {
+        spr.sup.stats.emitted += spr.sup.columns.reduce((a, col) => a + col.flux, 0) * frameSeconds;
+        const Tk = Float64Array.from(frame.T.subarray(n + D, n + D + S), (t) => t + KELVIN);
+        sprinkled = sprinklerFrame(spr, { t0: end - frameSeconds, t1: end, T: Tk, u: frame.speed, hrr: hrr[k] });
+        if (sprinkled.changed) gpu.applySuppression(spr.sup, sprinkled.changed);
+      }
       onFrame?.({
         k,
         time: end,
@@ -695,6 +768,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
         co2: co2.subarray(row * n, (row + 1) * n),
         o2: o2.subarray(row * n, (row + 1) * n),
         detectors: detectorVis.subarray(row * D, (row + 1) * D),
+        sprinklers: sprinkled && { opened: sprinkled.opened, open: sprinkled.open, water: sprinkled.water },
         hrr: hrr[k],
         maxT: stats.maxT - KELVIN,
         embers: stats.embersSpawned,
@@ -707,6 +781,9 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   } finally {
     gpu.destroy();
   }
-  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance };
+  const sprinklers = spr ? sprinklerResult(spr) : null;
+  // The GPU keeps no tally of the spray's evaporation.
+  if (sprinklers) sprinklers.stats = { emitted: sprinklers.stats.emitted, evaporated: null, floor: null };
+  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance, sprinklers };
   return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
 }

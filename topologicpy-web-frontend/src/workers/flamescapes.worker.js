@@ -106,6 +106,8 @@ self.onmessage = async (event) => {
       embers: payload.embers,
       particles: payload.particles ?? 2500,
       smoke: payload.smoke ?? true,
+      // Sprinklers (src/core/suppression.js): heads, mode and reading; none when off.
+      sprinklers: payload.sprinklers ?? null,
       keep: false,
       onFrame: (frame) => {
         frames += 1;

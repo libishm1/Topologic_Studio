@@ -14,9 +14,10 @@
  * converted the old way are converted again. 2: property sets, materials and
  * types left out of the fragments; semantics stored with them. 3: doors say
  * whether they are external (the final exits). 4: doors' fire rating and
- * whether they close themselves.
+ * whether they close themselves. 5: sprinkler heads and their properties
+ * (ifcSemantics' `sprinklers`).
  */
-export const IMPORT_SETTINGS = 4;
+export const IMPORT_SETTINGS = 5;
 
 /** What produced a fragments buffer; cache keys and prepared examples carry it. */
 export function converterId(fragmentsVersion, webIfcVersion) {

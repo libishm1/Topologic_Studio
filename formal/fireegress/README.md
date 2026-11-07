@@ -291,6 +291,26 @@ Full build on 2026-11-07 after this batch: 32 modules, 1365 theorems and lemmas 
 no `sorry`, no warnings; the 26 new theorems' axiom prints are in `AxiomCheck.lean`, which now prints
 343 results, every one on Lean's standard axioms (`axioms-all-2026-11-07.txt`).
 
+## Tenth batch: suppression (2026-11-07)
+
+Suppression.lean (58 results) backs the sprinkler build in `src/core/suppression.js` and the
+`spray` and Evans steps of `flamescapes.js` and its WGSL port, items 8 to 15 of
+[wiki/research/sprinkler-physics-2026-11-07.md](../../wiki/research/sprinkler-physics-2026-11-07.md)
+section 9; it reuses Sprinklers.lean's decay and FlamescapesPort.lean's `changeGas`.
+
+| Part | What is proved | What is not covered |
+|---|---|---|
+| Spray (item 8) | Down a column the water emitted is the water evaporated plus what is left, never negative and never growing downward; per head and over all heads, with heads sharing a column merged (`spray_column`, `spray_head`, `spray_budget`, `spray_budget_merged`). | How much evaporates in a cell (a parameter, not a theorem). |
+| Evaporation (item 9) | The step conserves energy with the vapour carrying its heat, `C T = (C + c_v dv) T' + dv (e - c_v T_B)`; `0 ≤ dv ≤ m_w`; `T_B ≤ T' ≤ T` (`evaporate_energy`, `evaporate_bounds`, `evaporate_between`, `evaporate_step`); at the energy limit the cell sits at boiling (`evaporate_limit_pinned`); Fire-X's Eq. 30 is the case `e = 0` (`evaporate_vs_X30`), not `T' = T_B` as the report said. | Floating point. |
+| Steam (items 10, 11) | Adding vapour through `changeGas` keeps every other species' mass, keeps the fractions valid, and never raises the oxygen's mole fraction (`vapour_changeGas`, `vapour_dilutes_O2`); at fixed temperature it scales the gas burn by the dilution factor, since the port's exponents sum to zero (`dilution_scales_burn`, `dilution_heat`). | Temperature changes, which item 12 treats. |
+| Cooling (item 12) | Cooling lowers the first-order burn rate up to 15,154 K for the port's kinetics (`cooling_first_order_port`), though the cooled cell holds more gas and its oxygen cap rises (`cooling_raises_cap`, counterexample 1000 to 600 K: 5/3); in fast chemistry, or whenever the oxygen cap binds, cooling burns more (`cooling_fast_chemistry`, `cooling_oxygen_limited`). | The full scheme's sign, which these show depends on the regime. |
+| Evans (item 14) | The cap never rises (`evansCap_antitone`); its sum is at most `r (tau + dt)` (`evansCap_sum`); cells under one envelope (`evans_cells`). | Evans's own data. |
+| Wet fuel and extinction (items 13, 15) | Wet fuel sits at or below boiling and its oxidation is bounded there (`wet_skin_pinned`, `wet_skin_heat`); a coarse-grid extinction limit, if adopted, is never undone by water (`extinct_monotone`); steam at a hot dry surface raises pyrolysis up to four times (`pyrolysis_dilution_counterexample`, `pyrolysis_rises_with_steam`). | The app does not wet the fuel yet. |
+
+Full build on 2026-11-07 after this batch: 33 modules, 1423 theorems and lemmas, no `sorry`, no
+warnings; the 58 axiom prints are in `AxiomCheck.lean` (401 prints in all), every one on Lean's
+standard axioms or none (`axioms-all-2026-11-07.txt`).
+
 ## Building
 
 Lake caches are gigabytes, so build outside OneDrive. Keep the working copy

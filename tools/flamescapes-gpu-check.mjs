@@ -27,6 +27,9 @@
  *      two distributions of heat released should match.
  *   2b. The app's worker (src/workers/flamescapes.worker.js) on backend
  *      "auto" (the GPU here) and "cpu": the same result shape.
+ *   2c. Sprinklers (src/core/suppression.js): a head over the fire, runScene on
+ *      both paths with no sprinklers, activation only, Evans and the spray;
+ *      activation times, heat, fuel and water, and each run's time.
  *   3. Milliseconds per step, CPU and GPU, at about 30k and 200k cells.
  *
  * Uses playwright-core with the installed Chrome (no browser download) and
@@ -36,7 +39,7 @@
  * software adapter (--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader).
  *
  *   node tools/flamescapes-gpu-check.mjs [--headed] [--swiftshader] [--quick]
- *        [--phase agreement|onestep|ensemble|radiation|full|worker|timing] [--horizon 120]
+ *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|timing] [--horizon 120]
  *        [--json out.json] [--url http://localhost:5173] (a running Vite server)
  */
 import { chromium } from "playwright-core";
@@ -460,6 +463,43 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
     log(`worker: auto ran on ${out.worker.gpu.backend?.kind}, cpu on ${out.worker.cpu.backend?.kind}`);
   }
 
+  // ---- 2c. sprinklers (src/core/suppression.js, 2026-11-07): one quick-response
+  // head over the fire, through runScene on both paths, with no sprinklers,
+  // activation only, Evans, and Evans with the spray. Activation times, heat
+  // released, fuel burnt and the water, and each run's time.
+  if (phase === "all" || phase === "sprinklers") {
+    const head = { id: "over", position: [2.5, 2.55, 2.0], footprint: { centre: [2.5, 2.0], axis: [1, 0], half: [2.3, 2.3] }, rti: 50, c: 0.4, activationC: 68, flowLpm: 85, coverage: 20.9 };
+    out.sprinklers = [];
+    for (const mode of [null, "activation", "evans", "spray"]) {
+      const o = { nodes: nodeArray, upAxis: "y", horizon, frameSeconds: 5, particles: 3000, sprinklers: mode ? { heads: [head], mode } : null };
+      const row = { mode: mode || "none" };
+      // A 200 kW burner under the first item, so the head opens within the run.
+      const scene = () => {
+        const sc = room(0.25, 200000);
+        sc.pilot = { ...sc.pilot, power: 200000 };
+        return sc;
+      };
+      for (const [name, fn] of [["cpu", (sc) => R.runScene(sc, o)], ["gpu", (sc) => runner.runScene(sc, o)]]) {
+        const t0 = performance.now();
+        const r = await fn(scene());
+        const s = r.sprinklers;
+        row[name] = {
+          ms: performance.now() - t0,
+          released: r.stats.released,
+          burnt: r.stats.burnt,
+          peakHrr: Math.max(...r.hrr),
+          estimate: s?.heads[0].estimate ?? null,
+          late: s?.heads[0].late ?? null,
+          covered: s?.covered ?? null,
+          columns: s?.columns ?? null,
+          water: s?.stats ?? null,
+        };
+      }
+      out.sprinklers.push(row);
+      log(`sprinklers ${row.mode}: CPU opens ${row.cpu.estimate} s, GPU ${row.gpu.estimate} s; released CPU ${(row.cpu.released / 1e6).toFixed(2)} MJ, GPU ${(row.gpu.released / 1e6).toFixed(2)} MJ`);
+    }
+  }
+
   // ---- 3. ms per step
   if (phase === "all" || phase === "timing") {
     out.timing = [];
@@ -505,7 +545,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
   return out;
 }
 
-const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "timing"] : [PHASE];
+const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "timing"] : [PHASE];
 const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
@@ -546,6 +586,16 @@ for (const r of report.radiation || []) {
   console.log(`  particles    CPU ${r.particles.cpu}  CPU other seed ${r.particles.cpuOtherSeed}  GPU ${r.particles.gpu}`);
   console.log(`  gas T  mean |diff| GPU ${e(r.gasT.gpuMeanAbs)} K vs other seed ${e(r.gasT.seedMeanAbs)} K; max ${e(r.gasT.gpuMax)} vs ${e(r.gasT.seedMax)} K`);
   console.log(`  solid Ts mean |diff| GPU ${e(r.solidTs.gpuMeanAbs)} K vs other seed ${e(r.solidTs.seedMeanAbs)} K; max ${e(r.solidTs.gpuMax)} vs ${e(r.solidTs.seedMax)} K`);
+}
+if (report.sprinklers) {
+  console.log(`
+Sprinklers: one quick-response head (RTI 50, C 0.4, 68 C) over a 200 kW burner; runScene on both paths`);
+  console.log("  mode        | opens (estimate / late) CPU   GPU         | released MJ CPU / GPU | burnt kg CPU / GPU | covered, columns | water kg emitted (evaporated) | run s CPU / GPU");
+  for (const r of report.sprinklers) {
+    const t = (x) => (x === null ? "-" : f(x, 1));
+    const w = r.cpu.water ? `${f(r.cpu.water.emitted, 1)} (${f(r.cpu.water.evaporated, 2)}) / ${f(r.gpu.water?.emitted, 1)}` : "-";
+    console.log(`  ${r.mode.padEnd(11)} | ${t(r.cpu.estimate)} / ${t(r.cpu.late)}   ${t(r.gpu.estimate)} / ${t(r.gpu.late)} | ${f(r.cpu.released / 1e6)} / ${f(r.gpu.released / 1e6)} | ${f(r.cpu.burnt, 3)} / ${f(r.gpu.burnt, 3)} | ${r.cpu.covered ?? "-"}, ${r.cpu.columns ?? "-"} | ${w} | ${f(r.cpu.ms / 1000, 1)} / ${f(r.gpu.ms / 1000, 1)}`);
+  }
 }
 if (report.full) {
   const r = report.full;

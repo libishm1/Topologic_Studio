@@ -13,7 +13,12 @@
  * Flamescapes the grid, ms per step and per stage, heat release, embers and
  * any non-finite value). Results go to benchmark/results/<date>-fire.json.
  *
- *   node tools/fire-bench.mjs [model.ifc ...] [--horizon 60] [--cells 30000] [--out file]
+ *   node tools/fire-bench.mjs [model.ifc ...] [--horizon 60] [--cells 30000] [--out file] [--sprinklers]
+ *
+ * With --sprinklers, each model with IfcSpace rooms also runs Flamescapes
+ * with sprinklers placed per room by NFPA 13 (src/core/sprinklers.js), open
+ * heads capping the fuel and spraying (src/core/suppression.js): its ms per
+ * step against the run without, and when the first head opens.
  *
  * Without models it runs the four examples shipped with the site.
  */
@@ -28,6 +33,7 @@ import { buildForecast } from "../topologicpy-web-frontend/src/core/forecast.js"
 import { buildRoomGraph } from "../topologicpy-web-frontend/src/core/rooms.js";
 import { buildZoneForecast } from "../topologicpy-web-frontend/src/core/zone.js";
 import { buildScene, forecastFromFrames, runScene } from "../topologicpy-web-frontend/src/core/flamescapesRun.js";
+import { layoutRooms, roomsFromSpaces } from "../topologicpy-web-frontend/src/core/sprinklers.js";
 import { fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -38,6 +44,7 @@ const flag = (name, fallback) => {
 };
 const horizon = Number(flag("--horizon", 60));
 const maxCells = Number(flag("--cells", 30000));
+const withSprinklers = args.includes("--sprinklers");
 let models = args.filter((a) => a.toLowerCase().endsWith(".ifc"));
 if (!models.length) {
   const dir = path.join(HERE, "../topologicpy-web-frontend/public/examples");
@@ -120,8 +127,17 @@ for (const file of models) {
   // Flamescapes, without and with embers, on the CPU.
   const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
   const fire = [graph.nodes[seed * 3], graph.nodes[seed * 3 + 1], graph.nodes[seed * 3 + 2]];
-  for (const embers of [false, true]) {
-    const key = embers ? "flamescapes-embers" : "flamescapes";
+  // With --sprinklers, a third run: heads placed per room, capping and spraying.
+  let heads = null;
+  if (withSprinklers && geo.spaces.length) {
+    const t1 = performance.now();
+    const names = new Map((geo.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
+    heads = layoutRooms(roomsFromSpaces(geo.spaces, { upAxis: "y", names })).heads;
+    row.sprinklerLayout = { heads: heads.length, ms: ms(t1) };
+    console.log(`  ${"sprinkler layout".padEnd(19)} ${heads.length} heads in ${ms(t1).toFixed(0)} ms`);
+  }
+  for (const [embers, sprinklers] of [[false, null], [true, null], ...(heads?.length ? [[false, { heads, mode: "spray" }]] : [])]) {
+    const key = sprinklers ? "flamescapes-sprinklers" : embers ? "flamescapes-embers" : "flamescapes";
     try {
       const t1 = performance.now();
       const scene = buildScene(geo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item });
@@ -141,6 +157,7 @@ for (const file of models) {
         embers,
         particles: 0,
         solverOptions: {},
+        sprinklers,
         onFrame: (f) => { if (f.hrr > peak) peak = f.hrr; },
         profileInto: profile,
       });
@@ -180,6 +197,16 @@ for (const file of models) {
         forecastMs,
         nodesInGrid: frames.inGrid,
         rssMB: rss(),
+        sprinklers: frames.sprinklers
+          ? {
+              heads: frames.sprinklers.heads.length,
+              onGrid: frames.sprinklers.heads.filter((h) => h.onGrid).length,
+              firstEstimate: Math.min(...frames.sprinklers.heads.map((h) => h.estimate ?? Infinity)),
+              firstLate: Math.min(...frames.sprinklers.heads.map((h) => h.late ?? Infinity)),
+              open: frames.sprinklers.open.length,
+              water: frames.sprinklers.stats,
+            }
+          : null,
       };
       const top = Object.entries(stages).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(", ");
       console.log(`  ${key.padEnd(19)} grid ${g.nx}x${g.ny}x${g.nz} (${g.h.toFixed(2)} m)  ${(runMs / steps).toFixed(1)} ms/step  x${(horizon / (runMs / 1000)).toFixed(2)} real time  peak ${peak.toFixed(0)} kW  embers ${frames.stats.embersSpawned}/${frames.stats.spotIgnitions}  untenable ${untenable}  non-finite ${nonFinite}`);

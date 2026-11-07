@@ -915,6 +915,30 @@ function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
  * the forecast's escape deadlines against detection, alarm and pre-movement,
  * per storey. Evidence for an alternative method, beside the code check.
  */
+const SPRINKLER_MODES = { activation: "they only open", evans: "they cap the fuel (Evans 1993)", spray: "they cap the fuel and spray (Fire-X's evaporation)" };
+const SPRINKLER_SOURCES = { ifc: "from the IFC", rooms: "placed per room (NFPA 13)", storeys: "on a lattice over the floor (no rooms)" };
+
+/** A run's sprinklers in a line: heads, when the first opened by both readings, how many opened, and the water. */
+function sprinklerLine(live, summary) {
+  const s = (x) => `${Math.round(x)} s`;
+  const kw = (x) => (x >= 1000 ? `${(x / 1000).toFixed(1)} MW` : `${Math.round(x)} kW`);
+  const heads = `${live.heads} heads ${SPRINKLER_SOURCES[live.source] || ""}; ${SPRINKLER_MODES[live.mode] || live.mode}`;
+  if (!summary) return `${heads}; ${live.open ? `${live.open} open, the first at ${s(live.first)}` : "none open yet"}`;
+  const first = (key, hrr) => {
+    const opened = summary.heads.filter((h) => h[key] !== null);
+    if (!opened.length) return null;
+    const head = opened.reduce((a, b) => (b[key] < a[key] ? b : a));
+    return `${s(head[key])} (${kw(head[hrr])})`;
+  };
+  const estimate = first("estimate", "hrrEstimate"), late = first("late", "hrrLate");
+  const offGrid = summary.heads.filter((h) => !h.onGrid).length;
+  const water = summary.stats?.emitted > 0
+    ? `; ${summary.stats.emitted.toFixed(0)} kg of water${summary.stats.evaporated !== null && summary.stats.evaporated !== undefined ? `, ${summary.stats.evaporated.toFixed(1)} kg evaporated` : ""}`
+    : "";
+  const opened = `${summary.open.length} opened (on the ${summary.reading === "late" ? "late bound" : "estimate"})`;
+  return `${heads}; the first opens at ${estimate || "none"} by the estimate, ${late || "none"} by the late bound; ${opened}${summary.covered ? `, ${summary.covered} fuel cells under them` : ""}${water}${offGrid ? `; ${offGrid} outside the fire grid` : ""}`;
+}
+
 /** The share of occupants started by t seconds after the alarm, design and measured, with their 99th percentiles. */
 function PreMovementChart({ curves, measuredLabel }) {
   const W = 300, H = 128;
@@ -2003,6 +2027,12 @@ function CombustionStatus({ combustion, running }) {
             {combustion.extras ? "heat, smoke, CO, CO₂, O₂" : combustion.extrasDropped ? "heat, smoke, CO (the rest would not fit in memory)" : "heat, smoke, CO"}
           </dd>
         </div>
+        {combustion.sprinklers && (
+          <div className="result__item">
+            <dt className="result__label">Sprinklers</dt>
+            <dd className="result__value">{sprinklerLine(combustion.sprinklers, combustion.sprinklerSummary)}</dd>
+          </div>
+        )}
         {combustion.detectors > 0 && (
           <div className="result__item">
             <dt className="result__label">Smoke detectors</dt>
@@ -2094,6 +2124,70 @@ function IgnitionPoints({ ignition, onFind, onUse, disabled }) {
   );
 }
 
+/** The sprinkler layout in brief: how many heads and from where, and the rooms whose rules fail or cannot be told. */
+function SprinklerLayout({ plan, busy, onRedo }) {
+  const mark = { pass: "Pass", fail: "Fail", "cannot tell": "Cannot tell", required: "Required", "not required": "Not required" };
+  const tone = { pass: "ok", fail: "warn", required: "warn" };
+  if (busy) return <p className="field__hint">Laying out the sprinklers…</p>;
+  if (!plan) return null;
+  // Rooms laid out, judged by their placement rules: obstructions cannot be
+  // told without a structural or MEP model, for every room alike.
+  const all = plan.rooms || [];
+  const rooms = all.filter((r) => r.status !== "n/a");
+  const skipped = all.length - rooms.length;
+  const placement = (r) => r.placement ?? r.status;
+  const failing = rooms.filter((r) => placement(r) === "fail");
+  const open = rooms.filter((r) => placement(r) === "cannot tell");
+  const where =
+    plan.source === "ifc"
+      ? "read from the IFC"
+      : plan.source === "rooms"
+        ? `placed by NFPA 13 in ${rooms.length} rooms`
+        : plan.source === "storeys"
+          ? "placed on a lattice over the walkable floor (the model has no rooms)"
+          : "none";
+  return (
+    <div className="sprinkler-layout">
+      <Notice tone={failing.length ? "warning" : "neutral"}>
+        <strong>{plan.heads.length} sprinkler heads</strong>, {where}
+        {plan.note ? ` (${plan.note})` : ""}.
+        {rooms.length > 0 && ` ${rooms.length - failing.length - open.length} meet every placement rule, ${failing.length} fail one, ${open.length} cannot be told.`}
+        {skipped > 0 && ` ${skipped} spaces not laid out (shafts, or spaces drawn over smaller rooms).`}
+        {rooms.length > 0 && " Obstructions (beams, ducts) are not checked without a structural or MEP model."}
+      </Notice>
+      {(plan.requirement || []).length > 0 && (
+        <ul className="code-list">
+          {plan.requirement.map((r, i) => (
+            <li key={i} className="code-list__storey" data-tone={tone[r.status] || "neutral"}>
+              <span className="pill">{mark[r.status] || r.status}</span> <span className="field__hint">{r.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {failing.length + open.length > 0 && (
+        <ul className="code-list">
+          {[...failing, ...open].slice(0, 8).map((r) => (
+            <li key={r.id} className="code-list__storey" data-tone={tone[r.status] || "neutral"}>
+              <span className="pill">{mark[r.status] || r.status}</span> <strong>{r.name || `Room ${r.id}`}</strong>{" "}
+              <span className="field__hint">
+                {(r.checks || [])
+                  .filter((c) => c.status !== "pass" && c.id !== "obstructions")
+                  .map((c) => c.text)
+                  .join("; ")}
+                .
+              </span>
+            </li>
+          ))}
+          {failing.length + open.length > 8 && <li className="field__hint">and {failing.length + open.length - 8} more rooms.</li>}
+        </ul>
+      )}
+      <Button size="sm" onClick={onRedo}>
+        Lay out again
+      </Button>
+    </div>
+  );
+}
+
 export function SimulatePanel({
   studio,
   exits,
@@ -2111,6 +2205,9 @@ export function SimulatePanel({
   onExportTopologic,
   onExportTable,
   onForgetRuns,
+  sprinklerPlan = null,
+  sprinklerBusy = false,
+  onLayOutSprinklers,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo, semantics } = studio;
   const doorsNow = doorsLabel(settings.flamescapesDoors, { seed: settings.flamescapesDoorSeed, share: settings.flamescapesDoorShare });
@@ -2399,6 +2496,80 @@ export function SimulatePanel({
               Forget kept runs
             </Button>
             <p className="field__hint">{FLAMESCAPES_LIMITS}</p>
+          </Disclosure>
+        )}
+
+        {flamescapes && (
+          <Disclosure summary="Sprinklers">
+            <Toggle
+              label="Sprinklers"
+              checked={settings.sprinklers}
+              onChange={(sprinklers) => setSettings({ sprinklers })}
+              hint="Off by default. Off, nothing is laid out and a run is exactly as before, at the same speed. On, the heads are read from the IFC or placed per room by NFPA 13, and a Flamescapes run opens them as the fire heats their links."
+            />
+            {settings.sprinklers && (
+              <>
+                <SelectField
+                  label="Heads"
+                  value={settings.sprinklerSource}
+                  onChange={(sprinklerSource) => setSettings({ sprinklerSource })}
+                  options={[
+                    { value: "auto", label: "The model's, if it has any; else placed per room" },
+                    { value: "ifc", label: "Only the model's (IfcFireSuppressionTerminal)" },
+                    { value: "placed", label: "Placed per room by NFPA 13" },
+                  ]}
+                />
+                <SelectField
+                  label="Hazard"
+                  value={settings.sprinklerHazard}
+                  onChange={(sprinklerHazard) => setSettings({ sprinklerHazard })}
+                  options={[
+                    { value: "auto", label: "By room name: kitchens, plant and parking ordinary 1, the rest light" },
+                    { value: "light", label: "Light hazard (offices, homes, classrooms): 20.9 m² a head" },
+                    { value: "oh1", label: "Ordinary hazard 1: 12.1 m² a head" },
+                    { value: "oh2", label: "Ordinary hazard 2: 12.1 m² a head, more water" },
+                  ]}
+                />
+                <SelectField
+                  label="Response"
+                  value={settings.sprinklerResponse}
+                  onChange={(sprinklerResponse) => setSettings({ sprinklerResponse })}
+                  options={[
+                    { value: "quick", label: "Quick response (RTI 50), required in light hazard rooms" },
+                    { value: "standard", label: "Standard response (RTI 100)" },
+                  ]}
+                />
+                <SelectField
+                  label="An open head"
+                  value={settings.sprinklerMode}
+                  onChange={(sprinklerMode) => setSettings({ sprinklerMode })}
+                  options={[
+                    { value: "spray", label: "Caps the fuel under it and sprays: steam and cooling in the gas" },
+                    { value: "evans", label: "Caps the fuel under it (Evans 1993) only" },
+                    { value: "activation", label: "Only opens: the fire is left as it is" },
+                  ]}
+                />
+                <SelectField
+                  label="Open the heads on"
+                  value={settings.sprinklerOpenOn}
+                  onChange={(sprinklerOpenOn) => setSettings({ sprinklerOpenOn })}
+                  options={[
+                    { value: "estimate", label: "The estimate: Alpert's ceiling jet under the fire's own ceiling" },
+                    { value: "late", label: "The late bound: the grid's top cell, which reads the jet low" },
+                  ]}
+                />
+                <SprinklerLayout plan={sprinklerPlan} busy={sprinklerBusy} onRedo={onLayOutSprinklers} />
+                <p className="field__hint">
+                  A head opens when its link reaches its rating: the RTI equation with conduction to the mount, stepped exactly on the gas at
+                  the top cell of its column and, under the fire&apos;s ceiling, on Alpert&apos;s jet for the run&apos;s heat release. The run
+                  card gives both times. An open head caps the fuel under it at its rate when the head opened, decaying as Evans measured
+                  for the spray&apos;s density (conservative: the least reduction to expect); with the spray, part of its water evaporates
+                  in the hot gas on the way down (1 mm drops), the steam diluting the oxygen. The fuel is not wetted directly, and the
+                  heads read no RTI or C from the IFC (none carries them): quick 50, standard 100, C 0.4. Extinguishers are not modelled;
+                  the agents for this fire class are listed above.
+                </p>
+              </>
+            )}
           </Disclosure>
         )}
 
