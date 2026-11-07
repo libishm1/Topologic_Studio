@@ -94,6 +94,9 @@ export const PARAMS = [
   ["sprayEta", "f32"], ["speedFrom", "u32"], ["ioSpeed", "u32"],
   // "wetting" mode: the share of the water left that soaks into each fuel cell.
   ["sprayWet", "f32"],
+  // Rooms flooded with clean agent or blanketed with foam (suppressionSystems.js):
+  // on, where each room's state starts in `sys`, and the foam's wet list (offset, count).
+  ["sysOn", "u32"], ["sysState", "u32"], ["sysWetAt", "u32"], ["sysWetN", "u32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -130,7 +133,17 @@ export const WG = 64;
  * buffer again as plain u32, for kernels that only read it: an atomicLoad is a
  * read-modify-write on some backends (D3D12), a plain load is not.
  */
-export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13, sup: 14 });
+export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13, sup: 14, sys: 15 });
+/**
+ * The `sys` buffer (binding 15), only as large as a run with flooded or
+ * foamed rooms needs (16 bytes otherwise, never read): per cell its room
+ * (u32 bits, 0 none), then from U.sysState eight floats per room
+ * (suppressionSystems.js STATE: agent %, class A and B extinguishing %,
+ * foam's share of evaporation left, foam's wetting share; room 0 is none),
+ * written by the CPU before every step, then from U.sysWetAt four words per
+ * foam wet cell: cell, room, solution kg/s on its column, unused.
+ */
+export const SYS = Object.freeze({ stride: 8, wet: 4 });
 /**
  * The `sup` buffer (binding 14), only as large as a run with sprinklers
  * needs (16 bytes otherwise, never read): per cell Evans's decay time
@@ -170,8 +183,9 @@ export const KERNELS = {
   vortForce: { uses: [0, 1, 3], threads: cells },
   vortApply: { uses: [0, 1, 4], threads: faces },
   diffuse: { uses: [0, 1, 2, 3, 5], threads: cells },
-  chemistry: { uses: [0, 1, 2, 3, 10, 13, 14], threads: cells },
+  chemistry: { uses: [0, 1, 2, 3, 10, 13, 14, 15], threads: cells },
   spray: { uses: [0, 1, 2, 3, 4, 14], threads: (d) => d.sprayCols || 0 },
+  systemsWet: { uses: [0, 1, 3, 15], threads: (d) => d.sysWet || 0 },
   reduceFinish: { uses: [0, 10], threads: () => WG },
   cullFlameFront: { uses: [0, 3, 7, 9], threads: particles },
   conductPorous: { uses: [0, 1, 2, 3], threads: cells },
@@ -329,6 +343,7 @@ struct Sweep { s: u32, pad0: u32, pad1: u32, pad2: u32 }
 @group(0) @binding(12) var<uniform> SW: Sweep;
 @group(0) @binding(13) var<storage, read_write> atomPlain: array<u32>;
 @group(0) @binding(14) var<storage, read_write> sup: array<f32>;
+@group(0) @binding(15) var<storage, read_write> sys: array<f32>;
 
 var<workgroup> wsum: array<vec4<f32>, 64>;
 var<workgroup> wmax: array<u32, 64>;
@@ -1109,6 +1124,42 @@ ${perThread("spray", "U.sprayN", `
     cf[ix(fMoist, c)] = moist + dw;
   }`)}
 
+// ------------------------------------------------------------------ systems (suppressionSystems.js)
+
+/** Cell c's flooded or foamed room (0: none, and always 0 when the run has no systems). */
+fn roomOf(c: u32) -> u32 {
+  if (U.sysOn == 0u) { return 0u; }
+  return bitcast<u32>(sys[c]);
+}
+/** Room r's state this step: 0 agent %, 1 and 2 class A and B extinguishing %, 3 foam's share of evaporation left, 4 foam's wetting share. */
+fn roomState(r: u32, k: u32) -> f32 { return sys[U.sysState + 8u * r + k]; }
+/** Cell c's agent at or above its vapour's extinguishing concentration (heptane's for a liquid, class A's otherwise). The CPU's flooded. */
+fn flooded(c: u32) -> bool {
+  let r = roomOf(c);
+  if (r == 0u) { return false; }
+  let ext = select(roomState(r, 1u), roomState(r, 2u), fuelOf(ci[ix(iVapour, c)]).liquid != 0.0);
+  return roomState(r, 0u) >= ext;
+}
+
+/**
+ * Foam-water sprinklers' water on class A fuel, one thread per wet cell (no
+ * two share a cell): while the room's foam is applied, the cell takes the
+ * wetting share of the solution on its column, mixed in at 20 C. The CPU's
+ * foamWet (flamescapes.js).
+ */
+${perThread("systemsWet", "U.sysWetN", `
+  let base = U.sysWetAt + 4u * t;
+  let c = bitcast<u32>(sys[base]);
+  let share = roomState(bitcast<u32>(sys[base + 1u]), 4u);
+  if (!(share > 0.0) || kindOf(c) == SOLID || !(cf[ix(fFuel, c)] > 0.0)) { return; }
+  let st = fuelOf(ci[ix(iFuelKind, c)]);
+  if (!waterBit(st, 1u)) { return; }
+  let moist = cf[ix(fMoist, c)];
+  let Cs = capOf(cf[ix(fInertC, c)], cf[ix(fFuel, c)], cf[ix(fArea, c)], moist, st.cp);
+  let dw = share * sys[base + 2u] * U.dt;
+  cf[ix(fTs, c)] = (Cs * cf[ix(fTs, c)] + dw * 4186.0 * 293.15) / (Cs + dw * 4186.0);
+  cf[ix(fMoist, c)] = moist + dw;`)}
+
 // ------------------------------------------------------------------ chemistry (Alg. 1 lines 24 to 27)
 
 /**
@@ -1155,6 +1206,12 @@ fn chemCell(c: u32) -> vec2<f32> {
         }
         var dv = min(min(skinOf(fuel, area), (C * (Ts - st.boiling)) / st.latent), cap);
         if (waterBit(st, 2u)) { dv *= evans(c, dv); }
+        // Foam over the pool: the share of its evaporation the blanket leaves.
+        let rl = roomOf(c);
+        if (rl != 0u) {
+          let left = roomState(rl, 3u);
+          if (left < 1.0) { dv *= left; }
+        }
         if (dv > 0.0) {
           fuel -= dv;
           Ts -= (dv * st.latent) / C;
@@ -1174,6 +1231,9 @@ fn chemCell(c: u32) -> vec2<f32> {
     let ko = arrhenius(U.oxA, U.oxE, Ts) * (yO / Y_O2_AIR);
     var dOx = skin * omexp(max(0.0, ko) * dt);
     dOx = min(dOx, o2 / st.o2);
+    // Clean agent at or above the class A extinguishing concentration: no oxidation.
+    let ro = roomOf(c);
+    if (ro != 0u && roomState(ro, 0u) >= roomState(ro, 1u)) { dOx = 0.0; }
     let starved = 1.0 - min(1.0, yO / Y_O2_AIR);
     let kp = arrhenius(U.pyA, U.pyE, Ts) * (0.25 + 0.75 * starved);
     var dPy = max(0.0, skin - dOx) * omexp(max(0.0, kp) * dt);
@@ -1227,7 +1287,8 @@ fn chemCell(c: u32) -> vec2<f32> {
   if (kc != SOLID) {
     let yF = Y[c * NS];
     let yO = Y[c * NS + 1u];
-    if (yF > 1e-7 && yO > 1e-6) {
+    // Clean agent at or above the vapour's extinguishing concentration: no flame (tested only where a flame could be).
+    if (yF > 1e-7 && yO > 1e-6 && !flooded(c)) {
       let rho = cf[ix(fRho, c)];
       let mass = rho * U.V;
       let st = fuelOf(ci[ix(iVapour, c)]);

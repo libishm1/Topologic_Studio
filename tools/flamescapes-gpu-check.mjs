@@ -30,6 +30,11 @@
  *   2c. Sprinklers (src/core/suppression.js): a head over the fire, runScene on
  *      both paths with no sprinklers, activation only, Evans and the spray;
  *      activation times, heat, fuel and water, and each run's time.
+ *   2d. Systems (src/core/suppressionSystems.js): the room flooded with
+ *      clean agent or foamed, 200 deterministic steps on both paths beside
+ *      the one-ulp twin; then runScene on both paths: no system, the agent
+ *      on detection, the agent with a 30 s hold, and a heptane spill with
+ *      and without foam.
  *   3. Milliseconds per step, CPU and GPU, at about 30k and 200k cells.
  *
  * Uses playwright-core with the installed Chrome (no browser download) and
@@ -39,7 +44,7 @@
  * software adapter (--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader).
  *
  *   node tools/flamescapes-gpu-check.mjs [--headed] [--swiftshader] [--quick]
- *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|timing] [--horizon 120]
+ *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|systems|timing] [--horizon 120]
  *        [--json out.json] [--url http://localhost:5173] (a running Vite server)
  */
 import { chromium } from "playwright-core";
@@ -500,6 +505,87 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
     }
   }
 
+  // ---- 2d. flooded and foamed rooms (src/core/suppressionSystems.js,
+  // 2026-11-07). First the deterministic stages (radiation and particles
+  // off) stepped 200 times on both paths from one state, with the room
+  // flooded with clean agent from 5 s (manual release) and, in a second run,
+  // foamed from 0 s: field differences beside the CPU's one-ulp twin. Then
+  // the full model through runScene on both paths: no system, the clean
+  // agent on detection (and with a 30 s hold, which lets the fire back),
+  // and foam on a heptane spill kept alight by the burner.
+  if (phase === "all" || phase === "systems") {
+    const SS = await import(base + "suppressionSystems.js");
+    const FC = await import(base + "fireClasses.js");
+    const roomRec = SS.rectangleRoom({ id: "room", name: "SERVER RM", x0: 0, z0: 0, x1: W, z1: D, floor: 0, ceiling: H });
+    out.systems = { agreement: [], runs: [] };
+    for (const [label, system, params] of [["clean agent released at 5 s", "clean-agent", { releaseAt: 5 }], ["foam released at 0 s", "foam", { releaseAt: 0 }]]) {
+      const scene = room(0.25, 200000);
+      const opts = { emitAbove: 1e9, embers: false, dt: 0.1, maxParticles: 0 };
+      const spec = { rooms: [{ ...roomRec, system, params }] };
+      const cpu = solverOf(scene, opts);
+      cpu.systems = R.systemsRun(scene, cpu, spec);
+      const twin = solverOf(scene, opts);
+      twin.systems = R.systemsRun(scene, twin, spec);
+      for (let c = 0; c < twin.N; c += 1) if (twin.kind[c] !== 2) twin.T[c] = Math.fround(twin.T[c] * (1 + 2 ** -23));
+      const simG = solverOf(scene, opts);
+      const gpu = runner.createSim(simG, { systems: R.systemsRun(scene, simG, spec) });
+      const rows = [];
+      for (let s = 1; s <= 200; s += 1) {
+        F.step(cpu, 0.1);
+        F.step(twin, 0.1);
+        gpu.step(0.1);
+        if (![50, 100, 150, 200].includes(s)) continue;
+        const g = await gpu.readFields();
+        const moist = absDiffs(cpu.moisture, g.moisture, (c) => cpu.kind[c] !== 0);
+        const moistTwin = absDiffs(cpu.moisture, twin.moisture, (c) => cpu.kind[c] !== 0);
+        rows.push({ step: s, ...range(cpu), released: { cpu: cpu.stats.released, twin: twin.stats.released }, gpu: compare(cpu, g), twin: compare(cpu, twin), moist, moistTwin, stats: { ...cpu.systems.rooms[0].stats } });
+        log(`systems agreement (${label}) step ${s}: max |dT| GPU ${rows.at(-1).gpu.T.max.toExponential(2)} K, twin ${rows.at(-1).twin.T.max.toExponential(2)} K; |d moisture| GPU ${moist.max.toExponential(2)} twin ${moistTwin.max.toExponential(2)} kg`);
+      }
+      gpu.destroy();
+      out.systems.agreement.push({ label, rows });
+    }
+    const heptane = FC.fuelsFor("B").ignitionFuel;
+    for (const [label, systemsOf, pool] of [
+      ["no system", () => null, false],
+      ["clean agent on detection", () => ({ rooms: [{ ...roomRec, system: "clean-agent" }] }), false],
+      ["clean agent, 30 s hold", () => ({ rooms: [{ ...roomRec, system: "clean-agent", params: { hold: 30 } }] }), false],
+      ["heptane spill, no system", () => null, true],
+      ["heptane spill, foam on detection", () => ({ rooms: [{ ...roomRec, system: "foam" }] }), true],
+    ]) {
+      const scene = () => {
+        const sc = room(0.25, 200000);
+        if (pool) {
+          // A 5 kg, 0.1 m2 heptane spill as the first item, kept alight by the burner (its own flame's feedback is below the grid).
+          sc.fuels = { contentsFuel, ignitionFuel: heptane };
+          sc.ignition = { ...sc.ignition, mass: 5, area: 0.1 };
+          sc.pilot = { ...sc.pilot, duration: 1e9 };
+        }
+        return sc;
+      };
+      const o = { nodes: nodeArray, upAxis: "y", horizon, frameSeconds: 5, particles: 3000, systems: systemsOf() };
+      const row = { label };
+      for (const [name, fn] of [["cpu", (sc) => R.runScene(sc, o)], ["gpu", (sc) => runner.runScene(sc, o)]]) {
+        const t0 = performance.now();
+        const r = await fn(scene());
+        const s = r.systems?.rooms[0] ?? null;
+        const after = s?.dischargeAt != null ? Array.from(r.hrr).filter((_, k) => (k + 1) * 5 > s.dischargeAt + (s.floodedAt != null ? s.floodedAt - s.dischargeAt : s.outAt - s.dischargeAt)) : [];
+        row[name] = {
+          ms: performance.now() - t0,
+          released: r.stats.released,
+          burnt: r.stats.burnt,
+          peakHrr: Math.max(...r.hrr),
+          peakAfter: after.length ? Math.max(...after) : null,
+          endHrr: r.hrr[r.hrr.length - 1],
+          detectedAt: s?.detectedAt ?? null,
+          dischargeAt: s?.dischargeAt ?? null,
+          hrr: Array.from(r.hrr),
+        };
+      }
+      out.systems.runs.push(row);
+      log(`systems ${label}: detected CPU ${row.cpu.detectedAt} s, GPU ${row.gpu.detectedAt} s; released CPU ${(row.cpu.released / 1e6).toFixed(2)} MJ, GPU ${(row.gpu.released / 1e6).toFixed(2)} MJ`);
+    }
+  }
+
   // ---- 3. ms per step
   if (phase === "all" || phase === "timing") {
     out.timing = [];
@@ -545,7 +631,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
   return out;
 }
 
-const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "timing"] : [PHASE];
+const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "systems", "timing"] : [PHASE];
 const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
@@ -595,6 +681,24 @@ Sprinklers: one quick-response head (RTI 50, C 0.4, 68 C) over a 200 kW burner; 
     const t = (x) => (x === null ? "-" : f(x, 1));
     const w = r.cpu.water ? `${f(r.cpu.water.emitted, 1)} (${f(r.cpu.water.evaporated, 2)}) / ${f(r.gpu.water?.emitted, 1)}` : "-";
     console.log(`  ${r.mode.padEnd(11)} | ${t(r.cpu.estimate)} / ${t(r.cpu.late)}   ${t(r.gpu.estimate)} / ${t(r.gpu.late)} | ${f(r.cpu.released / 1e6)} / ${f(r.gpu.released / 1e6)} | ${f(r.cpu.burnt, 3)} / ${f(r.gpu.burnt, 3)} | ${r.cpu.covered ?? "-"}, ${r.cpu.columns ?? "-"} | ${w} | ${f(r.cpu.ms / 1000, 1)} / ${f(r.gpu.ms / 1000, 1)}`);
+  }
+}
+if (report.systems) {
+  console.log("\nSystems (suppressionSystems.js): the room flooded with HFC-227ea or foamed, deterministic stages (radiation, particles off), 200 steps of 0.1 s");
+  console.log("  |CPU - GPU| beside |CPU - CPU twin| (one ulp warmer); moisture over fuel cells");
+  for (const run of report.systems.agreement) {
+    console.log(`\n  ${run.label}`);
+    console.log("  step | gas T (K) max / p99      | O2 max            | Ts max   | moisture max (kg) | twin: T max  O2 max   Ts max   moisture | released J CPU / twin | hottest gas C");
+    for (const r of run.rows) {
+      const G = r.gpu, Tw = r.twin;
+      console.log(`  ${String(r.step).padStart(4)} | ${e(G.T.max)} / ${e(G.T.p99)} | ${e(G.O2.max)} | ${e(G.Ts.max)} | ${e(r.moist.max)} | ${e(Tw.T.max)} ${e(Tw.O2.max)} ${e(Tw.Ts.max)} ${e(r.moistTwin.max)} | ${f(r.released.cpu, 0)} / ${f(r.released.twin, 0)} | ${f(r.TmaxC, 0)}${G.kindMismatch ? `  (${G.kindMismatch} cells differ in kind)` : ""}`);
+    }
+  }
+  console.log("\n  Full model through runScene (radiation, flame-front particles), both paths");
+  console.log("  case                              | detected s CPU / GPU | discharge s CPU / GPU | released MJ CPU / GPU | burnt kg CPU / GPU | peak after kW CPU / GPU | end kW CPU / GPU | run s CPU / GPU");
+  const t = (x) => (x === null || x === undefined ? "-" : f(x, 1));
+  for (const r of report.systems.runs) {
+    console.log(`  ${r.label.padEnd(33)} | ${t(r.cpu.detectedAt)} / ${t(r.gpu.detectedAt)} | ${t(r.cpu.dischargeAt)} / ${t(r.gpu.dischargeAt)} | ${f(r.cpu.released / 1e6)} / ${f(r.gpu.released / 1e6)} | ${f(r.cpu.burnt, 3)} / ${f(r.gpu.burnt, 3)} | ${t(r.cpu.peakAfter)} / ${t(r.gpu.peakAfter)} | ${t(r.cpu.endHrr)} / ${t(r.gpu.endHrr)} | ${f(r.cpu.ms / 1000, 1)} / ${f(r.gpu.ms / 1000, 1)}`);
   }
 }
 if (report.full) {

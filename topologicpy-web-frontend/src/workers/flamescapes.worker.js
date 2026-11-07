@@ -108,6 +108,8 @@ self.onmessage = async (event) => {
       smoke: payload.smoke ?? true,
       // Sprinklers (src/core/suppression.js): heads, mode and reading; none when off.
       sprinklers: payload.sprinklers ?? null,
+      // Rooms flooded with clean agent or blanketed with foam (src/core/suppressionSystems.js); none when off.
+      systems: payload.systems ?? null,
       keep: false,
       onFrame: (frame) => {
         frames += 1;

@@ -54,6 +54,7 @@
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
 import { T_BOIL, TERMINAL_SPEED, VAPOUR_CP, WATER_CP, WATER_TEMPERATURE, evansFactor } from "./suppression.js";
+import { STATE } from "./suppressionSystems.js";
 
 export const R_GAS = 8.314462618; // J / (mol K)
 export const SIGMA = 5.670374419e-8; // W / (m^2 K^4)
@@ -353,6 +354,9 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // Open sprinklers (suppression.js createSuppression), set by the run;
     // declared here so every solver has one shape for the engine.
     suppression: null,
+    // Rooms flooded with clean agent or blanketed with foam
+    // (suppressionSystems.js systemsSetup), set by the run; null when off.
+    systems: null,
     stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0 },
   };
 }
@@ -985,6 +989,21 @@ function diffuse(sim, dt) {
 // ---------------------------------------------------------------- chemistry
 
 /**
+ * A cell of a flooded room whose agent is at or above the extinguishing
+ * concentration of its vapour's fuel (heptane's cup-burner value for a
+ * liquid, class A's otherwise; suppressionSystems.js), counted in the room's
+ * tally of flames stopped.
+ */
+function flooded(sim, sys, c) {
+  const r = sys.room[c];
+  const o = r * STATE.stride;
+  const ext = sim.fuels[sim.fuelVapourKind?.[c] ?? 0].liquid ? sys.state[o + STATE.extB] : sys.state[o + STATE.extA];
+  if (sys.state[o + STATE.agent] < ext) return false;
+  sys.rooms[r - 1].stats.flameSteps += 1;
+  return true;
+}
+
+/**
  * Lines 24 to 27: evaporation, oxidation of solids (Eq. 15), oxygen-limited
  * pyrolysis (Eq. 14) and gas combustion (Eqs. 9, 10, 12). A solid cell
  * trades species with its open neighbours, a porous cell with its own gas.
@@ -994,6 +1013,10 @@ function chemistry(sim, dt) {
   const { nx, ny, nz } = g;
   // Open sprinklers cap the fuel under them (suppression.js; null when off).
   const sup = sim.suppression;
+  // Rooms flooded with clean agent or blanketed with foam
+  // (suppressionSystems.js; null when off): each room's state this step.
+  const sys = sim.systems;
+  if (sys) sys.update(sim.time);
   sim.burning.fill(0);
   if (!sim.solidLoss) sim.solidLoss = new Float32Array(sim.N);
   sim.solidLoss.fill(0);
@@ -1045,6 +1068,14 @@ function chemistry(sim, dt) {
           const skin0 = skinMass(sim, c);
           let dv = Math.min(skin0, (C * (sim.Ts[c] - fuel.liquid.boiling)) / fuel.liquid.latent, poolCap(fuel.liquid, sim.area[c], dt));
           if (sup && sup.tau[c] > 0 && fuel.water?.evans !== false) dv *= evansFactor(sup, c, dv, sim.time, dt);
+          // Foam over the pool: the share of its evaporation the blanket leaves.
+          if (sys && sys.room[gcell]) {
+            const left = sys.state[sys.room[gcell] * STATE.stride + STATE.blanket];
+            if (left < 1) {
+              sys.rooms[sys.room[gcell] - 1].stats.withheld += dv * (1 - left);
+              dv *= left;
+            }
+          }
           if (dv > 0) {
             sim.fuelMass[c] -= dv;
             sim.Ts[c] -= (dv * fuel.liquid.latent) / C;
@@ -1068,6 +1099,15 @@ function chemistry(sim, dt) {
       const ko = arrhenius(P.oxidationA, P.oxidationE, sim.Ts[c]) * (sim.Y[gcell * NS + SPECIES.O2] / Y_O2_AIR);
       let dOx = skin * (1 - survives(ko, dt));
       dOx = Math.min(dOx, o2 / st.o2);
+      // Clean agent at or above the class A extinguishing concentration in
+      // the gas beside the fuel: no oxidation (pyrolysis goes on below).
+      if (sys && sys.room[gcell]) {
+        const o = sys.room[gcell] * STATE.stride;
+        if (sys.state[o + STATE.agent] >= sys.state[o + STATE.extA]) {
+          sys.rooms[sys.room[gcell] - 1].stats.oxBlocked += dOx;
+          dOx = 0;
+        }
+      }
       // Pyrolysis, Eq. 14: suppressed as oxygen becomes available.
       const starved = 1 - Math.min(1, sim.Y[gcell * NS + SPECIES.O2] / Y_O2_AIR);
       const kp = arrhenius(P.pyrolysisA, P.pyrolysisE, sim.Ts[c]) * (0.25 + 0.75 * starved);
@@ -1123,7 +1163,9 @@ function chemistry(sim, dt) {
     if (kc !== SOLID) {
       const yF = sim.Y[c * NS + SPECIES.FUEL];
       const yO = sim.Y[c * NS + SPECIES.O2];
-      if (yF > 1e-7 && yO > 1e-6) {
+      // Clean agent at or above the extinguishing concentration of the
+      // vapour's fuel: no flame in the cell (tested only where a flame could be).
+      if (yF > 1e-7 && yO > 1e-6 && !(sys && sys.room[c] && flooded(sim, sys, c))) {
         const mass = sim.rho[c] * sim.V;
         const kindF = sim.fuelVapourKind?.[c] ?? 0;
         const st = sim.stoich[kindF];
@@ -1212,6 +1254,29 @@ function spray(sim, dt) {
   sup.stats.evaporated += evaporated;
   sup.stats.wetted = (sup.stats.wetted || 0) + wetted;
   sup.stats.floor += floor;
+}
+
+/**
+ * Foam-water sprinklers' water on class A fuel (suppressionSystems.js):
+ * while a room's foam is applied, the first fuel cell down each of its
+ * columns takes a share of the solution landing on its column, mixed in at
+ * the water's temperature, as the spray's wetting does. Liquids (blanketed
+ * in chemistry), metals and packs take none (fireClasses.js waterResponse).
+ */
+function foamWet(sim, dt) {
+  const sys = sim.systems;
+  if (!sys || !sys.wet.length) return;
+  for (let q = 0; q < sys.wet.length; q += 1) {
+    const share = sys.state[sys.wetRoom[q] * STATE.stride + STATE.wet];
+    if (!(share > 0)) continue;
+    const c = sys.wet[q];
+    if (sim.kind[c] === SOLID || !(sim.fuelMass[c] > 0) || sim.fuels[sim.fuelKind[c]]?.water?.wets === false) continue;
+    const dw = share * sys.wetFlux[q] * dt;
+    const Cs = solidCapacity(sim, c);
+    sim.Ts[c] = (Cs * sim.Ts[c] + dw * WATER_CP * WATER_TEMPERATURE) / (Cs + dw * WATER_CP);
+    sim.moisture[c] += dw;
+    sys.rooms[sys.wetRoom[q] - 1].stats.wetted += dw;
+  }
 }
 
 /** The gas speed at a cell's centre from its six faces (m/s), for a sprinkler's link. */
@@ -1732,6 +1797,7 @@ const STAGES = [
   ["ducts", ducts],
   ["chemistry", chemistry],
   ["spray", spray],
+  ["foamWet", foamWet],
   ["cullFlameFront", (sim) => cullFlameFront(sim)],
   ["conduct", conduct],
   ["density2", (sim) => updateDensity(sim)],

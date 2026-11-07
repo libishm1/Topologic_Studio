@@ -38,6 +38,7 @@
 
 import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, cellSpeed, createSolver, step } from "./flamescapes.js";
 import { activationFrame, activationSummary, createActivation, createSuppression, openHeads, sprinklerSetup } from "./suppression.js";
+import { systemsDetect, systemsSetup, systemsSummary } from "./suppressionSystems.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, toLocal, volumeFractions } from "./voxelize.js";
 // The CO dose and the forecast from frames live in forecast.js, so the
 // forecast worker does not load the solver; re-exported here.
@@ -484,6 +485,31 @@ export function sprinklerFrame(run, { t0, t1, T, u, hrr }) {
   return { opened, changed, open: run.sup.open.slice(), water: run.sup.columns.reduce((a, c) => a + c.flux, 0) };
 }
 
+/**
+ * The rooms of a run flooded with clean agent or blanketed with foam
+ * (suppressionSystems.js), or null when it has none: each room's cells,
+ * detectors and parameters, and the arrays the solver reads (sim.systems
+ * for the CPU; the GPU copies them). Nothing of this exists, and no step
+ * does any of its work, when the run has no such rooms.
+ *
+ * @param {object} systems  { rooms: [{id, name, system: "clean-agent" | "foam", footprint, floor, ceiling (or cells), params}] }
+ */
+export function systemsRun(scene, sim, systems, upAxis = "y") {
+  if (!systems?.rooms?.length) return null;
+  return systemsSetup(scene, systems, { upAxis, fuelMass: sim.fuelMass });
+}
+
+/** One frame of the systems' detection: the visibility at their detectors (m) at the frame's end. */
+export function systemsFrame(sys, { t1, vis }) {
+  const detected = systemsDetect(sys, { t1, vis });
+  return { detected, discharged: sys.rooms.filter((r) => Number.isFinite(r.t0) && r.t0 <= t1).map((r) => r.id) };
+}
+
+/** What a run's systems did, for its card. */
+export function systemsResult(sys, opts) {
+  return { rooms: systemsSummary(sys, opts) };
+}
+
 /** What a run's sprinklers came to, for its card. */
 export function sprinklerResult(run) {
   return {
@@ -507,14 +533,18 @@ export function sprinklerResult(run) {
  * Float32Array(K n), the detectors' visibility as Float32Array(K D), and
  * `detectorDistance`. With `sensorGas` (validation runs), each frame's
  * `sprinklers` also carries the gas at the heads' sensor cells, `gas`
- * {T (K), u (m/s)}.
+ * {T (K), u (m/s)}. With `systems` (systemsRun), each frame's `systems`
+ * says which rooms were detected in it and which have discharged, and the
+ * result's `systems.rooms` when each was detected, discharged and what it did.
  */
-export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true, sprinklers = null, sensorGas = false } = {}) {
+export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true, sprinklers = null, sensorGas = false, systems = null } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
   // Per-stage timing for the benchmark (tools/fire-bench.mjs).
   if (profileInto) sim.profile = profileInto;
   const spr = sprinklerRun(scene, sim, sprinklers, upAxis);
   if (spr) sim.suppression = spr.sup;
+  const sys = systemsRun(scene, sim, systems, upAxis);
+  if (sys) sim.systems = sys;
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
   const detectors = ceilingDetectors(scene);
@@ -553,6 +583,7 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
       sprinkled = sprinklerFrame(spr, { t0: end - frameSeconds, t1: end, T: Tk, u, hrr: hrr[k] });
       if (sensorGas) sprinkled.gas = { T: Tk, u };
     }
+    const flooded = sys ? systemsFrame(sys, { t1: end, vis: readNodes(sim, sys.detectorCells).vis }) : null;
     onFrame?.({
       k,
       time: end,
@@ -564,6 +595,7 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
       o2: frame.o2,
       detectors: atDetectors,
       sprinklers: sprinkled && { opened: sprinkled.opened, open: sprinkled.open, water: sprinkled.water, ...(sprinkled.gas ? { gas: sprinkled.gas } : {}) },
+      ...(flooded ? { systems: flooded } : {}),
       hrr: hrr[k],
       maxT: sim.stats.maxT - KELVIN,
       embers: sim.stats.embersSpawned,
@@ -575,6 +607,8 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
   }
   const inGrid = cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0);
   const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid, detectorDistance: detectors.distance, sprinklers: spr ? sprinklerResult(spr) : null };
+  // Only when the run has systems, so a run without them keeps its result's shape.
+  if (sys) out.systems = systemsResult(sys);
   // A prescribed burner's totals (J), only when the scene has one.
   if (sim.burner) out.burner = { released: sim.burner.released, convective: sim.burner.convective, radiant: sim.burner.radiant, cells: sim.burner.cells.length };
   return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
