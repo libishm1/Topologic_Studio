@@ -4,7 +4,7 @@ Status: research and plan, for the user's review before any of it is built. Noth
 
 - `sprinkler-codes-2026-11-07.md`: when the codes require sprinklers, NFPA 13 placement, hydraulics, response classes, outdoor assembly points (59-row value table with sources);
 - `sprinkler-physics-2026-11-07.md`: activation, the coarse-grid problem, suppression models, data per sprinkler, the spray, validation data, statements to prove;
-- `sprinkler-ifc-mep-2026-11-07.md`: open IFC models with fire protection, the IFC schema, federation of an MEP model (pending, see section 6);
+- `sprinkler-ifc-mep-2026-11-07.md`: open IFC models with fire protection, the IFC schema, federation of an MEP model;
 - `smoke-transport-2026-11-07.md`: smoke under ceilings, ducts, open and closed buildings, stack effect (pending, see section 8).
 
 Earlier notes: `fire-suppression-note-2026-11-05.md`, `sbc-firefighting-future-notes-2026-11-05.md`.
@@ -19,7 +19,21 @@ Earlier notes: `fire-suppression-note-2026-11-05.md`, `sbc-firefighting-future-n
 
 ## 2. What the codes require (summary; values and sources in the codes report)
 
-**The Saudi Building Code could not be read.** The free Arabic text opens only in a protected viewer and the English text is sold. SBC 2018 is built on the 2015 International Codes; SBC 2024 (mandatory from 30 June 2025) appears to follow IBC/IFC 2021 (its contents add IFC 2021's Sections 916 and 917). Every trigger below is therefore an IBC/IFC 2021 value **to be confirmed against SBC 201/801-2024** before the app cites it as SBC.
+**The SBC documents (identified 2026-11-07).**
+
+- **The current edition is SBC 801-CR-2024**, "The Saudi Fire Protection Code, Code Requirements" (English). The Saudi Building Code site publishes its table of contents (12 pages) openly. It places Section 903 "Automatic Sprinkler Systems" at page 150. Sections 915 (CO detection), 916 (gas detection) and 917 (mass notification), the last two added in IFC 2021, confirm an IFC 2021 base. Chapter 10 is the means of egress (Section 1028 exit discharge). Chapter 80 holds the referenced standards, at page 682. Appendix M covers retroactive sprinklers in high-rise buildings, and the code runs to about 764 pages. **The 2024 text itself was not obtained** (the English edition is sold).
+- **The previous edition, SBC 801-CR-2018**, was read in a licensed copy for internal use. It is kept locally and is not in the repository; its text is never quoted here, only clause numbers and values. Its Section 903 confirms the IBC values in metric form, with the Civil Defense in place of the fire department:
+  - **903.2.8:** sprinklers throughout any building with a Group R fire area;
+  - **903.2.1.3:** A-3 over 1,115 m², with 300 or more occupants, or off the level of exit discharge; a Saudi exception exempts detached mosques of Type I or II construction;
+  - **903.2.3:** Group E over 1,115 m²;
+  - **903.2.11.1:** storeys without openings over 140 m²;
+  - **903.2.11.1.2 and 903.2.11.1.3:** 23 m for openings on one side only, and for basements;
+  - **903.2.11.3, "Buildings 17 m or more in height":** a storey with 30 or more occupants 17 m or more above the lowest Civil Defense vehicle access;
+  - **903.3.1.1, 903.3.1.2, 903.3.1.3:** NFPA 13; NFPA 13R for Group R up to four storeys and 18 m; NFPA 13D;
+  - **903.3.2:** quick-response or residential sprinklers in dwelling and sleeping units of Groups I-1 and R, and in NFPA 13 light-hazard occupancies;
+  - **903.3.3:** sprinklers under kiosks and equipment wider than 1,200 mm.
+
+The triggers below are therefore SBC 2018 values (where read) or IBC/IFC 2021 values. Both are **to be confirmed against SBC 801-CR-2024 and SBC 201-2024** before the app cites them as the current code.
 
 | Where | Requirement (IBC/IFC 2021) | Clause |
 |---|---|---|
@@ -83,7 +97,25 @@ Per head: position, type (pendent, upright, sidewall), activation temperature, R
 
 ## 6. Open IFC models with sprinklers, and a second MEP model
 
-Pending the IFC/MEP report. Known so far: of the 123 IFC files in the local test corpus, one has an `IfcFireSuppressionTerminalType` with no instances and one (TalTech DS3) has pipes; FZK-Haus has `SprinklerProtection` on its spaces. The viewer loads one model at a time, so a second MEP IFC needs a federation step (both models in the same frame, from the shared site placement or `IfcMapConversion`).
+The full report is `sprinkler-ifc-mep-2026-11-07.md`. No openly licensed **tall** office or apartment building with sprinklers was found in IFC. Three Revit exports of 2 to 7 storeys have sprinklers and a matching architectural model:
+
+| Model | Sprinklers | Fire system | Architectural model | Licence |
+|---|---|---|---|---|
+| NIBS Office Building, `NBU_OfficeBuilding_Eng-HVAC` (IFC2x3, 2 storeys) | 292 (counted again here) | Revit "Fire Protection Wet" on 695 pipe segments | byte-identical to the local `Office_A_20110811.ifc`; same frame | none stated; the simplest first test |
+| NIBS Medical Clinic, `NBU_MedicalClinic_Eng-MEP` (IFC2x3, 2 storeys) | 418 | Revit "Fire Protection Wet" on 1,015 segments and 1,121 fittings | `NBU_MedicalClinic_Arch.ifc`; same frame | buildingSMART's copy says CC BY 4.0 |
+| West Riverside Hospital (Auckland repository, IFC4 and IFC2x3, 7 storeys) | 1,354 on levels 1 to 5 | 12 "Fire Protection Wet" and 3 "Pre-Action" systems; a full port graph | metric against imperial, storeys up to 0.27 m apart, no IfcSpace | Autodesk courtesy for research with attribution; "publishable under cc-by-sa-3.0" |
+
+**What real exports contain.** None of the files uses `PredefinedType` SPRINKLER, an `IfcDistributionSystem` FIREPROTECTION or `Pset_FireSuppressionTerminalTypeSprinkler`: every sprinkler type is `.NOTDEFINED.`. Fire systems are plain `IfcSystem` objects named "Fire Protection ...", or only a Revit "System Type" property. K-factor and temperature rating sit in Revit property sets in Revit's internal units (feet, kelvin). The reader must therefore:
+
+- accept IFC2x3 `IfcFlowTerminal` typed by `IfcFireSuppressionTerminalType`;
+- recognise sprinklers by type name and Revit system as well as by the enumeration;
+- convert Revit units.
+
+**Corrections to the local note.** `advanced_model.ifc` does have 6 sprinklers (the IFC2x3 pattern). TalTech DS3's pipes are heating, not fire protection.
+
+**Federation.** The viewer loads one model at a time. A second MEP model needs both models in one frame: the shared site placement in these exports, or `IfcMapConversion`, which only the buildingSMART certification scenes carry. The hospital pair shows what goes wrong (units, storey drift, true north). The report's section 6.4 proposes a check before overlaying.
+
+All downloads stay in the local test corpus, outside OneDrive; none may enter the repository.
 
 ## 7. Outdoor assembly points (a pending feature)
 
@@ -111,11 +143,11 @@ Still to prove before steps 3 and later (physics report section 9): the spray's 
 3. Evans cap.
 4. Spray zone with evaporation; then manual suppression.
 
-Each step behind its switch, with the timing check before and after, and its Lean items proved first.
+Each step behind its switch, with the timing check before and after, and its Lean items proved first. The user asked (2026-11-07) to release the whole feature once it is built, not step by step to the public.
 
 **Decisions for the user:**
 
-- whether to treat the IBC/IFC 2021 values as provisional SBC values until the SBC 2024 text is obtained (the English edition must be bought);
-- the university building: which drawings or IFC can be used, and whether they may be committed or must stay local;
+- whether to use the SBC 801-CR-2018 values (and IBC/IFC 2021 where 2018 was not read) as provisional until the SBC 801-CR-2024 and SBC 201-2024 texts are obtained (the English editions are sold);
+- the university building: deferred by the user to a future session (2026-11-07); then, which drawings or IFC can be used, and whether they may be committed or must stay local;
 - the assembly-point check as proposed in section 7;
 - whether the first release shows placed heads only (step 1) before any simulation.

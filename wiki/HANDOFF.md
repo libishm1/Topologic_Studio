@@ -45,6 +45,13 @@
    - **Sprinklers and suppression: research and Lean done, nothing built.** Read `wiki/research/fire-suppression-sprinklers-2026-11-07.md` (summary, plan, the user's decisions in its section 10) and its companion reports. The user's rules: off by default, behind switches, no cost when off, same or better speed when on, must run on Vienna in the browser. Order: sprinkler record, IFC reading and per-room layout with a rule report; then activation (card only); then Evans; then the spray zone. Time each step with `tools/flamescapes-gpu-check.mjs --phase timing` and `tools/fire-bench.mjs`, switch off and on.
    - **Branch tidy-up, waiting on the user.** All four GitHub branches were fully merged into `main` and no PR was open. Deleting `next/studio-2` (tip 0f68573) and `codex/wiki-hitl-testing-docs` (tip d56730e) on GitHub, and the merged local branches, was refused by the permission system as destructive. The user can run: `git push origin --delete next/studio-2 codex/wiki-hitl-testing-docs`, then `git branch -d codex/wiki-hitl-testing-docs next/studio-2 worktree-agent-a5564f61ecc07c56c worktree-agent-a6e3e35eb51c00dc1 worktree-agent-ab4bdc24cb476c1b2 worktree-agent-ab4f7303ef3afd806` and `git branch -f main origin/main`. Restore a deleted branch with `git push origin <tip>:refs/heads/<name>`. The worktrees under the Classic checkout (`TopologicStudio/.claude/worktrees`) and `TopologicStudio_push_20260311_100658` were left alone (Classic is not to be modified); their branches are merged too.
    - **Outdoor assembly points:** a check is proposed in section 7 of the sprinkler note; the user decides.
+   - **The user's decisions (2026-11-07):**
+     - release the sprinkler and suppression work as a whole once it is built, not step by step;
+     - the university building's egress waits for a future session.
+   - **SBC documents:**
+     - The current edition is SBC 801-CR-2024. Its open table of contents is on sbc.gov.sa (`/ar/BC/Documents/tableofcontent2024/SBC 801/`); the full text is sold and was not obtained.
+     - The user's Google Drive holds SBC 801-CR-2018, an 848-page licensed copy stamped for internal use only. It was read locally for Section 903, and values from it are in the sprinkler note. **Never commit it or quote its text**; cite clause numbers and values only.
+     - No SBC 201 text has been found. The only SBC file on disk is SBC 601 (energy), in the Shoaib references folder.
 
 0. **In order, as the user asked on 2026-11-06:**
    1. **Cloudflare: the user's steps, then the deploy.**
