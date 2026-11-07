@@ -963,6 +963,17 @@ if (await fsToggle.isVisible().catch(() => false)) {
   const sprCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
   const sprLine = sprCard.split("\n").find((l) => /^\d+ heads placed per room/.test(l.trim())) || "";
   record(/the first opens at .* by the estimate/.test(sprLine), "a run with sprinklers says when the heads open by both readings", `${sprLine.trim().slice(0, 180) || "no sprinkler line"} (${((Date.now() - tSpr) / 1000).toFixed(1)}s)`);
+  // Systems by room use (core/suppressionSystems.js, 2026-11-07): off by
+  // default; on, every room gets water, clean agent, foam or none by its name
+  // and the occupancy, with a report (the Duplex has no agent or foam rooms).
+  await page.locator("summary", { hasText: /^Systems by room use$/ }).first().click().catch(() => {});
+  const systemsSwitch = page.locator(".toggle__label", { hasText: /^Systems by room use$/ });
+  await systemsSwitch.first().click().catch(() => {});
+  await page.waitForFunction(() => /\d+ rooms: \d+ water/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 30000 }).catch(() => {});
+  const systemsText = await page.locator(".panel__scroll").first().innerText().catch(() => "");
+  const systemsLine = systemsText.match(/\d+ rooms: \d+ water[^\n]*/)?.[0] || "";
+  record(/\d+ rooms: \d+ water, \d+ clean agent .*, \d+ foam, \d+ none/.test(systemsLine), "systems by room use give every room water, clean agent, foam or none", systemsLine.slice(0, 160) || "no plan");
+  await systemsSwitch.first().click().catch(() => {});
   await sprinklerSwitch.first().click().catch(() => {});
   // Back to the default, so later steps see the page as before.
   await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});

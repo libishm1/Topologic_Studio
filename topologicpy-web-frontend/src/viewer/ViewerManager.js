@@ -58,7 +58,12 @@ const OVERLAY = {
   sprinklers: "sprinklers",
   spray: "spray",
   extinguishers: "extinguishers",
+  systems: "systems",
 };
+
+// Rooms flooded with clean agent or blanketed with foam (core/suppressionSystems.js), and their own extinguishers.
+const SYSTEM_COLOUR = { "clean-agent": 0x0d9488, foam: 0xca8a04 };
+const SPECIAL_UNIT_COLOUR = { "co2-2": 0x1f2937, "foam-9.5": 0xca8a04, "wet-chemical-6": 0x64748b };
 
 // The spray drawn under each open head: droplets per head, their fall speed
 // on screen (m/s; real drops fall at about 5 m/s, TERMINAL_SPEED) and the
@@ -1406,6 +1411,64 @@ export class ViewerManager {
     this._setOverlay(OVERLAY.extinguishers, marks);
   }
 
+  /**
+   * The rooms with a clean-agent or foam system (core/suppressionSystems.js
+   * planSystems), each its rectangle from floor to ceiling: outlined while
+   * armed, filled once discharged (`discharged`, a set of room ids); and the
+   * special rooms' own extinguishers (`units`: {position, unit}), dark for
+   * CO2, amber for class B foam, grey for class K. Rebuilt only on a change.
+   */
+  setSystemRooms(rooms, discharged = null, units = null) {
+    const list = (rooms || []).filter((r) => r?.rect && Number.isFinite(r.floor) && Number.isFinite(r.ceiling) && SYSTEM_COLOUR[r.system] !== undefined);
+    const marks = (units || []).filter((u) => u?.position);
+    const key = `${list.map((r) => `${r.id}:${r.system}:${discharged?.has(r.id) ? 1 : 0}`).join(",")}|${marks.length}`;
+    if (key === this._systemsKey && (list.length + marks.length === 0 || this.overlays.has(OVERLAY.systems))) return;
+    this._systemsKey = key;
+    // _destroyObject frees the group itself, not its members.
+    this.overlays.get(OVERLAY.systems)?.children.forEach((o) => {
+      o.geometry?.dispose();
+      o.material?.dispose();
+    });
+    if (!list.length && !marks.length) {
+      this._setOverlay(OVERLAY.systems, null);
+      return;
+    }
+    const group = new THREE.Group();
+    for (const r of list) {
+      const height = Math.max(0.1, r.ceiling - r.floor);
+      const box = new THREE.BoxGeometry(2 * r.rect.half[0], height, 2 * r.rect.half[1]);
+      const colour = SYSTEM_COLOUR[r.system];
+      const on = discharged?.has(r.id);
+      const at = new THREE.Vector3(r.rect.centre[0], (r.floor + r.ceiling) / 2, r.rect.centre[1]);
+      // The rectangle's long axis in plan (x, z), turned about the vertical.
+      const turn = -Math.atan2(r.rect.axis[1], r.rect.axis[0]);
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: on ? 0.95 : 0.7, depthTest: false }));
+      edges.position.copy(at);
+      edges.rotation.y = turn;
+      edges.renderOrder = 930;
+      group.add(edges);
+      if (on) {
+        const fill = new THREE.Mesh(box, new THREE.MeshBasicMaterial({ color: colour, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+        fill.position.copy(at);
+        fill.rotation.y = turn;
+        fill.renderOrder = 929;
+        group.add(fill);
+      } else {
+        box.dispose();
+      }
+    }
+    for (const u of marks) {
+      const mark = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.09, 0.5, 10),
+        new THREE.MeshBasicMaterial({ color: SPECIAL_UNIT_COLOUR[u.unit] ?? 0xdc2626, depthTest: false, depthWrite: false, transparent: true, opacity: 0.95 }),
+      );
+      mark.position.set(u.position[0], u.position[1] - 0.75, u.position[2]);
+      mark.renderOrder = 940;
+      group.add(mark);
+    }
+    this._setOverlay(OVERLAY.systems, group);
+  }
+
   // --------------------------------------------------------------- overlays
 
   _destroyObject(object) {
@@ -1621,10 +1684,12 @@ export class ViewerManager {
       const fall = drops?.[i] > 0 ? drops[i] : 2.4;
       for (let k = 0; k < SPRAY_DROPLETS; k += 1, q += 1) {
         head.set(points[i], q * 3);
-        // A fixed scatter (golden-ratio steps), the same picture every time.
-        seed[q * 3] = k * 2.399963;
-        seed[q * 3 + 1] = Math.sqrt((k * 0.618034) % 1);
-        seed[q * 3 + 2] = (k * 0.381966 + i * 0.137) % 1;
+        // A fixed scatter, the same picture every time: Roberts's R3 steps,
+        // so a drop's angle, radius and phase are independent and the drops
+        // fill the cone (steps from one golden ratio put them on a helix).
+        seed[q * 3] = 2 * Math.PI * ((0.5 + k * 0.8191725) % 1);
+        seed[q * 3 + 1] = Math.sqrt((0.5 + k * 0.6710436) % 1);
+        seed[q * 3 + 2] = (0.5 + k * 0.5497005 + i * 0.137) % 1;
         drop[q] = fall;
       }
     }

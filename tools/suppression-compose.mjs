@@ -15,7 +15,7 @@
  * when captured) and suppression-analysis.mp4 (all of them with title and
  * results cards).
  */
-import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright-core";
@@ -33,16 +33,33 @@ const ANALYSIS = flag("--analysis", null);
 const CHROME = flag("--chrome", "C:/Program Files/Google/Chrome/Application/chrome.exe");
 await mkdir(OUT, { recursive: true });
 
-const MODE_LABEL = { none: "No sprinklers", evans: "Evans's cap", spray: "Cap and spray", wetting: "Wetting (default)" };
-const MODE_COLOUR = { none: "#b91c1c", evans: "#d97706", spray: "#7c3aed", wetting: "#0284c7" };
+const MODE_LABEL = { none: "No sprinklers", evans: "Evans's cap", spray: "Cap and spray", wetting: "Wetting (default)", systems: "Clean agent and sprinklers" };
+const MODE_COLOUR = { none: "#b91c1c", evans: "#d97706", spray: "#7c3aed", wetting: "#0284c7", systems: "#0d9488" };
 
-/** A captured run: its frames (PNG paths, in step order) and its per-step readings. */
+/**
+ * A captured run, by step number (its frames are NNN.png): entry k is step
+ * k's frame and readings, or the last captured step before it when the
+ * capture missed k (a busy machine), so two runs' entries k are the same
+ * moment. `readings` are the captured steps alone, for the chart.
+ */
 async function run(caseName, mode) {
   const dir = path.join(IN, caseName, mode);
-  if (!existsSync(dir)) return null;
-  const files = (await readdir(dir)).filter((f) => f.endsWith(".png")).sort();
+  if (!existsSync(dir) || !existsSync(path.join(IN, caseName, `${mode}.json`))) return null;
   const meta = JSON.parse(await readFile(path.join(IN, caseName, `${mode}.json`), "utf8"));
-  return { mode, files: files.map((f) => path.join(dir, f)), steps: meta.steps };
+  const png = (k) => path.join(dir, `${String(k).padStart(3, "0")}.png`);
+  const byStep = new Map(meta.steps.map((s) => [s.step, s]));
+  const have = (k) => byStep.has(k) && existsSync(png(k));
+  const last = Math.max(...byStep.keys());
+  let at = [...Array(last + 1).keys()].find(have);
+  if (at === undefined) return null;
+  const files = [], steps = [];
+  for (let k = 0; k <= last; k += 1) {
+    if (have(k)) at = k;
+    files.push(png(at));
+    steps.push(byStep.get(at));
+  }
+  const readings = [...byStep.values()].sort((a, b) => a.step - b.step);
+  return { mode, files, steps, readings };
 }
 const b64 = async (file) => `data:image/png;base64,${(await readFile(file)).toString("base64")}`;
 
@@ -99,7 +116,7 @@ await page.evaluate(() => {
       g.fillText(p.label, x + 24, y + 33);
       g.font = font(14, 400);
       g.fillStyle = "#334155";
-      g.fillText(`${p.time != null ? `${Math.round(p.time)} s` : ""}   heat ${kw(p.hrr)}${p.open != null ? `   ${p.open} heads open` : ""}`, x + 24, y + 56);
+      if (p.hrr != null) g.fillText(`${p.time != null ? `${Math.round(p.time)} s   ` : ""}heat ${kw(p.hrr)}${p.open != null ? `   ${p.open} heads open` : ""}`, x + 24, y + 56);
     }
     if (chart) {
       const y0 = h - foot + 12, x0 = 60, cw = w - 90, ch = foot - 40;
@@ -209,7 +226,7 @@ const gifOf = async (name, pngs, delay) => {
   await writeFile(path.join(OUT, name), gif);
   console.log(`wrote ${name}: ${frames.length} frames, ${(gif.length / 1e6).toFixed(2)} MB`);
 };
-const series = (r) => ({ colour: MODE_COLOUR[r.mode], points: r.steps.filter((s) => s.time != null && s.hrrKw != null).map((s) => [s.time, s.hrrKw]) });
+const series = (r) => ({ colour: MODE_COLOUR[r.mode], points: r.readings.filter((s) => s.time != null && s.hrrKw != null).map((s) => [s.time, s.hrrKw]) });
 const video = [];
 
 // 1. The workflow: the heads laid out, then the fire with wetting.
@@ -258,12 +275,14 @@ if (modes.length > 1) {
   video.push(...frames.map((p) => ({ png: p, ms: 120 })));
 }
 
-// 3. Fire classes, and 4. the NIBS Office: no sprinklers against wetting.
-for (const [caseName, gifName, title, subtitle] of [
-  ["duplex-B", "suppression-classes.gif", "A heptane item: no sprinklers against wetting", "Duplex living room, class B first item"],
-  ["office-A", "suppression-office.gif", "An office fire: no sprinklers against wetting", "NIBS Office, class A"],
+// 3. Fire classes, 4. the NIBS Office: no sprinklers against wetting; and
+// 5. a server room: no system, sprinklers, and the systems by room use.
+for (const [caseName, gifName, title, subtitle, modeList] of [
+  ["duplex-B", "suppression-classes.gif", "A heptane item: no sprinklers against wetting", "Duplex living room, class B first item", ["none", "wetting"]],
+  ["office-A", "suppression-office.gif", "An office fire: no sprinklers against wetting", "NIBS Office, class A", ["none", "wetting"]],
+  ["office-C", "suppression-systems.gif", "A server room fire: sprinklers, then a clean agent", "NIBS Office server room, class C (electrical equipment)", ["none", "wetting", "systems"]],
 ]) {
-  const pair = [await run(caseName, "none"), await run(caseName, "wetting")].filter(Boolean);
+  const pair = (await Promise.all(modeList.map((m) => run(caseName, m)))).filter(Boolean);
   if (pair.length < 2) continue;
   const n = Math.min(...pair.map((r) => r.files.length));
   const tmax = Math.max(...pair.flatMap((r) => r.steps.map((s) => s.time || 0)));
@@ -287,7 +306,7 @@ for (const [caseName, gifName, title, subtitle] of [
 if (video.length) {
   const a = ANALYSIS ? JSON.parse(await readFile(ANALYSIS, "utf8")) : null;
   const cards = [];
-  cards.push({ png: toPng(await page.evaluate((o) => window.card(o), { w: W, h: H, title: "Fire suppression in Topologic Studio", lines: ["Sprinklers placed per room by NFPA 13, opened by the fire's heat, and", "four ways of letting the water act, compared on the same fires.", "Recorded from the app in the browser (Flamescapes solver)."], note: "libishm1.github.io/Topologic_Studio" })), ms: 4000 });
+  cards.push({ png: toPng(await page.evaluate((o) => window.card(o), { w: W, h: H, title: "Fire suppression in Topologic Studio", lines: ["Sprinklers placed per room by NFPA 13, opened by the fire's heat;", "four ways of letting the water act, compared on the same fires;", "and a clean agent (HFC-227ea) flooding a server room.", "Recorded from the app in the browser (Flamescapes solver)."], note: "libishm1.github.io/Topologic_Studio" })), ms: 4000 });
   const tail = [];
   if (a) {
     for (const slide of a.slides) tail.push({ png: toPng(await page.evaluate((o) => window.card(o), { w: W, h: H, ...slide })), ms: slide.ms || 6000 });

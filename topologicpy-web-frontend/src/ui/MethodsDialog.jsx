@@ -210,6 +210,24 @@ export function MethodsDialog({ open, onClose, studio }) {
                   </dd>
                 </div>
                 <div className="methods__card">
+                  <dt>Systems by room use</dt>
+                  <dd>
+                    Off by default. Each room gets its system from its name and the occupancy: water throughout in apartments and
+                    hotels (Group R, SBC 801-CR-2018 903.2.8); elsewhere a clean agent, HFC-227ea at NFPA 2001&apos;s class C design
+                    concentration of 7 %, in server, telecom, electrical and battery rooms, which keep their sprinklers as NFPA 75
+                    asks; foam-water sprinklers at 6.5 L/(min m²) (NFPA 11) in generator, fuel and flammable-liquid rooms; and water in
+                    the rest. The agent&apos;s mass is W = (V / s) C / (100 - C), s = 0.1269 + 0.000513 t m³/kg. In a run, a clean agent
+                    room is released 30 s after a detector in each of two zones under its ceiling responds, rises linearly to 7 % over
+                    10 s and holds for 10 minutes. At or above 5.2 % (6.62 % over a liquid&apos;s vapour, the heptane cup-burner value)
+                    gas combustion and the oxidation of solid fuel stop, while pyrolysis and evaporation go on. The room is a closed,
+                    well-mixed volume: the agent is not carried by the flow, does not cool the gas or dilute its oxygen, and the release
+                    does not close doors. Foam cuts a pool&apos;s evaporation linearly to a tenth at control and to nothing at
+                    extinguishment (1.05 and 3.2 L/m² of solution delivered, Back and Farley 2020: about 10 and 30 s), and its water wets
+                    class A fuel as the sprinklers&apos; does. The agent&apos;s 30 s delay is specification practice and the foam&apos;s
+                    is assumed.
+                  </dd>
+                </div>
+                <div className="methods__card">
                   <dt>A second model</dt>
                   <dd>
                     An MEP or structural IFC of the same building, drawn in the first one&apos;s frame through their coordination

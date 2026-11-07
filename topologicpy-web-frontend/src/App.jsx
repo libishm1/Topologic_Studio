@@ -73,6 +73,9 @@ const GPU_RUN_DRAW_RATE = 15;
 const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate";
 // How long a step is on screen, with nothing running, before its hint shows.
 const HINT_SETTLE_MS = 2500;
+// The code's occupancy group for the performance check's occupants setting
+// (sprinkler requirement, extinguishers, suppression systems by room use).
+const OCCUPANCY_GROUP = { office: "B", classroom: "university", apartment: "R-2", "apartment-origin": "R-2", hotel: "R-1", assembly: "A-3" };
 
 /** Lowest and highest point of the egress geometry along the up axis. */
 function heightRange(geometry, upAxis) {
@@ -396,6 +399,8 @@ export default function App() {
     viewer.setSmokeCloud(frame.smoke || null, { strength: view.kind === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
     // The heads open by this frame (core/suppression.js).
     if (run.sprinklerPoints) viewer.setSprinklers?.(run.sprinklerPoints, new Set(frame.sprinklers?.open || []), run.sprinklerDrops);
+    // The rooms flooded or foamed by this frame (core/suppressionSystems.js).
+    if (run.systemRooms) viewer.setSystemRooms?.(run.systemRooms, new Set(frame.systems?.discharged || []), run.systemUnits);
     if (view.kind === "smoke") viewer.setSmoke(frame.vis);
     else if (view.kind === "levels") viewer.setNodeLevels(view.levels(frame, view.key === "tenability" ? tenabilityOf(run, k) : null));
     else {
@@ -1370,7 +1375,7 @@ export default function App() {
       // Whether the codes require sprinklers (SBC 801-CR-2018 903.2 with IBC
       // 2021 where stricter), for the occupancy the performance check uses and
       // the storeys' walkable areas at its area per occupant.
-      const group = { office: "B", classroom: "university", apartment: "R-2", "apartment-origin": "R-2", hotel: "R-1", assembly: "A-3" }[settings.perfOccupancy] ?? null;
+      const group = OCCUPANCY_GROUP[settings.perfOccupancy] ?? null;
       const storeyOf = storeysOf(graph, levels);
       const kinds = graph.kinds || new Uint8Array(storeyOf.length);
       const cell = (graph.spacing || 0.5) ** 2;
@@ -1403,6 +1408,47 @@ export default function App() {
     const heads = settings.sprinklers ? sprinklerPlan?.heads : null;
     viewerRef.current?.setSprinklers?.(heads?.length ? heads.map((h) => h.position) : null);
   }, [settings.sprinklers, sprinklerPlan]);
+
+  // Suppression systems by room use (core/suppressionSystems.js), off by
+  // default: each room's system from its name and the occupancy, the rooms a
+  // run floods with clean agent or blankets with foam, and their own
+  // extinguishers. The rooms are the sprinklers' (roomsFromSpaces).
+  const [systemsState, setSystemsState] = useState({ graph: null, plan: null, busy: false });
+  const systemsPlan = systemsState.graph === graph ? systemsState.plan : null;
+  const layOutSystems = useCallback(async () => {
+    const geometry = geometryRef.current;
+    if (!graph || !geometry) return;
+    setSystemsState({ graph, plan: null, busy: true });
+    try {
+      const [S, Y] = await Promise.all([import("./core/sprinklers.js"), import("./core/suppressionSystems.js")]);
+      const upAxis = graph.upAxis || "y";
+      const occupancy = OCCUPANCY_GROUP[settings.perfOccupancy] ?? null;
+      const names = new Map((studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
+      const overhead = [...(geometry.floors || []), ...(geometry.roofMeshes || [])];
+      const found = geometry.spaces?.length ? S.roomsFromSpaces(geometry.spaces, { upAxis, names, overhead, walls: geometry.walls }) : null;
+      const rooms = (found?.rooms ? found.rooms : found) || [];
+      const plan = Y.planSystems(rooms, { occupancy: occupancy ? [occupancy] : null, sprinklered: settings.sprinklers, agentOnly: settings.systemsAgentOnly });
+      const units = Y.specialExtinguishers(plan, rooms, { upAxis });
+      // The rooms a run floods or foams, as the solver takes them.
+      const special = plan.rooms.flatMap((p, i) =>
+        (p.system === "clean-agent" || p.system === "foam") && rooms[i]?.footprint
+          ? [{ id: p.id, name: p.name, system: p.system, footprint: rooms[i].footprint, floor: rooms[i].floor, ceiling: rooms[i].ceiling, rect: rooms[i].rect, area: rooms[i].area }]
+          : [],
+      );
+      setSystemsState({ graph, plan: { ...plan, occupancy, special, units, noRooms: rooms.length === 0 }, busy: false });
+      markUsed("systems");
+    } catch (error) {
+      setSystemsState({ graph, plan: null, busy: false });
+      reportError(error, "Assigning suppression systems");
+    }
+  }, [graph, settings.perfOccupancy, settings.sprinklers, settings.systemsAgentOnly, studio.semantics, reportError, markUsed]);
+  useEffect(() => {
+    if (settings.suppressionSystems && graph && geometryRef.current) layOutSystems();
+  }, [settings.suppressionSystems, layOutSystems, graph]);
+  useEffect(() => {
+    const plan = settings.suppressionSystems ? systemsPlan : null;
+    viewerRef.current?.setSystemRooms?.(plan?.special ?? null, null, plan?.units ?? null);
+  }, [settings.suppressionSystems, systemsPlan]);
 
   // What the Flamescapes solver needs (src/core/flamescapesRun.js): the
   // IFC's walls, slabs, roofs, stairs and obstacles, the graph's nodes, the
@@ -1460,6 +1506,12 @@ export default function App() {
     // At most 120 frames of at least 1 s: memory is frames x nodes x 12 bytes
     // (review 6), and a frame shorter than the solver's step means nothing.
     const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(settings.flamescapesHorizon)));
+    // Suppression systems by room use: the rooms the run floods or foams, and
+    // the heads it leaves out there (a foam room's ordinary heads; an agent
+    // room's too when agent only).
+    const systemRooms = settings.suppressionSystems && systemsPlan?.special?.length ? systemsPlan.special : null;
+    const noHeads = new Set((systemRooms || []).filter((r) => r.system === "foam" || settings.systemsAgentOnly).map((r) => r.id));
+    const heads = settings.sprinklers && sprinklerPlan?.heads?.length ? sprinklerPlan.heads.filter((h) => h.room === null || !noHeads.has(h.room)) : null;
     const payload = {
       geometry: geo,
       upAxis: graph.upAxis,
@@ -1491,10 +1543,9 @@ export default function App() {
       ignitionFuel,
       item,
       // The heads, when the sprinklers are on (core/suppression.js).
-      sprinklers:
-        settings.sprinklers && sprinklerPlan?.heads?.length
-          ? { heads: sprinklerPlan.heads, mode: settings.sprinklerMode, openOn: settings.sprinklerOpenOn, source: sprinklerPlan.source }
-          : null,
+      sprinklers: heads?.length ? { heads, mode: settings.sprinklerMode, openOn: settings.sprinklerOpenOn, source: sprinklerPlan.source } : null,
+      // The clean-agent and foam rooms (core/suppressionSystems.js systemsSetup).
+      systems: systemRooms ? { rooms: systemRooms } : null,
       fireLoad: settings.flamescapesFireLoad * 1e6,
       backend: settings.flamescapesBackend,
       // The GPU's measured speed (cells a ms) sizes its grid, unless the finest grid is asked for.
@@ -1525,9 +1576,10 @@ export default function App() {
       ...(payload.sprinklers
         ? [["sprinklers", settings.sprinklerMode, settings.sprinklerOpenOn, payload.sprinklers.heads.map((h) => [h.id, ...h.position.map((x) => Math.round(x * 100)), h.rti, h.c, h.activationC, h.flowLpm]).join(";")]]
         : []),
+      ...(payload.systems ? [["systems", payload.systems.rooms.map((r) => [r.id, r.system, Math.round(r.floor * 100), Math.round(r.ceiling * 100)].join(":")).join(";")]] : []),
     ]);
     return { payload, transfers, key };
-  }, [graph, points.fire, settings, fireModel, studio.semantics, sprinklerPlan, overheadMeshes]);
+  }, [graph, points.fire, settings, fireModel, studio.semantics, sprinklerPlan, systemsPlan, overheadMeshes]);
 
   // Start the Flamescapes solver, or return the run already made for the
   // same graph and inputs. Its frames collect in run.frames as they arrive;
@@ -1544,7 +1596,11 @@ export default function App() {
       const below = levels.filter((l) => l <= p[up] - 1);
       return below.length ? Math.min(12, p[up] - Math.max(...below)) : 2.4;
     }) ?? null;
-    const run = { key, graph, frames: [], done: false, failed: false, result: null, info: null, sprinklerPoints, sprinklerDrops };
+    const run = {
+      key, graph, frames: [], done: false, failed: false, result: null, info: null, sprinklerPoints, sprinklerDrops,
+      systemRooms: payload.systems?.rooms ?? null,
+      systemUnits: payload.systems ? (systemsPlan?.units ?? null) : null,
+    };
     // Where this run is kept in the browser (core/runCache.js): the graph,
     // the scene's geometry (every 16th word) and the run's inputs.
     const storeKey = settings.flamescapesKeepRuns
@@ -1575,6 +1631,7 @@ export default function App() {
           detectors: last.detectors?.length ?? 0,
           detectedAt: firstDetection(stored.frames),
           sprinklerSummary: stored.result?.sprinklers ?? null,
+          systemsSummary: stored.result?.systems?.rooms ?? null,
           horizon: payload.horizon,
           embersOn: payload.embers,
           extras: payload.extras,
@@ -1623,6 +1680,14 @@ export default function App() {
                 water: progress.sprinklers?.water ?? 0,
               }
             : null,
+          // The rooms with a system, how many have been detected and have discharged.
+          systems: payload.systems
+            ? {
+                rooms: payload.systems.rooms.length,
+                detected: (c.combustion?.systems?.detected ?? 0) + (progress.systems?.detected.length ?? 0),
+                discharged: progress.systems?.discharged.length ?? 0,
+              }
+            : null,
           // The ceiling detectors round the fire (flamescapesRun.js ceilingDetectors) and when the first responds.
           detectors: progress.detectors?.length ?? 0,
           detectedAt: c.combustion?.detectedAt ?? (progress.detectors?.some((s) => s <= DETECTOR_VISIBILITY) ? progress.time : null),
@@ -1633,8 +1698,12 @@ export default function App() {
         run.done = true;
         run.result = result;
         // When each head opened by both readings, and the water (core/suppression.js).
-        if (result?.sprinklers && (!combustionRef.current || combustionRef.current === run)) {
-          studio.setFire((c) => ({ ...c, combustion: c.combustion ? { ...c.combustion, sprinklerSummary: result.sprinklers } : c.combustion }));
+        // And when each room's system was detected, discharged and acted (core/suppressionSystems.js).
+        if ((result?.sprinklers || result?.systems) && (!combustionRef.current || combustionRef.current === run)) {
+          studio.setFire((c) => ({
+            ...c,
+            combustion: c.combustion ? { ...c.combustion, sprinklerSummary: result.sprinklers ?? null, systemsSummary: result.systems?.rooms ?? null } : c.combustion,
+          }));
         }
         // The first measurement on a GPU stands, so its grid does not drift between runs.
         const name = result?.info?.backend?.name;
@@ -1671,7 +1740,7 @@ export default function App() {
     });
     combustionRef.current = run;
     return run;
-  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns, levels]);
+  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns, levels, systemsPlan]);
 
   const forgetRuns = useCallback(async () => {
     const { count, bytes } = await storedRuns();
@@ -2223,7 +2292,7 @@ export default function App() {
   // graph they were made on; nothing is read while the switch is off.
   const [extinguisherState, setExtinguisherState] = useState({ graph: null, plan: null, busy: false });
   const extinguisherPlan = extinguisherState.graph === graph ? extinguisherState.plan : null;
-  const occupancyGroup = { office: "B", classroom: "university", apartment: "R-2", "apartment-origin": "R-2", hotel: "R-1", assembly: "A-3" }[settings.perfOccupancy] ?? null;
+  const occupancyGroup = OCCUPANCY_GROUP[settings.perfOccupancy] ?? null;
   const layOutExtinguishers = useCallback(async () => {
     if (!graph) return;
     setExtinguisherState({ graph, plan: null, busy: true });
@@ -3210,6 +3279,8 @@ export default function App() {
     if (points.fire) items.push({ label: "Fire origin (spike)", color: "var(--viz-fire)", dot: true });
     if (settings.sprinklers && sprinklerPlan?.heads?.length) items.push({ label: "Sprinkler heads (blue once open, with their spray)", color: "#0284c7", dot: true });
     if (settings.extinguishers && extinguisherPlan?.sites?.length) items.push({ label: "Extinguishers", color: "#dc2626", dot: true });
+    if (settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "clean-agent")) items.push({ label: "Clean agent rooms (filled once flooded)", color: "#0d9488" });
+    if (settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "foam")) items.push({ label: "Foam rooms (filled once foamed)", color: "#ca8a04" });
     if (alternatives?.routes.length > 1) {
       alternatives.routes.forEach((route, i) =>
         items.push({ label: `Route ${route.rank} (${route.length.toFixed(1)} m)`, color: routeColor(i) }),
@@ -3248,6 +3319,8 @@ export default function App() {
     sprinklerPlan?.heads?.length,
     settings.extinguishers,
     extinguisherPlan?.sites?.length,
+    settings.suppressionSystems,
+    systemsPlan?.special,
   ]);
 
   // ------------------------------------------------------------------ render
@@ -3612,6 +3685,9 @@ export default function App() {
                   onLayOutSprinklers={layOutSprinklers}
                   overheadCount={overheadMeshes ? new Set(overheadMeshes.map((m) => `${m.source}:${m.itemId}`)).size : null}
                   extinguisherPlan={settings.extinguishers ? extinguisherPlan : null}
+                  systemsPlan={settings.suppressionSystems ? systemsPlan : null}
+                  systemsBusy={systemsState.busy}
+                  onLayOutSystems={layOutSystems}
                   extinguisherBusy={extinguisherState.busy}
                   onLayOutExtinguishers={layOutExtinguishers}
                   extinguisherAttempt={settings.extinguishers ? extinguisherAttempt : null}

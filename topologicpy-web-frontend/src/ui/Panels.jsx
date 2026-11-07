@@ -1108,6 +1108,27 @@ function sprinklerLine(live, summary) {
   return `${heads}; the first opens at ${estimate || "none"} by the estimate, ${late || "none"} by the late bound; ${opened}${summary.covered ? `, ${summary.covered} fuel cells under them` : ""}${water}${offGrid ? `; ${offGrid} outside the fire grid` : ""}`;
 }
 
+/**
+ * A run's suppression systems by room use in a line: per room whose
+ * detectors saw smoke, when the system was released and acted; a release
+ * due after the run's end says so.
+ */
+function systemsLine(live, summary, horizon) {
+  const s = (x) => (x === null || x === undefined ? "never" : `${Math.round(x)} s`);
+  if (!summary) return live ? `${live.rooms} room${live.rooms === 1 ? "" : "s"} with a clean agent or foam; ${live.detected} detected, ${live.discharged} released so far` : "";
+  const seen = summary.filter((r) => r.detectedAt !== null || r.manual);
+  const parts = seen.map((r) => {
+    const name = r.name || `Room ${r.id}`;
+    const after = r.dischargeAt !== null && r.dischargeAt > (horizon ?? Infinity);
+    const smoke = r.manual ? "released by hand" : `smoke seen at ${s(r.detectedAt)}`;
+    if (after) return `${name}: ${r.system === "foam" ? "foam" : "clean agent"}, ${smoke}, release due at ${s(r.dischargeAt)}, after the run's end`;
+    if (r.system === "clean-agent") return `${name}: clean agent, ${smoke}, released at ${s(r.dischargeAt)}, flames stop from ${s(r.reachesA)} (${r.extinguishing.A} %), ${r.design} % at ${s(r.floodedAt)}`;
+    return `${name}: foam, ${smoke}, on from ${s(r.dischargeAt)}, a pool controlled by ${s(r.controlAt)} and out by ${s(r.outAt)}`;
+  });
+  const quiet = summary.length - seen.length;
+  return [`${summary.length} room${summary.length === 1 ? "" : "s"} with a clean agent or foam`, ...parts, quiet ? `${quiet} saw no smoke` : null].filter(Boolean).join("; ");
+}
+
 /** The share of occupants started by t seconds after the alarm, design and measured, with their 99th percentiles. */
 function PreMovementChart({ curves, measuredLabel }) {
   const W = 300, H = 128;
@@ -2207,6 +2228,12 @@ function CombustionStatus({ combustion, running }) {
             </dd>
           </div>
         )}
+        {(combustion.systems || combustion.systemsSummary) && (
+          <div className="result__item">
+            <dt className="result__label">Systems</dt>
+            <dd className="result__value">{systemsLine(combustion.systems, combustion.systemsSummary, combustion.horizon)}</dd>
+          </div>
+        )}
         {combustion.detectors > 0 && (
           <div className="result__item">
             <dt className="result__label">Smoke detectors</dt>
@@ -2373,6 +2400,54 @@ function SprinklerLayout({ plan, busy, onRedo }) {
   );
 }
 
+const SYSTEM_WORDS = { water: "Water", "clean-agent": "Clean agent", foam: "Foam", none: "None" };
+const UNIT_WORDS = { "co2-2": "carbon dioxide", "foam-9.5": "class B foam", "wet-chemical-6": "class K wet chemical" };
+
+/** Suppression systems by room use in brief: the counts, the clean-agent and foam rooms and why, and their own extinguishers. */
+function SystemsPlan({ plan, busy, onRedo }) {
+  if (busy) return <p className="field__hint">Assigning the systems…</p>;
+  if (!plan) return null;
+  if (plan.noRooms) {
+    return <Notice tone="warning">The model has no rooms (IfcSpace). Systems are assigned by room name, so none can be given here.</Notice>;
+  }
+  const special = plan.rooms.filter((r) => r.system === "clean-agent" || r.system === "foam");
+  const units = {};
+  for (const u of plan.units || []) units[u.unit] = (units[u.unit] || 0) + 1;
+  return (
+    <div className="sprinkler-layout">
+      <Notice tone="neutral">
+        {plan.lines.map((line) => `${line[0].toUpperCase()}${line.slice(1)}.`).join(" ")}
+      </Notice>
+      {special.length > 0 && (
+        <ul className="code-list">
+          {special.slice(0, 12).map((r, i) => (
+            <li key={`${r.id}-${i}`} className="code-list__storey" data-tone="neutral">
+              <span className="pill">{SYSTEM_WORDS[r.system]}</span> <strong>{r.name || `Room ${r.id}`}</strong>{" "}
+              <span className="field__hint">
+                {r.reason}
+                {r.agentKg ? `; ${r.agentKg.toFixed(1)} kg of agent` : ""} ({r.clause.split(":")[0]}).
+              </span>
+            </li>
+          ))}
+          {special.length > 12 && <li className="field__hint">and {special.length - 12} more rooms.</li>}
+        </ul>
+      )}
+      {Object.keys(units).length > 0 && (
+        <p className="field__hint">
+          Their own extinguishers, at the door (dark, amber and grey in the view):{" "}
+          {Object.entries(units)
+            .map(([u, n]) => `${UNIT_WORDS[u] || u} at ${n} room${n === 1 ? "" : "s"}`)
+            .join(", ")}
+          ; ABC powder on the routes is in Extinguishers.
+        </p>
+      )}
+      <Button size="sm" onClick={onRedo}>
+        Assign again
+      </Button>
+    </div>
+  );
+}
+
 export function SimulatePanel({
   studio,
   exits,
@@ -2399,6 +2474,9 @@ export function SimulatePanel({
   onLayOutExtinguishers,
   extinguisherAttempt = null,
   onExtinguisherAttempt,
+  systemsPlan = null,
+  systemsBusy = false,
+  onLayOutSystems,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo, semantics } = studio;
   const doorsNow = doorsLabel(settings.flamescapesDoors, { seed: settings.flamescapesDoorSeed, share: settings.flamescapesDoorShare });
@@ -2772,11 +2850,51 @@ export function SimulatePanel({
                 <p className="field__hint">
                   A head opens when its link reaches its rating: the RTI equation with conduction to the mount, stepped exactly on the gas at
                   the top cell of its column and, under the fire&apos;s ceiling, on Alpert&apos;s jet for the run&apos;s heat release. The run
-                  card gives both times. An open head caps the fuel under it at its rate when the head opened, decaying as Evans measured
-                  for the spray&apos;s density (conservative: the least reduction to expect); with the spray, part of its water evaporates
-                  in the hot gas on the way down (1 mm drops), the steam diluting the oxygen. The fuel is not wetted directly, and the
-                  heads read no RTI or C from the IFC (none carries them): quick 50, standard 100, C 0.4. Extinguishers are not modelled;
-                  the agents for this fire class are listed above.
+                  card gives both times. What an open head then does is the choice above. Wetting: the water left at the end of each column
+                  soaks into the first fuel it reaches and cools it. The cap: the fuel under the head burns at its rate when the head opened,
+                  decaying as Evans measured for the spray&apos;s density (conservative: the least reduction to expect). With the spray, part of
+                  the water evaporates in the hot gas on the way down (1 mm drops), the steam diluting the oxygen. Liquids, metals and cooking
+                  oil are not wetted (the notice above). The heads read no RTI or C from the IFC (none carries them): quick 50, standard 100,
+                  C 0.4. Portable extinguishers have their own section below; clean agent and foam rooms are in Systems by room use.
+                </p>
+              </>
+            )}
+          </Disclosure>
+        )}
+
+        {flamescapes && (
+          <Disclosure summary="Systems by room use">
+            <Toggle
+              label="Systems by room use"
+              checked={settings.suppressionSystems}
+              onChange={(suppressionSystems) => setSettings({ suppressionSystems })}
+              hint="Off by default. Off, nothing is assigned and a run is exactly as before. On, each room gets its system from its name and the building's occupancy: clean agent (HFC-227ea, FM-200) in server, telecom, electrical and battery rooms; foam-water sprinklers in generator, fuel and flammable-liquid rooms; water everywhere else. Apartments and hotels (Group R) get water in every room. A Flamescapes run floods or foams those rooms once their own detectors see smoke."
+            />
+            {settings.suppressionSystems && (
+              <>
+                <SelectField
+                  label="Occupancy"
+                  value={settings.perfOccupancy}
+                  onChange={(id) => setSettings({ perfOccupancy: id, ...(presetOf(id).values || {}) })}
+                  options={RSET_PRESETS.map((p) => ({ value: p.id, label: p.label }))}
+                  hint="The performance check's occupants, shared with it: apartments and hotels (Group R) get water only, the rest by room name."
+                />
+                <Toggle
+                  label="Agent only in the agent rooms"
+                  checked={settings.systemsAgentOnly}
+                  onChange={(systemsAgentOnly) => setSettings({ systemsAgentOnly })}
+                  hint="Off: those rooms keep their sprinklers and the agent is a supplement (NFPA 75 9.1.1, 9.4.1). On: their sprinklers are left out, which needs the fire official's approval (SBC 801-CR-2018 903.3.1.1.1)."
+                />
+                {!settings.sprinklers && <Notice tone="warning">Sprinklers are off, so the water rooms have no system. Switch them on in Sprinklers above.</Notice>}
+                <SystemsPlan plan={systemsPlan} busy={systemsBusy} onRedo={onLayOutSystems} />
+                <p className="field__hint">
+                  Clean agent: once a detector in each of two zones sees smoke and 30 s have passed (specification practice; the code sets no
+                  number), the agent rises to 7 % over 10 s and holds for 10 minutes. At 5.2 % or more (6.62 % over a liquid&apos;s vapour)
+                  flames and smouldering stop; hot fuel goes on giving off vapour, which can burn again outside the room or once the agent is
+                  gone. The room is taken as closed and well mixed: the agent stays in it, does not cool or take oxygen, and the release does
+                  not close the model&apos;s doors. Foam: once one detector sees smoke and 30 s have passed (assumed), the blanket cuts a
+                  pool&apos;s evaporation to a tenth in about 10 s and to nothing in about 30 s (Back and Farley 2020), and its water wets the
+                  ordinary fuel it lands on, as sprinklers do.
                 </p>
               </>
             )}

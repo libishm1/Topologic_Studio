@@ -163,6 +163,13 @@ export const DEFAULT_SETTINGS = {
   // rooms), no mode helped.
   sprinklerMode: "wetting",
   sprinklerOpenOn: "estimate",
+  // Suppression systems by room use (core/suppressionSystems.js), off by
+  // default and costing nothing off: clean agent (HFC-227ea) in IT, telecom,
+  // electrical and battery rooms, foam in generator and fuel rooms, water
+  // elsewhere, apartments water only, read from room names and the
+  // performance check's occupancy. Agent only drops those rooms' sprinklers.
+  suppressionSystems: false,
+  systemsAgentOnly: false,
   // The graph's colour while a run plays (core/measures.js): "heat", "smoke",
   // "gases" or "tenability", and which smoke or gas measure.
   flamescapesShow: "heat",
