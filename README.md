@@ -31,8 +31,28 @@ the heat.*
 > calibrated temperature, so its results do not replace a fire engineer's
 > egress assessment.
 
+## What's new (2026-11-08)
+
+- **Suppression systems by room use.** A clean agent (FM-200) in server,
+  telecom and electrical rooms, foam in generator and fuel rooms, and water
+  everywhere else, in every room of an apartment building
+  ([Fire suppression](#fire-suppression)).
+- **Sprinklers, second round.** The water wets the fuel by default and acts
+  by fire class, open heads are drawn spraying, a second MEP or structural
+  model brings its heads, its beams and ducts are checked as obstructions,
+  and no heads hang over roofs or terraces.
+- **Extinguishers** are placed on the walk, and after a fire one person's
+  attempt is judged against the unit's rating.
+- **Two larger examples:** the NIBS Office and the medical Clinic, both with
+  server and electrical rooms ([The example buildings](#the-example-buildings)).
+- **A guide on the website**, with GIFs and an 84 s
+  [video](topologicpy-web-frontend/public/docs/media/suppression-analysis.mp4)
+  of the suppression results.
+- **On a phone** the page fits the screen, and hints take one line.
+
 ## Contents
 
+- [What's new](#whats-new-2026-11-08)
 - [Quick start](#quick-start)
 - [The example buildings](#the-example-buildings)
 - [What Studio does](#what-studio-does): [Model](#model-what-is-in-the-file),
@@ -831,7 +851,7 @@ windows (`studio`, `studio stop`, `studio status`, `studio test`), and
 
 | What | Command | Where |
 | --- | --- | --- |
-| Unit and property tests of the browser core (349 on 2026-11-07) | `npm test` | `topologicpy-web-frontend` |
+| Unit and property tests of the browser core (358 on 2026-11-08) | `npm test` | `topologicpy-web-frontend` |
 | Lint | `npm run lint` | `topologicpy-web-frontend` |
 | Production build (also converts the examples) | `npm run build` | `topologicpy-web-frontend` |
 | Server tests | `../.venv-next/Scripts/python -m pytest tests -q` | `topologicpy-web-backend` |
