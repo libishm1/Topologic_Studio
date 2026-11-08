@@ -84,7 +84,7 @@ for (const { file, occupancy } of models) {
   const t0 = performance.now();
   const geo = await extract(file, { withDoorFlags: true });
   const names = new Map((geo.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
-  const rooms = geo.spaces.length ? roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], walls: geo.walls }) : [];
+  const rooms = geo.spaces.length ? roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], ceilings: geo.ceilings, walls: geo.walls }) : [];
   const plan = planSystems(rooms, { occupancy });
   const heads = layoutRooms(rooms).heads;
   const fireGeo = slabsMissing(geo.floors, geo.spaces) ? { ...geo, floors: [...geo.floors, ...floorsFromSpaces(geo.spaces)] } : geo;

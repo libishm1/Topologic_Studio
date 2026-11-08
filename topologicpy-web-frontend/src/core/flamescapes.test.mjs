@@ -142,6 +142,26 @@ test("a slab thinner than a cell still seals: every column through it has a soli
   }
 });
 
+test("a 52 mm ceiling split evenly between two cells still seals, in one cell of each column", () => {
+  // On a 0.4 m grid each half holds 6.5 %, under THIN_FRACTION (8 %).
+  for (const offset of [0, 0.1, 0.174, 0.2, 0.3]) {
+    const probe = gridFor([box(0, 0, 0, 3, 3, 3)], { cell: 0.4, margin: 1, maxCells: 1e6 });
+    // The plate's middle on a cell face (offset 0.174 puts it there for this grid), or elsewhere.
+    const y0 = probe.origin[1] + 6 * 0.4 - 0.026 + offset;
+    const plate = box(0, y0, 0, 3, y0 + 0.052, 3);
+    const grid = gridFor([plate, box(0, 0, 0, 3, 0.01, 3)], { cell: 0.4, margin: 1, maxCells: 1e6, bounds: { lo: probe.origin, hi: [probe.origin[0] + 6, probe.origin[1] + 6, probe.origin[2] + 6] } });
+    const fraction = volumeFractions(grid, [plate], { rays: raysFor(grid) });
+    const solid = occupancy(grid, fraction);
+    for (let k = 3; k < grid.nz - 3; k += 1) {
+      for (let i = 3; i < grid.nx - 3; i += 1) {
+        let n = 0;
+        for (let j = 0; j < grid.ny; j += 1) n += solid[i + grid.nx * (j + grid.ny * k)];
+        assert.equal(n, 1, `offset ${offset}: column ${i},${k} has ${n} solid cells`);
+      }
+    }
+  }
+});
+
 test("the room contents carry the fire load: M = q A / heat of combustion", () => {
   const geo = room();
   const meshes = [...geo.walls, ...geo.floors, ...geo.roofs];
@@ -153,6 +173,45 @@ test("the room contents carry the fire load: M = q A / heat of combustion", () =
   assert.ok(fuel.area > 16 && fuel.area < 24, String(fuel.area));
   assert.ok(Math.abs(fuel.total - fuel.mass) / fuel.mass < 0.05);
   assert.ok(Math.abs(fuel.mass - (780e6 * fuel.area) / 17.5e6) < 1e-6 * fuel.mass);
+});
+
+test("a suspended ceiling 5 cm thick is the fire grid's ceiling under a higher slab; the walls' coefficient acts on walls only", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  // The room with its slab at 4 m and a ceiling at 2.6 m (the NIBS models' 52 to 57 mm).
+  const geo = room();
+  geo.walls = geo.walls.map((w) => box(...[0, 1, 2].map((a) => w.positions[a]), w.positions[18], 4.0, w.positions[20]));
+  geo.roofs = [box(-0.2, 4.0, -0.2, 5.2, 4.2, 4.2)];
+  const ceilings = [box(0, 2.6, 0, 5, 2.655, 4)];
+  for (const h of [0.25, 0.37]) {
+    const scene = buildScene({ ...geo, ceilings }, { fire: [2.5, 0.75, 2], maxCells: 1e5, minCell: h, maxCell: h, contentsFuel, ignitionFuel, item });
+    const g = scene.grid;
+    const firstSolidAbove = (x, z) => {
+      const i = Math.floor((x - g.origin[0]) / g.h), k = Math.floor((z - g.origin[2]) / g.h);
+      for (let j = Math.floor((1.0 - g.origin[1]) / g.h); j < g.ny; j += 1) if (scene.solid[i + g.nx * (j + g.ny * k)]) return g.origin[1] + j * g.h;
+      return Infinity;
+    };
+    for (const [x, z] of [[1, 1], [2.5, 2], [4, 3]]) {
+      const y = firstSolidAbove(x, z);
+      assert.ok(Math.abs(y - 2.6) <= g.h, `cell ${h} m at (${x}, ${z}): the gas meets a solid at ${y.toFixed(2)} m, not the slab at 4 m`);
+    }
+  }
+  // A sealed box of hot gas with no fuel: the walls take less of its heat at
+  // a lower walls' coefficient; the fuel's coefficient changes nothing.
+  const hot = (opts) => {
+    const shell = [box(-0.3, -0.3, -0.3, 2.3, 0, 2.3), box(-0.3, 2, -0.3, 2.3, 2.3, 2.3), box(-0.3, 0, -0.3, 0, 2, 2.3), box(2, 0, -0.3, 2.3, 2, 2.3), box(0, 0, -0.3, 2, 2, 0), box(0, 0, 2, 2, 2, 2.3)];
+    const grid = gridFor(shell, { cell: 0.25, margin: 1, maxCells: 1e5 });
+    const fraction = volumeFractions(grid, shell, { rays: raysFor(grid) });
+    const scene = { grid, fraction, solid: occupancy(grid, fraction), contents: { cells: [], masses: [] }, ignition: null, pilot: null, fuels: { contentsFuel, ignitionFuel } };
+    const sim = createSolver(scene, { contentsFuel, ignitionFuel, ...opts });
+    for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] === 0) sim.T[c] = 400;
+    for (let s = 0; s < 20; s += 1) step(sim);
+    let e = 0;
+    for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] === 0) e += sim.T[c];
+    return e;
+  };
+  const at200 = hot({ wallConvection: 200 }), at25 = hot({ wallConvection: 25 });
+  assert.ok(at25 > at200, "the gas keeps more heat with the lower walls' coefficient");
+  assert.equal(hot({ wallConvection: 25, convection: 50 }), at25, "the fuel's coefficient is not the walls'");
 });
 
 test("visibility falls with soot, and the CO dose reaches 1 at 35,000 ppm min", () => {

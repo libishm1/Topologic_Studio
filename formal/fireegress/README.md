@@ -344,6 +344,53 @@ no `sorry`, no warnings; the 111 axiom prints of this batch are in `AxiomCheck.l
 all), every one on Lean's standard axioms or none (`axioms-all-2026-11-07.txt`, regenerated from
 AxiomCheck.lean's output with every earlier line kept in order).
 
+## Twelfth batch: sprinkler activation (2026-11-08)
+
+SprinklerActivation.lean (35 results) backs the sprinkler activation fix. `conduct` in
+`flamescapes.js` now gives an inert wall its own coefficient, lower than the fuel's, and
+`sprinklerSetup` in `src/core/suppression.js` measures a head's distance from the head's exact
+position to the fire cell's centre. The module reuses FlamescapesPort.lean's `exchange`, `afterA`
+and `afterB` (the wall is body a) and Sprinklers.lean's `linkAfter`, `linkAfter_mono`,
+`activates_no_later` and `exactStep_weights`; its header maps every theorem to the function it
+backs. The helpers `rpow_two_thirds_cube`, `rpow_five_sixths_pow`, `pos_of_far` and `hypot_self`
+are counted among the 35.
+
+| Theorem | What it says | Where it shows in Studio |
+|---|---|---|
+| `wall_coeff_one_exchange` (with `decay_le_of_coeff`) | For a wall no hotter than the gas, positive capacities, `dt ≥ 0` and `0 < G' ≤ G`, one exchange leaves the gas at least as hot and the wall no hotter under `G'`. | The gas beside walls and ceilings in the fire run, after the wall coefficient was lowered. |
+| `cellRun_energy`, `cellRun_diff`, `cellRun_compare` | In a lumped ceiling-jet cell over a wall (a source `s n ≥ 0`, then the exchange), the energy is the initial energy plus the sources whatever the coefficient; the gas-to-wall difference decays by `exp(-G dt / μ)` each step, stays non-negative and is larger under the smaller coefficient. | The reasoning behind the next row. |
+| `wall_coeff_gas_hotter` | From the same state with the gas no colder than the wall, the gas under the smaller coefficient is at least as hot, and the wall no hotter, at every step, for any non-negative source history. | The gas temperature at a head's sensor cell (the late reading). |
+| `wall_coeff_link`, `wall_coeff_activates_no_later`, `wall_coeff_activates_exact`, `wall_coeff_first_activation` | A link driven by that gas, with any weights `k ≥ 0`, `k + c ≤ 1` or the exact step's weights for any frame length, is at least as hot at every step and reaches its activation temperature no later; its first opening step is no later. | Activation times of the late reading in `activationFrame`. |
+| `alpert_switch_cube`, `alpert_switch` | `(5.38 / 16.9)³ ≤ 0.18²`, hence `5.38 / 0.18^(2/3) ≤ 16.9`: at `r = 0.18 H` the far branch lies about 0.14 % below the near one. | `alpert`'s excess `dT`. |
+| `alpertDT_nonneg`, `alpertDT_mono_Q` | `dT ≥ 0`, and `dT` never falls when `Q` rises, at every `H` and `r`. | The estimate reading `max(Tg, layer + dT)`. |
+| `alpertDT_anti_H`, `alpertDT_H_switch` | `dT` never rises with `H` while the head stays in one branch; across the switch it can (at `Q = 1` kW and `r = 0.18` m, `H = 0.999` m gives less than `H = 1` m). | The ceiling height `H` of each head. |
+| `alpertDT_far_at_switch`, `alpertDT_anti_r` | `dT` never rises with `r` over the whole range, the switch at `0.18 H` included. | The head's distance `r`. |
+| `alpertU_far_at_switch`, `alpertU_jump`, `alpertU_not_antitone` | At `r = 0.15 H` the speed jumps up by the factor `0.197 / (0.947 · 0.15^(5/6))`, which lies between 1.01 and 1.011, at every `Q` and `H`; so the speed is not antitone in `r` (at `Q = 1` kW and `H = 1` m it is 0.947 m/s at 0.15 m and more at 0.151 m). | `alpert`'s speed `U`, the estimate's `max(ug, jet.U)`. |
+| `estimateGas_mono`, `estimate_activates_no_later` | `max(Tg, layer + dT)` never falls when `Tg`, the layer or `Q` rises, or when `r` falls; with the link's weights held fixed, a hotter cell, a hotter layer, more heat or a nearer head never opens a head later. | Activation times of the estimate reading. |
+| `faster_link_can_open_later`, `linkRun_mono` (with `linkRun`) | With weights 1/2, 1/4, 1/2 against 1/2, 1/2, 1/2 and the same gas 10, 0, 10 K above ambient, the slower link ends at 6.875 K and the faster at 6.25 K, so a head set at 6.5 K opens only in the slower run. With the speed free, a hotter and faster link is at least as hot while the slower run's link has not passed its gas. | The estimate's speed, which rises with `Q`. |
+| `abs_sub_cellCentre_le`, `hypot_eq_dist`, `dist_snap_le` | `\|x - (⌊x⌋ + 1/2)\| ≤ 1/2`; `Math.hypot` of coordinate differences is the distance in `EuclideanSpace ℝ (Fin 2)`; snapping a point to its cell's centre moves it at most `√2 / 2` cells. | The cell indices `sprinklerSetup` reads. |
+| `old_distance_error` | Measured between the centres of the head's cell and the fire cell, `h · hypot(i - pi, k - pk)` differs from the true distance by at most `h √2`. | The head's `r` before the fix. |
+| `new_distance_error` | Measured from the head's exact position to the fire cell's centre, the distance differs from the true one by at most `h √2 / 2`, when the fire cell holds the true fire point. | The head's `r` now. |
+| `distance_example` | With the fire at a cell corner `(0, 0)` and the head at `(-0.1, -0.1)`, the old distance is wrong by `0.9 √2` cells and the new one by exactly `√2 / 2`, its bound. | Heads near the fire cell. |
+
+What the proofs found. The brief's statement that Alpert's speed jumps by less than 1 % at
+`r = 0.15 H` is false: the factor is about 1.0109, above 1.01 and at most 1.011
+(`alpertU_jump`), so the bound that holds is 1.1 %. "A hotter layer or more heat never opens a head
+later" holds with the link's speed held fixed (`estimate_activates_no_later`); the estimate also
+raises the speed with the heat release, and a faster link cools faster once the gas falls below
+the link, so a run never cooler and never slower can open a head later
+(`faster_link_can_open_later`). The corrected statement holds in the heating phase
+(`linkRun_mono`). Alpert's excess is antitone in `H` only within a branch (`alpertDT_H_switch`).
+Not covered: floating point; the comparison of two whole fire runs, since item 2's source history is
+the same in both runs while the solver's source depends on the temperatures; the layer's mean and
+the frame mean `0.5 (prevT + T)`, taken as given; the crossing time inside a frame.
+
+Full build on 2026-11-08 after this batch: 38 modules, 1569 theorems and lemmas (counted as above),
+no `sorry`, no warnings; the 35 axiom prints of this batch are in `AxiomCheck.lean` (547 prints in
+all), every one on Lean's standard axioms or none, the 35 new ones on `propext`,
+`Classical.choice` and `Quot.sound` (`axioms-all-2026-11-08.txt`, AxiomCheck.lean's output with
+every earlier line kept in order).
+
 ## Building
 
 Lake caches are gigabytes, so build outside OneDrive. Keep the working copy

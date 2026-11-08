@@ -41,6 +41,12 @@ the heat.*
   by fire class, open heads are drawn spraying, a second MEP or structural
   model brings its heads, its beams and ducts are checked as obstructions,
   and no heads hang over roofs or terraces.
+- **Sprinklers open on time.** Suspended ceilings are in the fire grid, walls
+  no longer take the ceiling jet's heat at the fuel's rate, and each head is
+  read at its own height and distance: against NIST's tests every measured
+  head now opens within twice the measured time, and in large rooms heads
+  that opened late or never now open
+  ([Technical notes](#sprinkler-activation-and-its-validation)).
 - **Extinguishers** are placed on the walk, and after a fire one person's
   attempt is judged against the unit's rating.
 - **Two larger examples:** the NIBS Office and the medical Clinic, both with
@@ -417,11 +423,14 @@ estimate.
 
 Checked against measured tests (Vettori 1998 and 2003, Bittern 2004, UL/NFPRF
 1998; `tools/sprinkler-validation.mjs`), the link reproduces Vettori's
-activations when given the measured gas (median 1.00), but on the fire grid
-the estimate is late in rooms (about 1.1 to 1.7 times the measured time, some
-heads not opening) and close under a high open ceiling, because the solver's
-walls take much of the ceiling jet's heat. The run card says so. The numbers
-are in [Technical notes](#sprinkler-activation-and-its-validation).
+activations when given the measured gas (median 1.00), and on the fire grid
+the estimate opens every measured head within twice the measured time, the
+first head per test at a median 0.78 to 1.26 of it by data set; FDS, on grids
+two to six times finer, gives 0.73 to 1.13 on the same tests. Until
+2026-11-08 the estimate was late in rooms, and in large rooms often far
+later: the walls took the ceiling jet's heat, and suspended ceilings were not
+in the fire grid. The numbers and what was changed are in
+[Technical notes](#sprinkler-activation-and-its-validation).
 
 **What an open head does** is chosen under **An open head**. Where the head
 sprays, part of its water evaporates in the hot gas on the way down (Fire-X's
@@ -436,13 +445,15 @@ energy-limited evaporation on the grid), the steam diluting the oxygen.
 - **Evans's cap only**, or **only opens**, which leaves the fire as it is.
 
 The heads show in the view, blue once open, and open heads are drawn
-spraying. Wetting is the default because, in 12 test fires on the Duplex,
-Vienna, and the NIBS Office and Clinic (`tools/sprinkler-check.mjs`), it cut
-the heat released by 20 to 79 % in most fires, while Evans's cap and the spray
-ranged from 40 % less to 78 % more. In the Clinic's large rooms the heads
-opened late (63 to 68 s, when the fire was already large) and no mode helped. A single run can
-mislead: the fire's own scatter is large (see
-[Technical notes](#sprinkler-activation-and-its-validation)).
+spraying. Wetting is the default. In 12 test fires on the Duplex, Vienna,
+and the NIBS Office and Clinic (`tools/sprinkler-check.mjs`, 180 s,
+`benchmark/results/2026-11-08-sprinkler-check.txt`), heads opened by 47 s in
+nine; in those, wetting cut the heat released by 47 to 95 % in eight, Evans's
+cap by 12 to 95 % and the spray by up to 95 %. In the Clinic's mechanical
+room, with no ceiling over the fire, the first head opened at 47 s against
+about 1 MW and no mode helped; in the other three fires no head opened in
+time to matter. A single run can mislead: the fire's own scatter is large
+(see [Technical notes](#sprinkler-activation-and-its-validation)).
 
 ![The same fire four times, side by side: with no sprinklers, with Evans's cap, with the spray, and with the water wetting the fuel](topologicpy-web-frontend/public/docs/media/suppression-compare.gif)
 
@@ -454,7 +465,10 @@ with wetting, side by side.*
 *An open office fire over 180 s. With no sprinklers it grows to several
 megawatts, in spikes that are the solver's pyrolysis gas gathering and
 flashing; with them, the first head opens at 61 s and the fire stays below
-1 MW. One run each: a single run's numbers are not to be quoted.*
+1 MW. One run each: a single run's numbers are not to be quoted. The GIFs and
+the video were recorded on 2026-11-07, before the activation fix described
+under [Technical notes](#sprinkler-activation-and-its-validation): the
+Office's suspended ceilings were not yet in the fire grid.*
 
 **Water by fire class.** Sprinkler drops, about 1 mm across, are too large to
 put a flame out in the gas; sprinkler water works by cooling the burning
@@ -522,14 +536,19 @@ about 10 s and to nothing in about 30 s (Back and Farley 2020), and the
 solution's water wets the room's ordinary fuel.
 
 The systems were tested in server room fires (class C, 180 s, the mean of
-three contents seeds, `tools/systems-check.mjs`):
+three contents seeds, `tools/systems-check.mjs`,
+`benchmark/results/2026-11-08-systems-check.txt`):
 
-- Sprinklers cut the heat released by 65 % in the Office and 28 % in the
-  Clinic.
-- The clean agent cut it by 95 % and 93 %, acting at 42 s.
+- Sprinklers cut the heat released by 67 % in the Office and 61 % in the
+  Clinic, the first head opening at about 25 s.
+- The clean agent cut it by 91 % and 90 %, acting at 42 s.
 
-In the Clinic's store, a heptane spill kept alight lost 26 % of its heat to
-sprinklers and 41 % to foam. The sources and every value are in
+In the Clinic's store, a heptane spill kept alight by its burner lost 72 % of
+its heat to sprinklers, which opened at 29 s and wetted the room's other
+contents, and 8 % to foam: the burner keeps the pool itself burning under the
+blanket. These are after the activation fix of 2026-11-08; before it the
+sprinklers opened at 39 to 57 s and cut the server room fires by 65 and 28 %.
+The sources and every value are in
 `wiki/research/suppression-systems-by-room-2026-11-07.md`.
 
 ![A server room fire in the NIBS Office three times: with no system, with sprinklers, and with the clean agent, the room filling teal once the agent is released](topologicpy-web-frontend/public/docs/media/suppression-systems.gif)
@@ -735,11 +754,12 @@ the browser.
 - **Speed and accuracy.** A benchmark on 38 public models, against an exact
   geodesic, with a stress suite of known bugs
   ([benchmark/README.md](benchmark/README.md)).
-- **Proofs.** 37 Lean 4 modules with 1,534 theorems and lemmas, on Lean's
+- **Proofs.** 38 Lean 4 modules with 1,569 theorems and lemmas, on Lean's
   standard axioms only: the routing, the fire models, Fire-X and Flamescapes
-  and the browser port, the learned escape, sprinklers and suppression, the
-  second model, the obstruction rules, extinguishers, wetting and the
-  performance check ([What is proved in Lean](#what-is-proved-in-lean)).
+  and the browser port, the learned escape, sprinklers and suppression and
+  their activation, the second model, the obstruction rules, extinguishers,
+  wetting and the performance check
+  ([What is proved in Lean](#what-is-proved-in-lean)).
 - **Measured tests.** Sprinkler activation against NIST's full-scale tests
   ([Technical notes](#sprinkler-activation-and-its-validation)), the element
   names against 45 models, and the learned escape against 848 runs on nine
@@ -774,10 +794,14 @@ These are also on the Methods page.
   is never fully closed. The flow is solved as incompressible: heated gas
   takes up no extra volume, so a closed room never pressurises and smoke may
   reach head height later than it would.
-- **Sprinkler timing.** On the fire grid the estimate opened the first head
-  later than measured in rooms, up to twice as late or not at all, and heads
-  behind beams may not open. A late opening delays the modelled suppression,
-  so for tenability the bias is conservative; for anything that starts on
+- **Sprinkler timing.** Against NIST's tests the estimate opens the first
+  head at 0.8 to 1.3 of the measured time; it stays about a quarter late in a
+  small closed room, where the coarse grid spreads the hot layer down the
+  room. The fire grows faster than any design fire (about 500 kW within 15 s),
+  so heads open when it has reached 250 to 600 kW, as real quick-response
+  heads would on so fast a fire. A model without its suspended ceilings has
+  none in the fire grid. A late opening delays the modelled suppression, so
+  for tenability a late bias is conservative; for anything that starts on
   sprinkler flow, such as an alarm, it is not. An extinguisher attempt is
   judged but does not change the fire in the run.
 - **Temperature.** In the graph models the temperature is an index, scaled to
@@ -860,7 +884,7 @@ windows (`studio`, `studio stop`, `studio status`, `studio test`), and
 | Speed and sanity of all six fire models, Flamescapes timed per stage | `node tools/fire-bench.mjs [model.ifc ...]` (add `--sprinklers` for heads placed per room) | repository root; results in `benchmark/results/` |
 | The Flamescapes solver on one IFC | `node tools/flamescapes-check.mjs [model.ifc] [--embers]` | repository root |
 | Sprinklers: each mode against the free fire, and activation against NIST's measured tests | `node tools/sprinkler-check.mjs [model.ifc ...]`, `node tools/sprinkler-validation.mjs` | repository root |
-| Lean 4 proofs (37 modules, 1,534 theorems and lemmas) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
+| Lean 4 proofs (38 modules, 1,569 theorems and lemmas) | `lake build` | [formal/fireegress](formal/fireegress/README.md) |
 | This README's screenshots | `node tools/readme-shots.mjs` | repository root, with the app running |
 
 The browser suite drives the installed Chrome (no browser download) through
@@ -889,16 +913,46 @@ changes stated, are in [wiki/sources/papers/](wiki/sources/papers/).
 
 - **On measured gas** the link opens Vettori's 1998 heads at 0.81 to 1.18 of
   the measured time (median 1.00).
-- **On the fire grid** the estimate's median is 1.68 times the measured time
-  in Vettori's 1998 room, 1.09 under his 2003 flat ceiling and 1.18 in
-  Bittern's rooms (9 of 16 heads opening); under UL/NFPRF's high open ceiling
-  the first heads open at 0.98 to 1.11. Heads behind the 2003 beams did not
-  open, and the late bound opened 1 head of 110 within twice the measured
-  time, so it is not shown as the time a head opens.
-- **The cause** is mostly the solver's surface coefficient of 200 W/(m² K),
-  which takes most of the jet's heat into the walls, with a coarse plume; a
-  0.2 m grid does not help. Changing it would change every Flamescapes run,
-  so it is left open.
+- **On the fire grid** (since 2026-11-08) the estimate opens all 71 measured
+  heads within twice the measured time. The first head per test opens at a
+  median 1.26 of the measured time in Vettori's 1998 room, 0.78 under his 2003
+  smooth ceiling, 1.11 under its beams, 0.99 in Bittern's rooms and 1.11 under
+  UL/NFPRF's high open ceiling. FDS, on grids of 0.07 to 0.2 m, gives 1.13,
+  0.73, 0.90, 1.06 and about 1.06 on the same tests (FDS Validation Guide,
+  sixth edition; the paired data in firemodels/out). The late bound now opens
+  46 of the 71 heads within twice the measured time
+  (`benchmark/results/2026-11-08-sprinkler-validation.json`).
+- **Before**, the first head opened at 1.64 of the measured time in the 1998
+  room, none opened behind the 2003 beams, and 23 of 29 first heads opened
+  within twice the measured time. One surface coefficient, 200 W/(m² K), the
+  top of the Flamescapes paper's range and kept for the fuel so that a
+  burning item lights its neighbours, took most of the ceiling jet's heat
+  into the walls. Walls, slabs and ceilings now have their own, 10 W/(m² K):
+  FDS's default convection in such rooms gives 4 to 14, and Cooper's ceiling
+  correlation 7 to 13 two metres from a plume. The estimate also takes each
+  head's own height over the fire and its distance from the head's position;
+  on the grid these were up to a cell or more off, and in Vienna's garage the
+  plume's column stopped under a low solid 0.6 m over the fire.
+- **Large rooms.** The import dropped suspended ceilings (`IfcCovering`
+  CEILING), so the fire grid had none and the fire's gas rose past the heads:
+  in the NIBS Office's 610 m² open office to a ceiling 6.1 m over the fire,
+  and no head opened in 120 s; in the Clinic, heads hung at the 4.57 m slab
+  over 2.68 m ceilings and opened at 65 s against 4.5 MW. The ceilings are
+  now in the fire grid and the heads hang from them; a thin element split
+  between two cells now seals. In 14 growing fires in eight models
+  (`tools/activation-diagnose.mjs`) the first head opened before Alpert's jet
+  alone would open the nearest head on the run's own heat release, or at most
+  0.5 s after it, in 13 (the estimate measures from the first item's cell, the
+  reference from the fire's point): the Office's open office at 26 s, the
+  Clinic's waiting area at 22 s. In the FZK-Haus living room it opened 2.4 s
+  after: that model has no ceiling at the heads' height, and the nearest
+  head has no line of sight to the plume.
+- **What is left.** In the 1998 room the estimate is still about a quarter
+  late: the coarse grid spreads the hot layer down the room. The fire grows
+  faster than design fires: about 500 kW within 15 s, where an ultra-fast
+  t-squared fire takes 52 s, so heads open at 250 to 600 kW. Making the first
+  item grow as a design fire would change every Flamescapes run and is left
+  open.
 - **Scatter.** The same Duplex fire with its room contents laid out three
   ways released 137 to 272 MJ with no sprinklers; across the three, wetting
   cut 60 to 79 %, the spray changed the heat by +20 to -55 % and the cap by
@@ -906,7 +960,11 @@ changes stated, are in [wiki/sources/papers/](wiki/sources/papers/).
 
 The table by data set, the causes and Evans's cap against his own data are
 in the [guide](https://libishm1.github.io/Topologic_Studio/docs/suppression.html#validation);
-the results R1 to R9, with the data sets and their licences, in
+the diagnosis, the fix and its tests in
+[wiki/research/sprinkler-activation-fix-2026-11-08.md](wiki/research/sprinkler-activation-fix-2026-11-08.md),
+with the literature in
+[wiki/research/sprinkler-activation-literature-2026-11-08.md](wiki/research/sprinkler-activation-literature-2026-11-08.md);
+the first results R1 to R9, with the data sets and their licences, in
 [wiki/research/sprinkler-validation-data-2026-11-07.md](wiki/research/sprinkler-validation-data-2026-11-07.md);
 and the build in
 [wiki/research/fire-suppression-sprinklers-2026-11-07.md](wiki/research/fire-suppression-sprinklers-2026-11-07.md).
@@ -946,9 +1004,9 @@ and the build in
 ### What is proved in Lean
 
 [formal/fireegress/README.md](formal/fireegress/README.md) lists each of the
-37 modules, what it proves, what it leaves out, and where it shows in the
+38 modules, what it proves, what it leaves out, and where it shows in the
 app. Every theorem depends only on Lean's standard axioms, with no `sorry`
-(`formal/fireegress/axioms-all-2026-11-07.txt`). Among them: A* returns a
+(`formal/fireegress/axioms-all-2026-11-08.txt`). Among them: A* returns a
 least-cost route (`AStar.lean`), the shielded learner's route is a safe and
 earliest escape (`SafeEscape.lean`), the equations of Fire-X and Flamescapes
 and the port's schemes (`FireX.lean`, `Flamescapes.lean`,
@@ -956,8 +1014,16 @@ and the port's schemes (`FireX.lean`, `Flamescapes.lean`,
 (`Sprinklers.lean`, `Suppression.lean`), the obstruction rules, extinguishers,
 the second model's frame and wetting (`Obstructions.lean`,
 `Extinguishers.lean`, `Federation.lean`, `Wetting.lean`), and the performance
-check above. The proofs also found errors, in the review and in the code's
-own comments, which the README there lists.
+check above. `SprinklerActivation.lean` backs the 2026-11-08 fix: in a cell
+of gas over a wall, a lower wall coefficient leaves the gas at least as hot
+at every step and never opens a head later; Alpert's excess never rises with
+distance, across the switch between its branches too; and a head's distance
+measured from its own position errs by at most half a cell's diagonal,
+against a whole diagonal between cell centres. It also found that more heat
+can open a head later when the estimate's speed rises with it (the faster
+link cools faster once the gas falls), so that claim holds only at a fixed
+speed. The proofs also found errors, in the review and in the code's own
+comments, which the README there lists.
 
 ### Server API
 

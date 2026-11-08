@@ -3,8 +3,8 @@
  * and reading it at the walkable graph, for the Simulate step's optional
  * "Flamescapes" fire models.
  *
- * Scene. The IFC's walls, slabs, roofs, stairs and other obstacles
- * (windows, columns, railings) are inert solids; doors are left open; the
+ * Scene. The IFC's walls, slabs, roofs, suspended ceilings, stairs and other
+ * obstacles (windows, columns, railings) are inert solids; doors are left open; the
  * room contents are the paper's statistical interior fuel (Eqs. 3 to 5) on
  * every covered floor (voxelize.js). The first item to burn sits at the
  * fire origin with the fuel of the chosen fire class, lit by a burner.
@@ -59,7 +59,7 @@ export function visibility(rhoSoot, C = SIGN_CONSTANT, sigma = SOOT_EXTINCTION) 
  * The scene for the solver: meshes tagged with materials, the grid, volume
  * fractions, occupancy, the contents and the ignition cell.
  *
- * @param {object} geometry  {walls, floors, roofs, stairs, obstacles, doors?} meshes in the viewer
+ * @param {object} geometry  {walls, floors, roofs, ceilings?, stairs, obstacles, doors?} meshes in the viewer
  *                           frame; doors only when they are closed, and open windows left out of obstacles
  * @param {object} opts      upAxis; fire: [x, y, z] in the viewer frame; maxCells; maxCell (m);
  *                           reach (m); fireLoad (J/m^2); contentsFuel, ignitionFuel; item: {mass, area};
@@ -88,6 +88,10 @@ export function buildScene(geometry, {
     ...tag(geometry.walls, MATERIAL.STONE),
     ...tag(geometry.floors, MATERIAL.STONE),
     ...tag(geometry.roofs, MATERIAL.STONE),
+    // Suspended ceilings (IfcCovering CEILING): the heads hang from them and
+    // the plume meets them, not the slab above. About 5 cm thick, they are a
+    // seventh of a 0.37 m cell and snap to it as thin elements (occupancy).
+    ...tag(geometry.ceilings, MATERIAL.STONE),
     ...tag(geometry.stairs, MATERIAL.STONE),
     ...tag(geometry.obstacles, MATERIAL.STONE),
     // Closed doors, when the run closes them: inert leaves in their openings.

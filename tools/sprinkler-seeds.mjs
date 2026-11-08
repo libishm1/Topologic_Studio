@@ -28,7 +28,7 @@ const geo = await extract(file, { withDoorFlags: true });
 const built = buildLatticeGraph({ ...geo, upAxis: "y", spacing: 0.5, agentHeight: 0.75 });
 const nodes = built.points, n = nodes.length / 3;
 const names = new Map((geo.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
-const rooms = roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], walls: geo.walls });
+const rooms = roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], ceilings: geo.ceilings, walls: geo.walls });
 const heads = layoutRooms(rooms).heads;
 const room = rooms.filter((r) => r.rect && !r.problem && (!roomName || r.name === roomName)).sort((a, b) => b.area - a.area)[0];
 let seedNode = 0, bd = Infinity;

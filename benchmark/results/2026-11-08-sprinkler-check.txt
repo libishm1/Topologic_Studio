@@ -1,0 +1,134 @@
+Sprinkler modes against no sprinklers: tools/sprinkler-check.mjs <model> --fires 3 (180 s, CPU, walls 10 W/(m2 K), suspended ceilings in the fire grid), 2026-11-08, after the activation fix.
+
+
+duplex-apartment.ifc: 1540 nodes, 38 heads in 20 rooms (1 spaces left out); class A; 180 s
+  fire in Living Room (28 m², floor at 0.1 m)
+  activation opened 11 (first 21.9 s)  released  361.1 MJ  burnt  20.06 kg  peak 12205 kW  after opening 12205 kW  at the end  2469 kW  gas within 3 m 910 C (after 910 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [199 s]
+  none       opened  0              released  361.1 MJ  burnt  20.06 kg  peak 12205 kW  after opening 12205 kW  at the end  2469 kW  gas within 3 m 910 C (after 910 C)  [192 s]
+  evans      opened  7 (first 21.9 s)  released  135.7 MJ  burnt   7.54 kg  peak  6678 kW  after opening  6678 kW  at the end   381 kW  gas within 3 m 1616 C (after 1616 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [187 s]
+  spray      opened  7 (first 21.9 s)  released  142.7 MJ  burnt   7.93 kg  peak  4285 kW  after opening  4285 kW  at the end   750 kW  gas within 3 m 977 C (after 977 C)  water 943 kg (evaporated 13.0, on the fuel 0.0)  [173 s]
+  wetting    opened  7 (first 21.9 s)  released   73.8 MJ  burnt   4.10 kg  peak   576 kW  after opening   521 kW  at the end   235 kW  gas within 3 m 254 C (after 254 C)  water 933 kg (evaporated 0.6, on the fuel 485.0)  [164 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -62 %, heat released -62 %, peak after the opening -45 %, heat at the end -85 %
+  spray      against no sprinklers: fuel burnt -60 %, heat released -60 %, peak after the opening -65 %, heat at the end -70 %
+  wetting    against no sprinklers: fuel burnt -80 %, heat released -80 %, peak after the opening -96 %, heat at the end -90 %
+  fire in Bedroom 2 (22 m², floor at 3.2 m)
+  activation opened  2 (first 16.7 s)  released  182.7 MJ  burnt  10.15 kg  peak  4342 kW  after opening  4342 kW  at the end  1142 kW  gas within 3 m 1601 C (after 1601 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [181 s]
+  none       opened  0              released  182.7 MJ  burnt  10.15 kg  peak  4342 kW  after opening  4342 kW  at the end  1142 kW  gas within 3 m 1601 C (after 1601 C)  [132 s]
+  evans      opened  2 (first 16.7 s)  released  124.4 MJ  burnt   6.91 kg  peak  4342 kW  after opening  4342 kW  at the end   264 kW  gas within 3 m 1225 C (after 1225 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [112 s]
+  spray      opened  2 (first 16.7 s)  released  138.5 MJ  burnt   7.69 kg  peak  4342 kW  after opening  4342 kW  at the end   404 kW  gas within 3 m 1075 C (after 1075 C)  water 302 kg (evaporated 7.2, on the fuel 0.0)  [109 s]
+  wetting    opened  2 (first 16.7 s)  released   97.2 MJ  burnt   5.40 kg  peak  4342 kW  after opening  4342 kW  at the end   251 kW  gas within 3 m 316 C (after 316 C)  water 302 kg (evaporated 3.0, on the fuel 155.3)  [119 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -32 %, heat released -32 %, peak after the opening 0 %, heat at the end -77 %
+  spray      against no sprinklers: fuel burnt -24 %, heat released -24 %, peak after the opening 0 %, heat at the end -65 %
+  wetting    against no sprinklers: fuel burnt -47 %, heat released -47 %, peak after the opening 0 %, heat at the end -78 %
+  fire in Living Room (28 m², floor at 0.1 m)
+  activation opened  7 (first 25.1 s)  released  352.8 MJ  burnt  19.60 kg  peak 13350 kW  after opening 13350 kW  at the end  3165 kW  gas within 3 m 1003 C (after 1003 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [135 s]
+  none       opened  0              released  352.8 MJ  burnt  19.60 kg  peak 13350 kW  after opening 13350 kW  at the end  3165 kW  gas within 3 m 1003 C (after 1003 C)  [139 s]
+  evans      opened  7 (first 25.1 s)  released  163.3 MJ  burnt   9.07 kg  peak  9219 kW  after opening  9219 kW  at the end   736 kW  gas within 3 m 887 C (after 887 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [132 s]
+  spray      opened  7 (first 25.1 s)  released  178.1 MJ  burnt   9.89 kg  peak  8973 kW  after opening  8973 kW  at the end   625 kW  gas within 3 m 1336 C (after 1336 C)  water 933 kg (evaporated 12.0, on the fuel 0.0)  [130 s]
+  wetting    opened  7 (first 25.1 s)  released   85.7 MJ  burnt   4.76 kg  peak   670 kW  after opening   670 kW  at the end   398 kW  gas within 3 m 248 C (after 248 C)  water 924 kg (evaporated 1.3, on the fuel 479.8)  [128 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -54 %, heat released -54 %, peak after the opening -31 %, heat at the end -77 %
+  spray      against no sprinklers: fuel burnt -50 %, heat released -50 %, peak after the opening -33 %, heat at the end -80 %
+  wetting    against no sprinklers: fuel burnt -76 %, heat released -76 %, peak after the opening -95 %, heat at the end -87 %
+
+
+vienna-escape-route-model.ifc: 6846 nodes, 160 heads in 85 rooms (26 spaces left out); class A; 180 s
+  fire in Garage (236 m², floor at -2.9 m)
+  activation opened  0              released   18.1 MJ  burnt   1.01 kg  peak   146 kW  after opening     0 kW  at the end   109 kW  gas within 3 m 217 C (after 0 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [207 s]
+  none       opened  0              released   18.1 MJ  burnt   1.01 kg  peak   146 kW  after opening     0 kW  at the end   109 kW  gas within 3 m 217 C (after 0 C)  [207 s]
+  evans      opened  0              released   18.1 MJ  burnt   1.01 kg  peak   146 kW  after opening     0 kW  at the end   109 kW  gas within 3 m 217 C (after 0 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [200 s]
+  spray      opened  0              released   18.1 MJ  burnt   1.01 kg  peak   146 kW  after opening     0 kW  at the end   109 kW  gas within 3 m 217 C (after 0 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [183 s]
+  wetting    opened  0              released   18.1 MJ  burnt   1.01 kg  peak   146 kW  after opening     0 kW  at the end   109 kW  gas within 3 m 217 C (after 0 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [201 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt 0 %, heat released 0 %, peak after the opening -100 %, heat at the end 0 %
+  spray      against no sprinklers: fuel burnt 0 %, heat released 0 %, peak after the opening -100 %, heat at the end 0 %
+  wetting    against no sprinklers: fuel burnt 0 %, heat released 0 %, peak after the opening -100 %, heat at the end 0 %
+  fire in Terrasse (53 m², floor at 0.2 m)
+  activation opened 10 (first 38.2 s)  released  284.2 MJ  burnt  15.79 kg  peak 10378 kW  after opening 10378 kW  at the end  2704 kW  gas within 3 m 439 C (after 439 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [180 s]
+  none       opened  0              released  284.2 MJ  burnt  15.79 kg  peak 10378 kW  after opening 10378 kW  at the end  2704 kW  gas within 3 m 439 C (after 439 C)  [138 s]
+  evans      opened 10 (first 38.2 s)  released  179.6 MJ  burnt   9.98 kg  peak  7510 kW  after opening  7510 kW  at the end   904 kW  gas within 3 m 1078 C (after 1078 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [136 s]
+  spray      opened  9 (first 38.2 s)  released  171.2 MJ  burnt   9.51 kg  peak  6492 kW  after opening  6492 kW  at the end   770 kW  gas within 3 m 1036 C (after 1036 C)  water 938 kg (evaporated 9.0, on the fuel 0.0)  [157 s]
+  wetting    opened  7 (first 38.2 s)  released   49.3 MJ  burnt   2.74 kg  peak   419 kW  after opening   419 kW  at the end    85 kW  gas within 3 m 234 C (after 234 C)  water 646 kg (evaporated 0.5, on the fuel 306.4)  [145 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -37 %, heat released -37 %, peak after the opening -28 %, heat at the end -67 %
+  spray      against no sprinklers: fuel burnt -40 %, heat released -40 %, peak after the opening -37 %, heat at the end -72 %
+  wetting    against no sprinklers: fuel burnt -83 %, heat released -83 %, peak after the opening -96 %, heat at the end -97 %
+  fire in Wohnküche (42 m², floor at 3.4 m)
+  activation opened 11 (first 36.3 s)  released  340.0 MJ  burnt  18.89 kg  peak  6862 kW  after opening  6862 kW  at the end  3672 kW  gas within 3 m 868 C (after 868 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [159 s]
+  none       opened  0              released  340.0 MJ  burnt  18.89 kg  peak  6862 kW  after opening  6862 kW  at the end  3672 kW  gas within 3 m 868 C (after 868 C)  [155 s]
+  evans      opened 11 (first 36.3 s)  released  203.0 MJ  burnt  11.28 kg  peak  9721 kW  after opening  9721 kW  at the end   659 kW  gas within 3 m 1543 C (after 1543 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [155 s]
+  spray      opened 11 (first 36.3 s)  released  250.1 MJ  burnt  13.90 kg  peak 11105 kW  after opening 11105 kW  at the end   485 kW  gas within 3 m 1015 C (after 1015 C)  water 1313 kg (evaporated 13.2, on the fuel 0.0)  [144 s]
+  wetting    opened  9 (first 36.3 s)  released  118.4 MJ  burnt   6.58 kg  peak  1046 kW  after opening  1046 kW  at the end   281 kW  gas within 3 m 299 C (after 299 C)  water 1242 kg (evaporated 1.7, on the fuel 640.6)  [135 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -40 %, heat released -40 %, peak after the opening 42 %, heat at the end -82 %
+  spray      against no sprinklers: fuel burnt -26 %, heat released -26 %, peak after the opening 62 %, heat at the end -87 %
+  wetting    against no sprinklers: fuel burnt -65 %, heat released -65 %, peak after the opening -85 %, heat at the end -92 %
+
+
+nibs-office.ifc: 17470 nodes, 314 heads in 98 rooms (1 spaces left out); class A; 180 s
+  fire in OPEN OFFICE (610 m², floor at 4.3 m)
+  activation opened 12 (first 29.0 s)  released  323.9 MJ  burnt  17.99 kg  peak  8074 kW  after opening  8074 kW  at the end  6277 kW  gas within 3 m 887 C (after 887 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [201 s]
+  none       opened  0              released  323.9 MJ  burnt  17.99 kg  peak  8074 kW  after opening  8074 kW  at the end  6277 kW  gas within 3 m 887 C (after 887 C)  [192 s]
+  evans      opened 12 (first 29.0 s)  released  158.2 MJ  burnt   8.79 kg  peak  5792 kW  after opening  5792 kW  at the end   987 kW  gas within 3 m 1536 C (after 1536 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [198 s]
+  spray      opened 12 (first 29.0 s)  released  172.1 MJ  burnt   9.56 kg  peak  4809 kW  after opening  4809 kW  at the end   822 kW  gas within 3 m 1235 C (after 1235 C)  water 1625 kg (evaporated 6.8, on the fuel 0.0)  [179 s]
+  wetting    opened 12 (first 29.0 s)  released   76.0 MJ  burnt   4.22 kg  peak   705 kW  after opening   705 kW  at the end   159 kW  gas within 3 m 290 C (after 290 C)  water 1566 kg (evaporated 0.7, on the fuel 814.1)  [171 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -51 %, heat released -51 %, peak after the opening -28 %, heat at the end -84 %
+  spray      against no sprinklers: fuel burnt -47 %, heat released -47 %, peak after the opening -40 %, heat at the end -87 %
+  wetting    against no sprinklers: fuel burnt -77 %, heat released -77 %, peak after the opening -91 %, heat at the end -97 %
+  fire in OPEN OFFICE (215 m², floor at 0.0 m)
+  activation opened  9 (first 9.7 s)  released  472.8 MJ  burnt  26.27 kg  peak 10415 kW  after opening 10415 kW  at the end  4761 kW  gas within 3 m 1039 C (after 1039 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [179 s]
+  none       opened  0              released  472.8 MJ  burnt  26.27 kg  peak 10415 kW  after opening 10415 kW  at the end  4761 kW  gas within 3 m 1039 C (after 1039 C)  [144 s]
+  evans      opened  1 (first 9.7 s)  released   21.9 MJ  burnt   1.22 kg  peak   196 kW  after opening   196 kW  at the end   115 kW  gas within 3 m 281 C (after 281 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [131 s]
+  spray      opened  1 (first 9.7 s)  released   21.7 MJ  burnt   1.21 kg  peak   202 kW  after opening   202 kW  at the end   110 kW  gas within 3 m 246 C (after 246 C)  water 206 kg (evaporated 0.1, on the fuel 0.0)  [131 s]
+  wetting    opened  1 (first 9.7 s)  released   22.1 MJ  burnt   1.23 kg  peak   189 kW  after opening   189 kW  at the end   124 kW  gas within 3 m 232 C (after 232 C)  water 206 kg (evaporated 0.1, on the fuel 107.3)  [143 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -95 %, heat released -95 %, peak after the opening -98 %, heat at the end -98 %
+  spray      against no sprinklers: fuel burnt -95 %, heat released -95 %, peak after the opening -98 %, heat at the end -98 %
+  wetting    against no sprinklers: fuel burnt -95 %, heat released -95 %, peak after the opening -98 %, heat at the end -97 %
+  fire in ELEV (5 m², floor at -1.2 m)
+  activation opened  0              released   22.2 MJ  burnt   1.24 kg  peak   225 kW  after opening     0 kW  at the end   207 kW  gas within 3 m 202 C (after 0 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [135 s]
+  none       opened  0              released   22.2 MJ  burnt   1.24 kg  peak   225 kW  after opening     0 kW  at the end   207 kW  gas within 3 m 202 C (after 0 C)  [137 s]
+  evans      opened  0              released   22.2 MJ  burnt   1.24 kg  peak   225 kW  after opening     0 kW  at the end   207 kW  gas within 3 m 202 C (after 0 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [134 s]
+  spray      opened  0              released   22.2 MJ  burnt   1.24 kg  peak   225 kW  after opening     0 kW  at the end   207 kW  gas within 3 m 202 C (after 0 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [135 s]
+  wetting    opened  0              released   22.2 MJ  burnt   1.24 kg  peak   225 kW  after opening     0 kW  at the end   207 kW  gas within 3 m 202 C (after 0 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [128 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt 0 %, heat released 0 %, peak after the opening -100 %, heat at the end 0 %
+  spray      against no sprinklers: fuel burnt 0 %, heat released 0 %, peak after the opening -100 %, heat at the end 0 %
+  wetting    against no sprinklers: fuel burnt 0 %, heat released 0 %, peak after the opening -100 %, heat at the end 0 %
+
+
+nibs-clinic.ifc: 33654 nodes, 497 heads in 262 rooms (7 spaces left out); class A; 180 s
+  fire in MAIN MECHANICAL ROOM (226 m², floor at 4.6 m)
+  activation opened 15 (first 46.9 s)  released  572.4 MJ  burnt  31.80 kg  peak 19526 kW  after opening 19526 kW  at the end  2969 kW  gas within 3 m 1462 C (after 1462 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [219 s]
+  none       opened  0              released  572.4 MJ  burnt  31.80 kg  peak 19526 kW  after opening 19526 kW  at the end  2969 kW  gas within 3 m 1462 C (after 1462 C)  [232 s]
+  evans      opened 15 (first 46.9 s)  released  501.2 MJ  burnt  27.84 kg  peak 12757 kW  after opening 12757 kW  at the end  1517 kW  gas within 3 m 1754 C (after 1754 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [219 s]
+  spray      opened 15 (first 46.9 s)  released  574.9 MJ  burnt  31.94 kg  peak 14345 kW  after opening 14345 kW  at the end  6324 kW  gas within 3 m 1211 C (after 1211 C)  water 1692 kg (evaporated 17.5, on the fuel 0.0)  [205 s]
+  wetting    opened 15 (first 46.9 s)  released  624.2 MJ  burnt  34.68 kg  peak 13349 kW  after opening 13349 kW  at the end  4069 kW  gas within 3 m 1216 C (after 1216 C)  water 1680 kg (evaporated 16.7, on the fuel 861.9)  [231 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -12 %, heat released -12 %, peak after the opening -35 %, heat at the end -49 %
+  spray      against no sprinklers: fuel burnt 0 %, heat released 0 %, peak after the opening -27 %, heat at the end 113 %
+  wetting    against no sprinklers: fuel burnt 9 %, heat released 9 %, peak after the opening -32 %, heat at the end 37 %
+  fire in WAITING / ACTIVITY AREA (178 m², floor at -0.0 m)
+  activation opened  5 (first 21.1 s)  released  343.0 MJ  burnt  19.06 kg  peak  8427 kW  after opening  8427 kW  at the end  2416 kW  gas within 3 m 1904 C (after 1904 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [144 s]
+  none       opened  0              released  343.0 MJ  burnt  19.06 kg  peak  8427 kW  after opening  8427 kW  at the end  2416 kW  gas within 3 m 1904 C (after 1904 C)  [135 s]
+  evans      opened  6 (first 21.1 s)  released  273.8 MJ  burnt  15.21 kg  peak  9891 kW  after opening  9891 kW  at the end  1496 kW  gas within 3 m 1296 C (after 1296 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [134 s]
+  spray      opened  4 (first 21.1 s)  released  251.8 MJ  burnt  13.99 kg  peak  6624 kW  after opening  6624 kW  at the end  2113 kW  gas within 3 m 1653 C (after 1653 C)  water 515 kg (evaporated 10.7, on the fuel 0.0)  [147 s]
+  wetting    opened  3 (first 21.1 s)  released   71.8 MJ  burnt   3.99 kg  peak   858 kW  after opening   858 kW  at the end   162 kW  gas within 3 m 377 C (after 377 C)  water 509 kg (evaporated 0.9, on the fuel 264.3)  [137 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt -20 %, heat released -20 %, peak after the opening 17 %, heat at the end -38 %
+  spray      against no sprinklers: fuel burnt -27 %, heat released -27 %, peak after the opening -21 %, heat at the end -13 %
+  wetting    against no sprinklers: fuel burnt -79 %, heat released -79 %, peak after the opening -90 %, heat at the end -93 %
+  fire in OPEN TO BELOW (95 m², floor at 9.3 m)
+  activation opened  1 (first 164.7 s)  released   22.8 MJ  burnt   1.27 kg  peak   270 kW  after opening   163 kW  at the end   137 kW  gas within 3 m 180 C (after 78 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [135 s]
+  none       opened  0              released   22.8 MJ  burnt   1.27 kg  peak   270 kW  after opening   163 kW  at the end   137 kW  gas within 3 m 180 C (after 78 C)  [133 s]
+  evans      opened  1 (first 164.7 s)  released   22.8 MJ  burnt   1.27 kg  peak   270 kW  after opening   163 kW  at the end   137 kW  gas within 3 m 180 C (after 78 C)  water 0 kg (evaporated 0.0, on the fuel 0.0)  [134 s]
+  spray      opened  2 (first 164.7 s)  released   23.3 MJ  burnt   1.29 kg  peak   270 kW  after opening   168 kW  at the end   168 kW  gas within 3 m 180 C (after 103 C)  water 19 kg (evaporated 0.0, on the fuel 0.0)  [128 s]
+  wetting    opened  2 (first 164.7 s)  released   23.3 MJ  burnt   1.29 kg  peak   270 kW  after opening   168 kW  at the end   168 kW  gas within 3 m 180 C (after 103 C)  water 19 kg (evaporated 0.0, on the fuel 0.0)  [121 s]
+  activation alone leaves the fire as it is: yes
+  evans      against no sprinklers: fuel burnt 0 %, heat released 0 %, peak after the opening 0 %, heat at the end 0 %
+  spray      against no sprinklers: fuel burnt 2 %, heat released 2 %, peak after the opening 3 %, heat at the end 23 %
+  wetting    against no sprinklers: fuel burnt 2 %, heat released 2 %, peak after the opening 3 %, heat at the end 23 %
+

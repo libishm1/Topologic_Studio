@@ -178,12 +178,15 @@ export function MethodsDialog({ open, onClose, studio }) {
                     IBC 2021 where stricter). In a Flamescapes run each link follows the RTI equation with conduction to its
                     mount, stepped exactly over each frame on the gas at the top cell of its column (a late bound: a coarse
                     cell reads the ceiling jet low) and, under the fire&apos;s own ceiling, on Alpert&apos;s jet for the
-                    run&apos;s heat release (CFAST&apos;s hybrid, the estimate). Checked against measured tests (Vettori 1998
-                    and 2003, Bittern 2004, UL/NFPRF 1998): the link itself reproduces Vettori&apos;s activations when given the
-                    measured gas (median 1.00, 0.81 to 1.18), but on the grid the estimate is late in rooms (median 1.68 times
-                    the measured time in Vettori&apos;s 1998 room, 1.09 under his 2003 flat ceiling, 1.18 in Bittern&apos;s with 9
-                    of 16 heads opening) and close under UL&apos;s high open ceiling (first heads 0.98 to 1.11), and the late
-                    reading almost never opens: the walls take too much of the jet&apos;s heat and the plume is coarse. An open head caps every fuel cell under it at
+                    run&apos;s heat release (CFAST&apos;s hybrid, the estimate), at each head&apos;s own height over the fire and
+                    distance from it. Checked against measured tests (Vettori 1998 and 2003, Bittern 2004, UL/NFPRF 1998):
+                    the link itself reproduces Vettori&apos;s activations when given the measured gas (median 1.00, 0.81 to
+                    1.18), and on the grid the estimate opens all 71 measured heads within twice the measured time, the first
+                    head at medians of 0.78 to 1.26 of it by data set (FDS on finer grids: 0.73 to 1.13); it stays about a
+                    quarter late in a small closed room, where the coarse grid spreads the hot layer. Walls, slabs and
+                    suspended ceilings take the gas&apos;s heat at 10 W/(m² K) (FDS&apos;s default convection in such rooms,
+                    Cooper&apos;s ceiling correlation), the fuel at 200; until 2026-11-08 the walls took 200 too, ceilings were
+                    not in the fire grid, and heads opened late, in large rooms far late. An open head caps every fuel cell under it at
                     its rate when the head opened times exp(-(t - t_act)/tau), tau = 3.0 w&apos;&apos;^-1.85 s for the spray
                     density (Evans 1993, conservative), and with the spray evaporates part of its water on the way down
                     (Fire-X&apos;s energy-limited evaporation on the grid, 1 mm drops), the steam diluting the oxygen. In the

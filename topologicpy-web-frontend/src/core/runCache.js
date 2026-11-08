@@ -17,7 +17,9 @@
 // 2 (2026-11-07): frames carry the ceiling detectors (flamescapesRun.js ceilingDetectors).
 // 3 (2026-11-07): water by fire class (fireClasses.js waterResponse): liquid,
 // metal and pack first items hold no water of their own and take no cap.
-export const RUN_CACHE_VERSION = 3;
+// 4 (2026-11-08): suspended ceilings in the fire grid, and the walls' own
+// surface coefficient (flamescapes.js wallConvection).
+export const RUN_CACHE_VERSION = 4;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 

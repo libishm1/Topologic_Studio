@@ -97,6 +97,8 @@ export const PARAMS = [
   // Rooms flooded with clean agent or blanketed with foam (suppressionSystems.js):
   // on, where each room's state starts in `sys`, and the foam's wet list (offset, count).
   ["sysOn", "u32"], ["sysState", "u32"], ["sysWetAt", "u32"], ["sysWetN", "u32"],
+  // The interface coefficient of inert solids (the CPU's wallConvection).
+  ["wallConvection", "f32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -1365,10 +1367,11 @@ ${perCell("conductPorous", `
   cf[ix(fTs, c)] -= q / Cs;
   cf[ix(fT, c)] += q / Cg;`)}
 
-/** The solid-gas interface (Eq. 19) between solid s and gas g. */
+/** The solid-gas interface (Eq. 19) between solid s and gas g: the fuel's coefficient, or the wall's for an inert solid. */
 fn conductGas(s: u32, g: u32, Cs: f32) {
   let Cg = gasCap(g);
-  let q = exchange(cf[ix(fTs, s)], cf[ix(fT, g)], Cs, Cg, U.convection * U.h * U.h, U.dt);
+  let hc = select(U.convection, U.wallConvection, kindOf(s) == SOLID);
+  let q = exchange(cf[ix(fTs, s)], cf[ix(fT, g)], Cs, Cg, hc * U.h * U.h, U.dt);
   cf[ix(fTs, s)] -= q / Cs;
   cf[ix(fT, g)] += q / Cg;
 }

@@ -2222,8 +2222,8 @@ function CombustionStatus({ combustion, running }) {
               {sprinklerLine(combustion.sprinklers, combustion.sprinklerSummary)}
               <span className="field__hint">
                 {" "}
-                Against measured tests the estimate opens heads late in rooms, up to about twice the measured time or not at all, and within about
-                10 % under a high open ceiling; heads behind beams may not open. The late bound is not a time to quote.
+                Against measured tests the estimate opens the first head at 0.8 to 1.3 of the measured time, about a quarter late in a small
+                closed room. The fire grows fast, so heads open at a few hundred kW. The late bound is not a time to quote.
               </span>
             </dd>
           </div>

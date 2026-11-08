@@ -1356,9 +1356,10 @@ export default function App() {
       if (!plan && settings.sprinklerSource !== "ifc") {
         const names = new Map((studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
         // The slabs and roofs over the rooms: a space with none over it (drawn
-        // on the roof) gets no heads, and heads hang under the real ceiling.
+        // on the roof) gets no heads, and heads hang under the real ceiling,
+        // a suspended one where the model has it.
         const overhead = [...(geometry.floors || []), ...(geometry.roofMeshes || [])];
-        const rooms = geometry.spaces?.length ? S.roomsFromSpaces(geometry.spaces, { upAxis, names, overhead, walls: geometry.walls }) : null;
+        const rooms = geometry.spaces?.length ? S.roomsFromSpaces(geometry.spaces, { upAxis, names, overhead, ceilings: geometry.ceilings, walls: geometry.walls }) : null;
         const usable = rooms?.rooms ? rooms.rooms : rooms;
         if (usable?.length) {
           const laid = S.layoutRooms(usable, { hazardFor: hazard ? () => hazard : undefined, response: settings.sprinklerResponse, obstructions: obstructions.length ? obstructions : null });
@@ -1425,7 +1426,7 @@ export default function App() {
       const occupancy = OCCUPANCY_GROUP[settings.perfOccupancy] ?? null;
       const names = new Map((studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
       const overhead = [...(geometry.floors || []), ...(geometry.roofMeshes || [])];
-      const found = geometry.spaces?.length ? S.roomsFromSpaces(geometry.spaces, { upAxis, names, overhead, walls: geometry.walls }) : null;
+      const found = geometry.spaces?.length ? S.roomsFromSpaces(geometry.spaces, { upAxis, names, overhead, ceilings: geometry.ceilings, walls: geometry.walls }) : null;
       const rooms = (found?.rooms ? found.rooms : found) || [];
       const plan = Y.planSystems(rooms, { occupancy: occupancy ? [occupancy] : null, sprinklered: settings.sprinklers, agentOnly: settings.systemsAgentOnly });
       const units = Y.specialExtinguishers(plan, rooms, { upAxis });
@@ -1493,6 +1494,7 @@ export default function App() {
           : []),
       ],
       roofs: clone(geometry.roofMeshes),
+      ceilings: clone(geometry.ceilings),
       stairs: clone(geometry.stairs),
       obstacles: [
         ...clone(windowsOpen ? (geometry.obstacles || []).filter((m) => !windowIds.has(m.itemId)) : geometry.obstacles),

@@ -114,8 +114,9 @@ test("the burner's cells gain exactly its convective heat, with methane's produc
 test("in a full run the frame heat release is the burner's power, and the sprinklers' estimate reads its plume", () => {
   const hrr = [[0, 0], [20, 60e3], [40, 60e3]];
   const scene = roomScene({ h: 0.3, hrr, radiantFraction: 0.25 });
-  // A head over the burner, so the estimate reads the burner's plume.
-  const head = { id: "over", position: [2.0, 2.39, 1.5], rti: 50, c: 0.5, activationC: 57, flowLpm: 0, coverage: 1 };
+  // A head over the burner, so the estimate reads the burner's plume; its
+  // link 0.01 m under the 2.4 m ceiling.
+  const head = { id: "over", position: [2.0, 2.39, 1.5], ceilingAbove: 0.01, rti: 50, c: 0.5, activationC: 57, flowLpm: 0, coverage: 1 };
   const frames = [];
   const result = runScene(scene, {
     nodes: Float32Array.from([1, 0.75, 1]),

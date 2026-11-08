@@ -159,8 +159,8 @@ export const DEFAULT_SETTINGS = {
   sprinklerResponse: "quick",
   // "wetting" by default: across 12 test fires on 4 models it cut most fires by
   // 20 to 79 % (tools/sprinkler-check.mjs); Evans's cap and the spray ranged
-  // from 40 % less to 78 % more. Where heads opened late (the Clinic's large
-  // rooms), no mode helped.
+  // from 40 % less to 78 % more (2026-11-07, before the activation fix of
+  // 2026-11-08: wiki/research/sprinkler-activation-fix-2026-11-08.md).
   sprinklerMode: "wetting",
   sprinklerOpenOn: "estimate",
   // Suppression systems by room use (core/suppressionSystems.js), off by

@@ -1,5 +1,7 @@
 # Measured data for checking the sprinkler model: what was extracted, and which tests to run first (2026-11-07)
 
+Update, 2026-11-08: the late activation found in the results below (R4 to R8) was diagnosed and fixed (walls' own coefficient of 10 W/(m² K), suspended ceilings in the fire grid, each head's own height and distance). The new results, against FDS on the same tests, are in `sprinkler-activation-fix-2026-11-08.md`; the results here are as run on 2026-11-07.
+
 Status: data gathering only. No app code was changed and nothing was committed. This note follows section 8 ("Validation data") of `sprinkler-physics-2026-11-07.md` and reports what was pulled out of each data set listed there, in a form the Flamescapes sprinkler model (`topologicpy-web-frontend/src/core/suppression.js`: RTI, C, activation temperature, head position, ceiling height, heat release) can be set up from.
 
 The numbers are in one JSON file, `sprinkler-validation.json`, kept in the session scratchpad (`.../scratchpad/validation-data/sprinkler-validation.json`, 0.75 MB) with the downloads it was built from and the scripts in `.../scratchpad/vd-scripts/` (`parse_fds.py`, `crossref.py`, `build_json.py`, `energy_check.py`, `link_replay.py`). It is not in the repository. If it is to be kept, it should be copied in deliberately.

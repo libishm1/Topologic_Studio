@@ -174,6 +174,9 @@ export async function extract(ifcPath, { withDoorFlags = false } = {}) {
         api.GetLineType(model, mesh.expressID) === WebIFC.IFCCOVERING &&
         !isWalkableCovering(api, model, mesh.expressID)
       ) {
+        // Suspended ceilings: not floors, but the ceilings the heads hang
+        // from and the fire's gas meets (as the site does, ViewerManager.js).
+        if (api.GetLine(model, mesh.expressID)?.PredefinedType?.value === "CEILING") meshesOf(mesh, (out.ceilings ||= []));
         return;
       }
       meshesOf(mesh, meshes);

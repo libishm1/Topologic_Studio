@@ -133,7 +133,7 @@ for (const file of models) {
   if (withSprinklers && geo.spaces.length) {
     const t1 = performance.now();
     const names = new Map((geo.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
-    heads = layoutRooms(roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], walls: geo.walls })).heads;
+    heads = layoutRooms(roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], ceilings: geo.ceilings, walls: geo.walls })).heads;
     row.sprinklerLayout = { heads: heads.length, ms: ms(t1) };
     console.log(`  ${"sprinkler layout".padEnd(19)} ${heads.length} heads in ${ms(t1).toFixed(0)} ms`);
   }

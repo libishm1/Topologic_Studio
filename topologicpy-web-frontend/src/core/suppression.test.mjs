@@ -127,6 +127,26 @@ test("in a room fire a sprinkler opens, the estimate no later than the late boun
   for (const a of [spray.T, spray.vis, spray.co]) for (const x of a) assert.ok(Number.isFinite(x));
 });
 
+test("the estimate takes each head's own height over the fire and its distance from its exact position, not the grid's", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  for (const h of [0.25, 0.35, 0.45]) {
+    const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 40000, minCell: h, maxCell: h, contentsFuel, ignitionFuel, item });
+    const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, seed: 1, maxParticles: 0 });
+    // Heads 0.13 m under the 2.7 m ceiling (the default link offset), and one with its own.
+    const heads = [{ ...head("a", 3.7, 2.9), position: [3.7, 2.57, 2.9] }, { ...head("b", 1.1, 1.3), position: [1.1, 2.69, 1.3], ceilingAbove: 0.01 }];
+    const { setup } = sprinklerRun(scene, sim, { heads, mode: "activation" });
+    const g = scene.grid, c = scene.ignition.cell;
+    const pi = c % g.nx, pj = Math.floor(c / g.nx) % g.ny, pk = Math.floor(c / (g.nx * g.ny));
+    const fire = [g.origin[0] + (pi + 0.5) * g.h, g.origin[1] + (pj + 0.5) * g.h, g.origin[2] + (pk + 0.5) * g.h];
+    for (const hd of setup.heads) {
+      close(hd.r, Math.hypot(hd.position[0] - fire[0], hd.position[2] - fire[2]), 1e-9, `cell ${h}: r`);
+      close(hd.H, 2.7 - fire[1], 1e-6, `cell ${h}: H`);
+    }
+    // The grid's plume column snaps the same ceiling to a cell face.
+    assert.ok(Math.abs(setup.plume.H - (2.7 - fire[1])) <= g.h, `the grid's plume height ${setup.plume.H}`);
+  }
+});
+
 test("every covered fuel cell stays under Evans's cap in every step after its head opens", () => {
   const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
   const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.35, maxCell: 0.35, contentsFuel, ignitionFuel, item });

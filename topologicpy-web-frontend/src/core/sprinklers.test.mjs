@@ -517,3 +517,29 @@ test("a space with nothing over it and no wall round it gets no heads; a slab lo
   const living = laid.heads.filter((h) => h.room === 1);
   assert.ok(living.length > 0 && living.every((h) => h.position[1] < 2.7), "heads hang under the slab");
 });
+
+test("a suspended ceiling under the slab is the ceiling the heads hang from, and it makes no space inside", () => {
+  // The NIBS Clinic's waiting areas hung their heads at the 4.57 m slab over a 2.68 m ceiling.
+  const names = new Map([[1, "Waiting"], [2, "Roof"]]);
+  const spaces = [roomMesh(1, [[0, 0, 8, 6]], { y0: 0, y1: 4.5 }), roomMesh(2, [[20, 0, 25, 4]], { y0: 4.6, y1: 8.6 })];
+  const overhead = [roomMesh("slab", [[-0.2, -0.2, 8.2, 6.2]], { y0: 4.57, y1: 4.8 })];
+  // A ceiling over the room, and one over the roof space (the next block's), 5 cm thick.
+  const ceilings = [roomMesh("ceiling", [[0, 0, 8, 6]], { y0: 2.68, y1: 2.73 }), roomMesh("ceiling-2", [[20, 0, 25, 4]], { y0: 7.25, y1: 7.3 })];
+  const without = roomsFromSpaces(spaces, { names, overhead });
+  assert.ok(near(without[0].ceiling, 4.5, 1e-5), "the space's top, under the slab");
+  const rooms = roomsFromSpaces(spaces, { names, overhead, ceilings });
+  assert.ok(near(rooms[0].ceiling, 2.68, 1e-5), `the ceiling's underside: ${rooms[0].ceiling}`);
+  assert.match(rooms[1].problem || "", /nothing over it/, "a ceiling over the roof space does not make it a room");
+  const heads = layoutRooms(rooms).heads.filter((h) => h.room === 1);
+  assert.ok(heads.length > 0 && heads.every((h) => near(h.position[1], 2.68 - 0.13, 1e-6)), "links 0.13 m under the ceiling");
+  // A plant room with no ceiling in a model that draws them: open to the slab
+  // (the Clinic's mechanical room, its space 2.8 m high under a 4.15 m slab);
+  // a double-height space more than 2 m under its slab keeps its own top.
+  const plant = [roomMesh(3, [[0, 10, 6, 14]], { y0: 0, y1: 2.8 }), roomMesh(4, [[10, 10, 16, 14]], { y0: 0, y1: 2.8 })];
+  const slabs = [roomMesh("slab-3", [[-0.2, 9.8, 6.2, 14.2]], { y0: 4.15, y1: 4.4 }), roomMesh("slab-4", [[9.8, 9.8, 16.2, 14.2]], { y0: 5.2, y1: 5.4 })];
+  const [p3, p4] = roomsFromSpaces(plant, { overhead: slabs, ceilings });
+  assert.ok(near(p3.ceiling, 4.15, 1e-5), `open to the slab: ${p3.ceiling}`);
+  assert.ok(near(p4.ceiling, 2.8, 1e-5), `more than 2 m under the slab: ${p4.ceiling}`);
+  const [q3] = roomsFromSpaces(plant, { overhead: slabs });
+  assert.ok(near(q3.ceiling, 2.8, 1e-5), "a model with no ceilings keeps the space's top");
+});

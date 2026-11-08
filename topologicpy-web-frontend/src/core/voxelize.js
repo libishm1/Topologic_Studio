@@ -211,7 +211,12 @@ export const THIN_FRACTION = 0.08;
  * and the room would leak through it; so a cell is also solid where its
  * fraction is the largest along some axis among itself and its two
  * neighbours, and at least THIN_FRACTION: thin elements snap to the cell that
- * holds most of them, as obstructions snap to the grid in FDS.
+ * holds most of them, as obstructions snap to the grid in FDS. An element
+ * thinner still can straddle two cells with less than THIN_FRACTION in each:
+ * a 52 mm suspended ceiling on a 0.4 m grid split 6.5 % and 6.5 %, and the
+ * plume rose through it. Where a cell and its larger neighbour along an axis
+ * hold THIN_FRACTION between them, the larger of the two is solid (the lower
+ * one of an equal pair).
  */
 export function occupancy(grid, fraction) {
   const { nx, ny, nz } = grid;
@@ -231,6 +236,16 @@ export function occupancy(grid, fraction) {
             (v >= f(i, j - 1, k) && v >= f(i, j + 1, k)) ||
             (v >= f(i, j, k - 1) && v >= f(i, j, k + 1));
           if (peak) solid[c] = 1;
+        } else if (v > 0) {
+          // Split between this cell and a neighbour across the element (the
+          // other side holds less): the larger half seals.
+          for (const [a, b] of [[f(i - 1, j, k), f(i + 1, j, k)], [f(i, j - 1, k), f(i, j + 1, k)], [f(i, j, k - 1), f(i, j, k + 1)]]) {
+            const partner = Math.max(a, b);
+            if (Math.min(a, b) < v && partner < THIN_FRACTION && v + partner >= THIN_FRACTION && (v > partner || b === partner)) {
+              solid[c] = 1;
+              break;
+            }
+          }
         }
       }
     }

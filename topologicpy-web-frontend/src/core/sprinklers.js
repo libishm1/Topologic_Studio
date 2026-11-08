@@ -354,7 +354,13 @@ const MIN_ROOM_WIDTH = 0.6;
  * With `overhead` (the model's slabs and roofs), the ceiling is checked
  * against what is really over the room: looking straight up from five points
  * of its footprint, from 1 m over its floor, the nearest slab or roof face
- * is the ceiling when it is lower than the space's top. A space with nothing
+ * is the ceiling when it is lower than the space's top. With `ceilings` (its
+ * suspended ceilings, IfcCovering CEILING), a room the slabs and roofs keep
+ * inside takes the nearest ceiling face the same way, when it is lower still:
+ * the NIBS Clinic's waiting areas hung their heads at the 4.57 m slab over a
+ * 2.68 m ceiling. Ceilings do not make a space inside: one drawn on the roof
+ * may lie under the next block's ceilings. In a model with ceilings, a room
+ * with none is open to the slab over it, within OPEN_TO_SLAB of its top. A space with nothing
  * over it and no wall round it rising 1.5 m over its floor (`walls`) is
  * outside the building, no room to sprinkler: the Duplex's "Roof" space,
  * drawn on top of the roof, put eight heads 2.9 m above it. So is one with
@@ -365,15 +371,16 @@ const MIN_ROOM_WIDTH = 0.6;
  * are the spaces' bottoms), and the space's top stays the ceiling.
  *
  * @param {Array<{itemId, positions: Float32Array, indices: Uint32Array}>} spaceMeshes  viewer frame
- * @param {{upAxis?: string, names?: Map|object, overhead?: Array<{positions, indices}>, walls?: Array<{positions}>}} opts  names: itemId -> room name
+ * @param {{upAxis?: string, names?: Map|object, overhead?: Array<{positions, indices}>, ceilings?: Array<{positions, indices}>, walls?: Array<{positions}>}} opts  names: itemId -> room name
  * @returns {Array<{id, name, upAxis, floor, ceiling, footprint: Float64Array|null, area: number,
  *           rect: {centre: number[], axis: number[], half: number[]}|null, problem: string|null}>}
  *          footprint: plan triangles, six numbers each
  */
-export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overhead = null, walls = null } = {}) {
+export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overhead = null, ceilings = null, walls = null } = {}) {
   const up = upIndex(upAxis);
   const [h0, h1] = planAxes(upAxis);
   const above = overhead?.length ? overheadIndex(overhead, up, h0, h1) : null;
+  const hung = ceilings?.length ? overheadIndex(ceilings, up, h0, h1) : null;
   const wallBoxes = above && walls?.length ? meshBoxes(walls, up, h0, h1) : null;
   const nameOf = (id) => (names instanceof Map ? names.get(id) : names?.[id]) ?? null;
   const groups = new Map();
@@ -434,6 +441,7 @@ export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overh
       room.problem = `${(2 * rect.half[1]).toFixed(2)} m wide, less than ${MIN_ROOM_WIDTH} m: a shaft or a sliver, which the room rules do not cover`;
       continue;
     }
+    let slab = Infinity;
     if (above) {
       // What is really over the room: the nearest slab or roof face above
       // each of five points of the footprint (its centre and four points
@@ -463,8 +471,28 @@ export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overh
         }
       } else {
         hits.sort((p, q) => p - q);
+        slab = hits[Math.floor(hits.length / 2)];
+        if (slab < room.ceiling - 0.02) room.ceiling = slab;
+      }
+    }
+    if (hung) {
+      // A suspended ceiling under the slab: the same five points, the middle hit.
+      const { centre: o, axis: x, half } = rect;
+      const y = [-x[1], x[0]];
+      const hits = [];
+      for (const [a, b] of [[0, 0], [0.5, 0.5], [-0.5, 0.5], [0.5, -0.5], [-0.5, -0.5]]) {
+        const z = hung(o[0] + a * half[0] * x[0] + b * half[1] * y[0], o[1] + a * half[0] * x[1] + b * half[1] * y[1], lo + CEILING_SEARCH_FROM);
+        if (z < Infinity) hits.push(z);
+      }
+      if (hits.length) {
+        hits.sort((p, q) => p - q);
         const over = hits[Math.floor(hits.length / 2)];
         if (over < room.ceiling - 0.02) room.ceiling = over;
+      } else if (slab < Infinity && slab > room.ceiling + 0.02 && slab - room.ceiling <= OPEN_TO_SLAB) {
+        // A model that draws its ceilings and none over this room: the room
+        // is open to the slab (the Clinic's mechanical room, its space 2.8 m
+        // high under a 4.15 m slab), and the heads hang from the slab.
+        room.ceiling = slab;
       }
     }
     room.footprint = Float64Array.from(tris);
@@ -476,6 +504,12 @@ export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overh
 
 /** How far over a room's floor the search for its ceiling starts (m): past its own floor slab. */
 const CEILING_SEARCH_FROM = 1.0;
+/**
+ * In a model that draws its suspended ceilings, a room with none under a slab
+ * at most this far over its space's top (m) is open to the slab; farther, the
+ * space's top stays the ceiling (a double-height space, an atrium).
+ */
+const OPEN_TO_SLAB = 2.0;
 /** A wall encloses a room when it rises this far over its floor (m), within its footprint's reach plus WALL_MARGIN. */
 const WALL_ENCLOSES = 1.5;
 const WALL_MARGIN = 0.5;

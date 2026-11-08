@@ -35,3 +35,4 @@ import FireEgress.Federation
 import FireEgress.Obstructions
 import FireEgress.Extinguishers
 import FireEgress.Wetting
+import FireEgress.SprinklerActivation

@@ -119,7 +119,7 @@ for (const file of models) {
   }
   if (geo.spaces.length) {
     const names = new Map((geo.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
-    const layout = time(() => layoutRooms(roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], walls: geo.walls })));
+    const layout = time(() => layoutRooms(roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], ceilings: geo.ceilings, walls: geo.walls })));
     row.ms.sprinklerLayout = layout.ms;
     row.sprinklerHeads = layout.out.heads.length;
     row.ms.requirement = time(() => requirementReport({ occupancy: ["B"], storeyElevations: floorLevels(geo.floors, "y") })).ms;

@@ -59,7 +59,7 @@ for (const file of models) {
   const nodes = built.points;
   const n = nodes.length / 3;
   const names = new Map((geo.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
-  const rooms = geo.spaces.length ? roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], walls: geo.walls }) : [];
+  const rooms = geo.spaces.length ? roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], ceilings: geo.ceilings, walls: geo.walls }) : [];
   const heads = rooms.length ? layoutRooms(rooms).heads : [];
   const left = rooms.filter((r) => r.problem);
   console.log(`\n${path.basename(file)}: ${n} nodes, ${heads.length} heads in ${rooms.length - left.length} rooms (${left.length} spaces left out); class ${fireClass}; ${horizon} s`);

@@ -19,7 +19,12 @@
  *     the layer temperature from the grid plus Alpert's ceiling-jet excess
  *     for the run's heat release, the ceiling's height above the fire and
  *     the head's distance from it, and the larger of Alpert's jet speed and
- *     the cell's; elsewhere the cell, as the late bound.
+ *     the cell's; elsewhere the cell, as the late bound. The height and the
+ *     distance are the head's own, from its position (its ceiling
+ *     LINK_UNDER_CEILING over its link) to the first item's cell, not the
+ *     grid's: snapped to cells they were up to a cell or more off, and the
+ *     plume's column could stop under a low solid (0.6 m in Vienna's garage)
+ *     or rise past a ceiling the grid did not hold.
  * A head opens when its link reaches its activation temperature, at the
  * exact crossing time inside the frame (Sprinklers.lean
  * linkExact_activation). The fire is changed from the end of that frame.
@@ -83,6 +88,12 @@ export const DROPLET_EVAPORATION = -Math.log(1 - 0.017) / (300 * 0.35);
 export const TERMINAL_SPEED = 5;
 /** CFAST's least gas speed at a link (m/s): a link in still hot gas still heats. */
 export const SPEED_FLOOR = 0.1;
+/**
+ * How far a head's link stands under its ceiling (m) when its record does not
+ * say (`ceilingAbove`): the deflector 0.1 m under the ceiling and the link
+ * 0.03 m under the deflector (sprinklers.js SPRINKLER_DEFAULTS).
+ */
+export const LINK_UNDER_CEILING = 0.13;
 /** The lowest spray density (mm/s) in Evans's fit; below it the cap is off (outside the data). */
 /**
  * The share of the water reaching a fuel cell's top surface that soaks in,
@@ -195,7 +206,7 @@ export function sprinklerSetup(scene, heads, { upAxis = "y", fuel = null } = {})
     const y = head.provenance?.ceiling === "unknown" ? y0 + 1.5 / g.h : y0;
     const i = Math.floor(x), k = Math.floor(z);
     const jTop = topFrom(i, Math.floor(y), k);
-    const base = { ...head, sensor: -1, columns: [], covered: [], inSight: false, r: null };
+    const base = { ...head, sensor: -1, columns: [], covered: [], inSight: false, r: null, H: null };
     if (jTop < 0) return base;
     const sensor = at(i, jTop, k);
     // The footprint's columns, each from its own ceiling down to the fuel or the floor.
@@ -231,9 +242,14 @@ export function sprinklerSetup(scene, heads, { upAxis = "y", fuel = null } = {})
         }
       }
     }
-    const r = plume ? Math.hypot(i - plume.i, k - plume.k) * g.h : null;
+    // The head's distance from the first item's cell and its ceiling's height
+    // over it, from the head's own position (a head standing in for an
+    // unknown ceiling has none of its own: the plume's column gives it).
+    const r = plume ? Math.hypot(x - (plume.i + 0.5), z - (plume.k + 0.5)) * g.h : null;
+    const own = head.provenance?.ceiling !== "unknown";
+    const H = plume ? (own ? Math.max(0.5, (y0 - (plume.j + 0.5)) * g.h + (head.ceilingAbove ?? LINK_UNDER_CEILING)) : plume.H) : null;
     const inSight = Boolean(plume) && (sensor === plume.top || clear(plume.top, sensor));
-    return { ...base, sensor, columns: Int32Array.from(columns), covered: Int32Array.from(covered), inSight, r };
+    return { ...base, sensor, columns: Int32Array.from(columns), covered: Int32Array.from(covered), inSight, r, H };
   });
   return { heads: out, plume, h: g.h, nx: g.nx };
 }
@@ -272,7 +288,7 @@ export function activationFrame(setup, state, { t0, t1, T, u, hrr, reading = "es
   let sum = 0, count = 0;
   for (let h = 0; h < n; h += 1) {
     const head = setup.heads[h];
-    if (head.sensor < 0 || !head.inSight || !(head.r >= 0.2 * (plume?.H ?? 0))) continue;
+    if (head.sensor < 0 || !head.inSight || !(head.r >= 0.2 * (head.H ?? 0))) continue;
     sum += 0.5 * (state.prevT[h] + T[h]);
     count += 1;
   }
@@ -286,7 +302,7 @@ export function activationFrame(setup, state, { t0, t1, T, u, hrr, reading = "es
     const Ta = head.activationC + 273.15;
     const gases = { late: [Tg, ug] };
     if (head.inSight && plume) {
-      const jet = alpert(Q, plume.H, Math.max(head.r, 0.01));
+      const jet = alpert(Q, head.H, Math.max(head.r, 0.01));
       gases.estimate = [Math.max(Tg, layer + jet.dT), Math.max(ug, jet.U)];
     } else gases.estimate = gases.late;
     for (const name of ["late", "estimate"]) {
@@ -404,6 +420,7 @@ export function activationSummary(setup, state) {
     onGrid: head.sensor >= 0,
     inSight: head.inSight,
     r: head.r,
+    H: head.H,
     estimate: Number.isNaN(state.opened.estimate[h]) ? null : state.opened.estimate[h],
     late: Number.isNaN(state.opened.late[h]) ? null : state.opened.late[h],
     hrrEstimate: Number.isNaN(state.hrrAt.estimate[h]) ? null : state.hrrAt.estimate[h],

@@ -272,7 +272,7 @@ class GpuSim {
       nPart: this.nPart, nNodes: d.nNodes, snapMax: d.snapMax, pilotN: io.nodes,
       pilotMode: pilot && pilot.temperature ? 0 : 1, ioNodes: io.nodes, ioOut: io.out, ioSnap: io.snap,
       redRad: red.rad, redSteps: red.steps, seed: P.seed >>> 0, gsAt: AT_FIELDS * N,
-      h, dt: P.dt, V: sim.V, rho0: sim.rho0, ambient: P.ambient, gravity: P.gravity, convection: P.convection,
+      h, dt: P.dt, V: sim.V, rho0: sim.rho0, ambient: P.ambient, gravity: P.gravity, convection: P.convection, wallConvection: P.wallConvection,
       kappa: P.sootAbsorption, vorticity: P.vorticity, porousVel: P.porousVelocity, diffusivity: P.diffusivity,
       conductivity: P.conductivity, emitAbove: Math.min(P.emitAbove, 3e38), pyA: P.pyrolysisA, pyE: P.pyrolysisE,
       pyHeat: P.pyrolysisHeat, oxA: P.oxidationA, oxE: P.oxidationE, pyFuel: P.pyrolysisFuel, latent: P.latentHeat,

@@ -110,6 +110,16 @@ export const DEFAULTS = Object.freeze({
   // (section 4.9) for sub-grid turbulence and surfaces; with 25, a natural
   // convection value, the first item does not light its neighbours.
   convection: 200,
+  // The same interface for inert solids (walls, slabs, ceilings, doors: a
+  // solid cell never holds fuel), W / (m^2 K). The raised value above is for
+  // the fuel; on walls and ceilings it took most of the ceiling jet's heat and
+  // opened sprinklers late (validation R6.1). 10 is FDS's default convection
+  // model in these rooms (4 to 14 on walls and ceilings) and Cooper's ceiling
+  // correlation 2 m from a plume (7 to 13); with it the estimate opened every
+  // measured head of NIST's tests within twice the measured time, the first
+  // at medians 0.78 to 1.26 of it (FDS: 0.73 to 1.13)
+  // (wiki/research/sprinkler-activation-fix-2026-11-08.md).
+  wallConvection: 10,
   sootAbsorption: 500, // the paper's residual absorption coefficient kappa
   vorticity: 10, // confinement strength
   porousVelocity: 0.5, // velocity multiplier in porous cells
@@ -1366,6 +1376,8 @@ function conduct(sim, dt) {
           sim.Ts[c] -= q / Cs;
           sim.T[c] += q / Cg;
         }
+        // A face to gas: the fuel's coefficient, or the wall's for an inert solid.
+        const hc = kc === SOLID ? P.wallConvection : P.convection;
         // Forward neighbours only, so each pair is visited once.
         for (const [a, b, d] of [DIRS[0], DIRS[2], DIRS[4], DIRS[1], DIRS[3], DIRS[5]]) {
           const ii = i + a, jj = j + b, kk = k + d;
@@ -1374,7 +1386,7 @@ function conduct(sim, dt) {
           const kn = sim.kind[n];
           if (kn === GAS) {
             const Cg = sim.rho[n] * mixtureCp(sim.Y, n * NS) * sim.V;
-            const q = exchange(sim.Ts[c], sim.T[n], Cs, Cg, P.convection * A, dt);
+            const q = exchange(sim.Ts[c], sim.T[n], Cs, Cg, hc * A, dt);
             sim.Ts[c] -= q / Cs;
             sim.T[n] += q / Cg;
           } else if (n > c) {

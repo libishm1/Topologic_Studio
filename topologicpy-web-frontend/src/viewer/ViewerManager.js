@@ -1203,6 +1203,10 @@ export class ViewerManager {
     const flooring = await withPredefinedType(this.model, ids.coverings || [], "FLOORING").catch(
       () => [],
     );
+    // Suspended ceilings are not walked on, but the heads hang from them and
+    // the fire's hot gas meets them: the sprinklers and the fire solver take
+    // them as ceilings (without them a plume rose past the heads to the slab).
+    const ceilingIds = await withPredefinedType(this.model, ids.coverings || [], "CEILING").catch(() => []);
 
     // Slabs typed ROOF are walkable surfaces but not floors: 7% of C20's
     // graph and 14% of ISSUE_159's, and two of C20's separate parts
@@ -1233,7 +1237,7 @@ export class ViewerManager {
     const extracted = new Set([...ids.stairs, ...stairPartIds, ...(ids.spaces || [])]);
     const coreMeshIds = cores.map((core) => core.itemId).filter((id) => !extracted.has(id));
 
-    const [floors, stairs, doors, walls, spaces, obstacles, coreMeshes, roofMeshes] = await Promise.all([
+    const [floors, stairs, doors, walls, spaces, obstacles, coreMeshes, roofMeshes, ceilings] = await Promise.all([
       extractMeshes(this.model, [...floorIds, ...flooring], world),
       extractMeshes(this.model, [...ids.stairs, ...stairPartIds], world),
       extractMeshes(this.model, ids.doors, world),
@@ -1244,9 +1248,11 @@ export class ViewerManager {
       // Roof slabs are not walked on, but the Flamescapes solver needs them
       // as the top storey's ceiling.
       extractMeshes(this.model, [...roofs, ...(ids.roofElements || [])], world),
+      extractMeshes(this.model, ceilingIds, world),
     ]);
 
     done({
+      ceilings: ceilings.length,
       floors: floors.length,
       stairs: stairs.length,
       doors: doors.length,
@@ -1261,7 +1267,7 @@ export class ViewerManager {
     const flowTerminals = await elementRecords(this.model, ids.flowTerminals || []).catch(() => []);
     const terminalIds = [...(ids.airTerminals || []), ...flowTerminals.filter((r) => AIR_TERMINAL_NAME.test(r.name)).map((r) => r.itemId)];
     const terminals = [...(await this.positionsOf(terminalIds).catch(() => new Map())).values()];
-    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size, roofMeshes, cores, coreMeshes, terminals };
+    return { floors, stairs, doors, walls, spaces, obstacles, roofs: roofs.size, roofMeshes, ceilings, cores, coreMeshes, terminals };
   }
 
   /**

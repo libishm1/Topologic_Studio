@@ -32,15 +32,17 @@
  * and the gas at each head's sensor cell when the head opened in the test.
  *
  *   node tools/sprinkler-validation.mjs [--only REGEX] [--jobs 8]
- *        [--convection 200,25] [--cell 0.3] [--ulcell 0.5] [--horizon-factor 2]
- *        [--out benchmark/results/2026-11-07-sprinkler-validation.json]
+ *        [--convection 10,200] [--cell 0.3] [--ulcell 0.5] [--horizon-factor 2]
+ *        [--out benchmark/results/2026-11-08-sprinkler-validation.json]
  *        [--append]  (keep the out file runs not repeated, e.g. a finer --cell)
  *        [--summary file.json]  (print the tables of an earlier run)
  *
  * The convection option sets the solver's surface heat transfer coefficient
- * (W/m2K): 200 is the app's default, kept high so a burning item lights its
- * neighbours; 25 is a natural-convection value, run to show how much of the
- * ceiling jet the walls take.
+ * (W/m2K) for fuel and walls alike (`convection` and `wallConvection`); these
+ * scenes hold no fuel, so it is the walls'. 10 is the app's walls' value
+ * since 2026-11-08; 200, the fuel's (kept high so a burning item lights its
+ * neighbours), was the walls' too before, and opened heads late
+ * (wiki/research/sprinkler-activation-fix-2026-11-08.md).
  */
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -435,6 +437,8 @@ async function runCase(c) {
   const heads = c.heads.map((x) => ({
     id: String(x.n),
     position: [x.xy[0], x.z, x.xy[1]],
+    // The measured link's own distance under the ceiling (suppression.js LINK_UNDER_CEILING otherwise).
+    ceilingAbove: Math.max(0, ceilingZ - x.z),
     footprint: { centre: [x.xy[0], x.xy[1]], axis: [1, 0], half: x.half || [2.3, 2.3] },
     rti: x.rti,
     c: x.c,
@@ -453,7 +457,7 @@ async function runCase(c) {
     keep: false,
     sensorGas: true,
     sprinklers: { heads, mode: c.mode, openOn: "estimate" },
-    solverOptions: { ambient: c.ambientC + 273.15, convection: c.convection },
+    solverOptions: { ambient: c.ambientC + 273.15, convection: c.convection, wallConvection: c.convection },
     onFrame: (f) => frames.push({ time: f.time, hrr: f.hrr, T: Array.from(f.sprinklers.gas.T), u: Array.from(f.sprinklers.gas.u), open: f.sprinklers.open.length }),
   });
   const ran = performance.now();
@@ -465,14 +469,14 @@ async function runCase(c) {
     const f = frames[k];
     let sum = 0, count = 0;
     spr.heads.forEach((hd, j) => {
-      if (hd.onGrid && hd.inSight && hd.r >= 0.2 * (H ?? 0)) {
+      if (hd.onGrid && hd.inSight && hd.r >= 0.2 * (hd.H ?? 0)) {
         sum += f.T[j];
         count += 1;
       }
     });
     const layer = count ? sum / count : c.ambientC + 273.15;
     const hd = spr.heads[q];
-    const jet = hd.inSight && H ? S.alpert(f.hrr, H, Math.max(hd.r, 0.01)) : { dT: 0, U: 0 };
+    const jet = hd.inSight && hd.H ? S.alpert(f.hrr, hd.H, Math.max(hd.r, 0.01)) : { dT: 0, U: 0 };
     return {
       cellC: f.T[q] - 273.15,
       cellSpeed: f.u[q],
@@ -622,7 +626,7 @@ async function main() {
   }
   const data = JSON.parse(await readFile(DATA, "utf8"));
   const settings = {
-    convections: flag("--convection", "200,25").split(",").map(Number),
+    convections: flag("--convection", "10,200").split(",").map(Number),
     cell: Number(flag("--cell", 0.3)),
     ulCell: Number(flag("--ulcell", 0.5)),
     horizonFactor: Number(flag("--horizon-factor", 2)),
@@ -631,7 +635,7 @@ async function main() {
   let cases = makeCases(data, settings);
   if (only) cases = cases.filter((c) => new RegExp(only).test(c.id));
   const jobs = Math.max(1, Math.min(Number(flag("--jobs", Math.max(1, Math.floor(os.cpus().length / 2)))), cases.length));
-  const out = flag("--out", path.join(ROOT, "benchmark/results/2026-11-07-sprinkler-validation.json"));
+  const out = flag("--out", path.join(ROOT, "benchmark/results/2026-11-08-sprinkler-validation.json"));
   console.log(`${cases.length} runs, ${jobs} at a time`);
   const t0 = performance.now();
   const results = new Array(cases.length);
