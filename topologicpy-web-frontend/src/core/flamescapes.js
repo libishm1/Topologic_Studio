@@ -1745,6 +1745,10 @@ export function createBurner(spec, kind, grid) {
     design: spec.design ?? null,
     suppression: null,
     stopAt: Infinity,
+    // The last step's flame, for drawing it (flamescapesRun.js withBurnerFlame):
+    // the cells it reached (burnerCells) and its heat release, W.
+    flameCells: 0,
+    flameRate: 0,
   };
 }
 
@@ -1766,6 +1770,27 @@ export function burnerRate(b, t) {
 /** Heskestad's mean flame height (m) for a heat release Q (W) over a fire of diameter D (m): 0.235 Q^(2/5) - 1.02 D, Q in kW. */
 export function flameHeight(Q, D) {
   return 0.235 * Math.max(0, Q / 1000) ** 0.4 - 1.02 * D;
+}
+
+/** McCaffrey's (1979) Table 1: the flame's rise (K), and the coefficients of the intermittent flame's (K m kW^-2/5) and the plume's (K m^5/3 kW^-2/3). */
+const MCCAFFREY = Object.freeze({ flame: 797, intermittent: 62.9, plume: 21.6 });
+
+/**
+ * McCaffrey's mean centreline temperature rise (K) at a height z (m) over a
+ * fire of heat release Q (W), with z* = z / Q^(2/5) (Q in kW): 797 K in the
+ * continuous flame, 62.9 / z* in the intermittent flame, 21.6 z*^(-5/3) in
+ * the plume, the weighted averages of his Table 1 (McCaffrey 1979, NBSIR
+ * 79-1910, doi:10.6028/NBS.IR.79-1910). The regions meet where these are
+ * equal, z* = 0.079 and 0.201, as he found.
+ */
+export function plumeRise(z, Q) {
+  const q = Math.max(0, Q / 1000);
+  if (!(q > 0)) return 0;
+  const zs = Math.max(0, z) / q ** 0.4;
+  const { flame, intermittent, plume } = MCCAFFREY;
+  if (zs <= intermittent / flame) return flame;
+  if (zs <= (plume / intermittent) ** 1.5) return intermittent / zs;
+  return plume * zs ** (-5 / 3);
 }
 
 /** How many of a burner's cells take a step's heat at a heat release Q (W): all of them, or a design-fire item's layers its flame reaches (at least one). */
@@ -1813,8 +1838,11 @@ export function burnerEnergy(b, t) {
 export function burnerStep(sim, dt) {
   const b = sim.burner;
   const E = burnerHeat(b, sim.time, sim.time + dt);
+  b.flameCells = 0;
   if (!(E > 0)) return;
   const n = burnerCells(b, E / dt);
+  b.flameCells = n;
+  b.flameRate = E / dt;
   const convective = (1 - b.radiantFraction) * E;
   const share = convective / n;
   const fuel = E / b.stoich.heat / n;

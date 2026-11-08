@@ -915,6 +915,14 @@ if (await fsToggle.isVisible().catch(() => false)) {
   // The first item as a t-squared design fire by default (fireClasses.js designFireFor, 2026-11-08).
   const itemLine = card.split("\n").find((l) => /t-squared fire/.test(l)) || "";
   record(/^a medium t-squared fire \(0\.0117 kW\/s²\), 20 kg/.test(itemLine.trim()), "the first item grows as its class's design fire, and the card says so", itemLine.trim() || "no first-item line");
+  // The burning item is drawn as flames from the first frame (flamescapesRun.js
+  // withBurnerFlame, 2026-11-08): its burner makes no flame-front particles of
+  // its own, so until then a design fire showed none before the contents caught.
+  const flamePoints = await page
+    .waitForFunction(() => (window.__viewer?.overlays?.get("flames")?.geometry?.drawRange?.count ?? 0) > 0, null, { timeout: 15000 })
+    .then(() => page.evaluate(() => window.__viewer.overlays.get("flames").geometry.drawRange.count))
+    .catch(() => 0);
+  record(flamePoints > 0, "the burning first item is drawn as flames", `${flamePoints} flame points`);
   // Virtual smoke detectors under the ceiling round the fire (flamescapesRun.js ceilingDetectors, 2026-11-07).
   const detectorLine = card.split("\n").find((l) => /under the ceiling, 7 m from the fire/.test(l)) || "";
   record(/^\d+ under the ceiling/.test(detectorLine.trim()), "the run reads smoke at ceiling detectors round the fire", detectorLine.trim() || "no detector line");

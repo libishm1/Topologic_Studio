@@ -35,7 +35,7 @@
 
 import { DEFAULTS, NS, burnerCells, burnerHeat, createSolver } from "./flamescapes.js";
 import {
-  KELVIN, ceilingDetectors, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withDetectors, runScene as cpuRunScene,
+  KELVIN, ceilingDetectors, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
 import {
   AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
@@ -437,8 +437,11 @@ class GpuSim {
     if (this.burner) {
       const b = this.burner;
       const E = burnerHeat(b, this.time, this.time + dt);
+      b.flameCells = 0;
       if (E > 0) {
         burnerN = burnerCells(b, E / dt);
+        b.flameCells = burnerN;
+        b.flameRate = E / dt;
         burnerShare = E / burnerN;
         burnerFuel = E / b.stoich.heat / burnerN;
         b.released += E;
@@ -610,6 +613,8 @@ class GpuSim {
     let snapshot = null;
     if (snap) snapshot = this.snapshotFrom(f, u, at);
     else if (particles) snapshot = { positions: new Float32Array(0), temps: new Float32Array(0), kinds: new Uint8Array(0) };
+    // A design-fire item's flame, drawn from the host's record of the step (the CPU's particleSnapshot does the same).
+    if (snapshot) snapshot = withBurnerFlame(this.sim, snapshot);
     this.slot = 0;
     return {
       T, vis, co, soot, co2, o2, speed, released, burnt, radiated, maxT, lastReleased,

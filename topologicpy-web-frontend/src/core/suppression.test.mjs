@@ -5,7 +5,7 @@ import { EVANS_MIN_DENSITY, alpert, createSuppression, crossing, evansFactor, ev
 import { waterResponse } from "./fireClasses.js";
 import { MATERIAL } from "./voxelize.js";
 import { buildScene, readNodes, runScene, sprinklerFrame, sprinklerRun } from "./flamescapesRun.js";
-import { cellSpeed, createSolver, step } from "./flamescapes.js";
+import { DEFAULTS, cellSpeed, createSolver, plumeRise, step } from "./flamescapes.js";
 import { designFireFor, fuelsFor } from "./fireClasses.js";
 
 const close = (a, b, tol, what = "") => assert.ok(Math.abs(a - b) <= tol, `${what} ${a} vs ${b}`);
@@ -179,6 +179,38 @@ test("a design-fire first item follows its t-squared curve with the room's conte
   assert.equal(wet.designFire.suppressed, "water");
   assert.ok(wet.designFire.suppressedAt >= over.estimate && wet.designFire.suppressedAt <= over.estimate + 5, `water from ${wet.designFire.suppressedAt} s`);
   assert.ok(wet.designFire.released < free.designFire.released, "the water decays it");
+});
+
+test("the design-fire item's flame is drawn over it from the first frame, hotter at its base, and drawing it changes nothing in the run", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("C");
+  const make = () => buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.35, maxCell: 0.35, contentsFuel, ignitionFuel, item, designFire: designFireFor("C") });
+  const nodes = Float32Array.from([2.5, 0.75, 2, 1, 0.75, 1]);
+  const frames = [];
+  const drawn = runScene(make(), { nodes, horizon: 15, frameSeconds: 5, particles: 3000, onFrame: (f) => frames.push(f.particles) });
+  const plain = runScene(make(), { nodes, horizon: 15, frameSeconds: 5, particles: 0 });
+  assert.deepEqual(Array.from(drawn.hrr), Array.from(plain.hrr), "the same heat release");
+  assert.deepEqual(Array.from(drawn.T), Array.from(plain.T), "the same temperatures");
+  // The item's footprint, in grid cells; a point's cell from its viewer position.
+  const scene = make();
+  const g = scene.grid;
+  const base = scene.burner.layers[0];
+  const columns = new Set(base.map((c) => `${c % g.nx},${Math.floor(c / (g.nx * g.ny))}`));
+  const cellOf = (p, q) => [0, 1, 2].map((a) => Math.floor((p.positions[q * 3 + g.axes[a]] - g.origin[a]) / g.h));
+  frames.forEach((p, k) => {
+    const over = [];
+    for (let q = 0; q < p.kinds.length; q += 1) {
+      const [i, , kk] = cellOf(p, q);
+      if (p.kinds[q] === 0 && columns.has(`${i},${kk}`)) over.push(q);
+    }
+    // At least six points in each cell of its base layer (a medium fire is
+    // 0.3 kW at 5 s and 2.6 kW at 15 s: the room's contents have not caught).
+    assert.ok(over.length >= 6 * base.length, `frame ${k}: ${over.length} flame points over the item`);
+    // Coloured by McCaffrey: the base layer's rise at the step's heat release.
+    const t = 5 * (k + 1);
+    const want = DEFAULTS.ambient + plumeRise(0.5 * g.h, 11.7 * t * t);
+    const hottest = Math.max(...over.map((q) => p.temps[q]));
+    assert.ok(Math.abs(hottest - want) < 0.05 * (want - DEFAULTS.ambient), `frame ${k}: ${hottest} K against ${want} K`);
+  });
 });
 
 test("every covered fuel cell stays under Evans's cap in every step after its head opens", () => {

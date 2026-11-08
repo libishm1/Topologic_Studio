@@ -310,8 +310,10 @@ and C) grows as a t-squared design fire, Q = α t², until its fuel is spent:
 by default its class's growth (medium, 0.0117 kW/s², for both: EN 1991-1-2
 for dwellings and offices), or slow, medium, fast or ultra-fast under **How
 it grows**. It burns as a prescribed source over its own floor area, with its
-fuel's smoke, and the room's contents catch from it. Water from a head over
-it decays it as Evans measured, and clean agent at the class A concentration
+fuel's smoke, and the room's contents catch from it. Its flame is drawn over
+it as high as Heskestad's flame height reaches, coloured by McCaffrey's (1979)
+mean flame and plume temperatures; the drawing takes no part in the run.
+Water from a head over it decays it as Evans measured, and clean agent at the class A concentration
 puts it out. A pool, a metal or a battery pack keeps its own burning. Before,
 the solver lit and burned the item itself, which took every example to about
 500 kW within 15 s, faster than any design fire; **As the solver burns it**

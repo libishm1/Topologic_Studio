@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { HEAT_PER_O2, METHANE, NS, SPECIES, burnerCells, burnerEnergy, burnerHeat, burnerStep, createBurner, createSolver, flameHeight, mixtureCp } from "./flamescapes.js";
+import { HEAT_PER_O2, METHANE, NS, SPECIES, burnerCells, burnerEnergy, burnerHeat, burnerStep, createBurner, createSolver, flameHeight, mixtureCp, plumeRise } from "./flamescapes.js";
 import { MATERIAL, gridFor, occupancy, raysFor, volumeFractions } from "./voxelize.js";
 import { runScene } from "./flamescapesRun.js";
 
@@ -83,6 +83,19 @@ test("burnerHeat: Evans's decay once water reaches the item, never above its tab
   assert.ok(Math.abs(L - (0.235 * 500 ** 0.4 - 1.02)) < 1e-12);
   assert.equal(burnerCells(item, 500e3), 12, `${L.toFixed(2)} m reaches all three`);
   assert.equal(burnerCells(b, 1e9), 1, "a plain burner heats all its cells");
+});
+
+test("plumeRise is McCaffrey's Table 1: 797 K in the flame, 62.9 / z* and 21.6 z*^-5/3 above, meeting at z* 0.079 and 0.201", () => {
+  const close = (a, b, tol, what) => assert.ok(Math.abs(a - b) <= tol, `${what}: ${a} vs ${b}`);
+  const Q = 100e3; // 100 kW: z = z* Q^(2/5), Q^(2/5) = 6.31
+  const z = (zs) => zs * 100 ** 0.4;
+  assert.equal(plumeRise(z(0.03), Q), 797);
+  close(plumeRise(z(0.1), Q), 629, 0.5, "intermittent at z* 0.1");
+  close(plumeRise(z(1), Q), 21.6, 1e-9, "plume at z* 1");
+  for (const at of [62.9 / 797, (21.6 / 62.9) ** 1.5]) close(plumeRise(z(at * (1 - 1e-9)), Q), plumeRise(z(at * (1 + 1e-9)), Q), 1e-3, `continuous at z* ${at.toFixed(3)}`);
+  close(62.9 / 797, 0.079, 0.0005, "flame to intermittent");
+  close((21.6 / 62.9) ** 1.5, 0.201, 0.0005, "intermittent to plume");
+  assert.equal(plumeRise(1, 0), 0, "no fire, no rise");
 });
 
 test("a burner rejects what it cannot release: no open cell, a bad table, a bad radiant fraction", () => {

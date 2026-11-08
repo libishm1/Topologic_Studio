@@ -382,7 +382,7 @@ export function MethodsDialog({ open, onClose, studio }) {
                   GPU; here a cell is 0.2 to 0.45 m and a step 0.1 s. So the fuel&apos;s surface layer, a sub-grid
                   rule for where an ember lands, the first item as a prescribed t-squared design fire (its
                   class&apos;s growth by default; water over it decays it as Evans measured, clean agent puts it
-                  out), a raised solid-gas heat transfer coefficient for the fuel (the paper&apos;s own 200; walls
+                  out; its flame drawn to Heskestad&apos;s height at McCaffrey&apos;s temperatures), a raised solid-gas heat transfer coefficient for the fuel (the paper&apos;s own 200; walls
                   and ceilings 10) and exact integration of each reaction over a step stand in for what the paper
                   resolves. Walls and slabs do not burn; doors are open and windows
                   closed unless the run closes the doors (each leaf fills its opening, without leaks) or opens the
@@ -443,6 +443,14 @@ export function MethodsDialog({ open, onClose, studio }) {
                   liquid pool&apos;s burning rate, through the SFPE Handbook table in NUREG-1805 Suppl. 1).{" "}
                   <a href="https://doi.org/10.1007/BF02380810" target="_blank" rel="noreferrer">
                     doi:10.1007/BF02380810
+                  </a>
+                </li>
+                <li>
+                  McCaffrey (1979). Purely buoyant diffusion flames: some experimental results. NBSIR 79-1910,
+                  National Bureau of Standards (Table 1, the mean flame and plume temperatures that colour the
+                  design-fire item&apos;s drawn flame).{" "}
+                  <a href="https://doi.org/10.6028/NBS.IR.79-1910" target="_blank" rel="noreferrer">
+                    doi:10.6028/NBS.IR.79-1910
                   </a>
                 </li>
                 <li>

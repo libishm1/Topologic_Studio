@@ -36,7 +36,7 @@
  * 10 m for large spaces).
  */
 
-import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, step } from "./flamescapes.js";
+import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, plumeRise, step } from "./flamescapes.js";
 import { EVANS_MIN_DENSITY, activationFrame, activationSummary, createActivation, createSuppression, evansTau, openHeads, sprinklerSetup } from "./suppression.js";
 import { systemsDetect, systemsSetup, systemsSummary } from "./suppressionSystems.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, toLocal, volumeFractions } from "./voxelize.js";
@@ -466,6 +466,51 @@ export function particleSnapshot(sim, max = 3000) {
     positions[q * 3 + g.axes[2]] = c;
     temps[q] = pr.T[p];
     kinds[q] = pr.kind[p];
+  }
+  return withBurnerFlame(sim, { positions, temps, kinds });
+}
+
+/**
+ * The design-fire item's flame, to draw. The solver's flame-front particles
+ * come from cells where its own combustion took place (particleStep), while
+ * the item's burner puts its heat and products into its cells directly, so
+ * without these the item showed no flame until the room's contents caught.
+ * Six points in each cell the last step's flame reached (burnerCells), a
+ * quarter cell from its centre along each axis, as the solver spawns six
+ * flame-front particles in each burning cell, at McCaffrey's mean centreline
+ * temperature for the cell's height over the item's base (plumeRise). Drawn
+ * only: the solver never sees them. Appended to a particle snapshot in the
+ * viewer frame, as flame-front particles (kind 0); the GPU's snapshot too.
+ */
+export function withBurnerFlame(sim, snapshot) {
+  const b = sim.burner;
+  const n = b?.design ? b.flameCells : 0;
+  if (!n) return snapshot;
+  const g = sim.grid;
+  const count = snapshot.temps.length;
+  const positions = new Float32Array((count + 6 * n) * 3);
+  const temps = new Float32Array(count + 6 * n);
+  const kinds = new Uint8Array(count + 6 * n);
+  positions.set(snapshot.positions);
+  temps.set(snapshot.temps);
+  kinds.set(snapshot.kinds);
+  const x = [0, 0, 0];
+  let o = count;
+  for (let l = 0; b.layerStart[l] < n; l += 1) {
+    const T = sim.P.ambient + plumeRise((l + 0.5) * b.h, b.flameRate);
+    for (let q = b.layerStart[l]; q < Math.min(n, b.layerStart[l + 1]); q += 1) {
+      const c = b.cells[q];
+      const centre = [c % g.nx + 0.5, (Math.floor(c / g.nx) % g.ny) + 0.5, Math.floor(c / (g.nx * g.ny)) + 0.5];
+      for (let d = 0; d < 6; d += 1) {
+        x[0] = centre[0];
+        x[1] = centre[1];
+        x[2] = centre[2];
+        x[d >> 1] += d & 1 ? 0.25 : -0.25;
+        for (let a = 0; a < 3; a += 1) positions[o * 3 + g.axes[a]] = g.origin[a] + x[a] * g.h;
+        temps[o] = T;
+        o += 1;
+      }
+    }
   }
   return { positions, temps, kinds };
 }

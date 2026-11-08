@@ -21,7 +21,9 @@
 // surface coefficient (flamescapes.js wallConvection).
 // 5 (2026-11-08): the first item as a t-squared design fire by default
 // (fireClasses.js designFireFor; flamescapesRun.js itemBurner).
-export const RUN_CACHE_VERSION = 5;
+// 6 (2026-11-08): the design-fire item's flame is in the frames' particles
+// (flamescapesRun.js withBurnerFlame); kept runs had none until the contents caught.
+export const RUN_CACHE_VERSION = 6;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 
