@@ -2,9 +2,11 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at ea2ec33 (released 2026-11-07 at the user's request: the performance check, a6442e5 and 06b4b7f, and the sprinklers, ea2ec33). The backend did not change, so Render was not redeployed.
-  - **Live check of ea2ec33:** 0 failed steps, 0 console errors, with Render awake.
-  - **Committed after it, not deployed (the next release):** fc71f77 (the interface: hints as one line, the phone layout), c880a4b (the second round of the sprinkler work), 8b3b646 (sprinkler fixes; the Office and Clinic examples), 3144a8e (README and the /docs/ guide), de743ad and 6d03f01 (suppression systems by room use; the spray drawn as a cone), and the suppression GIFs and video.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at 977978f (released 2026-11-08 at the user's request, "Release it and update readme"): fc71f77 (the interface: hints as one line, the phone layout), c880a4b (the second round of the sprinkler work), 8b3b646 (sprinkler fixes; the Office and Clinic examples), 3144a8e (README and the /docs/ guide), de743ad and 6d03f01 (suppression systems by room use; the spray drawn as a cone), 1619bec (the suppression GIFs and video) and 977978f (README: what's new). The backend did not change, so Render was not redeployed.
+  - **Gates before it:** 358 unit tests, lint, the Pages build, the browser suite on the Pages build desktop and mobile (0 failed steps, 0 console errors).
+  - **Live check of 977978f:** 0 failed steps, 0 console errors, with Render awake.
+  - **Local tooling:** `topologicpy-web-frontend/node_modules/.bin` was found empty on 2026-11-08 (OneDrive), so `npx eslint` and `npm run build` fail with "not recognized"; run `node node_modules/eslint/bin/eslint.js .` and `node node_modules/vite/bin/vite.js build` instead, or `npm rebuild` to relink.
+  - **Live check of ea2ec33** (the release before): 0 failed steps, 0 console errors, with Render awake.
   - **Live check of ba32e6d:** 0 failed steps, with Render awake; the replay (4.0 s) and the as-built doors (14 of 81) pass live. Before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 7e009e6:** 0 failed steps, with Render awake; before it, the suite passed on the dev server and on the Pages build, desktop and mobile.
   - **Live check of 3f9a4f2:** 0 failed steps, with Render awake.
