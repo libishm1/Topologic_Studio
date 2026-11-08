@@ -253,10 +253,17 @@ export default {
           { role: "system", content: INSTRUCTIONS },
           { role: "user", content: `Facts:\n${facts}` },
         ],
-        max_tokens: 700,
+        // gpt-oss reasons before it writes, and the reasoning counts against
+        // max_tokens: at 700 the Vienna facts (550 characters) left no room
+        // for the answer in 4 runs of 4; at 2500 it wrote in 600 to 1000
+        // tokens (2026-11-08). The messages format ignores a reasoning effort.
+        max_tokens: 2500,
       });
       const text = textOf(result).trim();
-      if (!text) return json({ error: "The model returned no text." }, 502, cors);
+      if (!text) {
+        const cut = result?.choices?.[0]?.finish_reason === "length";
+        return json({ error: cut ? "The model ran out of room before it wrote anything. Try again." : "The model returned no text." }, 502, cors);
+      }
       return json({ text, model }, 200, cors);
     } catch (error) {
       // Past the free daily allowance Workers AI refuses; say so plainly.

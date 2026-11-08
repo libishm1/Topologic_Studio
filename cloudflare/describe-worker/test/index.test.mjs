@@ -32,6 +32,12 @@ test("a description from the facts: the model gets the Worker's instructions and
   assert.equal(seen.model, "@cf/test/model");
   assert.equal(seen.input.messages[0].content, INSTRUCTIONS);
   assert.equal(seen.input.messages[1].content, "Facts:\n- Doors: 14.");
+  // Room for a reasoning model's thinking and its answer (2026-11-08: at 700, gpt-oss wrote nothing).
+  assert.ok(seen.input.max_tokens >= 2500, `max_tokens ${seen.input.max_tokens}`);
+  // A reply cut off by the length limit before any text says so.
+  const cut = await worker.fetch(post({ facts: "- Doors: 14." }), env(async () => ({ choices: [{ message: { content: null, reasoning_content: "..." }, finish_reason: "length" }] })));
+  assert.equal(cut.status, 502);
+  assert.match((await cut.json()).error, /ran out of room/);
 });
 
 test("other sites, empty or oversized facts and broken JSON are refused; facts are capped", async () => {
