@@ -505,6 +505,35 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
     }
   }
 
+  // ---- 2e. A design-fire first item (flamescapesRun.js itemBurner,
+  // 2026-11-08): a fast t-squared 5 kg item, no pilot. Its heat is the
+  // host's (flamescapes.js burnerHeat), the same on both paths, so the
+  // frames' heat release should match while it burns alone; then with a
+  // head over it (wetting): when the head opens and the item's decay.
+  if (phase === "all" || phase === "design") {
+    const head = { id: "over", position: [2.5, 2.55, 2.0], footprint: { centre: [2.5, 2.0], axis: [1, 0], half: [2.3, 2.3] }, rti: 50, c: 0.4, activationC: 68, flowLpm: 85, coverage: 20.9 };
+    out.design = [];
+    for (const mode of [null, "wetting"]) {
+      const scene = () => {
+        const sc = room(0.25, 200000);
+        const fire = R.itemBurner(sc.grid, sc.solid, sc.ignition.cell, { alpha: 0.0469, growth: "fast", item: { mass: 5, area: 1 }, fuel: ignitionFuel });
+        const under = new Set(fire.layers.flat());
+        const keep = [];
+        for (let q = 0; q < sc.contents.cells.length; q += 1) if (!under.has(sc.contents.cells[q])) keep.push(q);
+        return { ...sc, contents: { cells: keep.map((q) => sc.contents.cells[q]), masses: keep.map((q) => sc.contents.masses[q]) }, ignition: { ...sc.ignition, designFire: fire.design }, pilot: null, burner: fire };
+      };
+      const o = { nodes: nodeArray, upAxis: "y", horizon: quick ? 90 : 150, frameSeconds: 5, particles: 3000, sprinklers: mode ? { heads: [head], mode } : null };
+      const row = { mode: mode || "none" };
+      for (const [name, fn] of [["cpu", (sc) => R.runScene(sc, o)], ["gpu", (sc) => runner.runScene(sc, o)]]) {
+        const t0 = performance.now();
+        const r = await fn(scene());
+        row[name] = { ms: performance.now() - t0, hrr: Array.from(r.hrr), released: r.stats.released, item: r.designFire ?? null, estimate: r.sprinklers?.heads[0].estimate ?? null };
+      }
+      out.design.push(row);
+      log(`design ${row.mode}: item released CPU ${(row.cpu.item?.released / 1e6).toFixed(2)} MJ, GPU ${(row.gpu.item?.released / 1e6).toFixed(2)} MJ; head CPU ${row.cpu.estimate} s, GPU ${row.gpu.estimate} s`);
+    }
+  }
+
   // ---- 2d. flooded and foamed rooms (src/core/suppressionSystems.js,
   // 2026-11-07). First the deterministic stages (radiation and particles
   // off) stepped 200 times on both paths from one state, with the room
@@ -631,7 +660,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
   return out;
 }
 
-const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "systems", "timing"] : [PHASE];
+const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "timing"] : [PHASE];
 const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
@@ -681,6 +710,14 @@ Sprinklers: one quick-response head (RTI 50, C 0.4, 68 C) over a 200 kW burner; 
     const t = (x) => (x === null ? "-" : f(x, 1));
     const w = r.cpu.water ? `${f(r.cpu.water.emitted, 1)} (${f(r.cpu.water.evaporated, 2)}) / ${f(r.gpu.water?.emitted, 1)}` : "-";
     console.log(`  ${r.mode.padEnd(11)} | ${t(r.cpu.estimate)} / ${t(r.cpu.late)}   ${t(r.gpu.estimate)} / ${t(r.gpu.late)} | ${f(r.cpu.released / 1e6)} / ${f(r.gpu.released / 1e6)} | ${f(r.cpu.burnt, 3)} / ${f(r.gpu.burnt, 3)} | ${r.cpu.covered ?? "-"}, ${r.cpu.columns ?? "-"} | ${w} | ${f(r.cpu.ms / 1000, 1)} / ${f(r.gpu.ms / 1000, 1)}`);
+  }
+}
+if (report.design) {
+  console.log("\nDesign-fire first item (a fast t-squared 5 kg item, no pilot): frame heat release kW every 10 s, CPU / GPU; the item's own release and suppression");
+  for (const r of report.design) {
+    const it = (x) => (x ? `${f(x.released / 1e6)} MJ${x.suppressed ? `, ${x.suppressed} from ${f(x.suppressedAt, 1)} s` : ""}` : "-");
+    console.log(`  ${r.mode}: head opens CPU ${r.cpu.estimate === null ? "-" : f(r.cpu.estimate, 1)} s, GPU ${r.gpu.estimate === null ? "-" : f(r.gpu.estimate, 1)} s; item CPU ${it(r.cpu.item)}, GPU ${it(r.gpu.item)}; run s CPU ${f(r.cpu.ms / 1000, 1)} / GPU ${f(r.gpu.ms / 1000, 1)}`);
+    console.log(`    ${r.cpu.hrr.map((q, k) => [q, k]).filter(([, k]) => (k + 1) % 2 === 0).map(([q, k]) => `${(k + 1) * 5} s ${f(q, 0)}/${f(r.gpu.hrr[k], 0)}`).join(", ")}`);
   }
 }
 if (report.systems) {

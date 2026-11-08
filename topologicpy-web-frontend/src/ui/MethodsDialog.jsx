@@ -380,9 +380,11 @@ export function MethodsDialog({ open, onClose, studio }) {
                 <li>
                   <strong>Flamescapes in the browser is coarse.</strong> The paper resolves centimetres on a desktop
                   GPU; here a cell is 0.2 to 0.45 m and a step 0.1 s. So the fuel&apos;s surface layer, a sub-grid
-                  rule for where an ember lands, the first item alight from the start, a raised solid-gas heat
-                  transfer coefficient (the paper&apos;s own 200) and exact integration of each reaction over a step
-                  stand in for what the paper resolves. Walls and slabs do not burn; doors are open and windows
+                  rule for where an ember lands, the first item as a prescribed t-squared design fire (its
+                  class&apos;s growth by default; water over it decays it as Evans measured, clean agent puts it
+                  out), a raised solid-gas heat transfer coefficient for the fuel (the paper&apos;s own 200; walls
+                  and ceilings 10) and exact integration of each reaction over a step stand in for what the paper
+                  resolves. Walls and slabs do not burn; doors are open and windows
                   closed unless the run closes the doors (each leaf fills its opening, without leaks) or opens the
                   windows (their wall openings vent the smoke); running ventilation joins every air terminal through
                   one duct volume at an assumed 100 L/s a terminal, without reading which system a terminal belongs to

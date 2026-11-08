@@ -109,6 +109,11 @@ export const DEFAULT_SETTINGS = {
   // and "flamescapes-embers" (with embers).
   flamescapes: false,
   flamescapesClass: "A", // fire class of the first item (src/core/fireClasses.js)
+  // How the first item grows (fireClasses.js designFireFor): "class", its fire
+  // class's t-squared growth (medium for A and C); a growth class; or
+  // "solver", the solver burning it itself as before 2026-11-08 (about 500 kW
+  // within 15 s, faster than any design fire).
+  flamescapesGrowth: "class",
   flamescapesHorizon: 180, // s
   flamescapesFireLoad: 780, // MJ / m^2 of floor, the contents
   flamescapesUntenableC: 60, // gas at head height
@@ -206,6 +211,7 @@ export const PLAN_SETTINGS = [
   "zoneSmoke",
   "zoneHorizon",
   "flamescapesClass",
+  "flamescapesGrowth",
   "flamescapesHorizon",
   "flamescapesFireLoad",
   "flamescapesUntenableC",

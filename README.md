@@ -47,13 +47,18 @@ the heat.*
   head now opens within twice the measured time, and in large rooms heads
   that opened late or never now open
   ([Technical notes](#sprinkler-activation-and-its-validation)).
+- **The first item grows as a design fire.** A t-squared fire at its class's
+  growth (medium for furniture and electrical equipment) instead of the
+  solver's own, which reached about 500 kW within 15 s. In rooms of ordinary
+  height the first sprinkler now opens at 30 to 320 kW, before the room's
+  contents catch ([How the first item grows](#simulate-fire-and-smoke)).
 - **Extinguishers** are placed on the walk, and after a fire one person's
   attempt is judged against the unit's rating.
 - **Two larger examples:** the NIBS Office and the medical Clinic, both with
   server and electrical rooms ([The example buildings](#the-example-buildings)).
-- **A guide on the website**, with GIFs and an 84 s
-  [video](topologicpy-web-frontend/public/docs/media/suppression-analysis.mp4)
-  of the suppression results.
+- **A guide on the website**, with GIFs of the suppression results; the
+  earlier recordings, with an 84 s video, are kept in
+  [docs/media/2026-11-07/](topologicpy-web-frontend/public/docs/media/2026-11-07/).
 - **On a phone** the page fits the screen, and hints take one line.
 
 ## Contents
@@ -300,6 +305,22 @@ temperature come from a literature review
 and are cited in
 [fireClasses.js](topologicpy-web-frontend/src/core/fireClasses.js).
 
+**How the first item grows.** Since 2026-11-08 a solid first item (classes A
+and C) grows as a t-squared design fire, Q = α t², until its fuel is spent:
+by default its class's growth (medium, 0.0117 kW/s², for both: EN 1991-1-2
+for dwellings and offices), or slow, medium, fast or ultra-fast under **How
+it grows**. It burns as a prescribed source over its own floor area, with its
+fuel's smoke, and the room's contents catch from it. Water from a head over
+it decays it as Evans measured, and clean agent at the class A concentration
+puts it out. A pool, a metal or a battery pack keeps its own burning. Before,
+the solver lit and burned the item itself, which took every example to about
+500 kW within 15 s, faster than any design fire; **As the solver burns it**
+keeps that. In 16 class A fires in eight models (`tools/activation-diagnose.mjs`,
+`benchmark/results/2026-11-08-design-fire-activation.json`) the first head
+opened at 33 to 319 kW, 53 to 165 s after ignition, in 12; in the other four,
+under a high or open ceiling or with few heads in sight, the room's contents
+caught first and the head opened at 0.45 to 1.6 MW.
+
 **Likely ignition points** finds where a fire most often starts in your
 model, from its appliances, furniture and rooms ranked by their share of fire
 deaths, and **Start here** puts the fire there with its class. **Cause**
@@ -390,10 +411,22 @@ All are off by default; off, a run is exactly as before, at the same speed.
 ![Switching sprinklers on: the heads laid out in the rooms, a fire started, and the heads near it opening and spraying](topologicpy-web-frontend/public/docs/media/suppression-workflow.gif)
 
 *Switching **Sprinklers** on lays out the heads; a Flamescapes fire then opens
-the heads its hot gas reaches, and the open heads spray.*
+the heads its hot gas reaches, and the open heads spray. Here the first item
+(class A, 20 kg) grows as a medium design fire: the first head opens at
+132 s, with the fire at about 290 kW, four are open by 135 s, and the water on
+the item brings it down as Evans measured, to 2 kW at 180 s. One run: its
+numbers are not to be quoted.*
 
-An 84 s video, recorded from the app, compares the fires below and sums up
-the results: [suppression-analysis.mp4](topologicpy-web-frontend/public/docs/media/suppression-analysis.mp4).
+The workflow, open office and server room GIFs were recorded on 2026-11-08,
+with the activation fix and the first item as a design fire. The recordings
+made on 2026-11-07, before both, are kept in
+[topologicpy-web-frontend/public/docs/media/2026-11-07/](topologicpy-web-frontend/public/docs/media/2026-11-07/):
+the earlier versions of those three, the four modes compared and the fire
+classes (both below), and an 84 s video that compares the fires and sums up
+the results then
+([suppression-analysis.mp4](topologicpy-web-frontend/public/docs/media/2026-11-07/suppression-analysis.mp4)).
+In them the item burns as the solver burns it, faster than a design fire, so
+their heads open sooner but against larger fires than the app's now.
 
 **Where the heads come from.** From the IFC where it has them
 (`IfcFireSuppressionTerminal`, or an IFC2x3 flow terminal typed as one, with
@@ -417,9 +450,10 @@ stepped exactly on two readings of the gas: Alpert's ceiling jet for the
 run's heat release under the fire's own ceiling (the estimate) and the gas at
 the top cell of the head's column (the late bound). The run card gives both
 times and the heat release at each. No IFC carries a head's RTI or C, so
-quick response is 50, standard 100 and C 0.4, as the panel says. In the test
-fires on the Duplex the first head opened 16 to 21 s after ignition by the
-estimate.
+quick response is 50, standard 100 and C 0.4, as the panel says. In the
+Duplex's living and bedrooms, with the first item a medium design fire, the
+first head opens 109 to 123 s after ignition by the estimate, against 141 to
+177 kW.
 
 Checked against measured tests (Vettori 1998 and 2003, Bittern 2004, UL/NFPRF
 1998; `tools/sprinkler-validation.mjs`), the link reproduces Vettori's
@@ -446,29 +480,36 @@ energy-limited evaporation on the grid), the steam diluting the oxygen.
 
 The heads show in the view, blue once open, and open heads are drawn
 spraying. Wetting is the default. In 12 test fires on the Duplex, Vienna,
-and the NIBS Office and Clinic (`tools/sprinkler-check.mjs`, 180 s,
-`benchmark/results/2026-11-08-sprinkler-check.txt`), heads opened by 47 s in
-nine; in those, wetting cut the heat released by 47 to 95 % in eight, Evans's
-cap by 12 to 95 % and the spray by up to 95 %. In the Clinic's mechanical
-room, with no ceiling over the fire, the first head opened at 47 s against
-about 1 MW and no mode helped; in the other three fires no head opened in
-time to matter. A single run can mislead: the fire's own scatter is large
-(see [Technical notes](#sprinkler-activation-and-its-validation)).
+and the NIBS Office and Clinic, with the first item as a design fire
+(`tools/sprinkler-check.mjs`, 180 s,
+`benchmark/results/2026-11-08-design-fire-sprinkler-check.txt`), heads opened
+by 152 s in eight, and wetting cut the heat released by 37 to 89 %; Evans's
+cap and the spray came within 4 % of it, since the water on the item decays
+it the same way in every mode. In the Clinic's mechanical room, with no
+ceiling over the fire, and in Vienna's garage the first head opened at 162
+and 168 s, too late to matter in 180 s; in the Clinic's atrium void one head
+opened with no effect, and the Office's lift shaft has no heads. With the
+solver's own burning, the same fires opened heads by 47 s, against fires
+already near 1 MW, and wetting did most
+(`benchmark/results/2026-11-08-sprinkler-check.txt`). A single run can
+mislead: the fire's own scatter is large (see
+[Technical notes](#sprinkler-activation-and-its-validation)).
 
-![The same fire four times, side by side: with no sprinklers, with Evans's cap, with the spray, and with the water wetting the fuel](topologicpy-web-frontend/public/docs/media/suppression-compare.gif)
+![The same fire four times, side by side: with no sprinklers, with Evans's cap, with the spray, and with the water wetting the fuel](topologicpy-web-frontend/public/docs/media/2026-11-07/suppression-compare.gif)
 
 *The same fire with no sprinklers, with Evans's cap, with the spray, and
-with wetting, side by side.*
+with wetting, side by side (recorded on 2026-11-07, before the activation fix
+and the design fire).*
 
-![An open office fire in the NIBS Office over 180 s, with no sprinklers and with wetting: two heads open near the fire and hold it below 1 MW](topologicpy-web-frontend/public/docs/media/suppression-office.gif)
+![An open office fire in the NIBS Office over 180 s, with no sprinklers and with wetting: three heads open near the fire and keep it near 400 kW, against 1.8 MW without them](topologicpy-web-frontend/public/docs/media/suppression-office.gif)
 
-*An open office fire over 180 s. With no sprinklers it grows to several
-megawatts, in spikes that are the solver's pyrolysis gas gathering and
-flashing; with them, the first head opens at 61 s and the fire stays below
-1 MW. One run each: a single run's numbers are not to be quoted. The GIFs and
-the video were recorded on 2026-11-07, before the activation fix described
-under [Technical notes](#sprinkler-activation-and-its-validation): the
-Office's suspended ceilings were not yet in the fire grid.*
+*An open office fire over 180 s, the first item (class A, 20 kg) a medium
+design fire. With no sprinklers it lights the room's contents and reaches
+1.8 MW; with them, the first head opens at 142 s, with the fire at about
+370 kW, and at 180 s three are open and the fire is at 394 kW: the water
+brings the item down, while the contents it had already lit go on burning.
+One run each: a single run's numbers are not to be quoted. The earlier
+recording of this fire is kept in `docs/media/2026-11-07/` with the others.*
 
 **Water by fire class.** Sprinkler drops, about 1 mm across, are too large to
 put a flame out in the gas; sprinkler water works by cooling the burning
@@ -479,10 +520,11 @@ panel says why: the water sinks through the pool, erupts the oil, feeds the
 metal hydrogen, or does not reach the cells. The room's class A contents
 round them are wetted and capped as usual.
 
-![A heptane item burning in the Duplex living room, with no sprinklers and with wetting: the pool is not wetted, the room's other contents are](topologicpy-web-frontend/public/docs/media/suppression-classes.gif)
+![A heptane item burning in the Duplex living room, with no sprinklers and with wetting: the pool is not wetted, the room's other contents are](topologicpy-web-frontend/public/docs/media/2026-11-07/suppression-classes.gif)
 
 *A heptane item as the first to burn. The water does not reach the pool, but
-it wets the room's other contents, so the fire stays smaller.*
+it wets the room's other contents, so the fire stays smaller (recorded on
+2026-11-07; a pool still burns as the solver burns it).*
 
 **A second model.** In the Model step, an MEP or structural IFC of the same
 building is drawn in the first one's frame through the two files'
@@ -535,26 +577,36 @@ doors. In a foam room, the blanket cuts a pool's evaporation to a tenth in
 about 10 s and to nothing in about 30 s (Back and Farley 2020), and the
 solution's water wets the room's ordinary fuel.
 
-The systems were tested in server room fires (class C, 180 s, the mean of
-three contents seeds, `tools/systems-check.mjs`,
-`benchmark/results/2026-11-08-systems-check.txt`):
+The systems were tested in server room fires (class C, its item a medium
+t-squared design fire, 180 s, the mean of three contents seeds,
+`tools/systems-check.mjs`,
+`benchmark/results/2026-11-08-design-fire-systems-check.txt`):
 
-- Sprinklers cut the heat released by 67 % in the Office and 61 % in the
-  Clinic, the first head opening at about 25 s.
-- The clean agent cut it by 91 % and 90 %, acting at 42 s.
+- Sprinklers cut the heat released by 55 % in the Office and 80 % in the
+  Clinic, the first head opening at 108 to 116 s.
+- The clean agent cut it by 85 % and 93 %, reaching the class A
+  concentration at about 103 s (the smoke reaches the room's detectors
+  later than it did from the solver's own, faster fire).
 
-In the Clinic's store, a heptane spill kept alight by its burner lost 72 % of
-its heat to sprinklers, which opened at 29 s and wetted the room's other
-contents, and 8 % to foam: the burner keeps the pool itself burning under the
-blanket. These are after the activation fix of 2026-11-08; before it the
-sprinklers opened at 39 to 57 s and cut the server room fires by 65 and 28 %.
-The sources and every value are in
+Class A fires on sprinklers lost 54 to 88 % of their heat (the Duplex's
+living room 88 %). In the Clinic's store, a heptane spill kept alight by its
+burner lost 72 % of its heat to sprinklers, which opened at 29 s and wetted
+the room's other contents, and 8 % to foam: the burner keeps the pool itself
+burning under the blanket (a pool keeps its own burning). With the solver's
+own burning the sprinklers opened at about 25 s and the agent acted at 42 s
+(`benchmark/results/2026-11-08-systems-check.txt`); before the activation fix
+the sprinklers opened at 39 to 57 s. The sources and every value are in
 `wiki/research/suppression-systems-by-room-2026-11-07.md`.
 
 ![A server room fire in the NIBS Office three times: with no system, with sprinklers, and with the clean agent, the room filling teal once the agent is released](topologicpy-web-frontend/public/docs/media/suppression-systems.gif)
 
 *A server room fire with no system, with sprinklers, and with the clean
-agent: the room fills teal once the agent is released.*
+agent: the room fills teal once the agent is released. The first item
+(class C, 10 kg) grows as a medium design fire and reaches 736 kW at 180 s
+with no system. With sprinklers the first head opens at 95 s, with the fire at
+about 110 kW, and the fire is at 78 kW at 180 s; with the agent as well, the
+room's detectors see smoke at 63 s, the agent is released at 93 s and the
+flames stop at 100 s. One run each.*
 
 ### Checks: the code check and the performance check
 
@@ -772,9 +824,11 @@ These are also on the Methods page.
 - **A coarse grid.** Flamescapes in the browser is coarse. The paper resolves
   centimetres on a desktop GPU; here a cell is 0.2 to 0.45 m and a step 0.1 s. A surface
   layer of the fuel, a sub-grid rule for where an ember lands, the first item
-  alight from the start, the paper's raised solid-gas heat transfer
-  coefficient and exact integration of each reaction over a step stand in for
-  what the paper resolves. It is not calibrated against room fire tests.
+  as a prescribed design fire, the paper's raised solid-gas heat transfer
+  coefficient for the fuel and exact integration of each reaction over a step
+  stand in for what the paper resolves. Once the room's contents catch, the
+  fire grows as the solver spreads it, which is not calibrated against room
+  fire tests.
 - **Doors, windows and ducts.** Walls and slabs do not burn. Doors are open
   and windows closed unless the **Doors** switch beside the fire controls or
   **Windows** in the Flamescapes settings say otherwise; a closed door or
@@ -797,10 +851,12 @@ These are also on the Methods page.
 - **Sprinkler timing.** Against NIST's tests the estimate opens the first
   head at 0.8 to 1.3 of the measured time; it stays about a quarter late in a
   small closed room, where the coarse grid spreads the hot layer down the
-  room. The fire grows faster than any design fire (about 500 kW within 15 s),
-  so heads open when it has reached 250 to 600 kW, as real quick-response
-  heads would on so fast a fire. A model without its suspended ceilings has
-  none in the fire grid. A late opening delays the modelled suppression, so
+  room. With the first item as its class's design fire, heads open at 30 to
+  320 kW in rooms of ordinary height; under a high or open ceiling, or with
+  few heads in sight, the room's contents can catch first, and once they do
+  the fire grows as the solver spreads it, faster than a design fire. A model
+  without its suspended ceilings has none in the fire grid. A late opening
+  delays the modelled suppression, so
   for tenability a late bias is conservative; for anything that starts on
   sprinkler flow, such as an alarm, it is not. An extinguisher attempt is
   judged but does not change the fire in the run.
@@ -947,12 +1003,17 @@ changes stated, are in [wiki/sources/papers/](wiki/sources/papers/).
   Clinic's waiting area at 22 s. In the FZK-Haus living room it opened 2.4 s
   after: that model has no ceiling at the heads' height, and the nearest
   head has no line of sight to the plume.
+- **The fire's growth.** With the solver's own burning every example reached
+  about 500 kW within 15 s, where an ultra-fast t-squared fire takes 52 s, so
+  heads opened at 250 to 600 kW. Since 2026-11-08 the first item grows as its
+  class's design fire (see [How the first item grows](#simulate-fire-and-smoke)),
+  and in 12 of 16 fires in eight models the first head opened at 33 to 319 kW,
+  before the room's contents caught.
 - **What is left.** In the 1998 room the estimate is still about a quarter
-  late: the coarse grid spreads the hot layer down the room. The fire grows
-  faster than design fires: about 500 kW within 15 s, where an ultra-fast
-  t-squared fire takes 52 s, so heads open at 250 to 600 kW. Making the first
-  item grow as a design fire would change every Flamescapes run and is left
-  open.
+  late: the coarse grid spreads the hot layer down the room. Once the room's
+  contents catch, the solver spreads the fire faster than a design fire, so
+  under a high or open ceiling (the Clinic's mechanical room, a 3 m lobby with
+  7 of its 40 heads in sight) heads open at 0.45 to 1.6 MW.
 - **Scatter.** The same Duplex fire with its room contents laid out three
   ways released 137 to 272 MJ with no sprinklers; across the three, wetting
   cut 60 to 79 %, the spray changed the heat by +20 to -55 % and the cap by

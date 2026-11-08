@@ -293,7 +293,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
   }
   const fuels = [contentsFuel, ignitionFuel];
   const stoich = fuels.map(stoichiometry);
-  if (scene.ignition) {
+  // A design-fire first item is the scene's burner, not fuel in the grid.
+  if (scene.ignition && !scene.ignition.designFire) {
     const { cell, mass } = scene.ignition;
     if (kind[cell] !== SOLID) {
       kind[cell] = POROUS;
@@ -1655,14 +1656,29 @@ export const METHANE = Object.freeze({ heatOfCombustion: 50.0e6, yields: Object.
  *     (runScene) includes the burner.
  * The axis cell is the lowest-layer cell nearest the cells' centroid: the
  * plume's axis for the sprinklers when the scene has no first item. With
- * `rays` 0 the radiant part leaves the domain. CPU solver only: the GPU
- * port does not run a burner. (buildScene's `burner` option is something
- * else: the pilot that lights the first item.)
+ * `rays` 0 the radiant part leaves the domain. (buildScene's `burner` option
+ * is something else: the pilot that lights the first item.)
+ *
+ * The first item as a design fire (buildScene's `designFire`, 2026-11-08)
+ * is a burner too: its table is the item's t-squared curve until its energy
+ * is spent, its fuel the item's (with its soot), `radiantFraction` 0 (the
+ * solver's own radiation from the hot, sooty flame cells takes that part),
+ * and `layers` the open cells over the item's area a layer at a time from
+ * its base: each step's heat goes to as many layers as Heskestad's mean
+ * flame height reaches for that heat release over a fire of `diameter`
+ * (burnerCells). The run caps it once water or clean agent reaches the item
+ * (b.suppression, b.stopAt; burnerHeat). The GPU port runs this kind of
+ * burner (its radiant part is none); the validation's, with rays, is CPU only.
  */
 export function createBurner(spec, kind, grid) {
   const { nx, ny } = grid;
-  const cells = Int32Array.from((spec.cells || []).filter((c) => c >= 0 && c < kind.length && kind[c] !== SOLID));
+  const open = (c) => c >= 0 && c < kind.length && kind[c] !== SOLID;
+  const layers = (spec.layers || [spec.cells || []]).map((layer) => layer.filter(open)).filter((layer) => layer.length);
+  const cells = Int32Array.from(layers.flat());
   if (!cells.length) throw new Error("A burner needs at least one open cell.");
+  // Where each layer starts in `cells`, and where the last ends.
+  const layerStart = new Int32Array(layers.length + 1);
+  for (let l = 0; l < layers.length; l += 1) layerStart[l + 1] = layerStart[l] + layers[l].length;
   const table = spec.hrr || [];
   if (!table.length) throw new Error("A burner needs a heat release table.");
   const times = Float64Array.from(table, (row) => row[0]);
@@ -1707,6 +1723,9 @@ export function createBurner(spec, kind, grid) {
   }
   return {
     cells,
+    layerStart,
+    diameter: spec.diameter ?? 0,
+    h: grid.h,
     axis,
     origin: [ai + 0.5, aj + 0.5, ak + 0.5],
     times,
@@ -1721,7 +1740,57 @@ export function createBurner(spec, kind, grid) {
     released: 0,
     convective: 0,
     radiant: 0,
+    // A design-fire item's curve (buildScene), and, set by the run, water
+    // on the item ({start, tau, q, by}) and the time clean agent puts its flames out.
+    design: spec.design ?? null,
+    suppression: null,
+    stopAt: Infinity,
   };
+}
+
+/** A burner's heat release rate at t, W: its table, linear between rows, held at its ends. */
+export function burnerRate(b, t) {
+  const { times: T, values: Q } = b;
+  const n = T.length;
+  if (t <= T[0]) return Q[0];
+  if (t >= T[n - 1]) return Q[n - 1];
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (T[mid] <= t) lo = mid;
+    else hi = mid;
+  }
+  return Q[lo] + ((t - T[lo]) / (T[hi] - T[lo])) * (Q[hi] - Q[lo]);
+}
+
+/** Heskestad's mean flame height (m) for a heat release Q (W) over a fire of diameter D (m): 0.235 Q^(2/5) - 1.02 D, Q in kW. */
+export function flameHeight(Q, D) {
+  return 0.235 * Math.max(0, Q / 1000) ** 0.4 - 1.02 * D;
+}
+
+/** How many of a burner's cells take a step's heat at a heat release Q (W): all of them, or a design-fire item's layers its flame reaches (at least one). */
+export function burnerCells(b, Q) {
+  const L = b.layerStart.length - 1;
+  if (L <= 1 || !(b.diameter > 0)) return b.layerStart[L];
+  return b.layerStart[Math.min(L, Math.max(1, Math.ceil(flameHeight(Q, b.diameter) / b.h)))];
+}
+
+/**
+ * The heat (J) a burner gives off over [t0, t1]: its table's integral; once
+ * water reaches the item (b.suppression = {start, tau, q}), the rate decays
+ * from q as Evans (1993) measured on wetted furnishings, q exp(-(t -
+ * start) / tau), never above the table; once the room's clean agent reaches
+ * the class A extinguishing concentration (b.stopAt), nothing.
+ */
+export function burnerHeat(b, t0, t1) {
+  const end = Math.min(t1, b.stopAt ?? Infinity);
+  if (!(end > t0)) return 0;
+  const s = b.suppression;
+  if (!s || !(end > s.start)) return burnerEnergy(b, end) - burnerEnergy(b, t0);
+  const a = Math.max(t0, s.start);
+  const before = a > t0 ? burnerEnergy(b, a) - burnerEnergy(b, t0) : 0;
+  const decay = s.q * s.tau * (Math.exp(-(a - s.start) / s.tau) - Math.exp(-(end - s.start) / s.tau));
+  return before + Math.max(0, Math.min(decay, burnerEnergy(b, end) - burnerEnergy(b, a)));
 }
 
 /** The integral of a burner's table from its first row to time t, J (burnerEnergy(b, t1) - burnerEnergy(b, t0) is released over [t0, t1]). */
@@ -1743,9 +1812,9 @@ export function burnerEnergy(b, t) {
 /** One step of the prescribed burner (createBurner): its heat, products and radiation over [time, time + dt]. */
 export function burnerStep(sim, dt) {
   const b = sim.burner;
-  const E = burnerEnergy(b, sim.time + dt) - burnerEnergy(b, sim.time);
+  const E = burnerHeat(b, sim.time, sim.time + dt);
   if (!(E > 0)) return;
-  const n = b.cells.length;
+  const n = burnerCells(b, E / dt);
   const convective = (1 - b.radiantFraction) * E;
   const share = convective / n;
   const fuel = E / b.stoich.heat / n;

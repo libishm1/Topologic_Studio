@@ -59,6 +59,7 @@ function sceneFor(payload, backend) {
     ignitionFuel: payload.ignitionFuel,
     item: payload.item,
     burner: payload.burner,
+    designFire: payload.designFire ?? null,
     ventilation: payload.ventilation || null,
     seed: payload.seed ?? 1,
   });
@@ -75,6 +76,8 @@ function describe(scene, backend, t0, restarted, resized = false, openings = nul
     cells: g.cells,
     clipped: scene.clipped,
     contents: scene.contentsSummary,
+    // The first item's t-squared curve, when it grows as a design fire.
+    designFire: scene.ignition?.designFire ?? null,
     setupMs: performance.now() - t0,
     restarted,
     resized,

@@ -99,6 +99,9 @@ export const PARAMS = [
   ["sysOn", "u32"], ["sysState", "u32"], ["sysWetAt", "u32"], ["sysWetN", "u32"],
   // The interface coefficient of inert solids (the CPU's wallConvection).
   ["wallConvection", "f32"],
+  // A design-fire first item (flamescapes.js burnerStep): the cells this step,
+  // where they are listed in io, and each one's heat (J) and fuel burnt (kg).
+  ["burnerN", "u32"], ["burnerAt", "u32"], ["burnerShare", "f32"], ["burnerFuel", "f32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -169,6 +172,7 @@ const half = (d) => Math.floor((d.nx + 1) / 2) * d.ny * d.nz;
 const one = () => 1;
 export const KERNELS = {
   pilot: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
+  burner: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
   ducts: { uses: [0, 1, 2, 11], threads: one, wg: 1 },
   spawnFlame: { uses: [0, 1, 3, 7, 9], threads: cells },
   spawnFlameEnd: { uses: [0, 9], threads: one, wg: 1 },
@@ -564,6 +568,24 @@ fn rnd(s: ptr<function, u32>) -> f32 {
 }
 
 // ------------------------------------------------------------------ ignition source
+
+/**
+ * A design-fire first item's step (flamescapes.js burnerStep; its radiant
+ * part is none): the host gives the step's heat a cell (burnerShare, J) and
+ * the item's fuel burnt a cell (burnerFuel, kg) for the first burnerN cells
+ * listed at io[burnerAt]; each takes the item's products, and its gas
+ * enthalpy above ambient rises by its share.
+ */
+@compute @workgroup_size(1)
+fn burner() {
+  let st = fuelOf(1u);
+  for (var q = 0u; q < U.burnerN; q++) {
+    let c = io[U.burnerAt + q];
+    let excess = cf[ix(fRho, c)] * U.V * mixtureCp(c) * (cf[ix(fT, c)] - U.ambient);
+    addProducts(c, st, U.burnerFuel, false);
+    cf[ix(fT, c)] = U.ambient + (excess + U.burnerShare) / (cf[ix(fRho, c)] * U.V * mixtureCp(c));
+  }
+}
 
 @compute @workgroup_size(1)
 fn pilot() {

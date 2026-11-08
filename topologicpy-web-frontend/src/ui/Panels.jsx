@@ -14,7 +14,7 @@ import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
-import { FIRE_CLASSES, FIRE_CLASS_KEYS, waterResponse } from "../core/fireClasses.js";
+import { FIRE_CLASSES, FIRE_CLASS_KEYS, designFireFor, waterResponse } from "../core/fireClasses.js";
 import { GAS_MEASURES, SHOW_GROUPS, SMOKE_MEASURES } from "../core/measures.js";
 import { IGNITION_CONTEXTS } from "../core/ignitionContexts.js";
 import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
@@ -1726,6 +1726,40 @@ const ZONE_GROWTH = [
   { value: "ultra-fast", label: "Ultra-fast (1 MW in 75 s)" },
 ];
 
+/** How the Flamescapes first item grows (fireClasses.js designFireFor). */
+const itemGrowthOptions = (cls) => [
+  { value: "class", label: `As its fire class (${cls.growth?.class ?? "its own burning"})` },
+  ...ZONE_GROWTH,
+  { value: "solver", label: "As the solver burns it (before 2026-11-08)" },
+];
+
+/** A design-fire first item on the run card: its curve, then what water or agent did to it. */
+function itemLine(design, summary, horizon) {
+  const base = `${/^[aeiou]/i.test(design.growth) ? "an" : "a"} ${design.growth} t-squared fire (${design.alpha} kW/s²), ${design.mass} kg`;
+  if (!summary) return base;
+  const stopped = summary.stoppedAt != null && summary.stoppedAt <= (horizon ?? Infinity);
+  const what = stopped
+    ? `the clean agent put it out at ${Math.round(summary.stoppedAt)} s`
+    : summary.suppressed
+      ? `${summary.suppressed === "foam" ? "foam-water" : "sprinkler water"} on it from ${Math.round(summary.suppressedAt)} s, decaying as Evans measured`
+      : "no water reached it";
+  return `${base}; ${what}; it released ${(summary.released / 1e6).toFixed(1)} MJ`;
+}
+
+/** What the first item does, for the growth choice's hint. */
+function itemGrowthHint(clsKey, growth) {
+  const cls = FIRE_CLASSES[clsKey] || FIRE_CLASSES.A;
+  const fire = designFireFor(clsKey, growth);
+  if (growth === "solver") return "The solver lights and burns the item itself: about 500 kW within 15 s in the examples, faster than any design fire, so sprinklers open when the fire is already large.";
+  if (!fire) return `A class ${cls.short} item keeps its own burning (a pool, a metal or a battery pack is not a t-squared item).`;
+  const energy = cls.item.mass * cls.fuel.heatOfCombustion;
+  const end = Math.cbrt((3 * energy) / (fire.alpha * 1000));
+  return (
+    `${/^[aeiou]/i.test(fire.growth) ? "An" : "A"} ${fire.growth} t-squared fire, ${fire.alpha} kW/s²: the ${cls.item.mass} kg item (${Math.round(energy / 1e6)} MJ) would reach ${Math.round(fire.alpha * end * end)} kW ` +
+    `when it burns out at ${Math.round(end)} s. The room's contents catch from it. Sprinkler water over it decays it as Evans measured; clean agent at the class A concentration puts it out.`
+  );
+}
+
 /** What the two-zone model leaves out (specification section 8), shown with every result. */
 const ZONE_LIMITS =
   "Pre-flashover correlations (MQH) for rooms of ordinary size; one fire; doors open; no ceiling jet, radiant heat, " +
@@ -2215,6 +2249,12 @@ function CombustionStatus({ combustion, running }) {
             {combustion.extras ? "heat, smoke, CO, CO₂, O₂" : combustion.extrasDropped ? "heat, smoke, CO (the rest would not fit in memory)" : "heat, smoke, CO"}
           </dd>
         </div>
+        {combustion.designFire && (
+          <div className="result__item">
+            <dt className="result__label">First item</dt>
+            <dd className="result__value">{itemLine(combustion.designFire, combustion.itemSummary, combustion.horizon)}</dd>
+          </div>
+        )}
         {combustion.sprinklers && (
           <div className="result__item">
             <dt className="result__label">Sprinklers</dt>
@@ -2223,7 +2263,8 @@ function CombustionStatus({ combustion, running }) {
               <span className="field__hint">
                 {" "}
                 Against measured tests the estimate opens the first head at 0.8 to 1.3 of the measured time, about a quarter late in a small
-                closed room. The fire grows fast, so heads open at a few hundred kW. The late bound is not a time to quote.
+                closed room. With the first item as a design fire, heads in rooms of ordinary height open at tens to a few hundred kW. The
+                late bound is not a time to quote.
               </span>
             </dd>
           </div>
@@ -2534,6 +2575,13 @@ export function SimulatePanel({
               onChange={(flamescapesClass) => setSettings({ flamescapesClass })}
               options={FIRE_CLASS_KEYS.map((key) => ({ value: key, label: FIRE_CLASSES[key].label }))}
               hint={`${fireClass.examples}. ISO 3941 class: ${fireClass.iso}.`}
+            />
+            <SelectField
+              label="How it grows"
+              value={settings.flamescapesGrowth}
+              onChange={(flamescapesGrowth) => setSettings({ flamescapesGrowth })}
+              options={itemGrowthOptions(fireClass)}
+              hint={itemGrowthHint(settings.flamescapesClass, settings.flamescapesGrowth)}
             />
             <Notice tone={fireClass.agents.unsuitable.length ? "warning" : "neutral"}>
               <strong>Extinguishing a class {fireClass.short} fire.</strong> Suitable: {fireClass.agents.suitable.join(", ")}.

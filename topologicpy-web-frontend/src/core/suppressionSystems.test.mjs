@@ -9,7 +9,7 @@ import {
 import { MATERIAL } from "./voxelize.js";
 import { buildScene, readNodes, runScene, systemsFrame, systemsRun } from "./flamescapesRun.js";
 import { createSolver, step } from "./flamescapes.js";
-import { fuelsFor } from "./fireClasses.js";
+import { designFireFor, fuelsFor } from "./fireClasses.js";
 
 const close = (a, b, tol, what = "") => assert.ok(Math.abs(a - b) <= tol, `${what} ${a} against ${b} (tolerance ${tol})`);
 
@@ -212,6 +212,21 @@ test("clean agent: after detection and the delay the room floods, its fire stops
   assert.ok(rec.stats.oxBlocked > 0 && rec.stats.flameSteps > 0, "the agent stopped oxidation and flames");
   // The hot fuel left after a 30 s hold lights again when the agent goes (NFPA 2001 A.7.4.1).
   assert.ok(after > 1e6, `${(after / 1e6).toFixed(2)} MJ released after the hold`);
+});
+
+test("clean agent: a design-fire first item stops when the agent reaches the class A extinguishing concentration", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("C");
+  const designFire = designFireFor("C", "fast");
+  const make = () => buildScene(twoRooms(), { fire: [2.5, 0.75, 2], maxCells: 30000, minCell: 0.35, maxCell: 0.35, contentsFuel, ignitionFuel, item, designFire });
+  const free = runScene(make(), { nodes, horizon: 40, frameSeconds: 5, particles: 0 });
+  const flooded = runScene(make(), { nodes, horizon: 40, frameSeconds: 5, particles: 0, systems: { rooms: [{ ...ROOM1, system: "clean-agent", params: { releaseAt: 5 } }] } });
+  const rec = { t0: 5, discharge: CLEAN_AGENT.discharge.value, extA: CLEAN_AGENT.mecClassA.value, design: CLEAN_AGENT.design.C.value };
+  const stop = rec.t0 + (rec.discharge * rec.extA) / rec.design;
+  assert.ok(Math.abs(flooded.designFire.stoppedAt - stop) < 1e-9, `stopped at ${flooded.designFire.stoppedAt} s, ${stop} s expected`);
+  // Its heat is the curve's up to the stop (the stop is set at the end of the frame the agent was released in), then none.
+  const curve = (46.9 * stop ** 3) / 3;
+  assert.ok(Math.abs(flooded.designFire.released - curve) < 0.01 * curve, `${flooded.designFire.released} J against ${curve} J`);
+  assert.ok(free.designFire.released > 2 * flooded.designFire.released, "unflooded it burns on");
 });
 
 test("clean agent: the agent stays in its room; a fire next door burns as it would", () => {

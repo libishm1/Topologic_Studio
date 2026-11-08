@@ -44,7 +44,7 @@ import { extract } from "./ifc-extract.mjs";
 import { buildScene, runScene } from "../topologicpy-web-frontend/src/core/flamescapesRun.js";
 import { layoutRooms, roomsFromSpaces } from "../topologicpy-web-frontend/src/core/sprinklers.js";
 import { planSystems } from "../topologicpy-web-frontend/src/core/suppressionSystems.js";
-import { fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
+import { designFireFor, fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
 import { floorsFromSpaces, slabsMissing } from "../topologicpy-web-frontend/src/core/spaceFloors.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -55,6 +55,8 @@ const flag = (name, fallback) => {
   return i >= 0 ? args[i + 1] : fallback;
 };
 const horizon = Number(flag("--horizon", 180));
+// The first item: "class" (its fire class's t-squared growth, the app's default), a class name, or "solver" (as before 2026-11-08).
+const growth = flag("--growth", "class");
 const maxCells = Number(flag("--cells", 30000));
 const seeds = flag("--seeds", "1,2,3").split(",").map(Number);
 const jsonOut = flag("--json", null);
@@ -135,7 +137,8 @@ for (const { file, occupancy } of models) {
     const runs = [];
     for (const seed of seeds) {
       for (const mode of c.modes) {
-        const scene = buildScene(fireGeo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item, seed });
+        // A spill kept alight stays the solver's pool (designFireFor gives none for a liquid).
+        const scene = buildScene(fireGeo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item, seed, designFire: designFireFor(c.cls, growth) });
         if (c.spill && scene.pilot) scene.pilot = { ...scene.pilot, duration: 1e9 };
         const t1 = performance.now();
         const out = runScene(scene, { nodes, horizon, frameSeconds: 5, particles: 0, ...options(mode) });

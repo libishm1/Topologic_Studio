@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { HEAT_PER_O2, METHANE, NS, SPECIES, burnerEnergy, burnerStep, createBurner, createSolver, mixtureCp } from "./flamescapes.js";
+import { HEAT_PER_O2, METHANE, NS, SPECIES, burnerCells, burnerEnergy, burnerHeat, burnerStep, createBurner, createSolver, flameHeight, mixtureCp } from "./flamescapes.js";
 import { MATERIAL, gridFor, occupancy, raysFor, volumeFractions } from "./voxelize.js";
 import { runScene } from "./flamescapesRun.js";
 
@@ -59,6 +59,30 @@ test("burnerEnergy is the exact integral of the linear table, held at its ends",
   assert.ok(burnerEnergy(b, -5) === 0); // held at 0 W before the first (-0 counts)
   const held = createBurner({ cells: [0], hrr: [[0, 0], [10, 1000]] }, new Uint8Array(1), { nx: 1, ny: 1, nz: 1 });
   assert.equal(burnerEnergy(held, 20) - burnerEnergy(held, 10), 10000); // the last value holds
+});
+
+test("burnerHeat: Evans's decay once water reaches the item, never above its table, and nothing once clean agent puts it out; the flame's layers follow Heskestad", () => {
+  // 100 W more each second: 150 kJ from 10 to 20 s by the table.
+  const b = createBurner({ cells: [0], hrr: [[0, 0], [100, 10000]] }, new Uint8Array(1), { nx: 1, ny: 1, nz: 1, h: 1 });
+  assert.ok(Math.abs(burnerHeat(b, 10, 20) - 15000) < 1e-9);
+  b.suppression = { start: 10, tau: 5, q: 1000 };
+  assert.ok(Math.abs(burnerHeat(b, 10, 20) - 1000 * 5 * (1 - Math.exp(-2))) < 1e-9, "q tau (1 - e^-2)");
+  assert.ok(Math.abs(burnerHeat(b, 5, 15) - (burnerEnergy(b, 10) - burnerEnergy(b, 5)) - 1000 * 5 * (1 - Math.exp(-1))) < 1e-9, "the table up to the start");
+  b.suppression = { start: 10, tau: 1e6, q: 1e6 };
+  assert.ok(Math.abs(burnerHeat(b, 10, 20) - 15000) < 1e-6, "never above the table");
+  b.suppression = null;
+  b.stopAt = 15;
+  assert.ok(Math.abs(burnerHeat(b, 10, 20) - (burnerEnergy(b, 15) - burnerEnergy(b, 10))) < 1e-9);
+  assert.equal(burnerHeat(b, 15, 20), 0);
+  // A design-fire item's layers (4 cells a layer, 3 layers, 0.5 m cells, a 1 m fire): as many as the flame reaches, at least one.
+  const g = { nx: 4, ny: 3, nz: 1, h: 0.5 };
+  const item = createBurner({ layers: [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], hrr: [[0, 0]], diameter: 1 }, new Uint8Array(12), g);
+  assert.deepEqual(Array.from(item.layerStart), [0, 4, 8, 12]);
+  assert.equal(burnerCells(item, 10e3), 4, "a small flame: its base layer");
+  const L = flameHeight(500e3, 1); // 0.235 * 500^0.4 - 1.02: 1.43 m
+  assert.ok(Math.abs(L - (0.235 * 500 ** 0.4 - 1.02)) < 1e-12);
+  assert.equal(burnerCells(item, 500e3), 12, `${L.toFixed(2)} m reaches all three`);
+  assert.equal(burnerCells(b, 1e9), 1, "a plain burner heats all its cells");
 });
 
 test("a burner rejects what it cannot release: no open cell, a bad table, a bad radiant fraction", () => {

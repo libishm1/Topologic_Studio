@@ -33,9 +33,9 @@
  *     runs on the CPU solver instead.
  */
 
-import { DEFAULTS, NS, createSolver } from "./flamescapes.js";
+import { DEFAULTS, NS, burnerCells, burnerHeat, createSolver } from "./flamescapes.js";
 import {
-  KELVIN, ceilingDetectors, headCells, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withDetectors, runScene as cpuRunScene,
+  KELVIN, ceilingDetectors, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
 import {
   AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
@@ -175,6 +175,8 @@ class GpuSim {
     this.vorticityOn = P.vorticity > 0;
     const pilot = sim.pilot && sim.pilot.cells?.length ? sim.pilot : null;
     this.pilot = pilot;
+    // A design-fire first item (flamescapes.js createBurner); its heat for each step is the host's (burnerHeat).
+    this.burner = sim.burner?.design ? sim.burner : null;
     // Running ventilation (flamescapes.js ducts): at most 8 systems.
     const ducts = sim.ducts && sim.ducts.cells?.length && sim.ducts.systems <= 8 ? sim.ducts : null;
     this.ducts = ducts;
@@ -189,7 +191,9 @@ class GpuSim {
     this.speedFrom = speedFrom ?? d.nNodes;
     this.nSpeed = d.nNodes - this.speedFrom;
     io.speed = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
-    io.size = io.speed + this.nSpeed;
+    // The design-fire item's cells, a layer at a time from its base.
+    io.burner = io.speed + this.nSpeed;
+    io.size = io.burner + (this.burner ? this.burner.cells.length : 0);
     this.io = io;
     this.suppressionOn = Boolean(suppression);
     d.sprayCols = 0;
@@ -286,6 +290,7 @@ class GpuSim {
       time: this.time, supOn: suppression ? 1 : 0, sprayN: 0, supCol: SUP.fields * N, sprayEta: suppression?.eta ?? 0, sprayWet: suppression?.wet ?? 0,
       speedFrom: this.speedFrom, ioSpeed: io.speed,
       sysOn: this.systems ? 1 : 0, sysState: sysAt.state, sysWetAt: sysAt.wet, sysWetN: d.sysWet,
+      burnerN: 0, burnerAt: io.burner, burnerShare: 0, burnerFuel: 0,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -378,6 +383,7 @@ class GpuSim {
     q.writeBuffer(this.buf.ctr, 0, ctr);
     const io = new Uint32Array(this.io.size);
     if (this.pilot) io.set(this.pilot.cells, 0);
+    if (this.burner) io.set(this.burner.cells, this.io.burner);
     if (this.ducts) {
       for (let q = 0; q < this.ducts.cells.length; q += 1) {
         io[this.io.ducts + 2 * q] = this.ducts.cells[q];
@@ -424,7 +430,22 @@ class GpuSim {
     const P = this.sim.P;
     // The projection stops once a sweep would move the flow by less than this (the CPU's settle).
     const settle = ((P.projectionTolerance ?? 0) * this.sim.rho0 * this.sim.grid.h) / dt;
-    this.setParams({ dt, stepNo: this.stepCount, slot, settle, time: this.time });
+    // The design-fire item's heat this step, as the CPU's burnerStep: shared
+    // over the cells its flame reaches; counted here (the GPU's tallies
+    // count only the solver's own combustion).
+    let burnerN = 0, burnerShare = 0, burnerFuel = 0;
+    if (this.burner) {
+      const b = this.burner;
+      const E = burnerHeat(b, this.time, this.time + dt);
+      if (E > 0) {
+        burnerN = burnerCells(b, E / dt);
+        burnerShare = E / burnerN;
+        burnerFuel = E / b.stoich.heat / burnerN;
+        b.released += E;
+        b.convective += E;
+      }
+    }
+    this.setParams({ dt, stepNo: this.stepCount, slot, settle, time: this.time, burnerN, burnerShare, burnerFuel });
     this.writeParams();
     // Each flooded or foamed room's state for this step (the CPU's chemistry computes the same at its start).
     if (this.systems) device.queue.writeBuffer(buf.sys, this.sysAt.state * 4, this.systems.update(this.time));
@@ -432,6 +453,7 @@ class GpuSim {
     enc.clearBuffer(buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4);
     let pass = enc.beginComputePass();
     // Ignition source, then particles (lines 8 to 14).
+    if (burnerN) this.dispatch(pass, "burner");
     if (this.pilot && this.time < this.pilot.duration) this.dispatch(pass, "pilot");
     if (this.particlesOn) {
       this.dispatch(pass, "spawnFlame");
@@ -698,6 +720,8 @@ class GpuSim {
 
 /** Fuel inside a SOLID cell trades gas with a neighbour, which the per-cell chemistry kernel does not do. */
 function supported(sim) {
+  // A validation burner (radiating along rays) runs on the CPU; a design-fire item's runs here.
+  if (sim.burner && !sim.burner.design) return false;
   for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] === 2 && sim.fuelMass[c] > 0) return false;
   return true;
 }
@@ -760,6 +784,8 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const detectorVis = new Float32Array(rows * D);
   const hrr = new Float32Array(K);
   const stats = { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: sim.P.ambient, released: 0, radiated: 0, sweeps: 0 };
+  // What a design-fire item has released by the last frame (the GPU's tallies leave it out).
+  let itemBefore = 0;
   try {
     for (let k = 0; k < K; k += 1) {
       const end = (k + 1) * frameSeconds;
@@ -769,6 +795,10 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       }
       const frame = await gpu.readFrame({ particles: Boolean(particles), smoke });
       if (shouldStop?.()) return null;
+      if (sim.burner) {
+        frame.released += sim.burner.released - itemBefore;
+        itemBefore = sim.burner.released;
+      }
       const row = keep ? k : 0;
       const nodesOf = (a) => (D + Ds + S ? a.subarray(0, n) : a);
       T.set(nodesOf(frame.T), row * n);
@@ -800,6 +830,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       // Flooded and foamed rooms: detection at their detectors; each step's
       // state follows from the discharge times (GpuSim.step).
       const flooded = sys ? systemsFrame(sys, { t1: end, vis: frame.vis.subarray(n + D, n + D + Ds) }) : null;
+      itemSuppression(sim, spr, sys, end);
       onFrame?.({
         k,
         time: end,
@@ -830,5 +861,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance, sprinklers };
   // The GPU keeps no per-room tallies of what the agent or the foam stopped.
   if (sys) out.systems = systemsResult(sys, { cpu: false });
+  const item = itemResult(sim);
+  if (item) out.designFire = item;
   return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
 }

@@ -25,7 +25,7 @@ import { buildScene, readNodes, sprinklerFrame, sprinklerRun } from "../topologi
 import { cellSpeed, createSolver, step } from "../topologicpy-web-frontend/src/core/flamescapes.js";
 import { alpert, linkStep, crossing, SPEED_FLOOR } from "../topologicpy-web-frontend/src/core/suppression.js";
 import { layoutRooms, roomsFromSpaces } from "../topologicpy-web-frontend/src/core/sprinklers.js";
-import { fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
+import { designFireFor, fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
 import { floorsFromSpaces, slabsMissing } from "../topologicpy-web-frontend/src/core/spaceFloors.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -41,12 +41,15 @@ const fireCount = Number(flag("--fires", 3));
 const frame = Number(flag("--frame", 1));
 const walls = String(flag("--wall", "200,25")).split(",").map(Number);
 const fireClass = flag("--class", "A");
+// The first item: "class" (its fire class's t-squared growth, the app's default), a class name, or "solver" (the solver burns it, as before 2026-11-08).
+const growth = flag("--growth", "class");
 const jsonOut = flag("--json", null);
 let models = args.filter((a) => a.toLowerCase().endsWith(".ifc"));
 if (!models.length) models = ["duplex-apartment.ifc", "nibs-office.ifc", "nibs-clinic.ifc"].map((f) => path.join(EXAMPLES, f));
 
 const KELVIN = 273.15;
 const { contentsFuel, ignitionFuel, item } = fuelsFor(fireClass);
+const designFire = designFireFor(fireClass, growth);
 const report = [];
 
 /** Whether a plan point lies in a room's rectangle (rect: centre, axis, half). */
@@ -96,7 +99,7 @@ for (const file of models) {
     const height = room.ceiling - room.floor;
     console.log(`  fire in ${room.name || room.id}: ${room.area.toFixed(0)} m², ${height.toFixed(2)} m high`);
     for (const wall of walls) {
-      const scene = buildScene(sceneGeo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item });
+      const scene = buildScene(sceneGeo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item, designFire });
       const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, dt: 0.1, seed: 1, wallConvection: wall });
       const spr = sprinklerRun(scene, sim, { heads, mode: "activation" }, "y");
       sim.suppression = spr.sup;

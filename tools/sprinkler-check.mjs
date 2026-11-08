@@ -20,7 +20,7 @@ import { extract } from "./ifc-extract.mjs";
 import { buildLatticeGraph } from "../topologicpy-web-frontend/src/core/lattice.js";
 import { buildScene, runScene } from "../topologicpy-web-frontend/src/core/flamescapesRun.js";
 import { layoutRooms, roomsFromSpaces } from "../topologicpy-web-frontend/src/core/sprinklers.js";
-import { fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
+import { designFireFor, fuelsFor } from "../topologicpy-web-frontend/src/core/fireClasses.js";
 import { floorsFromSpaces, slabsMissing } from "../topologicpy-web-frontend/src/core/spaceFloors.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +32,8 @@ const flag = (name, fallback) => {
 const horizon = Number(flag("--horizon", 180));
 const maxCells = Number(flag("--cells", 30000));
 const fireClass = flag("--class", "A");
+// The first item: "class" (its fire class's t-squared growth, the app's default), a class name, or "solver" (the solver burns it, as before 2026-11-08).
+const growth = flag("--growth", "class");
 // --fires N: a fire in each of the N largest rooms with heads, a storey at a time.
 const fireCount = Number(flag("--fires", 0));
 let models = args.filter((a) => a.toLowerCase().endsWith(".ifc"));
@@ -53,6 +55,7 @@ function seedNode(nodes) {
 }
 
 const { contentsFuel, ignitionFuel, item } = fuelsFor(fireClass);
+const designFire = designFireFor(fireClass, growth);
 for (const file of models) {
   const geo = await extract(file, { withDoorFlags: true });
   const built = buildLatticeGraph({ ...geo, upAxis: "y", spacing: 0.5, agentHeight: 0.75 });
@@ -107,7 +110,7 @@ for (const file of models) {
   // "after the opening" is read from, the free fire's included.
   let open = null;
   for (const mode of ["activation", null, "evans", "spray", "wetting"]) {
-    const scene = buildScene(slabsMissing(geo.floors, geo.spaces) ? { ...geo, floors: [...geo.floors, ...floorsFromSpaces(geo.spaces)] } : geo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item });
+    const scene = buildScene(slabsMissing(geo.floors, geo.spaces) ? { ...geo, floors: [...geo.floors, ...floorsFromSpaces(geo.spaces)] } : geo, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item, designFire });
     let peak = 0, peakAfter = 0, nearMax = 0, nearAfter = 0;
     const t0 = performance.now();
     const out = runScene(scene, {

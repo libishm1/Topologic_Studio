@@ -36,8 +36,8 @@
  * 10 m for large spaces).
  */
 
-import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, cellSpeed, createSolver, step } from "./flamescapes.js";
-import { activationFrame, activationSummary, createActivation, createSuppression, openHeads, sprinklerSetup } from "./suppression.js";
+import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, step } from "./flamescapes.js";
+import { EVANS_MIN_DENSITY, activationFrame, activationSummary, createActivation, createSuppression, evansTau, openHeads, sprinklerSetup } from "./suppression.js";
 import { systemsDetect, systemsSetup, systemsSummary } from "./suppressionSystems.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, toLocal, volumeFractions } from "./voxelize.js";
 // The CO dose and the forecast from frames live in forecast.js, so the
@@ -80,6 +80,7 @@ export function buildScene(geometry, {
   ignitionFuel = contentsFuel,
   item = { mass: 5, area: 1 },
   burner = { temperature: 900, duration: 30 },
+  designFire = null,
   ventilation = null,
   seed = 1,
 } = {}) {
@@ -161,17 +162,79 @@ export function buildScene(geometry, {
       }
     }
   }
+  // The first item as a t-squared design fire (fireClasses.js designFireFor):
+  // a burner over its area, with no pilot and none of its fuel in the grid.
+  // It stands on its own floor area: the room's statistical contents there
+  // are the item, so they leave the grid (the burner heated them directly,
+  // as if another item stood inside it).
+  const itemFire = designFire && ignitionCell >= 0 ? itemBurner(grid, solid, ignitionCell, { ...designFire, item, fuel: ignitionFuel }) : null;
+  let contentsCells = cells, contentsMasses = fuel.masses;
+  if (itemFire) {
+    const under = new Set(itemFire.layers.flat());
+    const keep = [];
+    for (let q = 0; q < cells.length; q += 1) if (!under.has(cells[q])) keep.push(q);
+    contentsCells = keep.map((q) => cells[q]);
+    contentsMasses = keep.map((q) => fuel.masses[q]);
+  }
   return {
     grid,
     fraction,
     solid,
-    contents: { cells, masses: fuel.masses },
+    contents: { cells: contentsCells, masses: contentsMasses },
     contentsSummary: { cells: cells.length, area: fuel.area, mass: fuel.total, energy: fuel.energy },
-    ignition: ignitionCell >= 0 ? { cell: ignitionCell, mass: item.mass, area: item.area } : null,
-    pilot: ignitionCell >= 0 ? { cells: [ignitionCell], ...burner } : null,
+    ignition: ignitionCell >= 0 ? { cell: ignitionCell, mass: item.mass, area: item.area, ...(itemFire ? { designFire: itemFire.design } : {}) } : null,
+    pilot: ignitionCell >= 0 && !itemFire ? { cells: [ignitionCell], ...burner } : null,
+    ...(itemFire ? { burner: itemFire } : {}),
     ducts: ventilation ? ductsFor(grid, solid, ventilation) : null,
     clipped,
     fuels: { contentsFuel, ignitionFuel },
+  };
+}
+
+/**
+ * The first item as a design fire: Q = alpha t^2 until its energy (mass
+ * times heat of combustion) is spent, then nothing, released by a burner
+ * (flamescapes.js createBurner) over the item's area: the open cells of its
+ * row within its radius, a layer at a time up to the ceiling over it, the
+ * flame filling as many layers as Heskestad's mean flame height reaches. Its
+ * products are the item's fuel's, soot included; its radiation is the
+ * solver's own from the hot, sooty flame cells (radiant fraction 0). The
+ * table has a row each second (each 1/400 of the burn, if longer), so its
+ * trapezoids hold the curve's energy to within alpha/6 J a second.
+ */
+export function itemBurner(grid, solid, cell, { alpha, growth = null, item, fuel }) {
+  const { nx, ny, nz, h } = grid;
+  const i0 = cell % nx, j0 = Math.floor(cell / nx) % ny, k0 = Math.floor(cell / (nx * ny));
+  const radius = Math.sqrt(item.area / Math.PI);
+  const reach = Math.ceil(radius / h);
+  const columns = [];
+  for (let k = k0 - reach; k <= k0 + reach; k += 1) {
+    for (let i = i0 - reach; i <= i0 + reach; i += 1) {
+      if (i < 0 || k < 0 || i >= nx || k >= nz) continue;
+      if ((i === i0 && k === k0) || Math.hypot(i - i0, k - k0) * h <= radius) columns.push([i, k]);
+    }
+  }
+  const layers = [];
+  for (let j = j0; j < ny && !solid[i0 + nx * (j + ny * k0)]; j += 1) {
+    const layer = [];
+    for (const [i, k] of columns) if (!solid[i + nx * (j + ny * k)]) layer.push(i + nx * (j + ny * k));
+    layers.push(layer);
+  }
+  const energy = item.mass * fuel.heatOfCombustion;
+  const a = alpha * 1000;
+  const tEnd = Math.cbrt((3 * energy) / a);
+  const row = Math.max(1, tEnd / 400);
+  const hrr = [];
+  for (let t = 0; t < tEnd; t += row) hrr.push([t, a * t * t]);
+  hrr.push([tEnd, a * tEnd * tEnd], [tEnd + 1e-3, 0]);
+  return {
+    layers,
+    hrr,
+    radiantFraction: 0,
+    rays: 0,
+    fuel,
+    diameter: 2 * radius,
+    design: { alpha, growth, mass: item.mass, area: item.area, energy, end: tEnd, peak: a * tEnd * tEnd },
   };
 }
 
@@ -469,13 +532,73 @@ export function sprinklerRun(scene, sim, sprinklers, upAxis = "y") {
   // first item: the plume the estimate reads rises from the burner's axis.
   const plumeScene = scene.ignition || !sim.burner ? scene : { ...scene, ignition: { cell: sim.burner.axis } };
   const setup = sprinklerSetup(plumeScene, sprinklers.heads, { upAxis, fuel: sim.fuelMass });
+  // The heads over a design-fire item: those with a column of their footprint over its base.
+  let itemHeads = null;
+  if (sim.burner?.design) {
+    const g = scene.grid;
+    const key = (c) => (c % g.nx) + g.nx * Math.floor(c / (g.nx * g.ny));
+    const base = new Set(Array.from(sim.burner.cells.subarray(0, sim.burner.layerStart[1]), key));
+    itemHeads = setup.heads.flatMap((hd, h) => {
+      for (let q = 0; q < hd.columns.length; q += 2) if (base.has(key(hd.columns[q]))) return [h];
+      return [];
+    });
+  }
   return {
     setup,
     state: createActivation(setup, { ambient: sim.P.ambient }),
     sup: createSuppression(sim.N, { mode: sprinklers.mode || "spray" }),
     sensors: Int32Array.from(setup.heads.map((h) => h.sensor)),
     reading: sprinklers.openOn === "late" ? "late" : "estimate",
+    itemHeads,
   };
+}
+
+/**
+ * Water or clean agent on a design-fire item (scene.burner), at a frame's
+ * end t, for both solvers. Once a head over the item has opened, in a mode
+ * with water, the item's heat release decays from its value then as Evans
+ * (1993) measured for the open heads' density over it (the item is
+ * prescribed, so it cannot be wetted; Evans's decay stands in for the water
+ * on it, in every water mode). In a foam room the foam-water does the same
+ * from its discharge; in a clean agent room the item stops when the agent
+ * reaches the class A extinguishing concentration. Like the solver's caps on
+ * the fuel, the water takes effect from the end of the frame a head opened in.
+ */
+export function itemSuppression(sim, spr, sys, t) {
+  const b = sim.burner;
+  if (!b?.design) return;
+  if (spr && spr.sup.mode !== "activation" && spr.itemHeads?.length) {
+    const open = new Set(spr.sup.open);
+    let w = 0;
+    for (const h of spr.itemHeads) {
+      if (!open.has(h)) continue;
+      const hd = spr.setup.heads[h];
+      w += (hd.flowLpm || 0) / 60 / Math.max(hd.coverage || 0, 1e-9);
+    }
+    if (w >= EVANS_MIN_DENSITY) {
+      const tau = evansTau(w);
+      if (!b.suppression) b.suppression = { start: t, tau, q: burnerRate(b, t), by: "water" };
+      else b.suppression.tau = Math.min(b.suppression.tau, tau);
+    }
+  }
+  if (sys) {
+    b.room ??= sys.room[b.axis] || 0;
+    const rec = b.room ? sys.rooms[b.room - 1] : null;
+    if (rec && Number.isFinite(rec.t0)) {
+      if (rec.system === "clean-agent") {
+        if (rec.design >= rec.extA) b.stopAt = rec.t0 + (rec.discharge * rec.extA) / rec.design;
+      } else if (!b.suppression && t >= rec.t0) {
+        b.suppression = { start: t, tau: evansTau(rec.rate / 60), q: burnerRate(b, t), by: "foam" };
+      }
+    }
+  }
+}
+
+/** What a design-fire item did in a run, for its card, or null without one. */
+export function itemResult(sim) {
+  const b = sim.burner;
+  if (!b?.design) return null;
+  return { ...b.design, released: b.released, suppressed: b.suppression?.by ?? null, suppressedAt: b.suppression?.start ?? null, stoppedAt: Number.isFinite(b.stopAt) ? b.stopAt : null };
 }
 
 /**
@@ -588,6 +711,7 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
       if (sensorGas) sprinkled.gas = { T: Tk, u };
     }
     const flooded = sys ? systemsFrame(sys, { t1: end, vis: readNodes(sim, sys.detectorCells).vis }) : null;
+    itemSuppression(sim, spr, sys, end);
     onFrame?.({
       k,
       time: end,
@@ -613,6 +737,9 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
   const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid, detectorDistance: detectors.distance, sprinklers: spr ? sprinklerResult(spr) : null };
   // Only when the run has systems, so a run without them keeps its result's shape.
   if (sys) out.systems = systemsResult(sys);
+  // Likewise a design-fire first item.
+  const item = itemResult(sim);
+  if (item) out.designFire = item;
   // A prescribed burner's totals (J), only when the scene has one.
   if (sim.burner) out.burner = { released: sim.burner.released, convective: sim.burner.convective, radiant: sim.burner.radiant, cells: sim.burner.cells.length };
   return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;

@@ -35,7 +35,7 @@ import { closedDoorIds, doorsLabel } from "./core/doorStates.js";
 import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
 import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
-import { FIRE_CLASSES, fuelsFor } from "./core/fireClasses.js";
+import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_RUNS, farthestFromExits, nodeAlong, stagesFor } from "./core/guided.js";
 import { describeFacts } from "./core/describeFacts.js";
@@ -1544,6 +1544,8 @@ export default function App() {
       contentsFuel,
       ignitionFuel,
       item,
+      // The first item as a t-squared design fire (fireClasses.js designFireFor), or null for the solver's own burning.
+      designFire: designFireFor(settings.flamescapesClass, settings.flamescapesGrowth),
       // The heads, when the sprinklers are on (core/suppression.js).
       sprinklers: heads?.length ? { heads, mode: settings.sprinklerMode, openOn: settings.sprinklerOpenOn, source: sprinklerPlan.source } : null,
       // The clean-agent and foam rooms (core/suppressionSystems.js systemsSetup).
@@ -1560,6 +1562,7 @@ export default function App() {
       points.fire,
       fireModel,
       settings.flamescapesClass,
+      settings.flamescapesGrowth,
       settings.flamescapesHorizon,
       settings.fireMaxSteps,
       settings.flamescapesFireLoad,
@@ -1638,6 +1641,7 @@ export default function App() {
           detectedAt: firstDetection(stored.frames),
           sprinklerSummary: stored.result?.sprinklers ?? null,
           systemsSummary: stored.result?.systems?.rooms ?? null,
+          itemSummary: stored.result?.designFire ?? null,
           horizon: payload.horizon,
           embersOn: payload.embers,
           extras: payload.extras,
@@ -1705,10 +1709,13 @@ export default function App() {
         run.result = result;
         // When each head opened by both readings, and the water (core/suppression.js).
         // And when each room's system was detected, discharged and acted (core/suppressionSystems.js).
-        if ((result?.sprinklers || result?.systems) && (!combustionRef.current || combustionRef.current === run)) {
+        // And what became of a design-fire first item.
+        if ((result?.sprinklers || result?.systems || result?.designFire) && (!combustionRef.current || combustionRef.current === run)) {
           studio.setFire((c) => ({
             ...c,
-            combustion: c.combustion ? { ...c.combustion, sprinklerSummary: result.sprinklers ?? null, systemsSummary: result.systems?.rooms ?? null } : c.combustion,
+            combustion: c.combustion
+              ? { ...c.combustion, sprinklerSummary: result.sprinklers ?? null, systemsSummary: result.systems?.rooms ?? null, itemSummary: result.designFire ?? null }
+              : c.combustion,
           }));
         }
         // The first measurement on a GPU stands, so its grid does not drift between runs.

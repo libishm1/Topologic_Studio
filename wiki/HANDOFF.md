@@ -1,4 +1,4 @@
-# Handoff: Topologic Studio Next (2026-11-07)
+# Handoff: Topologic Studio Next (2026-11-08)
 
 ## State
 
@@ -35,7 +35,7 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 362 tests;
+  - `npm test` in `topologicpy-web-frontend`: 365 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
@@ -147,10 +147,15 @@ Before any deploy: the gates above, then the live check, then update this file.
   - suspended ceilings (`IfcCovering` CEILING) were dropped at import, so the fire grid had none and heads hung at the slab: now a `ceilings` geometry group (`ViewerManager.extractEgressGeometry`, `tools/ifc-extract.mjs`), solid in the fire grid (`buildScene`), and `roomsFromSpaces(…, { ceilings })` lowers a room's ceiling to them (they never make a space inside; in a model with ceilings, a room without one is open to the slab within 2 m); a thin element split between two cells now seals (`voxelize.js occupancy`);
   - walls took the ceiling jet's heat at the fuel's 200 W/(m² K): `wallConvection` 10 (CPU `conduct`, GPU `conductGas`, a new uniform);
   - the estimate read the grid's plume column and cell-centre distances: each head's own `H` and exact `r` (`sprinklerSetup`; `ceilingAbove` on a record overrides the 0.13 m link offset);
-  - not fixed, the user's decision: the fire grows to about 500 kW within 15 s (faster than an ultra-fast t-squared fire), so heads open at 250 to 600 kW; a design-fire first item would change every run.
+  - the fire grew to about 500 kW within 15 s (faster than an ultra-fast t-squared fire), so heads opened at 250 to 600 kW: fixed by the design-fire first item below, at the user's word.
   - Results: against NIST every measured head opens within twice the measured time, first heads at medians 0.78 to 1.26 (FDS 0.73 to 1.13); in the app's fires the Office's 610 m² open office (no head in 120 s before) opens at 26 s and the Clinic's waiting area at 22 s (65 s at 4.5 MW before). Sprinklers now act at 16 to 39 s in the systems check (39 to 57 before): the Clinic's server room 61 % less heat on sprinklers (28 before), its waiting area 79 % with wetting (no mode helped before). Left: the Clinic's mechanical room (no ceiling over the fire; heads at 47 s against about 1 MW, no mode helped) and Vettori's 1998 room (a quarter late: idea I4, a layer from more than the top cell). Results in `benchmark/results/2026-11-08-*`. `RUN_CACHE_VERSION` 4. 362 unit tests.
   - Side effect: with walls at 10 a fire in the 5 x 4 m test room releases less heat in 120 s (41 to 48 MJ against 57 to 73 at 200), with an occasional flash of unburnt pyrolysis gas (224 MJ in one of five seeds). CPU and GPU agree as before (one step from one state: the same 0.022 K as at 200; ensembles agree).
-  - The GIFs and video (1619bec) were recorded before the fix; their captions say so. Re-recording is offered to the user.
+  - The GIFs and video of 1619bec were recorded before the fix; they are kept in `public/docs/media/2026-11-07/` (below).
+- **The user's answers ("yes to all"; then "rerecord just important cases, keep the website up to date and mention where old simulations are kept"):**
+  - **The first item as a design fire** (`fireClasses.js designFireFor`, `flamescapesRun.js itemBurner` and `itemSuppression`, `flamescapes.js burnerHeat`, `burnerCells`, the GPU `burner` kernel; "How it grows" in the panel, default its class's growth; `RUN_CACHE_VERSION` 5). Classes A and C only; pools, metals and packs keep their own burning. Water over the item decays it as Evans measured, clean agent stops it. In 12 of 16 fires in eight models the first head now opens at 33 to 319 kW (was mostly 0.5 to 1 MW); under high or open ceilings the contents still catch first (0.45 to 1.6 MW). Section 8 of the fix note; `benchmark/results/2026-11-08-design-fire-*`. 365 unit tests; CPU and GPU identical on the item (`flamescapes-gpu-check.mjs --phase design`); no measurable cost per step.
+  - **Recordings:** the 2026-11-07 GIFs and video moved to `public/docs/media/2026-11-07/` (git mv), named in the README and the guide ("Earlier recordings"). Only the important cases were re-recorded, at 180 s with the design fire, from a production build: the workflow (Duplex, wetting: the first head at 132 s and 287 kW, the item down to 2 kW by 180 s), the open office (no sprinklers 1.8 MW at 180 s; wetting: the first head at 142 s and 371 kW, 394 kW at 180 s, as the contents it had lit go on burning) and the server room (the first head at 95 s and 109 kW; the clean agent stops the flames at 100 s). The four-mode comparison, the fire classes and the video were not re-recorded and are linked from the archive. The compose label now says "1 head open".
+  - **Commit 5fb678a reworded** to 1f21594 ("Handoff: released 977978f, live check passed") and `next/browser-core` force-pushed with a lease; the tree was byte-identical. A local branch `backup/before-reword-2026-11-08` keeps the old commits.
+  - **Release** of all of it, then the live check.
 
 ## Earlier round (2026-11-07)
 

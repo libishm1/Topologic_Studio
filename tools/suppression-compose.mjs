@@ -120,7 +120,7 @@ await page.evaluate(() => {
       g.fillText(p.label, x + 24, y + 33);
       g.font = font(14, 400);
       g.fillStyle = "#334155";
-      if (p.hrr != null) g.fillText(`${p.time != null ? `${Math.round(p.time)} s   ` : ""}heat ${kw(p.hrr)}${p.open != null ? `   ${p.open} heads open` : ""}`, x + 24, y + 56);
+      if (p.hrr != null) g.fillText(`${p.time != null ? `${Math.round(p.time)} s   ` : ""}heat ${kw(p.hrr)}${p.open != null ? `   ${p.open} ${p.open === 1 ? "head" : "heads"} open` : ""}`, x + 24, y + 56);
     }
     if (chart) {
       const y0 = h - foot + 12, x0 = 60, cw = w - 90, ch = foot - 40;

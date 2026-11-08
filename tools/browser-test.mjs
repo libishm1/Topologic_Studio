@@ -912,6 +912,9 @@ if (await fsToggle.isVisible().catch(() => false)) {
   // The smoke, gas and tenability measures (core/tenability.js, core/measures.js; 2026-11-06).
   const measuresLine = card.split("\n").find((l) => /^heat, smoke, CO/.test(l.trim())) || "";
   record(/CO₂, O₂/.test(measuresLine), "the run records soot, CO₂ and O₂ too", measuresLine.trim() || "no measures line");
+  // The first item as a t-squared design fire by default (fireClasses.js designFireFor, 2026-11-08).
+  const itemLine = card.split("\n").find((l) => /t-squared fire/.test(l)) || "";
+  record(/^a medium t-squared fire \(0\.0117 kW\/s²\), 20 kg/.test(itemLine.trim()), "the first item grows as its class's design fire, and the card says so", itemLine.trim() || "no first-item line");
   // Virtual smoke detectors under the ceiling round the fire (flamescapesRun.js ceilingDetectors, 2026-11-07).
   const detectorLine = card.split("\n").find((l) => /under the ceiling, 7 m from the fire/.test(l)) || "";
   record(/^\d+ under the ceiling/.test(detectorLine.trim()), "the run reads smoke at ceiling detectors round the fire", detectorLine.trim() || "no detector line");
@@ -958,11 +961,22 @@ if (await fsToggle.isVisible().catch(() => false)) {
   const layoutText = await page.locator(".panel__scroll").first().innerText().catch(() => "");
   const layoutLine = layoutText.match(/\d+ sprinkler heads[^\n]*/)?.[0] || "";
   record(/\d+ sprinkler heads, placed by NFPA 13 in \d+ rooms/.test(layoutLine), "sprinklers are laid out per room by NFPA 13, with a rule report", layoutLine.slice(0, 160) || "no layout");
+  // A medium design fire opens no head in 30 s: this run is 90 s with an
+  // ultra-fast item (1 MW in 75 s), then the settings go back.
+  const growthSelect = page.getByLabel("How it grows");
+  await growthSelect.selectOption("ultra-fast").catch(() => {});
+  await page.getByLabel("Simulated time (s)").fill("90");
+  await page.getByLabel("Simulated time (s)").blur();
   const tSpr = Date.now();
   await startFs();
   const sprCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
   const sprLine = sprCard.split("\n").find((l) => /^\d+ heads placed per room/.test(l.trim())) || "";
   record(/the first opens at .* by the estimate/.test(sprLine), "a run with sprinklers says when the heads open by both readings", `${sprLine.trim().slice(0, 180) || "no sprinkler line"} (${((Date.now() - tSpr) / 1000).toFixed(1)}s)`);
+  const sprItem = sprCard.split("\n").find((l) => /t-squared fire/.test(l)) || "";
+  record(/sprinkler water on it from \d+ s/.test(sprItem), "the water over the first item decays it", sprItem.trim().slice(0, 180) || "no first-item line");
+  await growthSelect.selectOption("class").catch(() => {});
+  await page.getByLabel("Simulated time (s)").fill("30");
+  await page.getByLabel("Simulated time (s)").blur();
   // Systems by room use (core/suppressionSystems.js, 2026-11-07): off by
   // default; on, every room gets water, clean agent, foam or none by its name
   // and the occupancy, with a report (the Duplex has no agent or foam rooms).

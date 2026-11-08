@@ -1,0 +1,177 @@
+Suppression systems by room use with the first item as its class's t-squared design fire (classes A and C: medium; B keeps its pool): tools/systems-check.mjs, 2026-11-08. CPU solver, 180 s, frames of 5 s, contents seeds 1 to 3.
+Commands: node tools/systems-check.mjs <model> --seeds 1,2,3 --horizon 180; the Clinic again with --cases water --water-area 30 and --cases foam-spill.
+
+
+nibs-office.ifc (Group B): 99 spaces, 314 heads; 99 rooms: 89 water, 9 clean agent (HFC-227ea (FM-200)), 0 foam, 1 none
+  clean agent: 7 % (class C) in 9 rooms, 330 kg in all at 20 °C; below the NOAEL of 9 %; cross-zoned detection, 30 s delay, 10 s discharge, 10 min hold
+  extinguishers: 10 rooms need a unit of their own at the door (CO2 at IT, telecom and electrical rooms; class B at fuel rooms; class K at kitchens), besides ABC powder on the routes
+  NOC                    clean-agent it, 99.7 kg of agent for 182 m³
+  ELEC RM                clean-agent electrical, 38.1 kg of agent for 69 m³
+  TELE/COMM RM           clean-agent telecom, 19.8 kg of agent for 36 m³
+  SERVER RM              clean-agent it, 25.6 kg of agent for 47 m³
+  SERVER RM              clean-agent it, 79.5 kg of agent for 145 m³
+  A/V SERVER RM          clean-agent it, 20.2 kg of agent for 37 m³
+  TELE/COMM RM           clean-agent telecom, 17.8 kg of agent for 32 m³
+  ELEC RM                clean-agent electrical, 8.6 kg of agent for 16 m³
+  UPS/BATT RM            clean-agent battery, 21.1 kg of agent for 38 m³
+  no room qualifies for foam by name in this model
+
+  water case: fire (class A) in CMD CONFERENCE RM (53.3 m², floor at 0.0 m), water; 180 s; seeds 1, 2, 3
+    seed 1 none        detected    - s, acted      - s, heads  0  released   61.3 MJ (after   53.6)  burnt   2.14 kg  peak  1855 kW, after  1855 kW, end  1475 kW  [27744 cells, 179 s]
+    seed 1 water       detected    - s, acted  129.3 s, heads  4  released   14.1 MJ (after    6.4)  burnt   0.03 kg  peak   225 kW, after   225 kW, end    44 kW  [27744 cells, 140 s]
+    seed 2 none        detected    - s, acted      - s, heads  0  released   58.9 MJ (after   51.2)  burnt   2.01 kg  peak  1816 kW, after  1816 kW, end  1563 kW  [27744 cells, 125 s]
+    seed 2 water       detected    - s, acted  129.7 s, heads  4  released   14.1 MJ (after    6.4)  burnt   0.03 kg  peak   218 kW, after   218 kW, end    44 kW  [27744 cells, 118 s]
+    seed 3 none        detected    - s, acted      - s, heads  0  released   59.6 MJ (after   50.8)  burnt   2.05 kg  peak  1837 kW, after  1837 kW, end  1453 kW  [27744 cells, 97 s]
+    seed 3 water       detected    - s, acted  131.0 s, heads  4  released   15.3 MJ (after    6.5)  burnt   0.03 kg  peak   225 kW, after   225 kW, end    55 kW  [27744 cells, 112 s]
+    mean water       against none: released -76 %, after acting -88 %, burnt -99 %, peak after acting -88 %; acted at 130.0 s
+
+  clean-agent case: fire (class C) in SERVER RM (58.0 m², floor at 0.0 m), clean-agent; 180 s; seeds 1, 2, 3
+    seed 1 none        detected    - s, acted      - s, heads  0  released   27.0 MJ (after   23.6)  burnt   0.24 kg  peak   883 kW, after   883 kW, end   883 kW  [26390 cells, 129 s]
+    seed 1 water       detected    - s, acted  112.1 s, heads  2  released   12.5 MJ (after    9.2)  burnt   0.00 kg  peak   154 kW, after   154 kW, end    59 kW  [26390 cells, 122 s]
+    seed 1 agent       detected   60 s, acted   97.4 s, heads  0  released    3.6 MJ (after    0.3)  burnt   0.00 kg  peak   101 kW, after    53 kW, end     0 kW  [26390 cells, 121 s]
+    seed 1 agent+water detected   60 s, acted   97.4 s, heads  0  released    3.6 MJ (after    0.3)  burnt   0.00 kg  peak   101 kW, after    53 kW, end     0 kW  [26390 cells, 138 s]
+    seed 2 none        detected    - s, acted      - s, heads  0  released   31.6 MJ (after   27.0)  burnt   0.49 kg  peak  1423 kW, after  1423 kW, end  1423 kW  [26390 cells, 134 s]
+    seed 2 water       detected    - s, acted  118.5 s, heads  2  released   13.5 MJ (after    9.0)  burnt   0.01 kg  peak   168 kW, after   168 kW, end    70 kW  [26390 cells, 127 s]
+    seed 2 agent       detected   70 s, acted  107.4 s, heads  0  released    4.9 MJ (after    0.3)  burnt   0.00 kg  peak   124 kW, after    65 kW, end     0 kW  [26390 cells, 127 s]
+    seed 2 agent+water detected   70 s, acted  107.4 s, heads  0  released    4.9 MJ (after    0.3)  burnt   0.00 kg  peak   124 kW, after    65 kW, end     0 kW  [26390 cells, 124 s]
+    seed 3 none        detected    - s, acted      - s, heads  0  released   30.0 MJ (after   25.4)  burnt   0.40 kg  peak  1262 kW, after  1262 kW, end  1262 kW  [26390 cells, 121 s]
+    seed 3 water       detected    - s, acted  117.0 s, heads  2  released   13.4 MJ (after    8.9)  burnt   0.01 kg  peak   168 kW, after   168 kW, end    69 kW  [26390 cells, 87 s]
+    seed 3 agent       detected   70 s, acted  107.4 s, heads  0  released    4.9 MJ (after    0.3)  burnt   0.00 kg  peak   124 kW, after    65 kW, end     0 kW  [26390 cells, 110 s]
+    seed 3 agent+water detected   70 s, acted  107.4 s, heads  0  released    4.9 MJ (after    0.3)  burnt   0.00 kg  peak   124 kW, after    65 kW, end     0 kW  [26390 cells, 120 s]
+    mean water       against none: released -55 %, after acting -64 %, burnt -99 %, peak after acting -86 %; acted at 115.9 s
+    mean agent       against none: released -85 %, after acting -99 %, burnt -100 %, peak after acting -95 %; acted at 104.1 s
+    mean agent+water against none: released -85 %, after acting -99 %, burnt -100 %, peak after acting -95 %; acted at 104.1 s
+  [2238 s for nibs-office.ifc]
+
+
+nibs-clinic.ifc (Group B): 269 spaces, 497 heads; 269 rooms: 250 water, 10 clean agent (HFC-227ea (FM-200)), 2 foam, 7 none
+  clean agent: 7 % (class C) in 10 rooms, 172 kg in all at 20 °C; below the NOAEL of 9 %; cross-zoned detection, 30 s delay, 10 s discharge, 10 min hold
+  foam: foam-water sprinklers at 6.5 L/(min m²) in 2 rooms; a pool controlled about 10 s and out about 30 s after foam reaches it (derived)
+  extinguishers: 13 rooms need a unit of their own at the door (CO2 at IT, telecom and electrical rooms; class B at fuel rooms; class K at kitchens), besides ABC powder on the routes
+  ELEC. ROOM             clean-agent electrical, 13.1 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 13.0 kg of agent for 24 m³
+  ADP EQUIP SPACE        clean-agent it, 15.5 kg of agent for 28 m³
+  COMPUTER ROOM          clean-agent it, 47.2 kg of agent for 86 m³
+  ELECTRICAL             clean-agent electrical, 13.1 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 16.3 kg of agent for 30 m³
+  HAZ. STOR.             foam        fuel
+  COMM. ROOM             clean-agent telecom, 13.3 kg of agent for 24 m³
+  ELEC. ROOM             clean-agent electrical, 13.4 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 13.4 kg of agent for 24 m³
+  ELECTRICAL             clean-agent electrical, 13.3 kg of agent for 24 m³
+  FLAMABLE STORAGE       foam        fuel
+
+  water case: fire (class A) in PHYSICAL EXAM (55.4 m², floor at 0.0 m), water; 180 s; seeds 1, 2, 3
+    seed 1 none        detected    - s, acted      - s, heads  0  released   50.7 MJ (after   46.0)  burnt   1.56 kg  peak   701 kW, after   701 kW, end   701 kW  [27744 cells, 178 s]
+    seed 1 water       detected    - s, acted   96.4 s, heads  1  released   25.0 MJ (after   20.3)  burnt   0.70 kg  peak   367 kW, after   367 kW, end   178 kW  [27744 cells, 140 s]
+    seed 2 none        detected    - s, acted      - s, heads  0  released   51.1 MJ (after   46.4)  burnt   1.58 kg  peak   723 kW, after   723 kW, end   722 kW  [27744 cells, 139 s]
+    seed 2 water       detected    - s, acted   96.4 s, heads  1  released   24.9 MJ (after   20.2)  burnt   0.69 kg  peak   367 kW, after   367 kW, end   149 kW  [27744 cells, 124 s]
+    seed 3 none        detected    - s, acted      - s, heads  0  released   61.4 MJ (after   57.0)  burnt   2.15 kg  peak  2955 kW, after  2955 kW, end   450 kW  [27744 cells, 115 s]
+    seed 3 water       detected    - s, acted   99.8 s, heads  1  released   24.7 MJ (after   20.3)  burnt   0.68 kg  peak   324 kW, after   324 kW, end   195 kW  [27744 cells, 126 s]
+    mean water       against none: released -54 %, after acting -59 %, burnt -61 %, peak after acting -76 %; acted at 97.6 s
+
+  clean-agent case: fire (class C) in COMPUTER ROOM (32.1 m², floor at 4.6 m), clean-agent; 180 s; seeds 1, 2, 3
+    seed 1 none        detected    - s, acted      - s, heads  0  released   63.8 MJ (after   59.9)  burnt   2.28 kg  peak  1275 kW, after  1275 kW, end  1240 kW  [28900 cells, 155 s]
+    seed 1 water       detected    - s, acted  110.1 s, heads  2  released   13.8 MJ (after    9.9)  burnt   0.01 kg  peak   154 kW, after   154 kW, end    93 kW  [28900 cells, 121 s]
+    seed 1 agent       detected   65 s, acted  102.4 s, heads  0  released    4.2 MJ (after    0.3)  burnt   0.00 kg  peak   113 kW, after    59 kW, end     0 kW  [28900 cells, 145 s]
+    seed 1 agent+water detected   65 s, acted  102.4 s, heads  0  released    4.2 MJ (after    0.3)  burnt   0.00 kg  peak   113 kW, after    59 kW, end     0 kW  [28900 cells, 146 s]
+    seed 2 none        detected    - s, acted      - s, heads  0  released   67.4 MJ (after   63.5)  burnt   2.48 kg  peak  1294 kW, after  1294 kW, end  1294 kW  [28900 cells, 139 s]
+    seed 2 water       detected    - s, acted  104.8 s, heads  2  released   11.8 MJ (after    7.9)  burnt   0.01 kg  peak   130 kW, after   130 kW, end    71 kW  [28900 cells, 137 s]
+    seed 2 agent       detected   65 s, acted  102.4 s, heads  0  released    4.2 MJ (after    0.3)  burnt   0.00 kg  peak   113 kW, after    59 kW, end     0 kW  [28900 cells, 135 s]
+    seed 2 agent+water detected   65 s, acted  102.4 s, heads  0  released    4.2 MJ (after    0.3)  burnt   0.00 kg  peak   113 kW, after    59 kW, end     0 kW  [28900 cells, 126 s]
+    seed 3 none        detected    - s, acted      - s, heads  0  released   63.1 MJ (after   59.2)  burnt   2.24 kg  peak  1235 kW, after  1235 kW, end  1187 kW  [28900 cells, 94 s]
+    seed 3 water       detected    - s, acted  109.6 s, heads  2  released   13.0 MJ (after    9.1)  burnt   0.02 kg  peak   169 kW, after   169 kW, end    81 kW  [28900 cells, 133 s]
+    seed 3 agent       detected   65 s, acted  102.4 s, heads  0  released    4.2 MJ (after    0.3)  burnt   0.00 kg  peak   113 kW, after    59 kW, end     0 kW  [28900 cells, 108 s]
+    seed 3 agent+water detected   65 s, acted  102.4 s, heads  0  released    4.2 MJ (after    0.3)  burnt   0.00 kg  peak   113 kW, after    59 kW, end     0 kW  [28900 cells, 90 s]
+    mean water       against none: released -80 %, after acting -85 %, burnt -100 %, peak after acting -88 %; acted at 108.2 s
+    mean agent       against none: released -93 %, after acting -100 %, burnt -100 %, peak after acting -95 %; acted at 102.4 s
+    mean agent+water against none: released -93 %, after acting -100 %, burnt -100 %, peak after acting -95 %; acted at 102.4 s
+
+  foam case: fire (class B) in HAZ. STOR. (8.7 m², floor at 0.0 m), foam; 180 s; seeds 1, 2, 3
+    seed 1 none        detected    - s, acted      - s, heads  0  released   29.0 MJ (after   21.6)  burnt   1.61 kg  peak   344 kW, after   344 kW, end    54 kW  [26404 cells, 82 s]
+    seed 1 water       detected    - s, acted   16.1 s, heads  1  released   20.0 MJ (after   12.6)  burnt   1.11 kg  peak   299 kW, after   212 kW, end    16 kW  [26404 cells, 71 s]
+    seed 1 foam        detected   10 s, acted   40.0 s, heads  0  released   21.2 MJ (after   13.8)  burnt   1.18 kg  peak   299 kW, after   251 kW, end     0 kW  [26404 cells, 72 s]
+    seed 2 none        detected    - s, acted      - s, heads  0  released   27.7 MJ (after   20.4)  burnt   1.53 kg  peak   340 kW, after   340 kW, end    50 kW  [26404 cells, 69 s]
+    seed 2 water       detected    - s, acted   16.1 s, heads  1  released   16.7 MJ (after    9.3)  burnt   0.93 kg  peak   299 kW, after   208 kW, end     0 kW  [26404 cells, 79 s]
+    seed 2 foam        detected   10 s, acted   40.0 s, heads  0  released   21.7 MJ (after   14.5)  burnt   1.21 kg  peak   299 kW, after   253 kW, end     0 kW  [26404 cells, 74 s]
+    seed 3 none        detected    - s, acted      - s, heads  0  released   27.7 MJ (after   20.4)  burnt   1.54 kg  peak   346 kW, after   346 kW, end    52 kW  [26404 cells, 109 s]
+    seed 3 water       detected    - s, acted   16.1 s, heads  1  released   17.8 MJ (after   10.5)  burnt   0.99 kg  peak   299 kW, after   211 kW, end     0 kW  [26404 cells, 107 s]
+    seed 3 foam        detected   10 s, acted   40.0 s, heads  0  released   21.6 MJ (after   14.3)  burnt   1.20 kg  peak   299 kW, after   269 kW, end     0 kW  [26404 cells, 103 s]
+    mean water       against none: released -35 %, after acting -48 %, burnt -35 %, peak after acting -39 %; acted at 16.1 s
+    mean foam        against none: released -23 %, after acting -32 %, burnt -23 %, peak after acting -25 %; acted at 40.0 s
+  [3125 s for nibs-clinic.ifc]
+
+
+nibs-clinic.ifc (Group B): 269 spaces, 497 heads; 269 rooms: 250 water, 10 clean agent (HFC-227ea (FM-200)), 2 foam, 7 none
+  clean agent: 7 % (class C) in 10 rooms, 172 kg in all at 20 °C; below the NOAEL of 9 %; cross-zoned detection, 30 s delay, 10 s discharge, 10 min hold
+  foam: foam-water sprinklers at 6.5 L/(min m²) in 2 rooms; a pool controlled about 10 s and out about 30 s after foam reaches it (derived)
+  extinguishers: 13 rooms need a unit of their own at the door (CO2 at IT, telecom and electrical rooms; class B at fuel rooms; class K at kitchens), besides ABC powder on the routes
+  ELEC. ROOM             clean-agent electrical, 13.1 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 13.0 kg of agent for 24 m³
+  ADP EQUIP SPACE        clean-agent it, 15.5 kg of agent for 28 m³
+  COMPUTER ROOM          clean-agent it, 47.2 kg of agent for 86 m³
+  ELECTRICAL             clean-agent electrical, 13.1 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 16.3 kg of agent for 30 m³
+  HAZ. STOR.             foam        fuel
+  COMM. ROOM             clean-agent telecom, 13.3 kg of agent for 24 m³
+  ELEC. ROOM             clean-agent electrical, 13.4 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 13.4 kg of agent for 24 m³
+  ELECTRICAL             clean-agent electrical, 13.3 kg of agent for 24 m³
+  FLAMABLE STORAGE       foam        fuel
+
+  water case: fire (class A) in CONF. ROOM (29.4 m², floor at 4.6 m), water; 180 s; seeds 1, 2, 3
+    seed 1 none        detected    - s, acted      - s, heads  0  released   61.5 MJ (after   53.8)  burnt   2.15 kg  peak  1682 kW, after  1682 kW, end  1490 kW  [28512 cells, 184 s]
+    seed 1 water       detected    - s, acted  128.1 s, heads  4  released   11.0 MJ (after    3.3)  burnt   0.01 kg  peak   213 kW, after   213 kW, end     2 kW  [28512 cells, 143 s]
+    seed 2 none        detected    - s, acted      - s, heads  0  released   61.2 MJ (after   52.4)  burnt   2.13 kg  peak  1672 kW, after  1672 kW, end  1471 kW  [28512 cells, 131 s]
+    seed 2 water       detected    - s, acted  130.5 s, heads  4  released   12.2 MJ (after    3.4)  burnt   0.02 kg  peak   229 kW, after   229 kW, end     4 kW  [28512 cells, 116 s]
+    seed 3 none        detected    - s, acted      - s, heads  0  released   60.7 MJ (after   53.1)  burnt   2.11 kg  peak  1705 kW, after  1705 kW, end  1522 kW  [28512 cells, 100 s]
+    seed 3 water       detected    - s, acted  128.4 s, heads  4  released   11.3 MJ (after    3.6)  burnt   0.02 kg  peak   206 kW, after   206 kW, end     2 kW  [28512 cells, 106 s]
+    mean water       against none: released -81 %, after acting -94 %, burnt -99 %, peak after acting -87 %; acted at 129.0 s
+  [785 s for nibs-clinic.ifc]
+
+
+nibs-clinic.ifc (Group B): 269 spaces, 497 heads; 269 rooms: 250 water, 10 clean agent (HFC-227ea (FM-200)), 2 foam, 7 none
+  clean agent: 7 % (class C) in 10 rooms, 172 kg in all at 20 °C; below the NOAEL of 9 %; cross-zoned detection, 30 s delay, 10 s discharge, 10 min hold
+  foam: foam-water sprinklers at 6.5 L/(min m²) in 2 rooms; a pool controlled about 10 s and out about 30 s after foam reaches it (derived)
+  extinguishers: 13 rooms need a unit of their own at the door (CO2 at IT, telecom and electrical rooms; class B at fuel rooms; class K at kitchens), besides ABC powder on the routes
+  ELEC. ROOM             clean-agent electrical, 13.1 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 13.0 kg of agent for 24 m³
+  ADP EQUIP SPACE        clean-agent it, 15.5 kg of agent for 28 m³
+  COMPUTER ROOM          clean-agent it, 47.2 kg of agent for 86 m³
+  ELECTRICAL             clean-agent electrical, 13.1 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 16.3 kg of agent for 30 m³
+  HAZ. STOR.             foam        fuel
+  COMM. ROOM             clean-agent telecom, 13.3 kg of agent for 24 m³
+  ELEC. ROOM             clean-agent electrical, 13.4 kg of agent for 24 m³
+  COMM. ROOM             clean-agent telecom, 13.4 kg of agent for 24 m³
+  ELECTRICAL             clean-agent electrical, 13.3 kg of agent for 24 m³
+  FLAMABLE STORAGE       foam        fuel
+
+  foam case (a 0.1 m² heptane spill kept alight): fire (class B) in HAZ. STOR. (8.7 m², floor at 0.0 m), foam; 180 s; seeds 1, 2, 3
+    seed 1 none        detected    - s, acted      - s, heads  0  released   28.6 MJ (after   26.1)  burnt   1.58 kg  peak   435 kW, after   435 kW, end    58 kW  [26404 cells, 171 s]
+    seed 1 water       detected    - s, acted   29.2 s, heads  1  released    7.8 MJ (after    6.2)  burnt   0.42 kg  peak    61 kW, after    53 kW, end    33 kW  [26404 cells, 132 s]
+    seed 1 foam        detected    5 s, acted   35.0 s, heads  0  released   26.5 MJ (after   24.0)  burnt   1.45 kg  peak   295 kW, after   295 kW, end    13 kW  [26404 cells, 130 s]
+    seed 2 none        detected    - s, acted      - s, heads  0  released   28.6 MJ (after   26.2)  burnt   1.58 kg  peak   402 kW, after   402 kW, end    54 kW  [26404 cells, 125 s]
+    seed 2 water       detected    - s, acted   29.2 s, heads  1  released    7.9 MJ (after    6.3)  burnt   0.43 kg  peak    61 kW, after    54 kW, end    35 kW  [26404 cells, 106 s]
+    seed 2 foam        detected    5 s, acted   35.0 s, heads  0  released   26.0 MJ (after   23.6)  burnt   1.43 kg  peak   289 kW, after   289 kW, end    13 kW  [26404 cells, 115 s]
+    seed 3 none        detected    - s, acted      - s, heads  0  released   28.6 MJ (after   25.9)  burnt   1.58 kg  peak   383 kW, after   383 kW, end    56 kW  [26404 cells, 135 s]
+    seed 3 water       detected    - s, acted   29.3 s, heads  1  released    7.9 MJ (after    6.3)  burnt   0.43 kg  peak    61 kW, after    55 kW, end    37 kW  [26404 cells, 114 s]
+    seed 3 foam        detected    5 s, acted   35.0 s, heads  0  released   26.4 MJ (after   23.8)  burnt   1.45 kg  peak   294 kW, after   294 kW, end    12 kW  [26404 cells, 119 s]
+    mean water       against none: released -72 %, after acting -76 %, burnt -73 %, peak after acting -87 %; acted at 29.2 s
+    mean foam        against none: released -8 %, after acting -9 %, burnt -9 %, peak after acting -28 %; acted at 35.0 s
+  [1152 s for nibs-clinic.ifc]
+
+
+duplex-apartment.ifc (Group R-2): 21 spaces, 38 heads; 21 rooms: 20 water, 0 clean agent (HFC-227ea (FM-200)), 0 foam, 1 none
+  apartments: water only (SBC 801-CR-2018 903.2.8); an extinguisher of at least 1-A:10-B:C in each dwelling (906.1 item 1)
+
+  water case: fire (class A) in Living Room (27.7 m², floor at 0.1 m), water; 180 s; seeds 1, 2, 3
+    seed 1 none        detected    - s, acted      - s, heads  0  released  103.7 MJ (after   96.0)  burnt   4.50 kg  peak  7007 kW, after  7007 kW, end  2587 kW  [26208 cells, 172 s]
+    seed 1 water       detected    - s, acted  127.0 s, heads  4  released   10.8 MJ (after    3.1)  burnt   0.01 kg  peak   204 kW, after   204 kW, end     1 kW  [26208 cells, 132 s]
+    seed 2 none        detected    - s, acted      - s, heads  0  released  108.2 MJ (after  100.5)  burnt   4.75 kg  peak 10026 kW, after 10026 kW, end 10026 kW  [26208 cells, 117 s]
+    seed 2 water       detected    - s, acted  127.9 s, heads  4  released   11.0 MJ (after    3.4)  burnt   0.02 kg  peak   223 kW, after   223 kW, end     1 kW  [26208 cells, 116 s]
+    seed 3 none        detected    - s, acted      - s, heads  0  released   63.6 MJ (after   56.8)  burnt   2.27 kg  peak  1744 kW, after  1744 kW, end  1582 kW  [26208 cells, 92 s]
+    seed 3 water       detected    - s, acted  122.7 s, heads  4  released    9.9 MJ (after    3.1)  burnt   0.01 kg  peak   182 kW, after   182 kW, end     1 kW  [26208 cells, 89 s]
+    mean water       against none: released -88 %, after acting -96 %, burnt -100 %, peak after acting -97 %; acted at 125.8 s
+  [720 s for duplex-apartment.ifc]
+

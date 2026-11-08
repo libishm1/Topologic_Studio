@@ -6,7 +6,7 @@ import { waterResponse } from "./fireClasses.js";
 import { MATERIAL } from "./voxelize.js";
 import { buildScene, readNodes, runScene, sprinklerFrame, sprinklerRun } from "./flamescapesRun.js";
 import { cellSpeed, createSolver, step } from "./flamescapes.js";
-import { fuelsFor } from "./fireClasses.js";
+import { designFireFor, fuelsFor } from "./fireClasses.js";
 
 const close = (a, b, tol, what = "") => assert.ok(Math.abs(a - b) <= tol, `${what} ${a} vs ${b}`);
 
@@ -145,6 +145,40 @@ test("the estimate takes each head's own height over the fire and its distance f
     // The grid's plume column snaps the same ceiling to a cell face.
     assert.ok(Math.abs(setup.plume.H - (2.7 - fire[1])) <= g.h, `the grid's plume height ${setup.plume.H}`);
   }
+});
+
+test("a design-fire first item follows its t-squared curve with the room's contents stepped aside, and the water over it decays it", () => {
+  assert.deepEqual(designFireFor("A", "fast"), { alpha: 0.0469, growth: "fast" });
+  assert.deepEqual(designFireFor("A"), { alpha: 0.0117, growth: "medium" }, "class A's own: medium");
+  assert.equal(designFireFor("B"), null, "a pool keeps its burning rate");
+  assert.equal(designFireFor("L"), null, "so does a battery pack");
+  assert.equal(designFireFor("A", "solver"), null);
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  const designFire = designFireFor("A", "fast");
+  const make = () => buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.35, maxCell: 0.35, contentsFuel, ignitionFuel, item, designFire });
+  const scene = make();
+  assert.ok(scene.burner && scene.pilot === null && scene.ignition.designFire, "a burner and no pilot");
+  const under = new Set(scene.burner.layers.flat());
+  assert.ok(!scene.contents.cells.some((c) => under.has(c)), "no room contents under the item");
+  const nodes = Float32Array.from([2.5, 0.75, 2, 1, 0.75, 1, 4.5, 0.75, 3.5]);
+  const run = (sprinklers) => runScene(make(), { nodes, horizon: 60, frameSeconds: 5, particles: 0, sprinklers });
+  const free = run(null);
+  // While the item burns alone each frame releases the curve's mean over it, alpha (t1^3 - t0^3) / 3 / 5 s.
+  for (let k = 0; k < free.K; k += 1) {
+    const t0 = 5 * k, t1 = t0 + 5;
+    const want = (0.0469 * (t1 ** 3 - t0 ** 3)) / 3 / 5;
+    close(free.hrr[k], want, 0.02 * want + 0.3, `frame ${k} (kW)`);
+  }
+  const energy = (46.9 * 60 ** 3) / 3;
+  close(free.designFire.released, energy, 0.01 * energy, "the item's heat over 60 s (J)");
+  // Activation alone leaves it as it is; wetting decays it from the end of the frame its head opened in.
+  assert.equal(run({ heads: HEADS, mode: "activation" }).designFire.released, free.designFire.released);
+  const wet = run({ heads: HEADS, mode: "wetting" });
+  const over = wet.sprinklers.heads[0];
+  assert.ok(over.estimate > 0 && over.estimate < 60, `the head over the item opens (${over.estimate} s)`);
+  assert.equal(wet.designFire.suppressed, "water");
+  assert.ok(wet.designFire.suppressedAt >= over.estimate && wet.designFire.suppressedAt <= over.estimate + 5, `water from ${wet.designFire.suppressedAt} s`);
+  assert.ok(wet.designFire.released < free.designFire.released, "the water decays it");
 });
 
 test("every covered fuel cell stays under Evans's cap in every step after its head opens", () => {

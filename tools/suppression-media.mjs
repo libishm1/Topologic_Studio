@@ -152,7 +152,9 @@ async function setMode(page, mode, state) {
 
 /** One run of the fire in a mode: a frame and the card's readings per step. */
 async function capture(page, dir, mode, spec) {
-  if (mode === (spec.setupAt ?? spec.modes[1])) await shot(page, path.join(dir, "setup.png"));
+  // The heads laid out, before the case's set-up mode, else its first mode with sprinklers that runs.
+  const setupAt = spec.setupAt ?? spec.modes.find((m) => m !== "none" && (!onlyModes || onlyModes.includes(m)));
+  if (mode === setupAt) await shot(page, path.join(dir, "setup.png"));
   const frames = path.join(dir, mode);
   await rm(frames, { recursive: true, force: true });
   await mkdir(frames, { recursive: true });

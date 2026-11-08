@@ -1,6 +1,6 @@
 # Sprinklers opening late, and the large rooms: diagnosis and fix (2026-11-08)
 
-Status: done on `next/browser-core`, not deployed (the release waits for the user). The user asked, after the 977978f release, to "plan, ideate, fix the heads starting late and the large room problem, check Lean, derivations, literature, metrics, and test across IFCs, to make sure this bug is documented and fixed". The surface coefficient had been left to the user's decision on 2026-11-07; this request is that decision.
+Status: done, with the first item as a design fire (section 8), released at the user's word on 2026-11-08. The user asked, after the 977978f release, to "plan, ideate, fix the heads starting late and the large room problem, check Lean, derivations, literature, metrics, and test across IFCs, to make sure this bug is documented and fixed". The surface coefficient had been left to the user's decision on 2026-11-07; this request is that decision.
 
 ## 1. The problem as it stood
 
@@ -34,7 +34,7 @@ D4. The fire grows faster than any design fire. In every model the first item an
 | I5. Evans's (1985) hot-layer substitution in place of "layer plus Alpert" | literature (section 5) | small | not done: neither form bounds the other, and they agree within 4 K early |
 | I6. A speed-dependent wall coefficient (FDS's forced and natural convection) | literature | per-face speed, about 6 reads a face | not done: the constant met the target |
 | I7. A finer grid near ceilings | validation R7: a finer grid did not help at 200 | large | no |
-| I8. The first item as a t-squared design fire (D4) | section 2, D4 | changes every run's fire | the user's decision |
+| I8. The first item as a t-squared design fire (D4) | section 2, D4 | changes every run's fire | done at the user's word (section 8) |
 | I9. Spray cooling below boiling (UL's head counts) | validation R6 | small | later: after activation |
 
 ## 4. Metrics
@@ -106,3 +106,24 @@ One room is left as found: the Clinic's mechanical room has ceilings over part o
 - `old_distance_error`, `new_distance_error`: a distance between cell centres errs by up to a cell's diagonal, one from the head's own position by up to half of it, and the bound is reached.
 
 The cell model compares one cell under the same heat input in both runs; in the solver the heat input depends on the temperatures, so it does not compare two whole simulations.
+
+## 8. The first item as a design fire (I8, the user's decision)
+
+Asked whether the first item should grow as a standard design fire (D4), the user said yes, with the release and new recordings of the important cases. Built:
+
+- `fireClasses.js` `designFireFor(cls, growth)`: "class", the default, takes the fire class's own t-squared growth (medium, 0.0117 kW/s², for A and C, after EN 1991-1-2 for dwellings and offices); a named class (slow 0.00293, medium 0.0117, fast 0.0469, ultra-fast 0.188 kW/s², NFPA 72 Annex B, as zone.js) takes that; "solver" none. Only solids water wets (A, C) have one: a pool keeps its burning rate, a metal and a battery pack their own.
+- `flamescapesRun.js` `itemBurner`: the item is a burner (the validation's, `createBurner`) over its own floor area (the open cells within its radius, a layer at a time up to the ceiling over it), its table the curve to the item's energy (mass times heat of combustion; 20 kg of class A, 360 MJ, burns out at 452 s at medium growth), its fuel's products (soot included), no radiant part (the solver's own radiation from the hot, sooty flame cells takes it). Each step's heat goes to the layers Heskestad's mean flame height reaches (`burnerCells`). No pilot, and the room's statistical contents under the item leave the grid: left in, the burner heated them directly, as if a second item stood inside it, and in the Duplex the contents caught at about 85 s with the item at 75 kW; out, they caught at 130 to 140 s, after the first head (123 s at 177 kW).
+- Suppression of the item (`itemSuppression`, per frame, for both solvers): once a head over its base opens in a water mode, its rate decays from its value then as Evans measured for the open heads' density (`burnerHeat`: q tau (e^-(a - s)/tau - e^-(b - s)/tau), never above its table); in a foam room the same from the discharge at the foam-water's density; in a clean agent room it stops when the agent reaches the class A extinguishing concentration (b.stopAt). The prescribed item cannot be wetted, so Evans's decay stands in for the water on it in every water mode.
+- The GPU (`flamescapesGpu.js`, a `burner` kernel): the host computes each step's heat (the same `burnerHeat`) and gives each flame cell its share and the item's products; the frame's heat release adds it, since the GPU's tallies count only the solver's own combustion. A validation burner with rays still runs on the CPU.
+- The app: "How it grows" under What burns first (`flamescapesGrowth`, default "class"), a hint with the item's curve, the run card's "First item" line (its curve; when water reached it or the agent put it out; what it released). `RUN_CACHE_VERSION` 5.
+
+Checks. Unit tests: the frames' heat release is the curve's mean over each frame while the item burns alone (within 2 %), its energy over 60 s within 1 %, activation alone leaves it as it is, wetting decays it from the end of the frame its head opened in (`suppression.test.mjs`); the decay integral, the cap at the table, the agent's stop and the flame's layers exactly (`flamescapes.burner.test.mjs`); clean agent stops a class C item at the class A concentration and its heat up to then is the curve's (`suppressionSystems.test.mjs`). 365 tests. GPU (`flamescapes-gpu-check.mjs --phase design`): a fast 5 kg item released 11.40 MJ on both, the frames' heat release the same to the kW (3, 14, 36, 66, 106, 156, 215, 283, 379 and 378 kW at 10 to 90 s), the head over it opened at 57.5 s on both and the item decayed from 60 s on both. The browser suite checks the card's first-item line and, with an ultra-fast item over 90 s, that the water reached it (first head 32 s at 188 kW).
+
+Results (`benchmark/results/2026-11-08-design-fire-*`):
+
+- Activation, 16 class A fires in eight models (180 s): the first head opened at 33 to 319 kW, 53 to 165 s after ignition, in 12; in the other four (the Clinic's mechanical room with no ceiling over the fire, the FM_ARC 3 m lobby with 7 of 40 heads in sight, the FZK-Haus living room under its gallery, Vienna's terrace) the room's contents caught first and the head opened at 0.45 to 1.6 MW. With the solver's own burning the same fires opened their first heads at 112 kW to 3.6 MW, mostly 0.5 to 1 MW.
+- Modes, 12 fires on the four examples: heads opened by 152 s in eight, and wetting cut the heat released by 37 to 89 %, Evans's cap and the spray within 4 % of it (the decay on the item is the same in every mode, and the contents had mostly not caught). In the Clinic's mechanical room and Vienna's garage heads opened at 162 and 168 s, too late to matter in 180 s.
+- Systems: server rooms on sprinklers 55 % (Office) and 80 % (Clinic), heads at 108 to 116 s; the clean agent 85 and 93 %, reaching the class A concentration at about 103 s (42 s with the solver's own fire: the smoke reaches the detectors later); class A rooms on sprinklers 54 to 88 %; the heptane store and spill as before (a pool keeps its own burning).
+- Cost: no measurable change in the time a step takes. On the same machine, minutes apart, the commit before the design fire and this one took 41.5 to 44.3 against 41.0 ms a step on the CPU and 6.1 to 6.5 against 7.2 ms on the GPU at 27,300 cells (the machine was slower than in the morning after hours at full load: 29.1 and 2.7 ms then).
+
+Left: once the room's contents catch, the solver spreads the fire faster than a design fire (flame speed 1 m/s over a continuous statistical fuel bed, the fuel's raised coefficient), which is why heads under high or open ceilings still open at 0.45 to 1.6 MW. Calibrating that spread against room fire tests is the next step for the fire model, not for the sprinklers.

@@ -267,6 +267,27 @@ export function fuelsFor(cls = "A") {
   return { contentsFuel: FIRE_CLASSES.A.fuel, ignitionFuel: first.fuel, item: first.item };
 }
 
+/** The t-squared growth classes, alpha in kW/s^2: 1055 kW at 600, 300, 150 and 75 s (NFPA 72 Annex B; zone.js GROWTH). */
+export const GROWTH_CLASSES = Object.freeze({ slow: 0.00293, medium: 0.0117, fast: 0.0469, "ultra-fast": 0.188 });
+
+/**
+ * The first item's design fire for a growth choice (2026-11-08): "class",
+ * the default, takes the fire class's own (`growth` above: medium for A and
+ * C, after EN 1991-1-2 for dwellings and offices); a class name takes that
+ * class; "solver" none, the solver burning the item itself as before (it
+ * reached about 500 kW within 15 s, faster than any design fire). Only solids
+ * that water wets have one (classes A and C): a pool keeps its burning rate,
+ * and metal and battery packs their own. Returns {alpha (kW/s^2), growth}
+ * or null.
+ */
+export function designFireFor(cls = "A", growth = "class") {
+  const first = FIRE_CLASSES[cls] || FIRE_CLASSES.A;
+  if (growth === "solver" || first.fuel.liquid || !waterResponse(first.fuel).wets) return null;
+  const name = growth === "class" ? first.growth?.class : growth;
+  const alpha = GROWTH_CLASSES[name];
+  return alpha > 0 ? { alpha, growth: name } : null;
+}
+
 /**
  * The sources behind the values above (full records, with how each was read,
  * in wiki/research/ignition-sources-2026-11-05.json). DOIs were resolved at
