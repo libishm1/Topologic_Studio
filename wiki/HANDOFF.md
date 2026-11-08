@@ -2,7 +2,8 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at 17f1889 (released 2026-11-08 afternoon, the user's "yes to all": 1f21594 (handoff), 696683a (the sprinkler activation fix) and 17f1889 (the first item as a design fire; the workflow, open office and server room GIFs re-recorded, the 2026-11-07 media in `public/docs/media/2026-11-07/`). The backend did not change, so Render was not redeployed.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at 58dc781 (released 2026-11-08 evening at the user's request: the design-fire item's flame drawn, see This round). Live check: 109 steps, 0 failed, 0 console errors, the item drawn with 198 flame points, Render awake. The site does not yet offer the Cloudflare describer: it waits for the variables `DESCRIBE_URL` (the user is setting it) and `TURNSTILE_SITE_KEY`, then a rebuild.
+- **Released before it:** 17f1889 (2026-11-08 afternoon, the user's "yes to all": 1f21594 (handoff), 696683a (the sprinkler activation fix) and 17f1889 (the first item as a design fire; the workflow, open office and server room GIFs re-recorded, the 2026-11-07 media in `public/docs/media/2026-11-07/`). The backend did not change, so Render was not redeployed.
   - **Gates before it:** 365 unit tests, lint, the Pages build, the browser suite on the Pages build desktop (108 steps) and mobile (107), 0 failed, 0 console errors.
   - **Live check of 17f1889:** 108 steps, 0 failed, 0 console errors, with Render awake; the new GIFs and the archive serve from the live site.
   - **Build the Pages site from PowerShell** (`$env:BASE_PATH = "/Topologic_Studio/"`, then `node node_modules/vite/bin/vite.js build`) and restart `vite preview` after a rebuild: from Git Bash the base path becomes a Windows path and every browser-test step fails (it happened again on 2026-11-08).
@@ -72,15 +73,10 @@
 0. **In order, as the user asked on 2026-11-06:**
    1. **Cloudflare: the user's steps, then the deploy.**
       - **Plugin:** Cloudflare's Claude Code plugin is installed for the user (`claude plugin marketplace add cloudflare/skills`, `claude plugin install cloudflare@cloudflare`), as the user asked from developers.cloudflare.com/agent-setup. It was reviewed first: it is from the Cloudflare organisation, has no hooks, and has one MCP server, `https://mcp.cloudflare.com/mcp`. The optional `cf` CLI was not installed: the page says to ask first.
-      - **Needs the user:**
-        - run `/reload-plugins`;
-        - approve Cloudflare's OAuth on first use;
-        - or run `npx wrangler login`.
-
-        Never sign in for them.
-      - **Then:**
-        - deploy the Worker (`npx wrangler deploy` in `cloudflare/describe-worker`, or through the MCP);
-        - set the repository variable `DESCRIBE_URL`;
+      - **Signed in (2026-11-08):** the user ran `npx wrangler login` (wrangler 4.158.0, one account). Never sign in for them.
+      - **Worker deployed (2026-11-08, at the user's request):** `topologic-describe` on the user's workers.dev subdomain (the address is in the user's chat, not committed here); its 8 tests passed first; `/health` 200 and one test `/describe` from the live site's origin answered (CORS allowed). No `TURNSTILE_SECRET` yet, so it serves any allowed origin without the human check.
+      - **Then (the user):**
+        - set the repository variable `DESCRIBE_URL` (the GitHub CLI is not installed here, so the user sets it in Settings, Secrets and variables, Actions, Variables);
         - create a Turnstile widget (Managed, hostname `libishm1.github.io`);
         - `npx wrangler secret put TURNSTILE_SECRET`;
         - set the repository variable `TURNSTILE_SITE_KEY`;
