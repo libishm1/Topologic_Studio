@@ -447,6 +447,7 @@ Opening an IFC on a phone was slow: every step of a first open waited on the one
 11. **Grid dependence of the Flamescapes fire.**
     - **The finding:** peak heat release moves by two orders of magnitude between 0.20 and 0.34 m cells, and not in one direction. The 0.23 m run also settles to a constant 460 kW tail.
     - **Before any quantitative use:** a grid convergence study (same scene, 0.15 to 0.4 m, CPU and GPU), and a check of the tail (the pilot, or a steady burn of the contents).
+    - **The calibration plan** (2026-11-08, the user asked for it): `wiki/research/flamescapes-calibration-plan-2026-11-08.md`. Stage 0 is this grid study (hypotheses H1 to H4); then transport with prescribed heat release, one item burning alone, and spread in rooms, with the FDS Validation Guide's statistics. Nothing run yet; five decisions for the user in its section 11.
     - **Speed-sized grid noise:** sizing the GPU grid by speed makes the grid device-dependent; the stored speed keeps it fixed per browser. Fresh browsers picked 110k to 200k cells in three sessions, because the speed measurement is noisy while other jobs run.
 12. **Ventilation is a bound, not a model.**
     - **Missing inputs:** system membership (IfcRelAssignsToGroup with IfcDistributionSystem) and supply, return and exhaust roles are not read; duct geometry is unused; 100 L/s a terminal is an assumption.
