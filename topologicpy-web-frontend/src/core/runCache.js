@@ -23,7 +23,9 @@
 // (fireClasses.js designFireFor; flamescapesRun.js itemBurner).
 // 6 (2026-11-08): the design-fire item's flame is in the frames' particles
 // (flamescapesRun.js withBurnerFlame); kept runs had none until the contents caught.
-export const RUN_CACHE_VERSION = 6;
+// 7 (2026-11-08): that flame drawn as a flame (narrowing, flickering, at its
+// cells' temperatures) instead of a column of points at McCaffrey's.
+export const RUN_CACHE_VERSION = 7;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 

@@ -524,13 +524,22 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
       };
       const o = { nodes: nodeArray, upAxis: "y", horizon: quick ? 90 : 150, frameSeconds: 5, particles: 3000, sprinklers: mode ? { heads: [head], mode } : null };
       const row = { mode: mode || "none" };
-      for (const [name, fn] of [["cpu", (sc) => R.runScene(sc, o)], ["gpu", (sc) => runner.runScene(sc, o)]]) {
+      for (const [name, fn] of [["cpu", (sc, opts) => R.runScene(sc, opts)], ["gpu", (sc, opts) => runner.runScene(sc, opts)]]) {
+        // The last frame's flame points' temperatures (the item's drawn flame
+        // takes its cells', read back with the nodes on the GPU).
+        let flame = [];
+        const onFrame = (f) => {
+          flame = [];
+          for (let q = 0; q < (f.particles?.kinds.length ?? 0); q += 1) if (f.particles.kinds[q] === 0) flame.push(f.particles.temps[q]);
+        };
         const t0 = performance.now();
-        const r = await fn(scene());
-        row[name] = { ms: performance.now() - t0, hrr: Array.from(r.hrr), released: r.stats.released, item: r.designFire ?? null, estimate: r.sprinklers?.heads[0].estimate ?? null };
+        const r = await fn(scene(), { ...o, onFrame });
+        flame.sort((a, b) => a - b);
+        const at = (f) => (flame.length ? +flame[Math.floor(f * (flame.length - 1))].toFixed(0) : null);
+        row[name] = { ms: performance.now() - t0, hrr: Array.from(r.hrr), released: r.stats.released, item: r.designFire ?? null, estimate: r.sprinklers?.heads[0].estimate ?? null, flame: { n: flame.length, p10: at(0.1), p50: at(0.5), p90: at(0.9) } };
       }
       out.design.push(row);
-      log(`design ${row.mode}: item released CPU ${(row.cpu.item?.released / 1e6).toFixed(2)} MJ, GPU ${(row.gpu.item?.released / 1e6).toFixed(2)} MJ; head CPU ${row.cpu.estimate} s, GPU ${row.gpu.estimate} s`);
+      log(`design ${row.mode}: item released CPU ${(row.cpu.item?.released / 1e6).toFixed(2)} MJ, GPU ${(row.gpu.item?.released / 1e6).toFixed(2)} MJ; head CPU ${row.cpu.estimate} s, GPU ${row.gpu.estimate} s; flame points CPU ${JSON.stringify(row.cpu.flame)}, GPU ${JSON.stringify(row.gpu.flame)} K`);
     }
   }
 

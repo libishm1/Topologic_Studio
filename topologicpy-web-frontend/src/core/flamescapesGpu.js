@@ -138,9 +138,11 @@ class GpuSim {
    *       heads' sensor cells, last) and suppression ({columns, eta}: the
    *       `sup` buffer for Evans and the spray; null for none); systems
    *       (suppressionSystems.js systemsSetup: the `sys` buffer for flooded
-   *       and foamed rooms; null for none).
+   *       and foamed rooms; null for none); flameFrom (where a design-fire
+   *       item's cells, sim.burner.cells, start in nodeCells: their
+   *       temperatures colour its drawn flame; null for none).
    */
-  constructor(ctx, sim, { nodeCells = new Int32Array(0), snapMax = 0, slots = 64, speedFrom = null, suppression = null, systems = null } = {}) {
+  constructor(ctx, sim, { nodeCells = new Int32Array(0), snapMax = 0, slots = 64, speedFrom = null, suppression = null, systems = null, flameFrom = null } = {}) {
     const { device, kernels } = ctx;
     this.ctx = ctx;
     this.device = device;
@@ -190,6 +192,7 @@ class GpuSim {
     // The sensor cells' gas speeds (gather), when the run has sprinklers.
     this.speedFrom = speedFrom ?? d.nNodes;
     this.nSpeed = d.nNodes - this.speedFrom;
+    this.flameFrom = flameFrom;
     io.speed = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
     // The design-fire item's cells, a layer at a time from its base.
     io.burner = io.speed + this.nSpeed;
@@ -613,8 +616,13 @@ class GpuSim {
     let snapshot = null;
     if (snap) snapshot = this.snapshotFrom(f, u, at);
     else if (particles) snapshot = { positions: new Float32Array(0), temps: new Float32Array(0), kinds: new Uint8Array(0) };
-    // A design-fire item's flame, drawn from the host's record of the step (the CPU's particleSnapshot does the same).
-    if (snapshot) snapshot = withBurnerFlame(this.sim, snapshot);
+    // A design-fire item's flame, drawn from the host's record of the step (the CPU's particleSnapshot does the same),
+    // at its cells' temperatures read with the nodes.
+    if (snapshot) {
+      const from = this.flameFrom;
+      const at = from === null ? null : new Map(Array.from(this.sim.burner.cells, (c, q) => [c, T[from + q] + KELVIN]));
+      snapshot = withBurnerFlame(this.sim, snapshot, at && ((c) => at.get(c)));
+    }
     this.slot = 0;
     return {
       T, vis, co, soot, co2, o2, speed, released, burnt, radiated, maxT, lastReleased,
@@ -746,12 +754,15 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
   // The ceiling detectors are read with the nodes, after them, then the
-  // flooded and foamed rooms' detectors, then the sprinklers' sensor cells
-  // (with their gas speed).
+  // flooded and foamed rooms' detectors, then a design-fire item's cells
+  // (its drawn flame's colours), then the sprinklers' sensor cells (with
+  // their gas speed).
   const detectors = ceilingDetectors(scene);
   const D = detectors.cells.length;
   const sys = systemsRun(scene, sim, opts.systems, opts.upAxis);
   const Ds = sys ? sys.detectorCells.length : 0;
+  const flame = particles && sim.burner?.design ? sim.burner.cells : new Int32Array(0);
+  const B = flame.length;
   const spr = sprinklerRun(scene, sim, opts.sprinklers, opts.upAxis);
   const S = spr ? spr.sensors.length : 0;
   const suppression = spr && spr.sup.mode !== "activation" ? { columns: spr.setup.heads.reduce((a, h) => a + h.columns.length / 2, 0), eta: spr.sup.eta, wet: spr.sup.wet } : null;
@@ -762,12 +773,13 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   device.pushErrorScope("validation");
   try {
     gpu = new GpuSim(ctx, sim, {
-      nodeCells: withDetectors(withDetectors(withDetectors(cells, detectors.cells), sys ? sys.detectorCells : new Int32Array(0)), spr ? spr.sensors : new Int32Array(0)),
+      nodeCells: withDetectors(withDetectors(withDetectors(withDetectors(cells, detectors.cells), sys ? sys.detectorCells : new Int32Array(0)), flame), spr ? spr.sensors : new Int32Array(0)),
       snapMax: particles || 0,
       slots: Math.ceil(frameSeconds / dt) + 2,
-      speedFrom: n + D + Ds,
+      speedFrom: n + D + Ds + B,
       suppression,
       systems: sys,
+      flameFrom: B ? n + D + Ds : null,
     });
   } catch {
     gpu = null;
@@ -805,7 +817,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
         itemBefore = sim.burner.released;
       }
       const row = keep ? k : 0;
-      const nodesOf = (a) => (D + Ds + S ? a.subarray(0, n) : a);
+      const nodesOf = (a) => (D + Ds + B + S ? a.subarray(0, n) : a);
       T.set(nodesOf(frame.T), row * n);
       vis.set(nodesOf(frame.vis), row * n);
       co.set(nodesOf(frame.co), row * n);
@@ -828,7 +840,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       let sprinkled = null;
       if (spr) {
         spr.sup.stats.emitted += spr.sup.columns.reduce((a, col) => a + col.flux, 0) * frameSeconds;
-        const Tk = Float64Array.from(frame.T.subarray(n + D + Ds, n + D + Ds + S), (t) => t + KELVIN);
+        const Tk = Float64Array.from(frame.T.subarray(n + D + Ds + B, n + D + Ds + B + S), (t) => t + KELVIN);
         sprinkled = sprinklerFrame(spr, { t0: end - frameSeconds, t1: end, T: Tk, u: frame.speed, hrr: hrr[k] });
         if (sprinkled.changed) gpu.applySuppression(spr.sup, sprinkled.changed);
       }

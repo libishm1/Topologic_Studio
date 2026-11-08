@@ -36,10 +36,10 @@
  * 10 m for large spaces).
  */
 
-import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, plumeRise, step } from "./flamescapes.js";
+import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, flameHeight, step } from "./flamescapes.js";
 import { EVANS_MIN_DENSITY, activationFrame, activationSummary, createActivation, createSuppression, evansTau, openHeads, sprinklerSetup } from "./suppression.js";
 import { systemsDetect, systemsSetup, systemsSummary } from "./suppressionSystems.js";
-import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, toLocal, volumeFractions } from "./voxelize.js";
+import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, rng, toLocal, volumeFractions } from "./voxelize.js";
 // The CO dose and the forecast from frames live in forecast.js, so the
 // forecast worker does not load the solver; re-exported here.
 export { CO_LIMIT, coDoseRate, forecastFromFrames } from "./forecast.js";
@@ -475,44 +475,75 @@ export function particleSnapshot(sim, max = 3000) {
  * come from cells where its own combustion took place (particleStep), while
  * the item's burner puts its heat and products into its cells directly, so
  * without these the item showed no flame until the room's contents caught.
- * Six points in each cell the last step's flame reached (burnerCells), a
- * quarter cell from its centre along each axis, as the solver spawns six
- * flame-front particles in each burning cell, at McCaffrey's mean centreline
- * temperature for the cell's height over the item's base (plumeRise). Drawn
- * only: the solver never sees them. Appended to a particle snapshot in the
- * viewer frame, as flame-front particles (kind 0); the GPU's snapshot too.
+ *
+ * Shaped as a flame. Heskestad's mean flame height L (flameHeight, for the
+ * last step's heat release over the item's diameter) is where the flame is
+ * seen half the time, so a point at height z over the item's base is kept
+ * with a probability falling from 1 at L / 2 to 0 at 3L / 2, one half at L;
+ * and the flame narrows toward its tip, the item's footprint drawn in toward
+ * its centre by 1 - z / (3L / 2), never below a fifth, and no higher than
+ * the ceiling over it (its burner's layers). Coloured as the solver colours
+ * its own flame: each point at its cell's gas temperature, as particleStep
+ * spawns flame-front particles at their cell's, so the item burns in the
+ * room's colours. The first version filled every heated cell with six points
+ * at McCaffrey's centreline temperature: a straight column, too hot for the
+ * colour scale, that the additive sprites summed to a pinkish white.
+ *
+ * About two points to a cell of the mean flame, placed afresh each frame
+ * from a seed of the time (the same run draws the same flame) and never in a
+ * solid cell. Drawn only: the solver never sees them, and they take nothing
+ * from its random numbers. Appended to a particle snapshot in the viewer
+ * frame, as flame-front particles (kind 0); the GPU's snapshot too, with
+ * `temperatureOf(cell)` giving its burner cells' read-back temperatures (K).
  */
-export function withBurnerFlame(sim, snapshot) {
+export function withBurnerFlame(sim, snapshot, temperatureOf = null) {
   const b = sim.burner;
-  const n = b?.design ? b.flameCells : 0;
-  if (!n) return snapshot;
+  if (!(b?.design && b.flameCells)) return snapshot;
+  const tempAt = temperatureOf || ((c) => sim.T[c]);
   const g = sim.grid;
+  const { nx, ny, nz } = g;
+  const base = b.cells.subarray(b.layerStart[0], b.layerStart[1]);
+  // The base's centre and floor, in cells.
+  let ci = 0, ck = 0;
+  for (const c of base) {
+    ci += (c % nx) + 0.5;
+    ck += Math.floor(c / (nx * ny)) + 0.5;
+  }
+  ci /= base.length;
+  ck /= base.length;
+  const floor = Math.floor(base[0] / nx) % ny;
+  const L = Math.max(flameHeight(b.flameRate, b.diameter), 0.5 * g.h) / g.h;
+  const top = Math.min(1.5 * L, b.layerStart.length - 1);
+  const want = Math.max(base.length, Math.round(6 * base.length * L));
+  const random = rng(Math.round(sim.time * 1000) + 1);
   const count = snapshot.temps.length;
-  const positions = new Float32Array((count + 6 * n) * 3);
-  const temps = new Float32Array(count + 6 * n);
-  const kinds = new Uint8Array(count + 6 * n);
+  const positions = new Float32Array((count + want) * 3);
+  const temps = new Float32Array(count + want);
+  const kinds = new Uint8Array(count + want);
   positions.set(snapshot.positions);
   temps.set(snapshot.temps);
   kinds.set(snapshot.kinds);
   const x = [0, 0, 0];
   let o = count;
-  for (let l = 0; b.layerStart[l] < n; l += 1) {
-    const T = sim.P.ambient + plumeRise((l + 0.5) * b.h, b.flameRate);
-    for (let q = b.layerStart[l]; q < Math.min(n, b.layerStart[l + 1]); q += 1) {
-      const c = b.cells[q];
-      const centre = [c % g.nx + 0.5, (Math.floor(c / g.nx) % g.ny) + 0.5, Math.floor(c / (g.nx * g.ny)) + 0.5];
-      for (let d = 0; d < 6; d += 1) {
-        x[0] = centre[0];
-        x[1] = centre[1];
-        x[2] = centre[2];
-        x[d >> 1] += d & 1 ? 0.25 : -0.25;
-        for (let a = 0; a < 3; a += 1) positions[o * 3 + g.axes[a]] = g.origin[a] + x[a] * g.h;
-        temps[o] = T;
-        o += 1;
-      }
-    }
+  for (let tries = 0; o < count + want && tries < 8 * want; tries += 1) {
+    const z = random() * top;
+    const shrink = Math.max(0.2, 1 - z / (1.5 * L));
+    // Kept as often as the flame is seen there, and as the narrowing footprint's area.
+    if (random() > Math.min(1, (1.5 * L - z) / L) * shrink * shrink) continue;
+    const c = base[Math.floor(random() * base.length)];
+    x[0] = ci + ((c % nx) + random() - ci) * shrink;
+    x[1] = floor + z;
+    x[2] = ck + (Math.floor(c / (nx * ny)) + random() - ck) * shrink;
+    const i = Math.floor(x[0]), j = Math.floor(x[1]), k = Math.floor(x[2]);
+    if (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz) continue;
+    const cell = i + nx * (j + ny * k);
+    const T = sim.kind[cell] === SOLID_KIND ? undefined : tempAt(cell);
+    if (!(T > 0)) continue;
+    for (let a = 0; a < 3; a += 1) positions[o * 3 + g.axes[a]] = g.origin[a] + x[a] * g.h;
+    temps[o] = T;
+    o += 1;
   }
-  return { positions, temps, kinds };
+  return { positions: positions.subarray(0, o * 3), temps: temps.subarray(0, o), kinds: kinds.subarray(0, o) };
 }
 
 /**
