@@ -4,7 +4,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker, { INSTRUCTIONS, MAX_FACTS, MAX_SUMMARY, ROOM_INSTRUCTIONS, checkSuggestions, jsonOf, passesHumanCheck, textOf } from "../src/index.js";
+import worker, { ACTIONS, INSTRUCTIONS, MAX_FACTS, MAX_SUMMARY, ROOM_INSTRUCTIONS, checkSuggestions, jsonOf, passesHumanCheck, textOf } from "../src/index.js";
 import { DESCRIBE_INSTRUCTIONS } from "../../../topologicpy-web-frontend/src/core/describeFacts.js";
 
 const SITE = "https://libishm1.github.io";
@@ -144,27 +144,44 @@ test("room requests: other sites, no rooms, oversized summaries and non-JSON ans
   assert.equal(jsonOf("{broken"), null);
 });
 
-test("with a Turnstile secret, a request needs a token Cloudflare accepts; without one, none is asked for", async () => {
+test("with a Turnstile secret, a request needs a token Cloudflare accepts, for its route's action, from the site's hostname; without one, none is asked for", async () => {
   const realFetch = globalThis.fetch;
   const seen = [];
+  // Cloudflare's answers for the test tokens: "good-<action>" passes for that
+  // action on the site, "local-describe" passes but from localhost.
+  const answers = {
+    "good-describe": { success: true, action: "describe", hostname: "libishm1.github.io" },
+    "good-rooms": { success: true, action: "rooms", hostname: "libishm1.github.io" },
+    "local-describe": { success: true, action: "describe", hostname: "localhost" },
+  };
   globalThis.fetch = async (url, init) => {
-    seen.push({ url: String(url), token: init.body.get("response"), secret: init.body.get("secret") });
-    return new Response(JSON.stringify({ success: init.body.get("response") === "good-token" }));
+    const response = init.body.get("response");
+    seen.push({ url: String(url), token: response, secret: init.body.get("secret"), type: init.headers["Content-Type"] });
+    if (response === "down") return new Response("busy", { status: 503 });
+    return new Response(JSON.stringify(answers[response] ?? { success: false, "error-codes": ["invalid-input-response"] }));
   };
   try {
-    const guarded = { ...env(async () => ({ response: "ok" })), TURNSTILE_SECRET: "s3cret" };
+    const guarded = { ...env(async () => ({ response: "ok" })), TURNSTILE_SECRET: "s3cret", TURNSTILE_HOSTNAMES: "libishm1.github.io" };
     const describe = (body) => worker.fetch(post(body), guarded);
     assert.equal((await describe({ facts: "- x" })).status, 403);
     assert.equal((await describe({ facts: "- x", turnstile: "bad-token" })).status, 403);
-    assert.equal((await describe({ facts: "- x", turnstile: "good-token" })).status, 200);
-    assert.equal((await worker.fetch(rooms({ summary: SUMMARY, turnstile: "bad-token" }), guarded)).status, 403);
-    assert.equal(seen.length, 3, "a missing token is refused without asking Cloudflare");
+    assert.equal((await describe({ facts: "- x", turnstile: "good-describe" })).status, 200);
+    assert.equal((await describe({ facts: "- x", turnstile: "good-rooms" })).status, 403, "another route's token");
+    assert.equal((await describe({ facts: "- x", turnstile: "local-describe" })).status, 403, "a token from localhost");
+    assert.equal((await describe({ facts: "- x", turnstile: "down" })).status, 403, "Cloudflare not answering");
+    assert.equal((await worker.fetch(rooms({ summary: SUMMARY, turnstile: "good-describe" }), guarded)).status, 403, "the describe check's token on /rooms");
+    assert.equal(seen.length, 6, "a missing token is refused without asking Cloudflare");
     assert.match(seen[0].url, /turnstile\/v0\/siteverify$/);
     assert.equal(seen[0].secret, "s3cret");
+    assert.equal(seen[0].type, "application/x-www-form-urlencoded");
+    // A secret with no hostnames refuses everything, without asking Cloudflare.
+    const noHosts = { ...guarded, TURNSTILE_HOSTNAMES: "" };
+    assert.equal((await worker.fetch(post({ facts: "- x", turnstile: "good-describe" }), noHosts)).status, 403);
+    assert.equal(seen.length, 6);
     // No secret: the old behaviour, and Cloudflare is not asked.
     assert.equal((await worker.fetch(post({ facts: "- x" }), env(async () => ({ response: "ok" })))).status, 200);
-    assert.equal(seen.length, 3);
-    assert.equal(await passesHumanCheck("x".repeat(3000), { TURNSTILE_SECRET: "s" }), false);
+    assert.equal(seen.length, 6);
+    assert.equal(await passesHumanCheck("x".repeat(3000), { TURNSTILE_SECRET: "s", TURNSTILE_HOSTNAMES: "libishm1.github.io" }, null, ACTIONS.describe), false);
   } finally {
     globalThis.fetch = realFetch;
   }

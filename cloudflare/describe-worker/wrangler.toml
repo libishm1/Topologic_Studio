@@ -11,5 +11,9 @@ binding = "AI"
 [vars]
 # The pages that may call it: the live site and local development.
 ALLOWED_ORIGINS = "https://libishm1.github.io,http://localhost:5173,http://localhost:4173"
+# The pages whose Turnstile tokens it accepts (the hostname Cloudflare
+# reports for a token), once TURNSTILE_SECRET is set: the live site only.
+# Never localhost here: test locally with Cloudflare's test keys and wrangler dev.
+TURNSTILE_HOSTNAMES = "libishm1.github.io"
 # Any Workers AI text-generation model that takes chat messages.
 MODEL = "@cf/openai/gpt-oss-20b"

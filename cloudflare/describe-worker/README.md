@@ -46,8 +46,8 @@ For local development, put `VITE_DESCRIBE_URL=<the address>` in `topologicpy-web
 
 Turnstile is Cloudflare's "I'm human" check. It keeps bots from spending the Worker's free AI allowance, and it is optional.
 
-- **The page:** it loads Turnstile only when someone uses a cloud feature. The widget runs in "interaction-only" mode, so it stays invisible unless Cloudflare asks for a click.
-- **The Worker:** it then refuses any request without a valid token.
+- **The page:** it loads Turnstile only when someone chooses Cloudflare for a cloud feature, and shows one slim strip under the send button. It checks at once, usually with no click, and asks for the action `describe`.
+- **The Worker:** it then refuses any request unless Cloudflare accepts its token, for the route's action (`describe` on `/describe`, `rooms` on `/rooms`), from a hostname in `TURNSTILE_HOSTNAMES` in `wrangler.toml` (the live site only). With the secret set and no hostnames, it refuses everything. This follows Cloudflare's Turnstile Spin checks.
 
 To turn it on:
 
@@ -55,7 +55,7 @@ To turn it on:
 2. Give the Worker the secret key. From this folder, run `npx wrangler secret put TURNSTILE_SECRET` and paste the key when asked. Secrets are not kept in `wrangler.toml`.
 3. Give the site the site key. In the GitHub repository, add the variable `TURNSTILE_SITE_KEY` next to `DESCRIBE_URL`, then run Deploy Frontend again.
 
-For local testing, Cloudflare's test keys work on `localhost`: site key `1x00000000000000000000AA` (always passes, visible) and secret `1x0000000000000000000000000000000AA` (always passes). Source: https://developers.cloudflare.com/turnstile/troubleshooting/testing/, read on 2026-11-06.
+For local testing, Cloudflare's test keys (site key `1x00000000000000000000AA`, secret `1x0000000000000000000000000000000AA`) make the page's check pass, but their answers report the hostname `example.com` and no action, so this Worker refuses them (https://developers.cloudflare.com/turnstile/troubleshooting/testing/, read on 2026-11-08). To try the whole check locally, use your own widget (Cloudflare adds `localhost` to its domains) with `wrangler dev`, and put `TURNSTILE_SECRET` and `TURNSTILE_HOSTNAMES=localhost` in a `.dev.vars` file in this folder (git ignores it). Never add `localhost` to the deployed Worker's `TURNSTILE_HOSTNAMES`.
 
 Turnstile collects browser signals to tell people from bots. Cloudflare describes what it collects in its Turnstile privacy addendum.
 

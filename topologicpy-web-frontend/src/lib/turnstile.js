@@ -47,6 +47,8 @@ export async function mountHumanCheck(container, { theme = "auto" } = {}) {
   const state = { container, token: null, waiters: [] };
   state.id = turnstile.render(container, {
     sitekey: TURNSTILE_SITE_KEY,
+    // The Worker accepts this check's tokens for /describe only (its ACTIONS).
+    action: "describe",
     appearance: "always",
     size: "flexible",
     theme,

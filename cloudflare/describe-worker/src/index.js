@@ -22,7 +22,9 @@
  *
  * With a TURNSTILE_SECRET (wrangler secret put TURNSTILE_SECRET), every POST
  * must carry a Cloudflare Turnstile token ("turnstile"), checked with
- * Cloudflare before the model runs, so the allowance is spent on people.
+ * Cloudflare before the model runs, so the allowance is spent on people: a
+ * success, for the route's action (ACTIONS), from a hostname in
+ * TURNSTILE_HOSTNAMES (wrangler.toml).
  */
 
 export const DEFAULT_MODEL = "@cf/openai/gpt-oss-20b";
@@ -141,17 +143,32 @@ export function checkSuggestions(raw, summary) {
 
 const SITEVERIFY = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
-/** Whether a request passed the human check: always when no secret is set; else Cloudflare's answer for its token. */
-export async function passesHumanCheck(token, env, ip = null) {
+/** The Turnstile action each route expects (the widget's `action`; the page's lib/turnstile.js renders "describe"). */
+export const ACTIONS = Object.freeze({ describe: "describe", rooms: "rooms" });
+
+/**
+ * Whether a request passed the human check: always when no secret is set;
+ * else Cloudflare's answer for its token must be a success, for this route's
+ * `action`, from one of TURNSTILE_HOSTNAMES (comma-separated: the site's own;
+ * never localhost on the deployed Worker), as Cloudflare's Turnstile Spin
+ * requires. A secret with no hostnames refuses everything.
+ */
+export async function passesHumanCheck(token, env, ip = null, action = null) {
   if (!env.TURNSTILE_SECRET) return true;
-  if (typeof token !== "string" || !token || token.length > 2048) return false;
-  const form = new FormData();
-  form.append("secret", env.TURNSTILE_SECRET);
-  form.append("response", token);
-  if (ip) form.append("remoteip", ip);
+  const hostnames = new Set(String(env.TURNSTILE_HOSTNAMES ?? "").split(",").map((h) => h.trim()).filter(Boolean));
+  if (typeof token !== "string" || !token || token.length > 2048 || !hostnames.size) return false;
+  const form = new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token });
+  if (ip) form.set("remoteip", ip);
   try {
-    const answer = await (await fetch(SITEVERIFY, { method: "POST", body: form })).json();
-    return answer?.success === true;
+    const reply = await fetch(SITEVERIFY, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form,
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!reply.ok) return false;
+    const answer = await reply.json();
+    return answer?.success === true && answer.action === action && hostnames.has(answer.hostname);
   } catch {
     return false;
   }
@@ -172,7 +189,7 @@ async function suggestRooms(request, env, model, cors) {
   } catch {
     return json({ error: "Send JSON: {\"summary\": {\"rooms\": [...]}}." }, 400, cors);
   }
-  if (!(await passesHumanCheck(body?.turnstile, env, request.headers.get("CF-Connecting-IP")))) return json({ error: HUMAN_FAILED }, 403, cors);
+  if (!(await passesHumanCheck(body?.turnstile, env, request.headers.get("CF-Connecting-IP"), ACTIONS.rooms))) return json({ error: HUMAN_FAILED }, 403, cors);
   const summary = body?.summary;
   if (!Array.isArray(summary?.rooms) || summary.rooms.length === 0) return json({ error: "No rooms were sent." }, 400, cors);
   const text = JSON.stringify(summary);
@@ -226,7 +243,7 @@ export default {
     } catch {
       return json({ error: "Send JSON: {\"facts\": \"...\"}." }, 400, cors);
     }
-    if (!(await passesHumanCheck(body?.turnstile, env, request.headers.get("CF-Connecting-IP")))) return json({ error: HUMAN_FAILED }, 403, cors);
+    if (!(await passesHumanCheck(body?.turnstile, env, request.headers.get("CF-Connecting-IP"), ACTIONS.describe))) return json({ error: HUMAN_FAILED }, 403, cors);
     const facts = typeof body?.facts === "string" ? body.facts.slice(0, MAX_FACTS).trim() : "";
     if (!facts) return json({ error: "No facts were sent." }, 400, cors);
 

@@ -75,12 +75,12 @@
       - **Plugin:** Cloudflare's Claude Code plugin is installed for the user (`claude plugin marketplace add cloudflare/skills`, `claude plugin install cloudflare@cloudflare`), as the user asked from developers.cloudflare.com/agent-setup. It was reviewed first: it is from the Cloudflare organisation, has no hooks, and has one MCP server, `https://mcp.cloudflare.com/mcp`. The optional `cf` CLI was not installed: the page says to ask first.
       - **Signed in (2026-11-08):** the user ran `npx wrangler login` (wrangler 4.158.0, one account). Never sign in for them.
       - **Worker deployed (2026-11-08, at the user's request):** `topologic-describe` on the user's workers.dev subdomain (the address is in the user's chat, not committed here); its 8 tests passed first; `/health` 200 and one test `/describe` from the live site's origin answered (CORS allowed). No `TURNSTILE_SECRET` yet, so it serves any allowed origin without the human check.
+      - **Turnstile (2026-11-08):** the user made the widget in the dashboard (site key `0x4AAAAAAF4v1X9WmvwLdAJU`, Managed, domains `libishm1.github.io`, `localhost`, `127.0.0.1`) and pasted Cloudflare's Turnstile Spin prompt (existing-widget flow, `developers.cloudflare.com/turnstile/spin/prompt.md`, read as data). Done to its contract, each step approved by the user:
+        - the Worker accepts a token only on Cloudflare's success, for the route's action (`ACTIONS`: `describe`, `rooms`), from a hostname in `TURNSTILE_HOSTNAMES` (`wrangler.toml`: the live site only; a secret with no hostnames refuses all), with a 10 s timeout; the page's check renders action `describe`; 8 Worker tests; the Worker redeployed;
+        - the secret fetched and stored by the guarded flow, never shown: jq 1.8.2 (official binary, SHA-256 checked) and launchers `python3` (Python 3.13) and `wrangler` in `C:\Users\lmurugesan\tools\bin`, wrangler 4.158.0 installed with `npm install -g` (esbuild and workerd install scripts left off); widget metadata checked first, the secret checked with siteverify's dummy token, then `wrangler secret put TURNSTILE_SECRET`; a request without a token now gets 403;
+        - Cloudflare's test keys report hostname `example.com` and no action, so they cannot pass the Worker; local tests use the real widget with `wrangler dev` and a git-ignored `.dev.vars` (README).
       - **Then (the user):**
-        - set the repository variable `DESCRIBE_URL` (the GitHub CLI is not installed here, so the user sets it in Settings, Secrets and variables, Actions, Variables);
-        - create a Turnstile widget (Managed, hostname `libishm1.github.io`);
-        - `npx wrangler secret put TURNSTILE_SECRET`;
-        - set the repository variable `TURNSTILE_SITE_KEY`;
-        - rerun Deploy Frontend.
+        - set the repository variables `DESCRIBE_URL` and `TURNSTILE_SITE_KEY` (the GitHub CLI is not installed here, so the user sets them in Settings, Secrets and variables, Actions, Variables), then the site is rebuilt (a push to `main` does it) and a live request is tried with a fresh token, and the token replayed must be refused. Until then the live site does not offer Cloudflare.
 
         The Worker's README has the steps.
    2. **Smoke and gas measures:** done (3f9a4f2). See This round and `wiki/research/tenability-index-2026-11-06.md`.
