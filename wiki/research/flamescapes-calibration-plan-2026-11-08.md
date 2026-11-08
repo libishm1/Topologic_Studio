@@ -77,6 +77,18 @@ G3, the decision (section 11, decisions 1 and 2). Transport under a prescribed h
 
 Deliverables: `tools/grid-study.mjs`, `benchmark/results/<date>-grid-study.json` and a section in this note.
 
+### 4.1 First pass (2026-11-08)
+
+`node tools/grid-study.mjs --scenes room,duplex --cells 0.20,0.27,0.34 --modes design,solver --seeds 1 --horizon 120 --reach 9` (CPU, one contents seed, the same 9 m box at every cell; `benchmark/results/2026-11-08-grid-study.json`; 8 s to 2.5 min a run).
+
+With the heat release prescribed (a medium design fire, 6.8 MJ and 163 to 176 kW by 120 s, D* / dx 1.4 to 2.3), the energy agrees within 1.3 % at every cell, as it must, but transport does not converge to FDS's scatter. Against 0.20 m, the layer's temperature rise at 120 s changed by -21 % and -30 % in the test room (0.27 and 0.34 m) and by -44 % and -30 % in the Duplex's living room, not in one direction (FDS scatter 10 %); the hottest tree point by -23 % to -51 % (13 %); the layer's depth by -3 % to +43 % (14 %); the visibility at 1.8 m by +23 % to +45 % (26 %). The room's contents did not catch in 120 s at any cell.
+
+With the item burnt by the solver, the result is not a fire model on these grids: on 0.20 m cells the item never sustained itself (peak 8 to 12 kW, 0.6 to 0.7 MJ in 120 s), on 0.27 m the room went to 3.3 to 4.7 MW (85 to 154 MJ), on 0.34 m to about 1 MW (71 to 95 MJ). This is Open 11 again, now in a fixed box, and supports keeping the design fire as the default.
+
+The colours (P8): the design fire's drawn flame was all in the 1050 to 1300 K band (orange) on every cell but one frame, where at 0.27 m half its points fell below 800 K because its layers sit at different heights on that grid; the solver's own flame-front particles were 97 to 100 % below 800 K (dull red) on every cell. So the look already depends on the cell, and the P8 check compares runs on the same cell before and after a change.
+
+What follows. Decision 1 then puts transport, too, in per-cell calibration, with each run rounded up to a calibrated cell (decision 2). Before that, the cause of the transport spread is to be found, as it may be fixable: an energy budget per run (heat stored in the room's gas, taken by walls, carried out through the door and the box's open sides, radiated), which shows whether the heat goes to different places on different grids or is the same heat read differently by a tree in coarser cells; the door's resolution (a 0.9 x 2.0 m opening is 4 x 10 cells at 0.20 m and 2 x 6 at 0.34 m); and the burner's layering by cell. For the solver's burning, hypotheses H1 to H4, starting with why the item dies on 0.20 m cells.
+
 ## 5. Stage 1: transport, with the heat release prescribed
 
 With the measured heat release given to a burner (`createBurner`, as the sprinkler validation does), only the movement of heat, smoke and gases is tested.

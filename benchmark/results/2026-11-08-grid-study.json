@@ -1,0 +1,1363 @@
+{
+ "generated": "2026-11-08T16:40:25.309Z",
+ "plan": "wiki/research/flamescapes-calibration-plan-2026-11-08.md, section 4",
+ "horizon": 120,
+ "reach": 9,
+ "frameSeconds": 5,
+ "fdsScatter": {
+  "layerRise": 0.1,
+  "layerDepth": 0.14,
+  "hottestRise": 0.13,
+  "visibility": 0.26,
+  "energy": 0.28,
+  "peakHrr": 0.28
+ },
+ "rows": [
+  {
+   "scene": "room",
+   "mode": "design",
+   "seed": 1,
+   "cell": 0.2,
+   "grid": [
+    31,
+    22,
+    26
+   ],
+   "cells": 17732,
+   "wallSeconds": 27.6,
+   "energyMJ": 6.77,
+   "peakHrrKw": 162.8,
+   "plumeIndexAtPeak": 2.32,
+   "hrrKw": [
+    0.1,
+    0.7,
+    1.9,
+    3.6,
+    6,
+    8.9,
+    12.4,
+    16.5,
+    21.2,
+    26.4,
+    32.3,
+    38.7,
+    45.8,
+    53.4,
+    61.6,
+    70.4,
+    79.8,
+    89.9,
+    100.7,
+    111.9,
+    123.7,
+    136.1,
+    149.2,
+    162.8
+   ],
+   "at60": {
+    "layerRise": 15.02,
+    "layerDepth": 1.639,
+    "hottestRise": 34.85,
+    "visibility": 12.99
+   },
+   "atEnd": {
+    "layerRise": 109.5,
+    "layerDepth": 1.985,
+    "hottestRise": 157.22,
+    "visibility": 1.99
+   },
+   "colours": {
+    "60": {
+     "points": 270,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 270,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "room",
+   "mode": "design",
+   "seed": 1,
+   "cell": 0.27,
+   "grid": [
+    24,
+    18,
+    21
+   ],
+   "cells": 9072,
+   "wallSeconds": 13.6,
+   "energyMJ": 6.85,
+   "peakHrrKw": 175.1,
+   "plumeIndexAtPeak": 1.77,
+   "hrrKw": [
+    0.1,
+    0.7,
+    1.9,
+    3.6,
+    6,
+    8.9,
+    12.4,
+    16.5,
+    21.2,
+    26.4,
+    32.3,
+    38.7,
+    45.8,
+    53.4,
+    61.6,
+    70.4,
+    79.9,
+    90.2,
+    100.9,
+    112.4,
+    124.4,
+    137.1,
+    150.6,
+    175.1
+   ],
+   "at60": {
+    "layerRise": 7.87,
+    "layerDepth": 2.117,
+    "hottestRise": 13.15,
+    "visibility": 18.51
+   },
+   "atEnd": {
+    "layerRise": 86.01,
+    "layerDepth": 2.082,
+    "hottestRise": 120.44,
+    "visibility": 2.44
+   },
+   "colours": {
+    "60": {
+     "points": 150,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 319,
+     "shares": [
+      0.53,
+      0,
+      0.47,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "room",
+   "mode": "design",
+   "seed": 1,
+   "cell": 0.34,
+   "grid": [
+    20,
+    16,
+    17
+   ],
+   "cells": 5440,
+   "wallSeconds": 8.4,
+   "energyMJ": 6.78,
+   "peakHrrKw": 163.8,
+   "plumeIndexAtPeak": 1.37,
+   "hrrKw": [
+    0.1,
+    0.7,
+    1.9,
+    3.6,
+    6,
+    8.9,
+    12.4,
+    16.5,
+    21.2,
+    26.4,
+    32.3,
+    38.7,
+    45.7,
+    53.4,
+    61.6,
+    70.3,
+    79.7,
+    89.8,
+    100.5,
+    112,
+    124.1,
+    136.6,
+    149.8,
+    163.8
+   ],
+   "at60": {
+    "layerRise": 6.63,
+    "layerDepth": 1.407,
+    "hottestRise": 32.16,
+    "visibility": 19.6
+   },
+   "atEnd": {
+    "layerRise": 76.17,
+    "layerDepth": 1.922,
+    "hottestRise": 103.31,
+    "visibility": 2.88
+   },
+   "colours": {
+    "60": {
+     "points": 126,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 126,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "room",
+   "mode": "solver",
+   "seed": 1,
+   "cell": 0.2,
+   "grid": [
+    31,
+    22,
+    26
+   ],
+   "cells": 17732,
+   "wallSeconds": 28.8,
+   "energyMJ": 0.62,
+   "peakHrrKw": 8.4,
+   "plumeIndexAtPeak": 0.71,
+   "hrrKw": [
+    6.2,
+    1.5,
+    6.4,
+    7.9,
+    8.4,
+    7.4,
+    5.3,
+    4.8,
+    5.7,
+    4.8,
+    4.7,
+    4.9,
+    4.6,
+    4.6,
+    4.1,
+    3.6,
+    5.5,
+    5.1,
+    4.2,
+    5.6,
+    4.5,
+    4.1,
+    4.3,
+    5.7
+   ],
+   "at60": {
+    "layerRise": 12.32,
+    "layerDepth": 2.012,
+    "hottestRise": 23.19,
+    "visibility": 0.07
+   },
+   "atEnd": {
+    "layerRise": 14.69,
+    "layerDepth": 1.944,
+    "hottestRise": 20.56,
+    "visibility": 0.06
+   },
+   "colours": {
+    "60": {
+     "points": 257,
+     "shares": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 271,
+     "shares": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "room",
+   "mode": "solver",
+   "seed": 1,
+   "cell": 0.27,
+   "grid": [
+    24,
+    18,
+    21
+   ],
+   "cells": 9072,
+   "wallSeconds": 18.4,
+   "energyMJ": 85.13,
+   "peakHrrKw": 4664,
+   "plumeIndexAtPeak": 6.57,
+   "hrrKw": [
+    78.9,
+    162.9,
+    288,
+    271.3,
+    247.7,
+    300.6,
+    366.1,
+    396,
+    421.6,
+    472.5,
+    534.9,
+    2724.5,
+    4664,
+    529.1,
+    597.7,
+    559.3,
+    582.9,
+    581,
+    546.7,
+    574.8,
+    542,
+    553.2,
+    511.5,
+    518.4
+   ],
+   "at60": {
+    "layerRise": 789.17,
+    "layerDepth": 1.885,
+    "hottestRise": 1845.86,
+    "visibility": 0.04
+   },
+   "atEnd": {
+    "layerRise": 208.3,
+    "layerDepth": 2.26,
+    "hottestRise": 359.86,
+    "visibility": 0.02
+   },
+   "colours": {
+    "60": {
+     "points": 3000,
+     "shares": [
+      0.676,
+      0.085,
+      0.061,
+      0.062,
+      0.062,
+      0.054
+     ]
+    },
+    "120": {
+     "points": 3000,
+     "shares": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "room",
+   "mode": "solver",
+   "seed": 1,
+   "cell": 0.34,
+   "grid": [
+    20,
+    16,
+    17
+   ],
+   "cells": 5440,
+   "wallSeconds": 11.5,
+   "energyMJ": 71.44,
+   "peakHrrKw": 867.3,
+   "plumeIndexAtPeak": 2.66,
+   "hrrKw": [
+    126.8,
+    128.5,
+    347,
+    456.3,
+    469.3,
+    457.6,
+    520.9,
+    570.3,
+    603.6,
+    706.5,
+    756.4,
+    750,
+    841.4,
+    867.3,
+    792.8,
+    733.6,
+    749.1,
+    672.5,
+    716.8,
+    681.3,
+    651.6,
+    616.1,
+    555,
+    516.5
+   ],
+   "at60": {
+    "layerRise": 171.15,
+    "layerDepth": 2.105,
+    "hottestRise": 361.1,
+    "visibility": 0.02
+   },
+   "atEnd": {
+    "layerRise": 214.1,
+    "layerDepth": 2.261,
+    "hottestRise": 369.46,
+    "visibility": 0.01
+   },
+   "colours": {
+    "60": {
+     "points": 3000,
+     "shares": [
+      0.977,
+      0.023,
+      0,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 3000,
+     "shares": [
+      0.999,
+      0.001,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "design",
+   "seed": 1,
+   "cell": 0.2,
+   "grid": [
+    44,
+    43,
+    49
+   ],
+   "cells": 92708,
+   "wallSeconds": 151.4,
+   "energyMJ": 6.77,
+   "peakHrrKw": 162.7,
+   "plumeIndexAtPeak": 2.32,
+   "hrrKw": [
+    0.2,
+    0.7,
+    1.9,
+    3.7,
+    6,
+    8.9,
+    12.4,
+    16.5,
+    21.2,
+    26.5,
+    32.3,
+    38.8,
+    45.8,
+    53.4,
+    61.6,
+    70.5,
+    79.9,
+    90.1,
+    100.8,
+    111.9,
+    123.7,
+    136.1,
+    149.1,
+    162.7
+   ],
+   "at60": {
+    "layerRise": 15.51,
+    "layerDepth": 1.918,
+    "hottestRise": 23.09,
+    "visibility": 11.95
+   },
+   "atEnd": {
+    "layerRise": 126.62,
+    "layerDepth": 1.441,
+    "hottestRise": 266.73,
+    "visibility": 2.41
+   },
+   "colours": {
+    "60": {
+     "points": 270,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 279,
+     "shares": [
+      0.032,
+      0,
+      0.968,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "design",
+   "seed": 1,
+   "cell": 0.27,
+   "grid": [
+    33,
+    34,
+    38
+   ],
+   "cells": 42636,
+   "wallSeconds": 70.8,
+   "energyMJ": 6.86,
+   "peakHrrKw": 175.9,
+   "plumeIndexAtPeak": 1.77,
+   "hrrKw": [
+    0.2,
+    0.7,
+    1.9,
+    3.7,
+    6,
+    8.9,
+    12.4,
+    16.5,
+    21.2,
+    26.5,
+    32.3,
+    38.8,
+    45.8,
+    53.4,
+    61.6,
+    70.5,
+    80,
+    90.2,
+    101,
+    112.4,
+    124.4,
+    136.9,
+    150.4,
+    175.9
+   ],
+   "at60": {
+    "layerRise": 7.66,
+    "layerDepth": 1.81,
+    "hottestRise": 26.5,
+    "visibility": 17.36
+   },
+   "atEnd": {
+    "layerRise": 71.12,
+    "layerDepth": 2.055,
+    "hottestRise": 130.46,
+    "visibility": 3.05
+   },
+   "colours": {
+    "60": {
+     "points": 150,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 333,
+     "shares": [
+      0.55,
+      0,
+      0.45,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "design",
+   "seed": 1,
+   "cell": 0.34,
+   "grid": [
+    27,
+    28,
+    31
+   ],
+   "cells": 23436,
+   "wallSeconds": 38.4,
+   "energyMJ": 6.78,
+   "peakHrrKw": 163.7,
+   "plumeIndexAtPeak": 1.37,
+   "hrrKw": [
+    0.2,
+    0.7,
+    1.9,
+    3.7,
+    6,
+    8.9,
+    12.4,
+    16.5,
+    21.2,
+    26.5,
+    32.3,
+    38.8,
+    45.8,
+    53.4,
+    61.6,
+    70.4,
+    79.8,
+    89.8,
+    100.5,
+    112,
+    124.1,
+    136.6,
+    149.7,
+    163.7
+   ],
+   "at60": {
+    "layerRise": 7.18,
+    "layerDepth": 1.114,
+    "hottestRise": 37.16,
+    "visibility": 19.24
+   },
+   "atEnd": {
+    "layerRise": 88.68,
+    "layerDepth": 1.647,
+    "hottestRise": 160.78,
+    "visibility": 3.31
+   },
+   "colours": {
+    "60": {
+     "points": 126,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 126,
+     "shares": [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "solver",
+   "seed": 1,
+   "cell": 0.2,
+   "grid": [
+    44,
+    43,
+    49
+   ],
+   "cells": 92708,
+   "wallSeconds": 156.1,
+   "energyMJ": 0.66,
+   "peakHrrKw": 11.9,
+   "plumeIndexAtPeak": 0.81,
+   "hrrKw": [
+    6.2,
+    5.5,
+    3.7,
+    7.5,
+    11.9,
+    7,
+    6.6,
+    5.3,
+    4.4,
+    5.4,
+    6.1,
+    4.8,
+    4.2,
+    5,
+    5.4,
+    5.5,
+    4.2,
+    3.8,
+    4.6,
+    4.5,
+    4.6,
+    5.8,
+    4.2,
+    5.1
+   ],
+   "at60": {
+    "layerRise": 11.16,
+    "layerDepth": 1.174,
+    "hottestRise": 23.66,
+    "visibility": 0.1
+   },
+   "atEnd": {
+    "layerRise": 10.77,
+    "layerDepth": 1.432,
+    "hottestRise": 14.71,
+    "visibility": 0.1
+   },
+   "colours": {
+    "60": {
+     "points": 218,
+     "shares": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 232,
+     "shares": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "solver",
+   "seed": 1,
+   "cell": 0.27,
+   "grid": [
+    33,
+    34,
+    38
+   ],
+   "cells": 42636,
+   "wallSeconds": 78.4,
+   "energyMJ": 154.13,
+   "peakHrrKw": 3286.7,
+   "plumeIndexAtPeak": 5.72,
+   "hrrKw": [
+    82.1,
+    303.4,
+    2159.4,
+    797.5,
+    1314.9,
+    1946.6,
+    2166.8,
+    625,
+    2875.8,
+    451.4,
+    2732.5,
+    522.1,
+    3286.7,
+    2132.1,
+    695.2,
+    850.8,
+    822,
+    928.7,
+    925.5,
+    974.2,
+    979.2,
+    1051.6,
+    1044.5,
+    1158.7
+   ],
+   "at60": {
+    "layerRise": 166.18,
+    "layerDepth": 2.083,
+    "hottestRise": 334.73,
+    "visibility": 0.03
+   },
+   "atEnd": {
+    "layerRise": 226.21,
+    "layerDepth": 2.103,
+    "hottestRise": 409.71,
+    "visibility": 0.02
+   },
+   "colours": {
+    "60": {
+     "points": 3000,
+     "shares": [
+      0.995,
+      0.005,
+      0,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 3000,
+     "shares": [
+      0.992,
+      0.008,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "solver",
+   "seed": 1,
+   "cell": 0.34,
+   "grid": [
+    27,
+    28,
+    31
+   ],
+   "cells": 23436,
+   "wallSeconds": 40,
+   "energyMJ": 94.7,
+   "peakHrrKw": 1068.7,
+   "plumeIndexAtPeak": 2.9,
+   "hrrKw": [
+    117.3,
+    127.4,
+    418.1,
+    457.1,
+    439.7,
+    534.6,
+    604.7,
+    789.7,
+    763.5,
+    844.9,
+    920,
+    980.5,
+    996.6,
+    942.9,
+    921.3,
+    929.3,
+    948.1,
+    987.9,
+    1058.5,
+    998.1,
+    1015.9,
+    1046.6,
+    1068.7,
+    1028.2
+   ],
+   "at60": {
+    "layerRise": 173.48,
+    "layerDepth": 1.898,
+    "hottestRise": 303.69,
+    "visibility": 0.02
+   },
+   "atEnd": {
+    "layerRise": 255.88,
+    "layerDepth": 1.914,
+    "hottestRise": 386.08,
+    "visibility": 0.02
+   },
+   "colours": {
+    "60": {
+     "points": 3000,
+     "shares": [
+      0.967,
+      0.033,
+      0,
+      0,
+      0,
+      0
+     ]
+    },
+    "120": {
+     "points": 3000,
+     "shares": [
+      0.99,
+      0.01,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  }
+ ],
+ "compare": [
+  {
+   "scene": "room",
+   "mode": "design",
+   "seed": 1,
+   "fine": 0.2,
+   "coarse": 0.27,
+   "change": {
+    "energy": {
+     "fine": 6.77,
+     "coarse": 6.85,
+     "change": 0.012,
+     "fdsScatter": 0.28,
+     "within": true
+    },
+    "peakHrr": {
+     "fine": 162.8,
+     "coarse": 175.1,
+     "change": 0.076,
+     "fdsScatter": 0.28,
+     "within": true
+    },
+    "layerRise": {
+     "fine": 109.5,
+     "coarse": 86.01,
+     "change": -0.215,
+     "fdsScatter": 0.1,
+     "within": false
+    },
+    "layerDepth": {
+     "fine": 1.985,
+     "coarse": 2.082,
+     "change": 0.049,
+     "fdsScatter": 0.14,
+     "within": true
+    },
+    "hottestRise": {
+     "fine": 157.22,
+     "coarse": 120.44,
+     "change": -0.234,
+     "fdsScatter": 0.13,
+     "within": false
+    },
+    "visibility": {
+     "fine": 1.99,
+     "coarse": 2.44,
+     "change": 0.226,
+     "fdsScatter": 0.26,
+     "within": true
+    }
+   }
+  },
+  {
+   "scene": "room",
+   "mode": "design",
+   "seed": 1,
+   "fine": 0.2,
+   "coarse": 0.34,
+   "change": {
+    "energy": {
+     "fine": 6.77,
+     "coarse": 6.78,
+     "change": 0.001,
+     "fdsScatter": 0.28,
+     "within": true
+    },
+    "peakHrr": {
+     "fine": 162.8,
+     "coarse": 163.8,
+     "change": 0.006,
+     "fdsScatter": 0.28,
+     "within": true
+    },
+    "layerRise": {
+     "fine": 109.5,
+     "coarse": 76.17,
+     "change": -0.304,
+     "fdsScatter": 0.1,
+     "within": false
+    },
+    "layerDepth": {
+     "fine": 1.985,
+     "coarse": 1.922,
+     "change": -0.032,
+     "fdsScatter": 0.14,
+     "within": true
+    },
+    "hottestRise": {
+     "fine": 157.22,
+     "coarse": 103.31,
+     "change": -0.343,
+     "fdsScatter": 0.13,
+     "within": false
+    },
+    "visibility": {
+     "fine": 1.99,
+     "coarse": 2.88,
+     "change": 0.447,
+     "fdsScatter": 0.26,
+     "within": false
+    }
+   }
+  },
+  {
+   "scene": "room",
+   "mode": "solver",
+   "seed": 1,
+   "fine": 0.2,
+   "coarse": 0.27,
+   "change": {
+    "energy": {
+     "fine": 0.62,
+     "coarse": 85.13,
+     "change": 136.306,
+     "fdsScatter": 0.28,
+     "within": false
+    },
+    "peakHrr": {
+     "fine": 8.4,
+     "coarse": 4664,
+     "change": 554.238,
+     "fdsScatter": 0.28,
+     "within": false
+    },
+    "layerRise": {
+     "fine": 14.69,
+     "coarse": 208.3,
+     "change": 13.18,
+     "fdsScatter": 0.1,
+     "within": false
+    },
+    "layerDepth": {
+     "fine": 1.944,
+     "coarse": 2.26,
+     "change": 0.163,
+     "fdsScatter": 0.14,
+     "within": false
+    },
+    "hottestRise": {
+     "fine": 20.56,
+     "coarse": 359.86,
+     "change": 16.503,
+     "fdsScatter": 0.13,
+     "within": false
+    },
+    "visibility": {
+     "fine": 0.06,
+     "coarse": 0.02,
+     "change": null,
+     "fdsScatter": 0.26,
+     "within": null
+    }
+   }
+  },
+  {
+   "scene": "room",
+   "mode": "solver",
+   "seed": 1,
+   "fine": 0.2,
+   "coarse": 0.34,
+   "change": {
+    "energy": {
+     "fine": 0.62,
+     "coarse": 71.44,
+     "change": 114.226,
+     "fdsScatter": 0.28,
+     "within": false
+    },
+    "peakHrr": {
+     "fine": 8.4,
+     "coarse": 867.3,
+     "change": 102.25,
+     "fdsScatter": 0.28,
+     "within": false
+    },
+    "layerRise": {
+     "fine": 14.69,
+     "coarse": 214.1,
+     "change": 13.575,
+     "fdsScatter": 0.1,
+     "within": false
+    },
+    "layerDepth": {
+     "fine": 1.944,
+     "coarse": 2.261,
+     "change": 0.163,
+     "fdsScatter": 0.14,
+     "within": false
+    },
+    "hottestRise": {
+     "fine": 20.56,
+     "coarse": 369.46,
+     "change": 16.97,
+     "fdsScatter": 0.13,
+     "within": false
+    },
+    "visibility": {
+     "fine": 0.06,
+     "coarse": 0.01,
+     "change": null,
+     "fdsScatter": 0.26,
+     "within": null
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "design",
+   "seed": 1,
+   "fine": 0.2,
+   "coarse": 0.27,
+   "change": {
+    "energy": {
+     "fine": 6.77,
+     "coarse": 6.86,
+     "change": 0.013,
+     "fdsScatter": 0.28,
+     "within": true
+    },
+    "peakHrr": {
+     "fine": 162.7,
+     "coarse": 175.9,
+     "change": 0.081,
+     "fdsScatter": 0.28,
+     "within": true
+    },
+    "layerRise": {
+     "fine": 126.62,
+     "coarse": 71.12,
+     "change": -0.438,
+     "fdsScatter": 0.1,
+     "within": false
+    },
+    "layerDepth": {
+     "fine": 1.441,
+     "coarse": 2.055,
+     "change": 0.426,
+     "fdsScatter": 0.14,
+     "within": false
+    },
+    "hottestRise": {
+     "fine": 266.73,
+     "coarse": 130.46,
+     "change": -0.511,
+     "fdsScatter": 0.13,
+     "within": false
+    },
+    "visibility": {
+     "fine": 2.41,
+     "coarse": 3.05,
+     "change": 0.266,
+     "fdsScatter": 0.26,
+     "within": false
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "design",
+   "seed": 1,
+   "fine": 0.2,
+   "coarse": 0.34,
+   "change": {
+    "energy": {
+     "fine": 6.77,
+     "coarse": 6.78,
+     "change": 0.001,
+     "fdsScatter": 0.28,
+     "within": true
+    },
+    "peakHrr": {
+     "fine": 162.7,
+     "coarse": 163.7,
+     "change": 0.006,
+     "fdsScatter": 0.28,
+     "within": true
+    },
+    "layerRise": {
+     "fine": 126.62,
+     "coarse": 88.68,
+     "change": -0.3,
+     "fdsScatter": 0.1,
+     "within": false
+    },
+    "layerDepth": {
+     "fine": 1.441,
+     "coarse": 1.647,
+     "change": 0.143,
+     "fdsScatter": 0.14,
+     "within": false
+    },
+    "hottestRise": {
+     "fine": 266.73,
+     "coarse": 160.78,
+     "change": -0.397,
+     "fdsScatter": 0.13,
+     "within": false
+    },
+    "visibility": {
+     "fine": 2.41,
+     "coarse": 3.31,
+     "change": 0.373,
+     "fdsScatter": 0.26,
+     "within": false
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "solver",
+   "seed": 1,
+   "fine": 0.2,
+   "coarse": 0.27,
+   "change": {
+    "energy": {
+     "fine": 0.66,
+     "coarse": 154.13,
+     "change": 232.53,
+     "fdsScatter": 0.28,
+     "within": false
+    },
+    "peakHrr": {
+     "fine": 11.9,
+     "coarse": 3286.7,
+     "change": 275.193,
+     "fdsScatter": 0.28,
+     "within": false
+    },
+    "layerRise": {
+     "fine": 10.77,
+     "coarse": 226.21,
+     "change": 20.004,
+     "fdsScatter": 0.1,
+     "within": false
+    },
+    "layerDepth": {
+     "fine": 1.432,
+     "coarse": 2.103,
+     "change": 0.469,
+     "fdsScatter": 0.14,
+     "within": false
+    },
+    "hottestRise": {
+     "fine": 14.71,
+     "coarse": 409.71,
+     "change": 26.852,
+     "fdsScatter": 0.13,
+     "within": false
+    },
+    "visibility": {
+     "fine": 0.1,
+     "coarse": 0.02,
+     "change": null,
+     "fdsScatter": 0.26,
+     "within": null
+    }
+   }
+  },
+  {
+   "scene": "duplex",
+   "mode": "solver",
+   "seed": 1,
+   "fine": 0.2,
+   "coarse": 0.34,
+   "change": {
+    "energy": {
+     "fine": 0.66,
+     "coarse": 94.7,
+     "change": 142.485,
+     "fdsScatter": 0.28,
+     "within": false
+    },
+    "peakHrr": {
+     "fine": 11.9,
+     "coarse": 1068.7,
+     "change": 88.807,
+     "fdsScatter": 0.28,
+     "within": false
+    },
+    "layerRise": {
+     "fine": 10.77,
+     "coarse": 255.88,
+     "change": 22.759,
+     "fdsScatter": 0.1,
+     "within": false
+    },
+    "layerDepth": {
+     "fine": 1.432,
+     "coarse": 1.914,
+     "change": 0.337,
+     "fdsScatter": 0.14,
+     "within": false
+    },
+    "hottestRise": {
+     "fine": 14.71,
+     "coarse": 386.08,
+     "change": 25.246,
+     "fdsScatter": 0.13,
+     "within": false
+    },
+    "visibility": {
+     "fine": 0.1,
+     "coarse": 0.02,
+     "change": null,
+     "fdsScatter": 0.26,
+     "within": null
+    }
+   }
+  }
+ ]
+}
