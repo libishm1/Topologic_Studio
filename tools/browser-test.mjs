@@ -94,11 +94,21 @@ const consoleErrors = [];
 const pageErrors = [];
 const failedRequests = [];
 const badResponses = [];
+// Cloudflare Turnstile's own frames (the human check on the Cloudflare
+// describer, loaded once a site has DESCRIBE_URL and a site key) probe and log
+// in a headless browser: a 401 token probe, CSP refusals and hidden logs
+// inside its iframe. Counted apart, so the app's own errors stay visible.
+const challengeNoise = [];
+const fromChallenge = (url) => /^https:\/\/([a-z0-9-]+\.)?challenges\.cloudflare\.com\//.test(url || "");
 
 page.on("console", (msg) => {
   const type = msg.type();
   if (type === "error" || type === "warning") {
     const text = msg.text();
+    if (fromChallenge(msg.location()?.url)) {
+      if (type === "error") challengeNoise.push(`console: ${text}`);
+      return;
+    }
     // Vite injects a websocket for HMR; its noise is not the app's problem.
     if (text.includes("[vite]") || text.includes("Download the React DevTools")) return;
     (type === "error" ? consoleErrors : []).push?.(text);
@@ -112,11 +122,19 @@ page.on("pageerror", (error) => {
 page.on("requestfailed", (req) => {
   const failure = req.failure()?.errorText || "";
   if (failure.includes("ERR_ABORTED")) return; // navigation churn
+  if (fromChallenge(req.url())) {
+    challengeNoise.push(`request failed: ${failure}`);
+    return;
+  }
   failedRequests.push(`${req.method()} ${req.url()} — ${failure}`);
   console.log(`    [requestfailed] ${req.url().slice(0, 140)} ${failure}`);
 });
 page.on("response", (res) => {
   if (res.status() >= 400) {
+    if (fromChallenge(res.url())) {
+      challengeNoise.push(`http ${res.status()}`);
+      return;
+    }
     badResponses.push(`${res.status()} ${res.url()}`);
     console.log(`    [http ${res.status()}] ${res.url().slice(0, 140)}`);
   }
@@ -1479,11 +1497,13 @@ console.log(`  failed requests: ${failedRequests.length}`);
 failedRequests.slice(0, 12).forEach((e) => console.log(`    - ${e.slice(0, 220)}`));
 console.log(`  http >= 400    : ${badResponses.length}`);
 badResponses.slice(0, 12).forEach((e) => console.log(`    - ${e.slice(0, 220)}`));
+console.log(`  Cloudflare Turnstile's own frames (not the app's): ${challengeNoise.length}`);
+challengeNoise.slice(0, 12).forEach((e) => console.log(`    - ${e.slice(0, 160)}`));
 
 await writeFile(
   path.join(SHOTS, "report.json"),
   JSON.stringify(
-    { steps, timings, apiCalls, pageLoad, consoleErrors, pageErrors, failedRequests, badResponses },
+    { steps, timings, apiCalls, pageLoad, consoleErrors, pageErrors, failedRequests, badResponses, challengeNoise },
     null,
     2,
   ),

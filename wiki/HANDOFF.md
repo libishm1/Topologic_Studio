@@ -2,7 +2,8 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at 58dc781 (released 2026-11-08 evening at the user's request: the design-fire item's flame drawn, see This round). Live check: 109 steps, 0 failed, 0 console errors, the item drawn with 198 flame points, Render awake. The site does not yet offer the Cloudflare describer: it waits for the variables `DESCRIBE_URL` (the user is setting it) and `TURNSTILE_SITE_KEY`, then a rebuild.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at c272fbd (released 2026-11-08 evening at the user's request: the egress-by-storey facts, after 2032e73 Turnstile and the site rebuilt with `DESCRIBE_URL` and `TURNSTILE_SITE_KEY`). The Cloudflare describer works on the live site: the user's phone passed the human check and got a description (after d74723b). Live check of c272fbd: 110 steps, 0 failed, Render awake; Cloudflare Turnstile's own frames log in a headless browser (a 401 token probe, CSP refusals in its iframe, hidden logs), which the browser test now counts apart from the app's errors.
+- **Released before it:** 58dc781 (the design-fire item's flame drawn; live check 109 steps, 0 failed, 0 console errors).
 - **Released before it:** 17f1889 (2026-11-08 afternoon, the user's "yes to all": 1f21594 (handoff), 696683a (the sprinkler activation fix) and 17f1889 (the first item as a design fire; the workflow, open office and server room GIFs re-recorded, the 2026-11-07 media in `public/docs/media/2026-11-07/`). The backend did not change, so Render was not redeployed.
   - **Gates before it:** 365 unit tests, lint, the Pages build, the browser suite on the Pages build desktop (108 steps) and mobile (107), 0 failed, 0 console errors.
   - **Live check of 17f1889:** 108 steps, 0 failed, 0 console errors, with Render awake; the new GIFs and the archive serve from the live site.
