@@ -1237,19 +1237,41 @@ export class ViewerManager {
     const extracted = new Set([...ids.stairs, ...stairPartIds, ...(ids.spaces || [])]);
     const coreMeshIds = cores.map((core) => core.itemId).filter((id) => !extracted.has(id));
 
+    // Layered elements (IfcRelAggregates): IFC4 exports often keep a wall's,
+    // slab's or roof's layers as IfcBuildingElementParts and give the element
+    // no geometry of its own. Vienna has 226 such walls of 298; without their
+    // parts only 72 walls reached the fire grid, and smoke crossed the rest.
+    // Walls and roofs take their parts; a slab takes them only when it has no
+    // geometry of its own (below), so a layered slab's inner faces never
+    // become walking surfaces beside its own top. Two levels down, in one
+    // call a level (an IfcRoof holds slabs that hold parts).
+    const skipParts = new Set([...own, ...(ids.obstacles || []), ...(ids.spaces || [])]);
+    const layersOf = async (parents) => {
+      if (!parents.length || !this.model.getItemsChildren) return [];
+      const children = (await this.model.getItemsChildren(parents).catch(() => [])) || [];
+      const grandchildren = children.length ? (await this.model.getItemsChildren(children).catch(() => [])) || [] : [];
+      return [...new Set([...children, ...grandchildren])].filter((id) => !skipParts.has(id));
+    };
+    const roofIds = [...roofs, ...(ids.roofElements || [])];
+    const [wallParts, roofParts] = await Promise.all([layersOf(ids.walls), layersOf(roofIds)]);
+
     const [floors, stairs, doors, walls, spaces, obstacles, coreMeshes, roofMeshes, ceilings] = await Promise.all([
       extractMeshes(this.model, [...floorIds, ...flooring], world),
       extractMeshes(this.model, [...ids.stairs, ...stairPartIds], world),
       extractMeshes(this.model, ids.doors, world),
-      extractMeshes(this.model, ids.walls, world),
+      extractMeshes(this.model, [...ids.walls, ...wallParts], world),
       extractMeshes(this.model, ids.spaces || [], world),
       extractMeshes(this.model, ids.obstacles || [], world),
       extractMeshes(this.model, coreMeshIds, world),
       // Roof slabs are not walked on, but the Flamescapes solver needs them
       // as the top storey's ceiling.
-      extractMeshes(this.model, [...roofs, ...(ids.roofElements || [])], world),
+      extractMeshes(this.model, [...roofIds, ...roofParts], world),
       extractMeshes(this.model, ceilingIds, world),
     ]);
+    // Slabs with no geometry of their own are their parts.
+    const slabsWithMeshes = new Set(floors.map((m) => m.itemId));
+    const floorParts = await layersOf(floorIds.filter((id) => !slabsWithMeshes.has(id)));
+    if (floorParts.length) floors.push(...(await extractMeshes(this.model, floorParts, world)));
 
     done({
       ceilings: ceilings.length,
@@ -1261,6 +1283,9 @@ export class ViewerManager {
       obstacles: obstacles.length,
       roofs: roofs.size,
       stairParts: stairPartIds.length,
+      wallParts: wallParts.length,
+      roofParts: roofParts.length,
+      floorParts: floorParts.length,
       cores: cores.length,
     });
     // Air terminals, for the fire solver's ventilation: their centres.

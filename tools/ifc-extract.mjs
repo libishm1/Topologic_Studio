@@ -184,6 +184,24 @@ export async function extract(ifcPath, { withDoorFlags = false } = {}) {
     if (group === "stairs" && stairPartIds.length) api.StreamMeshes(model, stairPartIds, (mesh) => meshesOf(mesh, meshes));
     out[group] = meshes;
   }
+  // Layered elements, as the site reads them (ViewerManager.extractEgressGeometry):
+  // walls and roofs (slabs typed ROOF and IfcRoof elements, which the site
+  // takes as roofs) take their IfcRelAggregates parts; a slab takes its parts
+  // only when it has no geometry of its own.
+  const skipParts = new Set([...own, ...idsOf(api, model, [...GROUPS.obstacles, ...GROUPS.spaces])]);
+  const layersOf = (parents) => [...new Set([...aggregatedParts(api, model, parents).values()].flat())].filter((id) => !skipParts.has(id));
+  const roofSlabs = idsOf(api, model, ["IFCSLAB"]).filter((id) => api.GetLine(model, id)?.PredefinedType?.value === "ROOF");
+  const roofElements = idsOf(api, model, ["IFCROOF"]);
+  const wallParts = layersOf(idsOf(api, model, GROUPS.walls));
+  if (wallParts.length) api.StreamMeshes(model, wallParts, (mesh) => meshesOf(mesh, out.walls));
+  const roofParts = layersOf([...roofSlabs, ...roofElements]);
+  const roofOwn = roofElements.filter((id) => !skipParts.has(id));
+  if (roofOwn.length || roofParts.length) api.StreamMeshes(model, [...roofOwn, ...roofParts], (mesh) => meshesOf(mesh, (out.roofs ||= [])));
+  const slabsWithMeshes = new Set((out.floors || []).map((m) => m.itemId));
+  const bareSlabs = idsOf(api, model, ["IFCSLAB"]).filter((id) => !slabsWithMeshes.has(id) && !roofSlabs.includes(id));
+  const floorParts = layersOf(bareSlabs);
+  if (floorParts.length) api.StreamMeshes(model, floorParts, (mesh) => meshesOf(mesh, out.floors));
+  out.layers = { wallParts: wallParts.length, roofParts: roofParts.length, roofElements: roofOwn.length, floorParts: floorParts.length };
   out.coreMeshes = [];
   if (coreMeshIds.length) api.StreamMeshes(model, coreMeshIds, (mesh) => meshesOf(mesh, out.coreMeshes));
   if (withDoorFlags) {

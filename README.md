@@ -33,6 +33,13 @@ the heat.*
 
 ## What's new (2026-11-08)
 
+- **Layered walls are solid.** Walls, roofs and slabs exported as layers
+  (IfcBuildingElementPart), as in the Vienna example, were missing from the
+  fire grid and the walkable graph, so smoke and the graph passed through 226
+  of Vienna's 298 walls. They are read now; smoke still finds gaps at some
+  doors, windows and slab edges. The graph's "Reachable" no longer counts
+  links blocked by a wall: Vienna reads 90%, its shafts and a refuse room
+  with only an outside door standing apart.
 - **Suppression systems by room use.** A clean agent (FM-200) in server,
   telecom and electrical rooms, foam in generator and fuel rooms, and water
   everywhere else, in every room of an apartment building

@@ -4,8 +4,13 @@
  */
 import { KIND_DOOR, KIND_FLOOR, KIND_LIFT, KIND_STAIR } from "./lattice.js";
 
-/** Connected components by union-find: count, and the largest one's size. */
-export function components(nodeCount, edges) {
+/**
+ * Connected components by union-find: count, and the largest one's size.
+ * Links blocked by walls join nothing, as in the route search
+ * (route.js componentLabels); counting them put Vienna at 95 % reachable
+ * when its routes reached 90 %.
+ */
+export function components(nodeCount, edges, blocked = null) {
   const parent = new Int32Array(nodeCount);
   for (let i = 0; i < nodeCount; i += 1) parent[i] = i;
   const find = (x) => {
@@ -16,6 +21,7 @@ export function components(nodeCount, edges) {
     return x;
   };
   for (let e = 0; e + 1 < edges.length; e += 2) {
+    if (blocked?.[e / 2]) continue;
     const a = find(edges[e]), b = find(edges[e + 1]);
     if (a !== b) parent[a] = b;
   }
@@ -31,7 +37,7 @@ export function components(nodeCount, edges) {
 
 export function graphStats({ points, edges, kinds, blocked, stats = {} }) {
   const nodes = points.length / 3;
-  const { count, largest } = components(nodes, edges);
+  const { count, largest } = components(nodes, edges, blocked);
   let floor = 0, stair = 0, door = 0, lift = 0, blockedEdges = 0;
   for (const k of kinds) {
     if (k === KIND_FLOOR) floor += 1;

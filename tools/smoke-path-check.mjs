@@ -39,7 +39,14 @@ const cells = flag("--cells", "0.27,0.34").split(",").map(Number);
 const roomCount = Number(flag("--rooms", 3));
 // Rooms to start from by name (comma-separated, e.g. Zimmer,Bad): the first of each name, instead of the largest rooms.
 const roomNames = flag("--names", "").split(",").map((s) => s.trim()).filter(Boolean);
+// --all floods from every room and counts those that stay sealed; --layers off drops the layered
+// elements' parts (IfcBuildingElementPart) and IfcRoof elements, as the extraction was before 2026-11-08.
+const allRooms = args.includes("--all");
+const layersOff = flag("--layers", "on") === "off";
 // IFC types to add to the fire grid as solid, to test whether leaving them out opens a path (e.g. IFCBEAM,IFCCOVERING).
+// Caution: they come from a second web-ifc session, whose COORDINATE_TO_ORIGIN shift can differ from
+// extract()'s, so they can land off their place (Vienna's wall parts did); add a type to
+// ifc-extract.mjs instead before trusting a result.
 const addTypes = flag("--add", "").split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
 
 /** The meshes of `types`, in the viewer frame as ifc-extract's (for --add). */
@@ -106,7 +113,7 @@ async function elementBoxes(file) {
   return boxes;
 }
 
-const IN_GRID = /^(IFCWALL|IFCWALLSTANDARDCASE|IFCWALLELEMENTEDCASE|IFCSLAB|IFCSLABSTANDARDCASE|IFCSLABELEMENTEDCASE|IFCPLATE|IFCROOF|IFCSTAIR|IFCSTAIRFLIGHT|IFCRAMP|IFCRAMPFLIGHT|IFCDOOR|IFCDOORSTANDARDCASE|IFCWINDOW|IFCWINDOWSTANDARDCASE|IFCRAILING|IFCCOLUMN|IFCCOLUMNSTANDARDCASE|IFCCURTAINWALL|IFCMEMBER|IFCMEMBERSTANDARDCASE)$/i;
+const IN_GRID = /^(IFCBUILDINGELEMENTPART|IFCWALL|IFCWALLSTANDARDCASE|IFCWALLELEMENTEDCASE|IFCSLAB|IFCSLABSTANDARDCASE|IFCSLABELEMENTEDCASE|IFCPLATE|IFCROOF|IFCSTAIR|IFCSTAIRFLIGHT|IFCRAMP|IFCRAMPFLIGHT|IFCDOOR|IFCDOORSTANDARDCASE|IFCWINDOW|IFCWINDOWSTANDARDCASE|IFCRAILING|IFCCOLUMN|IFCCOLUMNSTANDARDCASE|IFCCURTAINWALL|IFCMEMBER|IFCMEMBERSTANDARDCASE)$/i;
 
 const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
 const report = [];
@@ -115,22 +122,33 @@ for (const file of models) {
   const boxes = await elementBoxes(file);
   const names = new Map((geo.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
   const rooms = roomsFromSpaces(geo.spaces, { upAxis: "y", names, overhead: [...geo.floors, ...(geo.roofs || [])], ceilings: geo.ceilings, walls: geo.walls }).filter((r) => r.rect && !r.problem && r.ceiling - r.floor > 1.8);
+  if (layersOff) {
+    const keep = (list) => (list || []).filter((m) => !/^IfcBuildingElementPart$|^IfcRoof$/i.test(m.type || ""));
+    geo.walls = keep(geo.walls);
+    geo.floors = keep(geo.floors);
+    geo.roofs = keep(geo.roofs);
+  }
   const base = slabsMissing(geo.floors, geo.spaces) ? { ...geo, floors: [...geo.floors, ...floorsFromSpaces(geo.spaces)] } : geo;
   // Doors closed: their leaves fill their openings (the fire grid's "Closed" doors); windows closed (obstacles).
   const extra = await meshesOfTypes(file, addTypes);
   const closed = { ...base, doors: geo.doors || [], obstacles: [...(base.obstacles || []), ...extra] };
   if (addTypes.length) console.log(`  added to the fire grid as solid: ${extra.length} meshes of ${addTypes.join(", ")}`);
-  const fires = roomNames.length
+  const fires = allRooms
+    ? rooms
+    : roomNames.length
     ? roomNames.map((name) => rooms.filter((r) => (r.name || "") === name).sort((a, b) => b.floor - a.floor)[0]).filter(Boolean)
     : rooms.slice().sort((a, b) => b.area - a.area).slice(0, roomCount);
   console.log(`\n${path.basename(file)}: ${rooms.length} rooms; ${geo.doors?.length ?? 0} door meshes closed; fires in ${fires.map((r) => r.name || r.id).join(", ")}`);
   for (const h of cells) {
+    // One grid of the whole model a cell size (no contents, nothing clipped), flooded from each room.
+    const t0 = performance.now();
+    const first = fires[0];
+    const scene = buildScene(closed, { upAxis: "y", fire: [first.rect.centre[0], first.floor + 0.75, first.rect.centre[1]], minCell: h, maxCell: h + 1, maxCells: 1e7, contentsFuel, ignitionFuel, item, fireLoad: 0 });
+    const g = scene.grid;
+    const sim = createSolver(scene, { contentsFuel, ignitionFuel });
+    console.log(`  cell ${h} m: grid ${g.nx}x${g.ny}x${g.nz} built in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
     for (const room of fires) {
       const [cx, cz] = room.rect.centre;
-      const fire = [cx, room.floor + 0.75, cz];
-      const scene = buildScene(closed, { upAxis: "y", fire, minCell: h, maxCell: h + 1, maxCells: 1e7, contentsFuel, ignitionFuel, item, fireLoad: 0 });
-      const g = scene.grid;
-      const sim = createSolver(scene, { contentsFuel, ignitionFuel });
       const cellAt = (x, y, z) => {
         const i = Math.floor((x - g.origin[0]) / g.h), j = Math.floor((y - g.origin[1]) / g.h), k = Math.floor((z - g.origin[2]) / g.h);
         return i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz ? -1 : i + g.nx * (j + g.ny * k);
@@ -183,14 +201,26 @@ for (const file of models) {
         const inside = boxes.filter((b) => /WALL|SLAB|DOOR|BEAM|COVERING|PLATE|CURTAIN/i.test(b.type) && [0, 1, 2].every((a) => at[a] >= b.lo[a] && at[a] <= b.hi[a]));
         joined.push({ room: other.name || other.id, storey: +other.floor.toFixed(2), leaves: at, steps, nearTypes: types, notInGrid: missing, throughElement: [...new Set(inside.map((b) => b.type))] });
       }
-      report.push({ model: path.basename(file), cell: h, fire: room.name || room.id, grid: [g.nx, g.ny, g.nz], joined });
       const own = Math.round((room.area * (room.ceiling - room.floor)) / h ** 3);
+      report.push({ model: path.basename(file), cell: h, fire: room.name || room.id, floor: room.floor, grid: [g.nx, g.ny, g.nz], reach: queue.length, own, sealed: queue.length <= 2 * own, joined });
+      if (allRooms) continue;
       console.log(`  cell ${h} m, fire in ${room.name || room.id} (floor ${room.floor.toFixed(2)} m): its air reaches ${queue.length} open cells (the room holds about ${own}); ${joined.length} other rooms joined with every door closed`);
       const through = joined.filter((j) => j.throughElement.length).length;
       console.log(`    ${through} of them through a cell inside a wall, slab, door, beam or covering; ${joined.length - through} through the open`);
       for (const j of joined.slice(0, 8)) console.log(`    ${j.room} (floor ${j.storey}): leaves at ${j.leaves.join(", ")}${j.throughElement.length ? ` INSIDE ${j.throughElement.join("/")}` : ""}; near ${j.nearTypes.join(", ") || "nothing"}${j.notInGrid.length ? `; not in the fire grid: ${j.notInGrid.join(", ")}` : ""}`);
       if (joined.length > 8) console.log(`    and ${joined.length - 8} more`);
     }
+    const these = report.filter((r) => r.model === path.basename(file) && r.cell === h);
+    const sealed = these.filter((r) => r.sealed);
+    console.log(`  cell ${h} m: ${sealed.length} of ${these.length} rooms keep their air in with every door closed (it reaches at most twice their own cells)${layersOff ? " (layers off)" : ""}`);
+    // Where the leaking rooms' air first leaves: what lies within a cell of that point.
+    const by = new Map();
+    for (const r of these.filter((x) => !x.sealed)) {
+      const near = new Set(r.joined[0]?.nearTypes || []);
+      const kind = near.has("IfcDoor") ? "by a door" : near.has("IfcWindow") ? "by a window" : near.has("IfcRoof") ? "by the roof" : [...near].some((x) => /Slab/i.test(x)) ? "by a slab" : near.size ? `by ${[...near].join("/")}` : "in the open (no element within a cell)";
+      by.set(kind, (by.get(kind) || 0) + 1);
+    }
+    console.log(`    leaking rooms, where the air leaves: ${[...by].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${k}`).join("; ")}`);
   }
 }
 if (jsonOut) {
