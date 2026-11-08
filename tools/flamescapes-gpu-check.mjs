@@ -44,7 +44,7 @@
  * software adapter (--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader).
  *
  *   node tools/flamescapes-gpu-check.mjs [--headed] [--swiftshader] [--quick]
- *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|systems|timing] [--horizon 120]
+ *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|design|leak|systems|timing] [--horizon 120]
  *        [--json out.json] [--url http://localhost:5173] (a running Vite server)
  */
 import { chromium } from "playwright-core";
@@ -531,6 +531,73 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
       }
       out.design.push(row);
       log(`design ${row.mode}: item released CPU ${(row.cpu.item?.released / 1e6).toFixed(2)} MJ, GPU ${(row.gpu.item?.released / 1e6).toFixed(2)} MJ; head CPU ${row.cpu.estimate} s, GPU ${row.gpu.estimate} s`);
+    }
+  }
+
+  // ---- 2e. walls (tools/wall-leak-check.mjs on the GPU, 2026-11-08): a
+  // closed 5 x 4 x 2.7 m room, its walls 0.1 and 0.2 m thick, square to the
+  // grid and turned 30 degrees, on 0.27 and 0.34 m cells, a fast design fire
+  // in the middle and no contents, 60 s on each path; the heat and soot
+  // outside the walls against the soot inside.
+  if (phase === "all" || phase === "leak") {
+    const turned = (x0, y0, z0, x1, y1, z1, deg) => {
+      const b = box(x0, y0, z0, x1, y1, z1, S);
+      const a = (deg * Math.PI) / 180, cos = Math.cos(a), sin = Math.sin(a);
+      for (let q = 0; q < b.positions.length; q += 3) {
+        const x = b.positions[q] - 2.5, z = b.positions[q + 2] - 2;
+        b.positions[q] = 2.5 + cos * x - sin * z;
+        b.positions[q + 2] = 2 + sin * x + cos * z;
+      }
+      return b;
+    };
+    const zoneOf = (x, y, z, th, deg) => {
+      const a = (-deg * Math.PI) / 180, cos = Math.cos(a), sin = Math.sin(a);
+      const u = 2.5 + cos * (x - 2.5) - sin * (z - 2), v = 2 + sin * (x - 2.5) + cos * (z - 2);
+      if (u > 0 && u < W && v > 0 && v < D && y > 0 && y < H) return 0;
+      if (u > -th && u < W + th && v > -th && v < D + th && y > -th && y < H + th) return 1;
+      return 2;
+    };
+    out.leak = [];
+    for (const h of [0.27, 0.34]) {
+      for (const th of [0.1, 0.2]) {
+        for (const deg of [0, 30]) {
+          const geometry = {
+            walls: [turned(-th, 0, -th, W + th, H, 0, deg), turned(-th, 0, D, W + th, H, D + th, deg), turned(-th, 0, 0, 0, H, D, deg), turned(W, 0, 0, W + th, H, D, deg)],
+            floors: [turned(-th, -th, -th, W + th, 0, D + th, deg)],
+            roofs: [turned(-th, H, -th, W + th, H + th, D + th, deg)],
+            stairs: [],
+            obstacles: [],
+          };
+          const make = () => R.buildScene(geometry, { upAxis: "y", fire: [2.5, 0.75, 2], minCell: h, maxCell: h - 1e-3, reach: 9, maxCells: 5e6, contentsFuel, ignitionFuel, item: { mass: 5, area: 1 }, designFire: { alpha: 0.0469, growth: "fast" }, fireLoad: 0 });
+          const measure = (scene, T, Y, kind) => {
+            const g = scene.grid;
+            let insideSoot = 0, outsideSoot = 0, outsideRise = 0;
+            for (let c = 0; c < g.cells; c += 1) {
+              if (kind[c] === 2) continue;
+              const x = g.origin[0] + ((c % g.nx) + 0.5) * g.h, y = g.origin[1] + ((Math.floor(c / g.nx) % g.ny) + 0.5) * g.h, z = g.origin[2] + (Math.floor(c / (g.nx * g.ny)) + 0.5) * g.h;
+              const zone = zoneOf(x, y, z, th, deg);
+              if (zone === 0) insideSoot += Y[c * 6 + 4];
+              else if (zone === 2) {
+                outsideSoot += Y[c * 6 + 4];
+                outsideRise = Math.max(outsideRise, T[c] - 293.15);
+              }
+            }
+            return { outsideShare: insideSoot > 0 ? outsideSoot / insideSoot : 0, outsideRise };
+          };
+          const cpuScene = make();
+          const cpu = solverOf(cpuScene, {});
+          for (let s = 0; s < 600; s += 1) F.step(cpu, 0.1);
+          const gpuScene = make();
+          const gsim = runner.createSim(solverOf(gpuScene, {}), {});
+          for (let s = 0; s < 600; s += 1) gsim.step(0.1);
+          await gsim.finish();
+          const fields = await gsim.readFields();
+          gsim.destroy();
+          const row = { cell: h, thick: th, angle: deg, grid: [cpuScene.grid.nx, cpuScene.grid.ny, cpuScene.grid.nz], cpu: measure(cpuScene, cpu.T, cpu.Y, cpu.kind), gpu: measure(gpuScene, fields.T, fields.Y, fields.kind) };
+          out.leak.push(row);
+          log(`leak ${h} m, wall ${th} m at ${deg} deg: soot outside CPU ${(100 * row.cpu.outsideShare).toFixed(3)} %, GPU ${(100 * row.gpu.outsideShare).toFixed(3)} % of inside; hottest outside CPU +${row.cpu.outsideRise.toFixed(2)} K, GPU +${row.gpu.outsideRise.toFixed(2)} K`);
+        }
+      }
     }
   }
 

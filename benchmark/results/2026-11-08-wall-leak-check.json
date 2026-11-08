@@ -1,0 +1,695 @@
+{
+ "generated": "2026-11-08T16:53:37.374Z",
+ "horizon": 60,
+ "room": {
+  "W": 5,
+  "D": 4,
+  "H": 2.7
+ },
+ "rows": [
+  {
+   "cell": 0.2,
+   "thick": 0.1,
+   "angle": 0,
+   "grid": [
+    30,
+    21,
+    25
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.0001001807698423105,
+   "insideRiseMean": 99.87,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0.39,
+   "drawnTotal": 820,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.1,
+   "angle": 15,
+   "grid": [
+    35,
+    21,
+    32
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00010127094174192013,
+   "insideRiseMean": 98.4,
+   "outsideSootMax": 0.0000034599713643942293,
+   "outsideSootShare": 0.0004291321703774033,
+   "outsideRiseMax": 2.07,
+   "drawnTotal": 830,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.1,
+   "angle": 30,
+   "grid": [
+    38,
+    21,
+    36
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00009727111598371818,
+   "insideRiseMean": 95.65,
+   "outsideSootMax": 0.000003961406876852412,
+   "outsideSootShare": 0.0011999329542314774,
+   "outsideRiseMax": 2.28,
+   "drawnTotal": 829,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.1,
+   "angle": 45,
+   "grid": [
+    38,
+    21,
+    38
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00010500450644284683,
+   "insideRiseMean": 99.02,
+   "outsideSootMax": 0.00000425081813827495,
+   "outsideSootShare": 0.00030517367791863665,
+   "outsideRiseMax": 2.66,
+   "drawnTotal": 840,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.2,
+   "angle": 0,
+   "grid": [
+    31,
+    22,
+    26
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00009220149001407002,
+   "insideRiseMean": 90.5,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0.2,
+   "drawnTotal": 888,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.2,
+   "angle": 15,
+   "grid": [
+    36,
+    22,
+    33
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00009731986224528069,
+   "insideRiseMean": 96.25,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0.15,
+   "drawnTotal": 812,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.2,
+   "angle": 30,
+   "grid": [
+    39,
+    22,
+    37
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00008879703971185682,
+   "insideRiseMean": 90.5,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0.1,
+   "drawnTotal": 821,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.2,
+   "angle": 45,
+   "grid": [
+    39,
+    22,
+    39
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00008942642654236238,
+   "insideRiseMean": 91.03,
+   "outsideSootMax": 0.0000019908992686519885,
+   "outsideSootShare": 0.00006604479653159537,
+   "outsideRiseMax": 1.42,
+   "drawnTotal": 842,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.3,
+   "angle": 0,
+   "grid": [
+    33,
+    23,
+    28
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00010224053740048265,
+   "insideRiseMean": 100.39,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0,
+   "drawnTotal": 840,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.3,
+   "angle": 15,
+   "grid": [
+    37,
+    23,
+    34
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00009128483529331141,
+   "insideRiseMean": 92.29,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0,
+   "drawnTotal": 918,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.3,
+   "angle": 30,
+   "grid": [
+    40,
+    23,
+    38
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00009122277549601116,
+   "insideRiseMean": 91.39,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0,
+   "drawnTotal": 925,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.2,
+   "thick": 0.3,
+   "angle": 45,
+   "grid": [
+    41,
+    23,
+    41
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00009454927206942507,
+   "insideRiseMean": 95.16,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0,
+   "drawnTotal": 990,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.1,
+   "angle": 0,
+   "grid": [
+    24,
+    17,
+    20
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00006798637699134036,
+   "insideRiseMean": 75.87,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0.02,
+   "drawnTotal": 312,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.1,
+   "angle": 15,
+   "grid": [
+    27,
+    17,
+    25
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00006447631475066349,
+   "insideRiseMean": 71.6,
+   "outsideSootMax": 0.000004274042967341104,
+   "outsideSootShare": 0.0005048367025443704,
+   "outsideRiseMax": 3.42,
+   "drawnTotal": 314,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.1,
+   "angle": 30,
+   "grid": [
+    29,
+    17,
+    28
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.0000640065632980711,
+   "insideRiseMean": 69.92,
+   "outsideSootMax": 0.0000027865159674280815,
+   "outsideSootShare": 0.0017328607523317706,
+   "outsideRiseMax": 1.86,
+   "drawnTotal": 314,
+   "drawnOutside": 2,
+   "drawnOutsideOpacity": 23
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.1,
+   "angle": 45,
+   "grid": [
+    29,
+    17,
+    29
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00006290354000357216,
+   "insideRiseMean": 70.06,
+   "outsideSootMax": 0.000003502627173429518,
+   "outsideSootShare": 0.0024313707667267346,
+   "outsideRiseMax": 2.43,
+   "drawnTotal": 319,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.2,
+   "angle": 0,
+   "grid": [
+    24,
+    18,
+    21
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00006385570417551681,
+   "insideRiseMean": 70.45,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0.01,
+   "drawnTotal": 344,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.2,
+   "angle": 15,
+   "grid": [
+    28,
+    18,
+    25
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.000060284789024981244,
+   "insideRiseMean": 66.72,
+   "outsideSootMax": 8.688175797690555e-7,
+   "outsideSootShare": 0.0002083671574284617,
+   "outsideRiseMax": 0.65,
+   "drawnTotal": 330,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.2,
+   "angle": 30,
+   "grid": [
+    30,
+    18,
+    29
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.000059377913588273654,
+   "insideRiseMean": 65.23,
+   "outsideSootMax": 5.742147269152833e-7,
+   "outsideSootShare": 0.00045077473503993834,
+   "outsideRiseMax": 0.33,
+   "drawnTotal": 341,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.2,
+   "angle": 45,
+   "grid": [
+    30,
+    18,
+    30
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.000060163523453286975,
+   "insideRiseMean": 66.38,
+   "outsideSootMax": 0.0000015354479598395695,
+   "outsideSootShare": 0.0007512376487068369,
+   "outsideRiseMax": 1.06,
+   "drawnTotal": 346,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.3,
+   "angle": 0,
+   "grid": [
+    25,
+    19,
+    22
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00006777554218857161,
+   "insideRiseMean": 75.51,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0,
+   "drawnTotal": 318,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.3,
+   "angle": 15,
+   "grid": [
+    29,
+    19,
+    26
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00006212146647935922,
+   "insideRiseMean": 68.96,
+   "outsideSootMax": 1.5622653956783276e-21,
+   "outsideSootShare": 8.890967354346126e-20,
+   "outsideRiseMax": 0,
+   "drawnTotal": 360,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.3,
+   "angle": 30,
+   "grid": [
+    31,
+    19,
+    30
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00006221830557369109,
+   "insideRiseMean": 68.78,
+   "outsideSootMax": 4.046212638901097e-19,
+   "outsideSootShare": 1.2376444571850078e-16,
+   "outsideRiseMax": 0,
+   "drawnTotal": 362,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.27,
+   "thick": 0.3,
+   "angle": 45,
+   "grid": [
+    31,
+    19,
+    31
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.0000610139732059625,
+   "insideRiseMean": 66.97,
+   "outsideSootMax": 4.377284704660397e-17,
+   "outsideSootShare": 3.3055841444418813e-15,
+   "outsideRiseMax": 0,
+   "drawnTotal": 375,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.1,
+   "angle": 0,
+   "grid": [
+    20,
+    15,
+    17
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00005757005563047629,
+   "insideRiseMean": 63.39,
+   "outsideSootMax": 4.7404587540131433e-23,
+   "outsideSootShare": 7.723891863654843e-22,
+   "outsideRiseMax": 0.01,
+   "drawnTotal": 170,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.1,
+   "angle": 15,
+   "grid": [
+    22,
+    15,
+    20
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00005569842951363851,
+   "insideRiseMean": 61.46,
+   "outsideSootMax": 0.0000033564632552862228,
+   "outsideSootShare": 0.0024132203249876824,
+   "outsideRiseMax": 2.51,
+   "drawnTotal": 158,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.1,
+   "angle": 30,
+   "grid": [
+    24,
+    15,
+    23
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.0000582119789957805,
+   "insideRiseMean": 64.32,
+   "outsideSootMax": 0.000001585488798062714,
+   "outsideSootShare": 0.0017040484432265003,
+   "outsideRiseMax": 1.09,
+   "drawnTotal": 161,
+   "drawnOutside": 1,
+   "drawnOutsideOpacity": 26
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.1,
+   "angle": 45,
+   "grid": [
+    24,
+    15,
+    24
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00005556882710842773,
+   "insideRiseMean": 62.16,
+   "outsideSootMax": 0.0000029323566992861343,
+   "outsideSootShare": 0.004579902611410259,
+   "outsideRiseMax": 2.15,
+   "drawnTotal": 163,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.2,
+   "angle": 0,
+   "grid": [
+    20,
+    16,
+    17
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00006268654747929195,
+   "insideRiseMean": 70.95,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0.01,
+   "drawnTotal": 177,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.2,
+   "angle": 15,
+   "grid": [
+    23,
+    16,
+    21
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.0000592937701709042,
+   "insideRiseMean": 66.86,
+   "outsideSootMax": 3.15629277550885e-8,
+   "outsideSootShare": 0.0000060541237292906045,
+   "outsideRiseMax": 0.02,
+   "drawnTotal": 167,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.2,
+   "angle": 30,
+   "grid": [
+    25,
+    16,
+    24
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00005859584419679497,
+   "insideRiseMean": 65.72,
+   "outsideSootMax": 0.0000012432503293056257,
+   "outsideSootShare": 0.0002807287001790909,
+   "outsideRiseMax": 1.06,
+   "drawnTotal": 161,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.2,
+   "angle": 45,
+   "grid": [
+    25,
+    16,
+    25
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.000052779924223280865,
+   "insideRiseMean": 58.17,
+   "outsideSootMax": 0.0000014764430268213619,
+   "outsideSootShare": 0.00077355087049498,
+   "outsideRiseMax": 1.24,
+   "drawnTotal": 163,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.3,
+   "angle": 0,
+   "grid": [
+    21,
+    16,
+    18
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.00005746191657344246,
+   "insideRiseMean": 64.82,
+   "outsideSootMax": 0,
+   "outsideSootShare": 0,
+   "outsideRiseMax": 0,
+   "drawnTotal": 178,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.3,
+   "angle": 15,
+   "grid": [
+    24,
+    16,
+    22
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.000050581759146522875,
+   "insideRiseMean": 56.33,
+   "outsideSootMax": 2.411667259859902e-7,
+   "outsideSootShare": 0.00010941754425455513,
+   "outsideRiseMax": 0.17,
+   "drawnTotal": 176,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.3,
+   "angle": 30,
+   "grid": [
+    26,
+    16,
+    24
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.000052875894148842544,
+   "insideRiseMean": 59.99,
+   "outsideSootMax": 9.38862498672377e-8,
+   "outsideSootShare": 0.00014846511693583037,
+   "outsideRiseMax": 0.06,
+   "drawnTotal": 183,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  },
+  {
+   "cell": 0.34,
+   "thick": 0.3,
+   "angle": 45,
+   "grid": [
+    26,
+    16,
+    26
+   ],
+   "gapCellsOutside": 0,
+   "insideSootMean": 0.000051397017968398724,
+   "insideRiseMean": 57.44,
+   "outsideSootMax": 2.0868393538267177e-7,
+   "outsideSootShare": 0.00017484041930192502,
+   "outsideRiseMax": 0.12,
+   "drawnTotal": 199,
+   "drawnOutside": 0,
+   "drawnOutsideOpacity": 0
+  }
+ ]
+}
