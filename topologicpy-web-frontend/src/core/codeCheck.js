@@ -388,6 +388,7 @@ export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], ex
       occupants,
       exits: found,
       maxTravel,
+      unreached,
       checks,
     };
   }).filter(Boolean);

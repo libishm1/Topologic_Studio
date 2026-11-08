@@ -175,8 +175,11 @@ language models is in
 **Describe this model** writes a short plain description of the building,
 its ways out and its fire. A language model writes it from the facts Studio
 has already worked out (storeys, rooms, doors and exits, the walkable graph,
-the route, the fire's results) and from nothing else. The facts are listed
-under it before anything is written. On Chrome 148 or later on a desktop
+the route, the fire's results) and from nothing else. Once the graph is
+built, each storey gets a line of its own: its ways out and its longest
+walk to one, worked out on the graph, and the code check's verdicts if you
+ran it; the model words them instead of finding paths itself. The facts are
+listed under it before anything is written. On Chrome 148 or later on a desktop
 computer, Chrome's built-in model writes it on the computer and nothing is
 sent. On other browsers, a site deployed with the Cloudflare describer
 ([cloudflare/describe-worker](cloudflare/describe-worker/README.md)) can send

@@ -260,7 +260,7 @@ function HumanCheck({ theme }) {
   return <div ref={ref} className="human-check" />;
 }
 
-function DescribeModel({ describe, onDescribe, onStop, onEngine, theme }) {
+function DescribeModel({ describe, onDescribe, onStop, onEngine, onOpen, theme }) {
   if (!describe) return null;
   const onDevice = describe.status !== "unsupported" && describe.status !== "unavailable" && describe.status !== "checking";
   const engine = describe.engine || "device";
@@ -274,7 +274,7 @@ function DescribeModel({ describe, onDescribe, onStop, onEngine, theme }) {
     available: "Written on this computer by Chrome's built-in model; nothing is sent.",
   }[describe.status];
   return (
-    <Disclosure summary="Describe this model">
+    <Disclosure summary="Describe this model" onToggle={onOpen}>
       <p className="field__hint">
         A short description of the building, its ways out and its fire, written by a language model from the facts Studio has worked out from the IFC and
         its own simulations, and from nothing else. It grows as you go: describe again after building the graph, finding a route or running a fire.
@@ -395,6 +395,7 @@ export function ModelPanel({
   onDescribe,
   onStopDescribe,
   onDescribeEngine,
+  onDescribeOpen,
   onOpenRooms,
   onExportRooms,
   linked,
@@ -444,7 +445,7 @@ export function ModelPanel({
             </p>
             <EgressCheck semantics={studio.semantics} />
             <ElementIdentification identification={identification} onIdentify={onIdentify} onIdentifyByShape={onIdentifyByShape} />
-            <DescribeModel describe={describe} onDescribe={onDescribe} onStop={onStopDescribe} onEngine={onDescribeEngine} theme={studio.theme} />
+            <DescribeModel describe={describe} onDescribe={onDescribe} onStop={onStopDescribe} onEngine={onDescribeEngine} onOpen={onDescribeOpen} theme={studio.theme} />
           </>
         )}
 

@@ -416,9 +416,9 @@ export function Choices({ legend, name, value, onChange, options, disabled }) {
 }
 
 /** Settings that most people leave alone, folded under one line. */
-export function Disclosure({ summary, children, defaultOpen = false }) {
+export function Disclosure({ summary, children, defaultOpen = false, onToggle = null }) {
   return (
-    <details className="disclosure" open={defaultOpen || undefined}>
+    <details className="disclosure" open={defaultOpen || undefined} onToggle={onToggle ? (e) => onToggle(e.currentTarget.open) : undefined}>
       <summary>{summary}</summary>
       <div className="disclosure__body">{children}</div>
     </details>

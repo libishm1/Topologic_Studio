@@ -220,6 +220,8 @@ export default function App() {
   const [MethodsDialog, setMethodsDialog] = useState(loadMethods);
   // Storey heights for the section cut, and the chosen one (null = whole).
   const [levels, setLevels] = useState([]);
+  // The model's coordination shift (m): a height in the viewer frame is the IFC's plus this.
+  const [levelShift, setLevelShift] = useState(0);
   const [section, setSection] = useState(null);
   const geometryPromiseRef = useRef(null);
   const closeMethods = useCallback(() => setMethodsOpen(false), []);
@@ -611,6 +613,7 @@ export default function App() {
             const shift = (await viewer.getCoordinationMatrix())?.[13] ?? 0;
             const geometry = await geometryPromiseRef.current;
             if (!latest()) return;
+            setLevelShift(shift);
             const fromGeometry = geometry ? floorLevels(geometry.floors, settings.upAxis) : [];
             const declared = [...new Set((semantics.storeys || []).map((s) => +(s.elevation + shift).toFixed(2)))].sort(
               (a, b) => a - b,
@@ -628,6 +631,7 @@ export default function App() {
         // Extract the egress geometry now rather than at the first build:
         // the outlines and the storey cut need it, and the build then skips it.
         setLevels([]);
+        setLevelShift(0);
         setSection(null);
         viewer.setSectionHeight(null);
         geometryPromiseRef.current = viewer
@@ -2661,6 +2665,19 @@ export default function App() {
       live = false;
     };
   }, []);
+  // Egress by storey for the facts (core/codeCheck.js on the graph): the
+  // code check's own result when the user ran it, else its measures alone,
+  // worked out only while the panel is open (2 to 15 ms on the examples).
+  const [describeOpen, setDescribeOpen] = useState(false);
+  const describeEgress = useMemo(() => {
+    if (!describeOpen || !graph) return null;
+    if (code.result) return code.result;
+    try {
+      return codeCheck(graph, { exits: exits?.final || [], levels, sprinklered: settings.codeSprinklered, useWalls: settings.useWalls });
+    } catch {
+      return null;
+    }
+  }, [describeOpen, graph, code.result, exits, levels, settings.codeSprinklered, settings.useWalls]);
   const describeFactsText = useMemo(
     () =>
       describeFacts({
@@ -2669,6 +2686,9 @@ export default function App() {
         semantics: studio.semantics,
         identification: identification?.answers,
         graph: graph ? { stats: graph.stats, cores: graph.cores } : null,
+        egress: describeEgress,
+        codeChecked: Boolean(code.result),
+        levelShift,
         route: path,
         walkSpeed: settings.walkSpeed,
         fire,
@@ -2676,7 +2696,7 @@ export default function App() {
         plan: forecastPlan?.result ? forecastPlan : null,
         rl: rl.result,
       }).text,
-    [file, modelInfo, studio.semantics, identification, graph, path, settings.walkSpeed, fire, forecastPlan, rl.result],
+    [file, modelInfo, studio.semantics, identification, graph, describeEgress, code.result, levelShift, path, settings.walkSpeed, fire, forecastPlan, rl.result],
   );
   const runDescribe = useCallback(async () => {
     describeAbortRef.current?.abort();
@@ -3636,6 +3656,7 @@ export default function App() {
                   onDescribe={runDescribe}
                   onStopDescribe={stopDescribe}
                   onDescribeEngine={setDescribeEngine}
+                  onDescribeOpen={setDescribeOpen}
                   onOpenRooms={handleFile}
                   onExportRooms={exportLod1}
                   linked={{ list: linkedList, busy: linkedBusy }}

@@ -1062,6 +1062,9 @@ for (const tab of ["Model", "Graph", "Route", "Simulate"]) {
     await page.locator(".panel__scroll").getByText("The facts it is given", { exact: true }).click();
     const facts = (await page.locator(".describe__facts").textContent({ timeout: 10000 }).catch(() => "")) || "";
     record(/Model: .*storeys/.test(facts) && /Doors: \d+/.test(facts), "Describe this model shows the facts it is given", facts.split("\n").slice(0, 2).join(" | ").slice(0, 160));
+    // With the graph built, each storey's ways out and longest walk (describeFacts.js, codeCheck.js; 2026-11-08).
+    const storeyLine = facts.split("\n").find((l) => /^- Storey .*(longest walk to one is [\d.]+ m|no place reaches a way out)/.test(l)) || "";
+    record(Boolean(storeyLine), "the facts give each storey's ways out and longest walk", storeyLine.slice(0, 160) || "no storey line");
   }
 }
 

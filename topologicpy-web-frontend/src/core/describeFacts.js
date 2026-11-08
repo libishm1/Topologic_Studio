@@ -10,6 +10,10 @@
 const round = (v, d = 1) => (Number.isFinite(v) ? Math.round(v * 10 ** d) / 10 ** d : null);
 const list = (items, max) => (items.length > max ? `${items.slice(0, max).join(", ")} and ${items.length - max} more` : items.join(", "));
 const duration = (s) => (s >= 90 ? `${round(s / 60, 1)} min` : `${Math.round(s)} s`);
+/** Storeys given a line each; the rest are summed up in one, so a tall building's facts stay short. */
+const MAX_STOREY_LINES = 12;
+/** A graph floor takes the name of the IFC storey within this many metres of it. */
+const STOREY_NAME_WITHIN = 0.6;
 
 const FIRE_MODELS = {
   temperature: "heat diffusion on the walkable graph (an index, not a measured temperature)",
@@ -24,6 +28,9 @@ const FIRE_MODELS = {
  * @param {object} s  what the app knows (every part optional):
  *   file {name}; stats (Model step counts); semantics (ifcSemantics.js);
  *   identification answers [{label, by}]; graph {stats, cores};
+ *   egress (codeCheck.js's result on the graph); codeChecked (the user ran
+ *   the code check, so its verdicts may be given); levelShift (m, the
+ *   model's coordination shift: a viewer height is the IFC's plus it);
  *   route {found, length, node_ids}; walkSpeed (m/s); fire {model, step};
  *   combustion (the Flamescapes run card); plan {result, inputs}; rl (result)
  * @returns {{lines: string[], text: string}}
@@ -88,6 +95,49 @@ export function describeFacts(s = {}) {
     const assumed = (s.graph?.cores || []).filter((c) => c.kind === "stair" && c.linked > 0).length;
     if (assumed) lines.push(`Stairs without modelled treads: ${assumed}, walked along an assumed line.`);
   }
+
+  // Egress by storey (codeCheck.js): each storey's ways out and its longest
+  // walk to one, worked out on the graph, so the model words them instead of
+  // finding paths itself. The code's verdicts only when the user ran the
+  // check: it judges every building as an office (Group B).
+  const eg = s.egress;
+  if (eg?.storeys?.length) {
+    // The graph's floors are in the viewer frame; the IFC's storeys are the
+    // viewer's heights less the model's coordination shift.
+    const ifcHeight = (x) => x.elevation - (s.levelShift || 0);
+    const levelled = storeys.filter((x) => Number.isFinite(x.elevation));
+    const nameOf = (x) => {
+      const h = ifcHeight(x);
+      const near = levelled.reduce((best, y) => (!best || Math.abs(y.elevation - h) < Math.abs(best.elevation - h) ? y : best), null);
+      return near && near.name && Math.abs(near.elevation - h) <= STOREY_NAME_WITHIN ? `Storey ${near.name}` : "Storey";
+    };
+    const verdict = (x) => {
+      if (!s.codeChecked) return "";
+      const of = (id) => x.checks.find((k) => k.id === id)?.status;
+      const separation = of("separation");
+      return `; code check: walk ${of("travel")}, number of exits ${of("exits")}${separation && separation !== "n/a" ? `, separation ${separation}` : ""}`;
+    };
+    for (const x of eg.storeys.slice(0, MAX_STOREY_LINES)) {
+      const reached = x.unreached < x.places;
+      const ways = x.discharge ? `${x.exits} exit${x.exits === 1 ? "" : "s"} (doors out of the building, or stairs down)` : `${x.exits} stair${x.exits === 1 ? "" : "s"} to leave by`;
+      lines.push(
+        `${nameOf(x)} (floor at ${round(ifcHeight(x), 1)} m${x.discharge ? ", with doors out of the building" : ""}): ` +
+          (reached ? `${ways}; the longest walk to one is ${round(x.maxTravel, 1)} m` : "no place reaches a way out on the graph") +
+          (reached && x.unreached ? `; ${x.unreached} of ${x.places} places reach none on the graph (often a door or stair the model lacks)` : "") +
+          verdict(x) +
+          ".",
+      );
+    }
+    const rest = eg.storeys.slice(MAX_STOREY_LINES);
+    if (rest.length) lines.push(`${rest.length} more storeys; the longest walk to a way out among them is ${round(Math.max(...rest.map((x) => x.maxTravel)), 1)} m.`);
+    if (Number.isFinite(eg.building?.height)) lines.push(`Highest occupied floor: ${round(eg.building.height, 1)} m above the storey with the doors out.`);
+    if (s.codeChecked) {
+      lines.push(
+        `Code check (run by the user): as an office (Group B), each limit the stricter of SBC 801-CR-2018 and IBC 2021, ${eg.building?.sprinklered ? "with" : "without"} sprinklers; ` +
+          `walking limit ${round(eg.limit, 2)} m; ${eg.building?.highRise ? "a high-rise building" : "not a high-rise building"}; exit door widths ${eg.doors?.status}: ${eg.doors?.text}.`,
+      );
+    }
+  }
   if (s.route) {
     if (s.route.found === false) lines.push("Route: none found between the chosen start and exit.");
     else if (s.route.length > 0) {
@@ -151,6 +201,6 @@ export function describeFacts(s = {}) {
 export const DESCRIBE_INSTRUCTIONS = [
   "You describe a building model for an architect or fire-safety reviewer, from facts that Topologic Studio computed from the model's IFC file and its own simulations.",
   "Use only the facts given. Never invent rooms, numbers, materials or code compliance; when the facts do not say something, say that they do not.",
-  "Write plain English in four short parts: the building; how people get out; what the fire simulation showed, if one was run; what to check next.",
+  "Write plain English in four short parts: the building; how people get out, storey by storey, with the code check's verdicts if they are given; what the fire simulation showed, or that none was run; what to check next.",
   "Say that the fire results come from uncalibrated models. Keep it under 250 words. No headings in capitals, no bullet lists longer than five items.",
 ].join(" ");
