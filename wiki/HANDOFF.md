@@ -2,7 +2,12 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at c272fbd (released 2026-11-08 evening at the user's request: the egress-by-storey facts, after 2032e73 Turnstile and the site rebuilt with `DESCRIBE_URL` and `TURNSTILE_SITE_KEY`). The Cloudflare describer works on the live site: the user's phone passed the human check and got a description (after d74723b). Live check of c272fbd: 110 steps, 0 failed, Render awake; Cloudflare Turnstile's own frames log in a headless browser (a 401 token probe, CSP refusals in its iframe, hidden logs), which the browser test now counts apart from the app's errors.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at 41a1426 (released 2026-11-08 night, the user's "release it after fixes"): layered walls, roofs and slabs (IfcBuildingElementPart) are read into the fire grid and the walkable graph (`ViewerManager.extractEgressGeometry`, `tools/ifc-extract.mjs`), and the graph's "Reachable" skips links blocked by walls (`core/graph.js`), so Vienna reads 90% (95% before both). The user accepted that part of Vienna's garage ramp stands apart behind basement walls with no opening.
+  - **Measured (Node, Vienna):** rooms that keep their air in with every door closed 0 of 82 before, 8 of 76 at 0.27 m and 4 of 78 at 0.34 m after; the remaining leaks are door meshes that are not closed solids (24), slab edges and stair openings (17), layer junctions (12) and windows (11). Fire set-up 0.11 to 0.19 s at 30k cells and 0.17 to 0.48 s at 160k; solver steps unchanged; graph build 183 to 201 ms. All 92 openings in layered walls are cut through the layers; rooms reaching the main graph 106 to 91 (15 shafts and the refuse room, whose only door is an outside door).
+  - **Gates:** 370 unit tests, lint, the Pages build, the browser suite on the Pages build desktop (110 steps) and mobile (109), 0 failed; live check 110 steps, 0 failed, 0 console errors, Render awake. The backend did not change.
+  - **Web-ifc sessions:** `COORDINATE_TO_ORIGIN` shifts each session differently, so meshes compared or merged must come from one session (`smoke-path-check.mjs --add` uses a second one and can misplace them).
+  - **IFCNet in the app:** Model step, "What the elements are", "Identify elements", then "Identify N by shape (IFCNet)"; the button shows only on models with generic elements the rules placed by size or not at all (Clinic 88, NIBS Office 18, buildingSMART scene 5; none on Vienna, the Duplex and the two CC0 examples).
+- **Released before it:** c272fbd (2026-11-08 evening at the user's request: the egress-by-storey facts, after 2032e73 Turnstile and the site rebuilt with `DESCRIBE_URL` and `TURNSTILE_SITE_KEY`). The Cloudflare describer works on the live site: the user's phone passed the human check and got a description (after d74723b). Live check of c272fbd: 110 steps, 0 failed, Render awake; Cloudflare Turnstile's own frames log in a headless browser (a 401 token probe, CSP refusals in its iframe, hidden logs), which the browser test now counts apart from the app's errors.
 - **Released before it:** 58dc781 (the design-fire item's flame drawn; live check 109 steps, 0 failed, 0 console errors).
 - **Released before it:** 17f1889 (2026-11-08 afternoon, the user's "yes to all": 1f21594 (handoff), 696683a (the sprinkler activation fix) and 17f1889 (the first item as a design fire; the workflow, open office and server room GIFs re-recorded, the 2026-11-07 media in `public/docs/media/2026-11-07/`). The backend did not change, so Render was not redeployed.
   - **Gates before it:** 365 unit tests, lint, the Pages build, the browser suite on the Pages build desktop (108 steps) and mobile (107), 0 failed, 0 console errors.
@@ -40,7 +45,7 @@
   - `src/core/drawingToLod1.js`, its 9 tests, `tools/dxf-lod1-check.mjs`;
   - the method, results and failure modes: `wiki/research/dxf-floor-plans-to-lod1-2026-11-05.md`.
 - **Gates before any deploy:**
-  - `npm test` in `topologicpy-web-frontend`: 365 tests;
+  - `npm test` in `topologicpy-web-frontend`: 370 tests;
   - `npx eslint .`;
   - the Pages build: `MSYS_NO_PATHCONV=1 BASE_PATH=/Topologic_Studio/ npm run build` from Git Bash;
   - `node tools/browser-test.mjs --url http://localhost:4173/Topologic_Studio/`, desktop then `--mobile`, against `vite preview` on that sub-path;
