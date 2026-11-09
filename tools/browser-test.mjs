@@ -568,6 +568,43 @@ if (gotStart && gotExit && (await altBtn.isEnabled())) {
   record(false, "Find alternative routes was enabled", "needs start and exit");
 }
 
+// ---- 4b'. people leaving -----------------------------------------------------
+// The egress animation (core/crowd.js, viewer/crowd.js, 2026-11-09): off by
+// default; on, everyone walks to the nearest exit, drawn on the GPU.
+
+console.log("\n[4b'] People leaving");
+const peopleSection = page.locator("summary, button", { hasText: /^People leaving/ }).first();
+if (await peopleSection.count()) {
+  await peopleSection.scrollIntoViewIfNeeded();
+  await peopleSection.click();
+  record(!(await page.evaluate(() => window.__viewer?.overlays?.has("crowd") ?? false)), "no people are drawn until switched on");
+  const tCrowd = Date.now();
+  await page.locator(".toggle__label", { hasText: /^Show people leaving$/ }).first().click();
+  const crowdLine = await page
+    .waitForFunction(() => document.body.innerText.match(/\d[\d,]* people, one per [^\n]*the last is out at \d+ s[^\n]*/)?.[0], null, { timeout: 60000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const drawn = await page.evaluate(() => {
+    const o = window.__viewer?.overlays?.get("crowd");
+    return o ? (o.geometry.instanceCount ?? o.geometry.attributes.position.count) : 0;
+  });
+  const counted = Number((crowdLine.match(/^([\d,]+) people/)?.[1] || "0").replace(/,/g, ""));
+  record(Boolean(crowdLine) && drawn === counted && counted > 0, "everyone walks out to an exit, drawn as figures", `${crowdLine.slice(0, 160)} (${drawn} drawn, ${((Date.now() - tCrowd) / 1000).toFixed(1)}s)`);
+  const runnerDrawn = await page.evaluate(() => window.__viewer?.overlays?.has("stairRunner") ?? false);
+  record(runnerDrawn, "a runner loops down a stair", runnerDrawn ? "drawn" : "none");
+  await shot(page, "people-leaving");
+  await page.getByLabel("Show them as").selectOption("dots").catch(() => {});
+  await page.waitForTimeout(300);
+  const dots = await page.evaluate(() => window.__viewer?.overlays?.get("crowd")?.type ?? null);
+  record(dots === "Points", "the people can be drawn as dots", dots || "none");
+  await page.getByLabel("Show them as").selectOption("figures").catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Show people leaving$/ }).first().click();
+  await page.waitForTimeout(300);
+  record(!(await page.evaluate(() => window.__viewer?.overlays?.has("crowd") ?? false)), "switched off, the people go");
+} else {
+  record(false, "the People leaving section is offered in Route");
+}
+
 // ---- 4c. TopologicPy Navigation cross-check ---------------------------------
 
 console.log("\n[4c] TopologicPy Navigation cross-check");

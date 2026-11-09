@@ -28,6 +28,7 @@ import { SCENE_COLOURS, heatColor, paintDeadlines } from "./heat.js";
 import { coreItems } from "../core/cores.js";
 import { centroidOf } from "../core/centroid.js";
 import { linkMatrix } from "../core/federation.js";
+import { crowdObject } from "./crowd.js";
 
 /** Categories that are not building elements: the spatial structure, openings, annotations. */
 const NOT_ELEMENTS = /^IFC(PROJECT|SITE|BUILDING|BUILDINGSTOREY|OPENINGELEMENT|ANNOTATION|GRID|VIRTUALELEMENT|GRIDAXIS)$|TYPE$/i;
@@ -59,6 +60,8 @@ const OVERLAY = {
   spray: "spray",
   extinguishers: "extinguishers",
   systems: "systems",
+  crowd: "crowd",
+  stairRunner: "stairRunner",
 };
 
 // Rooms flooded with clean agent or blanketed with foam (core/suppressionSystems.js), and their own extinguishers.
@@ -128,7 +131,7 @@ function glowColor(target, T) {
 // An IFC2x3 flow segment or fitting that is a duct or a cable tray, by name.
 const OVERHEAD_FLOW_NAME = /duct|cable ?tray|cable ?carrier|trunking|kanal|luftkanal/i;
 
-const CLIPPED = new Set([OVERLAY.outlines, OVERLAY.graph, OVERLAY.navGraph, OVERLAY.exits]);
+const CLIPPED = new Set([OVERLAY.outlines, OVERLAY.graph, OVERLAY.navGraph, OVERLAY.exits, OVERLAY.crowd, OVERLAY.stairRunner]);
 
 
 
@@ -1742,6 +1745,37 @@ export class ViewerManager {
       material.uniforms.time.value = performance.now() / 1000;
     };
     this._setOverlay(OVERLAY.spray, spray);
+  }
+
+  /**
+   * The egress animation's people (core/crowd.js, drawn by viewer/crowd.js):
+   * dots or figures, moved on the GPU from `clock()`, the walk's time in
+   * seconds, read before each draw. Null clears them.
+   */
+  setCrowd(crowd, { style = "figures", clock = () => 0 } = {}) {
+    this._setOverlay(OVERLAY.crowd, crowd?.people ? crowdObject(crowd, { style, clock }) : null);
+  }
+
+  /**
+   * The GPU drawing this view, as the browser names it (WebGL's unmasked
+   * renderer, e.g. "ANGLE (NVIDIA, Quadro RTX 4000 ... Direct3D11 ...)"), or
+   * null where it is hidden: which of a laptop's two GPUs Chrome chose.
+   */
+  gpuName() {
+    try {
+      const gl = this.world?.renderer?.three?.getContext?.();
+      const info = gl?.getExtension?.("WEBGL_debug_renderer_info");
+      return (info && gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** One figure in a high-visibility shirt running down a stair on a loop, in real time (core/crowd.js stairRunner); null clears it. */
+  setStairRunner(runner) {
+    const loop = runner?.duration > 0 ? runner.duration : 0;
+    const clock = () => (performance.now() / 1000) % loop;
+    this._setOverlay(OVERLAY.stairRunner, loop ? crowdObject(runner, { style: "figures", clock, colours: { walking: 0xf97316 } }) : null);
   }
 
   /** Navigation's route, drawn like ours in its own overlay. */

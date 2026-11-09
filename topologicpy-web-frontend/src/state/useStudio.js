@@ -95,6 +95,13 @@ export const DEFAULT_SETTINGS = {
   // on one side); "picked": the exit picked in the Route step.
   forecastExits: "model",
   showDeadlineMap: true,
+  // People leaving (core/crowd.js): off until switched on; drawn as
+  // "figures" or "dots", played at crowdRate times real time.
+  crowd: false,
+  crowdStyle: "figures",
+  crowdRate: 10,
+  // One figure running down a stair on a loop, when a walk takes one.
+  crowdStairRunner: true,
   // The two-zone room model (fireModel "zone"; src/core/zone.js), on a clock
   // in seconds with gas temperatures in degrees C: a t-squared fire of this
   // growth up to this peak (and the room's ventilation limit), untenable from

@@ -2337,6 +2337,113 @@ export default function App() {
     () => (settings.forecastExits === "model" && exits?.final.length ? exits.final : points.exit && graph ? [snap(graph, points.exit)] : []),
     [settings.forecastExits, exits, points.exit, graph],
   );
+
+  // ------------------------------------------------------- people leaving
+
+  // The egress animation (core/crowd.js, viewer/crowd.js): off until switched
+  // on, then everyone on the floors walks to the plan's nearest exit and
+  // gathers outside it. Worked out once per graph and inputs; the GPU moves
+  // them from this clock, so playing costs the page nothing per frame.
+  const [crowdState, setCrowdState] = useState({ key: null, result: null, busy: false, error: null });
+  const crowdClockRef = useRef({ base: 0, since: 0, rate: 10, playing: false, end: 0 });
+  const [crowdTime, setCrowdTime] = useState(0);
+  const crowdNow = useCallback(() => {
+    const c = crowdClockRef.current;
+    const t = c.playing ? c.base + ((performance.now() - c.since) / 1000) * c.rate : c.base;
+    return Math.min(t, c.end);
+  }, []);
+  const crowdKey = settings.crowd && graph ? JSON.stringify([planExitNodes(), settings.perfOccupantArea, settings.useWalls, settings.departAfter]) : null;
+  const crowdResult = crowdState.key === crowdKey && crowdState.graph === graph ? crowdState.result : null;
+  const crowdRunner = crowdResult && settings.crowdStairRunner ? crowdState.runner : null;
+  // The inputs as they read now, for the effect below, which runs on the key
+  // alone: depending on its own state too, its cleanup cancelled the walk it
+  // had just scheduled when it marked itself busy.
+  const crowdInputsRef = useRef(null);
+  crowdInputsRef.current = { exits: crowdKey ? planExitNodes() : [], occupantArea: settings.perfOccupantArea, useWalls: settings.useWalls, departAfter: settings.departAfter };
+  // The key and graph of the walk last worked out, so switching off and on again does not work it out twice.
+  const crowdDoneRef = useRef({ key: null, graph: null });
+  useEffect(() => {
+    if (!crowdKey || (crowdDoneRef.current.key === crowdKey && crowdDoneRef.current.graph === graph)) return undefined;
+    const { exits: exitNodes, occupantArea, useWalls, departAfter } = crowdInputsRef.current;
+    let live = true;
+    const finish = (state) => {
+      if (!live) return;
+      crowdDoneRef.current = { key: crowdKey, graph };
+      setCrowdState({ key: crowdKey, graph, busy: false, result: null, error: null, ...state });
+    };
+    setCrowdState({ key: crowdKey, graph, result: null, busy: true, error: null });
+    // A moment for the panel to say it is working before the walk is worked out.
+    const timer = setTimeout(() => {
+      if (!exitNodes.length) {
+        finish({ error: "No exit to walk to: the model marks none out of the building, so pick one in Route." });
+        return;
+      }
+      import("./core/crowd.js")
+        .then(({ simulateCrowd, stairRunner }) => {
+          if (!live) return;
+          const t0 = performance.now();
+          const result = simulateCrowd(graph, {
+            exits: exitNodes,
+            occupantArea,
+            blocked: useWalls ? graph.blocked : null,
+            start: [departAfter, departAfter + 10],
+          });
+          result.ms = performance.now() - t0;
+          finish({ result, runner: stairRunner(graph, result) });
+        })
+        .catch((error) => finish({ error: error?.message || String(error) }));
+    }, 30);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [crowdKey, graph]);
+  // The people on screen: set again when the walk or the look changes, and
+  // played from the start; cleared when switched off.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return undefined;
+    if (!crowdResult) {
+      viewer.setCrowd?.(null);
+      return undefined;
+    }
+    const clock = crowdClockRef.current;
+    Object.assign(clock, { base: 0, since: performance.now(), playing: true, end: crowdResult.lastOut + 10 });
+    viewer.setCrowd?.(crowdResult, { style: settings.crowdStyle, clock: crowdNow });
+    return () => viewer.setCrowd?.(null);
+  }, [crowdResult, settings.crowdStyle, crowdNow]);
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return undefined;
+    viewer.setStairRunner?.(crowdRunner);
+    return () => viewer.setStairRunner?.(null);
+  }, [crowdRunner]);
+  useEffect(() => {
+    const clock = crowdClockRef.current;
+    // The rate changes from where the walk is now.
+    Object.assign(clock, { base: crowdNow(), since: performance.now(), rate: settings.crowdRate });
+  }, [settings.crowdRate, crowdNow]);
+  // The time shown under the controls, four times a second while playing.
+  useEffect(() => {
+    if (!crowdResult) return undefined;
+    const timer = setInterval(() => {
+      const t = crowdNow();
+      setCrowdTime(t);
+      const clock = crowdClockRef.current;
+      if (clock.playing && t >= clock.end) Object.assign(clock, { base: clock.end, playing: false });
+    }, 250);
+    return () => clearInterval(timer);
+  }, [crowdResult, crowdNow]);
+  const playCrowd = useCallback(() => {
+    const clock = crowdClockRef.current;
+    if (clock.playing) Object.assign(clock, { base: crowdNow(), playing: false });
+    else Object.assign(clock, { base: clock.base >= clock.end ? 0 : clock.base, since: performance.now(), playing: true });
+    setCrowdTime(crowdNow());
+  }, [crowdNow]);
+  const restartCrowd = useCallback(() => {
+    Object.assign(crowdClockRef.current, { base: 0, since: performance.now(), playing: true });
+    setCrowdTime(0);
+  }, []);
   // --------------------------------------------------------- extinguishers
 
   // Portable extinguishers (core/extinguishers.js): the IFC's, told by name
@@ -3730,6 +3837,17 @@ export default function App() {
                   onStopPerfFires={stopPerfFires}
                   onDownloadPerfReport={downloadPerfReport}
                   onClearPerfReport={clearPerfReport}
+                  crowd={{
+                    result: crowdResult,
+                    runner: crowdResult ? crowdState.runner : null,
+                    gpu: crowdResult ? viewerRef.current?.gpuName?.() : null,
+                    busy: crowdState.key === crowdKey && crowdState.busy,
+                    error: crowdState.key === crowdKey ? crowdState.error : null,
+                    time: crowdTime,
+                    playing: crowdClockRef.current.playing,
+                  }}
+                  onPlayCrowd={playCrowd}
+                  onRestartCrowd={restartCrowd}
                 />
               )}
               {activeTab === "simulate" && (

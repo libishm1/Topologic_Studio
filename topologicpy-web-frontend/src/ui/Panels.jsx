@@ -13,6 +13,7 @@ import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
 import { STANDARD_CELLS } from "../lib/hardware.js";
+import { CROWD_COLOURS } from "../viewer/crowd.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS, designFireFor, waterResponse } from "../core/fireClasses.js";
@@ -1391,6 +1392,103 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
   );
 }
 
+/**
+ * People leaving (core/crowd.js): the switch, the look and the playback
+ * speed, the clock and what the walk came to.
+ */
+function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready }) {
+  const result = crowd?.result;
+  const swatch = (key, label) => (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 10 }}>
+      <span className="picker__dot" style={{ background: `#${CROWD_COLOURS[key].toString(16).padStart(6, "0")}` }} />
+      {label}
+    </span>
+  );
+  return (
+    <Section title="People leaving" badge={result ? `${result.people.toLocaleString()} people` : null} defaultOpen={false}>
+      <Toggle
+        label="Show people leaving"
+        checked={settings.crowd}
+        disabled={!ready}
+        onChange={(on) => setSettings({ crowd: on })}
+        hint="Everyone on the floors walks to the nearest exit and gathers outside it, played faster than real time."
+      />
+      {settings.crowd && (
+        <>
+          <div className="grid-2">
+            <SelectField
+              label="Show them as"
+              value={settings.crowdStyle}
+              onChange={(crowdStyle) => setSettings({ crowdStyle })}
+              options={[
+                { value: "figures", label: "Figures" },
+                { value: "dots", label: "Dots" },
+              ]}
+            />
+            <SelectField
+              label="Playback"
+              value={String(settings.crowdRate)}
+              onChange={(value) => setSettings({ crowdRate: Number(value) })}
+              options={[1, 5, 10, 30].map((r) => ({ value: String(r), label: r === 1 ? "Real time" : `${r} times real time` }))}
+            />
+          </div>
+          <Toggle
+            label="A runner on the stair, on a loop"
+            checked={settings.crowdStairRunner}
+            onChange={(crowdStairRunner) => setSettings({ crowdStairRunner })}
+            hint={
+              crowd?.result && !crowd.runner
+                ? "No walk here goes down a stair."
+                : "One of the walks down a stair, in an orange shirt, looped in real time at that walk's own speeds."
+            }
+          />
+          {crowd?.busy && <p className="field__hint">Working out everyone&apos;s walk…</p>}
+          {crowd?.error && <Notice tone="warning">{crowd.error}</Notice>}
+          {result && (
+            <>
+              <div className="grid-2">
+                <Button size="sm" onClick={onPlay}>
+                  {crowd.playing ? "Pause" : "Play"}
+                </Button>
+                <Button size="sm" onClick={onRestart}>
+                  From the start
+                </Button>
+              </div>
+              <p className="field__hint" aria-live="off">
+                {Math.round(crowd.time)} s of {Math.ceil(result.lastOut)} s{settings.crowdRate > 1 ? `, at ${settings.crowdRate} times real time` : ""}.
+              </p>
+              <p className="field__hint">
+                {swatch("waiting", "not yet off")}
+                {swatch("walking", "walking")}
+                {swatch("held", "held up")}
+                {swatch("out", "out")}
+                {result.inside > 0 && swatch("inside", "still inside")}
+              </p>
+              <Notice>
+                {result.people.toLocaleString()} people, one per {settings.perfOccupantArea} m² of walkable floor
+                {result.capped ? " (capped)" : ""}: the last is out at {Math.round(result.lastOut)} s
+                {result.inside > 0 ? `, ${result.inside} still inside when the walk stopped` : ""}, by{" "}
+                {result.exits.map((e) => `${e.people}`).join(", ")} through {result.exits.length} exit{result.exits.length === 1 ? "" : "s"}; the longest hold-up{" "}
+                {Math.round(result.longestWait)} s.
+                {result.unreached > 0 ? ` ${result.unreached.toLocaleString()} walkable places reach no exit and hold no one.` : ""}
+              </Notice>
+              {crowd.gpu && <p className="field__hint">Moved and drawn on the GPU: {crowd.gpu}.</p>}
+              <p className="field__hint">
+                Each person heads for the nearest exit by the shortest walk (the &quot;nearest exit&quot; choice that gave the shortest
+                times in Carrera et al. 2019) and holds one place of the graph at a time, as a cell of a floor-field model does
+                (Burstedde et al. 2001), stepping round whoever is ahead. Speeds spread about 1.19 m/s and slow as the crowd
+                thickens, 0.92 m/s at most on stairs, and a 0.9 m door passes about 0.8 people a second (SFPE Handbook). Everyone
+                sets off within 10 s of the plan&apos;s departure time: the performance check, not this animation, models how
+                long people take to start. An illustration of the walk out, not an evacuation model to quote.
+              </p>
+            </>
+          )}
+        </>
+      )}
+    </Section>
+  );
+}
+
 export function RoutePanel({
   studio,
   onPick,
@@ -1416,6 +1514,9 @@ export function RoutePanel({
   onStopPerfFires,
   onDownloadPerfReport,
   onClearPerfReport,
+  crowd = null,
+  onPlayCrowd,
+  onRestartCrowd,
 }) {
   const { graph, points, pickMode, path, pathBusy, comparison, alternatives, settings, setSettings, capabilities } =
     studio;
@@ -1573,6 +1674,7 @@ export function RoutePanel({
           </Notice>
         )}
       </Section>
+      <PeopleLeaving crowd={crowd} settings={settings} setSettings={setSettings} onPlay={onPlayCrowd} onRestart={onRestartCrowd} ready={Boolean(graph)} />
       <CodeCheck code={code} settings={settings} setSettings={setSettings} onRun={onCodeCheck} onShow={onShowTravel} ready={Boolean(graph)} />
       <PerformanceCheck
         perf={perf}
