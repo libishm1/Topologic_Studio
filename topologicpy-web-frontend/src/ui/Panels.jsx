@@ -1432,30 +1432,80 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
               options={[1, 5, 10, 30].map((r) => ({ value: String(r), label: r === 1 ? "Real time" : `${r} times real time` }))}
             />
           </div>
-          <Toggle
-            label="A runner on the stair, on a loop"
-            checked={settings.crowdStairRunner}
-            onChange={(crowdStairRunner) => setSettings({ crowdStairRunner })}
+          <SelectField
+            label="Egress"
+            value={settings.crowdWithFire ? "fire" : "none"}
+            onChange={(value) => setSettings({ crowdWithFire: value === "fire" })}
+            options={[
+              { value: "none", label: "Without the fire" },
+              { value: "fire", label: "With the fire" },
+            ]}
             hint={
-              crowd?.result && !crowd.runner
-                ? "No walk here goes down a stair."
-                : "One of the walks down a stair, in an orange shirt, looped in real time at that walk's own speeds."
+              !settings.crowdWithFire
+                ? "Everyone walks out as if there were no fire."
+                : !crowd?.fireActive
+                  ? "They wait for the fire: start it in Simulate and they set off with it."
+                  : crowd?.avoiding
+                    ? "They keep the fire's time and keep out of places it has made untenable (as the plan reads them): they turn back for another exit, and anyone with no way out but through the fire stays where they are."
+                    : "They keep the fire's time; they keep out of it once its run has finished computing, so play it again to see them turn back."
             }
           />
+          <Toggle
+            label="A runner in an orange shirt"
+            checked={settings.crowdStairRunner}
+            onChange={(crowdStairRunner) => setSettings({ crowdStairRunner })}
+          />
+          {settings.crowdStairRunner && (
+            <SelectField
+              label="The runner"
+              value={settings.crowdRunner}
+              onChange={(crowdRunner) => setSettings({ crowdRunner })}
+              options={[
+                { value: "stair", label: "Down a stair, on a loop" },
+                { value: "forecast", label: "The forecast's way out, on its timeline" },
+              ]}
+              hint={
+                settings.crowdRunner === "forecast"
+                  ? crowd?.planned
+                    ? "The forecast's evacuee on its earliest safe route, reaching each place when the plan says: with the fire on, at the fire's time."
+                    : "Plan with the forecast in Simulate first; until then the runner takes a stair."
+                  : crowd?.result && !crowd.runner
+                    ? "No walk here goes down a stair."
+                    : "One of the walks down a stair, looped in real time at that walk's own speeds."
+              }
+            />
+          )}
+          <Toggle
+            label="Full gathering places clear"
+            checked={settings.crowdShelterOn}
+            onChange={(crowdShelterOn) => setSettings({ crowdShelterOn })}
+            hint="A gathering place holds only what its area takes, about 0.64 m² a person standing; once it is full, the earliest there fade away as newcomers arrive."
+          />
+          {settings.crowdShelterOn && (
+            <SelectField
+              label="Each gathering place"
+              value={String(settings.crowdShelterArea)}
+              onChange={(value) => setSettings({ crowdShelterArea: Number(value) })}
+              options={[10, 25, 50, 100].map((a) => ({ value: String(a), label: `${a} m², about ${Math.floor(a / 0.636)} people` }))}
+            />
+          )}
           {crowd?.busy && <p className="field__hint">Working out everyone&apos;s walk…</p>}
           {crowd?.error && <Notice tone="warning">{crowd.error}</Notice>}
           {result && (
             <>
-              <div className="grid-2">
-                <Button size="sm" onClick={onPlay}>
-                  {crowd.playing ? "Pause" : "Play"}
-                </Button>
-                <Button size="sm" onClick={onRestart}>
-                  From the start
-                </Button>
-              </div>
+              {!settings.crowdWithFire && (
+                <div className="grid-2">
+                  <Button size="sm" onClick={onPlay}>
+                    {crowd.playing ? "Pause" : "Play"}
+                  </Button>
+                  <Button size="sm" onClick={onRestart}>
+                    From the start
+                  </Button>
+                </div>
+              )}
               <p className="field__hint" aria-live="off">
-                {Math.round(crowd.time)} s of {Math.ceil(result.lastOut)} s{settings.crowdRate > 1 ? `, at ${settings.crowdRate} times real time` : ""}.
+                {Math.round(crowd.time)} s of {Math.ceil(result.lastOut)} s
+                {settings.crowdWithFire ? ", on the fire's clock" : settings.crowdRate > 1 ? `, at ${settings.crowdRate} times real time` : ""}.
               </p>
               <p className="field__hint">
                 {swatch("waiting", "not yet off")}
@@ -1471,6 +1521,8 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
                 {result.exits.map((e) => `${e.people}`).join(", ")} through {result.exits.length} exit{result.exits.length === 1 ? "" : "s"}; the longest hold-up{" "}
                 {Math.round(result.longestWait)} s.
                 {result.unreached > 0 ? ` ${result.unreached.toLocaleString()} walkable places reach no exit and hold no one.` : ""}
+                {Number.isFinite(result.shelter) ? ` Each gathering place holds ${result.shelter}; ${Array.from(result.goneAt).filter(Number.isFinite).length} leave a full one.` : ""}
+                {result.cutOff > 0 ? ` ${result.cutOff} cut off by the fire stay where they are.` : ""}
               </Notice>
               {crowd.gpu && <p className="field__hint">Moved and drawn on the GPU: {crowd.gpu}.</p>}
               <p className="field__hint">

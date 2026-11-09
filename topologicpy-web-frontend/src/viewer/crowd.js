@@ -14,7 +14,8 @@
  * swing while walking). Colour says what each person is doing: grey before
  * setting off, light blue walking, amber held up by the crowd or a door for
  * more than half a second, green out at a gathering place; red is still
- * inside when the run ended.
+ * inside when the run ended. Someone who left a full gathering place
+ * (core/crowd.js goneAt) sinks a little and fades over FADE seconds.
  */
 import * as THREE from "three";
 
@@ -33,6 +34,10 @@ attribute float first;
 attribute float count;
 attribute float outAt;
 const int W = ${W};
+attribute float goneAt;
+const float FADE = 2.5;
+// 0 there, rising to 1 as they fade after leaving a full gathering place.
+float fadeOf() { return clamp((time - goneAt) / FADE, 0.0, 1.0); }
 vec4 seg(int k) { return texelFetch(segs, ivec2(k % W, k / W), 0); }
 vec3 pt(float i) { int k = int(i + 0.5); return texelFetch(pts, ivec2(k % W, k / W), 0).xyz; }
 // 0 before setting off, 1 walking, 2 held up, 3 out, 4 inside at the end.
@@ -60,11 +65,13 @@ vec3 colourOf(float state) { return colours[int(state + 0.5)]; }
 const DOT_VERTEX = `${LOOKUP}
 uniform float size;
 varying vec3 vColour;
+varying float vFade;
 void main() {
   vec3 p, dir; float state;
   locate(p, dir, state);
   vColour = colourOf(state);
-  vec4 mvPosition = modelViewMatrix * vec4(p + vec3(0.0, 0.9, 0.0), 1.0);
+  vFade = fadeOf();
+  vec4 mvPosition = modelViewMatrix * vec4(p + vec3(0.0, 0.9 - 0.4 * vFade, 0.0), 1.0);
   gl_PointSize = clamp(size / -mvPosition.z, 3.0, 18.0);
   gl_Position = projectionMatrix * mvPosition;
   #include <clipping_planes_vertex>
@@ -72,12 +79,14 @@ void main() {
 const DOT_FRAGMENT = `
 #include <clipping_planes_pars_fragment>
 varying vec3 vColour;
+varying float vFade;
 void main() {
   #include <clipping_planes_fragment>
+  if (vFade >= 1.0) discard;
   vec2 c = gl_PointCoord - 0.5;
   float r = dot(c, c);
   if (r > 0.25) discard;
-  gl_FragColor = vec4(mix(vColour, vColour * 0.55, smoothstep(0.12, 0.25, r)), 1.0);
+  gl_FragColor = vec4(mix(vColour, vColour * 0.55, smoothstep(0.12, 0.25, r)), 1.0 - vFade);
 }`;
 
 const FIGURE_VERTEX = `${LOOKUP}
@@ -88,9 +97,12 @@ attribute float tone;
 attribute float phase;
 varying vec3 vColour;
 varying float vShade;
+varying float vFade;
 void main() {
   vec3 p, dir; float state;
   locate(p, dir, state);
+  vFade = fadeOf();
+  p.y -= 0.4 * vFade;
   // The shirt says what they are doing; trousers and skin stay as they are.
   vColour = tone == 0.0 ? colourOf(state) : tone == 1.0 ? vec3(0.2, 0.24, 0.32) : vec3(0.93, 0.78, 0.65);
   // Arms and legs swing about the hip or shoulder while walking.
@@ -115,9 +127,11 @@ const FIGURE_FRAGMENT = `
 #include <clipping_planes_pars_fragment>
 varying vec3 vColour;
 varying float vShade;
+varying float vFade;
 void main() {
   #include <clipping_planes_fragment>
-  gl_FragColor = vec4(vColour * vShade, 1.0);
+  if (vFade >= 1.0) discard;
+  gl_FragColor = vec4(vColour * vShade, 1.0 - vFade);
 }`;
 
 /** A float texture of `rows` of four numbers, W texels wide. */
@@ -176,6 +190,7 @@ export function crowdObject(crowd, { style = "figures", clock = () => 0, colours
     geometry.setAttribute("first", new Attribute(Float32Array.from(first), 1));
     geometry.setAttribute("count", new Attribute(Float32Array.from(count), 1));
     geometry.setAttribute("outAt", new Attribute(Float32Array.from(outAt, (t) => (Number.isFinite(t) ? t : 1e30)), 1));
+    geometry.setAttribute("goneAt", new Attribute(Float32Array.from(crowd.goneAt ?? new Float32Array(people).fill(Infinity), (t) => (Number.isFinite(t) ? t : 1e30)), 1));
   };
   let object;
   if (style === "dots") {

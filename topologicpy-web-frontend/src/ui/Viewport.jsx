@@ -91,6 +91,8 @@ export function Viewport({
   guided,
   onStopGuided,
   onOpenNotes,
+  recording = null,
+  onRecord = null,
 }) {
   const containerRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
@@ -499,6 +501,22 @@ export function Viewport({
                   Fit
                 </Button>
               </div>
+              {onRecord && (
+                <Button
+                  size="sm"
+                  block
+                  onClick={onRecord}
+                  disabled={recording?.state === "encoding"}
+                  aria-pressed={recording?.state === "recording"}
+                  title="Record the view as a GIF: the fire, the smoke and the people as they play"
+                >
+                  {recording?.state === "recording"
+                    ? `Stop (${Math.round(recording.seconds)} of ${recording.limit} s)`
+                    : recording?.state === "encoding"
+                      ? "Making the GIF…"
+                      : "Record GIF"}
+                </Button>
+              )}
             </div>
           </div>
         </>

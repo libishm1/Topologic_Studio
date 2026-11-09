@@ -23,15 +23,31 @@
  * the door's less 0.15 m a side (performanceCheck.js doorCapacity): a door
  * of 0.9 m lets about 0.8 persons a second through.
  *
+ * With a fire (`closes`, each node's untenable time by the planners' rule,
+ * core/forecast.js), no one steps on to a place the fire has made
+ * untenable: every `replan` seconds each way out is worked out again with a
+ * closed place costing FIRE_PENALTY metres, so people turn back and take
+ * another exit when the fire cuts theirs, and anyone the fire has reached
+ * walks out of it the shortest way. Someone whose only way out is through
+ * the fire stays where they are (refuge in place) and is counted as cut off.
+ *
+ * On a stair a person steps on only when no one else stands within
+ * `stairGap` of the next node on the flight (0.9 m, about a person's
+ * length), so a stream down a stair keeps its gaps.
+ *
  * Out. Past an exit each person walks on to a gathering place a few metres
  * outside, at the level of the lowest exit (an upper exit's people come
  * down to the ground), and stands there, the later arrivals round the
- * earlier ones, so each exit's crowd shows how many chose it.
+ * earlier ones, so each exit's crowd shows how many chose it. With a
+ * `shelterArea`, a gathering place holds what that area takes at the
+ * spacing they stand at (GATHER_AREA a person); once full, each newcomer
+ * takes the place of the earliest there, who leaves (`goneAt`) and fades
+ * from the view.
  *
  * The result is each person's walk as straight segments (time, from, to),
  * which the view interpolates on the GPU from the playback time alone.
  */
-import { csr, edgeLengths } from "./route.js";
+import { Heap, csr, edgeLengths } from "./route.js";
 import { KIND_DOOR, KIND_LIFT, KIND_STAIR } from "./lattice.js";
 import { doorCapacity, walkTree } from "./performanceCheck.js";
 
@@ -47,6 +63,12 @@ export const SFPE = {
 };
 /** The unimpeded walking speed, SFPE's 0.85 k: 1.19 m/s. */
 export const FREE_SPEED = SFPE.free * SFPE.k;
+
+/** Metres a place the fire has made untenable adds to a way out: only taken by those already in it. */
+export const FIRE_PENALTY = 1000;
+
+/** m^2 a person standing at a gathering place: the sunflower's spacing, pi 0.45^2. */
+export const GATHER_AREA = Math.PI * 0.45 ** 2;
 
 /** A seeded uniform generator (mulberry32), so a crowd is the same each time. */
 function random(seed) {
@@ -76,10 +98,15 @@ function random(seed) {
  *   horizon       s, stop then; anyone still inside is reported
  *   seed          for where people are and how fast they walk
  *   blocked       edges no one may cross (walls)
+ *   stairGap      m kept clear round the next node on a stair (0: none)
+ *   shelterArea   m^2 each gathering place holds (Infinity: everyone)
+ *   closes        each node's untenable time, s (a fire's; null: none)
+ *   replan        s between ways out worked out again with a fire
  * @returns {{
  *   people: number, points: Float32Array, segments: Float32Array, first: Int32Array, count: Int32Array,
  *   exitOf: Int32Array, outAt: Float32Array, exits: Array<{node: number, people: number, last: number}>,
- *   unreached: number, inside: number, lastOut: number, longestWait: number, capped: boolean
+ *   unreached: number, inside: number, lastOut: number, longestWait: number, capped: boolean,
+ *   goneAt: Float32Array, shelter: number, cutOff: number
  * }}
  *   points: xyz of the graph's nodes at foot level, then the gathering places;
  *   segments: 4 numbers each, start s, end s, point from, point to, each person's
@@ -98,6 +125,10 @@ export function simulateCrowd(graph, opts = {}) {
     horizon = 900,
     seed = 1,
     blocked = null,
+    stairGap = 0.9,
+    shelterArea = Infinity,
+    closes = null,
+    replan = 2,
   } = opts;
   const n = graph.nodes.length / 3;
   const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
@@ -106,7 +137,38 @@ export function simulateCrowd(graph, opts = {}) {
   const { indptr, neighbours, edgeIds } = csr(graph);
   const length = edgeLengths(graph);
   // Metres to the nearest exit, and the next node on the way.
-  const { time: dist, next } = walkTree(graph, exits, { speed: 1, blocked });
+  let { time: dist, next } = walkTree(graph, exits, { speed: 1, blocked });
+  // The same with the places the fire has closed by t costing FIRE_PENALTY each.
+  const closedAt = (v, t) => closes !== null && closes[v] <= t;
+  const openTree = (t) => {
+    const time = new Float64Array(n).fill(Infinity);
+    const via = new Int32Array(n).fill(-1);
+    const heap = new Heap();
+    for (const e of exits) {
+      if (e < 0) continue;
+      const start = closedAt(e, t) ? FIRE_PENALTY : 0;
+      if (start >= time[e]) continue;
+      time[e] = start;
+      heap.push(start, e);
+    }
+    const done = new Uint8Array(n);
+    while (heap.size) {
+      const a = heap.pop();
+      if (done[a]) continue;
+      done[a] = 1;
+      for (let k = indptr[a]; k < indptr[a + 1]; k += 1) {
+        if (blocked?.[edgeIds[k]]) continue;
+        const b = neighbours[k];
+        const d = time[a] + length[edgeIds[k]] + (closedAt(b, t) ? FIRE_PENALTY : 0);
+        if (d < time[b]) {
+          time[b] = d;
+          via[b] = a;
+          heap.push(d, b);
+        }
+      }
+    }
+    return { time, next: via };
+  };
   const isExit = new Uint8Array(n);
   for (const e of exits) if (e >= 0) isExit[e] = 1;
 
@@ -163,17 +225,27 @@ export function simulateCrowd(graph, opts = {}) {
     const [h1, h2] = [0, 1, 2].filter((c) => c !== up);
     side[h1] = -dir[h2];
     side[h2] = dir[h1];
-    const g = { centre: p.map((x, c) => (c === up ? ground : x + dir[c] * 3.5)), dir, side, people: 0, last: 0 };
+    const g = { centre: p.map((x, c) => (c === up ? ground : x + dir[c] * 3.5)), dir, side, people: 0, last: 0, spots: [], here: [] };
     gather.set(e, g);
     return g;
   };
-  const spot = (g) => {
-    // A sunflower: the j-th arrival 0.45 sqrt(j) m out at the golden angle.
+  // How many a gathering place holds, and when each person left a full one.
+  const shelter = Number.isFinite(shelterArea) ? Math.max(1, Math.floor(shelterArea / GATHER_AREA)) : Infinity;
+  const goneAt = new Float32Array(people).fill(Infinity);
+  const spot = (g, i, t) => {
+    // A sunflower: the k-th place 0.45 sqrt(k) m out at the golden angle; in
+    // a full one the newcomer takes the place of the earliest still there.
     const j = g.people;
     g.people += 1;
-    const r = 0.45 * Math.sqrt(j + 0.5), a = j * 2.399963;
-    extra.push(g.centre.map((x, c) => x + r * (Math.cos(a) * g.dir[c] + Math.sin(a) * g.side[c])));
-    return n + extra.length - 1;
+    g.here.push(i);
+    if (j >= shelter) goneAt[g.here[j - shelter]] = t;
+    const k = j % shelter;
+    if (g.spots[k] === undefined) {
+      const r = 0.45 * Math.sqrt(k + 0.5), a = k * 2.399963;
+      extra.push(g.centre.map((x, c) => x + r * (Math.cos(a) * g.dir[c] + Math.sin(a) * g.side[c])));
+      g.spots[k] = n + extra.length - 1;
+    }
+    return g.spots[k];
   };
 
   const capacity = doorCapacity(doorWidth);
@@ -191,6 +263,32 @@ export function simulateCrowd(graph, opts = {}) {
     order.sort((p, q) => dist[at[p]] - dist[at[q]]);
   };
   sortOrder();
+  // The stair nodes within stairGap of each stair node, by the walk, found when first needed.
+  const nearStair = new Map();
+  const stairNear = (u) => {
+    if (nearStair.has(u)) return nearStair.get(u);
+    const found = [];
+    const seen = new Map([[u, 0]]);
+    const queue = [u];
+    while (queue.length) {
+      const a = queue.shift();
+      for (let k = indptr[a]; k < indptr[a + 1]; k += 1) {
+        const b = neighbours[k], d = seen.get(a) + length[edgeIds[k]];
+        if (d > stairGap || (seen.has(b) && seen.get(b) <= d) || kinds[b] !== KIND_STAIR) continue;
+        seen.set(b, d);
+        found.push(b);
+        queue.push(b);
+      }
+    }
+    nearStair.set(u, found);
+    return found;
+  };
+  // Whether a person at v may step on to u: no one holds it, and on a stair no one else stands close by.
+  const free = (u, v) => {
+    if (holder[u] >= 0) return false;
+    if (stairGap > 0 && kinds[u] === KIND_STAIR) for (const w of stairNear(u)) if (w !== v && holder[w] >= 0) return false;
+    return true;
+  };
   // The density round a node: those holding it and its neighbours, over their floor.
   const densityAt = (u) => {
     let held = holder[u] >= 0 ? 1 : 0;
@@ -200,20 +298,27 @@ export function simulateCrowd(graph, opts = {}) {
   };
 
   let t = 0;
+  const every = Math.max(1, Math.round(replan / dt));
   for (let step = 0; left > 0 && t < horizon; step += 1, t = step * dt) {
+    // With a fire, the ways out over the places still open, now and then.
+    if (closes !== null && step > 0 && step % every === 0) ({ time: dist, next } = openTree(t));
     if (step % 10 === 0) sortOrder();
     for (const i of order) {
       if (exitOf[i] >= 0 || ready[i] > t + 1e-9) continue;
       const v = at[i];
-      // The next node on the tree, or the best free neighbour as near the exit.
+      // The next node on the tree, or the best free neighbour as near the
+      // exit (any open one nearer, from a place the fire has closed).
       let u = next[v];
-      if (u >= 0 && holder[u] >= 0 && !isExit[u]) {
-        const limit = dist[u] + 1.0;
+      // From an open place no one steps into the fire; from inside it, anywhere out.
+      const inFire = closedAt(v, t);
+      if (u >= 0 && closedAt(u, t) && !inFire) u = -1;
+      if (u < 0 || (!isExit[u] && !free(u, v))) {
+        const limit = u >= 0 ? dist[u] + 1.0 : Infinity;
         let best = -1;
         for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
           if (blocked?.[edgeIds[k]]) continue;
           const w = neighbours[k];
-          if (holder[w] >= 0 || dist[w] >= dist[v] || dist[w] > limit || kinds[w] === KIND_LIFT) continue;
+          if (!free(w, v) || (closedAt(w, t) && !inFire) || !(dist[w] < dist[v]) || dist[w] > limit || kinds[w] === KIND_LIFT) continue;
           if (best < 0 || dist[w] < dist[best]) best = w;
         }
         u = best;
@@ -221,7 +326,9 @@ export function simulateCrowd(graph, opts = {}) {
       const doorShut = u >= 0 && (kinds[u] === KIND_DOOR || isExit[u]) && doorFree[u] > t + 1e-9;
       if (u < 0 || doorShut) {
         if (waitSince[i] < 0) waitSince[i] = t;
-        ready[i] = doorShut ? Math.max(t + dt, Math.ceil((doorFree[u] - 1e-9) / dt) * dt) : t + dt;
+        // Cut off by the fire: wait for the next look at the ways out.
+        const cut = u < 0 && dist[v] >= FIRE_PENALTY;
+        ready[i] = doorShut ? Math.max(t + dt, Math.ceil((doorFree[u] - 1e-9) / dt) * dt) : cut ? (Math.floor(step / every) + 1) * every * dt : t + dt;
         continue;
       }
       if (waitSince[i] >= 0) {
@@ -242,7 +349,7 @@ export function simulateCrowd(graph, opts = {}) {
       if (isExit[u]) {
         // Out: on to the gathering place, and the exit is free at once.
         const g = outward(u);
-        const p = spot(g);
+        const p = spot(g, i, arrive);
         const q = extra[p - n], e = pointOf(u);
         const walk = Math.hypot(q[0] - e[0], q[1] - e[1], q[2] - e[2]);
         segs[i].push(arrive, arrive + walk / vmax[i], u, p);
@@ -275,6 +382,9 @@ export function simulateCrowd(graph, opts = {}) {
   extra.forEach((p, j) => points.set(p, (n + j) * 3));
   let lastOut = 0;
   for (let i = 0; i < people; i += 1) if (Number.isFinite(outAt[i])) lastOut = Math.max(lastOut, outAt[i]);
+  // Still inside with no open way out at the end: cut off by the fire.
+  let cutOff = 0;
+  if (closes !== null) for (let i = 0; i < people; i += 1) if (exitOf[i] < 0 && dist[at[i]] >= FIRE_PENALTY) cutOff += 1;
   return {
     people,
     points,
@@ -290,6 +400,9 @@ export function simulateCrowd(graph, opts = {}) {
     longestWait,
     capped: wanted > people,
     doorCapacity: capacity,
+    goneAt,
+    shelter,
+    cutOff,
   };
 }
 
@@ -336,4 +449,26 @@ export function stairRunner(graph, crowd, { margin = 4, drop = 1.5 } = {}) {
     t += m.time;
   });
   return { people: 1, points, segments, first: Int32Array.of(0), count: Int32Array.of(best.moves.length), outAt: Float32Array.of(Infinity), duration: t };
+}
+
+/**
+ * One person on the forecast's way out (core/forecast.js planWithForecast:
+ * its earliest safe route, a node list and the time each is reached, in
+ * seconds from ignition), as a one-person crowd on that timeline: standing
+ * at the start until the plan sets off, out at its arrival. Null without a
+ * route.
+ */
+export function forecastRunner(graph, route) {
+  const nodes = route?.nodes, times = route?.times;
+  if (!nodes?.length || nodes.length < 2 || times?.length !== nodes.length) return null;
+  const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
+  const lift = graph.agentHeight || 0;
+  const points = new Float32Array(nodes.length * 3);
+  nodes.forEach((v, k) => {
+    for (let c = 0; c < 3; c += 1) points[k * 3 + c] = graph.nodes[v * 3 + c] - (c === up ? lift : 0);
+  });
+  const segments = new Float32Array((nodes.length - 1) * 4);
+  for (let k = 0; k + 1 < nodes.length; k += 1) segments.set([times[k], Math.max(times[k], times[k + 1]), k, k + 1], k * 4);
+  const arrival = times[times.length - 1];
+  return { people: 1, points, segments, first: Int32Array.of(0), count: Int32Array.of(nodes.length - 1), outAt: Float32Array.of(arrival), duration: arrival };
 }

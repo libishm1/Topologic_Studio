@@ -19,12 +19,13 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 import { api, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { CONVERTER } from "./lib/fragmentCache.js";
+import { isPhone } from "./lib/hardware.js";
 import { isCancelled, workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats, reachablePct } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
 import { floorsFromSpaces, slabsMissing } from "./core/spaceFloors.js";
-import { DETECTOR_VISIBILITY, earliestArrival, firstDetection, runRange, runSummary, stackFrames } from "./core/forecast.js";
+import { DETECTOR_VISIBILITY, buildForecast, earliestArrival, firstDetection, forecastFromFrames, runRange, runSummary, stackFrames } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
 import { KIND_DOOR, floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
@@ -37,7 +38,7 @@ import { RL_MAX_STEPS } from "./core/rl.js";
 import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
-import { GUIDED_RUNS, farthestFromExits, nodeAlong, stagesFor } from "./core/guided.js";
+import { GUIDED_RUNS, farthestFromExits, guidedOrigin, nodeAlong, stagesFor } from "./core/guided.js";
 import { describeFacts } from "./core/describeFacts.js";
 import { EGRESS_B, codeCheck, storeysOf } from "./core/codeCheck.js";
 import * as reportPages from "./core/perfReport.js";
@@ -2345,26 +2346,92 @@ export default function App() {
   // gathers outside it. Worked out once per graph and inputs; the GPU moves
   // them from this clock, so playing costs the page nothing per frame.
   const [crowdState, setCrowdState] = useState({ key: null, result: null, busy: false, error: null });
-  const crowdClockRef = useRef({ base: 0, since: 0, rate: 10, playing: false, end: 0 });
+  const crowdClockRef = useRef({ base: 0, since: 0, rate: 10, playing: false, end: 0, withFire: false });
   const [crowdTime, setCrowdTime] = useState(0);
+  // The fire's playback time (s since ignition), for people that play with
+  // it (settings.crowdWithFire): a Flamescapes frame's own time, else steps
+  // times seconds a step; between steps it runs on at the playback's pace.
+  const fireClockRef = useRef({ t: 0, dt: 0, at: 0, delay: 1, running: false, active: false, endedAt: 0 });
+  useEffect(() => {
+    const c = fireClockRef.current;
+    const frames = isFlamescapes(fire.model) ? combustionRef.current?.frames : null;
+    const dt = frames ? frames[0]?.time ?? 0 : settings.forecastSecondsPerStep;
+    const t = frames ? frames[fire.step]?.time ?? (frames.length ? frames.at(-1).time : 0) : fire.step * dt;
+    const now = performance.now();
+    Object.assign(c, { t, dt, at: now, delay: Math.max(1, settings.fireDelayMs), active: fire.running || fire.step > 0, endedAt: c.running && !fire.running ? now : c.endedAt, running: fire.running });
+  }, [fire.step, fire.running, fire.model, settings.forecastSecondsPerStep, settings.fireDelayMs]);
   const crowdNow = useCallback(() => {
     const c = crowdClockRef.current;
-    const t = c.playing ? c.base + ((performance.now() - c.since) / 1000) * c.rate : c.base;
+    const f = fireClockRef.current;
+    const now = performance.now();
+    if (c.withFire) {
+      // Before a fire they wait; while it plays they keep its time; once it
+      // has played out they carry on from its last moment at their own rate.
+      if (!f.active) return 0;
+      const t = f.running ? f.t + Math.min(1, (now - f.at) / f.delay) * f.dt : f.t + ((now - f.endedAt) / 1000) * c.rate;
+      return Math.min(t, c.end);
+    }
+    const t = c.playing ? c.base + ((now - c.since) / 1000) * c.rate : c.base;
     return Math.min(t, c.end);
   }, []);
-  const crowdKey = settings.crowd && graph ? JSON.stringify([planExitNodes(), settings.perfOccupantArea, settings.useWalls, settings.departAfter]) : null;
+  const crowdShelter = settings.crowdShelterOn ? settings.crowdShelterArea : 0;
+  // Egress with the fire: where and when it makes each place untenable, by
+  // the planners' rule (core/forecast.js): a finished Flamescapes run's
+  // frames, or the graph fire model's own forecast. Null without the fire.
+  const crowdRun = combustionRef.current;
+  const crowdFlames = settings.crowdWithFire && isFlamescapes(fire.model) && crowdRun?.done && !crowdRun.failed && crowdRun.graph === graph && crowdRun.result ? crowdRun : null;
+  const crowdGraphFire = settings.crowdWithFire && !isFlamescapes(fire.model) && fire.model !== "zone" && fire.step > 0 && points.fire && graph ? fire.model : null;
+  const crowdFireKey = crowdFlames
+    ? ["flames", crowdFlames.key, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility]
+    : crowdGraphFire
+      ? ["graph", crowdGraphFire, points.fire, settings.fireMaxSteps, settings.forecastSecondsPerStep, settings.untenableAbove]
+      : null;
+  const crowdKey = settings.crowd && graph ? JSON.stringify([planExitNodes(), settings.perfOccupantArea, settings.useWalls, settings.departAfter, crowdShelter, crowdFireKey]) : null;
+  const crowdAvoiding = Boolean(crowdFireKey);
   const crowdResult = crowdState.key === crowdKey && crowdState.graph === graph ? crowdState.result : null;
-  const crowdRunner = crowdResult && settings.crowdStairRunner ? crowdState.runner : null;
+  // The runner: down a stair on a loop, or the forecast's way out on its
+  // timeline (when a plan was made on this graph; until then, the stair).
+  const crowdPlanRoute = forecastPlan.result && forecastPlan.nodes === graph?.nodes ? forecastPlan.result.earliest : null;
+  const crowdRunnerKind = settings.crowdRunner === "forecast" && crowdPlanRoute ? "forecast" : "stair";
+  const crowdRunner = useMemo(() => {
+    if (!crowdResult || !settings.crowdStairRunner) return null;
+    if (crowdRunnerKind === "forecast") return crowdState.forecastRunner?.(graph, crowdPlanRoute) ?? null;
+    return crowdState.runner;
+  }, [crowdResult, settings.crowdStairRunner, crowdRunnerKind, crowdState, graph, crowdPlanRoute]);
   // The inputs as they read now, for the effect below, which runs on the key
   // alone: depending on its own state too, its cleanup cancelled the walk it
   // had just scheduled when it marked itself busy.
   const crowdInputsRef = useRef(null);
-  crowdInputsRef.current = { exits: crowdKey ? planExitNodes() : [], occupantArea: settings.perfOccupantArea, useWalls: settings.useWalls, departAfter: settings.departAfter };
+  crowdInputsRef.current = {
+    exits: crowdKey ? planExitNodes() : [],
+    occupantArea: settings.perfOccupantArea,
+    useWalls: settings.useWalls,
+    departAfter: settings.departAfter,
+    shelter: crowdShelter,
+    // Each node's untenable time (s; Infinity never), worked out when the walk is.
+    closes: () => {
+      if (crowdFlames) {
+        const frames = { ...stackFrames(crowdFlames.frames, graph.nodes.length / 3), frameSeconds: crowdFlames.result.frameSeconds };
+        return forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility }).untenable;
+      }
+      if (crowdGraphFire) {
+        return buildForecast(graph, {
+          model: crowdGraphFire,
+          seed: snap(graph, points.fire),
+          steps: settings.fireMaxSteps,
+          dt: settings.forecastSecondsPerStep,
+          threshold: settings.untenableAbove,
+          blocked: settings.useWalls ? graph.blocked : null,
+        }).untenable;
+      }
+      return null;
+    },
+  };
   // The key and graph of the walk last worked out, so switching off and on again does not work it out twice.
   const crowdDoneRef = useRef({ key: null, graph: null });
   useEffect(() => {
     if (!crowdKey || (crowdDoneRef.current.key === crowdKey && crowdDoneRef.current.graph === graph)) return undefined;
-    const { exits: exitNodes, occupantArea, useWalls, departAfter } = crowdInputsRef.current;
+    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
@@ -2379,7 +2446,7 @@ export default function App() {
         return;
       }
       import("./core/crowd.js")
-        .then(({ simulateCrowd, stairRunner }) => {
+        .then(({ simulateCrowd, stairRunner, forecastRunner }) => {
           if (!live) return;
           const t0 = performance.now();
           const result = simulateCrowd(graph, {
@@ -2387,9 +2454,13 @@ export default function App() {
             occupantArea,
             blocked: useWalls ? graph.blocked : null,
             start: [departAfter, departAfter + 10],
+            shelterArea: shelter > 0 ? shelter : Infinity,
+            closes: closes(),
+            // A phone draws fewer, so it keeps its pace.
+            maxPeople: isPhone() ? 1500 : 4000,
           });
           result.ms = performance.now() - t0;
-          finish({ result, runner: stairRunner(graph, result) });
+          finish({ result, runner: stairRunner(graph, result), forecastRunner });
         })
         .catch((error) => finish({ error: error?.message || String(error) }));
     }, 30);
@@ -2415,14 +2486,21 @@ export default function App() {
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return undefined;
-    viewer.setStairRunner?.(crowdRunner);
+    // The forecast's runner keeps the people's clock; the stair's loops in real time.
+    viewer.setStairRunner?.(crowdRunner, crowdRunnerKind === "forecast" ? { clock: crowdNow } : {});
     return () => viewer.setStairRunner?.(null);
-  }, [crowdRunner]);
+  }, [crowdRunner, crowdRunnerKind, crowdNow]);
   useEffect(() => {
     const clock = crowdClockRef.current;
     // The rate changes from where the walk is now.
     Object.assign(clock, { base: crowdNow(), since: performance.now(), rate: settings.crowdRate });
   }, [settings.crowdRate, crowdNow]);
+  useEffect(() => {
+    const clock = crowdClockRef.current;
+    // Unlinked again: the own clock goes on from where the fire had them.
+    if (clock.withFire && !settings.crowdWithFire) Object.assign(clock, { base: crowdNow(), since: performance.now(), playing: true });
+    clock.withFire = settings.crowdWithFire;
+  }, [settings.crowdWithFire, crowdNow]);
   // The time shown under the controls, four times a second while playing.
   useEffect(() => {
     if (!crowdResult) return undefined;
@@ -2444,6 +2522,55 @@ export default function App() {
     Object.assign(crowdClockRef.current, { base: 0, since: performance.now(), playing: true });
     setCrowdTime(0);
   }, []);
+  // ------------------------------------------------------- recording
+
+  // The view recorded as a GIF (lib/recorder.js): the fire, the smoke and the
+  // people as they play. Saved when stopped or at the device's limit.
+  const recordRef = useRef(null);
+  const [recording, setRecording] = useState({ state: "idle", seconds: 0, limit: 0 });
+  const toggleRecording = useCallback(async () => {
+    const current = recordRef.current;
+    if (current) {
+      setRecording((r) => ({ ...r, state: "encoding" }));
+      current.stop();
+      return;
+    }
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    try {
+      const { recordView, recordingLimits } = await import("./lib/recorder.js");
+      const limits = recordingLimits();
+      const rec = recordView(viewer, {
+        ...limits,
+        onTick: ({ seconds, stopped }) => setRecording((r) => (r.state === "idle" ? r : { ...r, seconds, state: stopped ? "encoding" : r.state })),
+      });
+      recordRef.current = rec;
+      setRecording({ state: "recording", seconds: 0, limit: limits.maxSeconds });
+      rec.done
+        .then(({ blob, frames }) => {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+          a.download = `${(file?.name || "topologic-studio").replace(/\.ifc(\.gz)?$/i, "")}-${stamp}.gif`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+          toast(`Saved a GIF of ${frames} frames (${formatBytes(blob.size)}).`, { variant: "info", ttl: 4000 });
+        })
+        .catch((error) => {
+          if (!isCancelled(error)) reportError(error, "Recording the view");
+        })
+        .finally(() => {
+          recordRef.current = null;
+          setRecording({ state: "idle", seconds: 0, limit: 0 });
+        });
+    } catch (error) {
+      reportError(error, "Recording the view");
+    }
+  }, [file, toast, reportError]);
+  useEffect(() => () => recordRef.current?.cancel(), []);
+
   // --------------------------------------------------------- extinguishers
 
   // Portable extinguishers (core/extinguishers.js): the IFC's, told by name
@@ -2838,8 +2965,9 @@ export default function App() {
         combustion: fire.combustion,
         plan: forecastPlan?.result ? forecastPlan : null,
         rl: rl.result,
+        crowd: crowdResult ? { result: crowdResult, withFire: crowdAvoiding, occupantArea: settings.perfOccupantArea } : null,
       }).text,
-    [file, modelInfo, studio.semantics, identification, graph, describeEgress, code.result, levelShift, path, settings.walkSpeed, fire, forecastPlan, rl.result],
+    [file, modelInfo, studio.semantics, identification, graph, describeEgress, code.result, levelShift, path, settings.walkSpeed, fire, forecastPlan, rl.result, crowdResult, crowdAvoiding, settings.perfOccupantArea],
   );
   const runDescribe = useCallback(async () => {
     describeAbortRef.current?.abort();
@@ -2883,8 +3011,6 @@ export default function App() {
     setGuided(null);
     closeLatest();
   }, [closeLatest]);
-  // useIgnition is a callback, not a hook; the alias keeps the hooks lint from reading it as one.
-  const applyIgnition = useIgnition;
   useEffect(() => {
     if (!guided || guided.stage === "done" || guided.error) return undefined;
     // Deferred a tick, so the stage's state changes happen outside the effect;
@@ -2934,7 +3060,9 @@ export default function App() {
       if (acted !== stage) {
         setTab("simulate");
         if (run.fire.model === "flamescapes") {
-          setSettings({ flamescapes: true, fireModel: "flamescapes", flamescapesDoors: run.fire.doors || "open", flamescapesHorizon: run.fire.horizon || 60 });
+          // A phone runs a shorter fire where the run says so.
+          const horizon = (isPhone() && run.fire.phoneHorizon) || run.fire.horizon || 60;
+          setSettings({ flamescapes: true, fireModel: "flamescapes", flamescapesDoors: run.fire.doors || "open", flamescapesHorizon: horizon });
           act(() => void findIgnition("residential"), points.fire);
         } else {
           setSettings({ flamescapes: false, fireModel: run.fire.model, reroute: true });
@@ -2943,14 +3071,48 @@ export default function App() {
           act(() => handlePick("fire", at(v)), points.fire);
         }
       } else if (run.fire.model === "flamescapes" && !guided.picked && ignition.candidates) {
-        if (!ignition.candidates.length) return fail("No likely ignition point was found in the model.");
+        // The likeliest origin near the route, on a floor that reaches an exit,
+        // clear of the start and the exits (core/guided.js guidedOrigin).
+        const pick = guidedOrigin(graph, {
+          candidates: ignition.candidates,
+          route: path?.node_ids || [],
+          exits: exits?.final || [],
+          start: points.start ? snap(graph, points.start) : -1,
+        });
+        if (!pick) return fail("No place for the fire was found in the model.");
         setGuided((g) => (g && g.run === run ? { ...g, picked: true } : g));
-        applyIgnition(ignition.candidates[0]);
+        handlePick("fire", at(pick.node));
+        const cls = pick.candidate?.scenario.fireClass;
+        if (FIRE_CLASSES[cls]) setSettings({ flamescapesClass: cls });
+        // As picking a likely ignition point by hand says (useIgnition).
+        if (pick.candidate) {
+          markUsed("ignition");
+          markFound("ignition", { label: pick.candidate.scenario.label });
+        }
       } else if (points.fire && points.fire !== before && (run.fire.model !== "flamescapes" || guided.picked)) advance();
+    } else if (stage === "people") {
+      // Everyone on the floors, leaving with the fire; the runner on the
+      // forecast's timeline once the plan is made; dots on a phone.
+      if (acted !== stage) {
+        act(() => setSettings({ crowd: true, crowdWithFire: true, crowdStairRunner: true, crowdRunner: "forecast", crowdStyle: isPhone() ? "dots" : "figures" }), null);
+      } else if (crowdResult) advance();
     } else if (stage === "fire") {
       if (acted !== stage) act(() => void startFire(), null);
       else if (fire.running && !guided.sawRunning) setGuided((g) => (g && g.run === run ? { ...g, sawRunning: true } : g));
       else if (guided.sawRunning && !fire.running && fire.step > 0) advance();
+    } else if (stage === "plan") {
+      if (acted !== stage) act(() => void planForecast(), forecastPlan.result);
+      else if (forecastPlan.result && forecastPlan.result !== before && !forecastPlan.busy) advance();
+    } else if (stage === "tour") {
+      // The fire plays again from its frames, the people and the runner with
+      // it, while the camera turns once round the building.
+      if (acted !== stage) {
+        act(() => {
+          viewerRef.current?.tour?.({ seconds: isPhone() ? 45 : 75 });
+          void startFire();
+        }, null);
+      } else if (fire.running && !guided.sawReplay) setGuided((g) => (g && g.run === run ? { ...g, sawReplay: true } : g));
+      else if (guided.sawReplay && !fire.running) advance();
     }
   };
   // A stage that waits too long ends the run (a fire on the GPU or a CPU core can take minutes).
@@ -3691,6 +3853,8 @@ export default function App() {
             }
             onOpenNotes={() => setNotesOpen(true)}
             onStopGuided={stopGuided}
+            recording={recording}
+            onRecord={toggleRecording}
           />
         ) : (
           <div className="viewport">
@@ -3841,6 +4005,10 @@ export default function App() {
                     result: crowdResult,
                     runner: crowdResult ? crowdState.runner : null,
                     gpu: crowdResult ? viewerRef.current?.gpuName?.() : null,
+                    fireActive: fire.running || fire.step > 0,
+                    avoiding: crowdAvoiding,
+                    runnerKind: crowdRunnerKind,
+                    planned: Boolean(crowdPlanRoute),
                     busy: crowdState.key === crowdKey && crowdState.busy,
                     error: crowdState.key === crowdKey ? crowdState.error : null,
                     time: crowdTime,

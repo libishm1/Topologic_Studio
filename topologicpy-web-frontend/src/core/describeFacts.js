@@ -169,6 +169,19 @@ export function describeFacts(s = {}) {
     lines.push(c.embersOn ? `Embers: on, ${c.embers ?? 0} thrown, ${c.spots ?? 0} spot fires.` : "Embers: off.");
   }
 
+  // People leaving (core/crowd.js), when the animation was run: an illustration.
+  const cr = s.crowd?.result;
+  if (cr?.people > 0) {
+    const exits = cr.exits || [];
+    lines.push(
+      `People leaving (the egress animation, an illustration, not an evacuation model): ${cr.people} people at one per ${s.crowd.occupantArea ?? "?"} m² of walkable floor, ` +
+        (s.crowd.withFire ? "with the fire, keeping out of places it made untenable" : "without the fire") +
+        `; the last out at ${duration(cr.lastOut)} through ${exits.length} exit${exits.length === 1 ? "" : "s"} (${exits.map((e) => e.people).join(", ")} people), the longest hold-up ${duration(cr.longestWait)}` +
+        (cr.cutOff > 0 ? `; ${cr.cutOff} cut off by the fire stayed where they were` : cr.inside > 0 ? `; ${cr.inside} still inside when the walk stopped` : "") +
+        ".",
+    );
+  }
+
   // The forecast plan (Panels.jsx planHeading).
   const plan = s.plan?.result;
   if (plan?.front) {

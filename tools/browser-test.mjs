@@ -11,7 +11,7 @@
  */
 import { chromium } from "playwright-core";
 import { mkdir, writeFile } from "node:fs/promises";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -598,6 +598,36 @@ if (await peopleSection.count()) {
   const dots = await page.evaluate(() => window.__viewer?.overlays?.get("crowd")?.type ?? null);
   record(dots === "Points", "the people can be drawn as dots", dots || "none");
   await page.getByLabel("Show them as").selectOption("figures").catch(() => {});
+  // Full gathering places clear (core/crowd.js shelterArea), an option.
+  await page.locator(".toggle__label", { hasText: /^Full gathering places clear$/ }).first().click().catch(() => {});
+  await page.getByLabel("Each gathering place").selectOption("10").catch(() => {});
+  const shelterLine = await page
+    .waitForFunction(() => document.body.innerText.match(/Each gathering place holds \d+; \d+ leave a full one\./)?.[0], null, { timeout: 30000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  record(Boolean(shelterLine), "a full gathering place clears as newcomers arrive", shelterLine || "no line");
+  await page.locator(".toggle__label", { hasText: /^Full gathering places clear$/ }).first().click().catch(() => {});
+  // Egress with the fire, an option: with no fire yet they wait for one.
+  await page.getByLabel("Egress").selectOption("fire").catch(() => {});
+  const waits = await page.getByText(/They wait for the fire/).count();
+  record(waits > 0, "egress with the fire waits for a fire", waits ? "waiting" : "no hint");
+  await page.getByLabel("Egress").selectOption("none").catch(() => {});
+  // Recording the view as a GIF (lib/recorder.js, workers/gif.worker.js).
+  const recordButton = page.getByRole("button", { name: /^Record GIF$/ });
+  if (await recordButton.count()) {
+    await recordButton.click();
+    await page.waitForTimeout(2500);
+    const [gif] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30000 }).catch(() => null),
+      page.getByRole("button", { name: /^Stop \(/ }).click().catch(() => {}),
+    ]);
+    const gifName = gif?.suggestedFilename() || "";
+    const gifPath = gif ? await gif.path().catch(() => null) : null;
+    const gifBytes = gifPath ? statSync(gifPath).size : 0;
+    record(/\.gif$/.test(gifName) && gifBytes > 1000, "the view records as a GIF", `${gifName || "no download"} (${(gifBytes / 1024).toFixed(0)} KB)`);
+  } else {
+    record(false, "the Record GIF button is offered");
+  }
   await page.locator(".toggle__label", { hasText: /^Show people leaving$/ }).first().click();
   await page.waitForTimeout(300);
   record(!(await page.evaluate(() => window.__viewer?.overlays?.has("crowd") ?? false)), "switched off, the people go");

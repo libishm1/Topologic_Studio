@@ -4,6 +4,15 @@ import assert from "node:assert/strict";
 import { DESCRIBE_INSTRUCTIONS, describeFacts } from "./describeFacts.js";
 import { codeCheck } from "./codeCheck.js";
 
+test("people leaving: the animation's outcome, said to be an illustration, with or without the fire", () => {
+  const result = { people: 197, lastOut: 305, longestWait: 260, exits: [{ people: 189 }, { people: 8 }], cutOff: 0, inside: 0 };
+  const without = describeFacts({ crowd: { result, withFire: false, occupantArea: 9 } }).text;
+  assert.match(without, /People leaving \(the egress animation, an illustration, not an evacuation model\): 197 people at one per 9 m² of walkable floor, without the fire; the last out at 5.1 min through 2 exits \(189, 8 people\), the longest hold-up 4.3 min\./);
+  const withFire = describeFacts({ crowd: { result: { ...result, cutOff: 3 }, withFire: true, occupantArea: 9 } }).text;
+  assert.match(withFire, /with the fire, keeping out of places it made untenable;[^\n]*; 3 cut off by the fire stayed where they were\./);
+  assert.doesNotMatch(describeFacts({}).text, /People leaving/);
+});
+
 test("the facts come from the app's state, with units, and leave out what it does not know", () => {
   const { lines, text } = describeFacts({
     file: { name: "duplex.ifc" },

@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FREE_SPEED, SFPE, simulateCrowd } from "./crowd.js";
+import { FREE_SPEED, GATHER_AREA, SFPE, simulateCrowd } from "./crowd.js";
 import { doorCapacity } from "./performanceCheck.js";
 import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "./lattice.js";
 
@@ -214,4 +214,126 @@ test("a runner loops down the stair the crowd uses most, at the walk's own speed
   // No stair, no runner.
   const flat = room(8, 4);
   assert.equal(stairRunner(flat.graph, simulateCrowd(flat.graph, { exits: flat.exits, occupantArea: 1 })), null);
+});
+
+/** Two floors joined by a straight stair of `steps` nodes, the upper room nx x nz; returns the graph and its exit. */
+function twoFloors(nx = 6, nz = 4, steps = 8) {
+  const s = 0.5, h = 0.75;
+  const nodes = [], kinds = [], edges = [];
+  const id = (i, k) => i * nz + k;
+  for (let i = 0; i < nx; i += 1) for (let k = 0; k < nz; k += 1) {
+    nodes.push(i * s, 3 + h, k * s);
+    kinds.push(KIND_FLOOR);
+  }
+  for (let i = 0; i < nx; i += 1) for (let k = 0; k < nz; k += 1) {
+    if (i + 1 < nx) edges.push(id(i, k), id(i + 1, k));
+    if (k + 1 < nz) edges.push(id(i, k), id(i, k + 1));
+  }
+  let prev = id(nx - 1, 1);
+  for (let j = 1; j <= steps; j += 1) {
+    const v = nodes.length / 3;
+    nodes.push((nx - 1) * s + j * 0.3, 3 - (j * 3) / steps + h, s);
+    kinds.push(KIND_STAIR);
+    edges.push(prev, v);
+    prev = v;
+  }
+  for (let j = 1; j <= 4; j += 1) {
+    const v = nodes.length / 3;
+    nodes.push((nx - 1) * s + steps * 0.3 + j * s, h, s);
+    kinds.push(j === 4 ? KIND_DOOR : KIND_FLOOR);
+    edges.push(prev, v);
+    prev = v;
+  }
+  return { graph: { nodes: Float32Array.from(nodes), edges: Int32Array.from(edges), kinds: Uint8Array.from(kinds), spacing: s, agentHeight: h, upAxis: "y" }, exit: prev };
+}
+
+/** The closest two people on stair nodes at any one time (m), sampled every 0.1 s. */
+function closestOnStair(graph, out) {
+  const ws = walks(out);
+  const n = graph.nodes.length / 3;
+  const end = Math.max(...ws.map((list) => list.at(-1).t1));
+  let closest = Infinity;
+  for (let t = 0; t <= end; t += 0.1) {
+    const held = [];
+    for (const list of ws) {
+      // The node a person holds at t: the target of their latest step begun.
+      let node = list[0].a;
+      for (const s of list) if (s.t0 <= t + 1e-9) node = s.b;
+      if (node < n && graph.kinds[node] === KIND_STAIR) held.push(node);
+    }
+    for (let a = 0; a < held.length; a += 1) for (let b = a + 1; b < held.length; b += 1) {
+      const d = Math.hypot(...[0, 1, 2].map((c) => graph.nodes[held[a] * 3 + c] - graph.nodes[held[b] * 3 + c]));
+      closest = Math.min(closest, d);
+    }
+  }
+  return closest;
+}
+
+test("on a stair people keep their gap; without it they would close up", () => {
+  const { graph, exit } = twoFloors();
+  const spaced = simulateCrowd(graph, { exits: [exit], occupantArea: 0.5 });
+  assert.equal(spaced.inside, 0);
+  assert.ok(closestOnStair(graph, spaced) > 0.9, `closest ${closestOnStair(graph, spaced).toFixed(2)} m`);
+  const packed = simulateCrowd(graph, { exits: [exit], occupantArea: 0.5, stairGap: 0 });
+  assert.ok(closestOnStair(graph, packed) < 0.9, "the test can tell");
+});
+
+test("a gathering place holds what its area takes; the earliest there leave first", () => {
+  const { graph, exits } = room(10, 6);
+  const out = simulateCrowd(graph, { exits, occupantArea: 0.5, shelterArea: 5 });
+  const C = Math.floor(5 / GATHER_AREA);
+  assert.equal(out.shelter, C);
+  assert.ok(out.people > C + 5);
+  const order = Array.from(out.outAt, (t, i) => [t, i]).sort((a, b) => a[0] - b[0]).map(([, i]) => i);
+  // Everyone but the last C to arrive leaves, in the order they came.
+  order.forEach((i, j) => assert.equal(Number.isFinite(out.goneAt[i]), j < out.people - C));
+  for (let j = 1; j < out.people - C; j += 1) assert.ok(out.goneAt[order[j]] >= out.goneAt[order[j - 1]]);
+  // Never more than C there at once.
+  for (const t of out.outAt) {
+    const there = Array.from(out.outAt).filter((a, i) => a <= t && out.goneAt[i] > t).length;
+    assert.ok(there <= C, `${there} there at ${t.toFixed(1)} s`);
+  }
+  // Unlimited by default: no one leaves.
+  const all = simulateCrowd(graph, { exits, occupantArea: 0.5 });
+  assert.ok(Array.from(all.goneAt).every((t) => t === Infinity));
+});
+
+test("the forecast's runner keeps the plan's timeline", async () => {
+  const { forecastRunner } = await import("./crowd.js");
+  const { graph } = room(6, 2);
+  const route = { nodes: [0, 2, 4, 6], times: [12, 13.5, 15, 17] };
+  const runner = forecastRunner(graph, route);
+  assert.equal(runner.count[0], 3);
+  assert.deepEqual(Array.from(runner.segments.subarray(0, 4)), [12, 13.5, 0, 1]);
+  assert.equal(runner.outAt[0], 17);
+  // At foot level: the nodes stand agentHeight above the floor.
+  assert.ok(Math.abs(runner.points[1] - (graph.nodes[1] - graph.agentHeight)) < 1e-6);
+  assert.equal(forecastRunner(graph, null), null);
+  assert.equal(forecastRunner(graph, { nodes: [3], times: [0] }), null);
+});
+
+test("with a fire, no one walks into a place it has made untenable; they turn to another exit or stay put", () => {
+  // A corridor 30 nodes long, an exit at each end.
+  const { graph, exits } = room(30, 1, { exits: ["left", "right"] });
+  const n = graph.nodes.length / 3;
+  // The fire closes nodes 6 to 9 from 2 s: those between it and the right
+  // exit that would have gone left must turn right.
+  const closes = new Float64Array(n).fill(Infinity);
+  for (let v = 6; v <= 9; v += 1) closes[v] = 2;
+  const out = simulateCrowd(graph, { exits, occupantArea: 0.25, closes, start: [0, 0] });
+  const without = simulateCrowd(graph, { exits, occupantArea: 0.25, start: [0, 0] });
+  // From an open place no one steps into the fire (those in it walk out).
+  for (const list of walks(out)) for (const s of list) if (s.b < n && closes[s.a] > s.t0) assert.ok(closes[s.b] > s.t0, `into node ${s.b} at ${s.t0.toFixed(1)} s`);
+  const turned = walks(out).filter((list, i) => list[0].a >= 10 && list[0].a <= 13 && out.exitOf[i] === exits[1] && without.exitOf[i] === exits[0]);
+  assert.ok(turned.length > 0, "someone turned to the other exit");
+  assert.equal(out.cutOff, 0);
+  // One exit only, the fire between: those beyond it stay where they are.
+  const single = room(30, 1);
+  const shut = new Float64Array(single.graph.nodes.length / 3).fill(Infinity);
+  for (let v = 5; v <= 7; v += 1) shut[v] = 0;
+  const trapped = simulateCrowd(single.graph, { exits: single.exits, occupantArea: 0.25, closes: shut, start: [0, 0], horizon: 60 });
+  const beyond = walks(trapped).filter((list) => list[0].a > 7).length;
+  assert.equal(trapped.cutOff, beyond);
+  assert.equal(trapped.inside, beyond);
+  for (const list of walks(trapped)) for (const s of list) if (s.b < single.graph.nodes.length / 3 && shut[s.a] > s.t0) assert.ok(shut[s.b] > s.t0);
 });

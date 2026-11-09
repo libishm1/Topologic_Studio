@@ -65,6 +65,20 @@
 
 The session stopped at the user's word (usage at 97 %), then went on ("continue"). Main is 0f256f0; the worktree has next/browser-core checked out; next/calibration is behind it at d0a1ffc. Still open: the state-machine audit (below).
 
+### Built after it, NOT released: the people options, recording and the demo (next/browser-core)
+
+The user liked the live site (0f256f0, tagged `live-2026-11-09-people`; restore by pushing the tag to main) and asked that it be preserved: every new feature is an option, off by default, except the stair gap. Release only on the user's word.
+
+- **Gaps on stairs** (core/crowd.js `stairGap` 0.9 m): a person steps on to a stair node only when no one else stands within 0.9 m of it on the flight.
+- **Gathering places with a capacity** ("Full gathering places clear", 10/25/50/100 m²): a place holds its area at GATHER_AREA (0.64 m², the sunflower spacing) a person; once full, each newcomer takes the earliest's place, who fades (`goneAt`, shader fade over 2.5 s).
+- **Egress with the fire** (option "Egress": without / with the fire): people keep the fire's playback time (Flamescapes frame times, else steps x seconds a step, smoothed between ticks; after it has played out they carry on at their own rate; before a fire they wait). With a finished fire run, `closes` = each node's untenable time by the planners' rule (forecastFromFrames(...).untenable, or buildForecast(...).untenable for the graph models; not `closes`, which is capped at the horizon): every 2 s the ways out are worked out again with a closed place costing FIRE_PENALTY (1 km), no one steps from an open place into a closed one, those the fire reaches walk out of it, and those whose only way out is through it stay put and are counted cut off. The user asked for it as an option.
+- **The runner** ("Down a stair, on a loop" as before, or "The forecast's way out, on its timeline": core/crowd.js `forecastRunner` on the plan's earliest route and times).
+- **Record GIF** (viewport button; lib/recorder.js reads the canvas just after each draw via ViewerManager.onRendered, workers/gif.worker.js encodes with gifenc 1.0.3, MIT, frame by frame): desktop 640 px, 10 fps, 30 s; phone 360 px, 8 fps, 15 s.
+- **Guided runs set the fire origin themselves** (core/guided.js `guidedOrigin`): the likeliest ignition point that snaps to a node reaching an exit, nearest the route and its node, 3 m clear of the start and the exits; else a node part-way along the route. Restores the "ignition" field note.
+- **Demo: "Vienna on the GPU"** (welcome screen guided run): open, graph, start, exit, route, origin, people (with the fire, forecast runner, dots on a phone), Flamescapes 120 s (60 s on a phone), the forecast plan, then a tour (ViewerManager.tour: one turn round the building, ended by touching the camera) while it all plays again. About 25 s on this PC's Intel GPU.
+- **The describer's facts** (core/describeFacts.js) say what the animation showed when it was run, labelled an illustration.
+- **Phones**: at most 1,500 people, dots in the demo, a smaller and shorter GIF.
+
 ### Built: people leaving (the user's egress animation)
 
 The user asked for an optional agent simulation: simple but convincing human figures on the floors, people as dots flowing along the graph to their nearest exits and gathering there, a single person running down a stair on a loop, on the GPU, fast but grounded in the literature, using their animation folder (two agent-based egress papers and five Mixamo FBX clips).

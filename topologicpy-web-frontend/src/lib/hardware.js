@@ -19,11 +19,16 @@ export function standardCells(backend) {
   return Math.min(backend.cells, STANDARD_CELLS);
 }
 
+/** Whether the browser says it runs on a phone or tablet. */
+export function isPhone(nav = globalThis.navigator) {
+  return /Android|iPhone|iPad|Mobile/i.test(nav?.userAgent || "");
+}
+
 /** Cells the CPU path can step in about 20 to 40 ms on this device. */
 export function cpuBudget(nav = globalThis.navigator) {
   const cores = nav?.hardwareConcurrency || 4;
   const memory = nav?.deviceMemory || 8; // GB, Chromium only
-  const mobile = /Android|iPhone|iPad|Mobile/i.test(nav?.userAgent || "");
+  const mobile = isPhone(nav);
   if (mobile || memory <= 4 || cores <= 4) return 15000;
   return 30000;
 }

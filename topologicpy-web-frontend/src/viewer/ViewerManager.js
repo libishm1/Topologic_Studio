@@ -1756,6 +1756,22 @@ export class ViewerManager {
     this._setOverlay(OVERLAY.crowd, crowd?.people ? crowdObject(crowd, { style, clock }) : null);
   }
 
+  /** The canvas the view is drawn on (for recording). */
+  canvas() {
+    return this.world?.renderer?.three?.domElement ?? null;
+  }
+
+  /**
+   * Calls `fn` just after each time the view is drawn, while its picture is
+   * still in the canvas (lib/recorder.js); returns the call that stops it.
+   */
+  onRendered(fn) {
+    const event = this.world?.renderer?.onAfterUpdate;
+    if (!event) return () => {};
+    event.add(fn);
+    return () => event.remove(fn);
+  }
+
   /**
    * The GPU drawing this view, as the browser names it (WebGL's unmasked
    * renderer, e.g. "ANGLE (NVIDIA, Quadro RTX 4000 ... Direct3D11 ...)"), or
@@ -1772,10 +1788,11 @@ export class ViewerManager {
   }
 
   /** One figure in a high-visibility shirt running down a stair on a loop, in real time (core/crowd.js stairRunner); null clears it. */
-  setStairRunner(runner) {
+  setStairRunner(runner, { clock = null } = {}) {
     const loop = runner?.duration > 0 ? runner.duration : 0;
-    const clock = () => (performance.now() / 1000) % loop;
-    this._setOverlay(OVERLAY.stairRunner, loop ? crowdObject(runner, { style: "figures", clock, colours: { walking: 0xf97316 } }) : null);
+    // A clock of its own (the forecast's runner keeps the people's), else a loop in real time.
+    const time = clock || (() => (performance.now() / 1000) % loop);
+    this._setOverlay(OVERLAY.stairRunner, loop ? crowdObject(runner, { style: "figures", clock: time, colours: { walking: 0xf97316 } }) : null);
   }
 
   /** Navigation's route, drawn like ours in its own overlay. */
@@ -2391,6 +2408,46 @@ export class ViewerManager {
       camera.position.copy(eye);
       camera.lookAt(center);
     }
+  }
+
+  /**
+   * A slow tour for a demonstration: from the iso view, one turn round the
+   * model in `seconds`, ended early by anyone taking the camera
+   * (camera-controls' controlstart). Returns the call that stops it.
+   */
+  tour({ seconds = 60 } = {}) {
+    this.stopTour?.();
+    const controls = this.world?.camera?.controls;
+    if (!controls?.rotate) return () => {};
+    this.setStandardView("iso");
+    let last = 0, turned = 0, frame = 0, stopped = false;
+    const stop = () => {
+      stopped = true;
+      cancelAnimationFrame(frame);
+      controls.removeEventListener?.("controlstart", stop);
+      if (this.stopTour === stop) this.stopTour = null;
+    };
+    const turn = (now) => {
+      if (stopped) return;
+      const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
+      last = now;
+      const step = (2 * Math.PI * dt) / seconds;
+      controls.rotate(step, 0, false);
+      turned += step;
+      if (this.world?.renderer) this.world.renderer.needsUpdate = true;
+      if (turned >= 2 * Math.PI) stop();
+      else frame = requestAnimationFrame(turn);
+    };
+    // After the move to the iso view.
+    const timer = setTimeout(() => {
+      if (!stopped) frame = requestAnimationFrame(turn);
+    }, 1200);
+    controls.addEventListener?.("controlstart", stop);
+    this.stopTour = () => {
+      clearTimeout(timer);
+      stop();
+    };
+    return this.stopTour;
   }
 
   /** Snap to an axis view. `which` is one of top/front/back/left/right/iso. */

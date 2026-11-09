@@ -100,8 +100,17 @@ export const DEFAULT_SETTINGS = {
   crowd: false,
   crowdStyle: "figures",
   crowdRate: 10,
-  // One figure running down a stair on a loop, when a walk takes one.
+  // One figure running down a stair on a loop, when a walk takes one; or,
+  // with crowdRunner "forecast" and a plan made, the forecast's evacuee on
+  // its earliest safe route and timeline.
   crowdStairRunner: true,
+  crowdRunner: "stair",
+  // People keep the fire's playback time (Simulate) instead of their own.
+  crowdWithFire: false,
+  // Gathering places hold crowdShelterArea m^2 of people when on; once full,
+  // the earliest there fade as newcomers arrive.
+  crowdShelterOn: false,
+  crowdShelterArea: 25,
   // The two-zone room model (fireModel "zone"; src/core/zone.js), on a clock
   // in seconds with gas temperatures in degrees C: a t-squared fire of this
   // growth up to this peak (and the room's ventilation limit), untenable from
