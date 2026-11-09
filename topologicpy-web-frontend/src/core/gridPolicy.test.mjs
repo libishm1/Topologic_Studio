@@ -89,3 +89,10 @@ test("the range over repeat runs: median, least and most, and runs where no node
   assert.deepEqual(runRange([run(12, 35, 373, 26.6)]).untenable, { median: 12, min: 12, max: 12 });
   assert.equal(runRange([run(0, null, 10, 1)]).firstUntenable, null);
 });
+
+test("people leaving is never remembered between visits: not stored, and dropped if an earlier version stored it", async () => {
+  const { SESSION_ONLY, withoutSessionOnly } = await import("./settingsMigration.js");
+  assert.ok(SESSION_ONLY.includes("crowd"));
+  assert.deepEqual(withoutSessionOnly({ crowd: true, crowdStyle: "dots", walkSpeed: 1.2 }), { crowdStyle: "dots", walkSpeed: 1.2 });
+  assert.deepEqual(withoutSessionOnly(null), {});
+});

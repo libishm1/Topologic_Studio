@@ -2374,12 +2374,23 @@ export default function App() {
     const t = c.playing ? c.base + ((now - c.since) / 1000) * c.rate : c.base;
     return Math.min(t, c.end);
   }, []);
+  // People leave only when asked for the graph on screen: a new graph
+  // switches them off (the demo turns them on again itself, after its
+  // graph). A graph is told by its nodes: the copy the server upload makes
+  // (graphId added) is the same graph.
+  const graphNodes = graph?.nodes ?? null;
+  const crowdGraphRef = useRef(graphNodes);
+  useEffect(() => {
+    if (crowdGraphRef.current === graphNodes) return;
+    crowdGraphRef.current = graphNodes;
+    if (settings.crowd) setSettings({ crowd: false });
+  }, [graphNodes, settings.crowd, setSettings]);
   const crowdShelter = settings.crowdShelterOn ? settings.crowdShelterArea : 0;
   // Egress with the fire: where and when it makes each place untenable, by
   // the planners' rule (core/forecast.js): a finished Flamescapes run's
   // frames, or the graph fire model's own forecast. Null without the fire.
   const crowdRun = combustionRef.current;
-  const crowdFlames = settings.crowdWithFire && isFlamescapes(fire.model) && crowdRun?.done && !crowdRun.failed && crowdRun.graph === graph && crowdRun.result ? crowdRun : null;
+  const crowdFlames = settings.crowdWithFire && isFlamescapes(fire.model) && crowdRun?.done && !crowdRun.failed && crowdRun.graph?.nodes === graphNodes && crowdRun.result ? crowdRun : null;
   const crowdGraphFire = settings.crowdWithFire && !isFlamescapes(fire.model) && fire.model !== "zone" && fire.step > 0 && points.fire && graph ? fire.model : null;
   const crowdFireKey = crowdFlames
     ? ["flames", crowdFlames.key, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility]
@@ -2388,7 +2399,7 @@ export default function App() {
       : null;
   const crowdKey = settings.crowd && graph ? JSON.stringify([planExitNodes(), settings.perfOccupantArea, settings.useWalls, settings.departAfter, crowdShelter, crowdFireKey]) : null;
   const crowdAvoiding = Boolean(crowdFireKey);
-  const crowdResult = crowdState.key === crowdKey && crowdState.graph === graph ? crowdState.result : null;
+  const crowdResult = crowdState.key === crowdKey && crowdState.nodes === graphNodes ? crowdState.result : null;
   // The runner: down a stair on a loop, or the forecast's way out on its
   // timeline (when a plan was made on this graph; until then, the stair).
   const crowdPlanRoute = forecastPlan.result && forecastPlan.nodes === graph?.nodes ? forecastPlan.result.earliest : null;
@@ -2428,17 +2439,17 @@ export default function App() {
     },
   };
   // The key and graph of the walk last worked out, so switching off and on again does not work it out twice.
-  const crowdDoneRef = useRef({ key: null, graph: null });
+  const crowdDoneRef = useRef({ key: null, nodes: null });
   useEffect(() => {
-    if (!crowdKey || (crowdDoneRef.current.key === crowdKey && crowdDoneRef.current.graph === graph)) return undefined;
+    if (!crowdKey || (crowdDoneRef.current.key === crowdKey && crowdDoneRef.current.nodes === graph.nodes)) return undefined;
     const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
-      crowdDoneRef.current = { key: crowdKey, graph };
-      setCrowdState({ key: crowdKey, graph, busy: false, result: null, error: null, ...state });
+      crowdDoneRef.current = { key: crowdKey, nodes: graph.nodes };
+      setCrowdState({ key: crowdKey, nodes: graph.nodes, busy: false, result: null, error: null, ...state });
     };
-    setCrowdState({ key: crowdKey, graph, result: null, busy: true, error: null });
+    setCrowdState({ key: crowdKey, nodes: graph.nodes, result: null, busy: true, error: null });
     // A moment for the panel to say it is working before the walk is worked out.
     const timer = setTimeout(() => {
       if (!exitNodes.length) {

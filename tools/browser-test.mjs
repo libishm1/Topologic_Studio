@@ -592,6 +592,9 @@ if (await peopleSection.count()) {
   record(Boolean(crowdLine) && drawn === counted && counted > 0, "everyone walks out to an exit, drawn as figures", `${crowdLine.slice(0, 160)} (${drawn} drawn, ${((Date.now() - tCrowd) / 1000).toFixed(1)}s)`);
   const runnerDrawn = await page.evaluate(() => window.__viewer?.overlays?.has("stairRunner") ?? false);
   record(runnerDrawn, "a runner loops down a stair", runnerDrawn ? "drawn" : "none");
+  // The switch lasts for the visit only, so a later graph does not start them (2026-11-09).
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("ts.settings") || "{}").crowd);
+  record(stored === undefined, "the people switch is not remembered for the next visit", stored === undefined ? "not stored" : `stored ${stored}`);
   await shot(page, "people-leaving");
   await page.getByLabel("Show them as").selectOption("dots").catch(() => {});
   await page.waitForTimeout(300);

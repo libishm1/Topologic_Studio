@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api, openFireStream } from "../lib/api.js";
 import { cacheSize, clearCache } from "../lib/fragmentCache.js";
 import { mark } from "../lib/perf.js";
-import { migrateSettings } from "../core/settingsMigration.js";
+import { migrateSettings, withoutSessionOnly } from "../core/settingsMigration.js";
 
 const THEME_KEY = "ts.theme";
 const SETTINGS_KEY = "ts.settings";
@@ -273,7 +273,7 @@ function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...migrateSettings(JSON.parse(raw)) };
+    return { ...DEFAULT_SETTINGS, ...withoutSessionOnly(migrateSettings(JSON.parse(raw))) };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -386,7 +386,7 @@ export function useStudio() {
     setSettingsState((current) => {
       const next = typeof patch === "function" ? patch(current) : { ...current, ...patch };
       try {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(withoutSessionOnly(next)));
       } catch {
         /* not fatal */
       }
