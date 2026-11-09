@@ -17,6 +17,9 @@ import {
   poolCap,
   exchange,
   gasDensity,
+  hashUnit,
+  particleStep,
+  pcgHash,
   step,
   stoichiometry,
   survives,
@@ -464,4 +467,70 @@ test("every fire class burns: liquid pools give off at most their burning rate",
     const out = runScene(scene, { nodes: Float32Array.from([2.5, 0.75, 2]), horizon: 5, frameSeconds: 5, particles: 0 });
     assert.ok(out.stats.released > 1e5, `class ${cls}: released ${out.stats.released} J`);
   }
+});
+
+test("radiation emits from the step's starting temperatures: the heat radiated does not hang on the rays", () => {
+  // A block of hot, sooty gas: rays from one cell are nearly all absorbed in
+  // its neighbours (kappa Y_soot h = 500 x 0.02 x 0.4 = 4). Added as each ray
+  // went, a neighbour later in the loop re-emitted some of it, by where the
+  // random rays had gone (the CPU before 2026-11-09; the GPU never did).
+  const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 4000, minCell: 0.4, contentsFuel: FIRE_CLASSES.A.fuel });
+  const radiated = (seed) => {
+    const sim = createSolver({ ...scene, contents: { cells: [], masses: [] }, ignition: null, pilot: null }, { contentsFuel: FIRE_CLASSES.A.fuel, maxParticles: 0, seed });
+    const g = sim.grid;
+    const ci = Math.floor((2.5 - g.origin[0]) / g.h), cj = Math.floor((1.5 - g.origin[1]) / g.h), ck = Math.floor((2 - g.origin[2]) / g.h);
+    let hot = 0;
+    for (let k = ck - 1; k <= ck + 1; k += 1) for (let j = cj - 1; j <= cj + 1; j += 1) for (let i = ci - 1; i <= ci + 1; i += 1) {
+      const c = i + g.nx * (j + g.ny * k);
+      if (sim.kind[c] !== 0) continue;
+      sim.T[c] = 1300;
+      sim.Y[c * NS + SPECIES.SOOT] = 0.02;
+      sim.rho[c] = gasDensity(sim.T[c], sim.Y, c * NS);
+      hot += 1;
+    }
+    assert.equal(hot, 27);
+    step(sim);
+    return sim.stats.radiated;
+  };
+  const a = radiated(1), b = radiated(2);
+  assert.ok(a > 0);
+  assert.ok(Math.abs(a - b) <= 1e-9 * a, `radiated ${a} J with one seed, ${b} J with another`);
+});
+
+test("pcgHash is the GPU's u32 PCG hash: checked against BigInt arithmetic", () => {
+  const M = 2n ** 32n;
+  const ref = (v) => {
+    const st = (BigInt(v) * 747796405n + 2891336453n) % M;
+    const word = (((st >> ((st >> 28n) + 4n)) ^ st) * 277803737n) % M;
+    return Number((word >> 22n) ^ word);
+  };
+  for (const v of [0, 1, 2, 5, 1234567, 2 ** 31, 2 ** 32 - 1, 0xdeadbeef]) assert.equal(pcgHash(v), ref(v), `v = ${v}`);
+  // hashUnit is the first draw of a cell's stream: in [0, 1) and spread evenly.
+  let low = 0;
+  for (let c = 0; c < 4000; c += 1) {
+    const u = hashUnit(c, 17, 5, 1);
+    assert.ok(u >= 0 && u < 1);
+    if (u < 0.5) low += 1;
+  }
+  assert.ok(low > 1850 && low < 2150, `${low} of 4000 below 0.5`);
+});
+
+test("flame particles that would overfill their share spawn from burning cells spread over the room, not the first in order", () => {
+  const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 4000, minCell: 0.4, contentsFuel: FIRE_CLASSES.A.fuel });
+  const sim = createSolver({ ...scene, contents: { cells: [], masses: [] }, ignition: null, pilot: null }, { contentsFuel: FIRE_CLASSES.A.fuel, maxParticles: 400 });
+  // Every open cell burning, labelled by its rank in cell order through its temperature.
+  const burning = [];
+  for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] === 0) burning.push(c);
+  burning.forEach((c, r) => {
+    sim.burning[c] = 1;
+    sim.T[c] = 400 + r;
+  });
+  particleStep(sim, 0.1);
+  const space = Math.ceil(sim.P.flameShare * sim.P.maxParticles);
+  assert.ok(6 * burning.length > 4 * space, `${burning.length} burning cells against room for ${space}`);
+  assert.ok(sim.parts.n > 0.7 * space && sim.parts.n <= space, `${sim.parts.n} particles, room for ${space}`);
+  let late = 0;
+  for (let q = 0; q < sim.parts.n; q += 1) if (sim.parts.T[q] - 400 >= burning.length / 2) late += 1;
+  // Refused in order, every particle came from the first cells; shared, about half from the later half.
+  assert.ok(late > 0.3 * sim.parts.n && late < 0.7 * sim.parts.n, `${late} of ${sim.parts.n} from the later half of the cells`);
 });

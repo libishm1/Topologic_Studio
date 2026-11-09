@@ -125,8 +125,8 @@ export const CI_FIELDS = 6;
  */
 export const AT = Object.freeze({ flame: 0, depGas: 1, depSolid: 2, ember: 3, emberMax: 4 });
 export const AT_FIELDS = 5;
-/** Counters in the `ctr` buffer. */
-export const CTR = Object.freeze({ count: 0, countB: 1, embers: 2, spots: 3, maxT: 4, before: 5 });
+/** Counters in the `ctr` buffer (burning: the cells that burned last step, for spawnFlame's share). */
+export const CTR = Object.freeze({ count: 0, countB: 1, embers: 2, spots: 3, maxT: 4, before: 5, burning: 6 });
 export const CTR_SIZE = 8;
 /** Floats per particle (three vec4). */
 export const PARTICLE_FLOATS = 12;
@@ -174,6 +174,7 @@ export const KERNELS = {
   pilot: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
   burner: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
   ducts: { uses: [0, 1, 2, 11], threads: one, wg: 1 },
+  countBurning: { uses: [0, 3, 9], threads: cells },
   spawnFlame: { uses: [0, 1, 3, 7, 9], threads: cells },
   spawnFlameEnd: { uses: [0, 9], threads: one, wg: 1 },
   spawnEmbers: { uses: [0, 1, 3, 4, 7, 9], threads: cells },
@@ -636,8 +637,21 @@ fn ducts() {
 
 // ------------------------------------------------------------------ particles (Alg. 1 lines 8 to 14)
 
+${perCell("countBurning", `
+  if (ci[ix(iBurning, c)] != 0u) { atomicAdd(&ctr[6], 1u); }`)}
+
 ${perCell("spawnFlame", `
   if (ci[ix(iBurning, c)] == 0u) { return; }
+  // More spawns than the flame particles' room: each burning cell spawns with
+  // the same chance, by the hash of the cell and the step that the CPU's
+  // particleStep draws alike (salt 5), not by which thread comes first.
+  let burningCells = atomicLoad(&ctr[6]);
+  let alive = atomicLoad(&ctr[5]);
+  let room = select(0u, U.flameCap - alive, U.flameCap > alive);
+  if (6u * burningCells > room) {
+    var rs = seedOf(c, 5u);
+    if (rnd(&rs) >= f32(room) / f32(6u * burningCells)) { return; }
+  }
   let p = vec3<f32>(coords(c)) + 0.5;
   let temp = max(cf[ix(fT, c)], cf[ix(fTs, c)]);
   let base = atomicAdd(&ctr[0], 6u);
@@ -657,6 +671,7 @@ ${perCell("spawnFlame", `
 fn spawnFlameEnd() {
   let limit = max(atomicLoad(&ctr[5]), U.flameCap);
   if (atomicLoad(&ctr[0]) > limit) { atomicStore(&ctr[0], limit); }
+  atomicStore(&ctr[6], 0u);
 }
 
 ${perCell("spawnEmbers", `

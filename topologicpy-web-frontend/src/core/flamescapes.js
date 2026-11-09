@@ -357,6 +357,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     },
     random: rng(P.seed),
     time: 0,
+    // Steps taken: the GPU's hash streams number steps alike (flamescapesGpu.js stepBase).
+    steps: 0,
     kindVersion: 0,
     pilot: scene.pilot || null,
     // A prescribed heat release (createBurner); null in every app run.
@@ -430,6 +432,26 @@ export function velocityAt(sim, x, y, z, out = [0, 0, 0], field = sim) {
 
 // ------------------------------------------------------------- particles
 
+/** The GPU's PCG hash (kernels.js pcg), on 32-bit unsigned integers. */
+export function pcgHash(v) {
+  const s = (Math.imul(v >>> 0, 747796405) + 2891336453) >>> 0;
+  const w = Math.imul((s >>> ((s >>> 28) + 4)) ^ s, 277803737) >>> 0;
+  return ((w >>> 22) ^ w) >>> 0;
+}
+
+/** Cell c's random stream in a step (kernels.js seedOf): its state before the first draw. */
+export function cellStream(c, step, salt, seed) {
+  return pcgHash((c ^ pcgHash((Math.imul(step, 8) + salt + pcgHash(seed >>> 0)) >>> 0)) >>> 0);
+}
+
+/**
+ * The GPU's first draw from cell c's stream in a step (kernels.js seedOf then
+ * rnd), in [0, 1): the same number on both paths for the same cell, step,
+ * salt and seed.
+ */
+export function hashUnit(c, step, salt, seed) {
+  return (pcgHash(cellStream(c, step, salt, seed)) >>> 8) / 16777216;
+}
 
 function spawn(sim, kind, x, y, z, vx, vy, vz, T, m, life) {
   const pr = sim.parts;
@@ -477,14 +499,26 @@ const DIRS = [
 ];
 
 /** Algorithm 1 lines 8 to 14: spawn and move embers and flame-front particles. */
-function particleStep(sim, dt) {
+export function particleStep(sim, dt) {
   const { P, grid: g, parts: pr } = sim;
   const h = g.h;
   const vel = [0, 0, 0];
   // Flame front (section 4.7): six particles from every cell that burned,
   // one per axis direction; a flame particle keeps its direction in `m`.
+  // When they would overfill the flame particles' share of the buffer, each
+  // burning cell spawns with the same chance, by a hash of the cell and the
+  // step that the GPU draws alike (kernels.js spawnFlame). Refused in cell
+  // order instead (before 2026-11-09), the cells numbered last never spawned
+  // during a flare, and the CPU's fire fell back where the GPU's, refused by
+  // whichever thread came last, burned on (tools/flamescapes-gpu-check.mjs
+  // --phase spread).
+  let burningCells = 0;
+  for (let c = 0; c < sim.N; c += 1) if (sim.burning[c]) burningCells += 1;
+  const room = Math.max(0, Math.min(P.maxParticles, Math.ceil(P.flameShare * P.maxParticles)) - pr.n);
+  const share = 6 * burningCells > room ? room / (6 * burningCells) : 1;
   for (let c = 0; c < sim.N; c += 1) {
     if (!sim.burning[c]) continue;
+    if (share < 1 && hashUnit(c, sim.steps, 5, P.seed) >= share) continue;
     const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
     const temp = Math.max(sim.T[c], sim.Ts[c]);
     for (let d = 0; d < 6; d += 1) {
@@ -635,6 +669,16 @@ function solidCapacity(sim, c) {
  * gas emit; each emitting cell casts `rays` rays carrying equal shares, which
  * lose the fraction 1 - exp(-kappa Y_soot l) in every gas cell they cross and
  * leave the rest in the first solid or porous cell they meet.
+ *
+ * Every cell emits from its temperature at the start of the stage; what the
+ * rays leave is added once all have emitted, as on the GPU. Added as each ray
+ * went (before 2026-11-09), a cell later in the loop re-emitted heat it had
+ * taken in the same step, so the result hung on the cells' numbering: on the
+ * CPU a 200 kW burner's room cooled after the contents flared and its fire
+ * fell back, where the GPU's went on at 1 to 2 MW (tools/flamescapes-gpu-check.mjs
+ * --phase spread). The rays' directions come from each cell's own stream of
+ * the step (cellStream), as the GPU draws them, so both paths cast the same
+ * rays and differ only by float32 round-off.
  */
 function radiation(sim, dt) {
   const { P, grid: g } = sim;
@@ -642,6 +686,12 @@ function radiation(sim, dt) {
   const A = h * h;
   const Ta4 = P.ambient ** 4;
   const dir = [0, 0, 0];
+  const dep = { T: workArray(sim, "radGas", sim.N, Float64Array).fill(0), Ts: workArray(sim, "radSolid", sim.N, Float64Array).fill(0) };
+  let stream = 0;
+  const draw = () => {
+    stream = pcgHash(stream);
+    return (stream >>> 8) / 16777216;
+  };
   for (let c = 0; c < sim.N; c += 1) {
     const kc = sim.kind[c];
     let emitted = 0;
@@ -676,24 +726,30 @@ function radiation(sim, dt) {
     const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
     const share = emitted / P.rays;
     const faces = fromSolid ? openFaces(sim, i, j, k) : null;
+    // The cell's own stream of the step (salt 2), the GPU's: both paths cast the same rays.
+    stream = cellStream(c, sim.steps, 2, P.seed);
     for (let r = 0; r < P.rays; r += 1) {
       // A uniform direction on the sphere; from a surface, added to the
       // normal of one of its open faces, which gives Lambert's cosine law
       // over that face's hemisphere.
-      const zc = 2 * sim.random() - 1;
-      const phi = 2 * Math.PI * sim.random();
+      const zc = 2 * draw() - 1;
+      const phi = 2 * Math.PI * draw();
       const s = Math.sqrt(1 - zc * zc);
       dir[0] = s * Math.cos(phi);
       dir[1] = zc;
       dir[2] = s * Math.sin(phi);
       if (faces) {
-        const n = DIRS[faces[Math.floor(sim.random() * faces.length)]];
+        const n = DIRS[faces[Math.min(Math.floor(draw() * faces.length), faces.length - 1)]];
         for (let d = 0; d < 3; d += 1) dir[d] += n[d];
         const len = Math.hypot(dir[0], dir[1], dir[2]) || 1;
         for (let d = 0; d < 3; d += 1) dir[d] /= len;
       }
-      march(sim, i + 0.5, j + 0.5, k + 0.5, dir, share, c, fromSolid);
+      march(sim, i + 0.5, j + 0.5, k + 0.5, dir, share, c, fromSolid, dep);
     }
+  }
+  for (let c = 0; c < sim.N; c += 1) {
+    if (dep.T[c]) sim.T[c] += dep.T[c];
+    if (dep.Ts[c]) sim.Ts[c] += dep.Ts[c];
   }
 }
 
@@ -709,9 +765,13 @@ function openFaces(sim, i, j, k) {
   return out;
 }
 
-/** March one ray cell by cell (Amanatides-Woo), depositing its energy. */
-function march(sim, x, y, z, dir, energy, from, skipOwn) {
+/**
+ * March one ray cell by cell (Amanatides-Woo), depositing its energy: into
+ * `dep` ({T, Ts}, kelvin a cell) when given, to be added later, else at once.
+ */
+function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null) {
   const { P, grid: g } = sim;
+  const gasT = dep ? dep.T : sim.T, solidTs = dep ? dep.Ts : sim.Ts;
   const h = g.h;
   let i = Math.floor(x), j = Math.floor(y), k = Math.floor(z);
   const step = dir.map((d) => (d > 0 ? 1 : -1));
@@ -731,7 +791,7 @@ function march(sim, x, y, z, dir, energy, from, skipOwn) {
       const tau = P.sootAbsorption * sim.Y[c * NS + SPECIES.SOOT] * length;
       if (tau > 0) {
         const taken = left * (1 - Math.exp(-tau));
-        sim.T[c] += taken / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
+        gasT[c] += taken / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
         left -= taken;
       }
     }
@@ -742,7 +802,7 @@ function march(sim, x, y, z, dir, energy, from, skipOwn) {
     if (i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz) return; // leaves the domain
     const next = at(g, i, j, k);
     if (sim.kind[next] !== GAS && !(skipOwn && next === from)) {
-      sim.Ts[next] += left / Math.max(solidCapacity(sim, next), 1e-6);
+      solidTs[next] += left / Math.max(solidCapacity(sim, next), 1e-6);
       return;
     }
   }
@@ -750,8 +810,8 @@ function march(sim, x, y, z, dir, energy, from, skipOwn) {
   // absorbed in the gas cell it ended in, so no energy is lost.
   if (left > 0 && i >= 0 && j >= 0 && k >= 0 && i < g.nx && j < g.ny && k < g.nz) {
     const c = at(g, i, j, k);
-    if (sim.kind[c] === GAS) sim.T[c] += left / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
-    else sim.Ts[c] += left / Math.max(solidCapacity(sim, c), 1e-6);
+    if (sim.kind[c] === GAS) gasT[c] += left / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
+    else solidTs[c] += left / Math.max(solidCapacity(sim, c), 1e-6);
   }
 }
 
@@ -1933,5 +1993,6 @@ export function step(sim, dt = sim.P.dt) {
   for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] !== SOLID && sim.T[c] > maxT) maxT = sim.T[c];
   sim.stats.maxT = maxT;
   sim.time += dt;
+  sim.steps += 1;
   return sim;
 }

@@ -44,7 +44,7 @@
  * software adapter (--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader).
  *
  *   node tools/flamescapes-gpu-check.mjs [--headed] [--swiftshader] [--quick]
- *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|design|leak|systems|timing] [--horizon 120]
+ *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|timing] [--horizon 120] [--members 6]
  *        [--json out.json] [--url http://localhost:5173] (a running Vite server)
  */
 import { chromium } from "playwright-core";
@@ -70,6 +70,8 @@ const FIRE_CLASS = flag("--class", null);
 // --ducts: the app scene with two ceiling air terminals and the ventilation running.
 const DUCTS = args.includes("--ducts");
 const HORIZON = Number(flag("--horizon", QUICK ? 60 : 120));
+// --members N: the spread phase's ensemble on each path (0 skips it; default 6, 3 with --quick).
+const MEMBERS = Number(flag("--members", QUICK ? 3 : 6));
 
 // ---- a static server for the frontend's source files
 const TYPES = { ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".html": "text/html", ".wasm": "application/wasm" };
@@ -119,7 +121,7 @@ await page.goto(server ? `${origin}/check.html` : `${origin}/src/core/flamescape
  * Everything below runs in the page. It is serialised by Playwright, so it
  * holds its own helpers.
  */
-async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
+async function suite({ base, phase, horizon, quick, fireClass, ducts, members: spreadMembers }) {
   const V = await import(base + "voxelize.js");
   const F = await import(base + "flamescapes.js");
   const R = await import(base + "flamescapesRun.js");
@@ -222,9 +224,9 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
     return { TmaxC: Tmax - 273.15, sootMax, o2Min };
   };
 
-  /** A deep copy of a CPU solver state with its own random stream. */
+  /** A deep copy of a CPU solver state with its own random streams (the rays follow P.seed since 2026-11-09). */
   const cloneSim = (sim, seed) => {
-    const c = { ...sim, topo: null, random: V.rng(seed), stats: { ...sim.stats }, parts: { ...sim.parts } };
+    const c = { ...sim, P: { ...sim.P, seed }, topo: null, random: V.rng(seed), stats: { ...sim.stats }, parts: { ...sim.parts } };
     for (const key of Object.keys(sim)) if (ArrayBuffer.isView(sim[key])) c[key] = sim[key].slice();
     for (const key of Object.keys(sim.parts)) if (ArrayBuffer.isView(sim.parts[key])) c.parts[key] = sim.parts[key].slice();
     return c;
@@ -505,6 +507,98 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts }) {
     }
   }
 
+  // ---- 2d. spread (2026-11-09): the sprinkler phase's fire with no heads,
+  // members on each path with the room k mK warmer (member 0 is that phase's
+  // run). Whether the 200 kW burner lights the contents around it is a
+  // threshold, so one run on each path says little; the members show each
+  // path's spread. Only with --phase spread.
+  if (phase === "spread") {
+    const members = spreadMembers;
+    out.spread = { members, horizon, runs: { cpu: [], gpu: [] } };
+    for (let k = 0; k < members; k += 1) {
+      const o = { nodes: nodeArray, upAxis: "y", horizon, frameSeconds: 5, particles: 3000, solverOptions: { ambient: 293.15 + k * 1e-3 } };
+      for (const [name, fn] of [["cpu", (sc) => R.runScene(sc, o)], ["gpu", (sc) => runner.runScene(sc, o)]]) {
+        const sc = room(0.25, 200000);
+        sc.pilot = { ...sc.pilot, power: 200000 };
+        const r = await fn(sc);
+        out.spread.runs[name].push({ released: r.stats.released, burnt: r.stats.burnt, hrr: Array.from(r.hrr) });
+      }
+      log(`spread member ${k}: released CPU ${(out.spread.runs.cpu[k].released / 1e6).toFixed(2)} MJ, GPU ${(out.spread.runs.gpu[k].released / 1e6).toFixed(2)} MJ`);
+    }
+    // From identical states: the CPU's run at t0 handed to the GPU and to two
+    // CPU copies with other random streams (radiation's rays), 10 s on each,
+    // the heat released each second (kW); with radiation off too, which draws
+    // no random numbers.
+    out.spread.steps = [];
+    for (const [label, extra] of [["default", {}], ["radiation off", { emitAbove: 1e9 }]]) {
+      const sc = room(0.25, 200000);
+      sc.pilot = { ...sc.pilot, power: 200000 };
+      const base = solverOf(sc, { dt: 0.1, embers: false, ...extra });
+      for (const t0 of quick ? [25] : [20, 25, 30, 35]) {
+        while (base.time < t0 - 1e-9) F.step(base, 0.1);
+        const a = cloneSim(base, base.P.seed), b = cloneSim(base, 12);
+        const gpu = runner.createSim(base, {});
+        const kw = { cpu: [], cpuOther: [], gpu: [] };
+        let qa = a.stats.released, qb = b.stats.released;
+        for (let s = 0; s < 10; s += 1) {
+          for (let q = 0; q < 10; q += 1) {
+            F.step(a, 0.1);
+            F.step(b, 0.1);
+            gpu.step(0.1);
+          }
+          const fr = await gpu.readFrame({ particles: false });
+          kw.cpu.push((a.stats.released - qa) / 1000);
+          kw.cpuOther.push((b.stats.released - qb) / 1000);
+          kw.gpu.push(fr.released / 1000);
+          qa = a.stats.released;
+          qb = b.stats.released;
+        }
+        gpu.destroy();
+        out.spread.steps.push({ label, t0, kw });
+        const sum = (v) => v.reduce((x, y) => x + y, 0) / 1000;
+        log(`spread from ${label} at ${t0} s, next 10 s: released CPU ${sum(kw.cpu).toFixed(2)} MJ, CPU other rays ${sum(kw.cpuOther).toFixed(2)} MJ, GPU ${sum(kw.gpu).toFixed(2)} MJ`);
+      }
+    }
+    // One step after the contents flare: the heat radiated, and the heat the
+    // step left in the fuel (porous cells), the walls and the gas (J; the
+    // gas at c_p 1100), on each path from the same state.
+    out.spread.budget = [];
+    {
+      const sc = room(0.25, 200000);
+      sc.pilot = { ...sc.pilot, power: 200000 };
+      const base = solverOf(sc, { dt: 0.1, embers: false });
+      const P = base.P;
+      const cap = (s, c) => base.inertC[c] + Math.min(s.fuelMass[c], P.skinDensity * base.area[c]) * (base.fuels[base.fuelKind[c]].heatCapacity ?? P.fuelHeatCapacity) + s.moisture[c] * 4186;
+      const budget = (s0, s) => {
+        const e = { fuel: 0, walls: 0, gas: 0 };
+        for (let c = 0; c < base.N; c += 1) {
+          const k = base.kind[c];
+          if (k !== 0) e[k === 1 ? "fuel" : "walls"] += cap(s, c) * (s.Ts[c] - s0.Ts[c]);
+          if (k !== 2) e.gas += s.rho[c] * base.V * 1100 * (s.T[c] - s0.T[c]);
+        }
+        return e;
+      };
+      for (const t0 of quick ? [32] : [31, 32, 34]) {
+        while (base.time < t0 - 1e-9) F.step(base, 0.1);
+        const s0 = { T: base.T.slice(), Ts: base.Ts.slice(), rho: base.rho.slice(), fuelMass: base.fuelMass.slice(), moisture: base.moisture.slice() };
+        const a = cloneSim(base, base.P.seed), b = cloneSim(base, 12);
+        const gpu = runner.createSim(base, {});
+        F.step(a, 0.1);
+        F.step(b, 0.1);
+        gpu.step(0.1);
+        const fr = await gpu.readFrame({ particles: false });
+        const g = await gpu.readFields();
+        gpu.destroy();
+        const row = { t0 };
+        for (const [name, s, rad, rel] of [["cpu", a, a.stats.radiated - base.stats.radiated, a.stats.released - base.stats.released], ["cpuOther", b, b.stats.radiated - base.stats.radiated, b.stats.released - base.stats.released], ["gpu", g, fr.radiated, fr.released]]) {
+          row[name] = { radiated: rad, released: rel, ...budget(s0, s) };
+        }
+        out.spread.budget.push(row);
+        log(`spread one step at ${t0} s: radiated CPU ${row.cpu.radiated.toFixed(0)} J, other rays ${row.cpuOther.radiated.toFixed(0)} J, GPU ${row.gpu.radiated.toFixed(0)} J`);
+      }
+    }
+  }
+
   // ---- 2e. A design-fire first item (flamescapesRun.js itemBurner,
   // 2026-11-08): a fast t-squared 5 kg item, no pilot. Its heat is the
   // host's (flamescapes.js burnerHeat), the same on both paths, so the
@@ -741,7 +835,7 @@ const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
   console.log(`\n== ${phase}`);
-  const res = await page.evaluate(suite, { base: `${origin}/src/core/`, phase, horizon: HORIZON, quick: QUICK, fireClass: FIRE_CLASS, ducts: DUCTS });
+  const res = await page.evaluate(suite, { base: `${origin}/src/core/`, phase, horizon: HORIZON, quick: QUICK, fireClass: FIRE_CLASS, ducts: DUCTS, members: MEMBERS });
   if (res.error) {
     console.log(`  ${res.error}`);
     report.error = res.error;
@@ -786,6 +880,24 @@ Sprinklers: one quick-response head (RTI 50, C 0.4, 68 C) over a 200 kW burner; 
     const t = (x) => (x === null ? "-" : f(x, 1));
     const w = r.cpu.water ? `${f(r.cpu.water.emitted, 1)} (${f(r.cpu.water.evaporated, 2)}) / ${f(r.gpu.water?.emitted, 1)}` : "-";
     console.log(`  ${r.mode.padEnd(11)} | ${t(r.cpu.estimate)} / ${t(r.cpu.late)}   ${t(r.gpu.estimate)} / ${t(r.gpu.late)} | ${f(r.cpu.released / 1e6)} / ${f(r.gpu.released / 1e6)} | ${f(r.cpu.burnt, 3)} / ${f(r.gpu.burnt, 3)} | ${r.cpu.covered ?? "-"}, ${r.cpu.columns ?? "-"} | ${w} | ${f(r.cpu.ms / 1000, 1)} / ${f(r.gpu.ms / 1000, 1)}`);
+  }
+}
+if (report.spread) {
+  const s = report.spread;
+  console.log(`\nSpread: the sprinklers phase's fire, no heads, ${s.horizon} s, ${s.members} members on each path (ambient + k mK); frame heat release kW every 10 s`);
+  for (const side of ["cpu", "gpu"]) {
+    s.runs[side].forEach((r, k) => {
+      console.log(`  ${side.toUpperCase()} ${k}: released ${f(r.released / 1e6)} MJ, burnt ${f(r.burnt, 3)} kg, peak ${f(Math.max(...r.hrr), 0)} kW | ${r.hrr.filter((_, q) => (q + 1) % 2 === 0).map((q) => f(q, 0)).join(" ")}`);
+    });
+  }
+  console.log("  From identical states, 10 s on each: heat release kW each second, CPU with the GPU's rays / CPU other rays / GPU");
+  for (const r of s.steps || []) {
+    console.log(`  ${r.label} at ${r.t0} s: ${r.kw.cpu.map((q, k) => `${f(q, 0)}/${f(r.kw.cpuOther[k], 0)}/${f(r.kw.gpu[k], 0)}`).join("  ")}`);
+  }
+  console.log("  One step after the flare, kJ: radiated, released, and the heat the step left in the fuel, the walls and the gas; CPU with the GPU's rays / CPU other rays / GPU");
+  for (const r of s.budget || []) {
+    const k = (key) => `${f(r.cpu[key] / 1000, 1)}/${f(r.cpuOther[key] / 1000, 1)}/${f(r.gpu[key] / 1000, 1)}`;
+    console.log(`  at ${r.t0} s: radiated ${k("radiated")}  released ${k("released")}  fuel ${k("fuel")}  walls ${k("walls")}  gas ${k("gas")}`);
   }
 }
 if (report.design) {

@@ -25,7 +25,12 @@
 // (flamescapesRun.js withBurnerFlame); kept runs had none until the contents caught.
 // 7 (2026-11-08): that flame drawn as a flame (narrowing, flickering, at its
 // cells' temperatures) instead of a column of points at McCaffrey's.
-export const RUN_CACHE_VERSION = 7;
+// 8 (2026-11-09): the CPU's radiation emits from the stage's starting
+// temperatures, with the GPU's rays (each cell's own stream; flamescapes.js
+// radiation, cellStream); flame particles
+// beyond their share are refused by a hash on both paths, not in cell or
+// thread order (particleStep, kernels.js spawnFlame).
+export const RUN_CACHE_VERSION = 8;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 

@@ -17,8 +17,11 @@
  * What is changed from the CPU solver, and why (details in kernels.js):
  *   - float32 arithmetic; conduction in ten race-free passes (porous own
  *     gas, the +x, +y, +z faces split by parity, then the -x, -y, -z gas
- *     faces) that give every solid cell the CPU's own order of exchanges; radiation emission from start-of-pass temperatures with
- *     fixed-point deposits; embers' spot-ignition test once per cell and step;
+ *     faces) that give every solid cell the CPU's own order of exchanges; radiation's
+ *     deposits in fixed point (both paths emit from the stage's starting
+ *     temperatures and add the deposits after, since 2026-11-09); embers' spot-ignition test once per cell and step;
+ *     flame particles beyond their share refused by the same hash of cell and
+ *     step as the CPU's (since 2026-11-09; before, by whichever thread came last);
  *     random numbers from a per-thread PCG hash. With radiation and particles
  *     off, the GPU agrees with the CPU to float32 round-off and summation
  *     order: no more than the CPU differs from itself started one ulp apart
@@ -169,6 +172,8 @@ class GpuSim {
     this.sweepStride = Math.max(SWEEP_BYTES, device.limits.minUniformBufferOffsetAlignment || 256);
     this.time = sim.time || 0;
     this.stepCount = 0;
+    // The CPU's step count at upload: the random streams number steps from the run's start (sim.steps).
+    this.stepBase = sim.steps || 0;
     this.slot = 0;
     this.lastDt = P.dt;
     this.particlesOn = d.cap > 0;
@@ -451,7 +456,7 @@ class GpuSim {
         b.convective += E;
       }
     }
-    this.setParams({ dt, stepNo: this.stepCount, slot, settle, time: this.time, burnerN, burnerShare, burnerFuel });
+    this.setParams({ dt, stepNo: this.stepBase + this.stepCount, slot, settle, time: this.time, burnerN, burnerShare, burnerFuel });
     this.writeParams();
     // Each flooded or foamed room's state for this step (the CPU's chemistry computes the same at its start).
     if (this.systems) device.queue.writeBuffer(buf.sys, this.sysAt.state * 4, this.systems.update(this.time));
@@ -462,6 +467,7 @@ class GpuSim {
     if (burnerN) this.dispatch(pass, "burner");
     if (this.pilot && this.time < this.pilot.duration) this.dispatch(pass, "pilot");
     if (this.particlesOn) {
+      this.dispatch(pass, "countBurning");
       this.dispatch(pass, "spawnFlame");
       this.dispatch(pass, "spawnFlameEnd");
       if (this.embersOn) this.dispatch(pass, "spawnEmbers");
