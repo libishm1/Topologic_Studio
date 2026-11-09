@@ -828,20 +828,35 @@ function advect(sim, dt) {
   // being overwritten.
   const u = copyOf(sim, "u0", sim.u), v = copyOf(sim, "v0", sim.v), w = copyOf(sim, "w0", sim.w);
   const old = { u, v, w };
-  // Midpoint (RK2) back-trace in cell units, into `pos` (no allocation).
-  const back = (x, y, z) => {
-    velocityAt(sim, x, y, z, vel, old);
-    const mx = x - 0.5 * s * vel[0], my = y - 0.5 * s * vel[1], mz = z - 0.5 * s * vel[2];
+  // Midpoint (RK2) back-trace in cell units, into `pos` (no allocation), from
+  // the velocity (a, b, c) at its start.
+  const backFrom = (x, y, z, a, b, c) => {
+    const mx = x - 0.5 * s * a, my = y - 0.5 * s * b, mz = z - 0.5 * s * c;
     velocityAt(sim, mx, my, mz, vel, old);
     pos[0] = x - s * vel[0];
     pos[1] = y - s * vel[1];
     pos[2] = z - s * vel[2];
   };
+  const back = (x, y, z) => {
+    velocityAt(sim, x, y, z, vel, old);
+    backFrom(x, y, z, vel[0], vel[1], vel[2]);
+  };
+  // A back-trace starts at a face or a cell centre, where sampleFace's
+  // trilinear weights are 0, 1/2 or 1. Away from the domain's sides (where it
+  // clamps) the start's velocity is read here with sampleFace's own products
+  // and sums, less the terms it weights 0: the same numbers (but for the sign
+  // of an exact zero), three of the seven samples a face takes (2026-11-09).
+  const u1 = nx + 1, vk = nx * (ny + 1), wk = nx * ny, uk = (nx + 1) * ny;
   const T = copyOf(sim, "T0", sim.T), Y = copyOf(sim, "Y0", sim.Y);
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i <= nx; i += 1) {
-        back(i, j + 0.5, k + 0.5);
+        if (i >= 1 && i <= nx - 1 && j <= ny - 2 && k <= nz - 2) {
+          const bv = i - 1 + nx * j + vk * k, bw = i - 1 + nx * j + wk * k;
+          const v0 = v[bv] * 0.5 + v[bv + 1] * 0.5, v1 = v[bv + nx] * 0.5 + v[bv + nx + 1] * 0.5;
+          const w0 = w[bw] * 0.5 + w[bw + 1] * 0.5, w1 = w[bw + wk] * 0.5 + w[bw + wk + 1] * 0.5;
+          backFrom(i, j + 0.5, k + 0.5, u[i + u1 * j + uk * k], v0 * 0.5 + v1 * 0.5, w0 * 0.5 + w1 * 0.5);
+        } else back(i, j + 0.5, k + 0.5);
         sim.u[uAt(g, i, j, k)] = sampleFace(u, nx + 1, ny, nz, pos[0], pos[1] - 0.5, pos[2] - 0.5);
       }
     }
@@ -849,7 +864,12 @@ function advect(sim, dt) {
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j <= ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
-        back(i + 0.5, j, k + 0.5);
+        if (i <= nx - 2 && j >= 1 && j <= ny - 1 && k <= nz - 2) {
+          const bu = i + u1 * (j - 1) + uk * k, bw = i + nx * (j - 1) + wk * k;
+          const u0 = u[bu] * 0.5 + u[bu + 1] * 0.5, uu = u[bu + u1] * 0.5 + u[bu + u1 + 1] * 0.5;
+          const wv = (w[bw] * 0.5 + w[bw + nx] * 0.5) * 0.5 + (w[bw + wk] * 0.5 + w[bw + wk + nx] * 0.5) * 0.5;
+          backFrom(i + 0.5, j, k + 0.5, u0 * 0.5 + uu * 0.5, v[i + nx * j + vk * k], wv);
+        } else back(i + 0.5, j, k + 0.5);
         sim.v[vAt(g, i, j, k)] = sampleFace(v, nx, ny + 1, nz, pos[0] - 0.5, pos[1], pos[2] - 0.5);
       }
     }
@@ -857,7 +877,12 @@ function advect(sim, dt) {
   for (let k = 0; k <= nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
-        back(i + 0.5, j + 0.5, k);
+        if (i <= nx - 2 && j <= ny - 2 && k >= 1 && k <= nz - 1) {
+          const bu = i + u1 * j + uk * (k - 1), bv = i + nx * j + vk * (k - 1);
+          const u0 = u[bu] * 0.5 + u[bu + 1] * 0.5, uu = u[bu + uk] * 0.5 + u[bu + uk + 1] * 0.5;
+          const vv = (v[bv] * 0.5 + v[bv + nx] * 0.5) * 0.5 + (v[bv + vk] * 0.5 + v[bv + vk + nx] * 0.5) * 0.5;
+          backFrom(i + 0.5, j + 0.5, k, u0 * 0.5 + uu * 0.5, vv, w[i + nx * j + wk * k]);
+        } else back(i + 0.5, j + 0.5, k);
         sim.w[wAt(g, i, j, k)] = sampleFace(w, nx, ny, nz + 1, pos[0] - 0.5, pos[1] - 0.5, pos[2]);
       }
     }
@@ -872,7 +897,10 @@ function advect(sim, dt) {
       for (let i = 0; i < nx; i += 1) {
         const c = at(g, i, j, k);
         if (sim.kind[c] === SOLID) continue;
-        back(i + 0.5, j + 0.5, k + 0.5);
+        if (i <= nx - 2 && j <= ny - 2 && k <= nz - 2) {
+          const bu = i + u1 * j + uk * k, bv = i + nx * j + vk * k, bw = i + nx * j + wk * k;
+          backFrom(i + 0.5, j + 0.5, k + 0.5, u[bu] * 0.5 + u[bu + 1] * 0.5, v[bv] * 0.5 + v[bv + nx] * 0.5, w[bw] * 0.5 + w[bw + wk] * 0.5);
+        } else back(i + 0.5, j + 0.5, k + 0.5);
         const x = Math.min(Math.max(pos[0] - 0.5, 0), nx - 1.001);
         const y = Math.min(Math.max(pos[1] - 0.5, 0), ny - 1.001);
         const z = Math.min(Math.max(pos[2] - 0.5, 0), nz - 1.001);
@@ -1585,19 +1613,25 @@ function project(sim, dt) {
   // from the last step, so a calm flow needs few).
   const settle = (P.projectionTolerance * sim.rho0 * h) / dt;
   sim.stats.sweeps = 0;
+  const o0 = off[0], o1 = off[1], o2 = off[2], o3 = off[3], o4 = off[4], o5 = off[5];
   for (let sweep = 0; sweep < P.projection; sweep += 1) {
     let change = 0;
     for (const list of topo.colours) {
       for (let q = 0; q < list.length; q += 1) {
         const c = list[q];
         const mask = topo.mask[c];
-        let sum = 0;
-        if (mask & 1) sum += p[c + off[0]];
-        if (mask & 2) sum += p[c + off[1]];
-        if (mask & 4) sum += p[c + off[2]];
-        if (mask & 8) sum += p[c + off[3]];
-        if (mask & 16) sum += p[c + off[4]];
-        if (mask & 32) sum += p[c + off[5]];
+        let sum;
+        // A cell with all six neighbours open (most of them): the same sum in the same order, unbranched.
+        if (mask === 63) sum = p[c + o0] + p[c + o1] + p[c + o2] + p[c + o3] + p[c + o4] + p[c + o5];
+        else {
+          sum = 0;
+          if (mask & 1) sum += p[c + o0];
+          if (mask & 2) sum += p[c + o1];
+          if (mask & 4) sum += p[c + o2];
+          if (mask & 8) sum += p[c + o3];
+          if (mask & 16) sum += p[c + o4];
+          if (mask & 32) sum += p[c + o5];
+        }
         const next = (sum - scale * div[c]) / topo.count[c];
         const d = Math.abs(next - p[c]);
         if (d > change) change = d;
