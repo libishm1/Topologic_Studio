@@ -2,7 +2,8 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at 0f256f0 (released 2026-11-09 at the user's "the gpu works now lets add the agents to the deployment and test it"): people leaving, the optional egress animation (see "Built: people leaving" below). Live check 117 steps, 0 failed, 0 console errors, Render awake; the user confirmed WebGPU works on their Quadro RTX 4000 laptop. The backend did not change.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at 228dc6d (released 2026-11-09 at the user's "Release it"): 4a01f78, the people options, Record GIF, guided origins and the "Vienna on the GPU" demo (see "Built after it" below), then 228dc6d, deploy-pages waiting up to 20 minutes: the first deploy of 4a01f78 built but timed out at GitHub Pages' default 10 minutes ("Timeout reached, aborting!", no GitHub incident; the deploy before took 16 s), and the change's push ran it again. Live check 120 steps, 0 failed, 0 console errors, Render awake; the Vienna demo ran live start to end in 23 s on the GPU, no errors. The previous release is tagged `live-2026-11-09-people`. The user declined a chat on the describer.
+- **Released before it:** 0f256f0 (2026-11-09 at the user's "the gpu works now lets add the agents to the deployment and test it"): people leaving, the optional egress animation (see "Built: people leaving" below). Live check 117 steps, 0 failed, 0 console errors, Render awake; the user confirmed WebGPU works on their Quadro RTX 4000 laptop. The backend did not change.
 - **Released before it:** d0a1ffc (2026-11-09 at the user's "build the web deployment so I can test on my Quadro laptop", choosing "release now, crowd later"): fede128, 39c276a, e3effe6 and d0a1ffc, i.e. the CPU and GPU agreeing step by step, the CPU 12 to 26 % faster, the standard grid by default and repeat runs on the GPU (off by default). main, next/browser-core and next/calibration all point at it. Live check 112 steps, 0 failed, 0 console errors, Render awake (TopologicPy 0.9.86). The backend did not change.
 - **Released before it:** 7a8079d (2026-11-09, the user's "test why gpu releases twice the flame output and then release the fix"): the design-fire item's flame drawn as a flame (narrowing, flickering, at its cells' gas temperatures) instead of the "pillar of light" the user saw. Gates: 371 unit tests, lint, the Pages build, the browser suite desktop and mobile (0 failed), every phase of the GPU check; live check 0 failed steps, Render awake. The backend did not change.
 - **Branch `next/calibration` (not on main; merge only on the user's word, "only if we are confident we merge with main"):**
@@ -65,9 +66,9 @@
 
 The session stopped at the user's word (usage at 97 %), then went on ("continue"). Main is 0f256f0; the worktree has next/browser-core checked out; next/calibration is behind it at d0a1ffc. Still open: the state-machine audit (below).
 
-### Built after it, NOT released: the people options, recording and the demo (next/browser-core)
+### Built after it, released as 228dc6d: the people options, recording and the demo
 
-The user liked the live site (0f256f0, tagged `live-2026-11-09-people`; restore by pushing the tag to main) and asked that it be preserved: every new feature is an option, off by default, except the stair gap. Release only on the user's word.
+The user liked the live site (0f256f0, tagged `live-2026-11-09-people`; restore by pushing the tag to main) and asked that it be preserved: every new feature is an option, off by default, except the stair gap. Released at the user's word.
 
 - **Gaps on stairs** (core/crowd.js `stairGap` 0.9 m): a person steps on to a stair node only when no one else stands within 0.9 m of it on the flight.
 - **Gathering places with a capacity** ("Full gathering places clear", 10/25/50/100 m²): a place holds its area at GATHER_AREA (0.64 m², the sunflower spacing) a person; once full, each newcomer takes the earliest's place, who fades (`goneAt`, shader fade over 2.5 s).
