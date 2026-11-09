@@ -68,3 +68,10 @@ The benchmark supports the user's premise in part. The GPU is fast (about nine t
 4. **Slow CPUs kept responsive.** The CPU's budget is a fixed rule today (15,000 cells on phones and small machines, 30,000 otherwise); measuring the first frame's speed, as the GPU's worker does, would keep slower machines ahead of real time, at the cost of a coarser grid there (and so of reproducing the default). Playback already starts with the first frame.
 
 Which grid is the more accurate is the calibration plan's Stage 0 and Stage 1, not something this benchmark can say.
+
+## 5. Built (2026-11-09, the user's "build 1 to 3")
+
+- **1. The standard grid.** `settings.flamescapesGridPolicy` (was `flamescapesGrid`, migrated by `core/settingsMigration.js`: a stored "finest" stays, the old default "speed" gives way) defaults to `"standard"`: the worker caps every backend at `STANDARD_CELLS` (30,000, `lib/hardware.js standardCells`), so the GPU builds the desktop CPU's grid. A phone's or small machine's CPU keeps `cpuBudget`'s 15,000 so it is not slow, and its run card says the grid is lighter and can differ. The GPU's measured speed is kept only from `"speed"` runs, so a small grid does not size later finer grids too coarse.
+- **2. Repeat runs.** `settings.flamescapesRepeats` (1, 4 or 8; one by default, as heavy features are off by default): after a GPU run the page sends its inputs again to the same worker with the run's grid budget, and the worker runs the rest with the room k mK warmer, each answered with `core/forecast.js runSummary` (energy, peak, untenable nodes and first time by the planners' own `forecastFromFrames`). The run card gives the median and range (`runRange`), filled in as they arrive; a newer run ends them; none on the CPU. They start only if the run is still the current one on the same model.
+- **3. The finer grids** stay as options ("Finer on the GPU", "Finest on the GPU"), and the card says their fire differs from the standard grid's.
+- Proposal 4 (slow CPUs sized by measured speed) was not built.

@@ -6,6 +6,19 @@
  * a worker otherwise. Works in a page or a worker.
  */
 
+/**
+ * The standard grid's cell budget: every device's default, the CPU's on a
+ * desktop, so a GPU builds the grid a CPU does and gives the same fire
+ * (wiki/research/backend-benchmark-2026-11-09.md). A finer grid on the GPU
+ * is asked for by name.
+ */
+export const STANDARD_CELLS = 30000;
+
+/** A backend's budget on the standard grid: STANDARD_CELLS, or less where the CPU's own budget is smaller (phones, small machines). */
+export function standardCells(backend) {
+  return Math.min(backend.cells, STANDARD_CELLS);
+}
+
 /** Cells the CPU path can step in about 20 to 40 ms on this device. */
 export function cpuBudget(nav = globalThis.navigator) {
   const cores = nav?.hardwareConcurrency || 4;

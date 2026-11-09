@@ -12,6 +12,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
+import { STANDARD_CELLS } from "../lib/hardware.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS, designFireFor, waterResponse } from "../core/fireClasses.js";
@@ -1735,6 +1736,29 @@ const itemGrowthOptions = (cls) => [
 ];
 
 /** A design-fire first item on the run card: its curve, then what water or agent did to it. */
+/** What grid a run was built on, for its card's note (flamescapes.worker.js describe). */
+function gridNote(c) {
+  if (c.policy === "speed") return " A finer grid sized to this GPU's speed: its fire differs from the standard grid's, which every device builds by default.";
+  if (c.policy === "finest") return " The finest grid this GPU's memory allows: its fire differs from the standard grid's, which every device builds by default.";
+  if (c.policy === "standard" && c.budget < STANDARD_CELLS)
+    return ` This device's CPU builds a lighter grid (at most ${c.budget.toLocaleString()} cells) to keep ahead of real time: its fire can differ from the standard grid's.`;
+  return c.policy === "standard" ? " The standard grid, the same on every device." : "";
+}
+
+/** The range over a fire's repeat runs (core/forecast.js runRange), for its card. */
+function repeatsLine({ of, status, tenability: t, range }) {
+  const span = (s, f) => (!s ? "none" : s.min === s.max ? f(s.median) : `${f(s.median)} (${f(s.min)} to ${f(s.max)})`);
+  const runs =
+    status === "running" ? `${range.runs} of ${of} runs so far` : status === "stopped" ? `${range.runs} of ${of} runs (the rest stopped)` : `${range.runs} runs`;
+  const first = range.firstUntenable ? span(range.firstUntenable, (s) => `${Math.round(s)} s`) : "never";
+  const never = range.firstUntenable && range.noneUntenable ? `, none in ${range.noneUntenable} of them` : "";
+  return (
+    `${runs}, the median and its range: ${span(range.untenable, Math.round)} nodes untenable, the first at ${first}${never}; ` +
+    `peak ${span(range.peakKw, (kw) => `${(kw / 1000).toFixed(2)} MW`)}; ${span(range.releasedMJ, (mj) => `${mj.toFixed(1)} MJ`)} released. ` +
+    `Untenable at ${t.threshold} °C${t.smoke ? `, below ${t.visibilityLimit} m visibility` : ""} or by dose, as the plan reads it.`
+  );
+}
+
 function itemLine(design, summary, horizon) {
   const base = `${/^[aeiou]/i.test(design.growth) ? "an" : "a"} ${design.growth} t-squared fire (${design.alpha} kW/s²), ${design.mass} kg`;
   if (!summary) return base;
@@ -2293,6 +2317,12 @@ function CombustionStatus({ combustion, running }) {
             </dd>
           </div>
         )}
+        {combustion.repeats && (
+          <div className="result__item">
+            <dt className="result__label">Repeat runs</dt>
+            <dd className="result__value">{repeatsLine(combustion.repeats)}</dd>
+          </div>
+        )}
       </dl>
       {combustion.backend && (
         <p className="result__note">
@@ -2302,6 +2332,7 @@ function CombustionStatus({ combustion, running }) {
             : combustion.restarted
               ? " The GPU stopped partway, so the fire started again on the CPU."
               : ""}
+          {gridNote(combustion)}
           {combustion.clipped
             ? " The model is larger than the grid allows, so the grid covers the area round the fire; its sides are open to outside air, so smoke that reaches them leaves the run even where they cut through the building, and nodes outside it read as clear air."
             : ""}
@@ -2748,7 +2779,7 @@ export function SimulatePanel({
               onChange={(flamescapesBackend) => setSettings({ flamescapesBackend })}
               options={[
                 { value: "auto", label: "The GPU where the browser offers WebGPU, else the CPU" },
-                { value: "cpu", label: "The CPU (one core, coarser grid)" },
+                { value: "cpu", label: "The CPU (one core)" },
               ]}
             />
             <SelectField
@@ -2797,18 +2828,38 @@ export function SimulatePanel({
               system a terminal belongs to is not read, and 100 L/s a terminal is an assumption, not a measured value.
             </p>
             <SelectField
-              label="Grid on the GPU"
-              value={settings.flamescapesGrid}
-              onChange={(flamescapesGrid) => setSettings({ flamescapesGrid })}
+              label="Grid"
+              value={settings.flamescapesGridPolicy}
+              onChange={(flamescapesGridPolicy) => setSettings({ flamescapesGridPolicy })}
               options={[
-                { value: "speed", label: "Sized to keep three times real time on this GPU" },
-                { value: "finest", label: "The finest this GPU's memory allows (slower)" },
+                { value: "standard", label: "Standard: the same on every device, so the GPU and the CPU give one fire" },
+                { value: "speed", label: "Finer on the GPU: sized to keep three times real time" },
+                { value: "finest", label: "Finest on the GPU: all its memory allows (slower)" },
               ]}
             />
             <p className="field__hint">
               The fire depends on the grid: on the Duplex a sofa fire peaked at 0.09 MW on a 0.20 m grid, 2.5 MW on 0.23 m and 6.1 MW on
-              0.27 m. Keep one grid when comparing runs; the run card gives it. This browser remembers the GPU&apos;s speed, so the first
-              setting picks the same grid each time on the same GPU.
+              0.27 m. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device, so the CPU gives the
+              GPU&apos;s fire at about a ninth of its speed; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and
+              its card says so. The finer grids are for the GPU (the CPU builds the standard one) and give a different fire; which grid is
+              nearer a real fire has not been measured. Keep one grid when comparing runs; the run card gives it.
+            </p>
+            <SelectField
+              label="Repeat runs on the GPU"
+              value={String(settings.flamescapesRepeats)}
+              onChange={(value) => setSettings({ flamescapesRepeats: Number(value) })}
+              options={[
+                { value: "1", label: "One run" },
+                { value: "4", label: "4: the run you watch, then 3 more" },
+                { value: "8", label: "8: the run you watch, then 7 more" },
+              ]}
+            />
+            <p className="field__hint">
+              A fire that catches the room&apos;s contents is partly chance: the same run with the room a thousandth of a degree warmer can
+              hold or die back. After the run you watch, the GPU makes the rest on the same grid, each a thousandth of a degree warmer,
+              while the view plays on, and the card gives the median and range of the untenable nodes, the first untenable time, the peak
+              and the energy. On the standard grid each takes a few seconds; none are made on the CPU, where each would take as long as
+              the first.
             </p>
             <Toggle
               label="Record soot, CO₂ and O₂ too"

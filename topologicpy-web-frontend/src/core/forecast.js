@@ -436,6 +436,77 @@ export function forecastFromFrames(frames, { threshold = 60, smoke = true, visib
   return { n, K, stride, dt: frameSeconds, frameSeconds: stride * frameSeconds, horizon, rate, untenable, closes, threshold, model: "flamescapes" };
 }
 
+// ------------------------------------------------------- repeat runs, a range
+
+/**
+ * A run's frames as the page keeps them, one object a frame, stacked as
+ * forecastFromFrames reads them: T, vis and CO for `n` nodes, and CO2 and O2
+ * when every frame carries them.
+ */
+export function stackFrames(list, n) {
+  const K = list.length;
+  const gases = K > 0 && list.every((f) => f.co2 && f.o2);
+  const T = new Float32Array(K * n), vis = new Float32Array(K * n), co = new Float32Array(K * n);
+  const co2 = gases ? new Float32Array(K * n) : null, o2 = gases ? new Float32Array(K * n) : null;
+  list.forEach((f, k) => {
+    T.set(f.T, k * n);
+    vis.set(f.vis, k * n);
+    co.set(f.co, k * n);
+    if (gases) {
+      co2.set(f.co2, k * n);
+      o2.set(f.o2, k * n);
+    }
+  });
+  return { n, K, T, vis, co, ...(gases ? { co2, o2 } : {}) };
+}
+
+/**
+ * What one run of a repeat set reports for the range (runRange): the energy
+ * released (MJ), the peak heat release (kW), how many nodes become untenable
+ * within the horizon by the planners' own rule (forecastFromFrames, doses
+ * included) and the first time one does (s, null when none does). `frames`
+ * are stacked, with the run's `frameSeconds`, `hrr` (kW a frame) and
+ * `stats.released` (J).
+ */
+export function runSummary(frames, { threshold = 60, smoke = true, visibilityLimit = 10 } = {}) {
+  const forecast = forecastFromFrames(frames, { threshold, smoke, visibilityLimit });
+  let untenable = 0;
+  let first = Infinity;
+  for (let v = 0; v < forecast.n; v += 1) {
+    const t = forecast.untenable[v];
+    if (t < forecast.horizon) {
+      untenable += 1;
+      if (t < first) first = t;
+    }
+  }
+  let peak = 0;
+  for (const h of frames.hrr) if (h > peak) peak = h;
+  return { releasedMJ: frames.stats.released / 1e6, peakKw: peak, untenable, firstUntenable: first === Infinity ? null : first };
+}
+
+/** The median, least and most of the numbers in a list (nulls left out); null when there are none. */
+function spread(values) {
+  const v = values.filter((x) => x !== null && x !== undefined && Number.isFinite(x)).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const mid = v.length >> 1;
+  return { median: v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2, min: v[0], max: v.at(-1) };
+}
+
+/**
+ * The range over a repeat set's runs (runSummary each): each measure's
+ * median, least and most, and how many runs left every node tenable.
+ */
+export function runRange(members) {
+  return {
+    runs: members.length,
+    untenable: spread(members.map((m) => m.untenable)),
+    firstUntenable: spread(members.map((m) => m.firstUntenable)),
+    noneUntenable: members.filter((m) => m.firstUntenable === null).length,
+    peakKw: spread(members.map((m) => m.peakKw)),
+    releasedMJ: spread(members.map((m) => m.releasedMJ)),
+  };
+}
+
 /** Optical density per metre at which C/VM2 has a smoke detector respond (Table 3.2.2.2). */
 export const DETECTOR_OPTICAL_DENSITY = 0.097;
 /** The same as visibility of light-reflecting signs, C / (OD ln 10) with C = 3: 13.4 m. */

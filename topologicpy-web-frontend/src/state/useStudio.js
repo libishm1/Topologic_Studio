@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api, openFireStream } from "../lib/api.js";
 import { cacheSize, clearCache } from "../lib/fragmentCache.js";
 import { mark } from "../lib/perf.js";
+import { migrateSettings } from "../core/settingsMigration.js";
 
 const THEME_KEY = "ts.theme";
 const SETTINGS_KEY = "ts.settings";
@@ -120,10 +121,17 @@ export const DEFAULT_SETTINGS = {
   flamescapesSmoke: true, // visibility below the limit is untenable
   flamescapesVisibility: 10, // m
   flamescapesBackend: "auto", // "auto" (WebGPU where offered) or "cpu"
-  // The GPU's grid: "speed" (the finest level its measured speed steps at
-  // three times real time) or "finest" (the finest its memory allows). The
-  // results depend on the grid, so comparisons should keep one.
-  flamescapesGrid: "speed",
+  // The fire's grid: "standard", the same budget on every device so a GPU
+  // and a CPU give the same fire (lib/hardware.js STANDARD_CELLS; a phone's
+  // CPU keeps a smaller one); or, on the GPU, "speed" (the finest level its
+  // measured speed steps at three times real time) or "finest" (the finest
+  // its memory allows). The results depend on the grid, so comparisons should
+  // keep one. Named flamescapesGrid before 2026-11-09, defaulting to "speed".
+  flamescapesGridPolicy: "standard",
+  // Runs of each fire on the GPU, the first watched and the rest after it with
+  // the room a thousandth of a degree warmer each, for the range on the card;
+  // 1 for one run. Not on the CPU, where each takes as long as the first.
+  flamescapesRepeats: 1,
   // Openings for the smoke: doors "open" or "closed"; windows "closed" or "open".
   flamescapesDoors: "open",
   // With random doors (core/doorStates.js): the share closed and the seed that picks them.
@@ -223,7 +231,7 @@ export const PLAN_SETTINGS = [
   "flamescapesWindows",
   "flamescapesVentilation",
   "flamescapesTerminalFlow",
-  "flamescapesGrid",
+  "flamescapesGridPolicy",
 ];
 
 export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));
@@ -249,7 +257,7 @@ function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    return { ...DEFAULT_SETTINGS, ...migrateSettings(JSON.parse(raw)) };
   } catch {
     return DEFAULT_SETTINGS;
   }

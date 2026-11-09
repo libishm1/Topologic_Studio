@@ -921,6 +921,9 @@ if (await fsToggle.isVisible().catch(() => false)) {
   if (fsDone) timing("Flamescapes, 30 s simulated (click to complete)", Date.now() - tFs);
   const card = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
   record(/Running on (the GPU|one CPU core)/.test(card), "the run says what it ran on", card.split("\n").find((l) => /Running on/.test(l)) || "no backend line");
+  // The standard grid by default, the same on every device; a small CPU builds a lighter one and says so (lib/hardware.js, 2026-11-09).
+  const gridNote = card.match(/The standard grid, the same on every device\.|This device's CPU builds a lighter grid \(at most [\d,]+ cells\)/)?.[0] || "";
+  record(Boolean(gridNote), "the run is on the standard grid, and the card says so", gridNote || "no grid note");
   // This run asked for embers: the card says they are on (an "off" run says "off").
   const embersLine = card.split("\n").find((l) => /^on: \d+ thrown|^off$/.test(l.trim())) || "";
   record(/^on: \d+ thrown/.test(embersLine.trim()), "the run card says embers are on", embersLine.trim() || "no embers line");
@@ -977,6 +980,28 @@ if (await fsToggle.isVisible().catch(() => false)) {
   await startFs();
   const replayCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
   record(/Played from this browser/.test(replayCard), "the same run asked for again plays from the browser's kept runs", `${((Date.now() - tReplay) / 1000).toFixed(1)}s`);
+  // Repeat runs (settings.flamescapesRepeats, 2026-11-09): on the GPU, after
+  // the run, three more on its grid and the card gives the range; on the CPU none.
+  const onGpu = /Running on the GPU/.test(card);
+  await page.getByLabel("Repeat runs on the GPU").selectOption("4").catch(() => {});
+  await burns.selectOption(firstClass === "B" ? "A" : "B").catch(() => {});
+  const tRepeat = Date.now();
+  await startFs();
+  const repeated = onGpu
+    ? await page
+        .waitForFunction(() => /\n4 runs, the median and its range/.test(document.querySelector('[aria-label="Flamescapes run"]')?.innerText || ""), null, { timeout: 180000 })
+        .then(() => true)
+        .catch(() => false)
+    : true;
+  const repeatCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
+  const repeatLine = repeatCard.split("\n").find((l) => /runs.*the median and its range/.test(l)) || "";
+  record(
+    onGpu ? repeated && /nodes untenable/.test(repeatLine) : !/Repeat runs/.test(repeatCard),
+    onGpu ? "repeat runs on the GPU give the range on the card" : "no repeat runs on the CPU",
+    onGpu ? `${repeatLine.trim().slice(0, 200) || "no range"} (${((Date.now() - tRepeat) / 1000).toFixed(1)}s)` : "CPU run, none made",
+  );
+  await page.getByLabel("Repeat runs on the GPU").selectOption("1").catch(() => {});
+  await burns.selectOption(firstClass).catch(() => {});
   // Sprinklers (core/sprinklers.js, core/suppression.js, 2026-11-07): off by
   // default; on, the Duplex's rooms get heads by NFPA 13 with a rule report,
   // and a run reports when they open.

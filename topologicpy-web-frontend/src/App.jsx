@@ -24,7 +24,7 @@ import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeCol
 import { graphIsSplit, graphStats, reachablePct } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
 import { floorsFromSpaces, slabsMissing } from "./core/spaceFloors.js";
-import { DETECTOR_VISIBILITY, earliestArrival, firstDetection } from "./core/forecast.js";
+import { DETECTOR_VISIBILITY, earliestArrival, firstDetection, runRange, runSummary, stackFrames } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
 import { KIND_DOOR, floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
@@ -1556,8 +1556,8 @@ export default function App() {
       systems: systemRooms ? { rooms: systemRooms } : null,
       fireLoad: settings.flamescapesFireLoad * 1e6,
       backend: settings.flamescapesBackend,
-      // The GPU's measured speed (cells a ms) sizes its grid, unless the finest grid is asked for.
-      sizeBySpeed: settings.flamescapesGrid !== "finest",
+      // The grid: "standard" (the same on every device), "speed" (sized to this GPU's measured speed, cells a ms) or "finest".
+      grid: settings.flamescapesGridPolicy,
       gpuRate: gpuRateRef.current?.rate ?? null,
       gpuName: gpuRateRef.current?.name ?? null,
     };
@@ -1571,7 +1571,7 @@ export default function App() {
       settings.fireMaxSteps,
       settings.flamescapesFireLoad,
       settings.flamescapesBackend,
-      settings.flamescapesGrid,
+      settings.flamescapesGridPolicy,
       settings.flamescapesDoors,
       // The doors closed, so a random or as-built set is part of the run.
       [...shut].sort((a, b) => a - b).join(","),
@@ -1598,6 +1598,8 @@ export default function App() {
     const current = combustionRef.current;
     if (current && current.key === key && current.graph === graph && !current.failed) return current;
     flamescapesRef.current?.cancel();
+    // The model this run is built from: its repeat runs start only on it.
+    const geometryAtStart = geometryRef.current;
     const sprinklerPoints = payload.sprinklers?.heads.map((h) => h.position) ?? null;
     // How far each head's spray falls: to the highest floor at least 1 m below it.
     const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
@@ -1743,8 +1745,41 @@ export default function App() {
         throw error;
       },
     );
+    // Repeat runs on the GPU (settings.flamescapesRepeats): the same fire
+    // with the room a thousandth of a degree warmer each time, so the card
+    // gives the range of a fire that is partly chance, not one run. They go
+    // after this run, to its worker, on its grid; a newer run ends them.
+    const repeat = (result) => {
+      const count = settings.flamescapesRepeats - 1;
+      if (!(count > 0) || run.info?.backend?.kind !== "gpu" || !run.info.budget || !result?.hrr) return;
+      if (combustionRef.current !== run || geometryRef.current !== geometryAtStart) return;
+      const tenability = { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility };
+      const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: result.frameSeconds, hrr: result.hrr, stats: result.stats };
+      const members = [{ k: 0, ...runSummary(frames, tenability) }];
+      const show = (status) => {
+        if (combustionRef.current !== run) return;
+        run.repeats = { of: count + 1, status, tenability, range: runRange(members) };
+        studio.setFire((c) => (c.combustion ? { ...c, combustion: { ...c.combustion, repeats: run.repeats } } : c));
+      };
+      show("running");
+      // This run's own inputs again (the callback of its start), on its grid.
+      const again = combustionInputs();
+      flamescapesJob({ ...again.payload, maxCells: run.info.budget, repeats: { count, tenability } }, again.transfers, (progress) => {
+        if (progress.type !== "member") return;
+        members.push(progress.summary);
+        show("running");
+      }).then(
+        (answer) => show(answer?.skipped ? "stopped" : "done"),
+        // Ended by a newer run (its card is another), or the GPU failed: the range stays as far as it got.
+        () => show("stopped"),
+      );
+    };
     run.promise = (storeKey ? readRun(storeKey) : Promise.resolve(null)).then((stored) => {
-      if (stored) return replay(stored);
+      if (stored) {
+        const result = replay(stored);
+        repeat(result);
+        return result;
+      }
       return compute().then((result) => {
         // Kept once the browser is idle: copying the frames takes a moment.
         if (storeKey) {
@@ -1752,12 +1787,13 @@ export default function App() {
           if (typeof requestIdleCallback === "function") requestIdleCallback(keep, { timeout: 5000 });
           else setTimeout(keep, 1000);
         }
+        repeat(result);
         return result;
       });
     });
     combustionRef.current = run;
     return run;
-  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns, levels, systemsPlan]);
+  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns, settings.flamescapesRepeats, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, levels, systemsPlan]);
 
   const forgetRuns = useCallback(async () => {
     const { count, bytes } = await storedRuns();
