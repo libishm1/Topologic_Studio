@@ -56,3 +56,7 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Pages usually takes under a minute; on 2026-11-09 it took more than
+          # the default 10 minutes once and the release failed. Wait up to 20.
+          timeout: 1200000
