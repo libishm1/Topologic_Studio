@@ -2,7 +2,8 @@
 
 ## State
 
-- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at d0a1ffc (released 2026-11-09 at the user's "build the web deployment so I can test on my Quadro laptop", choosing "release now, crowd later"): fede128, 39c276a, e3effe6 and d0a1ffc, i.e. the CPU and GPU agreeing step by step, the CPU 12 to 26 % faster, the standard grid by default and repeat runs on the GPU (off by default). main, next/browser-core and next/calibration all point at it. Live check 112 steps, 0 failed, 0 console errors, Render awake (TopologicPy 0.9.86). The backend did not change.
+- **Live:** https://libishm1.github.io/Topologic_Studio/ is `origin/main` at 0f256f0 (released 2026-11-09 at the user's "the gpu works now lets add the agents to the deployment and test it"): people leaving, the optional egress animation (see "Built: people leaving" below). Live check 117 steps, 0 failed, 0 console errors, Render awake; the user confirmed WebGPU works on their Quadro RTX 4000 laptop. The backend did not change.
+- **Released before it:** d0a1ffc (2026-11-09 at the user's "build the web deployment so I can test on my Quadro laptop", choosing "release now, crowd later"): fede128, 39c276a, e3effe6 and d0a1ffc, i.e. the CPU and GPU agreeing step by step, the CPU 12 to 26 % faster, the standard grid by default and repeat runs on the GPU (off by default). main, next/browser-core and next/calibration all point at it. Live check 112 steps, 0 failed, 0 console errors, Render awake (TopologicPy 0.9.86). The backend did not change.
 - **Released before it:** 7a8079d (2026-11-09, the user's "test why gpu releases twice the flame output and then release the fix"): the design-fire item's flame drawn as a flame (narrowing, flickering, at its cells' gas temperatures) instead of the "pillar of light" the user saw. Gates: 371 unit tests, lint, the Pages build, the browser suite desktop and mobile (0 failed), every phase of the GPU check; live check 0 failed steps, Render awake. The backend did not change.
 - **Branch `next/calibration` (not on main; merge only on the user's word, "only if we are confident we merge with main"):**
   - fede128: the CPU and GPU fires agree step by step. The CPU's radiation emits from the stage's starting temperatures (it depended on cell numbering), flame particles beyond their share are refused by the same hash on both paths (cell order on the CPU, thread order on the GPU before), and the CPU casts the GPU's rays (`cellStream`, `pcgHash`). RUN_CACHE_VERSION 8. Open: over whole runs the 200 kW test room's fire held after its flare in 16 of 16 GPU runs and 8 of 16 CPU runs (p = 0.002); no shared-state window shows the bias. `wiki/research/gpu-cpu-fire-gap-2026-11-09.md`.
@@ -62,7 +63,7 @@
 
 ## Resume here (2026-11-09)
 
-The session stopped at the user's word (usage at 97 %), then went on ("continue"). Main is d0a1ffc (released at the user's word for the Quadro test); the worktree now has next/browser-core checked out.
+The session stopped at the user's word (usage at 97 %), then went on ("continue"). Main is 0f256f0; the worktree has next/browser-core checked out; next/calibration is behind it at d0a1ffc. Still open: the state-machine audit (below).
 
 ### Built: people leaving (the user's egress animation)
 
