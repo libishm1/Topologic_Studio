@@ -8,6 +8,17 @@ import assert from "node:assert/strict";
 
 import { effectiveEngine, isStaleSite } from "./session.js";
 import { ApiError, api, isGraphGone } from "../lib/api.js";
+import { humanCheckFailure } from "../lib/turnstile.js";
+
+test("a failed human check says why, from Cloudflare's error code", () => {
+  assert.match(humanCheckFailure("110200"), /does not accept this site's address \(code 110200\)/);
+  assert.match(humanCheckFailure("600010"), /could not confirm you are human \(code 600010\)\. A VPN/);
+  assert.match(humanCheckFailure("300030"), /could not confirm you are human/);
+  assert.match(humanCheckFailure("110620"), /timed out/);
+  assert.match(humanCheckFailure("400020"), /key is not valid/);
+  assert.equal(humanCheckFailure(undefined), "The human check failed. Reload the page and try again.");
+  assert.match(humanCheckFailure("999999"), /failed \(code 999999\)/);
+});
 
 test("a saved TopologicPy engine gives way to the browser's while the server lists no engines", () => {
   // Asleep, unreachable or absent: routing runs in the browser rather than refusing.

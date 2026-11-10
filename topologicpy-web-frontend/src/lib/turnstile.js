@@ -38,6 +38,23 @@ function loadTurnstile() {
 
 const failAll = (state, message) => state.waiters.splice(0).forEach((w) => w.reject(new Error(message)));
 
+/**
+ * What a failed check means, from Cloudflare's error code (its "client-side
+ * errors"): "The human check failed" alone did not say whether the site, the
+ * browser or Cloudflare's view of the visitor was the cause.
+ */
+export function humanCheckFailure(code) {
+  const c = String(code ?? "");
+  const tag = c ? ` (code ${c})` : "";
+  if (c === "110200") return `Cloudflare's check does not accept this site's address${tag}: the site key must list this domain.`;
+  if (["110100", "110110", "400020", "400070"].includes(c)) return `The site's human-check key is not valid${tag}.`;
+  if (c === "110500" || c === "110510") return `Cloudflare's check does not support this browser${tag}: try an up-to-date Chrome, Edge or Firefox.`;
+  if (c === "110600" || c === "110620" || c === "200100") return `The human check timed out${tag}: check the computer's clock, then try again.`;
+  if (/^(300|600)/.test(c))
+    return `Cloudflare could not confirm you are human${tag}. A VPN, an ad or privacy blocker, or strict tracking protection often causes this: switch them off for this site, or try another browser.`;
+  return `The human check failed${tag}. Reload the page and try again.`;
+}
+
 /** Show the check in `container` (theme "light", "dark" or "auto"). */
 export async function mountHumanCheck(container, { theme = "auto" } = {}) {
   if (!TURNSTILE_SITE_KEY || !container) return;
@@ -56,7 +73,8 @@ export async function mountHumanCheck(container, { theme = "auto" } = {}) {
       state.token = token;
       state.waiters.splice(0).forEach((w) => w.resolve(token));
     },
-    "error-callback": () => failAll(state, "The human check failed. Try again."),
+    // Cloudflare retries by itself; the request waiting now is told why.
+    "error-callback": (code) => failAll(state, humanCheckFailure(code)),
     "expired-callback": () => {
       state.token = null;
       turnstile.reset(state.id);
