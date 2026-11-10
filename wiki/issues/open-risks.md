@@ -135,3 +135,12 @@ serialised), B18 (the Worker's `/rooms` action; a siteverify outage read as a
 failed check). The server still answers a request with no graph id on the latest
 graph of its kind, whoever made it. All in
 [state-machines.md](../architecture/state-machines.md).
+
+## Area 3 leftovers (2026-11-10)
+
+Not fixed: C10 (a second model added before the first's semantics arrive is
+placed without them), C11 (after a WebGL context loss the storey cut stops
+clipping; traced in That Open's code, not run), C12 (suspected: a code check
+before the semantics keeps the fallback exits), C13 (overhead meshes keyed by
+file name), C16 (one abort slot for imports). All in
+[state-machines.md](../architecture/state-machines.md).

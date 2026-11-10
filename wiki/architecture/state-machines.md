@@ -14,7 +14,7 @@ A finding is **confirmed** when the full event sequence is traced line by line i
 |---|---|---|
 | 1. Fire runs and compute workers | `lib/workerJob.js`, `workers/*` (not the IFC import), `core/flamescapesRun.js`, GPU init and device loss, `lib/recorder.js`, the run, plan, people and recording state in `App.jsx` | mapped; 11 confirmed, 1 suspected; fixed (SM-1 to SM-3) |
 | 2. Network, backend and storage | `lib/api.js`, `lib/turnstile.js`, `lib/describe.js`, `core/runCache.js`, `lib/fragmentCache.js`, `state/useFieldNotes.js`, the backend's `app/store.py` and routers, `cloudflare/` | mapped; 13 confirmed, 5 suspected; 11 fixed (SM-4 to SM-6), 2 confirmed low ones open |
-| 3. Model, graph and workflow | `state/useStudio.js`, `ui/Stepper.jsx`, model loading and the IFC import worker, `core/federation.js`, graph and route invalidation, `viewer/ViewerManager.js`, `viewer/TopologyViewer.jsx` | not started |
+| 3. Model, graph and workflow | `state/useStudio.js`, `ui/Stepper.jsx`, model loading and the IFC import worker, `core/federation.js`, graph and route invalidation, `viewer/ViewerManager.js`, `viewer/TopologyViewer.jsx` | mapped; 15 confirmed (one by tracing That Open's code), 1 suspected; 11 fixed (SM-7), 4 confirmed lower ones open |
 
 ## Issues
 
@@ -134,6 +134,35 @@ Run on the build before the area 2 fixes (016a002) and after them, on the Duplex
 
 After the fixes the whole suite passed on a desktop (129 steps) and an emulated phone (128 steps), with no console errors, and `tools/server-race-test.mjs` passed 7 of 7. Backend: 131 tests pass.
 
+### SM-7. The model and the graph changing under work in progress
+
+Findings C1 to C9, C14, C15. The model and the graph live both in React state and in the viewer's scene, kept in step by hand. Only the model load checked that it was still the latest; the graph build, a fire still starting, the second models, the markers and identification did not, and a rebuild left the last fire behind.
+
+| Finding | Impact | Fix |
+|---|---|---|
+| C1. A graph build still running when another model was opened set the old model's graph on the new one, said "Graph ready" and moved to Route; routes, fires and the code check then ran on the old graph under the new model. Its end also cleared the new load's progress card. | High | `buildGraph` goes on only for the load it started on (`loadSeqRef`), keeps its extracted geometry only then, and leaves the busy flags to a newer build or load; opening a model cancels the build's worker. |
+| C7. The `b` key started a build while one was running, and once per key repeat, each with copies of the geometry. | Medium | One build at a time per model (`buildingRef`); key repeats ignored. |
+| C2. A two-zone fire still starting survived a new model or a rebuild, then played on the old graph. | Medium | `endFireStart()`, used by Stop, the model opens, a rebuild and the viewer switch. |
+| C6, C14. A rebuild kept the last fire's step, model and burning nodes, so Export for TopologicPy wrote them onto the new graph's vertices; and the agent's answer for the old graph. | Medium, low | The rebuild resets the fire, its burning nodes and temperatures, and the agent. |
+| C3. Viewer mode Topology JSON and back gave a new, empty viewer while the model, graph and points stayed; Rebuild graph then said "Load an IFC model first". | Medium | `switchMode`: leaving the model's viewer closes the model with it. |
+| C4. A rooms model opened while an IFC loaded left the progress card for good. | Medium | `openLod1` ends the card with the load it overtakes. |
+| C5. A second model still being added when the main model was replaced stayed in the scene until a reload. | Medium | `loadLinkedIfc` removes and disposes it when the owner changed after it was drawn. |
+| C8. The start, exit and fire markers stayed drawn after another model was opened. | Medium to low | The markers follow `points` in an effect. |
+| C9. An example clicked before the viewer was ready left "Downloading" spinning. | Medium to low | The not-ready path ends the card. |
+| C15. A late identification answer for an older model overwrote the newer model's. | Low | Written only if the same model is still open. |
+
+Regression tests: `tools/model-race-test.mjs` (new): "the build key pressed during a build starts no second one" (builds sent to the sampler counted), "a build still running when another model opens does not land on it" (the sampler worker's script held back), "a rebuilt graph drops the last fire and its export", "the start marker goes when another model is opened", "back from the topology viewer, no graph is offered for a model no longer drawn". C2, C4, C5, C9 and C15 are checked by reading only: each needs a timing the scripts do not yet hold (a two-zone start, a rooms model during a load, a second IFC, the viewer still starting, two identifications). Status: fixed.
+
+### Verification of the area 3 fixes (2026-11-10)
+
+| Check | Before (4f7d57b) | After |
+|---|---|---|
+| The build key pressed during a build starts no second one | fail: 3 builds sent | pass: 1 |
+| A build still running when another model opens does not land on it | fail: the old model's graph set on the new one | pass |
+| A rebuilt graph drops the last fire and its export | fail: the export still offered | pass |
+| The start marker goes when another model is opened | fail: still drawn | pass |
+| Back from the topology viewer, no graph is offered for a model no longer drawn | fail: the old graph offered | pass |
+
 ### Open
 
 - A9 (suspected, low): when the GPU solver falls back to the CPU on its own (`flamescapesGpu.js runSceneGpu`: device already lost, scene unsupported, or a buffer setup error), the run keeps the GPU label and the GPU-sized grid, and with the "speed" grid a CPU-measured rate could be stored as that GPU's. To settle: force a buffer setup error in a WebGPU browser and read the card's backend line and `info.gpuRate`. Suggested fix: let `runSceneGpu` throw so the worker's labelled, re-sized CPU restart runs. In [../issues/open-risks.md](../issues/open-risks.md).
@@ -142,6 +171,11 @@ After the fixes the whole suite passed on a desktop (129 steps) and an emulated 
 - B15 (confirmed, low, not fixed): two tabs overwrite each other's field notes and settings in `localStorage` (each writes its whole object; no `storage` listener). Fix when touched: merge on write and refresh on the `storage` event.
 - Suspected, low: B12 (near the storage quota a failed write also rolls back its eviction, so nothing new is kept); B13 (IndexedDB opens have no timeout or `onblocked`/`onversionchange`; latent until a database version bump with an old tab open); B14 (a cached fragments buffer that fails to load is not dropped); B17 (TopologicPy TGraph builds are not serialised, though Navigation builds are locked as "not known to be thread-safe"); B18 (the Worker's `/rooms` wants a Turnstile action the page never issues, latent; a siteverify outage reads as a failed human check). What would settle each is in the area 2 findings below.
 - The server still answers a request with no graph id on the latest graph of its kind, whoever made it (`store.get(None, mode)`). Next always sends an id; a client that does not would reach another visitor's graph. Not changed: other clients of the API may rely on it.
+- C10 (confirmed, medium to low, not fixed): a second model added before the first model's semantics arrive is placed and checked with none (`addLinkedModel` reads `studio.semantics` at the click), so a pair aligned by map conversions is placed by placements, and nothing places it again. Fix: offer "Add a model" only once the semantics are in, or read them when placing.
+- C11 (confirmed by tracing That Open's code, not run; low to medium): after a WebGL context loss and restore, That Open makes a new renderer without local clipping, so the storey cut stops clipping (and a phone's pixel ratio is lost). Fix: a `webglcontextrestored` listener in `ViewerManager.init` setting `localClippingEnabled` and the pixel ratio again.
+- C12 (suspected, low to medium): a code check run before the IFC's semantics arrive keeps the fallback exits after they arrive. To settle: hold the semantics pass and run the check.
+- C13 (confirmed, low): the overhead meshes (beams, ducts) are keyed by file name, so a revised file of the same name briefly uses the old model's. Fix: key by the model.
+- C16 (confirmed, low): one abort slot for imports in the viewer, so a second model's load displaces the main model's semantics job, which can then no longer be stopped.
 
 ## 1. Fire runs and compute workers
 
@@ -437,4 +471,117 @@ Evidence, as traced (lines at 016a002):
 
 ## 3. Model, graph and workflow
 
-Pending.
+The model and the graph live both in React state (`useStudio`) and in the viewer's scene (`ViewerManager`), kept in step by hand. Most findings are a place where one of them moved on and the other did not.
+
+### Machines
+
+#### L1. Model load (`App.jsx`: `handleFile`, `openExample`, `openLod1`, `loadSeqRef`; `useStudio`: `beginLoad`, `loadState`, `file`, `modelInfo`, `semantics`)
+
+| State | Representation |
+|---|---|
+| None | `file` and `modelInfo` null |
+| Downloading (example) | `loadState` "downloading" |
+| Loading | `loadState` busy, `file` set, `modelInfo` null; `loadSeqRef` counts loads |
+| Shown | `modelInfo` set; the semantics may still be on their way |
+
+| Event | From | To |
+|---|---|---|
+| a file opened | any | Loading for a new `seq`; the downstream reset (`beginLoad`); a graph build and a fire start for the old model end *(SM-7, C1, C2)* |
+| an example clicked | any | Downloading, then a file opened; a file opened meanwhile wins |
+| the viewer not ready yet | Downloading | None, the card ended *(SM-7, C9)* |
+| a rooms model opened | any | Shown at once; an IFC still loading dropped with its card *(SM-7, C4)* |
+| the load answers, `seq` still latest | Loading | Shown |
+| the load answers for an older `seq` | any | ignored |
+| the viewer mode switched away | any | None *(SM-7, C3)* |
+
+Invariants: only the latest load writes the page; `loadState` belongs to the latest load or build; the viewer shows the model `modelInfo` describes.
+
+#### L2. The viewer's load (`ViewerManager.loadIfc`, `loadLod1`, `clearModel`) and L3. the import job (`_importJob`, `workers/ifc-import.worker.js`)
+
+Every await in `loadIfc` is followed by a check of the load's token, its signal and disposal; a model loaded for an overtaken load is disposed, not adopted; `clearModel` removes the second models, the rooms meshes, overlays and the graph's pick nodes. The import job settles once and its worker is ended on every path. One abort slot is shared by the main and second models' jobs (C16, open).
+
+#### L4. Second (linked) models (`App.jsx addLinkedModel`; `ViewerManager.loadLinkedIfc`, `linked`)
+
+Adding, added, removed. Kept per main model (`linked.owner === modelInfo`). The owner is checked after each await; a model drawn for a replaced owner is now removed and disposed *(SM-7, C5)*. Placed with the main model's semantics as they were at the click (C10, open).
+
+#### G1. Graph build (`App.jsx buildGraph`, `buildingRef`, `graphBusy`, the sampler worker)
+
+| State | Representation |
+|---|---|
+| Idle | `buildingRef` null |
+| Extracting, sampling | `buildingRef` holds the load's `seq`; `graphBusy`; `loadState` "extracting", "sampling" |
+| Built | `graph` set and drawn |
+
+| Event | From | To |
+|---|---|---|
+| Build (button or `b`) | Idle, or a build for an older model | Extracting *(a second for the same model is ignored, as are key repeats: SM-7, C7)* |
+| extraction or sampling answers, same model | Extracting, sampling | Built: the route, alternatives, comparison, cross-check, plan, fire (step, burning nodes, a fire still starting) and agent reset *(SM-7, C6, C14, C2)* |
+| another model opened | Extracting, sampling | the worker cancelled; the answer dropped; the busy flags left to the new load *(SM-7, C1)* |
+
+Invariants: the graph on screen was built from the model on screen; one build at a time; a rebuild leaves nothing computed on the old graph on screen. The Flamescapes run, code check, plans, report and people leaving are kept with the graph object and drop themselves.
+
+#### G2. Points and markers (`useStudio.points`, `pickMode`; `handlePick`, `clearPoints`; `ViewerManager.markers`)
+
+The points are set by a pick, the keyboard path, a guided run, or cleared by a new model or Clear; the markers follow the points in an effect *(SM-7, C8)*. `pickMode` is reset on a new model and after each pick.
+
+#### W1. Workflow and stepper (`tab`, `setTab`, step status; `ui/Stepper.jsx`)
+
+Presentational: the active tab is always valid, the status of each step is derived, not stored; `busy` (a load, a build, a fire running or starting, a guided run) is shown, not enforced.
+
+#### V1. Viewer lifecycle (`ui/Viewport.jsx`; `ViewerManager.init`, `dispose`; Viewer mode)
+
+Starting, ready, disposed. The topology viewer's mode unmounts the model's viewer and a new one is made on return; the model's state now goes with the old viewer *(SM-7, C3)*. A manager whose `init` ends after unmount is disposed. No handling of a WebGL context loss of its own (C11, open).
+
+#### I1. Identification (`identifyState`, `identifyDataRef`, `modelKey`)
+
+Kept per model (`modelKey === modelInfo`); an answer for a model no longer open is dropped *(SM-7, C15)*.
+
+#### T1. Topology inspector (`topology`, `topologyBusy`; `viewer/TopologyViewer.jsx`)
+
+Its server actions are disabled while busy; a new payload resets the selection; unmounting removes its listeners and stops its loop. Sound.
+
+### Findings
+
+| Id | Finding | Status | Impact | Issue |
+|---|---|---|---|---|
+| C1 | A build overtaken by a model load lands on the new model | Confirmed | High | SM-7 |
+| C2 | A two-zone fire still starting survives a model change or a rebuild | Confirmed | Medium | SM-7 |
+| C3 | Topology JSON and back leaves the state on an empty viewer | Confirmed | Medium | SM-7 |
+| C4 | A rooms model opened during an IFC load leaves the progress card | Confirmed | Medium | SM-7 |
+| C5 | A second model being added when the first is replaced stays in the scene | Confirmed | Medium | SM-7 |
+| C6 | A rebuild keeps the last fire; the export writes it onto the new graph | Confirmed | Medium | SM-7 |
+| C7 | The `b` key builds while a build runs, once per key repeat | Confirmed | Medium | SM-7 |
+| C8 | Markers stay after another model is opened | Confirmed | Medium to low | SM-7 |
+| C9 | An example clicked before the viewer is ready leaves "Downloading" | Confirmed | Medium to low | SM-7 |
+| C10 | A second model added before the first's semantics is placed without them | Confirmed | Medium to low | open |
+| C11 | After a WebGL context loss the storey cut no longer clips | Confirmed by trace | Low to medium | open |
+| C12 | A code check run before the semantics keeps the fallback exits | Suspected | Low to medium | open |
+| C13 | Overhead meshes keyed by file name | Confirmed | Low | open |
+| C14 | A rebuild keeps the trained agent's result | Confirmed | Low | SM-7 |
+| C15 | A late identification answer overwrites the newer model's | Confirmed | Low | SM-7 |
+| C16 | One abort slot for imports | Confirmed | Low | open |
+
+Evidence, as traced (lines at 4f7d57b):
+
+- **C1.** `buildGraph` (App.jsx:750-898) awaited the extraction and the sampler worker with no check of `loadSeqRef`, then set and drew the graph, said "Graph ready" and moved to Route; its `finally` set `loadState` idle under the new load. `handleFile` did not cancel the sampler.
+- **C2.** `buildGraph` called the hook's `stopFire`, which does not bump `fireStartRef` or cancel the zone lane; the model opens did neither, so `startFire`'s continuation after the two-zone frames went on.
+- **C3.** The header's Viewer mode unmounts `Viewport` (and its `ViewerManager`) in Topology JSON mode; nothing reset `file`, `modelInfo`, `graph` or `points`.
+- **C4.** `openLod1` bumped `loadSeqRef` but never reset `loadState`, which the overtaken load would have reset only if still latest.
+- **C5.** `loadLinkedIfc` added the object to the scene (ViewerManager.js:808), then awaited and checked the owner (:810-813), throwing with the object still in the scene and not in `linked`.
+- **C6.** A rebuild left `fire.step`, `fire.model` and `burningRef`; `exportTopologic` writes the burning flags when `fire.step > 0` (App.jsx:1916, :1922).
+- **C7.** The `b` hotkey called `buildGraph` with no busy check and on every key repeat (App.jsx:3572).
+- **C8.** `beginLoad` cleared `points` but nothing cleared the markers in the viewer (`setMarker` was called only by picks and Clear).
+- **C9.** `openExample` set "downloading" and `handleFile`'s "viewer still starting" path returned without resetting it.
+- **C15.** `identifyElements` wrote `identifyDataRef` and `identifyState` after its awaits with no check.
+
+### Checked and sound
+
+- `ViewerManager.loadIfc`: every await followed by a check of token, signal and disposal; an overtaken load's model disposed; a prepared model's id carries the load's token; `clearModel` removes second models, rooms meshes, overlays and the graph's pick nodes.
+- `handleFile`: progress, model info, semantics, storeys, extraction and the card's reset are all behind `latest()`; `beginLoad` resets points, pick mode, semantics and everything downstream.
+- `openExample`: a file opened during the download wins; a double click downloads twice and the second wins (wasted, not wrong).
+- The import job: job and semantics settle once; the worker is ended on every path; a job aborted before the worker is ready never posts.
+- `loadLinkedIfc` up to the scene: the owner checked after each await; adding is disabled while busy; the list is kept per main model.
+- `core/federation.js`: pure; matrices validated.
+- Picking: `pickMode` reset on a new model and after each pick; picks snap to the graph's nodes when there is one.
+- Viewport mount: a manager whose `init` ends after unmount is disposed; `dispose` aborts the import and ends the warm worker.
+- Viewer settings pushed by effects (graph shown, appearance, theme, pick mode, exit rings, sprinkler heads, the reference graph) follow state on each change.

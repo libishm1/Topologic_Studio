@@ -206,6 +206,14 @@ export default function App() {
   const fireStartRef = useRef(0);
   // Whether the last fire was stopped rather than ending by itself.
   const fireStoppedRef = useRef(false);
+  // The load a graph build is running for (buildGraph), or null.
+  const buildingRef = useRef(null);
+  // Ends a two-zone fire still computing its frames: Stop, a new model, a
+  // rebuilt graph or the viewer closed (SM-2, SM-7).
+  const endFireStart = useCallback(() => {
+    fireStartRef.current += 1;
+    forecastRef.current.zone?.cancel();
+  }, []);
   // What a Flamescapes run colours the graph by (core/measures.js), and the
   // limits its tenability index is worked out with (core/tenability.js).
   const showRef = useRef(measureView({}, false));
@@ -437,8 +445,12 @@ export default function App() {
         toast("The 3D viewer is still starting. Try again in a moment.", { variant: "warning" });
         return;
       }
-      // An IFC still loading is dropped.
+      // An IFC still loading is dropped, its progress card with it, and a
+      // graph build or a fire start for the old model ends (SM-7).
       ++loadSeqRef.current;
+      studio.setLoadState({ busy: false, stage: null, detail: null });
+      samplerRef.current?.cancel();
+      endFireStart();
       rlRef.current?.cancel();
       dropPlan();
       colours.set(null);
@@ -483,7 +495,7 @@ export default function App() {
         reportError(error, "Could not open the rooms model");
       }
     },
-    [colours, dropPlan, reportError, setSettings, settings.modelAppearance, settings.upAxis, studio, toast],
+    [colours, dropPlan, reportError, setSettings, settings.modelAppearance, settings.upAxis, studio, toast, endFireStart],
   );
 
   // JSON files chosen or dropped together: the TopologicPy CellComplex with
@@ -552,6 +564,8 @@ export default function App() {
       }
       const viewer = viewerRef.current;
       if (!viewer?.ready) {
+        // An example's "Downloading" card goes too (SM-7).
+        studio.setLoadState({ busy: false, stage: null, detail: null });
         toast("The 3D viewer is still starting. Try again in a moment.", {
           variant: "warning",
         });
@@ -565,6 +579,9 @@ export default function App() {
       const seq = ++loadSeqRef.current;
       const latest = () => seq === loadSeqRef.current;
 
+      // A graph build or a fire start for the old model ends with it (SM-7).
+      samplerRef.current?.cancel();
+      endFireStart();
       rlRef.current?.cancel();
       dropPlan();
       // The new model starts with no graph to colour.
@@ -675,7 +692,7 @@ export default function App() {
         if (latest()) studio.setLoadState({ busy: false, stage: null, detail: null });
       }
     },
-    [reportError, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan, colours, openLod1Files],
+    [reportError, settings.modelAppearance, settings.upAxis, studio, toast, dropPlan, colours, openLod1Files, endFireStart],
   );
 
   // --------------------------------------------------------------- examples
@@ -753,6 +770,14 @@ export default function App() {
       toast("Load an IFC model first.", { variant: "warning" });
       return;
     }
+    // One build at a time for a model: the "b" key started one per key
+    // repeat. And the build is for the model it started on: one still running
+    // when another model was opened set its graph on the new model
+    // (wiki/architecture/state-machines.md, SM-7).
+    const seq = loadSeqRef.current;
+    if (buildingRef.current === seq) return;
+    buildingRef.current = seq;
+    const latest = () => seq === loadSeqRef.current;
 
     studio.setGraphBusy(true);
     studio.setLoadState({ busy: true, stage: "extracting", detail: null });
@@ -764,10 +789,12 @@ export default function App() {
       // Geometry extraction is the expensive part, so it is cached against the
       // loaded model: changing a slider re-samples but does not re-extract.
       if (!geometryRef.current) {
-        geometryRef.current = await timer.run(
+        const extracted = await timer.run(
           "extract",
           async () => (await geometryPromiseRef.current) || viewer.extractEgressGeometry(),
         );
+        if (!latest()) return;
+        geometryRef.current = extracted;
       }
       const geometry = geometryRef.current;
 
@@ -810,6 +837,7 @@ export default function App() {
 
       // The whole graph is built in the worker (src/core/lattice.js).
       const built = await timer.run("lattice", () => sample(payload, transfers));
+      if (!latest()) return;
       setLastSample({ nodes: built.stats.nodes, ms: built.stats.ms });
       const local = {
         ...built,
@@ -857,8 +885,16 @@ export default function App() {
       studio.setComparison(null);
       studio.setNavCheck(null);
       dropPlan();
-      // A fire still running spreads over the old graph's node ids.
+      // A fire still running spreads over the old graph's node ids, and one
+      // still starting would start on them. A fire that ended left its step
+      // and burning nodes, which the export then wrote onto the new graph's
+      // vertices; the agent's answer was for the old graph too (SM-7).
       studio.stopFire();
+      endFireStart();
+      studio.setFire({ running: false, step: 0, model: null });
+      burningRef.current = new Set();
+      temperatureRef.current = new Map();
+      studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
       viewer.setPath(null);
       viewer.setPath(null, { dynamic: true });
       viewer.setRoutes(null);
@@ -890,12 +926,17 @@ export default function App() {
       }
       setTab("route");
     } catch (error) {
-      reportError(error, "Could not build the navigation graph");
+      // Ended because another model was opened: nothing to report.
+      if (latest() && !isCancelled(error)) reportError(error, "Could not build the navigation graph");
     } finally {
-      studio.setGraphBusy(false);
-      studio.setLoadState({ busy: false, stage: null, detail: null });
+      // A newer build, or the newer model's load, owns the busy flags now.
+      if (buildingRef.current === seq) {
+        buildingRef.current = null;
+        studio.setGraphBusy(false);
+      }
+      if (latest()) studio.setLoadState({ busy: false, stage: null, detail: null });
     }
-  }, [reportError, sample, setSettings, settings, studio, toast, dropPlan, colours, markFound]);
+  }, [reportError, sample, setSettings, settings, studio, toast, dropPlan, colours, markFound, endFireStart]);
 
   /**
    * Server-backed actions need the backend up. They always name the graph on
@@ -1052,6 +1093,13 @@ export default function App() {
     viewerRef.current?.setPath(null, { dynamic: true });
     viewerRef.current?.setRoutes(null);
   }, [studio, dropPlan]);
+
+  // The markers follow the points, whichever way they changed: opening
+  // another model cleared the points and left the old start, exit and fire
+  // drawn on it (wiki/architecture/state-machines.md, SM-7).
+  useEffect(() => {
+    for (const name of ["start", "exit", "fire"]) viewerRef.current?.setMarker(name, points[name]);
+  }, [points]);
 
   // ------------------------------------------------------------- find path
 
@@ -1992,12 +2040,16 @@ export default function App() {
     const viewer = viewerRef.current;
     if (!viewer || !modelInfo) return;
     setIdentify({ busy: true, modelKey: modelInfo });
+    const asked = askedRef.current;
     try {
       const [{ identify }, data] = await Promise.all([import("./core/identify.js"), viewer.identifyData()]);
+      // Another model opened meanwhile: this answer is not its (SM-7).
+      if (asked.file !== askedRef.current.file) return;
       const answers = data.records.map((record) => ({ record, answer: identify(record) }));
       identifyDataRef.current = { modelKey: modelInfo, answers, meshesOf: data.meshesOf };
       setIdentify({ busy: false, modelKey: modelInfo, answers: answers.map((a) => a.answer) });
     } catch (error) {
+      if (asked.file !== askedRef.current.file) return;
       setIdentify({ busy: false, modelKey: null });
       reportError(error, "Identifying the elements");
     }
@@ -2286,8 +2338,7 @@ export default function App() {
   const stopFire = useCallback(() => {
     studio.stopFire();
     // A two-zone fire still starting is ended with its frames (SM-2).
-    fireStartRef.current += 1;
-    forecastRef.current.zone?.cancel();
+    endFireStart();
     // A Flamescapes run still computing, or its repeat runs, is ended: they
     // hold a CPU core or the GPU. A finished run stays, to be played again.
     const run = combustionRef.current;
@@ -2306,7 +2357,7 @@ export default function App() {
     } else {
       colours.set(null);
     }
-  }, [studio, settings.showDeadlineMap, deadlines, planHorizon, colours]);
+  }, [studio, settings.showDeadlineMap, deadlines, planHorizon, colours, endFireStart]);
 
   // --------------------------------------------------------------------- RL
 
@@ -3525,6 +3576,28 @@ export default function App() {
     viewerRef.current?.setModelAppearance(settings.modelAppearance);
   }, [settings.modelAppearance, modelInfo]);
 
+  // The topology viewer replaces the model's viewer, which is made new and
+  // empty on the way back. The model, graph and points go with the old one:
+  // kept, the panels offered a graph and a route with nothing drawn, and a
+  // build said "Load an IFC model first" (SM-7).
+  const switchMode = useCallback(
+    (next) => {
+      if (next === mode) return;
+      if (mode === "ifc") {
+        ++loadSeqRef.current;
+        samplerRef.current?.cancel();
+        endFireStart();
+        rlRef.current?.cancel();
+        dropPlan();
+        geometryRef.current = null;
+        studio.beginLoad(null);
+        studio.setLoadState({ busy: false, stage: null, detail: null });
+      }
+      setMode(next);
+    },
+    [mode, studio, dropPlan, endFireStart],
+  );
+
   // ---------------------------------------------------------------- hotkeys
 
   useEffect(() => {
@@ -3570,7 +3643,7 @@ export default function App() {
           }));
           break;
         case "b":
-          if (modelInfo) void buildGraph();
+          if (modelInfo && !event.repeat) void buildGraph();
           break;
         case "enter":
           if (graph && points.start && points.exit) void findPath();
@@ -3823,7 +3896,7 @@ export default function App() {
         <div className="header__mode">
           <Segmented
             value={mode}
-            onChange={setMode}
+            onChange={switchMode}
             options={MODES}
             label="Viewer mode"
           />

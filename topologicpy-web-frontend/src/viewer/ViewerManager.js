@@ -807,10 +807,20 @@ export class ViewerManager {
     if (this.world.camera.three && model.useCamera) model.useCamera(this.world.camera.three);
     this.world.scene.three.add(object);
     if (this._section) this._applyClip(object);
-    const categoryIds = await collectCategoryIds(model).catch(() => ({}));
-    if (categoryIds.spaces?.length && model.setVisible) await model.setVisible(categoryIds.spaces, false).catch(() => {});
-    await this.fragments.core.update(true);
-    current();
+    let categoryIds;
+    try {
+      categoryIds = await collectCategoryIds(model).catch(() => ({}));
+      if (categoryIds.spaces?.length && model.setVisible) await model.setVisible(categoryIds.spaces, false).catch(() => {});
+      await this.fragments.core.update(true);
+      current();
+    } catch (error) {
+      // The main model was replaced meanwhile: this one, already drawn but
+      // not yet listed, stayed in the scene for good
+      // (wiki/architecture/state-machines.md, SM-7).
+      this.world.scene?.three?.remove(object);
+      Promise.resolve().then(() => this.fragments?.core?.disposeModel?.(id)).catch(() => {});
+      throw error;
+    }
     const entry = { id, name: file.name, model, object, semantics: read, categoryIds, how, matrix };
     this.linked.set(id, entry);
     const box = model.box;

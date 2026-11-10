@@ -158,3 +158,18 @@ Details and evidence: [state-machines.md](../architecture/state-machines.md), SM
   graph): counts only now, live after the next manual Render deploy. A tab open
   across a deploy now says to reload. A timeout or a cancel no longer marks the
   backend offline.
+
+## State-machine audit, area 3: model, graph and workflow (2026-11-10)
+
+Details and evidence: [state-machines.md](../architecture/state-machines.md), SM-7. On `next/browser-core`.
+
+- **SM-7. The model and the graph changing under work in progress.** A graph
+  build still running when another model was opened set the old model's graph
+  on the new one (and "Graph ready"); the `b` key built once per key repeat; a
+  two-zone fire still starting survived a new model or rebuild; a rebuild kept
+  the last fire, which the export then wrote onto the new graph, and the agent's
+  answer; Topology JSON and back left the model's state on an empty viewer; a
+  rooms model or an early example click left the progress card spinning; a
+  second model being added when the first was replaced stayed in the scene; the
+  markers stayed after another model opened; a late identification answer
+  overwrote the newer model's.
