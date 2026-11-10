@@ -73,7 +73,7 @@ def create_app() -> FastAPI:
             version=settings.version,
             topologicpy=_topologicpy_info(),
             ifcopenshell=_ifcopenshell_version(),
-            graphs=store.stats(),
+            graphs=store.summary(),
         )
 
     @app.get("/api/capabilities", tags=["meta"])

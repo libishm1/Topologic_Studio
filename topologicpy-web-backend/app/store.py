@@ -252,6 +252,14 @@ class GraphStore:
                 ],
             }
 
+    def summary(self) -> Dict:
+        """How full the store is, for the public routes. No ids: an id is the
+        only key to a graph, and listing them let any visitor read or delete
+        another's graph (wiki/architecture/state-machines.md, SM-6)."""
+        with self._lock:
+            self._evict_locked()
+            return {"count": len(self._items), "capacity": self._capacity, "ttl_seconds": self._ttl}
+
     def _evict_locked(self) -> None:
         if self._ttl > 0:
             cutoff = time.time() - self._ttl

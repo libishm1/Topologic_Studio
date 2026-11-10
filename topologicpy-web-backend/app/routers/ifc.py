@@ -116,7 +116,7 @@ def delete_graph(graph_id: str) -> Dict:
 
 @router.get("/api/graphs", tags=["ifc"])
 def list_graphs() -> Dict:
-    return store.stats()
+    return store.summary()
 
 
 # --------------------------------------------------------------------------

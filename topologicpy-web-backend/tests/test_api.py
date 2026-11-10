@@ -204,6 +204,19 @@ class TestPointCloudGraph:
         assert again["stats"]["nodes"] == 16
         assert large["stats"]["nodes"] == 64
 
+    def test_graph_ids_are_not_listed(self, client):
+        """An id is the only key to a graph: the public routes give counts, not ids
+        (wiki/architecture/state-machines.md, SM-6)."""
+        gid = client.post(
+            "/api/ifc/graph",
+            json={"floor_points": slab_points(n=4), "options": {"max_edge_floor": 0.8}},
+        ).json()["graph_id"]
+        health = client.get("/health")
+        listed = client.get("/api/graphs")
+        assert gid not in health.text and gid not in listed.text
+        assert listed.json()["count"] >= 1
+        assert health.json()["graphs"]["count"] >= 1
+
     def test_delete_graph(self, client):
         gid = client.post(
             "/api/ifc/graph",

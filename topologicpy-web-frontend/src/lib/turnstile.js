@@ -80,9 +80,11 @@ export function unmountHumanCheck(container = null) {
 /**
  * A token for one request: the check's current one, or the next it gives
  * (up to two minutes, if Cloudflare asks for a click). The check then runs
- * again for the next request. Null when the site has no site key.
+ * again for the next request. Null when the site has no site key. `signal`
+ * ends the wait: Stop did nothing while it lasted
+ * (wiki/architecture/state-machines.md, SM-5).
  */
-export async function humanToken() {
+export async function humanToken({ signal } = {}) {
   if (!TURNSTILE_SITE_KEY) return null;
   const state = widget;
   if (!state) throw new Error("The human check is not on the page: choose Cloudflare again.");
@@ -90,13 +92,16 @@ export async function humanToken() {
     state.token ??
     (await new Promise((resolve, reject) => {
       const waiter = { resolve, reject };
-      state.waiters.push(waiter);
-      setTimeout(() => {
+      const leave = (error) => {
         const i = state.waiters.indexOf(waiter);
         if (i < 0) return;
         state.waiters.splice(i, 1);
-        reject(new Error("The human check was not completed."));
-      }, 120000);
+        reject(error);
+      };
+      state.waiters.push(waiter);
+      setTimeout(() => leave(new Error("The human check was not completed.")), 120000);
+      if (signal?.aborted) leave(new Error("cancelled"));
+      signal?.addEventListener("abort", () => leave(new Error("cancelled")), { once: true });
     }));
   state.token = null;
   try {

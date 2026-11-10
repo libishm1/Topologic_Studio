@@ -8,15 +8,16 @@
  */
 
 export const API_BASE = (
-  import.meta.env.VITE_API_BASE || "http://localhost:8000"
+  import.meta.env?.VITE_API_BASE || "http://localhost:8000"
 ).replace(/\/$/, "");
 
 export class ApiError extends Error {
   /**
    * @param kind "network" when the server could not be reached at all,
-   *             "http" when it answered with an error status. The UI needs the
-   *             difference: an unreachable server should flip the status
-   *             indicator, a 404 should not.
+   *             "http" when it answered with an error status, "timeout" when
+   *             it did not answer in time, "aborted" when the caller cancelled.
+   *             The UI needs the difference: only an unreachable server should
+   *             flip the status indicator.
    */
   constructor(message, { status = 0, detail = null, url = "", kind = "http" } = {}) {
     super(message);
@@ -27,6 +28,13 @@ export class ApiError extends Error {
     this.kind = kind;
   }
 }
+
+/**
+ * The server no longer has the graph a request named: it sleeps and restarts
+ * empty, and keeps a few graphs for an hour (backend/app/store.py).
+ */
+export const isGraphGone = (error) =>
+  error instanceof ApiError && error.status === 400 && /no (navigation )?graph/i.test(String(error.detail ?? error.message));
 
 async function request(path, { method = "GET", body, signal, timeout = 120000 } = {}) {
   const url = `${API_BASE}${path}`;
@@ -48,8 +56,12 @@ async function request(path, { method = "GET", body, signal, timeout = 120000 } 
       signal: controller.signal,
     });
   } catch (error) {
+    // A timeout or a caller's cancel is not a server gone away: only "network"
+    // marks the backend offline (wiki/architecture/state-machines.md, SM-6).
     if (error.name === "AbortError") {
-      throw new ApiError("Request cancelled or timed out.", { url, kind: "network" });
+      throw signal?.aborted
+        ? new ApiError("Request cancelled.", { url, kind: "aborted" })
+        : new ApiError("The backend took too long to answer.", { url, kind: "timeout" });
     }
     throw new ApiError(
       `Cannot reach the backend at ${API_BASE}. Is it running?`,

@@ -16,7 +16,7 @@
  */
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
-import { api, legacyApi } from "./lib/api.js";
+import { api, isGraphGone, legacyApi } from "./lib/api.js";
 import { PhaseTimer, formatBytes, formatMs } from "./lib/perf.js";
 import { CONVERTER } from "./lib/fragmentCache.js";
 import { isPhone } from "./lib/hardware.js";
@@ -818,11 +818,10 @@ export default function App() {
       };
 
       // Only the TopologicPy features need the graph on the server, so it is
-      // uploaded in the background: the graph is usable at once, and on mobile
-      // data the build no longer waits for the upload. Its id is filled in
-      // when the server answers (below).
+      // uploaded when one of them is first asked for (serverGraphId, below).
       const response = {
-        graphId: null,
+        // What the upload sends (lib/api.js importGraph).
+        forServer: local,
         stats: graphStats(local),
         upAxis: settings.upAxis,
         bounds: [],
@@ -855,6 +854,7 @@ export default function App() {
       studio.setPath(null);
       studio.setDynamicPath(null);
       studio.setAlternatives(null);
+      studio.setComparison(null);
       studio.setNavCheck(null);
       dropPlan();
       // A fire still running spreads over the old graph's node ids.
@@ -875,20 +875,6 @@ export default function App() {
       }
 
       timer.finish({ nodes: response.stats.nodes, edges: response.stats.edges });
-
-      if (studio.serverStatus === "online") {
-        api
-          .importGraph(local)
-          .then((uploaded) => {
-            // Only if this is still the graph on screen.
-            studio.setGraph((current) =>
-              current && current.nodes === response.nodes
-                ? { ...current, graphId: uploaded.graph_id, bounds: uploaded.bounds ?? [] }
-                : current,
-            );
-          })
-          .catch((error) => console.warn("Graph upload failed; continuing in the browser only.", error));
-      }
 
       // A graph in several parts, or none at all, is explained beside the
       // graph (Panels.jsx) and flagged on the stepper; a toast would vanish.
@@ -912,21 +898,77 @@ export default function App() {
   }, [reportError, sample, setSettings, settings, studio, toast, dropPlan, colours, markFound]);
 
   /**
-   * Server-backed actions need this graph on the server. Without an id the
-   * server would fall back to whatever graph it built last, which may be a
-   * different model, so refuse plainly instead.
+   * Server-backed actions need the backend up. They always name the graph on
+   * screen (serverGraphId): without an id the server would fall back to
+   * whatever graph it built last, which may be another model.
    */
   const needsServerGraph = useCallback(
     (what) => {
-      if (graph?.graphId) return false;
+      if (studio.serverStatus === "online") return false;
       toast(
-        `${what} still runs on the backend, which is not connected. The graph itself was built in your browser.`,
+        studio.serverStatus === "offline"
+          ? `${what} still runs on the backend, which is not connected. The graph itself was built in your browser.`
+          : `${what} runs on the backend, which is still waking up. Try again in a moment.`,
         { title: "Backend needed", variant: "warning", ttl: 8000 },
       );
       return true;
     },
-    [graph, toast],
+    [studio.serverStatus, toast],
   );
+
+  // The server's copy of the graph on screen, kept beside the graph rather
+  // than in it. Written into the graph, the upload's answer made a new graph
+  // object, and everything kept "with the graph it was made on" (a fire, the
+  // code check, the report, the plans) took it for a new graph and ended or
+  // dropped itself; and a graph built while the backend was waking was never
+  // uploaded (wiki/architecture/state-machines.md, SM-4).
+  const serverGraphRef = useRef({ nodes: null, id: null, pending: null });
+  const serverGraphId = useCallback(
+    (again = false) => {
+      const held = serverGraphRef.current;
+      if (held.nodes === graph.nodes && !again) {
+        if (held.id) return Promise.resolve(held.id);
+        if (held.pending) return held.pending;
+      }
+      const nodes = graph.nodes;
+      const pending = api.importGraph(graph.forServer).then(
+        (uploaded) => {
+          if (serverGraphRef.current.pending === pending) serverGraphRef.current = { nodes, id: uploaded.graph_id, pending: null };
+          return uploaded.graph_id;
+        },
+        (error) => {
+          if (serverGraphRef.current.pending === pending) serverGraphRef.current = { nodes: null, id: null, pending: null };
+          throw error;
+        },
+      );
+      // The copy of a graph no longer on screen goes: the server keeps only a few.
+      if (held.id && held.nodes !== nodes) api.deleteGraph(held.id).catch(() => {});
+      serverGraphRef.current = { nodes, id: null, pending };
+      return pending;
+    },
+    [graph],
+  );
+  // A request on the graph on screen: uploaded first if the server has no
+  // copy, and once more if the server lost it (it sleeps and restarts empty,
+  // and keeps a few graphs for an hour) (SM-4).
+  const onServerGraph = useCallback(
+    async (ask) => {
+      try {
+        return await ask(await serverGraphId());
+      } catch (error) {
+        if (!isGraphGone(error)) throw error;
+        return ask(await serverGraphId(true));
+      }
+    },
+    [serverGraphId],
+  );
+  // What a server answer must still match when it lands: the graph, the
+  // points and the model on screen. An answer for older ones was drawn over
+  // the newer (SM-5).
+  const askedRef = useRef(null);
+  askedRef.current = { nodes: graph?.nodes ?? null, start: points.start, exit: points.exit, file };
+  const sameRoute = useCallback((asked) => asked.nodes === askedRef.current.nodes && asked.start === askedRef.current.start && asked.exit === askedRef.current.exit, []);
+  const sameModel = useCallback((asked) => asked.nodes === askedRef.current.nodes && asked.file === askedRef.current.file, []);
 
   // -------------------------------------------------------------- picking
 
@@ -980,6 +1022,7 @@ export default function App() {
       if (mode !== "fire") {
         studio.setPath(null);
         studio.setAlternatives(null);
+        studio.setComparison(null);
         viewerRef.current?.setPath(null);
         viewerRef.current?.setRoutes(null);
       }
@@ -1004,6 +1047,7 @@ export default function App() {
     studio.setPath(null);
     studio.setDynamicPath(null);
     studio.setAlternatives(null);
+    studio.setComparison(null);
     viewerRef.current?.setPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
     viewerRef.current?.setRoutes(null);
@@ -1031,16 +1075,20 @@ export default function App() {
     // The route overlays held the alternatives or the plan's routes.
     viewerRef.current?.setRoutes(null);
     showPlanRoutes(false);
+    const asked = askedRef.current;
     try {
       const result = onServer
-        ? await api.findPath({
-            graph_id: graph.graphId,
-            start_point: points.start,
-            end_point: points.exit,
-            engine: studio.effectiveEngine,
-            use_walls: settings.useWalls,
-          })
+        ? await onServerGraph((graphId) =>
+            api.findPath({
+              graph_id: graphId,
+              start_point: points.start,
+              end_point: points.exit,
+              engine: studio.effectiveEngine,
+              use_walls: settings.useWalls,
+            }),
+          )
         : findRoute(graph, points.start, points.exit, { useWalls: settings.useWalls });
+      if (!sameRoute(asked)) return;
       const shown = straighten(result);
       studio.setPath(shown);
       viewerRef.current?.setPath(drawn(shown));
@@ -1056,19 +1104,23 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten, showPlanRoutes, markFound]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, onServerGraph, sameRoute, straighten, showPlanRoutes, markFound]);
 
   const comparePath = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
     if (needsServerGraph("Engine comparison")) return;
     studio.setPathBusy(true);
+    const asked = askedRef.current;
     try {
-      const result = await api.comparePath({
-        graph_id: graph.graphId,
-        start_point: points.start,
-        end_point: points.exit,
-        use_walls: settings.useWalls,
-      });
+      const result = await onServerGraph((graphId) =>
+        api.comparePath({
+          graph_id: graphId,
+          start_point: points.start,
+          end_point: points.exit,
+          use_walls: settings.useWalls,
+        }),
+      );
+      if (!sameRoute(asked)) return;
       studio.setComparison(result);
       const shown = straighten(result.fast);
       studio.setPath(shown);
@@ -1087,7 +1139,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, straighten]);
+  }, [graph, points, reportError, settings.useWalls, studio, toast, needsServerGraph, onServerGraph, sameRoute, straighten]);
 
   const findAlternatives = useCallback(async () => {
     if (!graph || !points.start || !points.exit) return;
@@ -1097,22 +1149,26 @@ export default function App() {
     if (onServer && needsServerGraph("Alternative routes on the TopologicPy engine")) return;
     studio.setPathBusy(true);
     studio.setComparison(null);
+    const asked = askedRef.current;
     try {
       const raw = onServer
-        ? await api.alternatives({
-            graph_id: graph.graphId,
-            start_point: points.start,
-            end_point: points.exit,
-            engine: studio.effectiveEngine,
-            use_walls: settings.useWalls,
-            k: settings.altCount,
-            method: settings.altMethod,
-          })
+        ? await onServerGraph((graphId) =>
+            api.alternatives({
+              graph_id: graphId,
+              start_point: points.start,
+              end_point: points.exit,
+              engine: studio.effectiveEngine,
+              use_walls: settings.useWalls,
+              k: settings.altCount,
+              method: settings.altMethod,
+            }),
+          )
         : alternativeRoutes(graph, points.start, points.exit, {
             k: settings.altCount,
             method: settings.altMethod,
             useWalls: settings.useWalls,
           });
+      if (!sameRoute(asked)) return;
       const result = { ...raw, routes: raw.routes.map(straighten) };
       studio.setAlternatives(result);
       markUsed("alternatives");
@@ -1137,7 +1193,7 @@ export default function App() {
     } finally {
       studio.setPathBusy(false);
     }
-  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, straighten, showPlanRoutes, markFound, markUsed]);
+  }, [graph, points, reportError, settings, studio, toast, needsServerGraph, onServerGraph, sameRoute, straighten, showPlanRoutes, markFound, markUsed]);
 
   // ------------------------------------------------- Navigation cross-check
 
@@ -1150,17 +1206,23 @@ export default function App() {
     }
     if (needsServerGraph("The TopologicPy cross-check")) return;
     studio.setNavBusy(true);
+    const asked = askedRef.current;
     try {
       // An example opened from its prepared fragments fetches its IFC now.
       const ifc = file.download ? await file.download() : file;
-      const result = await api.navigationCheck(ifc, {
-        graphId: graph.graphId,
-        spacing: settings.navSpacing,
-        startPoint: points.start,
-        endPoint: points.exit,
-        useWalls: settings.useWalls,
-        coordination: await viewer.getCoordinationMatrix(),
-      });
+      const coordination = await viewer.getCoordinationMatrix();
+      const result = await onServerGraph((graphId) =>
+        api.navigationCheck(ifc, {
+          graphId,
+          spacing: settings.navSpacing,
+          startPoint: points.start,
+          endPoint: points.exit,
+          useWalls: settings.useWalls,
+          coordination,
+        }),
+      );
+      // Another model or graph opened meanwhile: not drawn over it.
+      if (!sameModel(asked)) return;
       studio.setNavCheck(result);
       const pct = (v) => `${Math.round(v * 100)}%`;
       toast(
@@ -1173,7 +1235,7 @@ export default function App() {
     } finally {
       studio.setNavBusy(false);
     }
-  }, [file, graph, points, reportError, settings, studio, toast, needsServerGraph]);
+  }, [file, graph, points, reportError, settings, studio, toast, needsServerGraph, onServerGraph, sameModel]);
 
   // TopologicPy's graph and route are drawn from state, so hiding and showing
   // them is a toggle rather than another server round trip.
@@ -2272,7 +2334,7 @@ export default function App() {
       // In the browser (src/core/rl.js), with the review's terminal-potential
       // and horizon corrections.
       const trained = await rlJob(
-        { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked, graphId: graph.graphId ?? null },
+        { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
         {
           startPoint: points.start,
           exitPoint: points.exit,
@@ -3006,6 +3068,13 @@ export default function App() {
       live = false;
     };
   }, []);
+  // A description belongs to its model: another model opened ends a run
+  // still going and clears the text. It stayed, or landed, under the new
+  // model's facts (wiki/architecture/state-machines.md, SM-5).
+  useEffect(() => {
+    describeAbortRef.current?.abort();
+    setDescribe((d) => (d.text || d.error || d.busy ? { ...d, busy: false, text: "", error: null, progress: null, model: null } : d));
+  }, [file]);
   // Egress by storey for the facts (core/codeCheck.js on the graph): the
   // code check's own result when the user ran it, else its measures alone,
   // worked out only while the panel is open (2 to 15 ms on the examples).
@@ -3055,7 +3124,7 @@ export default function App() {
         });
       } else {
         // The human check's token (lib/turnstile.js); none if the site has no site key.
-        const token = await humanToken();
+        const token = await humanToken({ signal: abort.signal });
         const { text, model } = await describeInCloud(describeFactsText, { signal: abort.signal, token });
         setDescribe((d) => ({ ...d, text, model: `${model} on Cloudflare Workers AI` }));
       }

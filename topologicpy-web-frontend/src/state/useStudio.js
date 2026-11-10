@@ -8,10 +8,11 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ApiError, api, openFireStream } from "../lib/api.js";
+import { ApiError, api, isGraphGone, openFireStream } from "../lib/api.js";
 import { cacheSize, clearCache } from "../lib/fragmentCache.js";
 import { mark } from "../lib/perf.js";
 import { migrateSettings, withoutSessionOnly } from "../core/settingsMigration.js";
+import { STALE_SITE_MESSAGE, effectiveEngine as engineFor, isStaleSite } from "../core/session.js";
 
 const THEME_KEY = "ts.theme";
 const SETTINGS_KEY = "ts.settings";
@@ -351,8 +352,10 @@ export function useStudio() {
 
   const reportError = useCallback(
     (error, title) => {
-      const message =
-        error instanceof ApiError
+      // A part of the site that a newer deploy replaced: say to reload (SM-6).
+      const message = isStaleSite(error)
+        ? STALE_SITE_MESSAGE
+        : error instanceof ApiError
           ? error.message
           : error?.message || "Something went wrong.";
 
@@ -365,10 +368,7 @@ export function useStudio() {
 
       // The graph store is in-memory, so restarting the backend orphans the
       // graph id the client is holding. Say what to do about it.
-      const graphGone =
-        error instanceof ApiError &&
-        error.status === 400 &&
-        /no (navigation )?graph/i.test(String(error.detail ?? error.message));
+      const graphGone = isGraphGone(error);
 
       // Log the full object; the toast only carries what a user can act on.
       console.error(title || "Error", error);
@@ -483,14 +483,10 @@ export function useStudio() {
     };
   }, [serverStatus, refreshCapabilities]);
 
-  // The engine the server can actually serve. Derived rather than corrected in
-  // an effect: writing the preference back would fight the user's own choice
-  // every time the backend restarted without topologicpy.
-  const effectiveEngine = useMemo(() => {
-    const engines = capabilities?.engines;
-    if (!engines?.length) return settings.engine;
-    return engines.includes(settings.engine) ? settings.engine : engines[0];
-  }, [capabilities, settings.engine]);
+  // The engine the server can actually serve (core/session.js). Derived rather
+  // than corrected in an effect: writing the preference back would fight the
+  // user's own choice every time the backend restarted without topologicpy.
+  const effectiveEngine = useMemo(() => engineFor(settings.engine, capabilities?.engines), [capabilities, settings.engine]);
 
   // --------------------------------------------------------------- workflow
 

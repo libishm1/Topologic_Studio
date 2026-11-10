@@ -137,3 +137,24 @@ Full machines, event sequences and evidence: [state-machines.md](../architecture
   recorders; Identify by shape stayed busy when its module failed to load;
   moving a point during agent training drew its answer for the old points; Stop
   in a guided run's fire stage counted as the fire ending.
+
+## State-machine audit, area 2: network, backend and storage (2026-11-10)
+
+Details and evidence: [state-machines.md](../architecture/state-machines.md), SM-4 to SM-6. On `next/browser-core`.
+
+- **SM-4. The graph's copy on the server.** The upload's answer replaced the
+  graph object, so a fire or plan running then ended silently and the code
+  check, report and plans vanished; a graph built while the backend woke was
+  never uploaded; a copy the server lost was never sent again; a saved
+  TopologicPy engine refused routing with no server. The id is now kept beside
+  the graph, the graph is uploaded when a TopologicPy feature first asks, and
+  sent again once if the server lost it; with no server the browser engine runs.
+- **SM-5. Answers for inputs that changed meanwhile.** TopologicPy routes,
+  alternatives, comparisons and the Navigation cross-check were drawn after the
+  points or the model changed; the comparison outlived its route; Stop did not
+  end a wait for the human check; a description stayed under another model.
+- **SM-6. The backend's state and the site's updates.** `/health` and
+  `/api/graphs` listed every graph id (any visitor could read or delete another's
+  graph): counts only now, live after the next manual Render deploy. A tab open
+  across a deploy now says to reload. A timeout or a cancel no longer marks the
+  backend offline.

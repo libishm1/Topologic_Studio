@@ -13,7 +13,7 @@ A finding is **confirmed** when the full event sequence is traced line by line i
 | Area | Scope | Status |
 |---|---|---|
 | 1. Fire runs and compute workers | `lib/workerJob.js`, `workers/*` (not the IFC import), `core/flamescapesRun.js`, GPU init and device loss, `lib/recorder.js`, the run, plan, people and recording state in `App.jsx` | mapped; 11 confirmed, 1 suspected; fixed (SM-1 to SM-3) |
-| 2. Network, backend and storage | `lib/api.js`, `lib/turnstile.js`, `lib/describe.js`, `core/runCache.js`, `lib/fragmentCache.js`, `state/useFieldNotes.js`, the backend's `app/store.py` and routers, `cloudflare/` | not started |
+| 2. Network, backend and storage | `lib/api.js`, `lib/turnstile.js`, `lib/describe.js`, `core/runCache.js`, `lib/fragmentCache.js`, `state/useFieldNotes.js`, the backend's `app/store.py` and routers, `cloudflare/` | mapped; 13 confirmed, 5 suspected; 11 fixed (SM-4 to SM-6), 2 confirmed low ones open |
 | 3. Model, graph and workflow | `state/useStudio.js`, `ui/Stepper.jsx`, model loading and the IFC import worker, `core/federation.js`, graph and route invalidation, `viewer/ViewerManager.js`, `viewer/TopologyViewer.jsx` | not started |
 
 ## Issues
@@ -76,10 +76,72 @@ Each regression check was run on the build before the fixes (979d759) and after 
 | A restarted run's tenability index (unit test) | fail on the old reset rule | pass |
 | Identifying by shape ends cleanly when its module cannot load | not run: the Duplex leaves no element to identify by shape | not run |
 
+### SM-4. The graph's copy on the server
+
+Findings B1, B2, B3, B5. The server's id was written into the graph object when the upload answered, the upload happened only if the backend was "online" at the moment of the build, and a copy the server lost was never sent again. Since Next, routes, fires and plans run in the browser, so the free-plan server is usually asleep, and its store empty, by the time a TopologicPy feature is asked for.
+
+| Finding | Impact | Fix |
+|---|---|---|
+| B1. The upload's answer replaced the graph with a new object for the same graph; everything kept "with the graph it was made on" took it for a new graph: a Flamescapes fire or plan running then was cancelled with no message, and the code check, the performance report and the sprinkler, systems and extinguisher plans vanished or were made again. Reached when the upload is slow, as it is after the server's 15-minute sleep (about 33 s), or when a guided run reaches its fire first. | High | The id is kept beside the graph (`serverGraphRef` in `App.jsx`, by the graph's `nodes`), so the graph object changes only on a build or a model load. |
+| B2. A graph built while the backend was checking, waking or offline, or whose upload failed, was never uploaded; the TopologicPy features then refused with "not connected" under a "backend up" badge. | Medium | The graph is uploaded when a TopologicPy feature first asks for it (`serverGraphId`, one upload in flight per graph), not at the build; while the backend is waking the message says so. |
+| B3. A copy the server lost (its 15-minute sleep, the 1 h limit, eight graphs shared by every user) was never sent again: every TopologicPy feature failed until a rebuild, which also dropped the route, plan and fire. | Medium | `onServerGraph`: on the server's "no graph" refusal the graph is sent again once and the request asked again; the copy of a graph replaced on screen is deleted. |
+| B5. A TopologicPy engine saved in an earlier visit was used while the server's engines were unknown (asleep, unreachable, or a site with no backend): Find route refused, and a guided run stopped at its route stage. | Medium | `core/session.js effectiveEngine`: with no engine list the browser's engine runs; the saved choice applies again when the server lists it. |
+
+Regression tests: `core/session.test.mjs` (the engine rule); `tools/server-race-test.mjs`, which stands between the page and the real local backend and holds back or refuses chosen requests: "the code check stays while the graph's upload is still out", "a graph built while the backend woke is sent when TopologicPy routes it", "a graph the server lost is sent again and the route asked again", "with no backend, a saved TopologicPy engine gives way to the browser's". Status: fixed.
+
+### SM-5. Answers written for inputs that changed while they were awaited
+
+Findings B4, B16, B6, B7. The server and describer answers were written whatever had changed meanwhile, and two waits could not be ended.
+
+| Finding | Impact | Fix |
+|---|---|---|
+| B4. A TopologicPy route, alternatives or engine comparison for the old start, exit or graph was drawn after the points moved or the graph was rebuilt; a Navigation cross-check of the old model was drawn over a newly opened one. | Medium (the TopologicPy engine is a choice; the browser engine answers at once) | Each answer is written only if the graph and points (route answers) or the graph and model (the cross-check) are still the ones it was asked for (`askedRef`, `sameRoute`, `sameModel`). |
+| B16. The engine comparison stayed after the points moved or the graph was rebuilt, and Compare had no busy state, so a double click sent two requests. | Low | The comparison is cleared wherever the route is; Compare is busy while a route request is out. |
+| B6. Stop while the describer waited for the human check did nothing: it stayed busy for up to two minutes. | Low to medium | `humanToken({ signal })`: Stop ends the wait. |
+| B7. A model's description stayed, or landed if still being written, under another model opened after it. | Low to medium | Opening another model ends a description still being written and clears the text. |
+
+Regression tests: `tools/server-race-test.mjs`: "a route that comes after the start moved is not drawn", "the engines' comparison goes when the start moves"; `tools/describer-test.mjs --check stop` (B6), run on a build made with `VITE_DESCRIBE_URL` and Cloudflare's always-interactive Turnstile test key. B7's check (`--check model`, the always-pass key) did not reach its assertion on either build (it timed out waiting for the describer to be ready) and was set aside; B7 is checked by reading only. Status: fixed.
+
+### SM-6. The backend's state and the site's own updates
+
+Findings B10, B9, B11.
+
+| Finding | Impact | Fix |
+|---|---|---|
+| B11. `/health` and `/api/graphs` listed every stored graph's id, and an id is the only key to a graph: any visitor could download another's walkable graph or delete it. | Medium | Both routes report counts only (`store.summary()`); the full listing stays for the server's own use. Live only after the backend is deployed again (Render deploys by hand). |
+| B9. A tab open across a deploy lost every part of the site it had not loaded yet, with a raw "Failed to fetch dynamically imported module" and no word about reloading. | Medium to low | `core/session.js isStaleSite`: the message says the site was updated and to reload. |
+| B10. A request that timed out or was cancelled marked the backend offline. | Low | `lib/api.js`: kinds "timeout" and "aborted" apart from "network"; only "network" flips the status. |
+
+Regression tests: `core/session.test.mjs` (the request kinds with a stubbed `fetch`, and the stale-site messages of Chrome, Firefox and Safari); backend `tests/test_api.py::test_graph_ids_are_not_listed`; `tools/server-race-test.mjs` "a part of the site gone after a deploy says to reload". Status: fixed.
+
+### Verification of the area 2 fixes (2026-11-10)
+
+Run on the build before the area 2 fixes (016a002) and after them, on the Duplex, against the real local backend.
+
+| Check | Before | After |
+|---|---|---|
+| The code check stays while the graph's upload is still out | fail: gone when the upload answered | pass |
+| A graph built while the backend woke is sent when TopologicPy routes it | fail: no route, 0 uploads | pass: 1 upload |
+| A graph the server lost is sent again and the route asked again | fail: no route, 1 route request | pass: 2 uploads, 2 requests |
+| With no backend, a saved TopologicPy engine gives way to the browser's | fail: no route | pass |
+| A route that comes after the start moved is not drawn | fail: drawn | pass |
+| The engines' comparison goes when the start moves | fail: it stayed | pass |
+| A part of the site gone after a deploy says to reload | fail: the raw message | pass |
+| Graph ids are not listed (pytest) | fail | pass |
+| Request kinds, engine rule, stale-site messages (unit) | fail: `lib/api.js` could not be imported by node, and the old rules | pass |
+| Stop ends a wait for the human check (describer build) | fail: still waiting | pass |
+| A description goes when another model is opened (describer build) | not reached: the check timed out on both builds | not reached |
+
+After the fixes the whole suite passed on a desktop (129 steps) and an emulated phone (128 steps), with no console errors, and `tools/server-race-test.mjs` passed 7 of 7. Backend: 131 tests pass.
+
 ### Open
 
 - A9 (suspected, low): when the GPU solver falls back to the CPU on its own (`flamescapesGpu.js runSceneGpu`: device already lost, scene unsupported, or a buffer setup error), the run keeps the GPU label and the GPU-sized grid, and with the "speed" grid a CPU-measured rate could be stored as that GPU's. To settle: force a buffer setup error in a WebGPU browser and read the card's backend line and `info.gpuRate`. Suggested fix: let `runSceneGpu` throw so the worker's labelled, re-sized CPU restart runs. In [../issues/open-risks.md](../issues/open-risks.md).
 - Not reachable today, noted: a throw inside `repeat()` after a successful run would reject `run.promise` with `failed` still false, and that run would be reused for its key. No call in `repeat()` throws in practice.
+- B8 (confirmed, low, not fixed): a theme change while Turnstile's script loads leaves no human check widget (two mounts of the same element await the script; the first's late cleanup removes the widget the second relied on), so the next cloud description fails with "choose Cloudflare again". Fix when touched: a mount counter in `lib/turnstile.js`, and the cleanup removing only its own widget. Needs a site key to test, which local builds lack.
+- B15 (confirmed, low, not fixed): two tabs overwrite each other's field notes and settings in `localStorage` (each writes its whole object; no `storage` listener). Fix when touched: merge on write and refresh on the `storage` event.
+- Suspected, low: B12 (near the storage quota a failed write also rolls back its eviction, so nothing new is kept); B13 (IndexedDB opens have no timeout or `onblocked`/`onversionchange`; latent until a database version bump with an old tab open); B14 (a cached fragments buffer that fails to load is not dropped); B17 (TopologicPy TGraph builds are not serialised, though Navigation builds are locked as "not known to be thread-safe"); B18 (the Worker's `/rooms` wants a Turnstile action the page never issues, latent; a siteverify outage reads as a failed human check). What would settle each is in the area 2 findings below.
+- The server still answers a request with no graph id on the latest graph of its kind, whoever made it (`store.get(None, mode)`). Next always sends an id; a client that does not would reach another visitor's graph. Not changed: other clients of the API may rely on it.
 
 ## 1. Fire runs and compute workers
 
@@ -227,7 +289,151 @@ Evidence, as traced (lines at 979d759):
 
 ## 2. Network, backend and storage
 
-Pending.
+Since Next, routes, fires, plans and RL run in the browser, so the backend sees a request only when a TopologicPy feature is used. On the free Render plan it sleeps after 15 idle minutes and restarts with an empty graph store (render.yaml), so it is usually asleep, and its store empty, when a TopologicPy feature is asked for. Every machine below lives with that.
+
+### Machines
+
+#### N1. Backend status (`state/useStudio.js`: `serverStatus`, `capabilities`, `refreshCapabilities`, `reportError`)
+
+| State | Representation |
+|---|---|
+| Checking | the first probe pending |
+| Waking | still checking after 2.5 s ("Waking backend…") |
+| Online | a probe answered; `capabilities` set |
+| Offline | a probe failed (`capabilities` null), or a request could not reach the server |
+
+| Event | From | To |
+|---|---|---|
+| mount | - | Checking; one probe with a 90 s timeout |
+| 2.5 s, probe pending | Checking | Waking |
+| a probe answers | any | Online |
+| a probe fails | any | Offline |
+| a request fails as `network` (unreachable) | any | Offline *(a timeout or a cancel no longer does: SM-6, B10)* |
+| Offline, tab visible | Offline | probes after 4, 8, 16, 32 then 60 s |
+| the server sleeps or restarts | Online | Online (not probed again while Online) |
+
+Invariants: Offline is left only by a probe that answers; Online means "answered once", not "has my graph" (N3). Derived: `effectiveEngine` (core/session.js) is the saved engine if the server lists it, the server's first otherwise, and the browser's when no list is known *(SM-4, B5)*.
+
+#### N2. One request (`lib/api.js request`)
+
+Waiting for headers (timer armed: 120 s by default, 8 or 90 s for probes, 300 s for the cross-check), reading the body, resolved, or rejected as an `ApiError` of kind `http` (the server's `detail`), `network` (unreachable), `timeout` or `aborted` *(SM-6, B10)*. Every request settles once; the timeout covers the wait for headers only.
+
+#### N3. The graph's copy on the server (`App.jsx`: `serverGraphRef`, `serverGraphId`, `onServerGraph`)
+
+| State | Representation |
+|---|---|
+| None | `serverGraphRef.nodes` is not the graph on screen's |
+| Uploading | `pending` set for the graph on screen |
+| Held | `id` set for the graph on screen |
+| Lost | `id` set, but the server no longer has it (known only when a request is refused) |
+
+| Event | From | To |
+|---|---|---|
+| graph built or model opened | any | None for the new graph (the graph object itself is not touched again) *(SM-4, B1)* |
+| a TopologicPy feature asks, backend Online | None | Uploading; the previous graph's copy deleted *(SM-4, B2)* |
+| a second feature asks meanwhile | Uploading | Uploading (the same upload awaited) |
+| upload answers | Uploading | Held |
+| upload fails | Uploading | None (the feature reports the error; the next ask uploads again) |
+| the server sleeps, its 1 h limit passes, eight newer graphs, a DELETE | Held | Lost |
+| a request refused "no graph" | Lost | Uploading, then the request asked once more *(SM-4, B3)* |
+| a feature asks while the backend is not Online | any | refused: "not connected", or "still waking up" |
+
+Invariants: a server request names only the graph on screen; the graph object stands for one graph for as long as it is on screen; a lost copy is sent again.
+
+#### N4. Server graph store (`backend/app/store.py GraphStore`)
+
+Per id: absent, live (`_items[gid]`, touched on every `get`), gone (TTL of an hour idle, the oldest beyond eight, `DELETE`, a process restart). Every access holds the lock; a request holding a graph keeps it after eviction; one uvicorn process, so one store. The store is shared by every visitor; the public routes now report counts only *(SM-6, B11)*. Still: `get(None, mode)` answers with the latest graph of a kind whoever made it (Open).
+
+#### N5. Server answers in `App.jsx` (route, compare, alternatives, Navigation cross-check)
+
+Idle, busy (`pathBusy` or `navBusy`; Compare now shows it too), shown (`path`, `comparison`, `alternatives` or `navCheck`). An answer is written only if the graph and the points (route answers) or the graph and the model (the cross-check) are still those it was asked for *(SM-5, B4)*. Moving a point, clearing them, rebuilding the graph or opening a model clears the route, the alternatives and the comparison *(SM-5, B16)*. The browser engines answer within the click, so only the server paths have a window.
+
+#### N6. Describer (`App.jsx`: `describe`, `runDescribe`, `stopDescribe`; `lib/describe.js`)
+
+| State | Representation |
+|---|---|
+| Ready | `busy` false |
+| Waiting for the human check | `busy`; cloud; `humanToken` pending (up to 120 s) |
+| Writing | `busy`; the cloud request or the on-device model running |
+| Written / Error | `text` or `error` set |
+
+| Event | From | To |
+|---|---|---|
+| Describe | Ready, Written, Error | Waiting (cloud) or Writing (on the device) |
+| token, answer, failure | Waiting, Writing | Writing, Written, Error |
+| Stop | Waiting or Writing | Ready *(SM-5, B6: Waiting used to stay)* |
+| another model opened | any | Ready, text cleared *(SM-5, B7)* |
+| the panel closed while Waiting | Waiting | Error "The human check was closed." |
+
+The Describe button and the engine switch are disabled while busy, so two runs never overlap.
+
+#### N7. Human check (`lib/turnstile.js`)
+
+The script not loaded, loading or loaded; no widget, a widget with no token (requests wait), a widget with a token (taken once, then the widget resets). Mounting a new element replaces the widget; unmounting rejects the waiters. Invariant: while the cloud engine is chosen, one widget is in the panel. Broken by a theme change during the script's load (B8, open).
+
+#### N8. The describer Worker (`cloudflare/describe-worker/src/index.js`)
+
+Per request: origin (403 with no CORS header), size (413), JSON (400), the human check (no secret: pass; else siteverify with a 10 s timeout, checking success, action and hostname), facts (400), Workers AI (503 past the daily allowance, 502 for an empty answer), then `{text, model}`. A siteverify outage is answered as a failed human check (B18, open).
+
+#### N9. Kept runs (`core/runCache.js`) and N10. Fragment cache (`lib/fragmentCache.js`)
+
+One IndexedDB connection each, opened on first use and kept; a failed open is retried on the next call. Kept runs: read and touch in one readwrite transaction; write only after a run succeeded, over 96 MB not at all, LRU eviction and the put in one transaction; every failure means "compute as before". Fragments: buffer and record in one transaction, keyed by the IFC's hash and the converter's versions, LRU eviction after a successful write. Open: B12, B13, B14.
+
+#### N11. Field notes (`state/useFieldNotes.js`) and settings (`state/useStudio.js`)
+
+Read once at mount from `localStorage`, written whole on every change, errors swallowed (the session keeps its state). Settings drop the session-only keys on write and on read. Two tabs overwrite each other (B15, open).
+
+#### N12. The server's Navigation cache (`backend/app/graphs/navigation_check.py`)
+
+Parsed models and Navigation graphs by the IFC's hash and the spacing, LRU, every build under one lock, run in the threadpool after the upload is read. Sound.
+
+### Findings
+
+| Id | Finding | Status | Impact | Issue |
+|---|---|---|---|---|
+| B1 | The upload's answer made a new graph object; a fire or plan running then ended, and the code check, report and plans vanished | Confirmed | High | SM-4 |
+| B4 | Server answers written whatever changed meanwhile | Confirmed | Medium (TopologicPy engine) | SM-5 |
+| B3 | A lost server copy never sent again | Confirmed | Medium | SM-4 |
+| B2 | No upload unless "online" at the build, and no retry | Confirmed | Medium | SM-4 |
+| B5 | A saved TopologicPy engine refused routing while the server's engines were unknown | Confirmed | Medium | SM-4 |
+| B11 | Graph ids listed publicly; any client could read or delete any graph | Confirmed | Medium | SM-6 |
+| B9 | A tab open across a deploy fails with a raw message | Confirmed | Medium to low | SM-6 |
+| B6 | Stop did not end a wait for the human check | Confirmed | Low to medium | SM-5 |
+| B7 | A description stayed under another model | Confirmed | Low to medium | SM-5 |
+| B10 | A timeout or a cancel marked the backend offline | Confirmed | Low | SM-6 |
+| B16 | The comparison outlived its inputs; Compare had no busy state | Confirmed | Low | SM-5 |
+| B8 | A theme change while Turnstile loads leaves no widget | Confirmed | Low | open |
+| B15 | Two tabs overwrite each other's notes and settings | Confirmed | Low | open |
+| B12 | Near the quota, eviction never happens | Suspected | Low | open |
+| B13 | IndexedDB opens can wait for good | Suspected, latent | Low | open |
+| B14 | A cached fragments buffer that fails to load is served again | Suspected | Low | open |
+| B17 | TopologicPy TGraph builds are not serialised | Suspected | Low | open |
+| B18 | The Worker's `/rooms` action; a siteverify outage read as a failed check | Suspected, latent | Low | open |
+
+Evidence, as traced (lines at 016a002):
+
+- **B1.** `buildGraph` uploaded only when `serverStatus === "online"` (App.jsx:879) and on the answer set the graph to `{ ...current, graphId, bounds }` (:884-887), a new object. The effect on `[graph]` (:3409-3418) cancels a run whose `run.graph !== graph`; the code check (`codeState.graph === graph`, :2343), the report (:2378), and the sprinkler, systems and extinguisher plans (:1318, :1432, :2651, :2712) compare the graph by object. The people-leaving code already compared `nodes` for this reason (:2422-2431).
+- **B2.** With the status checking, waking or offline at the build, nothing uploaded later; `needsServerGraph` (:919-929) then refused because `graph.graphId` was null, under a "backend up" badge once the probe answered.
+- **B3.** The store keeps a graph for an hour idle and at most eight, shared by every visitor (backend/app/config.py, store.py); the free plan's sleep empties it. A request then got 400 "No navigation graph available…" (routers/ifc.py `_require_graph`), `reportError` said to build the graph again (useStudio.js:366-380), and `graph.graphId` stayed, so every later request failed the same way.
+- **B4.** `findPath` (:1036-1046), `comparePath` (:1066-1075), `findAlternatives` (:1102-1126) and `runNavigationCheck` (:1156-1164) wrote their answers with no check; the pick buttons, Rebuild graph and Open IFC stay enabled while they wait.
+- **B5.** `effectiveEngine` returned the saved engine when `capabilities` was null (useStudio.js:489-493); `settings.engine` is saved across visits.
+- **B6.** `humanToken()` took no signal (lib/turnstile.js:85-100); Stop aborted only the later fetch.
+- **B7.** Nothing cleared `describe.text` when a model was opened; the answer was written with no check (App.jsx:3060).
+- **B9.** No handling of a chunk that a deploy removed; `reportError` showed the browser's message as it was.
+- **B10.** `request` mapped every `AbortError`, its own timeout and a caller's cancel alike, to kind `network` (api.js:50-53), and `reportError` set Offline for that kind (useStudio.js:362-364).
+- **B11.** `GET /health` returned `store.stats()` with every id (main.py:69-77, store.py:235-253), as did `GET /api/graphs`; `GET` and `DELETE /api/ifc/graph/{id}` need only the id.
+- **B16.** `setComparison(null)` was not called by `handlePick`, `clearPoints` or `buildGraph`; the Compare button had no `busy`.
+
+### Checked and sound
+
+- `request`: every call settles once; an HTTP error carries the server's `detail`; the timer is always cleared; an already-aborted signal aborts at once.
+- The probes: 90 s for the first; the offline loop backs off to a minute, skips while hidden and probes at once on becoming visible.
+- A server request always names the graph on screen; the server's "latest graph" fallback is never reached from Next.
+- Server: the store takes its lock on every access and keeps its "latest" map consistent on eviction; the graph's lazy caches are idempotent; `import_graph` validates lengths, ranges and finiteness; CORS lists the Pages origin and the local ports. The fire stream and the server's RL and timeline routes are not used by Next.
+- Topology inspector: its three server actions are disabled while busy.
+- Describer: one run at a time; an abort during a fetch or on-device streaming ends busy without an error; a token is taken before any await, so two callers never share one; an expired token resets the check.
+- Worker: other origins are refused before any work; the body size is checked before parsing; a token is checked for success, action and hostname; Workers AI failures are 503 with the reason.
+- Kept runs and fragments: written only after success; every failure falls back to computing or converting; a version or converter change changes the key, so a stale entry is never served.
 
 ## 3. Model, graph and workflow
 

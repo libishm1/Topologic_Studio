@@ -1663,7 +1663,7 @@ export function RoutePanel({
             onChange={(straightenRoutes) => setSettings({ straightenRoutes })}
             hint="Straight runs, as TopologicPy's Wire.Straighten draws them, never longer than the grid route. A run whose ends both stand 0.25 m clear keeps about 0.24 m from walls at the 0.5 m grid (less on a coarser grid). Doors and stairs stay on the route. Applies to the next route."
           />
-          <Button block disabled={!canRoute || engines.length < 2} onClick={onCompare}>
+          <Button block busy={pathBusy} disabled={!canRoute || engines.length < 2} onClick={onCompare}>
             Compare both engines
           </Button>
           <Button block disabled={!points.start && !points.exit && !points.fire} onClick={onClearPoints}>

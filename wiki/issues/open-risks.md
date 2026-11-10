@@ -124,3 +124,14 @@ grid, and with the "speed" grid a CPU-measured rate could be stored as that
 GPU's. Not yet reproduced. To settle: force a buffer setup error in a WebGPU
 browser and read the card's backend line and `info.gpuRate`. Finding A9 in
 [state-machines.md](../architecture/state-machines.md).
+
+## Area 2 leftovers (2026-11-10)
+
+Confirmed but low and not fixed: a theme change while Turnstile's script loads
+leaves no human check widget (B8); two tabs overwrite each other's field notes
+and settings (B15). Suspected: B12 (quota and eviction), B13 (IndexedDB opens
+with no timeout), B14 (a bad cached fragments buffer), B17 (TGraph builds not
+serialised), B18 (the Worker's `/rooms` action; a siteverify outage read as a
+failed check). The server still answers a request with no graph id on the latest
+graph of its kind, whoever made it. All in
+[state-machines.md](../architecture/state-machines.md).
