@@ -108,7 +108,7 @@ Findings B10, B9, B11.
 
 | Finding | Impact | Fix |
 |---|---|---|
-| B11. `/health` and `/api/graphs` listed every stored graph's id, and an id is the only key to a graph: any visitor could download another's walkable graph or delete it. | Medium | Both routes report counts only (`store.summary()`); the full listing stays for the server's own use. Live only after the backend is deployed again (Render deploys by hand). |
+| B11. `/health` and `/api/graphs` listed every stored graph's id, and an id is the only key to a graph: any visitor could download another's walkable graph or delete it. | Medium | Both routes report counts only (`store.summary()`); the full listing stays for the server's own use. Live on Render since 2026-11-10 (deployed by hand; `/health` checked). |
 | B9. A tab open across a deploy lost every part of the site it had not loaded yet, with a raw "Failed to fetch dynamically imported module" and no word about reloading. | Medium to low | `core/session.js isStaleSite`: the message says the site was updated and to reload. |
 | B10. A request that timed out or was cancelled marked the backend offline. | Low | `lib/api.js`: kinds "timeout" and "aborted" apart from "network"; only "network" flips the status. |
 
