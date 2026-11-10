@@ -38,13 +38,13 @@ import { RL_MAX_STEPS } from "./core/rl.js";
 import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
-import { GUIDED_RUNS, farthestFromExits, guidedOrigin, nodeAlong, stagesFor } from "./core/guided.js";
+import { GUIDED_RUNS, farthestFromExits, fireStageNext, guidedOrigin, nodeAlong, stagesFor } from "./core/guided.js";
 import { describeFacts } from "./core/describeFacts.js";
 import { EGRESS_B, codeCheck, storeysOf } from "./core/codeCheck.js";
 import * as reportPages from "./core/perfReport.js";
 import * as rsetPresets from "./core/rsetPresets.js";
 import { measureView } from "./core/measures.js";
-import { tenabilityTracker } from "./core/tenability.js";
+import { runIndex } from "./core/tenability.js";
 import { fieldNote, nextHint } from "./core/fieldNotes.js";
 import { useFieldNotes } from "./state/useFieldNotes.js";
 import { FieldNotesButton, FieldNotesDialog, HintCard } from "./ui/FieldNotes.jsx";
@@ -72,6 +72,8 @@ const SMOKE_IN_HEAT_VIEW = 0.35;
 // (and whenever the camera moves): the playback changes it about 8 times a second.
 const GPU_RUN_DRAW_RATE = 15;
 const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate";
+// The recording while its module loads (a click then does nothing).
+const RECORDER_STARTING = { cancel() {} };
 // How long a step is on screen, with nothing running, before its hint shows.
 const HINT_SETTLE_MS = 2500;
 // The code's occupancy group for the performance check's occupants setting
@@ -178,7 +180,8 @@ export default function App() {
   const studio = useStudio();
   const viewerRef = useRef(null);
   const samplerRef = useRef(null);
-  const forecastRef = useRef(null);
+  // The forecast worker's lanes, one worker each: plan, zone, report.
+  const forecastRef = useRef({});
   const rlRef = useRef(null);
   // The Flamescapes solver's worker, and its current run: inputs, frames as
   // they arrive, and the stacked result once done (reused by the plan).
@@ -198,6 +201,11 @@ export default function App() {
   // The run whose frames are on screen (playback reads its view from a ref,
   // so switching heat and smoke mid-run holds: review 4).
   const playingRunRef = useRef(null);
+  // Counts fire starts and stops: a start still waiting for its two-zone
+  // frames goes on only if nothing came after it.
+  const fireStartRef = useRef(0);
+  // Whether the last fire was stopped rather than ending by itself.
+  const fireStoppedRef = useRef(false);
   // What a Flamescapes run colours the graph by (core/measures.js), and the
   // limits its tenability index is worked out with (core/tenability.js).
   const showRef = useRef(measureView({}, false));
@@ -281,7 +289,7 @@ export default function App() {
   useEffect(
     () => () => {
       samplerRef.current?.cancel();
-      forecastRef.current?.cancel();
+      Object.values(forecastRef.current).forEach((lane) => lane.cancel());
       rlRef.current?.cancel();
       flamescapesRef.current?.cancel();
     },
@@ -289,13 +297,17 @@ export default function App() {
   );
 
   // Planning with the forecast has its own worker: its deadline map takes a
-  // few seconds on a large graph and must not hold up a graph rebuild.
-  const forecastJob = useCallback((payload, transfers = []) => {
-    forecastRef.current ||= workerClient(
+  // few seconds on a large graph and must not hold up a graph rebuild. The
+  // plan, the two-zone fire's frames and the report's fires each have a lane
+  // of their own, since ending a worker ends every job in it: one shared, the
+  // report's Stop left the plan busy for good and a second Plan click lost a
+  // starting fire (wiki/architecture/state-machines.md, SM-2).
+  const forecastJob = useCallback((payload, transfers = [], lane = "plan") => {
+    forecastRef.current[lane] ||= workerClient(
       () => new Worker(new URL("./workers/forecast.worker.js", import.meta.url), { type: "module" }),
       { failure: "Planning with the forecast stopped: its worker did not load or ran out of memory. Reload the page and try again." },
     );
-    return forecastRef.current.run({ payload }, transfers);
+    return forecastRef.current[lane].run({ payload }, transfers);
   }, []);
 
   // The Flamescapes solver streams a frame at a time as progress.
@@ -348,16 +360,20 @@ export default function App() {
    * routes it drew, its deadline colours (they follow the state) and any plan
    * still running (review M1, M3). A map left on a rebuilt graph, indexed by
    * the new graph's nodes, read past its end and took the page down (C1).
+   *
+   * keepRun: the fire about to start plays the plan's Flamescapes run, so it
+   * is kept (its start reuses it, or ends it if its inputs differ).
    */
-  const dropPlan = useCallback(() => {
+  const dropPlan = useCallback((opts) => {
     planGenRef.current += 1;
     if (planRunningRef.current) {
       planRunningRef.current = false;
-      forecastRef.current?.cancel();
+      forecastRef.current.plan?.cancel();
       // A Flamescapes run started for this plan, and not on screen, is ended
-      // too (review 8).
+      // too (review 8), unless the fire about to start plays it: ended, it
+      // was computed again from the start (SM-1).
       const run = combustionRef.current;
-      if (run && !run.done && run !== playingRunRef.current) {
+      if (run && !run.done && run !== playingRunRef.current && opts?.keepRun !== true) {
         flamescapesRef.current?.cancel();
         combustionRef.current = null;
       }
@@ -373,24 +389,8 @@ export default function App() {
 
   // The tenability index of frame k of a run (core/tenability.js): worked
   // out in order and kept with the run, again from the start when the limits
-  // change, or when a restarted run dropped its frames.
-  const tenabilityOf = useCallback((run, k) => {
-    const opts = tenabilityRef.current;
-    const key = JSON.stringify(opts);
-    const n = run.frames[0]?.T.length || 0;
-    if (!run.ti || run.tiKey !== key || run.ti.length > run.frames.length) {
-      run.ti = [];
-      run.tiKey = key;
-      run.tiTracker = tenabilityTracker(n, opts);
-    }
-    let before = run.ti.length ? run.frames[run.ti.length - 1].time : 0;
-    while (run.ti.length <= k && run.ti.length < run.frames.length) {
-      const frame = run.frames[run.ti.length];
-      run.ti.push(run.tiTracker.step(frame, Math.max(0, frame.time - before) / 60));
-      before = frame.time;
-    }
-    return run.ti[Math.min(k, run.ti.length - 1)] || null;
-  }, []);
+  // change, or when a restarted run replaced its frames.
+  const tenabilityOf = useCallback((run, k) => runIndex(run, k, tenabilityRef.current), []);
 
   // Frame k of a run in what is on show (core/measures.js): heat on the
   // run's ramp, the smoke measures by visibility (each is a function of the
@@ -968,6 +968,15 @@ export default function App() {
       studio.setPickMode(null);
       // A plan is for one start, exit and fire: moving any of them drops it.
       dropPlan();
+      // So is the agent's training, and its answer: still training, it drew
+      // a route for the old points when it ended (SM-3).
+      if (mode !== "fire" || settings.rlUseFire) {
+        rlRef.current?.cancel();
+        if (rl.busy || rl.result) {
+          studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
+          if (rl.path) viewerRef.current?.setPath(null, { dynamic: true });
+        }
+      }
       if (mode !== "fire") {
         studio.setPath(null);
         studio.setAlternatives(null);
@@ -975,7 +984,7 @@ export default function App() {
         viewerRef.current?.setRoutes(null);
       }
     },
-    [snapToGraph, studio, dropPlan],
+    [snapToGraph, studio, dropPlan, settings.rlUseFire, rl],
   );
 
   const requestPick = useCallback(
@@ -1659,6 +1668,8 @@ export default function App() {
       return stored.result;
     };
     const compute = () => flamescapesJob(payload, transfers, (progress) => {
+      // Only the current run writes the card (SM-1).
+      if (combustionRef.current !== run) return;
       if (progress.type === "scene") {
         // A second scene is a restart on the CPU after the GPU stopped: the
         // frames so far came from the abandoned run (a playback waiting on
@@ -1765,17 +1776,35 @@ export default function App() {
       show("running");
       // This run's own inputs again (the callback of its start), on its grid.
       const again = combustionInputs();
+      // While they run the worker is busy though the run is done: Stop and a
+      // new graph end them too (SM-1).
+      run.repeating = true;
       flamescapesJob({ ...again.payload, maxCells: run.info.budget, repeats: { count, tenability } }, again.transfers, (progress) => {
         if (progress.type !== "member") return;
         members.push(progress.summary);
         show("running");
       }).then(
-        (answer) => show(answer?.skipped ? "stopped" : "done"),
-        // Ended by a newer run (its card is another), or the GPU failed: the range stays as far as it got.
-        () => show("stopped"),
+        (answer) => {
+          run.repeating = false;
+          show(answer?.skipped ? "stopped" : "done");
+        },
+        // Ended by Stop or a newer run (its card is another), or the GPU failed: the range stays as far as it got.
+        () => {
+          run.repeating = false;
+          show("stopped");
+        },
       );
     };
     run.promise = (storeKey ? readRun(storeKey) : Promise.resolve(null)).then((stored) => {
+      // Stopped or replaced while the kept runs were read (behind the last
+      // run's write, that can take seconds): nothing of it was in the worker
+      // to cancel, so it must not start now. Started, it ran to its end with
+      // no Stop to end it, beside the newer run in the same worker (SM-1).
+      if (combustionRef.current !== run) {
+        run.done = true;
+        run.failed = true;
+        throw new Error("cancelled");
+      }
       if (stored) {
         const result = replay(stored);
         repeat(result);
@@ -1917,9 +1946,12 @@ export default function App() {
     const open = data.answers.filter((a) => a.answer.by === "box" || a.answer.by === "none");
     if (!open.length) return;
     setIdentify((c) => ({ ...c, shapeBusy: true, shapeDone: 0, shapeTotal: open.length }));
-    const { IFCNET_MODEL, combine, createGeometryIdentifier, samplePoints } = await import("./core/identifyGeometry.js");
-    const classifier = createGeometryIdentifier({ modelUrl: `${import.meta.env.BASE_URL}${IFCNET_MODEL}` });
+    // Loaded inside the try: a module that fails to load (offline, or a tab
+    // open across a deploy) left the button spinning for good (SM-3).
+    let classifier = null;
     try {
+      const { IFCNET_MODEL, combine, createGeometryIdentifier, samplePoints } = await import("./core/identifyGeometry.js");
+      classifier = createGeometryIdentifier({ modelUrl: `${import.meta.env.BASE_URL}${IFCNET_MODEL}` });
       let byShape = 0;
       for (let i = 0; i < open.length; i += 8) {
         const chunk = open.slice(i, i + 8).map((a) => ({ a, cloud: samplePoints(data.meshesOf.get(a.record.itemId), { seed: a.record.itemId }) })).filter((c) => c.cloud);
@@ -1937,7 +1969,7 @@ export default function App() {
       setIdentify((c) => ({ ...c, shapeBusy: false }));
       reportError(error, "Identifying elements by shape");
     } finally {
-      classifier.terminate();
+      classifier?.terminate();
     }
   }, [modelInfo, reportError]);
 
@@ -2017,16 +2049,21 @@ export default function App() {
   const startFire = useCallback(async () => {
     if (!graph || !points.fire) return;
     markUsed("fire");
-    // A plan still running would land mid-fire and clear its route.
-    if (planRunningRef.current) dropPlan();
+    // A plan still running would land mid-fire and clear its route. Its
+    // Flamescapes run is the one this fire plays, if the inputs match.
+    if (planRunningRef.current) dropPlan({ keepRun: isFlamescapes(fireModel) });
     studio.stopFire();
     studio.setDynamicPath(null);
     viewerRef.current?.setPath(null, { dynamic: true });
+    const start = ++fireStartRef.current;
+    fireStoppedRef.current = false;
 
     // The two-zone model is run first, in the forecast worker; the simulation
     // then plays its node temperatures, one frame per step over its horizon.
+    // Until they come the fire is starting: Start and Plan wait, Stop ends it.
     let zoneFrames = null;
     if (fireModel === "zone") {
+      studio.setFire((current) => ({ ...current, starting: true }));
       try {
         const frames = Math.max(1, settings.fireMaxSteps);
         const { zone, transfers } = zoneInputs();
@@ -2040,13 +2077,16 @@ export default function App() {
             frameSeconds: settings.zoneHorizon / frames,
           },
           transfers,
+          "zone",
         );
         zoneFrames = zoneNodeFrames(table.nodeRoom, table.table, table.rooms, table.frames);
       } catch (error) {
-        // Cancelled: the worker was ended for a newer request, or the page.
+        // Cancelled: Stop, or the page closing.
+        if (start === fireStartRef.current) studio.setFire((current) => ({ ...current, starting: false }));
         if (!isCancelled(error)) reportError(error, "The two-zone fire model");
         return;
       }
+      if (start !== fireStartRef.current) return;
     }
 
     // Flames, embers and smoke of an earlier run go (review 7).
@@ -2183,11 +2223,16 @@ export default function App() {
   // wanted, else the graph's own colours.
   const stopFire = useCallback(() => {
     studio.stopFire();
-    // A Flamescapes run still computing is ended: it holds a CPU core or the GPU.
-    if (combustionRef.current && !combustionRef.current.done) {
-      flamescapesRef.current?.cancel();
-      combustionRef.current = null;
-    }
+    // A two-zone fire still starting is ended with its frames (SM-2).
+    fireStartRef.current += 1;
+    forecastRef.current.zone?.cancel();
+    // A Flamescapes run still computing, or its repeat runs, is ended: they
+    // hold a CPU core or the GPU. A finished run stays, to be played again.
+    const run = combustionRef.current;
+    if (run && (!run.done || run.repeating)) flamescapesRef.current?.cancel();
+    if (run && !run.done) combustionRef.current = null;
+    // Stopped, not ended by itself: a guided run ends here (SM-3).
+    fireStoppedRef.current = true;
     const viewer = viewerRef.current;
     viewer?.setTemperatures(null);
     viewer?.setBurningNodes(null);
@@ -2439,15 +2484,24 @@ export default function App() {
     },
   };
   // The key and graph of the walk last worked out, so switching off and on again does not work it out twice.
-  const crowdDoneRef = useRef({ key: null, nodes: null });
+  const crowdDoneRef = useRef({ key: null, nodes: null, state: null });
   useEffect(() => {
-    if (!crowdKey || (crowdDoneRef.current.key === crowdKey && crowdDoneRef.current.nodes === graph.nodes)) return undefined;
+    if (!crowdKey) return undefined;
+    // Worked out already: shown again. A walk for another key may have been
+    // started in between and dropped, which left the panel on that key with
+    // nothing drawn (wiki/architecture/state-machines.md, SM-3).
+    const done = crowdDoneRef.current;
+    if (done.key === crowdKey && done.nodes === graph.nodes) {
+      setCrowdState(done.state);
+      return undefined;
+    }
     const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
-      crowdDoneRef.current = { key: crowdKey, nodes: graph.nodes };
-      setCrowdState({ key: crowdKey, nodes: graph.nodes, busy: false, result: null, error: null, ...state });
+      const next = { key: crowdKey, nodes: graph.nodes, busy: false, result: null, error: null, ...state };
+      crowdDoneRef.current = { key: crowdKey, nodes: graph.nodes, state: next };
+      setCrowdState(next);
     };
     setCrowdState({ key: crowdKey, nodes: graph.nodes, result: null, busy: true, error: null });
     // A moment for the panel to say it is working before the walk is worked out.
@@ -2541,6 +2595,9 @@ export default function App() {
   const [recording, setRecording] = useState({ state: "idle", seconds: 0, limit: 0 });
   const toggleRecording = useCallback(async () => {
     const current = recordRef.current;
+    // Starting: its module is still loading. A second click then started a
+    // second recorder that no Stop could reach (SM-3).
+    if (current === RECORDER_STARTING) return;
     if (current) {
       setRecording((r) => ({ ...r, state: "encoding" }));
       current.stop();
@@ -2548,6 +2605,7 @@ export default function App() {
     }
     const viewer = viewerRef.current;
     if (!viewer) return;
+    recordRef.current = RECORDER_STARTING;
     try {
       const { recordView, recordingLimits } = await import("./lib/recorder.js");
       const limits = recordingLimits();
@@ -2577,6 +2635,7 @@ export default function App() {
           setRecording({ state: "idle", seconds: 0, limit: 0 });
         });
     } catch (error) {
+      recordRef.current = null;
       reportError(error, "Recording the view");
     }
   }, [file, toast, reportError]);
@@ -2833,6 +2892,7 @@ export default function App() {
             zone: zone?.zone,
           },
           zone?.transfers || [],
+          "report",
         );
         const { detectionFrom, ...opts } = perfCase(presets, plan, exitNodes);
         addToReport({ plan, ...fireLabel(origin.node, origin.how), detectionFrom, cases: report.planCases(performanceCheck, graph, plan, opts) });
@@ -2847,7 +2907,7 @@ export default function App() {
   }, [graph, fireModel, planExitNodes, perfBatch, settings, levels, points.start, zoneInputs, forecastJob, perfCase, fireLabel, addToReport, toast, reportError, markUsed]);
   const stopPerfFires = useCallback(() => {
     perfBatchStopRef.current = true;
-    forecastRef.current?.cancel();
+    forecastRef.current.report?.cancel();
   }, []);
   const clearPerfReport = useCallback(() => setPerfReport({ graph: null, entries: [] }), []);
 
@@ -3110,7 +3170,11 @@ export default function App() {
     } else if (stage === "fire") {
       if (acted !== stage) act(() => void startFire(), null);
       else if (fire.running && !guided.sawRunning) setGuided((g) => (g && g.run === run ? { ...g, sawRunning: true } : g));
-      else if (guided.sawRunning && !fire.running && fire.step > 0) advance();
+      else {
+        const next = fireStageNext({ sawRunning: guided.sawRunning, running: fire.running, step: fire.step, stopped: fireStoppedRef.current });
+        if (next === "advance") advance();
+        else if (next === "stopped") fail("The fire was stopped, so the guided run ends here.");
+      }
     } else if (stage === "plan") {
       if (acted !== stage) act(() => void planForecast(), forecastPlan.result);
       else if (forecastPlan.result && forecastPlan.result !== before && !forecastPlan.busy) advance();
@@ -3158,9 +3222,9 @@ export default function App() {
       route: Boolean(path && path.found !== false),
       appearance: settings.modelAppearance,
       fireOrigin: Boolean(points.fire),
-      busy: Boolean(studio.loadState.busy || studio.graphBusy || fire.running || guided),
+      busy: Boolean(studio.loadState.busy || studio.graphBusy || fire.running || fire.starting || guided),
     }),
-    [tab, modelInfo, graph, path, settings.modelAppearance, points.fire, studio.loadState.busy, studio.graphBusy, fire.running, guided],
+    [tab, modelInfo, graph, path, settings.modelAppearance, points.fire, studio.loadState.busy, studio.graphBusy, fire.running, fire.starting, guided],
   );
   const hint = nextHint(hintState, { used: notes.used, dismissed: notes.dismissed, on: notes.hints });
   // A hint shows only once the step has been on screen for a moment, so it
@@ -3205,7 +3269,7 @@ export default function App() {
     }
     // A plan still running is for older inputs: end its worker rather than
     // queue behind a deadline map that can take seconds.
-    if (planRunningRef.current) forecastRef.current?.cancel();
+    if (planRunningRef.current) forecastRef.current.plan?.cancel();
     const gen = ++planGenRef.current;
     // What the card describes: the values this plan used (review M2).
     const inputs = planSettings(settings);
@@ -3330,11 +3394,13 @@ export default function App() {
         });
       }
     } catch (error) {
-      // Cancelled, or overtaken: a newer request or a change owns the state.
-      if (isCancelled(error) || gen !== planGenRef.current) return;
+      // Overtaken: a newer request or a change owns the state.
+      if (gen !== planGenRef.current) return;
+      // Still this plan's: it ends, whatever ended it. A cancel no newer
+      // request asked for left it busy, its button spinning for good (SM-2).
       planRunningRef.current = false;
       studio.setForecastPlan(NO_PLAN);
-      reportError(error, "Planning with the forecast failed");
+      if (!isCancelled(error)) reportError(error, "Planning with the forecast failed");
     }
   }, [graph, points, settings, studio, exits, forecastJob, pointsOf, toast, reportError, showPlanRoutes, fireModel, zoneInputs, runCombustion, markFound, markUsed]);
 
@@ -3342,7 +3408,7 @@ export default function App() {
   // it and lets its frames go.
   useEffect(() => {
     if (combustionRef.current && combustionRef.current.graph !== graph) {
-      if (!combustionRef.current.done) flamescapesRef.current?.cancel();
+      if (!combustionRef.current.done || combustionRef.current.repeating) flamescapesRef.current?.cancel();
       combustionRef.current = null;
       playingRunRef.current = null;
       viewerRef.current?.setParticles(null);

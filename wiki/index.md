@@ -16,6 +16,7 @@ Use this page as the stable entry point.
 | Rooms (LOD1) models and the GeoJSON plan | [concepts/lod1-models.md](concepts/lod1-models.md) |
 | Deployment | [deployment/vite-github-pages.md](deployment/vite-github-pages.md) |
 | Known bugs and risks | [issues/open-risks.md](issues/open-risks.md) |
+| State machines, invariants and the bugs found in them | [architecture/state-machines.md](architecture/state-machines.md) |
 | HITL browser testing | [testing/agent-instructions-codex-claude.md](testing/agent-instructions-codex-claude.md) |
 | HITL PDF summaries | [summaries/hitl-pdf-summaries.md](summaries/hitl-pdf-summaries.md) |
 | Source inventory | [sources/source-inventory.md](sources/source-inventory.md) |

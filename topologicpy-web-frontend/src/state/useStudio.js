@@ -523,7 +523,7 @@ export function useStudio() {
   const stopFire = useCallback(() => {
     fireHandle.current?.close();
     fireHandle.current = null;
-    setFire((current) => ({ ...current, running: false }));
+    setFire((current) => ({ ...current, running: false, starting: false }));
   }, []);
 
   const setFireHandle = useCallback((handle) => {

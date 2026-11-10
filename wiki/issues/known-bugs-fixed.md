@@ -115,3 +115,25 @@ Full evidence, measurements and tests: [review-2026-10-27.md](../roadmap/review-
   against a suite tested on 0.8.5. Capped `<0.9`.
 - **A cold-starting hosted backend was reported "offline"** after 8 s. The
   UI now shows "Waking backend…" and waits up to 90 s.
+
+## State-machine audit, area 1: fire runs and compute workers (2026-11-10)
+
+Full machines, event sequences and evidence: [state-machines.md](../architecture/state-machines.md). On `next/browser-core`; each fix has a regression test that fails on the code before it.
+
+- **SM-1. A fire run outlived Stop, replacement or a restart.** A run stopped or
+  replaced while its kept run was read from IndexedDB started computing anyway,
+  with no Stop able to end it, and could write its numbers on the newer run's
+  card. Start fire during a plan's run computed that run again from zero.
+  Repeat runs went on after Stop and after a new model. After a GPU-to-CPU
+  restart the tenability index kept the abandoned frames' doses.
+- **SM-2. One forecast worker served the plan, the two-zone fire and the
+  report.** The report's Stop ended a plan beside it and left the Plan button
+  spinning, disabled, for good; a second Plan click lost a starting two-zone
+  fire. Each now has its own worker, and the two-zone fire has a "starting"
+  state that Start, Plan and Stop respect.
+- **SM-3. Async actions without a starting state or a check that they were
+  still wanted.** People leaving with the fire drew nobody after a fire was
+  started again with no step delay; a double click on Record GIF made two
+  recorders; Identify by shape stayed busy when its module failed to load;
+  moving a point during agent training drew its answer for the old points; Stop
+  in a guided run's fire stage counted as the fire ending.

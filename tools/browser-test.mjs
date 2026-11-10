@@ -74,6 +74,35 @@ const context = await browser.newContext(
     : { viewport: { width: 1600, height: 950 }, deviceScaleFactor: 1 },
 );
 const page = await context.newPage();
+// Every worker the page starts, by its script, and the kind of each job sent
+// to one, so a check can count them (wiki/architecture/state-machines.md: a
+// stopped fire starts none, a double click makes one recorder or one fire).
+await page.addInitScript(() => {
+  const Base = window.Worker;
+  window.__workers = [];
+  window.__jobs = [];
+  window.Worker = class extends Base {
+    constructor(url, opts) {
+      super(url, opts);
+      window.__workers.push(String(url));
+    }
+    postMessage(message, ...rest) {
+      window.__jobs.push(message?.payload?.kind ?? null);
+      return super.postMessage(message, ...rest);
+    }
+  };
+});
+const workersOf = (pattern) => page.evaluate((source) => window.__workers.filter((url) => new RegExp(source).test(url)).length, pattern.source);
+const jobsOf = (kind) => page.evaluate((k) => window.__jobs.filter((j) => j === k).length, kind);
+// A step's sections and disclosures close when it is left: these open one again if it is closed.
+const openSection = async (title) => {
+  const header = page.locator("button.section__header", { hasText: title }).first();
+  if ((await header.getAttribute("aria-expanded").catch(() => "true")) !== "true") await header.click();
+};
+// Simulate's "Rerouting and timing" fields.
+const openTiming = async () => {
+  if (!(await page.getByLabel("Steps", { exact: true }).isVisible().catch(() => false))) await page.getByText("Rerouting and timing", { exact: true }).click();
+};
 if (MOBILE) {
   const cdp = await context.newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
@@ -618,8 +647,19 @@ if (await peopleSection.count()) {
   // Recording the view as a GIF (lib/recorder.js, workers/gif.worker.js).
   const recordButton = page.getByRole("button", { name: /^Record GIF$/ });
   if (await recordButton.count()) {
-    await recordButton.click();
+    // Clicked twice while the recorder's module loads (held here), it makes
+    // one recording: the second used to start a recorder no Stop reached (SM-3).
+    const recorderChunk = /\/recorder(-[\w-]+)?\.js/;
+    await page.route(recorderChunk, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      await route.continue();
+    });
+    const gifWorkers = await workersOf(/gif\.worker/);
+    await recordButton.dblclick();
     await page.waitForTimeout(2500);
+    await page.unroute(recorderChunk);
+    const recorders = (await workersOf(/gif\.worker/)) - gifWorkers;
+    record(recorders === 1, "a double click on Record GIF makes one recording", `${recorders} recorder(s)`);
     const [gif] = await Promise.all([
       page.waitForEvent("download", { timeout: 30000 }).catch(() => null),
       page.getByRole("button", { name: /^Stop \(/ }).click().catch(() => {}),
@@ -782,6 +822,24 @@ if (await trainBtn.isEnabled()) {
     q["Return vs best within the step limit"],
   );
   await page.getByRole("group", { name: "Learning method" }).getByRole("button", { name: "Shielded (proved)" }).click();
+  // Moving the fire while the agent trains drops the training and its
+  // answer: still training, it drew a route for the old points when it ended
+  // (SM-3). The fire is placed again where it is, by its coordinates, which
+  // counts as a move.
+  const fireAt = ((await page.locator(".picker", { hasText: "Fire origin" }).locator(".picker__coord").first().textContent().catch(() => "")) || "").split(",").map((v) => v.trim());
+  if (fireAt.length === 3 && fireAt.every((v) => Number.isFinite(Number(v)))) {
+    await page.getByText("Place without the mouse", { exact: true }).first().click();
+    for (const [i, axis] of ["x", "y", "z"].entries()) await page.getByLabel(axis, { exact: true }).first().fill(fireAt[i]);
+    await trainBtn.click();
+    // Still training as the fire moves, or done already on a fast machine: either way the answer goes.
+    const training = await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => /Train policy/.test(b.textContent) && b.getAttribute("aria-busy") === "true"));
+    await page.getByRole("button", { name: /^Place fire origin$/ }).click();
+    await page.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /^Train policy$/.test(b.textContent) && !b.disabled), null, { timeout: 120000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    const stale = /certified earliest/i.test(await page.locator(".panel__scroll").first().innerText().catch(() => ""));
+    record(!stale, "moving the fire while the agent trains drops its answer", `${stale ? "the old points' answer was shown" : "dropped"} (${training ? "moved while training" : "training had ended"})`);
+    await page.getByText("Place without the mouse", { exact: true }).first().click();
+  }
 } else {
   record(false, "Train policy was enabled", "needs start and exit");
 }
@@ -890,6 +948,41 @@ if (await planBtn.isEnabled().catch(() => false)) {
       reportName || "no download",
     );
     await shot(page, "performance-report");
+    // The report's Stop leaves a plan running beside it alone. They shared a
+    // worker, and the plan stayed busy, its button spinning, for good (SM-2).
+    // Longer fires (2000 steps) keep both at work while the steps change.
+    const addFires = page.getByRole("button", { name: "Add fires on every storey" });
+    if (await addFires.isEnabled().catch(() => false)) {
+      await page.getByRole("tab", { name: /^Simulate/ }).click();
+      await openTiming();
+      const stepsField = page.getByLabel("Steps", { exact: true });
+      const stepsBefore = await stepsField.inputValue();
+      await stepsField.fill("2000");
+      await stepsField.blur();
+      await page.getByRole("tab", { name: /^Route/ }).click();
+      await openSection("Performance check (with the fire)");
+      await addFires.click();
+      await page.getByRole("tab", { name: /^Simulate/ }).click();
+      await planBtn.click();
+      await page.getByRole("tab", { name: /^Route/ }).click();
+      await openSection("Performance check (with the fire)");
+      const stopped = await page
+        .locator(".panel__scroll")
+        .getByRole("button", { name: /^Stop$/ })
+        .click({ timeout: 3000 })
+        .then(() => true)
+        .catch(() => false);
+      await page.getByRole("tab", { name: /^Simulate/ }).click();
+      const planFree = await page
+        .waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /^Plan with the forecast$/.test(b.textContent) && !b.disabled), null, { timeout: 120000 })
+        .then(() => true)
+        .catch(() => false);
+      if (stopped) record(planFree, "stopping the report's fires leaves a plan beside them to finish", planFree ? "plan usable" : "plan stuck busy");
+      else console.log("    (the report's fires ended before Stop: not checked)");
+      await openTiming();
+      await stepsField.fill(stepsBefore);
+      await stepsField.blur();
+    }
     await page.getByRole("tab", { name: /^Simulate/ }).click();
   }
 } else {
@@ -952,9 +1045,65 @@ if (zoneOffered) {
     record(played, "the live simulation plays the two-zone model", legend ? "gas-temperature legend shown" : "legend not visible");
     await shot(page, "zone-fire-running");
     await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
+    // A double click on Start while the two-zone frames compute starts the
+    // fire once. Each click computed the frames and started the fire, the
+    // second from step 0 again (SM-2).
+    const zoneJobs = await jobsOf("zoneFrames");
+    await startFire.dblclick();
+    await page.waitForFunction(() => /fire step \d+/i.test(document.body.innerText), null, { timeout: 45000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    const zoneStarts = (await jobsOf("zoneFrames")) - zoneJobs;
+    record(zoneStarts === 1, "a double click on Start fire starts the two-zone fire once", `${zoneStarts} start(s)`);
+    await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
   }
   // Back to heat diffusion for the steps that follow.
   await page.getByText("Heat diffusion", { exact: true }).click().catch(() => {});
+}
+
+// ---- 5d'. people leaving with a graph fire started again --------------------
+//
+// With no step delay, starting the fire again flipped the people's walk from
+// "with the fire" to "no fire yet" and back within the walk's 30 ms pause:
+// the panel was left on the dropped one, with nobody drawn (SM-3).
+
+console.log("\n[5d'] People leaving with a fire started again");
+if (await startFire.isEnabled().catch(() => false)) {
+  await page.getByRole("tab", { name: /^Route/ }).click();
+  const showPeople = page.locator(".toggle__label", { hasText: /^Show people leaving$/ }).first();
+  const openPeople = () => openSection("People leaving");
+  await openPeople();
+  await showPeople.click();
+  await page.getByLabel("Egress").selectOption("fire").catch(() => {});
+  await page.getByRole("tab", { name: /^Simulate/ }).click();
+  await openTiming();
+  const delayField = page.getByLabel("Step delay (ms)", { exact: true });
+  const stepsField = page.getByLabel("Steps", { exact: true });
+  const [delayBefore, stepsBefore] = [await delayField.inputValue(), await stepsField.inputValue()];
+  await delayField.fill("0");
+  await delayField.blur();
+  await stepsField.fill("30");
+  await stepsField.blur();
+  const fireEnded = () =>
+    page.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /^Start fire$/.test(b.textContent) && !b.disabled), null, { timeout: 60000 }).catch(() => {});
+  await startFire.click();
+  await page.waitForTimeout(500);
+  await fireEnded();
+  await page.waitForTimeout(1000);
+  await startFire.click();
+  await page.waitForTimeout(500);
+  await fireEnded();
+  await page.waitForTimeout(1500);
+  const peopleDrawn = await page.evaluate(() => window.__viewer?.overlays?.has("crowd") ?? false);
+  record(peopleDrawn, "people leaving with the fire are drawn after the fire is started again", peopleDrawn ? "drawn" : "nobody drawn");
+  await delayField.fill(delayBefore);
+  await delayField.blur();
+  await stepsField.fill(stepsBefore);
+  await stepsField.blur();
+  await page.getByRole("tab", { name: /^Route/ }).click();
+  await openPeople();
+  await page.getByLabel("Egress").selectOption("none").catch(() => {});
+  await showPeople.click().catch(() => {});
+  await page.getByRole("tab", { name: /^Simulate/ }).click();
 }
 
 // ---- 5e. the optional Flamescapes solver --------------------------------------
@@ -1070,8 +1219,85 @@ if (await fsToggle.isVisible().catch(() => false)) {
     onGpu ? "repeat runs on the GPU give the range on the card" : "no repeat runs on the CPU",
     onGpu ? `${repeatLine.trim().slice(0, 200) || "no range"} (${((Date.now() - tRepeat) / 1000).toFixed(1)}s)` : "CPU run, none made",
   );
+  // Stop ends the repeat runs too: they ran on after Stop, holding the GPU
+  // (SM-1). A new length makes a new run; the GPU computes it faster than it
+  // plays, so its repeats start while it is still on screen.
+  const simulated = page.getByLabel("Simulated time (s)");
+  if (onGpu) {
+    await page.getByLabel("Repeat runs on the GPU").selectOption("8").catch(() => {});
+    await simulated.fill("33");
+    await simulated.blur();
+    await page.getByRole("button", { name: /^Start fire$/ }).click();
+    const repeating = await page
+      .waitForFunction(() => /of 8 runs so far/.test(document.querySelector('[aria-label="Flamescapes run"]')?.innerText || ""), null, { timeout: 180000 })
+      .then(() => true)
+      .catch(() => false);
+    const stopped = await page
+      .getByRole("button", { name: /^Stop$/ })
+      .click({ timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+    const ended = await page
+      .waitForFunction(() => /of 8 runs \(the rest stopped\)/.test(document.querySelector('[aria-label="Flamescapes run"]')?.innerText || ""), null, { timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+    if (repeating && stopped) record(ended, "Stop ends the repeat runs too", ended ? "the rest stopped" : "they ran on");
+    else console.log(`    (repeat runs ${repeating ? "ran" : "did not start"}, Stop ${stopped ? "pressed" : "not offered"}: not checked)`);
+  }
   await page.getByLabel("Repeat runs on the GPU").selectOption("1").catch(() => {});
   await burns.selectOption(firstClass).catch(() => {});
+  // Start fire while a plan's run computes plays that run. It was thrown away
+  // and computed again from the start (SM-1). A new length makes a new run.
+  await simulated.fill("31");
+  await simulated.blur();
+  const solversBeforePlan = await workersOf(/flamescapes\.worker/);
+  await planBtn.click();
+  // The plan's run is computing: its solver has started.
+  await page
+    .waitForFunction((n) => window.__workers.filter((url) => /flamescapes\.worker/.test(url)).length > n, solversBeforePlan, { timeout: 60000 })
+    .catch(() => {});
+  await startFs();
+  const planSolvers = (await workersOf(/flamescapes\.worker/)) - solversBeforePlan;
+  record(planSolvers === 1, "Start fire while a plan's run computes plays that run", `${planSolvers} solver run(s) for one fire`);
+  // Stopped while its kept run is looked up, a run starts nothing. It
+  // started its solver once the lookup ended, and no Stop could end it
+  // (SM-1). The browser's store of kept runs is held busy so the lookup waits.
+  await simulated.fill("32");
+  await simulated.blur();
+  const held = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const open = indexedDB.open("topologic-studio-runs");
+        open.onerror = () => resolve(false);
+        open.onsuccess = () => {
+          try {
+            const tx = open.result.transaction(["meta", "frames"], "readwrite");
+            const store = tx.objectStore("meta");
+            window.__holdRuns = true;
+            const spin = () => {
+              if (window.__holdRuns) store.get("hold").onsuccess = spin;
+            };
+            spin();
+            resolve(true);
+          } catch {
+            resolve(false);
+          }
+        };
+      }),
+  );
+  const solversBeforeStop = await workersOf(/flamescapes\.worker/);
+  await page.getByRole("button", { name: /^Start fire$/ }).click();
+  await page.waitForTimeout(400);
+  await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
+  await page.evaluate(() => {
+    window.__holdRuns = false;
+  });
+  await page.waitForTimeout(3000);
+  const afterStop = (await workersOf(/flamescapes\.worker/)) - solversBeforeStop;
+  if (held) record(afterStop === 0, "a fire stopped while its kept run is looked up starts no solver", `${afterStop} solver run(s) after Stop`);
+  else console.log("    (the kept runs could not be held: not checked)");
+  await simulated.fill("30");
+  await simulated.blur();
   // Sprinklers (core/sprinklers.js, core/suppression.js, 2026-11-07): off by
   // default; on, the Duplex's rooms get heads by NFPA 13 with a rule report,
   // and a run reports when they open.
@@ -1170,6 +1396,23 @@ for (const tab of ["Model", "Graph", "Route", "Simulate"]) {
       .textContent({ timeout: 30000 })
       .catch(() => null);
     record(Boolean(named), "the Model step identifies the elements", named || "not shown");
+    // By shape, when its module cannot load (offline, or a tab open across a
+    // deploy): the button is usable again, not spinning for good (SM-3).
+    const shapeButton = page.getByRole("button", { name: /^Identify [\d,]+ by shape/ });
+    if (await shapeButton.count()) {
+      const shapeChunk = /identifyGeometry/;
+      await page.route(shapeChunk, (route) => route.abort("aborted"));
+      const errorsBefore = consoleErrors.length;
+      await shapeButton.click();
+      const freed = await page
+        .waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /^Identify [\d,]+ by shape/.test(b.textContent) && !b.disabled), null, { timeout: 8000 })
+        .then(() => true)
+        .catch(() => false);
+      await page.unroute(shapeChunk);
+      // The error it reports is this check's own.
+      consoleErrors.splice(errorsBefore);
+      record(freed, "identifying by shape ends cleanly when its module cannot load", freed ? "button usable again" : "button stuck");
+    }
     // Describe this model: the facts it would send are the app's own, shown before anything is sent.
     await page.locator(".panel__scroll").getByText("Describe this model", { exact: true }).click();
     await page.locator(".panel__scroll").getByText("The facts it is given", { exact: true }).click();

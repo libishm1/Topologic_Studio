@@ -15,6 +15,7 @@ import {
   limitingCriterion,
   obscuration,
   opticalDensity,
+  runIndex,
   tenabilityTracker,
   visibilityOf,
 } from "./tenability.js";
@@ -83,4 +84,29 @@ test("the doses never fall, so the index's dose parts never fall while a fire bu
     assert.ok(tracker.fedGas[0] >= fed);
     fed = tracker.fedGas[0];
   }
+});
+
+/** A run's frames as the page keeps them: one node at room temperature, clear, with CO only. */
+const framesOf = (count, co) => Array.from({ length: count }, (_, k) => ({ time: 10 * k, T: Float32Array.of(20), vis: Float32Array.of(100), co: Float32Array.of(co) }));
+
+test("a run restarted with new frames starts its index again, without the abandoned frames' doses (state-machines.md SM-1)", () => {
+  const opts = { limitC: 60, smoke: true };
+  // The GPU run gets to frame 5, painted as it came: CO enough to dose.
+  const run = { frames: framesOf(6, 20000) };
+  for (let k = 0; k <= 5; k += 1) runIndex(run, k, opts);
+  assert.ok(run.ti[5][0] > 0.5);
+  // It restarts on the CPU: its frames are dropped, and the new run is past
+  // frame 5 when the playback asks for frame 6, so there are more frames than
+  // before. This run has no CO: its index is a room's heat dose, not the old CO dose.
+  run.frames.length = 0;
+  run.frames.push(...framesOf(7, 0));
+  const fresh = { frames: framesOf(7, 0) };
+  assert.deepEqual(Array.from(runIndex(run, 6, opts)), Array.from(runIndex(fresh, 6, opts)));
+  assert.ok(runIndex(run, 6, opts)[0] < 0.01);
+  // The same frames painted again keep their index; a change of limits starts it again.
+  const kept = run.ti;
+  runIndex(run, 6, opts);
+  assert.equal(run.ti, kept);
+  runIndex(run, 6, { ...opts, limitC: 80 });
+  assert.notEqual(run.ti, kept);
 });

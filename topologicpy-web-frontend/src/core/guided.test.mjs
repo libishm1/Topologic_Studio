@@ -1,7 +1,7 @@
 /** The guided runs' choices on the graph (guided.js). */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { GUIDED_RUNS, farthestFromExits, guidedOrigin, nodeAlong, stagesFor } from "./guided.js";
+import { GUIDED_RUNS, farthestFromExits, fireStageNext, guidedOrigin, nodeAlong, stagesFor } from "./guided.js";
 
 test("the start is the floor node most links from any exit, past blocked links", () => {
   // A path 0-1-2-3-4 with the exit at 0, and a door node 5 hanging off 4; node 6 joins 0 only by a blocked link.
@@ -51,4 +51,13 @@ test("a guided run lights its fire at the likeliest origin near the route, on th
   assert.equal(guidedOrigin(graph, { candidates: [at(5.2, 10)], route, exits: [0], start: 20 }).candidate, null);
   // Never at the start or an exit.
   for (const c of [at(0, 0), at(20, 0)]) assert.equal(guidedOrigin(graph, { candidates: [c], route, exits: [0], start: 20 }).candidate, null);
+});
+
+test("a guided run's fire stage moves on when the fire ends by itself, and ends the run when it is stopped (state-machines.md SM-3)", () => {
+  assert.equal(fireStageNext({ sawRunning: false, running: false, step: 0, stopped: false }), "wait");
+  assert.equal(fireStageNext({ sawRunning: true, running: true, step: 12, stopped: false }), "wait");
+  assert.equal(fireStageNext({ sawRunning: true, running: false, step: 40, stopped: false }), "advance");
+  // Stopped: taken as ended, the plan stage computed the stopped run again from the start.
+  assert.equal(fireStageNext({ sawRunning: true, running: false, step: 12, stopped: true }), "stopped");
+  assert.equal(fireStageNext({ sawRunning: true, running: false, step: 0, stopped: true }), "wait");
 });

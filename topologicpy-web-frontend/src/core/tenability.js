@@ -110,6 +110,36 @@ export function tenabilityTracker(n, { ambient = 20, limitC = 60, visibilityLimi
 }
 
 /**
+ * The tenability index of frame k of a run (`run.frames`, each with its
+ * `time` in seconds), worked out in order and kept on the run. It starts
+ * again when the limits change, or when the frames were replaced: a run that
+ * restarts on the CPU after the GPU stopped drops its frames, and the doses
+ * of the abandoned frames must not carry into the new ones
+ * (wiki/architecture/state-machines.md, SM-1).
+ *
+ * @param {object} run   {frames}; ti, tiKey, tiFirst and tiTracker are kept on it
+ * @param {number} k     the frame
+ * @param {object} opts  as tenabilityTracker
+ */
+export function runIndex(run, k, opts = {}) {
+  const key = JSON.stringify(opts);
+  const n = run.frames[0]?.T.length || 0;
+  if (!run.ti || run.tiKey !== key || run.tiFirst !== run.frames[0] || run.ti.length > run.frames.length) {
+    run.ti = [];
+    run.tiKey = key;
+    run.tiFirst = run.frames[0];
+    run.tiTracker = tenabilityTracker(n, opts);
+  }
+  let before = run.ti.length ? run.frames[run.ti.length - 1].time : 0;
+  while (run.ti.length <= k && run.ti.length < run.frames.length) {
+    const frame = run.frames[run.ti.length];
+    run.ti.push(run.tiTracker.step(frame, Math.max(0, frame.time - before) / 60));
+    before = frame.time;
+  }
+  return run.ti[Math.min(k, run.ti.length - 1)] || null;
+}
+
+/**
  * Which criterion is nearest its limit at a node now (for a tooltip or the
  * export): "heat", "smoke", "gases" or "heat dose".
  */

@@ -2340,7 +2340,7 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
           onChange={(showDeadlineMap) => setSettings({ showDeadlineMap })}
         />
       </Disclosure>
-      <Button block busy={forecastPlan.busy} disabled={!ready || fire.running} onClick={onPlan}>
+      <Button block busy={forecastPlan.busy} disabled={!ready || fire.running || fire.starting} onClick={onPlan}>
         Plan with the forecast
       </Button>
       {!ready && graph && (
@@ -2706,6 +2706,8 @@ export function SimulatePanel({
   onLayOutSystems,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo, semantics } = studio;
+  // Running, or starting: the two-zone model computes its frames first.
+  const fireBusy = fire.running || Boolean(fire.starting);
   const doorsNow = doorsLabel(settings.flamescapesDoors, { seed: settings.flamescapesDoorSeed, share: settings.flamescapesDoorShare });
   const selfClosingCount = (semantics?.doors || []).filter((d) => d.selfClosing).length;
   const ready = Boolean(graph);
@@ -2735,7 +2737,7 @@ export function SimulatePanel({
           shortcut="F"
         />
         {ready && <PlaceWithoutMouse kinds={["fire"]} onPlace={onPlace} />}
-        {ready && <IgnitionPoints ignition={ignition} onFind={onFindIgnition} onUse={onUseIgnition} disabled={fire.running} />}
+        {ready && <IgnitionPoints ignition={ignition} onFind={onFindIgnition} onUse={onUseIgnition} disabled={fireBusy} />}
 
         <Choices
           legend="How the fire spreads"
@@ -2743,13 +2745,13 @@ export function SimulatePanel({
           value={fireModel}
           onChange={(fireModel) => setSettings({ fireModel })}
           options={models}
-          disabled={fire.running}
+          disabled={fireBusy}
         />
-        {fire.running && <p className="field__hint">Stop the fire to change how it spreads.</p>}
+        {fireBusy && <p className="field__hint">Stop the fire to change how it spreads.</p>}
         <Toggle
           label="Flamescapes combustion solver (optional)"
           checked={settings.flamescapes}
-          disabled={fire.running}
+          disabled={fireBusy}
           onChange={(on) => setSettings(on ? { flamescapes: true, fireModel: "flamescapes" } : { flamescapes: false, fireModel: isFlamescapes(settings.fireModel) ? "temperature" : settings.fireModel })}
           hint="Fire and smoke from the Flamescapes paper (Wrede, Wagner et al. 2026), with or without embers. Heavier: on your GPU where the browser offers WebGPU, otherwise a minute or more on the CPU."
         />
@@ -2867,12 +2869,12 @@ export function SimulatePanel({
             variant="primary"
             size="lg"
             style={{ flex: 1 }}
-            disabled={!ready || fire.running || !points.fire}
+            disabled={!ready || fireBusy || !points.fire}
             onClick={onStartFire}
           >
             Start fire
           </Button>
-          <Button variant="danger" size="lg" disabled={!fire.running} onClick={onStopFire}>
+          <Button variant="danger" size="lg" disabled={!fireBusy} onClick={onStopFire}>
             Stop
           </Button>
         </div>

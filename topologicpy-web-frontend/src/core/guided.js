@@ -70,6 +70,18 @@ export const stagesFor = (run) =>
       (run.tour || s.id !== "tour"),
   );
 
+/**
+ * What the fire stage does next: "wait" until the fire has been seen
+ * running and has ended, then "advance" if it ended by itself. A fire the
+ * user stopped ends the run ("stopped"): taken as ended, the plan stage
+ * computed the stopped run again under its own time limit
+ * (wiki/architecture/state-machines.md, SM-3).
+ */
+export function fireStageNext({ sawRunning, running, step, stopped }) {
+  if (!sawRunning || running || !(step > 0)) return "wait";
+  return stopped ? "stopped" : "advance";
+}
+
 /** Links from the nearest exit to every node (breadth first, skipping links blocked by walls); -1 for none. */
 export function hopsFromExits(graph, exitNodes) {
   const n = graph.nodes.length / 3;

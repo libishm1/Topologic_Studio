@@ -114,3 +114,13 @@ still during live rerouting. Research decisions, not bugs; see section 5 of
 
 `legacy/contract.py` imports `topologicpy.Graph`. Pinned at 0.9.86 until it is
 ported to `TGraph`; a bump without the port silently drops `/upload-topology`.
+
+## The GPU solver's own CPU fallbacks (suspected, 2026-11-10)
+
+`core/flamescapesGpu.js runSceneGpu` falls back to the CPU by itself when the
+device was already lost, the scene is unsupported, or setting up its buffers
+fails. The worker is not told: the run keeps the GPU label and the GPU-sized
+grid, and with the "speed" grid a CPU-measured rate could be stored as that
+GPU's. Not yet reproduced. To settle: force a buffer setup error in a WebGPU
+browser and read the card's backend line and `info.gpuRate`. Finding A9 in
+[state-machines.md](../architecture/state-machines.md).
