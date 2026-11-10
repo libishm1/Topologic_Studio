@@ -2555,7 +2555,10 @@ export default function App() {
     : crowdGraphFire
       ? ["graph", crowdGraphFire, points.fire, settings.fireMaxSteps, settings.forecastSecondsPerStep, settings.untenableAbove]
       : null;
-  const crowdKey = settings.crowd && graph ? JSON.stringify([planExitNodes(), settings.perfOccupantArea, settings.useWalls, settings.departAfter, crowdShelter, crowdFireKey]) : null;
+  const crowdKey =
+    settings.crowd && graph
+      ? JSON.stringify([planExitNodes(), settings.perfOccupantArea, settings.useWalls, settings.departAfter, crowdShelter, crowdFireKey, settings.crowdChoice])
+      : null;
   const crowdAvoiding = Boolean(crowdFireKey);
   const crowdResult = crowdState.key === crowdKey && crowdState.nodes === graphNodes ? crowdState.result : null;
   // The runner: down a stair on a loop, or the forecast's way out on its
@@ -2577,6 +2580,7 @@ export default function App() {
     useWalls: settings.useWalls,
     departAfter: settings.departAfter,
     shelter: crowdShelter,
+    choice: settings.crowdChoice,
     // Each node's untenable time (s; Infinity never), worked out when the walk is.
     closes: () => {
       if (crowdFlames) {
@@ -2608,7 +2612,7 @@ export default function App() {
       setCrowdState(done.state);
       return undefined;
     }
-    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes } = crowdInputsRef.current;
+    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, choice } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
@@ -2634,6 +2638,7 @@ export default function App() {
             start: [departAfter, departAfter + 10],
             shelterArea: shelter > 0 ? shelter : Infinity,
             closes: closes(),
+            choice,
             // A phone draws fewer, so it keeps its pace.
             maxPeople: isPhone() ? 1500 : 4000,
           });

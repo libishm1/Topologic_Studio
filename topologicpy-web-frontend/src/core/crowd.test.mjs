@@ -112,7 +112,8 @@ test("an exit passes no more than the SFPE specific flow through its width", () 
 
 test("people take their nearest exit", () => {
   const { graph, exits } = room(30, 6, { exits: ["left", "right"] });
-  const out = simulateCrowd(graph, { exits, occupantArea: 1 });
+  const out = simulateCrowd(graph, { exits, occupantArea: 1, choice: "nearest" });
+  assert.equal(out.choice, "nearest");
   const middle = (30 * 0.5) / 2;
   let checked = 0;
   walks(out).forEach((list, i) => {
@@ -123,6 +124,59 @@ test("people take their nearest exit", () => {
   });
   assert.ok(checked > 10);
   assert.equal(out.exits.length, 2);
+});
+
+/**
+ * A room 6 nodes across and 20 deep, full (a person a node), with the door
+ * at the middle of one end's side and a second exit in the far corner: most
+ * are nearest the first.
+ */
+function busyRoom() {
+  const { graph, exits } = room(6, 20);
+  const v = graph.nodes.length / 3;
+  const corner = 5 * 20 + 19;
+  return {
+    graph: {
+      ...graph,
+      nodes: Float32Array.from([...graph.nodes, 3.0, 0.75, 9.5]),
+      edges: Int32Array.from([...graph.edges, v, corner]),
+      kinds: Uint8Array.from([...graph.kinds, KIND_DOOR]),
+    },
+    exits: [...exits, v],
+  };
+}
+
+test("with the quickest choice the back of a long queue takes a farther free exit, and everyone is out sooner", () => {
+  const { graph, exits } = busyRoom();
+  const nearest = simulateCrowd(graph, { exits, occupantArea: 0.25, choice: "nearest" });
+  const quickest = simulateCrowd(graph, { exits, occupantArea: 0.25 });
+  assert.equal(quickest.choice, "quickest", "the default");
+  assert.equal(quickest.people, nearest.people);
+  assert.equal(quickest.inside, 0);
+  const by = (out, e) => Array.from(out.exitOf).filter((x) => x === e).length;
+  const gap = (out) => Math.abs(by(out, exits[0]) - by(out, exits[1]));
+  assert.ok(gap(quickest) < gap(nearest), `the exits share the crowd more evenly (${gap(quickest)} against ${gap(nearest)})`);
+  // Some whose nearest exit is the first leave by the second.
+  const turned = Array.from(nearest.exitOf).filter((e, i) => e === exits[0] && quickest.exitOf[i] === exits[1]).length;
+  assert.ok(turned > 0);
+  assert.ok(quickest.lastOut < 0.8 * nearest.lastOut, `out by ${quickest.lastOut.toFixed(0)} s against ${nearest.lastOut.toFixed(0)} s`);
+});
+
+test("people keep the exit they chose unless another is clearly quicker: no one turns back and forth", () => {
+  const { graph, exits } = busyRoom();
+  const out = simulateCrowd(graph, { exits, occupantArea: 0.25 });
+  // With two exits, a second turn would be back to the first.
+  assert.ok(Math.max(...out.switches) <= 1, `at most ${Math.max(...out.switches)} turns`);
+  assert.ok(out.switches.some((s) => s > 0), "some turn as the queues change");
+  assert.ok(simulateCrowd(graph, { exits, occupantArea: 0.25, choice: "nearest" }).switches.every((s) => s === 0));
+});
+
+test("with one exit the quickest choice is the nearest", () => {
+  const { graph, exits } = room(12, 6);
+  const quickest = simulateCrowd(graph, { exits, occupantArea: 0.5 });
+  const nearest = simulateCrowd(graph, { exits, occupantArea: 0.5, choice: "nearest" });
+  assert.equal(quickest.choice, "nearest");
+  assert.deepEqual(Array.from(quickest.segments), Array.from(nearest.segments));
 });
 
 test("walking speeds stay within the SFPE values, slower on a stair", () => {
@@ -320,13 +374,17 @@ test("with a fire, no one walks into a place it has made untenable; they turn to
   // exit that would have gone left must turn right.
   const closes = new Float64Array(n).fill(Infinity);
   for (let v = 6; v <= 9; v += 1) closes[v] = 2;
-  const out = simulateCrowd(graph, { exits, occupantArea: 0.25, closes, start: [0, 0] });
-  const without = simulateCrowd(graph, { exits, occupantArea: 0.25, start: [0, 0] });
-  // From an open place no one steps into the fire (those in it walk out).
-  for (const list of walks(out)) for (const s of list) if (s.b < n && closes[s.a] > s.t0) assert.ok(closes[s.b] > s.t0, `into node ${s.b} at ${s.t0.toFixed(1)} s`);
-  const turned = walks(out).filter((list, i) => list[0].a >= 10 && list[0].a <= 13 && out.exitOf[i] === exits[1] && without.exitOf[i] === exits[0]);
-  assert.ok(turned.length > 0, "someone turned to the other exit");
-  assert.equal(out.cutOff, 0);
+  for (const choice of ["quickest", "nearest"]) {
+    const out = simulateCrowd(graph, { exits, occupantArea: 0.25, closes, start: [0, 0], choice });
+    const without = simulateCrowd(graph, { exits, occupantArea: 0.25, start: [0, 0], choice });
+    assert.equal(out.choice, choice);
+    // From an open place no one steps into the fire (those in it walk out).
+    for (const list of walks(out)) for (const s of list) if (s.b < n && closes[s.a] > s.t0) assert.ok(closes[s.b] > s.t0, `${choice}: into node ${s.b} at ${s.t0.toFixed(1)} s`);
+    const turned = walks(out).filter((list, i) => list[0].a >= 10 && list[0].a <= 13 && out.exitOf[i] === exits[1] && without.exitOf[i] === exits[0]);
+    assert.ok(turned.length > 0, `${choice}: someone turned to the other exit`);
+    assert.equal(out.cutOff, 0);
+    assert.equal(out.inside, 0);
+  }
   // One exit only, the fire between: those beyond it stay where they are.
   const single = room(30, 1);
   const shut = new Float64Array(single.graph.nodes.length / 3).fill(Infinity);

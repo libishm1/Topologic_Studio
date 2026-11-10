@@ -108,6 +108,9 @@ export const DEFAULT_SETTINGS = {
   crowdRunner: "stair",
   // People keep the fire's playback time (Simulate) instead of their own.
   crowdWithFire: false,
+  // Each person takes the exit that gets them out soonest, queues counted
+  // ("quickest"), or the nearest ("nearest"; core/crowd.js EXIT_CHOICES).
+  crowdChoice: "quickest",
   // Gathering places hold crowdShelterArea m^2 of people when on; once full,
   // the earliest there fade as newcomers arrive.
   crowdShelterOn: false,

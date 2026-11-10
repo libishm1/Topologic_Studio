@@ -3,11 +3,31 @@
  * animation: a floor-field model on the walkable graph, timed by the SFPE
  * Handbook's hydraulic values.
  *
- * Where everyone goes. Each person heads for the nearest exit along the
- * shortest walk, the tree the performance check walks (performanceCheck.js
- * walkTree), as the "nearest exit" policy that gave the shortest exit times
- * in Carrera et al. (2019, doi:10.1007/978-3-319-99608-0_16) and that people
- * without a known exit take (Park et al. 2019, doi:10.1109/iemcon.2019.8936208).
+ * Where everyone goes. By default (`choice` "quickest") each person weighs
+ * every exit and takes the one that gets them out soonest: the walk there at
+ * their own speed, or the people ahead of them for it (nearer it by the walk)
+ * passing at the flow seen through it, whichever is longer. Each looks again
+ * every `replan` seconds and turns to another exit only where the two ways
+ * part and when it saves SWITCH_GAIN seconds and SWITCH_SHARE of their time,
+ * so a queue's back leaves for a free door while its front stays, and no one
+ * changes their mind over and over in a jam all the ways out share. The flow
+ * through an exit is its door's capacity until someone heading for it is held
+ * up, then what passes: a stair that feeds it slower than its door passes
+ * makes it look as slow as it is. Pathfinder's "locally quickest" door choice
+ * weighs a door the same way, by the walk and the person's place in its queue
+ * at the door's observed flow, with a preference for the door already chosen
+ * (Thunderhead Engineering, Pathfinder Technical Reference, Path Planning).
+ * On the site's examples with no fire, the last one was out sooner where
+ * queues formed at some exits while others stood free (the NIBS clinic 459
+ * to 333 s, the NIBS office 433 to 350 s), and within 3 s on the others
+ * (2026-11-10). With "nearest"
+ * each person heads for the nearest exit along the shortest walk, the tree
+ * the performance check walks (performanceCheck.js walkTree), as the
+ * "nearest exit" policy that gave the shortest exit times in Carrera et al.
+ * (2019, doi:10.1007/978-3-319-99608-0_16) and that people without a known
+ * exit take (Park et al. 2019, doi:10.1109/iemcon.2019.8936208). The
+ * quickest choice keeps a walk tree to each exit; on a graph where those
+ * would take more than QUICKEST_CELLS, everyone takes the nearest.
  * A node holds one person at a time, as a cell of the static floor-field
  * automaton holds one (Burstedde et al. 2001, 0.4 m cells; the
  * graph's are about 0.5 m, a jam of about 4 persons/m^2). When the next node
@@ -30,6 +50,9 @@
  * another exit when the fire cuts theirs, and anyone the fire has reached
  * walks out of it the shortest way. Someone whose only way out is through
  * the fire stays where they are (refuge in place) and is counted as cut off.
+ * With the quickest choice a person weighs only the exits whose walk the
+ * fire has not cut; once it has cut every one, or reached them, they take
+ * the way out worked out with the fire, as with the nearest.
  *
  * On a stair a person steps on only when no one else stands within
  * `stairGap` of the next node on the flight (0.9 m, about a person's
@@ -70,6 +93,22 @@ export const FIRE_PENALTY = 1000;
 /** m^2 a person standing at a gathering place: the sunflower's spacing, pi 0.45^2. */
 export const GATHER_AREA = Math.PI * 0.45 ** 2;
 
+/** How each person picks an exit: the one that gets them out soonest, or the nearest. */
+export const EXIT_CHOICES = ["quickest", "nearest"];
+
+/** Seconds, and the share of their time out, another exit must save before someone heading for one turns to it. */
+export const SWITCH_GAIN = 5;
+export const SWITCH_SHARE = 0.2;
+
+/** At most this many exits x nodes for the quickest choice (a walk tree an exit, 12 bytes a node); above it, the nearest. */
+export const QUICKEST_CELLS = 2e6;
+
+/** Seconds the flow seen through an exit is averaged over. */
+export const FLOW_SECONDS = 20;
+
+/** The least share of its door's capacity an exit's flow is taken at, so one no one has reached yet is not thought shut. */
+export const FLOW_FLOOR = 0.1;
+
 /** A seeded uniform generator (mulberry32), so a crowd is the same each time. */
 function random(seed) {
   let a = seed >>> 0;
@@ -101,13 +140,19 @@ function random(seed) {
  *   stairGap      m kept clear round the next node on a stair (0: none)
  *   shelterArea   m^2 each gathering place holds (Infinity: everyone)
  *   closes        each node's untenable time, s (a fire's; null: none)
- *   replan        s between ways out worked out again with a fire
+ *   replan        s between ways out worked out again with a fire, and exits weighed again
+ *   choice        "quickest" (default) or "nearest" (EXIT_CHOICES)
  * @returns {{
  *   people: number, points: Float32Array, segments: Float32Array, first: Int32Array, count: Int32Array,
  *   exitOf: Int32Array, outAt: Float32Array, exits: Array<{node: number, people: number, last: number}>,
  *   unreached: number, inside: number, lastOut: number, longestWait: number, capped: boolean,
- *   goneAt: Float32Array, shelter: number, cutOff: number
+ *   goneAt: Float32Array, shelter: number, cutOff: number, choice: string, tooLarge: boolean,
+ *   switches: Int32Array
  * }}
+ *   choice: the one taken, "nearest" when the quickest was asked with a
+ *   single exit or on a graph too large for it (tooLarge, QUICKEST_CELLS);
+ *   switches: how many times each person turned to another exit after the
+ *   start (0 with the nearest);
  *   points: xyz of the graph's nodes at foot level, then the gathering places;
  *   segments: 4 numbers each, start s, end s, point from, point to, each person's
  *   from first[i], count[i] of them, in time order (a gap between two is a wait).
@@ -129,6 +174,7 @@ export function simulateCrowd(graph, opts = {}) {
     shelterArea = Infinity,
     closes = null,
     replan = 2,
+    choice = "quickest",
   } = opts;
   const n = graph.nodes.length / 3;
   const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
@@ -256,13 +302,110 @@ export function simulateCrowd(graph, opts = {}) {
   const waitSince = new Float64Array(people).fill(-1);
   let longestWait = 0;
   let left = people;
+
+  // The quickest choice: a walk tree to each exit, and the one each person
+  // heads for (goal, an index into them; -1: the way out worked out with the
+  // fire, as everyone's with the nearest choice).
+  const exitList = [...new Set(exits.filter((e) => e >= 0))];
+  const trees =
+    choice === "quickest" && exitList.length > 1 && exitList.length * n <= QUICKEST_CELLS
+      ? exitList.map((e) => walkTree(graph, [e], { speed: 1, blocked }))
+      : null;
+  const goal = new Int32Array(people).fill(-1);
+  // How many times each turned to another exit after the start.
+  const switches = new Int32Array(people);
+  // Each person's metres to their exit, and the next node on the way.
+  const distTo = (i) => (goal[i] >= 0 ? trees[goal[i]].time : dist);
+  const nextTo = (i) => (goal[i] >= 0 ? trees[goal[i]].next : next);
+  // Who heads for each exit, by metres from it: a Fenwick tree, a slot every
+  // 0.1 m (a slot a metre wide left out a dense queue's band round each person).
+  const slot = (d) => Math.floor(d * 10);
+  let slots = 2;
+  if (trees) for (const { time } of trees) for (let v = 0; v < n; v += 1) if (time[v] < Infinity) slots = Math.max(slots, slot(time[v]) + 2);
+  const heading = trees ? trees.map(() => new Int32Array(slots + 1)) : [];
+  const tally = (g, d, k) => {
+    for (let x = Math.min(slots, slot(d) + 1); x <= slots; x += x & -x) heading[g][x] += k;
+  };
+  // How many heading for exit g are nearer it than d (by a slot or more).
+  const ahead = (g, d) => {
+    let s = 0;
+    for (let x = Math.min(slots, slot(d)); x > 0; x -= x & -x) s += heading[g][x];
+    return s;
+  };
+  // The flow seen out through each exit, persons/s: its door's capacity at
+  // first, then an exponential average over FLOW_SECONDS of those who passed
+  // while someone heading for it was held up, so an exit a stair feeds slower
+  // than its door passes looks as slow as it is. With no one held up for it,
+  // what passes says how many want it, not how many it takes: its flow goes
+  // back towards the door's capacity.
+  const flow = new Float64Array(exitList.length).fill(capacity);
+  const passed = new Int32Array(exitList.length);
+  const held = new Uint8Array(exitList.length);
+  const exitIndex = new Map(exitList.map((e, g) => [e, g]));
+  let lastWeigh = 0;
+  // Seconds till person i at v is out by exit g: the walk there, or those ahead through it at its flow, whichever is longer.
+  const outBy = (i, g, v) => {
+    const before = ahead(g, trees[g].time[v]);
+    return Math.max(trees[g].time[v] / vmax[i], before > 0 ? before / Math.max(flow[g], FLOW_FLOOR * capacity) : 0);
+  };
+  // Whether the walk from v to exit g is clear of the fire at t.
+  const clear = (g, v, t) => {
+    if (closes === null) return true;
+    for (let u = v; u >= 0; u = trees[g].next[u]) if (closedAt(u, t)) return false;
+    return true;
+  };
+  // Everyone still inside weighs the exits again, nearer first, each counted
+  // for the exit they take before the next weighs theirs. At the start each
+  // takes the quickest clear one; later they keep theirs unless another saves
+  // SWITCH_GAIN or the fire cuts it, and once the fire has cut every one they
+  // keep to the way out worked out with it.
+  const weigh = (t) => {
+    if (t > lastWeigh) {
+      const span = t - lastWeigh, a = 1 - Math.exp(-span / FLOW_SECONDS);
+      for (let g = 0; g < flow.length; g += 1) flow[g] += ((held[g] ? passed[g] / span : capacity) - flow[g]) * a;
+      passed.fill(0);
+      held.fill(0);
+      lastWeigh = t;
+    }
+    for (const h of heading) h.fill(0);
+    for (const i of order) if (goal[i] >= 0) tally(goal[i], trees[goal[i]].time[at[i]], 1);
+    for (const i of order) {
+      const v = at[i], own = goal[i];
+      if (own < 0 && t > 0) continue;
+      let keep = Infinity;
+      if (own >= 0) {
+        tally(own, trees[own].time[v], -1);
+        if (clear(own, v, t)) keep = outBy(i, own, v);
+      }
+      let pick = keep < Infinity ? own : -1;
+      let bar = keep < Infinity ? Math.min(keep - SWITCH_GAIN, keep * (1 - SWITCH_SHARE)) : Infinity;
+      for (let g = 0; g < trees.length; g += 1) {
+        if (g === own || !(trees[g].time[v] < Infinity)) continue;
+        // While the two ways go on together there is nothing to choose yet.
+        if (keep < Infinity && trees[g].next[v] === trees[own].next[v]) continue;
+        const out = outBy(i, g, v);
+        if (out < bar && clear(g, v, t)) {
+          pick = g;
+          bar = out;
+        }
+      }
+      if (t > 0 && pick !== own && pick >= 0) switches[i] += 1;
+      goal[i] = pick;
+      if (pick >= 0) tally(pick, trees[pick].time[v], 1);
+    }
+  };
+
   // Nearer the exits first, so a queue moves up from its front in one step.
   let order = Array.from({ length: people }, (_, i) => i);
   const sortOrder = () => {
     order = order.filter((i) => exitOf[i] < 0);
-    order.sort((p, q) => dist[at[p]] - dist[at[q]]);
+    order.sort((p, q) => distTo(p)[at[p]] - distTo(q)[at[q]]);
   };
   sortOrder();
+  if (trees) {
+    weigh(0);
+    sortOrder();
+  }
   // The stair nodes within stairGap of each stair node, by the walk, found when first needed.
   const nearStair = new Map();
   const stairNear = (u) => {
@@ -302,32 +445,35 @@ export function simulateCrowd(graph, opts = {}) {
   for (let step = 0; left > 0 && t < horizon; step += 1, t = step * dt) {
     // With a fire, the ways out over the places still open, now and then.
     if (closes !== null && step > 0 && step % every === 0) ({ time: dist, next } = openTree(t));
+    if (trees && step > 0 && step % every === 0) weigh(t);
     if (step % 10 === 0) sortOrder();
     for (const i of order) {
       if (exitOf[i] >= 0 || ready[i] > t + 1e-9) continue;
       const v = at[i];
+      const D = distTo(i);
       // The next node on the tree, or the best free neighbour as near the
       // exit (any open one nearer, from a place the fire has closed).
-      let u = next[v];
+      let u = nextTo(i)[v];
       // From an open place no one steps into the fire; from inside it, anywhere out.
       const inFire = closedAt(v, t);
       if (u >= 0 && closedAt(u, t) && !inFire) u = -1;
       if (u < 0 || (!isExit[u] && !free(u, v))) {
-        const limit = u >= 0 ? dist[u] + 1.0 : Infinity;
+        const limit = u >= 0 ? D[u] + 1.0 : Infinity;
         let best = -1;
         for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
           if (blocked?.[edgeIds[k]]) continue;
           const w = neighbours[k];
-          if (!free(w, v) || (closedAt(w, t) && !inFire) || !(dist[w] < dist[v]) || dist[w] > limit || kinds[w] === KIND_LIFT) continue;
-          if (best < 0 || dist[w] < dist[best]) best = w;
+          if (!free(w, v) || (closedAt(w, t) && !inFire) || !(D[w] < D[v]) || D[w] > limit || kinds[w] === KIND_LIFT) continue;
+          if (best < 0 || D[w] < D[best]) best = w;
         }
         u = best;
       }
       const doorShut = u >= 0 && (kinds[u] === KIND_DOOR || isExit[u]) && doorFree[u] > t + 1e-9;
       if (u < 0 || doorShut) {
         if (waitSince[i] < 0) waitSince[i] = t;
+        if (goal[i] >= 0) held[goal[i]] = 1;
         // Cut off by the fire: wait for the next look at the ways out.
-        const cut = u < 0 && dist[v] >= FIRE_PENALTY;
+        const cut = u < 0 && goal[i] < 0 && dist[v] >= FIRE_PENALTY;
         ready[i] = doorShut ? Math.max(t + dt, Math.ceil((doorFree[u] - 1e-9) / dt) * dt) : cut ? (Math.floor(step / every) + 1) * every * dt : t + dt;
         continue;
       }
@@ -355,6 +501,7 @@ export function simulateCrowd(graph, opts = {}) {
         segs[i].push(arrive, arrive + walk / vmax[i], u, p);
         exitOf[i] = u;
         outAt[i] = arrive;
+        if (trees) passed[exitIndex.get(u)] += 1;
         g.last = Math.max(g.last, arrive);
         left -= 1;
         continue;
@@ -403,6 +550,9 @@ export function simulateCrowd(graph, opts = {}) {
     goneAt,
     shelter,
     cutOff,
+    choice: trees ? "quickest" : "nearest",
+    tooLarge: choice === "quickest" && exitList.length > 1 && !trees,
+    switches,
   };
 }
 

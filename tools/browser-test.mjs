@@ -599,7 +599,8 @@ if (gotStart && gotExit && (await altBtn.isEnabled())) {
 
 // ---- 4b'. people leaving -----------------------------------------------------
 // The egress animation (core/crowd.js, viewer/crowd.js, 2026-11-09): off by
-// default; on, everyone walks to the nearest exit, drawn on the GPU.
+// default; on, everyone walks out by the quickest exit (the nearest an
+// option, 2026-11-10), drawn on the GPU.
 
 console.log("\n[4b'] People leaving");
 const peopleSection = page.locator("summary, button", { hasText: /^People leaving/ }).first();
@@ -644,6 +645,21 @@ if (await peopleSection.count()) {
   const waits = await page.getByText(/They wait for the fire/).count();
   record(waits > 0, "egress with the fire waits for a fire", waits ? "waiting" : "no hint");
   await page.getByLabel("Egress").selectOption("none").catch(() => {});
+  // Each person takes the quickest exit, queues counted, by default; the nearest is an option.
+  const choiceField = page.getByLabel("Each person takes");
+  const choiceDefault = await choiceField.inputValue().catch(() => "");
+  const quickestText = await page
+    .waitForFunction(() => /Each person takes the exit that gets them out soonest/.test(document.body.innerText), null, { timeout: 30000 })
+    .then(() => true)
+    .catch(() => false);
+  record(choiceDefault === "quickest" && quickestText, "people take the quickest exit by default", `${choiceDefault || "no field"}, ${quickestText ? "said so" : "not said"}`);
+  await choiceField.selectOption("nearest").catch(() => {});
+  const nearestWalk = await page
+    .waitForFunction(() => /Each person heads for the nearest exit by the shortest walk/.test(document.body.innerText), null, { timeout: 30000 })
+    .then(() => true)
+    .catch(() => false);
+  record(nearestWalk, "the nearest exit is an option, walked again", nearestWalk ? "walked again" : "no change");
+  await choiceField.selectOption("quickest").catch(() => {});
   // Recording the view as a GIF (lib/recorder.js, workers/gif.worker.js).
   const recordButton = page.getByRole("button", { name: /^Record GIF$/ });
   if (await recordButton.count()) {

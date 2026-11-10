@@ -1398,6 +1398,8 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
  */
 function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready }) {
   const result = crowd?.result;
+  // How many turned to another exit on the way (the quickest choice).
+  const turned = result?.switches ? result.switches.reduce((sum, s) => sum + (s > 0 ? 1 : 0), 0) : 0;
   const swatch = (key, label) => (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 10 }}>
       <span className="picker__dot" style={{ background: `#${CROWD_COLOURS[key].toString(16).padStart(6, "0")}` }} />
@@ -1411,7 +1413,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
         checked={settings.crowd}
         disabled={!ready}
         onChange={(on) => setSettings({ crowd: on })}
-        hint="Everyone on the floors walks to the nearest exit and gathers outside it, played faster than real time."
+        hint="Everyone on the floors walks out by the exit that gets them out soonest and gathers outside it, played faster than real time."
       />
       {settings.crowd && (
         <>
@@ -1448,6 +1450,20 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
                   : crowd?.avoiding
                     ? "They keep the fire's time and keep out of places it has made untenable (as the plan reads them): they turn back for another exit, and anyone with no way out but through the fire stays where they are."
                     : "They keep the fire's time; they keep out of it once its run has finished computing, so play it again to see them turn back."
+            }
+          />
+          <SelectField
+            label="Each person takes"
+            value={settings.crowdChoice}
+            onChange={(crowdChoice) => setSettings({ crowdChoice })}
+            options={[
+              { value: "quickest", label: "The quickest exit, queues counted" },
+              { value: "nearest", label: "The nearest exit" },
+            ]}
+            hint={
+              settings.crowdChoice === "quickest"
+                ? "Each weighs every exit out of the building, the walk there against the queue ahead of them at that door, and turns to a free door where the ways part when it is clearly quicker."
+                : "Each walks to the nearest exit and waits in its queue, even while another door stands free."
             }
           />
           <Toggle
@@ -1520,14 +1536,18 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
                 {result.inside > 0 ? `, ${result.inside} still inside when the walk stopped` : ""}, by{" "}
                 {result.exits.map((e) => `${e.people}`).join(", ")} through {result.exits.length} exit{result.exits.length === 1 ? "" : "s"}; the longest hold-up{" "}
                 {Math.round(result.longestWait)} s.
+                {turned > 0 ? ` ${turned.toLocaleString()} turned to another exit on the way.` : ""}
+                {result.tooLarge ? " The graph is too large to weigh every exit for everyone, so each took the nearest." : ""}
                 {result.unreached > 0 ? ` ${result.unreached.toLocaleString()} walkable places reach no exit and hold no one.` : ""}
                 {Number.isFinite(result.shelter) ? ` Each gathering place holds ${result.shelter}; ${Array.from(result.goneAt).filter(Number.isFinite).length} leave a full one.` : ""}
                 {result.cutOff > 0 ? ` ${result.cutOff} cut off by the fire stay where they are.` : ""}
               </Notice>
               {crowd.gpu && <p className="field__hint">Moved and drawn on the GPU: {crowd.gpu}.</p>}
               <p className="field__hint">
-                Each person heads for the nearest exit by the shortest walk (the &quot;nearest exit&quot; choice that gave the shortest
-                times in Carrera et al. 2019) and holds one place of the graph at a time, as a cell of a floor-field model does
+                {result.choice === "quickest"
+                  ? "Each person takes the exit that gets them out soonest: the walk there, or the people ahead of them through it at the flow seen at its door, whichever is longer, looked at again every 2 s, as Pathfinder's “locally quickest” door choice weighs a door. "
+                  : "Each person heads for the nearest exit by the shortest walk (the “nearest exit” choice that gave the shortest times in Carrera et al. 2019). "}
+                Each holds one place of the graph at a time, as a cell of a floor-field model does
                 (Burstedde et al. 2001), stepping round whoever is ahead. Speeds spread about 1.19 m/s and slow as the crowd
                 thickens, 0.92 m/s at most on stairs, and a 0.9 m door passes about 0.8 people a second (SFPE Handbook). Everyone
                 sets off within 10 s of the plan&apos;s departure time: the performance check, not this animation, models how
