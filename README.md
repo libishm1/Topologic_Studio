@@ -31,7 +31,53 @@ the heat.*
 > calibrated temperature, so its results do not replace a fire engineer's
 > egress assessment.
 
-## What's new (2026-11-08)
+## What's new (2026-11-11)
+
+- **People leaving.** An optional animation in the Route step: everyone on
+  the floors, one person per 9 m² of walkable floor, walks out at the SFPE
+  Handbook's speeds and gathers outside the exit they used. By default each
+  person takes the exit that gets them out soonest, the walk there or the
+  queue ahead at the flow seen through its door, and turns to a free door
+  where the ways part; the nearest exit is an option. On the examples with
+  no fire, the last person was out sooner where queues formed: the NIBS
+  Clinic from 459 s to 333 s, the NIBS Office from 433 s to 350 s. Everyone
+  uses every exit out of the building; **Exits** can send them all to the one
+  exit picked, to show what losing the others costs. With the fire, they keep
+  its clock and keep out of places it has made untenable. It is an
+  illustration of the walk out, not an evacuation model to quote
+  ([People leaving and the slime mould](https://libishm1.github.io/Topologic_Studio/docs/people-and-slime.html)).
+- **How people move.** Two options, off by default: walking speeds that vary
+  over time, as Corbetta et al. (2017) measured, and steps drawn at random by
+  the floor field (Kirchner and Schadschneider 2002), mostly direct,
+  wandering or disoriented. With either on, the walk runs on several seeds
+  and the notice gives the range of the time the last person is out.
+- **The slime mould.** Jeff Jones's Physarum agents grow over the walkable
+  graph towards the exits, and their yellow trail shows which corridors and
+  stairs the building's escape leans on. The fire can hold the slime back
+  (smoke from 30 s before a place becomes untenable, or a Flamescapes run's
+  own visibility) or wall it off. Five readings, each off until asked:
+  desire lines, the floor's medial axis, bottlenecks (on the NIBS Office,
+  202 people through a 0.92 m door, 250 s), dead ends against IBC 2021's
+  corridor limit, and branches the slime explored and gave up. The agents'
+  rules are proved in Lean (`Physarum.lean`, 23 results). A reading for
+  design, not a result to quote.
+- **A nearer exit.** When the start stands much nearer another exit out of
+  the building than the one picked, a note under the route says so.
+- **Roofs and voids are not walked on.** Spaces outside the building that no
+  door opens onto, such as roofs drawn as rooms, and spaces named as voids
+  ("open to below") are left out of the walkable graph; the Graph step lists
+  them.
+- **Atria.** Smoke rises through an atrium: voids are no longer floors in the
+  fire grid, and a grid clipped round a fire under an atrium reaches its top.
+  Sprinklers follow IBC 2021 404.3: heads at the atrium's top, none in its air
+  at each storey, none above 55 ft (16.8 m). Runs kept from before are not
+  reused.
+- **Describe this model** now also reads people leaving, the slime mould,
+  the performance check, sprinklers, systems and extinguishers, and the
+  spaces not walked on, and fits its facts within what the Cloudflare
+  describer reads.
+
+### Earlier: 2026-11-08
 
 - **Layered walls are solid.** Walls, roofs and slabs exported as layers
   (IfcBuildingElementPart), as in the Vienna example, were missing from the
@@ -66,11 +112,11 @@ the heat.*
 - **A guide on the website**, with GIFs of the suppression results; the
   earlier recordings, with an 84 s video, are kept in
   [docs/media/2026-11-07/](topologicpy-web-frontend/public/docs/media/2026-11-07/).
-- **On a phone** the page fits the screen, and hints take one line.
+- **On a phone** the page fits the screen.
 
 ## Contents
 
-- [What's new](#whats-new-2026-11-08)
+- [What's new](#whats-new-2026-11-11)
 - [Quick start](#quick-start)
 - [The example buildings](#the-example-buildings)
 - [What Studio does](#what-studio-does): [Model](#model-what-is-in-the-file),
@@ -214,6 +260,11 @@ The step reports how much of the building one can reach from its largest
 part. The Duplex is two homes side by side, so its graph is in two parts and
 the app says so: a route can only join two points in the same part.
 
+Spaces outside the building that no door opens onto, such as roofs drawn as
+rooms, and spaces named as voids ("open to below", "void", "Luftraum") are
+not walked on, and the step lists them. A roof, terrace or balcony with a door
+onto it stays walkable.
+
 **Graph settings** change the grid spacing, the largest step a person can
 climb, the agent's height, whether walls block links, and whether lifts and
 escalators join floors (off by default, as in an evacuation). **Cross-check
@@ -244,6 +295,19 @@ built-in A* search (in your browser) and TopologicPy's `TGraph` engine (on the
 server). **Alternative routes** look for other ways out: *Different space*
 keeps routes that do not run along one already found, and *Yen* lists the next
 cheapest routes exactly.
+
+When the start stands much nearer another exit out of the building than the
+one picked (it would save at least half the walk and 10 m), a note under the
+route says so; the route stays the one asked for.
+
+Two optional sections in this step show where the escape goes. **People
+leaving** walks everyone out by the quickest exit, at the SFPE Handbook's
+speeds, with the fire if you like, and gathers them outside each exit. The
+**Slime mould** grows Jones's Physarum agents over the floor towards the exits;
+its trail, desire lines, bottlenecks, dead ends and abandoned branches read
+where the escape concentrates. Both are illustrations for design, not
+evacuation results; see the guide's
+[People leaving and the slime mould](https://libishm1.github.io/Topologic_Studio/docs/people-and-slime.html).
 
 ### Simulate: fire and smoke
 
@@ -890,6 +954,15 @@ These are also on the Methods page.
 - **Assumed stairs and lifts.** They are approximate: an assumed stair has no
   known width, and a lift ride counts as walking its rise, with no wait for
   the car.
+- **People leaving.** An illustration of the walk out: everyone sets off
+  within 10 s, smoke and pre-movement slow no one, every door is taken as
+  0.9 m wide, and no one helps or follows another. The performance check, not
+  the animation, gives escape times.
+- **The slime mould.** Agents, not people, one seed a run, and no time to
+  quote. Its dead ends read IBC 2021's corridor limit, applied to rooms only
+  as a reference, with values from summaries of the code still to be checked
+  against its text. That its networks predict where people go is a hypothesis
+  to test.
 
 ---
 

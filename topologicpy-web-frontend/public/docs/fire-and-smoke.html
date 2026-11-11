@@ -42,6 +42,7 @@
       </li>
       <li><a href="suppression.html">Fire suppression</a></li>
       <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="people-and-slime.html">People leaving and the slime mould</a></li>
       <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
     </ol>
     <p class="toc__out"><a href="../">Open the app</a></p>
@@ -97,6 +98,7 @@
     <h2 id="doors">Doors, windows and ducts</h2>
     <p><span class="label">Doors</span> can be open, closed, as built or random. As built closes the doors the model says close themselves: <code>Pset_DoorCommon.SelfClosing</code>, or a fire rating whose EN 13501-2 class carries the self-closing mark -C (14 of the Vienna model's 81 doors, rated EI2 30-C or EI2 30-C-Sm). Random closes a share of the doors chosen with a seed, so a run can be repeated and compared with another seed.</p>
     <p>Doors are open and windows closed unless the <span class="label">Doors</span> switch beside the fire controls or <span class="label">Windows</span> in the Flamescapes settings say otherwise. A closed door or window has no gaps: with everything closed on the Duplex, 0.0 g of 138 g of soot reached the outside air after 60 s, against 24 % with the doors open, the default (<code>tools/envelope-check.mjs</code>). A grid clipped round the fire lets smoke out at its sides, which the run card says.</p>
+    <p>Atria: a space named as a void ("open to below") is never a floor in the fire grid, so smoke rises through an atrium as it would in the building. A model with no floor slabs takes its floors from its rooms' bottoms, and until 2026-11-11 the voids' bottoms sealed the NIBS Clinic's atria at the upper storey's floor, 4.57 m up. A grid clipped round a fire under an atrium now reaches the atrium's top and half a storey over it, its cells coarser for the same count. On the Clinic, over a 120 s run, the upper storey over the atrium went from clear air to 0.4 to 0.7 m of visibility at head height. The Clinic has no roof over its atria, so its smoke leaves through the top of the grid there. Runs kept from before this change are not reused.</p>
     <p><span class="label">Ventilation: running</span> joins the model's air terminals through one well-mixed duct volume at an assumed 100 L/s a terminal, without reading which system each belongs to or the ducts themselves, so it shows the furthest the ducts could spread smoke.</p>
 
     <h2 id="classes">What burns first, and where</h2>

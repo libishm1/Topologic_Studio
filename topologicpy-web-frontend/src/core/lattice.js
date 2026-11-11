@@ -242,7 +242,7 @@ function collapse(samples, gap) {
  * without reading their vertices: a model with many floor heights is cut many
  * times, and each cut used to visit every triangle (5 of 8 s on a 70 MB model).
  */
-function sectionAt(meshes, height, up, h0, h1, ranges = null) {
+export function sectionAt(meshes, height, up, h0, h1, ranges = null) {
   const segs = [];
   let k = 0;
   for (const { positions: p, indices: ix } of meshes) {

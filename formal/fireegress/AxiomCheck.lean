@@ -584,3 +584,8 @@ import FireEgress
 #print axioms FireEgress.Physarum.erode_mono
 #print axioms FireEgress.Physarum.erode_antitone
 #print axioms FireEgress.Physarum.erode_not_antitone_in_s
+#print axioms FireEgress.Sixteen.two_directions
+#print axioms FireEgress.Sixteen.two_directions_eq
+#print axioms FireEgress.Sixteen.knight_cos_gt
+#print axioms FireEgress.Sixteen.sixteen_bound
+#print axioms FireEgress.Sixteen.sixteen_percent

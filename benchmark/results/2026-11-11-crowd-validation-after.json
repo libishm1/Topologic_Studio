@@ -1,0 +1,606 @@
+{
+ "date": "2026-11-11",
+ "model": {
+  "file": "topologicpy-web-frontend/src/core/crowd.js",
+  "sha256": "e95a3384f91ce6e989cf4afcd2dfa0c74bbe4400e94e37cc8b60435dc7d56982",
+  "lattice_spacing_m": 0.5,
+  "dt_s": 0.1
+ },
+ "quick": false,
+ "seconds": 4,
+ "sources": {
+  "rimea": "RiMEA e.V., Guideline for Microscopic Evacuation Analysis, version 4.1.1 of 11.09.2025 (German authoritative), https://rimea.de, CC BY-ND 4.0",
+  "nist": "Ronchi E., Kuligowski E.D., Reneke P.A., Peacock R.D., Nilsson D. (2013) The Process of Verification and Validation of Building Fire Evacuation Models, NIST TN 1822, doi:10.6028/NIST.TN.1822",
+  "iso": "ISO 20414:2020, Fire safety engineering: verification and validation protocol for building fire evacuation models (paywalled; not read; scope from the ISO page)",
+  "percentiles": "RiMEA Test 16 percentiles, https://rimea.de/wp-content/uploads/2025/01/test_16_percentiles.xlsx (raw data: Chraibi and Subaih, SingleFileComparator, Zenodo doi:10.5281/zenodo.8378592)"
+ },
+ "summary": {
+  "pass": 16,
+  "fail": 2,
+  "documentation": 3
+ },
+ "tests": [
+  {
+   "id": "RiMEA-1",
+   "source": "RiMEA 4.1.1 Test 1",
+   "name": "speed in a 2 m x 40 m corridor at 1.33 m/s, 0 degrees to the lattice",
+   "criterion": "time for 40 m within [26, 34] s (expected 30.08 s)",
+   "measured": {
+    "time40_mean_s": 30.08,
+    "time40_range_s": [
+     30.08,
+     30.08
+    ],
+    "realised_speed_mps": 1.33,
+    "segment_speed_mps": 1.33,
+    "runs": 9
+   },
+   "pass": true,
+   "summary": "40 m in 30.08 s (expected 30.08), realised 1.33 m/s, while moving 1.33 m/s"
+  },
+  {
+   "id": "RiMEA-1-45deg",
+   "source": "RiMEA 4.1.1 Test 1",
+   "name": "speed in a 2 m x 40 m corridor at 1.33 m/s, 45 degrees to the lattice",
+   "criterion": "time for 40 m within [26, 34] s (expected 30.08 s)",
+   "measured": {
+    "time40_mean_s": 30.08,
+    "time40_range_s": [
+     30.08,
+     30.08
+    ],
+    "realised_speed_mps": 1.33,
+    "segment_speed_mps": 1.33,
+    "runs": 9
+   },
+   "pass": true,
+   "summary": "40 m in 30.08 s (expected 30.08), realised 1.33 m/s, while moving 1.33 m/s"
+  },
+  {
+   "id": "NIST-Verif.2.1",
+   "source": "NIST TN 1822 Verif.2.1 (IMO Test 1)",
+   "name": "speed in a 2 m x 40 m corridor at 1 m/s, 0 degrees to the lattice",
+   "criterion": "time for 40 m within [38, 42] s (expected 40 s)",
+   "measured": {
+    "time40_mean_s": 40,
+    "time40_range_s": [
+     40,
+     40
+    ],
+    "realised_speed_mps": 1,
+    "segment_speed_mps": 1,
+    "runs": 9
+   },
+   "pass": true,
+   "summary": "40 m in 40 s (expected 40), realised 1 m/s, while moving 1 m/s"
+  },
+  {
+   "id": "NIST-Verif.2.1-45deg",
+   "source": "NIST TN 1822 Verif.2.1 (IMO Test 1)",
+   "name": "speed in a 2 m x 40 m corridor at 1 m/s, 45 degrees to the lattice",
+   "criterion": "time for 40 m within [38, 42] s (expected 40 s)",
+   "measured": {
+    "time40_mean_s": 40,
+    "time40_range_s": [
+     40,
+     40
+    ],
+    "realised_speed_mps": 1,
+    "segment_speed_mps": 1,
+    "runs": 9
+   },
+   "pass": true,
+   "summary": "40 m in 40 s (expected 40), realised 1 m/s, while moving 1 m/s"
+  },
+  {
+   "id": "RiMEA-2",
+   "source": "RiMEA 4.1.1 Test 2",
+   "name": "speed up a stair 2 m wide, 10 m along the slope",
+   "criterion": "time for 10 m within Test 1's tolerance scaled, [12.55, 16.42] s, at the model's stair speed 0.689 m/s up (expected 14.52 s)",
+   "measured": {
+    "time10_mean_s": 14.52,
+    "time10_range_s": [
+     14.52,
+     14.52
+    ],
+    "moving_speed_mps": 0.689,
+    "runs": 10
+   },
+   "pass": true,
+   "summary": "10 m in 14.52 s (expected 14.52), moving at 0.689 m/s",
+   "up": {
+    "t10": 14.524328113549227,
+    "range": [
+     14.524327435148178,
+     14.52432870096886
+    ],
+    "moving": 0.6885000088763286,
+    "runs": 10
+   }
+  },
+  {
+   "id": "RiMEA-3",
+   "source": "RiMEA 4.1.1 Test 3",
+   "name": "speed down a stair 2 m wide, 10 m along the slope",
+   "criterion": "time for 10 m within Test 1's tolerance scaled, [9.42, 12.31] s, at the model's stair speed 0.918 m/s down (expected 10.89 s)",
+   "measured": {
+    "time10_mean_s": 10.89,
+    "time10_range_s": [
+     10.89,
+     10.89
+    ],
+    "moving_speed_mps": 0.918,
+    "runs": 10
+   },
+   "pass": true,
+   "summary": "10 m in 10.89 s (expected 10.89), moving at 0.918 m/s",
+   "up": {
+    "t10": 10.893246150007986,
+    "range": [
+     10.893245787050603,
+     10.89324659531201
+    ],
+    "moving": 0.918000003531424,
+    "runs": 10
+   }
+  },
+  {
+   "id": "NIST-Verif.2.2",
+   "source": "NIST TN 1822 Verif.2.2 (IMO Tests 2 and 3)",
+   "name": "1 m/s down a stair, 100 m along the incline (10 m run, scaled)",
+   "criterion": "100 s for 100 m, within 5 %",
+   "measured": {
+    "time100_s": 100,
+    "moving_speed_mps": 1,
+    "runs": 10
+   },
+   "pass": true,
+   "summary": "100 m in 100 s, moving at 1 m/s"
+  },
+  {
+   "id": "RiMEA-13",
+   "source": "RiMEA 4.1.1 Test 13 (fundamental diagram on stairs: down faster than up)",
+   "name": "walking speeds down a stair higher than up",
+   "criterion": "speed down > speed up (and within the spread of Fig. 16)",
+   "measured": {
+    "up_mps": 0.689,
+    "down_mps": 0.918
+   },
+   "pass": true,
+   "summary": "up 0.689 m/s, down 0.918 m/s (ascent at STAIR_UP 0.75 of kStair)"
+  },
+  {
+   "id": "RiMEA-6",
+   "source": "RiMEA 4.1.1 Test 6; NIST TN 1822 Verif.2.3 (IMO Test 6)",
+   "name": "twenty persons round a corner",
+   "criterion": "all go round the corner without passing through walls",
+   "measured": {
+    "people": 100,
+    "out": 100,
+    "points_outside_walls": 0
+   },
+   "pass": true,
+   "summary": "100 of 100 out, 0 points of their walks outside the walls",
+   "deviation": "persons start at random over the whole corridor, not in the 6 m x 2 m start area (crowd.js has no start areas)"
+  },
+  {
+   "id": "RiMEA-5",
+   "source": "RiMEA 4.1.1 Test 5; NIST TN 1822 Verif.1.1 (IMO Test 5)",
+   "name": "pre-movement uniform 10 to 100 s, ten persons in an 8 m x 5 m room",
+   "criterion": "each starts at an appropriate time: first moves within [10, 100] s, and uniform (KS p > 0.05)",
+   "measured": {
+    "samples": 100,
+    "earliest_s": 10.98,
+    "latest_s": 99.25,
+    "ks_D": 0.065,
+    "ks_p": 0.775
+   },
+   "pass": true,
+   "summary": "first moves 11 to 99.2 s, KS p 0.775 (crowd.js 'start' is a stagger; the performance check models pre-movement)"
+  },
+  {
+   "id": "RiMEA-7",
+   "source": "RiMEA 4.1.1 Test 7; NIST TN 1822 Verif.2.4 (IMO Test 7)",
+   "name": "50 persons' unimpeded speeds against the distribution assigned (uniform 0.89 to 1.49 m/s)",
+   "criterion": "speeds consistent with the distribution assigned (KS p > 0.05)",
+   "measured": {
+    "samples": 200,
+    "assigned": [
+     0.893,
+     1.487
+    ],
+    "moving_min_median_max": [
+     0.895,
+     1.207,
+     1.484
+    ],
+    "realised_median": 1.207,
+    "ks_D": 0.069,
+    "ks_p": 0.2841
+   },
+   "pass": true,
+   "summary": "moving 0.895 to 1.484 m/s (median 1.207) against 0.893 to 1.487; KS p 0.2841",
+   "deviation": "crowd.js assigns a uniform spread about one speed; RiMEA's population (Weidmann's speeds by age) cannot be set"
+  },
+  {
+   "id": "NIST-Verif.5.2",
+   "source": "NIST TN 1822 Verif.5.2 (IMO Test 4; MSC/Circ.1238's 1.33 persons/s/m)",
+   "name": "100 persons through a 1 m exit: the flow never above 1.33 persons/s",
+   "criterion": "flow at the exit over the whole period, and in any 10 s, at most 1.33 persons/s",
+   "measured": {
+    "mean_flow_ps": 0.923,
+    "peak_10s_flow_ps": 0.9,
+    "door_capacity_ps": 0.921
+   },
+   "pass": true,
+   "summary": "mean 0.923 persons/s, peak 10 s 0.9 (the door's SFPE capacity 0.921)"
+  },
+  {
+   "id": "NIST-Verif.4.1",
+   "source": "NIST TN 1822 Verif.4.1",
+   "name": "an exit closing at 10 s",
+   "criterion": "no one steps out by it after it closes; everyone still leaves",
+   "measured": {
+    "people": 240,
+    "out": 240,
+    "steps_on_to_closed_exit_begun_after_10s": 0,
+    "steps_begun_before_and_ending_after_10s": 2
+   },
+   "pass": true,
+   "summary": "0 steps on to the closed exit begun after 10 s (2 begun before it closed, ending after); 240 of 240 out"
+  },
+  {
+   "id": "NIST-Verif.3.1",
+   "source": "NIST TN 1822 Verif.3.1 (IMO Test 10); RiMEA 4.1.1 Test 10",
+   "name": "exit choice in a corridor with twelve rooms, a main and a secondary exit",
+   "criterion": "a deterministic model sends everyone to the closest exit (NIST); RiMEA's assignment by room cannot be set in crowd.js",
+   "measured": {
+    "nearest_choice_deterministic": "115 of 115",
+    "rimea_assignment_matched_by_nearest": "79 of 91 starting in rooms",
+    "exits_used": {
+     "nearest": {
+      "main": 62,
+      "secondary": 53
+     },
+     "quickest": {
+      "main": 62,
+      "secondary": 53
+     }
+    }
+   },
+   "pass": true,
+   "summary": "nearest: 115 of 115 to their closest exit; 79 of 91 in rooms where RiMEA assigns them; quickest used main 62, secondary 53",
+   "deviation": "persons start at random over rooms, corridor and passage; RiMEA's per-person exit assignment is not representable"
+  },
+  {
+   "id": "RiMEA-12a",
+   "source": "RiMEA 4.1.1 Test 12a",
+   "name": "room 1's evacuation against the goal's distance a past the bottleneck (0.5 to 10 m)",
+   "criterion": "the time rises with a until it is constant (documentation)",
+   "measured": [
+    {
+     "a": 0.5,
+     "people": 150,
+     "room1_s": 162.3,
+     "flow_ps": 0.921
+    },
+    {
+     "a": 1,
+     "people": 148,
+     "room1_s": 160.3,
+     "flow_ps": 0.92
+    },
+    {
+     "a": 2,
+     "people": 147,
+     "room1_s": 159.7,
+     "flow_ps": 0.921
+    },
+    {
+     "a": 5,
+     "people": 150,
+     "room1_s": 162.9,
+     "flow_ps": 0.921
+    },
+    {
+     "a": 10,
+     "people": 151,
+     "room1_s": 163.3,
+     "flow_ps": 0.921
+    }
+   ],
+   "pass": null,
+   "summary": "a 0.5 m: 162.3 s; a 1 m: 160.3 s; a 2 m: 159.7 s; a 5 m: 162.9 s; a 10 m: 163.3 s (non-decreasing)",
+   "deviation": "about 150 start in room 1 (persons start at random over both rooms; those who start in room 2 are left out of the reading)"
+  },
+  {
+   "id": "RiMEA-12b",
+   "source": "RiMEA 4.1.1 Test 12b",
+   "name": "a 5 m long, 1 m wide bottleneck against a short one",
+   "criterion": "room 1 takes longer to empty through the long bottleneck",
+   "measured": {
+    "short_door_s": 163.3,
+    "long_corridor_s": 128.8,
+    "long_with_doors_at_its_ends_s": 167.4,
+    "short_flow_ps": 0.921,
+    "long_corridor_flow_ps": 1.179
+   },
+   "pass": false,
+   "summary": "short (one door node) 163.3 s; long corridor 128.8 s; long with door nodes at its ends 167.4 s",
+   "deviation": "the long bottleneck is two lattice rows (z 5 and 5.5 m); a corridor carries no door capacity in crowd.js, only one person a node"
+  },
+  {
+   "id": "RiMEA-12d",
+   "source": "RiMEA 4.1.1 Test 12d (Fig. 15, flows from experiments: Kretz et al. 2006; Seyfried et al. 2009; about 1.9 w persons/s)",
+   "name": "flow through a bottleneck 0.8, 1.0 and 1.2 m wide",
+   "criterion": "the flow rises with the width (verification); and, as validation, how near it is to the measured flows",
+   "measured": [
+    {
+     "width_m": 0.8,
+     "flow_ps": 0.658,
+     "sfpe_capacity_ps": 0.658,
+     "measured_1_9w_ps": 1.52,
+     "ratio_to_measured": 0.433,
+     "median_step_onto_node_before_door_s": 0.72,
+     "median_gap_between_steps_onto_door_s": 1.52
+    },
+    {
+     "width_m": 1,
+     "flow_ps": 0.921,
+     "sfpe_capacity_ps": 0.921,
+     "measured_1_9w_ps": 1.9,
+     "ratio_to_measured": 0.485,
+     "median_step_onto_node_before_door_s": 0.72,
+     "median_gap_between_steps_onto_door_s": 1.09
+    },
+    {
+     "width_m": 1.2,
+     "flow_ps": 1.184,
+     "sfpe_capacity_ps": 1.184,
+     "measured_1_9w_ps": 2.28,
+     "ratio_to_measured": 0.519,
+     "median_step_onto_node_before_door_s": 0.72,
+     "median_gap_between_steps_onto_door_s": 0.84
+    }
+   ],
+   "pass": true,
+   "summary": "0.8 m: 0.658 persons/s (SFPE 0.658, measured about 1.52); 1 m: 0.921 persons/s (SFPE 0.921, measured about 1.9); 1.2 m: 1.184 persons/s (SFPE 1.184, measured about 2.28)",
+   "validation": "fails as a match to the measured flows by design: the SFPE capacity is a design value, about half the laboratory flows"
+  },
+  {
+   "id": "RiMEA-16",
+   "source": "RiMEA 4.1.1 Test 16 (percentiles: rimea.de test_16_percentiles.xlsx; raw data Zenodo doi:10.5281/zenodo.8378592)",
+   "name": "single-file fundamental diagram, 200 m corridor one agent wide",
+   "criterion": "mean speeds between the experiments' 10 and 90 % percentiles at the measured density (validation)",
+   "measured": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.999,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.467,
+     "mean_speed_mps": 0.999,
+     "p10": 0.729,
+     "p50": 1.102,
+     "p90": 1.402,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.717,
+     "mean_speed_mps": 0.988,
+     "p10": 0.584,
+     "p50": 0.955,
+     "p90": 1.287,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.892,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.258,
+     "mean_speed_mps": 0.75,
+     "p10": 0.213,
+     "p50": 0.418,
+     "p90": 0.655,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.513,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.506,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 1.052,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.996,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.717,
+     "mean_speed_mps": 0.97,
+     "p10": 0.584,
+     "p50": 0.955,
+     "p90": 1.287,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.886,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.755,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.513,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.506,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    }
+   ],
+   "pass": false,
+   "summary": "8 of 14 points inside the 10 to 90 % band; 0.267/m: 0.999 m/s [0.859, 1.474]; 0.467/m: 0.999 m/s [0.729, 1.402]; 0.717/m: 0.988 m/s [0.584, 1.287]; 1/m: 0.892 m/s [0.381, 0.969]; 1.258/m: 0.75 m/s [0.213, 0.655]; 1.517/m: 0.513 m/s [0.108, 0.476]; 1.725/m: 0.506 m/s [0.068, 0.373]",
+   "deviation": "the lattice holds at most 2 persons/m in single file (0.5 m nodes); measured in x 40 to 80 m between 10 and 40 s, before the exit's queue reaches it"
+  },
+  {
+   "id": "RiMEA-4",
+   "source": "RiMEA 4.1.1 Test 4; Weidmann (1993) for comparison",
+   "name": "fundamental diagram in a 10 m wide corridor (2 m x 2 m measuring area)",
+   "criterion": "documentation: speed against density beside the model's SFPE relation and Weidmann's",
+   "measured": [
+    {
+     "set_density_per_m2": 0.5,
+     "measured_density_per_m2": 0.642,
+     "mean_speed_mps": 1.155,
+     "sfpe_mps": 1.161,
+     "weidmann_mps": 1.243,
+     "rel_diff_weidmann": -0.071
+    },
+    {
+     "set_density_per_m2": 1,
+     "measured_density_per_m2": 1.211,
+     "mean_speed_mps": 1.044,
+     "sfpe_mps": 0.949,
+     "weidmann_mps": 0.947,
+     "rel_diff_weidmann": 0.103
+    },
+    {
+     "set_density_per_m2": 2,
+     "measured_density_per_m2": 2.438,
+     "mean_speed_mps": 0.767,
+     "sfpe_mps": 0.492,
+     "weidmann_mps": 0.469,
+     "rel_diff_weidmann": 0.636
+    },
+    {
+     "set_density_per_m2": 3,
+     "measured_density_per_m2": 3.625,
+     "mean_speed_mps": 0.353,
+     "sfpe_mps": 0.05,
+     "weidmann_mps": 0.213,
+     "rel_diff_weidmann": 0.655
+    },
+    {
+     "set_density_per_m2": 3.8,
+     "measured_density_per_m2": 4.25,
+     "mean_speed_mps": 0.162,
+     "sfpe_mps": -0.183,
+     "weidmann_mps": 0.122,
+     "rel_diff_weidmann": 0.319
+    }
+   ],
+   "pass": null,
+   "summary": "0.642/m2: 1.155 m/s (SFPE 1.161, Weidmann 1.243); 1.211/m2: 1.044 m/s (SFPE 0.949, Weidmann 0.947); 2.438/m2: 0.767 m/s (SFPE 0.492, Weidmann 0.469); 3.625/m2: 0.353 m/s (SFPE 0.05, Weidmann 0.213); 4.25/m2: 0.162 m/s (SFPE -0.183, Weidmann 0.122)",
+   "deviation": "100 m long, not 1,000 m; the lattice holds at most 4 persons/m2 (RiMEA asks up to 6); measured between 10 and 40 s"
+  },
+  {
+   "id": "RiMEA-9",
+   "source": "RiMEA 4.1.1 Test 9",
+   "name": "1,000 persons leave a hall by four doors, then by two",
+   "criterion": "about twice the time with two doors (documentation, not an exclusion criterion: footnote 8)",
+   "measured": {
+    "four_doors_s": 274.1,
+    "two_doors_s": 544.7,
+    "ratio": 1.987
+   },
+   "pass": null,
+   "summary": "four doors 274.1 s, two 544.7 s: 1.99 times",
+   "deviation": "persons spread over the whole hall rather than the 26 m x 16 m area; walking speeds crowd.js's uniform spread, not RiMEA's population"
+  },
+  {
+   "id": "RiMEA-11",
+   "source": "RiMEA 4.1.1 Test 11",
+   "name": "1,000 persons, two exits 5 m apart in one wall",
+   "criterion": "most prefer the closer exit 1, congestion there, some use exit 2",
+   "measured": {
+    "quickest": {
+     "exit1_share": 0.502,
+     "longest_wait_s": 527.9
+    },
+    "nearest": {
+     "exit1_share": 0.593,
+     "longest_wait_s": 630.9
+    }
+   },
+   "pass": true,
+   "summary": "quickest: 50.2 % by exit 1 (longest wait 527.9 s); nearest: 59.3 %",
+   "deviation": "persons spread over the whole room, not packed from the left side (crowd.js has no start areas), so exit 2 is the nearer for those far right"
+  }
+ ]
+}

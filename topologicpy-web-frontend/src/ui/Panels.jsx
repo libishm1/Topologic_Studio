@@ -1619,9 +1619,11 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                   : "Each person heads for the nearest exit by the shortest walk (the “nearest exit” choice that gave the shortest times in Carrera et al. 2019). "}
                 Each holds one place of the graph at a time, as a cell of a floor-field model does
                 (Burstedde et al. 2001), stepping round whoever is ahead. Speeds spread about 1.19 m/s and slow as the crowd
-                thickens, 0.92 m/s at most on stairs, and a 0.9 m door passes about 0.8 people a second (SFPE Handbook). Everyone
-                sets off within 10 s of the plan&apos;s departure time: the performance check, not this animation, models how
-                long people take to start. An illustration of the walk out, not an evacuation model to quote.
+                thickens, at most 0.92 m/s down stairs and 0.69 m/s up them, and each door passes people at its own width&apos;s
+                capacity (SFPE Handbook). Everyone sets off within 10 s of the plan&apos;s departure time: the performance check,
+                not this animation, models how long people take to start. Checked against the RiMEA and NIST TN 1822 test cases
+                (16 of 18 pass; dense corridors and single file still run fast): an illustration of the walk out, not an
+                evacuation model to quote.
               </p>
             </>
           )}
@@ -1770,6 +1772,155 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
   );
 }
 
+/**
+ * The egress map (core/egressMap.js): each room's walk from its worst place,
+ * the blocked-exit sweep and worst-first cascade, dead-end corridors and
+ * rooms' common paths, the doors no way out can do without; and, when asked,
+ * the fine grid's walk (core/floorRaster.js). Readings of the geometry, as
+ * the code check's; not a compliance verdict.
+ */
+function EgressMap({ egress, settings, setSettings, onMap, onFine, onClear, ready }) {
+  const r = egress?.result;
+  const fine = egress?.fine;
+  const m = (x) => (Number.isFinite(x) ? `${x.toFixed(1)} m` : "none");
+  const worstRoom = r?.rooms?.find((x) => Number.isFinite(x.dist));
+  const near = r ? r.rooms.filter((x) => x.near).length : 0;
+  const singles = r ? [...r.sweep.single].sort((a, b) => b.unreachedArea - a.unreachedArea || b.farthest - a.farthest) : [];
+  const cascade = r?.sweep.cascade || [];
+  const dead = r?.deadEnds;
+  return (
+    <Section title="Egress map" badge={r ? "mapped" : null} defaultOpen={false}>
+      <p className="field__hint">The walk to the nearest exit from every place, room by room, and what closing exits does to it.</p>
+      <div className="grid-2">
+        <Button size="sm" onClick={onMap} disabled={!ready || Boolean(egress?.busy)}>
+          {egress?.busy === "map" ? "Mapping…" : r ? "Map again" : "Map the egress"}
+        </Button>
+        <Button size="sm" onClick={onFine} disabled={!r || Boolean(egress?.busy)}>
+          {egress?.busy === "fine" ? "Measuring…" : "Measure finely"}
+        </Button>
+      </div>
+      {egress?.error && <Notice tone="warning">{egress.error}</Notice>}
+      {r && (
+        <Notice>
+          Farthest walk {m(r.summary.farthest)}
+          {worstRoom ? `, from ${worstRoom.name || "an unnamed space"} to ${worstRoom.exitLabel}` : ""}, against {m(r.limit)}; {r.rooms.length} rooms routed
+          {near ? `; ${near} within 5 % of the limit: measure them on site` : ""}.
+          {singles[0]
+            ? ` Closing one exit at a time, the worst is ${singles[0].label}: the farthest walk ${m(singles[0].farthest)}, ${singles[0].roomsRerouted} rooms rerouted${singles[0].unreachedArea ? `, ${Math.round(singles[0].unreachedArea)} m² left with no way out` : ""}.`
+            : ""}
+          {cascade.length > 1
+            ? ` Worst first: losing ${cascade.slice(0, 2).map((c) => c.label).join(" then ")} takes it to ${m(cascade[1].farthest)}${cascade[1].unreachedArea ? ` with ${Math.round(cascade[1].unreachedArea)} m² cut off` : ""}.`
+            : ""}
+        </Notice>
+      )}
+      {r && (
+        <>
+          <Toggle label="Routes from every room" checked={settings.egressRoutes} onChange={(egressRoutes) => setSettings({ egressRoutes })} hint="Red, from each room's worst place to its exit." />
+          <Toggle label="Contours every 5 m" checked={settings.egressContours} onChange={(egressContours) => setSettings({ egressContours })} hint="Lines of equal walk to the nearest exit." />
+          <Toggle
+            label="Dead-end corridors"
+            checked={settings.egressDeadEnds}
+            onChange={(egressDeadEnds) => setSettings({ egressDeadEnds })}
+            hint="Corridors with one way out, against IBC 2021 1020.5; rooms are held to the common path instead."
+          />
+          <Toggle label="Doors no way out can lose" checked={settings.egressCritical} onChange={(egressCritical) => setSettings({ egressCritical })} hint="Violet, larger for more rooms behind the door." />
+          {fine && <Toggle label="Walk measured finely" checked={settings.egressFine} onChange={(egressFine) => setSettings({ egressFine })} hint="The fine grid's walk on the floors, in 5 m bands; red past the limit." />}
+          <p className="field__hint">
+            {dead
+              ? `Dead-end corridors: ${dead.corridors.length}${dead.corridors.length ? `, ${dead.corridors.filter((c) => c.over).length} past ${m(dead.limit)}, the longest ${m(dead.corridors[0].length)}${dead.corridors[0].width ? ` and ${dead.corridors[0].width.toFixed(2)} m wide` : ""}` : ""}. Rooms whose common path passes Table 1006.2.1: ${dead.rooms.filter((x) => x.over).length}. `
+              : "Dead ends not worked out (more than 40 exits). "}
+            {r.critical.doors.length ? `${r.critical.doors.length} doors are the only way out of the rooms behind them; ${r.critical.suites.length} of them serve more than one room.` : ""}
+          </p>
+          {fine && (
+            <p className="field__hint">
+              Measured finely ({fine.storeys[0]?.cell ?? 0.05} m cells, 16 directions):{" "}
+              {fine.storeys
+                .filter((s) => s.walkArea > 20)
+                .map((s) => `${s.label || "a floor"} ${m(s.farthest)} against the graph's ${m(s.graphFarthest)}${s.fastMarching ? `, Fast Marching within ${(Math.abs(s.fastMarching.mean) * 100).toFixed(1)} %` : ""}`)
+                .join("; ")}
+              .
+            </p>
+          )}
+          <Button size="sm" variant="ghost" onClick={onClear}>
+            Clear the map
+          </Button>
+        </>
+      )}
+      <p className="field__hint">
+        Dijkstra 1959; Gromov's product; Tarjan 1974; Felzenszwalb and Huttenlocher 2012; Sethian 1996. The worst-first exit cascade and the near-limit list are Poux's (2026).
+      </p>
+    </Section>
+  );
+}
+
+/** The wheelchair audit and accessible means of egress (core/accessAudit.js), from the fine grid. */
+function Accessibility({ egress, settings, setSettings, onAudit, ready }) {
+  const fine = egress?.fine;
+  const storeys = (fine?.storeys || []).filter((s) => s.audit.rooms.onFoot > 0);
+  const issues = storeys.flatMap((s) => s.audit.issues.map((i) => ({ ...i, storeyLabel: s.label || "" })));
+  const act = storeys.flatMap((s) => s.audit.act);
+  const stale = fine && fine.profile !== settings.accessProfile;
+  const download = () => {
+    const rows = [["storey", "severity", "issue", "room", "measured", "required"], ...issues.map((i) => [i.storeyLabel, i.severity, i.kind, i.name || "", i.measured, i.required])];
+    const csv = rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "accessibility-issues.csv";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return (
+    <Section title="Accessibility" badge={fine && !stale ? "audited" : null} defaultOpen={false}>
+      <p className="field__hint">Where a wheelchair can go, what stops it, and whether it has a way out.</p>
+      <SelectField
+        label="Profile"
+        value={settings.accessProfile}
+        onChange={(accessProfile) => setSettings({ accessProfile })}
+        options={[
+          { value: "icc", label: "ICC A117.1 / 2010 ADA (0.915, 0.815, 1.525 m)" },
+          { value: "metric", label: "Metric (0.90, 0.80, 1.50 m)" },
+        ]}
+        hint="Passage, door and turning circle; the Saudi code's values are to be read from SBC 201."
+      />
+      <Button size="sm" block onClick={onAudit} disabled={!ready || Boolean(egress?.busy)}>
+        {egress?.busy === "fine" ? "Auditing…" : fine && !stale ? "Audit again" : "Audit for a wheelchair"}
+      </Button>
+      {fine && !stale && (
+        <>
+          {storeys.map((s) => (
+            <p key={s.storey} className="field__hint">
+              {(s.label || "A floor").replace(/^the/, "The")}: a wheelchair reaches {s.audit.rooms.byChair} of {s.audit.rooms.onFoot} rooms ({s.audit.rooms.turnable} with a turning circle)
+              {s.audit.rooms.byChair === 0 ? "; no lift on the graph reaches it (switch lifts on in Graph)" : ""}; {s.audit.egress.filter((e) => e.ok).length} of {s.audit.egress.length} rooms have{" "}
+              {s.audit.required === 2 ? "two" : "one"} accessible way{s.audit.required === 2 ? "s" : ""} out.
+            </p>
+          ))}
+          {issues.length > 0 && (
+            <ul className="code-list">
+              {issues
+                .filter((i) => i.severity !== "low")
+                .slice(0, 8)
+                .map((i, k) => (
+                  <li key={k} className="code-list__storey" data-tone={i.severity === "high" ? "warn" : "neutral"}>
+                    <span className="pill">{i.severity}</span> <strong>{i.kind}</strong> <span className="field__hint">{i.name || ""}: {i.measured}, needs {i.required}.</span>
+                  </li>
+                ))}
+            </ul>
+          )}
+          {act.length > 0 && <p className="field__hint">First changes: {act.map((a) => `${a.kind.toLowerCase()} ${a.label} (+${a.gain} room${a.gain === 1 ? "" : "s"})`).join("; ")}.</p>}
+          <Toggle label="Show it on the floors" checked={settings.accessOverlay} onChange={(accessOverlay) => setSettings({ accessOverlay })} hint="Green a wheelchair, darker where it turns; amber on foot only; red neither." />
+          {issues.length > 0 && (
+            <Button size="sm" variant="ghost" onClick={download}>
+              Download the issues (CSV)
+            </Button>
+          )}
+        </>
+      )}
+      <p className="field__hint">An audit of the model's fixed construction, not a certification; movable furniture is not in the model.</p>
+    </Section>
+  );
+}
+
 export function RoutePanel({
   studio,
   onPick,
@@ -1803,6 +1954,10 @@ export function RoutePanel({
   slimeFireReady = false,
   onGrowSlime,
   onClearSlime,
+  egress = null,
+  onMapEgress,
+  onMeasureFinely,
+  onClearEgress,
 }) {
   const { graph, points, pickMode, path, pathBusy, comparison, alternatives, settings, setSettings, capabilities } =
     studio;
@@ -1991,6 +2146,8 @@ export function RoutePanel({
         fireReady={slimeFireReady}
       />
       <CodeCheck code={code} settings={settings} setSettings={setSettings} onRun={onCodeCheck} onShow={onShowTravel} ready={Boolean(graph)} />
+      <EgressMap egress={egress} settings={settings} setSettings={setSettings} onMap={onMapEgress} onFine={onMeasureFinely} onClear={onClearEgress} ready={Boolean(graph)} />
+      <Accessibility egress={egress} settings={settings} setSettings={setSettings} onAudit={onMeasureFinely} ready={Boolean(graph)} />
       <PerformanceCheck
         perf={perf}
         settings={settings}

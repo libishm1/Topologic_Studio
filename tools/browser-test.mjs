@@ -775,6 +775,51 @@ if (await slimeSection.count()) {
   record(false, "the Slime mould section is offered in Route");
 }
 
+// ---- 4b'''. egress map and accessibility -------------------------------------
+// core/egressMap.js on the graph, then each storey's measuring grid and the
+// wheelchair audit (core/floorRaster.js, core/accessAudit.js), in a worker:
+// nothing runs or draws until asked (2026-11-11).
+console.log("\n[4b'''] Egress map and accessibility");
+const egressSection = page.locator("summary, button", { hasText: /^Egress map/ }).first();
+if (await egressSection.count()) {
+  await egressSection.scrollIntoViewIfNeeded();
+  await egressSection.click();
+  const drawnBefore = await page.evaluate(() => ["egressRoutes", "egressContours", "egressDeadEnds", "egressCritical", "egressFine", "accessAudit"].filter((n) => window.__viewer?.overlays?.has(n)).length);
+  const tMap = Date.now();
+  await page.getByRole("button", { name: /^Map the egress$/ }).click();
+  const mapLine = await page
+    .waitForFunction(() => document.body.innerText.match(/Farthest walk [\d.]+ m[^\n]*/)?.[0], null, { timeout: 60000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  record(drawnBefore === 0 && /rooms routed|against/.test(mapLine), "the egress map reads the farthest walk and closes each exit in turn, drawing nothing until asked", `${mapLine.slice(0, 200)} (${((Date.now() - tMap) / 1000).toFixed(1)}s)`);
+  await page.locator(".toggle__label", { hasText: /^Routes from every room$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Contours every 5 m$/ }).first().click().catch(() => {});
+  await page.waitForTimeout(400);
+  const layers = await page.evaluate(() => ({ routes: window.__viewer?.overlays?.has("egressRoutes") ?? false, contours: window.__viewer?.overlays?.has("egressContours") ?? false }));
+  record(layers.routes && layers.contours, "every room's route and the contours are drawn when asked", JSON.stringify(layers));
+  await page.locator(".toggle__label", { hasText: /^Routes from every room$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Contours every 5 m$/ }).first().click().catch(() => {});
+  const tFine = Date.now();
+  await page.getByRole("button", { name: /^Measure finely$/ }).click();
+  const fineLine = await page
+    .waitForFunction(() => document.body.innerText.match(/Measured finely[^\n]*/)?.[0], null, { timeout: 120000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  record(/16 directions/.test(fineLine) && /against the graph's/.test(fineLine), "measured finely, the walk on 16 directions is set against the graph's and Fast Marching", `${fineLine.slice(0, 200)} (${((Date.now() - tFine) / 1000).toFixed(1)}s)`);
+  const accessSection = page.locator("summary, button", { hasText: /^Accessibility/ }).first();
+  await accessSection.scrollIntoViewIfNeeded().catch(() => {});
+  await accessSection.click().catch(() => {});
+  const accessLine = (await page.getByText(/a wheelchair reaches \d+ of \d+ rooms/).first().textContent({ timeout: 5000 }).catch(() => "")) || "";
+  const audit = await page.evaluate(() => window.__viewer?.overlays?.has("accessAudit") ?? false);
+  record(/a wheelchair reaches/.test(accessLine) && audit, "the wheelchair audit reads each storey and lays its map on the floors", `${accessLine.slice(0, 200)} audit layer ${audit}`);
+  await page.locator("section.section", { has: page.locator(".section__header", { hasText: /^Egress map/ }) }).getByRole("button", { name: /^Clear the map$/ }).click().catch(() => {});
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() => ["egressRoutes", "egressContours", "egressFine", "accessAudit"].filter((n) => window.__viewer?.overlays?.has(n)).length);
+  record(after === 0, "cleared, the map's layers go", `${after} left`);
+} else {
+  record(false, "the Egress map section is offered in Route");
+}
+
 // ---- 4c. TopologicPy Navigation cross-check ---------------------------------
 
 console.log("\n[4c] TopologicPy Navigation cross-check");

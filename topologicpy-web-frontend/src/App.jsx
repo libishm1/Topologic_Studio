@@ -2648,6 +2648,8 @@ export default function App() {
           settings.crowdFluctuate,
           settings.crowdSteps,
           settings.crowdRuns,
+          // The IFC's door widths may arrive after the graph: the walk is worked out again with them.
+          (studio.semantics?.doors || []).length,
         ])
       : null;
   const crowdAvoiding = Boolean(crowdFireKey);
@@ -2675,6 +2677,8 @@ export default function App() {
     // Randomness in how people move (core/crowd.js; off by default) and how many seeds to run with it.
     motion: { fluctuate: settings.crowdFluctuate, steps: settings.crowdSteps },
     runs: settings.crowdRuns,
+    // Each door's own width (the IFC's, else measured): its capacity sets the flow through it.
+    doorWidths: () => (graph ? slimeDoorWidths(graph, studio.semantics) : null),
     // Each node's untenable time (s; Infinity never), worked out when the walk is.
     closes: () => {
       if (crowdFlames) {
@@ -2706,7 +2710,7 @@ export default function App() {
       setCrowdState(done.state);
       return undefined;
     }
-    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, choice, motion, runs } = crowdInputsRef.current;
+    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, choice, motion, runs, doorWidths: widthsOf } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
@@ -2727,9 +2731,11 @@ export default function App() {
           const kS = STEP_RANDOMNESS[motion.steps] ?? null;
           const varied = Boolean(motion.fluctuate) || kS !== null;
           const fire = closes();
+          const doorWidths = widthsOf();
           const optsFor = (seed) => ({
             exits: exitNodes,
             occupantArea,
+            doorWidths,
             blocked: useWalls ? graph.blocked : null,
             start: [departAfter, departAfter + 10],
             shelterArea: shelter > 0 ? shelter : Infinity,
@@ -2951,6 +2957,137 @@ export default function App() {
       viewer.setMarkers?.("slimeBottlenecks", null);
     };
   }, [slime.result, graph, settings.slimeDesire, settings.slimeMedial, settings.slimeDeadEnds, settings.slimeAbandoned, settings.slimeBottlenecks]);
+  // ------------------------------------------------------- egress map and accessibility
+
+  // The egress map (core/egressMap.js) and, when asked, each storey's
+  // measuring grid with the wheelchair audit (core/floorRaster.js,
+  // core/accessAudit.js), in a worker (workers/egress.worker.js). Kept with
+  // the graph they were made on; nothing runs until asked.
+  const [egressState, setEgressState] = useState({ nodes: null, result: null, fine: null, busy: null, error: null });
+  const egressRef = useRef(null);
+  const egress = egressState.nodes === graphNodes && graphNodes ? egressState : { nodes: null, result: null, fine: null, busy: null, error: null };
+  const runEgress = useCallback(
+    (kind) => {
+      if (!graph) return;
+      const exits = buildingExitNodes();
+      if (!exits.length) {
+        toast("No exit to map towards: the model marks none out of the building, so pick one in Route.", { variant: "warning" });
+        return;
+      }
+      egressRef.current ||= workerClient(() => new Worker(new URL("./workers/egress.worker.js", import.meta.url), { type: "module" }), {
+        failure: "The egress map stopped, usually because the browser ran out of memory. Reload the page and try again.",
+      });
+      const geometry = geometryRef.current;
+      if (kind === "fine" && !geometry) {
+        toast("Build the walkable graph again first: the model's geometry is not loaded.", { variant: "warning" });
+        return;
+      }
+      const nodes = graph.nodes;
+      setEgressState((s) => ({ ...(s.nodes === nodes ? s : { result: null, fine: null }), nodes, busy: kind, error: null }));
+      const names = (studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]);
+      const doorNames = {};
+      for (const d of graph.doors || []) {
+        const sem = (studio.semantics?.doors || []).find((x) => x.id === d.itemId);
+        if (d.node >= 0 && sem?.name) doorNames[d.node] = sem.name;
+      }
+      const limit = settings.codeSprinklered ? EGRESS_B.travel.sprinklered : EGRESS_B.travel.unsprinklered;
+      const clone = (meshes) => (meshes || []).map((m) => ({ itemId: m.itemId, positions: m.positions.slice(), indices: m.indices.slice() }));
+      const payload = {
+        kind,
+        graph: { nodes: graph.nodes.slice(), edges: graph.edges.slice(), kinds: graph.kinds ? graph.kinds.slice() : null, blocked: graph.blocked ? graph.blocked.slice() : null, upAxis: graph.upAxis, spacing: graph.spacing, agentHeight: graph.agentHeight },
+        opts: {
+          exits,
+          levels,
+          useWalls: settings.useWalls,
+          limit,
+          sprinklered: Boolean(settings.codeSprinklered),
+          occupantArea: settings.perfOccupantArea,
+          doorWidth: slimeDoorWidths(graph, studio.semantics),
+          doorNames,
+          spaceNames: names,
+          profile: settings.accessProfile,
+          fastMarching: true,
+          // Phones measure at 10 cm: four times fewer cells.
+          cell: window.matchMedia?.("(max-width: 720px)").matches ? 0.1 : 0.05,
+        },
+        // The rooms (their IfcSpaces, checked against the slabs, ceilings and walls) for both;
+        // the fine grid also cuts the obstacles, stairs and doors.
+        geometry: {
+          floors: clone(geometry?.floors),
+          spaces: clone(geometry?.spaces),
+          walls: clone(geometry?.walls),
+          ceilings: clone(geometry?.ceilings),
+          roofMeshes: clone(geometry?.roofMeshes),
+          ...(kind === "fine" ? { obstacles: clone(geometry?.obstacles), stairs: clone(geometry?.stairs), doors: clone(geometry?.doors) } : {}),
+        },
+      };
+      const t0 = performance.now();
+      // Each storey by its IFC name within 0.6 m, else its IFC height (the viewer's less the coordination shift).
+      const storeyLabel = (h) => {
+        const ifc = h - (levelShift || 0);
+        const near = (studio.semantics?.storeys || []).filter((x) => Number.isFinite(x.elevation)).reduce((best, x) => (!best || Math.abs(x.elevation - ifc) < Math.abs(best.elevation - ifc) ? x : best), null);
+        return near?.name && Math.abs(near.elevation - ifc) <= 0.6 ? near.name : `the floor at ${ifc.toFixed(1)} m`;
+      };
+      egressRef.current.run({ payload }).then(
+        (result) =>
+          setEgressState((s) =>
+            s.nodes !== nodes
+              ? s
+              : kind === "map"
+                ? { ...s, busy: null, result: { ...result, ms: performance.now() - t0 } }
+                : {
+                    ...s,
+                    busy: null,
+                    result: { ...result.map, ms: result.map.ms },
+                    fine: { ...result, storeys: result.storeys.map((x) => ({ ...x, label: storeyLabel(x.level) })), profile: settings.accessProfile, ms: performance.now() - t0 },
+                  },
+          ),
+        (error) => {
+          if (!isCancelled(error)) setEgressState((s) => (s.nodes === nodes ? { ...s, busy: null, error: error?.message || String(error) } : s));
+        },
+      );
+    },
+    [graph, buildingExitNodes, levels, levelShift, settings.useWalls, settings.codeSprinklered, settings.perfOccupantArea, settings.accessProfile, studio.semantics, toast],
+  );
+  const clearEgress = useCallback(() => setEgressState({ nodes: null, result: null, fine: null, busy: null, error: null }), []);
+  // What the map draws, each layer when asked.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const r = egress.result;
+    if (!viewer || !r) return undefined;
+    if (settings.egressRoutes && r.routeLinks?.length) viewer.setSkeleton?.("egressRoutes", r.routeLinks, { color: 0xdc2626, arrows: true });
+    if (settings.egressContours && r.contours?.length) viewer.setSkeleton?.("egressContours", r.contours, { color: 0x334155 });
+    if (settings.egressDeadEnds && r.deadLinks?.length) viewer.setSkeleton?.("egressDeadEnds", r.deadLinks, { color: 0x9d174d });
+    if (settings.egressCritical && r.critical?.doors?.length) {
+      viewer.setMarkers?.(
+        "egressCritical",
+        r.critical.doors.map((d) => d.position),
+        { color: 0x7c3aed, sizes: r.critical.doors.map((d) => 0.5 + 0.25 * Math.min(4, d.rooms.length)) },
+      );
+    }
+    return () => {
+      for (const layer of ["egressRoutes", "egressContours", "egressDeadEnds"]) viewer.setSkeleton?.(layer, null);
+      viewer.setMarkers?.("egressCritical", null);
+    };
+  }, [egress.result, settings.egressRoutes, settings.egressContours, settings.egressDeadEnds, settings.egressCritical]);
+  // The fine grid's walk, and the wheelchair audit, laid on the floors.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const f = egress.fine;
+    if (!viewer || !f?.images?.length) return undefined;
+    if (settings.egressFine) viewer.setFloorImages?.("egressFine", f.images.map((im) => ({ ...im, rgba: im.distance })));
+    if (settings.accessOverlay) {
+      viewer.setFloorImages?.("accessAudit", f.images.map((im) => ({ ...im, rgba: im.access })), { lift: 0.06 });
+      const issues = f.storeys.flatMap((s) => s.audit.issues).filter((i) => i.at && i.severity !== "low");
+      viewer.setMarkers?.("accessIssues", issues.map((i) => i.at), { color: 0xb91c1c, sizes: issues.map((i) => (i.severity === "high" ? 1 : 0.7)) });
+    }
+    return () => {
+      viewer.setFloorImages?.("egressFine", null);
+      viewer.setFloorImages?.("accessAudit", null);
+      viewer.setMarkers?.("accessIssues", null);
+    };
+  }, [egress.fine, settings.egressFine, settings.accessOverlay]);
+
   // ------------------------------------------------------- recording
 
   // The view recorded as a GIF (lib/recorder.js): the fire, the smoke and the
@@ -4538,6 +4675,10 @@ export default function App() {
                   slimeFireReady={Boolean(graph) && (isFlamescapes(fire.model) ? Boolean(combustionRef.current?.done) : fire.model !== "zone" && fire.step > 0)}
                   onGrowSlime={growSlime}
                   onClearSlime={clearSlime}
+                  egress={egress}
+                  onMapEgress={() => runEgress("map")}
+                  onMeasureFinely={() => runEgress("fine")}
+                  onClearEgress={clearEgress}
                 />
               )}
               {activeTab === "simulate" && (

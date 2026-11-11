@@ -308,6 +308,60 @@ export function MethodsDialog({ open, onClose, studio }) {
                     search and the best return within the step limit.
                   </dd>
                 </div>
+                <div className="methods__card">
+                  <dt>People leaving (optional)</dt>
+                  <dd>
+                    Off by default. Everyone on the floors, one person per occupant area (9 m² by default, the performance
+                    check&apos;s), walks out on the walkable graph, one person a node as a cell of a floor-field model holds one
+                    (Burstedde et al. 2001), at the SFPE hydraulic model&apos;s speeds: 1.19 m/s unimpeded, k (1 - a D) with
+                    a = 0.266 in a crowd, at most 0.92 m/s on a stair, and a door passing 1.3 persons a second per metre of
+                    effective width (each door at its own width from the IFC, 0.9 m where it gives none; 16 of 18 RiMEA and
+                    NIST TN 1822 test cases pass). By default each person takes the quickest exit: the walk there,
+                    or the people ahead of them at the flow seen through its door, whichever is longer, looked at again every 2 s,
+                    turning only where the ways part and when it saves 5 s and a fifth of their time, as Pathfinder&apos;s
+                    locally quickest door choice weighs a door; the nearest exit is an option. With the fire, no one steps on to a
+                    place it has made untenable, and anyone with no way out but through it stays put. Two kinds of randomness are
+                    options: speeds that drift about each person&apos;s own, a Langevin equation in a double-well potential as
+                    Corbetta et al. (2017) measured, and steps drawn by the floor field with weight exp(kS times the cells a step
+                    brings nearer the exit) (Kirchner and Schadschneider 2002). Each draws from its own stream, so with both off a
+                    run is exactly as before; with either on, the notice gives the range over several seeds.
+                  </dd>
+                </div>
+                <div className="methods__card">
+                  <dt>The slime mould (optional)</dt>
+                  <dd>
+                    Off by default. Jones&apos;s (2010) Physarum agents on the walkable graph: each senses three links ahead and 60
+                    degrees to either side, turns towards the strongest trail (keeping its heading when ahead is strictly
+                    strongest, left on a tie), steps where the node ahead is free and lays trail; the trail then becomes the mean
+                    over the node and its eight neighbours less a share that fades, walls absorbing it. The exits are its food and
+                    draw by the walk to them, the static floor field, the trail adding to it as a dynamic field does (Kirchner and
+                    Schadschneider 2002). An agent that steps through an exit starts again at a random free place, so the trail,
+                    averaged over the run&apos;s second half, measures the escape traffic each place carries. Held back by the
+                    fire, the run keeps the fire&apos;s clock and a place&apos;s smoke repels the agents, fades their trail and
+                    charges the way out, from 30 s before it becomes untenable or as a Flamescapes run&apos;s visibility falls
+                    from 30 m to 10 m; walled off, an untenable place is a wall, as a maze&apos;s walls are in Jones and Saeed
+                    (2007). Readings, each when asked: desire lines, the ways out from each 2 m square along the tubes; the
+                    floor&apos;s lambda-medial axis (Chazal and Lieutier 2005, lambda 1 m); bottlenecks, the people the desire
+                    lines carry over each passage&apos;s clear width at 1.3 persons a second per metre; dead ends, half of the
+                    walks to the two nearest exits less the walk between them, against IBC 2021&apos;s corridor limit; and
+                    branches explored early and abandoned.
+                  </dd>
+                </div>
+                <div className="methods__card">
+                  <dt>The egress map and the accessibility audit (optional)</dt>
+                  <dd>
+                    Off until asked. The walk to the nearest exit from every place, one Dijkstra (1959) from all exits at once,
+                    read from each room&apos;s worst place; each exit closed in turn and the building solved again, then the
+                    worst-first cascade and the list of values near a limit (both after Poux 2026); the common path as the Gromov
+                    product of the walks to the two nearest exits, its depth by a search back to two-way floor, dead-end
+                    corridors against IBC 2021 1020.5 and rooms against Table 1006.2.1; and the doors that are bridges (Tarjan
+                    1974) of the graph of rooms. Measured finely, a 5 cm grid per storey, cut across a walking body&apos;s band,
+                    with the exact distance transform (Felzenszwalb and Huttenlocher 2012), the walk on 16 directions (at most
+                    2.75 % long, Sixteen.lean) checked by Fast Marching (Sethian 1996), and a wheelchair&apos;s reach, turning
+                    circles (an opening by a disc), what stops it, the change that helps most first, and its accessible ways out
+                    (IBC 2021 1009), to ICC A117.1-2017 and the 2010 ADA Standards.
+                  </dd>
+                </div>
               </dl>
             </section>
 
@@ -396,6 +450,17 @@ export function MethodsDialog({ open, onClose, studio }) {
                   The heat release depends strongly on the grid, and not in one direction: a sofa fire in the Duplex peaked at
                   0.09 MW on a 0.20 m grid, 2.5 MW on 0.23 m, 6.1 MW on 0.27 m and 0.75 MW on the CPU&apos;s 0.34 m. On the GPU the
                   grid is sized to the GPU&apos;s speed unless the finest is asked for; compare runs on one grid.
+                </li>
+                <li>
+                  <strong>People leaving is an illustration.</strong> Everyone sets off within 10 s of the plan&apos;s
+                  departure; pre-movement, smoke and heat slow no one, every door is taken as 0.9 m wide, and no one helps or
+                  follows another. The performance check, not the animation, gives escape times.
+                </li>
+                <li>
+                  <strong>The slime mould is a reading, not a crowd.</strong> Agents, one seed a run, no time to quote. Its
+                  dead ends apply IBC 2021&apos;s corridor limit to rooms only as a reference, with values from summaries of
+                  the code still to be checked against its text. That its networks predict where people go is a hypothesis to
+                  test.
                 </li>
                 <li>
                   <strong>Identifying generic elements is a best guess.</strong> On 159 proxies labelled by hand from their
@@ -536,6 +601,57 @@ export function MethodsDialog({ open, onClose, studio }) {
                   heat. SFPE Handbook of Fire Protection Engineering.{" "}
                   <a href="https://doi.org/10.1007/978-1-4939-2565-0_63" target="_blank" rel="noreferrer">
                     doi:10.1007/978-1-4939-2565-0_63
+                  </a>
+                </li>
+                <li>
+                  Gwynne and Rosenbaum (2016). Employing the hydraulic model in assessing emergency movement. SFPE Handbook
+                  of Fire Protection Engineering, 5th ed., ch. 59 (people leaving&apos;s speeds and door flows).{" "}
+                  <a href="https://doi.org/10.1007/978-1-4939-2565-0_59" target="_blank" rel="noreferrer">
+                    doi:10.1007/978-1-4939-2565-0_59
+                  </a>
+                </li>
+                <li>
+                  Burstedde, Klauck, Schadschneider and Zittartz (2001). Simulation of pedestrian dynamics using a
+                  two-dimensional cellular automaton. Physica A 295, 507-525.{" "}
+                  <a href="https://doi.org/10.1016/S0378-4371(01)00141-8" target="_blank" rel="noreferrer">
+                    doi:10.1016/S0378-4371(01)00141-8
+                  </a>
+                </li>
+                <li>
+                  Kirchner and Schadschneider (2002). Simulation of evacuation processes using a bionics-inspired cellular
+                  automaton model for pedestrian dynamics. Physica A 312, 260-276.{" "}
+                  <a href="https://doi.org/10.1016/S0378-4371(02)00857-9" target="_blank" rel="noreferrer">
+                    doi:10.1016/S0378-4371(02)00857-9
+                  </a>
+                </li>
+                <li>
+                  Corbetta, Lee, Benzi, Muntean and Toschi (2017). Fluctuations around mean walking behaviors in diluted
+                  pedestrian flows. Physical Review E 95, 032316.{" "}
+                  <a href="https://doi.org/10.1103/PhysRevE.95.032316" target="_blank" rel="noreferrer">
+                    doi:10.1103/PhysRevE.95.032316
+                  </a>
+                </li>
+                <li>
+                  Thunderhead Engineering. Pathfinder Technical Reference, Path Planning (the locally quickest door choice).
+                </li>
+                <li>
+                  Jones (2010). Characteristics of pattern formation and evolution in approximations of Physarum transport
+                  networks. Artificial Life 16(2), 127-153.{" "}
+                  <a href="https://doi.org/10.1162/artl.2010.16.2.16202" target="_blank" rel="noreferrer">
+                    doi:10.1162/artl.2010.16.2.16202
+                  </a>
+                </li>
+                <li>
+                  Jones and Saeed (2007). Image enhancement: an emergent pattern formation approach via decentralised
+                  multi-agent systems. Multiagent and Grid Systems 3(1).{" "}
+                  <a href="https://doi.org/10.3233/mgs-2007-3108" target="_blank" rel="noreferrer">
+                    doi:10.3233/mgs-2007-3108
+                  </a>
+                </li>
+                <li>
+                  Chazal and Lieutier (2005). The lambda-medial axis. Graphical Models 67, 304-331.{" "}
+                  <a href="https://doi.org/10.1016/j.gmod.2005.01.002" target="_blank" rel="noreferrer">
+                    doi:10.1016/j.gmod.2005.01.002
                   </a>
                 </li>
                 <li>

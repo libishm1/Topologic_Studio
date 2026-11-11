@@ -48,9 +48,19 @@ So the evacuation map is largely there, at a coarser metric and with three missi
 - **A2. Accessible means of egress**, then wheelchair users in the crowd.
 - **S1. Scan input, with a collaborator.** A classified point cloud (S3DIS's 13 classes) onto the same raster, so a scanned building gets the same map and audit, and an as-built scan can be set against its design IFC.
 
+## Built (2026-11-11, not released)
+
+E1, E2 (bridges on the graph of rooms joined by doors; dead ends from the Gromov product, depth by a search), E3, A1 and A2 are built: core/egressMap.js, core/floorRaster.js, core/accessAudit.js, core/egressRun.js, workers/egress.worker.js; Route step, "Egress map" and "Accessibility", every layer off until asked; tools/egress-map-check.mjs runs them headless. Changes from the plan, after reading Poux's tutorial in full: the grid cuts the walls and fixed obstacles across a walking body's band (0.10 to 1.80 m), not at one height; a walker's centre keeps 0.25 m off obstacles (configuration space); exit cells start with their own step to the door; doors are opened at their leaf (some exporters leave the wall whole there) with floor under them; a dead end's depth is a search back to two-way floor; and Poux's circulation rule is the fallback for spaces whose names say nothing. Two errors found on the way: wall faces on a grid line narrowed every passage by a cell, and 32-bit model coordinates put faces a hair past the line (a 0.70 m door read 0.60 m); both fixed and tested.
+
+Measured (tools/egress-map-check.mjs, 5 cm cells, no sprinklers): the NIBS Clinic's ground floor, the fine grid's farthest walk 36.0 m against the graph's 37.1 m, Fast Marching within 0.3 % on average; a wheelchair reaches 149 of its 151 rooms on foot, 141 of them with two accessible ways out; its upper floor's walk to a stair reaches 88.6 m, past the 60 m limit; the NIBS Office 34.3 m against 35.1 m, 58 of 58 rooms. Upper floors read no wheelchair reach unless lifts are on in the graph. The map takes 0.2 to 0.6 s, the fine grid and audit 4 to 6 s on these models.
+
+## Credits
+
+The algorithms are the original works': Dijkstra 1959 (the walk from every exit at once), the Gromov product (the common path), Tarjan 1974 (bridges), Felzenszwalb and Huttenlocher 2012 (the exact distance transform), Sethian 1996 (Fast Marching), Matheron 1975 and Serra 1982 (openings by a disc), Lozano-Perez 1983 (configuration space), Borgefors 1986 (a lattice's move set decides its error), and the codes' definitions (IBC 2021 1006, 1017, 1020, 1009; ICC A117.1-2017; the 2010 ADA Standards). What is Poux's own (his evacuation-distance-map and wheelchair-accessibility-audit kits and their articles, 2026; code MIT), and credited to him in the code, the panel and the guide: the worst-first blocked-exit cascade read as "redundant alone, critical together" and the exit-resilience table; the list of values near a limit for a tape check; the dead end's depth by a search (a difference of distances read a 5.0 m stub as 4.6 m); his circulation rule; exit cells seeded with their own step; the greedy act step; and his known answer, a 1.60 m corridor leaving a 1.10 m strip for a body's centre, which floorRaster.test.mjs reproduces.
+
 ## Checks
 
-- Lean: the 16-neighbour bound; the transform's opening equals the disc test; a bridge's removal disconnects its tip.
+- Lean: the 16-neighbour bound, proved (formal/fireegress/FireEgress/Sixteen.lean: (a + b)^2 (1 + c) <= 2 (a^2 + b^2 + 2abc), the knight pair's cosine over 0.8944, the walk under 1.0276 times the straight one). Still to do: the transform's opening equals the disc test; a bridge's removal disconnects its tip.
 - Against the kits: on their synthetic tests, the same answers; on S3DIS (local only, never committed), the farthest walk 23.4 m and mean 8.2 m on Area 1, and 8 of 26 rooms on Area 2, once S1 exists.
 - Speed: the Vienna model on the web with everything off as now; each reading timed when on.
 

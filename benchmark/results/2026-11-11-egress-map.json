@@ -1,0 +1,495 @@
+{
+ "date": "2026-11-11T13:18:38.709Z",
+ "cell": 0.05,
+ "profile": "icc",
+ "results": [
+  {
+   "model": "nibs-clinic.ifc",
+   "nodes": 25407,
+   "storeys": 4,
+   "mapMs": 600,
+   "fineMs": 5903,
+   "farthest": 92.1,
+   "exits": 19,
+   "sweep": [
+    {
+     "exit": "Stair 1",
+     "farthest": 92.1,
+     "rerouted": 0
+    },
+    {
+     "exit": "Stair 2",
+     "farthest": 92.1,
+     "rerouted": 35
+    },
+    {
+     "exit": "Stair 3",
+     "farthest": 92.1,
+     "rerouted": 0
+    },
+    {
+     "exit": "Stair 4",
+     "farthest": 98.2,
+     "rerouted": 24
+    },
+    {
+     "exit": "Stair 5",
+     "farthest": 92.1,
+     "rerouted": 0
+    },
+    {
+     "exit": "Stair 6",
+     "farthest": 92.1,
+     "rerouted": 44
+    },
+    {
+     "exit": "Exit 1",
+     "farthest": 92.1,
+     "rerouted": 3
+    },
+    {
+     "exit": "Exit 2",
+     "farthest": 92.1,
+     "rerouted": 30
+    },
+    {
+     "exit": "Exit 3",
+     "farthest": 92.1,
+     "rerouted": 2
+    },
+    {
+     "exit": "Exit 4",
+     "farthest": 92.1,
+     "rerouted": 4
+    },
+    {
+     "exit": "Exit 5",
+     "farthest": 92.1,
+     "rerouted": 36
+    },
+    {
+     "exit": "Exit 6",
+     "farthest": 92.1,
+     "rerouted": 1
+    },
+    {
+     "exit": "Exit 7",
+     "farthest": 92.1,
+     "rerouted": 1
+    },
+    {
+     "exit": "Exit 8",
+     "farthest": 92.1,
+     "rerouted": 1
+    },
+    {
+     "exit": "Exit 9",
+     "farthest": 92.1,
+     "rerouted": 33
+    },
+    {
+     "exit": "Exit 10",
+     "farthest": 92.1,
+     "rerouted": 8
+    },
+    {
+     "exit": "Exit 11",
+     "farthest": 92.1,
+     "rerouted": 29
+    },
+    {
+     "exit": "Exit 12",
+     "farthest": 92.1,
+     "rerouted": 0
+    },
+    {
+     "exit": "Exit 13",
+     "farthest": 92.1,
+     "rerouted": 1
+    }
+   ],
+   "cascade": [
+    {
+     "closed": "Exit 1",
+     "farthest": 92.1,
+     "cutOff": 252
+    },
+    {
+     "closed": "Exit 8",
+     "farthest": 92.1,
+     "cutOff": 290
+    },
+    {
+     "closed": "Exit 3",
+     "farthest": 92.1,
+     "cutOff": 308
+    },
+    {
+     "closed": "Exit 6",
+     "farthest": 92.1,
+     "cutOff": 322
+    },
+    {
+     "closed": "Exit 7",
+     "farthest": 92.1,
+     "cutOff": 325
+    },
+    {
+     "closed": "Stair 4",
+     "farthest": 98.2,
+     "cutOff": 325
+    }
+   ],
+   "deadEnds": {
+    "oneWay": 0.9135342909164476,
+    "corridors": [
+     {
+      "length": 19,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 18.7,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 15.6,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 12.7,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 10.3,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 8.9,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "W. STAFF TOILET"
+     },
+     {
+      "length": 8.2,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 7.5,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 7.4,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 6.7,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     }
+    ],
+    "roomsOver": 0
+   },
+   "critical": {
+    "doors": 144,
+    "suites": 28
+   },
+   "fine": [
+    {
+     "storey": 0,
+     "cell": 0.05,
+     "walk": 2332,
+     "farthest": 36,
+     "graph": 37.1,
+     "fastMarching": {
+      "mean": 0.0034202902945472385,
+      "max": -0.049414550340250614,
+      "cells": 713080
+     },
+     "noWayOut": 7.7,
+     "audit": {
+      "total": 151,
+      "onFoot": 151,
+      "byChair": 149,
+      "turnable": 143,
+      "issues": 8,
+      "act": [],
+      "egressOk": 141,
+      "egressRooms": 149
+     }
+    },
+    {
+     "storey": 1,
+     "cell": 0.05,
+     "walk": 8,
+     "farthest": 1.1,
+     "graph": 1.5,
+     "fastMarching": {
+      "mean": -0.004076945582433971,
+      "max": -0.006090647473192544,
+      "cells": 22
+     },
+     "noWayOut": 0,
+     "audit": {
+      "total": 0,
+      "onFoot": 0,
+      "byChair": 0,
+      "turnable": 0,
+      "issues": 0,
+      "act": [],
+      "egressOk": 0,
+      "egressRooms": 0
+     }
+    },
+    {
+     "storey": 2,
+     "cell": 0.05,
+     "walk": 2292,
+     "farthest": 88.6,
+     "graph": 92.1,
+     "fastMarching": {
+      "mean": 0.0006930545321059852,
+      "max": -0.03600135031390645,
+      "cells": 684508
+     },
+     "noWayOut": 137,
+     "audit": {
+      "total": 104,
+      "onFoot": 104,
+      "byChair": 0,
+      "turnable": 0,
+      "issues": 104,
+      "act": [],
+      "egressOk": 0,
+      "egressRooms": 0
+     }
+    },
+    {
+     "storey": 3,
+     "cell": 0.05,
+     "walk": 59,
+     "farthest": 0,
+     "graph": 0,
+     "fastMarching": {
+      "mean": 0,
+      "max": 0,
+      "cells": 0
+     },
+     "noWayOut": 51,
+     "audit": {
+      "total": 0,
+      "onFoot": 0,
+      "byChair": 0,
+      "turnable": 0,
+      "issues": 0,
+      "act": [],
+      "egressOk": 0,
+      "egressRooms": 0
+     }
+    }
+   ]
+  },
+  {
+   "model": "nibs-office.ifc",
+   "nodes": 17470,
+   "storeys": 2,
+   "mapMs": 227,
+   "fineMs": 4414,
+   "farthest": 46.6,
+   "exits": 8,
+   "sweep": [
+    {
+     "exit": "Stair 1",
+     "farthest": 65.7,
+     "rerouted": 21
+    },
+    {
+     "exit": "Stair 4",
+     "farthest": 63.5,
+     "rerouted": 16
+    },
+    {
+     "exit": "Exit 1",
+     "farthest": 46.6,
+     "rerouted": 1
+    },
+    {
+     "exit": "Exit 2",
+     "farthest": 46.6,
+     "rerouted": 7
+    },
+    {
+     "exit": "Exit 3",
+     "farthest": 66.9,
+     "rerouted": 25
+    },
+    {
+     "exit": "Exit 4",
+     "farthest": 46.6,
+     "rerouted": 1
+    },
+    {
+     "exit": "Exit 5",
+     "farthest": 46.6,
+     "rerouted": 9
+    },
+    {
+     "exit": "Exit 6",
+     "farthest": 52.5,
+     "rerouted": 13
+    }
+   ],
+   "cascade": [
+    {
+     "closed": "Exit 4",
+     "farthest": 46.6,
+     "cutOff": 139
+    },
+    {
+     "closed": "Exit 1",
+     "farthest": 46.6,
+     "cutOff": 175
+    },
+    {
+     "closed": "Exit 3",
+     "farthest": 66.9,
+     "cutOff": 175
+    },
+    {
+     "closed": "Exit 6",
+     "farthest": 68.3,
+     "cutOff": 175
+    },
+    {
+     "closed": "Exit 5",
+     "farthest": 74.4,
+     "cutOff": 175
+    },
+    {
+     "closed": "Stair 1",
+     "farthest": 74.4,
+     "cutOff": 175
+    }
+   ],
+   "deadEnds": {
+    "oneWay": 0.7431643447598127,
+    "corridors": [
+     {
+      "length": 19.4,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 16.2,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 12.4,
+      "width": null,
+      "over": true,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 4.2,
+      "width": null,
+      "over": false,
+      "exempt": false,
+      "name": "CORRIDOR"
+     },
+     {
+      "length": 2.3,
+      "width": null,
+      "over": false,
+      "exempt": false,
+      "name": "CORRIDOR"
+     }
+    ],
+    "roomsOver": 3
+   },
+   "critical": {
+    "doors": 52,
+    "suites": 4
+   },
+   "fine": [
+    {
+     "storey": 0,
+     "cell": 0.05,
+     "walk": 1678,
+     "farthest": 34.3,
+     "graph": 35.1,
+     "fastMarching": {
+      "mean": 0.0044554657643946305,
+      "max": -0.03268928770451167,
+      "cells": 544084
+     },
+     "noWayOut": 3,
+     "audit": {
+      "total": 58,
+      "onFoot": 58,
+      "byChair": 58,
+      "turnable": 58,
+      "issues": 0,
+      "act": [],
+      "egressOk": 56,
+      "egressRooms": 58
+     }
+    },
+    {
+     "storey": 1,
+     "cell": 0.05,
+     "walk": 1693,
+     "farthest": 45.3,
+     "graph": 46.6,
+     "fastMarching": {
+      "mean": 0.0016492089364247566,
+      "max": -0.04884687008406655,
+      "cells": 582001
+     },
+     "noWayOut": 6,
+     "audit": {
+      "total": 39,
+      "onFoot": 39,
+      "byChair": 0,
+      "turnable": 0,
+      "issues": 39,
+      "act": [],
+      "egressOk": 0,
+      "egressRooms": 0
+     }
+    }
+   ]
+  }
+ ]
+}

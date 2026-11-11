@@ -384,6 +384,10 @@ figure.pending figcaption::before {
   font-weight: 650;
 }
 
+figure.pending.still figcaption::before {
+  content: "Figure to come. ";
+}
+
 .figure-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));

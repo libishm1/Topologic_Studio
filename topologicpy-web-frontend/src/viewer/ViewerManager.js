@@ -2083,6 +2083,42 @@ export class ViewerManager {
     this._setOverlay(name, balls);
   }
 
+  /**
+   * Images laid on the storeys' floors (the egress map's fine walk, the
+   * wheelchair audit): each {a0, b0, cell, w, h, level, rgba}, the grid's
+   * plan origin and size on the horizontal axes, its row 0 at b0, a few
+   * centimetres over the floor; null clears the layer `name`.
+   */
+  setFloorImages(name, images, { lift = 0.04, opacity = 0.92 } = {}) {
+    // _destroyObject frees the group itself, not its members.
+    this.overlays.get(name)?.children?.forEach((o) => {
+      o.material?.map?.dispose();
+      o.geometry?.dispose();
+      o.material?.dispose();
+    });
+    this._setOverlay(name, null);
+    if (!images?.length) return;
+    const group = new THREE.Group();
+    for (const im of images) {
+      if (!im?.rgba || !im.w || !im.h) continue;
+      const texture = new THREE.DataTexture(im.rgba, im.w, im.h, THREE.RGBAFormat);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
+      texture.needsUpdate = true;
+      const W = im.w * im.cell, H = im.h * im.cell;
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(W, H), material);
+      // The plane's +y turned to the world's +z, so row 0 (v = 0) lies at b0 and column 0 at a0.
+      plane.rotation.x = Math.PI / 2;
+      plane.position.set(im.a0 + W / 2, im.level + lift, im.b0 + H / 2);
+      plane.renderOrder = 880;
+      group.add(plane);
+    }
+    this._setOverlay(name, group);
+  }
+
   setSlimeWeights(weights) {
     const segments = this.overlays.get(OVERLAY.graph);
     if (!segments || !this._graphEdges) return;

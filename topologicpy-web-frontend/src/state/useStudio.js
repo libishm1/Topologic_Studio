@@ -134,6 +134,18 @@ export const DEFAULT_SETTINGS = {
   slimeBottlenecks: false,
   slimeDeadEnds: false,
   slimeAbandoned: false,
+  // The egress map (core/egressMap.js, Route step), each layer off until
+  // asked: every room's route from its worst place, contours of the walk,
+  // dead-end corridors, the doors no way out can do without, and the fine
+  // grid's walk (core/floorRaster.js) laid on the floors.
+  egressRoutes: false,
+  egressContours: false,
+  egressDeadEnds: false,
+  egressCritical: false,
+  egressFine: false,
+  // The wheelchair audit (core/accessAudit.js): its profile, and its map on the floors once run.
+  accessProfile: "icc",
+  accessOverlay: true,
   // Gathering places hold crowdShelterArea m^2 of people when on; once full,
   // the earliest there fade as newcomers arrive.
   crowdShelterOn: false,

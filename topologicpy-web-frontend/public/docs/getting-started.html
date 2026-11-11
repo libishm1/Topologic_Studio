@@ -41,6 +41,7 @@
       <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
       <li><a href="suppression.html">Fire suppression</a></li>
       <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="people-and-slime.html">People leaving and the slime mould</a></li>
       <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
     </ol>
     <p class="toc__out"><a href="../">Open the app</a></p>
@@ -82,6 +83,7 @@
 
     <h3 id="describe">Describe this model</h3>
     <p><span class="label">Describe this model</span> writes a short plain description of the building, its ways out and its fire. A language model writes it from the facts Studio has already worked out (storeys, rooms, doors and exits, the walkable graph, the route, the fire's results) and from nothing else. Once the graph is built, each storey gets a line of its own: its ways out and its longest walk to one, worked out on the graph, and the code check's verdicts if you ran it; the model words them instead of finding paths itself. The facts are listed under it before anything is written.</p>
+    <p>Whatever else you have run joins the facts, and nothing you have not: people leaving (how they chose their exits, and the range over seeds), the slime mould and its readings, said to be a reading for design, the performance check, sprinklers, suppression systems and extinguishers, the spaces not walked on, and a much nearer exit than the route's. On a tall building with everything run, the facts list fewer room names and storey lines until they fit the 8,000 characters the Cloudflare describer reads.</p>
     <ul>
       <li>On Chrome 148 or later on a desktop computer, Chrome's built-in model writes it on the computer, and nothing is sent.</li>
       <li>On other browsers, a site deployed with the Cloudflare describer can send those facts, never the IFC, to a Workers AI model on Cloudflare's free allowance instead.</li>
@@ -97,6 +99,7 @@
     </figure>
     <p><span class="label">Build egress graph</span> lays a grid of points over every floor, 0.5 m apart and turned to line up with the walls, and joins neighbouring points that a person could walk between. Walls cut 0.75 m above each floor block the links that cross them, doors join the rooms on either side, and each stair is walked along its flight. The whole graph is built in your browser, in a few hundredths of a second for the Duplex (1,597 points and 4,597 links).</p>
     <p>The step reports how much of the building one can reach from its largest part. The Duplex is two homes side by side, so its graph is in two parts and the app says so: a route can only join two points in the same part.</p>
+    <p>Two kinds of room are not walked on, and the step says which: spaces outside the building that no door opens onto, such as roofs drawn as rooms, and spaces named as voids ("open to below", "void", "Luftraum"). A roof, terrace or balcony with a door onto it stays walkable. The NIBS Clinic draws five of its roofs as rooms that no stair or door reaches; without this its graph had parts on the roof that reached no exit.</p>
     <p><span class="label">Graph settings</span> change the grid spacing, the largest step a person can climb, the agent's height, whether walls block links, and whether lifts and escalators join floors (off by default, as in an evacuation). <span class="label">Cross-check with TopologicPy</span> builds TopologicPy's own navigation graph on the server and reports how much of each graph the other covers.</p>
 
     <h2 id="route">Step 3, Route: the shortest way out</h2>
@@ -107,7 +110,8 @@
     <p>Press <span class="label">Set</span> beside Start (or <kbd>S</kbd>) and click a point on the graph, then set the Exit the same way, or press <span class="label">Use the nearest exit door</span>. <span class="label">Find egress route</span> draws the shortest route and straightens it, so it reads as a person would walk it rather than as a zigzag across the grid. The result gives its length, the length on the grid before straightening, and its turns.</p>
     <p>The nearest exit door is one of the doors out of the building, drawn as orange rings. Where the model says which doors are external, these are the external doors at street level and the fire exits that open onto no walkable floor. A flat's front door flagged as a fire exit leads only to the stair, and a balcony door leads nowhere, so neither counts: of the Vienna model's 35 exit doors, two lead out, the street door and a fire exit at the back of the first floor.</p>
     <p>Without a mouse, <span class="label">Place without the mouse</span> puts the exit at any door from a list, or any point at typed coordinates. <span class="label">Route options</span> switch between the built-in A* search (in your browser) and TopologicPy's <code>TGraph</code> engine (on the server). <span class="label">Alternative routes</span> look for other ways out: <em>Different space</em> keeps routes that do not run along one already found, and <em>Yen</em> lists the next cheapest routes exactly.</p>
-    <p>The <span class="label">Code check</span> and the <span class="label">Performance check (with the fire)</span> are also in this step; see <a href="checks.html">Code and performance checks</a>.</p>
+    <p>When the start stands much nearer another exit out of the building than the one picked (the route would save at least half its walk and 10 m), a note under the route says so and offers <span class="label">Use the nearest exit door</span>. The route stays the one asked for. On the NIBS Clinic, a start beside an exit had crossed the building to the exit picked before: 54.9 m against 5.7 m.</p>
+    <p>The <span class="label">Code check</span> and the <span class="label">Performance check (with the fire)</span> are also in this step; see <a href="checks.html">Code and performance checks</a>. So are <span class="label">People leaving</span> and the <span class="label">Slime mould</span>; see <a href="people-and-slime.html">People leaving and the slime mould</a>.</p>
 
     <h2 id="your-files">Using your own IFC files</h2>
     <p>Studio works best on architectural models with slabs or floors, walls, doors and stairs. Some things that help, and what Studio does when they are missing:</p>

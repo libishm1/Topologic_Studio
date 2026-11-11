@@ -386,4 +386,34 @@ export const PROOFS = [
     files: ["SafeEscape"],
     status: "Proved",
   },
+  {
+    property: "The slime mould's trail spreads without making or losing any, and two agents never share a place",
+    meaning:
+      "One step of Jones's diffusion makes each cell (1 - d) times the mean of its 3 by 3 window. On the wrap-around grid this leaves exactly (1 - d) times the total trail and, for d at most 1, never makes it negative or lifts a cell above (1 - d) times the old largest; where walls absorb, the total only falls faster. An agent keeps its heading when the sensor ahead is strictly the strongest, else turns towards the stronger side; on a tie the code turns left, where the 2010 paper turns at random. Moving, in any order, never puts two agents on one place or one on a wall.",
+    tex: [
+      String.raw`D_d(T)(x) = (1-d)\,\overline{T}_{3\times3}(x)`,
+      String.raw`\textstyle\sum_x D_d(T)(x)`,
+      String.raw`\quad = (1-d)\textstyle\sum_x T(x)`,
+      String.raw`0 \le T \le M \;\Rightarrow`,
+      String.raw`\quad 0 \le D_d(T) \le (1-d)\,M`,
+      String.raw`f > f_L,\ f > f_R \Rightarrow \text{keep}`,
+      String.raw`\text{valid}(p) \Rightarrow \text{valid}(\text{move}(p))`,
+    ],
+    files: ["Physarum"],
+    status: "Proved",
+  },
+  {
+    property: "The fine grid's walk on 16 directions is at most 2.75 % longer than the straight walk in the open",
+    meaning:
+      "The egress map's measuring grid walks in 16 directions, the king's and the knight's moves. A walk to a point between two adjacent directions goes a along one and b along the other, and the straight walk squared is a² + b² + 2ab cos θ. Then (a + b)²(1 + cos θ) is at most twice that, the difference being (1 − cos θ)(a − b)². The widest gap between adjacent directions is the knight's, cos θ = 2/√5, so the walk is under 1.0276 times the straight one; the graph's 8 directions allow 8.24 %.",
+    tex: [
+      String.raw`(a+b)^2 (1+c) \le 2\,(a^2+b^2+2abc)`,
+      String.raw`\quad c \le 1`,
+      String.raw`c = 2/\sqrt5 > 0.8944`,
+      String.raw`(a+b)^2 \le 1.0558\,(a^2+b^2+2abc)`,
+      String.raw`\sqrt{1.0558} < 1.0276`,
+    ],
+    files: ["Sixteen"],
+    status: "Proved",
+  },
 ];
