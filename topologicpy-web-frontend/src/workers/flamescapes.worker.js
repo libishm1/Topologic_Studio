@@ -20,7 +20,10 @@
  * GPU_STEP_MS a step, starts again on the coarser grid level that keeps up;
  * the page keeps the measured speed per GPU (payload.gpuRate, gpuName), so
  * later runs on that GPU start on the same level. "finest" asks for the
- * finest grid the GPU's memory allows.
+ * finest grid the GPU's memory allows. "calibrated" builds cells of exactly
+ * the size the held-out tests calibrated the smoke layer's depth on
+ * (core/calibrationStatus.js CALIBRATED_CELL, 0.27 m), clipped round the fire
+ * to the backend's own budget, so the run lies on a validated grid.
  *
  * Repeat runs (payload.repeats, a second job after a GPU run): the same fire
  * on the first run's grid (payload.maxCells) with the room k thousandths of
@@ -31,6 +34,7 @@ import { DEFAULTS } from "../core/flamescapes.js";
 import { buildScene, runScene } from "../core/flamescapesRun.js";
 import { runSummary } from "../core/forecast.js";
 import { chooseBackend, standardCells } from "../lib/hardware.js";
+import { CALIBRATED_CELL } from "../core/calibrationStatus.js";
 
 // Wall time a solver step (0.1 s) may take on the GPU: three times real time,
 // about what one CPU core manages on its coarser grid.
@@ -63,6 +67,8 @@ function sceneFor(payload, backend) {
     upAxis: payload.upAxis,
     fire: payload.fire,
     maxCells: payload.maxCells || backend.cells,
+    // The calibrated grid: cells of exactly the validated size, clipped to the budget.
+    ...(payload.grid === "calibrated" ? { minCell: CALIBRATED_CELL, maxCell: CALIBRATED_CELL } : {}),
     fireLoad: payload.fireLoad,
     contentsFuel: payload.contentsFuel,
     ignitionFuel: payload.ignitionFuel,

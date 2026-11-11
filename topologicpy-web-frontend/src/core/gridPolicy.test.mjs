@@ -96,3 +96,30 @@ test("people leaving is never remembered between visits: not stored, and dropped
   assert.deepEqual(withoutSessionOnly({ crowd: true, crowdStyle: "dots", walkSpeed: 1.2 }), { crowdStyle: "dots", walkSpeed: 1.2 });
   assert.deepEqual(withoutSessionOnly(null), {});
 });
+
+test("the calibrated grid builds cells of exactly the validated size, clipped round the fire to the budget", async () => {
+  const { buildScene } = await import("./flamescapesRun.js");
+  const { CALIBRATED_CELL } = await import("./calibrationStatus.js");
+  const { MATERIAL } = await import("./voxelize.js");
+  const box = (x0, y0, z0, x1, y1, z1) => ({
+    positions: Float32Array.from([x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1]),
+    indices: Uint32Array.from([0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 2, 3, 7, 2, 7, 6, 1, 2, 6, 1, 6, 5, 0, 4, 7, 0, 7, 3]),
+    material: MATERIAL.STONE,
+  });
+  // A 40 x 30 m storey: too large for 30,000 cells of 0.27 m, so the grid is clipped round the fire.
+  const geometry = { walls: [box(-0.2, 0, -0.2, 40.2, 3, 0)], floors: [box(-0.2, -0.2, -0.2, 40.2, 0, 30.2)], roofs: [box(-0.2, 3, -0.2, 40.2, 3.2, 30.2)], stairs: [], obstacles: [], doors: [], windows: [] };
+  const { fuelsFor } = await import("./fireClasses.js");
+  const { contentsFuel, ignitionFuel } = fuelsFor("A");
+  const scene = buildScene(geometry, { fire: [20, 0.75, 15], maxCells: 30000, minCell: CALIBRATED_CELL, maxCell: CALIBRATED_CELL, contentsFuel, ignitionFuel });
+  assert.ok(Math.abs(scene.grid.h - CALIBRATED_CELL) < 1e-9, `cell ${scene.grid.h}`);
+  assert.ok(scene.grid.cells <= 30000);
+  assert.equal(scene.clipped, true);
+});
+
+test("a laptop's integrated graphics is told apart, so the card can say how to use its faster card", async () => {
+  const { integratedGpu } = await import("../lib/hardware.js");
+  assert.equal(integratedGpu("intel gen-12lp"), true);
+  assert.equal(integratedGpu("nvidia turing"), false);
+  assert.equal(integratedGpu("amd rdna-2"), false);
+  assert.equal(integratedGpu(""), false);
+});

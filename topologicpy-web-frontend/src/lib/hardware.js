@@ -60,6 +60,17 @@ export async function detectGpu(nav = globalThis.navigator) {
   }
 }
 
+/**
+ * Whether a WebGPU adapter's name is a laptop's integrated graphics. Chrome on
+ * Windows ignores powerPreference (crbug.com/369219127), so a laptop with a
+ * second, faster card (an NVIDIA Quadro or GeForce, an AMD Radeon) runs the
+ * fire on the integrated one unless Windows is told to give the browser the
+ * faster card; the run card says how when this is true.
+ */
+export function integratedGpu(name) {
+  return /^intel\b/i.test(name || "");
+}
+
 /** The backend a run will use: the GPU if offered and allowed, else the CPU. */
 export async function chooseBackend(preference = "auto", nav = globalThis.navigator) {
   const cpu = { kind: "cpu", name: `CPU, one core of ${nav?.hardwareConcurrency || "?"}`, cells: cpuBudget(nav) };

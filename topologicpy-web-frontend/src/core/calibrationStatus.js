@@ -14,6 +14,9 @@
 /** The cell sizes the held-out tests ran on, m. */
 export const TESTED_CELLS = [0.2, 0.27, 0.34];
 
+/** The cell size the smoke layer's depth is calibrated on, m: the "calibrated" grid builds it. */
+export const CALIBRATED_CELL = 0.27;
+
 /**
  * Per quantity: its status on each tested cell, and a short note. Held-out:
  * Steckler (NBS 1982), NBS multi-room (1991), NIST/NRC (2006) and WTC (2005).

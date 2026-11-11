@@ -12,7 +12,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
-import { STANDARD_CELLS } from "../lib/hardware.js";
+import { STANDARD_CELLS, integratedGpu } from "../lib/hardware.js";
 import { CROWD_COLOURS } from "../viewer/crowd.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { DEFAULT_SETTINGS, PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
@@ -2960,6 +2960,9 @@ function CombustionStatus({ combustion, running }) {
       {combustion.backend && (
         <p className="result__note">
           Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}.
+          {combustion.backend.kind === "gpu" && integratedGpu(combustion.backend.name)
+            ? " That is the integrated graphics. On a laptop that also has an NVIDIA or AMD card, Windows decides which one the browser gets: in Settings, System, Display, Graphics, choose the browser, set it to High performance and restart the browser, and the fire runs on the faster card."
+            : ""}
           {combustion.resized
             ? " The GPU stepped the first grid slower than three times real time, so the fire started again on a coarser grid it keeps up with."
             : combustion.restarted
@@ -3468,16 +3471,18 @@ export function SimulatePanel({
               onChange={(flamescapesGridPolicy) => setSettings({ flamescapesGridPolicy })}
               options={[
                 { value: "standard", label: "Standard: the same on every device, so the GPU and the CPU give one fire" },
+                { value: "calibrated", label: "Calibrated: 0.27 m cells, the size the smoke layer's depth was validated on" },
                 { value: "speed", label: "Finer on the GPU: sized to keep three times real time" },
                 { value: "finest", label: "Finest on the GPU: all its memory allows (slower)" },
               ]}
             />
             <Notes summary="Why the grid matters">
-              The fire depends on the grid: on the Duplex a sofa fire peaked at 0.09 MW on a 0.20 m grid, 2.5 MW on 0.23 m and 6.1 MW on
-              0.27 m. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device, so the CPU gives the
-              GPU&apos;s fire at about a ninth of its speed; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and
-              its card says so. The finer grids are for the GPU (the CPU builds the standard one) and give a different fire; which grid is
-              nearer a real fire has not been measured. Keep one grid when comparing runs; the run card gives it.
+              The fire depends on the grid. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device,
+              so the CPU gives the GPU&apos;s fire; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and its card
+              says so. Checked against held-out measured room fires, the smoke layer&apos;s depth is calibrated on 0.27 m cells and only
+              indicative on 0.20 and 0.34 m: the calibrated grid builds 0.27 m cells, clipped round the fire to what the device can hold (a
+              GPU holds a much larger area than a CPU). The finer grids give a different fire that no measurement has checked. Keep one grid
+              when comparing runs; the run card gives it and says what holds on it.
             </Notes>
             <SelectField
               label="Repeat runs on the GPU"
