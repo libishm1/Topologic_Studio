@@ -346,3 +346,304 @@ H. **The worker's GPU grid.** It now sizes its grid by its measured step rate, w
 - Fedkiw, Stam and Jensen (2001), McCaffrey (1979), MQH (1981), Alpert (1972), Janssens and Tran (1992), Steckler, Quintiere and Rinkinen (1982): as in section 7.
 - NIST, `firemodels/exp`, Steckler_Compartment: the measured profiles and layer reductions of tests 14, 410 and 610 (a US Government work). NIST, `firemodels/fds`, Validation/Steckler_Compartment/FDS_Input_Files: the tests' geometry, burner and positions.
 - FDS Validation Guide (NIST SP 1018-3), release 6.11.1, Table 4.1, for σ̃E of temperature (0.07) and velocity (0.08). The 0.05 used for heights in `steckler-checks.mjs` is an assumption, to be checked against the guide's layer depth.
+
+## 12. Held-out validation datasets (2026-11-12)
+
+Status: sections 12.1 to 12.6 were written on 2026-11-11, before the suite's baseline started at 21:55, and are its pre-registration. They were not committed before the runs, so their content at 21:55 cannot be verified from git. Short smoke runs (30 to 120 s, or single tests) were used only to check the plumbing and the run times. The rule in 12.6 is not changed after seeing results; a changed rule is a new, dated pre-registration. Section 12.7 gives the runs, the two harness faults found and fixed, and the old transport's partial comparison; 12.8 gives the results on the final solver.
+
+The suite is `tools/calibration/validation-suite.mjs`. Its data are made by `tools/calibration/validation-data.mjs`, and its shared code is in `tools/calibration/lib/` (`fds.mjs`, the FDS input reader and scene translator; `stats.mjs`, the statistics and the layer reduction). Rerun it after each change to the solver.
+
+### 12.1 The datasets, and why they are independent
+
+All four are measured full-scale tests from NIST's experimental database (`github.com/firemodels/exp`, commit 704e0d9), with each test's conditions from NIST's FDS validation inputs (`github.com/firemodels/fds`, commit 193faff). They are four separate test series: different years, test programmes, facilities and, for three of them, teams.
+
+| Dataset | Series | Tests used | Fire | Enclosure | Compared |
+| --- | --- | --- | --- | --- | --- |
+| `steckler` | NBS, 1980 to 1981; Steckler, Quintiere and Rinkinen (1982) | 55 (all the FDS guide uses) | methane, 31.6 to 158 kW, steady, at 9 positions, on the floor or a 0.3 m block | 2.8 x 2.8 x 2.13 m room; a door 0.24 to 0.99 m wide, or a window with its sill at 0.45 to 1.37 m | the room tree's layer temperature and depth; the door centreline's peak outflow and neutral plane |
+| `nbs` | NBS, 1985; Peacock, Davis and Babrauskas (1991) | 3 (100A, 100O, 100Z) | natural gas, 110 kW for 900 s | a burn room off a 12.2 m corridor (and a target room in 100Z); the corridor's end door open or shut | the layer temperature and depth at four trees |
+| `nistnrc` | NIST, 2003; Hamins et al. (2006) for the US NRC | 10 (1, 2, 3, 7, 8, 9, 13, 14, 15, 18) | heptane spray, 0.4 to 2.3 MW | 21.7 x 7.04 x 3.82 m; the 2 x 2 m door open or shut, no fan | the layer at six trees; seven ceiling thermocouples; O2 and CO2 |
+| `wtc` | NIST, 2004; Hamins et al. (2005) for the WTC investigation | 6 | heptane spray, 2.0 to 3.2 MW | 7.0 x 3.6 x 3.82 m; a low opening at one end, a high one at the other | the layer at two trees; two ceiling thermocouples; O2 and CO2 |
+
+The weakest link in their independence: `nistnrc` and `wtc` were run a year apart in the same NIST laboratory under the same lead (Hamins), with the same kinds of instruments. They are different test series, so they count as two datasets here. Adding the ATF corridors (ATF's laboratory, 2008; in `firemodels/exp`) and UL FSRI's 2018 compartments (UL; MIT licence) would remove that weakness; neither is wired in yet.
+
+Left out, and why:
+- NIST/NRC tests 4, 5, 10 and 16, which ran a fan (the harness has no fan), and test 17 (toluene: its soot yield, 0.195 ± 0.052, leaves its heat release from the fuel flow uncertain, and no calorimetry was taken with the door shut).
+- WTC on 0.20 m cells, and NIST/NRC on 0.20 m cells: about 60 min a test at 600 s on this PC (measured on 60 s runs), past the suite's budget. `--all-cells` runs them.
+- VTT, FM/SNL, UL/NFPRF, Bittern and LLNL: other laboratories' data, which NIST's notice does not speak for (decision 4 of the 2026-11-08 plan).
+
+**Held out.** None of these tests or measurements has been used to fit any solver parameter. The one fitted parameter, the confinement strength (6), was fitted on McCaffrey's plume and Alpert's ceiling jet (section 8, C). The walls' convection coefficient (10) came from the sprinkler validation (Vettori, UL/NFPRF and Bittern), none of which is here. Steckler's tests 14, 410 and 610 were compared in development (section 9.3). They set no solver parameter, but their 0.27 m corner tree prompted the connected-gas instrument rule (claim protocol, section 1). The rule stands: nothing in this suite is used to set a parameter. If one ever is, the dataset it was fitted on leaves the held-out set, and the claim needs three others.
+
+### 12.2 What is measured and compared
+
+Each quantity is compared as the FDS Validation Guide compares it (its dataplot inputs, `Utilities/Python/FDS_validation_dataplot_inputs.csv`, give the devices and the windows), as a rise above ambient:
+
+| Quantity | Measured as | Metric | σ̃E (Table 4.1, unless stated) |
+| --- | --- | --- | --- |
+| Layer temperature | each thermocouple tree, reduced by Janssens and Tran (1992) | its largest rise in the window (Steckler: the steady value) | 0.07 |
+| Layer depth | the same reduction: the ceiling less the interface | its largest in the window (Steckler: steady) | 0.05 |
+| Ceiling jet | the thermocouples nearest the ceiling (NIST/NRC: each tree's top; WTC: one west and one east) | the largest rise | 0.07 |
+| O2, CO2 | the gas analysers, as volume fractions | the largest drop of O2, rise of CO2 | 0.08 |
+| Door velocity | Steckler's door centreline probes | the peak outflow (steady) | 0.08 |
+| Neutral plane | the same profile | the flow's reversal height (steady) | 0.05, this project's assumption (the layer depth's); Table 4.1 gives none |
+
+- **One reduction for both sides.** The measured trees are reduced by the same code as the model's (`lib/stats.mjs janssensTran`) at each measured time. This mirrors the guide's method. As a check, the measured interfaces match the guide's own two-layer files for every Steckler test. Its upper temperatures sometimes differ by a few per cent. For NIST/NRC and WTC the guide averages its trees; here each tree is its own pair, which is stricter.
+- **Windows.** Steckler: the model's mean from 200 to 300 s, against the tests' steady state after 30 min. NBS: 0 to 900 s for the temperature, 300 to 900 s for the depth (the guide's). NIST/NRC: the guide's windows cut at 600 s. WTC: the guide's windows cut at 600 s, or at the burner's end plus 30 s.
+- **The model's samples.** The model is read each second and averaged over each measured interval (10 s for NIST/NRC and WTC; 10 to 15 s for NBS), at the measured times, so both sides take their largest values from the same times.
+- **Pairs.** Each device in each test is one pair. Pairs with a non-positive member are left out and counted.
+
+### 12.3 How the model mirrors each test
+
+- **Geometry.** The FDS input's meshes, obstructions less their holes, and open vents (`lib/fds.mjs`). Everything inside the domain but outside a mesh is wall; an open vent on a mesh's side opens to the domain's edge, which is the solver's open boundary. The scene is voxelised by the app's own `voxelize.js`, so a wall thinner than a cell seals as it would in the app. Obstructions of no thickness (FDS's thin plates: WTC's trusses and column flanges, NIST/NRC's fire pan) are left out.
+- **The fire.** The app's design-fire burner (`flamescapesRun.js itemBurner`): the open cells over the burner's area, a layer at a time up to the ceiling. Heskestad's flame height picks the layers each step. The fuel is the class A item's sooty fuel and the radiant fraction is 0, with the hot sooty cells radiating (principle P2).
+- **Heat release.** The test's own:
+  - Steckler and NBS: the FDS input's HRRPUA times the burner's area, with its ramp. Steckler's rise takes 10 s, as `steckler-checks.mjs`.
+  - NIST/NRC and WTC: the FDS input's fire ramp, scaled to the calorimetry's mean over the ramp's hold.
+  - NIST/NRC's door-shut tests had no calorimetry, so the FDS input's fuel flow at 684 kg/m³ and 44.6 MJ/kg instead. On the open-door tests this flow gives 1 to 12 % more than the calorimetry.
+  - NIST/NRC's burner is a 1 m circle at the pan's centre (the guide's note); WTC's is its 1 x 2 m pan.
+- **Products.** The burner's CO2 yield is set to the test fuel's CO2 per unit heat (heptane 3.006 kg/kg over 44.6 MJ/kg). Here CO2 is a passive tracer of the heat, so this converts the fuel without touching the flow. O2 is consumed by Huggett's rule for every fuel.
+- **Walls.** Each test's own surfaces from its FDS input, at most three per test (the solver's inert slots):
+  - Steckler: 13 mm ceramic fibre board throughout.
+  - NBS: the corridor's 13 mm calcium silicate on 13 mm gypsum; the burn room's 50 mm ceramic fibre and 113 mm fire brick floor.
+  - NIST/NRC: 25.4 mm marinite, and a gypsum on pine floor.
+  - WTC: 25.4 mm marinite and a 25.4 mm gypsum floor.
+
+  The solver lumps a wall into whole cells, 0.2 to 0.34 m thick. So each surface's density is set to its areal mass over the cell (ρ = Σ ρ_i L_i / h) and its specific heat to Σ ρ_i c_i L_i / Σ ρ_i L_i. A wall one cell thick then holds the board's heat capacity per unit area, not ten to twenty times it. Its conductivity and emissivity are the exposed layer's, at the first point of any ramp. This is input fidelity, set from the documented materials by one rule for every test before any comparison. It is not tuning, and it changes no solver parameter: the solver takes it as a run option (`inert`). `--walls stone` runs the solver's stone instead, as a diagnostic.
+- **The rest of the test conditions.** The solver's ambient is the test's (FDS TMPA). The cells are the app's: 0.20, 0.27 and 0.34 m, CPU.
+- **The run itself.** Each second the run is checked as the app checks it (`healthReadings`, `healthVerdict`), and its steps are cut as the app cuts them (`substepsFor`). A run that fails stops, and its readings are set aside.
+- **Instruments.** Trees, points and the door's column read only open cells in the fire's connected gas (the solver's regions after the first second). A tree's ceiling is the top of its connected open cells. A point whose cell is solid, or outside that gas, moves to the nearest connected open cell within four cells, and the distance is recorded.
+- **One solver for the whole run.** The suite copies the solver's modules at its start, so every run uses the same code. It records the git state, the copies' digests and the solver options.
+
+### 12.4 Known mismatches
+
+- **Walls.** A wall is a lumped cell with no conduction depth: thermally thin. The tests' boards (13 to 113 mm) are thin for the first minutes and then lose heat through their backs. FDS conducts in one dimension through each layer.
+- **Ceilings and openings snap to the grid.** The app's voxeliser seals any cell a slab enters by more than 8 %. So a ceiling snaps down by up to a cell: Steckler's 2.13 m room is 1.89 m tall on 0.27 m cells and 2.04 m on 0.34 m cells. Openings snap to whole cells: Steckler's 0.74 m door is 0.54 m wide on 0.27 m cells and 0.68 m on 0.34 m cells. Each run records its trees' ceilings and the door's modelled width.
+- **The burner's fuel.** It is the class A item's sooty fuel, not methane or heptane, and it has no prescribed radiant fraction. A methane flame radiates 15 to 20 % of its heat and a heptane spray 44 %. Here that heat is lost only through the solver's soot radiation.
+- **Duration.** NIST/NRC and WTC are cut at 600 s; their tests ran 5 to 50 min. Steckler's steady state is the model's 200 to 300 s mean against the tests' 30 min.
+- **Leakage and spray.** NIST/NRC's door-shut rooms are sealed here; the measured leakage, 0.06 to 0.08 m², is below a cell. The spray burners are pool-like burners over the pan.
+- **Not matched surfaces.** NBS: the corridor's floor (gypsum board in FDS) and the target room's walls and floor take the corridor walls' material.
+
+### 12.5 Running it
+
+`node tools/calibration/validation-data.mjs` fetches the raw files at the fixed commits into `tools/calibration/data/cache/` (git-ignored). It checks their SHA-256 digests against those recorded, and writes the reduced numbers to `tools/calibration/data/<dataset>.json`; `--offline` reduces from the cache. The suite reads only the reduced files.
+
+`node tools/calibration/validation-suite.mjs [--datasets steckler,nbs,nistnrc,wtc] [--cells 0.20,0.27,0.34] [--solver vorticity=6,cfl=1] [--jobs N] [--tests REGEX] [--walls stone] [--all-cells] [--json out.json]`
+- `--solver` overrides DEFAULTS as the other calibration tools do. For example, `--solver conservative=0,expansion=0,vorticity=6` reproduces the transport before proposal F.
+- `--summary out.json` recomputes an earlier run's statistics with the current code, both ways (12.6), and prints them; `--write` saves them back.
+- `--jobs` defaults to 4. A NIST/NRC run on 0.27 m cells holds about 200 MB and takes about 37 min on this PC; the whole suite took 167 min at 4 jobs.
+
+**Licence.** Both repositories carry NIST's notice: NIST-developed works, not subject to copyright in the United States; to be acknowledged as NIST's, with changes marked. All four datasets are NIST or NBS tests, so the reduced numbers are committed with that notice and a note of the change, as in each file's `notice`. The raw files stay in the git-ignored cache.
+
+### 12.6 Acceptance rule (pre-registered)
+
+Statistics as in section 2 (FDS Validation Guide, section 4.4), with σ̃E from the table in 12.2. The bands are this project's (2026-11-08 plan, section 8), on the FDS Validation Guide's statistics: the guide defines the statistics, not the bands. The rule, per quantity and per cell size:
+
+1. **A dataset is in band** when its own pairs (its tests and devices on that cell) give a tier within the calibrated band (0.8 ≤ δ ≤ 1.25 and σ̃M ≤ 0.35), and none of its runs on that cell stopped. One stopped run puts the whole dataset out of band for every quantity it measures on that cell, so a stopped run cannot help a verdict by leaving the rest.
+2. **Calibrated on that cell** when at least three datasets are in band, and all datasets' pairs pooled also lie within the calibrated band.
+3. **Indicative on that cell** when the pooled pairs lie within the indicative band (0.67 ≤ δ ≤ 1.5 and σ̃M ≤ 0.5).
+4. **Otherwise not calibrated.**
+
+What the rule allows, before any result:
+- The layer's temperature and depth are measured in all four datasets, so they can be calibrated.
+- The ceiling jet, O2 and CO2 are measured only in NIST/NRC and WTC, the two datasets from one laboratory. They can be indicative at most until a third dataset measures them.
+- The door velocity and neutral plane come from Steckler alone, so they too are indicative at most.
+- On 0.20 m cells only Steckler and NBS run, so nothing can be calibrated there. This costs the app little: the app's calibrated cells are 0.27 to 0.34 m (decision 2 of the 2026-11-08 plan).
+- A quantity is calibrated only on the cells where the rule holds. The app may claim it only for runs on those cells, within the range of fires (D*/δx) and rooms the datasets cover.
+
+The suite also reports the claim rule of [fire-calibration-claim-protocol-2026-11-12.md](fire-calibration-claim-protocol-2026-11-12.md), section 4, which was also written before any held-out result: in band in at least three datasets and outside the indicative band in none; indicative in at least two. A dataset with a stopped run counts as outside the indicative band. Where the two rules differ, the stricter one is the verdict.
+
+**Added 2026-11-12, 00:28** (the claim protocol's addendum, commit 0afce90). A check on geometry alone found that the grid seals some of Steckler's doors:
+- the 0.24 to 0.25 m doors (tests 10, 114 and 514) on every cell size;
+- the 0.36 m doors (tests 11, 144 and 544) on 0.34 m cells.
+
+The check floods the fire's open cells and asks whether they reach the domain's open boundary (`tools/calibration/lib/represented.mjs`). It was prompted by held-out output: test 10's missing door velocity in the old-transport comparison run. By 00:28 nine final-solver Steckler runs had finished, steckler/10@0.2 among them, though none had been read. In those 12 of the 165 Steckler runs the room has no opening, so they do not represent their tests. Every verdict is given both ways (12.8), and none moved.
+
+The rule: a run whose fire's gas cannot reach the open boundary, though its test had an opening, is left out and reported as "not represented on this grid". Tests sealed by design (NIST/NRC 1, 2, 7, 8 and 13, and NBS 100O: door shut, leakage below a cell) are unaffected. Every statistic and verdict is reported both ways: as pre-registered, with every test, and with this rule. The rule's verdict is the one the app states, with the pre-registered one beside it. For the app the same fact is a limit: an opening narrower than about a cell closes on the grid.
+
+### 12.7 The runs
+
+**Which runs count.** The verdict comes from one run on the solver as it stands after proposal F and the confinement's refit:
+- DEFAULTS vorticity 3, conservative 1, expansion 1, no overrides;
+- `flamescapes.js` SHA-256 352694a972e2543b, the file as committed in 7e2e9f5 (heat-conserving transport, confinement refitted);
+- 4 jobs, as this PC had about 2 GB of memory free; a NIST/NRC run on 0.27 m cells holds about 200 MB;
+- started 2026-11-11 21:55, output `benchmark/results/2026-11-12-validation-baseline.json`.
+
+Two earlier starts, with 16 jobs on an intermediate solver (vorticity 6), were stopped before any run finished and wrote nothing.
+
+**The old transport, for comparison** (`--solver conservative=0,expansion=0,vorticity=6`, 2 jobs alongside the final run). It was stopped after 67 of its 206 runs by the main session's choice, to give the final run the CPU. Its log is kept, reconstructed into `benchmark/results/2026-11-12-validation-old-transport-partial.json`; the suite writes its full JSON only at the end.
+
+- **What ran.** The queue runs the costliest first, so the 67 are:
+  - every NIST/NRC run on 0.27 and 0.34 m;
+  - every WTC and NBS run on 0.27 and 0.34 m;
+  - NBS on 0.20 m;
+  - 26 Steckler runs on 0.20 m.
+- **What stopped.** 19 runs, all NIST/NRC: every one of its tests on 0.27 and 0.34 m, except test 15 on 0.34 m, which ran to 600 s.
+  - The guard's reason, every time: the gas held more than 1.5 times the heat put in, plus 1 MJ (energy).
+  - The times, 0.27 m: test 13 at 7 s; 02, 09 and 03 at 8 s; 08, 14 and 18 at 9 s; 15 at 10 s; 07 at 11 s; 01 at 18 s.
+  - The times, 0.34 m: 13 at 7 s; 02 at 9 s; 08 and 14 at 10 s; 09 and 03 at 11 s; 18 at 16 s; 07 at 19 s; 01 at 25 s.
+- **Why.** This is finding F6 at the scale of a 21.7 m compartment: the old transport makes heat as the burner's gas mixes, and early in a slow ramp the heat put in is still small.
+- **The final solver** ran the same tests without a stop.
+
+**A second harness fault, and its fix (2026-11-12, recorded in the claim protocol before its rerun).**
+- **What it was.** The run records showed WTC's west tree on 0.27 m cells with a ceiling of 2.97 m, against 3.82 m. A small instrument bracket (1.0 to 1.2 x 0.5 to 0.6 x 3.2 to 3.3 m) was sealed into two whole cells in the tree's column. The tree read only the cells below it, so its Janssens and Tran reduction lost the top 0.8 m of the layer.
+- **The fix.** A tree now reads every open, fire-connected cell of its column below the test's nominal ceiling, skipping solid ones, and takes its ceiling at the top of the highest (`lib/fds.mjs treeCells`). A check on geometry alone, over all 417 tree columns of every test on every grid, finds that this changes only those six: WTC tests 1 to 6, west tree, 0.27 m.
+- **The rerun.** The six were rerun with the fix (`benchmark/results/2026-11-12-validation-wtc-tree-fix.json`). Ten unaffected runs rerun alongside repeated bit for bit: WTC on 0.34 m, NBS 100A and Steckler 14 on 0.27 and 0.34 m. `benchmark/results/2026-11-12-validation-baseline-wtc-fixed.json` is the as-made run with the six replaced.
+- **What changed.** WTC on 0.27 m, as made then fixed (δ, with σ̃M in brackets): the layer temperature 1.03 (0.10) then 1.10 (0.07); the layer depth 0.95 (0.14) then 1.09 (0.05). No verdict changed.
+- **The literal rerun.** The full rerun of all 206 runs on the fixed harness that protocol section 5 asks for started on 2026-11-12 at 01:09, as `benchmark/results/2026-11-12-validation-final.json`. Given the bit-for-bit repeat, it is expected to match the merged file.
+
+### 12.8 Results on the final solver
+
+The fixed harness, with the sealed-door rule (12.6). Each cell gives δ, σ̃M in brackets, the number of pairs, and the dataset's tier. "In band" means within the calibrated band.
+
+| Quantity | Dataset | 0.20 m | 0.27 m | 0.34 m |
+| --- | --- | --- | --- | --- |
+| Layer temperature rise | Steckler | 1.30 (0.17), 52: indicative | 1.09 (0.08), 52: in band | 1.12 (0.11), 49: in band |
+| | NBS multi-room | 0.64 (0.68), 12: not calibrated | 0.96 (0.61), 12: not calibrated | 0.78 (0.77), 12: not calibrated |
+| | NIST/NRC | not run | 1.04 (0.20), 60: in band | 1.14 (0.20), 60: in band |
+| | WTC | not run | 1.10 (0.07), 12: in band | 1.18 (0.07), 12: in band |
+| Layer depth | Steckler | 0.97 (0.16), 52: in band | 1.16 (0.09), 52: in band | 1.28 (0.12), 49: indicative |
+| | NBS multi-room | 1.14 (0.29), 12: in band | 1.11 (0.20), 12: in band | 1.29 (0.24), 12: indicative |
+| | NIST/NRC | not run | 0.94 (0.11), 60: in band | 0.95 (0.11), 60: in band |
+| | WTC | not run | 1.09 (0.05), 12: in band | 1.10 (0.05), 12: in band |
+| Ceiling jet rise | NIST/NRC | not run | 1.15 (0.26), 69: in band | 1.31 (0.19), 69: indicative |
+| | WTC | not run | 1.32 (0.09), 12: indicative | 1.30 (0.10), 12: indicative |
+| O2 drop | NIST/NRC | not run | 1.31 (0.09), 15: indicative | 1.44 (0.13), 15: indicative |
+| | WTC | not run | 1.77 (0.16), 6: not calibrated | 2.19 (0.17), 6: not calibrated |
+| CO2 rise | NIST/NRC | not run | 1.03 (0.08), 10: in band | 1.11 (0.08), 10: in band |
+| | WTC | not run | 1.59 (0.34), 6: not calibrated | 2.00 (0.33), 6: not calibrated |
+| Door peak outflow | Steckler | 0.69 (0.14), 52: indicative | 0.65 (0.11), 52: not calibrated | 0.58 (0.40), 48: not calibrated |
+| Neutral plane height | Steckler | 0.96 (0.05), 52: in band | 0.98 (0.10), 52: in band | 0.94 (0.11), 47: in band |
+
+The verdicts. Each cell gives the pooled δ (σ̃M), the datasets in band, the verdict of plan 12.6 and of the claim protocol's section 4, and in bold the stricter, which is the verdict:
+
+| Quantity | 0.20 m | 0.27 m | 0.34 m |
+| --- | --- | --- | --- |
+| Layer temperature rise | 1.21 (0.48); 0 of 2; indicative / not calibrated: **not calibrated** | 1.06 (0.24); 3 of 4; calibrated / indicative: **indicative** | 1.12 (0.33); 3 of 4; calibrated / indicative: **indicative** |
+| Layer depth | 1.00 (0.19); 2 of 2; indicative / indicative: **indicative** | 1.05 (0.15); 4 of 4; calibrated / calibrated: **calibrated** | 1.11 (0.18); 2 of 4; indicative / indicative: **indicative** |
+| Ceiling jet rise | not run | 1.18 (0.25); 1 of 2; indicative / indicative: **indicative** | 1.31 (0.18); 0 of 2; indicative / indicative: **indicative** |
+| O2 drop | not run | 1.44 (0.18); 0 of 2; indicative / not calibrated: **not calibrated** | 1.65 (0.23); 0 of 2; not calibrated / not calibrated: **not calibrated** |
+| CO2 rise | not run | 1.23 (0.27); 1 of 2; indicative / not calibrated: **not calibrated** | 1.43 (0.33); 1 of 2; indicative / not calibrated: **not calibrated** |
+| Door peak outflow | 0.69 (0.14); 0 of 1; indicative / not calibrated: **not calibrated** | 0.65 (0.11); 0 of 1; not calibrated / not calibrated: **not calibrated** | 0.58 (0.40); 0 of 1; not calibrated / not calibrated: **not calibrated** |
+| Neutral plane height | 0.96 (0.05); 1 of 1; indicative / not calibrated: **not calibrated** | 0.98 (0.10); 1 of 1; indicative / not calibrated: **not calibrated** | 0.94 (0.11); 1 of 1; indicative / not calibrated: **not calibrated** |
+
+**As pre-registered, with every test.** Every verdict is the same. Only Steckler's numbers differ:
+- its layer temperature: 1.29 (0.16), 1.09 (0.09) and 1.14 (0.12) on the three cells;
+- its layer depth: 0.98 (0.17), 1.13 (0.23) and 1.27 (0.12);
+- the pooled layer depth on 0.27 m: 1.04 (0.19).
+
+The 12 runs left out under the rule:
+- tests 10, 114 and 514 on 0.20, 0.27 and 0.34 m;
+- tests 11, 144 and 544 on 0.34 m.
+
+**How independent the four are.** The four series come from two institutions, NBS and NIST (NBS became NIST in 1988), and NIST/NRC and WTC share a laboratory and lead. Counted as one, with Steckler set aside, the depth would be indicative: the merged NIST/NRC and WTC pairs give δ 0.96, σ̃M 0.12 on 0.27 m cells (72 pairs), beside NBS's 1.11 (0.20), two datasets.
+
+**What the one calibrated verdict covers.** The hot layer's depth, by Janssens and Tran's reduction of a thermocouple tree, on 0.27 m cells only. The range it holds over:
+- **Fires.** Prescribed heat releases of 32 kW to 3.2 MW: D*/δx 0.9 to 5.6 on those cells (Steckler 0.9 to 1.7, NBS 1.5, NIST/NRC 2.5 to 5.0, WTC 4.7 to 5.6).
+- **Enclosures.**
+  - single rooms of 17 m³ (2.8 x 2.8 x 2.13 m) to 584 m³ (21.7 x 7.04 x 3.82 m);
+  - a burn room off a 12.2 m corridor;
+  - ceilings of 2.1 to 3.8 m.
+- **Openings.**
+  - one door 0.36 to 1.0 m wide, or a window with its sill up to 1.37 m;
+  - a door to a corridor;
+  - a 2 x 2 m door;
+  - two vents at opposite ends;
+  - rooms closed.
+- **Walls.** Lightweight insulating boards (ceramic fibre, calcium silicate on gypsum, marinite), with gypsum or fire-brick floors.
+- **Times.** Up to 600 to 900 s, or Steckler's steady state.
+
+Outside it, the depth stays at most indicative:
+- other cells: on 0.20 and 0.34 m it is indicative;
+- narrower openings: doors under about a cell close on the grid;
+- masonry or concrete walls;
+- longer fires.
+
+**What the rest says.**
+- **The layer's temperature rise** is within the band in three datasets on 0.27 and 0.34 m. NBS's multi-room tests are outside even the indicative band, with large scatter (σ̃M 0.6 to 0.8). By tree, as a share of the measured rise:
+- the burn room's tree: 0.8 to 1.3;
+- the corridor tree a metre from its door: 0.6 to 1.8;
+- the trees 5 and 11 m down the corridor and in the target room: 0.1 to 0.9.
+
+The model's layer cools too fast along the 12 m corridor. So the rise is indicative.
+- **The ceiling jet** is indicative on both cells, running 15 to 30 % hot.
+- **O2 and CO2** fail on WTC's 2 to 3 MW fires, where the model's oxygen drop and CO2 rise run 1.6 to 2.2 times the measured. NIST/NRC is within or near the band for both.
+- **Steckler's door outflow** reads a third low, as section 9.3 found. The neutral plane is in band on every cell, but it has one dataset.
+
+**Costs** (CPU, 4 jobs, i7-14700; solver seconds a run, median):
+- NIST/NRC: 37 min on 0.27 m, 11 min on 0.34 m;
+- WTC: 13 min on 0.27 m, 4 min on 0.34 m;
+- NBS: 16, 4 and 1.4 min on the three cells;
+- Steckler: 49, 15 and 5 s.
+
+The whole suite took 167 min at 4 jobs. The 30 min a cell size first aimed at needs about 16 jobs and more memory than this PC had free, and even then the longest single run, NIST/NRC on 0.27 m, takes about 40 min.
+
+**The geometry as modelled** (each run records it):
+- **Steckler.** The ceiling is 2.00 m on 0.20 m cells and 2.04 m on 0.34 m cells. On 0.27 m cells it snaps down to 1.89 m in most of the room. Beside two walls, where the tree stands, a row of cells stays open to 2.16 m, joined to the room from below.
+- **Steckler's doors.** They are modelled at 0.54 to 1.11 times their width (the sealed ones aside). The 0.46 m window is one cell tall on 0.34 m cells, so it has no neutral plane there.
+- **The others.** NIST/NRC and WTC ceilings are 3.74 to 3.78 m. Point devices moved at most 0.26 m to an open, connected cell. Every run took its walls' materials, and every burner released its table's heat to within 0.1 %.
+
+**Superseded.** The results above are on the solver of 7e2e9f5. On 2026-11-12 an independent review found two solver faults that change the physics: the transport's fixed x, y, z sweep order (fixed by alternating the order by step) and the porous cells' projection. Under the claim protocol's section 5, every comparison is rerun on the fixed solver and the confinement is refitted. The full literal rerun on 7e2e9f5 was stopped after 4 of 206 runs, because that solver was about to change; its log is kept in `benchmark/results/2026-11-12-validation-final-partial.json`.
+
+### 12.9 Extension for the next solver (pre-registered 2026-11-12, before any run on it)
+
+The user now requires every quantity, smoke visibility included, to have its fair chance of calibration; the label still follows the evidence. What follows is fixed before any run on the next solver.
+
+**1. A fifth dataset: ATF corridors.**
+- **What it is.** The ATF Fire Research Laboratory's 2008 tests, in `firemodels/exp` under NIST's notice: the data of a US federal laboratory other than NIST.
+- **The tests.** Six: 48, 97, 242, 250 and 485 kW, and a pulsed fire up to 485 kW, all natural gas, modelled as methane.
+- **The enclosure.** Two 17 m corridors (1.75 m wide, 2.4 m tall) joined by a stairwell. The lower corridor's far door is shut; the upper corridor's end is open.
+- **Compared,** as the guide's dataplot inputs choose:
+  - the layer at five trees, each from its own floor: A and B in the lower corridor, C at the foot of the stairs, F and G in the upper corridor;
+  - seven ceiling thermocouples: A-10, B-10, C-10, D-10, E-08, F-10 and G-10.
+- **Runs.** 600 s, on 0.27 and 0.34 m cells. On 0.20 m cells the scene has about 78,000 cells, so it is not run there by default.
+- **Walls.** The FDS input's 12.7 mm gypsum board, with its concrete ground floor. The guide's description has cement board on plywood for the floor; the pine stairs take the gypsum; the stairs and rails snap to whole cells.
+- **Independence.** A different laboratory and team. It is the third dataset for the ceiling jet, after NIST/NRC and WTC, and the fifth for the layer.
+
+**2. Smoke: NIST/NRC's obscuration.**
+- **What is measured.** The laser path under the ceiling's far corner: FDS's TRANSMISSION device, 0.8 m long at 3.62 m.
+- **The metric.** As the guide compares it: the largest obscuration per metre, 100 − T (%/m), with σ̃E 0.12 (the guide's scatter-plot input for smoke obscuration).
+- **The model.** The soot density in the path's connected open cells gives K = 8700 m²/kg × ρ Y_soot (Mulholland and Croarkin 2000; `flamescapesRun.js SOOT_EXTINCTION`), as the app's visibility 3/K uses it. The obscuration is 100 (1 − e^−K). Visibility is 3/K, so its bias is the inverse of K's.
+- **Only one dataset.** No other NIST or public dataset fits the app's cells:
+  - FAA's cargo compartments are 1.4 m tall with a 5 kW tray, four cells tall on 0.34 m cells;
+  - FM/FPRF's data centre is not NIST's;
+  - NIST's smoke alarm tests give activation times only.
+
+  So smoke cannot reach indicative under the protocol, which needs two datasets. It is reported and labelled not calibrated.
+
+**3. The burner's fuel is the test's.** This is input fidelity, one rule for every test, found by a check that uses no measured data.
+- **The fault.** The burner had the class A item's heat of combustion (18 MJ/kg) with its CO2 yield matched per joule. At the analysers, the model's CO2 rise over its O2 drop is 0.51 to 0.55, where the burner's inputs give 0.64 (heptane, 7/11 = 0.636).
+- **Why.** The class A fuel adds 2.5 times heptane's mass per joule, and the mass balance closes with water. The extra product moles dilute the gas, so the O2 drop reads about 14 % high.
+- **The fix.** The burner takes the test fuel's heat of combustion and yields:
+  - methane: 50.0 MJ/kg, CO2 2.744;
+  - heptane: 44.6 MJ/kg, CO2 3.006, CO 0.008;
+  - soot as each series documents it: Steckler 0 and ATF 0 (their FDS inputs), NBS 0.005 (its FDS input), NIST/NRC 0.0149 (measured in the tests, as the guide quotes it), WTC 0.015 (its FDS input).
+- **Its consequence.** The solver's flame radiates only through its soot, so the methane burners, with little or no soot, lose no heat by radiation. A methane flame radiates 15 to 20 % of its heat. This is a known mismatch, which may bias their layers hot.
+- **The former rule** is kept as a diagnostic: `--fuel app`.
+
+**4. NBS's geometry and materials, checked without measured data.**
+- On 0.20 m cells the scene is exact: the burn room's door 0.80 m wide up to its 1.60 m soffit, ceilings 2.20 and 2.40 m, the end door 1.60 m², the plan areas.
+- On 0.27 m cells the corridor's ceiling snaps to 2.16 m and the door to 0.54 m. On 0.34 m cells the ceilings are 2.04 and 2.38 m.
+- The walls take the FDS input's surfaces.
+
+No input fault explains NBS's scatter: its far corridor trees run cold on every cell (12.8), including the one where the scene is exact. Nothing changed.
+
+**5. Unchanged:**
+- the verdict rule (12.6 and the claim protocol's section 4; the stricter governs);
+- the sealed-door rule and the tree rule (12.7);
+- the windows and horizons;
+- the cells: 0.20 m runs only Steckler and NBS;
+- every other input.
+
+**6. Records.** Each results file records SHA-256 digests of the harness (`lib/*.mjs`, `validation-suite.mjs`, `data/*.json`) in `git.harnessDigests`, and `--summary --write` refuses to rewrite a file made with a different harness. The run's output is logged to a file beside its results.
+
+**7. The run.** After the main session's "solver final":
+
+`node tools/calibration/validation-suite.mjs --cells 0.20,0.27,0.34 --jobs 6 --json benchmark/results/2026-11-12-validation-final.json > benchmark/results/2026-11-12-validation-final.log 2>&1`
+
+It covers all five datasets, 218 runs: the 206 before and ATF's 12. Six jobs hold about 1.3 GB. It should take about 2.5 h.
+
+**What the rule allows, before any result:**
+- Layer temperature and depth: five datasets, so they can be calibrated.
+- Ceiling jet: three (NIST/NRC, WTC and ATF), so it can be calibrated; the first two share a laboratory.
+- O2 and CO2: two (NIST/NRC and WTC), so indicative at most.
+- Smoke obscuration, and with it visibility: one (NIST/NRC), so not calibrated whatever its result.
+- Door velocity and neutral plane: one (Steckler), so not calibrated.

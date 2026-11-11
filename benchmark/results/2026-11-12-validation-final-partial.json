@@ -1,0 +1,131 @@
+{
+ "generated": "2026-11-12",
+ "tool": "tools/calibration/validation-suite.mjs",
+ "what": "partial comparison run of the final solver (7e2e9f5) on the fixed harness, the full literal rerun, kept as evidence; reconstructed from the suite's log because the run was stopped before it wrote its JSON",
+ "command": "node tools/calibration/validation-suite.mjs --datasets steckler,nbs,nistnrc,wtc --cells 0.20,0.27,0.34 --jobs 4",
+ "solver": {
+  "snapshotFlamescapesSha256": "352694a972e2543b (the same file as the final run; the final solver, no overrides)",
+  "overrides": {}
+ },
+ "stopped": "by the main session's choice on 2026-11-12, because the solver was about to change (sweep order, porous projection), after the runs listed (queue order: costliest first)",
+ "stoppedRuns": 0,
+ "note": "firstPairs are the first three comparisons the log printed per run (model/measured, rises in K), not the full set",
+ "runs": [
+  {
+   "order": 1,
+   "dataset": "nistnrc",
+   "test": "15",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 2187.3,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 166.7,
+     "measured": 162.9
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "2",
+     "model": 184.4,
+     "measured": 170.4
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 196.4,
+     "measured": 240.8
+    }
+   ]
+  },
+  {
+   "order": 2,
+   "dataset": "nistnrc",
+   "test": "02",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 2327,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 181.9,
+     "measured": 210
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "2",
+     "model": 231.7,
+     "measured": 260.4
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 207.5,
+     "measured": 260.5
+    }
+   ]
+  },
+  {
+   "order": 3,
+   "dataset": "nistnrc",
+   "test": "08",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 2446.2,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 192.3,
+     "measured": 210.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "2",
+     "model": 242.6,
+     "measured": 249.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 225.9,
+     "measured": 253.5
+    }
+   ]
+  },
+  {
+   "order": 4,
+   "dataset": "nistnrc",
+   "test": "13",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 2548.4,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 224.8,
+     "measured": 269.4
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "2",
+     "model": 282.6,
+     "measured": 359.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 251.9,
+     "measured": 331.8
+    }
+   ]
+  }
+ ]
+}
