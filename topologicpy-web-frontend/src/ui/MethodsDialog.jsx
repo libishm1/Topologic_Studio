@@ -443,7 +443,12 @@ export function MethodsDialog({ open, onClose, studio }) {
                   windows (their wall openings vent the smoke); running ventilation joins every air terminal through
                   one duct volume at an assumed 100 L/s a terminal, without reading which system a terminal belongs to
                   or the ducts themselves; and contents are a statistical fire load. It shows how heat and smoke may move through
-                  the building; it is not calibrated, and its fire class values marked provisional are still being
+                  the building. Its transport keeps the gas&apos;s mass and heat, and heated gas expands (the low-Mach
+                  form). Checked against held-out measured room fires (Steckler, NBS multi-room, NIST/NRC and WTC;
+                  2026-11-12), the smoke layer&apos;s depth is calibrated on 0.27 m cells (bias 1.05, scatter 0.15, in
+                  all four) and indicative on 0.20 and 0.34 m; the layer&apos;s temperature and the gas under the
+                  ceiling are indicative; gases, door flows and smoke visibility are not calibrated. Those tests had
+                  insulating-board walls; the app&apos;s walls are stone. Its fire class values marked provisional are still being
                   checked. Indoors at these cells embers seldom land hot enough to light anything: in a 120 s fire in
                   the Duplex they lit no spot fire. A liquid pool lights, but much of its vapour stays unburnt on this
                   grid: a 1 m² heptane pool reached 0.3 MW after 30 s in a test room, against the 3.2 MW its burning rate allows.

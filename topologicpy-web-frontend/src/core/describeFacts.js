@@ -6,6 +6,7 @@
  * shows the lines before anything is sent. Pure: App.jsx gathers the state,
  * this turns it into text.
  */
+import { validationLine } from "./calibrationStatus.js";
 
 const round = (v, d = 1) => (Number.isFinite(v) ? Math.round(v * 10 ** d) / 10 ** d : null);
 const list = (items, max) => (items.length > max ? `${items.slice(0, max).join(", ")} and ${items.length - max} more` : items.join(", "));
@@ -226,7 +227,8 @@ function factLines(s, { roomNames, storeyLines }) {
       `Flamescapes run: ${Math.round(c.time)} of ${Math.round(c.horizon ?? c.time)} s simulated; heat release peaked at ${Math.round(c.peak ?? 0)} kW` +
         (c.grid ? ` on a ${c.grid.join(" x ")} grid of ${round(c.cell, 2)} m cells` : "") +
         (c.backend?.name ? `, on ${c.backend.kind === "gpu" ? "the GPU" : "one CPU core"}` : "") +
-        ". The solver is not calibrated and its heat release depends strongly on the grid.",
+        // What held-out measured fires support on its cells (core/calibrationStatus.js).
+        `. ${c.cell > 0 ? validationLine(c.cell) : "The solver is not calibrated."} Its heat release depends on the grid.`,
     );
     const o = c.openings;
     if (o) {

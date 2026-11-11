@@ -23,6 +23,7 @@ import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
 import { MEASURED_PRE, NO_RESPONSE_SOURCE, RSET_CRITERIA, RSET_PRESETS, criterionOf, measuredOf, presetOf } from "../core/rsetPresets.js";
 import { worstStatus } from "../core/perfReport.js";
 import { healthReason } from "../core/runHealth.js";
+import { validationLine } from "../core/calibrationStatus.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
@@ -2312,10 +2313,13 @@ const FLAMESCAPES_MODELS = [
 const FLAMESCAPES_LIMITS =
   "A browser version of a graphics fire solver: grid cells of 0.2 to 0.45 m, not centimetres, so flames and " +
   "thin walls are coarse; room contents are a statistical fire load, not the model's furniture; walls and slabs " +
-  "do not burn; doors and windows as set above. The flow is incompressible, so heated gas takes no extra volume " +
-  "and smoke may reach head height later than it would; the grid's sides are open to outside air, so a large " +
-  "model clipped round the fire is never fully closed. It shows how heat and smoke may move through this " +
-  "building; it is not a calibrated fire engineering model.";
+  "do not burn; doors and windows as set above. Heated gas expands and the transport keeps its mass and heat, " +
+  "but a room sealed by closed doors does not pressurise; an opening narrower than about a cell closes; the " +
+  "grid's sides are open to outside air, so a large model clipped round the fire is never fully closed. It " +
+  "shows how heat and smoke may move through this building; it is not a fire engineering model. Checked " +
+  "against held-out measured room fires (2026-11-12): the smoke layer's depth is calibrated on 0.27 m cells and " +
+  "indicative on 0.20 and 0.34 m; the layer's temperature and the gas under the ceiling are indicative; gases, " +
+  "door flows and smoke visibility are not calibrated. The tests had insulating-board walls; the app's walls are stone.";
 
 const ZONE_GROWTH = [
   { value: "slow", label: "Slow (1 MW in 600 s)" },
@@ -2937,6 +2941,13 @@ function CombustionStatus({ combustion, running }) {
             <dd className="result__value">
               {combustion.grid.join(" x ")} of {combustion.cell?.toFixed(2)} m
             </dd>
+          </div>
+        )}
+        {/* What held-out measured fires support on this run's cells (core/calibrationStatus.js). */}
+        {combustion.cell > 0 && (
+          <div className="result__item">
+            <dt className="result__label">Checked against measured fires</dt>
+            <dd className="result__value">{validationLine(combustion.cell)}</dd>
           </div>
         )}
         {combustion.repeats && (

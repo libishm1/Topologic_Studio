@@ -31,6 +31,26 @@ the heat.*
 > calibrated temperature, so its results do not replace a fire engineer's
 > egress assessment.
 
+## What's new (2026-11-12)
+
+- **The fire solver conserves heat, and is checked against measured fires.**
+  Flamescapes made heat as its gas mixed (a sealed box of hot and cold gas
+  gained half its heat again in a minute). Its gas now moves through the
+  cells conserving mass and heat, and heated gas expands, on the CPU and the
+  GPU alike. Its one fitted constant was refitted, and it was then compared,
+  by rules written before the comparisons, with 74 room fire tests it was
+  never fitted to (Steckler, NBS multi-room, NIST/NRC, WTC). The smoke
+  layer's depth is calibrated on 0.27 m cells (bias 1.05, scatter 0.15, in
+  all four series) and indicative on 0.20 and 0.34 m; the layer's
+  temperature and the gas under the ceiling are indicative; gases, door
+  flows and visibility are not calibrated. The tests had insulating-board
+  walls; the app's walls are stone. Each run's card says what holds on its
+  cells. The protocol and the results:
+  [wiki/research/fire-calibration-claim-protocol-2026-11-12.md](wiki/research/fire-calibration-claim-protocol-2026-11-12.md).
+- **The guide names every control,** and the panel folds long hints, adds
+  "In the guide" links, a taller panel on phones and a fifth guided run,
+  "Every room's way out".
+
 ## What's new (2026-11-11)
 
 - **People leaving.** An optional animation in the Route step: everyone on
@@ -116,7 +136,7 @@ the heat.*
 
 ## Contents
 
-- [What's new](#whats-new-2026-11-11)
+- [What's new](#whats-new-2026-11-12)
 - [Quick start](#quick-start)
 - [The example buildings](#the-example-buildings)
 - [What Studio does](#what-studio-does): [Model](#model-what-is-in-the-file),
