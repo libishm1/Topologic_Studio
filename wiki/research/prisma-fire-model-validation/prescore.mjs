@@ -34,7 +34,26 @@ const QUANTITIES = [
 const EXCLUDE = /wildland|forest fire|wildfire|bushfire|internal combustion|combustor|gas turbine|engine cylinder|coal mine/i;
 
 const pool = JSON.parse(readFileSync(input, "utf8"));
-const records = Array.isArray(pool) ? pool : pool.works || Object.values(pool);
+const all = Array.isArray(pool) ? pool : pool.works || Object.values(pool);
+// PROTOCOL.md section 4, step 1: duplicates by normalised DOI, then by
+// normalised title and year (OpenAlex ids are already unique); the first kept
+// takes the others' queries.
+const norm = (s) => (s || "").toLowerCase().replace(/<[^>]+>/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+const seen = new Map();
+const records = [];
+let duplicates = 0;
+for (const r of all) {
+  const doi = (r.doi || "").toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//, "");
+  const keys = [doi && `doi:${doi}`, norm(r.title) && `t:${norm(r.title)}|${r.publication_year}`].filter(Boolean);
+  const first = keys.map((k) => seen.get(k)).find(Boolean);
+  if (first) {
+    duplicates += 1;
+    for (const q of r.queries || []) if (!first.queries.includes(q)) first.queries.push(q);
+    continue;
+  }
+  for (const k of keys) seen.set(k, r);
+  records.push(r);
+}
 for (const r of records) {
   const text = `${r.title || ""} ${r.abstract || ""}`;
   let score = 0;
@@ -47,6 +66,6 @@ const sorted = records.map((r) => r.score).sort((a, b) => b - a);
 const threshold = sorted[Math.min(TARGET, sorted.length) - 1] ?? 0;
 const kept = records.filter((r) => r.score >= threshold).length;
 writeFileSync(output, JSON.stringify(records, null, 1));
-const counts = { records: records.length, excludedByGate: records.filter((r) => r.score === 0).length, target: TARGET, threshold, kept, belowThreshold: records.length - kept };
+const counts = { harvested: all.length, duplicates, records: records.length, excludedByGate: records.filter((r) => r.score === 0).length, target: TARGET, threshold, kept, belowThreshold: records.length - kept };
 writeFileSync(output.replace(/\.json$/, "-counts.json"), JSON.stringify(counts, null, 1));
 console.log(JSON.stringify(counts));

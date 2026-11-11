@@ -50,4 +50,4 @@ Metadata (OpenAlex, CC0) and the coding are committed. Abstracts and full texts 
 
 ## Amendments
 
-(none)
+- **2026-11-12, during the harvest, before any screening.** OpenAlex refused cursor paging past the first 200 records without an API key, so queries with more hits stopped at 200. `page2_supplement.py` fetches records 201 to 400 of those queries with plain page numbers, by the same filter, ranking and fields, as the cap of 400 intended; the search log records the pages so fetched.
