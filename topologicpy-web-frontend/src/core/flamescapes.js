@@ -394,7 +394,7 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // Rooms flooded with clean agent or blanketed with foam
     // (suppressionSystems.js systemsSetup), set by the run; null when off.
     systems: null,
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0 },
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0 },
   };
 }
 
@@ -595,7 +595,8 @@ export function particleStep(sim, dt) {
     // it enters: moved whole, a particle faster than a cell a step jumped
     // walls a cell thick and lit the contents of a sealed room (2026-11-12).
     const dx = (pr.vel[q * 3] * dt) / h, dy = (pr.vel[q * 3 + 1] * dt) / h, dz = (pr.vel[q * 3 + 2] * dt) / h;
-    const pieces = Math.max(1, Math.ceil(2 * Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz))));
+    // At most 64 pieces (the GPU's cap), so a non-finite speed cannot hang the step.
+    const pieces = Math.min(64, Math.max(1, Math.ceil(2 * Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)))) || 1);
     let nxp = pr.x[q * 3], nyp = pr.x[q * 3 + 1], nzp = pr.x[q * 3 + 2];
     let out = false, cell = -1;
     for (let piece = 0; piece < pieces; piece += 1) {
@@ -1047,6 +1048,8 @@ function transportGas(sim, dt, u, v, w) {
         if (from === -2 || to === -2) continue;
         const back = vf > 0 ? cellAt(a - 2) : cellAt(a + 1);
         const courant = Math.min(1, Math.abs(vf) * s);
+        // Faces moving more than a cell a step (the cut steps' cap of 8 can leave some on fine grids): counted, so a budget can see them.
+        if (Math.abs(vf) * s > 1) sim.stats.courantClamped += 1;
         // The face's flow out of the cell before it and into the cell after.
         const out = vf > 0 ? courant : -courant;
         const left = cellAt(a - 1), right = cellAt(a);
@@ -1109,12 +1112,24 @@ function transportGas(sim, dt, u, v, w) {
   for (let k = 0; k < nz; k += 1) for (let j = 0; j < ny; j += 1) xLines.push(nx * (j + ny * k));
   for (let k = 0; k < nz; k += 1) for (let i = 0; i < nx; i += 1) yLines.push(i + nx * ny * k);
   for (let j = 0; j < ny; j += 1) for (let i = 0; i < nx; i += 1) zLines.push(i + nx * j);
-  sweep(nx, 1, xLines, (l, a) => u[a + (nx + 1) * l], false);
-  sweep(ny, nx, yLines, (l, a) => {
-    const i = l % nx, k = Math.floor(l / nx);
-    return v[i + nx * (a + (ny + 1) * k)];
-  }, true);
-  sweep(nz, nx * ny, zLines, (l, a) => w[l + nx * ny * a], false);
+  const sweepX = () => sweep(nx, 1, xLines, (l, a) => u[a + (nx + 1) * l], false);
+  const sweepY = () =>
+    sweep(ny, nx, yLines, (l, a) => {
+      const i = l % nx, k = Math.floor(l / nx);
+      return v[i + nx * (a + (ny + 1) * k)];
+    }, true);
+  const sweepZ = () => sweep(nz, nx * ny, zLines, (l, a) => w[l + nx * ny * a], false);
+  // x, y, z on even steps and z, y, x on odd ones: a fixed order favoured the
+  // first axis swept (15 % in a ceiling jet's rise, review 2026-11-12).
+  if (sim.steps % 2 === 0) {
+    sweepX();
+    sweepY();
+    sweepZ();
+  } else {
+    sweepZ();
+    sweepY();
+    sweepX();
+  }
   for (let c = 0; c < N; c += 1) {
     if (kind[c] === SOLID) continue;
     for (let q = 0; q < NS; q += 1) sim.Y[c * NS + q] = Y[c * NS + q];
@@ -1920,6 +1935,15 @@ function project(sim, dt) {
       for (let i = 0; i < nx; i += 1) if (solid(i, j, k - 1) || solid(i, j, k)) sim.w[wAt(g, i, j, k)] = 0;
     }
   }
+  // Porous cells slow the flow through them (the paper's velocity bound), as a
+  // weight on each face, the product of its two cells' factors, inside the
+  // projection: the weighted flow still carries the gas's expansion. Scaled
+  // after the projection (before 2026-11-12), div u was no longer the
+  // expansion in and round them, and the transport made heat there.
+  const pv = P.porousVelocity;
+  let porous = false;
+  if (pv < 1) for (let c = 0; c < sim.N && !porous; c += 1) porous = sim.kind[c] === POROUS;
+  const pf = (i, j, k) => (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz ? 1 : sim.kind[at(g, i, j, k)] === POROUS ? pv : 1);
   const div = workArray(sim, "div", sim.N);
   div.fill(0);
   for (let k = 0; k < nz; k += 1) {
@@ -1927,6 +1951,14 @@ function project(sim, dt) {
       for (let i = 0; i < nx; i += 1) {
         const c = at(g, i, j, k);
         if (sim.kind[c] === SOLID) continue;
+        if (porous) {
+          const me = pf(i, j, k);
+          div[c] =
+            (me * pf(i + 1, j, k) * sim.u[uAt(g, i + 1, j, k)] - me * pf(i - 1, j, k) * sim.u[uAt(g, i, j, k)] +
+              me * pf(i, j + 1, k) * sim.v[vAt(g, i, j + 1, k)] - me * pf(i, j - 1, k) * sim.v[vAt(g, i, j, k)] +
+              me * pf(i, j, k + 1) * sim.w[wAt(g, i, j, k + 1)] - me * pf(i, j, k - 1) * sim.w[wAt(g, i, j, k)]) / h;
+          continue;
+        }
         div[c] =
           (sim.u[uAt(g, i + 1, j, k)] - sim.u[uAt(g, i, j, k)] +
             sim.v[vAt(g, i, j + 1, k)] - sim.v[vAt(g, i, j, k)] +
@@ -1964,12 +1996,45 @@ function project(sim, dt) {
   const settle = (P.projectionTolerance * sim.rho0 * h) / dt;
   sim.stats.sweeps = 0;
   const o0 = off[0], o1 = off[1], o2 = off[2], o3 = off[3], o4 = off[4], o5 = off[5];
+  // With porous cells: each link's weight (the face's), and their sum, open
+  // sides counted at the cell's own factor; the ground and solids carry none.
+  let beta = null, wsum = null;
+  if (porous) {
+    beta = workArray(sim, "porousBeta", sim.N * 6, Float64Array);
+    wsum = workArray(sim, "porousWsum", sim.N, Float64Array);
+    for (let c = 0; c < sim.N; c += 1) {
+      if (sim.kind[c] === SOLID) continue;
+      const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
+      const me = pf(i, j, k);
+      let ws = 0;
+      for (let d = 0; d < 6; d += 1) {
+        const [a, b, e] = DIRS[d];
+        const ii = i + a, jj = j + b, kk = k + e;
+        let w = 0;
+        if (jj < 0) w = 0;
+        else if (ii < 0 || kk < 0 || ii >= nx || jj >= ny || kk >= nz) w = me;
+        else if (sim.kind[at(g, ii, jj, kk)] !== SOLID) w = me * pf(ii, jj, kk);
+        beta[c * 6 + d] = w;
+        ws += w;
+      }
+      wsum[c] = ws > 0 ? ws : 1;
+    }
+  }
   for (let sweep = 0; sweep < P.projection; sweep += 1) {
     let change = 0;
     for (const list of topo.colours) {
       for (let q = 0; q < list.length; q += 1) {
         const c = list[q];
         const mask = topo.mask[c];
+        if (porous) {
+          let sum = 0;
+          for (let d = 0; d < 6; d += 1) if (mask & (1 << d)) sum += beta[c * 6 + d] * p[c + off[d]];
+          const next = (sum - scale * div[c]) / wsum[c];
+          const dd = Math.abs(next - p[c]);
+          if (dd > change) change = dd;
+          p[c] = next;
+          continue;
+        }
         let sum;
         // A cell with all six neighbours open (most of them): the same sum in the same order, unbranched.
         if (mask === 63) sum = p[c + o0] + p[c + o1] + p[c + o2] + p[c + o3] + p[c + o4] + p[c + o5];
@@ -1993,11 +2058,16 @@ function project(sim, dt) {
   }
   const k2 = dt / (sim.rho0 * h);
   const pr = (i, j, k) => (i < 0 || k < 0 || i >= nx || j >= ny || k >= nz || j < 0 ? 0 : p[at(g, i, j, k)]);
+  // A face's weight: 1 without porous cells (the scheme as it was), else the
+  // product of its two cells' factors (outside the domain counts 1).
+  const fw = (i0, j0, k0, i1, j1, k1) => (porous ? pf(i0, j0, k0) * pf(i1, j1, k1) : 1);
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i <= nx; i += 1) {
         if (solid(i - 1, j, k) || solid(i, j, k)) continue;
-        sim.u[uAt(g, i, j, k)] -= k2 * (pr(i, j, k) - pr(i - 1, j, k));
+        const f = uAt(g, i, j, k);
+        if (porous) sim.u[f] = fw(i - 1, j, k, i, j, k) * (sim.u[f] - k2 * (pr(i, j, k) - pr(i - 1, j, k)));
+        else sim.u[f] -= k2 * (pr(i, j, k) - pr(i - 1, j, k));
       }
     }
   }
@@ -2005,7 +2075,9 @@ function project(sim, dt) {
     for (let j = 1; j <= ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
         if (solid(i, j - 1, k) || solid(i, j, k)) continue;
-        sim.v[vAt(g, i, j, k)] -= k2 * (pr(i, j, k) - pr(i, j - 1, k));
+        const f = vAt(g, i, j, k);
+        if (porous) sim.v[f] = fw(i, j - 1, k, i, j, k) * (sim.v[f] - k2 * (pr(i, j, k) - pr(i, j - 1, k)));
+        else sim.v[f] -= k2 * (pr(i, j, k) - pr(i, j - 1, k));
       }
     }
   }
@@ -2013,21 +2085,10 @@ function project(sim, dt) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
         if (solid(i, j, k - 1) || solid(i, j, k)) continue;
-        sim.w[wAt(g, i, j, k)] -= k2 * (pr(i, j, k) - pr(i, j, k - 1));
+        const f = wAt(g, i, j, k);
+        if (porous) sim.w[f] = fw(i, j, k - 1, i, j, k) * (sim.w[f] - k2 * (pr(i, j, k) - pr(i, j, k - 1)));
+        else sim.w[f] -= k2 * (pr(i, j, k) - pr(i, j, k - 1));
       }
-    }
-  }
-  // Porous cells slow the flow through them (the paper's velocity bound).
-  if (P.porousVelocity < 1) {
-    for (let c = 0; c < sim.N; c += 1) {
-      if (sim.kind[c] !== POROUS) continue;
-      const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
-      sim.u[uAt(g, i, j, k)] *= P.porousVelocity;
-      sim.u[uAt(g, i + 1, j, k)] *= P.porousVelocity;
-      sim.v[vAt(g, i, j, k)] *= P.porousVelocity;
-      sim.v[vAt(g, i, j + 1, k)] *= P.porousVelocity;
-      sim.w[wAt(g, i, j, k)] *= P.porousVelocity;
-      sim.w[wAt(g, i, j, k + 1)] *= P.porousVelocity;
     }
   }
 }

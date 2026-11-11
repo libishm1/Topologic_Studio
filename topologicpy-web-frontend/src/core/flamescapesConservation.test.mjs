@@ -77,3 +77,31 @@ test("F: a uniform gas stays uniform whatever flow the projection leaves", () =>
   }
   assert.ok(hi - lo < 0.5, `spread ${hi - lo} K`);
 });
+
+test("F: the transport favours no axis: a centred burner heats the ceiling alike along x and z", async () => {
+  const { flameHeight } = await import("./flamescapes.js");
+  const { fuelsFor } = await import("./fireClasses.js");
+  const h = 0.25, W = 6, H = 2.5, t = 0.25;
+  // A flat ceiling over open sides, a 100 kW burner at its middle; no confinement, so only the transport can break the symmetry.
+  const boxes = [box(-t, -t, -t, W + t, 0, W + t), box(-t, H, -t, W + t, H + t, W + t)];
+  const lo = [-t, -t, -t], hi = [W + t, H + t, W + t];
+  const n = [0, 1, 2].map((d) => Math.ceil((hi[d] - lo[d]) / h - 1e-6));
+  const grid = { nx: n[0], ny: n[1], nz: n[2], h, origin: lo, axes: [0, 1, 2], upAxis: "y", cells: n[0] * n[1] * n[2] };
+  const fraction = V.volumeFractions(grid, boxes, { rays: V.raysFor(grid) });
+  const solid = V.occupancy(grid, fraction);
+  const at = (i, j, k) => i + n[0] * (j + n[1] * k);
+  const mid = Math.floor(n[0] / 2), layers = Math.max(1, Math.round(flameHeight(100e3, 0.5) / h));
+  const cells = [];
+  for (const [i, k] of [[mid - 1, mid - 1], [mid, mid - 1], [mid - 1, mid], [mid, mid]]) for (let l = 0; l < layers; l += 1) cells.push(at(i, 1 + l, k));
+  const scene = { grid, fraction, solid, contents: { cells: [], masses: [] }, ignition: null, pilot: null, burner: { cells, hrr: [[0, 0], [5, 100e3], [1e6, 100e3]], radiantFraction: 0, fuel: fuelsFor("A").ignitionFuel }, fuels: { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL } };
+  const sim = createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, vorticity: 0, emitAbove: 1e9 });
+  while (sim.time < 20 - 1e-9) step(sim, 0.05);
+  // The top open row, 1.25 m from the centre's middle, along each half-axis.
+  let top = 0;
+  for (let j = n[1] - 1; j >= 0; j -= 1) if (sim.kind[at(mid, j, mid)] !== SOLID) { top = j; break; }
+  const c0 = mid - 0.5, r = Math.round(1.25 / h);
+  const rise = (di, dk) => sim.T[at(Math.round(c0 + di * r + 0.5 * Math.sign(di) - 0.5 * (di === 0)), top, Math.round(c0 + dk * r + 0.5 * Math.sign(dk) - 0.5 * (dk === 0)))] - TA;
+  const x = (rise(1, 0) + rise(-1, 0)) / 2, z = (rise(0, 1) + rise(0, -1)) / 2;
+  assert.ok(x > 5 && z > 5, `the ceiling heats: x ${x.toFixed(1)} K, z ${z.toFixed(1)} K`);
+  assert.ok(Math.abs(x - z) / Math.max(x, z) < 0.05, `x ${x.toFixed(1)} K against z ${z.toFixed(1)} K`);
+});
