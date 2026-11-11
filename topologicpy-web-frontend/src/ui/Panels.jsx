@@ -1487,6 +1487,37 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
             }
           />
           <Toggle
+            label="Walking speed varies over time"
+            checked={settings.crowdFluctuate}
+            onChange={(crowdFluctuate) => setSettings({ crowdFluctuate })}
+            hint="Each person's speed drifts about their own and recovers within a few seconds, as Corbetta et al. (2017) measured 72,376 walkers' does: a spread of about 16 %."
+          />
+          <SelectField
+            label="Each step"
+            value={settings.crowdSteps}
+            onChange={(crowdSteps) => setSettings({ crowdSteps })}
+            options={[
+              { value: "exact", label: "Straight on, as before" },
+              { value: "direct", label: "Mostly direct (kS 10)" },
+              { value: "wandering", label: "Wandering (kS 2)" },
+              { value: "disoriented", label: "Disoriented (kS 0.4)" },
+            ]}
+            hint={
+              settings.crowdSteps === "exact"
+                ? null
+                : "Each step is drawn as the floor-field model draws it (Kirchner and Schadschneider 2002): a step nearer the exit is likelier, but people sometimes step aside or hesitate, the more so the smaller kS."
+            }
+          />
+          {(settings.crowdFluctuate || settings.crowdSteps !== "exact") && (
+            <SelectField
+              label="Runs"
+              value={String(settings.crowdRuns)}
+              onChange={(value) => setSettings({ crowdRuns: Number(value) })}
+              options={[1, 3, 5, 10].map((r) => ({ value: String(r), label: r === 1 ? "One" : `${r} seeds` }))}
+              hint="With randomness one run is one sample: the view plays the first, and the notice gives the range over the rest (3 at most on a phone)."
+            />
+          )}
+          <Toggle
             label="A runner in an orange shirt"
             checked={settings.crowdStairRunner}
             onChange={(crowdStairRunner) => setSettings({ crowdStairRunner })}
@@ -1562,6 +1593,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
                 {Number.isFinite(result.shelter) ? ` Each gathering place holds ${result.shelter}; ${Array.from(result.goneAt).filter(Number.isFinite).length} leave a full one.` : ""}
                 {result.cutOff > 0 ? ` ${result.cutOff} cut off by the fire stay where they are.` : ""}
               </Notice>
+              {crowd.runs && <RunsRange runs={crowd.runs} />}
               {crowd.gpu && <p className="field__hint">Moved and drawn on the GPU: {crowd.gpu}.</p>}
               <p className="field__hint">
                 {result.choice === "quickest"
@@ -1578,6 +1610,26 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
         </>
       )}
     </Section>
+  );
+}
+
+/**
+ * The range over a crowd's seeds when people move with randomness: the last
+ * one out (lowest, median, highest), and anyone left inside or cut off.
+ */
+function RunsRange({ runs }) {
+  const samples = runs.samples || [];
+  const outs = samples.map((s) => s.lastOut).sort((a, b) => a - b);
+  const median = outs.length ? (outs.length % 2 ? outs[(outs.length - 1) / 2] : (outs[outs.length / 2 - 1] + outs[outs.length / 2]) / 2) : 0;
+  const inside = Math.max(0, ...samples.map((s) => s.inside));
+  const cut = Math.max(0, ...samples.map((s) => s.cutOff));
+  const done = samples.length >= runs.of;
+  return (
+    <p className="field__hint" aria-live="polite">
+      Over {samples.length} of {runs.of} runs: the last out between {Math.round(outs[0])} and {Math.round(outs[outs.length - 1])} s (median{" "}
+      {Math.round(median)} s){inside > 0 ? `; up to ${inside} still inside when a walk stopped` : ""}
+      {cut > 0 ? `; up to ${cut} cut off by the fire` : ""}.{done ? "" : " Working out the rest…"}
+    </p>
   );
 }
 
@@ -1652,6 +1704,7 @@ export function RoutePanel({
   doors,
   exits,
   onNearestExit,
+  nearerExit = null,
   onClearPoints,
   onFindPath,
   onCompare,
@@ -1734,6 +1787,16 @@ export function RoutePanel({
         </Button>
 
         {path && <RouteResult path={path} />}
+        {path?.found && nearerExit && (
+          <Notice tone="warning">
+            A nearer exit out of the building is {nearerExit.walk.toFixed(1)} m from the start; this route walks{" "}
+            {nearerExit.route.toFixed(1)} m to the exit picked.{" "}
+            <Button size="sm" onClick={onNearestExit}>
+              Use the nearest exit door
+            </Button>{" "}
+            then find the route again.
+          </Notice>
+        )}
 
         {comparison && (
           <KeyValue

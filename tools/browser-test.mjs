@@ -663,6 +663,22 @@ if (await peopleSection.count()) {
     .catch(() => false);
   record(nearestWalk, "the nearest exit is an option, walked again", nearestWalk ? "walked again" : "no change");
   await choiceField.selectOption("quickest").catch(() => {});
+  // Randomness in how people move (wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md, stage 1):
+  // speeds that wobble and floor-field steps, run over five seeds, the range reported.
+  await page.locator(".toggle__label", { hasText: /^Walking speed varies over time$/ }).first().click().catch(() => {});
+  await page.getByLabel("Each step").selectOption("wandering").catch(() => {});
+  const rangeLine = await page
+    .waitForFunction(() => document.body.innerText.match(/Over 5 of 5 runs: the last out between \d+ and \d+ s \(median \d+ s\)[^\n]*/)?.[0], null, { timeout: 60000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  record(Boolean(rangeLine), "people's motion varies: five seeds, the range of the last one out", rangeLine.slice(0, 140) || "no range");
+  await page.getByLabel("Each step").selectOption("exact").catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Walking speed varies over time$/ }).first().click().catch(() => {});
+  const backToExact = await page
+    .waitForFunction(() => !/Over \d+ of \d+ runs/.test(document.body.innerText), null, { timeout: 30000 })
+    .then(() => true)
+    .catch(() => false);
+  record(backToExact, "with the randomness off, one exact walk again", backToExact ? "no range" : "range still shown");
   // Recording the view as a GIF (lib/recorder.js, workers/gif.worker.js).
   const recordButton = page.getByRole("button", { name: /^Record GIF$/ });
   if (await recordButton.count()) {

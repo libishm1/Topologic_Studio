@@ -58,6 +58,17 @@
  * `stairGap` of the next node on the flight (0.9 m, about a person's
  * length), so a stream down a stair keeps its gaps.
  *
+ * Randomness in how people move (off by default; the plan is
+ * wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md). With `fluctuate`
+ * each person's speed wobbles about their own as Corbetta et al. (2017)
+ * measured walkers' do (WALK_FLUCTUATION). With `kS` each step is drawn as the
+ * floor-field model draws it (Burstedde et al. 2001; Kirchner and
+ * Schadschneider 2002): staying, or a free neighbour, with weight exp(kS x
+ * the cells it brings nearer the exit), so people sometimes step aside or
+ * hesitate, the more so the smaller kS. Both draw from a stream of their own,
+ * so with both off a run is exactly as before; with either on, one run is one
+ * sample, and the panel runs several.
+ *
  * Out. Past an exit each person walks on to a gathering place a few metres
  * outside, at the level of the lowest exit (an upper exit's people come
  * down to the ground), and stands there, the later arrivals round the
@@ -103,6 +114,31 @@ export const SWITCH_SHARE = 0.2;
 /** At most this many exits x nodes for the quickest choice (a walk tree an exit, 12 bytes a node); above it, the nearest. */
 export const QUICKEST_CELLS = 2e6;
 
+/**
+ * Walking-speed fluctuations as Corbetta, Lee, Benzi, Muntean and Toschi
+ * measured them on 72,376 walkers (2017, doi:10.1103/PhysRevE.95.032316;
+ * arXiv:1610.07429, Table 1): the speed u along the walk follows
+ * du = -4 alpha u (u^2 - up^2) dt + sigma dW, alpha 0.0625 m^-2 s,
+ * sigma 0.16 m s^-3/2, up 1.0 m/s; about up it relaxes at 8 alpha up^2 =
+ * 0.5 per second (about 2 s) with a spread of 0.16 m/s. Here as a factor
+ * f = u / up on each person's own unimpeded speed, worked in steps of at most
+ * `step` seconds and kept above `floor`, the unstable point (about 0.2 m/s):
+ * the one walker in about 450 to 1,000 who turns back is left out.
+ */
+export const WALK_FLUCTUATION = { alpha: 0.0625, sigma: 0.16, up: 1.0, step: 0.1, floor: 0.2 };
+
+/** The drift of the speed factor f: -4 alpha up^2 f (f^2 - 1), zero at f = 1. */
+export const fluctuationDrift = (f) => -4 * WALK_FLUCTUATION.alpha * WALK_FLUCTUATION.up ** 2 * f * (f * f - 1);
+
+/**
+ * The floor field's sensitivity kS for the step choice (Kirchner and
+ * Schadschneider 2002, doi:10.1016/S0378-4371(02)00857-9, who ran 0.1, 0.4
+ * and 10): null steps as before (the limit of a large kS); 10 their "strong",
+ * near-ordered walking; 0.4 their intermediate, people far less sure of the
+ * way; 2 between.
+ */
+export const STEP_RANDOMNESS = { exact: null, direct: 10, wandering: 2, disoriented: 0.4 };
+
 /** Seconds the flow seen through an exit is averaged over. */
 export const FLOW_SECONDS = 20;
 
@@ -142,6 +178,8 @@ function random(seed) {
  *   closes        each node's untenable time, s (a fire's; null: none)
  *   replan        s between ways out worked out again with a fire, and exits weighed again
  *   choice        "quickest" (default) or "nearest" (EXIT_CHOICES)
+ *   fluctuate     each person's speed wobbles in time (WALK_FLUCTUATION; default off)
+ *   kS            the floor field's step choice (STEP_RANDOMNESS; null, the default: as before)
  * @returns {{
  *   people: number, points: Float32Array, segments: Float32Array, first: Int32Array, count: Int32Array,
  *   exitOf: Int32Array, outAt: Float32Array, exits: Array<{node: number, people: number, last: number}>,
@@ -175,6 +213,8 @@ export function simulateCrowd(graph, opts = {}) {
     closes = null,
     replan = 2,
     choice = "quickest",
+    fluctuate = false,
+    kS = null,
   } = opts;
   const n = graph.nodes.length / 3;
   const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
@@ -440,6 +480,59 @@ export function simulateCrowd(graph, opts = {}) {
     return held / ((deg + 1) * cell);
   };
 
+  // Randomness in how people move (wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md,
+  // stage 1), drawn from a stream of its own so that with it off a run is
+  // exactly as it was. Speed: each person's factor on their unimpeded speed
+  // follows Corbetta et al.'s Langevin equation, worked to the time asked.
+  const wobble = random((seed ^ 0x9e3779b9) >>> 0);
+  const gauss = () => {
+    const a = Math.max(1e-12, wobble()), b = wobble();
+    return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b);
+  };
+  const factor = new Float64Array(people).fill(1);
+  const factorAt = new Float64Array(people);
+  const speedFactor = (i, t) => {
+    if (!fluctuate) return 1;
+    let f = factor[i];
+    for (let h = t - factorAt[i]; h > 1e-9; h -= WALK_FLUCTUATION.step) {
+      const s = Math.min(WALK_FLUCTUATION.step, h);
+      f += fluctuationDrift(f) * s + (WALK_FLUCTUATION.sigma / WALK_FLUCTUATION.up) * Math.sqrt(s) * gauss();
+      f = Math.max(WALK_FLUCTUATION.floor, f);
+    }
+    factor[i] = f;
+    factorAt[i] = t;
+    return f;
+  };
+  // Steps: with kS set, staying or each free open neighbour, weighed as the
+  // floor field weighs a cell (Kirchner and Schadschneider 2002, Eq. 1, with
+  // no dynamic field): exp(kS x the cells it brings nearer the exit).
+  const spacing = graph.spacing || 0.5;
+  const pickStep = (i, v, D, inFire, t) => {
+    const options = [v], logw = [0];
+    for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
+      if (blocked?.[edgeIds[k]]) continue;
+      const w = neighbours[k];
+      if (kinds[w] === KIND_LIFT || (closedAt(w, t) && !inFire) || !(D[w] < Infinity)) continue;
+      if (!isExit[w] && !free(w, v)) continue;
+      options.push(w);
+      logw.push((-kS * (D[w] - D[v])) / spacing);
+    }
+    let top = -Infinity;
+    for (const l of logw) if (l > top) top = l;
+    let total = 0;
+    const weights = logw.map((l) => {
+      const e = Math.exp(l - top);
+      total += e;
+      return e;
+    });
+    let r = wobble() * total;
+    for (let j = 0; j < options.length; j += 1) {
+      r -= weights[j];
+      if (r <= 0) return options[j];
+    }
+    return options[options.length - 1];
+  };
+
   let t = 0;
   const every = Math.max(1, Math.round(replan / dt));
   for (let step = 0; left > 0 && t < horizon; step += 1, t = step * dt) {
@@ -456,8 +549,15 @@ export function simulateCrowd(graph, opts = {}) {
       let u = nextTo(i)[v];
       // From an open place no one steps into the fire; from inside it, anywhere out.
       const inFire = closedAt(v, t);
-      if (u >= 0 && closedAt(u, t) && !inFire) u = -1;
-      if (u < 0 || (!isExit[u] && !free(u, v))) {
+      if (kS !== null) {
+        // The floor field's step, or staying a step where they are.
+        u = pickStep(i, v, D, inFire, t);
+        if (u === v) {
+          ready[i] = t + dt;
+          continue;
+        }
+      } else if (u >= 0 && closedAt(u, t) && !inFire) u = -1;
+      if (kS === null && (u < 0 || (!isExit[u] && !free(u, v)))) {
         const limit = u >= 0 ? D[u] + 1.0 : Infinity;
         let best = -1;
         for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
@@ -485,7 +585,7 @@ export function simulateCrowd(graph, opts = {}) {
       for (let k = indptr[v]; k < indptr[v + 1]; k += 1) if (neighbours[k] === u) len = length[edgeIds[k]];
       const stair = kinds[u] === KIND_STAIR || kinds[v] === KIND_STAIR;
       const k0 = stair ? SFPE.kStair : SFPE.k;
-      const own = stair ? vmax[i] * (SFPE.kStair / SFPE.k) : vmax[i];
+      const own = (stair ? vmax[i] * (SFPE.kStair / SFPE.k) : vmax[i]) * speedFactor(i, t);
       const crowded = k0 * (1 - SFPE.a * densityAt(u));
       const vel = Math.max(0.15, Math.min(own, crowded));
       const arrive = t + len / vel;

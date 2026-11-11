@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FREE_SPEED, GATHER_AREA, SFPE, simulateCrowd } from "./crowd.js";
+import { FREE_SPEED, GATHER_AREA, SFPE, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, simulateCrowd } from "./crowd.js";
 import { doorCapacity } from "./performanceCheck.js";
 import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "./lattice.js";
 
@@ -394,4 +394,84 @@ test("with a fire, no one walks into a place it has made untenable; they turn to
   assert.equal(trapped.cutOff, beyond);
   assert.equal(trapped.inside, beyond);
   for (const list of walks(trapped)) for (const s of list) if (s.b < single.graph.nodes.length / 3 && shut[s.a] > s.t0) assert.ok(shut[s.b] > s.t0);
+});
+
+// ---- randomness in how people move (wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md, stage 1)
+
+/** Each node's holders as [from, till] spans; throws if two overlap. */
+function assertOneANode(graph, exits, out) {
+  const held = new Map();
+  for (const list of walks(out)) {
+    for (let j = 0; j < list.length; j += 1) {
+      const { b } = list[j];
+      if (exits.includes(b) || b >= graph.nodes.length / 3) continue;
+      const until = j + 1 < list.length ? list[j + 1].t0 : Infinity;
+      if (!held.has(b)) held.set(b, []);
+      held.get(b).push([list[j].t0, until]);
+    }
+  }
+  for (const spans of held.values()) {
+    spans.sort((p, q) => p[0] - q[0]);
+    for (let j = 1; j < spans.length; j += 1) assert.ok(spans[j][0] >= spans[j - 1][1] - 1e-4, "no two at once");
+  }
+}
+
+test("with the randomness off a run is exactly as before", () => {
+  const { graph, exits } = room(30, 6, { exits: ["left", "right"] });
+  const before = simulateCrowd(graph, { exits, occupantArea: 1, seed: 5 });
+  const off = simulateCrowd(graph, { exits, occupantArea: 1, seed: 5, fluctuate: false, kS: STEP_RANDOMNESS.exact });
+  assert.deepEqual(Array.from(off.segments), Array.from(before.segments));
+});
+
+test("speeds wobble as Corbetta et al. measured: about the person's own, a spread of about 16 %", () => {
+  // The drift: zero at f = 1 and at the unstable point 0; restoring about 1 at 8 alpha up^2 = 0.5 a second.
+  assert.equal(Math.abs(fluctuationDrift(1)), 0);
+  assert.equal(Math.abs(fluctuationDrift(0)), 0);
+  assert.ok(Math.abs((fluctuationDrift(1.001) - fluctuationDrift(0.999)) / 0.002 + 8 * WALK_FLUCTUATION.alpha) < 1e-6);
+  // One person walking a corridor 500 m long at 0.6 m/s with no spread (slow
+  // enough that the crowding cap, 0.9 m/s in a corridor one node wide, does not
+  // clip the wobble): each step's speed over 0.6 is the factor.
+  const { graph, exits } = room(1000, 1, { exits: ["right"] });
+  const n = graph.nodes.length / 3;
+  const ratios = [];
+  for (const seed of [1, 2, 3]) {
+    const out = simulateCrowd(graph, { exits, occupantArea: 1e9, maxPeople: 1, speed: 0.6, spread: 0, start: [0, 0], horizon: 3000, fluctuate: true, seed });
+    for (const s of walks(out)[0]) if (s.a < n && s.b < n && s.a !== s.b) ratios.push(0.5 / (s.t1 - s.t0) / 0.6);
+  }
+  const mean = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+  const sd = Math.sqrt(ratios.reduce((a, b) => a + (b - mean) ** 2, 0) / ratios.length);
+  assert.ok(Math.abs(mean - 1) < 0.04, `mean factor ${mean.toFixed(3)}`);
+  assert.ok(Math.abs(sd - 0.16) < 0.04, `spread ${sd.toFixed(3)}`);
+  // Exact without it (times are kept in single precision).
+  const steady = simulateCrowd(graph, { exits, occupantArea: 1e9, maxPeople: 1, speed: 0.6, spread: 0, start: [0, 0], horizon: 3000 });
+  for (const s of walks(steady)[0]) if (s.a < n && s.b < n && s.a !== s.b) assert.ok(Math.abs(0.5 / (s.t1 - s.t0) - 0.6) < 1e-3);
+});
+
+test("the floor field's steps: still one a node and out of the fire; the larger kS the nearer the exact walk, the smaller the slower", () => {
+  const { graph, exits } = room(30, 6, { exits: ["left", "right"] });
+  const exact = simulateCrowd(graph, { exits, occupantArea: 0.5, start: [0, 0], seed: 1 });
+  const lastOut = (kS) => [1, 2, 3].map((seed) => simulateCrowd(graph, { exits, occupantArea: 0.5, start: [0, 0], seed, kS }).lastOut).reduce((a, b) => a + b, 0) / 3;
+  const direct = lastOut(50), ordered = lastOut(STEP_RANDOMNESS.direct), lost = lastOut(STEP_RANDOMNESS.disoriented);
+  assert.ok(Math.abs(direct - exact.lastOut) < 0.15 * exact.lastOut, `kS 50: ${direct.toFixed(1)} s against exact ${exact.lastOut.toFixed(1)} s`);
+  assert.ok(lost > ordered, `kS 0.4: ${lost.toFixed(1)} s against kS 10: ${ordered.toFixed(1)} s`);
+  for (const kS of [STEP_RANDOMNESS.direct, STEP_RANDOMNESS.wandering, STEP_RANDOMNESS.disoriented]) {
+    const out = simulateCrowd(graph, { exits, occupantArea: 0.5, seed: 4, kS, fluctuate: true, horizon: 3000 });
+    assertOneANode(graph, exits, out);
+    assert.equal(out.inside, 0, `kS ${kS}: everyone out`);
+  }
+  // With a fire, no one steps from an open place into one it has made untenable.
+  const corridor = room(30, 1, { exits: ["left", "right"] });
+  const m = corridor.graph.nodes.length / 3;
+  const closes = new Float64Array(m).fill(Infinity);
+  for (let v = 6; v <= 9; v += 1) closes[v] = 2;
+  for (const seed of [1, 2, 3]) {
+    const out = simulateCrowd(corridor.graph, { exits: corridor.exits, occupantArea: 0.25, closes, start: [0, 0], seed, kS: STEP_RANDOMNESS.wandering, fluctuate: true });
+    for (const list of walks(out)) for (const s of list) if (s.b < m && closes[s.a] > s.t0) assert.ok(closes[s.b] > s.t0, `seed ${seed}: into node ${s.b} at ${s.t0.toFixed(1)} s`);
+  }
+  // One seed, one run; another, another.
+  const a = simulateCrowd(graph, { exits, occupantArea: 0.5, seed: 9, kS: 2, fluctuate: true });
+  const b = simulateCrowd(graph, { exits, occupantArea: 0.5, seed: 9, kS: 2, fluctuate: true });
+  const c = simulateCrowd(graph, { exits, occupantArea: 0.5, seed: 10, kS: 2, fluctuate: true });
+  assert.deepEqual(Array.from(a.segments), Array.from(b.segments));
+  assert.notDeepEqual(Array.from(a.segments), Array.from(c.segments));
 });

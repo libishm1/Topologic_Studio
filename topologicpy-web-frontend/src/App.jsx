@@ -2473,6 +2473,26 @@ export default function App() {
     handlePick("exit", [graph.nodes[i], graph.nodes[i + 1], graph.nodes[i + 2]]);
   }, [graph, points.start, exits, settings.useWalls, handlePick, toast]);
 
+  // A much nearer exit out of the building than the one the route went to:
+  // the user moved the start beside an exit and the route still crossed the
+  // building to the exit picked before (NIBS Clinic, 2026-11-11: 54.9 m
+  // against 5.7 m). Shown under the route; the route stays the one asked for.
+  const nearerExit = useMemo(() => {
+    const path = studio.path;
+    if (!graph || !points.start || !points.exit || !exits?.final.length || !path?.found) return null;
+    const open = new Float64Array(graph.nodes.length / 3).fill(Infinity);
+    const found = earliestArrival(graph, snap(graph, points.start), 0, {
+      exits: exits.final,
+      closes: open,
+      speed: 1,
+      blocked: settings.useWalls ? graph.blocked : null,
+    });
+    if (found.exit < 0 || found.exit === snap(graph, points.exit)) return null;
+    const walk = found.arrive[found.exit];
+    // Only when it saves half the walk and at least 10 m: a near tie is no news.
+    return walk < 0.5 * path.length && path.length - walk >= 10 ? { walk, route: path.length } : null;
+  }, [graph, points.start, points.exit, exits, studio.path, settings.useWalls]);
+
   // ------------------------------------------------- egress code check
 
   // Walking distance, exits per storey, separation, door widths and
@@ -2583,7 +2603,18 @@ export default function App() {
       : null;
   const crowdKey =
     settings.crowd && graph
-      ? JSON.stringify([planExitNodes(), settings.perfOccupantArea, settings.useWalls, settings.departAfter, crowdShelter, crowdFireKey, settings.crowdChoice])
+      ? JSON.stringify([
+          planExitNodes(),
+          settings.perfOccupantArea,
+          settings.useWalls,
+          settings.departAfter,
+          crowdShelter,
+          crowdFireKey,
+          settings.crowdChoice,
+          settings.crowdFluctuate,
+          settings.crowdSteps,
+          settings.crowdRuns,
+        ])
       : null;
   const crowdAvoiding = Boolean(crowdFireKey);
   const crowdResult = crowdState.key === crowdKey && crowdState.nodes === graphNodes ? crowdState.result : null;
@@ -2607,6 +2638,9 @@ export default function App() {
     departAfter: settings.departAfter,
     shelter: crowdShelter,
     choice: settings.crowdChoice,
+    // Randomness in how people move (core/crowd.js; off by default) and how many seeds to run with it.
+    motion: { fluctuate: settings.crowdFluctuate, steps: settings.crowdSteps },
+    runs: settings.crowdRuns,
     // Each node's untenable time (s; Infinity never), worked out when the walk is.
     closes: () => {
       if (crowdFlames) {
@@ -2638,7 +2672,7 @@ export default function App() {
       setCrowdState(done.state);
       return undefined;
     }
-    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, choice } = crowdInputsRef.current;
+    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, choice, motion, runs } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
@@ -2654,22 +2688,47 @@ export default function App() {
         return;
       }
       import("./core/crowd.js")
-        .then(({ simulateCrowd, stairRunner, forecastRunner }) => {
+        .then(({ simulateCrowd, stairRunner, forecastRunner, STEP_RANDOMNESS }) => {
           if (!live) return;
-          const t0 = performance.now();
-          const result = simulateCrowd(graph, {
+          const kS = STEP_RANDOMNESS[motion.steps] ?? null;
+          const varied = Boolean(motion.fluctuate) || kS !== null;
+          const fire = closes();
+          const optsFor = (seed) => ({
             exits: exitNodes,
             occupantArea,
             blocked: useWalls ? graph.blocked : null,
             start: [departAfter, departAfter + 10],
             shelterArea: shelter > 0 ? shelter : Infinity,
-            closes: closes(),
+            closes: fire,
             choice,
+            fluctuate: Boolean(motion.fluctuate),
+            kS,
+            seed,
             // A phone draws fewer, so it keeps its pace.
             maxPeople: isPhone() ? 1500 : 4000,
           });
+          const t0 = performance.now();
+          const result = simulateCrowd(graph, optsFor(1));
           result.ms = performance.now() - t0;
-          finish({ result, runner: stairRunner(graph, result), forecastRunner });
+          // With randomness one run is one sample: the view plays the first,
+          // and the other seeds run one at a time after it, for the range.
+          const count = varied ? Math.max(1, Math.min(isPhone() ? 3 : 10, runs || 1)) : 1;
+          const sample = (r) => ({ lastOut: r.lastOut, inside: r.inside, cutOff: r.cutOff });
+          finish({ result, runner: stairRunner(graph, result), forecastRunner, runs: count > 1 ? { of: count, samples: [sample(result)] } : null });
+          let seed = 2;
+          const more = () => {
+            if (!live || seed > count) return;
+            const r = simulateCrowd(graph, optsFor(seed));
+            seed += 1;
+            setCrowdState((s) => {
+              if (s.key !== crowdKey || !s.runs) return s;
+              const next = { ...s, runs: { ...s.runs, samples: [...s.runs.samples, sample(r)] } };
+              crowdDoneRef.current = { key: crowdKey, nodes: graph.nodes, state: next };
+              return next;
+            });
+            setTimeout(more, 0);
+          };
+          if (count > 1) setTimeout(more, 0);
         })
         .catch((error) => finish({ error: error?.message || String(error) }));
     }, 30);
@@ -4319,6 +4378,7 @@ export default function App() {
                   doors={doorList}
                   exits={exits}
                   onNearestExit={nearestExit}
+                  nearerExit={nearerExit}
                   onGoTo={setTab}
                   code={{ ...code, shown: code.shown && graphColours === "travel" }}
                   onCodeCheck={runCodeCheck}
@@ -4335,6 +4395,7 @@ export default function App() {
                   onClearPerfReport={clearPerfReport}
                   crowd={{
                     result: crowdResult,
+                    runs: crowdResult ? crowdState.runs : null,
                     runner: crowdResult ? crowdState.runner : null,
                     gpu: crowdResult ? viewerRef.current?.gpuName?.() : null,
                     fireActive: fire.running || fire.step > 0,

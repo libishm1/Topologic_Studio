@@ -111,6 +111,13 @@ export const DEFAULT_SETTINGS = {
   // Each person takes the exit that gets them out soonest, queues counted
   // ("quickest"), or the nearest ("nearest"; core/crowd.js EXIT_CHOICES).
   crowdChoice: "quickest",
+  // Randomness in how people move (core/crowd.js; wiki/roadmap/crowd-motion-
+  // randomness-plan-2026-11-11.md): each person's speed wobbles in time, and
+  // each step is drawn by the floor field ("exact", or STEP_RANDOMNESS's
+  // "direct", "wandering", "disoriented"); with either on, crowdRuns seeds.
+  crowdFluctuate: false,
+  crowdSteps: "exact",
+  crowdRuns: 5,
   // The slime mould (core/slimeEgress.js) grows kept out of where the fire
   // makes untenable, or as if there were none.
   slimeWithFire: false,
