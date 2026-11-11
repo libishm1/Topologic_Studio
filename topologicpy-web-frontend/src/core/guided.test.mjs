@@ -25,7 +25,14 @@ test("a node part-way along a route, and the stages each preset passes through",
     assert.equal(ids[0], "open");
     assert.equal(ids.at(-1), "done");
     assert.equal(ids.includes("fire"), Boolean(run.fire));
+    // The egress run maps every room instead of finding one route.
+    assert.equal(ids.includes("map") && ids.includes("measure"), Boolean(run.egress));
+    assert.equal(ids.includes("route"), !run.egress);
   }
+  assert.deepEqual(
+    stagesFor(GUIDED_RUNS.find((r) => r.egress)).map((s) => s.id),
+    ["open", "graph", "map", "measure", "done"],
+  );
 });
 
 test("a guided run lights its fire at the likeliest origin near the route, on the walkable graph", () => {

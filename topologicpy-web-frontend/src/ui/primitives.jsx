@@ -5,6 +5,7 @@
  * the spacing/typography stays consistent across the app.
  */
 import React, { useId, useState } from "react";
+import { splitHint } from "../core/hintText.js";
 
 export function Button({
   children,
@@ -88,7 +89,10 @@ export function Segmented({ value, onChange, options, label, disabled = false })
   );
 }
 
-export function Section({ title, badge, children, defaultOpen = true, id }) {
+/** The guide's page for a section (public/docs/), named in full: Vite's dev server answers docs/ with the app. */
+const guideHref = (page) => `${import.meta.env.BASE_URL}docs/${page}`;
+
+export function Section({ title, badge, children, defaultOpen = true, id, guide }) {
   const [open, setOpen] = useState(defaultOpen);
   const bodyId = useId();
   return (
@@ -116,10 +120,54 @@ export function Section({ title, badge, children, defaultOpen = true, id }) {
       </button>
       {open && (
         <div className="section__body" id={bodyId}>
+          {guide && (
+            <a className="section__guide" href={guideHref(guide)} target="_blank" rel="noopener">
+              In the guide
+            </a>
+          )}
           {children}
         </div>
       )}
     </section>
+  );
+}
+
+/** Everything folded opens when the page is driven by the browser checks (tools/browser-test.mjs sets the flag). */
+const expandAll = () => typeof window !== "undefined" && window.__studioExpandAll === true;
+
+/** A field's hint: its first sentence, the rest behind "More" (core/hintText.js). A hint given as elements shows whole. */
+export function Hint({ children, id }) {
+  const [open, setOpen] = useState(expandAll);
+  if (typeof children !== "string") {
+    return (
+      <p className="field__hint" id={id}>
+        {children}
+      </p>
+    );
+  }
+  const [first, rest] = splitHint(children);
+  return (
+    <p className="field__hint" id={id}>
+      {rest ? (open ? children : first) : children}
+      {rest && (
+        <>
+          {" "}
+          <button type="button" className="hint__toggle" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+            {open ? "Less" : "More"}
+          </button>
+        </>
+      )}
+    </p>
+  );
+}
+
+/** A note folded under a summary line ("How it works"): method notes and sources that need not sit open. */
+export function Notes({ summary = "How it works", children }) {
+  return (
+    <details className="notes" open={expandAll() || undefined}>
+      <summary className="notes__summary">{summary}</summary>
+      <div className="notes__body field__hint">{children}</div>
+    </details>
   );
 }
 
@@ -141,7 +189,7 @@ export function Slider({ label, value, min, max, step, onChange, format, hint, d
         onChange={(event) => onChange(Number(event.target.value))}
         aria-label={label}
       />
-      {hint && <p className="field__hint">{hint}</p>}
+      {hint && <Hint>{hint}</Hint>}
     </div>
   );
 }
@@ -196,11 +244,7 @@ export function NumberField({ label, value, onChange, hint, min, max, optional =
           {problem}
         </p>
       )}
-      {hint && (
-        <p className="field__hint" id={hintId}>
-          {hint}
-        </p>
-      )}
+      {hint && <Hint id={hintId}>{hint}</Hint>}
     </div>
   );
 }
@@ -218,7 +262,7 @@ export function SelectField({ label, value, onChange, options, hint }) {
           </option>
         ))}
       </select>
-      {hint && <p className="field__hint">{hint}</p>}
+      {hint && <Hint>{hint}</Hint>}
     </div>
   );
 }
@@ -236,7 +280,7 @@ export function Toggle({ label, checked, onChange, hint, disabled }) {
         <span className="toggle__track" aria-hidden="true" />
         <span className="toggle__label">{label}</span>
       </label>
-      {hint && <p className="field__hint">{hint}</p>}
+      {hint && <Hint>{hint}</Hint>}
     </div>
   );
 }

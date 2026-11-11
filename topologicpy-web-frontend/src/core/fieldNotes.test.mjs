@@ -33,8 +33,10 @@ test("twelve field notes, each with its own question and a text that reads its d
   assert.equal(fieldNote("nope"), null);
 });
 
-test("every guided run ends on a field note that exists", () => {
-  for (const run of GUIDED_RUNS) assert.ok(fieldNote(run.note), run.id);
+test("every guided run that ends on a field note names one that exists", () => {
+  // The egress run ends on its map and audit in the panel, with no note.
+  for (const run of GUIDED_RUNS) if (run.note !== undefined) assert.ok(fieldNote(run.note), run.id);
+  assert.ok(GUIDED_RUNS.filter((run) => run.note).length >= 4);
 });
 
 test("hints lead past the first screen, one step at a time, as features are used", () => {

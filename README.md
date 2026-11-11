@@ -431,7 +431,7 @@ on the same run, adding the CO dose of ISO 13571 to the heat dose.
 while the fire spreads. Studio first checks whether any escape exists, so a
 failed agent and an impossible escape are told apart.
 
-- **Shielded (the default):** learns on (node, time) behind a shield that
+- **Safe learner (proved), the default:** learns on (node, time) behind a shield that
   never lets it step where the fire will seal it in. It stops when it can
   prove its route is the earliest escape, by any exit door or the chosen one.
   Both properties are proved in Lean (`SafeEscape.lean`).

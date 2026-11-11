@@ -72,12 +72,13 @@
     <p>The notice under the view gives the number of people, the time the last one is out, how many used each exit, the longest hold-up and how many turned to another exit on the way.</p>
 
     <h3 id="how-they-move">How they choose and move</h3>
+    <p>These options sit folded under <span class="label">How people move</span>.</p>
     <dl>
       <dt class="label">Each person takes</dt>
       <dd><p>The quickest exit, queues counted (the default), or the nearest exit. With the quickest, each person weighs every exit out of the building: the walk there at their own speed, or the people ahead of them for it passing at the flow seen through it, whichever is longer. They look again every 2 s and turn to another exit only where the two ways part and when it saves at least 5 s and a fifth of their time, so a queue's back leaves for a free door while its front stays. Pathfinder's "locally quickest" door choice weighs a door the same way. On the examples with no fire, the last person was out sooner where queues formed at some exits while others stood free: the NIBS Clinic from 459 s to 333 s, the NIBS Office from 433 s to 350 s. With the nearest, each person walks to the nearest exit by the shortest walk and waits in its queue even while another door stands free.</p></dd>
       <dt class="label">Walking speed varies over time</dt>
       <dd><p>Off by default. Each person's speed then drifts about their own and recovers within a few seconds, as Corbetta et al. (2017) measured 72,376 walkers' speeds do: a spread of about 16 %.</p></dd>
-      <dt class="label">Each step</dt>
+      <dt class="label">Step randomness</dt>
       <dd><p>Straight on (the default), or drawn at random as the floor-field model draws it (Kirchner and Schadschneider 2002): mostly direct (kS 10), wandering (kS 2) or disoriented (kS 0.4). A step that brings a person nearer the exit is likelier, but people sometimes step aside or hesitate, the more so the smaller kS.</p></dd>
       <dt class="label">Runs</dt>
       <dd><p>Shown when either kind of randomness is on: one run, or 3, 5 (the default) or 10 seeds. With randomness one run is one sample, so the view plays the first and the notice gives the range of the time the last person is out over the rest, with the median. A phone runs 3 at most. With both kinds of randomness off a run is exactly as before.</p></dd>
@@ -107,7 +108,7 @@
     </dl>
 
     <h3 id="readings">Its readings</h3>
-    <p>Five switches below the buttons draw what the trail says, each off until asked. A line of readings appears under the notice.</p>
+    <p>Five switches under <span class="label">Readings</span>, below the buttons, draw what the trail says, each off until asked. A line of readings appears under the notice.</p>
     <dl>
       <dt class="label">Desire lines</dt>
       <dd><p>The slime's ways out from every part of the floor, along its tubes: one way out traced from each 2 m square of floor, where a link costs its length times 1 + 2 (1 - its trail weight), bundled where they share a tube. Drawn dark over the yellow, thicker where more of them bundle, with arrows towards the exits. They carry people, one per 9 m² of floor (the performance check's floor area per occupant), not floor samples.</p></dd>
@@ -115,9 +116,9 @@
       <dd><p>Crimson markers, larger the worse: where the people the desire lines carry would take longest to pass, at 1.3 persons a second per metre of clear width less 0.15 m a side. The width is the IFC door's where the passage is a door, else twice the largest clearance from the walls within two links. On the NIBS Office, the worst is 202 people through a 0.92 m door, 250 s; on the NIBS Clinic, 264 people through a 0.92 m door, 326 s.</p></dd>
       <dt class="label">Dead ends</dt>
       <dd><p>Dark red: places where the walk before a second, separate way out opens is longer than the IBC 2021 dead-end limit of 6.1 m, or 15.2 m with sprinklers (the code check's <span class="label">sprinklered</span> setting). The walk is half of the walks to the two nearest exits less the walk between them. The code's limit is for corridors; for rooms, whose own limit is the common path of egress travel, it is a reference. The values come from an ICC interpretation and summaries of the code, to be checked against its text.</p></dd>
-      <dt class="label">Branches it gave up</dt>
+      <dt class="label">Corridors it abandoned</dt>
       <dd><p>Grey: where the slime went early in the run and left no trail late, branches it explored and abandoned. They are corridors that look like ways out and are not.</p></dd>
-      <dt class="label">Medial axis of the floor</dt>
+      <dt class="label">Centre lines of rooms and corridors</dt>
       <dd><p>Cyan: the line through each room and corridor furthest from its walls, the robot planner's roadmap of most clearance, as the lambda-medial axis (Chazal and Lieutier 2005) with lambda 1 m. Where the desire lines leave it, the slime takes another line than the geometry centres. The notice gives the share of the desire lines within half a metre of the axis (71 % on the NIBS Office and 80 % on the Clinic with no fire) and the route that keeps to the axis.</p></dd>
     </dl>
     <figure class="pending still">

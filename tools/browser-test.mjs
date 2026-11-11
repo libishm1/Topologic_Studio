@@ -74,6 +74,20 @@ const context = await browser.newContext(
     : { viewport: { width: 1600, height: 950 }, deviceScaleFactor: 1 },
 );
 const page = await context.newPage();
+// The checks read hints and method notes that the panels fold by default
+// (primitives.jsx Hint and Notes; the interface audit of 2026-11-11):
+// unfolded here, so the checks see them as before. Option lists (Disclosure)
+// stay folded and the checks open them.
+await context.addInitScript(() => {
+  window.__studioExpandAll = true;
+});
+// A folded option list (<details>) opened by its summary, left open when it
+// already is, so a click never folds it.
+async function openSummary(p, name) {
+  const summary = p.locator("summary", { hasText: name }).first();
+  const open = await summary.evaluate((el) => el.parentElement?.open === true).catch(() => false);
+  if (!open) await summary.click().catch(() => {});
+}
 // Every worker the page starts, by its script, and the kind of each job sent
 // to one, so a check can count them (wiki/architecture/state-machines.md: a
 // stopped fire starts none, a double click makes one recorder or one fire).
@@ -634,6 +648,8 @@ if (await peopleSection.count()) {
   const dots = await page.evaluate(() => window.__viewer?.overlays?.get("crowd")?.type ?? null);
   record(dots === "Points", "the people can be drawn as dots", dots || "none");
   await page.getByLabel("Show them as").selectOption("figures").catch(() => {});
+  // The options below sit under "How people move" (the interface audit, 2026-11-11).
+  await openSummary(page, /^How people move$/);
   // Full gathering places clear (core/crowd.js shelterArea), an option.
   await page.locator(".toggle__label", { hasText: /^Full gathering places clear$/ }).first().click().catch(() => {});
   await page.getByLabel("Each gathering place").selectOption("10").catch(() => {});
@@ -666,13 +682,13 @@ if (await peopleSection.count()) {
   // Randomness in how people move (wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md, stage 1):
   // speeds that wobble and floor-field steps, run over five seeds, the range reported.
   await page.locator(".toggle__label", { hasText: /^Walking speed varies over time$/ }).first().click().catch(() => {});
-  await page.getByLabel("Each step").selectOption("wandering").catch(() => {});
+  await page.getByLabel("Step randomness").selectOption("wandering").catch(() => {});
   const rangeLine = await page
     .waitForFunction(() => document.body.innerText.match(/Over 5 of 5 runs: the last out between \d+ and \d+ s \(median \d+ s\)[^\n]*/)?.[0], null, { timeout: 60000 })
     .then((h) => h.jsonValue())
     .catch(() => "");
   record(Boolean(rangeLine), "people's motion varies: five seeds, the range of the last one out", rangeLine.slice(0, 140) || "no range");
-  await page.getByLabel("Each step").selectOption("exact").catch(() => {});
+  await page.getByLabel("Step randomness").selectOption("exact").catch(() => {});
   await page.locator(".toggle__label", { hasText: /^Walking speed varies over time$/ }).first().click().catch(() => {});
   const backToExact = await page
     .waitForFunction(() => !/Over \d+ of \d+ runs/.test(document.body.innerText), null, { timeout: 30000 })
@@ -745,25 +761,26 @@ if (await slimeSection.count()) {
     .catch(() => "");
   const slimeRoute = await page.evaluate(() => window.__viewer?.overlays?.has("slimePath") ?? false);
   record(/reached an exit/.test(slimeLine) && /along its tubes/.test(slimeLine) && slimeRoute, "the slime mould grows to the exits and the start's route keeps to its tubes", `${slimeLine.slice(0, 180)} (${((Date.now() - tSlime) / 1000).toFixed(1)}s)`);
-  // Its skeletons (core/skeleton.js, 2026-11-11): the desire lines and the floor's medial axis, each when asked.
+  // Its skeletons (core/skeleton.js, 2026-11-11): the desire lines and the floor's medial axis, each when asked, under Readings.
+  await openSummary(page, /^Readings$/);
   const skeletonsBefore = await page.evaluate(() => ["slimeDesire", "slimeMedial"].filter((n) => window.__viewer?.overlays?.has(n)).length);
   await page.locator(".toggle__label", { hasText: /^Desire lines$/ }).first().click().catch(() => {});
-  await page.locator(".toggle__label", { hasText: /^Medial axis of the floor$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Centre lines of rooms and corridors$/ }).first().click().catch(() => {});
   await page.waitForTimeout(400);
   const skeletons = await page.evaluate(() => ({ desire: window.__viewer?.overlays?.has("slimeDesire") ?? false, medial: window.__viewer?.overlays?.has("slimeMedial") ?? false }));
   const agreeLine = await page.getByText(/within half a metre of the medial axis/).count();
   record(skeletonsBefore === 0 && skeletons.desire && skeletons.medial && agreeLine > 0, "the slime's desire lines and the floor's medial axis are drawn when asked", JSON.stringify(skeletons));
   await page.locator(".toggle__label", { hasText: /^Desire lines$/ }).first().click().catch(() => {});
-  await page.locator(".toggle__label", { hasText: /^Medial axis of the floor$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Centre lines of rooms and corridors$/ }).first().click().catch(() => {});
   // Its readings (2026-11-11): bottlenecks, dead ends and the branches it gave up, each drawn when asked.
   const readingsBefore = await page.evaluate(() => ["slimeBottlenecks", "slimeDead", "slimeAbandoned"].filter((n) => window.__viewer?.overlays?.has(n)).length);
   const readingsLine = (await page.getByText(/^(Bottlenecks: |No bottleneck )/).first().textContent().catch(() => "")) || "";
-  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Branches it gave up$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
+  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Corridors it abandoned$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
   await page.waitForTimeout(400);
   const readings = await page.evaluate(() => Object.fromEntries(["slimeBottlenecks", "slimeDead", "slimeAbandoned"].map((n) => [n, window.__viewer?.overlays?.has(n) ?? false])));
   const drawnAsSaid = readings.slimeBottlenecks === readingsLine.startsWith("Bottlenecks: ") && readings.slimeDead === /Dead ends: /.test(readingsLine) && readings.slimeAbandoned === /gave up/.test(readingsLine);
   record(readingsBefore === 0 && readingsLine.length > 0 && drawnAsSaid, "the slime's bottlenecks, dead ends and abandoned branches are read out and drawn when asked", `${readingsLine.slice(0, 200)} ${JSON.stringify(readings)}`);
-  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Branches it gave up$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
+  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Corridors it abandoned$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
   await page
     .locator("section.section", { has: page.locator(".section__header", { hasText: /^Slime mould/ }) })
     .getByRole("button", { name: /^Clear$/ })
@@ -963,7 +980,7 @@ if (await trainBtn.isEnabled()) {
     "Q-learning reports its return against the exact optimum (backward induction)",
     q["Return vs best within the step limit"],
   );
-  await page.getByRole("group", { name: "Learning method" }).getByRole("button", { name: "Shielded (proved)" }).click();
+  await page.getByRole("group", { name: "Learning method" }).getByRole("button", { name: "Safe learner (proved)" }).click();
   // Moving the fire while the agent trains drops the training and its
   // answer: still training, it drew a route for the old points when it ended
   // (SM-3). The fire is placed again where it is, by its coordinates, which
@@ -1443,7 +1460,7 @@ if (await fsToggle.isVisible().catch(() => false)) {
   // Sprinklers (core/sprinklers.js, core/suppression.js, 2026-11-07): off by
   // default; on, the Duplex's rooms get heads by NFPA 13 with a rule report,
   // and a run reports when they open.
-  await page.locator("summary", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
+  await openSummary(page, /^Sprinklers$/);
   const sprinklerSwitch = page.locator(".toggle__label", { hasText: /^Sprinklers$/ });
   await sprinklerSwitch.first().click().catch(() => {});
   await page.waitForFunction(() => /\d+ sprinkler heads/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 30000 }).catch(() => {});
@@ -1469,7 +1486,7 @@ if (await fsToggle.isVisible().catch(() => false)) {
   // Systems by room use (core/suppressionSystems.js, 2026-11-07): off by
   // default; on, every room gets water, clean agent, foam or none by its name
   // and the occupancy, with a report (the Duplex has no agent or foam rooms).
-  await page.locator("summary", { hasText: /^Systems by room use$/ }).first().click().catch(() => {});
+  await openSummary(page, /^Systems by room use$/);
   const systemsSwitch = page.locator(".toggle__label", { hasText: /^Systems by room use$/ });
   await systemsSwitch.first().click().catch(() => {});
   await page.waitForFunction(() => /\d+ rooms: \d+ water/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 30000 }).catch(() => {});
@@ -1492,7 +1509,7 @@ if (await fsToggle.isVisible().catch(() => false)) {
 // attempt on the fire on show reads put out, not put out or cannot tell.
 console.log("\n[5f] Extinguishers");
 await page.getByRole("tab", { name: /^Simulate/ }).click();
-await page.locator("summary", { hasText: /^Extinguishers$/ }).first().click().catch(() => {});
+await openSummary(page, /^Extinguishers$/);
 const extSwitch = page.locator(".toggle__label", { hasText: /^Extinguishers$/ });
 const tExt = Date.now();
 await extSwitch.first().click().catch(() => {});
@@ -1905,6 +1922,27 @@ for (const [call, list] of byCall) {
   await guidedPage.close();
 }
 
+// The egress guided run (core/guided.js, the interface audit 2026-11-11): the
+// NIBS Clinic's graph, its egress map and dead ends drawn, then its fine grid
+// and the wheelchair audit laid on the floors. ?debug exposes the viewer to read its layers.
+{
+  const guidedPage = await context.newPage();
+  await guidedPage.goto(`${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`, { waitUntil: "load", timeout: 60000 });
+  await guidedPage.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  const t0 = Date.now();
+  await guidedPage.locator(".welcome").getByRole("button", { name: /^Every room's way out/ }).click().catch(() => {});
+  const caption = await guidedPage
+    .waitForFunction(() => /^(Done|Stopped)/.test(document.querySelector(".guided__caption")?.textContent || "") && document.querySelector(".guided__caption").textContent, null, { timeout: 300000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const drawn = await guidedPage.evaluate(() => ["egressRoutes", "egressDeadEnds", "accessAudit", "accessIssues"].filter((n) => window.__viewer?.overlays?.has(n)));
+  // The map's readings are in its section, closed until opened.
+  await guidedPage.locator(".section__header", { hasText: /^Egress map/ }).first().click().catch(() => {});
+  const mapped = /Farthest walk [\d.]+ m/.test(await guidedPage.locator(".panel__scroll").innerText().catch(() => ""));
+  record(/^Done/.test(caption) && mapped && drawn.includes("egressDeadEnds") && drawn.includes("accessAudit"), "the egress guided run maps every room and lays the wheelchair audit on the floors", `${((Date.now() - t0) / 1000).toFixed(1)}s: ${caption || "no caption"}; drawn ${drawn.join(", ") || "nothing"}`);
+  await guidedPage.close();
+}
+
 // Hints and field notes from a fresh browser (nothing stored): the count
 // starts at 0, a hint leads past the model, and a dismissed hint stays gone.
 {
@@ -1960,7 +1998,7 @@ if (LINKED && existsSync(LINKED)) {
     await p.waitForFunction(() => /nodes/.test(document.querySelector(".statusbar")?.innerText || ""), null, { timeout: 120000 }).catch(() => {});
     await p.getByRole("tab", { name: /^Simulate/ }).click();
     await p.getByText("Flamescapes combustion solver (optional)", { exact: true }).click().catch(() => {});
-    await p.locator("summary", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
+    await openSummary(p, /^Sprinklers$/);
     await p.locator(".toggle__label", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
     await p.waitForFunction(() => /\d+ sprinkler heads/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 60000 }).catch(() => {});
     const line = ((await p.locator(".panel__scroll").first().innerText().catch(() => "")).match(/\d+ sprinkler heads[^\n]*/)?.[0] || "").trim();

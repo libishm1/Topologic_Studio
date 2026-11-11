@@ -44,6 +44,16 @@ export const GUIDED_RUNS = [
     tour: true,
     note: "ignition",
   },
+  {
+    id: "egress-access",
+    title: "Every room's way out",
+    description:
+      "The NIBS Clinic: its walkable graph, the walk from every room to its nearest exit with the common paths and dead ends against IBC 2021, then each floor measured on a fine grid for a wheelchair.",
+    example: "nibs-clinic",
+    fire: null,
+    // The extra stages: the egress map, then the fine grid and the accessibility audit (no route).
+    egress: true,
+  },
 ];
 
 /** The stages a guided run passes through, in order, with what each shows. */
@@ -53,6 +63,8 @@ export const GUIDED_STAGES = [
   { id: "start", caption: "Starting in the room furthest from an exit" },
   { id: "exit", caption: "Taking the nearest exit door" },
   { id: "route", caption: "Finding the shortest route" },
+  { id: "map", caption: "Mapping the walk from every room to its nearest exit" },
+  { id: "measure", caption: "Measuring each floor finely, and auditing it for a wheelchair" },
   { id: "origin", caption: "Placing the fire" },
   { id: "people", caption: "Everyone on the floors, ready to leave with the fire" },
   { id: "fire", caption: "The fire spreads; the route reacts" },
@@ -65,6 +77,8 @@ export const stagesFor = (run) =>
   GUIDED_STAGES.filter(
     (s) =>
       (run.fire || (s.id !== "origin" && s.id !== "fire")) &&
+      // The egress run maps every room instead of one route.
+      (run.egress ? !["start", "exit", "route"].includes(s.id) : s.id !== "map" && s.id !== "measure") &&
       (run.people || s.id !== "people") &&
       (run.plan || s.id !== "plan") &&
       (run.tour || s.id !== "tour"),

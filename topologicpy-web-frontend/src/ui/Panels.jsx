@@ -22,6 +22,7 @@ import { IGNITION_CONTEXTS } from "../core/ignitionContexts.js";
 import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
 import { MEASURED_PRE, NO_RESPONSE_SOURCE, RSET_CRITERIA, RSET_PRESETS, criterionOf, measuredOf, presetOf } from "../core/rsetPresets.js";
 import { worstStatus } from "../core/perfReport.js";
+import { healthReason } from "../core/runHealth.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
@@ -31,6 +32,7 @@ import {
   FileButton,
   Icon,
   KeyValue,
+  Notes,
   Notice,
   NumberField,
   Section,
@@ -244,12 +246,12 @@ function ElementIdentification({ identification, onIdentify, onIdentifyByShape }
                     ? "Checked by shape"
                     : `Identify ${fmt(open)} by shape (IFCNet)`}
               </Button>
-              <p className="field__hint">
+              <Notes summary="About the classifier">
                 IFCNet&apos;s point-cloud network (Emunds et al. 2021) looks at the shape of each element the name could not place, and its answer replaces
                 the size&apos;s when it is at least 90% sure. The first use downloads 4.5 MB (the model from this site, onnxruntime-web from jsDelivr) and
                 takes about 0.2 s an element.
                 {identification.shapeRun && ` It identified ${fmt(identification.byShape)}; the rest keep the rules' answer.`}
-              </p>
+              </Notes>
             </>
           )}
         </>
@@ -519,10 +521,10 @@ export function ModelPanel({
       )}
 
       <Section title="Rooms models (LOD1)" defaultOpen={false}>
-        <p className="field__hint">
+        <Notes summary="About rooms models">
           A building as rooms, storeys, doors and stairs, with no IFC: a TopologicPy LOD1 export (the CellComplex JSON, with its circulation and
           adjacency graphs chosen together with it) or a GeoJSON plan. The graph, routes, code check and both fire models run on it as on an IFC.
-        </p>
+        </Notes>
         <FileButton accept=".json,.geojson" multiple onFile={onOpenRooms}>
           Open a rooms model
         </FileButton>
@@ -698,12 +700,12 @@ function NavigationCheckSection({ studio, onRun }) {
 
   return (
     <Section title="Cross-check with TopologicPy" defaultOpen={false} badge={navCheck ? pct(navCheck.studio_covered) : null}>
-      <p className="field__hint">
+      <Notes summary="How it works">
         TopologicPy&apos;s <code>Navigation</code> class builds its own walkable graph from the IFC, an
         independent estimate of the same space: where the two disagree, one of them is wrong about the
         building. The IFC is uploaded and parsed on the server, which takes seconds here and up to a
         minute on a small host.
-      </p>
+      </Notes>
       <NumberField
         label="Grid spacing (m)"
         value={settings.navSpacing}
@@ -797,10 +799,10 @@ function LinkedModels({ linked, onAdd, onAlign, onRemove }) {
   const { list, busy } = linked;
   return (
     <Section title="Second model (MEP, structure)" defaultOpen={false} badge={list.length ? `${list.length} added` : null}>
-      <p className="field__hint">
+      <Notes summary="How it works">
         An MEP or structural IFC of the same building. It is drawn in this model&apos;s frame and checked against it; its sprinklers, ducts and beams are
         used by the sprinklers in step 4. The graph and the fire&apos;s walls stay this model&apos;s.
-      </p>
+      </Notes>
       <FileButton accept=".ifc" onFile={onAdd} disabled={Boolean(busy)}>
         {busy ? `Adding ${busy}...` : "Add a model"}
       </FileButton>
@@ -1032,13 +1034,13 @@ function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
   const tone = { pass: "ok", fail: "warn" };
   const mark = { pass: "Pass", fail: "Fail", "cannot tell": "Cannot tell", "n/a": "Not applicable" };
   return (
-    <Section title="Code check" defaultOpen={false}>
-      <p className="field__hint">
+    <Section title="Code check" guide="checks.html#code" defaultOpen={false}>
+      <Notes summary="The codes and their values">
         Offices (occupancy group B). Each limit is the stricter of the Saudi Fire Code SBC 801-CR-2018 (Chapter 10, means of egress) and the
         International Building Code 2021, so a pass meets both; SBC 2024 replaces the 2018 values when its text is available, and the high-rise
         provisions are the IBC&apos;s until SBC 201 is read. Distances are walked on the graph to the nearest exit out of the building, or, above and
         below it, to the nearest stair; the occupant load uses the walkable area, a lower bound.
-      </p>
+      </Notes>
       <Toggle
         label="The building has automatic sprinklers"
         checked={settings.codeSprinklered}
@@ -1231,13 +1233,13 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
   const seconds = (x) => (x === -Infinity ? "no safe time" : Number.isFinite(x) ? `${Math.round(x)} s` : "");
   const status = report.length ? worstStatus(report.flatMap((e) => e.cases.map((c) => c.result?.status ?? "cannot tell"))) : null;
   return (
-    <Section title="Performance check (with the fire)" defaultOpen={false}>
-      <p className="field__hint">
+    <Section title="Performance check (with the fire)" guide="checks.html#performance" defaultOpen={false}>
+      <Notes summary="How it works">
         Performance-based: each place passes when someone there can wait for detection, the alarm, the 99th percentile of pre-movement
         time and any queue at the doors, and still get out with a dose under the limit, with the margin the criterion asks. It reads the
         escape-deadline map of the forecast (Simulate step, Plan with the forecast); every check joins a report of fires. Evidence for an
         alternative method (SBC 801-CR-2018 104.9) beside the code check, not a replacement for it.
-      </p>
+      </Notes>
       <SelectField label="Occupants" value={settings.perfOccupancy} onChange={choose} options={RSET_PRESETS.map((p) => ({ value: p.id, label: p.label }))} hint={preset.source} />
       <Toggle
         label="Detection from the fire run's smoke"
@@ -1346,12 +1348,12 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
           {perf.blockedAsked && !perf.cases?.some((c) => c.id === "exit-blocked") && (
             <p className="field__hint">The case with an exit blocked needs a plan made with that switch on and at least two exits: plan again.</p>
           )}
-          <p className="field__hint">
+          <Notes summary="How the times are worked out">
             ASET from the forecast (ISO 13571 dose against the limit set under Clock, speed and limits), RSET as detection, alarm,
             pre-movement (a log-normal through the two percentiles, PD 7974-6), the walk with no fire and any queue. The margin is ASET less
             RSET at the 99th percentile. One walking speed; time in a queue is added to RSET as in a hand calculation, without its own dose;
             the room of fire origin is judged like any other place.
-          </p>
+          </Notes>
         </>
       )}
       {(report.length > 0 || canAddFires) && (
@@ -1427,7 +1429,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
     </span>
   );
   return (
-    <Section title="People leaving" badge={result ? `${result.people.toLocaleString()} people` : null} defaultOpen={false}>
+    <Section title="People leaving" guide="people-and-slime.html#people" badge={result ? `${result.people.toLocaleString()} people` : null} defaultOpen={false}>
       <Toggle
         label="Show people leaving"
         checked={settings.crowd}
@@ -1490,6 +1492,8 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                   : "The model marks no exit out of the building, so they use the exit picked in Route."
             }
           />
+          <p className="field__hint">One person per {settings.perfOccupantArea} m² of floor (the floor area per occupant, set in Performance check).</p>
+          <Disclosure summary="How people move">
           <SelectField
             label="Each person takes"
             value={settings.crowdChoice}
@@ -1511,7 +1515,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
             hint="Each person's speed drifts about their own and recovers within a few seconds, as Corbetta et al. (2017) measured 72,376 walkers' does: a spread of about 16 %."
           />
           <SelectField
-            label="Each step"
+            label="Step randomness"
             value={settings.crowdSteps}
             onChange={(crowdSteps) => setSettings({ crowdSteps })}
             options={[
@@ -1574,6 +1578,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
               options={[10, 25, 50, 100].map((a) => ({ value: String(a), label: `${a} m², about ${Math.floor(a / 0.636)} people` }))}
             />
           )}
+          </Disclosure>
           {crowd?.busy && <p className="field__hint">Working out everyone&apos;s walk…</p>}
           {crowd?.error && <Notice tone="warning">{crowd.error}</Notice>}
           {result && (
@@ -1613,7 +1618,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
               </Notice>
               {crowd.runs && <RunsRange runs={crowd.runs} />}
               {crowd.gpu && <p className="field__hint">Moved and drawn on the GPU: {crowd.gpu}.</p>}
-              <p className="field__hint">
+              <Notes summary="How people move">
                 {result.choice === "quickest"
                   ? "Each person takes the exit that gets them out soonest: the walk there, or the people ahead of them through it at the flow seen at its door, whichever is longer, looked at again every 2 s, as Pathfinder's “locally quickest” door choice weighs a door. "
                   : "Each person heads for the nearest exit by the shortest walk (the “nearest exit” choice that gave the shortest times in Carrera et al. 2019). "}
@@ -1624,7 +1629,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                 not this animation, models how long people take to start. Checked against the RiMEA and NIST TN 1822 test cases
                 (16 of 18 pass; dense corridors and single file still run fast): an illustration of the walk out, not an
                 evacuation model to quote.
-              </p>
+              </Notes>
             </>
           )}
         </>
@@ -1663,11 +1668,12 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
   const m = (x) => `${x.toFixed(1)} m`;
   const flux = result ? result.exits.reduce((s, e) => s + e.flux, 0) : 0;
   return (
-    <Section title="Slime mould" badge={result ? "grown" : null} defaultOpen={false}>
+    <Section title="Slime mould" guide="people-and-slime.html#slime" badge={result ? "grown" : "research"} defaultOpen={false}>
       <p className="field__hint">
         Slime mould agents (Jones&apos;s <em>Physarum</em> model) grow over the walkable graph towards the exits. Their trail, drawn yellow,
         shows which corridors and stairs the building&apos;s escape leans on; the route from the start keeps to it.
       </p>
+      <p className="field__hint">Floor area per occupant: {settings.perfOccupantArea} m² (set in Performance check), for the bottlenecks&apos; people.</p>
       <SelectField
         label="The fire"
         value={settings.slimeFire}
@@ -1695,36 +1701,38 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
           Clear
         </Button>
       </div>
-      <Toggle
-        label="Desire lines"
-        checked={settings.slimeDesire}
-        onChange={(slimeDesire) => setSettings({ slimeDesire })}
-        hint="The slime's ways out from every part of the floor, along its tubes: dark over the yellow, thicker where more of them bundle, with arrows towards the exits."
-      />
-      <Toggle
-        label="Bottlenecks"
-        checked={settings.slimeBottlenecks}
-        onChange={(slimeBottlenecks) => setSettings({ slimeBottlenecks })}
-        hint="Crimson, larger the worse: where the people the desire lines carry (one per occupant area) would take longest to pass, a door's clear width or a corridor's at 1.3 persons a second a metre."
-      />
-      <Toggle
-        label="Dead ends"
-        checked={settings.slimeDeadEnds}
-        onChange={(slimeDeadEnds) => setSettings({ slimeDeadEnds })}
-        hint="Dark red: places with one way out for longer than the IBC 2021 dead-end limit (6.1 m; 15.2 m sprinklered, as the code check's setting says) before a second, separate way out opens. The code's limit is for corridors; for rooms it is a reference."
-      />
-      <Toggle
-        label="Branches it gave up"
-        checked={settings.slimeAbandoned}
-        onChange={(slimeAbandoned) => setSettings({ slimeAbandoned })}
-        hint="Grey: where the slime went early and left no trail late, branches it explored and abandoned: corridors that look like ways out and are not."
-      />
-      <Toggle
-        label="Medial axis of the floor"
-        checked={settings.slimeMedial}
-        onChange={(slimeMedial) => setSettings({ slimeMedial })}
-        hint="In cyan, the line through each room and corridor furthest from its walls (the robot planner's roadmap of most clearance): where the desire lines leave it, the slime takes another line than the geometry centres."
-      />
+      <Disclosure summary="Readings">
+        <Toggle
+          label="Desire lines"
+          checked={settings.slimeDesire}
+          onChange={(slimeDesire) => setSettings({ slimeDesire })}
+          hint="The slime's ways out from every part of the floor, along its tubes: dark over the yellow, thicker where more of them bundle, with arrows towards the exits."
+        />
+        <Toggle
+          label="Bottlenecks"
+          checked={settings.slimeBottlenecks}
+          onChange={(slimeBottlenecks) => setSettings({ slimeBottlenecks })}
+          hint="Crimson, larger the worse: where the people the desire lines carry (one per occupant area) would take longest to pass, a door's clear width or a corridor's at 1.3 persons a second a metre."
+        />
+        <Toggle
+          label="Dead ends"
+          checked={settings.slimeDeadEnds}
+          onChange={(slimeDeadEnds) => setSettings({ slimeDeadEnds })}
+          hint="Dark red: places with one way out for longer than the IBC 2021 dead-end limit (6.1 m; 15.2 m sprinklered, as the code check's setting says) before a second, separate way out opens. The code's limit is for corridors; for rooms it is a reference."
+        />
+        <Toggle
+          label="Corridors it abandoned"
+          checked={settings.slimeAbandoned}
+          onChange={(slimeAbandoned) => setSettings({ slimeAbandoned })}
+          hint="Grey: where the slime went early and left no trail late, the branches it explored and gave up: corridors that look like ways out and are not."
+        />
+        <Toggle
+          label="Centre lines of rooms and corridors"
+          checked={settings.slimeMedial}
+          onChange={(slimeMedial) => setSettings({ slimeMedial })}
+          hint="In cyan, the floor's medial axis: the line through each room and corridor furthest from its walls (the robot planner's roadmap of most clearance). Where the desire lines leave it, the slime takes another line than the geometry centres."
+        />
+      </Disclosure>
       {slime?.error && <Notice tone="warning">{slime.error}</Notice>}
       {result && (
         <Notice>
@@ -1763,11 +1771,11 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
           {result.abandonedArea > 0 ? `The slime gave up ${Math.round(result.abandonedArea)} m² it had explored.` : ""}
         </p>
       )}
-      <p className="field__hint">
+      <Notes summary="How it works">
         After Jones (2010) and Jones and Saeed (2007): the agents sense ahead and to either side, turn towards the strongest, step and
         lay trail, which spreads and fades; walls absorb it. Here the exits also draw by the walking distance to them, so far rooms keep a
         way out. An illustration of where the escape concentrates, not an evacuation model to quote.
-      </p>
+      </Notes>
     </Section>
   );
 }
@@ -1789,7 +1797,7 @@ function EgressMap({ egress, settings, setSettings, onMap, onFine, onClear, read
   const cascade = r?.sweep.cascade || [];
   const dead = r?.deadEnds;
   return (
-    <Section title="Egress map" badge={r ? "mapped" : null} defaultOpen={false}>
+    <Section title="Egress map" guide="people-and-slime.html#egress-map" badge={r ? "mapped" : null} defaultOpen={false}>
       <p className="field__hint">The walk to the nearest exit from every place, room by room, and what closing exits does to it.</p>
       <div className="grid-2">
         <Button size="sm" onClick={onMap} disabled={!ready || Boolean(egress?.busy)}>
@@ -1835,7 +1843,7 @@ function EgressMap({ egress, settings, setSettings, onMap, onFine, onClear, read
             <p className="field__hint">
               Measured finely ({fine.storeys[0]?.cell ?? 0.05} m cells, 16 directions):{" "}
               {fine.storeys
-                .filter((s) => s.walkArea > 20)
+                .filter((s) => s.walkArea > 20 && s.farthest > 0)
                 .map((s) => `${s.label || "a floor"} ${m(s.farthest)} against the graph's ${m(s.graphFarthest)}${s.fastMarching ? `, Fast Marching within ${(Math.abs(s.fastMarching.mean) * 100).toFixed(1)} %` : ""}`)
                 .join("; ")}
               .
@@ -1871,7 +1879,7 @@ function Accessibility({ egress, settings, setSettings, onAudit, ready }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return (
-    <Section title="Accessibility" badge={fine && !stale ? "audited" : null} defaultOpen={false}>
+    <Section title="Accessibility" guide="people-and-slime.html#accessibility" badge={fine && !stale ? "audited" : null} defaultOpen={false}>
       <p className="field__hint">Where a wheelchair can go, what stops it, and whether it has a way out.</p>
       <SelectField
         label="Profile"
@@ -2092,7 +2100,7 @@ export function RoutePanel({
             onChange={(altMethod) => setSettings({ altMethod })}
             options={[
               { value: "distinct", label: "Different space" },
-              { value: "yen", label: "Yen k-shortest" },
+              { value: "yen", label: "Next-shortest routes (Yen)" },
             ]}
           />
         </div>
@@ -2635,7 +2643,7 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
   const space = fireRoomId !== null && fireRoomId !== undefined ? semantics?.spaces?.find((s) => s.id === fireRoomId) : null;
   const roomName = space ? [space.longName, space.name].filter(Boolean).join(" ") || null : null;
   return (
-    <Section title="Escape deadlines and forecast routes" badge={forecastPlan.result?.earliest ? "planned" : null}>
+    <Section title="Escape deadlines and forecast routes" guide="fire-and-smoke.html#forecast" badge={forecastPlan.result?.earliest ? "planned" : null}>
       <p className="field__hint">
         Runs the fire to its last step first, then routes with the state each point will be in when you would reach it,
         and works out how long you can wait before leaving.
@@ -2746,7 +2754,7 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
           />
         </div>
         <NumberField
-          label="Dose limit (FED)"
+          label="Toxic dose limit (FED)"
           value={settings.doseLimit}
           min={0.01}
           max={1}
@@ -2798,12 +2806,19 @@ function returnVsBest(r) {
 function CombustionStatus({ combustion, running }) {
   if (!combustion) return null;
   const done = combustion.time >= (combustion.horizon ?? Infinity) - 1e-6;
+  // A run the health guard stopped (core/flamescapes.js HEALTH) says why and when.
+  const stopped = combustion.health && combustion.health.ok === false ? combustion.health : null;
   return (
     <section className="result" aria-live="polite" aria-label="Flamescapes run">
-      <h3 className="result__title" data-tone="ok">
-        <Icon name={done ? "check" : "info"} size={16} />
-        {done ? "Flamescapes run complete" : running ? "Flamescapes is computing" : "Flamescapes run"}
+      <h3 className="result__title" data-tone={stopped ? "warn" : "ok"}>
+        <Icon name={stopped ? "alert" : done ? "check" : "info"} size={16} />
+        {stopped ? "Flamescapes run stopped" : done ? "Flamescapes run complete" : running ? "Flamescapes is computing" : "Flamescapes run"}
       </h3>
+      {stopped && (
+        <p className="result__note">
+          Stopped at {Math.round(stopped.time)} s: {healthReason(stopped)}. The frames before it play; the run is not kept in this browser.
+        </p>
+      )}
       {combustion.replayed && (
         <p className="result__note">
           Played from this browser&apos;s kept runs (computed {new Date(combustion.replayed).toLocaleString()}), not computed again.
@@ -3396,13 +3411,13 @@ export function SimulatePanel({
                 onChange={(flamescapesTerminalFlow) => setSettings({ flamescapesTerminalFlow: flamescapesTerminalFlow ?? 100 })}
               />
             )}
-            <p className="field__hint">
+            <Notes summary="Openings and the smoke">
               For the smoke only: a route still goes through every door. A closed door or window is airtight and never breaks or burns through, so
               smoke leaves the building only through open doorways and open windows. Real ones leak at their gaps and glass can fail in a hot layer,
               so a run with everything closed keeps the most smoke in its rooms. Running ventilation joins
               every air terminal in the model (IfcAirTerminal) through one well-mixed duct volume, the case that spreads smoke furthest: which
               system a terminal belongs to is not read, and 100 L/s a terminal is an assumption, not a measured value.
-            </p>
+            </Notes>
             <SelectField
               label="Grid"
               value={settings.flamescapesGridPolicy}
@@ -3413,13 +3428,13 @@ export function SimulatePanel({
                 { value: "finest", label: "Finest on the GPU: all its memory allows (slower)" },
               ]}
             />
-            <p className="field__hint">
+            <Notes summary="Why the grid matters">
               The fire depends on the grid: on the Duplex a sofa fire peaked at 0.09 MW on a 0.20 m grid, 2.5 MW on 0.23 m and 6.1 MW on
               0.27 m. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device, so the CPU gives the
               GPU&apos;s fire at about a ninth of its speed; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and
               its card says so. The finer grids are for the GPU (the CPU builds the standard one) and give a different fire; which grid is
               nearer a real fire has not been measured. Keep one grid when comparing runs; the run card gives it.
-            </p>
+            </Notes>
             <SelectField
               label="Repeat runs on the GPU"
               value={String(settings.flamescapesRepeats)}
@@ -3430,13 +3445,13 @@ export function SimulatePanel({
                 { value: "8", label: "8: the run you watch, then 7 more" },
               ]}
             />
-            <p className="field__hint">
+            <Notes summary="Why two runs differ">
               A fire that catches the room&apos;s contents is partly chance: the same run with the room a thousandth of a degree warmer can
               hold or die back. After the run you watch, the GPU makes the rest on the same grid, each a thousandth of a degree warmer,
               while the view plays on, and the card gives the median and range of the untenable nodes, the first untenable time, the peak
               and the energy. On the standard grid each takes a few seconds; none are made on the CPU, where each would take as long as
               the first.
-            </p>
+            </Notes>
             <Toggle
               label="Record soot, CO₂ and O₂ too"
               checked={settings.flamescapesMeasures}
@@ -3523,7 +3538,7 @@ export function SimulatePanel({
                   ]}
                 />
                 <SprinklerLayout plan={sprinklerPlan} busy={sprinklerBusy} onRedo={onLayOutSprinklers} />
-                <p className="field__hint">
+                <Notes summary="How a head opens">
                   A head opens when its link reaches its rating: the RTI equation with conduction to the mount, stepped exactly on the gas at
                   the top cell of its column and, under the fire&apos;s ceiling, on Alpert&apos;s jet for the run&apos;s heat release. The run
                   card gives both times. What an open head then does is the choice above. Wetting: the water left at the end of each column
@@ -3532,7 +3547,7 @@ export function SimulatePanel({
                   the water evaporates in the hot gas on the way down (1 mm drops), the steam diluting the oxygen. Liquids, metals and cooking
                   oil are not wetted (the notice above). The heads read no RTI or C from the IFC (none carries them): quick 50, standard 100,
                   C 0.4. Portable extinguishers have their own section below; clean agent and foam rooms are in Systems by room use.
-                </p>
+                </Notes>
               </>
             )}
           </Disclosure>
@@ -3563,7 +3578,7 @@ export function SimulatePanel({
                 />
                 {!settings.sprinklers && <Notice tone="warning">Sprinklers are off, so the water rooms have no system. Switch them on in Sprinklers above.</Notice>}
                 <SystemsPlan plan={systemsPlan} busy={systemsBusy} onRedo={onLayOutSystems} />
-                <p className="field__hint">
+                <Notes summary="How the systems act">
                   Clean agent: once a detector in each of two zones sees smoke and 30 s have passed (specification practice; the code sets no
                   number), the agent rises to 7 % over 10 s and holds for 10 minutes. At 5.2 % or more (6.62 % over a liquid&apos;s vapour)
                   flames and smouldering stop; hot fuel goes on giving off vapour, which can burn again outside the room or once the agent is
@@ -3571,7 +3586,7 @@ export function SimulatePanel({
                   not close the model&apos;s doors. Foam: once one detector sees smoke and 30 s have passed (assumed), the blanket cuts a
                   pool&apos;s evaporation to a tenth in about 10 s and to nothing in about 30 s (Back and Farley 2020), and its water wets the
                   ordinary fuel it lands on, as sprinklers do.
-                </p>
+                </Notes>
               </>
             )}
           </Disclosure>
@@ -3716,7 +3731,7 @@ export function SimulatePanel({
 
       <ForecastSection studio={studio} exits={exits} onPlan={onPlanForecast} deadlinesShown={deadlinesShown} />
 
-      <Section title="Train an agent against this fire" defaultOpen={false}>
+      <Section title="Train an agent against this fire" guide="fire-and-smoke.html#learned" badge="research" defaultOpen={false}>
         <div className="field">
           <div className="field__label">
             <span>Method</span>
@@ -3726,7 +3741,7 @@ export function SimulatePanel({
             value={settings.rlMethod}
             onChange={(rlMethod) => setSettings({ rlMethod })}
             options={[
-              { value: "shielded", label: "Shielded (proved)" },
+              { value: "shielded", label: "Safe learner (proved)" },
               { value: "qlearning", label: "Q-learning" },
             ]}
           />
@@ -3747,7 +3762,7 @@ export function SimulatePanel({
               value={settings.rlExits}
               onChange={(rlExits) => setSettings({ rlExits })}
               options={[
-                { value: "any", label: "Any exit door" },
+                { value: "any", label: "Any exit" },
                 { value: "chosen", label: "The chosen exit" },
               ]}
             />

@@ -27,6 +27,7 @@ import { findRoute, snap } from "./core/route.js";
 import { VOID_NAME, floorsFromSpaces, slabsMissing } from "./core/spaceFloors.js";
 import { DETECTOR_VISIBILITY, buildForecast, earliestArrival, firstDetection, forecastFromFrames, runRange, runSummary, stackFrames } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
+import { healthReason } from "./core/runHealth.js";
 import { KIND_DOOR, floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
@@ -246,6 +247,9 @@ export default function App() {
   const temperatureRef = useRef(new Map());
   const [tab, setTab] = useState("model");
   const [panelOpen, setPanelOpen] = useState(true);
+  // On a phone the panel takes half the screen; "Taller panel" gives it most
+  // of the screen for a long step and hands it back (workflow.css).
+  const [panelTall, setPanelTall] = useState(false);
   const [methodsOpen, setMethodsOpen] = useState(false);
   // Field notes and hints (core/fieldNotes.js): found from the app's own
   // results where they appear below, kept in this browser.
@@ -1815,6 +1819,7 @@ export default function App() {
           sprinklerSummary: stored.result?.sprinklers ?? null,
           systemsSummary: stored.result?.systems?.rooms ?? null,
           itemSummary: stored.result?.designFire ?? null,
+          health: stored.result?.health ?? null,
           horizon: payload.horizon,
           embersOn: payload.embers,
           extras: payload.extras,
@@ -1885,13 +1890,18 @@ export default function App() {
         // When each head opened by both readings, and the water (core/suppression.js).
         // And when each room's system was detected, discharged and acted (core/suppressionSystems.js).
         // And what became of a design-fire first item.
-        if ((result?.sprinklers || result?.systems || result?.designFire) && (!combustionRef.current || combustionRef.current === run)) {
+        // And a run the health guard stopped: why and when (flamescapes.js HEALTH).
+        const stopped = result?.health && !result.health.ok ? result.health : null;
+        if ((result?.sprinklers || result?.systems || result?.designFire || stopped) && (!combustionRef.current || combustionRef.current === run)) {
           studio.setFire((c) => ({
             ...c,
             combustion: c.combustion
-              ? { ...c.combustion, sprinklerSummary: result.sprinklers ?? null, systemsSummary: result.systems?.rooms ?? null, itemSummary: result.designFire ?? null }
+              ? { ...c.combustion, sprinklerSummary: result.sprinklers ?? null, systemsSummary: result.systems?.rooms ?? null, itemSummary: result.designFire ?? null, health: stopped }
               : c.combustion,
           }));
+        }
+        if (stopped && (!combustionRef.current || combustionRef.current === run)) {
+          toast(`The fire run was stopped at ${Math.round(stopped.time)} s: ${healthReason(stopped)}. The frames before it play.`, { variant: "warning", ttl: 8000 });
         }
         // The first measurement on a GPU stands, so its grid does not drift between runs.
         const name = result?.info?.backend?.name;
@@ -1969,7 +1979,8 @@ export default function App() {
       }
       return compute().then((result) => {
         // Kept once the browser is idle: copying the frames takes a moment.
-        if (storeKey) {
+        // A run the health guard stopped is not kept, so it never replays as a result.
+        if (storeKey && result?.health?.ok !== false) {
           const keep = () => void writeRun(storeKey, { info: run.info, frames: run.frames, result });
           if (typeof requestIdleCallback === "function") requestIdleCallback(keep, { timeout: 5000 });
           else setTimeout(keep, 1000);
@@ -1980,7 +1991,7 @@ export default function App() {
     });
     combustionRef.current = run;
     return run;
-  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns, settings.flamescapesRepeats, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, levels, systemsPlan]);
+  }, [combustionInputs, flamescapesJob, graph, studio, toast, settings.flamescapesKeepRuns, settings.flamescapesRepeats, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, levels, systemsPlan]);
 
   const forgetRuns = useCallback(async () => {
     const { count, bytes } = await storedRuns();
@@ -3681,6 +3692,21 @@ export default function App() {
         if (path.found === false) return fail("No route was found.");
         advance();
       }
+    } else if (stage === "map") {
+      // The egress map's readings drawn: each room's worst walk and the dead ends.
+      if (acted !== stage) {
+        setTab("route");
+        setSettings({ egressRoutes: true, egressDeadEnds: true });
+        act(() => runEgress("map"), egress.result);
+      } else if (egress.error) return fail(egress.error);
+      else if (egress.result && egress.result !== before && !egress.busy) advance();
+    } else if (stage === "measure") {
+      // The routes give way to the wheelchair audit laid on the floors.
+      if (acted !== stage) {
+        setSettings({ egressRoutes: false, accessOverlay: true });
+        act(() => runEgress("fine"), egress.fine);
+      } else if (egress.error) return fail(egress.error);
+      else if (egress.fine && egress.fine !== before && !egress.busy) advance();
     } else if (stage === "origin") {
       if (acted !== stage) {
         setTab("simulate");
@@ -4433,7 +4459,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="app-body" data-panel-collapsed={!panelOpen}>
+      <div className="app-body" data-panel-collapsed={!panelOpen} data-panel-tall={panelTall}>
         {mode === "ifc" ? (
           <Viewport
             viewerRef={viewerRef}
@@ -4566,6 +4592,14 @@ export default function App() {
 
         {panelOpen && (
           <aside className="panel" aria-label="Workflow">
+            <button
+              type="button"
+              className="panel__grow"
+              aria-pressed={panelTall}
+              onClick={() => setPanelTall((v) => !v)}
+            >
+              {panelTall ? "Shorter panel" : "Taller panel"}
+            </button>
             {mode === "ifc" ? (
               <Stepper steps={tabs} active={activeTab} status={stepStatus} onSelect={setTab} />
             ) : (

@@ -919,6 +919,25 @@ details.legend[open] > .legend__summary {
     max-height: 50vh;
   }
 
+  /* "Taller panel": most of the screen for a long step, the view kept in sight. */
+  .app-body[data-panel-tall="true"] {
+    grid-template-rows: minmax(18vh, 1fr) auto;
+  }
+
+  .app-body[data-panel-tall="true"] .panel {
+    max-height: 78vh;
+  }
+
+  /* The legend and the view card would cover what is left of the view. */
+  .app-body[data-panel-tall="true"] .overlay--bottom-left,
+  .app-body[data-panel-tall="true"] .overlay--bottom-right {
+    display: none;
+  }
+
+  .panel__grow {
+    display: block;
+  }
+
   .viewcube {
     grid-template-columns: repeat(2, 48px);
   }
