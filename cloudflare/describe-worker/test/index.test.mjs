@@ -5,7 +5,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import worker, { ACTIONS, INSTRUCTIONS, MAX_FACTS, MAX_SUMMARY, ROOM_INSTRUCTIONS, checkSuggestions, jsonOf, passesHumanCheck, textOf } from "../src/index.js";
-import { DESCRIBE_INSTRUCTIONS } from "../../../topologicpy-web-frontend/src/core/describeFacts.js";
+import { DESCRIBE_INSTRUCTIONS, MAX_FACTS as PAGE_MAX_FACTS } from "../../../topologicpy-web-frontend/src/core/describeFacts.js";
 
 const SITE = "https://libishm1.github.io";
 const env = (run) => ({ ALLOWED_ORIGINS: `${SITE},http://localhost:5173`, MODEL: "@cf/test/model", AI: { run } });
@@ -18,6 +18,10 @@ const post = (body, origin = SITE) =>
 
 test("the Worker's instructions are the page's, so both engines are told the same", () => {
   assert.equal(INSTRUCTIONS, DESCRIBE_INSTRUCTIONS);
+});
+
+test("the page keeps its facts within what the Worker reads", () => {
+  assert.equal(PAGE_MAX_FACTS, MAX_FACTS);
 });
 
 test("a description from the facts: the model gets the Worker's instructions and the facts, the page gets the text", async () => {

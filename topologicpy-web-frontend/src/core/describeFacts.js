@@ -10,8 +10,18 @@
 const round = (v, d = 1) => (Number.isFinite(v) ? Math.round(v * 10 ** d) / 10 ** d : null);
 const list = (items, max) => (items.length > max ? `${items.slice(0, max).join(", ")} and ${items.length - max} more` : items.join(", "));
 const duration = (s) => (s >= 90 ? `${round(s / 60, 1)} min` : `${Math.round(s)} s`);
-/** Storeys given a line each; the rest are summed up in one, so a tall building's facts stay short. */
-const MAX_STOREY_LINES = 12;
+/**
+ * The Worker reads this many characters of facts and drops the rest
+ * (cloudflare/describe-worker MAX_FACTS), so the facts fit within it: room
+ * names listed and storeys given a line each (the rest summed up in one),
+ * fewer of each until they do, for a tall building with everything run.
+ */
+export const MAX_FACTS = 8000;
+const DETAIL = [
+  { roomNames: 25, storeyLines: 12 },
+  { roomNames: 10, storeyLines: 6 },
+  { roomNames: 0, storeyLines: 3 },
+];
 /** A graph floor takes the name of the IFC storey within this many metres of it. */
 const STOREY_NAME_WITHIN = 0.6;
 
@@ -24,18 +34,44 @@ const FIRE_MODELS = {
   "flamescapes-embers": "the Flamescapes combustion solver (fire, smoke and embers)",
 };
 
+/** How each person's next step is drawn (core/crowd.js STEP_RANDOMNESS). */
+const STEP_WORDS = { direct: "a little at random (direct)", wandering: "at random, wandering", disoriented: "at random, as if disoriented" };
+/** Where the performance check's detection time came from (Panels.jsx PerformanceCheck). */
+const DETECTED_BY = {
+  ceiling: "by the run's ceiling detectors",
+  run: "from the run's smoke at head height",
+  "not in the run": "as set (the run's smoke reached no detector)",
+  "no run": "as set (no Flamescapes run to detect)",
+  set: "as set",
+};
+const VERDICT = { pass: "pass", fail: "fail", "cannot tell": "cannot tell" };
+
 /**
  * @param {object} s  what the app knows (every part optional):
  *   file {name}; stats (Model step counts); semantics (ifcSemantics.js);
- *   identification answers [{label, by}]; graph {stats, cores};
- *   egress (codeCheck.js's result on the graph); codeChecked (the user ran
- *   the code check, so its verdicts may be given); levelShift (m, the
- *   model's coordination shift: a viewer height is the IFC's plus it);
- *   route {found, length, node_ids}; walkSpeed (m/s); fire {model, step};
- *   combustion (the Flamescapes run card); plan {result, inputs}; rl (result)
+ *   identification answers [{label, by}]; graph {stats, cores,
+ *   outdoorSpaces}; egress (codeCheck.js's result on the graph); codeChecked
+ *   (the user ran the code check, so its verdicts may be given); levelShift
+ *   (m, the model's coordination shift: a viewer height is the IFC's plus
+ *   it); route {found, length, node_ids}; nearerExit {walk, route} (m);
+ *   walkSpeed (m/s); fire {model, step}; combustion (the Flamescapes run
+ *   card); plan {result, inputs}; rl (result); crowd {result, withFire,
+ *   occupantArea, exits, fluctuate, steps, runs}; slime (slimeEgress.js's
+ *   result with the worker's readings); perf (performanceCheck.js's result);
+ *   sprinklers, systems, extinguishers (their layouts, when switched on)
  * @returns {{lines: string[], text: string}}
  */
 export function describeFacts(s = {}) {
+  let facts = null;
+  for (const detail of DETAIL) {
+    const lines = factLines(s, detail);
+    facts = { lines, text: lines.map((l) => `- ${l}`).join("\n") };
+    if (facts.text.length <= MAX_FACTS) break;
+  }
+  return facts;
+}
+
+function factLines(s, { roomNames, storeyLines }) {
   const lines = [];
   const sem = s.semantics || {};
   const st = s.stats || {};
@@ -49,7 +85,7 @@ export function describeFacts(s = {}) {
       ".",
   );
   const rooms = (sem.spaces || []).map((r) => r.longName || r.name).filter(Boolean);
-  if (rooms.length || st.spaces) lines.push(`Rooms (IfcSpace): ${rooms.length || st.spaces}${rooms.length ? `, named ${list([...new Set(rooms)], 25)}` : ""}.`);
+  if (rooms.length || st.spaces) lines.push(`Rooms (IfcSpace): ${rooms.length || st.spaces}${rooms.length && roomNames ? `, named ${list([...new Set(rooms)], roomNames)}` : ""}.`);
   const doors = sem.doors || [];
   const exits = doors.filter((d) => d.exit);
   const widths = doors.map((d) => d.widthM).filter((w) => w > 0);
@@ -82,6 +118,29 @@ export function describeFacts(s = {}) {
     );
   }
 
+  // Fire protection the user laid out (sprinklers.js, suppressionSystems.js, extinguishers.js).
+  const sp = s.sprinklers;
+  if (sp?.heads) {
+    const rooms = (sp.rooms || []).filter((r) => r.status !== "n/a");
+    const placement = (r) => r.placement ?? r.status;
+    const failing = rooms.filter((r) => placement(r) === "fail").length;
+    const open = rooms.filter((r) => placement(r) === "cannot tell").length;
+    const where = { ifc: "read from the IFC", rooms: `placed by NFPA 13 in ${rooms.length} rooms`, storeys: "placed on a lattice over the walkable floor (the model has no rooms)" }[sp.source] || "laid out";
+    lines.push(
+      `Sprinklers (laid out by the user): ${sp.heads.length} heads, ${where}` +
+        (rooms.length ? `; ${rooms.length - failing - open} rooms meet every placement rule, ${failing} fail one, ${open} cannot be told` : "") +
+        (rooms.length && !sp.obstructionCount ? "; beams and ducts not checked (no structural or MEP model)" : "") +
+        ".",
+    );
+  }
+  const sys = s.systems;
+  if (sys?.lines?.length && !sys.noRooms) lines.push(`Suppression systems by room use: ${sys.lines.join("; ")}.`);
+  const ex = s.extinguishers;
+  if (ex?.sites) {
+    const where = { ifc: "read from the IFC", placed: "placed on the walk by the travel rule" }[ex.source] || "none found in the IFC";
+    lines.push(`Extinguishers: ${ex.sites.length}, ${where}` + (ex.check ? `; travel check ${VERDICT[ex.check.status] || ex.check.status} (every place within ${ex.check.limit} m of walking to one)` : "") + ".");
+  }
+
   // The walkable graph and the route.
   const gs = s.graph?.stats;
   if (gs?.nodes) {
@@ -94,6 +153,16 @@ export function describeFacts(s = {}) {
     );
     const assumed = (s.graph?.cores || []).filter((c) => c.kind === "stair" && c.linked > 0).length;
     if (assumed) lines.push(`Stairs without modelled treads: ${assumed}, walked along an assumed line.`);
+    // Spaces left out of the floor (core/outdoorSpaces.js).
+    const outside = s.graph?.outdoorSpaces || [];
+    if (outside.length) {
+      const voids = outside.filter((o) => /void/.test(o.why)).length;
+      const parts = [
+        outside.length - voids ? `${outside.length - voids} outside the building with no door onto them (roofs, terraces)` : "",
+        voids ? `${voids} named as voids` : "",
+      ].filter(Boolean);
+      lines.push(`Spaces not walked on: ${parts.join(" and ")}.`);
+    }
   }
 
   // Egress by storey (codeCheck.js): each storey's ways out and its longest
@@ -117,7 +186,7 @@ export function describeFacts(s = {}) {
       const separation = of("separation");
       return `; code check: walk ${of("travel")}, number of exits ${of("exits")}${separation && separation !== "n/a" ? `, separation ${separation}` : ""}`;
     };
-    for (const x of eg.storeys.slice(0, MAX_STOREY_LINES)) {
+    for (const x of eg.storeys.slice(0, storeyLines)) {
       const reached = x.unreached < x.places;
       const ways = x.discharge ? `${x.exits} exit${x.exits === 1 ? "" : "s"} (doors out of the building, or stairs down)` : `${x.exits} stair${x.exits === 1 ? "" : "s"} to leave by`;
       lines.push(
@@ -128,7 +197,7 @@ export function describeFacts(s = {}) {
           ".",
       );
     }
-    const rest = eg.storeys.slice(MAX_STOREY_LINES);
+    const rest = eg.storeys.slice(storeyLines);
     if (rest.length) lines.push(`${rest.length} more storeys; the longest walk to a way out among them is ${round(Math.max(...rest.map((x) => x.maxTravel)), 1)} m.`);
     if (Number.isFinite(eg.building?.height)) lines.push(`Highest occupied floor: ${round(eg.building.height, 1)} m above the storey with the doors out.`);
     if (s.codeChecked) {
@@ -143,6 +212,7 @@ export function describeFacts(s = {}) {
     else if (s.route.length > 0) {
       const speed = s.walkSpeed > 0 ? s.walkSpeed : 1.2;
       lines.push(`Shortest route from the chosen start to the chosen exit: ${round(s.route.length, 1)} m, about ${duration(s.route.length / speed)} at ${speed} m/s.`);
+      if (s.nearerExit?.walk >= 0) lines.push(`Another exit out of the building is much nearer that start: ${round(s.nearerExit.walk, 1)} m away.`);
     }
   }
 
@@ -180,6 +250,56 @@ export function describeFacts(s = {}) {
         (cr.cutOff > 0 ? `; ${cr.cutOff} cut off by the fire stayed where they were` : cr.inside > 0 ? `; ${cr.inside} still inside when the walk stopped` : "") +
         ".",
     );
+    const turned = cr.switches ? cr.switches.reduce((n, x) => n + (x > 0 ? 1 : 0), 0) : 0;
+    const how = [
+      s.crowd.exits === "picked" ? "all were sent to the exit picked alone, to show one exit's load" : "every exit out of the building was open to them",
+      cr.tooLarge
+        ? "each took the nearest exit (the graph is too large to weigh every exit for everyone)"
+        : cr.choice === "quickest"
+          ? `each took the exit that got them out soonest, the walk or the queue ahead${turned ? `, and ${turned} turned to another exit on the way` : ""}`
+          : "each took the nearest exit by the shortest walk",
+      s.crowd.fluctuate ? "walking speeds varied over time as measured (Corbetta et al. 2017)" : "",
+      STEP_WORDS[s.crowd.steps] ? `each step chosen ${STEP_WORDS[s.crowd.steps]} by the floor field (Kirchner and Schadschneider 2002)` : "",
+    ].filter(Boolean);
+    lines.push(`How they chose: ${how.join("; ")}.`);
+    const outs = (s.crowd.runs?.samples || []).map((x) => x.lastOut).filter(Number.isFinite).sort((a, b) => a - b);
+    if (outs.length > 1) {
+      const mid = outs.length % 2 ? outs[(outs.length - 1) / 2] : (outs[outs.length / 2 - 1] + outs[outs.length / 2]) / 2;
+      lines.push(`Over ${outs.length} runs with different random seeds the last out ranged from ${duration(outs[0])} to ${duration(outs.at(-1))} (median ${duration(mid)}).`);
+    }
+  }
+
+  // The slime mould (core/slimeEgress.js, workers/slime.worker.js), when grown.
+  const sl = s.slime;
+  if (sl?.agents > 0) {
+    const reached = (sl.exits || []).reduce((n, e) => n + e.flux, 0);
+    const fire =
+      sl.fire === "soft"
+        ? `held back by the fire${sl.smokeSource === "visibility" ? " and the Flamescapes run's smoke (its visibility, and the agents' sight shortened in it)" : ""} over ${Math.round(sl.seconds)} s of it, ${sl.closed} places untenable by then and ${Math.round(sl.fireShare * 100)}% of its trail laid in smoke or fire`
+        : sl.fire === "hard"
+          ? `walled off from ${sl.closed} places the fire made untenable`
+          : "grown as if there were no fire";
+    lines.push(
+      `Slime mould (Jones's Physarum agents grown over the walkable graph towards the exits; a reading of where the escape concentrates, for design, not an evacuation model): ` +
+        `${sl.agents} agents for ${sl.steps} steps, ${reached} reaching an exit through ${(sl.exits || []).length} exits; ${fire}` +
+        (sl.route ? `; from the chosen start along its tubes ${round(sl.route.length, 1)} m against the shortest walk ${round(sl.route.shortest, 1)} m` : "") +
+        (sl.medialRoute ? `, keeping to the floor's medial axis ${round(sl.medialRoute.length, 1)} m` : "") +
+        (sl.agreement != null ? `; ${Math.round(sl.agreement * 100)}% of its desire lines lie within half a metre of the medial axis` : "") +
+        ".",
+    );
+    const necks = (sl.bottlenecks || []).slice(0, 3);
+    const readings = [
+      necks.length
+        ? `bottlenecks (the people the desire lines carry, one per occupant area, at 1.3 people a second per metre of clear width): ${necks.map((b) => `${Math.round(b.people)} people through ${round(b.width, 2)} m of ${b.door ? "door" : "corridor"}, ${Math.round(b.seconds)} s`).join("; ")}`
+        : sl.bottlenecks
+          ? "no bottleneck holds the desire lines' people 10 s or more"
+          : "",
+      sl.deadEnds
+        ? `the walk before a second, separate way out opens is longer than ${round(sl.deadEnds.limit, 1)} m (IBC 2021 1020.5's dead-end limit for corridors${sl.deadEnds.sprinklered ? ", sprinklered" : ""}, applied to every place, rooms included, as a reference) over ${Math.round(sl.deadEnds.area)} m² of floor, the longest ${round(sl.deadEnds.worst, 1)} m`
+        : "",
+      sl.abandonedArea > 0 ? `it explored and then gave up ${Math.round(sl.abandonedArea)} m² (branches that look like ways out)` : "",
+    ].filter(Boolean);
+    if (readings.length) lines.push(`Slime mould readings: ${readings.join("; ")}.`);
   }
 
   // The forecast plan (Panels.jsx planHeading).
@@ -191,6 +311,22 @@ export function describeFacts(s = {}) {
     if (within) lines.push(`Forecast plan: a safe route leaves the building in ${duration(within.arrival - depart)}, within the dose limit.`);
     else if (plan.earliest) lines.push(`Forecast plan: the earliest way out takes ${duration(plan.earliest.arrival - depart)}, above the dose limit.`);
     else lines.push("Forecast plan: no safe route within the forecast.");
+  }
+
+  // The performance-based check (core/performanceCheck.js), when the user ran it.
+  const pf = s.perf;
+  if (pf?.status) {
+    const count = (st) => (pf.storeys || []).filter((x) => x.status === st).length;
+    const storeys = ["pass", "fail", "cannot tell"].map((st) => [st, count(st)]).filter(([, n]) => n > 0);
+    const busiest = pf.queues?.busiest;
+    lines.push(
+      `Performance check (run by the user, ASET against RSET from the forecast${pf.criterion?.label ? `; ${pf.criterion.label}` : ""}): ${VERDICT[pf.status] || pf.status}; ` +
+        `occupants must be able to set off up to ${Math.round(pf.start)} s after ignition${pf.factor > 1 ? " beside an exit, later farther away" : ""}; ` +
+        `detection at ${Math.round(pf.detection)} s ${DETECTED_BY[pf.detectionFrom] || "as set"}, the alarm at ${Math.round(pf.cue)} s` +
+        (storeys.length ? `; storeys: ${storeys.map(([st, n]) => `${n} ${st}`).join(", ")}` : "") +
+        (busiest?.wait > 0 ? `; the busiest door passes ${Math.round(busiest.persons)} people and holds them up to ${Math.round(busiest.wait)} s` : "") +
+        ".",
+    );
   }
 
   // The learned escape.
@@ -207,7 +343,7 @@ export function describeFacts(s = {}) {
     } else lines.push(`Learned escape (Q-learning): ${rl.reached_exit ? "reached the exit" : "did not reach the exit"}.`);
   }
 
-  return { lines, text: lines.map((l) => `- ${l}`).join("\n") };
+  return lines;
 }
 
 /** The instructions the model gets with the facts (the Worker holds its own copy). */
