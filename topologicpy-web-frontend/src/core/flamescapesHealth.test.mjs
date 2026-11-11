@@ -33,8 +33,10 @@ const designScene = (opts = {}) => {
 };
 const nodes = Float32Array.from([2.5, 0.75, 2, 1, 0.75, 1]);
 
-test("C: the confinement strength is the fitted 6, with the cut steps' limits beside it", () => {
-  assert.equal(DEFAULTS.vorticity, 6);
+test("C and F: the confinement strength is the fitted 3 on the heat-conserving transport, with the cut steps' limits beside it", () => {
+  assert.equal(DEFAULTS.vorticity, 3);
+  assert.equal(DEFAULTS.conservative, 1);
+  assert.equal(DEFAULTS.expansion, 1);
   assert.equal(DEFAULTS.cfl, 1);
   assert.equal(DEFAULTS.vorticityStep, 0.5);
   assert.equal(DEFAULTS.maxSubsteps, 8);
@@ -42,7 +44,8 @@ test("C: the confinement strength is the fitted 6, with the cut steps' limits be
 });
 
 test("B: a frame's steps are cut by the fastest gas (a cell a step) and the confinement (vorticity x step at most 0.5), at most 8", () => {
-  const P = DEFAULTS;
+  // The rules at the confinement of 6 (the fitted 3 x 0.1 = 0.3 never cuts on its own).
+  const P = { ...DEFAULTS, vorticity: 6 };
   // Still air: the confinement alone, 6 x 0.1 = 0.6 > 0.5: two steps.
   assert.equal(substepsFor(P, 0.2, 0, 0.1), 2);
   // 5 m/s on 0.2 m cells moves 2.5 cells in 0.1 s: three steps.
@@ -106,7 +109,9 @@ test("A and B: a healthy design fire runs through, its steps cut, and says so", 
   const out = runScene(designScene(), { nodes, horizon: 20, frameSeconds: 5, particles: 0 });
   assert.equal(out.health.ok, true);
   assert.equal(out.K, 4);
-  assert.ok(out.health.substeps >= 2, `${out.health.substeps} steps a step`);
+  // At least the cut its fastest gas asks for (one cell a step; the fitted
+  // confinement, 3 x 0.1, cuts nothing on its own).
+  assert.ok(out.health.substeps >= substepsFor(DEFAULTS, 0.35, out.health.maxSpeed, DEFAULTS.dt), `${out.health.substeps} steps a step`);
   assert.ok(out.health.maxSpeed > 0 && out.health.maxSpeed < HEALTH.maxSpeed);
   assert.ok(out.stats.released > 0);
 });

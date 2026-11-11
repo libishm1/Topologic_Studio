@@ -1,0 +1,655 @@
+{
+ "generated": "2026-11-11T18:54:04.905Z",
+ "rule": "see the header of tools/calibration/fit-confinement.mjs",
+ "candidates": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  6,
+  10
+ ],
+ "rows": [
+  {
+   "vorticity": 0,
+   "coarseScore": 0.3585997408296446,
+   "coarseOut": null,
+   "coarseParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 1.18,
+     "sigmaM": 0.302,
+     "term": 0.08121902934454639
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 3.137,
+     "sigmaM": 0.306,
+     "term": 1.3627552714219273
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 1.82,
+     "sigmaM": 0.176,
+     "term": 0.3678211550361614
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.728,
+     "sigmaM": 0.333,
+     "term": 0.16994618864358246
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 2.043,
+     "sigmaM": 0.324,
+     "term": 0.5749109588388427
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 1.44,
+     "sigmaM": 0.187,
+     "term": 0.14441360028708486
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 0.837,
+     "sigmaM": 0.104,
+     "term": 0.03281551495565907
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 0.783,
+     "sigmaM": 0.344,
+     "term": 0.134916208109352
+    }
+   ],
+   "allScore": null,
+   "allOut": null,
+   "allParts": null,
+   "seconds": 171.464
+  },
+  {
+   "vorticity": 1,
+   "coarseScore": 0.3060856981793245,
+   "coarseOut": null,
+   "coarseParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 1.196,
+     "sigmaM": 0.287,
+     "term": 0.07912379098001218
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 2.908,
+     "sigmaM": 0.27,
+     "term": 1.1794827210843037
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 1.765,
+     "sigmaM": 0.157,
+     "term": 0.32872420698524757
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.746,
+     "sigmaM": 0.317,
+     "term": 0.14687539264495836
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 1.928,
+     "sigmaM": 0.29,
+     "term": 0.47937018687767663
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 1.409,
+     "sigmaM": 0.171,
+     "term": 0.1258478541249029
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 0.963,
+     "sigmaM": 0.141,
+     "term": 0.0064624307891608425
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 0.925,
+     "sigmaM": 0.381,
+     "term": 0.1027990019483336
+    }
+   ],
+   "allScore": null,
+   "allOut": null,
+   "allParts": null,
+   "seconds": 165.718
+  },
+  {
+   "vorticity": 2,
+   "coarseScore": 0.1472729154599147,
+   "coarseOut": null,
+   "coarseParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 1.15,
+     "sigmaM": 0.262,
+     "term": 0.05639740053647716
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 2.126,
+     "sigmaM": 0.148,
+     "term": 0.5749654168185517
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 1.394,
+     "sigmaM": 0.08,
+     "term": 0.11034176683231783
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.731,
+     "sigmaM": 0.298,
+     "term": 0.1501670956798441
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 1.476,
+     "sigmaM": 0.162,
+     "term": 0.16004630767876918
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 1.117,
+     "sigmaM": 0.08,
+     "term": 0.012242652407376979
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 1.259,
+     "sigmaM": 0.07,
+     "term": 0.053046268296896175
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 1.175,
+     "sigmaM": 0.257,
+     "term": 0.06097641542908469
+    }
+   ],
+   "allScore": 0.17937266176303454,
+   "allOut": null,
+   "allParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 1.15,
+     "sigmaM": 0.262,
+     "term": 0.05639740053647716
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 2.126,
+     "sigmaM": 0.148,
+     "term": 0.5749654168185517
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 1.394,
+     "sigmaM": 0.08,
+     "term": 0.11034176683231783
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.731,
+     "sigmaM": 0.298,
+     "term": 0.1501670956798441
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 1.476,
+     "sigmaM": 0.162,
+     "term": 0.16004630767876918
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 1.117,
+     "sigmaM": 0.08,
+     "term": 0.012242652407376979
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 1.259,
+     "sigmaM": 0.07,
+     "term": 0.053046268296896175
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 1.175,
+     "sigmaM": 0.257,
+     "term": 0.06097641542908469
+    },
+    {
+     "cell": 0.2,
+     "key": "intermittentTemperature",
+     "delta": 1.056,
+     "sigmaM": 0.333,
+     "term": 0.07213796233555113
+    },
+    {
+     "cell": 0.2,
+     "key": "plumeTemperature",
+     "delta": 2.398,
+     "sigmaM": 0.204,
+     "term": 0.7829424822429958
+    },
+    {
+     "cell": 0.2,
+     "key": "plumeVelocity",
+     "delta": 1.396,
+     "sigmaM": 0.08,
+     "term": 0.11129630221686403
+    },
+    {
+     "cell": 0.2,
+     "key": "ceilingJetTemperature",
+     "delta": 1.093,
+     "sigmaM": 0.072,
+     "term": 0.007911870681686457
+    }
+   ],
+   "seconds": 170.696
+  },
+  {
+   "vorticity": 3,
+   "coarseScore": 0.11733415450884671,
+   "coarseOut": null,
+   "coarseParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 1.049,
+     "sigmaM": 0.213,
+     "term": 0.02273741008547886
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 1.497,
+     "sigmaM": 0.07,
+     "term": 0.16278247744926427
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 1.045,
+     "sigmaM": 0.08,
+     "term": 0.0019374862017934346
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.646,
+     "sigmaM": 0.237,
+     "term": 0.2188193494802267
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 0.902,
+     "sigmaM": 0.07,
+     "term": 0.010638016150493177
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 0.771,
+     "sigmaM": 0.08,
+     "term": 0.067634795294115
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 1.643,
+     "sigmaM": 0.07,
+     "term": 0.24653592275004566
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 1.428,
+     "sigmaM": 0.354,
+     "term": 0.20758777865935663
+    }
+   ],
+   "allScore": 0.11079761770195919,
+   "allOut": null,
+   "allParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 1.049,
+     "sigmaM": 0.213,
+     "term": 0.02273741008547886
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 1.497,
+     "sigmaM": 0.07,
+     "term": 0.16278247744926427
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 1.045,
+     "sigmaM": 0.08,
+     "term": 0.0019374862017934346
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.646,
+     "sigmaM": 0.237,
+     "term": 0.2188193494802267
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 0.902,
+     "sigmaM": 0.07,
+     "term": 0.010638016150493177
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 0.771,
+     "sigmaM": 0.08,
+     "term": 0.067634795294115
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 1.643,
+     "sigmaM": 0.07,
+     "term": 0.24653592275004566
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 1.428,
+     "sigmaM": 0.354,
+     "term": 0.20758777865935663
+    },
+    {
+     "cell": 0.2,
+     "key": "intermittentTemperature",
+     "delta": 0.988,
+     "sigmaM": 0.311,
+     "term": 0.058226747217658026
+    },
+    {
+     "cell": 0.2,
+     "key": "plumeTemperature",
+     "delta": 1.744,
+     "sigmaM": 0.105,
+     "term": 0.31056266682024025
+    },
+    {
+     "cell": 0.2,
+     "key": "plumeVelocity",
+     "delta": 1.029,
+     "sigmaM": 0.08,
+     "term": 0.0008172426892599573
+    },
+    {
+     "cell": 0.2,
+     "key": "ceilingJetTemperature",
+     "delta": 1.157,
+     "sigmaM": 0.075,
+     "term": 0.021291519625578514
+    }
+   ],
+   "seconds": 166.476
+  },
+  {
+   "vorticity": 4,
+   "coarseScore": 0.15607566611081786,
+   "coarseOut": null,
+   "coarseParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 0.922,
+     "sigmaM": 0.165,
+     "term": 0.015620073102219793
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 1.005,
+     "sigmaM": 0.07,
+     "term": 0.00002487557032433687
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 0.8,
+     "sigmaM": 0.08,
+     "term": 0.04979304449311734
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.542,
+     "sigmaM": 0.21,
+     "term": 0.39474311510452237
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 0.665,
+     "sigmaM": 0.07,
+     "term": 0.16643808348305075
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 0.671,
+     "sigmaM": 0.08,
+     "term": 0.1591899415163871
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 1.619,
+     "sigmaM": 0.121,
+     "term": 0.23474059901183225
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 1.397,
+     "sigmaM": 0.411,
+     "term": 0.22805559660508912
+    }
+   ],
+   "allScore": null,
+   "allOut": null,
+   "allParts": null,
+   "seconds": 178.71
+  },
+  {
+   "vorticity": 6,
+   "coarseScore": 0.3206460908615722,
+   "coarseOut": null,
+   "coarseParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 0.656,
+     "sigmaM": 0.13,
+     "term": 0.1813419140304417
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 0.636,
+     "sigmaM": 0.07,
+     "term": 0.20480758087268752
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 0.623,
+     "sigmaM": 0.08,
+     "term": 0.2239265307249899
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.423,
+     "sigmaM": 0.148,
+     "term": 0.7463430786552384
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 0.453,
+     "sigmaM": 0.07,
+     "term": 0.627047253869544
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 0.559,
+     "sigmaM": 0.08,
+     "term": 0.338265313371718
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 1.31,
+     "sigmaM": 0.228,
+     "term": 0.09787865483148085
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 1.15,
+     "sigmaM": 0.425,
+     "term": 0.14555840053647717
+    }
+   ],
+   "allScore": null,
+   "allOut": null,
+   "allParts": null,
+   "seconds": 166.445
+  },
+  {
+   "vorticity": 10,
+   "coarseScore": 1.4656380223306087,
+   "coarseOut": "plume off its axis (0.27 m, 10 %)",
+   "coarseParts": [
+    {
+     "cell": 0.27,
+     "key": "intermittentTemperature",
+     "delta": 0.339,
+     "sigmaM": 0.133,
+     "term": 1.1741632512869944
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeTemperature",
+     "delta": 0.26,
+     "sigmaM": 0.101,
+     "term": 1.8155684130460683
+    },
+    {
+     "cell": 0.27,
+     "key": "plumeVelocity",
+     "delta": 0.295,
+     "sigmaM": 0.219,
+     "term": 1.5096246195265821
+    },
+    {
+     "cell": 0.34,
+     "key": "intermittentTemperature",
+     "delta": 0.237,
+     "sigmaM": 0.175,
+     "term": 2.0837470899403097
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeTemperature",
+     "delta": 0.177,
+     "sigmaM": 0.117,
+     "term": 3.000666768352015
+    },
+    {
+     "cell": 0.34,
+     "key": "plumeVelocity",
+     "delta": 0.252,
+     "sigmaM": 0.08,
+     "term": 1.8997830900941624
+    },
+    {
+     "cell": 0.27,
+     "key": "ceilingJetTemperature",
+     "delta": 0.943,
+     "sigmaM": 0.287,
+     "term": 0.050533398292415314
+    },
+    {
+     "cell": 0.34,
+     "key": "ceilingJetTemperature",
+     "delta": 0.911,
+     "sigmaM": 0.497,
+     "term": 0.19101754810632116
+    }
+   ],
+   "allScore": null,
+   "allOut": null,
+   "allParts": null,
+   "seconds": 177.112
+  }
+ ],
+ "fitted": 3
+}

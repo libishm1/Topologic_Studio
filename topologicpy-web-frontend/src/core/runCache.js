@@ -39,7 +39,11 @@
 // by the fastest gas and the confinement (flamescapes.js substepsFor), the
 // confinement strength fitted to 6 (was 10), and a run that diverges stopped
 // with its health in the result (healthVerdict).
-export const RUN_CACHE_VERSION = 10;
+// 11 (2026-11-12): proposal F, the heat-conserving transport (density moved
+// in fluxes, the gas expanding as it is heated), particles that no longer
+// jump walls, and the confinement refitted on it
+// (wiki/research/fire-calibration-claim-protocol-2026-11-12.md).
+export const RUN_CACHE_VERSION = 11;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 

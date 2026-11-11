@@ -59,6 +59,18 @@
  *     without a round trip per sweep, so every sweep is queued and each
  *     sweep's threads decide alike from the previous sweep's largest change
  *     (gsSkip); a skipped sweep costs a workgroup launch and one read.
+ *   - The conserved transport (proposal F, the CPU's transportGas) runs as one
+ *     pass per sweep in which every cell computes both of its faces' fluxes
+ *     (its neighbour computes the same numbers for the face they share),
+ *     where the CPU walks each line's faces once; the sweeps ping-pong
+ *     between a scratch state in `snap` and the live fields. The CPU counts
+ *     the mass its floor adds (stats.massFloor) and the heat the shell's gas
+ *     carries out (stats.shellHeat); the GPU keeps neither tally.
+ *   - A sealed region's mean expansion is a float32 tree per region (one
+ *     workgroup each) over a cell list the CPU's topology made at upload, where
+ *     the CPU sums in cell order each step; only porous cells change kind on
+ *     the GPU, and they stay open, so the regions do not change.
+ *   - A particle's move in half-cell pieces is capped at 64 pieces (the CPU's is not).
  *   - A value every thread needs from an atomic (the particle count, the
  *     sweep's state) is read by one thread per workgroup and shared through
  *     workgroupUniformLoad; kernels that only read the atomic buffer bind it a
@@ -104,6 +116,12 @@ export const PARAMS = [
   ["burnerN", "u32"], ["burnerAt", "u32"], ["burnerShare", "f32"], ["burnerFuel", "f32"],
   // Where in `red` the pilot's added heat (J) accumulates over a frame (the CPU's stats.pilotHeat).
   ["redPilot", "u32"],
+  // Proposal F (flamescapes.js DEFAULTS.conservative, .expansion): on or off;
+  // where in `snap` the transport's scratch state (gasAt) and the step's
+  // starting temperatures (expandAt) are; the sealed regions (count, their
+  // cell lists in `io` from sealedAt) and their mean expansion in `red` (redMean).
+  ["conservative", "u32"], ["expansion", "u32"], ["gasAt", "u32"], ["expandAt", "u32"],
+  ["sealedN", "u32"], ["sealedAt", "u32"], ["redMean", "u32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -115,12 +133,16 @@ export const PARAM_SCALARS = Math.ceil(PARAMS.length / 4) * 4;
 export const FUEL_VEC4 = 4;
 export const PARAM_BYTES = PARAM_SCALARS * 4 + 2 * FUEL_VEC4 * 16;
 
-/** Per-cell float fields, each N long, in the `cf` buffer. */
-export const CF = Object.freeze({ T: 0, Ts: 1, rho: 2, p: 3, fuel: 4, moist: 5, area: 6, inertC: 7, inertK: 8, eps: 9, loss: 10, div: 11, wx: 12, wy: 13, wz: 14, mag: 15, fx: 16, fy: 17, fz: 18 });
-export const CF_FIELDS = 19;
-/** Per-cell integer fields in the `ci` buffer. */
-export const CI = Object.freeze({ kind: 0, fuelKind: 1, burning: 2, vapour: 3, mask: 4, count: 5 });
-export const CI_FIELDS = 6;
+/** Per-cell float fields, each N long, in the `cf` buffer (D: the gas's expansion, proposal F). */
+export const CF = Object.freeze({ T: 0, Ts: 1, rho: 2, p: 3, fuel: 4, moist: 5, area: 6, inertC: 7, inertK: 8, eps: 9, loss: 10, div: 11, wx: 12, wy: 13, wz: 14, mag: 15, fx: 16, fy: 17, fz: 18, D: 19 });
+export const CF_FIELDS = 20;
+/**
+ * Per-cell integer fields in the `ci` buffer (sealed: the cell's sealed
+ * region, numbered from 0, or NO_CELL; the CPU's topology, uploaded once:
+ * only porous cells change kind on the GPU, and they stay open).
+ */
+export const CI = Object.freeze({ kind: 0, fuelKind: 1, burning: 2, vapour: 3, mask: 4, count: 5, sealed: 6 });
+export const CI_FIELDS = 7;
 /**
  * Per-cell atomic fields in the `atom` buffer, then (from U.gsAt = AT_FIELDS
  * N) one slot per pressure sweep: the largest pressure change of that sweep.
@@ -193,7 +215,16 @@ export const KERNELS = {
   radApply: { uses: [0, 1, 13], threads: cells },
   particleToGrid: { uses: [0, 1, 3, 6, 7, 9], threads: particles },
   emberDeposit: { uses: [0, 1, 3, 9, 13], threads: cells },
-  advect: { uses: [0, 1, 2, 3, 4, 5], threads: (d) => d.nu + d.nv + d.nw + d.N },
+  // With the conservative transport the cells' T and Y are the transport's, not the back-trace's.
+  advect: { uses: [0, 1, 2, 3, 4, 5], threads: (d) => d.nu + d.nv + d.nw + (d.conservative ? 0 : d.N) },
+  expandBefore: { uses: [0, 1, 3, 5], threads: cells },
+  transport_x: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transport_y: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transport_z: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transportEnd: { uses: [0, 1, 2, 3, 5], threads: cells },
+  expandEnd: { uses: [0, 1, 3, 5], threads: cells },
+  // One workgroup per sealed region.
+  sealedMean: { uses: [0, 1, 10, 11], threads: (d) => (d.sealedN || 0) * WG },
   density: { uses: [0, 1, 2, 3], threads: cells },
   buoyancy: { uses: [0, 1, 3, 4], threads: (d) => d.nv },
   vortCurl: { uses: [0, 1, 3, 4], threads: cells },
@@ -218,7 +249,7 @@ export const KERNELS = {
   densityBoundaries: { uses: [0, 1, 2, 3], threads: cells },
   topology: { uses: [0, 3], threads: cells },
   projectZero: { uses: [0, 3, 4], threads: faces },
-  divergence: { uses: [0, 1, 3, 4], threads: cells },
+  divergence: { uses: [0, 1, 3, 4, 10], threads: cells },
   gsRed: { uses: [0, 1, 3, 6, 12], threads: half },
   gsBlack: { uses: [0, 1, 3, 6, 12], threads: half },
   projectUpdate: { uses: [0, 1, 3, 4], threads: faces },
@@ -331,6 +362,113 @@ fn ${name}(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroup
   }
   if (li == 0u && wmax[0] > 0u) { atomicMax(&atom[U.gsAt + SW.s], wmax[0]); }
 }`;
+
+/**
+ * The gas states a transport sweep reads and writes (proposal F): "start", the
+ * step's starting state in the snapshot (its density from T by the gas law);
+ * "scratch", the transport's own state in `snap` from U.gasAt; "live", cf's
+ * rho and the Y buffer.
+ */
+const GAS_STATE = {
+  start: { rho: (c) => `rhoStart(${c})`, y: (c, q) => `yStart(${c}, ${q})` },
+  scratch: { rho: (c) => `snap[U.gasAt + ${c}]`, y: (c, q) => `snap[U.gasAt + U.N + ${c} * NS + ${q}]` },
+  live: { rho: (c) => `cf[ix(fRho, ${c})]`, y: (c, q) => `Y[${c} * NS + ${q}]` },
+};
+
+/**
+ * One sweep of the gas's transport along an axis (the CPU's transportGas
+ * sweep), from state `src` to state `dst`. The CPU walks each line's faces
+ * and adds every face's flux to its two cells; here each cell computes its
+ * own two faces (the one before it first, as the CPU's line order adds
+ * them), and its neighbour computes the same numbers for the face they
+ * share, so a face takes out of one cell what it puts into the next and no
+ * two threads write one cell.
+ */
+const transportSweep = (axis, src, dst) => {
+  const X = ["x", "y", "z"][axis];
+  const n = ["U.nx", "U.ny", "U.nz"][axis];
+  const stride = ["1", "i32(U.nx)", "i32(U.nx * U.ny)"][axis];
+  const face = ["uAt(u32(a), p.y, p.z)", "vAt(p.x, u32(a), p.z)", "wAt(p.x, p.y, u32(a))"][axis];
+  const S = GAS_STATE[src], D = GAS_STATE[dst];
+  return `
+/** A cell along this sweep's line at position b: -1 outside the domain (ambient air), -2 a solid. */
+fn line_${X}(c: u32, pos: i32, b: i32) -> i32 {
+  if (b < 0 || b >= i32(${n})) { return -1; }
+  let q = i32(c) + (b - pos) * ${stride};
+  if (kindOf(u32(q)) == SOLID) { return -2; }
+  return q;
+}
+fn rho_${X}(q: i32) -> f32 {
+  if (q < 0) { return U.rho0; }
+  return ${S.rho("u32(q)")};
+}
+fn y_${X}(q: i32, s: u32) -> f32 {
+  if (q < 0) { return select(0.0, Y_O2_AIR, s == 1u); }
+  return ${S.y("u32(q)", "s")};
+}
+${perCell(`transport_${X}`, `
+  if (kindOf(c) == SOLID) { return; }
+  let p = coords(c);
+  let pos = i32(p.${X});
+  let s = U.dt / U.h;
+  var dm = 0.0;
+  var dd = 0.0;
+  var dY = array<f32, 6>(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  for (var f = 0; f < 2; f++) {
+    let a = pos + f;
+    ${axis === 1 ? "if (a == 0) { continue; } // the ground carries nothing" : ""}
+    let vf = snap[${face}];
+    if (vf == 0.0) { continue; }
+    let left = line_${X}(c, pos, a - 1);
+    let right = line_${X}(c, pos, a);
+    let donor = select(right, left, vf > 0.0);
+    let acceptor = select(left, right, vf > 0.0);
+    if (donor == -2 || acceptor == -2) { continue; }
+    let back = select(line_${X}(c, pos, a + 1), line_${X}(c, pos, a - 2), vf > 0.0);
+    let courant = min(1.0, abs(vf) * s);
+    // The face's flow out of the cell before it and into the cell after: this cell is after the first face, before the second.
+    let outflow = select(-courant, courant, vf > 0.0);
+    if (f == 0) { dd -= outflow; } else { dd += outflow; }
+    // The face's density: the donor's, with a van Leer limited slope towards the acceptor.
+    let rd = rho_${X}(donor);
+    let ra = rho_${X}(acceptor);
+    var rf = rd;
+    if (back != -2) {
+      let dr = ra - rd;
+      if (dr != 0.0) {
+        let ratio = (rd - rho_${X}(back)) / dr;
+        rf += 0.5 * ((ratio + abs(ratio)) / (1.0 + abs(ratio))) * (1.0 - courant) * dr;
+      }
+    }
+    let m = courant * rf;
+    let sgn = select(-1.0, 1.0, acceptor == i32(c));
+    dm += sgn * m;
+    for (var q = 0u; q < NS; q++) {
+      let yd = y_${X}(donor, q);
+      var yf = yd;
+      if (back != -2) {
+        let dy = y_${X}(acceptor, q) - yd;
+        if (dy != 0.0) {
+          let t = (yd - y_${X}(back, q)) / dy;
+          yf += 0.5 * ((t + abs(t)) / (1.0 + abs(t))) * (1.0 - courant) * dy;
+        }
+      }
+      dY[q] += sgn * (m * yf);
+    }
+  }
+  // The flux difference, and the cell's starting density times its faces'
+  // divergence given back (the advective form: a uniform gas stays uniform).
+  let before = rho_${X}(i32(c));
+  let r0 = rhoStart(c);
+  var after = before + dm + r0 * dd;
+  // A cell emptied faster than it fills is kept at a hundredth of ambient (the CPU counts the mass added; the GPU does not).
+  if (after < 0.01 * U.rho0) { after = 0.01 * U.rho0; }
+  for (var q = 0u; q < NS; q++) {
+    let y = y_${X}(i32(c), q);
+    ${D.y("c", "q")} = clamp((before * y + r0 * yStart(c, q) * dd + dY[q]) / after, 0.0, 1.0);
+  }
+  ${D.rho("c")} = after;`)}`;
+};
 
 export function buildShader() {
   const scalars = PARAMS.map(([name, type]) => `  ${name}: ${type},`);
@@ -738,10 +876,23 @@ ${perParticle("moveParticles", `
     // Flame-front particles: the flame speed along their own direction plus the gas velocity.
     P.v = vec4<f32>(vec3<f32>(dirv(u32(P.q.x))) * U.flameSpeed + vg, P.v.w);
   }
-  let np = x + P.v.xyz * U.dt / U.h;
+  // The move, in pieces of at most half a cell, stopping in the first solid
+  // it enters (the CPU's particleStep): moved whole, a particle faster than a
+  // cell a step jumped walls a cell thick. At most 64 pieces, which the CPU
+  // does not cap: a particle past 32 cells a step is past anything the cut
+  // steps allow, and an unbounded count (a non-finite speed) would hang the GPU.
+  let d = P.v.xyz * U.dt / U.h;
+  let pieces = clamp(u32(ceil(2.0 * max(abs(d.x), max(abs(d.y), abs(d.z))))), 1u, 64u);
+  var np = x;
+  var outside = false;
+  for (var piece = 0u; piece < pieces; piece++) {
+    np += d / f32(pieces);
+    outside = np.x < 0.0 || np.y < 0.0 || np.z < 0.0 || np.x >= f32(U.nx) || np.y >= f32(U.ny) || np.z >= f32(U.nz);
+    if (outside) { break; }
+    if (kindOf(at3(u32(np.x), u32(np.y), u32(np.z))) == SOLID) { break; }
+  }
   P.p = vec4<f32>(np, P.p.w);
   P.q.y += U.dt;
-  let outside = np.x < 0.0 || np.y < 0.0 || np.z < 0.0 || np.x >= f32(U.nx) || np.y >= f32(U.ny) || np.z >= f32(U.nz);
   if (outside || P.q.y > P.q.z) {
     P.p.w = -1.0;
   } else if (P.p.w == 0.0 && kindOf(at3(u32(np.x), u32(np.y), u32(np.z))) == SOLID) {
@@ -971,9 +1122,10 @@ ${perThread("advect", "U.nu + U.nv + U.nw + U.N", `
   // Temperature and the six species share one back-trace and one set of
   // eight trilinear weights per cell (the CPU's advect). Corners inside
   // solids hold no gas: they get no weight and the rest are renormalised; a
-  // cell whose back-trace lands among solids only keeps its own state.
+  // cell whose back-trace lands among solids only keeps its own state. With
+  // the conservative transport (proposal F) the transport moves them instead.
   let c = t - U.nu - U.nv - U.nw;
-  if (kindOf(c) == SOLID) { return; }
+  if (U.conservative != 0u || kindOf(c) == SOLID) { return; }
   let x = backTrace(vec3<f32>(coords(c)) + 0.5);
   let r = triOf(x);
   let fx = r.f.x; let fy = r.f.y; let fz = r.f.z;
@@ -1003,6 +1155,72 @@ ${perThread("advect", "U.nu + U.nv + U.nw + U.N", `
 ${perCell("density", `
   if (kindOf(c) == SOLID) { return; }
   cf[ix(fRho, c)] = gasDensity(cf[ix(fT, c)], c);`)}
+
+// ------------------------------------------------------------------ proposal F: the conserved transport and the expansion
+
+/** The step's starting gas (the snapshot): its mass fractions, and its density by the gas law. */
+fn yStart(c: u32, s: u32) -> f32 { return snap[U.nu + U.nv + U.nw + U.N + c * NS + s]; }
+fn rhoStart(c: u32) -> f32 {
+  var inv = 0.0;
+  var rest = 1.0;
+  for (var s = 0u; s < NS; s++) {
+    let y = yStart(c, s);
+    inv += y / molar(s);
+    rest -= y;
+  }
+  inv += max(0.0, rest) / 0.028;
+  return P_AMBIENT / (R_GAS * snap[U.nu + U.nv + U.nw + c] * inv);
+}
+
+// The gas's transport (the CPU's transportGas): x from the step's start into
+// the scratch state, y from it into the live fields, z back into the scratch,
+// then the cells take their mass fractions and, by the gas law, their T.
+${transportSweep(0, "start", "scratch")}
+${transportSweep(1, "scratch", "live")}
+${transportSweep(2, "live", "scratch")}
+${perCell("transportEnd", `
+  if (kindOf(c) == SOLID) { return; }
+  for (var q = 0u; q < NS; q++) { Y[c * NS + q] = snap[U.gasAt + U.N + c * NS + q]; }
+  cf[ix(fT, c)] = gasDensity(1.0, c) / snap[U.gasAt + c];`)}
+
+/**
+ * The gas's expansion (the CPU's expansionBeforeAdvect and expansionEnd): the
+ * change of T the heat sources made before the advection, from the step's
+ * starting T (copied to snap at U.expandAt), and after it, from the T the
+ * advection left (the snapshot diffusion reads); the domain's shell expands nothing.
+ */
+${perCell("expandBefore", `
+  if (kindOf(c) == SOLID) { cf[ix(fD, c)] = 0.0; return; }
+  cf[ix(fD, c)] = log(cf[ix(fT, c)] / snap[U.expandAt + c]);`)}
+${perCell("expandEnd", `
+  if (kindOf(c) == SOLID) { return; }
+  let p = coords(c);
+  if (p.x == 0u || p.z == 0u || p.x == U.nx - 1u || p.z == U.nz - 1u || p.y == U.ny - 1u) { cf[ix(fD, c)] = 0.0; return; }
+  cf[ix(fD, c)] = (cf[ix(fD, c)] + log(cf[ix(fT, c)] / snap[U.nu + U.nv + U.nw + c])) / U.dt;`)}
+
+/**
+ * A sealed region's mean expansion, which its gas has nowhere to take
+ * (the CPU's project): one workgroup per region, over its cells listed in io
+ * (offsets from U.sealedAt, then the cells), into red at U.redMean. The sum
+ * is a tree in float32, where the CPU sums in cell order in float64.
+ */
+@compute @workgroup_size(64)
+fn sealedMean(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let s = wid.x + wid.y * nwg.x;
+  if (s >= U.sealedN) { return; }
+  let start = io[U.sealedAt + s];
+  let end = io[U.sealedAt + s + 1u];
+  let list = U.sealedAt + U.sealedN + 1u;
+  var acc = 0.0;
+  for (var q = start + li; q < end; q += 64u) { acc += cf[ix(fD, io[list + q])]; }
+  wheat[li] = acc;
+  workgroupBarrier();
+  for (var w = 32u; w > 0u; w >>= 1u) {
+    if (li < w) { wheat[li] = wheat[li] + wheat[li + w]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) { red[U.redMean + s] = wheat[0] / f32(end - start); }
+}
 
 /** Buoyancy, Eq. 6's (1 - rho_0 / rho) g on the vertical faces. */
 ${perThread("buoyancy", "U.nv", `
@@ -1521,7 +1739,15 @@ ${perCell("divergence", `
   if (kindOf(c) == SOLID) { cf[ix(fDiv, c)] = 0.0; return; }
   let p = coords(c);
   let i = p.x; let j = p.y; let k = p.z;
-  cf[ix(fDiv, c)] = (vel[uAt(i + 1u, j, k)] - vel[uAt(i, j, k)] + vel[vAt(i, j + 1u, k)] - vel[vAt(i, j, k)] + vel[wAt(i, j, k + 1u)] - vel[wAt(i, j, k)]) / U.h;`)}
+  let div = (vel[uAt(i + 1u, j, k)] - vel[uAt(i, j, k)] + vel[vAt(i, j + 1u, k)] - vel[vAt(i, j, k)] + vel[wAt(i, j, k + 1u)] - vel[wAt(i, j, k)]) / U.h;
+  // The gas's expansion is asked of the flow (proposal F), less a sealed region's mean, which has nowhere to go.
+  var used = 0.0;
+  if (U.expansion != 0u) {
+    used = cf[ix(fD, c)];
+    let s = ci[ix(iSealed, c)];
+    if (s != NO_CELL) { used -= red[U.redMean + s]; }
+  }
+  cf[ix(fDiv, c)] = div - used;`)}
 
 /** One cell of a sweep: half-index t of the given colour; returns |new p - old p|. */
 fn gsCell(t: u32, colour: u32) -> f32 {

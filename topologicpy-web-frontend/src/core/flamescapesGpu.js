@@ -26,6 +26,11 @@
  *     off, the GPU agrees with the CPU to float32 round-off and summation
  *     order: no more than the CPU differs from itself started one ulp apart
  *     (tools/flamescapes-gpu-check.mjs).
+ *   - The conserved transport and the expansion (proposal F, behind the
+ *     CPU's own flags): each transport sweep a pass in which every cell
+ *     computes both its faces, a sealed region's mean expansion a float32
+ *     tree over the regions the CPU's topology found at upload; the CPU's
+ *     tallies of the mass floor and the shell's heat are not kept.
  *   - The initial state is the CPU's createSolver, uploaded, so both paths
  *     start from the same state; node cells are the CPU's headCells.
  *   - Per frame only the node readings, the frame's per-step heat release,
@@ -36,7 +41,7 @@
  *     runs on the CPU solver instead.
  */
 
-import { DEFAULTS, NS, burnerCells, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor } from "./flamescapes.js";
+import { DEFAULTS, NS, burnerCells, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor, topology } from "./flamescapes.js";
 import {
   KELVIN, ceilingDetectors, failedHealth, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
@@ -52,6 +57,37 @@ const waterFlags = (fuel) => (fuel?.water?.wets === false ? 0 : 1) + (fuel?.wate
 const MAX_WG_PER_DIM = 65535;
 /** Conduction's passes, in the order that gives every solid cell the CPU's order of exchanges. */
 const CONDUCTION = ["conductPorous", "conduct_x0", "conduct_x1", "conduct_y0", "conduct_y1", "conduct_z0", "conduct_z1", "conduct_bx", "conduct_by", "conduct_bz"];
+/** The conserved transport's passes (proposal F): the CPU's three sweeps, then T from the gas law. */
+const TRANSPORT = ["transport_x", "transport_y", "transport_z", "transportEnd"];
+
+/**
+ * The sealed regions of the CPU's topology (open cells that reach no open
+ * side of the domain), for the GPU's expansion: per cell its sealed region
+ * (0xffffffff none), and per region its cells in cell order, as offsets into
+ * one list. Only porous cells change kind on the GPU, and they stay open, so
+ * the regions hold for the whole run.
+ */
+function sealedRegions(sim) {
+  const topo = topology(sim);
+  const index = new Int32Array(topo.sealed.length).fill(-1);
+  let S = 0;
+  for (let r = 0; r < topo.sealed.length; r += 1) if (topo.sealed[r]) index[r] = S++;
+  const cellSealed = new Uint32Array(sim.N).fill(0xffffffff);
+  const counts = new Uint32Array(S);
+  for (let c = 0; c < sim.N; c += 1) {
+    const r = topo.region[c];
+    if (r >= 0 && index[r] >= 0) {
+      cellSealed[c] = index[r];
+      counts[index[r]] += 1;
+    }
+  }
+  const offsets = new Uint32Array(S + 1);
+  for (let s = 0; s < S; s += 1) offsets[s + 1] = offsets[s] + counts[s];
+  const list = new Uint32Array(offsets[S]);
+  const next = offsets.slice(0, S);
+  for (let c = 0; c < sim.N; c += 1) if (cellSealed[c] !== 0xffffffff) list[next[cellSealed[c]]++] = c;
+  return { S, cellSealed, offsets, list };
+}
 /** Workgroups for a 1D thread count, folded into 2D past the per-dimension limit (kernels use `lin`). */
 function workgroups(threads, size) {
   const wg = Math.ceil(threads / size);
@@ -180,6 +216,12 @@ class GpuSim {
     this.radiationOn = Number.isFinite(P.emitAbove) && P.emitAbove < 1e8;
     this.embersOn = Boolean(P.embers) && this.particlesOn;
     this.vorticityOn = P.vorticity > 0;
+    // Proposal F, as the CPU's flags: the conserved transport and the expansion.
+    this.conservativeOn = P.conservative > 0;
+    this.expansionOn = P.expansion > 0;
+    this.sealed = this.expansionOn ? sealedRegions(sim) : null;
+    d.conservative = this.conservativeOn;
+    d.sealedN = this.sealed ? this.sealed.S : 0;
     const pilot = sim.pilot && sim.pilot.cells?.length ? sim.pilot : null;
     this.pilot = pilot;
     // A design-fire first item (flamescapes.js createBurner); its heat for each step is the host's (burnerHeat).
@@ -201,7 +243,9 @@ class GpuSim {
     io.speed = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
     // The design-fire item's cells, a layer at a time from its base.
     io.burner = io.speed + this.nSpeed;
-    io.size = io.burner + (this.burner ? this.burner.cells.length : 0);
+    // The sealed regions' offsets and cells (sealedRegions), when the gas expands.
+    io.sealed = io.burner + (this.burner ? this.burner.cells.length : 0);
+    io.size = io.sealed + (this.sealed ? this.sealed.S + 1 + this.sealed.list.length : 0);
     this.io = io;
     this.suppressionOn = Boolean(suppression);
     d.sprayCols = 0;
@@ -213,8 +257,16 @@ class GpuSim {
     const red = { rad: 2 * this.nPart, steps: 3 * this.nPart };
     // After the step sums, four floats: the pilot's added heat over the frame, then padding.
     red.pilot = red.steps + 4 * this.slots;
-    red.size = red.pilot + 4;
+    // Then each sealed region's mean expansion this step (sealedMean).
+    red.mean = red.pilot + 4;
+    red.size = red.mean + d.sealedN;
     this.red = red;
+    // In `snap` after the step's start (velocities, T, Y): the transport's
+    // scratch state (rho, then Y) and the step's starting T for the expansion.
+    const snapAt = { gas: nuvw + 7 * N };
+    snapAt.expand = snapAt.gas + (this.conservativeOn ? 7 * N : 0);
+    snapAt.size = snapAt.expand + (this.expansionOn ? N : 0);
+    this.snapAt = snapAt;
 
     const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
     const make = (label, bytes) => device.createBuffer({ label, size: Math.max(16, Math.ceil(bytes / 4) * 4), usage });
@@ -224,7 +276,7 @@ class GpuSim {
       Y: 6 * N * 4,
       ci: CI_FIELDS * N * 4,
       vel: nuvw * 4,
-      snap: (nuvw + 7 * N) * 4,
+      snap: snapAt.size * 4,
       atom: (AT_FIELDS * N + this.gsSlots) * 4,
       parts: Math.max(1, d.cap) * PARTICLE_FLOATS * 4,
       red: red.size * 4,
@@ -301,6 +353,8 @@ class GpuSim {
       speedFrom: this.speedFrom, ioSpeed: io.speed,
       sysOn: this.systems ? 1 : 0, sysState: sysAt.state, sysWetAt: sysAt.wet, sysWetN: d.sysWet,
       burnerN: 0, burnerAt: io.burner, burnerShare: 0, burnerFuel: 0,
+      conservative: this.conservativeOn ? 1 : 0, expansion: this.expansionOn ? 1 : 0, gasAt: snapAt.gas, expandAt: snapAt.expand,
+      sealedN: d.sealedN, sealedAt: io.sealed, redMean: red.mean,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -343,6 +397,8 @@ class GpuSim {
     ci.set(sim.fuelKind, CI.fuelKind * N);
     ci.set(sim.burning, CI.burning * N);
     if (sim.fuelVapourKind) ci.set(sim.fuelVapourKind, CI.vapour * N);
+    if (this.sealed) ci.set(this.sealed.cellSealed, CI.sealed * N);
+    else ci.fill(0xffffffff, CI.sealed * N, (CI.sealed + 1) * N);
     q.writeBuffer(this.buf.ci, 0, ci);
     if (this.suppressionOn) {
       const sup = new Float32Array(SUP.fields * N);
@@ -401,6 +457,10 @@ class GpuSim {
       }
     }
     for (let v = 0; v < nodeCells.length; v += 1) io[this.io.nodes + v] = nodeCells[v] < 0 ? 0xffffffff : nodeCells[v];
+    if (this.sealed) {
+      io.set(this.sealed.offsets, this.io.sealed);
+      io.set(this.sealed.list, this.io.sealed + this.sealed.S + 1);
+    }
     q.writeBuffer(this.buf.io, 0, io);
     // Open-neighbour masks for the first diffusion and projection.
     const enc = device.createCommandEncoder();
@@ -464,6 +524,8 @@ class GpuSim {
     if (this.systems) device.queue.writeBuffer(buf.sys, this.sysAt.state * 4, this.systems.update(this.time));
     const enc = device.createCommandEncoder();
     enc.clearBuffer(buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4);
+    // The step's starting T, from which the expansion reads what the heat sources did (the CPU's expansionStart).
+    if (this.expansionOn) enc.copyBufferToBuffer(buf.cf, CF.T * N * 4, buf.snap, this.snapAt.expand * 4, N * 4);
     let pass = enc.beginComputePass();
     // Ignition source, then particles (lines 8 to 14).
     if (burnerN) this.dispatch(pass, "burner");
@@ -499,7 +561,9 @@ class GpuSim {
     enc.copyBufferToBuffer(buf.cf, CF.T * N * 4, buf.snap, nuvw * 4, N * 4);
     enc.copyBufferToBuffer(buf.Y, 0, buf.snap, (nuvw + N) * 4, 6 * N * 4);
     pass = enc.beginComputePass();
+    if (this.expansionOn) this.dispatch(pass, "expandBefore");
     this.dispatch(pass, "advect");
+    if (this.conservativeOn) for (const name of TRANSPORT) this.dispatch(pass, name);
     this.dispatch(pass, "density");
     this.dispatch(pass, "buoyancy");
     if (this.vorticityOn) {
@@ -520,6 +584,11 @@ class GpuSim {
     if (d.sysWet) this.dispatch(pass, "systemsWet");
     if (this.particlesOn) this.dispatch(pass, "cullFlameFront");
     for (const name of CONDUCTION) this.dispatch(pass, name);
+    // The expansion the step's heat made, and each sealed region's mean (the CPU's expansionEnd and project).
+    if (this.expansionOn) {
+      this.dispatch(pass, "expandEnd");
+      this.dispatch(pass, "sealedMean");
+    }
     this.dispatch(pass, "densityBoundaries");
     this.dispatch(pass, "topology");
     this.dispatch(pass, "projectZero");

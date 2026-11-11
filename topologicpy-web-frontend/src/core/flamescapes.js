@@ -122,19 +122,27 @@ export const DEFAULTS = Object.freeze({
   wallConvection: 10,
   sootAbsorption: 500, // the paper's residual absorption coefficient kappa
   // Confinement strength (Fedkiw, Stam and Jensen 2001: a force vorticity x h
-  // x (N x omega)). 6, fitted 2026-11-11 on McCaffrey's plume and Alpert's
-  // ceiling jet on the app's cells by a rule fixed before the runs
-  // (tools/calibration/fit-confinement.mjs; candidates 0 to 10; the paper's 10
-  // lost the open plume's axis): the plume's temperatures within the
-  // calibration plan's band on 0.27 and 0.34 m, the ceiling jet still 1.9 to
-  // 3.1 times Alpert's rise (wiki/research/fire-calibration-plan-2026-11-11.md).
-  vorticity: 6,
+  // x (N x omega)), the solver's one fitted parameter: 3, refitted 2026-11-12
+  // on the heat-conserving transport (conservative, expansion) by the rule
+  // fixed on 2026-11-11 (tools/calibration/fit-confinement.mjs: candidates 0
+  // to 10 on McCaffrey's plume and Alpert's ceiling jet; scores 0.11 for 3,
+  // 0.18 for 2; 10 lost the plume's axis). 6 had been fitted on the old
+  // transport, which made heat (wiki/research/fire-calibration-claim-protocol-2026-11-12.md).
+  vorticity: 3,
   // A frame's steps are cut so that the flow moves at most `cfl` cells a step
   // and the confinement force at most vorticity x step = `vorticityStep`, in
   // at most `maxSubsteps` (substepsFor; wiki/research/fire-calibration-plan-2026-11-11.md, B).
   cfl: 1,
   vorticityStep: 0.5,
   maxSubsteps: 8,
+  // Heat-conserving transport (proposal F, wiki/research/fire-calibration-plan-2026-11-11.md,
+  // F6): the gas's mass and species move through the faces, conserved
+  // (transportGas), where back-tracing T made heat; and heat put into gas
+  // expands it, a divergence ln(T1/T0)/dt in the projection (the low-Mach
+  // form FDS uses), so heated gas leaves its cell instead of thinning in
+  // place. 0 restores the paper's transport.
+  conservative: 1,
+  expansion: 1,
   porousVelocity: 0.5, // velocity multiplier in porous cells
   projection: 30, // red-black Gauss-Seidel sweeps at most
   projectionTolerance: 1e-3, // m/s: stop sweeping when a sweep changes the flow less
@@ -274,14 +282,17 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
   const inertK = new Float32Array(N); // W / (m K)
   const eps = new Float32Array(N).fill(0.9);
   const solidMask = scene.solid || occupancy(grid, fraction);
+  // The inert materials' properties: INERT, or a test's own (options.inert,
+  // the same order) where a validation run matches its walls (2026-11-12).
+  const inert = P.inert || INERT;
   for (let c = 0; c < N; c += 1) {
     let C = 0, K = 0, E = 0, w = 0;
-    for (let m = 0; m < INERT.length; m += 1) {
+    for (let m = 0; m < inert.length; m += 1) {
       const f = fraction[c * MATERIALS + m];
       if (f <= 0) continue;
-      C += f * INERT[m].rho * INERT[m].c * V;
-      K += f * INERT[m].k;
-      E += f * INERT[m].eps;
+      C += f * inert[m].rho * inert[m].c * V;
+      K += f * inert[m].k;
+      E += f * inert[m].eps;
       w += f;
     }
     // Only a solid cell holds inert mass. Part of a wall in an open cell is
@@ -383,7 +394,7 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // Rooms flooded with clean agent or blanketed with foam
     // (suppressionSystems.js systemsSetup), set by the run; null when off.
     systems: null,
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0 },
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0 },
   };
 }
 
@@ -580,17 +591,32 @@ export function particleStep(sim, dt) {
       const dirn = DIRS[pr.m[q]];
       for (let d = 0; d < 3; d += 1) pr.vel[q * 3 + d] = dirn[d] * P.flameSpeed + vel[d];
     }
-    for (let d = 0; d < 3; d += 1) pr.x[q * 3 + d] += (pr.vel[q * 3 + d] * dt) / h;
+    // The move, in pieces of at most half a cell, stopping in the first solid
+    // it enters: moved whole, a particle faster than a cell a step jumped
+    // walls a cell thick and lit the contents of a sealed room (2026-11-12).
+    const dx = (pr.vel[q * 3] * dt) / h, dy = (pr.vel[q * 3 + 1] * dt) / h, dz = (pr.vel[q * 3 + 2] * dt) / h;
+    const pieces = Math.max(1, Math.ceil(2 * Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz))));
+    let nxp = pr.x[q * 3], nyp = pr.x[q * 3 + 1], nzp = pr.x[q * 3 + 2];
+    let out = false, cell = -1;
+    for (let piece = 0; piece < pieces; piece += 1) {
+      nxp += dx / pieces;
+      nyp += dy / pieces;
+      nzp += dz / pieces;
+      out = nxp < 0 || nyp < 0 || nzp < 0 || nxp >= g.nx || nyp >= g.ny || nzp >= g.nz;
+      if (out) break;
+      cell = at(g, Math.floor(nxp), Math.floor(nyp), Math.floor(nzp));
+      if (sim.kind[cell] === SOLID) break;
+    }
+    pr.x[q * 3] = nxp;
+    pr.x[q * 3 + 1] = nyp;
+    pr.x[q * 3 + 2] = nzp;
     pr.age[q] += dt;
-    const nxp = pr.x[q * 3], nyp = pr.x[q * 3 + 1], nzp = pr.x[q * 3 + 2];
-    const out = nxp < 0 || nyp < 0 || nzp < 0 || nxp >= g.nx || nyp >= g.ny || nzp >= g.nz;
     if (out || pr.age[q] > pr.life[q]) {
       removeParticle(pr, q);
       continue;
     }
     // Boundary handling: flame-front particles stop at solids; embers
     // deposit there (particleToGrid) and are removed.
-    const cell = at(g, Math.floor(nxp), Math.floor(nyp), Math.floor(nzp));
     if (sim.kind[cell] === SOLID && pr.kind[q] === 0) removeParticle(pr, q);
   }
 }
@@ -900,6 +926,11 @@ function advect(sim, dt) {
       }
     }
   }
+  // The gas itself: conserved (proposal F), or the paper's back-traced T and Y.
+  if (sim.P.conservative > 0) {
+    transportGas(sim, dt, u, v, w);
+    return;
+  }
   // Temperature and the six species share one back-trace and one set of
   // trilinear weights per cell (as sampleCell computes them).
   const sx = 1, sy = nx, sz = nx * ny;
@@ -947,6 +978,147 @@ function advect(sim, dt) {
         }
       }
     }
+  }
+}
+
+/**
+ * The gas's transport (proposal F): its density and its species' densities
+ * move through the faces by the step's starting flow, one sweep along each
+ * axis in turn. A face carries its upwind cell's density and mass fractions,
+ * plus a van Leer limited slope where the Courant number leaves room (van
+ * Leer 1974). Density, not T, is what mixes: gases mix by volume at constant
+ * pressure, and averaging T made heat (F6). Each cell takes the flux
+ * difference and gives back its own density times the faces' divergence,
+ * the advective form d rho / dt + u . grad rho = 0 in fluxes: a uniform gas
+ * stays uniform whatever divergence the projection leaves (with T following
+ * the density, the fully conservative form turned that remainder into hot
+ * and cold spots), the heat sources' own thinning of the gas they heat is
+ * not taken twice, and where the flow is divergence-free no mass is made or
+ * lost. Outside the domain is still ambient air; the ground and the faces of
+ * solids carry nothing. T follows from the density by the gas law.
+ */
+function transportGas(sim, dt, u, v, w) {
+  const { grid: g } = sim;
+  const { nx, ny, nz, h } = g;
+  const N = sim.N;
+  const kind = sim.kind;
+  const rho = workArray(sim, "gasRho", N, Float64Array);
+  const Y = workArray(sim, "gasY", N * NS, Float64Array);
+  const dm = workArray(sim, "gasDm", N, Float64Array);
+  const dY = workArray(sim, "gasDY", N * NS, Float64Array);
+  const dd = workArray(sim, "gasDiv", N, Float64Array);
+  // The densities at the start: each sweep gives back these times its faces'
+  // divergence, so that over the three sweeps the divergence-free part of the
+  // flow gives back nothing (the current density would leave a splitting
+  // error, 5 % of the heat in the sealed box's mixing).
+  const rho0 = workArray(sim, "gasRho0", N, Float64Array);
+  const ry0 = workArray(sim, "gasRY0", N * NS, Float64Array);
+  for (let c = 0; c < N; c += 1) {
+    if (kind[c] === SOLID) continue;
+    rho[c] = rho0[c] = gasDensity(sim.T[c], sim.Y, c * NS);
+    for (let q = 0; q < NS; q += 1) {
+      Y[c * NS + q] = sim.Y[c * NS + q];
+      ry0[c * NS + q] = rho[c] * Y[c * NS + q];
+    }
+  }
+  const rhoA = sim.rho0;
+  const yA = new Float64Array(NS);
+  yA[SPECIES.O2] = Y_O2_AIR;
+  const s = dt / h;
+  const fy = new Float64Array(NS);
+  // One sweep along an axis: n cells along it, stride `step` between them,
+  // `lines` the first cells of the lines, `vel(line, a)` the flow through the
+  // face before cell a of the line (a from 0 to n).
+  const sweep = (n, stride, lines, vel, ground) => {
+    dm.fill(0);
+    dY.fill(0);
+    dd.fill(0);
+    for (let l = 0; l < lines.length; l += 1) {
+      const base = lines[l];
+      // A cell along the line: -1 outside the domain (ambient air), -2 a solid.
+      const cellAt = (a) => (a < 0 || a >= n ? -1 : kind[base + a * stride] === SOLID ? -2 : base + a * stride);
+      const r = (c) => (c === -1 ? rhoA : rho[c]);
+      for (let a = 0; a <= n; a += 1) {
+        if (a === 0 && ground) continue;
+        const vf = vel(l, a);
+        if (vf === 0) continue;
+        const from = vf > 0 ? cellAt(a - 1) : cellAt(a);
+        const to = vf > 0 ? cellAt(a) : cellAt(a - 1);
+        if (from === -2 || to === -2) continue;
+        const back = vf > 0 ? cellAt(a - 2) : cellAt(a + 1);
+        const courant = Math.min(1, Math.abs(vf) * s);
+        // The face's flow out of the cell before it and into the cell after.
+        const out = vf > 0 ? courant : -courant;
+        const left = cellAt(a - 1), right = cellAt(a);
+        if (left >= 0) dd[left] += out;
+        if (right >= 0) dd[right] -= out;
+        // The face's density: the donor's, with a limited slope towards the acceptor.
+        const rd = r(from), ra = r(to);
+        let rf = rd;
+        if (back !== -2) {
+          const dr = ra - rd;
+          if (dr !== 0) {
+            const q = (rd - r(back)) / dr;
+            rf += 0.5 * ((q + Math.abs(q)) / (1 + Math.abs(q))) * (1 - courant) * dr;
+          }
+        }
+        const m = courant * rf; // mass through the face, per unit cell volume
+        for (let q = 0; q < NS; q += 1) {
+          const yd = from === -1 ? yA[q] : Y[from * NS + q];
+          const ya = to === -1 ? yA[q] : Y[to * NS + q];
+          let yf = yd;
+          if (back !== -2) {
+            const dy = ya - yd;
+            if (dy !== 0) {
+              const yb = back === -1 ? yA[q] : Y[back * NS + q];
+              const t = (yd - yb) / dy;
+              yf += 0.5 * ((t + Math.abs(t)) / (1 + Math.abs(t))) * (1 - courant) * dy;
+            }
+          }
+          fy[q] = m * yf;
+        }
+        if (from >= 0) {
+          dm[from] -= m;
+          for (let q = 0; q < NS; q += 1) dY[from * NS + q] -= fy[q];
+        }
+        if (to >= 0) {
+          dm[to] += m;
+          for (let q = 0; q < NS; q += 1) dY[to * NS + q] += fy[q];
+        }
+      }
+    }
+    for (let c = 0; c < N; c += 1) {
+      if (kind[c] === SOLID) continue;
+      const before = rho[c];
+      let after = before + dm[c] + rho0[c] * dd[c];
+      // A cell emptied faster than it fills (two faces out at Courant
+      // numbers summing past 1): kept at a hundredth of ambient, the mass
+      // added counted, so that a budget can see it.
+      if (after < 0.01 * rhoA) {
+        sim.stats.massFloor += (0.01 * rhoA - after) * sim.V;
+        after = 0.01 * rhoA;
+      }
+      for (let q = 0; q < NS; q += 1) {
+        const y = Y[c * NS + q];
+        Y[c * NS + q] = Math.min(1, Math.max(0, (before * y + ry0[c * NS + q] * dd[c] + dY[c * NS + q]) / after));
+      }
+      rho[c] = after;
+    }
+  };
+  const xLines = [], yLines = [], zLines = [];
+  for (let k = 0; k < nz; k += 1) for (let j = 0; j < ny; j += 1) xLines.push(nx * (j + ny * k));
+  for (let k = 0; k < nz; k += 1) for (let i = 0; i < nx; i += 1) yLines.push(i + nx * ny * k);
+  for (let j = 0; j < ny; j += 1) for (let i = 0; i < nx; i += 1) zLines.push(i + nx * j);
+  sweep(nx, 1, xLines, (l, a) => u[a + (nx + 1) * l], false);
+  sweep(ny, nx, yLines, (l, a) => {
+    const i = l % nx, k = Math.floor(l / nx);
+    return v[i + nx * (a + (ny + 1) * k)];
+  }, true);
+  sweep(nz, nx * ny, zLines, (l, a) => w[l + nx * ny * a], false);
+  for (let c = 0; c < N; c += 1) {
+    if (kind[c] === SOLID) continue;
+    for (let q = 0; q < NS; q += 1) sim.Y[c * NS + q] = Y[c * NS + q];
+    sim.T[c] = gasDensity(1, sim.Y, c * NS) / rho[c];
   }
 }
 
@@ -1582,6 +1754,43 @@ function conduct(sim, dt) {
   }
 }
 
+/**
+ * The gas's expansion (proposal F): at constant pressure a cell whose gas is
+ * heated from T0 to T1 swells by ln(T1/T0) of its volume, and that volume
+ * must leave it. Each step's heat sources are read as the change of T they
+ * make, apart from the advection's: those before it (the pilot or burner,
+ * particles, radiation) at the step's start, and those after it (diffusion,
+ * ducts, chemistry, spray, conduction) since the advection. The projection
+ * then asks the flow for that divergence. The domain's shell is held at
+ * ambient and expands nothing.
+ */
+function expansionStart(sim) {
+  if (sim.P.expansion > 0) copyOf(sim, "expandT0", sim.T);
+}
+
+function expansionBeforeAdvect(sim) {
+  if (!(sim.P.expansion > 0)) return;
+  const D = workArray(sim, "expand", sim.N, Float64Array);
+  const T0 = sim.work.expandT0;
+  for (let c = 0; c < sim.N; c += 1) D[c] = sim.kind[c] === SOLID ? 0 : Math.log(sim.T[c] / T0[c]);
+}
+
+function expansionAfterAdvect(sim) {
+  if (sim.P.expansion > 0) copyOf(sim, "expandT1", sim.T);
+}
+
+function expansionEnd(sim, dt) {
+  if (!(sim.P.expansion > 0)) return;
+  const { nx, ny, nz } = sim.grid;
+  const D = sim.work.expand, T1 = sim.work.expandT1;
+  for (let c = 0; c < sim.N; c += 1) {
+    if (sim.kind[c] === SOLID) continue;
+    const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
+    if (i === 0 || k === 0 || i === nx - 1 || k === nz - 1 || j === ny - 1) D[c] = 0;
+    else D[c] = (D[c] + Math.log(sim.T[c] / T1[c])) / dt;
+  }
+}
+
 /** Line 31: the equation of state for every open cell. */
 function updateDensity(sim) {
   for (let c = 0; c < sim.N; c += 1) {
@@ -1595,6 +1804,8 @@ function boundaries(sim) {
   const { grid: g, P } = sim;
   const { nx, ny, nz } = g;
   const reset = (c) => {
+    // The heat the shell's gas carried, leaving the domain (for budgets only).
+    sim.stats.shellHeat += sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS) * (sim.T[c] - P.ambient);
     sim.T[c] = P.ambient;
     for (let q = 0; q < NS; q += 1) sim.Y[c * NS + q] = 0;
     sim.Y[c * NS + SPECIES.O2] = Y_O2_AIR;
@@ -1618,7 +1829,7 @@ function boundaries(sim) {
  * sides; the ground is closed), and the open cells split red and black.
  * Rebuilt only when a cell changes kind (fuel burnt out).
  */
-function topology(sim) {
+export function topology(sim) {
   if (sim.topo && sim.topo.version === sim.kindVersion) return sim.topo;
   const g = sim.grid;
   const { nx, ny, nz } = g;
@@ -1651,7 +1862,36 @@ function topology(sim) {
     }
   }
   const offsets = DIRS.map(([a, b, e]) => a + nx * (b + ny * e));
-  sim.topo = { version: sim.kindVersion, mask, count, colours: [Int32Array.from(red), Int32Array.from(black)], offsets };
+  // The open cells' connected regions, and which reach an open side of the
+  // domain. A sealed region (a room behind closed doors) cannot let its gas
+  // expand out, so the projection takes the region's mean expansion off: its
+  // heat stays in it as hotter, thinner gas, as before (proposal F).
+  const region = new Int32Array(sim.N).fill(-1);
+  const sealed = [];
+  const queue = new Int32Array(sim.N);
+  for (let s = 0; s < sim.N; s += 1) {
+    if (sim.kind[s] === SOLID || region[s] >= 0) continue;
+    const id = sealed.length;
+    let head = 0, tail = 0, open = false;
+    region[s] = id;
+    queue[tail++] = s;
+    while (head < tail) {
+      const c = queue[head++];
+      let links = 0;
+      for (let d = 0; d < 6; d += 1) {
+        if (!(mask[c] & (1 << d))) continue;
+        links += 1;
+        const n = c + offsets[d];
+        if (region[n] < 0) {
+          region[n] = id;
+          queue[tail++] = n;
+        }
+      }
+      if (count[c] > links) open = true;
+    }
+    sealed.push(open ? 0 : 1);
+  }
+  sim.topo = { version: sim.kindVersion, mask, count, colours: [Int32Array.from(red), Int32Array.from(black)], offsets, region, sealed: Uint8Array.from(sealed) };
   return sim.topo;
 }
 
@@ -1698,6 +1938,26 @@ function project(sim, dt) {
   const p = sim.p;
   const topo = topology(sim);
   const off = topo.offsets;
+  // The gas's expansion (expansionEnd): the flow is asked for it, less each
+  // sealed region's mean, which has nowhere to go.
+  if (P.expansion > 0 && sim.work?.expand) {
+    const D = sim.work.expand;
+    const { region, sealed } = topo;
+    const sum = new Float64Array(sealed.length), cells = new Float64Array(sealed.length);
+    for (let c = 0; c < sim.N; c += 1) {
+      const r = region[c];
+      if (r >= 0 && sealed[r]) {
+        sum[r] += D[c];
+        cells[r] += 1;
+      }
+    }
+    const used = workArray(sim, "expandUsed", sim.N, Float64Array);
+    for (let c = 0; c < sim.N; c += 1) {
+      const r = region[c];
+      used[c] = r < 0 ? 0 : sealed[r] ? D[c] - sum[r] / cells[r] : D[c];
+      div[c] -= used[c];
+    }
+  }
   // Sweeps stop early once the largest pressure change in a sweep would move
   // the flow by less than `projectionTolerance` m/s (the pressure is kept
   // from the last step, so a calm flow needs few).
@@ -2086,11 +2346,14 @@ function copyOf(sim, name, field) {
 
 /** Algorithm 1's stages in order, as [name, function(sim, dt)]. */
 const STAGES = [
+  ["expansionStart", expansionStart],
   ["pilot", pilot],
   ["particles", particleStep],
   ["radiation", radiation],
   ["particleToGrid", (sim) => particleToGrid(sim)],
+  ["expansionBeforeAdvect", expansionBeforeAdvect],
   ["advect", advect],
+  ["expansionAfterAdvect", expansionAfterAdvect],
   ["density", (sim) => updateDensity(sim)],
   ["buoyancy", buoyancy],
   ["vorticity", vorticityConfinement],
@@ -2102,6 +2365,7 @@ const STAGES = [
   ["cullFlameFront", (sim) => cullFlameFront(sim)],
   ["conduct", conduct],
   ["density2", (sim) => updateDensity(sim)],
+  ["expansionEnd", expansionEnd],
   ["boundaries", (sim) => boundaries(sim)],
   ["project", project],
 ];

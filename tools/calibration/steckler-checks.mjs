@@ -180,8 +180,9 @@ function runTest(T, h) {
     const y = lo[1] + (j + 0.5) * h;
     if (y > 0 && y < doorH && !solid[at(di, j, dk)]) door.push([y, j]);
   }
-  const sumTree = new Float64Array(tree.length), sumU = new Float64Array(door.length), sumTd = new Float64Array(door.length);
-  let samples = 0, next = 1, speed = 0, substeps = substepsFor(sim.P, h, 0, sim.P.dt), worst = 0;
+  let sumTree = new Float64Array(tree.length);
+  const sumU = new Float64Array(door.length), sumTd = new Float64Array(door.length);
+  let samples = 0, next = 1, speed = 0, substeps = substepsFor(sim.P, h, 0, sim.P.dt), worst = 0, connected = false;
   const t0 = performance.now();
   while (sim.time < HORIZON - 1e-9) {
     step(sim, Math.min(sim.P.dt / substeps, next - sim.time));
@@ -191,6 +192,16 @@ function runTest(T, h) {
       speed = s;
       worst = Math.max(worst, s);
       substeps = substepsFor(sim.P, h, speed, sim.P.dt);
+      // The tree reads only cells joined to the fire's gas (the solver's
+      // regions): on 0.27 m cells the solver seals the row under the
+      // ceiling, which straddles two cells, and left an open pocket in the
+      // tree's column that the hot layer never reaches (2026-11-12).
+      if (!connected && sim.topo) {
+        const home = sim.topo.region[burner[0]];
+        for (let q = tree.length - 1; q >= 0; q -= 1) if (sim.topo.region[tree[q][1]] !== home) tree.splice(q, 1);
+        sumTree = new Float64Array(tree.length);
+        connected = true;
+      }
       if (sim.time > FROM + 1e-9) {
         tree.forEach(([, c], q) => (sumTree[q] += sim.T[c]));
         door.forEach(([, j], q) => {

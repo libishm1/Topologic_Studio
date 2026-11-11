@@ -1,0 +1,124 @@
+{
+ "generated": "2026-11-11T19:28:00.084Z",
+ "solver": {
+  "conservative": 0,
+  "expansion": 0
+ },
+ "adiabatic": {
+  "wallConvection": 0,
+  "emitAbove": 1000000000
+ },
+ "results": [
+  {
+   "case": "mix",
+   "cell": 0.2,
+   "startHeatMJ": 1.618,
+   "ratios": {
+    "30": {
+     "heat": 1.584,
+     "mass": 0.844
+    },
+    "60": {
+     "heat": 1.611,
+     "mass": 0.837
+    }
+   },
+   "wallSeconds": 8.3
+  },
+  {
+   "case": "burner",
+   "cell": 0.2,
+   "rows": {
+    "30": {
+     "releasedMJ": 2.25,
+     "gas": 3.111,
+     "left": 0.29,
+     "closure": 3.401,
+     "maxT": 2410
+    },
+    "60": {
+     "releasedMJ": 6.75,
+     "gas": 1.199,
+     "left": 1.325,
+     "closure": 2.524,
+     "maxT": 1169
+    }
+   },
+   "wallSeconds": 30.5
+  },
+  {
+   "case": "mix",
+   "cell": 0.27,
+   "startHeatMJ": 1.09,
+   "ratios": {
+    "30": {
+     "heat": 1.297,
+     "mass": 0.93
+    },
+    "60": {
+     "heat": 1.375,
+     "mass": 0.911
+    }
+   },
+   "wallSeconds": 2.6
+  },
+  {
+   "case": "burner",
+   "cell": 0.27,
+   "rows": {
+    "30": {
+     "releasedMJ": 2.25,
+     "gas": 3.975,
+     "left": 1.111,
+     "closure": 5.087,
+     "maxT": 2887
+    },
+    "60": {
+     "releasedMJ": 6.75,
+     "gas": 1.335,
+     "left": 2.144,
+     "closure": 3.479,
+     "maxT": 1429
+    }
+   },
+   "wallSeconds": 10.8
+  },
+  {
+   "case": "mix",
+   "cell": 0.34,
+   "startHeatMJ": 1.004,
+   "ratios": {
+    "30": {
+     "heat": 1.314,
+     "mass": 0.933
+    },
+    "60": {
+     "heat": 1.138,
+     "mass": 0.971
+    }
+   },
+   "wallSeconds": 1.5
+  },
+  {
+   "case": "burner",
+   "cell": 0.34,
+   "rows": {
+    "30": {
+     "releasedMJ": 2.25,
+     "gas": 4.03,
+     "left": 2.724,
+     "closure": 6.754,
+     "maxT": 1990
+    },
+    "60": {
+     "releasedMJ": 6.75,
+     "gas": 1.326,
+     "left": 2.706,
+     "closure": 4.033,
+     "maxT": 1486
+    }
+   },
+   "wallSeconds": 3.6
+  }
+ ]
+}
