@@ -755,6 +755,15 @@ if (await slimeSection.count()) {
   record(skeletonsBefore === 0 && skeletons.desire && skeletons.medial && agreeLine > 0, "the slime's desire lines and the floor's medial axis are drawn when asked", JSON.stringify(skeletons));
   await page.locator(".toggle__label", { hasText: /^Desire lines$/ }).first().click().catch(() => {});
   await page.locator(".toggle__label", { hasText: /^Medial axis of the floor$/ }).first().click().catch(() => {});
+  // Its readings (2026-11-11): bottlenecks, dead ends and the branches it gave up, each drawn when asked.
+  const readingsBefore = await page.evaluate(() => ["slimeBottlenecks", "slimeDead", "slimeAbandoned"].filter((n) => window.__viewer?.overlays?.has(n)).length);
+  const readingsLine = (await page.getByText(/^(Bottlenecks: |No bottleneck )/).first().textContent().catch(() => "")) || "";
+  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Branches it gave up$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
+  await page.waitForTimeout(400);
+  const readings = await page.evaluate(() => Object.fromEntries(["slimeBottlenecks", "slimeDead", "slimeAbandoned"].map((n) => [n, window.__viewer?.overlays?.has(n) ?? false])));
+  const drawnAsSaid = readings.slimeBottlenecks === readingsLine.startsWith("Bottlenecks: ") && readings.slimeDead === /Dead ends: /.test(readingsLine) && readings.slimeAbandoned === /gave up/.test(readingsLine);
+  record(readingsBefore === 0 && readingsLine.length > 0 && drawnAsSaid, "the slime's bottlenecks, dead ends and abandoned branches are read out and drawn when asked", `${readingsLine.slice(0, 200)} ${JSON.stringify(readings)}`);
+  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Branches it gave up$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
   await page
     .locator("section.section", { has: page.locator(".section__header", { hasText: /^Slime mould/ }) })
     .getByRole("button", { name: /^Clear$/ })

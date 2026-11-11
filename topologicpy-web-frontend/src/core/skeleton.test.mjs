@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { agreement, clearanceOf, desireLines, medialAxis, medialRoute, openAdjacency, ridgeOf } from "./skeleton.js";
+import { SPECIFIC_FLOW, agreement, bottlenecks, clearanceOf, commonPath, desireLines, medialAxis, medialRoute, openAdjacency, ridgeOf } from "./skeleton.js";
 import { KIND_DOOR, KIND_FLOOR } from "./lattice.js";
 
 /** A floor nx x nz nodes 0.5 m apart, eight-linked, less `hole(i, k)`; `kind(i, k)` marks doors. */
@@ -91,4 +91,38 @@ test("the medial way out keeps clearer of the walls than the shortest walk", () 
   const flat = ridgeOf(adj, new Float64Array(graph.nodes.length / 3).fill(1));
   for (let v = 0; v < flat.length; v += 1) if (flat[v]) assert.ok(adj.start[v + 1] - adj.start[v] < 8, `node ${v} inside`);
   assert.equal(flat[id.get("15,7")], 0);
+});
+
+test("bottlenecks: a door's clear width holds the people the desire lines send through it", () => {
+  // Two rooms 9 x 9, a door at (9, 4) 0.9 m wide; everyone in the left room goes right to the exit at (18, 4).
+  const { graph, id, adj } = floor(19, 9, { hole: (i, k) => i === 9 && k !== 4, kind: (i, k) => (i === 9 && k === 4 ? KIND_DOOR : KIND_FLOOR) });
+  const n = graph.nodes.length / 3;
+  const door = id.get("9,4"), exit = id.get("18,4");
+  const weights = new Float32Array(n).fill(0.5);
+  const people = new Float32Array(n);
+  for (let i = 0; i < 9; i += 1) for (let k = 0; k < 9; k += 1) people[id.get(`${i},${k}`)] = 0.25 / 0.5; // a person each 0.5 m^2
+  const desire = desireLines(graph, adj, weights, [exit], { cell: 1, people });
+  const doorWidth = new Float32Array(n);
+  doorWidth[door] = 0.9;
+  const { clearance } = clearanceOf(graph, adj);
+  const found = bottlenecks(graph, desire.links, desire.people, { clearance, doorWidth, minSeconds: 1, adj });
+  assert.equal(found[0].node, door, "the worst is the door");
+  assert.ok(found[0].door);
+  const persons = 81 * 0.5;
+  assert.ok(Math.abs(found[0].people - persons) < 1e-3, `${found[0].people} people`);
+  assert.ok(Math.abs(found[0].seconds - persons / (SPECIFIC_FLOW * (0.9 - 0.3))) < 1e-3, "widths are kept in single precision");
+});
+
+test("one way out: the walk before a second way opens, the depth of a dead end", () => {
+  // A corridor 30 x 3 with an exit at each end, and a blind branch 3 wide rising from its middle.
+  const { graph, id, adj } = floor(30, 16, { hole: (i, k) => k > 2 && (i < 14 || i > 16) });
+  const exits = [id.get("0,1"), id.get("29,1")];
+  const cp = commonPath(adj, exits);
+  assert.ok(cp[id.get("15,1")] < 0.6, `the corridor's middle: ${cp[id.get("15,1")]} m`);
+  const deep = cp[id.get("15,15")];
+  assert.ok(deep > 6 && deep < 8, `the branch's end: ${deep.toFixed(2)} m`);
+  // One exit only: all of the walk is one way out.
+  const single = commonPath(adj, [exits[0]]);
+  assert.ok(Math.abs(single[id.get("15,1")] - 7.5) < 1e-6);
+  assert.equal(commonPath(adj, []), null);
 });

@@ -45,6 +45,17 @@
  * still goes, at a cost. The place itself repels by `repel` r metres, and
  * its trail fades faster, by a further share `retard` r a step: the fire and
  * its smoke retard the mould. No one starts or starts again where r is 1.
+ * With a Flamescapes run's frames (`smokeFrames`: K frames of visibility at
+ * head height, m a node) the smoke is the run's own: r rises as visibility
+ * falls from `clearVisibility` (30 m) to the tenability limit (10 m), and is
+ * 1 where the place is untenable; and a sensor reaches less far in smoke,
+ * SO links shortened in proportion to the visibility below 30 m
+ * (sensorReach), as sight does.
+ *
+ * Explored and abandoned. The first half's visits are kept (`explored`, on
+ * the weights' scale): where the agents went early and left no trail late,
+ * the slime explored a branch and gave it up (the misleading corridors of
+ * the plan's gap 2).
  *
  * The fire, hard. A place the fire has made untenable by `time` is a wall:
  * no agent enters it, no trail spreads into it, and the walk to the exits
@@ -94,7 +105,19 @@ export const SLIME_DEFAULTS = {
   fireCost: 20,
   retard: 0.5,
   replanSteps: 10,
+  // With a Flamescapes run's frames: visibility (m) from which smoke begins to
+  // retard, and at which it is full (the tenability limit).
+  clearVisibility: 30,
+  visibilityLimit: 10,
 };
+
+/**
+ * Links a sensor reaches through smoke: SO in clear air, shortened in
+ * proportion to the visibility below `clear` metres, at least one.
+ */
+export function sensorReach(so, visibility, clear) {
+  return Math.max(1, Math.round(so * Math.min(1, visibility / clear)));
+}
 
 /** Cosine of the widest angle off a direction a step or a sensor may take a link: 67.5 degrees, so one of the lattice's eight links always qualifies in open floor. */
 export const SENSE_CONE = Math.cos((67.5 * Math.PI) / 180);
@@ -155,6 +178,7 @@ function walkFrom(sources, adj, cost = null) {
  *   closes   each node's untenable time, s (a fire's; null: none)
  *   fire     "soft" (default): a retardant on the fire's clock from `from` s; "hard": walls from `time`
  *   from     s on the fire's clock the soft run starts at (0)
+ *   smokeFrames  {K, frameSeconds, vis: Float32Array K x n}: a Flamescapes run's visibility (soft fire)
  *   time     s: with the hard fire, places untenable by then are walls (Infinity: every place it ever closes)
  *   places   nodes agents start from (default: all the open floor)
  *   blocked  links no one may cross (walls)
@@ -189,10 +213,28 @@ export function slimeEgress(graph, opts = {}) {
   const exitList = [...new Set(exits.filter((e) => e >= 0 && open[e]))];
   const isExit = new Uint8Array(n);
   for (const e of exitList) isExit[e] = 1;
-  // The soft fire's strength now, and the walk to the exits it weighs.
+  // The soft fire's strength now, and the walk to the exits it weighs. With a
+  // Flamescapes run's frames, the smoke is its visibility at head height on
+  // the fire's clock (full at the tenability limit, none from clearVisibility
+  // up), and full where the fire has made a place untenable; without them,
+  // the ramp over `lead` seconds before each place becomes untenable.
+  const frames = soft && opts.smokeFrames && opts.smokeFrames.vis?.length === opts.smokeFrames.K * n ? opts.smokeFrames : null;
   const smoke = new Float32Array(n);
+  const sight = new Float32Array(n).fill(p.clearVisibility);
   const smokeNow = (t) => {
-    if (soft) for (let v = 0; v < n; v += 1) smoke[v] = smokeAt(closes[v], t, p.lead);
+    if (!soft) return;
+    if (!frames) {
+      for (let v = 0; v < n; v += 1) smoke[v] = smokeAt(closes[v], t, p.lead);
+      return;
+    }
+    const k = Math.min(frames.K - 1, Math.max(0, Math.floor(t / frames.frameSeconds)));
+    const span = Math.max(1e-6, p.clearVisibility - p.visibilityLimit);
+    for (let v = 0; v < n; v += 1) {
+      const seen = frames.vis[k * n + v];
+      sight[v] = seen;
+      const thick = Math.min(1, Math.max(0, (p.clearVisibility - seen) / span));
+      smoke[v] = closes[v] <= t ? 1 : thick;
+    }
   };
   const fireWalk = () => walkFrom(exitList, adj, (a, b, k) => adj.len[k] * (1 + p.fireCost * Math.max(smoke[a], smoke[b])));
   smokeNow(from);
@@ -267,6 +309,9 @@ export function slimeEgress(graph, opts = {}) {
 
   const trail = new Float64Array(n), next = new Float64Array(n), sum = new Float64Array(n);
   const visits = new Uint32Array(n);
+  // Where the agents went in the first half, while exploring: set against
+  // the second half's trail, the branches they explored and abandoned.
+  const early = new Uint32Array(n);
   const flux = new Map();
   let laidAll = 0, laidInFire = 0;
   const field = (v) => (base[v] === -Infinity ? -Infinity : base[v] + (p.trailWeight * trail[v]) / (trail[v] + p.trailHalf));
@@ -282,10 +327,12 @@ export function slimeEgress(graph, opts = {}) {
     }
     return best;
   };
+  // In smoke the sensors reach less far, as sight does.
   const sense = (v, angle) => {
     const c = Math.cos(angle), s = Math.sin(angle);
+    const reach = frames ? sensorReach(p.so, sight[v], p.clearVisibility) : p.so;
     let u = v;
-    for (let step = 0; step < p.so; step += 1) {
+    for (let step = 0; step < reach; step += 1) {
       u = along(u, c, s);
       if (u < 0) return -Infinity;
     }
@@ -332,6 +379,7 @@ export function slimeEgress(graph, opts = {}) {
       holder[at[i]] = -1;
       trail[u] += p.depT;
       visits[u] += 1;
+      if (step < burnIn) early[u] += 1;
       if (step >= burnIn) {
         laidAll += p.depT;
         if (smoke[u] >= 0.5) laidInFire += p.depT;
@@ -392,6 +440,11 @@ export function slimeEgress(graph, opts = {}) {
   const scale = laid.length ? laid[Math.min(laid.length - 1, Math.floor(0.99 * laid.length))] : 0;
   const weights = new Float32Array(n);
   if (scale > 0) for (let v = 0; v < n; v += 1) weights[v] = Math.min(1, sum[v] / scale);
+  // The first half's visits on the same scale (99th percentile, capped at 1).
+  const went = Array.from(early).filter((x) => x > 0).sort((a, b) => a - b);
+  const earlyScale = went.length ? went[Math.min(went.length - 1, Math.floor(0.99 * went.length))] : 0;
+  const explored = new Float32Array(n);
+  if (earlyScale > 0) for (let v = 0; v < n; v += 1) explored[v] = Math.min(1, early[v] / earlyScale);
 
   // The route along the tubes (and round the soft fire as it ends), against the shortest walk.
   let route = null;
@@ -455,5 +508,7 @@ export function slimeEgress(graph, opts = {}) {
     fireShare: laidAll ? laidInFire / laidAll : 0,
     // The soft fire's strength at the run's end, for the desire lines (skeleton.js).
     smoke: soft ? smoke : null,
+    smokeSource: frames ? "visibility" : soft ? "ramp" : null,
+    explored,
   };
 }

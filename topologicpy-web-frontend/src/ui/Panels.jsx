@@ -1700,6 +1700,24 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
         hint="The slime's ways out from every part of the floor, along its tubes: dark over the yellow, thicker where more of them bundle, with arrows towards the exits."
       />
       <Toggle
+        label="Bottlenecks"
+        checked={settings.slimeBottlenecks}
+        onChange={(slimeBottlenecks) => setSettings({ slimeBottlenecks })}
+        hint="Crimson, larger the worse: where the people the desire lines carry (one per occupant area) would take longest to pass, a door's clear width or a corridor's at 1.3 persons a second a metre."
+      />
+      <Toggle
+        label="Dead ends"
+        checked={settings.slimeDeadEnds}
+        onChange={(slimeDeadEnds) => setSettings({ slimeDeadEnds })}
+        hint="Dark red: places with one way out for longer than the IBC 2021 dead-end limit (6.1 m; 15.2 m sprinklered, as the code check's setting says) before a second, separate way out opens. The code's limit is for corridors; for rooms it is a reference."
+      />
+      <Toggle
+        label="Branches it gave up"
+        checked={settings.slimeAbandoned}
+        onChange={(slimeAbandoned) => setSettings({ slimeAbandoned })}
+        hint="Grey: where the slime went early and left no trail late, branches it explored and abandoned: corridors that look like ways out and are not."
+      />
+      <Toggle
         label="Medial axis of the floor"
         checked={settings.slimeMedial}
         onChange={(slimeMedial) => setSettings({ slimeMedial })}
@@ -1712,7 +1730,7 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
           {result.exits.slice(0, 6).map((e) => e.flux).join(", ")}
           {result.exits.length > 6 ? ", ..." : ""} through {result.exits.length} exit{result.exits.length === 1 ? "" : "s"}.
           {result.fire === "soft"
-            ? ` Held back by the fire over ${Math.round(result.seconds)} s of it: ${result.closed.toLocaleString()} places untenable by then, ${Math.round(result.fireShare * 100)} % of the trail laid in smoke or fire.`
+            ? ` Held back by the fire${result.smokeSource === "visibility" ? " and the run's own smoke (its visibility, and sight shortened in it)" : ""} over ${Math.round(result.seconds)} s of it: ${result.closed.toLocaleString()} places untenable by then, ${Math.round(result.fireShare * 100)} % of the trail laid in smoke or fire.`
             : result.fire === "hard"
               ? ` Walled off from ${result.closed.toLocaleString()} untenable places.`
               : ""}{" "}
@@ -1726,6 +1744,22 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
           {result.medialRoute ? ` Keeping to the medial axis: ${m(result.medialRoute.length)}.` : ""}
           {result.agreement != null ? ` ${Math.round(result.agreement * 100)} % of the desire lines lie within half a metre of the medial axis.` : ""}
         </Notice>
+      )}
+      {result && (result.bottlenecks?.length > 0 || result.deadEnds || result.abandonedArea > 0) && (
+        <p className="field__hint">
+          {result.bottlenecks?.length > 0
+            ? `Bottlenecks: ${result.bottlenecks
+                .slice(0, 3)
+                .map((b) => `${Math.round(b.people)} people through ${b.width.toFixed(2)} m ${b.door ? "of door" : "of corridor"}, ${Math.round(b.seconds)} s`)
+                .join("; ")}. `
+            : "No bottleneck holds the desire lines' people 10 s or more. "}
+          {result.deadEnds
+            ? result.deadEnds.area > 0
+              ? `Dead ends: ${Math.round(result.deadEnds.area)} m² of floor with one way out longer than ${result.deadEnds.limit.toFixed(1)} m, the longest ${result.deadEnds.worst.toFixed(1)} m. `
+              : `No place has one way out longer than ${result.deadEnds.limit.toFixed(1)} m (the longest ${result.deadEnds.worst.toFixed(1)} m). `
+            : "Dead ends not worked out (more than 32 exits). "}
+          {result.abandonedArea > 0 ? `The slime gave up ${Math.round(result.abandonedArea)} m² it had explored.` : ""}
+        </p>
       )}
       <p className="field__hint">
         After Jones (2010) and Jones and Saeed (2007): the agents sense ahead and to either side, turn towards the strongest, step and

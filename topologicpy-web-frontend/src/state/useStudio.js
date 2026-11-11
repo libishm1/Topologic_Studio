@@ -128,6 +128,12 @@ export const DEFAULT_SETTINGS = {
   slimeFire: "none",
   slimeDesire: false,
   slimeMedial: false,
+  // Readings from the slime's run (the desire-lines plan's gaps 1 and 2):
+  // bottlenecks on its desire lines, dead ends (one way out longer than the
+  // code's limit) and the branches it explored and abandoned.
+  slimeBottlenecks: false,
+  slimeDeadEnds: false,
+  slimeAbandoned: false,
   // Gathering places hold crowdShelterArea m^2 of people when on; once full,
   // the earliest there fade as newcomers arrive.
   crowdShelterOn: false,

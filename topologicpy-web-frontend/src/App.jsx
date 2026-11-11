@@ -77,6 +77,21 @@ const RECORDER_STARTING = { cancel() {} };
 
 /** No slime mould grown (core/slimeEgress.js). */
 const SLIME_NONE = { nodes: null, result: null, busy: false, error: null };
+
+/**
+ * Each graph node's door width, m (0 where no door): the IFC's declared
+ * width where it gives one, else the width the graph measured.
+ */
+function slimeDoorWidths(graph, semantics) {
+  const widths = new Float32Array(graph.nodes.length / 3);
+  const declared = new Map((semantics?.doors || []).map((d) => [d.id, d.widthM]));
+  for (const d of graph.doors || []) {
+    if (!(d.node >= 0)) continue;
+    const w = declared.get(d.itemId) > 0 ? declared.get(d.itemId) : d.width;
+    if (w > 0) widths[d.node] = w;
+  }
+  return widths;
+}
 // How long a step is on screen, with nothing running, before its hint shows.
 const HINT_SETTLE_MS = 2500;
 // The code's occupancy group for the performance check's occupants setting
@@ -2821,10 +2836,12 @@ export default function App() {
     if (isFlamescapes(fire.model)) {
       if (!run?.done || run.failed || run.graph?.nodes !== graph.nodes || !run.result) return null;
       const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: run.result.frameSeconds };
-      return forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility }).untenable;
+      const closes = forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility }).untenable;
+      // The run's own smoke: its visibility at head height, frame by frame.
+      return { closes, smokeFrames: { K: frames.K, frameSeconds: frames.frameSeconds, vis: frames.vis } };
     }
     if (fire.model === "zone" || !(fire.step > 0) || !points.fire) return null;
-    return buildForecast(graph, {
+    const closes = buildForecast(graph, {
       model: fire.model,
       seed: snap(graph, points.fire),
       steps: settings.fireMaxSteps,
@@ -2832,6 +2849,7 @@ export default function App() {
       threshold: settings.untenableAbove,
       blocked: settings.useWalls ? graph.blocked : null,
     }).untenable;
+    return { closes, smokeFrames: null };
   }, [graph, fire.model, fire.step, points.fire, settings]);
   const growSlime = useCallback(() => {
     if (!graph) return;
@@ -2841,7 +2859,8 @@ export default function App() {
       return;
     }
     const withFire = settings.slimeFire === "soft" || settings.slimeFire === "hard";
-    const closes = withFire ? slimeFire() : null;
+    const fireNow = withFire ? slimeFire() : null;
+    const closes = fireNow?.closes ?? null;
     if (withFire && !closes) {
       toast("Start a fire in Simulate first; a Flamescapes run must have finished.", { variant: "warning" });
       return;
@@ -2853,18 +2872,24 @@ export default function App() {
     const nodes = graph.nodes;
     setSlimeState({ nodes, result: null, busy: true, error: null });
     const payload = {
-      graph: { nodes: graph.nodes.slice(), edges: graph.edges.slice(), kinds: graph.kinds ? graph.kinds.slice() : null, upAxis: graph.upAxis },
+      graph: { nodes: graph.nodes.slice(), edges: graph.edges.slice(), kinds: graph.kinds ? graph.kinds.slice() : null, upAxis: graph.upAxis, spacing: graph.spacing },
       opts: {
         exits,
         start: points.start ? snap(graph, points.start) : -1,
         closes: closes ? Float64Array.from(closes) : null,
+        smokeFrames: fireNow?.smokeFrames ? { ...fireNow.smokeFrames, vis: Float32Array.from(fireNow.smokeFrames.vis) } : null,
+        visibilityLimit: settings.flamescapesVisibility,
         blocked: settings.useWalls && graph.blocked ? graph.blocked.slice() : null,
         fire: settings.slimeFire === "hard" ? "hard" : "soft",
+        // For the bottlenecks and the dead ends.
+        occupantArea: settings.perfOccupantArea,
+        doorWidth: slimeDoorWidths(graph, studio.semantics),
+        sprinklered: Boolean(settings.codeSprinklered),
         seed: 1,
       },
     };
-    const transfers = [payload.graph.nodes.buffer, payload.graph.edges.buffer];
-    for (const typed of [payload.graph.kinds, payload.opts.closes, payload.opts.blocked]) if (typed) transfers.push(typed.buffer);
+    const transfers = [payload.graph.nodes.buffer, payload.graph.edges.buffer, payload.opts.doorWidth.buffer];
+    for (const typed of [payload.graph.kinds, payload.opts.closes, payload.opts.blocked, payload.opts.smokeFrames?.vis]) if (typed) transfers.push(typed.buffer);
     const t0 = performance.now();
     slimeRef.current.run({ payload }, transfers).then(
       (result) => setSlimeState((s) => (s.nodes === nodes ? { ...s, busy: false, result: { ...result, ms: performance.now() - t0, withFire: Boolean(closes) } } : s)),
@@ -2872,7 +2897,7 @@ export default function App() {
         if (!isCancelled(error)) setSlimeState((s) => (s.nodes === nodes ? { ...s, busy: false, error: error?.message || String(error) } : s));
       },
     );
-  }, [graph, buildingExitNodes, points.start, settings.slimeFire, settings.useWalls, slimeFire, toast]);
+  }, [graph, buildingExitNodes, points.start, settings.slimeFire, settings.useWalls, settings.perfOccupantArea, settings.codeSprinklered, settings.flamescapesVisibility, studio.semantics, slimeFire, toast]);
   const clearSlime = useCallback(() => setSlimeState(SLIME_NONE), []);
   // The weights on the graph, slime yellow, and the route along the tubes.
   useEffect(() => {
@@ -2905,11 +2930,21 @@ export default function App() {
       viewer.setSkeleton?.("slimeDesire", segmentsOf(result.desireLinks), { color: 0x1e1b4b, arrows: true, widths });
     }
     if (settings.slimeMedial && result.medialLinks?.length) viewer.setSkeleton?.("slimeMedial", segmentsOf(result.medialLinks), { color: 0x06b6d4 });
+    if (settings.slimeDeadEnds && result.deadLinks?.length) viewer.setSkeleton?.("slimeDead", segmentsOf(result.deadLinks), { color: 0x7f1d1d });
+    if (settings.slimeAbandoned && result.abandonedLinks?.length) viewer.setSkeleton?.("slimeAbandoned", segmentsOf(result.abandonedLinks), { color: 0x64748b });
+    if (settings.slimeBottlenecks && result.bottlenecks?.length) {
+      const worst = result.bottlenecks[0].seconds;
+      viewer.setMarkers?.(
+        "slimeBottlenecks",
+        result.bottlenecks.map((b) => [P[b.node * 3], P[b.node * 3 + 1], P[b.node * 3 + 2]]),
+        { color: 0xbe123c, sizes: result.bottlenecks.map((b) => 0.6 + 0.8 * Math.sqrt(b.seconds / worst)) },
+      );
+    }
     return () => {
-      viewer.setSkeleton?.("slimeDesire", null);
-      viewer.setSkeleton?.("slimeMedial", null);
+      for (const layer of ["slimeDesire", "slimeMedial", "slimeDead", "slimeAbandoned"]) viewer.setSkeleton?.(layer, null);
+      viewer.setMarkers?.("slimeBottlenecks", null);
     };
-  }, [slime.result, graph, settings.slimeDesire, settings.slimeMedial]);
+  }, [slime.result, graph, settings.slimeDesire, settings.slimeMedial, settings.slimeDeadEnds, settings.slimeAbandoned, settings.slimeBottlenecks]);
   // ------------------------------------------------------- recording
 
   // The view recorded as a GIF (lib/recorder.js): the fire, the smoke and the

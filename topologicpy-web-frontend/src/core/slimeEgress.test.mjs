@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { SLIME_DEFAULTS, slimeEgress } from "./slimeEgress.js";
+import { SLIME_DEFAULTS, sensorReach, slimeEgress } from "./slimeEgress.js";
 import { KIND_DOOR, KIND_FLOOR } from "./lattice.js";
 
 /**
@@ -189,4 +189,25 @@ test("the soft fire's strength rises over the lead before a place is untenable a
   assert.equal(smokeAt(60, 60, 30), 1);
   assert.equal(smokeAt(60, 500, 30), 1);
   for (let t = 0; t < 100; t += 1) assert.ok(smokeAt(60, t + 1, 30) >= smokeAt(60, t, 30), "never weaker later");
+});
+
+test("the run's own smoke: thick smoke on a corridor holds the slime back from it, and sight shortens in it", () => {
+  assert.equal(sensorReach(3, 30, 30), 3);
+  assert.equal(sensorReach(3, 60, 30), 3);
+  assert.equal(sensorReach(3, 20, 30), 2);
+  assert.equal(sensorReach(3, 10, 30), 1);
+  assert.equal(sensorReach(3, 0.5, 30), 1);
+  const { graph, exits, top, bottom, room } = twoWays();
+  const n = graph.nodes.length / 3;
+  // Smoke on the top corridor from the start (visibility 2 m), clear elsewhere; nothing untenable.
+  const K = 10, frameSeconds = 30;
+  const vis = new Float32Array(K * n).fill(40);
+  for (let k = 0; k < K; k += 1) for (const v of top) vis[k * n + v] = 2;
+  const closes = new Float64Array(n).fill(Infinity);
+  const smoky = slimeEgress(graph, { exits, places: room, agents: 30, steps: 300, closes, smokeFrames: { K, frameSeconds, vis }, seed: 2 });
+  const calm = slimeEgress(graph, { exits, places: room, agents: 30, steps: 300, seed: 2 });
+  assert.equal(smoky.smokeSource, "visibility");
+  assert.ok(mean(smoky.weights, top) < mean(calm.weights, top), "less trail in the smoke");
+  assert.ok(mean(smoky.weights, bottom) > mean(calm.weights, bottom), "more on the clear corridor");
+  assert.equal(smoky.explored.length, n);
 });

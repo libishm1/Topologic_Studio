@@ -2059,6 +2059,30 @@ export class ViewerManager {
     this._updateGraphEmphasis();
   }
 
+  /**
+   * Spheres at points (the slime's bottlenecks): one instanced mesh, over
+   * everything, each sized by `sizes` (a factor on a radius scaled to the
+   * model); null clears the layer `name`.
+   */
+  setMarkers(name, points, { color = 0xbe123c, sizes = null } = {}) {
+    this._setOverlay(name, null);
+    if (!points?.length) return;
+    const box = this._modelBox();
+    const extent = box ? Math.max(...box.getSize(new THREE.Vector3()).toArray()) : 20;
+    const r = Math.max(0.15, Math.min(0.8, extent * 0.008));
+    const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthTest: false, depthWrite: false });
+    const balls = new THREE.InstancedMesh(new THREE.SphereGeometry(r, 16, 12), material, points.length);
+    const m = new THREE.Matrix4();
+    points.forEach((p, i) => {
+      const k = sizes ? sizes[i] : 1;
+      m.makeScale(k, k, k).setPosition(p[0], p[1], p[2]);
+      balls.setMatrixAt(i, m);
+    });
+    balls.renderOrder = 905;
+    balls.frustumCulled = false;
+    this._setOverlay(name, balls);
+  }
+
   setSlimeWeights(weights) {
     const segments = this.overlays.get(OVERLAY.graph);
     if (!segments || !this._graphEdges) return;

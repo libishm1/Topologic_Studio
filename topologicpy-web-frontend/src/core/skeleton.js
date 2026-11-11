@@ -198,11 +198,12 @@ export function medialAxis(graph, adj, { lambda = 1.0 } = {}) {
  * @param adj      openAdjacency's
  * @param weights  the slime's weights (0 to 1 a node)
  * @param exits    the exit nodes
- * @param opts     tube (2), fireCost and smoke (the soft fire's, or 0 and null), cell (2 m), minFlow (2): links fewer ways pass are left out
- * @returns {{links: Int32Array, flow: Int32Array, on: Uint8Array, maxFlow: number}}
- *   links as directed pairs [from, to, ...], towards the exit; flow a link; on: nodes on a kept link
+ * @param opts     tube (2), fireCost and smoke (the soft fire's, or 0 and null), cell (2 m), minFlow (2): links fewer ways pass are left out;
+ *                 people: persons on each node (to weigh each way by the people of its cell; null: one a way)
+ * @returns {{links: Int32Array, flow: Int32Array, people: Float32Array, on: Uint8Array, maxFlow: number}}
+ *   links as directed pairs [from, to, ...], towards the exit; flow a link (ways), people a link (persons); on: nodes on a kept link
  */
-export function desireLines(graph, adj, weights, exits, { tube = 2, fireCost = 0, smoke = null, cell = 2, minFlow = 2 } = {}) {
+export function desireLines(graph, adj, weights, exits, { tube = 2, fireCost = 0, smoke = null, cell = 2, minFlow = 2, people = null } = {}) {
   const { n, start, to, len, up, h0, h1 } = adj;
   const P = graph.nodes;
   const kinds = graph.kinds || new Uint8Array(n);
@@ -233,26 +234,150 @@ export function desireLines(graph, adj, weights, exits, { tube = 2, fireCost = 0
     }
   }
   // One floor node a cell (by plan and storey), traced out; a link's flow is the ways through it.
-  const seeds = new Map();
+  const seeds = new Map(), folk = new Map();
   for (let v = 0; v < n; v += 1) {
     if (kinds[v] !== KIND_FLOOR || !(cost[v] < Infinity)) continue;
     const key = `${Math.floor(P[v * 3 + h0] / cell)},${Math.floor(P[v * 3 + h1] / cell)},${Math.round(P[v * 3 + up] / 1.5)}`;
     if (!seeds.has(key)) seeds.set(key, v);
+    if (people) folk.set(key, (folk.get(key) || 0) + people[v]);
   }
   const up1 = new Int32Array(n);
-  for (const s of seeds.values()) for (let v = s; parent[v] >= 0; v = parent[v]) up1[v] += 1;
-  const links = [], flow = [];
+  const carried = new Float32Array(n);
+  for (const [key, s] of seeds) {
+    const w = people ? folk.get(key) : 1;
+    for (let v = s; parent[v] >= 0; v = parent[v]) {
+      up1[v] += 1;
+      carried[v] += w;
+    }
+  }
+  const links = [], flow = [], persons = [];
   const on = new Uint8Array(n);
   let maxFlow = 0;
   for (let v = 0; v < n; v += 1) {
     if (parent[v] < 0 || up1[v] < minFlow) continue;
     links.push(v, parent[v]);
     flow.push(up1[v]);
+    persons.push(carried[v]);
     on[v] = 1;
     on[parent[v]] = 1;
     if (up1[v] > maxFlow) maxFlow = up1[v];
   }
-  return { links: Int32Array.from(links), flow: Int32Array.from(flow), on, maxFlow };
+  return { links: Int32Array.from(links), flow: Int32Array.from(flow), people: Float32Array.from(persons), on, maxFlow };
+}
+
+/** Persons a second a metre of effective width passes at the densest flow (SFPE, as performanceCheck.js DOOR_FLOW). */
+export const SPECIFIC_FLOW = (1 - 0.266 * 1.9) * 1.4 * 1.9;
+
+/** Metres lost at each side of a passage (performanceCheck.js DOOR_BOUNDARY). */
+export const EDGE_LOSS = 0.15;
+
+/**
+ * Bottlenecks on the desire lines: each link's people over what its clear
+ * width passes, in seconds (the time it would take everyone the slime sends
+ * that way to get through): a door's width where a door node is (doorWidth,
+ * m a node, 0 elsewhere), else twice the largest clearance within two links
+ * (a passage's width at its axis, whichever side of it the line runs), less
+ * EDGE_LOSS a side, at SPECIFIC_FLOW. Stairs are left out
+ * (their width is not on the graph yet). The `top` worst, at least `apart`
+ * metres from each other, from `minSeconds` up.
+ *
+ * @returns {Array<{node: number, people: number, width: number, seconds: number, door: boolean}>}
+ */
+export function bottlenecks(graph, links, people, { clearance, doorWidth = null, top = 8, apart = 4, minSeconds = 10, adj = null } = {}) {
+  const P = graph.nodes;
+  const kinds = graph.kinds || new Uint8Array(P.length / 3);
+  // The largest clearance within two links of a node.
+  const widest = (v) => {
+    let best = clearance[v];
+    if (!adj) return best;
+    for (let k = adj.start[v]; k < adj.start[v + 1]; k += 1) {
+      const u = adj.to[k];
+      if (clearance[u] > best && clearance[u] < Infinity) best = clearance[u];
+      for (let j = adj.start[u]; j < adj.start[u + 1]; j += 1) if (clearance[adj.to[j]] > best && clearance[adj.to[j]] < Infinity) best = clearance[adj.to[j]];
+    }
+    return best;
+  };
+  const found = [];
+  for (let k = 0; k < links.length; k += 2) {
+    const a = links[k], b = links[k + 1];
+    if (kinds[a] === KIND_STAIR || kinds[b] === KIND_STAIR) continue;
+    const at = kinds[b] === KIND_DOOR ? b : kinds[a] === KIND_DOOR ? a : b;
+    const door = kinds[at] === KIND_DOOR;
+    const width = door && doorWidth?.[at] > 0 ? doorWidth[at] : Math.max(0.5, 2 * widest(at));
+    const passes = SPECIFIC_FLOW * Math.max(0.1, width - 2 * EDGE_LOSS);
+    const seconds = people[k / 2] / passes;
+    if (seconds >= minSeconds) found.push({ node: at, people: people[k / 2], width, seconds, door });
+  }
+  found.sort((x, y) => y.seconds - x.seconds);
+  const kept = [];
+  for (const f of found) {
+    if (kept.length >= top) break;
+    const near = kept.some((g) => Math.hypot(P[g.node * 3] - P[f.node * 3], P[g.node * 3 + 1] - P[f.node * 3 + 1], P[g.node * 3 + 2] - P[f.node * 3 + 2]) < apart);
+    if (!near) kept.push(f);
+  }
+  return kept;
+}
+
+/**
+ * One way out: each node's walk before a second, separate way out opens,
+ * the part its shortest walks to its two nearest exits share (the common
+ * path of egress travel; a dead end's depth): (dA + dB - dAB) / 2, with dA
+ * and dB its walks to the two nearest exits and dAB the walk between them
+ * (the Gromov product; on the lattice the two walks often run side by side
+ * through different nodes, so comparing their steps would find them apart
+ * at once). A node that reaches one exit only is all common path. Worked
+ * from a walk tree to each exit, so with more than `maxExits` exits it is
+ * not worked out (null).
+ *
+ * @returns {Float32Array|null}  m a node (Infinity where no exit is reached)
+ */
+export function commonPath(adj, exits, { maxExits = 32 } = {}) {
+  const list = [...new Set(exits.filter((e) => e >= 0))];
+  if (!list.length || list.length > maxExits) return null;
+  const { n, start, to, len } = adj;
+  const trees = list.map((e) => {
+    const dist = new Float64Array(n).fill(Infinity);
+    const parent = new Int32Array(n).fill(-1);
+    const heap = new Heap();
+    dist[e] = 0;
+    heap.push(0, e);
+    const done = new Uint8Array(n);
+    while (heap.size) {
+      const a = heap.pop();
+      if (done[a]) continue;
+      done[a] = 1;
+      for (let k = start[a]; k < start[a + 1]; k += 1) {
+        const b = to[k], d = dist[a] + len[k];
+        if (d < dist[b]) {
+          dist[b] = d;
+          parent[b] = a;
+          heap.push(d, b);
+        }
+      }
+    }
+    return { dist, parent };
+  });
+  const out = new Float32Array(n).fill(Infinity);
+  for (let v = 0; v < n; v += 1) {
+    let first = -1, second = -1;
+    for (let g = 0; g < trees.length; g += 1) {
+      const d = trees[g].dist[v];
+      if (!(d < Infinity)) continue;
+      if (first < 0 || d < trees[first].dist[v]) {
+        second = first;
+        first = g;
+      } else if (second < 0 || d < trees[second].dist[v]) second = g;
+    }
+    if (first < 0) continue;
+    const A = trees[first];
+    if (second < 0) {
+      out[v] = A.dist[v];
+      continue;
+    }
+    const between = A.dist[list[second]];
+    out[v] = between < Infinity ? Math.max(0, (A.dist[v] + trees[second].dist[v] - between) / 2) : A.dist[v];
+  }
+  return out;
 }
 
 /**
