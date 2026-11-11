@@ -39,6 +39,18 @@ Per quantity and per cell size, from the held-out results:
 
 Sprinkler activation is reported apart: the walls' convection coefficient was set on those data, so they are not fully held out for it, and that is said with the number. The overall statement is never "the fire is calibrated"; it is a list of quantities and their status.
 
+### Added 2026-11-12, 00:40, before any held-out verdict
+
+The validation suite as built (plan section 12, pre-registered there before its runs) differs from section 3 in five ways, recorded here and not changed:
+
+- NIST/NRC has no plume comparison: the FDS Validation Guide's inputs give none for it. "Plume" in section 3's NIST/NRC row is struck.
+- The suite also compares WTC's ceiling jet, O2 and CO2, and NIST/NRC's O2 and CO2, as the FDS guide does. They are reported; with two datasets from one laboratory they can be indicative at most.
+- A dataset with any run stopped by the health guard on a cell counts, on that cell, as outside the indicative band for every quantity it measures. Section 4 did not say; this is the stricter reading.
+- NIST/NRC and WTC (one laboratory, one lead, a year apart, different series) count as two datasets; section 3 already listed them so.
+- On 0.20 m cells only Steckler and NBS run (NIST/NRC and WTC take about an hour a test there), so nothing can be calibrated on 0.20 m cells.
+
+Where the suite's rule (plan 12.6) and section 4 differ, the stricter gives the verdict.
+
 ## 5. If the comparisons find a fault
 
 A fault found while comparing (in the solver or the harness) may be fixed only when a check that uses no validation data shows it, as section 1's do. After any such fix, every held-out comparison is rerun, and both the results before and after are reported.
