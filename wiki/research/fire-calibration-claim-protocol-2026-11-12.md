@@ -39,7 +39,7 @@ Per quantity and per cell size, from the held-out results:
 
 Sprinkler activation is reported apart: the walls' convection coefficient was set on those data, so they are not fully held out for it, and that is said with the number. The overall statement is never "the fire is calibrated"; it is a list of quantities and their status.
 
-### Added 2026-11-12, 00:40, before any held-out verdict
+### Added 2026-11-12, 00:26 (commit d9160e1), before any held-out verdict
 
 The validation suite as built (plan section 12, pre-registered there before its runs) differs from section 3 in five ways, recorded here and not changed:
 
@@ -51,7 +51,7 @@ The validation suite as built (plan section 12, pre-registered there before its 
 
 Where the suite's rule (plan 12.6) and section 4 differ, the stricter gives the verdict.
 
-### Added 2026-11-12, about 01:00, before any final-solver Steckler result
+### Added 2026-11-12, 00:28 (commit 0afce90), before any final-solver Steckler result
 
 A check on geometry alone (the fire's open cells flooded to see whether they reach the domain's open boundary) found that the grid seals some of Steckler's doors: the 0.24 to 0.25 m doors (tests 10, 114 and 514) on every cell size, and the 0.36 m doors (11, 144 and 544) on 0.34 m cells. In those 12 of the 165 Steckler runs the room has no opening, so they do not represent their tests. The rule: a run whose fire's gas cannot reach the open boundary, though its test had an opening, is left out and reported as "not represented on this grid". Tests sealed by design (NIST/NRC 1, 2, 7, 8 and 13 and NBS 100O, door shut, leakage below a cell) are unaffected. The statistics and verdicts are reported both ways, as pre-registered with every test and with this rule; the rule's verdict is the one the app states, and the pre-registered one is given beside it. For the app, the same fact is a limit: an opening narrower than about a cell closes on the grid.
 
