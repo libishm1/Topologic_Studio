@@ -5,12 +5,14 @@ import {
   AREA_PER_EXTINGUISHER,
   CAPACITY,
   EXTINGUISHER_HAZARDS,
+  GROWTH_TIME,
   STANDOFF,
   TRAVEL,
   T_TAKE,
   UNITS,
   attempt,
   capFor,
+  designFire,
   extinguisherCap,
   extinguisherRecords,
   layoutExtinguishers,
@@ -23,6 +25,7 @@ import {
 } from "./extinguishers.js";
 import { createSuppression, evansFactor } from "./suppression.js";
 import { KIND_DOOR } from "./lattice.js";
+import { GROWTH } from "./zone.js";
 
 const close = (a, b, tol, what = "") => assert.ok(Math.abs(a - b) <= tol, `${what} ${a} vs ${b}`);
 const RANK = { success: 0, "cannot tell": 1, failure: 2 };
@@ -293,6 +296,24 @@ test("success never returns once a growing fire has outgrown the unit: the outco
     assert.equal(a.outcome === "success", a.times.tS <= Math.sqrt(80 / 0.0117));
   }
   assert.deepEqual([...seen], ["success", "cannot tell", "failure"]);
+});
+
+test("the design fire takes the two-zone growth keys: ultra-fast reaches 1 MW at 75 s, not medium's 300 s", () => {
+  // The panel's values are zone.js's keys; "ultrafast" fell back to medium (docs pass 2026-11-12).
+  assert.deepEqual(Object.keys(GROWTH_TIME), Object.keys(GROWTH));
+  for (const [growth, tg] of Object.entries(GROWTH_TIME)) {
+    const fire = designFire(growth, 5000);
+    assert.equal(fire.growth, growth);
+    assert.equal(fire.tGrowth, tg);
+    close(fire.hrrAt(tg), 1000, 1e-9, `${growth} at ${tg} s`);
+    close(fire.hrrAt(tg / 2), 250, 1e-9, `${growth} at ${tg / 2} s`);
+  }
+  const ultra = designFire("ultra-fast", 5000);
+  assert.equal(ultra.text, "an ultra-fast t-squared design fire (1 MW in 75 s, at most 5000 kW)");
+  assert.match(designFire("fast", 5000).text, /^a fast /);
+  assert.equal(ultra.hrrAt(600), 5000, "capped at the peak");
+  assert.equal(designFire("ultrafast", 2000).growth, "medium", "an unknown key is medium");
+  assert.equal(designFire(undefined, 2000).tGrowth, 300);
 });
 
 test("tau_x = t_d / ln(1/epsilon): the note's values, and the cap at the end of discharge is epsilon of the start", () => {

@@ -8,7 +8,7 @@
  *
  * Prints the labels the guide does not name. With --max, exits 1 when more
  * than N are missing, so a new control cannot go in without its words in the
- * guide (a ratchet: lower N as the guide catches up; 74 on 2026-11-11).
+ * guide (a ratchet: lower N as the guide catches up; 0 on 2026-11-12).
  */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";

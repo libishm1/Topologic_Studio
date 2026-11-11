@@ -54,6 +54,22 @@
 
     <h2 id="start">Starting a fire and rerouting</h2>
     <p>Press <span class="label">Set</span> beside Fire origin (or <kbd>F</kbd>), click where the fire starts, and press <span class="label">Start fire</span>. The fire spreads step by step on the graph while the route is checked every five steps and moved away from the heat when it has to be. It may move to any exit out of the building, by another stair if it must; <span class="label">Reroute towards</span>, under <span class="label">Rerouting and timing</span>, keeps it to the exit you picked instead.</p>
+    <p>While the fire runs, the <span class="label">Route during the fire</span> card says whether the route is still clear, when it last changed, or that there is no safe route. It gives the route's cost (its length in metres, lengthened by the heat as <span class="label">Hazard weight</span> sets), whether it leaves by the exit picked or another, and the step at which it was last checked. A route that has to pass through the fire is drawn but reported as not safe.</p>
+    <p>The other settings under <span class="label">Rerouting and timing</span>:</p>
+    <dl>
+      <dt class="label">Recompute the route as the fire grows</dt>
+      <dd><p>On by default; it needs a start and an exit. With heat diffusion, two-zone rooms and Flamescapes the route is solved again against the current heat; with spread along links and distance bands, burning nodes are impassable.</p></dd>
+      <dt class="label">Hazard weight</dt>
+      <dd><p>0.5 by default, 0 to 5. A link costs its length times (1 + weight × degrees above 20 °C / 100), from the mean temperature of its two ends; zero ignores the fire. It acts with the models that give a temperature: heat diffusion (its index), two-zone rooms and Flamescapes (their gas temperature).</p></dd>
+      <dt class="label">Recompute every</dt>
+      <dd><p>5 steps by default, 1 to 30 steps.</p></dd>
+      <dt class="label">Impassable above (°C)</dt>
+      <dd><p>Blank by default, 30 to 200. Links whose mean temperature is above it are closed; left blank, heat only adds cost. With heat diffusion it is compared with the model's index, 20 to 120, not a measured temperature; with two-zone rooms, with each room's gas temperature at head height; with Flamescapes, with the run's gas temperature at head height. Spread along links and distance bands have no temperature: they close burning nodes.</p></dd>
+      <dt class="label">Steps</dt>
+      <dd><p>60 by default, 1 to 2,000: how many steps the fire runs. The two-zone model plays its forecast length in this many frames, and a Flamescapes run keeps this many frames of its simulated time, at most 120 and at most one a second. A kept Flamescapes run is replayed only for the same Steps, so changing it starts a new run.</p></dd>
+      <dt class="label">Step delay (ms)</dt>
+      <dd><p>120 ms by default, 0 to 2,000 ms: the pause between steps as the fire plays. A Flamescapes run also waits for each frame to be computed.</p></dd>
+    </dl>
     <figure>
       <img src="media/office-reroute.gif" width="960" height="434" loading="lazy" alt="The two-storey Office example with a fire at the foot of its east stair: the route from an upstairs room first takes the east stair, then, once the way out by it is above 60 degrees C at head height, turns back along the upper corridor to the west stair and exit.">
       <figcaption>The Office example, with a Flamescapes fire (class B) at the foot of the east stair and <span class="label">Impassable above</span> set to 60 °C. The route from the upstairs room takes the east stair until step 20 (100 s), when the way out by it passes 60 °C at head height; from then on it takes the west stair and exit. The switch came at step 20 in each of five runs.</figcaption>
@@ -85,18 +101,45 @@
     <p>Switch it on with <span class="label">Flamescapes combustion solver (optional)</span> in the Simulate step. It runs in your browser: on the GPU through WebGPU where the browser offers it, otherwise on one CPU core at 2.8 to 2.9 times real time for the Duplex (34 to 36 ms a step, <code>tools/fire-bench.mjs</code>), several times faster on a GPU. Its frames play as they are computed, and the route reroutes on the gas temperature at head height.</p>
     <p>A finished run is kept in the browser (at most 256 MB), so the same fire asked for again, after a reload too, plays from its kept frames instead of being computed; <span class="label">Forget kept runs</span> clears them.</p>
 
+    <h3 id="flamescapes-settings">Flamescapes settings</h3>
+    <p>Folded under <span class="label">Flamescapes settings</span>, below the run card:</p>
+    <dl>
+      <dt class="label">Simulated time (s)</dt>
+      <dd><p>180 s by default, 30 to 900 s: how long the fire is run. The run is kept as frames, as many as <span class="label">Steps</span> under Rerouting and timing, at most 120 and at most one a second: by default 60 frames 3 s apart.</p></dd>
+      <dt class="label">Fire load (MJ/m²)</dt>
+      <dd><p>The room contents per square metre of floor, 780 MJ/m² by default (the Eurocode mean for dwellings), 50 to 3,000.</p></dd>
+      <dt class="label">Untenable from (gas °C)</dt>
+      <dd><p>60 °C by default, 30 to 200: a node is untenable once its gas at head height reaches this temperature.</p></dd>
+      <dt class="label">Untenable below visibility (m)</dt>
+      <dd><p>10 m by default, 1 to 30 m.</p></dd>
+      <dt class="label">Smoke makes a place untenable</dt>
+      <dd><p>On by default: visibility below the limit closes a node, as gas above the temperature does. Off, only the temperature and the doses close it. These three limits, with the ISO 13571 doses, are what the run card, the tenability index, the forecast, the exports, and the people and the slime mould that keep out of the fire read as untenable.</p></dd>
+      <dt class="label">Run on</dt>
+      <dd><p>The GPU where the browser offers WebGPU, else the CPU (the default), or the CPU on one core.</p></dd>
+      <dt class="label">Windows and Ventilation</dt>
+      <dd><p>See <a href="#doors">Doors, windows and ducts</a>. With the ventilation running, <span class="label">Air through each terminal (L/s)</span> sets the air each terminal moves: 100 L/s by default, 10 to 1,000, an assumption rather than a value read from the model.</p></dd>
+      <dt class="label">Grid</dt>
+      <dd><p>Standard (the default): the same grid on every device, so the GPU and the CPU give one fire; a phone's or small machine's CPU builds a lighter one and its card says so. Or, on the GPU, finer (sized to keep three times real time) or finest (all its memory allows, slower). The fire depends on the grid, so keep one grid when comparing runs; which grid is nearer a real fire has not been measured.</p></dd>
+      <dt class="label">Repeat runs on the GPU</dt>
+      <dd><p>One run (the default), 4 or 8. A fire that catches the room's contents is partly chance. After the run you watch, the GPU makes the rest on the same grid, each with the room a thousandth of a degree warmer, while the view plays on, and the card gives the median and range of the untenable nodes, the first untenable time, the peak and the energy. None are made on the CPU, where each would take as long as the first.</p></dd>
+      <dt class="label">Record soot, CO₂ and O₂ too</dt>
+      <dd><p>On by default. Needed for the CO₂ and O₂ readings, the tenability index's CO₂ and O₂ terms, and the exports' soot, CO₂ and O₂. Recording them doubles what each stored frame holds, so a run past 64 MB of frames keeps temperature, visibility and CO only, and its card says so.</p></dd>
+      <dt class="label">Keep finished runs in this browser</dt>
+      <dd><p>On by default: the kept runs above, at most 256 MB, the runs used least recently going first.</p></dd>
+    </dl>
+
     <h2 id="readings">Smoke, gases and tenability</h2>
     <p><span class="label">Show on the graph</span> colours the nodes by one of four readings at head height:</p>
     <ul>
       <li><span class="label">Heat:</span> the gas temperature.</li>
-      <li><span class="label">Smoke:</span> the visibility, or the soot concentration, extinction coefficient, obscuration or optical density it comes from.</li>
+      <li><span class="label">Smoke:</span> the visibility (the default), or the soot concentration, extinction coefficient, obscuration or optical density it comes from, chosen under <span class="label">Smoke measure</span>. All five come from the soot at head height, so they shade the graph alike; the legend reads in the one chosen.</li>
       <li><span class="label">Gases:</span> CO, CO₂ or O₂.</li>
       <li><span class="label">Tenability index:</span> the largest share of a limit a node has reached, over its gas temperature, its visibility, and the asphyxiant and heat doses of ISO 13571 against a fractional effective dose of 0.3, so that 1 means untenable.</li>
     </ul>
     <p>The smoke the solver carries (its soot) is drawn as a grey cloud, faint in the heat view and full in the smoke view. The run card says whether embers are on, and how many were thrown and how many spot fires they lit.</p>
 
     <h2 id="doors">Doors, windows and ducts</h2>
-    <p><span class="label">Doors</span> can be open, closed, as built or random. As built closes the doors the model says close themselves: <code>Pset_DoorCommon.SelfClosing</code>, or a fire rating whose EN 13501-2 class carries the self-closing mark -C (14 of the Vienna model's 81 doors, rated EI2 30-C or EI2 30-C-Sm). Random closes a share of the doors chosen with a seed, so a run can be repeated and compared with another seed.</p>
+    <p><span class="label">Doors</span> can be open, closed, as built or random. As built closes the doors the model says close themselves: <code>Pset_DoorCommon.SelfClosing</code>, or a fire rating whose EN 13501-2 class carries the self-closing mark -C (14 of the Vienna model's 81 doors, rated EI2 30-C or EI2 30-C-Sm). Random closes a share of the doors chosen with a seed, so a run can be repeated and compared with another seed: <span class="label">Closed (%)</span> sets the share, 50 % by default, and <span class="label">Seed</span> picks the doors (1 by default), the same seed closing the same doors.</p>
     <p>Doors are open and windows closed unless the <span class="label">Doors</span> switch beside the fire controls or <span class="label">Windows</span> in the Flamescapes settings say otherwise. A closed door or window has no gaps: with everything closed on the Duplex, 0.0 g of 138 g of soot reached the outside air after 60 s, against 24 % with the doors open, the default (<code>tools/envelope-check.mjs</code>). A grid clipped round the fire lets smoke out at its sides, which the run card says.</p>
     <p>Atria: a space named as a void ("open to below") is never a floor in the fire grid, so smoke rises through an atrium as it would in the building. A model with no floor slabs takes its floors from its rooms' bottoms, and until 2026-11-11 the voids' bottoms sealed the NIBS Clinic's atria at the upper storey's floor, 4.57 m up. A grid clipped round a fire under an atrium now reaches the atrium's top and half a storey over it, its cells coarser for the same count. On the Clinic, over a 120 s run, the upper storey over the atrium went from clear air to 0.4 to 0.7 m of visibility at head height. The Clinic has no roof over its atria, so its smoke leaves through the top of the grid there. Runs kept from before this change are not reused.</p>
     <p><span class="label">Ventilation: running</span> joins the model's air terminals through one well-mixed duct volume at an assumed 100 L/s a terminal, without reading which system each belongs to or the ducts themselves, so it shows the furthest the ducts could spread smoke.</p>
@@ -125,7 +168,36 @@
     </figure>
 
     <h2 id="forecast">Planning with the forecast</h2>
-    <p><span class="label">Plan with the forecast</span> runs the fire to its end first, then routes with the state each point will be in when you would reach it. It reports the earliest safe route and how long you could wait before leaving, and colours the graph by escape deadline: for each point, the latest time to set off and still get out within the dose limit. The defaults are a fractional effective dose of 0.3, walking at 1.2 m/s, over a five-minute forecast; all of these can be changed under <span class="label">Clock, speed and limits</span>. With a Flamescapes run it plans on the same run, adding the CO dose of ISO 13571 to the heat dose.</p>
+    <p><span class="label">Plan with the forecast</span>, in the section <span class="label">Escape deadlines and forecast routes</span>, runs the fire to its end first, then routes with the state each point will be in when you would reach it. It reports the earliest safe route and how long you could wait before leaving, and colours the graph by escape deadline: for each point, the latest time to set off and still get out within the dose limit. The defaults are a fractional effective dose of 0.3 and walking at 1.2 m/s, over a five-minute forecast with the graph models; all of these can be changed under <span class="label">Clock, speed and limits</span>. With a Flamescapes run it plans on the same run, adding the CO dose of ISO 13571 to the heat dose. It needs a start and a fire origin, and an exit when <span class="label">Exits</span> is set to the exit you picked rather than every exit out of the building (the default).</p>
+    <p>With <span class="label">Two-zone rooms</span> chosen, <span class="label">The room fire</span> opens above the clock. Its settings drive the live two-zone fire too.</p>
+    <dl>
+      <dt class="label">Growth</dt>
+      <dd><p>A t-squared fire in the room of the fire origin: slow, medium (the default), fast or ultra-fast, reaching 1 MW in 600, 300, 150 or 75 s.</p></dd>
+      <dt class="label">Peak heat release (kW)</dt>
+      <dd><p>5,000 kW by default, 50 to 50,000 kW. The fire is capped at this peak or at what the room's doors let it burn, whichever is lower.</p></dd>
+      <dt class="label">Smoke at head height is untenable</dt>
+      <dd><p>On by default: a point closes once its room's smoke layer is down to 1.8 m, however hot. Off, only the gas temperature closes it.</p></dd>
+    </dl>
+    <p>Under <span class="label">Clock, speed and limits</span>:</p>
+    <dl>
+      <dt class="label">Forecast length (s)</dt>
+      <dd><p>Two-zone rooms only: 600 s by default, 60 to 1,800 s. It is also the length of the live two-zone fire.</p></dd>
+      <dt class="label">Seconds per fire step</dt>
+      <dd><p>The graph models: 5 s by default, 0.5 to 60 s. The graph models count steps; this sets the clock, so 60 steps make a five-minute forecast.</p></dd>
+      <dt class="label">Walking speed (m/s)</dt>
+      <dd><p>1.2 m/s by default, 0.2 to 3 m/s. The performance check and the extinguisher attempt walk at it too.</p></dd>
+      <dt class="label">Untenable from (gas °C)</dt>
+      <dd><p>Two-zone rooms only: 60 °C by default, 30 to 200.</p></dd>
+      <dt class="label">Untenable from (model °C)</dt>
+      <dd><p>The graph models: 80 by default, 25 to 120, on the index that reads 20 to 120 (see <a href="#limits">Limits</a>). Spread along links and distance bands put a burning node at the top of the scale, so with them a node closes when the fire reaches it.</p></dd>
+      <dt class="label">Leave after (s)</dt>
+      <dd><p>0 s by default: when the person sets off, counted from ignition.</p></dd>
+      <dt class="label">Toxic dose limit (FED)</dt>
+      <dd><p>0.3 by default, 0.01 to 1. ISO 13571 uses a fractional effective dose of 0.3 to protect most occupants and 1 for the average adult.</p></dd>
+      <dt class="label">Colour the graph by escape deadline</dt>
+      <dd><p>On by default. The deadline map is the slow part of planning and is made only when it will be drawn. The performance check reads it, so leave it on to run the check.</p></dd>
+    </dl>
+    <p>With a Flamescapes fire the forecast keeps the run's own clock and limits, <span class="label">Untenable from (gas °C)</span> and the visibility in the <a href="#flamescapes-settings">Flamescapes settings</a>; <span class="label">Seconds per fire step</span> and <span class="label">Untenable from (model °C)</span> are then not used, and the panel greys them out and says so.</p>
     <figure>
       <img src="media/duplex-forecast.jpg" width="1440" height="900" loading="lazy" alt="The escape-deadline map of the Duplex: the graph coloured from red (leave now) to yellow (time to spare), with the earliest safe route in teal.">
       <figcaption>The escape-deadline map: red means leave now, yellow means time to spare; the earliest safe route is in teal.</figcaption>
@@ -133,11 +205,45 @@
     <p>The escape deadlines are what the <a href="checks.html#performance">performance check</a> reads.</p>
 
     <h2 id="learned">A learned escape</h2>
-    <p><span class="label">Train an agent against this fire</span> trains an agent to find its own way out while the fire spreads. Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart.</p>
+    <p><span class="label">Train an agent against this fire</span> trains an agent to find its own way out while the fire spreads, from the start set in the Route step; it needs an exit set there too. Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart. The <span class="label">Learning method</span> is one of two:</p>
     <ul>
       <li><span class="label">Safe learner (proved)</span>, the default: learns on (node, time) behind a shield that never lets it step where the fire will seal it in. It stops when it can prove its route is the earliest escape, by any exit door or the chosen one. Both properties are proved in Lean (<code>SafeEscape.lean</code>).</li>
-      <li><span class="label">Q-learning:</span> the earlier tabular Q-learning (after Jabi et al. 2019), kept for comparison.</li>
+      <li><span class="label">Q-learning:</span> the earlier tabular Q-learning (after Jabi et al. 2019), kept for comparison. Its route is drawn by a walk that never revisits a node.</li>
     </ul>
+    <p>The agent's fire is its own, not the fire model chosen above: it starts at the fire origin and spreads along the links, as <span class="label">Spread along links</span> does, at a speed you set, held back by walls when <span class="label">Walls block routes</span> is on. Time is counted in moves, one link each.</p>
+    <dl>
+      <dt class="label">Escape by</dt>
+      <dd><p>The safe learner only: any exit out of the building (the default), or the chosen exit.</p></dd>
+      <dt class="label">Episodes</dt>
+      <dd><p>Q-learning only: 400 training episodes by default, at least 10. The safe learner runs up to 20,000 trials and stops sooner when its route is certified.</p></dd>
+      <dt class="label">Max steps</dt>
+      <dd><p>200 moves by default, 10 to 1,000: the step limit. An escape must reach an exit within it.</p></dd>
+      <dt class="label">Train with the fire</dt>
+      <dd><p>On by default: the agent trains against its own fire. It needs a fire origin; without one the agent trains without fire. Off, it learns its way out as if there were no fire. What the fire does to the agent depends on the method: Q-learning loses 10 for stepping into a burning node, which ends the episode; the safe learner's shield never lets it step where the fire will seal it in, so for it the switch only turns the fire on or off.</p></dd>
+      <dt class="label">Fire speed (links per move)</dt>
+      <dd><p>1 by default, 0.05 to 10: how many links the fire advances each time the evacuee moves one. At 1, with the fire on or beside the route, the study's runs had no escape in 70 of 72; the result says when.</p></dd>
+    </dl>
+    <p>The result:</p>
+    <dl>
+      <dt class="label">Steps</dt>
+      <dd><p>The moves the agent's route takes.</p></dd>
+      <dt class="label">Reached exit</dt>
+      <dd><p>Yes, no, or burned (the route ran into the fire).</p></dd>
+      <dt class="label">Length vs shortest</dt>
+      <dd><p>The agent's route against the shortest walk with no fire to the exit, or to the nearest of the exits it may use, both in metres on the graph.</p></dd>
+      <dt class="label">Moves vs earliest escape</dt>
+      <dd><p>The safe learner: its moves against the earliest escape found by an exact search. They match whenever it is certified.</p></dd>
+      <dt class="label">Certified earliest</dt>
+      <dd><p>The safe learner: yes when it proved, from its own bounds, that no route leaves sooner.</p></dd>
+      <dt class="label">Trials</dt>
+      <dd><p>The safe learner: how many trials it took.</p></dd>
+      <dt class="label">Late-training success</dt>
+      <dd><p>Q-learning: the share of the last fifth of the training episodes, with exploration, that reached the exit.</p></dd>
+      <dt class="label">Return vs best within the step limit</dt>
+      <dd><p>Q-learning: the learned policy's discounted return against the most any policy can collect within the step limit, worked out by backward induction, with how far short it falls; more than 5 % short is flagged. The rewards are +10 at the exit, -10 in the fire and -0.1 for each median link's length walked, discounted by 0.99 a move.</p></dd>
+      <dt class="label">Escape possible</dt>
+      <dd><p>With the fire on: whether any route escapes it within the step limit, and in how many moves, by an exact search.</p></dd>
+    </dl>
     <p>In a study of 848 runs on nine buildings (<a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/rl-egress-study-2026-11-05.md">the reinforcement learning study</a>, <code>tools/rl-bench.mjs</code>), most "failures" near the fire had no escape at all. Where one existed, the Q-learning's drawn path missed it in 15% of runs, mostly from the way its path was drawn. The shielded learner escaped in all of them, by the earliest route, certified, in a median 1.8 ms.</p>
     <figure>
       <img src="media/duplex-rl.jpg" width="1440" height="900" loading="lazy" alt="A trained agent's route out of the Duplex, as long as the shortest route (19.1 m), with its training success and its return against the best possible.">
@@ -167,7 +273,7 @@
       <li><span class="label">Not calibrated.</span> Checked against measured fires (McCaffrey's plume, Alpert's ceiling jet, the MQH layer temperature and Steckler's room tests), the plume now stays on its axis, but the hot layer reads 2.5 to 3.9 times too hot and the Steckler room tests do not pass. Where the gas moves fast, each frame is cut into up to eight smaller steps.</li>
       <li><span class="label">A stopped run.</span> A run whose gas goes past what a fire can do (hotter than 3,000 K, faster than 50 m/s, or holding over one and a half times the heat the fire has put in) is stopped, and the card says why and when. The frames before it play; the run is not kept in the browser.</li>
       <li><span class="label">Temperature.</span> In the graph models the temperature is an index, scaled to read 20 to 120 degrees C, not a temperature a sensor would measure. Doses computed from it rank routes under the model; the ISO 13571 limits do not carry over.</li>
-      <li><span class="label">Time in steps.</span> The graph models count fire time in steps; the forecast converts steps to seconds with a factor you set. Fire growth is not calibrated.</li>
+      <li><span class="label">Time in steps.</span> The graph models count fire time in steps; the forecast converts steps to seconds with a factor you set (<span class="label">Seconds per fire step</span>). Fire growth is not calibrated.</li>
       <li><span class="label">Waiting.</span> In the live simulation the evacuee waits while the fire grows, and each reroute starts from the original start. A route that has to pass through fire is drawn but reported as not safe. A route stays within one part of the graph.</li>
       <li><span class="label">Walking.</span> Stairs are walked at level speed (reference tools use about half to nine tenths of it). The routes have no queues at doors, no slowing in smoke and no pre-movement time; the performance check adds pre-movement and queues at doors. An assumed stair has no known width, and a lift ride counts as walking its rise, with no wait for the car.</li>
     </ul>
@@ -181,7 +287,7 @@
 
 <footer class="site-footer">
   <div>
-    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-12.</p>
     <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
   </div>
 </footer>

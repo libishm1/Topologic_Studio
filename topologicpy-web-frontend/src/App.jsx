@@ -3242,12 +3242,27 @@ export default function App() {
         return prev.hrr;
       };
     } else {
-      const growth = { slow: 600, medium: 300, fast: 150, ultrafast: 75 }[settings.zoneGrowth] ?? 300;
-      source = `a ${settings.zoneGrowth || "medium"} t-squared design fire (1 MW in ${growth} s, at most ${settings.zonePeakKw} kW)`;
-      hrrAt = (t) => Math.min(settings.zonePeakKw, 1000 * (t / growth) ** 2);
+      const design = E.designFire(settings.zoneGrowth, settings.zonePeakKw);
+      source = design.text;
+      hrrAt = design.hrrAt;
     }
+    // After the alarm: detection as the performance check takes it, from the
+    // plan's run when asked and found, else the time typed.
+    const plan = forecastPlan.nodes === graph.nodes ? forecastPlan.result : null;
+    const detected = reportPages.planDetection(plan, { fromRun: settings.perfDetectionFromRun, typed: settings.perfDetection });
     const median = Math.sqrt(Math.max(1, settings.perfPre1) * Math.max(1, settings.perfPre99));
-    const tGo = settings.extinguisherStart === "alarm" ? settings.perfDetection + settings.perfAlarm + median : 30;
+    const alarm = settings.extinguisherStart === "alarm";
+    const tGo = alarm ? detected.seconds + settings.perfAlarm + median : 30;
+    const start = alarm
+      ? {
+          detection: detected.seconds,
+          // No plan and no Flamescapes fire: no run would give one either.
+          detectionFrom: detected.from === "no plan" && !isFlamescapes(fireModel) ? "no run" : detected.from,
+          detectors: plan?.detectors ?? 0,
+          alarm: settings.perfAlarm,
+          median,
+        }
+      : null;
     try {
       const out = E.attempt({
         graph,
@@ -3264,12 +3279,12 @@ export default function App() {
         useWalls: settings.useWalls,
       });
       const late = out.times?.tS > horizon;
-      setAttemptState({ graph, result: { ...out, source, tGo, late, horizon } });
+      setAttemptState({ graph, result: { ...out, source, tGo, start, late, horizon } });
       markUsed("extinguisherAttempt");
     } catch (error) {
-      setAttemptState({ graph, result: { outcome: "cannot tell", reasons: [{ id: "error", status: "cannot tell", text: error.message }], source, tGo } });
+      setAttemptState({ graph, result: { outcome: "cannot tell", reasons: [{ id: "error", status: "cannot tell", text: error.message }], source, tGo, start } });
     }
-  }, [settings.extinguishers, settings.extinguisherStart, settings.extinguisherUnit, settings.extinguisherTrained, settings.zoneGrowth, settings.zonePeakKw, settings.perfPre1, settings.perfPre99, settings.perfDetection, settings.perfAlarm, settings.walkSpeed, settings.flamescapesClass, settings.useWalls, graph, points.fire, extinguisherPlan, fireModel, planExitNodes, markUsed]);
+  }, [settings.extinguishers, settings.extinguisherStart, settings.extinguisherUnit, settings.extinguisherTrained, settings.zoneGrowth, settings.zonePeakKw, settings.perfPre1, settings.perfPre99, settings.perfDetection, settings.perfDetectionFromRun, settings.perfAlarm, settings.walkSpeed, settings.flamescapesClass, settings.useWalls, graph, points.fire, extinguisherPlan, fireModel, forecastPlan.nodes, forecastPlan.result, planExitNodes, markUsed]);
 
   // A report entry's name: the fire's storey and how it was placed, and the model.
   const fireLabel = useCallback(
@@ -3288,7 +3303,7 @@ export default function App() {
     (presets, plan, planExits) => {
       const criterion = presets.criterionOf(settings.perfCriterion);
       const sensitivity = presets.criterionOf("sensitivity");
-      const fromRun = settings.perfDetectionFromRun && Number.isFinite(plan.detection);
+      const detected = reportPages.planDetection(plan, { fromRun: settings.perfDetectionFromRun, typed: settings.perfDetection });
       const measured = presets.measuredOf(settings.perfMeasured);
       // Door widths where the IFC gives them; the stricter code minimum elsewhere.
       let widths = null;
@@ -3303,14 +3318,14 @@ export default function App() {
       return {
         criterion,
         sensitivity,
-        fromCeiling: fromRun && plan.detectionAt === "ceiling",
-        detectionFrom: fromRun ? (plan.detectionAt === "ceiling" ? "ceiling" : "run") : !settings.perfDetectionFromRun ? "set" : isFlamescapes(plan.model) ? "not in the run" : "no run",
+        fromCeiling: detected.from === "ceiling",
+        detectionFrom: detected.from,
         levels,
         exits: planExits,
         horizon: plan.horizon,
         step: plan.mapStep ?? 0,
         speed: forecastPlan.result === plan ? (forecastPlan.inputs?.walkSpeed ?? settings.walkSpeed) : settings.walkSpeed,
-        detection: fromRun ? plan.detection : settings.perfDetection,
+        detection: detected.seconds,
         alarm: settings.perfAlarm,
         pre1: settings.perfPre1,
         pre99: settings.perfPre99,

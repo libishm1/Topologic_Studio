@@ -21,6 +21,22 @@ export function worstStatus(list) {
 }
 
 /**
+ * Detection as the performance check takes it, so the extinguisher attempt
+ * can take the same: the plan's smoke detection (a Flamescapes run's
+ * ceiling detectors, or head height for a run kept from before them) when
+ * `fromRun` and the plan has one, else `typed`. `from` says which: "ceiling"
+ * or "run" from the run, else "set", "not in the run" (the smoke never
+ * reached a detector), "no run" (a plan of another fire model) or "no plan".
+ * @returns {{seconds: number, from: string}}
+ */
+export function planDetection(plan, { fromRun, typed }) {
+  if (!fromRun) return { seconds: typed, from: "set" };
+  if (!plan) return { seconds: typed, from: "no plan" };
+  if (Number.isFinite(plan.detection)) return { seconds: plan.detection, from: plan.detectionAt === "ceiling" ? "ceiling" : "run" };
+  return { seconds: typed, from: /^flamescapes/.test(plan.model ?? "") ? "not in the run" : "no run" };
+}
+
+/**
  * The cases one plan gives.
  * @param {Function} check   performanceCheck
  * @param {object} graph

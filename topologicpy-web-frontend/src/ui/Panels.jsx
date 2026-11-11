@@ -903,6 +903,11 @@ function ExtinguisherAttempt({ attempt }) {
   const [tone, word] = OUTCOME_WORDS[attempt.outcome] || ["plan", attempt.outcome];
   const t = attempt.times || {};
   const s = (x) => (Number.isFinite(x) ? `${Math.round(x)} s` : "-");
+  // After the alarm: which detection it waited for, as the performance check words it.
+  const st = attempt.start;
+  const cue = st
+    ? `detection at ${s(st.detection)}, ${detectedBy(st.detectionFrom, st.detectors)}; the alarm ${s(st.alarm)} after it; the median pre-movement ${s(st.median)}`
+    : "on seeing the fire";
   return (
     <div className="linked-model">
       <div className="summary__row">
@@ -911,7 +916,7 @@ function ExtinguisherAttempt({ attempt }) {
       </div>
       {attempt.attempted !== false && Number.isFinite(t.tS) && (
         <p className="field__hint">
-          Sets off at {s(attempt.tGo)}, reaches the extinguisher at {s(attempt.tGo + (t.toExtinguisher || 0))}, readies it, and starts at {s(t.tS)}
+          Sets off at {s(attempt.tGo)} ({cue}), reaches the extinguisher at {s(attempt.tGo + (t.toExtinguisher || 0))}, readies it, and starts at {s(t.tS)}
           {Number.isFinite(attempt.hrr) ? ` against ${kwText(attempt.hrr)}` : ""}
           {attempt.capacity?.units === "kW"
             ? `; the unit puts out up to ${kwText(attempt.capacity.low)} for sure and nothing above ${kwText(attempt.capacity.high)}`
@@ -1209,6 +1214,19 @@ function PreMovementChart({ curves, measuredLabel }) {
   );
 }
 
+/** Where the detection time came from, in words (perfReport.js planDetection's `from`). */
+function detectedBy(from, detectors) {
+  const words = {
+    ceiling: `from the run's ${detectors ? `${detectors} ` : ""}ceiling detectors`,
+    run: "from the run's smoke at head height (a run kept from before the ceiling detectors)",
+    "not in the run": "as set: the run's smoke never reached a detector's threshold",
+    "no run": "as set: only a Flamescapes run gives smoke to detect",
+    "no plan": "as set: the run's smoke is read when you plan with the forecast",
+    set: "as set",
+  };
+  return words[from] || "as set";
+}
+
 function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, report, batch, canAddFires, onAddFires, onStopFires, onDownloadReport, onClearReport }) {
   const tone = { pass: "ok", fail: "warn" };
   const mark = { pass: "Pass", fail: "Fail", "cannot tell": "Cannot tell" };
@@ -1223,13 +1241,6 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
   const set = (key) => (v) => setSettings({ [key]: Math.max(0, v ?? 0), perfOccupancy: "custom" });
   const badPre = !(settings.perfPre1 > 0 && settings.perfPre99 > settings.perfPre1);
   const badArea = settings.perfQueues && !(settings.perfOccupantArea > 0);
-  const detectedBy = {
-    ceiling: `from the run's ${perf?.detectors || ""} ceiling detectors`.replace("  ", " "),
-    run: "from the run's smoke at head height (a run kept from before the ceiling detectors)",
-    "not in the run": "as set: the run's smoke never reached a detector's threshold",
-    "no run": "as set: only a Flamescapes run gives smoke to detect",
-    set: "as set",
-  };
   const seconds = (x) => (x === -Infinity ? "no safe time" : Number.isFinite(x) ? `${Math.round(x)} s` : "");
   const status = report.length ? worstStatus(report.flatMap((e) => e.cases.map((c) => c.result?.status ?? "cannot tell"))) : null;
   return (
@@ -1267,7 +1278,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
         label="Queues at doors"
         checked={settings.perfQueues}
         onChange={(perfQueues) => setSettings({ perfQueues })}
-        hint="Occupants on every place walk to the nearest exit and queue at each door on the way: 1.32 persons a second per metre of the door's width less 0.15 m a side (NZ C/VM2 3.5.3). Widths from the IFC; 0.813 m where it gives none."
+        hint="Occupants on every place walk to the nearest exit and queue at each door on the way: 1.32 persons a second per metre of the door's width less 0.15 m a side (NZ C/VM2 3.5.3). Widths from the IFC; 0.813 m, the code's least clear width, where it gives none (people leaving and the slime mould take the width of the door's geometry instead)."
       />
       {settings.perfQueues && (
         <NumberField label="Floor area per occupant (m²)" value={settings.perfOccupantArea} min={0.3} max={100} step={0.5} onChange={set("perfOccupantArea")} hint={preset.load} />
@@ -1303,7 +1314,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
           <Notice tone={perf.status === "pass" ? "neutral" : "warning"}>
             <strong>{mark[perf.status]}.</strong> Occupants must be able to set off up to {Math.round(perf.start)} s after ignition
             {perf.factor > 1 ? " beside an exit, and later farther away" : ""}: detection at {Math.round(perf.detection)} s,{" "}
-            {detectedBy[perf.detectionFrom] || "as set"}; the alarm at {Math.round(perf.cue)} s; then pre-movement
+            {detectedBy(perf.detectionFrom, perf.detectors)}; the alarm at {Math.round(perf.cue)} s; then pre-movement
             {perf.queues ? " and the queues at doors" : ""}. {perf.criterion?.label}.
           </Notice>
           <ul className="code-list">
@@ -1435,7 +1446,9 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
         checked={settings.crowd}
         disabled={!ready}
         onChange={(on) => setSettings({ crowd: on })}
-        hint="Everyone on the floors walks out by the exit that gets them out soonest and gathers outside it, played faster than real time."
+        hint={`Everyone on the floors walks out by ${
+          settings.crowdChoice === "nearest" ? "the nearest exit" : "the exit that gets them out soonest"
+        } and gathers outside it${settings.crowdRate > 1 ? ", played faster than real time" : ""}.`}
       />
       {settings.crowd && (
         <>
@@ -1625,7 +1638,8 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                 Each holds one place of the graph at a time, as a cell of a floor-field model does
                 (Burstedde et al. 2001), stepping round whoever is ahead. Speeds spread about 1.19 m/s and slow as the crowd
                 thickens, at most 0.92 m/s down stairs and 0.69 m/s up them, and each door passes people at its own width&apos;s
-                capacity (SFPE Handbook). Everyone sets off within 10 s of the plan&apos;s departure time: the performance check,
+                capacity (SFPE Handbook): the IFC&apos;s width, else the width of the door&apos;s geometry, else 0.9 m (the performance
+                check&apos;s queues take 0.813 m where the IFC gives none). Everyone sets off within 10 s of the plan&apos;s departure time: the performance check,
                 not this animation, models how long people take to start. Checked against the RiMEA and NIST TN 1822 test cases
                 (16 of 18 pass; dense corridors and single file still run fast): an illustration of the walk out, not an
                 evacuation model to quote.
@@ -1712,7 +1726,7 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
           label="Bottlenecks"
           checked={settings.slimeBottlenecks}
           onChange={(slimeBottlenecks) => setSettings({ slimeBottlenecks })}
-          hint="Crimson, larger the worse: where the people the desire lines carry (one per occupant area) would take longest to pass, a door's clear width or a corridor's at 1.3 persons a second a metre."
+          hint="Crimson, larger the worse: where the people the desire lines carry (one per occupant area) would take longest to pass at 1.3 persons a second a metre: a door's width from the IFC, else from its geometry; elsewhere twice the clearance from the walls."
         />
         <Toggle
           label="Dead ends"
@@ -2605,6 +2619,11 @@ function ForecastResult({ plan, settings, deadlinesShown, roomName }) {
         )}
         {zone ? (
           <ZoneNotes zone={zone} roomName={roomName} />
+        ) : isFlamescapes(result.model) ? (
+          <span className="field__hint">
+            Times are counted from ignition, on the Flamescapes run&apos;s own clock. The dose is ISO 13571&apos;s, from the run&apos;s
+            gas temperature and gases at head height.
+          </span>
         ) : (
           <span className="field__hint">
             Times are counted from ignition, on the clock set for this plan ({inputs.forecastSecondsPerStep} s per fire
@@ -2638,6 +2657,8 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
   const modelExits = settings.forecastExits === "model" && exits?.final.length > 0;
   const ready = Boolean(graph && points.start && points.fire && (modelExits || points.exit));
   const zone = fireModelIn(settings, modelInfo) === "zone";
+  // A Flamescapes plan keeps the run's own clock and limits (forecast.worker.js).
+  const flamescapes = isFlamescapes(fireModelIn(settings, modelInfo));
   // The fire room's IfcSpace name, from the model's own data (ifcSemantics.js).
   const fireRoomId = forecastPlan.result?.zone?.fireRoomId;
   const space = fireRoomId !== null && fireRoomId !== undefined ? semantics?.spaces?.find((s) => s.id === fireRoomId) : null;
@@ -2648,6 +2669,7 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
         Runs the fire to its last step first, then routes with the state each point will be in when you would reach it,
         and works out how long you can wait before leaving.
         {zone && " The fire is the two-zone room model chosen above: gas temperatures in degrees C, on a clock in seconds."}
+        {flamescapes && " The fire is the Flamescapes run, on its own clock and with the limits under Flamescapes settings."}
       </p>
       {exits?.final.length > 0 && (
         <Choices
@@ -2713,8 +2735,13 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
               min={0.5}
               max={60}
               step={0.5}
+              disabled={flamescapes}
               onChange={(v) => setSettings({ forecastSecondsPerStep: v ?? 5 })}
-              hint="The fire models count steps; this sets the clock."
+              hint={
+                flamescapes
+                  ? "Not used with Flamescapes: the plan keeps the run's own clock, its simulated time over its frames."
+                  : "The fire models count steps; this sets the clock."
+              }
             />
           )}
           <NumberField
@@ -2741,7 +2768,13 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
               min={25}
               max={120}
               step={5}
+              disabled={flamescapes}
               onChange={(v) => setSettings({ untenableAbove: v ?? 80 })}
+              hint={
+                flamescapes
+                  ? "Not used with Flamescapes: the plan takes Untenable from (gas °C) and the visibility limit under Flamescapes settings."
+                  : undefined
+              }
             />
           )}
           <NumberField
@@ -3636,6 +3669,11 @@ export function SimulatePanel({
                   { value: "seen", label: "When they see the fire (30 s after ignition)" },
                   { value: "alarm", label: "After detection, the alarm and the median pre-movement (Route step, performance check)" },
                 ]}
+                hint={
+                  settings.extinguisherStart === "alarm"
+                    ? "Detection as the performance check takes it: from the Flamescapes run's smoke when Detection from the fire run's smoke is on and the plan with the forecast found it, else Detection (s). The result says which."
+                    : undefined
+                }
               />
               <Toggle
                 label="Trained to use it (7.2 s to ready it, not 13.4 s)"
@@ -3686,7 +3724,11 @@ export function SimulatePanel({
             onChange={(hazardAlpha) => setSettings({ hazardAlpha })}
             format={(v) => v.toFixed(1)}
             disabled={!settings.reroute || !heat}
-            hint="Heat diffusion and two-zone rooms only. Link cost is length x (1 + weight x degrees above ambient / 100); zero ignores the fire."
+            hint={
+              heat
+                ? "Link cost is length x (1 + weight x degrees above 20 °C / 100), from heat diffusion's index or the gas temperature of two-zone rooms and Flamescapes; zero ignores the fire."
+                : "Only with a model that gives temperatures: heat diffusion, two-zone rooms or Flamescapes. Spread along links and distance bands close burning nodes instead."
+            }
           />
           <Slider
             label="Recompute every"
@@ -3698,8 +3740,9 @@ export function SimulatePanel({
             format={(v) => `${v} steps`}
             disabled={!settings.reroute}
           />
+          {/* What the threshold is compared with depends on the model: an index for heat diffusion, gas °C for the others. */}
           <NumberField
-            label="Impassable above (model °C)"
+            label="Impassable above (°C)"
             value={settings.lethalityThreshold}
             min={30}
             max={200}
@@ -3707,7 +3750,17 @@ export function SimulatePanel({
             optional
             placeholder="none"
             onChange={(lethalityThreshold) => setSettings({ lethalityThreshold })}
-            hint="Links hotter than this are closed. Left blank, heat only adds cost. The scale is an index, not a measured temperature (see Methods)."
+            hint={
+              !heat
+                ? "Only with a model that gives temperatures: heat diffusion, two-zone rooms or Flamescapes. Spread along links and distance bands close burning nodes instead."
+                : `Links hotter than this are closed; left blank, heat only adds cost. ${
+                    fireModel === "temperature"
+                      ? "With heat diffusion it is compared with the model's index, 20 to 120, not a measured temperature (see Methods)."
+                      : fireModel === "zone"
+                        ? "With two-zone rooms it is compared with each room's gas temperature at head height."
+                        : "With Flamescapes it is compared with the run's gas temperature at head height."
+                  }`
+            }
           />
           <div className="grid-2">
             <NumberField
@@ -3716,6 +3769,13 @@ export function SimulatePanel({
               min={1}
               max={2000}
               onChange={(fireMaxSteps) => setSettings({ fireMaxSteps: fireMaxSteps ?? 60 })}
+              hint={
+                flamescapes
+                  ? "Also the frames a Flamescapes run keeps, at most 120 and at most one a second; a kept run is replayed only for the same Steps, so changing it starts a new run."
+                  : fireModel === "zone"
+                    ? "The two-zone fire plays its forecast length in this many frames."
+                    : undefined
+              }
             />
             <NumberField
               label="Step delay (ms)"
@@ -3749,7 +3809,8 @@ export function SimulatePanel({
             {shielded
               ? "Learns the escape on (node, time) behind a shield that never lets it step where the fire will seal it in, and stops when it can prove its route is the earliest escape. Both properties are proved in Lean."
               : "Tabular Q-learning over the same graph, with the spreading fire as a penalty (after Jabi et al. 2019). It is drawn by a walk that never revisits a node, and on the study's corpus it missed 15% of the escapes that existed."}{" "}
-            Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart.
+            Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart. The agent&apos;s fire is
+            its own, not the fire model chosen above: it spreads along the links from the fire origin at the fire speed below.
           </p>
         </div>
         {shielded && (
@@ -3787,14 +3848,19 @@ export function SimulatePanel({
             onChange={(rlMaxSteps) => setSettings({ rlMaxSteps: rlMaxSteps ?? 200 })}
           />
         </div>
+        {/* Q-learning penalises the fire; the safe learner's shield keeps out of it: the switch only turns that fire on or off. */}
         <Toggle
-          label="Penalise reaching burning nodes"
+          label="Train with the fire"
           checked={settings.rlUseFire}
           onChange={(rlUseFire) => setSettings({ rlUseFire })}
           hint={
             settings.rlUseFire && !points.fire
               ? "Set a fire origin (F); without one the policy trains without fire."
-              : undefined
+              : !settings.rlUseFire
+                ? "Off, the agent learns its way out as if there were no fire."
+                : shielded
+                  ? "The shield never lets the learner step where its fire will seal it in."
+                  : "Stepping into a burning node costs 10 and ends the episode."
           }
         />
         <NumberField

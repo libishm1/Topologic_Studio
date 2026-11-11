@@ -1055,6 +1055,26 @@ export function suitability(agent, fireClass = "A") {
 
 // ------------------------------------------------------------------ the attempt
 
+/** Seconds to 1 MW of each growth class, keyed as the two-zone setting is (zone.js GROWTH). */
+export const GROWTH_TIME = Object.freeze({ slow: 600, medium: 300, fast: 150, "ultra-fast": 75 });
+
+/**
+ * The attempt's fire when there is no Flamescapes run: the two-zone
+ * settings' growth and peak as a t-squared fire, 1 MW at the class's time,
+ * capped at peakKw. An unknown growth is medium. Returns {growth, tGrowth,
+ * hrrAt, text}, text naming it for the result line.
+ */
+export function designFire(growth, peakKw) {
+  const name = GROWTH_TIME[growth] ? growth : "medium";
+  const tGrowth = GROWTH_TIME[name];
+  return {
+    growth: name,
+    tGrowth,
+    hrrAt: (t) => Math.min(peakKw, 1000 * (t / tGrowth) ** 2),
+    text: `${name === "ultra-fast" ? "an" : "a"} ${name} t-squared design fire (1 MW in ${tGrowth} s, at most ${peakKw} kW)`,
+  };
+}
+
 /** tau_x = t_d / ln(1/epsilon) (s): the cap is epsilon of its start when the unit is empty (decay_at_discharge_end). */
 export function capFor(unit = DEFAULT_UNIT, epsilon = CAPACITY.epsilon.value) {
   if (!(epsilon > 0 && epsilon < 1)) throw new RangeError(`epsilon must lie between 0 and 1, not ${epsilon}.`);
