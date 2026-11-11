@@ -2002,6 +2002,63 @@ export class ViewerManager {
    * goes from 0 to 1. null, or weights for another graph, restores the
    * graph's own colours.
    */
+  /**
+   * Line segments drawn thick (core/skeleton.js: the medial axis, the
+   * slime's desire lines): one instanced thin cylinder a segment, in a
+   * single draw call, over everything; with `arrows`, a small cone at every
+   * third segment's far end pointing along it. `segments` holds six numbers a
+   * segment (from x, y, z, to x, y, z), `widths` (optional) a thickness
+   * factor a segment; null clears the layer `name`.
+   */
+  setSkeleton(name, segments, { color = 0x06b6d4, radius = null, arrows = false, widths = null } = {}) {
+    for (const layer of [name, `${name}:arrows`]) this._setOverlay(layer, null);
+    const count = segments ? segments.length / 6 : 0;
+    if (!count) {
+      this._updateGraphEmphasis();
+      return;
+    }
+    const box = this._modelBox();
+    const extent = box ? Math.max(...box.getSize(new THREE.Vector3()).toArray()) : 20;
+    const r = radius ?? Math.max(0.025, Math.min(0.12, extent * 0.0018));
+    const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false });
+    const rod = new THREE.InstancedMesh(new THREE.CylinderGeometry(r, r, 1, 6, 1, true), material, count);
+    const cone = arrows ? new THREE.InstancedMesh(new THREE.ConeGeometry(r * 3, r * 7, 8), material, Math.ceil(count / 3)) : null;
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), d = new THREE.Vector3(), yAxis = new THREE.Vector3(0, 1, 0);
+    const q = new THREE.Quaternion(), m = new THREE.Matrix4(), s = new THREE.Vector3();
+    let cones = 0;
+    for (let i = 0; i < count; i += 1) {
+      a.fromArray(segments, i * 6);
+      b.fromArray(segments, i * 6 + 3);
+      d.subVectors(b, a);
+      const length = d.length();
+      if (length < 1e-6) {
+        m.makeScale(0, 0, 0);
+        rod.setMatrixAt(i, m);
+        continue;
+      }
+      d.divideScalar(length);
+      q.setFromUnitVectors(yAxis, d);
+      const w = widths ? widths[i] : 1;
+      m.compose(a.clone().addScaledVector(d, length / 2), q, s.set(w, length, w));
+      rod.setMatrixAt(i, m);
+      if (cone && i % 3 === 0) {
+        m.compose(b.clone().addScaledVector(d, -r * 3.5), q, s.set(w, w, w));
+        cone.setMatrixAt(cones, m);
+        cones += 1;
+      }
+    }
+    rod.renderOrder = 903;
+    rod.frustumCulled = false;
+    this._setOverlay(name, rod);
+    if (cone) {
+      cone.count = cones;
+      cone.renderOrder = 904;
+      cone.frustumCulled = false;
+      this._setOverlay(`${name}:arrows`, cone);
+    }
+    this._updateGraphEmphasis();
+  }
+
   setSlimeWeights(weights) {
     const segments = this.overlays.get(OVERLAY.graph);
     if (!segments || !this._graphEdges) return;

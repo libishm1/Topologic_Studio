@@ -121,9 +121,13 @@ export const DEFAULT_SETTINGS = {
   crowdFluctuate: false,
   crowdSteps: "exact",
   crowdRuns: 5,
-  // The slime mould (core/slimeEgress.js) grows kept out of where the fire
-  // makes untenable, or as if there were none.
-  slimeWithFire: false,
+  // The slime mould (core/slimeEgress.js) grows as if there were no fire
+  // ("none"), held back by the fire and its smoke on the fire's clock
+  // ("soft"), or walled off from every place the fire makes untenable
+  // ("hard"); its skeletons (core/skeleton.js) drawn when asked.
+  slimeFire: "none",
+  slimeDesire: false,
+  slimeMedial: false,
   // Gathering places hold crowdShelterArea m^2 of people when on; once full,
   // the earliest there fade as newcomers arrive.
   crowdShelterOn: false,

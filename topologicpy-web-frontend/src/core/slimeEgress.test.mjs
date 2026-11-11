@@ -82,23 +82,23 @@ test("the tubes form along the shorter way to the exit, and the route keeps to t
   assert.ok(out.route.length < 1.1 * out.route.shortest, `${out.route.length.toFixed(1)} m against ${out.route.shortest.toFixed(1)} m`);
 });
 
-test("a place the fire has made untenable is a wall: no agent enters it, no trail is laid there, and the tubes go round", () => {
+test("the hard fire: a place it has made untenable is a wall: no agent enters it, no trail is laid there, and the tubes go round", () => {
   const { graph, exits, top, bottom, start, id } = twoWays();
   const n = graph.nodes.length / 3;
   // The fire closes the top corridor's middle from 0 s.
   const closes = new Float64Array(n).fill(Infinity);
   for (let i = 14; i <= 16; i += 1) for (const k of [0, 1]) closes[id.get(`${i},${k}`)] = 0;
-  const out = slimeEgress(graph, { exits, start, agents: 60, steps: 400, closes, time: 30, seed: 1 });
+  const out = slimeEgress(graph, { exits, start, agents: 60, steps: 400, closes, time: 30, seed: 1, fire: "hard" });
   assert.equal(out.closed, 6);
   for (let v = 0; v < n; v += 1) if (closes[v] <= 30) assert.ok(out.visits[v] === 0 && out.weights[v] === 0, `node ${v}`);
   assert.ok(mean(out.weights, bottom) > mean(out.weights, top.filter((v) => closes[v] > 30)), "the bottom corridor carries the escape");
   assert.ok(out.route && out.route.nodes.some((v) => bottom.includes(v)), "the route goes round by the bottom");
   // Before the fire reaches it (time 0 is before nothing: every close is at 0), a later fire does not count.
   const later = Float64Array.from(closes, (c) => (c === 0 ? 100 : c));
-  assert.equal(slimeEgress(graph, { exits, start, agents: 10, steps: 20, closes: later, time: 30, seed: 1 }).closed, 0);
+  assert.equal(slimeEgress(graph, { exits, start, agents: 10, steps: 20, closes: later, time: 30, seed: 1, fire: "hard" }).closed, 0);
 });
 
-test("a start the fire cuts off from every exit has no route", () => {
+test("with the hard fire, a start it cuts off from every exit has no route", () => {
   const { graph, exits, start, id } = twoWays();
   const n = graph.nodes.length / 3;
   const closes = new Float64Array(n).fill(Infinity);
@@ -107,7 +107,7 @@ test("a start the fire cuts off from every exit has no route", () => {
     const v = id.get(`3,${k}`);
     if (v !== undefined) closes[v] = 0;
   }
-  const out = slimeEgress(graph, { exits, start, agents: 20, steps: 50, closes, time: 0, seed: 1 });
+  const out = slimeEgress(graph, { exits, start, agents: 20, steps: 50, closes, time: 0, seed: 1, fire: "hard" });
   assert.equal(out.route, null);
 });
 
@@ -151,4 +151,42 @@ test("the defaults are Jones's agent with the field weighed in metres", () => {
   assert.equal(none.agents, 0);
   assert.equal(none.route, null);
   assert.ok(slimeEgress(graph, { exits, agents: 10, steps: 5 }).agents === 10);
+});
+
+test("the soft fire: still a way out when the fire fills the walls' way; the trail keeps out of it and fades there", () => {
+  const { graph, exits, top, bottom, room, start, id } = twoWays();
+  const n = graph.nodes.length / 3;
+  // A fire that will close both corridors' mouths and most of the room, by 60 s.
+  const closes = new Float64Array(n).fill(Infinity);
+  for (let i = 0; i <= 5; i += 1) for (let k = 0; k < 14; k += 1) {
+    const v = id.get(`${i},${k}`);
+    if (v !== undefined && !(i === 1 && k === 7)) closes[v] = 20 + 2 * k;
+  }
+  // Hard, it walls off everything it ever closes: nothing to go by.
+  const walled = slimeEgress(graph, { exits, start, agents: 30, steps: 200, closes, fire: "hard", seed: 1 });
+  assert.equal(walled.route, null);
+  // Soft, the slime still runs and finds the start a way out, at a cost.
+  const soft = slimeEgress(graph, { exits, start, agents: 30, steps: 200, closes, seed: 1 });
+  assert.equal(soft.fire, "soft");
+  assert.ok(soft.exits[0]?.flux > 0, "agents reach the exit");
+  assert.ok(soft.route, "a way out");
+  // Little of its trail lies where the fire is.
+  assert.ok(soft.fireShare < 0.25, `share of the trail in smoke ${soft.fireShare.toFixed(2)}`);
+  // A fire on the top corridor alone, starting at 0: the soft slime moves its tubes to the bottom one.
+  const topFire = new Float64Array(n).fill(Infinity);
+  for (const v of top) topFire[v] = 0;
+  const moved = slimeEgress(graph, { exits, places: room, agents: 30, steps: 300, closes: topFire, seed: 2 });
+  const calm = slimeEgress(graph, { exits, places: room, agents: 30, steps: 300, seed: 2 });
+  assert.ok(mean(moved.weights, bottom) > mean(calm.weights, bottom), "more on the bottom corridor with the fire on the top one");
+  assert.ok(mean(moved.weights, top) < mean(calm.weights, top), "less on the top one");
+});
+
+test("the soft fire's strength rises over the lead before a place is untenable and stays full after", async () => {
+  const { smokeAt } = await import("./slimeEgress.js");
+  assert.equal(smokeAt(Infinity, 100, 30), 0);
+  assert.equal(smokeAt(60, 20, 30), 0);
+  assert.equal(smokeAt(60, 45, 30), 0.5);
+  assert.equal(smokeAt(60, 60, 30), 1);
+  assert.equal(smokeAt(60, 500, 30), 1);
+  for (let t = 0; t < 100; t += 1) assert.ok(smokeAt(60, t + 1, 30) >= smokeAt(60, t, 30), "never weaker later");
 });

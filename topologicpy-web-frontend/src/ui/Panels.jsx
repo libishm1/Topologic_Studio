@@ -1668,42 +1668,63 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
       </p>
       <SelectField
         label="The fire"
-        value={settings.slimeWithFire ? "fire" : "none"}
-        onChange={(value) => setSettings({ slimeWithFire: value === "fire" })}
+        value={settings.slimeFire}
+        onChange={(slimeFire) => setSettings({ slimeFire })}
         options={[
           { value: "none", label: "Grow as if there were none" },
-          { value: "fire", label: "Keep out of where it makes untenable" },
+          { value: "soft", label: "Held back by the fire and its smoke" },
+          { value: "hard", label: "Walled off from every untenable place" },
         ]}
         hint={
-          settings.slimeWithFire
-            ? fireReady
-              ? "Every place the fire makes untenable during its run is a wall, and the places near it repel."
-              : "Start a fire in Simulate first; a Flamescapes run must have finished."
-            : null
+          settings.slimeFire === "none"
+            ? null
+            : !fireReady
+              ? "Start a fire in Simulate first; a Flamescapes run must have finished."
+              : settings.slimeFire === "soft"
+                ? "On the fire's clock: a place's smoke holds the slime back from 30 s before the fire makes it untenable, its trail fading faster there and the way out going round it at a cost, but never walled off."
+                : "Every place the fire makes untenable during its run is a wall: with a large fire little may be left to grow in."
         }
       />
       <div className="grid-2">
-        <Button size="sm" onClick={onGrow} disabled={!ready || slime?.busy || (settings.slimeWithFire && !fireReady)}>
+        <Button size="sm" onClick={onGrow} disabled={!ready || slime?.busy || (settings.slimeFire !== "none" && !fireReady)}>
           {slime?.busy ? "Growing…" : result ? "Grow again" : "Grow the slime mould"}
         </Button>
         <Button size="sm" onClick={onClear} disabled={!result}>
           Clear
         </Button>
       </div>
+      <Toggle
+        label="Desire lines"
+        checked={settings.slimeDesire}
+        onChange={(slimeDesire) => setSettings({ slimeDesire })}
+        hint="The slime's ways out from every part of the floor, along its tubes: dark over the yellow, thicker where more of them bundle, with arrows towards the exits."
+      />
+      <Toggle
+        label="Medial axis of the floor"
+        checked={settings.slimeMedial}
+        onChange={(slimeMedial) => setSettings({ slimeMedial })}
+        hint="In cyan, the line through each room and corridor furthest from its walls (the robot planner's roadmap of most clearance): where the desire lines leave it, the slime takes another line than the geometry centres."
+      />
       {slime?.error && <Notice tone="warning">{slime.error}</Notice>}
       {result && (
         <Notice>
           {result.agents.toLocaleString()} agents for {result.steps} steps, {(result.ms / 1000).toFixed(1)} s: {flux.toLocaleString()} reached an exit,{" "}
           {result.exits.slice(0, 6).map((e) => e.flux).join(", ")}
           {result.exits.length > 6 ? ", ..." : ""} through {result.exits.length} exit{result.exits.length === 1 ? "" : "s"}.
-          {result.withFire ? ` Kept out of ${result.closed.toLocaleString()} untenable places.` : ""}{" "}
+          {result.fire === "soft"
+            ? ` Held back by the fire over ${Math.round(result.seconds)} s of it: ${result.closed.toLocaleString()} places untenable by then, ${Math.round(result.fireShare * 100)} % of the trail laid in smoke or fire.`
+            : result.fire === "hard"
+              ? ` Walled off from ${result.closed.toLocaleString()} untenable places.`
+              : ""}{" "}
           {result.route
             ? `From the start along its tubes: ${m(result.route.length)}, against the shortest walk ${m(result.route.shortest)}.`
             : hasStart
-              ? result.withFire
+              ? result.fire === "hard"
                 ? "The fire cuts the start off from every exit."
                 : "The start reaches no exit."
               : "Pick a start to see its way out along the tubes."}
+          {result.medialRoute ? ` Keeping to the medial axis: ${m(result.medialRoute.length)}.` : ""}
+          {result.agreement != null ? ` ${Math.round(result.agreement * 100)} % of the desire lines lie within half a metre of the medial axis.` : ""}
         </Notice>
       )}
       <p className="field__hint">

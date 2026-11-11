@@ -745,6 +745,16 @@ if (await slimeSection.count()) {
     .catch(() => "");
   const slimeRoute = await page.evaluate(() => window.__viewer?.overlays?.has("slimePath") ?? false);
   record(/reached an exit/.test(slimeLine) && /along its tubes/.test(slimeLine) && slimeRoute, "the slime mould grows to the exits and the start's route keeps to its tubes", `${slimeLine.slice(0, 180)} (${((Date.now() - tSlime) / 1000).toFixed(1)}s)`);
+  // Its skeletons (core/skeleton.js, 2026-11-11): the desire lines and the floor's medial axis, each when asked.
+  const skeletonsBefore = await page.evaluate(() => ["slimeDesire", "slimeMedial"].filter((n) => window.__viewer?.overlays?.has(n)).length);
+  await page.locator(".toggle__label", { hasText: /^Desire lines$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Medial axis of the floor$/ }).first().click().catch(() => {});
+  await page.waitForTimeout(400);
+  const skeletons = await page.evaluate(() => ({ desire: window.__viewer?.overlays?.has("slimeDesire") ?? false, medial: window.__viewer?.overlays?.has("slimeMedial") ?? false }));
+  const agreeLine = await page.getByText(/within half a metre of the medial axis/).count();
+  record(skeletonsBefore === 0 && skeletons.desire && skeletons.medial && agreeLine > 0, "the slime's desire lines and the floor's medial axis are drawn when asked", JSON.stringify(skeletons));
+  await page.locator(".toggle__label", { hasText: /^Desire lines$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Medial axis of the floor$/ }).first().click().catch(() => {});
   await page
     .locator("section.section", { has: page.locator(".section__header", { hasText: /^Slime mould/ }) })
     .getByRole("button", { name: /^Clear$/ })

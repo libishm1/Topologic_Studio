@@ -2840,8 +2840,9 @@ export default function App() {
       toast("No exit to grow towards: the model marks none out of the building, so pick one in Route.", { variant: "warning" });
       return;
     }
-    const closes = settings.slimeWithFire ? slimeFire() : null;
-    if (settings.slimeWithFire && !closes) {
+    const withFire = settings.slimeFire === "soft" || settings.slimeFire === "hard";
+    const closes = withFire ? slimeFire() : null;
+    if (withFire && !closes) {
       toast("Start a fire in Simulate first; a Flamescapes run must have finished.", { variant: "warning" });
       return;
     }
@@ -2858,6 +2859,7 @@ export default function App() {
         start: points.start ? snap(graph, points.start) : -1,
         closes: closes ? Float64Array.from(closes) : null,
         blocked: settings.useWalls && graph.blocked ? graph.blocked.slice() : null,
+        fire: settings.slimeFire === "hard" ? "hard" : "soft",
         seed: 1,
       },
     };
@@ -2870,7 +2872,7 @@ export default function App() {
         if (!isCancelled(error)) setSlimeState((s) => (s.nodes === nodes ? { ...s, busy: false, error: error?.message || String(error) } : s));
       },
     );
-  }, [graph, buildingExitNodes, points.start, settings.slimeWithFire, settings.useWalls, slimeFire, toast]);
+  }, [graph, buildingExitNodes, points.start, settings.slimeFire, settings.useWalls, slimeFire, toast]);
   const clearSlime = useCallback(() => setSlimeState(SLIME_NONE), []);
   // The weights on the graph, slime yellow, and the route along the tubes.
   useEffect(() => {
@@ -2885,6 +2887,29 @@ export default function App() {
       viewer.setPath(null, { name: "slimePath" });
     };
   }, [slime.result, graph]);
+  // Its skeletons (core/skeleton.js), when asked: the desire lines in a dark
+  // ink with arrows to the exits, over the yellow; the floor's medial axis in cyan.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const result = slime.result;
+    if (!viewer || !result || !graph) return undefined;
+    const P = graph.nodes;
+    const segmentsOf = (links) => {
+      const out = new Float32Array(links.length * 3);
+      for (let k = 0; k < links.length; k += 1) out.set(P.subarray(links[k] * 3, links[k] * 3 + 3), k * 3);
+      return out;
+    };
+    if (settings.slimeDesire && result.desireLinks?.length) {
+      // Thicker where more ways out bundle: 0.6 to 2 times, by the square root of the flow.
+      const widths = Float32Array.from(result.desireFlow, (f) => 0.6 + 1.4 * Math.sqrt(f / Math.max(1, result.desireMax)));
+      viewer.setSkeleton?.("slimeDesire", segmentsOf(result.desireLinks), { color: 0x1e1b4b, arrows: true, widths });
+    }
+    if (settings.slimeMedial && result.medialLinks?.length) viewer.setSkeleton?.("slimeMedial", segmentsOf(result.medialLinks), { color: 0x06b6d4 });
+    return () => {
+      viewer.setSkeleton?.("slimeDesire", null);
+      viewer.setSkeleton?.("slimeMedial", null);
+    };
+  }, [slime.result, graph, settings.slimeDesire, settings.slimeMedial]);
   // ------------------------------------------------------- recording
 
   // The view recorded as a GIF (lib/recorder.js): the fire, the smoke and the
