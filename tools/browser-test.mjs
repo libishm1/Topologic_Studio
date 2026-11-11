@@ -358,6 +358,9 @@ if (await buildBtn.count()) {
       return out;
     });
     console.log(`    graph: ${JSON.stringify(g)}`);
+    // A space outside the building that no door opens onto is not floor (core/outdoorSpaces.js, 2026-11-11): the Duplex's "Roof".
+    const outdoorNote = await page.getByText(/^Not walked on: /).first().textContent({ timeout: 3000 }).catch(() => "");
+    record(/outside the building/.test(outdoorNote || ""), "a roof drawn as a room is not walked on", (outdoorNote || "no note").slice(0, 140));
     record(Number(g.Nodes?.replace(/,/g, "")) > 100, "graph has a sane node count", `${g.Nodes}`);
     record(Number(g.Links?.replace(/,/g, "")) > 100, "graph has edges", `${g.Links}`);
   }
@@ -692,6 +695,35 @@ if (await peopleSection.count()) {
   record(!(await page.evaluate(() => window.__viewer?.overlays?.has("crowd") ?? false)), "switched off, the people go");
 } else {
   record(false, "the People leaving section is offered in Route");
+}
+
+// ---- 4b''. slime mould -------------------------------------------------------
+// Jones's Physarum agents on the walkable graph (core/slimeEgress.js,
+// workers/slime.worker.js, 2026-11-11): grown when asked, drawn yellow, the
+// start's route along the tubes.
+
+console.log("\n[4b''] Slime mould");
+const slimeSection = page.locator("summary, button", { hasText: /^Slime mould/ }).first();
+if (await slimeSection.count()) {
+  await slimeSection.scrollIntoViewIfNeeded();
+  await slimeSection.click();
+  const tSlime = Date.now();
+  await page.getByRole("button", { name: /^Grow the slime mould$/ }).click();
+  const slimeLine = await page
+    .waitForFunction(() => document.body.innerText.match(/[\d,]+ agents for \d+ steps[^\n]*/)?.[0], null, { timeout: 60000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const slimeRoute = await page.evaluate(() => window.__viewer?.overlays?.has("slimePath") ?? false);
+  record(/reached an exit/.test(slimeLine) && /along its tubes/.test(slimeLine) && slimeRoute, "the slime mould grows to the exits and the start's route keeps to its tubes", `${slimeLine.slice(0, 180)} (${((Date.now() - tSlime) / 1000).toFixed(1)}s)`);
+  await page
+    .locator("section.section", { has: page.locator(".section__header", { hasText: /^Slime mould/ }) })
+    .getByRole("button", { name: /^Clear$/ })
+    .click()
+    .catch(() => {});
+  await page.waitForTimeout(300);
+  record(!(await page.evaluate(() => window.__viewer?.overlays?.has("slimePath") ?? false)), "cleared, the slime route goes");
+} else {
+  record(false, "the Slime mould section is offered in Route");
 }
 
 // ---- 4c. TopologicPy Navigation cross-check ---------------------------------

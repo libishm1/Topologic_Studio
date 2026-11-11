@@ -1997,6 +1997,35 @@ export class ViewerManager {
   }
 
   /**
+   * Recolour graph edges by the slime mould's weights (core/slimeEgress.js):
+   * from the graph's own colour towards Physarum's yellow as a node's weight
+   * goes from 0 to 1. null, or weights for another graph, restores the
+   * graph's own colours.
+   */
+  setSlimeWeights(weights) {
+    const segments = this.overlays.get(OVERLAY.graph);
+    if (!segments || !this._graphEdges) return;
+    const attribute = segments.geometry.getAttribute("color");
+    if (!attribute) return;
+    const colors = attribute.array;
+    if (!weights || weights.length !== this._graphNodes.length / 3) {
+      this._setColouring(null, colors, attribute);
+      return;
+    }
+    const slime = [0.98, 0.8, 0.12];
+    const base = this._baseColors;
+    const edgeCount = this._graphEdges.length / 2;
+    for (let e = 0; e < edgeCount; e += 1) {
+      for (let side = 0; side < 2; side += 1) {
+        const w = Math.min(1, Math.max(0, weights[this._graphEdges[e * 2 + side]]));
+        const offset = e * 6 + side * 3;
+        for (let c = 0; c < 3; c += 1) colors[offset + c] = base[offset + c] * (1 - w) + slime[c] * w;
+      }
+    }
+    this._setColouring({ opacity: 0.85, redraw: () => this.setSlimeWeights(weights) }, colors, attribute);
+  }
+
+  /**
    * How often the view draws. 0 (the default) draws every frame. While the
    * fire solver computes on the GPU it shares it with this view: drawing
    * `fps` times a second, and whenever the camera moves, gives the solver

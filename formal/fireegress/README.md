@@ -391,6 +391,38 @@ all), every one on Lean's standard axioms or none, the 35 new ones on `propext`,
 `Classical.choice` and `Quot.sound` (`axioms-all-2026-11-08.txt`, AxiomCheck.lean's output with
 every earlier line kept in order).
 
+## Thirteenth batch: Jones's Physarum model (2026-11-11)
+
+Physarum.lean (23 results) checks the rules of Jeff Jones's multi-agent slime mould model as his
+example code implements them (Jones 2010, doi:10.1162/artl.2010.16.2.16202; the code is not in this
+repository; the models as pseudocode are in
+[../../wiki/research/physarum-jones-models-2026-11-11.md](../../wiki/research/physarum-jones-models-2026-11-11.md)),
+which Studio ports in `src/core/physarum.js` (his grid) and `src/core/slimeEgress.js` (on the
+walkable graph).
+
+| Theorem | What it says | Where it shows in Studio |
+|---|---|---|
+| `diffuse_total` | On a torus the trail's total after one diffusion step is exactly `(1 - d)` times the total before, for any `d`. | Wrap-around diffusion in `physarum.js`. |
+| `diffuse_nonneg`, `diffuse_le` | With `d ≤ 1` trail stays non-negative and under `(1 - d)` times the old maximum (a discrete maximum principle). | Every diffusion step. |
+| `diffuse_absorbing_total_le` (with `sum_pad_shift_le`, `interior_window_in_grid`) | On any finite grid with zero outside it and any absorbing cells (his border and walls; Studio's walls), the total falls at least by the factor `1 - d`. Off the border the 3x3 window stays in the grid, so the zero padding is exactly his step. | The trail cannot build up without agents laying it; walls absorb in both ports. |
+| `turn_keep_front`, `turn_pos_iff`, `turn_toward_larger`, `turn_range` | The sensory turn keeps the heading when ahead is strictly the strongest, turns right exactly when not and left is weaker than right, never turns away from a strictly stronger side, and turns by -1, 0 or +1 steps of RA. | The agents' sensory stage in both ports. |
+| `turn_tie_left` | When both sides read the same and more than ahead, the code always turns left. | A finding: Jones (2010) describes a random choice there; the ports keep the code's rule and say so. |
+| `update_valid`, `moveOne_valid`, `moveAll_injective`, `respawn_preserves` | Moving agents one at a time, in any order, onto cells that are neither walls nor held by another, and teleporting onto such a cell, keep one agent a cell and none on a wall. | The motor stage; in the slime mould's egress, a place the fire has made untenable is a wall, so no agent stands in the fire. |
+| `window_count_le`, `shrink_limit_exceeded` | Agents in any set of cells number at most its cells; in his 5x5 shrinkage window a count above 23 is 24 or 25. | The adaptive population's death test. |
+| `erode_nonneg`, `erode_le`, `erode_exact`, `erode_mono`, `erode_antitone`, `erode_not_antitone_in_s` | Erosion `max 0 (s - e)` never goes below 0, never above `s` (for `s, e ≥ 0`), takes exactly `e` when `e ≤ s`, rises with `s` and falls with `e`, and is not antitone in `s`. | The erosion model's substrate. |
+
+What the proofs found. The tie turning left (`turn_tie_left`). The brief's "erosion is antitone in
+the substrate" was false: it is monotone in it (`erode e e = 0` but `erode (e + 1) e = 1`), which is
+what keeps a deeper channel deeper (`erode_mono`); `erode_le` needs both `s ≥ 0` and `e ≥ 0`
+(`erode (-1) 0 = 0 > -1`). Several hypotheses were not needed: `diffuse_total` holds for any `d`,
+and the bounds need only `d ≤ 1`. Not covered: floating point, the sensors' rounding to cells, the
+random update order's distribution, and the code's edge jump (an agent at an
+unwalled edge rounding to the far side; the ports clamp).
+
+`lake build FireEgress.Physarum` passes with no errors, warnings or `sorry`; its 23 axiom prints are
+appended to `AxiomCheck.lean` (four of the movement results use no axioms, the other nineteen
+`propext`, `Classical.choice` and `Quot.sound`).
+
 ## Building
 
 Lake caches are gigabytes, so build outside OneDrive. Keep the working copy

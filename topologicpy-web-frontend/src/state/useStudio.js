@@ -111,6 +111,9 @@ export const DEFAULT_SETTINGS = {
   // Each person takes the exit that gets them out soonest, queues counted
   // ("quickest"), or the nearest ("nearest"; core/crowd.js EXIT_CHOICES).
   crowdChoice: "quickest",
+  // The slime mould (core/slimeEgress.js) grows kept out of where the fire
+  // makes untenable, or as if there were none.
+  slimeWithFire: false,
   // Gathering places hold crowdShelterArea m^2 of people when on; once full,
   // the earliest there fade as newcomers arrive.
   crowdShelterOn: false,

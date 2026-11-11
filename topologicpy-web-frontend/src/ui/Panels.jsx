@@ -1581,6 +1581,70 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
   );
 }
 
+/**
+ * The slime mould (core/slimeEgress.js): Jones's Physarum agents grown on the
+ * walkable graph towards the exits, kept from the fire when asked; their trail
+ * is drawn yellow on the graph and the start's route keeps to it.
+ */
+function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasStart, fireReady }) {
+  const result = slime?.result;
+  const m = (x) => `${x.toFixed(1)} m`;
+  const flux = result ? result.exits.reduce((s, e) => s + e.flux, 0) : 0;
+  return (
+    <Section title="Slime mould" badge={result ? "grown" : null} defaultOpen={false}>
+      <p className="field__hint">
+        Slime mould agents (Jones&apos;s <em>Physarum</em> model) grow over the walkable graph towards the exits. Their trail, drawn yellow,
+        shows which corridors and stairs the building&apos;s escape leans on; the route from the start keeps to it.
+      </p>
+      <SelectField
+        label="The fire"
+        value={settings.slimeWithFire ? "fire" : "none"}
+        onChange={(value) => setSettings({ slimeWithFire: value === "fire" })}
+        options={[
+          { value: "none", label: "Grow as if there were none" },
+          { value: "fire", label: "Keep out of where it makes untenable" },
+        ]}
+        hint={
+          settings.slimeWithFire
+            ? fireReady
+              ? "Every place the fire makes untenable during its run is a wall, and the places near it repel."
+              : "Start a fire in Simulate first; a Flamescapes run must have finished."
+            : null
+        }
+      />
+      <div className="grid-2">
+        <Button size="sm" onClick={onGrow} disabled={!ready || slime?.busy || (settings.slimeWithFire && !fireReady)}>
+          {slime?.busy ? "Growing…" : result ? "Grow again" : "Grow the slime mould"}
+        </Button>
+        <Button size="sm" onClick={onClear} disabled={!result}>
+          Clear
+        </Button>
+      </div>
+      {slime?.error && <Notice tone="warning">{slime.error}</Notice>}
+      {result && (
+        <Notice>
+          {result.agents.toLocaleString()} agents for {result.steps} steps, {(result.ms / 1000).toFixed(1)} s: {flux.toLocaleString()} reached an exit,{" "}
+          {result.exits.slice(0, 6).map((e) => e.flux).join(", ")}
+          {result.exits.length > 6 ? ", ..." : ""} through {result.exits.length} exit{result.exits.length === 1 ? "" : "s"}.
+          {result.withFire ? ` Kept out of ${result.closed.toLocaleString()} untenable places.` : ""}{" "}
+          {result.route
+            ? `From the start along its tubes: ${m(result.route.length)}, against the shortest walk ${m(result.route.shortest)}.`
+            : hasStart
+              ? result.withFire
+                ? "The fire cuts the start off from every exit."
+                : "The start reaches no exit."
+              : "Pick a start to see its way out along the tubes."}
+        </Notice>
+      )}
+      <p className="field__hint">
+        After Jones (2010) and Jones and Saeed (2007): the agents sense ahead and to either side, turn towards the strongest, step and
+        lay trail, which spreads and fades; walls absorb it. Here the exits also draw by the walking distance to them, so far rooms keep a
+        way out. An illustration of where the escape concentrates, not an evacuation model to quote.
+      </p>
+    </Section>
+  );
+}
+
 export function RoutePanel({
   studio,
   onPick,
@@ -1609,6 +1673,10 @@ export function RoutePanel({
   crowd = null,
   onPlayCrowd,
   onRestartCrowd,
+  slime = null,
+  slimeFireReady = false,
+  onGrowSlime,
+  onClearSlime,
 }) {
   const { graph, points, pickMode, path, pathBusy, comparison, alternatives, settings, setSettings, capabilities } =
     studio;
@@ -1767,6 +1835,16 @@ export function RoutePanel({
         )}
       </Section>
       <PeopleLeaving crowd={crowd} settings={settings} setSettings={setSettings} onPlay={onPlayCrowd} onRestart={onRestartCrowd} ready={Boolean(graph)} />
+      <SlimeMould
+        slime={slime}
+        settings={settings}
+        setSettings={setSettings}
+        onGrow={onGrowSlime}
+        onClear={onClearSlime}
+        ready={Boolean(graph)}
+        hasStart={Boolean(studio.points?.start)}
+        fireReady={slimeFireReady}
+      />
       <CodeCheck code={code} settings={settings} setSettings={setSettings} onRun={onCodeCheck} onShow={onShowTravel} ready={Boolean(graph)} />
       <PerformanceCheck
         perf={perf}

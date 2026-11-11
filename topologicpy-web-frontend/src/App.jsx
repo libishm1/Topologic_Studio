@@ -74,6 +74,9 @@ const GPU_RUN_DRAW_RATE = 15;
 const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate";
 // The recording while its module loads (a click then does nothing).
 const RECORDER_STARTING = { cancel() {} };
+
+/** No slime mould grown (core/slimeEgress.js). */
+const SLIME_NONE = { nodes: null, result: null, busy: false, error: null };
 // How long a step is on screen, with nothing running, before its hint shows.
 const HINT_SETTLE_MS = 2500;
 // The code's occupancy group for the performance check's occupants setting
@@ -2728,6 +2731,88 @@ export default function App() {
     Object.assign(crowdClockRef.current, { base: 0, since: performance.now(), playing: true });
     setCrowdTime(0);
   }, []);
+
+  // ------------------------------------------------------- slime mould
+
+  // Jones's Physarum agents on the walkable graph (core/slimeEgress.js), in a
+  // worker of their own, grown when asked for; a result is for the graph it
+  // was grown on.
+  const slimeRef = useRef(null);
+  useEffect(() => () => slimeRef.current?.cancel(), []);
+  const [slimeState, setSlimeState] = useState(SLIME_NONE);
+  const slime = slimeState.nodes === graphNodes && graphNodes ? slimeState : SLIME_NONE;
+  // The fire's untenable times, as the people's are worked out: a Flamescapes
+  // run once it has finished, else the graph fire.
+  const slimeFire = useCallback(() => {
+    if (!graph) return null;
+    const run = combustionRef.current;
+    if (isFlamescapes(fire.model)) {
+      if (!run?.done || run.failed || run.graph?.nodes !== graph.nodes || !run.result) return null;
+      const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: run.result.frameSeconds };
+      return forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility }).untenable;
+    }
+    if (fire.model === "zone" || !(fire.step > 0) || !points.fire) return null;
+    return buildForecast(graph, {
+      model: fire.model,
+      seed: snap(graph, points.fire),
+      steps: settings.fireMaxSteps,
+      dt: settings.forecastSecondsPerStep,
+      threshold: settings.untenableAbove,
+      blocked: settings.useWalls ? graph.blocked : null,
+    }).untenable;
+  }, [graph, fire.model, fire.step, points.fire, settings]);
+  const growSlime = useCallback(() => {
+    if (!graph) return;
+    const exits = planExitNodes();
+    if (!exits.length) {
+      toast("No exit to grow towards: the model marks none out of the building, so pick one in Route.", { variant: "warning" });
+      return;
+    }
+    const closes = settings.slimeWithFire ? slimeFire() : null;
+    if (settings.slimeWithFire && !closes) {
+      toast("Start a fire in Simulate first; a Flamescapes run must have finished.", { variant: "warning" });
+      return;
+    }
+    slimeRef.current ||= workerClient(
+      () => new Worker(new URL("./workers/slime.worker.js", import.meta.url), { type: "module" }),
+      { failure: "The slime mould stopped, usually because the browser ran out of memory. Reload the page and try again." },
+    );
+    const nodes = graph.nodes;
+    setSlimeState({ nodes, result: null, busy: true, error: null });
+    const payload = {
+      graph: { nodes: graph.nodes.slice(), edges: graph.edges.slice(), kinds: graph.kinds ? graph.kinds.slice() : null, upAxis: graph.upAxis },
+      opts: {
+        exits,
+        start: points.start ? snap(graph, points.start) : -1,
+        closes: closes ? Float64Array.from(closes) : null,
+        blocked: settings.useWalls && graph.blocked ? graph.blocked.slice() : null,
+        seed: 1,
+      },
+    };
+    const transfers = [payload.graph.nodes.buffer, payload.graph.edges.buffer];
+    for (const typed of [payload.graph.kinds, payload.opts.closes, payload.opts.blocked]) if (typed) transfers.push(typed.buffer);
+    const t0 = performance.now();
+    slimeRef.current.run({ payload }, transfers).then(
+      (result) => setSlimeState((s) => (s.nodes === nodes ? { ...s, busy: false, result: { ...result, ms: performance.now() - t0, withFire: Boolean(closes) } } : s)),
+      (error) => {
+        if (!isCancelled(error)) setSlimeState((s) => (s.nodes === nodes ? { ...s, busy: false, error: error?.message || String(error) } : s));
+      },
+    );
+  }, [graph, planExitNodes, points.start, settings.slimeWithFire, settings.useWalls, slimeFire, toast]);
+  const clearSlime = useCallback(() => setSlimeState(SLIME_NONE), []);
+  // The weights on the graph, slime yellow, and the route along the tubes.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const result = slime.result;
+    if (!viewer || !result || !graph) return undefined;
+    viewer.setSlimeWeights?.(result.weights);
+    const route = result.route?.nodes;
+    if (route) viewer.setPath(route.map((v) => [graph.nodes[v * 3], graph.nodes[v * 3 + 1], graph.nodes[v * 3 + 2]]), { name: "slimePath", color: 0xe5b800 });
+    return () => {
+      viewer.setSlimeWeights?.(null);
+      viewer.setPath(null, { name: "slimePath" });
+    };
+  }, [slime.result, graph]);
   // ------------------------------------------------------- recording
 
   // The view recorded as a GIF (lib/recorder.js): the fire, the smoke and the
@@ -4263,6 +4348,10 @@ export default function App() {
                   }}
                   onPlayCrowd={playCrowd}
                   onRestartCrowd={restartCrowd}
+                  slime={slime}
+                  slimeFireReady={Boolean(graph) && (isFlamescapes(fire.model) ? Boolean(combustionRef.current?.done) : fire.model !== "zone" && fire.step > 0)}
+                  onGrowSlime={growSlime}
+                  onClearSlime={clearSlime}
                 />
               )}
               {activeTab === "simulate" && (
