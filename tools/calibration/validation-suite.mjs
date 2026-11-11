@@ -201,6 +201,12 @@ async function runCase(c) {
   const spec = R.itemBurner(grid, solid, cell0, { alpha: 0.0117, item: { area: T.burner.area, mass: 1 }, fuel });
   spec.hrr = T.burner.hrrW;
   spec.design = null;
+  // The test's radiant fraction along the burner's rays (plan 12.9, amendment 8): the FDS input's, or
+  // FDS's default for its fuel. --fuel app keeps the app's design-fire burner (radiant fraction 0).
+  if (c.fuelRule !== "app" && T.burner.radiantFraction != null) {
+    spec.radiantFraction = T.burner.radiantFraction;
+    spec.rays = 16;
+  }
   const INERT_FUEL = { heatOfCombustion: 17.5e6, yields: { co2: 1.27, co: 0.004, soot: 0.015 }, embers: false, ignitionTemperature: 300 };
   const scene = { grid, fraction: G.fraction, solid, contents: { cells: [], masses: [] }, ignition: null, pilot: null, burner: spec, fuels: { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL } };
   const sim = F.createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ambient: Ta, ...(inert ? { inert } : {}), ...c.solver });
@@ -434,7 +440,7 @@ async function runCase(c) {
     openCells: solid.reduce((a, s) => a + (s ? 0 : 1), 0),
     plumeIndex: +S.plumeIndex(Qpeak, h).toFixed(2),
     peakKW: Math.round(Qpeak / 1000),
-    burner: { cells: spec.layers.reduce((a, l) => a + l.length, 0), columns: spec.layers[0]?.length ?? 0, layers: spec.layers.length, released: +(sim.stats.released / 1e6).toFixed(3), expectedMJ: +(burnerIntegral(T.burner.hrrW, health.ok ? horizon : health.time) / 1e6).toFixed(3) },
+    burner: { cells: spec.layers.reduce((a, l) => a + l.length, 0), columns: spec.layers[0]?.length ?? 0, layers: spec.layers.length, radiantFraction: spec.radiantFraction, radiantMJ: +((sim.burner?.radiant ?? 0) / 1e6).toFixed(3), released: +(sim.stats.released / 1e6).toFixed(3), expectedMJ: +(burnerIntegral(T.burner.hrrW, health.ok ? horizon : health.time) / 1e6).toFixed(3) },
     trees: trees.map((tr) => ({ id: tr.id, modelCeiling: tr.modelH != null ? +tr.modelH.toFixed(3) : null, nominal: tr.H, cells: tr.cells ? tr.cells.length : null, droppedCells: tr.dropped ?? null })),
     points: points.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null, ...(p.pathCells ? { pathCells: p.pathCells.length } : {}) })),
     fuel: { heatOfCombustion: fuel.heatOfCombustion, yields: fuel.yields, rule: c.fuelRule !== "app" && T.fuel ? "the test fuel's" : "class A, CO2 per joule matched" },

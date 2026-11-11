@@ -616,8 +616,8 @@ The user now requires every quantity, smoke visibility included, to have its fai
   - methane: 50.0 MJ/kg, CO2 2.744;
   - heptane: 44.6 MJ/kg, CO2 3.006, CO 0.008;
   - soot as each series documents it: Steckler 0 and ATF 0 (their FDS inputs), NBS 0.005 (its FDS input), NIST/NRC 0.0149 (measured in the tests, as the guide quotes it), WTC 0.015 (its FDS input).
-- **Its consequence.** The solver's flame radiates only through its soot, so the methane burners, with little or no soot, lose no heat by radiation. A methane flame radiates 15 to 20 % of its heat. This is a known mismatch, which may bias their layers hot.
-- **The former rule** is kept as a diagnostic: `--fuel app`.
+- **Its consequence.** The solver's flame radiates only through its soot, so the methane burners, with little or no soot, would lose no heat by radiation. A methane flame radiates 15 to 20 % of its heat. Amendment 8 gives the burners their radiant fraction for this reason.
+- **The former rule** is kept as a diagnostic: `--fuel app`. It runs the app's design-fire burner: class A fuel, CO2 matched per joule, radiant fraction 0.
 
 **4. NBS's geometry and materials, checked without measured data.**
 - On 0.20 m cells the scene is exact: the burn room's door 0.80 m wide up to its 1.60 m soffit, ceilings 2.20 and 2.40 m, the end door 1.60 m², the plan areas.
@@ -640,6 +640,31 @@ No input fault explains NBS's scatter: its far corridor trees run cold on every 
 `node tools/calibration/validation-suite.mjs --cells 0.20,0.27,0.34 --jobs 6 --json benchmark/results/2026-11-12-validation-final.json > benchmark/results/2026-11-12-validation-final.log 2>&1`
 
 It covers all five datasets, 218 runs: the 206 before and ATF's 12. Six jobs hold about 1.3 GB. It should take about 2.5 h.
+
+**8. Amendment, 2026-11-12, before any run on the next solver: the burner's radiant fraction and yields from each FDS input.** With each test's own fuel, the methane burners carry little or no soot, so the solver's soot radiation would no longer take their radiant heat. Their layers would then run hot for a reason that is not the transport.
+
+The rule, the same for every test:
+- **Radiant fraction.** Each burner radiates the FDS input's RADIATIVE_FRACTION along its rays (`flamescapes.js createBurner` and `burnerStep`, 16 rays), its convective rest into the flame cells. Where the input leaves the fraction out, FDS's own default for its fuel applies: the FDS User's Guide's table of default radiative fractions gives METHANE 0.20 and N-HEPTANE 0.40, and 0.35 only for species it does not list.
+- **Soot and CO.** As the input gives them. CO2 follows by the carbon balance: the fuel's carbon, less the soot's and the CO's, as CO2.
+
+The values:
+
+| Dataset | Tests | Radiant fraction | Soot | CO | CO2 (kg/kg) |
+| --- | --- | --- | --- | --- | --- |
+| Steckler | all 55 | 0.20 (FDS's methane default) | 0 | 0 | 2.743 |
+| NBS | 100A | 0.20 (FDS's methane default) | 0.005 | 0 | 2.725 |
+| NBS | 100O, 100Z (acetylene added) | 0.30 (input) | 0.010 | 0 | 2.707 |
+| NIST/NRC | all 10 | 0.44 (input) | 0.0149 (the input's lumped products; the tests' measured value) | 0.008 | 3.007 |
+| WTC | 1, 4, 5, 6 | 0.44 (input) | 0.015 | 0.008 | 3.007 |
+| WTC | 2, 3 | 0.39 (input) | 0.114 | 0.042 | 2.591 |
+| ATF | all 6 | 0.20 (FDS's methane default) | 0 | 0 | 2.743 |
+
+Heats of combustion: methane 50.0 MJ/kg, heptane 44.6 MJ/kg.
+
+Known mismatches:
+- **Double counting for sooty fuels.** For WTC 2 and 3, the solver's soot radiation from the hot burner gas comes on top of the prescribed fraction, so those fires may radiate more than their stated share. FDS instead holds the flame's emission to the stated fraction.
+- **NBS 100A.** The guide's text gives 0.20 for natural gas, which FDS's default also gives.
+- **The burner's rays** are absorbed by soot on the way and by the first solid they meet, as the solver's own radiation is.
 
 **What the rule allows, before any result:**
 - Layer temperature and depth: five datasets, so they can be calibrated.

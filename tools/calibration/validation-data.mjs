@@ -206,10 +206,31 @@ const CO2_PER_J = { methane: 2.744 / 50.0e6, heptane: 3.006 / 44.6e6, toluene: n
  * REAC, or the test report as the FDS Validation Guide quotes it).
  */
 const TEST_FUELS = {
-  methane: { heatOfCombustion: 50.0e6, yields: { co2: 2.744, co: 0 } },
-  heptane: { heatOfCombustion: 44.6e6, yields: { co2: 3.006, co: 0.008 } },
+  methane: { heatOfCombustion: 50.0e6, carbon: 12.011 / 16.043, co: 0 },
+  heptane: { heatOfCombustion: 44.6e6, carbon: (7 * 12.011) / 100.205, co: 0.008 },
 };
-const testFuel = (name, soot, co, source) => ({ name, heatOfCombustion: TEST_FUELS[name].heatOfCombustion, yields: { ...TEST_FUELS[name].yields, ...(co != null ? { co } : {}), soot }, source });
+/**
+ * The burner's radiant fraction (plan section 12.9, amendment 8): the FDS
+ * input's RADIATIVE_FRACTION, or where the input leaves it out FDS's own
+ * default for its fuel (FDS User's Guide, table "Default radiative fraction
+ * for some common fuels": METHANE 0.20, N-HEPTANE 0.40, TOLUENE 0.40; 0.35
+ * for species it does not list).
+ */
+const FDS_DEFAULT_RF = { METHANE: 0.2, "N-HEPTANE": 0.4, TOLUENE: 0.4 };
+const radiantOf = (geo) => {
+  const given = geo.reac?.radiativeFraction;
+  const fuel = String(geo.reac?.fuel || "").toUpperCase();
+  return given != null
+    ? { radiantFraction: given, radiantSource: `the FDS input's RADIATIVE_FRACTION ${given}` }
+    : { radiantFraction: FDS_DEFAULT_RF[fuel] ?? 0.35, radiantSource: `FDS's default for ${fuel || "an unlisted fuel"} (${FDS_DEFAULT_RF[fuel] ?? 0.35}; the input gives none)` };
+};
+/** The test fuel, its CO2 yield by the carbon balance: the fuel's carbon less the soot's and the CO's, as CO2. */
+const testFuel = (name, soot, co, source) => {
+  const f = TEST_FUELS[name];
+  const coY = co ?? f.co;
+  const co2 = +((f.carbon - soot - (coY * 12.011) / 28.01) * (44.01 / 12.011)).toFixed(4);
+  return { name, heatOfCombustion: f.heatOfCombustion, yields: { co2, co: coY, soot }, source: `${source}; CO2 by the carbon balance` };
+};
 
 async function steckler(sources, dataplot) {
   // Every test with an FDS input and measured profiles (the guide's 55).
@@ -248,7 +269,7 @@ async function steckler(sources, dataplot) {
       geometry: geometryOf(geo),
       opening,
       ambientC: geo.tmpa,
-      burner: { centre: [r3((Math.min(...xs) + Math.max(...xs)) / 2), r3((Math.min(...ys) + Math.max(...ys)) / 2)], area: r4(area), z0: r3(fire[0].xb[4]), peakW: Math.round(Q), hrrW: [[0, 0], [10, Math.round(Q)], [1e6, Math.round(Q)]], ramp: "FDS: steady (its default 1 s rise); here a 10 s linear rise (as steckler-checks.mjs)" },
+      burner: { centre: [r3((Math.min(...xs) + Math.max(...xs)) / 2), r3((Math.min(...ys) + Math.max(...ys)) / 2)], area: r4(area), z0: r3(fire[0].xb[4]), peakW: Math.round(Q), hrrW: [[0, 0], [10, Math.round(Q)], [1e6, Math.round(Q)]], ramp: "FDS: steady (its default 1 s rise); here a 10 s linear rise (as steckler-checks.mjs)", ...radiantOf(geo) },
       co2PerJ: CO2_PER_J.methane,
       fuel: testFuel("methane", geo.reac?.soot ?? 0, null, "methane; soot yield from the FDS input's REAC (SOOT_YIELD 0)"),
       // Walls, ceiling, floor and the burner's block: the FDS input's default surface (13 mm ceramic fibre board).
@@ -299,7 +320,7 @@ async function nbs(sources, dataplot) {
       fdsInput: fdsFile,
       geometry: geometryOf(geo),
       ambientC: geo.tmpa,
-      burner: { centre: [r3((fire.xb[0] + fire.xb[1]) / 2), r3((fire.xb[2] + fire.xb[3]) / 2)], area: r4(area), z0: r3(fire.xb[4]), peakW: Math.round(Q), hrrW: ramp.map(([t, fr]) => [t, Math.round(Q * fr)]), ramp: `FDS RAMP_Q '${surf.rampQ}' x HRRPUA ${surf.hrrpua} kW/m2 x ${area.toFixed(3)} m2 (110 kW measured, Peacock et al. 1991, as the guide states)` },
+      burner: { centre: [r3((fire.xb[0] + fire.xb[1]) / 2), r3((fire.xb[2] + fire.xb[3]) / 2)], area: r4(area), z0: r3(fire.xb[4]), peakW: Math.round(Q), hrrW: ramp.map(([t, fr]) => [t, Math.round(Q * fr)]), ramp: `FDS RAMP_Q '${surf.rampQ}' x HRRPUA ${surf.hrrpua} kW/m2 x ${area.toFixed(3)} m2 (110 kW measured, Peacock et al. 1991, as the guide states)`, ...radiantOf(geo) },
       co2PerJ: CO2_PER_J.methane,
       fuel: testFuel("methane", geo.reac?.soot ?? 0, null, `natural gas as methane; soot yield from the FDS input's REAC (SOOT_YIELD ${geo.reac?.soot ?? 0})`),
       // The corridor's walls and ceiling (13 mm calcium silicate on 13 mm gypsum), the burn room's (50 mm ceramic
@@ -394,7 +415,7 @@ async function nistNrc(sources, dataplotText) {
       ventilation: closed ? "door closed, no fan (the room sealed here; the test's measured leakage, 0.06 to 0.08 m2, is below a cell)" : "door open (2 m x 2 m), no fan",
       ambientC: geo.tmpa,
       fuel,
-      burner: { centre: centre.map(r3), area: r4(Math.PI * 0.25), z0: 0, shape: "circle", peakW: Math.round(Qm), hrrW: ramp.map(([t, fr]) => [t, Math.round(Qm * fr)]), ramp: calorimetry ? `FDS FIRE_RAMP x the measured HRR's mean over ${h0 + 60} to ${h1 - 30} s (${(Qm / 1000).toFixed(0)} kW; the FDS nozzle flow gives ${(Qflow / 1000).toFixed(0)} kW)` : `FDS FIRE_RAMP x the FDS input's fuel flow, ${flow} L/min of heptane at 684 kg/m3 and 44.6 MJ/kg (${(Qm / 1000).toFixed(0)} kW; no calorimetry with the door shut)`, source: calorimetry ? "calorimetry" : "fuel flow" },
+      burner: { centre: centre.map(r3), area: r4(Math.PI * 0.25), z0: 0, shape: "circle", peakW: Math.round(Qm), hrrW: ramp.map(([t, fr]) => [t, Math.round(Qm * fr)]), ramp: calorimetry ? `FDS FIRE_RAMP x the measured HRR's mean over ${h0 + 60} to ${h1 - 30} s (${(Qm / 1000).toFixed(0)} kW; the FDS nozzle flow gives ${(Qflow / 1000).toFixed(0)} kW)` : `FDS FIRE_RAMP x the FDS input's fuel flow, ${flow} L/min of heptane at 684 kg/m3 and 44.6 MJ/kg (${(Qm / 1000).toFixed(0)} kW; no calorimetry with the door shut)`, source: calorimetry ? "calorimetry" : "fuel flow", ...radiantOf(geo) },
       co2PerJ: CO2_PER_J[fuel],
       fuel: testFuel("heptane", 0.0149, 0.008, "heptane; soot yield 0.0149 as measured in the tests (Hamins et al. 2006, as the FDS Validation Guide quotes it); CO 0.008 from the FDS input's lumped products"),
       // Walls and ceiling: the default 25.4 mm marinite; the floor: 12.7 mm gypsum plaster on 18.3 mm pine (FDS's 'GYPSUM BOARD').
@@ -461,7 +482,7 @@ async function wtc(sources, dataplotText) {
       geometry: geometryOf(geo),
       ambientC: geo.tmpa,
       fuel: "heptane",
-      burner: { centre: [r3((pan[0] + pan[1]) / 2), r3((pan[2] + pan[3]) / 2)], area: r4((pan[1] - pan[0]) * (pan[3] - pan[2])), z0: 0, peakW: Math.round(Qm), hrrW: ramp.map(([t, fr]) => [t, Math.round(Qm * fr)]), ramp: `FDS FIRE_RAMP x the measured HRR's (calHRR) mean over ${h0 + 60} to ${h1 - 30} s (${(Qm / 1000).toFixed(0)} kW; from the FDS nozzle flow ${(Qflow / 1000).toFixed(0)} kW)` },
+      burner: { centre: [r3((pan[0] + pan[1]) / 2), r3((pan[2] + pan[3]) / 2)], area: r4((pan[1] - pan[0]) * (pan[3] - pan[2])), z0: 0, peakW: Math.round(Qm), hrrW: ramp.map(([t, fr]) => [t, Math.round(Qm * fr)]), ramp: `FDS FIRE_RAMP x the measured HRR's (calHRR) mean over ${h0 + 60} to ${h1 - 30} s (${(Qm / 1000).toFixed(0)} kW; from the FDS nozzle flow ${(Qflow / 1000).toFixed(0)} kW)`, ...radiantOf(geo) },
       co2PerJ: CO2_PER_J.heptane,
       fuel: testFuel("heptane", geo.reac?.soot ?? 0.015, geo.reac?.co ?? 0.008, `heptane; soot ${geo.reac?.soot} and CO ${geo.reac?.co} from the FDS input's REAC`),
       // Walls and ceiling: the default 25.4 mm marinite; the floor: 25.4 mm gypsum board.
@@ -526,7 +547,7 @@ async function atf(sources, dataplotText) {
       fdsInput: fdsFile,
       geometry: geometryOf(geo),
       ambientC: geo.tmpa,
-      burner: { centre: [r3((fire.xb[0] + fire.xb[1]) / 2), r3((fire.xb[2] + fire.xb[3]) / 2)], area: r4(area), z0: r3(fire.xb[4]), peakW: Math.round(Q * Math.max(...ramp.map((x) => x[1]))), hrrW: ramp.map(([t, fr]) => [t, Math.round(Q * fr)]), ramp: `FDS RAMP_Q '${surf.rampQ}' x HRRPUA ${surf.hrrpua} kW/m2 x ${area.toFixed(3)} m2` },
+      burner: { centre: [r3((fire.xb[0] + fire.xb[1]) / 2), r3((fire.xb[2] + fire.xb[3]) / 2)], area: r4(area), z0: r3(fire.xb[4]), peakW: Math.round(Q * Math.max(...ramp.map((x) => x[1]))), hrrW: ramp.map(([t, fr]) => [t, Math.round(Q * fr)]), ramp: `FDS RAMP_Q '${surf.rampQ}' x HRRPUA ${surf.hrrpua} kW/m2 x ${area.toFixed(3)} m2`, ...radiantOf(geo) },
       co2PerJ: CO2_PER_J.methane,
       fuel: testFuel("methane", geo.reac?.soot ?? 0, null, "natural gas as methane; soot yield from the FDS input's REAC (SOOT_YIELD 0)"),
       // Walls and ceilings: the default 12.7 mm gypsum board; the ground floor: concrete. Not matched: the
