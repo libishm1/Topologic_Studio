@@ -1,0 +1,30 @@
+{
+ "_comment": "FMV review (PROTOCOL.md). Harvest with the aec-research-workflow skill's harvest_openalex.py; title and abstract search; each query logged with its hits.",
+ "date_from": "1980-01-01",
+ "date_to": "2026-12-31",
+ "types": "article|review|report|book-chapter|preprint",
+ "default_cap": 400,
+ "blocks": {
+  "MODEL": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\")",
+  "VALID": "(validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark)",
+  "ENCLOSURE": "(compartment OR room OR enclosure OR corridor OR building OR atrium OR \"multi-room\")"
+ },
+ "queries": {
+  "Q01_hot_gas_layer": "{MODEL} AND {VALID} AND (\"hot gas layer\" OR \"upper layer\" OR \"smoke layer\" OR \"layer temperature\" OR \"layer height\" OR \"layer interface\")",
+  "Q02_ceiling_jet": "{MODEL} AND {VALID} AND (\"ceiling jet\")",
+  "Q03_plume": "{MODEL} AND {VALID} AND (\"fire plume\" OR \"buoyant plume\" OR \"plume temperature\" OR McCaffrey)",
+  "Q04_species": "{MODEL} AND {VALID} AND (oxygen OR \"carbon dioxide\" OR \"carbon monoxide\" OR \"gas concentration\" OR \"gas species\") AND {ENCLOSURE}",
+  "Q05_opening_flows": "{MODEL} AND {VALID} AND (\"door flow\" OR doorway OR \"vent flow\" OR \"neutral plane\" OR Steckler OR \"opening flow\")",
+  "Q06_smoke_visibility": "{MODEL} AND {VALID} AND (\"smoke visibility\" OR \"optical density\" OR \"extinction coefficient\" OR soot OR \"smoke concentration\" OR obscuration)",
+  "Q07_activation": "(\"sprinkler activation\" OR \"detector activation\" OR \"smoke detector\" OR \"heat detector\" OR \"activation time\") AND ({MODEL} OR \"response time index\") AND {VALID}",
+  "Q08_resolution": "{MODEL} AND (\"grid resolution\" OR \"mesh resolution\" OR \"grid sensitivity\" OR \"plume resolution index\" OR \"cell size\" OR \"grid size\") AND (fire OR compartment)",
+  "Q09_uncertainty": "{MODEL} AND (\"uncertainty quantification\" OR \"model uncertainty\" OR \"sensitivity analysis\" OR \"model bias\") AND (fire OR compartment)",
+  "Q10_experiment_datasets": "(\"full-scale\" OR \"large-scale\" OR \"compartment fire\" OR \"room fire\") AND (experiment OR experiments OR tests) AND (\"hot gas layer\" OR \"ceiling jet\" OR \"smoke layer\" OR \"upper layer temperature\")",
+  "Q11_fast_models": "(GPU OR \"real-time\" OR \"faster than real time\" OR \"coarse grid\" OR \"reduced order\" OR surrogate OR \"machine learning\") AND (\"fire simulation\" OR \"smoke spread\" OR \"fire model\" OR \"smoke movement\") AND (validation OR calibration OR accuracy)",
+  "Q12_zone_and_cfd": "(CFAST OR \"zone model\") AND (FDS OR CFD OR \"field model\") AND (comparison OR validation) AND (compartment OR building)",
+  "Q13_correlations": "(MQH OR McCaffrey OR Alpert OR Heskestad OR \"empirical correlation\") AND fire AND (\"layer temperature\" OR \"ceiling jet\" OR plume) AND (comparison OR validation)",
+  "Q14_wall_heat": "{MODEL} AND {VALID} AND (\"wall heat transfer\" OR \"heat flux\" OR \"surface temperature\" OR \"heat losses\") AND {ENCLOSURE}",
+  "Q15_numerics": "(\"low Mach\" OR \"conservative scheme\" OR \"energy conservation\" OR \"semi-Lagrangian\" OR \"vorticity confinement\") AND (fire OR \"buoyant flow\" OR smoke) AND (simulation OR model)",
+  "Q16_tenability": "(tenability OR ASET OR \"available safe egress time\") AND {MODEL} AND (validation OR uncertainty OR calibration)"
+ }
+}
