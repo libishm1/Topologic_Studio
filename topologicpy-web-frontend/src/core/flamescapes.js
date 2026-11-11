@@ -121,7 +121,20 @@ export const DEFAULTS = Object.freeze({
   // (wiki/research/sprinkler-activation-fix-2026-11-08.md).
   wallConvection: 10,
   sootAbsorption: 500, // the paper's residual absorption coefficient kappa
-  vorticity: 10, // confinement strength
+  // Confinement strength (Fedkiw, Stam and Jensen 2001: a force vorticity x h
+  // x (N x omega)). 6, fitted 2026-11-11 on McCaffrey's plume and Alpert's
+  // ceiling jet on the app's cells by a rule fixed before the runs
+  // (tools/calibration/fit-confinement.mjs; candidates 0 to 10; the paper's 10
+  // lost the open plume's axis): the plume's temperatures within the
+  // calibration plan's band on 0.27 and 0.34 m, the ceiling jet still 1.9 to
+  // 3.1 times Alpert's rise (wiki/research/fire-calibration-plan-2026-11-11.md).
+  vorticity: 6,
+  // A frame's steps are cut so that the flow moves at most `cfl` cells a step
+  // and the confinement force at most vorticity x step = `vorticityStep`, in
+  // at most `maxSubsteps` (substepsFor; wiki/research/fire-calibration-plan-2026-11-11.md, B).
+  cfl: 1,
+  vorticityStep: 0.5,
+  maxSubsteps: 8,
   porousVelocity: 0.5, // velocity multiplier in porous cells
   projection: 30, // red-black Gauss-Seidel sweeps at most
   projectionTolerance: 1e-3, // m/s: stop sweeping when a sweep changes the flow less
@@ -370,7 +383,7 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // Rooms flooded with clean agent or blanketed with foam
     // (suppressionSystems.js systemsSetup), set by the run; null when off.
     systems: null,
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0 },
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0 },
   };
 }
 
@@ -1378,6 +1391,83 @@ function foamWet(sim, dt) {
   }
 }
 
+/**
+ * A run's health (wiki/research/fire-calibration-plan-2026-11-11.md, proposal
+ * A): a guard, not physics. A run is stopped when its gas holds a non-finite
+ * or non-positive value, is hotter than maxT (K, well above any hydrocarbon's
+ * adiabatic flame temperature in air), moves faster than maxSpeed (m/s, far
+ * above a building fire's gas), or holds more heat above ambient than
+ * energyFactor times what the fire has released plus energySlack (J): the
+ * calibration's diverging runs reached 6,400 K and 10^4 m/s within seconds.
+ * The gas's heat is read at a fixed cp, the same on both paths.
+ */
+export const HEALTH = Object.freeze({ maxT: 3000, maxSpeed: 50, energyFactor: 1.5, energySlack: 1e6, cp: 1005 });
+
+/**
+ * One frame's health readings over the gas cells of a state {T, rho, u, v, w,
+ * kind} (the solver itself, or fields read back from the GPU): the hottest
+ * gas (K), the fastest cell-centred speed (m/s), the gas's heat above ambient
+ * (J), whether any value is non-finite or non-positive, and the cell that
+ * most fails (the first non-finite one, else the hottest or fastest).
+ */
+export function healthReadings(state, grid, P, V = grid.h ** 3) {
+  const { nx, ny, nz } = grid;
+  const { T, rho, u, v, w, kind } = state;
+  const Ta = P.ambient;
+  let maxT = Ta, maxSpeed = 0, gasHeat = 0, nonFinite = false, hotCell = -1, fastCell = -1, badCell = -1;
+  for (let k = 0; k < nz; k += 1) {
+    for (let j = 0; j < ny; j += 1) {
+      for (let i = 0; i < nx; i += 1) {
+        const c = at(grid, i, j, k);
+        if (kind[c] === SOLID) continue;
+        const a = 0.5 * (u[uAt(grid, i, j, k)] + u[uAt(grid, i + 1, j, k)]);
+        const b = 0.5 * (v[vAt(grid, i, j, k)] + v[vAt(grid, i, j + 1, k)]);
+        const d = 0.5 * (w[wAt(grid, i, j, k)] + w[wAt(grid, i, j, k + 1)]);
+        const s = Math.hypot(a, b, d);
+        const t = T[c], r = rho[c];
+        if (!(Number.isFinite(t) && Number.isFinite(r) && Number.isFinite(s)) || !(r > 0)) {
+          if (!nonFinite) badCell = c;
+          nonFinite = true;
+          continue;
+        }
+        if (t > maxT) [maxT, hotCell] = [t, c];
+        if (s > maxSpeed) [maxSpeed, fastCell] = [s, c];
+        if (t > Ta) gasHeat += r * V * HEALTH.cp * (t - Ta);
+      }
+    }
+  }
+  return { maxT, maxSpeed, gasHeat, nonFinite, badCell, hotCell, fastCell };
+}
+
+/**
+ * The verdict on a frame's readings, given the heat put into the run so far
+ * (J): what the fire released and what a pilot added (stats.released +
+ * stats.pilotHeat). {ok: true} or {ok: false, reason, value, cell}.
+ */
+export function healthVerdict(r, released) {
+  if (r.nonFinite) return { ok: false, reason: "non-finite", value: null, cell: r.badCell };
+  if (r.maxT > HEALTH.maxT) return { ok: false, reason: "temperature", value: r.maxT, cell: r.hotCell };
+  if (r.maxSpeed > HEALTH.maxSpeed) return { ok: false, reason: "speed", value: r.maxSpeed, cell: r.fastCell };
+  if (r.gasHeat > HEALTH.energyFactor * Math.max(0, released) + HEALTH.energySlack) return { ok: false, reason: "energy", value: r.gasHeat, cell: r.hotCell };
+  return { ok: true };
+}
+
+/**
+ * The steps a frame's time step dt is cut into (proposal B), from the fastest
+ * gas of the frame before: the flow moves at most `cfl` cells a step, and the
+ * explicit confinement force adds at most about the flow's own speed a step
+ * (vorticity times the step at most `vorticityStep`: the force is vorticity
+ * h |omega| per unit mass and |omega| is up to about twice the speed over h);
+ * at most `maxSubsteps`, past which the health guard stops a runaway. The
+ * same function on both paths, from the same frame reading, so the CPU and
+ * the GPU cut their steps alike.
+ */
+export function substepsFor(P, h, maxSpeed, dt) {
+  const byFlow = P.cfl > 0 && maxSpeed > 0 ? Math.ceil((maxSpeed * dt) / (P.cfl * h) - 1e-6) : 1;
+  const byForce = P.vorticity > 0 && P.vorticityStep > 0 ? Math.ceil((P.vorticity * dt) / P.vorticityStep - 1e-6) : 1;
+  return Math.max(1, Math.min(P.maxSubsteps || 1, Math.max(byFlow, byForce)));
+}
+
 /** The gas speed at a cell's centre from its six faces (m/s), for a sprinkler's link. */
 export function cellSpeed(sim, c) {
   const g = sim.grid;
@@ -1707,8 +1797,15 @@ function pilot(sim, dt) {
   if (sim.burner) burnerStep(sim, dt);
   const pl = sim.pilot;
   if (!pl || sim.time >= pl.duration || !pl.cells.length) return;
+  // The heat the pilot adds is tallied (stats.pilotHeat): it is heat the
+  // fire has not released, and the health guard's energy check counts it.
   if (pl.temperature) {
-    for (const c of pl.cells) if (sim.Ts[c] < pl.temperature) sim.Ts[c] = pl.temperature;
+    for (const c of pl.cells) {
+      if (sim.Ts[c] < pl.temperature) {
+        sim.stats.pilotHeat += solidCapacity(sim, c) * (pl.temperature - sim.Ts[c]);
+        sim.Ts[c] = pl.temperature;
+      }
+    }
     return;
   }
   const share = (pl.power * dt) / pl.cells.length;
@@ -1716,6 +1813,7 @@ function pilot(sim, dt) {
     const C = solidCapacity(sim, c);
     if (C > 0) sim.Ts[c] += share / C;
     else sim.T[c] += share / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
+    sim.stats.pilotHeat += share;
   }
 }
 

@@ -34,7 +34,12 @@
 // floor, and a grid clipped round a fire under one reaches the atrium's top
 // (flamescapesRun.js atriumTop): the NIBS Clinic's atria held their smoke at
 // the ground floor.
-export const RUN_CACHE_VERSION = 9;
+// 10 (2026-11-11): the fire calibration's proposals A to C
+// (wiki/research/fire-calibration-plan-2026-11-11.md): each frame's steps cut
+// by the fastest gas and the confinement (flamescapes.js substepsFor), the
+// confinement strength fitted to 6 (was 10), and a run that diverges stopped
+// with its health in the result (healthVerdict).
+export const RUN_CACHE_VERSION = 10;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 

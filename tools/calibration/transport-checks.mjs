@@ -30,7 +30,7 @@
  */
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { DEFAULTS, INERT, createSolver, flameHeight, plumeRise, step } from "../../topologicpy-web-frontend/src/core/flamescapes.js";
+import { DEFAULTS, INERT, createSolver, flameHeight, plumeRise, step, substepsFor } from "../../topologicpy-web-frontend/src/core/flamescapes.js";
 import { fuelsFor } from "../../topologicpy-web-frontend/src/core/fireClasses.js";
 import * as V from "../../topologicpy-web-frontend/src/core/voxelize.js";
 
@@ -137,19 +137,25 @@ function maxSpeed(sim) {
 function run(scene, sample) {
   const sim = createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ...SOLVER });
   const t0 = performance.now();
-  let next = 1, peak = 0, divergedAt = null;
+  let next = 1, peak = 0, divergedAt = null, last = 0, mostSubsteps = 1;
+  // Each second a frame, as the app's: its steps cut by the second before's
+  // fastest gas (flamescapes.js substepsFor, proposal B).
+  let substeps = substepsFor(sim.P, sim.grid.h, 0, sim.P.dt);
   while (sim.time < horizon - 1e-9) {
-    step(sim, Math.min(sim.P.dt, horizon - sim.time));
+    step(sim, Math.min(sim.P.dt / substeps, next - sim.time, horizon - sim.time));
     if (sim.time >= next - 1e-9) {
       const s = maxSpeed(sim);
       peak = Math.max(peak, s);
+      last = s;
       if (divergedAt == null && !(s <= DIVERGED_SPEED)) divergedAt = Math.round(sim.time);
       if (divergedAt != null) break;
       sample(sim, Math.round(sim.time));
       next += 1;
+      substeps = substepsFor(sim.P, sim.grid.h, Number.isFinite(last) ? last : 0, sim.P.dt);
+      mostSubsteps = Math.max(mostSubsteps, substeps);
     }
   }
-  return { sim, seconds: (performance.now() - t0) / 1000, health: { maxSpeed: Number.isFinite(peak) ? +peak.toFixed(1) : "non-finite", diverged: divergedAt != null, divergedAt } };
+  return { sim, seconds: (performance.now() - t0) / 1000, health: { maxSpeed: Number.isFinite(peak) ? +peak.toFixed(1) : "non-finite", diverged: divergedAt != null, divergedAt, substeps: mostSubsteps } };
 }
 
 const sceneOf = ({ grid, fraction, solid }, burner, Q) => ({

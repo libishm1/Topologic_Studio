@@ -36,10 +36,10 @@
  * 10 m for large spaces).
  */
 
-import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, flameHeight, step } from "./flamescapes.js";
+import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, flameHeight, healthReadings, healthVerdict, step, substepsFor } from "./flamescapes.js";
 import { EVANS_MIN_DENSITY, activationFrame, activationSummary, createActivation, createSuppression, evansTau, openHeads, sprinklerSetup } from "./suppression.js";
 import { systemsDetect, systemsSetup, systemsSummary } from "./suppressionSystems.js";
-import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, rng, toLocal, volumeFractions } from "./voxelize.js";
+import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, rng, toLocal, toWorld, volumeFractions } from "./voxelize.js";
 // The CO dose and the forecast from frames live in forecast.js, so the
 // forecast worker does not load the solver; re-exported here.
 export { CO_LIMIT, coDoseRate, forecastFromFrames } from "./forecast.js";
@@ -806,11 +806,24 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
   const detectorVis = new Float32Array(rows * D);
   const hrr = new Float32Array(K);
   let released = 0;
+  // Proposals A and B: each frame's steps cut by the frame before's fastest
+  // gas, and each frame checked; a run that fails stops with why and when.
+  let speed = 0, mostSubsteps = 1, health = null, frames = K;
   for (let k = 0; k < K; k += 1) {
     const end = (k + 1) * frameSeconds;
+    const substeps = substepsFor(sim.P, sim.grid.h, speed, dt);
+    mostSubsteps = Math.max(mostSubsteps, substeps);
     while (sim.time < end - 1e-9) {
-      step(sim, Math.min(dt, end - sim.time));
+      step(sim, Math.min(dt / substeps, end - sim.time));
       if (shouldStop?.()) return null;
+    }
+    const reading = healthReadings(sim, sim.grid, sim.P, sim.V);
+    speed = reading.maxSpeed;
+    const verdict = healthVerdict(reading, sim.stats.released + sim.stats.pilotHeat);
+    if (!verdict.ok) {
+      health = failedHealth(sim.grid, verdict, end, reading);
+      frames = k;
+      break;
     }
     const row = keep ? k : 0;
     const at = (a) => a.subarray(row * n, (row + 1) * n);
@@ -851,7 +864,10 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
     });
   }
   const inGrid = cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0);
-  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats: { ...sim.stats }, inGrid, detectorDistance: detectors.distance, sprinklers: spr ? sprinklerResult(spr) : null };
+  // A failed run keeps the frames before the failure only.
+  const cut = (a, per) => (frames < K ? a.slice(0, frames * per) : a);
+  const out = { n, K: frames, frameSeconds, horizon: frames * frameSeconds, hrr: cut(hrr, 1), stats: { ...sim.stats }, inGrid, detectorDistance: detectors.distance, sprinklers: spr ? sprinklerResult(spr) : null };
+  out.health = health || { ok: true, maxSpeed: +speed.toFixed(2), substeps: mostSubsteps };
   // Only when the run has systems, so a run without them keeps its result's shape.
   if (sys) out.systems = systemsResult(sys);
   // Likewise a design-fire first item.
@@ -859,5 +875,30 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
   if (item) out.designFire = item;
   // A prescribed burner's totals (J), only when the scene has one.
   if (sim.burner) out.burner = { released: sim.burner.released, convective: sim.burner.convective, radiant: sim.burner.radiant, cells: sim.burner.cells.length };
-  return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
+  return keep ? { ...out, T: cut(T, n), vis: cut(vis, n), co: cut(co, n), soot: cut(soot, n), co2: cut(co2, n), o2: cut(o2, n), detectorVis: cut(detectorVis, D) } : out;
+}
+
+/**
+ * A failed run's health, for the result (proposal A): why (non-finite,
+ * temperature, speed or energy), when (the end of the frame that failed, s),
+ * the value that failed (K, m/s or J), the cell and its centre in the viewer
+ * frame, and the frame's readings.
+ */
+export function failedHealth(grid, verdict, time, reading) {
+  const c = verdict.cell;
+  let position = null;
+  if (c >= 0) {
+    const i = c % grid.nx, j = Math.floor(c / grid.nx) % grid.ny, k = Math.floor(c / (grid.nx * grid.ny));
+    position = toWorld(grid, grid.origin[0] + (i + 0.5) * grid.h, grid.origin[1] + (j + 0.5) * grid.h, grid.origin[2] + (k + 0.5) * grid.h);
+  }
+  const round = (x, d = 1) => (Number.isFinite(x) ? +x.toFixed(d) : null);
+  return {
+    ok: false,
+    reason: verdict.reason,
+    time,
+    value: round(verdict.value),
+    cell: c,
+    position: position && position.map((x) => +x.toFixed(2)),
+    readings: { maxT: round(reading.maxT), maxSpeed: round(reading.maxSpeed, 2), gasHeat: round(reading.gasHeat, 0), nonFinite: reading.nonFinite },
+  };
 }

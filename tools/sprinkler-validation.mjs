@@ -33,6 +33,7 @@
  *
  *   node tools/sprinkler-validation.mjs [--only REGEX] [--jobs 8]
  *        [--convection 10,200] [--cell 0.3] [--ulcell 0.5] [--horizon-factor 2]
+ *        [--solver vorticity=10,cfl=0,vorticityStep=0]  (solver options over the defaults)
  *        [--out benchmark/results/2026-11-08-sprinkler-validation.json]
  *        [--append]  (keep the out file runs not repeated, e.g. a finer --cell)
  *        [--summary file.json]  (print the tables of an earlier run)
@@ -457,7 +458,7 @@ async function runCase(c) {
     keep: false,
     sensorGas: true,
     sprinklers: { heads, mode: c.mode, openOn: "estimate" },
-    solverOptions: { ambient: c.ambientC + 273.15, convection: c.convection, wallConvection: c.convection },
+    solverOptions: { ambient: c.ambientC + 273.15, convection: c.convection, wallConvection: c.convection, ...c.solver },
     onFrame: (f) => frames.push({ time: f.time, hrr: f.hrr, T: Array.from(f.sprinklers.gas.T), u: Array.from(f.sprinklers.gas.u), open: f.sprinklers.open.length }),
   });
   const ran = performance.now();
@@ -518,6 +519,8 @@ async function runCase(c) {
     grid: { n: grid3, cells: grid.cells, h },
     burner: { cells: cells.length, columns: columns.length, layers, columnHeight: layers * h, radiantFraction: b.radiantFraction, released: result.burner.released, qAtMeasuredFirst: qAtFirst },
     plumeHeight: H,
+    // The run's health (flamescapes.js healthVerdict, proposal A of the 2026-11-11 calibration plan).
+    health: result.health ?? null,
     heads: out,
     openAtEnd: spr.open.length,
     openedSequence: c.mode === "spray" ? frames.filter((f, k) => k === 0 || f.open !== frames[k - 1].open).map((f) => [f.time, f.open]) : undefined,
@@ -630,9 +633,11 @@ async function main() {
     cell: Number(flag("--cell", 0.3)),
     ulCell: Number(flag("--ulcell", 0.5)),
     horizonFactor: Number(flag("--horizon-factor", 2)),
+    // --solver vorticity=10,cfl=0,vorticityStep=0: the solver as it was before the 2026-11-11 calibration.
+    solver: Object.fromEntries((flag("--solver", "") || "").split(",").filter(Boolean).map((kv) => kv.split("=")).map(([k, v]) => [k, Number(v)])),
   };
   const only = flag("--only", null);
-  let cases = makeCases(data, settings);
+  let cases = makeCases(data, settings).map((c) => ({ ...c, solver: settings.solver }));
   if (only) cases = cases.filter((c) => new RegExp(only).test(c.id));
   const jobs = Math.max(1, Math.min(Number(flag("--jobs", Math.max(1, Math.floor(os.cpus().length / 2)))), cases.length));
   const out = flag("--out", path.join(ROOT, "benchmark/results/2026-11-08-sprinkler-validation.json"));

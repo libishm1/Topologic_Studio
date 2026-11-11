@@ -1,0 +1,6871 @@
+{
+ "generated": "2026-11-11T15:21:29.184Z",
+ "plan": "wiki/research/fire-calibration-plan-2026-11-11.md (sections 8 to 10: the proposals A to E applied, and what they showed)",
+ "solver": {
+  "vorticity": 6,
+  "cfl": 1,
+  "vorticityStep": 0.5,
+  "maxSubsteps": 8,
+  "health": {
+   "maxT": 3000,
+   "maxSpeed": 50,
+   "energyFactor": 1.5,
+   "energySlack": 1000000
+  }
+ },
+ "stage1a": {
+  "tool": "tools/calibration/transport-checks.mjs",
+  "before": [
+   {
+    "case": "plume",
+    "cell": 0.2,
+    "Q_kW": 500,
+    "burnerSide": 0.8,
+    "grid": [
+     32,
+     31,
+     32
+    ],
+    "cells": 31744,
+    "plumeIndex": 3.63,
+    "burner": {
+     "cells": 160,
+     "layers": 10,
+     "columns": 16
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 14.1,
+     "diverged": false,
+     "divergedAt": null,
+     "offAxisShare": 0.61
+    },
+    "wallSeconds": 47.6,
+    "stats": {
+     "plumeTemperature": {
+      "n": 13,
+      "delta": 0.013,
+      "sigmaM": 0.497,
+      "meanRatio": 0.012
+     },
+     "plumeVelocity": {
+      "n": 6,
+      "delta": 0.009,
+      "sigmaM": 1.112,
+      "meanRatio": 0.005
+     },
+     "intermittentTemperature": {
+      "n": 7,
+      "delta": 0.114,
+      "sigmaM": 0.52,
+      "meanRatio": 0.1
+     },
+     "intermittentVelocity": {
+      "n": 4,
+      "delta": 0.017,
+      "sigmaM": 0.431,
+      "meanRatio": 0.015
+     }
+    },
+    "verdicts": {
+     "plumeTemperature": "not calibrated",
+     "plumeVelocity": "not calibrated",
+     "intermittentTemperature": "not calibrated",
+     "intermittentVelocity": "not calibrated"
+    }
+   },
+   {
+    "case": "plume",
+    "cell": 0.27,
+    "Q_kW": 500,
+    "burnerSide": 0.8,
+    "grid": [
+     24,
+     24,
+     24
+    ],
+    "cells": 13824,
+    "plumeIndex": 2.69,
+    "burner": {
+     "cells": 63,
+     "layers": 7,
+     "columns": 9
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 11,
+     "diverged": false,
+     "divergedAt": null,
+     "offAxisShare": 0.43
+    },
+    "wallSeconds": 22,
+    "stats": {
+     "plumeTemperature": {
+      "n": 0,
+      "delta": null,
+      "sigmaM": null
+     },
+     "plumeVelocity": {
+      "n": 10,
+      "delta": 0.012,
+      "sigmaM": 0.685,
+      "meanRatio": 0.009
+     },
+     "intermittentTemperature": {
+      "n": 4,
+      "delta": 0.025,
+      "sigmaM": 1.224,
+      "meanRatio": 0.012
+     },
+     "intermittentVelocity": {
+      "n": 1,
+      "delta": 0.001644490955299745,
+      "sigmaM": null
+     }
+    },
+    "verdicts": {
+     "plumeTemperature": "too few points",
+     "plumeVelocity": "not calibrated",
+     "intermittentTemperature": "not calibrated",
+     "intermittentVelocity": "too few points"
+    }
+   },
+   {
+    "case": "plume",
+    "cell": 0.34,
+    "Q_kW": 500,
+    "burnerSide": 0.8,
+    "grid": [
+     19,
+     19,
+     19
+    ],
+    "cells": 6859,
+    "plumeIndex": 2.14,
+    "burner": {
+     "cells": 54,
+     "layers": 6,
+     "columns": 9
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 11.9,
+     "diverged": false,
+     "divergedAt": null,
+     "offAxisShare": 0.26
+    },
+    "wallSeconds": 10.1,
+    "stats": {
+     "plumeTemperature": {
+      "n": 8,
+      "delta": 0.235,
+      "sigmaM": 0.07,
+      "meanRatio": 0.235
+     },
+     "plumeVelocity": {
+      "n": 8,
+      "delta": 0.221,
+      "sigmaM": 0.08,
+      "meanRatio": 0.221
+     },
+     "intermittentTemperature": {
+      "n": 4,
+      "delta": 0.262,
+      "sigmaM": 0.115,
+      "meanRatio": 0.261
+     },
+     "intermittentVelocity": {
+      "n": 4,
+      "delta": 0.235,
+      "sigmaM": 0.082,
+      "meanRatio": 0.235
+     }
+    },
+    "verdicts": {
+     "plumeTemperature": "not calibrated",
+     "plumeVelocity": "not calibrated",
+     "intermittentTemperature": "not calibrated",
+     "intermittentVelocity": "not calibrated"
+    }
+   },
+   {
+    "case": "room",
+    "cell": 0.2,
+    "Q_kW": 150,
+    "grid": [
+     32,
+     17,
+     22
+    ],
+    "cells": 11968,
+    "plumeIndex": 2.24,
+    "burner": {
+     "cells": 60,
+     "layers": 5,
+     "columns": 12
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.6,
+     2.6,
+     2.6
+    ],
+    "health": {
+     "maxSpeed": 10.3,
+     "diverged": false,
+     "divergedAt": null
+    },
+    "wallSeconds": 22.5,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.336,
+      "sigmaM": 0.07,
+      "meanRatio": 2.336
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 108.8,
+      "interfaceHeight": 0.72,
+      "mqhRiseK": 45.5,
+      "ratio": 2.389
+     },
+     {
+      "time": 90,
+      "layerRiseK": 115.7,
+      "interfaceHeight": 0.77,
+      "mqhRiseK": 49.6,
+      "ratio": 2.333
+     },
+     {
+      "time": 120,
+      "layerRiseK": 120,
+      "interfaceHeight": 0.76,
+      "mqhRiseK": 52.5,
+      "ratio": 2.287
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.2,
+    "Q_kW": 400,
+    "grid": [
+     32,
+     17,
+     22
+    ],
+    "cells": 11968,
+    "plumeIndex": 3.32,
+    "burner": {
+     "cells": 108,
+     "layers": 9,
+     "columns": 12
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.6,
+     2.6,
+     2.6
+    ],
+    "health": {
+     "maxSpeed": 10.1,
+     "diverged": false,
+     "divergedAt": null
+    },
+    "wallSeconds": 40.7,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.461,
+      "sigmaM": 0.07,
+      "meanRatio": 2.461
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 230.5,
+      "interfaceHeight": 0.82,
+      "mqhRiseK": 87.6,
+      "ratio": 2.631
+     },
+     {
+      "time": 90,
+      "layerRiseK": 230.3,
+      "interfaceHeight": 0.66,
+      "mqhRiseK": 95.4,
+      "ratio": 2.415
+     },
+     {
+      "time": 120,
+      "layerRiseK": 236.8,
+      "interfaceHeight": 0.77,
+      "mqhRiseK": 100.9,
+      "ratio": 2.347
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.27,
+    "Q_kW": 150,
+    "grid": [
+     24,
+     13,
+     17
+    ],
+    "cells": 5304,
+    "plumeIndex": 1.66,
+    "burner": {
+     "cells": 16,
+     "layers": 4,
+     "columns": 4
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.5,
+     2.5,
+     2.5
+    ],
+    "health": {
+     "maxSpeed": 11.6,
+     "diverged": false,
+     "divergedAt": null
+    },
+    "wallSeconds": 7.6,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 3.006,
+      "sigmaM": 0.07,
+      "meanRatio": 3.006
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 141.8,
+      "interfaceHeight": 0.59,
+      "mqhRiseK": 45.5,
+      "ratio": 3.113
+     },
+     {
+      "time": 90,
+      "layerRiseK": 151.3,
+      "interfaceHeight": 0.63,
+      "mqhRiseK": 49.6,
+      "ratio": 3.05
+     },
+     {
+      "time": 120,
+      "layerRiseK": 150,
+      "interfaceHeight": 0.59,
+      "mqhRiseK": 52.5,
+      "ratio": 2.859
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.27,
+    "Q_kW": 400,
+    "grid": [
+     24,
+     13,
+     17
+    ],
+    "cells": 5304,
+    "plumeIndex": 2.46,
+    "burner": {
+     "cells": 28,
+     "layers": 7,
+     "columns": 4
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.5,
+     2.5,
+     2.5
+    ],
+    "health": {
+     "maxSpeed": 9.4,
+     "diverged": false,
+     "divergedAt": null
+    },
+    "wallSeconds": 14.9,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.741,
+      "sigmaM": 0.07,
+      "meanRatio": 2.741
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 259.5,
+      "interfaceHeight": 0.64,
+      "mqhRiseK": 87.6,
+      "ratio": 2.963
+     },
+     {
+      "time": 90,
+      "layerRiseK": 261,
+      "interfaceHeight": 0.65,
+      "mqhRiseK": 95.4,
+      "ratio": 2.737
+     },
+     {
+      "time": 120,
+      "layerRiseK": 256.5,
+      "interfaceHeight": 0.76,
+      "mqhRiseK": 100.9,
+      "ratio": 2.543
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.34,
+    "Q_kW": 150,
+    "grid": [
+     19,
+     10,
+     13
+    ],
+    "cells": 2470,
+    "plumeIndex": 1.32,
+    "burner": {
+     "cells": 6,
+     "layers": 3,
+     "columns": 2
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.52,
+     2.52,
+     2.52
+    ],
+    "health": {
+     "maxSpeed": 9.6,
+     "diverged": false,
+     "divergedAt": null
+    },
+    "wallSeconds": 3.3,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 3.489,
+      "sigmaM": 0.07,
+      "meanRatio": 3.489
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 163.7,
+      "interfaceHeight": 0.65,
+      "mqhRiseK": 45.5,
+      "ratio": 3.595
+     },
+     {
+      "time": 90,
+      "layerRiseK": 181.4,
+      "interfaceHeight": 0.7,
+      "mqhRiseK": 49.6,
+      "ratio": 3.658
+     },
+     {
+      "time": 120,
+      "layerRiseK": 169.4,
+      "interfaceHeight": 0.66,
+      "mqhRiseK": 52.5,
+      "ratio": 3.23
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.34,
+    "Q_kW": 400,
+    "grid": [
+     19,
+     10,
+     13
+    ],
+    "cells": 2470,
+    "plumeIndex": 1.95,
+    "burner": {
+     "cells": 10,
+     "layers": 5,
+     "columns": 2
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.52,
+     2.52,
+     2.52
+    ],
+    "health": {
+     "maxSpeed": 10.2,
+     "diverged": false,
+     "divergedAt": null
+    },
+    "wallSeconds": 6.1,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.67,
+      "sigmaM": 0.07,
+      "meanRatio": 2.67
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 255.1,
+      "interfaceHeight": 0.7,
+      "mqhRiseK": 87.6,
+      "ratio": 2.913
+     },
+     {
+      "time": 90,
+      "layerRiseK": 253.7,
+      "interfaceHeight": 0.79,
+      "mqhRiseK": 95.4,
+      "ratio": 2.66
+     },
+     {
+      "time": 120,
+      "layerRiseK": 247.9,
+      "interfaceHeight": 0.7,
+      "mqhRiseK": 100.9,
+      "ratio": 2.458
+     }
+    ]
+   },
+   {
+    "case": "ceiling",
+    "cell": 0.2,
+    "Q_kW": 500,
+    "ceilingHeight": 3,
+    "grid": [
+     38,
+     17,
+     38
+    ],
+    "cells": 24548,
+    "plumeIndex": 3.63,
+    "topCellCentreBelowCeiling": 0.1,
+    "burner": {
+     "cells": 99,
+     "layers": 11,
+     "columns": 9
+    },
+    "averagedFrom": 60,
+    "samples": 0,
+    "health": {
+     "maxSpeed": 73,
+     "diverged": true,
+     "divergedAt": 32
+    },
+    "wallSeconds": 9.6,
+    "stats": {},
+    "verdicts": {}
+   },
+   {
+    "case": "ceiling",
+    "cell": 0.27,
+    "Q_kW": 500,
+    "ceilingHeight": 3,
+    "grid": [
+     29,
+     14,
+     29
+    ],
+    "cells": 11774,
+    "plumeIndex": 2.69,
+    "topCellCentreBelowCeiling": 0.165,
+    "burner": {
+     "cells": 32,
+     "layers": 8,
+     "columns": 4
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 11.5,
+     "diverged": false,
+     "divergedAt": null
+    },
+    "wallSeconds": 15.3,
+    "stats": {
+     "ceilingJetTemperature": {
+      "n": 6,
+      "delta": 0.85,
+      "sigmaM": 0.262,
+      "meanRatio": 0.823
+     }
+    },
+    "verdicts": {
+     "ceilingJetTemperature": "within the calibrated band"
+    }
+   },
+   {
+    "case": "ceiling",
+    "cell": 0.34,
+    "Q_kW": 500,
+    "ceilingHeight": 3,
+    "grid": [
+     23,
+     11,
+     23
+    ],
+    "cells": 5819,
+    "plumeIndex": 2.14,
+    "topCellCentreBelowCeiling": 0.45,
+    "burner": {
+     "cells": 24,
+     "layers": 6,
+     "columns": 4
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 10.5,
+     "diverged": false,
+     "divergedAt": null
+    },
+    "wallSeconds": 7,
+    "stats": {
+     "ceilingJetTemperature": {
+      "n": 6,
+      "delta": 1.065,
+      "sigmaM": 0.5,
+      "meanRatio": 0.942
+     }
+    },
+    "verdicts": {
+     "ceilingJetTemperature": "indicative"
+    }
+   }
+  ],
+  "after": [
+   {
+    "case": "plume",
+    "cell": 0.2,
+    "Q_kW": 500,
+    "burnerSide": 0.8,
+    "grid": [
+     32,
+     31,
+     32
+    ],
+    "cells": 31744,
+    "plumeIndex": 3.63,
+    "burner": {
+     "cells": 160,
+     "layers": 10,
+     "columns": 16
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 13.2,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 7,
+     "offAxisShare": 0
+    },
+    "wallSeconds": 312.5,
+    "stats": {
+     "plumeTemperature": {
+      "n": 13,
+      "delta": 1.431,
+      "sigmaM": 0.091,
+      "meanRatio": 1.429
+     },
+     "plumeVelocity": {
+      "n": 13,
+      "delta": 0.858,
+      "sigmaM": 0.08,
+      "meanRatio": 0.858
+     },
+     "intermittentTemperature": {
+      "n": 7,
+      "delta": 0.863,
+      "sigmaM": 0.256,
+      "meanRatio": 0.837
+     },
+     "intermittentVelocity": {
+      "n": 7,
+      "delta": 0.647,
+      "sigmaM": 0.08,
+      "meanRatio": 0.647
+     }
+    },
+    "verdicts": {
+     "plumeTemperature": "indicative",
+     "plumeVelocity": "within the calibrated band",
+     "intermittentTemperature": "within the calibrated band",
+     "intermittentVelocity": "not calibrated"
+    }
+   },
+   {
+    "case": "plume",
+    "cell": 0.27,
+    "Q_kW": 500,
+    "burnerSide": 0.8,
+    "grid": [
+     24,
+     24,
+     24
+    ],
+    "cells": 13824,
+    "plumeIndex": 2.69,
+    "burner": {
+     "cells": 63,
+     "layers": 7,
+     "columns": 9
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 11.3,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 5,
+     "offAxisShare": 0.03
+    },
+    "wallSeconds": 75.8,
+    "stats": {
+     "plumeTemperature": {
+      "n": 10,
+      "delta": 1.151,
+      "sigmaM": 0.07,
+      "meanRatio": 1.151
+     },
+     "plumeVelocity": {
+      "n": 10,
+      "delta": 0.722,
+      "sigmaM": 0.08,
+      "meanRatio": 0.722
+     },
+     "intermittentTemperature": {
+      "n": 5,
+      "delta": 1.012,
+      "sigmaM": 0.127,
+      "meanRatio": 1.006
+     },
+     "intermittentVelocity": {
+      "n": 5,
+      "delta": 0.77,
+      "sigmaM": 0.08,
+      "meanRatio": 0.77
+     }
+    },
+    "verdicts": {
+     "plumeTemperature": "within the calibrated band",
+     "plumeVelocity": "indicative",
+     "intermittentTemperature": "within the calibrated band",
+     "intermittentVelocity": "indicative"
+    }
+   },
+   {
+    "case": "plume",
+    "cell": 0.34,
+    "Q_kW": 500,
+    "burnerSide": 0.8,
+    "grid": [
+     19,
+     19,
+     19
+    ],
+    "cells": 6859,
+    "plumeIndex": 2.14,
+    "burner": {
+     "cells": 54,
+     "layers": 6,
+     "columns": 9
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 13.3,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 4,
+     "offAxisShare": 0.02
+    },
+    "wallSeconds": 25.5,
+    "stats": {
+     "plumeTemperature": {
+      "n": 8,
+      "delta": 0.865,
+      "sigmaM": 0.07,
+      "meanRatio": 0.865
+     },
+     "plumeVelocity": {
+      "n": 8,
+      "delta": 0.685,
+      "sigmaM": 0.08,
+      "meanRatio": 0.685
+     },
+     "intermittentTemperature": {
+      "n": 4,
+      "delta": 0.714,
+      "sigmaM": 0.13,
+      "meanRatio": 0.71
+     },
+     "intermittentVelocity": {
+      "n": 4,
+      "delta": 0.673,
+      "sigmaM": 0.08,
+      "meanRatio": 0.673
+     }
+    },
+    "verdicts": {
+     "plumeTemperature": "within the calibrated band",
+     "plumeVelocity": "indicative",
+     "intermittentTemperature": "indicative",
+     "intermittentVelocity": "indicative"
+    }
+   },
+   {
+    "case": "room",
+    "cell": 0.2,
+    "Q_kW": 150,
+    "grid": [
+     32,
+     17,
+     22
+    ],
+    "cells": 11968,
+    "plumeIndex": 2.24,
+    "burner": {
+     "cells": 60,
+     "layers": 5,
+     "columns": 12
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.6,
+     2.6,
+     2.6
+    ],
+    "health": {
+     "maxSpeed": 7.8,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 4
+    },
+    "wallSeconds": 39.6,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.49,
+      "sigmaM": 0.118,
+      "meanRatio": 2.479
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 123,
+      "interfaceHeight": 0.85,
+      "mqhRiseK": 45.5,
+      "ratio": 2.7
+     },
+     {
+      "time": 90,
+      "layerRiseK": 132.1,
+      "interfaceHeight": 0.93,
+      "mqhRiseK": 49.6,
+      "ratio": 2.664
+     },
+     {
+      "time": 120,
+      "layerRiseK": 111.1,
+      "interfaceHeight": 0.81,
+      "mqhRiseK": 52.5,
+      "ratio": 2.118
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.2,
+    "Q_kW": 400,
+    "grid": [
+     32,
+     17,
+     22
+    ],
+    "cells": 11968,
+    "plumeIndex": 3.32,
+    "burner": {
+     "cells": 108,
+     "layers": 9,
+     "columns": 12
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.6,
+     2.6,
+     2.6
+    ],
+    "health": {
+     "maxSpeed": 8.8,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 5
+    },
+    "wallSeconds": 88.7,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.483,
+      "sigmaM": 0.07,
+      "meanRatio": 2.483
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 240.3,
+      "interfaceHeight": 0.83,
+      "mqhRiseK": 87.6,
+      "ratio": 2.743
+     },
+     {
+      "time": 90,
+      "layerRiseK": 228.1,
+      "interfaceHeight": 0.8,
+      "mqhRiseK": 95.4,
+      "ratio": 2.391
+     },
+     {
+      "time": 120,
+      "layerRiseK": 235.6,
+      "interfaceHeight": 0.96,
+      "mqhRiseK": 100.9,
+      "ratio": 2.336
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.27,
+    "Q_kW": 150,
+    "grid": [
+     24,
+     13,
+     17
+    ],
+    "cells": 5304,
+    "plumeIndex": 1.66,
+    "burner": {
+     "cells": 16,
+     "layers": 4,
+     "columns": 4
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.5,
+     2.5,
+     2.5
+    ],
+    "health": {
+     "maxSpeed": 7.5,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 3
+    },
+    "wallSeconds": 14.4,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 3.516,
+      "sigmaM": 0.07,
+      "meanRatio": 3.516
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 166,
+      "interfaceHeight": 0.75,
+      "mqhRiseK": 45.5,
+      "ratio": 3.646
+     },
+     {
+      "time": 90,
+      "layerRiseK": 173.5,
+      "interfaceHeight": 0.73,
+      "mqhRiseK": 49.6,
+      "ratio": 3.498
+     },
+     {
+      "time": 120,
+      "layerRiseK": 178.8,
+      "interfaceHeight": 0.65,
+      "mqhRiseK": 52.5,
+      "ratio": 3.409
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.27,
+    "Q_kW": 400,
+    "grid": [
+     24,
+     13,
+     17
+    ],
+    "cells": 5304,
+    "plumeIndex": 2.46,
+    "burner": {
+     "cells": 28,
+     "layers": 7,
+     "columns": 4
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.5,
+     2.5,
+     2.5
+    ],
+    "health": {
+     "maxSpeed": 7.7,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 3
+    },
+    "wallSeconds": 26.5,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.905,
+      "sigmaM": 0.07,
+      "meanRatio": 2.905
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 280.2,
+      "interfaceHeight": 0.81,
+      "mqhRiseK": 87.6,
+      "ratio": 3.2
+     },
+     {
+      "time": 90,
+      "layerRiseK": 273.2,
+      "interfaceHeight": 0.75,
+      "mqhRiseK": 95.4,
+      "ratio": 2.865
+     },
+     {
+      "time": 120,
+      "layerRiseK": 270.1,
+      "interfaceHeight": 0.73,
+      "mqhRiseK": 100.9,
+      "ratio": 2.678
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.34,
+    "Q_kW": 150,
+    "grid": [
+     19,
+     10,
+     13
+    ],
+    "cells": 2470,
+    "plumeIndex": 1.32,
+    "burner": {
+     "cells": 6,
+     "layers": 3,
+     "columns": 2
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.52,
+     2.52,
+     2.52
+    ],
+    "health": {
+     "maxSpeed": 7.5,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 3
+    },
+    "wallSeconds": 6.3,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 3.902,
+      "sigmaM": 0.07,
+      "meanRatio": 3.902
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 195.8,
+      "interfaceHeight": 0.74,
+      "mqhRiseK": 45.5,
+      "ratio": 4.299
+     },
+     {
+      "time": 90,
+      "layerRiseK": 186.4,
+      "interfaceHeight": 0.76,
+      "mqhRiseK": 49.6,
+      "ratio": 3.758
+     },
+     {
+      "time": 120,
+      "layerRiseK": 192.8,
+      "interfaceHeight": 0.78,
+      "mqhRiseK": 52.5,
+      "ratio": 3.676
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.34,
+    "Q_kW": 400,
+    "grid": [
+     19,
+     10,
+     13
+    ],
+    "cells": 2470,
+    "plumeIndex": 1.95,
+    "burner": {
+     "cells": 10,
+     "layers": 5,
+     "columns": 2
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.52,
+     2.52,
+     2.52
+    ],
+    "health": {
+     "maxSpeed": 8.4,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 3
+    },
+    "wallSeconds": 10.1,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.875,
+      "sigmaM": 0.07,
+      "meanRatio": 2.875
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 269.4,
+      "interfaceHeight": 0.78,
+      "mqhRiseK": 87.6,
+      "ratio": 3.076
+     },
+     {
+      "time": 90,
+      "layerRiseK": 267.4,
+      "interfaceHeight": 0.87,
+      "mqhRiseK": 95.4,
+      "ratio": 2.804
+     },
+     {
+      "time": 120,
+      "layerRiseK": 278.1,
+      "interfaceHeight": 0.91,
+      "mqhRiseK": 100.9,
+      "ratio": 2.757
+     }
+    ]
+   },
+   {
+    "case": "ceiling",
+    "cell": 0.2,
+    "Q_kW": 500,
+    "ceilingHeight": 3,
+    "grid": [
+     38,
+     17,
+     38
+    ],
+    "cells": 24548,
+    "plumeIndex": 3.63,
+    "topCellCentreBelowCeiling": 0.1,
+    "burner": {
+     "cells": 99,
+     "layers": 11,
+     "columns": 9
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 12.1,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 7
+    },
+    "wallSeconds": 178.8,
+    "stats": {
+     "ceilingJetTemperature": {
+      "n": 6,
+      "delta": 3.113,
+      "sigmaM": 0.07,
+      "meanRatio": 3.113
+     }
+    },
+    "verdicts": {
+     "ceilingJetTemperature": "not calibrated"
+    }
+   },
+   {
+    "case": "ceiling",
+    "cell": 0.27,
+    "Q_kW": 500,
+    "ceilingHeight": 3,
+    "grid": [
+     29,
+     14,
+     29
+    ],
+    "cells": 11774,
+    "plumeIndex": 2.69,
+    "topCellCentreBelowCeiling": 0.165,
+    "burner": {
+     "cells": 32,
+     "layers": 8,
+     "columns": 4
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 10.7,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 4
+    },
+    "wallSeconds": 77.8,
+    "stats": {
+     "ceilingJetTemperature": {
+      "n": 6,
+      "delta": 2.755,
+      "sigmaM": 0.171,
+      "meanRatio": 2.722
+     }
+    },
+    "verdicts": {
+     "ceilingJetTemperature": "not calibrated"
+    }
+   },
+   {
+    "case": "ceiling",
+    "cell": 0.34,
+    "Q_kW": 500,
+    "ceilingHeight": 3,
+    "grid": [
+     23,
+     11,
+     23
+    ],
+    "cells": 5819,
+    "plumeIndex": 2.14,
+    "topCellCentreBelowCeiling": 0.45,
+    "burner": {
+     "cells": 24,
+     "layers": 6,
+     "columns": 4
+    },
+    "averagedFrom": 60,
+    "samples": 61,
+    "health": {
+     "maxSpeed": 8.7,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 3
+    },
+    "wallSeconds": 25.1,
+    "stats": {
+     "ceilingJetTemperature": {
+      "n": 6,
+      "delta": 1.887,
+      "sigmaM": 0.446,
+      "meanRatio": 1.713
+     }
+    },
+    "verdicts": {
+     "ceilingJetTemperature": "not calibrated"
+    }
+   }
+  ],
+  "roomVorticity10CutSteps": [
+   {
+    "case": "room",
+    "cell": 0.2,
+    "Q_kW": 150,
+    "grid": [
+     32,
+     17,
+     22
+    ],
+    "cells": 11968,
+    "plumeIndex": 2.24,
+    "burner": {
+     "cells": 60,
+     "layers": 5,
+     "columns": 12
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.6,
+     2.6,
+     2.6
+    ],
+    "health": {
+     "maxSpeed": 7.8,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 4
+    },
+    "wallSeconds": 72.7,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.506,
+      "sigmaM": 0.07,
+      "meanRatio": 2.506
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 120.5,
+      "interfaceHeight": 0.86,
+      "mqhRiseK": 45.5,
+      "ratio": 2.645
+     },
+     {
+      "time": 90,
+      "layerRiseK": 117.8,
+      "interfaceHeight": 0.76,
+      "mqhRiseK": 49.6,
+      "ratio": 2.375
+     },
+     {
+      "time": 120,
+      "layerRiseK": 131.3,
+      "interfaceHeight": 0.86,
+      "mqhRiseK": 52.5,
+      "ratio": 2.503
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.2,
+    "Q_kW": 400,
+    "grid": [
+     32,
+     17,
+     22
+    ],
+    "cells": 11968,
+    "plumeIndex": 3.32,
+    "burner": {
+     "cells": 108,
+     "layers": 9,
+     "columns": 12
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.6,
+     2.6,
+     2.6
+    ],
+    "health": {
+     "maxSpeed": 9.3,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 5
+    },
+    "wallSeconds": 152.9,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.516,
+      "sigmaM": 0.07,
+      "meanRatio": 2.516
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 234.5,
+      "interfaceHeight": 0.86,
+      "mqhRiseK": 87.6,
+      "ratio": 2.677
+     },
+     {
+      "time": 90,
+      "layerRiseK": 237.3,
+      "interfaceHeight": 0.85,
+      "mqhRiseK": 95.4,
+      "ratio": 2.488
+     },
+     {
+      "time": 120,
+      "layerRiseK": 241.2,
+      "interfaceHeight": 0.88,
+      "mqhRiseK": 100.9,
+      "ratio": 2.391
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.27,
+    "Q_kW": 150,
+    "grid": [
+     24,
+     13,
+     17
+    ],
+    "cells": 5304,
+    "plumeIndex": 1.66,
+    "burner": {
+     "cells": 16,
+     "layers": 4,
+     "columns": 4
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.5,
+     2.5,
+     2.5
+    ],
+    "health": {
+     "maxSpeed": 8.2,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 4
+    },
+    "wallSeconds": 25.6,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 3.287,
+      "sigmaM": 0.07,
+      "meanRatio": 3.287
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 153.3,
+      "interfaceHeight": 0.63,
+      "mqhRiseK": 45.5,
+      "ratio": 3.367
+     },
+     {
+      "time": 90,
+      "layerRiseK": 164.7,
+      "interfaceHeight": 0.73,
+      "mqhRiseK": 49.6,
+      "ratio": 3.322
+     },
+     {
+      "time": 120,
+      "layerRiseK": 166.7,
+      "interfaceHeight": 0.71,
+      "mqhRiseK": 52.5,
+      "ratio": 3.177
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.27,
+    "Q_kW": 400,
+    "grid": [
+     24,
+     13,
+     17
+    ],
+    "cells": 5304,
+    "plumeIndex": 2.46,
+    "burner": {
+     "cells": 28,
+     "layers": 7,
+     "columns": 4
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.5,
+     2.5,
+     2.5
+    ],
+    "health": {
+     "maxSpeed": 8.3,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 4
+    },
+    "wallSeconds": 46.6,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 3.01,
+      "sigmaM": 0.07,
+      "meanRatio": 3.01
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 289.6,
+      "interfaceHeight": 0.81,
+      "mqhRiseK": 87.6,
+      "ratio": 3.306
+     },
+     {
+      "time": 90,
+      "layerRiseK": 281.2,
+      "interfaceHeight": 0.81,
+      "mqhRiseK": 95.4,
+      "ratio": 2.948
+     },
+     {
+      "time": 120,
+      "layerRiseK": 282.5,
+      "interfaceHeight": 0.81,
+      "mqhRiseK": 100.9,
+      "ratio": 2.801
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.34,
+    "Q_kW": 150,
+    "grid": [
+     19,
+     10,
+     13
+    ],
+    "cells": 2470,
+    "plumeIndex": 1.32,
+    "burner": {
+     "cells": 6,
+     "layers": 3,
+     "columns": 2
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.52,
+     2.52,
+     2.52
+    ],
+    "health": {
+     "maxSpeed": 10,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 3
+    },
+    "wallSeconds": 9.8,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 3.918,
+      "sigmaM": 0.07,
+      "meanRatio": 3.918
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 195.8,
+      "interfaceHeight": 0.77,
+      "mqhRiseK": 45.5,
+      "ratio": 4.298
+     },
+     {
+      "time": 90,
+      "layerRiseK": 189.7,
+      "interfaceHeight": 0.65,
+      "mqhRiseK": 49.6,
+      "ratio": 3.826
+     },
+     {
+      "time": 120,
+      "layerRiseK": 191.9,
+      "interfaceHeight": 0.75,
+      "mqhRiseK": 52.5,
+      "ratio": 3.658
+     }
+    ]
+   },
+   {
+    "case": "room",
+    "cell": 0.34,
+    "Q_kW": 400,
+    "grid": [
+     19,
+     10,
+     13
+    ],
+    "cells": 2470,
+    "plumeIndex": 1.95,
+    "burner": {
+     "cells": 10,
+     "layers": 5,
+     "columns": 2
+    },
+    "walls": {
+     "material": "stone (flamescapes.js INERT)",
+     "k": 2.5,
+     "rho": 2700,
+     "c": 800,
+     "wallConvection": 10,
+     "AT": 86.8,
+     "door": [
+      0.9,
+      2
+     ]
+    },
+    "openHeight": [
+     2.52,
+     2.52,
+     2.52
+    ],
+    "health": {
+     "maxSpeed": 9.2,
+     "diverged": false,
+     "divergedAt": null,
+     "substeps": 3
+    },
+    "wallSeconds": 16.5,
+    "stats": {
+     "layerTemperature": {
+      "n": 3,
+      "delta": 2.975,
+      "sigmaM": 0.07,
+      "meanRatio": 2.975
+     }
+    },
+    "verdicts": {
+     "layerTemperature": "not calibrated"
+    },
+    "rows": [
+     {
+      "time": 60,
+      "layerRiseK": 282.5,
+      "interfaceHeight": 0.84,
+      "mqhRiseK": 87.6,
+      "ratio": 3.225
+     },
+     {
+      "time": 90,
+      "layerRiseK": 271.4,
+      "interfaceHeight": 0.81,
+      "mqhRiseK": 95.4,
+      "ratio": 2.845
+     },
+     {
+      "time": 120,
+      "layerRiseK": 289.6,
+      "interfaceHeight": 0.94,
+      "mqhRiseK": 100.9,
+      "ratio": 2.871
+     }
+    ]
+   }
+  ]
+ },
+ "fit": {
+  "tool": "tools/calibration/fit-confinement.mjs",
+  "rule": "see the tool's header (fixed before the runs)",
+  "fitted": 6,
+  "candidates": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   6,
+   10
+  ],
+  "rows": [
+   {
+    "vorticity": 0,
+    "coarseScore": 0.9377456049797027,
+    "coarseOut": null,
+    "coarseParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 1.356,
+      "sigmaM": 0.224,
+      "term": 0.11646011795240452
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 3.372,
+      "sigmaM": 0.305,
+      "term": 1.5326799336158727
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 1.969,
+      "sigmaM": 0.162,
+      "term": 0.4657652092008418
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 1.068,
+      "sigmaM": 0.255,
+      "term": 0.03855302680509562
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 2.827,
+      "sigmaM": 0.326,
+      "term": 1.1455060582524095
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 1.751,
+      "sigmaM": 0.175,
+      "term": 0.32283453468909895
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 4.319,
+      "sigmaM": 0.071,
+      "term": 2.140439914352201
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 3.688,
+      "sigmaM": 0.261,
+      "term": 1.7397260449696972
+     }
+    ],
+    "allScore": null,
+    "allOut": null,
+    "allParts": null,
+    "seconds": 155.832
+   },
+   {
+    "vorticity": 1,
+    "coarseScore": 1.020109816222596,
+    "coarseOut": null,
+    "coarseParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 1.433,
+      "sigmaM": 0.224,
+      "term": 0.15315056000069804
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 3.544,
+      "sigmaM": 0.302,
+      "term": 1.654696828392137
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 2.006,
+      "sigmaM": 0.158,
+      "term": 0.49069864419962794
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 1.167,
+      "sigmaM": 0.254,
+      "term": 0.05770658722196731
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 3.047,
+      "sigmaM": 0.318,
+      "term": 1.3028509348142094
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 1.803,
+      "sigmaM": 0.168,
+      "term": 0.35519759454612937
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 4.505,
+      "sigmaM": 0.07,
+      "term": 2.265590587394557
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 3.885,
+      "sigmaM": 0.268,
+      "term": 1.880986793211443
+     }
+    ],
+    "allScore": null,
+    "allOut": null,
+    "allParts": null,
+    "seconds": 174.143
+   },
+   {
+    "vorticity": 2,
+    "coarseScore": 0.9635584884522223,
+    "coarseOut": null,
+    "coarseParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 1.585,
+      "sigmaM": 0.215,
+      "term": 0.23316299627483084
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 3.5,
+      "sigmaM": 0.243,
+      "term": 1.5993440552333267
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 1.832,
+      "sigmaM": 0.084,
+      "term": 0.36653516884617815
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 1.305,
+      "sigmaM": 0.237,
+      "term": 0.09875305891767353
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 2.819,
+      "sigmaM": 0.219,
+      "term": 1.0962890896235669
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 1.562,
+      "sigmaM": 0.08,
+      "term": 0.19888661095001398
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 4.566,
+      "sigmaM": 0.08,
+      "term": 2.3063600025222746
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 3.788,
+      "sigmaM": 0.258,
+      "term": 1.8091369252499137
+     }
+    ],
+    "allScore": null,
+    "allOut": null,
+    "allParts": null,
+    "seconds": 142.37
+   },
+   {
+    "vorticity": 3,
+    "coarseScore": 0.7831312414941626,
+    "coarseOut": null,
+    "coarseParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 1.535,
+      "sigmaM": 0.194,
+      "term": 0.199014287473568
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 2.637,
+      "sigmaM": 0.12,
+      "term": 0.9427054285303611
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 1.372,
+      "sigmaM": 0.08,
+      "term": 0.10002641516597988
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 1.278,
+      "sigmaM": 0.205,
+      "term": 0.07839530224497036
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 2.297,
+      "sigmaM": 0.145,
+      "term": 0.6971900859248134
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 1.314,
+      "sigmaM": 0.08,
+      "term": 0.07457045811793656
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 4.705,
+      "sigmaM": 0.082,
+      "term": 2.3983857849155084
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 3.695,
+      "sigmaM": 0.328,
+      "term": 1.7747621695801632
+     }
+    ],
+    "allScore": null,
+    "allOut": null,
+    "allParts": null,
+    "seconds": 150.904
+   },
+   {
+    "vorticity": 4,
+    "coarseScore": 0.49654474958016226,
+    "coarseOut": null,
+    "coarseParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 1.237,
+      "sigmaM": 0.126,
+      "term": 0.048372650455716974
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 1.843,
+      "sigmaM": 0.116,
+      "term": 0.37591945312761915
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 1.016,
+      "sigmaM": 0.08,
+      "term": 0.0002519632134374976
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 1.092,
+      "sigmaM": 0.139,
+      "term": 0.012506914527113704
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 1.534,
+      "sigmaM": 0.07,
+      "term": 0.18308018443395072
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 0.97,
+      "sigmaM": 0.08,
+      "term": 0.0009277633205965268
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 4.07,
+      "sigmaM": 0.07,
+      "term": 1.9702136699176358
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 3.131,
+      "sigmaM": 0.35,
+      "term": 1.3810853976452273
+     }
+    ],
+    "allScore": 0.5482146532287736,
+    "allOut": null,
+    "allParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 1.237,
+      "sigmaM": 0.126,
+      "term": 0.048372650455716974
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 1.843,
+      "sigmaM": 0.116,
+      "term": 0.37591945312761915
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 1.016,
+      "sigmaM": 0.08,
+      "term": 0.0002519632134374976
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 1.092,
+      "sigmaM": 0.139,
+      "term": 0.012506914527113704
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 1.534,
+      "sigmaM": 0.07,
+      "term": 0.18308018443395072
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 0.97,
+      "sigmaM": 0.08,
+      "term": 0.0009277633205965268
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 4.07,
+      "sigmaM": 0.07,
+      "term": 1.9702136699176358
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 3.131,
+      "sigmaM": 0.35,
+      "term": 1.3810853976452273
+     },
+     {
+      "cell": 0.2,
+      "key": "intermittentTemperature",
+      "delta": 1.158,
+      "sigmaM": 0.26,
+      "term": 0.057619240874439676
+     },
+     {
+      "cell": 0.2,
+      "key": "plumeTemperature",
+      "delta": 2.259,
+      "sigmaM": 0.18,
+      "term": 0.6761982531489705
+     },
+     {
+      "cell": 0.2,
+      "key": "plumeVelocity",
+      "delta": 1.176,
+      "sigmaM": 0.08,
+      "term": 0.02628252135556303
+     },
+     {
+      "cell": 0.2,
+      "key": "ceilingJetTemperature",
+      "delta": 3.891,
+      "sigmaM": 0.082,
+      "term": 1.846117826725012
+     }
+    ],
+    "seconds": 158.69
+   },
+   {
+    "vorticity": 6,
+    "coarseScore": 0.25589829964570454,
+    "coarseOut": null,
+    "coarseParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 1.036,
+      "sigmaM": 0.122,
+      "term": 0.003954834863207654
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 1.143,
+      "sigmaM": 0.07,
+      "term": 0.01786402920119349
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 0.718,
+      "sigmaM": 0.08,
+      "term": 0.1097502216064167
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 0.736,
+      "sigmaM": 0.12,
+      "term": 0.09645767386828723
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 0.83,
+      "sigmaM": 0.07,
+      "term": 0.034718711709019884
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 0.688,
+      "sigmaM": 0.08,
+      "term": 0.13985089903070072
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 2.811,
+      "sigmaM": 0.16,
+      "term": 1.0763055350311632
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 1.934,
+      "sigmaM": 0.435,
+      "term": 0.5682844918556476
+     }
+    ],
+    "allScore": 0.2986287136846847,
+    "allOut": null,
+    "allParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 1.036,
+      "sigmaM": 0.122,
+      "term": 0.003954834863207654
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 1.143,
+      "sigmaM": 0.07,
+      "term": 0.01786402920119349
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 0.718,
+      "sigmaM": 0.08,
+      "term": 0.1097502216064167
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 0.736,
+      "sigmaM": 0.12,
+      "term": 0.09645767386828723
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 0.83,
+      "sigmaM": 0.07,
+      "term": 0.034718711709019884
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 0.688,
+      "sigmaM": 0.08,
+      "term": 0.13985089903070072
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 2.811,
+      "sigmaM": 0.16,
+      "term": 1.0763055350311632
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 1.934,
+      "sigmaM": 0.435,
+      "term": 0.5682844918556476
+     },
+     {
+      "cell": 0.2,
+      "key": "intermittentTemperature",
+      "delta": 0.907,
+      "sigmaM": 0.227,
+      "term": 0.03417726435941831
+     },
+     {
+      "cell": 0.2,
+      "key": "plumeTemperature",
+      "delta": 1.529,
+      "sigmaM": 0.115,
+      "term": 0.1823219869572887
+     },
+     {
+      "cell": 0.2,
+      "key": "plumeVelocity",
+      "delta": 0.916,
+      "sigmaM": 0.08,
+      "term": 0.007698117083947751
+     },
+     {
+      "cell": 0.2,
+      "key": "ceilingJetTemperature",
+      "delta": 3.144,
+      "sigmaM": 0.07,
+      "term": 1.3121607986499249
+     }
+    ],
+    "seconds": 130.602
+   },
+   {
+    "vorticity": 10,
+    "coarseScore": 0.6884665247024074,
+    "coarseOut": "plume off its axis (0.27 m, 12 %)",
+    "coarseParts": [
+     {
+      "cell": 0.27,
+      "key": "intermittentTemperature",
+      "delta": 0.625,
+      "sigmaM": 0.07,
+      "term": 0.22090341150416287
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeTemperature",
+      "delta": 0.507,
+      "sigmaM": 0.076,
+      "term": 0.461408785651382
+     },
+     {
+      "cell": 0.27,
+      "key": "plumeVelocity",
+      "delta": 0.451,
+      "sigmaM": 0.13,
+      "term": 0.6365744825604419
+     },
+     {
+      "cell": 0.34,
+      "key": "intermittentTemperature",
+      "delta": 0.375,
+      "sigmaM": 0.098,
+      "term": 0.9628100235635408
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeTemperature",
+      "delta": 0.35,
+      "sigmaM": 0.081,
+      "term": 1.1022474930869175
+     },
+     {
+      "cell": 0.34,
+      "key": "plumeVelocity",
+      "delta": 0.288,
+      "sigmaM": 0.433,
+      "term": 1.6741230912345295
+     },
+     {
+      "cell": 0.27,
+      "key": "ceilingJetTemperature",
+      "delta": 1.512,
+      "sigmaM": 0.275,
+      "term": 0.21295207515717887
+     },
+     {
+      "cell": 0.34,
+      "key": "ceilingJetTemperature",
+      "delta": 1.334,
+      "sigmaM": 0.462,
+      "term": 0.23671283486110728
+     }
+    ],
+    "allScore": null,
+    "allOut": null,
+    "allParts": null,
+    "seconds": 101.27
+   }
+  ]
+ },
+ "energyBudget": {
+  "tool": "tools/calibration/energy-budget.mjs",
+  "rows": [
+   {
+    "cell": 0.2,
+    "Q_kW": 150,
+    "window": [
+     60,
+     120
+    ],
+    "wallSeconds": 36.1,
+    "fireMJ": 9,
+    "shares": {
+     "gas": -0.026,
+     "walls": 0.506,
+     "door": 0.47,
+     "rest": 0.05
+    },
+    "radiatedMJ": 0.16,
+    "doorOutflowKgPerS": 0.703,
+    "meanWallFluxKwPerM2": 0.874,
+    "mqh": {
+     "riseK": 49.6,
+     "wallShare": 0.766
+    },
+    "wallsShort": false
+   },
+   {
+    "cell": 0.2,
+    "Q_kW": 400,
+    "window": [
+     60,
+     120
+    ],
+    "wallSeconds": 112.3,
+    "fireMJ": 24,
+    "shares": {
+     "gas": -0.001,
+     "walls": 0.598,
+     "door": 0.367,
+     "rest": 0.037
+    },
+    "radiatedMJ": 8.13,
+    "doorOutflowKgPerS": 0.752,
+    "meanWallFluxKwPerM2": 2.755,
+    "mqh": {
+     "riseK": 95.4,
+     "wallShare": 0.82
+    },
+    "wallsShort": false
+   },
+   {
+    "cell": 0.27,
+    "Q_kW": 150,
+    "window": [
+     60,
+     120
+    ],
+    "wallSeconds": 19.3,
+    "fireMJ": 9,
+    "shares": {
+     "gas": 0.025,
+     "walls": 0.802,
+     "door": 0.444,
+     "rest": -0.27
+    },
+    "radiatedMJ": 1.44,
+    "doorOutflowKgPerS": 0.489,
+    "meanWallFluxKwPerM2": 1.386,
+    "mqh": {
+     "riseK": 49.6,
+     "wallShare": 0.837
+    },
+    "wallsShort": false
+   },
+   {
+    "cell": 0.27,
+    "Q_kW": 400,
+    "window": [
+     60,
+     120
+    ],
+    "wallSeconds": 36.1,
+    "fireMJ": 24,
+    "shares": {
+     "gas": -0.002,
+     "walls": 0.911,
+     "door": 0.275,
+     "rest": -0.184
+    },
+    "radiatedMJ": 19.62,
+    "doorOutflowKgPerS": 0.514,
+    "meanWallFluxKwPerM2": 4.198,
+    "mqh": {
+     "riseK": 95.4,
+     "wallShare": 0.877
+    },
+    "wallsShort": false
+   },
+   {
+    "cell": 0.34,
+    "Q_kW": 150,
+    "window": [
+     60,
+     120
+    ],
+    "wallSeconds": 8.7,
+    "fireMJ": 9,
+    "shares": {
+     "gas": -0.001,
+     "walls": 1.173,
+     "door": 0.518,
+     "rest": -0.689
+    },
+    "radiatedMJ": 5.72,
+    "doorOutflowKgPerS": 0.502,
+    "meanWallFluxKwPerM2": 2.027,
+    "mqh": {
+     "riseK": 49.6,
+     "wallShare": 0.833
+    },
+    "wallsShort": false
+   },
+   {
+    "cell": 0.34,
+    "Q_kW": 400,
+    "window": [
+     60,
+     120
+    ],
+    "wallSeconds": 13.6,
+    "fireMJ": 24,
+    "shares": {
+     "gas": 0,
+     "walls": 1.052,
+     "door": 0.259,
+     "rest": -0.311
+    },
+    "radiatedMJ": 32.07,
+    "doorOutflowKgPerS": 0.487,
+    "meanWallFluxKwPerM2": 4.85,
+    "mqh": {
+     "riseK": 95.4,
+     "wallShare": 0.883
+    },
+    "wallsShort": false
+   }
+  ],
+  "decision": "the walls are not short of heat on any cell (the rule: short only below half the MQH-implied share), so no wall surface model is proposed"
+ },
+ "closure": {
+  "note": "a sealed 5 x 4 x 2.7 m stone box, wall exchange and radiation off: the gas's heat over the heat released (scratch check, not a tool)",
+  "burner150kW": {
+   "0.20": 4.81,
+   "0.27": 1.82,
+   "0.34": 4.89,
+   "at": "60 s; 150 kW for 15 s; vorticity 6"
+  },
+  "burner150kWNoConfinement": {
+   "0.20": 6.55,
+   "0.27": 6.86,
+   "0.34": 1.91
+  },
+  "hotLowerLayerNoBurner": {
+   "0.20": 1.26,
+   "0.27": 1.23,
+   "0.34": 1.31,
+   "at": "60 s; the lowest 1 m at ambient + 300 K, nothing else"
+  }
+ },
+ "stage1b": {
+  "tool": "tools/calibration/steckler-checks.mjs",
+  "data": "Steckler, Quintiere and Rinkinen (1982), NBSIR 82-2520, tests 14, 410, 610 (NIST firemodels/exp, a US Government work)",
+  "generated": "2026-11-11T14:45:38.506Z",
+  "solver": {
+   "vorticity": 6
+  },
+  "horizon": 300,
+  "averagedFrom": 200,
+  "notes": "walls: the solver's stone a cell thick, not the tests' fibre board; 300 s, not the tests' 30 min; one dataset (Steckler), so at most indicative under the plan's tiers",
+  "rows": [
+   {
+    "test": 14,
+    "position": "A",
+    "cell": 0.2,
+    "grid": [
+     20,
+     15,
+     16
+    ],
+    "wallSeconds": 38.3,
+    "maxSpeed": 9.8,
+    "diverged": false,
+    "model": {
+     "upperRise": 79.55,
+     "interface": 0.384,
+     "maxOutflow": 1.126,
+     "neutral": 0.952
+    },
+    "measured": {
+     "upperRise": 81.9,
+     "interface": 0.78,
+     "maxOutflow": 2.15,
+     "neutral": 1.011
+    },
+    "doorProfile": {
+     "z": [
+      1.7,
+      1.5,
+      1.3,
+      1.1,
+      0.9,
+      0.7,
+      0.5,
+      0.3,
+      0.1
+     ],
+     "u": [
+      1.125,
+      1.126,
+      0.775,
+      0.395,
+      -0.137,
+      -0.403,
+      -0.736,
+      -0.909,
+      -1.152
+     ]
+    }
+   },
+   {
+    "test": 410,
+    "position": "B",
+    "cell": 0.2,
+    "grid": [
+     20,
+     15,
+     16
+    ],
+    "wallSeconds": 53.9,
+    "maxSpeed": 4.7,
+    "diverged": false,
+    "model": {
+     "upperRise": 93.388,
+     "interface": 0.401,
+     "maxOutflow": 1.114,
+     "neutral": 0.947
+    },
+    "measured": {
+     "upperRise": 113.11,
+     "interface": 1.21,
+     "maxOutflow": 2.23,
+     "neutral": 1.014
+    },
+    "doorProfile": {
+     "z": [
+      1.7,
+      1.5,
+      1.3,
+      1.1,
+      0.9,
+      0.7,
+      0.5,
+      0.3,
+      0.1
+     ],
+     "u": [
+      1.114,
+      1.098,
+      0.72,
+      0.461,
+      -0.142,
+      -0.558,
+      -0.861,
+      -0.962,
+      -1.206
+     ]
+    }
+   },
+   {
+    "test": 610,
+    "position": "C",
+    "cell": 0.2,
+    "grid": [
+     20,
+     15,
+     16
+    ],
+    "wallSeconds": 55.3,
+    "maxSpeed": 5.7,
+    "diverged": false,
+    "model": {
+     "upperRise": 109.327,
+     "interface": 0.404,
+     "maxOutflow": 1.382,
+     "neutral": 0.843
+    },
+    "measured": {
+     "upperRise": 110.65,
+     "interface": 1.08,
+     "maxOutflow": 2.19,
+     "neutral": 1.039
+    },
+    "doorProfile": {
+     "z": [
+      1.7,
+      1.5,
+      1.3,
+      1.1,
+      0.9,
+      0.7,
+      0.5,
+      0.3,
+      0.1
+     ],
+     "u": [
+      1.382,
+      1.373,
+      1.038,
+      0.413,
+      0.16,
+      -0.397,
+      -0.788,
+      -1.005,
+      -1.28
+     ]
+    }
+   },
+   {
+    "test": 14,
+    "position": "A",
+    "cell": 0.27,
+    "grid": [
+     16,
+     12,
+     13
+    ],
+    "wallSeconds": 26,
+    "maxSpeed": 15.5,
+    "diverged": false,
+    "model": {
+     "upperRise": 108.103,
+     "interface": 1.276,
+     "maxOutflow": 1.452,
+     "neutral": 0.899
+    },
+    "measured": {
+     "upperRise": 81.9,
+     "interface": 0.78,
+     "maxOutflow": 2.15,
+     "neutral": 1.011
+    },
+    "doorProfile": {
+     "z": [
+      1.49,
+      1.22,
+      0.95,
+      0.68,
+      0.41,
+      0.14
+     ],
+     "u": [
+      1.452,
+      1.175,
+      0.111,
+      -0.533,
+      -0.779,
+      -1.507
+     ]
+    }
+   },
+   {
+    "test": 410,
+    "position": "B",
+    "cell": 0.27,
+    "grid": [
+     16,
+     12,
+     13
+    ],
+    "wallSeconds": 21.8,
+    "maxSpeed": 5.1,
+    "diverged": false,
+    "model": {
+     "upperRise": 24.631,
+     "interface": 1.805,
+     "maxOutflow": 1.427,
+     "neutral": 0.848
+    },
+    "measured": {
+     "upperRise": 113.11,
+     "interface": 1.21,
+     "maxOutflow": 2.23,
+     "neutral": 1.014
+    },
+    "doorProfile": {
+     "z": [
+      1.49,
+      1.22,
+      0.95,
+      0.68,
+      0.41,
+      0.14
+     ],
+     "u": [
+      1.427,
+      1.322,
+      0.358,
+      -0.635,
+      -0.711,
+      -1.411
+     ]
+    }
+   },
+   {
+    "test": 610,
+    "position": "C",
+    "cell": 0.27,
+    "grid": [
+     16,
+     12,
+     13
+    ],
+    "wallSeconds": 26.1,
+    "maxSpeed": 7.5,
+    "diverged": false,
+    "model": {
+     "upperRise": 94.426,
+     "interface": 1.431,
+     "maxOutflow": 1.6,
+     "neutral": 0.862
+    },
+    "measured": {
+     "upperRise": 110.65,
+     "interface": 1.08,
+     "maxOutflow": 2.19,
+     "neutral": 1.039
+    },
+    "doorProfile": {
+     "z": [
+      1.49,
+      1.22,
+      0.95,
+      0.68,
+      0.41,
+      0.14
+     ],
+     "u": [
+      1.6,
+      1.392,
+      0.382,
+      -0.858,
+      -1.008,
+      -1.691
+     ]
+    }
+   },
+   {
+    "test": 14,
+    "position": "A",
+    "cell": 0.34,
+    "grid": [
+     13,
+     10,
+     11
+    ],
+    "wallSeconds": 13.1,
+    "maxSpeed": 14.2,
+    "diverged": false,
+    "model": {
+     "upperRise": 203.901,
+     "interface": 0.574,
+     "maxOutflow": 1.324,
+     "neutral": 0.912
+    },
+    "measured": {
+     "upperRise": 81.9,
+     "interface": 0.78,
+     "maxOutflow": 2.15,
+     "neutral": 1.011
+    },
+    "doorProfile": {
+     "z": [
+      1.53,
+      1.19,
+      0.85,
+      0.51,
+      0.17
+     ],
+     "u": [
+      1.324,
+      0.584,
+      -0.131,
+      -0.435,
+      -1.394
+     ]
+    }
+   },
+   {
+    "test": 410,
+    "position": "B",
+    "cell": 0.34,
+    "grid": [
+     13,
+     10,
+     11
+    ],
+    "wallSeconds": 12.7,
+    "maxSpeed": 3.9,
+    "diverged": false,
+    "model": {
+     "upperRise": 112.094,
+     "interface": 0.485,
+     "maxOutflow": 1.26,
+     "neutral": 0.972
+    },
+    "measured": {
+     "upperRise": 113.11,
+     "interface": 1.21,
+     "maxOutflow": 2.23,
+     "neutral": 1.014
+    },
+    "doorProfile": {
+     "z": [
+      1.53,
+      1.19,
+      0.85,
+      0.51,
+      0.17
+     ],
+     "u": [
+      1.26,
+      0.739,
+      -0.412,
+      -0.278,
+      -1.175
+     ]
+    }
+   },
+   {
+    "test": 610,
+    "position": "C",
+    "cell": 0.34,
+    "grid": [
+     13,
+     10,
+     11
+    ],
+    "wallSeconds": 12.2,
+    "maxSpeed": 6.2,
+    "diverged": false,
+    "model": {
+     "upperRise": 132.586,
+     "interface": 0.459,
+     "maxOutflow": 1.32,
+     "neutral": 0.809
+    },
+    "measured": {
+     "upperRise": 110.65,
+     "interface": 1.08,
+     "maxOutflow": 2.19,
+     "neutral": 1.039
+    },
+    "doorProfile": {
+     "z": [
+      1.53,
+      1.19,
+      0.85,
+      0.51,
+      0.17
+     ],
+     "u": [
+      1.32,
+      1.163,
+      0.075,
+      -0.541,
+      -1.315
+     ]
+    }
+   }
+  ],
+  "stats": {
+   "0.2": {
+    "upperRise": {
+     "n": 3,
+     "delta": 0.925,
+     "sigmaM": 0.07,
+     "verdict": "within the calibrated band"
+    },
+    "interface": {
+     "n": 3,
+     "delta": 0.401,
+     "sigmaM": 0.197,
+     "verdict": "not calibrated"
+    },
+    "maxOutflow": {
+     "n": 3,
+     "delta": 0.549,
+     "sigmaM": 0.094,
+     "verdict": "not calibrated"
+    },
+    "neutral": {
+     "n": 3,
+     "delta": 0.894,
+     "sigmaM": 0.067,
+     "verdict": "within the calibrated band"
+    }
+   },
+   "0.27": {
+    "upperRise": {
+     "n": 3,
+     "delta": 0.969,
+     "sigmaM": 0.937,
+     "verdict": "not calibrated"
+    },
+    "interface": {
+     "n": 3,
+     "delta": 1.483,
+     "sigmaM": 0.093,
+     "verdict": "indicative"
+    },
+    "maxOutflow": {
+     "n": 3,
+     "delta": 0.681,
+     "sigmaM": 0.08,
+     "verdict": "indicative"
+    },
+    "neutral": {
+     "n": 3,
+     "delta": 0.851,
+     "sigmaM": 0.05,
+     "verdict": "within the calibrated band"
+    }
+   },
+   "0.34": {
+    "upperRise": {
+     "n": 3,
+     "delta": 1.608,
+     "sigmaM": 0.481,
+     "verdict": "not calibrated"
+    },
+    "interface": {
+     "n": 3,
+     "delta": 0.528,
+     "sigmaM": 0.331,
+     "verdict": "not calibrated"
+    },
+    "maxOutflow": {
+     "n": 3,
+     "delta": 0.594,
+     "sigmaM": 0.08,
+     "verdict": "not calibrated"
+    },
+    "neutral": {
+     "n": 3,
+     "delta": 0.879,
+     "sigmaM": 0.094,
+     "verdict": "within the calibrated band"
+    }
+   }
+  },
+  "otherSettings": {
+   "old (vorticity 10, one step)": {
+    "solver": {
+     "vorticity": 10,
+     "cfl": 0,
+     "vorticityStep": 0
+    },
+    "rows": [
+     {
+      "test": 14,
+      "position": "A",
+      "cell": 0.2,
+      "grid": [
+       20,
+       15,
+       16
+      ],
+      "wallSeconds": 47.5,
+      "maxSpeed": null,
+      "diverged": true,
+      "model": {
+       "upperRise": -1.004,
+       "interface": 0.204,
+       "maxOutflow": null,
+       "neutral": null
+      },
+      "measured": {
+       "upperRise": 81.9,
+       "interface": 0.78,
+       "maxOutflow": 2.15,
+       "neutral": 1.011
+      }
+     },
+     {
+      "test": 410,
+      "position": "B",
+      "cell": 0.2,
+      "grid": [
+       20,
+       15,
+       16
+      ],
+      "wallSeconds": 41.7,
+      "maxSpeed": 4.8,
+      "diverged": false,
+      "model": {
+       "upperRise": 82.19,
+       "interface": 0.286,
+       "maxOutflow": 0.885,
+       "neutral": 0.948
+      },
+      "measured": {
+       "upperRise": 113.11,
+       "interface": 1.21,
+       "maxOutflow": 2.23,
+       "neutral": 1.014
+      }
+     },
+     {
+      "test": 610,
+      "position": "C",
+      "cell": 0.2,
+      "grid": [
+       20,
+       15,
+       16
+      ],
+      "wallSeconds": 40.9,
+      "maxSpeed": 6.3,
+      "diverged": false,
+      "model": {
+       "upperRise": 92.926,
+       "interface": 0.303,
+       "maxOutflow": 1.092,
+       "neutral": 0.856
+      },
+      "measured": {
+       "upperRise": 110.65,
+       "interface": 1.08,
+       "maxOutflow": 2.19,
+       "neutral": 1.039
+      }
+     },
+     {
+      "test": 14,
+      "position": "A",
+      "cell": 0.27,
+      "grid": [
+       16,
+       12,
+       13
+      ],
+      "wallSeconds": 25,
+      "maxSpeed": null,
+      "diverged": true,
+      "model": {
+       "upperRise": -0.08,
+       "interface": 2.099,
+       "maxOutflow": null,
+       "neutral": null
+      },
+      "measured": {
+       "upperRise": 81.9,
+       "interface": 0.78,
+       "maxOutflow": 2.15,
+       "neutral": 1.011
+      }
+     },
+     {
+      "test": 410,
+      "position": "B",
+      "cell": 0.27,
+      "grid": [
+       16,
+       12,
+       13
+      ],
+      "wallSeconds": 19.9,
+      "maxSpeed": 5.1,
+      "diverged": false,
+      "model": {
+       "upperRise": -7.19,
+       "interface": 2.064,
+       "maxOutflow": 1.428,
+       "neutral": 0.804
+      },
+      "measured": {
+       "upperRise": 113.11,
+       "interface": 1.21,
+       "maxOutflow": 2.23,
+       "neutral": 1.014
+      }
+     },
+     {
+      "test": 610,
+      "position": "C",
+      "cell": 0.27,
+      "grid": [
+       16,
+       12,
+       13
+      ],
+      "wallSeconds": 21.5,
+      "maxSpeed": 8.4,
+      "diverged": false,
+      "model": {
+       "upperRise": -5.027,
+       "interface": 2.137,
+       "maxOutflow": 1.21,
+       "neutral": 0.798
+      },
+      "measured": {
+       "upperRise": 110.65,
+       "interface": 1.08,
+       "maxOutflow": 2.19,
+       "neutral": 1.039
+      }
+     },
+     {
+      "test": 14,
+      "position": "A",
+      "cell": 0.34,
+      "grid": [
+       13,
+       10,
+       11
+      ],
+      "wallSeconds": 14.5,
+      "maxSpeed": null,
+      "diverged": true,
+      "model": {
+       "upperRise": -0.1,
+       "interface": 2.025,
+       "maxOutflow": null,
+       "neutral": null
+      },
+      "measured": {
+       "upperRise": 81.9,
+       "interface": 0.78,
+       "maxOutflow": 2.15,
+       "neutral": 1.011
+      }
+     },
+     {
+      "test": 410,
+      "position": "B",
+      "cell": 0.34,
+      "grid": [
+       13,
+       10,
+       11
+      ],
+      "wallSeconds": 12,
+      "maxSpeed": 5.4,
+      "diverged": false,
+      "model": {
+       "upperRise": 107.523,
+       "interface": 0.412,
+       "maxOutflow": 1.229,
+       "neutral": 0.881
+      },
+      "measured": {
+       "upperRise": 113.11,
+       "interface": 1.21,
+       "maxOutflow": 2.23,
+       "neutral": 1.014
+      }
+     },
+     {
+      "test": 610,
+      "position": "C",
+      "cell": 0.34,
+      "grid": [
+       13,
+       10,
+       11
+      ],
+      "wallSeconds": 11.1,
+      "maxSpeed": 6,
+      "diverged": false,
+      "model": {
+       "upperRise": 120.965,
+       "interface": 0.423,
+       "maxOutflow": 1.25,
+       "neutral": 0.799
+      },
+      "measured": {
+       "upperRise": 110.65,
+       "interface": 1.08,
+       "maxOutflow": 2.19,
+       "neutral": 1.039
+      }
+     }
+    ],
+    "stats": {
+     "0.2": {
+      "upperRise": {
+       "n": 2,
+       "delta": 0.781,
+       "sigmaM": 0.075,
+       "verdict": "indicative"
+      },
+      "interface": {
+       "n": 2,
+       "delta": 0.259,
+       "sigmaM": 0.11,
+       "verdict": "not calibrated"
+      },
+      "maxOutflow": {
+       "n": 2,
+       "delta": 0.448,
+       "sigmaM": 0.14,
+       "verdict": "not calibrated"
+      },
+      "neutral": {
+       "n": 2,
+       "delta": 0.879,
+       "sigmaM": 0.074,
+       "verdict": "within the calibrated band"
+      }
+     },
+     "0.27": {
+      "upperRise": {
+       "n": 0,
+       "delta": null,
+       "sigmaM": null,
+       "verdict": "too few points"
+      },
+      "interface": {
+       "n": 2,
+       "delta": 1.843,
+       "sigmaM": 0.092,
+       "verdict": "not calibrated"
+      },
+      "maxOutflow": {
+       "n": 2,
+       "delta": 0.595,
+       "sigmaM": 0.08,
+       "verdict": "not calibrated"
+      },
+      "neutral": {
+       "n": 2,
+       "delta": 0.78,
+       "sigmaM": 0.05,
+       "verdict": "indicative"
+      }
+     },
+     "0.34": {
+      "upperRise": {
+       "n": 2,
+       "delta": 1.019,
+       "sigmaM": 0.07,
+       "verdict": "within the calibrated band"
+      },
+      "interface": {
+       "n": 2,
+       "delta": 0.366,
+       "sigmaM": 0.085,
+       "verdict": "not calibrated"
+      },
+      "maxOutflow": {
+       "n": 2,
+       "delta": 0.561,
+       "sigmaM": 0.08,
+       "verdict": "not calibrated"
+      },
+      "neutral": {
+       "n": 2,
+       "delta": 0.818,
+       "sigmaM": 0.07,
+       "verdict": "within the calibrated band"
+      }
+     }
+    }
+   },
+   "vorticity 10, cut steps": {
+    "solver": {
+     "vorticity": 10
+    },
+    "rows": [
+     {
+      "test": 14,
+      "position": "A",
+      "cell": 0.2,
+      "grid": [
+       20,
+       15,
+       16
+      ],
+      "wallSeconds": 55.5,
+      "maxSpeed": 11.2,
+      "diverged": false,
+      "model": {
+       "upperRise": 79.115,
+       "interface": 0.358,
+       "maxOutflow": 0.965,
+       "neutral": 0.806
+      },
+      "measured": {
+       "upperRise": 81.9,
+       "interface": 0.78,
+       "maxOutflow": 2.15,
+       "neutral": 1.011
+      }
+     },
+     {
+      "test": 410,
+      "position": "B",
+      "cell": 0.2,
+      "grid": [
+       20,
+       15,
+       16
+      ],
+      "wallSeconds": 65.4,
+      "maxSpeed": 5,
+      "diverged": false,
+      "model": {
+       "upperRise": 86.431,
+       "interface": 0.343,
+       "maxOutflow": 1.063,
+       "neutral": 0.879
+      },
+      "measured": {
+       "upperRise": 113.11,
+       "interface": 1.21,
+       "maxOutflow": 2.23,
+       "neutral": 1.014
+      }
+     },
+     {
+      "test": 610,
+      "position": "C",
+      "cell": 0.2,
+      "grid": [
+       20,
+       15,
+       16
+      ],
+      "wallSeconds": 55.7,
+      "maxSpeed": 6.6,
+      "diverged": false,
+      "model": {
+       "upperRise": 103.185,
+       "interface": 0.368,
+       "maxOutflow": 1.208,
+       "neutral": 0.814
+      },
+      "measured": {
+       "upperRise": 110.65,
+       "interface": 1.08,
+       "maxOutflow": 2.19,
+       "neutral": 1.039
+      }
+     },
+     {
+      "test": 14,
+      "position": "A",
+      "cell": 0.27,
+      "grid": [
+       16,
+       12,
+       13
+      ],
+      "wallSeconds": 28.1,
+      "maxSpeed": 15.9,
+      "diverged": false,
+      "model": {
+       "upperRise": 60.227,
+       "interface": 1.752,
+       "maxOutflow": 1.467,
+       "neutral": 0.755
+      },
+      "measured": {
+       "upperRise": 81.9,
+       "interface": 0.78,
+       "maxOutflow": 2.15,
+       "neutral": 1.011
+      }
+     },
+     {
+      "test": 410,
+      "position": "B",
+      "cell": 0.27,
+      "grid": [
+       16,
+       12,
+       13
+      ],
+      "wallSeconds": 22.7,
+      "maxSpeed": 5.3,
+      "diverged": false,
+      "model": {
+       "upperRise": 92.002,
+       "interface": 2.16,
+       "maxOutflow": 1.278,
+       "neutral": 0.832
+      },
+      "measured": {
+       "upperRise": 113.11,
+       "interface": 1.21,
+       "maxOutflow": 2.23,
+       "neutral": 1.014
+      }
+     },
+     {
+      "test": 610,
+      "position": "C",
+      "cell": 0.27,
+      "grid": [
+       16,
+       12,
+       13
+      ],
+      "wallSeconds": 27.5,
+      "maxSpeed": 8.9,
+      "diverged": false,
+      "model": {
+       "upperRise": 119.042,
+       "interface": 2.16,
+       "maxOutflow": 1.441,
+       "neutral": 0.808
+      },
+      "measured": {
+       "upperRise": 110.65,
+       "interface": 1.08,
+       "maxOutflow": 2.19,
+       "neutral": 1.039
+      }
+     },
+     {
+      "test": 14,
+      "position": "A",
+      "cell": 0.34,
+      "grid": [
+       13,
+       10,
+       11
+      ],
+      "wallSeconds": 11.9,
+      "maxSpeed": 15.4,
+      "diverged": false,
+      "model": {
+       "upperRise": 188.395,
+       "interface": 0.487,
+       "maxOutflow": 1.123,
+       "neutral": 0.891
+      },
+      "measured": {
+       "upperRise": 81.9,
+       "interface": 0.78,
+       "maxOutflow": 2.15,
+       "neutral": 1.011
+      }
+     },
+     {
+      "test": 410,
+      "position": "B",
+      "cell": 0.34,
+      "grid": [
+       13,
+       10,
+       11
+      ],
+      "wallSeconds": 10.9,
+      "maxSpeed": 4.8,
+      "diverged": false,
+      "model": {
+       "upperRise": 103.331,
+       "interface": 0.451,
+       "maxOutflow": 1.327,
+       "neutral": 0.707
+      },
+      "measured": {
+       "upperRise": 113.11,
+       "interface": 1.21,
+       "maxOutflow": 2.23,
+       "neutral": 1.014
+      }
+     },
+     {
+      "test": 610,
+      "position": "C",
+      "cell": 0.34,
+      "grid": [
+       13,
+       10,
+       11
+      ],
+      "wallSeconds": 10.9,
+      "maxSpeed": 6.6,
+      "diverged": false,
+      "model": {
+       "upperRise": 154.058,
+       "interface": 0.462,
+       "maxOutflow": 1.063,
+       "neutral": 0.804
+      },
+      "measured": {
+       "upperRise": 110.65,
+       "interface": 1.08,
+       "maxOutflow": 2.19,
+       "neutral": 1.039
+      }
+     }
+    ],
+    "stats": {
+     "0.2": {
+      "upperRise": {
+       "n": 3,
+       "delta": 0.886,
+       "sigmaM": 0.105,
+       "verdict": "within the calibrated band"
+      },
+      "interface": {
+       "n": 3,
+       "delta": 0.364,
+       "sigmaM": 0.238,
+       "verdict": "not calibrated"
+      },
+      "maxOutflow": {
+       "n": 3,
+       "delta": 0.491,
+       "sigmaM": 0.08,
+       "verdict": "not calibrated"
+      },
+      "neutral": {
+       "n": 3,
+       "delta": 0.815,
+       "sigmaM": 0.05,
+       "verdict": "within the calibrated band"
+      }
+     },
+     "0.27": {
+      "upperRise": {
+       "n": 3,
+       "delta": 0.876,
+       "sigmaM": 0.184,
+       "verdict": "within the calibrated band"
+      },
+      "interface": {
+       "n": 3,
+       "delta": 2.01,
+       "sigmaM": 0.103,
+       "verdict": "not calibrated"
+      },
+      "maxOutflow": {
+       "n": 3,
+       "delta": 0.636,
+       "sigmaM": 0.08,
+       "verdict": "not calibrated"
+      },
+      "neutral": {
+       "n": 3,
+       "delta": 0.781,
+       "sigmaM": 0.05,
+       "verdict": "indicative"
+      }
+     },
+     "0.34": {
+      "upperRise": {
+       "n": 3,
+       "delta": 1.584,
+       "sigmaM": 0.457,
+       "verdict": "not calibrated"
+      },
+      "interface": {
+       "n": 3,
+       "delta": 0.479,
+       "sigmaM": 0.262,
+       "verdict": "not calibrated"
+      },
+      "maxOutflow": {
+       "n": 3,
+       "delta": 0.532,
+       "sigmaM": 0.08,
+       "verdict": "not calibrated"
+      },
+      "neutral": {
+       "n": 3,
+       "delta": 0.784,
+       "sigmaM": 0.106,
+       "verdict": "indicative"
+      }
+     }
+    }
+   }
+  }
+ },
+ "sprinklers": {
+  "note": "the first head's estimate reading over the measured time (median per data set), and the heads whose estimate falls within a factor of two of the measured time; convection 10 W/m2K rows",
+  "2026-11-08 (vorticity 10, one step, no health guard)": {
+   "vettori_flat_1998 tabulated": {
+    "runs": 9,
+    "healthy": 9,
+    "failures": [],
+    "firstHeadMedian": 1.26,
+    "heads": 18,
+    "opened": 18,
+    "within2": 18
+   },
+   "vettori_flat_1998 nominal": {
+    "runs": 9,
+    "healthy": 9,
+    "failures": [],
+    "firstHeadMedian": 1.78,
+    "heads": 18,
+    "opened": 16,
+    "within2": 16
+   },
+   "vettori_sloped_2003 tabulated": {
+    "runs": 8,
+    "healthy": 8,
+    "failures": [],
+    "firstHeadMedian": 0.99,
+    "heads": 21,
+    "opened": 21,
+    "within2": 21
+   },
+   "vettori_sloped_2003 nominal": {
+    "runs": 8,
+    "healthy": 8,
+    "failures": [],
+    "firstHeadMedian": 1.31,
+    "heads": 21,
+    "opened": 21,
+    "within2": 21
+   },
+   "bittern_2004 measured": {
+    "runs": 8,
+    "healthy": 8,
+    "failures": [],
+    "firstHeadMedian": 0.99,
+    "heads": 16,
+    "opened": 16,
+    "within2": 16
+   },
+   "ul_nfprf_1998_series_I measured": {
+    "runs": 4,
+    "healthy": 4,
+    "failures": [],
+    "firstHeadMedian": 1.29,
+    "heads": 16,
+    "opened": 16,
+    "within2": 15
+   }
+  },
+  "before, with the health guard (vorticity 10, cfl 0, vorticityStep 0)": {
+   "vettori_flat_1998 tabulated": {
+    "runs": 9,
+    "healthy": 2,
+    "failures": [
+     "temperature at 91 s",
+     "temperature at 71 s",
+     "temperature at 74 s",
+     "temperature at 159 s",
+     "temperature at 124 s",
+     "temperature at 244 s",
+     "speed at 245 s"
+    ],
+    "firstHeadMedian": 1.26,
+    "heads": 18,
+    "opened": 18,
+    "within2": 18
+   },
+   "vettori_flat_1998 nominal": {
+    "runs": 9,
+    "healthy": 6,
+    "failures": [
+     "temperature at 91 s",
+     "temperature at 77 s",
+     "temperature at 185 s"
+    ],
+    "firstHeadMedian": 1.77,
+    "heads": 18,
+    "opened": 14,
+    "within2": 14
+   },
+   "vettori_sloped_2003 tabulated": {
+    "runs": 8,
+    "healthy": 0,
+    "failures": [
+     "temperature at 91 s",
+     "temperature at 91 s",
+     "temperature at 327 s",
+     "temperature at 343 s",
+     "temperature at 82 s",
+     "temperature at 94 s",
+     "temperature at 337 s",
+     "temperature at 337 s"
+    ],
+    "firstHeadMedian": 0.91,
+    "heads": 21,
+    "opened": 18,
+    "within2": 18
+   },
+   "vettori_sloped_2003 nominal": {
+    "runs": 8,
+    "healthy": 0,
+    "failures": [
+     "temperature at 119 s",
+     "temperature at 108 s",
+     "temperature at 323 s",
+     "temperature at 319 s",
+     "temperature at 125 s",
+     "temperature at 118 s",
+     "temperature at 298 s",
+     "temperature at 298 s"
+    ],
+    "firstHeadMedian": 1.31,
+    "heads": 21,
+    "opened": 21,
+    "within2": 21
+   },
+   "bittern_2004 measured": {
+    "runs": 8,
+    "healthy": 5,
+    "failures": [
+     "temperature at 257 s",
+     "temperature at 211 s",
+     "temperature at 385 s"
+    ],
+    "firstHeadMedian": 1,
+    "heads": 16,
+    "opened": 14,
+    "within2": 14
+   },
+   "ul_nfprf_1998_series_I measured": {
+    "runs": 4,
+    "healthy": 2,
+    "failures": [
+     "speed at 89 s",
+     "speed at 89 s"
+    ],
+    "firstHeadMedian": 1.29,
+    "heads": 16,
+    "opened": 16,
+    "within2": 15
+   }
+  },
+  "after (vorticity 6, cut steps)": {
+   "vettori_flat_1998 tabulated": {
+    "runs": 9,
+    "healthy": 3,
+    "failures": [
+     "temperature at 73 s",
+     "temperature at 70 s",
+     "temperature at 71 s",
+     "temperature at 147 s",
+     "temperature at 151 s",
+     "temperature at 248 s"
+    ],
+    "firstHeadMedian": 1.04,
+    "heads": 18,
+    "opened": 18,
+    "within2": 18
+   },
+   "vettori_flat_1998 nominal": {
+    "runs": 9,
+    "healthy": 4,
+    "failures": [
+     "energy at 76 s",
+     "temperature at 86 s",
+     "temperature at 76 s",
+     "temperature at 166 s",
+     "temperature at 159 s"
+    ],
+    "firstHeadMedian": 1.56,
+    "heads": 18,
+    "opened": 18,
+    "within2": 18
+   },
+   "vettori_sloped_2003 tabulated": {
+    "runs": 8,
+    "healthy": 0,
+    "failures": [
+     "temperature at 93 s",
+     "temperature at 93 s",
+     "temperature at 372 s",
+     "temperature at 353 s",
+     "temperature at 89 s",
+     "temperature at 99 s",
+     "temperature at 314 s",
+     "temperature at 314 s"
+    ],
+    "firstHeadMedian": 0.9,
+    "heads": 21,
+    "opened": 21,
+    "within2": 21
+   },
+   "vettori_sloped_2003 nominal": {
+    "runs": 8,
+    "healthy": 0,
+    "failures": [
+     "temperature at 124 s",
+     "temperature at 111 s",
+     "temperature at 324 s",
+     "temperature at 359 s",
+     "temperature at 113 s",
+     "temperature at 142 s",
+     "temperature at 327 s",
+     "temperature at 327 s"
+    ],
+    "firstHeadMedian": 1.15,
+    "heads": 21,
+    "opened": 21,
+    "within2": 21
+   },
+   "bittern_2004 measured": {
+    "runs": 8,
+    "healthy": 6,
+    "failures": [
+     "energy at 183 s",
+     "energy at 215 s"
+    ],
+    "firstHeadMedian": 0.87,
+    "heads": 16,
+    "opened": 16,
+    "within2": 16
+   },
+   "ul_nfprf_1998_series_I measured": {
+    "runs": 4,
+    "healthy": 4,
+    "failures": [],
+    "firstHeadMedian": 1.08,
+    "heads": 16,
+    "opened": 16,
+    "within2": 15
+   }
+  }
+ },
+ "timing": {
+  "machine": "Intel UHD 770 (gen-12lp), Chrome headless; 1 run each, 120 s; CPU numbers taken while calibration runs shared the CPU",
+  "before": {
+   "room": {
+    "cpu": {
+     "cells": 17732,
+     "cell": 0.2,
+     "realTime": 3.72,
+     "msPerStep": 26.9
+    },
+    "gpu-same": {
+     "cells": 17732,
+     "cell": 0.2,
+     "realTime": 36.41,
+     "msPerStep": 2.8
+    },
+    "gpu-app": {
+     "cells": 17732,
+     "cell": 0.2,
+     "realTime": 36.73,
+     "msPerStep": 2.7
+    }
+   },
+   "vienna": {
+    "cpu": {
+     "cells": 27744,
+     "cell": 0.4,
+     "realTime": 3.09,
+     "msPerStep": 32.4
+    },
+    "gpu-same": {
+     "cells": 27744,
+     "cell": 0.4,
+     "realTime": 29.66,
+     "msPerStep": 3.4
+    },
+    "gpu-app": {
+     "cells": 279585,
+     "cell": 0.343,
+     "realTime": 2.55,
+     "msPerStep": 39.3
+    }
+   }
+  },
+  "after": {
+   "room": {
+    "cpu": {
+     "cells": 17732,
+     "cell": 0.2,
+     "realTime": 1.6,
+     "msPerStep": 62.5
+    },
+    "gpu-same": {
+     "cells": 17732,
+     "cell": 0.2,
+     "realTime": 16.27,
+     "msPerStep": 6.1
+    },
+    "gpu-app": {
+     "cells": 17732,
+     "cell": 0.2,
+     "realTime": 16,
+     "msPerStep": 6.2
+    }
+   },
+   "vienna": {
+    "cpu": {
+     "cells": 27744,
+     "cell": 0.4,
+     "realTime": 1.39,
+     "msPerStep": 71.9
+    },
+    "gpu-same": {
+     "cells": 27744,
+     "cell": 0.4,
+     "realTime": 16.25,
+     "msPerStep": 6.2
+    },
+    "gpu-app": {
+     "cells": 195858,
+     "cell": 0.37,
+     "realTime": 1.83,
+     "msPerStep": 54.8
+    }
+   }
+  },
+  "gpuMsPerStep": [
+   {
+    "label": "30k",
+    "cells": 27300,
+    "gpuMs": 2.45
+   },
+   {
+    "label": "200k",
+    "cells": 186760,
+    "gpuMs": 12.53
+   }
+  ]
+ },
+ "gpuParity": {
+  "agreement": {
+   "adapter": {
+    "vendor": "intel",
+    "architecture": "gen-12lp",
+    "description": "",
+    "fallback": false
+   },
+   "compileMs": 553.5999999046326,
+   "agreement": {
+    "grid": [
+     28,
+     22,
+     24
+    ],
+    "cells": 14784,
+    "h": 0.25,
+    "runs": [
+     {
+      "label": "radiation and particles off",
+      "rows": [
+       {
+        "step": 1,
+        "TmaxC": 20.763696289062523,
+        "sootMax": 6.973802646470517e-10,
+        "o2Min": 0.23199991881847382,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 4,
+         "gpu": 4
+        },
+        "gpu": {
+         "T": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "O2": {
+          "max": 2.9802322387695312e-8,
+          "median": 0,
+          "p99": 1.4901161193847656e-8,
+          "n": 12554
+         },
+         "soot": {
+          "max": 2.4424906541753444e-15,
+          "median": 0,
+          "p99": 2.636779683484747e-16,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 2.384185791015625e-7,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "v": {
+          "max": 4.881033177639438e-8,
+          "median": 3.082631394590862e-8,
+          "p99": 4.4580783509218236e-8,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 0.000030517578125,
+          "median": 0.000030517578125,
+          "p99": 0.000030517578125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "soot": {
+          "max": 5.551115123125783e-17,
+          "median": 0,
+          "p99": 6.938893903907228e-18,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 1.1920928955078125e-7,
+          "median": 1.1920928955078125e-7,
+          "p99": 1.1920928955078125e-7,
+          "n": 12554
+         },
+         "v": {
+          "max": 1.1683559719699588e-7,
+          "median": 7.378787714173995e-8,
+          "p99": 1.0671147165908224e-7,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       },
+       {
+        "step": 10,
+        "TmaxC": 30.498223876953148,
+        "sootMax": 1.4187272689980546e-8,
+        "o2Min": 0.2319984883069992,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 4,
+         "gpu": 4
+        },
+        "gpu": {
+         "T": {
+          "max": 0.000152587890625,
+          "median": 0,
+          "p99": 0.00006103515625,
+          "n": 12554
+         },
+         "O2": {
+          "max": 1.341104507446289e-7,
+          "median": 0,
+          "p99": 1.1920928955078125e-7,
+          "n": 12554
+         },
+         "soot": {
+          "max": 1.687538997430238e-14,
+          "median": 0,
+          "p99": 2.4424906541753444e-15,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 7.152557373046875e-7,
+          "median": 0,
+          "p99": 2.384185791015625e-7,
+          "n": 12554
+         },
+         "v": {
+          "max": 0.0000012199379852972925,
+          "median": 1.0415222106986757e-7,
+          "p99": 6.225043606700176e-7,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 0.000030517578125,
+          "median": 0.000030517578125,
+          "p99": 0.000030517578125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "soot": {
+          "max": 2.7755575615628914e-16,
+          "median": 0,
+          "p99": 5.551115123125783e-17,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 1.1920928955078125e-7,
+          "median": 1.1920928955078125e-7,
+          "p99": 1.1920928955078125e-7,
+          "n": 12554
+         },
+         "v": {
+          "max": 0.0000020215542235746398,
+          "median": 9.812580969992268e-8,
+          "p99": 0.0000012314412174418976,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       },
+       {
+        "step": 50,
+        "TmaxC": 74.41472778320315,
+        "sootMax": 0.0000026490033633308485,
+        "o2Min": 0.23172174394130707,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 4,
+         "gpu": 4
+        },
+        "gpu": {
+         "T": {
+          "max": 0.064788818359375,
+          "median": 0,
+          "p99": 0.000274658203125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 4.172325134277344e-7,
+          "median": 0,
+          "p99": 2.384185791015625e-7,
+          "n": 12554
+         },
+         "soot": {
+          "max": 3.497277134556498e-9,
+          "median": 0,
+          "p99": 1.4199680493931499e-11,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0.001922607421875,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.0002617835998535156,
+          "median": 0,
+          "p99": 0.0000011920928955078125,
+          "n": 12554
+         },
+         "v": {
+          "max": 0.23001476749777794,
+          "median": 0.000008985769279674233,
+          "p99": 0.062001682817935944,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 0.001953125,
+          "median": 0.000030517578125,
+          "p99": 0.000030517578125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 4.470348358154297e-8,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "soot": {
+          "max": 1.0345502232667059e-10,
+          "median": 0,
+          "p99": 5.314459809724337e-12,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0.00006103515625,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.000007867813110351562,
+          "median": 1.1920928955078125e-7,
+          "p99": 1.1920928955078125e-7,
+          "n": 12554
+         },
+         "v": {
+          "max": 0.08777084201574326,
+          "median": 0.00002534015402488876,
+          "p99": 0.02917987760156393,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       },
+       {
+        "step": 100,
+        "TmaxC": 99.87209472656252,
+        "sootMax": 0.000006539943115058122,
+        "o2Min": 0.012188291177153587,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 20,
+         "gpu": 20
+        },
+        "gpu": {
+         "T": {
+          "max": 6.255035400390625,
+          "median": 0.00006103515625,
+          "p99": 0.01312255859375,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0.025785714387893677,
+          "median": 4.470348358154297e-8,
+          "p99": 0.00004526972770690918,
+          "n": 12554
+         },
+         "soot": {
+          "max": 0.0000019669039925673815,
+          "median": 3.044363683530778e-31,
+          "p99": 1.0879629697146953e-8,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0.9818115234375,
+          "median": 0,
+          "p99": 0.00079345703125,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.08221149444580078,
+          "median": 2.384185791015625e-7,
+          "p99": 0.00018143653869628906,
+          "n": 12554
+         },
+         "v": {
+          "max": 3.1389143466949463,
+          "median": 0.02842699084430933,
+          "p99": 1.417330801486969,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 7.712860107421875,
+          "median": 0.000030517578125,
+          "p99": 0.011932373046875,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0.029084086418151855,
+          "median": 0,
+          "p99": 0.000036075711250305176,
+          "n": 12554
+         },
+         "soot": {
+          "max": 0.0000013078717344683355,
+          "median": 1.589947502762327e-28,
+          "p99": 7.241750810127456e-9,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 1.00927734375,
+          "median": 0,
+          "p99": 0.00067138671875,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.06767505407333374,
+          "median": 1.1920928955078125e-7,
+          "p99": 0.0001519918441772461,
+          "n": 12554
+         },
+         "v": {
+          "max": 2.7706366777420044,
+          "median": 0.04103586636483669,
+          "p99": 1.5256181359291077,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       },
+       {
+        "step": 200,
+        "TmaxC": 156.35506591796877,
+        "sootMax": 0.00026035442715510726,
+        "o2Min": 0.02314792387187481,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 30,
+         "gpu": 18
+        },
+        "gpu": {
+         "T": {
+          "max": 18.538665771484375,
+          "median": 0.00018310546875,
+          "p99": 1.173858642578125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0.055443376302719116,
+          "median": 2.2351741790771484e-7,
+          "p99": 0.005285099148750305,
+          "n": 12554
+         },
+         "soot": {
+          "max": 0.00011098472168669105,
+          "median": 1.9325727541701088e-14,
+          "p99": 3.767564038525961e-7,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 1.8336181640625,
+          "median": 0,
+          "p99": 0.04730224609375,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.18319416046142578,
+          "median": 7.152557373046875e-7,
+          "p99": 0.020237088203430176,
+          "n": 12554
+         },
+         "v": {
+          "max": 3.2058045864105225,
+          "median": 0.11125852167606354,
+          "p99": 1.8222531080245972,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 10.205169677734375,
+          "median": 0.000030517578125,
+          "p99": 1.422271728515625,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0.03629976511001587,
+          "median": 0,
+          "p99": 0.006163597106933594,
+          "n": 12554
+         },
+         "soot": {
+          "max": 0.000029272327083162963,
+          "median": 1.9861540255343424e-14,
+          "p99": 2.9247632937767776e-7,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 5.587799072265625,
+          "median": 0,
+          "p99": 0.052337646484375,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.1326533555984497,
+          "median": 1.1920928955078125e-7,
+          "p99": 0.024201035499572754,
+          "n": 12554
+         },
+         "v": {
+          "max": 2.912184238433838,
+          "median": 0.11482623964548111,
+          "p99": 1.760749101638794,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       }
+      ]
+     },
+     {
+      "label": "flame-front particles on, radiation off",
+      "rows": [
+       {
+        "step": 1,
+        "TmaxC": 20.763696289062523,
+        "sootMax": 6.973802646470517e-10,
+        "o2Min": 0.23199991881847382,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 4,
+         "gpu": 4
+        },
+        "gpu": {
+         "T": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "O2": {
+          "max": 2.9802322387695312e-8,
+          "median": 0,
+          "p99": 1.4901161193847656e-8,
+          "n": 12554
+         },
+         "soot": {
+          "max": 2.4424906541753444e-15,
+          "median": 0,
+          "p99": 2.636779683484747e-16,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 2.384185791015625e-7,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "v": {
+          "max": 4.881033177639438e-8,
+          "median": 3.082631394590862e-8,
+          "p99": 4.4580783509218236e-8,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 0.000030517578125,
+          "median": 0.000030517578125,
+          "p99": 0.000030517578125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "soot": {
+          "max": 5.551115123125783e-17,
+          "median": 0,
+          "p99": 6.938893903907228e-18,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 1.1920928955078125e-7,
+          "median": 1.1920928955078125e-7,
+          "p99": 1.1920928955078125e-7,
+          "n": 12554
+         },
+         "v": {
+          "max": 1.1683559719699588e-7,
+          "median": 7.378787714173995e-8,
+          "p99": 1.0671147165908224e-7,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       },
+       {
+        "step": 10,
+        "TmaxC": 30.498223876953148,
+        "sootMax": 1.4187272689980546e-8,
+        "o2Min": 0.2319984883069992,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 4,
+         "gpu": 4
+        },
+        "gpu": {
+         "T": {
+          "max": 0.000152587890625,
+          "median": 0,
+          "p99": 0.00006103515625,
+          "n": 12554
+         },
+         "O2": {
+          "max": 1.341104507446289e-7,
+          "median": 0,
+          "p99": 1.1920928955078125e-7,
+          "n": 12554
+         },
+         "soot": {
+          "max": 1.687538997430238e-14,
+          "median": 0,
+          "p99": 2.4424906541753444e-15,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 7.152557373046875e-7,
+          "median": 0,
+          "p99": 2.384185791015625e-7,
+          "n": 12554
+         },
+         "v": {
+          "max": 0.0000012199379852972925,
+          "median": 1.0415222106986757e-7,
+          "p99": 6.225043606700176e-7,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 0.000030517578125,
+          "median": 0.000030517578125,
+          "p99": 0.000030517578125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "soot": {
+          "max": 2.7755575615628914e-16,
+          "median": 0,
+          "p99": 5.551115123125783e-17,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 1.1920928955078125e-7,
+          "median": 1.1920928955078125e-7,
+          "p99": 1.1920928955078125e-7,
+          "n": 12554
+         },
+         "v": {
+          "max": 0.0000020215542235746398,
+          "median": 9.812580969992268e-8,
+          "p99": 0.0000012314412174418976,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       },
+       {
+        "step": 50,
+        "TmaxC": 74.41472778320315,
+        "sootMax": 0.0000026490033633308485,
+        "o2Min": 0.23172174394130707,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 4,
+         "gpu": 4
+        },
+        "gpu": {
+         "T": {
+          "max": 0.064788818359375,
+          "median": 0,
+          "p99": 0.000274658203125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 4.172325134277344e-7,
+          "median": 0,
+          "p99": 2.384185791015625e-7,
+          "n": 12554
+         },
+         "soot": {
+          "max": 3.497277134556498e-9,
+          "median": 0,
+          "p99": 1.4199680493931499e-11,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0.001922607421875,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.0002617835998535156,
+          "median": 0,
+          "p99": 0.0000011920928955078125,
+          "n": 12554
+         },
+         "v": {
+          "max": 0.23001476749777794,
+          "median": 0.000008985769279674233,
+          "p99": 0.062001682817935944,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 0.001953125,
+          "median": 0.000030517578125,
+          "p99": 0.000030517578125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 4.470348358154297e-8,
+          "median": 0,
+          "p99": 0,
+          "n": 12554
+         },
+         "soot": {
+          "max": 1.0345502232667059e-10,
+          "median": 0,
+          "p99": 5.314459809724337e-12,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0.00006103515625,
+          "median": 0,
+          "p99": 0,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.000007867813110351562,
+          "median": 1.1920928955078125e-7,
+          "p99": 1.1920928955078125e-7,
+          "n": 12554
+         },
+         "v": {
+          "max": 0.08777084201574326,
+          "median": 0.00002534015402488876,
+          "p99": 0.02917987760156393,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       },
+       {
+        "step": 100,
+        "TmaxC": 99.87209472656252,
+        "sootMax": 0.000006539943115058122,
+        "o2Min": 0.012188291177153587,
+        "particles": {
+         "cpu": 0,
+         "gpu": 0
+        },
+        "sweeps": {
+         "cpu": 20,
+         "gpu": 20
+        },
+        "gpu": {
+         "T": {
+          "max": 6.255035400390625,
+          "median": 0.00006103515625,
+          "p99": 0.01312255859375,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0.025785714387893677,
+          "median": 4.470348358154297e-8,
+          "p99": 0.00004526972770690918,
+          "n": 12554
+         },
+         "soot": {
+          "max": 0.0000019669039925673815,
+          "median": 3.044363683530778e-31,
+          "p99": 1.0879629697146953e-8,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 0.9818115234375,
+          "median": 0,
+          "p99": 0.00079345703125,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.08221149444580078,
+          "median": 2.384185791015625e-7,
+          "p99": 0.00018143653869628906,
+          "n": 12554
+         },
+         "v": {
+          "max": 3.1389143466949463,
+          "median": 0.02842699084430933,
+          "p99": 1.417330801486969,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 7.712860107421875,
+          "median": 0.000030517578125,
+          "p99": 0.011932373046875,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0.029084086418151855,
+          "median": 0,
+          "p99": 0.000036075711250305176,
+          "n": 12554
+         },
+         "soot": {
+          "max": 0.0000013078717344683355,
+          "median": 1.589947502762327e-28,
+          "p99": 7.241750810127456e-9,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 1.00927734375,
+          "median": 0,
+          "p99": 0.00067138671875,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.06767505407333374,
+          "median": 1.1920928955078125e-7,
+          "p99": 0.0001519918441772461,
+          "n": 12554
+         },
+         "v": {
+          "max": 2.7706366777420044,
+          "median": 0.04103586636483669,
+          "p99": 1.5256181359291077,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       },
+       {
+        "step": 200,
+        "TmaxC": 156.35506591796877,
+        "sootMax": 0.00026035442715510726,
+        "o2Min": 0.02314792387187481,
+        "particles": {
+         "cpu": 6,
+         "gpu": 6
+        },
+        "sweeps": {
+         "cpu": 30,
+         "gpu": 18
+        },
+        "gpu": {
+         "T": {
+          "max": 18.538665771484375,
+          "median": 0.00018310546875,
+          "p99": 1.173858642578125,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0.055443376302719116,
+          "median": 2.2351741790771484e-7,
+          "p99": 0.005285099148750305,
+          "n": 12554
+         },
+         "soot": {
+          "max": 0.00011098472168669105,
+          "median": 1.9325727541701088e-14,
+          "p99": 3.767564038525961e-7,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 1.8336181640625,
+          "median": 0,
+          "p99": 0.04730224609375,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.18319416046142578,
+          "median": 7.152557373046875e-7,
+          "p99": 0.020237088203430176,
+          "n": 12554
+         },
+         "v": {
+          "max": 3.2058045864105225,
+          "median": 0.11125852167606354,
+          "p99": 1.8222531080245972,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        },
+        "twin": {
+         "T": {
+          "max": 10.205169677734375,
+          "median": 0.000030517578125,
+          "p99": 1.422271728515625,
+          "n": 12554
+         },
+         "O2": {
+          "max": 0.03629976511001587,
+          "median": 0,
+          "p99": 0.006163597106933594,
+          "n": 12554
+         },
+         "soot": {
+          "max": 0.000029272327083162963,
+          "median": 1.9861540255343424e-14,
+          "p99": 2.9247632937767776e-7,
+          "n": 12554
+         },
+         "Ts": {
+          "max": 5.587799072265625,
+          "median": 0,
+          "p99": 0.052337646484375,
+          "n": 2829
+         },
+         "rho": {
+          "max": 0.1326533555984497,
+          "median": 1.1920928955078125e-7,
+          "p99": 0.024201035499572754,
+          "n": 12554
+         },
+         "v": {
+          "max": 2.912184238433838,
+          "median": 0.11482623964548111,
+          "p99": 1.760749101638794,
+          "n": 15456
+         },
+         "kindMismatch": 0
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "onestep": {
+   "adapter": {
+    "vendor": "intel",
+    "architecture": "gen-12lp",
+    "description": "",
+    "fallback": false
+   },
+   "compileMs": 407.7999999523163,
+   "onestep": {
+    "cells": 17732,
+    "rows": [
+     {
+      "step": 100,
+      "releasedJ": {
+       "cpu": 163.93164369378792,
+       "gpu": 163.9322967529297
+      },
+      "sweeps": {
+       "cpu": 22,
+       "gpu": 22
+      },
+      "gpu": {
+       "T": 0.02203369140625,
+       "Trel": 0.00007266970060989203,
+       "Ts": 0.001251220703125,
+       "Tsrel": 0.000004088869687822778,
+       "rho": 0.00007267468792089041,
+       "O2": 1.341104507446289e-7,
+       "soot": 1.862645149230957e-8
+      },
+      "twin": {
+       "T": 0.00006103515625,
+       "Trel": 1.7850883890978583e-7
+      }
+     },
+     {
+      "step": 400,
+      "releasedJ": {
+       "cpu": 107.23064541547501,
+       "gpu": 107.23574829101562
+      },
+      "sweeps": {
+       "cpu": 25,
+       "gpu": 25
+      },
+      "gpu": {
+       "T": 0.317138671875,
+       "Trel": 0.00041189903051524953,
+       "Ts": 0.0115966796875,
+       "Tsrel": 0.00001506555140354245,
+       "rho": 0.0004118653208319982,
+       "O2": 1.4901161193847656e-7,
+       "soot": 5.21540641784668e-8
+      },
+      "twin": {
+       "T": 0.00006103515625,
+       "Trel": 1.674186274317765e-7
+      }
+     }
+    ],
+    "ducts": 0
+   }
+  },
+  "full": {
+   "adapter": {
+    "vendor": "intel",
+    "architecture": "gen-12lp",
+    "description": "",
+    "fallback": false
+   },
+   "compileMs": 429.5,
+   "full": {
+    "cells": 14784,
+    "nodes": 92,
+    "frames": 12,
+    "horizon": 60,
+    "released": {
+     "cpu": 42764.20846150726,
+     "gpu": 45843.814420342445
+    },
+    "burnt": {
+     "cpu": 0.002443669054943273,
+     "gpu": 0.0026196465015271286
+    },
+    "radiated": {
+     "cpu": 7902.658502009033,
+     "gpu": 15480.953720092773
+    },
+    "peakHrr": {
+     "cpu": 2.6749212741851807,
+     "gpu": 2.500852584838867
+    },
+    "nodeT": {
+     "rms": 1.221612490084539,
+     "correlation": 0.8342898820665048
+    },
+    "extras": {
+     "soot": {
+      "rms": 470.9448254654171,
+      "correlation": 0.8686743988834791,
+      "meanCpu": 350.2297706237758,
+      "meanGpu": 391.1442729461888
+     },
+     "co2": {
+      "rms": 0.008461619416265964,
+      "correlation": 0.8743603014841448,
+      "meanCpu": 0.009177784913469609,
+      "meanGpu": 0.011875777808570267
+     },
+     "o2": {
+      "rms": 0.14917907238035627,
+      "correlation": 0.884231542376302,
+      "meanCpu": 20.717694054479185,
+      "meanGpu": 20.67604718864828
+     },
+     "co": {
+      "rms": 0.41879724916597744,
+      "correlation": 0.8743603588902037,
+      "meanCpu": 0.45424374143721863,
+      "meanGpu": 0.5877772304099531
+     }
+    },
+    "detectors": {
+     "count": 9,
+     "vis": {
+      "rms": 12.514241938555397,
+      "correlation": 0.9644238225179126,
+      "meanCpu": 66.76002143171651,
+      "meanGpu": 63.63634823455855
+     },
+     "firstCpu": 45,
+     "firstGpu": 45
+    },
+    "smokyAgreement": 0.9619565217391305,
+    "untenable": {
+     "cpu": 82,
+     "gpu": 81,
+     "medianAbsDiff": 0,
+     "maxAbsDiff": 10
+    },
+    "ms": {
+     "cpu": 23460.699999809265,
+     "gpu": 2077.9000000953674
+    },
+    "series": [
+     {
+      "time": 5,
+      "hrrCpu": 0.018592799082398415,
+      "hrrGpu": 0.018592868000268936,
+      "meanTCpu": 19.999994651131008,
+      "meanTGpu": 20.000006634256113,
+      "maxTCpu": 20,
+      "maxTGpu": 20.000457763671875,
+      "smokyCpu": 0,
+      "smokyGpu": 0,
+      "partsCpu": 0,
+      "partsGpu": 0
+     },
+     {
+      "time": 10,
+      "hrrCpu": 0.16861768066883087,
+      "hrrGpu": 0.16977578401565552,
+      "meanTCpu": 20.000050710595172,
+      "meanTGpu": 20.001957437266473,
+      "maxTCpu": 20.001123428344727,
+      "maxTGpu": 20.02947998046875,
+      "smokyCpu": 0,
+      "smokyGpu": 0,
+      "partsCpu": 0,
+      "partsGpu": 0
+     },
+     {
+      "time": 15,
+      "hrrCpu": 0.01847597397863865,
+      "hrrGpu": 0.01836683787405491,
+      "meanTCpu": 20.00479221343994,
+      "meanTGpu": 20.00318477464759,
+      "maxTCpu": 20.100366592407227,
+      "maxTGpu": 20.025360107421875,
+      "smokyCpu": 0,
+      "smokyGpu": 0,
+      "partsCpu": 0,
+      "partsGpu": 0
+     },
+     {
+      "time": 20,
+      "hrrCpu": 0.3447398543357849,
+      "hrrGpu": 0.35520797967910767,
+      "meanTCpu": 20.017217843428902,
+      "meanTGpu": 20.0730444866678,
+      "maxTCpu": 20.05864906311035,
+      "maxTGpu": 20.863922119140625,
+      "smokyCpu": 0,
+      "smokyGpu": 0,
+      "partsCpu": 12,
+      "partsGpu": 12
+     },
+     {
+      "time": 25,
+      "hrrCpu": 1.0319111347198486,
+      "hrrGpu": 0.9230613112449646,
+      "meanTCpu": 20.14770404152248,
+      "meanTGpu": 20.172272391941238,
+      "maxTCpu": 22.585229873657227,
+      "maxTGpu": 21.0357666015625,
+      "smokyCpu": 0,
+      "smokyGpu": 0,
+      "partsCpu": 0,
+      "partsGpu": 0
+     },
+     {
+      "time": 30,
+      "hrrCpu": 0.7756926417350769,
+      "hrrGpu": 0.7453671097755432,
+      "meanTCpu": 20.175853521927543,
+      "meanTGpu": 20.274615412173063,
+      "maxTCpu": 21.025293350219727,
+      "maxTGpu": 21.3802490234375,
+      "smokyCpu": 0,
+      "smokyGpu": 0,
+      "partsCpu": 0,
+      "partsGpu": 0
+     },
+     {
+      "time": 35,
+      "hrrCpu": 0.5832875967025757,
+      "hrrGpu": 0.7686923742294312,
+      "meanTCpu": 20.184191123298977,
+      "meanTGpu": 20.396387514860734,
+      "maxTCpu": 20.73491859436035,
+      "maxTGpu": 22.34173583984375,
+      "smokyCpu": 0,
+      "smokyGpu": 12,
+      "partsCpu": 0,
+      "partsGpu": 0
+     },
+     {
+      "time": 40,
+      "hrrCpu": 0.4630366861820221,
+      "hrrGpu": 0.6989713311195374,
+      "meanTCpu": 20.54671872180441,
+      "meanTGpu": 20.94824550462806,
+      "maxTCpu": 25.45073890686035,
+      "maxTGpu": 30.3284912109375,
+      "smokyCpu": 43,
+      "smokyGpu": 50,
+      "partsCpu": 0,
+      "partsGpu": 443
+     },
+     {
+      "time": 45,
+      "hrrCpu": 0.7123568654060364,
+      "hrrGpu": 0.6474786996841431,
+      "meanTCpu": 20.814124024432637,
+      "meanTGpu": 20.91649329144022,
+      "maxTCpu": 24.073877334594727,
+      "maxTGpu": 22.65826416015625,
+      "smokyCpu": 70,
+      "smokyGpu": 79,
+      "partsCpu": 0,
+      "partsGpu": 0
+     },
+     {
+      "time": 50,
+      "hrrCpu": 0.5912806987762451,
+      "hrrGpu": 0.45059865713119507,
+      "meanTCpu": 21.954481270002283,
+      "meanTGpu": 22.118420476498812,
+      "maxTCpu": 33.25139617919922,
+      "maxTGpu": 37.64520263671875,
+      "smokyCpu": 80,
+      "smokyGpu": 80,
+      "partsCpu": 302,
+      "partsGpu": 276
+     },
+     {
+      "time": 55,
+      "hrrCpu": 1.1699285507202148,
+      "hrrGpu": 1.8717974424362183,
+      "meanTCpu": 23.015312070431918,
+      "meanTGpu": 23.483010333517324,
+      "maxTCpu": 39.434776306152344,
+      "maxTGpu": 38.81451416015625,
+      "smokyCpu": 81,
+      "smokyGpu": 80,
+      "partsCpu": 260,
+      "partsGpu": 303
+     },
+     {
+      "time": 60,
+      "hrrCpu": 2.6749212741851807,
+      "hrrGpu": 2.500852584838867,
+      "meanTCpu": 22.988971502884574,
+      "meanTGpu": 23.77926901112432,
+      "maxTCpu": 31.36663246154785,
+      "maxTGpu": 33.84844970703125,
+      "smokyCpu": 82,
+      "smokyGpu": 81,
+      "partsCpu": 560,
+      "partsGpu": 553
+     }
+    ],
+    "inGrid": {
+     "cpu": 86,
+     "gpu": 86
+    }
+   }
+  },
+  "timing": {
+   "adapter": {
+    "vendor": "intel",
+    "architecture": "gen-12lp",
+    "description": "",
+    "fallback": false
+   },
+   "compileMs": 440.80000019073486,
+   "timing": [
+    {
+     "label": "30k",
+     "grid": [
+      35,
+      26,
+      30
+     ],
+     "cells": 27300,
+     "h": 0.1889568,
+     "cpuMs": 51.039999985694884,
+     "cpuSteps": 10,
+     "gpuMs": 2.45,
+     "gpuSteps": 50,
+     "encodeMsPerStep": 0.11000000476837159,
+     "gpuGridOnlyMs": 2.762000002861023,
+     "gpuParticlesAtEnd": 0
+    },
+    {
+     "label": "200k",
+     "grid": [
+      70,
+      46,
+      58
+     ],
+     "cells": 186760,
+     "h": 0.08569121343897607,
+     "cpuMs": 263.8666666348775,
+     "cpuSteps": 3,
+     "gpuMs": 12.526000003814698,
+     "gpuSteps": 50,
+     "encodeMsPerStep": 0.04,
+     "gpuGridOnlyMs": 11.987999997138978,
+     "gpuParticlesAtEnd": 0
+    }
+   ]
+  }
+ },
+ "oldAgainstNew": {
+  "note": "scratch tool old-new-compare.mjs: class A design fire, 780 MJ/m2, backend-bench's fire origin, the CPU budget's grid on both backends; untenable at 60 C or visibility 10 m; smoky: visibility below 10 m at any frame",
+  "cases": {
+   "duplex": {
+    "cpu-old": {
+     "grid": [
+      28,
+      26,
+      36
+     ],
+     "cells": 26208,
+     "cell": 0.37,
+     "dt": 0.1,
+     "vorticity": 10,
+     "wallS": 113,
+     "realTime": 2.66,
+     "frames": 60,
+     "releasedMJ": 109.43,
+     "burntKg": 0.23,
+     "peakKw": 1037,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 532,
+     "maxGasAt": 105,
+     "untenable": 12,
+     "firstUntenable": 35,
+     "smokyNodes": 12,
+     "firstSmoke": 40,
+     "nodes": 1540,
+     "health": "no guard (old solver)",
+     "hrr": [
+      0.2,
+      0.8,
+      1.9,
+      3.7,
+      6,
+      9,
+      12.5,
+      16.6,
+      21.2,
+      26.5,
+      32.4,
+      38.8,
+      45.9,
+      53.7,
+      62.3,
+      71.3,
+      80.8,
+      91.7,
+      130.2,
+      252.4,
+      282.9,
+      298.5,
+      240.7,
+      215.1,
+      203.1,
+      208.2,
+      220,
+      230.8,
+      250.1,
+      263.5,
+      279.6,
+      296,
+      314.4,
+      332.9,
+      352.3,
+      372.9,
+      393.4,
+      415.2,
+      437.2,
+      460.2,
+      483,
+      506.8,
+      531.6,
+      556.2,
+      582.7,
+      608,
+      634.9,
+      661.8,
+      689.4,
+      718.1,
+      747.7,
+      779.5,
+      807.9,
+      838.8,
+      870.1,
+      902.4,
+      935,
+      968.5,
+      1002.3,
+      1036.8
+     ]
+    },
+    "cpu-new": {
+     "grid": [
+      28,
+      26,
+      36
+     ],
+     "cells": 26208,
+     "cell": 0.37,
+     "dt": 0.1,
+     "vorticity": 6,
+     "wallS": 213.5,
+     "realTime": 1.41,
+     "frames": 60,
+     "releasedMJ": 108.03,
+     "burntKg": 0.15,
+     "peakKw": 1038,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 507,
+     "maxGasAt": 110,
+     "untenable": 12,
+     "firstUntenable": 35,
+     "smokyNodes": 12,
+     "firstSmoke": 40,
+     "nodes": 1540,
+     "health": {
+      "ok": true,
+      "maxSpeed": 3.69,
+      "substeps": 2
+     },
+     "hrr": [
+      0.2,
+      0.8,
+      1.9,
+      3.7,
+      6,
+      9,
+      12.5,
+      16.6,
+      21.2,
+      26.5,
+      32.4,
+      38.9,
+      46,
+      53.9,
+      62.4,
+      71.3,
+      80.8,
+      92.4,
+      133.3,
+      196.9,
+      207.6,
+      208.8,
+      217.3,
+      196.4,
+      198.4,
+      206.1,
+      217.2,
+      230.6,
+      245.8,
+      261.7,
+      278.8,
+      297.8,
+      320.3,
+      333.3,
+      352.2,
+      372.2,
+      393.1,
+      414.7,
+      436.4,
+      459,
+      482,
+      505.7,
+      530,
+      555,
+      580.7,
+      606.9,
+      633.7,
+      661.2,
+      689.2,
+      717.7,
+      747.2,
+      777.4,
+      807.4,
+      838.5,
+      870.2,
+      903.2,
+      935.7,
+      969.4,
+      1003.2,
+      1038
+     ]
+    },
+    "gpu-old": {
+     "grid": [
+      28,
+      26,
+      36
+     ],
+     "cells": 26208,
+     "cell": 0.37,
+     "dt": 0.1,
+     "vorticity": 10,
+     "wallS": 9.7,
+     "realTime": 30.86,
+     "frames": 60,
+     "releasedMJ": 109.48,
+     "burntKg": 0.23,
+     "peakKw": 1037,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 542,
+     "maxGasAt": 295,
+     "untenable": 12,
+     "firstUntenable": 35,
+     "smokyNodes": 12,
+     "firstSmoke": 40,
+     "nodes": 1540,
+     "health": "no guard (old solver)",
+     "hrr": [
+      0.2,
+      0.8,
+      1.9,
+      3.7,
+      6,
+      9,
+      12.5,
+      16.6,
+      21.2,
+      26.5,
+      32.4,
+      38.8,
+      45.9,
+      53.7,
+      62.3,
+      71.3,
+      80.8,
+      91.5,
+      133.3,
+      270.3,
+      301.2,
+      283.4,
+      231.5,
+      206.8,
+      206.4,
+      209.3,
+      218.9,
+      230.9,
+      248.5,
+      264.3,
+      279.7,
+      296.5,
+      314.4,
+      333.2,
+      352.7,
+      372.4,
+      393.5,
+      414.9,
+      436.6,
+      459.9,
+      483.2,
+      506.3,
+      531.2,
+      556.6,
+      582,
+      608.2,
+      635.4,
+      662.7,
+      689.3,
+      718.6,
+      747.6,
+      777.5,
+      807.9,
+      839.1,
+      870.3,
+      902.5,
+      935.2,
+      968.4,
+      1002.6,
+      1037.1
+     ]
+    },
+    "gpu-new": {
+     "grid": [
+      28,
+      26,
+      36
+     ],
+     "cells": 26208,
+     "cell": 0.37,
+     "dt": 0.1,
+     "vorticity": 6,
+     "wallS": 16.6,
+     "realTime": 18.11,
+     "frames": 60,
+     "releasedMJ": 108.02,
+     "burntKg": 0.15,
+     "peakKw": 1038,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 498,
+     "maxGasAt": 300,
+     "untenable": 12,
+     "firstUntenable": 40,
+     "smokyNodes": 12,
+     "firstSmoke": 45,
+     "nodes": 1540,
+     "health": {
+      "ok": true,
+      "maxSpeed": 3.69,
+      "substeps": 2
+     },
+     "hrr": [
+      0.2,
+      0.8,
+      1.9,
+      3.7,
+      6,
+      9,
+      12.5,
+      16.6,
+      21.2,
+      26.5,
+      32.4,
+      38.8,
+      46,
+      53.9,
+      62.4,
+      71.3,
+      80.8,
+      96.2,
+      134.4,
+      210.8,
+      201.4,
+      209.8,
+      210.1,
+      193,
+      196.6,
+      205.1,
+      216.5,
+      230.1,
+      245.4,
+      261.5,
+      278.7,
+      297.8,
+      320.1,
+      333.1,
+      352,
+      372.2,
+      393,
+      414.6,
+      436.4,
+      459,
+      482,
+      505.8,
+      530,
+      555,
+      580.7,
+      606.9,
+      633.7,
+      661.1,
+      689.2,
+      717.7,
+      747.2,
+      777.4,
+      807.4,
+      838.5,
+      870.2,
+      903.1,
+      935.7,
+      969.3,
+      1003.2,
+      1037.9
+     ]
+    }
+   },
+   "office": {
+    "cpu-old": {
+     "grid": [
+      34,
+      24,
+      34
+     ],
+     "cells": 27744,
+     "cell": 0.4,
+     "dt": 0.1,
+     "vorticity": 10,
+     "wallS": 131.3,
+     "realTime": 2.28,
+     "frames": 60,
+     "releasedMJ": 130.69,
+     "burntKg": 1.41,
+     "peakKw": 1912,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 705,
+     "maxGasAt": 205,
+     "untenable": 451,
+     "firstUntenable": 75,
+     "smokyNodes": 451,
+     "firstSmoke": 80,
+     "nodes": 17470,
+     "health": "no guard (old solver)",
+     "hrr": [
+      0.2,
+      0.8,
+      2,
+      3.7,
+      6.1,
+      9,
+      12.5,
+      16.6,
+      21.3,
+      26.5,
+      32.4,
+      38.8,
+      45.8,
+      53.5,
+      61.6,
+      70.4,
+      79.8,
+      89.7,
+      100.3,
+      111.4,
+      123.1,
+      135.4,
+      148.3,
+      161.8,
+      175.8,
+      190.5,
+      205.9,
+      221.8,
+      238.2,
+      255,
+      272.6,
+      290.8,
+      309.6,
+      328.9,
+      348.8,
+      369.3,
+      390.3,
+      412,
+      434.2,
+      457,
+      480.4,
+      504.5,
+      529.3,
+      555,
+      581.7,
+      608.9,
+      637.3,
+      756.8,
+      1004.1,
+      932.2,
+      1077.2,
+      1053.9,
+      1057.6,
+      1534.2,
+      1326.6,
+      1222.9,
+      1609.5,
+      1238,
+      1264.9,
+      1911.8
+     ]
+    },
+    "cpu-new": {
+     "grid": [
+      34,
+      24,
+      34
+     ],
+     "cells": 27744,
+     "cell": 0.4,
+     "dt": 0.1,
+     "vorticity": 6,
+     "wallS": 262.9,
+     "realTime": 1.14,
+     "frames": 60,
+     "releasedMJ": 122.03,
+     "burntKg": 0.93,
+     "peakKw": 1277,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 793,
+     "maxGasAt": 295,
+     "untenable": 189,
+     "firstUntenable": 60,
+     "smokyNodes": 189,
+     "firstSmoke": 65,
+     "nodes": 17470,
+     "health": {
+      "ok": true,
+      "maxSpeed": 10.81,
+      "substeps": 4
+     },
+     "hrr": [
+      0.2,
+      0.8,
+      2,
+      3.7,
+      6.1,
+      9,
+      12.5,
+      16.6,
+      21.3,
+      26.5,
+      32.4,
+      38.8,
+      45.8,
+      53.5,
+      61.6,
+      70.4,
+      79.8,
+      89.7,
+      100.3,
+      111.4,
+      123.1,
+      135.4,
+      148.3,
+      161.7,
+      175.8,
+      190.5,
+      205.8,
+      221.6,
+      238,
+      255,
+      272.6,
+      290.7,
+      309.4,
+      328.7,
+      348.6,
+      369.1,
+      390.1,
+      411.8,
+      434.9,
+      459.4,
+      518.6,
+      564,
+      586.7,
+      608.3,
+      695,
+      714.2,
+      901.9,
+      764.1,
+      983.9,
+      792.3,
+      1050.4,
+      930,
+      965.6,
+      1061.8,
+      1063,
+      1122.5,
+      1136.8,
+      1176.6,
+      1240.5,
+      1277.5
+     ]
+    },
+    "gpu-old": {
+     "grid": [
+      34,
+      24,
+      34
+     ],
+     "cells": 27744,
+     "cell": 0.4,
+     "dt": 0.1,
+     "vorticity": 10,
+     "wallS": 10.5,
+     "realTime": 28.59,
+     "frames": 60,
+     "releasedMJ": 126.32,
+     "burntKg": 1.17,
+     "peakKw": 1774,
+     "peakAt": 285,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 651,
+     "maxGasAt": 135,
+     "untenable": 469,
+     "firstUntenable": 65,
+     "smokyNodes": 469,
+     "firstSmoke": 70,
+     "nodes": 17470,
+     "health": "no guard (old solver)",
+     "hrr": [
+      0.2,
+      0.8,
+      2,
+      3.7,
+      6.1,
+      9,
+      12.5,
+      16.6,
+      21.3,
+      26.5,
+      32.4,
+      38.8,
+      45.8,
+      53.5,
+      61.6,
+      70.4,
+      79.8,
+      89.7,
+      100.3,
+      111.4,
+      123.1,
+      135.4,
+      148.3,
+      161.7,
+      175.8,
+      190.5,
+      205.8,
+      221.7,
+      238.1,
+      255,
+      272.6,
+      290.8,
+      309.6,
+      328.9,
+      348.8,
+      369.3,
+      390.3,
+      412,
+      434.2,
+      457,
+      480.4,
+      504.4,
+      529,
+      554.3,
+      580.3,
+      606.9,
+      634.9,
+      665.4,
+      702,
+      929.9,
+      992.8,
+      1072.8,
+      1323.4,
+      1112.3,
+      1183.3,
+      1274.5,
+      1774.3,
+      1269,
+      1440.9,
+      1382.3
+     ]
+    },
+    "gpu-new": {
+     "grid": [
+      34,
+      24,
+      34
+     ],
+     "cells": 27744,
+     "cell": 0.4,
+     "dt": 0.1,
+     "vorticity": 6,
+     "wallS": 22.5,
+     "realTime": 13.36,
+     "frames": 60,
+     "releasedMJ": 114.77,
+     "burntKg": 0.53,
+     "peakKw": 1232,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 802,
+     "maxGasAt": 130,
+     "untenable": 162,
+     "firstUntenable": 65,
+     "smokyNodes": 162,
+     "firstSmoke": 70,
+     "nodes": 17470,
+     "health": {
+      "ok": true,
+      "maxSpeed": 8.42,
+      "substeps": 3
+     },
+     "hrr": [
+      0.2,
+      0.8,
+      2,
+      3.7,
+      6.1,
+      9,
+      12.5,
+      16.6,
+      21.3,
+      26.5,
+      32.4,
+      38.8,
+      45.8,
+      53.5,
+      61.6,
+      70.4,
+      79.8,
+      89.7,
+      100.3,
+      111.4,
+      123.1,
+      135.4,
+      148.3,
+      161.8,
+      175.8,
+      190.5,
+      205.7,
+      221.6,
+      238,
+      255,
+      272.5,
+      290.7,
+      309.5,
+      328.8,
+      348.6,
+      369.2,
+      390.2,
+      411.9,
+      434.1,
+      456.9,
+      480.3,
+      504.5,
+      529.1,
+      555.2,
+      580.8,
+      632.5,
+      662.9,
+      735.6,
+      827.4,
+      808.6,
+      901.4,
+      912.3,
+      937.3,
+      938.6,
+      1044.6,
+      1116.7,
+      1112.9,
+      1087.6,
+      1103.4,
+      1232.2
+     ]
+    }
+   },
+   "clinic": {
+    "cpu-old": {
+     "grid": [
+      36,
+      24,
+      33
+     ],
+     "cells": 28512,
+     "cell": 0.37,
+     "dt": 0.1,
+     "vorticity": 10,
+     "wallS": 129.2,
+     "realTime": 2.32,
+     "frames": 60,
+     "releasedMJ": 105.31,
+     "burntKg": 0,
+     "peakKw": 1036,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 553,
+     "maxGasAt": 130,
+     "untenable": 85,
+     "firstUntenable": 90,
+     "smokyNodes": 85,
+     "firstSmoke": 95,
+     "nodes": 33654,
+     "health": "no guard (old solver)",
+     "hrr": [
+      0.1,
+      0.7,
+      1.9,
+      3.6,
+      6,
+      8.9,
+      12.4,
+      16.5,
+      21.2,
+      26.4,
+      32.3,
+      38.7,
+      45.7,
+      53.4,
+      61.5,
+      70.3,
+      79.7,
+      89.6,
+      100.2,
+      111.3,
+      123,
+      135.3,
+      148.1,
+      161.6,
+      175.6,
+      190.2,
+      205.5,
+      221.2,
+      237.6,
+      254.6,
+      272.1,
+      290.3,
+      309,
+      328.3,
+      348.2,
+      368.7,
+      389.7,
+      411.4,
+      433.6,
+      456.4,
+      479.8,
+      503.8,
+      528.4,
+      553.5,
+      579.3,
+      605.6,
+      632.5,
+      660,
+      688.1,
+      716.7,
+      746,
+      775.8,
+      806.2,
+      837.3,
+      868.8,
+      901,
+      933.8,
+      967.1,
+      1001.1,
+      1035.6
+     ]
+    },
+    "cpu-new": {
+     "grid": [
+      36,
+      24,
+      33
+     ],
+     "cells": 28512,
+     "cell": 0.37,
+     "dt": 0.1,
+     "vorticity": 6,
+     "wallS": 243.7,
+     "realTime": 1.23,
+     "frames": 60,
+     "releasedMJ": 105.31,
+     "burntKg": 0,
+     "peakKw": 1036,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 782,
+     "maxGasAt": 290,
+     "untenable": 56,
+     "firstUntenable": 65,
+     "smokyNodes": 56,
+     "firstSmoke": 70,
+     "nodes": 33654,
+     "health": {
+      "ok": true,
+      "maxSpeed": 10.71,
+      "substeps": 3
+     },
+     "hrr": [
+      0.1,
+      0.7,
+      1.9,
+      3.6,
+      6,
+      8.9,
+      12.4,
+      16.5,
+      21.2,
+      26.4,
+      32.3,
+      38.7,
+      45.7,
+      53.4,
+      61.5,
+      70.3,
+      79.7,
+      89.6,
+      100.2,
+      111.3,
+      123,
+      135.3,
+      148.1,
+      161.6,
+      175.6,
+      190.2,
+      205.5,
+      221.2,
+      237.6,
+      254.6,
+      272.1,
+      290.3,
+      309,
+      328.3,
+      348.2,
+      368.7,
+      389.7,
+      411.4,
+      433.6,
+      456.4,
+      479.8,
+      503.8,
+      528.4,
+      553.5,
+      579.3,
+      605.6,
+      632.5,
+      660,
+      688.1,
+      716.7,
+      746,
+      775.8,
+      806.2,
+      837.3,
+      868.8,
+      901,
+      933.8,
+      967.1,
+      1001.1,
+      1035.6
+     ]
+    },
+    "gpu-old": {
+     "grid": [
+      36,
+      24,
+      33
+     ],
+     "cells": 28512,
+     "cell": 0.37,
+     "dt": 0.1,
+     "vorticity": 10,
+     "wallS": 11.1,
+     "realTime": 27.11,
+     "frames": 60,
+     "releasedMJ": 105.31,
+     "burntKg": 0,
+     "peakKw": 1036,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 562,
+     "maxGasAt": 125,
+     "untenable": 85,
+     "firstUntenable": 90,
+     "smokyNodes": 85,
+     "firstSmoke": 95,
+     "nodes": 33654,
+     "health": "no guard (old solver)",
+     "hrr": [
+      0.1,
+      0.7,
+      1.9,
+      3.6,
+      6,
+      8.9,
+      12.4,
+      16.5,
+      21.2,
+      26.4,
+      32.3,
+      38.7,
+      45.7,
+      53.4,
+      61.5,
+      70.3,
+      79.7,
+      89.6,
+      100.2,
+      111.3,
+      123,
+      135.3,
+      148.1,
+      161.6,
+      175.6,
+      190.2,
+      205.5,
+      221.2,
+      237.6,
+      254.6,
+      272.1,
+      290.3,
+      309,
+      328.3,
+      348.2,
+      368.7,
+      389.7,
+      411.4,
+      433.6,
+      456.4,
+      479.8,
+      503.8,
+      528.4,
+      553.5,
+      579.3,
+      605.6,
+      632.5,
+      660,
+      688.1,
+      716.7,
+      746,
+      775.8,
+      806.2,
+      837.3,
+      868.8,
+      901,
+      933.8,
+      967.1,
+      1001.1,
+      1035.6
+     ]
+    },
+    "gpu-new": {
+     "grid": [
+      36,
+      24,
+      33
+     ],
+     "cells": 28512,
+     "cell": 0.37,
+     "dt": 0.1,
+     "vorticity": 6,
+     "wallS": 22.2,
+     "realTime": 13.53,
+     "frames": 60,
+     "releasedMJ": 105.31,
+     "burntKg": 0,
+     "peakKw": 1036,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 811,
+     "maxGasAt": 125,
+     "untenable": 48,
+     "firstUntenable": 65,
+     "smokyNodes": 48,
+     "firstSmoke": 70,
+     "nodes": 33654,
+     "health": {
+      "ok": true,
+      "maxSpeed": 7.96,
+      "substeps": 4
+     },
+     "hrr": [
+      0.1,
+      0.7,
+      1.9,
+      3.6,
+      6,
+      8.9,
+      12.4,
+      16.5,
+      21.2,
+      26.4,
+      32.3,
+      38.7,
+      45.7,
+      53.4,
+      61.5,
+      70.3,
+      79.7,
+      89.6,
+      100.2,
+      111.3,
+      123,
+      135.3,
+      148.1,
+      161.6,
+      175.6,
+      190.2,
+      205.5,
+      221.2,
+      237.6,
+      254.6,
+      272.1,
+      290.3,
+      309,
+      328.3,
+      348.2,
+      368.7,
+      389.7,
+      411.4,
+      433.6,
+      456.4,
+      479.8,
+      503.8,
+      528.4,
+      553.5,
+      579.3,
+      605.6,
+      632.5,
+      660,
+      688.1,
+      716.7,
+      746,
+      775.8,
+      806.2,
+      837.3,
+      868.8,
+      901,
+      933.8,
+      967.1,
+      1001.1,
+      1035.6
+     ]
+    }
+   },
+   "vienna": {
+    "gpu-old": {
+     "grid": [
+      34,
+      24,
+      34
+     ],
+     "cells": 27744,
+     "cell": 0.4,
+     "dt": 0.1,
+     "vorticity": 10,
+     "wallS": 10.7,
+     "realTime": 28.11,
+     "frames": 60,
+     "releasedMJ": 216.66,
+     "burntKg": 6.19,
+     "peakKw": 3817,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 1863,
+     "maxGasAt": 300,
+     "untenable": 755,
+     "firstUntenable": 25,
+     "smokyNodes": 755,
+     "firstSmoke": 30,
+     "nodes": 7835,
+     "health": "no guard (old solver)",
+     "hrr": [
+      0.2,
+      0.7,
+      1.9,
+      3.7,
+      6,
+      8.9,
+      12.4,
+      16.5,
+      21.2,
+      26.5,
+      32.4,
+      38.9,
+      46,
+      53.6,
+      61.8,
+      70.6,
+      82.2,
+      118,
+      270.3,
+      249.2,
+      212.1,
+      267.7,
+      256.6,
+      309.6,
+      303.8,
+      298.1,
+      328.1,
+      350.9,
+      334,
+      362.2,
+      453.8,
+      791.1,
+      665.9,
+      616.4,
+      635.5,
+      651.1,
+      652,
+      698.5,
+      744.7,
+      833.3,
+      819.1,
+      829.6,
+      956.9,
+      926.9,
+      965.7,
+      1020.8,
+      1097.9,
+      1183.1,
+      1242.6,
+      1239.8,
+      1291.1,
+      1334.6,
+      1356.6,
+      1470.7,
+      1562.2,
+      3809.6,
+      2144.8,
+      2444.5,
+      2932.3,
+      3816.7
+     ]
+    },
+    "gpu-new": {
+     "grid": [
+      34,
+      24,
+      34
+     ],
+     "cells": 27744,
+     "cell": 0.4,
+     "dt": 0.1,
+     "vorticity": 6,
+     "wallS": 19.3,
+     "realTime": 15.55,
+     "frames": 60,
+     "releasedMJ": 151.77,
+     "burntKg": 2.58,
+     "peakKw": 1352,
+     "peakAt": 300,
+     "fallsBelowHalfAt": null,
+     "maxGasC": 740,
+     "maxGasAt": 130,
+     "untenable": 660,
+     "firstUntenable": 20,
+     "smokyNodes": 660,
+     "firstSmoke": 25,
+     "nodes": 7835,
+     "health": {
+      "ok": true,
+      "maxSpeed": 6.51,
+      "substeps": 2
+     },
+     "hrr": [
+      0.2,
+      0.7,
+      1.9,
+      3.7,
+      6,
+      8.9,
+      12.4,
+      16.5,
+      21.2,
+      26.5,
+      32.4,
+      38.9,
+      46,
+      53.6,
+      61.8,
+      70.7,
+      81.5,
+      159.6,
+      247.2,
+      225.1,
+      233.3,
+      270.2,
+      260.6,
+      330,
+      443.4,
+      417.1,
+      406.1,
+      388,
+      364.6,
+      446.8,
+      457.4,
+      507.7,
+      587.3,
+      547.4,
+      521.2,
+      523.3,
+      528.5,
+      564.3,
+      783.6,
+      709.2,
+      723.3,
+      743.9,
+      783.2,
+      788.5,
+      806.4,
+      868.7,
+      864.5,
+      902.2,
+      951.2,
+      964.8,
+      1015.1,
+      1012.6,
+      1036.9,
+      1095.3,
+      1125.1,
+      1168.7,
+      1212,
+      1231.6,
+      1304.2,
+      1352.5
+     ]
+    }
+   }
+  }
+ },
+ "longGpuRuns": [
+  {
+   "name": "vienna",
+   "horizon": 600,
+   "grid": [
+    109,
+    27,
+    95
+   ],
+   "cell": 0.34276485375590426,
+   "frames": 120,
+   "realTime": 1.196576594363526
+  },
+  {
+   "name": "clinic",
+   "horizon": 600,
+   "grid": [
+    124,
+    29,
+    82
+   ],
+   "cell": 0.3173748645888002,
+   "frames": 120,
+   "realTime": 1.0103837134229277
+  }
+ ],
+ "freePool": {
+  "note": "suppressionSystems.test.mjs's free heptane pool (5 kg, 0.1 m2, pilot held), 150 s on 0.35 m cells; scratch check",
+  "vorticity 10, one step": {
+   "releasedMJ": 13.09,
+   "pilotMJ": 7.17,
+   "lastFourFramesKw": 322,
+   "drop": "35 to 40 s, with 16 to 17 % oxygen at the pool's node"
+  },
+  "vorticity 10, cut steps": {
+   "releasedMJ": 19.34,
+   "pilotMJ": 3.19,
+   "lastFourFramesKw": 257,
+   "drop": "115 to 120 s, oxygen at the pool's node 3 to 11 %"
+  },
+  "vorticity 6, cut steps": {
+   "releasedMJ": 19.87,
+   "pilotMJ": 3.74,
+   "lastFourFramesKw": 197,
+   "drop": "105 to 120 s, oxygen at the pool's node 2 to 9 %"
+  }
+ }
+}

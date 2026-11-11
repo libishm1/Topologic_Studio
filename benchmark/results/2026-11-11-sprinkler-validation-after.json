@@ -1,0 +1,7592 @@
+{
+ "generated": "2026-11-11T14:47:53.293Z",
+ "tool": "tools/sprinkler-validation.mjs",
+ "data": "benchmark/validation/sprinkler-tests.json",
+ "node": "v24.21.0",
+ "cpu": "Intel(R) Core(TM) i7-14700",
+ "cores": 28,
+ "jobs": 4,
+ "settings": {
+  "convections": [
+   10
+  ],
+  "cell": 0.3,
+  "ulCell": 0.5,
+  "horizonFactor": 2
+ },
+ "earlierSettings": [],
+ "wallSeconds": 881.1008710000001,
+ "results": [
+  {
+   "id": "vettori_flat/1/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 1,
+   "growth": "fast",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 105,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 32,
+    "columns": 8,
+    "layers": 4,
+    "columnHeight": 1.22,
+    "radiantFraction": 0.2,
+    "released": 16455149.999999013,
+    "qAtMeasuredFirst": 231.57199999999997
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 73,
+    "value": 3138.2,
+    "cell": 6345,
+    "position": [
+     4.73,
+     0.76,
+     1.68
+    ],
+    "readings": {
+     "maxT": 3138.2,
+     "maxSpeed": 14.5,
+     "gasHeat": 15754668,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 46.4,
+     "estimate": 48.03573103039872,
+     "late": 62.616311258280405,
+     "hrrEstimate": 249.13999938964844,
+     "hrrLate": 404.4199981689453,
+     "measuredGasC": 116,
+     "measuredSpeed": 1.21,
+     "atMeasured": {
+      "cellC": 125.28960418701172,
+      "cellSpeed": 1.4946739103524265,
+      "estimateC": 192.78768379620982,
+      "estimateSpeed": 1.4946739103524265,
+      "hrr": 221.69000244140625
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 51,
+     "estimate": 49.61770512083614,
+     "late": 61.67006638460569,
+     "hrrEstimate": 260.1199951171875,
+     "hrrLate": 391.55999755859375,
+     "measuredGasC": 114.4,
+     "measuredSpeed": 0.82,
+     "atMeasured": {
+      "cellC": 175.26046752929688,
+      "cellSpeed": 1.7236324502933544,
+      "estimateC": 248.04172017185908,
+      "estimateSpeed": 1.7236324502933544,
+      "hrr": 274.8999938964844
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 150.182,
+    "run": 35106.1458,
+    "perStep": 33.43442457142857
+   }
+  },
+  {
+   "id": "vettori_flat/1/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 1,
+   "growth": "fast",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 105,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 6848618.39999948,
+    "qAtMeasuredFirst": 100.76976
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "energy",
+    "time": 76,
+    "value": 11296408.7,
+    "cell": 5568,
+    "position": [
+     4.73,
+     0.76,
+     1.37
+    ],
+    "readings": {
+     "maxT": 2478,
+     "maxSpeed": 10.77,
+     "gasHeat": 11296409,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 46.4,
+     "estimate": 64.37710708469413,
+     "late": 69.62848463049895,
+     "hrrEstimate": 191.71619415283203,
+     "hrrLate": 222.83819580078125,
+     "measuredGasC": 116,
+     "measuredSpeed": 1.21,
+     "atMeasured": {
+      "cellC": 29.53655433654785,
+      "cellSpeed": 1.1888186540504917,
+      "estimateC": 64.56992620641643,
+      "estimateSpeed": 1.1888186540504917,
+      "hrr": 96.89939880371094
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 51,
+     "estimate": 66.78995547044491,
+     "late": 73.92533048722568,
+     "hrrEstimate": 203.8842010498047,
+     "hrrLate": 249.42060089111328,
+     "measuredGasC": 114.4,
+     "measuredSpeed": 0.82,
+     "atMeasured": {
+      "cellC": 47.48998260498047,
+      "cellSpeed": 0.40277505354237003,
+      "estimateC": 94.16788168161878,
+      "estimateSpeed": 0.6635982651321398,
+      "hrr": 119.3634033203125
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 177.74550000000002,
+    "run": 36617.3726,
+    "perStep": 34.873688190476194
+   }
+  },
+  {
+   "id": "vettori_flat/2/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 2,
+   "growth": "fast",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 95,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 24,
+    "columns": 8,
+    "layers": 3,
+    "columnHeight": 0.915,
+    "radiantFraction": 0.2,
+    "released": 14841749.99999896,
+    "qAtMeasuredFirst": 209.39999999999998
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 70,
+    "value": 3053.5,
+    "cell": 5568,
+    "position": [
+     4.73,
+     0.76,
+     1.37
+    ],
+    "readings": {
+     "maxT": 3053.5,
+     "maxSpeed": 13.24,
+     "gasHeat": 15652231,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 43.3,
+     "estimate": 42.291842503195504,
+     "late": 55.71796633633584,
+     "hrrEstimate": 204.1999969482422,
+     "hrrLate": 310.67999267578125,
+     "measuredGasC": 118,
+     "measuredSpeed": 1.63,
+     "atMeasured": {
+      "cellC": 145.06808471679688,
+      "cellSpeed": 1.8111273540939972,
+      "estimateC": 198.1281194395287,
+      "estimateSpeed": 1.8111273540939972,
+      "hrr": 206.1999969482422
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 46.3,
+     "estimate": 42.847652538386875,
+     "late": 49.60068267824614,
+     "hrrEstimate": 204.1999969482422,
+     "hrrLate": 260.1199951171875,
+     "measuredGasC": 128.5,
+     "measuredSpeed": 1.06,
+     "atMeasured": {
+      "cellC": 255.18441772460938,
+      "cellSpeed": 1.626885755948242,
+      "estimateC": 255.18441772460938,
+      "estimateSpeed": 1.626885755948242,
+      "hrr": 221.69000244140625
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 191.12219999999996,
+    "run": 35202.954300000005,
+    "perStep": 37.05574136842106
+   }
+  },
+  {
+   "id": "vettori_flat/2/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 2,
+   "growth": "fast",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 95,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 9923144.399999334,
+    "qAtMeasuredFirst": 87.75468
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 86,
+    "value": 3237.1,
+    "cell": 5567,
+    "position": [
+     4.42,
+     0.76,
+     1.37
+    ],
+    "readings": {
+     "maxT": 3237.1,
+     "maxSpeed": 12.52,
+     "gasHeat": 13614398,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 43.3,
+     "estimate": 65.74505882023752,
+     "late": 75.4793715161913,
+     "hrrEstimate": 197.7533950805664,
+     "hrrLate": 263.2733917236328,
+     "measuredGasC": 118,
+     "measuredSpeed": 1.63,
+     "atMeasured": {
+      "cellC": 28.7506046295166,
+      "cellSpeed": 1.42449848891561,
+      "estimateC": 64.34232703377893,
+      "estimateSpeed": 1.42449848891561,
+      "hrr": 84.54419708251953
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 46.3,
+     "estimate": 67.3861373441811,
+     "late": 75.30667886926582,
+     "hrrEstimate": 210.10860443115234,
+     "hrrLate": 263.2733917236328,
+     "measuredGasC": 128.5,
+     "measuredSpeed": 1.06,
+     "atMeasured": {
+      "cellC": 55.947837829589844,
+      "cellSpeed": 0.9732021271813167,
+      "estimateC": 77.44904029850989,
+      "estimateSpeed": 0.9732021271813167,
+      "hrr": 96.89939880371094
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 176.53130000000002,
+    "run": 41345.946200000006,
+    "perStep": 43.522048631578954
+   }
+  },
+  {
+   "id": "vettori_flat/3/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 3,
+   "growth": "fast",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 90,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 24,
+    "columns": 8,
+    "layers": 3,
+    "columnHeight": 0.915,
+    "radiantFraction": 0.2,
+    "released": 15364149.999998825,
+    "qAtMeasuredFirst": 200.2
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 71,
+    "value": 3402.9,
+    "cell": 6345,
+    "position": [
+     4.73,
+     0.76,
+     1.68
+    ],
+    "readings": {
+     "maxT": 3402.9,
+     "maxSpeed": 14.96,
+     "gasHeat": 17110011,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 41,
+     "estimate": 41.63899341036015,
+     "late": 52.14913337574924,
+     "hrrEstimate": 200.1999969482422,
+     "hrrLate": 286.3000030517578,
+     "measuredGasC": 108,
+     "measuredSpeed": 1.53,
+     "atMeasured": {
+      "cellC": 119.18965911865234,
+      "cellSpeed": 1.5453455250077783,
+      "estimateC": 160.74092238814893,
+      "estimateSpeed": 1.5453455250077783,
+      "hrr": 198.1999969482422
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 44.3,
+     "estimate": 44.07790371731202,
+     "late": 53.802315869532265,
+     "hrrEstimate": 212.1999969482422,
+     "hrrLate": 293.90000915527344,
+     "measuredGasC": 131.8,
+     "measuredSpeed": 2.03,
+     "atMeasured": {
+      "cellC": 144.31146240234375,
+      "cellSpeed": 1.0091099749366448,
+      "estimateC": 183.04674665878224,
+      "estimateSpeed": 1.0091099749366448,
+      "hrr": 210.1999969482422
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 80.27500000000146,
+    "run": 38846.914,
+    "perStep": 43.16323777777777
+   }
+  },
+  {
+   "id": "vettori_flat/3/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 3,
+   "growth": "fast",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 90,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 6848618.39999948,
+    "qAtMeasuredFirst": 78.6708
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 76,
+    "value": 3074.1,
+    "cell": 6382,
+    "position": [
+     4.73,
+     1.07,
+     1.68
+    ],
+    "readings": {
+     "maxT": 3074.1,
+     "maxSpeed": 13.58,
+     "gasHeat": 9455915,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 41,
+     "estimate": 66.27184519398014,
+     "late": null,
+     "hrrEstimate": 203.8842010498047,
+     "hrrLate": null,
+     "measuredGasC": 108,
+     "measuredSpeed": 1.53,
+     "atMeasured": {
+      "cellC": 29.382532119750977,
+      "cellSpeed": 0.4294512101607818,
+      "estimateC": 60.76443563324966,
+      "estimateSpeed": 0.6554500832458681,
+      "hrr": 76.77539825439453
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 44.3,
+     "estimate": 66.72525264319172,
+     "late": null,
+     "hrrEstimate": 203.8842010498047,
+     "hrrLate": null,
+     "measuredGasC": 131.8,
+     "measuredSpeed": 2.03,
+     "atMeasured": {
+      "cellC": 38.056480407714844,
+      "cellSpeed": 0.34391199002272654,
+      "estimateC": 71.49701235564015,
+      "estimateSpeed": 0.6007707204238885,
+      "hrr": 88.56900024414062
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 98.03399999999965,
+    "run": 39412.289899999996,
+    "perStep": 43.79143322222222
+   }
+  },
+  {
+   "id": "vettori_flat/6/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 6,
+   "growth": "medium",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 190,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 24,
+    "columns": 8,
+    "layers": 3,
+    "columnHeight": 0.915,
+    "radiantFraction": 0.2,
+    "released": 20735669.99999888,
+    "qAtMeasuredFirst": 158.98000000000002
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 147,
+    "value": 3022.8,
+    "cell": 5531,
+    "position": [
+     4.73,
+     0.46,
+     1.37
+    ],
+    "readings": {
+     "maxT": 3022.8,
+     "maxSpeed": 11.61,
+     "gasHeat": 14784052,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 88.2,
+     "estimate": 87.41707412342228,
+     "late": 113.86192313675528,
+     "hrrEstimate": 156.6999969482422,
+     "hrrLate": 202.73999786376953,
+     "measuredGasC": 102,
+     "measuredSpeed": 1.68,
+     "atMeasured": {
+      "cellC": 94.49044036865234,
+      "cellSpeed": 1.0735790928714013,
+      "estimateC": 139.29127402065404,
+      "estimateSpeed": 1.0735790928714013,
+      "hrr": 157.64999389648438
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 92.8,
+     "estimate": 91.62282519008498,
+     "late": 107.3715055286796,
+     "hrrEstimate": 163.87999725341797,
+     "hrrLate": 185.63999938964844,
+     "measuredGasC": 125.3,
+     "measuredSpeed": 1.38,
+     "atMeasured": {
+      "cellC": 99.14183807373047,
+      "cellSpeed": 0.2244079838494423,
+      "estimateC": 147.24295368394883,
+      "estimateSpeed": 0.7408632636143836,
+      "hrr": 166.10000610351562
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 145.4457238695616,
+     "late": 145.4457238695616,
+     "hrrEstimate": 349.10499572753906,
+     "hrrLate": 349.10499572753906,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 145.30063324812647,
+     "late": 145.30063324812647,
+     "hrrEstimate": 349.10499572753906,
+     "hrrLate": 349.10499572753906,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 77.26190000000497,
+    "run": 72408.5956,
+    "perStep": 38.109787157894736
+   }
+  },
+  {
+   "id": "vettori_flat/6/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 6,
+   "growth": "medium",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 190,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 17840078.099999942,
+    "qAtMeasuredFirst": 91.01898000000001
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 166,
+    "value": 3336.9,
+    "cell": 5530,
+    "position": [
+     4.42,
+     0.46,
+     1.37
+    ],
+    "readings": {
+     "maxT": 3336.9,
+     "maxSpeed": 11.46,
+     "gasHeat": 20845300,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 88.2,
+     "estimate": 112.47833519043567,
+     "late": 125.56860828714161,
+     "hrrEstimate": 146.7706527709961,
+     "hrrLate": 182.81835174560547,
+     "measuredGasC": 102,
+     "measuredSpeed": 1.68,
+     "atMeasured": {
+      "cellC": 50.351951599121094,
+      "cellSpeed": 0.8604951914401741,
+      "estimateC": 84.45231274705509,
+      "estimateSpeed": 0.8604951914401741,
+      "hrr": 89.58104705810547
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 92.8,
+     "estimate": 113.24018865925427,
+     "late": 123.32394601276164,
+     "hrrEstimate": 149.4031524658203,
+     "hrrLate": 177.01515197753906,
+     "measuredGasC": 125.3,
+     "measuredSpeed": 1.38,
+     "atMeasured": {
+      "cellC": 59.069175720214844,
+      "cellSpeed": 0.8852471025473357,
+      "estimateC": 97.46491279945838,
+      "estimateSpeed": 0.8852471025473357,
+      "hrr": 100.11105346679688
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 146.86251892434652,
+     "late": 146.86251892434652,
+     "hrrEstimate": 249.4030532836914,
+     "hrrLate": 249.4030532836914,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 146.76143740830148,
+     "late": 146.76143740830148,
+     "hrrEstimate": 249.4030532836914,
+     "hrrLate": 249.4030532836914,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 92.83399999999529,
+    "run": 86575.0003,
+    "perStep": 45.565789631578944
+   }
+  },
+  {
+   "id": "vettori_flat/7/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 7,
+   "growth": "medium",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 140,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 18342749.99999865,
+    "qAtMeasuredFirst": 120.06
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": true,
+    "maxSpeed": 12.25,
+    "substeps": 5
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 67,
+     "estimate": 78.23022484968311,
+     "late": 96.74443478279585,
+     "hrrEstimate": 139.6999969482422,
+     "hrrLate": 170.63999938964844,
+     "measuredGasC": 108,
+     "measuredSpeed": 1.65,
+     "atMeasured": {
+      "cellC": 91.34273529052734,
+      "cellSpeed": 1.4596094778818678,
+      "estimateC": 126.42674194455122,
+      "estimateSpeed": 1.4596094778818678,
+      "hrr": 119.31999969482422
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 68.2,
+     "estimate": 81.03243454862918,
+     "late": 97.01384354175846,
+     "hrrEstimate": 145.3800048828125,
+     "hrrLate": 171.47999572753906,
+     "measuredGasC": 128.2,
+     "measuredSpeed": 1.6,
+     "atMeasured": {
+      "cellC": 94.35356903076172,
+      "cellSpeed": 0.9054123848078182,
+      "estimateC": 128.3441770806093,
+      "estimateSpeed": 0.9054123848078182,
+      "hrr": 120.80000305175781
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 129.38757828048688,
+     "late": 129.38757828048688,
+     "hrrEstimate": 275.28001403808594,
+     "hrrLate": 275.28001403808594,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 126.4068450841107,
+     "late": 126.4068450841107,
+     "hrrEstimate": 262.62001037597656,
+     "hrrLate": 262.62001037597656,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 125.35500000001048,
+    "run": 67005.8447,
+    "perStep": 47.861317642857145
+   }
+  },
+  {
+   "id": "vettori_flat/7/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 7,
+   "growth": "medium",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 140,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 10701872.999998784,
+    "qAtMeasuredFirst": 52.521300000000004
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": true,
+    "maxSpeed": 6.11,
+    "substeps": 4
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 67,
+     "estimate": 110.67170136221931,
+     "late": 124.57861178321404,
+     "hrrEstimate": 141.5758514404297,
+     "hrrLate": 179.9050521850586,
+     "measuredGasC": 108,
+     "measuredSpeed": 1.65,
+     "atMeasured": {
+      "cellC": 28.713769912719727,
+      "cellSpeed": 0.34039603761319104,
+      "estimateC": 52.37135441398203,
+      "estimateSpeed": 0.5746677645355881,
+      "hrr": 51.74325180053711
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 68.2,
+     "estimate": 113.84368177049122,
+     "late": 122.188359426249,
+     "hrrEstimate": 149.4031524658203,
+     "hrrLate": 174.14865112304688,
+     "measuredGasC": 128.2,
+     "measuredSpeed": 1.6,
+     "atMeasured": {
+      "cellC": 33.72161102294922,
+      "cellSpeed": 0.47992176075155246,
+      "estimateC": 56.61619685548408,
+      "estimateSpeed": 0.5072482890925052,
+      "hrr": 53.31105041503906
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 119.16960000000836,
+    "run": 65517.00200000001,
+    "perStep": 46.79785857142858
+   }
+  },
+  {
+   "id": "vettori_flat/8/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 8,
+   "growth": "medium",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 160,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 22209929.99999841,
+    "qAtMeasuredFirst": 138.94
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 151,
+    "value": 3909.2,
+    "cell": 6308,
+    "position": [
+     4.73,
+     0.46,
+     1.68
+    ],
+    "readings": {
+     "maxT": 3909.2,
+     "maxSpeed": 14.02,
+     "gasHeat": 20793007,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 77.6,
+     "estimate": 73.31519712719941,
+     "late": 90.3426092406118,
+     "hrrEstimate": 130.1999969482422,
+     "hrrLate": 162.2949981689453,
+     "measuredGasC": 111,
+     "measuredSpeed": 1.47,
+     "atMeasured": {
+      "cellC": 132.07208251953125,
+      "cellSpeed": 1.516285344438959,
+      "estimateC": 167.7997469009398,
+      "estimateSpeed": 1.516285344438959,
+      "hrr": 138.75
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 79,
+     "estimate": 76.84223627056379,
+     "late": 92.19702634336905,
+     "hrrEstimate": 135.9000015258789,
+     "hrrLate": 165.36000061035156,
+     "measuredGasC": 126,
+     "measuredSpeed": 1.24,
+     "atMeasured": {
+      "cellC": 118.81468963623047,
+      "cellSpeed": 1.381783455920329,
+      "estimateC": 163.31137314587022,
+      "estimateSpeed": 1.381783455920329,
+      "hrr": 140.64999389648438
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 126.90703142009441,
+     "late": 126.90703142009441,
+     "hrrEstimate": 262.62001037597656,
+     "hrrLate": 262.62001037597656,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 129.5389062784004,
+     "late": 129.5389062784004,
+     "hrrEstimate": 275.28001403808594,
+     "hrrLate": 275.28001403808594,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 73.30270000000019,
+    "run": 73920.98279999998,
+    "perStep": 46.20061424999999
+   }
+  },
+  {
+   "id": "vettori_flat/8/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 8,
+   "growth": "medium",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 160,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 15677058.149999626,
+    "qAtMeasuredFirst": 70.45739999999999
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 159,
+    "value": 3013.9,
+    "cell": 5567,
+    "position": [
+     4.42,
+     0.76,
+     1.37
+    ],
+    "readings": {
+     "maxT": 3013.9,
+     "maxSpeed": 13.5,
+     "gasHeat": 16467810,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 77.6,
+     "estimate": 111.47979299942537,
+     "late": 132.7583880852261,
+     "hrrEstimate": 144.16155242919922,
+     "hrrLate": 203.8666534423828,
+     "measuredGasC": 111,
+     "measuredSpeed": 1.47,
+     "atMeasured": {
+      "cellC": 41.345909118652344,
+      "cellSpeed": 1.156053187407335,
+      "estimateC": 71.46783525048994,
+      "estimateSpeed": 1.156053187407335,
+      "hrr": 70.27604675292969
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 79,
+     "estimate": 114.6461037579667,
+     "late": 130.14861532945295,
+     "hrrEstimate": 152.05905151367188,
+     "hrrLate": 197.73584747314453,
+     "measuredGasC": 126,
+     "measuredSpeed": 1.24,
+     "atMeasured": {
+      "cellC": 42.641807556152344,
+      "cellSpeed": 0.3950200175085027,
+      "estimateC": 68.90455657253142,
+      "estimateSpeed": 0.5609564013737761,
+      "hrr": 72.10124969482422
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 155.41908348309954,
+     "late": 155.41908348309954,
+     "hrrEstimate": 281.0983581542969,
+     "hrrLate": 281.0983581542969,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 155.12970629563486,
+     "late": 155.12970629563486,
+     "hrrEstimate": 281.0983581542969,
+     "hrrLate": 281.0983581542969,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 74.06040000000212,
+    "run": 71309.77419999999,
+    "perStep": 44.56860887499999
+   }
+  },
+  {
+   "id": "vettori_flat/11/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 11,
+   "growth": "slow",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 205,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 16753250,
+    "qAtMeasuredFirst": 78.184
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.78,
+    "substeps": 3
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 100.4,
+     "estimate": 132.94951939398808,
+     "late": 161.66010530186034,
+     "hrrEstimate": 102.31999969482422,
+     "hrrLate": 125.53999710083008,
+     "measuredGasC": 108.9,
+     "measuredSpeed": 1.57,
+     "atMeasured": {
+      "cellC": 50.315086364746094,
+      "cellSpeed": 0.6579644518243698,
+      "estimateC": 85.14386361036935,
+      "estimateSpeed": 0.6582965428268504,
+      "hrr": 77.77999877929688
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 100.2,
+     "estimate": 138.01759836001096,
+     "late": 157.57127501017945,
+     "hrrEstimate": 107.36000061035156,
+     "hrrLate": 122.58000183105469,
+     "measuredGasC": 118,
+     "measuredSpeed": 1.78,
+     "atMeasured": {
+      "cellC": 58.138938903808594,
+      "cellSpeed": 0.2494738176149648,
+      "estimateC": 81.98457454312182,
+      "estimateSpeed": 0.5753129567187872,
+      "hrr": 77.77999877929688
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 76.3760000000184,
+    "run": 87199.7959,
+    "perStep": 42.53648580487805
+   }
+  },
+  {
+   "id": "vettori_flat/11/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 11,
+   "growth": "slow",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 205,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 8414205.525,
+    "qAtMeasuredFirst": 29.417786
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.27,
+    "substeps": 2
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 100.4,
+     "estimate": 190.34424442252399,
+     "late": null,
+     "hrrEstimate": 105.77446365356445,
+     "hrrLate": null,
+     "measuredGasC": 108.9,
+     "measuredSpeed": 1.57,
+     "atMeasured": {
+      "cellC": 22.982690811157227,
+      "cellSpeed": 0.7537131734820866,
+      "estimateC": 39.23408988164056,
+      "estimateSpeed": 0.7537131734820866,
+      "hrr": 29.008464813232422
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 100.2,
+     "estimate": 196.77138388934895,
+     "late": null,
+     "hrrEstimate": 112.56034851074219,
+     "hrrLate": null,
+     "measuredGasC": 118,
+     "measuredSpeed": 1.78,
+     "atMeasured": {
+      "cellC": 23.447656631469727,
+      "cellSpeed": 0.9302431001945469,
+      "estimateC": 37.59717069043273,
+      "estimateSpeed": 0.9302431001945469,
+      "hrr": 29.008464813232422
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 86.07399999999325,
+    "run": 86324.42310000001,
+    "perStep": 42.10947468292684
+   }
+  },
+  {
+   "id": "vettori_flat/12/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 12,
+   "growth": "slow",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 255,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 26419240,
+    "qAtMeasuredFirst": 88.868
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 248,
+    "value": 3109.4,
+    "cell": 5530,
+    "position": [
+     4.42,
+     0.46,
+     1.37
+    ],
+    "readings": {
+     "maxT": 3109.4,
+     "maxSpeed": 12.72,
+     "gasHeat": 18731235,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 116.6,
+     "estimate": 127.325793885543,
+     "late": 154.28559958537917,
+     "hrrEstimate": 98.27999877929688,
+     "hrrLate": 120.04000091552734,
+     "measuredGasC": 100,
+     "measuredSpeed": 1.1,
+     "atMeasured": {
+      "cellC": 67.10729217529297,
+      "cellSpeed": 1.0137041156323712,
+      "estimateC": 101.66273687615126,
+      "estimateSpeed": 1.0137041156323712,
+      "hrr": 88.72000122070312
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 127.3,
+     "estimate": 128.35356790820865,
+     "late": 155.35425176506772,
+     "hrrEstimate": 98.91999816894531,
+     "hrrLate": 121.14500045776367,
+     "measuredGasC": 108.7,
+     "measuredSpeed": 1.61,
+     "atMeasured": {
+      "cellC": 111.5647201538086,
+      "cellSpeed": 1.1559119593796119,
+      "estimateC": 121.48788554694778,
+      "estimateSpeed": 1.1559119593796119,
+      "hrr": 97.95999908447266
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 209.10174462652222,
+     "late": 209.10174462652222,
+     "hrrEstimate": 193.4199981689453,
+     "hrrLate": 193.4199981689453,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 211.2191909876687,
+     "late": 211.2191909876687,
+     "hrrEstimate": 196.79999542236328,
+     "hrrLate": 196.79999542236328,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 75.20029999999679,
+    "run": 111849.0423,
+    "perStep": 43.862369529411765
+   }
+  },
+  {
+   "id": "vettori_flat/12/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 12,
+   "growth": "slow",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 255,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 16194600.774999997,
+    "qAtMeasuredFirst": 39.835694
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.52,
+    "substeps": 3
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 116.6,
+     "estimate": 186.52750916146718,
+     "late": 218.2234531144492,
+     "hrrEstimate": 101.36774444580078,
+     "hrrLate": 139.24678802490234,
+     "measuredGasC": 100,
+     "measuredSpeed": 1.1,
+     "atMeasured": {
+      "cellC": 28.922937393188477,
+      "cellSpeed": 0.6133266924375407,
+      "estimateC": 48.61906171692681,
+      "estimateSpeed": 0.6133266924375407,
+      "hrr": 39.767425537109375
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 127.3,
+     "estimate": 186.7798173948076,
+     "late": 207.5240640951992,
+     "hrrEstimate": 101.36774444580078,
+     "hrrLate": 125.54903793334961,
+     "measuredGasC": 108.7,
+     "measuredSpeed": 1.61,
+     "atMeasured": {
+      "cellC": 42.685203552246094,
+      "cellSpeed": 0.446269287244515,
+      "estimateC": 63.497813744651296,
+      "estimateSpeed": 0.4859967114619841,
+      "hrr": 46.887325286865234
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 82.6876999999804,
+    "run": 105860.43220000001,
+    "perStep": 41.51389498039216
+   }
+  },
+  {
+   "id": "vettori_flat/13/tabulated/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 13,
+   "growth": "slow",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 245,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 25634499.999999985,
+    "qAtMeasuredFirst": 88.27600000000001
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.59,
+    "substeps": 5
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 116.2,
+     "estimate": 123.29859657751236,
+     "late": 164.67791290786892,
+     "hrrEstimate": 95.7599983215332,
+     "hrrLate": 128.65999603271484,
+     "measuredGasC": 93,
+     "measuredSpeed": 1.23,
+     "atMeasured": {
+      "cellC": 71.78142547607422,
+      "cellSpeed": 1.4259344430806449,
+      "estimateC": 114.1540016080092,
+      "estimateSpeed": 1.4259344430806449,
+      "hrr": 87.23999786376953
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 121.3,
+     "estimate": 130.15211789213197,
+     "late": 163.33272329312186,
+     "hrrEstimate": 100.30500030517578,
+     "hrrLate": 127.61999893188477,
+     "measuredGasC": 106.8,
+     "measuredSpeed": 1.08,
+     "atMeasured": {
+      "cellC": 80.9710922241211,
+      "cellSpeed": 0.6543906902928229,
+      "estimateC": 109.82759004805331,
+      "estimateSpeed": 0.6543906902928229,
+      "hrr": 94.20999908447266
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 207.87066073950734,
+     "late": 207.87066073950734,
+     "hrrEstimate": 190.05999755859375,
+     "hrrLate": 190.05999755859375,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 211.24614818001032,
+     "late": 211.24614818001032,
+     "hrrEstimate": 196.79999542236328,
+     "hrrLate": 196.79999542236328,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 94.41759999998612,
+    "run": 108814.83719999998,
+    "perStep": 44.414219265306116
+   }
+  },
+  {
+   "id": "vettori_flat/13/nominal/h10/0.305",
+   "dataset": "vettori_flat_1998",
+   "test": 13,
+   "growth": "slow",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 245,
+   "grid": {
+    "n": [
+     37,
+     21,
+     25
+    ],
+    "cells": 19425,
+    "h": 0.305
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.61,
+    "radiantFraction": 0.2,
+    "released": 14363101.725,
+    "qAtMeasuredFirst": 39.562618
+   },
+   "plumeHeight": 1.9825,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.07,
+    "substeps": 3
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.0226869505684757,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 116.2,
+     "estimate": 181.82492754991188,
+     "late": 213.37215007418087,
+     "hrrEstimate": 95.99119186401367,
+     "hrrLate": 132.9326400756836,
+     "measuredGasC": 93,
+     "measuredSpeed": 1.23,
+     "atMeasured": {
+      "cellC": 30.397607803344727,
+      "cellSpeed": 0.681352262296571,
+      "estimateC": 50.43866106299225,
+      "estimateSpeed": 0.681352262296571,
+      "hrr": 39.08766555786133
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.377659037793266,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 121.3,
+     "estimate": 189.59638924080963,
+     "late": 215.70126245015334,
+     "hrrEstimate": 104.66399383544922,
+     "hrrLate": 135.44071197509766,
+     "measuredGasC": 106.8,
+     "measuredSpeed": 1.08,
+     "atMeasured": {
+      "cellC": 31.17095375061035,
+      "cellSpeed": 0.7471453316253618,
+      "estimateC": 52.28489101336538,
+      "estimateSpeed": 0.7471453316253618,
+      "hrr": 42.545066833496094
+     }
+    },
+    {
+     "head": 3,
+     "r": 3.6942201477443106,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 3.4763864140799994,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 104.34530000001541,
+    "run": 102145.65769999998,
+    "perStep": 41.69210518367346
+   }
+  },
+  {
+   "id": "vettori_sloped/1/tabulated/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 1,
+   "growth": "fast",
+   "ceiling": "smooth",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 145,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 40,
+    "columns": 8,
+    "layers": 5,
+    "columnHeight": 1.53125,
+    "radiantFraction": 0.2,
+    "released": 31024449.999997877,
+    "qAtMeasuredFirst": 514.7
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 93,
+    "value": 3419.9,
+    "cell": 4395,
+    "position": [
+     3.83,
+     0.46,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3419.9,
+     "maxSpeed": 11.95,
+     "gasHeat": 18721694,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 71,
+     "estimate": 48.20245895070926,
+     "late": 64.35348821840006,
+     "hrrEstimate": 249.13999938964844,
+     "hrrLate": 430.13999938964844,
+     "measuredGasC": 114.6,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 257.5169982910156,
+      "cellSpeed": 1.1410990578762539,
+      "estimateC": 378.94637175872424,
+      "estimateSpeed": 1.1824657573287067,
+      "hrr": 522.4000244140625
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 70,
+     "estimate": 51.40025059769273,
+     "late": 66.12898734008901,
+     "hrrEstimate": 278.6999969482422,
+     "hrrLate": 457.3400115966797,
+     "measuredGasC": 130,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 273.6809997558594,
+      "cellSpeed": 1.155800156900609,
+      "estimateC": 382.6328314064825,
+      "estimateSpeed": 1.155800156900609,
+      "hrr": 507.5299987792969
+     }
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 52.82214381042745,
+     "late": 66.83257473854803,
+     "hrrEstimate": 286.3000030517578,
+     "hrrLate": 457.3400115966797,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 51.00090303391862,
+     "late": 63.48460372634308,
+     "hrrEstimate": 278.6999969482422,
+     "hrrLate": 417.2799987792969,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 50.883900000015274,
+    "run": 19373.17239999998,
+    "perStep": 13.360808551724125
+   }
+  },
+  {
+   "id": "vettori_sloped/1/nominal/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 1,
+   "growth": "fast",
+   "ceiling": "smooth",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 145,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 32,
+    "columns": 8,
+    "layers": 4,
+    "columnHeight": 1.225,
+    "radiantFraction": 0.2,
+    "released": 29744301.59999776,
+    "qAtMeasuredFirst": 229.32000000000002
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 124,
+    "value": 3287.3,
+    "cell": 4425,
+    "position": [
+     3.83,
+     0.77,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3287.3,
+     "maxSpeed": 10.94,
+     "gasHeat": 18266365,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 71,
+     "estimate": 77.11577494050655,
+     "late": 88.99949380218592,
+     "hrrEstimate": 277.50059509277344,
+     "hrrLate": 362.4425964355469,
+     "measuredGasC": 114.6,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 70.10128021240234,
+      "cellSpeed": 0.522532269610559,
+      "estimateC": 153.4792492642771,
+      "estimateSpeed": 0.9029620275434508,
+      "hrr": 232.61940002441406
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 70,
+     "estimate": 78.32472478109868,
+     "late": 90.07454544855548,
+     "hrrEstimate": 284.7545928955078,
+     "hrrLate": 379.1033935546875,
+     "measuredGasC": 130,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 97.2485580444336,
+      "cellSpeed": 1.38729648841019,
+      "estimateC": 139.55402220534245,
+      "estimateSpeed": 1.38729648841019,
+      "hrr": 226.06739807128906
+     }
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 79.49634197172897,
+     "late": 87.53176785529665,
+     "hrrEstimate": 292.1022033691406,
+     "hrrLate": 354.2525939941406,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 78.58009187434773,
+     "late": 89.60479168908631,
+     "hrrEstimate": 284.7545928955078,
+     "hrrLate": 370.7261962890625,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 63.41889999998966,
+    "run": 27193.64380000002,
+    "perStep": 18.75423710344829
+   }
+  },
+  {
+   "id": "vettori_sloped/2/tabulated/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 2,
+   "growth": "fast",
+   "ceiling": "smooth",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 135,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 40,
+    "columns": 8,
+    "layers": 5,
+    "columnHeight": 1.53125,
+    "radiantFraction": 0.2,
+    "released": 31024449.999997877,
+    "qAtMeasuredFirst": 378.7
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 93,
+    "value": 3419.9,
+    "cell": 4395,
+    "position": [
+     3.83,
+     0.46,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3419.9,
+     "maxSpeed": 11.95,
+     "gasHeat": 18721694,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 60,
+     "estimate": 48.20245895070926,
+     "late": 64.35348821840006,
+     "hrrEstimate": 249.13999938964844,
+     "hrrLate": 430.13999938964844,
+     "measuredGasC": 125.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 144.48468017578125,
+      "cellSpeed": 0.4601986861896723,
+      "estimateC": 263.02150789416817,
+      "estimateSpeed": 1.055683996230927,
+      "hrr": 371.739990234375
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 51.40025059769273,
+     "late": 66.12898734008901,
+     "hrrEstimate": 278.6999969482422,
+     "hrrLate": 457.3400115966797,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 66,
+     "estimate": 52.82214381042745,
+     "late": 66.83257473854803,
+     "hrrEstimate": 286.3000030517578,
+     "hrrLate": 457.3400115966797,
+     "measuredGasC": 119.6,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 281.1280822753906,
+      "cellSpeed": 0.9548749339708931,
+      "estimateC": 321.1056916990415,
+      "estimateSpeed": 0.9688448201535785,
+      "hrr": 450.1700134277344
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 66,
+     "estimate": 51.00090303391862,
+     "late": 63.48460372634308,
+     "hrrEstimate": 278.6999969482422,
+     "hrrLate": 417.2799987792969,
+     "measuredGasC": 158.8,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 191.55868530273438,
+      "cellSpeed": 1.741685802010286,
+      "estimateC": 326.4757836931982,
+      "estimateSpeed": 1.741685802010286,
+      "hrr": 450.1700134277344
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 65.44449999998324,
+    "run": 20540.001899999974,
+    "perStep": 15.214816222222202
+   }
+  },
+  {
+   "id": "vettori_sloped/2/nominal/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 2,
+   "growth": "fast",
+   "ceiling": "smooth",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 135,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 24,
+    "columns": 8,
+    "layers": 3,
+    "columnHeight": 0.9187500000000001,
+    "radiantFraction": 0.2,
+    "released": 21335909.399998717,
+    "qAtMeasuredFirst": 168.48000000000002
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 111,
+    "value": 3408.4,
+    "cell": 4394,
+    "position": [
+     3.52,
+     0.46,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3408.4,
+     "maxSpeed": 14.32,
+     "gasHeat": 17373610,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 60,
+     "estimate": 73.07973733651693,
+     "late": 83.0954879102052,
+     "hrrEstimate": 249.42060089111328,
+     "hrrLate": 322.4285888671875,
+     "measuredGasC": 125.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 65.1075668334961,
+      "cellSpeed": 0.3116095496985014,
+      "estimateC": 129.69423602085976,
+      "estimateSpeed": 0.8064132672976208,
+      "hrr": 165.69540405273438
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 74.41028185039089,
+     "late": 84.21999399140397,
+     "hrrEstimate": 256.3002014160156,
+     "hrrLate": 330.24420166015625,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 66,
+     "estimate": 74.06474238314946,
+     "late": 82.76971363435257,
+     "hrrEstimate": 256.3002014160156,
+     "hrrLate": 314.7065887451172,
+     "measuredGasC": 119.6,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 88.18099212646484,
+      "cellSpeed": 0.3262267402160744,
+      "estimateC": 147.53105002558084,
+      "estimateSpeed": 0.7402526150708676,
+      "hrr": 200.79539489746094
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 66,
+     "estimate": 74.12130974634778,
+     "late": 81.53954569385792,
+     "hrrEstimate": 256.3002014160156,
+     "hrrLate": 307.0782012939453,
+     "measuredGasC": 158.8,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 111.7260971069336,
+      "cellSpeed": 1.0180623208930792,
+      "estimateC": 150.6660185354421,
+      "estimateSpeed": 1.0180623208930792,
+      "hrr": 200.79539489746094
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 73.19980000000214,
+    "run": 23959.31880000001,
+    "perStep": 17.747643555555563
+   }
+  },
+  {
+   "id": "vettori_sloped/3/tabulated/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 3,
+   "growth": "slow",
+   "ceiling": "smooth",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 440,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 24,
+    "columns": 8,
+    "layers": 3,
+    "columnHeight": 0.9187500000000001,
+    "radiantFraction": 0.2,
+    "released": 76888899.9999995,
+    "qAtMeasuredFirst": 188.38
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 372,
+    "value": 3333,
+    "cell": 4395,
+    "position": [
+     3.83,
+     0.46,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3333,
+     "maxSpeed": 13.44,
+     "gasHeat": 18162522,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 206,
+     "estimate": 143.25481108194202,
+     "late": 190.71854551897405,
+     "hrrEstimate": 110.5199966430664,
+     "hrrLate": 163.45000457763672,
+     "measuredGasC": 117.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 153.74301147460938,
+      "cellSpeed": 0.1341237173400219,
+      "estimateC": 205.1198527460557,
+      "estimateSpeed": 0.8403989004321086,
+      "hrr": 187.5399932861328
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 218,
+     "estimate": 145.3820771754773,
+     "late": 187.46792584765404,
+     "hrrEstimate": 111.80000305175781,
+     "hrrLate": 158.45999908447266,
+     "measuredGasC": 96.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 257.1245422363281,
+      "cellSpeed": 0.8089447764379458,
+      "estimateC": 257.1245422363281,
+      "estimateSpeed": 0.8089447764379458,
+      "hrr": 208.35000610351562
+     }
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 207,
+     "estimate": 150.5552716734889,
+     "late": 188.4763626419809,
+     "hrrEstimate": 115.15499877929688,
+     "hrrLate": 160.13999938964844,
+     "measuredGasC": 137,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 130.94219970703125,
+      "cellSpeed": 0.8210334897890429,
+      "estimateC": 184.9879143218174,
+      "estimateSpeed": 0.8210334897890429,
+      "hrr": 189.22000122070312
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 208,
+     "estimate": 144.79822801049002,
+     "late": 186.08725921416766,
+     "hrrEstimate": 111.15999984741211,
+     "hrrLate": 156.77999877929688,
+     "measuredGasC": 130.7,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 153.8485107421875,
+      "cellSpeed": 0.8015053225368042,
+      "estimateC": 197.1502050727704,
+      "estimateSpeed": 0.8015053225368042,
+      "hrr": 190.89999389648438
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 63.162600000039674,
+    "run": 78762.0894,
+    "perStep": 17.90047486363636
+   }
+  },
+  {
+   "id": "vettori_sloped/3/nominal/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 3,
+   "growth": "slow",
+   "ceiling": "smooth",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 440,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.6125,
+    "radiantFraction": 0.2,
+    "released": 33218763.659999736,
+    "qAtMeasuredFirst": 124.33748
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 324,
+    "value": 3039.4,
+    "cell": 4395,
+    "position": [
+     3.83,
+     0.46,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3039.4,
+     "maxSpeed": 8.86,
+     "gasHeat": 17000672,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 206,
+     "estimate": 189.99752591634487,
+     "late": 215.60092463714568,
+     "hrrEstimate": 104.66399383544922,
+     "hrrLate": 135.44071197509766,
+     "measuredGasC": 117.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 120.02642059326172,
+      "cellSpeed": 1.3778458788375416,
+      "estimateC": 150.90919539681522,
+      "estimateSpeed": 1.3778458788375416,
+      "hrr": 123.73536682128906
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 218,
+     "estimate": 190.77387038449396,
+     "late": 218.49627241170208,
+     "hrrEstimate": 105.77446365356445,
+     "hrrLate": 139.24678802490234,
+     "measuredGasC": 96.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 184.49420166015625,
+      "cellSpeed": 1.298353417391469,
+      "estimateC": 184.49420166015625,
+      "estimateSpeed": 1.298353417391469,
+      "hrr": 138.60804748535156
+     }
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 207,
+     "estimate": 193.34143022510628,
+     "late": 222.01936283264232,
+     "hrrEstimate": 109.14103698730469,
+     "hrrLate": 144.4035873413086,
+     "measuredGasC": 137,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 96.12548065185547,
+      "cellSpeed": 0.5273191957435418,
+      "estimateC": 149.33019998884896,
+      "estimateSpeed": 0.6319733968374155,
+      "hrr": 124.9425277709961
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 208,
+     "estimate": 190.62977248189173,
+     "late": 224.16234035800625,
+     "hrrEstimate": 105.77446365356445,
+     "hrrLate": 147.01714324951172,
+     "measuredGasC": 130.7,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 122.95555877685547,
+      "cellSpeed": 0.618045782564068,
+      "estimateC": 155.83972482801607,
+      "estimateSpeed": 0.6847570613191913,
+      "hrr": 126.15554809570312
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 69.43459999997867,
+    "run": 66021.75910000002,
+    "perStep": 15.004945250000006
+   }
+  },
+  {
+   "id": "vettori_sloped/4/tabulated/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 4,
+   "growth": "slow",
+   "ceiling": "smooth",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 430,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 24,
+    "columns": 8,
+    "layers": 3,
+    "columnHeight": 0.9187500000000001,
+    "radiantFraction": 0.2,
+    "released": 66618979.99999947,
+    "qAtMeasuredFirst": 196.79999999999998
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 353,
+    "value": 3474,
+    "cell": 4784,
+    "position": [
+     3.52,
+     0.77,
+     3.22
+    ],
+    "readings": {
+     "maxT": 3474,
+     "maxSpeed": 11.97,
+     "gasHeat": 18397760,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 212,
+     "estimate": 146.06326975006107,
+     "late": 186.9752520973722,
+     "hrrEstimate": 112.44000244140625,
+     "hrrLate": 156.77999877929688,
+     "measuredGasC": 110.2,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 136.20144653320312,
+      "cellSpeed": 0.4738846144068223,
+      "estimateC": 203.8755180035589,
+      "estimateSpeed": 0.8552369287007007,
+      "hrr": 197.64999389648438
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 211,
+     "estimate": 149.03779276617652,
+     "late": 187.88394007554356,
+     "hrrEstimate": 114.36000061035156,
+     "hrrLate": 158.45999908447266,
+     "measuredGasC": 44.5,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 163.54464721679688,
+      "cellSpeed": 0.8622680789415667,
+      "estimateC": 202.17223430051916,
+      "estimateSpeed": 0.8622680789415667,
+      "hrr": 195.9499969482422
+     }
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 214,
+     "estimate": 151.19479796125628,
+     "late": 186.97941298125758,
+     "hrrEstimate": 116.2599983215332,
+     "hrrLate": 156.77999877929688,
+     "measuredGasC": 131.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 187.5711669921875,
+      "cellSpeed": 0.870455079685133,
+      "estimateC": 247.16281781514465,
+      "estimateSpeed": 0.870455079685133,
+      "hrr": 201.0500030517578
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 145.5373466271257,
+     "late": 184.21395198884795,
+     "hrrEstimate": 111.80000305175781,
+     "hrrLate": 153.62000274658203,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 69.7434999999823,
+    "run": 74643.77530000004,
+    "perStep": 17.359017511627915
+   }
+  },
+  {
+   "id": "vettori_sloped/4/nominal/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 4,
+   "growth": "slow",
+   "ceiling": "smooth",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 430,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.6125,
+    "radiantFraction": 0.2,
+    "released": 45188861.134999655,
+    "qAtMeasuredFirst": 130.44653
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 359,
+    "value": 3006.5,
+    "cell": 4425,
+    "position": [
+     3.83,
+     0.77,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3006.5,
+     "maxSpeed": 9.87,
+     "gasHeat": 17929312,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 212,
+     "estimate": 190.44825858231403,
+     "late": 216.96492108778978,
+     "hrrEstimate": 105.77446365356445,
+     "hrrLate": 136.70354461669922,
+     "measuredGasC": 110.2,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 115.91216278076172,
+      "cellSpeed": 1.1752001649226327,
+      "estimateC": 158.3203891989495,
+      "estimateSpeed": 1.1752001649226327,
+      "hrr": 131.06622314453125
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 211,
+     "estimate": 195.06386281456983,
+     "late": 218.68041317899244,
+     "hrrEstimate": 111.41471862792969,
+     "hrrLate": 139.24678802490234,
+     "measuredGasC": 44.5,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 99.92198944091797,
+      "cellSpeed": 0.707706645737466,
+      "estimateC": 156.82931985259256,
+      "estimateSpeed": 0.707706645737466,
+      "hrr": 129.8297576904297
+     }
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 214,
+     "estimate": 193.37388753594502,
+     "late": 219.0227558880409,
+     "hrrEstimate": 109.14103698730469,
+     "hrrLate": 140.5271987915039,
+     "measuredGasC": 131.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 138.05645751953125,
+      "cellSpeed": 1.260357100098082,
+      "estimateC": 166.94643701995278,
+      "estimateSpeed": 1.260357100098082,
+      "hrr": 133.55673217773438
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 192.5742993563175,
+     "late": 218.58180626501039,
+     "hrrEstimate": 108.01298522949219,
+     "hrrLate": 139.24678802490234,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 57.08919999998761,
+    "run": 75606.08429999999,
+    "perStep": 17.58281030232558
+   }
+  },
+  {
+   "id": "vettori_sloped/13/tabulated/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 13,
+   "growth": "fast",
+   "ceiling": "obstructed (two beams)",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 170,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 40,
+    "columns": 8,
+    "layers": 5,
+    "columnHeight": 1.53125,
+    "radiantFraction": 0.2,
+    "released": 27537229.99999872,
+    "qAtMeasuredFirst": 607.96
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 89,
+    "value": 3049.2,
+    "cell": 4394,
+    "position": [
+     3.52,
+     0.46,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3049.2,
+     "maxSpeed": 13.15,
+     "gasHeat": 16660333,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 76,
+     "estimate": 78.7180174502679,
+     "late": 78.7180174502679,
+     "hrrEstimate": 640.47998046875,
+     "hrrLate": 640.47998046875,
+     "measuredGasC": 164.5,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 413.6230163574219,
+      "cellSpeed": 0.3500702281642157,
+      "estimateC": 413.6230163574219,
+      "estimateSpeed": 0.3500702281642157,
+      "hrr": 599.8300170898438
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 78.1424463009421,
+     "late": 78.1424463009421,
+     "hrrEstimate": 640.47998046875,
+     "hrrLate": 640.47998046875,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 76,
+     "estimate": 77.47979145409093,
+     "late": 77.47979145409093,
+     "hrrEstimate": 624.2200012207031,
+     "hrrLate": 624.2200012207031,
+     "measuredGasC": 179.2,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 313.3636779785156,
+      "cellSpeed": 0.5162715820473252,
+      "estimateC": 313.3636779785156,
+      "estimateSpeed": 0.5162715820473252,
+      "hrr": 599.8300170898438
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 83,
+     "estimate": 77.56919346952782,
+     "late": 77.56919346952782,
+     "hrrEstimate": 624.2200012207031,
+     "hrrLate": 624.2200012207031,
+     "measuredGasC": 138.8,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 443.9291687011719,
+      "cellSpeed": 0.3661248596651888,
+      "estimateC": 443.9291687011719,
+      "estimateSpeed": 0.3661248596651888,
+      "hrr": 716.25
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 58.02779999998165,
+    "run": 19701.892300000007,
+    "perStep": 11.58934841176471
+   }
+  },
+  {
+   "id": "vettori_sloped/13/nominal/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 13,
+   "growth": "fast",
+   "ceiling": "obstructed (two beams)",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 170,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 32,
+    "columns": 8,
+    "layers": 4,
+    "columnHeight": 1.225,
+    "radiantFraction": 0.2,
+    "released": 22510074.599998094,
+    "qAtMeasuredFirst": 270.3168
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 113,
+    "value": 3163.6,
+    "cell": 4395,
+    "position": [
+     3.83,
+     0.46,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3163.6,
+     "maxSpeed": 10.9,
+     "gasHeat": 14451005,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 76,
+     "estimate": 105.28317943467218,
+     "late": 105.28317943467218,
+     "hrrEstimate": 515.993408203125,
+     "hrrLate": 515.993408203125,
+     "measuredGasC": 164.5,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 100.48088836669922,
+      "cellSpeed": 0.45575855848106545,
+      "estimateC": 100.48088836669922,
+      "estimateSpeed": 0.45575855848106545,
+      "hrr": 266.78338623046875
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 105.76898934078062,
+     "late": 105.76898934078062,
+     "hrrEstimate": 515.993408203125,
+     "hrrLate": 515.993408203125,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 76,
+     "estimate": 104.97343782601423,
+     "late": 104.97343782601423,
+     "hrrEstimate": 506.2122039794922,
+     "hrrLate": 506.2122039794922,
+     "measuredGasC": 179.2,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 106.96501922607422,
+      "cellSpeed": 0.9420229332623841,
+      "estimateC": 106.96501922607422,
+      "estimateSpeed": 0.9420229332623841,
+      "hrr": 266.78338623046875
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 83,
+     "estimate": 103.95350346354573,
+     "late": 103.95350346354573,
+     "hrrEstimate": 496.52459716796875,
+     "hrrLate": 496.52459716796875,
+     "measuredGasC": 138.8,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 114.39360809326172,
+      "cellSpeed": 0.5378812245868367,
+      "estimateC": 114.39360809326172,
+      "estimateSpeed": 0.5378812245868367,
+      "hrr": 318.544189453125
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 63.66859999997541,
+    "run": 22892.6066,
+    "perStep": 13.466239176470587
+   }
+  },
+  {
+   "id": "vettori_sloped/14/tabulated/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 14,
+   "growth": "fast",
+   "ceiling": "obstructed (two beams)",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 170,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 40,
+    "columns": 8,
+    "layers": 5,
+    "columnHeight": 1.53125,
+    "radiantFraction": 0.2,
+    "released": 36846889.99999871,
+    "qAtMeasuredFirst": 656.74
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 99,
+    "value": 3444.7,
+    "cell": 4034,
+    "position": [
+     3.52,
+     0.46,
+     2.6
+    ],
+    "readings": {
+     "maxT": 3444.7,
+     "maxSpeed": 10.99,
+     "gasHeat": 17644730,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 84,
+     "estimate": 80.25898364705986,
+     "late": 80.25898364705986,
+     "hrrEstimate": 673.260009765625,
+     "hrrLate": 673.260009765625,
+     "measuredGasC": 185.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 326.9386901855469,
+      "cellSpeed": 1.2482337157227683,
+      "estimateC": 326.9386901855469,
+      "estimateSpeed": 1.2482337157227683,
+      "hrr": 733.5499877929688
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 81.3655057817488,
+     "late": 81.3655057817488,
+     "hrrEstimate": 690.3000183105469,
+     "hrrLate": 690.3000183105469,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 79,
+     "estimate": 81.64298091598016,
+     "late": 81.64298091598016,
+     "hrrEstimate": 690.3000183105469,
+     "hrrLate": 690.3000183105469,
+     "measuredGasC": 177.1,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 215.34463500976562,
+      "cellSpeed": 0.2846999892819757,
+      "estimateC": 215.34463500976562,
+      "estimateSpeed": 0.2846999892819757,
+      "hrr": 648.6099853515625
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 79,
+     "estimate": 80.37247978214933,
+     "late": 80.37247978214933,
+     "hrrEstimate": 673.260009765625,
+     "hrrLate": 673.260009765625,
+     "measuredGasC": 160.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 225.312255859375,
+      "cellSpeed": 0.43430293049632657,
+      "estimateC": 225.312255859375,
+      "estimateSpeed": 0.43430293049632657,
+      "hrr": 648.6099853515625
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 68.83789999998407,
+    "run": 21759.430699999968,
+    "perStep": 12.79966511764704
+   }
+  },
+  {
+   "id": "vettori_sloped/14/nominal/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 14,
+   "growth": "fast",
+   "ceiling": "obstructed (two beams)",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 170,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 32,
+    "columns": 8,
+    "layers": 4,
+    "columnHeight": 1.225,
+    "radiantFraction": 0.2,
+    "released": 44668400.3999973,
+    "qAtMeasuredFirst": 292.0788
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 142,
+    "value": 3386.6,
+    "cell": 4515,
+    "position": [
+     3.83,
+     1.68,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3386.6,
+     "maxSpeed": 14.15,
+     "gasHeat": 18413618,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 84,
+     "estimate": 104.61581693354783,
+     "late": 104.61581693354783,
+     "hrrEstimate": 506.2122039794922,
+     "hrrLate": 506.2122039794922,
+     "measuredGasC": 185.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 131.94046020507812,
+      "cellSpeed": 0.9453564792767182,
+      "estimateC": 131.94046020507812,
+      "estimateSpeed": 0.9453564792767182,
+      "hrr": 326.31298828125
+     }
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 105.66260251551061,
+     "late": 105.66260251551061,
+     "hrrEstimate": 515.993408203125,
+     "hrrLate": 515.993408203125,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 79,
+     "estimate": 105.04663712797789,
+     "late": 105.04663712797789,
+     "hrrEstimate": 515.993408203125,
+     "hrrLate": 515.993408203125,
+     "measuredGasC": 177.1,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 110.82100677490234,
+      "cellSpeed": 0.25374235961565494,
+      "estimateC": 110.82100677490234,
+      "estimateSpeed": 0.25374235961565494,
+      "hrr": 288.4049987792969
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 79,
+     "estimate": 107.1197194037261,
+     "late": 107.1197194037261,
+     "hrrEstimate": 535.8365783691406,
+     "hrrLate": 535.8365783691406,
+     "measuredGasC": 160.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 109.10506439208984,
+      "cellSpeed": 0.7253947125806054,
+      "estimateC": 109.10506439208984,
+      "estimateSpeed": 0.7253947125806054,
+      "hrr": 288.4049987792969
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 65.06369999999879,
+    "run": 32036.047300000035,
+    "perStep": 18.844733705882373
+   }
+  },
+  {
+   "id": "vettori_sloped/15/tabulated/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 15,
+   "growth": "slow",
+   "ceiling": "obstructed (two beams)",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 435,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 24,
+    "columns": 8,
+    "layers": 3,
+    "columnHeight": 0.9187500000000001,
+    "radiantFraction": 0.2,
+    "released": 48591509.99999963,
+    "qAtMeasuredFirst": 203.6
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 314,
+    "value": 3154,
+    "cell": 4454,
+    "position": [
+     3.52,
+     1.07,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3154,
+     "maxSpeed": 14.48,
+     "gasHeat": 15175056,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 219.25329188150303,
+     "late": 219.25329188150303,
+     "hrrEstimate": 211.1999969482422,
+     "hrrLate": 211.1999969482422,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 221.10645130370176,
+     "late": 221.10645130370176,
+     "hrrEstimate": 214.77999877929688,
+     "hrrLate": 214.77999877929688,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 216,
+     "estimate": 217.84554170854102,
+     "late": 217.84554170854102,
+     "hrrEstimate": 207.4000015258789,
+     "hrrLate": 207.4000015258789,
+     "measuredGasC": 138.7,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 121.25438690185547,
+      "cellSpeed": 0.614478168776545,
+      "estimateC": 121.25438690185547,
+      "estimateSpeed": 0.614478168776545,
+      "hrr": 204.5500030517578
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 215,
+     "estimate": 219.02903935052018,
+     "late": 219.02903935052018,
+     "hrrEstimate": 211.1999969482422,
+     "hrrLate": 211.1999969482422,
+     "measuredGasC": 140.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 115.96331024169922,
+      "cellSpeed": 0.7808735810463799,
+      "estimateC": 115.96331024169922,
+      "estimateSpeed": 0.7808735810463799,
+      "hrr": 202.75
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 69.58929999999236,
+    "run": 64105.220299999986,
+    "perStep": 14.73683225287356
+   }
+  },
+  {
+   "id": "vettori_sloped/15/nominal/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 15,
+   "growth": "slow",
+   "ceiling": "obstructed (two beams)",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 435,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.6125,
+    "radiantFraction": 0.2,
+    "released": 34150074.414999165,
+    "qAtMeasuredFirst": 135.43925000000002
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 327,
+    "value": 3152.7,
+    "cell": 4064,
+    "position": [
+     3.52,
+     0.77,
+     2.6
+    ],
+    "readings": {
+     "maxT": 3152.7,
+     "maxSpeed": 12.29,
+     "gasHeat": 14464849,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 251.68427490826286,
+     "late": 251.68427490826286,
+     "hrrEstimate": 184.59439086914062,
+     "hrrLate": 184.59439086914062,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 249.61565975070175,
+     "late": 249.61565975070175,
+     "hrrEstimate": 181.66439819335938,
+     "hrrLate": 181.66439819335938,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 216,
+     "estimate": 246.56348230117874,
+     "late": 246.56348230117874,
+     "hrrEstimate": 177.31333923339844,
+     "hrrLate": 177.31333923339844,
+     "measuredGasC": 138.7,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 83.71446990966797,
+      "cellSpeed": 1.6322359283336862,
+      "estimateC": 83.71446990966797,
+      "estimateSpeed": 1.6322359283336862,
+      "hrr": 136.07066345214844
+     }
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 215,
+     "estimate": 251.5173675010893,
+     "late": 251.5173675010893,
+     "hrrEstimate": 184.59439086914062,
+     "hrrLate": 184.59439086914062,
+     "measuredGasC": 140.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 81.96617889404297,
+      "cellSpeed": 0.3612215268983602,
+      "estimateC": 81.96617889404297,
+      "estimateSpeed": 0.3612215268983602,
+      "hrr": 134.81076049804688
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 53.95219999999972,
+    "run": 69609.99580000003,
+    "perStep": 16.00229788505748
+   }
+  },
+  {
+   "id": "vettori_sloped/16/tabulated/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 16,
+   "growth": "slow",
+   "ceiling": "obstructed (two beams)",
+   "ramp": "tabulated",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 445,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 24,
+    "columns": 8,
+    "layers": 3,
+    "columnHeight": 0.9187500000000001,
+    "radiantFraction": 0.2,
+    "released": 48591509.99999963,
+    "qAtMeasuredFirst": 214.78
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 314,
+    "value": 3154,
+    "cell": 4454,
+    "position": [
+     3.52,
+     1.07,
+     2.91
+    ],
+    "readings": {
+     "maxT": 3154,
+     "maxSpeed": 14.48,
+     "gasHeat": 15175056,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 219.25329188150303,
+     "late": 219.25329188150303,
+     "hrrEstimate": 211.1999969482422,
+     "hrrLate": 211.1999969482422,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 221.10645130370176,
+     "late": 221.10645130370176,
+     "hrrEstimate": 214.77999877929688,
+     "hrrLate": 214.77999877929688,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 217.84554170854102,
+     "late": 217.84554170854102,
+     "hrrEstimate": 207.4000015258789,
+     "hrrLate": 207.4000015258789,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 221,
+     "estimate": 219.02903935052018,
+     "late": 219.02903935052018,
+     "hrrEstimate": 211.1999969482422,
+     "hrrLate": 211.1999969482422,
+     "measuredGasC": 137.6,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 122.76451873779297,
+      "cellSpeed": 0.31910344099586213,
+      "estimateC": 122.76451873779297,
+      "estimateSpeed": 0.31910344099586213,
+      "hrr": 213.94000244140625
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 45.176100000040606,
+    "run": 64655.69909999997,
+    "perStep": 14.529370584269657
+   }
+  },
+  {
+   "id": "vettori_sloped/16/nominal/h10/0.306",
+   "dataset": "vettori_sloped_2003",
+   "test": 16,
+   "growth": "slow",
+   "ceiling": "obstructed (two beams)",
+   "ramp": "nominal",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 445,
+   "grid": {
+    "n": [
+     30,
+     12,
+     24
+    ],
+    "cells": 8640,
+    "h": 0.30625
+   },
+   "burner": {
+    "cells": 16,
+    "columns": 8,
+    "layers": 2,
+    "columnHeight": 0.6125,
+    "radiantFraction": 0.2,
+    "released": 34150074.414999165,
+    "qAtMeasuredFirst": 143.10413
+   },
+   "plumeHeight": 1.990625,
+   "health": {
+    "ok": false,
+    "reason": "temperature",
+    "time": 327,
+    "value": 3152.7,
+    "cell": 4064,
+    "position": [
+     3.52,
+     0.77,
+     2.6
+    ],
+    "readings": {
+     "maxT": 3152.7,
+     "maxSpeed": 12.29,
+     "gasHeat": 14464849,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "r": 2.150840133819806,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 251.68427490826286,
+     "late": 251.68427490826286,
+     "hrrEstimate": 184.59439086914062,
+     "hrrLate": 184.59439086914062,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 2,
+     "r": 2.396648864821461,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 249.61565975070175,
+     "late": 249.61565975070175,
+     "hrrEstimate": 181.66439819335938,
+     "hrrLate": 181.66439819335938,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 3,
+     "r": 2.573941681788847,
+     "inSight": false,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 246.56348230117874,
+     "late": 246.56348230117874,
+     "hrrEstimate": 177.31333923339844,
+     "hrrLate": 177.31333923339844,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 4,
+     "r": 2.346777211677751,
+     "inSight": false,
+     "onGrid": true,
+     "measured": 221,
+     "estimate": 251.5173675010893,
+     "late": 251.5173675010893,
+     "hrrEstimate": 184.59439086914062,
+     "hrrLate": 184.59439086914062,
+     "measuredGasC": 137.6,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 118.33296966552734,
+      "cellSpeed": 1.0625181249623845,
+      "estimateC": 118.33296966552734,
+      "estimateSpeed": 1.0625181249623845,
+      "hrr": 142.45806884765625
+     }
+    }
+   ],
+   "openAtEnd": 4,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 59.43949999997858,
+    "run": 72292.63510000001,
+    "perStep": 16.245535977528093
+   }
+  },
+  {
+   "id": "bittern/3/measured/h10/0.300",
+   "dataset": "bittern_2004",
+   "test": 3,
+   "door": "open",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 385,
+   "grid": {
+    "n": [
+     33,
+     12,
+     20
+    ],
+    "cells": 7920,
+    "h": 0.3
+   },
+   "burner": {
+    "cells": 3,
+    "columns": 1,
+    "layers": 3,
+    "columnHeight": 0.8999999999999999,
+    "radiantFraction": 0.46,
+    "released": 29717725,
+    "qAtMeasuredFirst": 102.40472673559823
+   },
+   "plumeHeight": 1.3499999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.63,
+    "substeps": 4
+   },
+   "heads": [
+    {
+     "head": 1,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 1.950640920313117,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 192,
+     "estimate": 167.94663599897893,
+     "late": 182.0415114738847,
+     "hrrEstimate": 75.87862396240234,
+     "hrrLate": 100.22684097290039,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 241.65371704101562,
+      "cellSpeed": 0.43159674518410274,
+      "estimateC": 320.74459933693583,
+      "estimateSpeed": 0.6142313088821985,
+      "hrr": 102.69276428222656
+     }
+    },
+    {
+     "head": 2,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 2.0506096654409878,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 192,
+     "estimate": 168.55112016039115,
+     "late": 183.40130521653003,
+     "hrrEstimate": 77.12000274658203,
+     "hrrLate": 101.67690658569336,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 287.8778991699219,
+      "cellSpeed": 0.5420262222002334,
+      "estimateC": 318.9101488330665,
+      "estimateSpeed": 0.5891744320046917,
+      "hrr": 102.69276428222656
+     }
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 55.06389999995008,
+    "run": 87545.94150000007,
+    "perStep": 22.739205584415604
+   }
+  },
+  {
+   "id": "bittern/4/measured/h10/0.300",
+   "dataset": "bittern_2004",
+   "test": 4,
+   "door": "open",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 455,
+   "grid": {
+    "n": [
+     33,
+     12,
+     20
+    ],
+    "cells": 7920,
+    "h": 0.3
+   },
+   "burner": {
+    "cells": 3,
+    "columns": 1,
+    "layers": 3,
+    "columnHeight": 0.8999999999999999,
+    "radiantFraction": 0.46,
+    "released": 19905034.999999993,
+    "qAtMeasuredFirst": 125.3128048780488
+   },
+   "plumeHeight": 1.3499999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 2.57,
+    "substeps": 4
+   },
+   "heads": [
+    {
+     "head": 1,
+     "type": "SS68 (standard response, 5 mm glass bulb)",
+     "r": 1.950640920313117,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 226,
+     "estimate": 189.95098391918884,
+     "late": 203.46987154879835,
+     "hrrEstimate": 88.31726837158203,
+     "hrrLate": 103.89762115478516,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 346.2502136230469,
+      "cellSpeed": 0.5946560512187352,
+      "estimateC": 475.59922519502186,
+      "estimateSpeed": 0.656079759697904,
+      "hrr": 125.1451187133789
+     }
+    },
+    {
+     "head": 2,
+     "type": "SS68 (standard response, 5 mm glass bulb)",
+     "r": 2.0506096654409878,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 226,
+     "estimate": 187.83253034501945,
+     "late": 200.51468137814828,
+     "hrrEstimate": 86.84893417358398,
+     "hrrLate": 99.681396484375,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 477.2153015136719,
+      "cellSpeed": 1.7051989093572975,
+      "estimateC": 477.2153015136719,
+      "estimateSpeed": 1.7051989093572975,
+      "hrr": 125.1451187133789
+     }
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 50.335499999986496,
+    "run": 103286.87800000003,
+    "perStep": 22.700412747252752
+   }
+  },
+  {
+   "id": "bittern/8/measured/h10/0.300",
+   "dataset": "bittern_2004",
+   "test": 8,
+   "door": "open",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 375,
+   "grid": {
+    "n": [
+     33,
+     12,
+     20
+    ],
+    "cells": 7920,
+    "h": 0.3
+   },
+   "burner": {
+    "cells": 3,
+    "columns": 1,
+    "layers": 3,
+    "columnHeight": 0.8999999999999999,
+    "radiantFraction": 0.46,
+    "released": 14683925.5,
+    "qAtMeasuredFirst": 88.09696261682244
+   },
+   "plumeHeight": 1.3499999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.24,
+    "substeps": 4
+   },
+   "heads": [
+    {
+     "head": 1,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 1.950640920313117,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 182,
+     "estimate": 177.7343577771235,
+     "late": 181.54288068759436,
+     "hrrEstimate": 85.72483444213867,
+     "hrrLate": 87.93341445922852,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 280.3155822753906,
+      "cellSpeed": 1.3372251067309708,
+      "estimateC": 318.7389732030356,
+      "estimateSpeed": 1.3372251067309708,
+      "hrr": 88.01519012451172
+     }
+    },
+    {
+     "head": 2,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 2.0506096654409878,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 187,
+     "estimate": 178.39214437185674,
+     "late": 182.9537898027936,
+     "hrrEstimate": 86.96234893798828,
+     "hrrLate": 88.10672378540039,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 402.9118957519531,
+      "cellSpeed": 1.8880941262094622,
+      "estimateC": 420.91187544131776,
+      "estimateSpeed": 1.8880941262094622,
+      "hrr": 89.93653869628906
+     }
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 46.0515000000014,
+    "run": 78736.12949999998,
+    "perStep": 20.996301199999994
+   }
+  },
+  {
+   "id": "bittern/10/measured/h10/0.300",
+   "dataset": "bittern_2004",
+   "test": 10,
+   "door": "open",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 370,
+   "grid": {
+    "n": [
+     33,
+     12,
+     20
+    ],
+    "cells": 7920,
+    "h": 0.3
+   },
+   "burner": {
+    "cells": 3,
+    "columns": 1,
+    "layers": 3,
+    "columnHeight": 0.8999999999999999,
+    "radiantFraction": 0.46,
+    "released": 5153679.092592593,
+    "qAtMeasuredFirst": 96.14320987654321
+   },
+   "plumeHeight": 1.3499999999999999,
+   "health": {
+    "ok": false,
+    "reason": "energy",
+    "time": 183,
+    "value": 8817376.3,
+    "cell": 3712,
+    "position": [
+     4.05,
+     1.05,
+     1.95
+    ],
+    "readings": {
+     "maxT": 1619.8,
+     "maxSpeed": 6.5,
+     "gasHeat": 8817376,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "type": "Res A (residential, 3 mm glass bulb)",
+     "r": 1.950640920313117,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 183,
+     "estimate": 155.92809216547406,
+     "late": 158.89232402784495,
+     "hrrEstimate": 61.87931823730469,
+     "hrrLate": 67.36314392089844,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 345.8473815917969,
+      "cellSpeed": 0.7530049537625189,
+      "estimateC": 477.32227722908726,
+      "estimateSpeed": 0.7530049537625189,
+      "hrr": 95.63895416259766
+     }
+    },
+    {
+     "head": 2,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 2.0506096654409878,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 184,
+     "estimate": 156.31693102065742,
+     "late": 158.42681352958255,
+     "hrrEstimate": 63.66229438781738,
+     "hrrLate": 67.36314392089844,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 502.0269470214844,
+      "cellSpeed": 2.5118329217030126,
+      "estimateC": 502.0269470214844,
+      "estimateSpeed": 2.5118329217030126,
+      "hrr": 95.63895416259766
+     }
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 50.21759999997448,
+    "run": 38981.31920000003,
+    "perStep": 10.535491675675683
+   }
+  },
+  {
+   "id": "bittern/12/measured/h10/0.300",
+   "dataset": "bittern_2004",
+   "test": 12,
+   "door": "closed",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 495,
+   "grid": {
+    "n": [
+     33,
+     12,
+     20
+    ],
+    "cells": 7920,
+    "h": 0.3
+   },
+   "burner": {
+    "cells": 3,
+    "columns": 1,
+    "layers": 3,
+    "columnHeight": 0.8999999999999999,
+    "radiantFraction": 0.46,
+    "released": 5138849.506109956,
+    "qAtMeasuredFirst": 113.34540682414698
+   },
+   "plumeHeight": 1.3499999999999999,
+   "health": {
+    "ok": false,
+    "reason": "energy",
+    "time": 215,
+    "value": 8897966,
+    "cell": 3745,
+    "position": [
+     4.05,
+     1.35,
+     1.95
+    ],
+    "readings": {
+     "maxT": 1114.8,
+     "maxSpeed": 4.14,
+     "gasHeat": 8897966,
+     "nonFinite": false
+    }
+   },
+   "heads": [
+    {
+     "head": 1,
+     "type": "SS68 (standard response, 5 mm glass bulb)",
+     "r": 1.950640920313117,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 246,
+     "estimate": 199.18924695840727,
+     "late": 212.12143760324497,
+     "hrrEstimate": 82.82506942749023,
+     "hrrLate": 102.9853286743164,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 473.0837707519531,
+      "cellSpeed": 0.49601024337949556,
+      "estimateC": 586.6633840782989,
+      "estimateSpeed": 0.6181469003208285,
+      "hrr": 104.66924285888672
+     }
+    },
+    {
+     "head": 2,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 2.0506096654409878,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 228,
+     "estimate": 185.43605942997573,
+     "late": 195.5944646884518,
+     "hrrEstimate": 59.109235763549805,
+     "hrrLate": 76.50754165649414,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 586.8534545898438,
+      "cellSpeed": 0.959329746183472,
+      "estimateC": 586.8534545898438,
+      "estimateSpeed": 0.959329746183472,
+      "hrr": 104.66924285888672
+     }
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 60.11040000000503,
+    "run": 53466.01540000003,
+    "perStep": 10.801215232323239
+   }
+  },
+  {
+   "id": "bittern/13/measured/h10/0.300",
+   "dataset": "bittern_2004",
+   "test": 13,
+   "door": "closed",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 410,
+   "grid": {
+    "n": [
+     33,
+     12,
+     20
+    ],
+    "cells": 7920,
+    "h": 0.3
+   },
+   "burner": {
+    "cells": 3,
+    "columns": 1,
+    "layers": 3,
+    "columnHeight": 0.8999999999999999,
+    "radiantFraction": 0.46,
+    "released": 34505048,
+    "qAtMeasuredFirst": 102.49961315280464
+   },
+   "plumeHeight": 1.3499999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.08,
+    "substeps": 4
+   },
+   "heads": [
+    {
+     "head": 1,
+     "type": "SS68 (standard response, 5 mm glass bulb)",
+     "r": 1.950640920313117,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 204,
+     "estimate": 182.63799594495998,
+     "late": 187.25335635352738,
+     "hrrEstimate": 93.72078704833984,
+     "hrrLate": 97.90710830688477,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 291.2892150878906,
+      "cellSpeed": 0.855292181724725,
+      "estimateC": 346.24511197395157,
+      "estimateSpeed": 0.855292181724725,
+      "hrr": 108.62965393066406
+     }
+    },
+    {
+     "head": 2,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 2.0506096654409878,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 194,
+     "estimate": 167.07569921023574,
+     "late": 183.39261187034015,
+     "hrrEstimate": 76.16976547241211,
+     "hrrLate": 94.41828155517578,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 655.0704956054688,
+      "cellSpeed": 1.8733779364177345,
+      "estimateC": 690.2512539039014,
+      "estimateSpeed": 1.8733779364177345,
+      "hrr": 102.22882080078125
+     }
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 48.94720000005327,
+    "run": 115094.33809999994,
+    "perStep": 28.07178978048779
+   }
+  },
+  {
+   "id": "bittern/14/measured/h10/0.300",
+   "dataset": "bittern_2004",
+   "test": 14,
+   "door": "closed",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 410,
+   "grid": {
+    "n": [
+     33,
+     12,
+     20
+    ],
+    "cells": 7920,
+    "h": 0.3
+   },
+   "burner": {
+    "cells": 3,
+    "columns": 1,
+    "layers": 3,
+    "columnHeight": 0.8999999999999999,
+    "radiantFraction": 0.46,
+    "released": 27665040.5,
+    "qAtMeasuredFirst": 77.09166666666667
+   },
+   "plumeHeight": 1.3499999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.29,
+    "substeps": 4
+   },
+   "heads": [
+    {
+     "head": 1,
+     "type": "SS68 (standard response, 5 mm glass bulb)",
+     "r": 1.950640920313117,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 203,
+     "estimate": 206.13426195822728,
+     "late": 219.9599195076036,
+     "hrrEstimate": 96.6160659790039,
+     "hrrLate": 98.30211639404297,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 307.9524230957031,
+      "cellSpeed": 1.1693705197294846,
+      "estimateC": 307.9524230957031,
+      "estimateSpeed": 1.1693705197294846,
+      "hrr": 93.84855651855469
+     }
+    },
+    {
+     "head": 2,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 2.0506096654409878,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 187,
+     "estimate": 188.00443549792203,
+     "late": 206.615580155908,
+     "hrrEstimate": 78.43722152709961,
+     "hrrLate": 96.6160659790039,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 88.95470428466797,
+      "cellSpeed": 0.5684633223779539,
+      "estimateC": 144.8154447479551,
+      "estimateSpeed": 0.5684633223779539,
+      "hrr": 76.4066390991211
+     }
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 62.74750000005588,
+    "run": 107764.38789999997,
+    "perStep": 26.28399704878048
+   }
+  },
+  {
+   "id": "bittern/15/measured/h10/0.300",
+   "dataset": "bittern_2004",
+   "test": 15,
+   "door": "closed",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "activation",
+   "horizon": 540,
+   "grid": {
+    "n": [
+     33,
+     12,
+     20
+    ],
+    "cells": 7920,
+    "h": 0.3
+   },
+   "burner": {
+    "cells": 3,
+    "columns": 1,
+    "layers": 3,
+    "columnHeight": 0.8999999999999999,
+    "radiantFraction": 0.46,
+    "released": 36114863.99999729,
+    "qAtMeasuredFirst": 92.94782608695654
+   },
+   "plumeHeight": 1.3499999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.13,
+    "substeps": 4
+   },
+   "heads": [
+    {
+     "head": 1,
+     "type": "SS68 (standard response, 5 mm glass bulb)",
+     "r": 1.950640920313117,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 270,
+     "estimate": 244.15369009910634,
+     "late": 249.53914521773206,
+     "hrrEstimate": 84.13485336303711,
+     "hrrLate": 80.5907211303711,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 435.4137878417969,
+      "cellSpeed": 1.4387966805201804,
+      "estimateC": 480.572539659025,
+      "estimateSpeed": 1.4387966805201804,
+      "hrr": 123.86933135986328
+     }
+    },
+    {
+     "head": 2,
+     "type": "Res B (residential, 3 mm glass bulb)",
+     "r": 2.0506096654409878,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 253,
+     "estimate": 225.38046752840702,
+     "late": 243.59810178434012,
+     "hrrEstimate": 67.30400085449219,
+     "hrrLate": 84.65670394897461,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 271.0759582519531,
+      "cellSpeed": 1.7043785332012553,
+      "estimateC": 328.78193140388214,
+      "estimateSpeed": 1.7043785332012553,
+      "hrr": 91.20869445800781
+     }
+    }
+   ],
+   "openAtEnd": 2,
+   "water": {
+    "emitted": 0,
+    "evaporated": 0,
+    "wetted": 0,
+    "floor": 0
+   },
+   "ms": {
+    "build": 88.08539999998175,
+    "run": 145897.85820000002,
+    "perStep": 27.018121888888892
+   }
+  },
+  {
+   "id": "ul_nfprf/I-17/measured/h10/0.507",
+   "dataset": "ul_nfprf_1998_series_I",
+   "test": "I-17",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "spray",
+   "horizon": 160,
+   "grid": {
+    "n": [
+     41,
+     17,
+     43
+    ],
+    "cells": 29971,
+    "h": 0.5066666666666666
+   },
+   "burner": {
+    "cells": 44,
+    "columns": 4,
+    "layers": 11,
+    "columnHeight": 5.573333333333332,
+    "radiantFraction": 0.35,
+    "released": 582682000,
+    "qAtMeasuredFirst": 4600
+   },
+   "plumeHeight": 6.839999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 7.97,
+    "substeps": 3
+   },
+   "heads": [
+    {
+     "head": 50,
+     "r": 8.707212846574704,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 123.64950744076663,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 51,
+     "r": 6.415402472868627,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 105.88695597347409,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 52,
+     "r": 5.0104113825336,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 87.85487658173436,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 53,
+     "r": 5.25890250485361,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 91.42023057729061,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 54,
+     "r": 7.43702822966868,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 114.69324613765045,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 55,
+     "r": 4.54436158577002,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 84.66054457150157,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 56,
+     "r": 2.144307710090964,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 58,
+     "estimate": 58.52788752709342,
+     "late": 95.64707747778675,
+     "hrrEstimate": 4600,
+     "hrrLate": 4600,
+     "measuredGasC": 159.7,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 295.0237731933594,
+      "cellSpeed": 2.1855929395522358,
+      "estimateC": 295.0237731933594,
+      "estimateSpeed": 4.5377541742790894,
+      "hrr": 4600
+     }
+    },
+    {
+     "head": 57,
+     "r": 2.6739276147436923,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 64,
+     "estimate": 63.85750157375341,
+     "late": 111.47621067426958,
+     "hrrEstimate": 4600,
+     "hrrLate": 4600,
+     "measuredGasC": 161.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 144.59716796875,
+      "cellSpeed": 2.59904351574781,
+      "estimateC": 186.65860611923227,
+      "estimateSpeed": 3.775335185026412,
+      "hrr": 4600
+     }
+    },
+    {
+     "head": 58,
+     "r": 7.308092926490618,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 108.28009939081014,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 59,
+     "r": 4.330133433920429,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 82.5369526837089,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 60,
+     "r": 1.6422207186882276,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 60,
+     "estimate": 54.29196242958417,
+     "late": 84.90567500029078,
+     "hrrEstimate": 4600,
+     "hrrLate": 4600,
+     "measuredGasC": 150.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 185.21896362304688,
+      "cellSpeed": 1.665111253650066,
+      "estimateC": 277.7206792170422,
+      "estimateSpeed": 5.667444576674544,
+      "hrr": 4600
+     }
+    },
+    {
+     "head": 61,
+     "r": 2.2910089965389084,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 80,
+     "estimate": 59.95165622202359,
+     "late": 110.63879792531992,
+     "hrrEstimate": 4600,
+     "hrrLate": 4600,
+     "measuredGasC": 141.2,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 52.54387664794922,
+      "cellSpeed": 0.5597741697519507,
+      "estimateC": 203.0671606181059,
+      "estimateSpeed": 4.294288573517644,
+      "hrr": 4600
+     }
+    },
+    {
+     "head": 62,
+     "r": 8.36820702951886,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 118.51770409212834,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 63,
+     "r": 5.947160853905181,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 99.87415679582236,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 64,
+     "r": 4.394946593026533,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 81.99987655954277,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 65,
+     "r": 4.676258000676276,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 84.51855923605066,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 87,
+     "r": 10.26034708098231,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 138.65827608636826,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 88,
+     "r": 8.403365727823317,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 126.15716221104628,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 89,
+     "r": 7.386703519763662,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 113.78282263494131,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 90,
+     "r": 7.557461360948014,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 116.08127056102707,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 94,
+     "r": 12.614577105696233,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 95,
+     "r": 11.15658500119498,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 138.3803705139327,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 96,
+     "r": 10.412311089389434,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 131.79905591236604,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 97,
+     "r": 10.534137627521083,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 127.00411781566841,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 23,
+   "openedSequence": [
+    [
+     1,
+     0
+    ],
+    [
+     55,
+     1
+    ],
+    [
+     59,
+     2
+    ],
+    [
+     60,
+     3
+    ],
+    [
+     64,
+     4
+    ],
+    [
+     82,
+     5
+    ],
+    [
+     83,
+     6
+    ],
+    [
+     85,
+     8
+    ],
+    [
+     88,
+     9
+    ],
+    [
+     92,
+     10
+    ],
+    [
+     100,
+     11
+    ],
+    [
+     106,
+     12
+    ],
+    [
+     109,
+     13
+    ],
+    [
+     114,
+     14
+    ],
+    [
+     115,
+     15
+    ],
+    [
+     117,
+     16
+    ],
+    [
+     119,
+     17
+    ],
+    [
+     124,
+     18
+    ],
+    [
+     127,
+     19
+    ],
+    [
+     128,
+     20
+    ],
+    [
+     132,
+     21
+    ],
+    [
+     139,
+     23
+    ]
+   ],
+   "measuredCount": 4,
+   "measuredCountCsv": 6,
+   "measuredSequence": [
+    58,
+    60,
+    64,
+    80,
+    662,
+    694
+   ],
+   "water": {
+    "emitted": 4284.489999999993,
+    "evaporated": 18.632654564945906,
+    "wetted": 0,
+    "floor": 4265.857345434977
+   },
+   "ms": {
+    "build": 363.22549999994226,
+    "run": 170127.7609,
+    "perStep": 106.3298505625
+   }
+  },
+  {
+   "id": "ul_nfprf/I-18/measured/h10/0.507",
+   "dataset": "ul_nfprf_1998_series_I",
+   "test": "I-18",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "spray",
+   "horizon": 160,
+   "grid": {
+    "n": [
+     41,
+     17,
+     43
+    ],
+    "cells": 29971,
+    "h": 0.5066666666666666
+   },
+   "burner": {
+    "cells": 40,
+    "columns": 4,
+    "layers": 10,
+    "columnHeight": 5.066666666666666,
+    "radiantFraction": 0.35,
+    "released": 468679000,
+    "qAtMeasuredFirst": 3700
+   },
+   "plumeHeight": 6.839999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 7.15,
+    "substeps": 2
+   },
+   "heads": [
+    {
+     "head": 50,
+     "r": 4.557552949652796,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 136.13993136170754,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 51,
+     "r": 2.158036659146974,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 58,
+     "estimate": 70.80568402520811,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": 161.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 182.84243774414062,
+      "cellSpeed": 2.323318361512742,
+      "estimateC": 182.84243774414062,
+      "estimateSpeed": 4.197710691555833,
+      "hrr": 3700
+     }
+    },
+    {
+     "head": 52,
+     "r": 2.6735660746567644,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 62,
+     "estimate": 81.14515910605095,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": 146,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 67.48046112060547,
+      "cellSpeed": 2.2345518968541502,
+      "estimateC": 160.54408119814389,
+      "estimateSpeed": 3.5114440284063497,
+      "hrr": 3700
+     }
+    },
+    {
+     "head": 53,
+     "r": 5.314488582064024,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 54,
+     "r": 4.336948491995519,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 124.08136566778016,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 55,
+     "r": 1.6416319793289686,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 64,
+     "estimate": 60.95821734549281,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": 142.5,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 108.8838119506836,
+      "cellSpeed": 0.6651274020792947,
+      "estimateC": 193.63204351623108,
+      "estimateSpeed": 5.272278567144463,
+      "hrr": 3700
+     }
+    },
+    {
+     "head": 56,
+     "r": 2.277232726114943,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 78,
+     "estimate": 72.95911145165394,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": 133.2,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 122.83431243896484,
+      "cellSpeed": 3.4289057380837984,
+      "estimateC": 166.11547287344388,
+      "estimateSpeed": 4.013796389970256,
+      "hrr": 3700
+     }
+    },
+    {
+     "head": 57,
+     "r": 5.12656046704047,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 155.59872364399757,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 58,
+     "r": 5.954154478643926,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 59,
+     "r": 4.397475285762146,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 121.03552193243178,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 60,
+     "r": 4.6721111097899,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 129.97397614704127,
+     "late": null,
+     "hrrEstimate": 3700,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 61,
+     "r": 6.551675782237361,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 62,
+     "r": 8.399632267083016,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 63,
+     "r": 7.378323356668201,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 64,
+     "r": 7.5452295451423375,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 65,
+     "r": 8.833250943011986,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 87,
+     "r": 11.151038317374553,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 88,
+     "r": 10.403436398079668,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 89,
+     "r": 10.52246749684798,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 90,
+     "r": 11.481208802018866,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 94,
+     "r": 14.02649239435465,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 95,
+     "r": 13.43980365266629,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 96,
+     "r": 13.53215265785734,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 97,
+     "r": 14.290380991733173,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 9,
+   "openedSequence": [
+    [
+     1,
+     0
+    ],
+    [
+     61,
+     1
+    ],
+    [
+     71,
+     2
+    ],
+    [
+     73,
+     3
+    ],
+    [
+     82,
+     4
+    ],
+    [
+     122,
+     5
+    ],
+    [
+     125,
+     6
+    ],
+    [
+     130,
+     7
+    ],
+    [
+     137,
+     8
+    ],
+    [
+     156,
+     9
+    ]
+   ],
+   "measuredCount": 4,
+   "measuredCountCsv": 4,
+   "measuredSequence": [
+    58,
+    62,
+    64,
+    78
+   ],
+   "water": {
+    "emitted": 1523.8649999999197,
+    "evaporated": 5.17392055917787,
+    "wetted": 0,
+    "floor": 1518.6910794407695
+   },
+   "ms": {
+    "build": 383.61979999998584,
+    "run": 149154.42869999993,
+    "perStep": 93.22151793749995
+   }
+  },
+  {
+   "id": "ul_nfprf/I-20/measured/h10/0.507",
+   "dataset": "ul_nfprf_1998_series_I",
+   "test": "I-20",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "spray",
+   "horizon": 200,
+   "grid": {
+    "n": [
+     41,
+     17,
+     43
+    ],
+    "cells": 29971,
+    "h": 0.5066666666666666
+   },
+   "burner": {
+    "cells": 44,
+    "columns": 4,
+    "layers": 11,
+    "columnHeight": 5.573333333333332,
+    "radiantFraction": 0.35,
+    "released": 700013999.9999995,
+    "qAtMeasuredFirst": 4200
+   },
+   "plumeHeight": 6.839999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.81,
+    "substeps": 3
+   },
+   "heads": [
+    {
+     "head": 50,
+     "r": 6.421886188825075,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 125.38009228239076,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 51,
+     "r": 5.0126296048636565,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 98.32314129292027,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 52,
+     "r": 5.255215398905066,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 100.75173588961412,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 53,
+     "r": 6.979478649743277,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 129.14987602799366,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 54,
+     "r": 4.553510245465091,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 93.57494017708757,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 55,
+     "r": 2.1494857266073875,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 54,
+     "estimate": 62.08762733116585,
+     "late": 161.9259978689186,
+     "hrrEstimate": 4200,
+     "hrrLate": 4200,
+     "measuredGasC": 175.3,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 169.147216796875,
+      "cellSpeed": 1.6477397950901216,
+      "estimateC": 224.48734689856735,
+      "estimateSpeed": 4.393377981938388,
+      "hrr": 4200
+     }
+    },
+    {
+     "head": 56,
+     "r": 2.6666687499991895,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 84,
+     "estimate": 68.12215575840808,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": 139.6,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 93.66622161865234,
+      "cellSpeed": 1.177450441955011,
+      "estimateC": 177.86668973109744,
+      "estimateSpeed": 3.670876842210981,
+      "hrr": 4200
+     }
+    },
+    {
+     "head": 57,
+     "r": 5.311022082006019,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 99.76585546489613,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 58,
+     "r": 4.339733734791672,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 91.18477064801759,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 59,
+     "r": 1.6489761132964342,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 106,
+     "estimate": 55.70139997721777,
+     "late": 92.81352044026185,
+     "hrrEstimate": 4200,
+     "hrrLate": 4200,
+     "measuredGasC": 108.1,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 77.44506072998047,
+      "cellSpeed": 1.6488443731579132,
+      "estimateC": 213.92431039492885,
+      "estimateSpeed": 5.4793881982780235,
+      "hrr": 4200
+     }
+    },
+    {
+     "head": 60,
+     "r": 2.282532706349585,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 196,
+     "estimate": 63.72278324054839,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": 123.7,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 114.52263641357422,
+      "cellSpeed": 1.642965479065711,
+      "estimateC": 154.4284836616306,
+      "estimateSpeed": 4.178911746283945,
+      "hrr": 4200
+     }
+    },
+    {
+     "head": 61,
+     "r": 5.128916931369513,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 97.78466393265658,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 62,
+     "r": 5.954154478643926,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 117.75583656084468,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 63,
+     "r": 4.397475285762146,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 90.44224160812878,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 64,
+     "r": 4.6721111097899,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 92.31367661941663,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 65,
+     "r": 6.551675782237361,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 121.12385138440105,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 87,
+     "r": 8.40831665013211,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 88,
+     "r": 7.388208322876542,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 151.1205140298732,
+     "late": null,
+     "hrrEstimate": 4200,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 89,
+     "r": 7.554896131354524,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 90,
+     "r": 8.841509423672457,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 94,
+     "r": 11.160314611256359,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 95,
+     "r": 10.413378681079235,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 96,
+     "r": 10.532297417415103,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 97,
+     "r": 11.49021854545083,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 17,
+   "openedSequence": [
+    [
+     1,
+     0
+    ],
+    [
+     56,
+     1
+    ],
+    [
+     63,
+     2
+    ],
+    [
+     64,
+     3
+    ],
+    [
+     69,
+     4
+    ],
+    [
+     91,
+     5
+    ],
+    [
+     92,
+     6
+    ],
+    [
+     93,
+     7
+    ],
+    [
+     94,
+     8
+    ],
+    [
+     98,
+     9
+    ],
+    [
+     99,
+     10
+    ],
+    [
+     100,
+     11
+    ],
+    [
+     101,
+     12
+    ],
+    [
+     118,
+     13
+    ],
+    [
+     122,
+     14
+    ],
+    [
+     126,
+     15
+    ],
+    [
+     130,
+     16
+    ],
+    [
+     152,
+     17
+    ]
+   ],
+   "measuredCount": 4,
+   "measuredCountCsv": 4,
+   "measuredSequence": [
+    54,
+    84,
+    106,
+    196
+   ],
+   "water": {
+    "emitted": 5464.459999999582,
+    "evaporated": 11.440828484897704,
+    "wetted": 0,
+    "floor": 5453.019171514627
+   },
+   "ms": {
+    "build": 412.0317000000505,
+    "run": 183418.22979999997,
+    "perStep": 91.70911489999999
+   }
+  },
+  {
+   "id": "ul_nfprf/I-22/measured/h10/0.507",
+   "dataset": "ul_nfprf_1998_series_I",
+   "test": "I-22",
+   "ramp": "measured",
+   "convection": 10,
+   "mode": "spray",
+   "horizon": 140,
+   "grid": {
+    "n": [
+     41,
+     17,
+     43
+    ],
+    "cells": 29971,
+    "h": 0.5066666666666666
+   },
+   "burner": {
+    "cells": 44,
+    "columns": 4,
+    "layers": 11,
+    "columnHeight": 5.573333333333332,
+    "radiantFraction": 0.35,
+    "released": 490681999.9999861,
+    "qAtMeasuredFirst": 4600
+   },
+   "plumeHeight": 6.839999999999999,
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.09,
+    "substeps": 3
+   },
+   "heads": [
+    {
+     "head": 54,
+     "r": 8.049279470859489,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 135.66941921783183,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 55,
+     "r": 9.216908375371865,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 56,
+     "r": 11.122809896784178,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 57,
+     "r": 13.456871850471048,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 58,
+     "r": 5.119414028968551,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 101.36502711392419,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 59,
+     "r": 6.809471345119239,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 120.73996383959006,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 60,
+     "r": 9.226830441706408,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 61,
+     "r": 11.937541622964087,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 62,
+     "r": 2.5031979546172556,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 64,
+     "estimate": 65.06937332078336,
+     "late": 102.73716098606046,
+     "hrrEstimate": 4600,
+     "hrrLate": 4600,
+     "measuredGasC": 162.9,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 172.5731201171875,
+      "cellSpeed": 2.825433566135046,
+      "estimateC": 194.64197972137254,
+      "estimateSpeed": 3.988726190827394,
+      "hrr": 4600
+     }
+    },
+    {
+     "head": 63,
+     "r": 5.140671162406715,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 99.95860550621295,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 64,
+     "r": 8.074156302673366,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 139.1306237019926,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 65,
+     "r": 11.070794912742265,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 75,
+     "r": 10.76067377072644,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 76,
+     "r": 8.955367105819839,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 77,
+     "r": 7.950477973052941,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 136.59314016141016,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 78,
+     "r": 8.786899339357428,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 79,
+     "r": 6.451054177419377,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 121.60622632683419,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 80,
+     "r": 4.962620275620532,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 100.2863018996301,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 81,
+     "r": 7.567509497846698,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 131.76669038172594,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 82,
+     "r": 4.6555021211465455,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 95.96640793634333,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 83,
+     "r": 2.1645322820415505,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 60,
+     "estimate": 60.517147630837876,
+     "late": 85.14347750301532,
+     "hrrEstimate": 4600,
+     "hrrLate": 4600,
+     "measuredGasC": 153.1,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 199.59765625,
+      "cellSpeed": 2.635188827965657,
+      "estimateC": 199.59765625,
+      "estimateSpeed": 4.502394011985552,
+      "hrr": 4600
+     }
+    },
+    {
+     "head": 84,
+     "r": 7.4721951259318695,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 131.8470976878756,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 85,
+     "r": 4.498910979337109,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 94.89464458073303,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 86,
+     "r": 1.803247071257845,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 62,
+     "estimate": 56.3155329354445,
+     "late": 106.05641762539429,
+     "hrrEstimate": 4600,
+     "hrrLate": 4600,
+     "measuredGasC": 154,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 130.4613037109375,
+      "cellSpeed": 1.5444655153290427,
+      "estimateC": 214.28200910719227,
+      "estimateSpeed": 5.242448723672853,
+      "hrr": 4600
+     }
+    },
+    {
+     "head": 87,
+     "r": 2.1982947936980617,
+     "inSight": true,
+     "onGrid": true,
+     "measured": 68,
+     "estimate": 61.60796988892158,
+     "late": 107.51952210840373,
+     "hrrEstimate": 4600,
+     "hrrLate": 4600,
+     "measuredGasC": 142.5,
+     "measuredSpeed": null,
+     "atMeasured": {
+      "cellC": 63.381492614746094,
+      "cellSpeed": 0.6827145779977142,
+      "estimateC": 204.81506578779874,
+      "estimateSpeed": 4.444694797773602,
+      "hrr": 4600
+     }
+    },
+    {
+     "head": 88,
+     "r": 4.999299950993139,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 98.34492496577776,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 89,
+     "r": 7.984891984241242,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 132.84391589080752,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 90,
+     "r": 11.00586207436746,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 91,
+     "r": 8.544308046881268,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 92,
+     "r": 6.116510443054925,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 114.7969798292821,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 93,
+     "r": 4.519203469639311,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 94.93183104664288,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 94,
+     "r": 4.690842141876017,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 97.60455448559955,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 95,
+     "r": 6.493419746173814,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 119.86421819183208,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 96,
+     "r": 8.996110270555828,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 97,
+     "r": 11.760123298673362,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 98,
+     "r": 10.429846595228522,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 99,
+     "r": 8.555010227930763,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 100,
+     "r": 7.496645916675002,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 130.60763714992876,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 101,
+     "r": 7.601348564564052,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": 132.36610903120848,
+     "late": null,
+     "hrrEstimate": 4600,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 102,
+     "r": 8.828420017194468,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 103,
+     "r": 10.803078265013173,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    },
+    {
+     "head": 104,
+     "r": 13.193824312912463,
+     "inSight": true,
+     "onGrid": true,
+     "measured": null,
+     "estimate": null,
+     "late": null,
+     "hrrEstimate": null,
+     "hrrLate": null,
+     "measuredGasC": null,
+     "measuredSpeed": null,
+     "atMeasured": null
+    }
+   ],
+   "openAtEnd": 24,
+   "openedSequence": [
+    [
+     1,
+     0
+    ],
+    [
+     57,
+     1
+    ],
+    [
+     61,
+     2
+    ],
+    [
+     62,
+     3
+    ],
+    [
+     66,
+     4
+    ],
+    [
+     95,
+     6
+    ],
+    [
+     96,
+     7
+    ],
+    [
+     98,
+     8
+    ],
+    [
+     99,
+     9
+    ],
+    [
+     100,
+     10
+    ],
+    [
+     101,
+     11
+    ],
+    [
+     102,
+     12
+    ],
+    [
+     115,
+     13
+    ],
+    [
+     120,
+     14
+    ],
+    [
+     121,
+     15
+    ],
+    [
+     122,
+     16
+    ],
+    [
+     131,
+     17
+    ],
+    [
+     132,
+     19
+    ],
+    [
+     133,
+     21
+    ],
+    [
+     136,
+     22
+    ],
+    [
+     137,
+     23
+    ],
+    [
+     140,
+     24
+    ]
+   ],
+   "measuredCount": 6,
+   "measuredCountCsv": 6,
+   "measuredSequence": [
+    60,
+    62,
+    64,
+    68,
+    243,
+    265
+   ],
+   "water": {
+    "emitted": 2448.279999999955,
+    "evaporated": 17.462426990539264,
+    "wetted": 0,
+    "floor": 2430.8175730094567
+   },
+   "ms": {
+    "build": 346.96649999998044,
+    "run": 123310.26170000003,
+    "perStep": 88.07875835714287
+   }
+  }
+ ],
+ "summary": [
+  {
+   "dataset": "vettori_flat_1998",
+   "ramp": "tabulated",
+   "convection": 10,
+   "cell": 0.305,
+   "reading": "estimate",
+   "tests": 9,
+   "heads": 18,
+   "opened": 18,
+   "openedShare": 1,
+   "median": 1.0119307326054645,
+   "min": 0.9254352600083559,
+   "max": 1.3774211413174746,
+   "early": 8,
+   "bracketedShare": 0.4444444444444444,
+   "firstMedian": 1.035252823931007,
+   "firstMin": 0.9447834681340131,
+   "firstMax": 1.3268415109180447,
+   "firstOpened": 9
+  },
+  {
+   "dataset": "vettori_flat_1998",
+   "ramp": "tabulated",
+   "convection": 10,
+   "cell": 0.305,
+   "reading": "late",
+   "tests": 9,
+   "heads": 18,
+   "opened": 18,
+   "openedShare": 1,
+   "median": 1.2888702851861877,
+   "min": 1.0712890427266986,
+   "max": 1.610160411373111,
+   "early": 0,
+   "bracketedShare": null,
+   "firstMedian": 1.3232041130821541,
+   "firstMin": 1.1455123020380171,
+   "firstMax": 1.5725676148720504,
+   "firstOpened": 9
+  },
+  {
+   "dataset": "vettori_flat_1998",
+   "ramp": "nominal",
+   "convection": 10,
+   "cell": 0.305,
+   "reading": "estimate",
+   "tests": 9,
+   "heads": 18,
+   "opened": 18,
+   "openedShare": 1,
+   "median": 1.5122875067607287,
+   "min": 1.2202606536557572,
+   "max": 1.963786266360768,
+   "early": 0,
+   "bracketedShare": 0,
+   "firstMedian": 1.564758412649844,
+   "firstMin": 1.2752645713201323,
+   "firstMax": 1.899643157909421,
+   "firstOpened": 9
+  },
+  {
+   "dataset": "vettori_flat_1998",
+   "ramp": "nominal",
+   "convection": 10,
+   "cell": 0.305,
+   "reading": "late",
+   "tests": 9,
+   "heads": 18,
+   "opened": 14,
+   "openedShare": 0.7777777777777778,
+   "median": 1.6791273985627702,
+   "min": 1.3289218320340694,
+   "max": 1.8715562016676606,
+   "early": 0,
+   "bracketedShare": null,
+   "firstMedian": 1.7391842694980562,
+   "firstMin": 1.3982306804167985,
+   "firstMax": 1.8362491400531915,
+   "firstOpened": 7
+  },
+  {
+   "dataset": "vettori_sloped_2003",
+   "ramp": "tabulated",
+   "convection": 10,
+   "cell": 0.306,
+   "reading": "estimate",
+   "tests": 8,
+   "heads": 21,
+   "opened": 21,
+   "openedShare": 1,
+   "median": 0.8003355122792037,
+   "min": 0.6668902622728317,
+   "max": 1.0357633875035248,
+   "early": 15,
+   "bracketedShare": 0.09523809523809523,
+   "firstMedian": 0.8945503744577379,
+   "firstMin": 0.6886065564387037,
+   "firstMax": 1.019470940185407,
+   "firstOpened": 8
+  },
+  {
+   "dataset": "vettori_sloped_2003",
+   "ramp": "tabulated",
+   "convection": 10,
+   "cell": 0.306,
+   "reading": "late",
+   "tests": 8,
+   "heads": 21,
+   "opened": 21,
+   "openedShare": 1,
+   "median": 0.9554640910364269,
+   "min": 0.8599446139800644,
+   "max": 1.0725581369733344,
+   "early": 13,
+   "bracketedShare": null,
+   "firstMedian": 0.9994807553922329,
+   "firstMin": 0.8730519051604169,
+   "firstMax": 1.0580767287723847,
+   "firstOpened": 8
+  },
+  {
+   "dataset": "vettori_sloped_2003",
+   "ramp": "nominal",
+   "convection": 10,
+   "cell": 0.306,
+   "reading": "estimate",
+   "tests": 8,
+   "heads": 21,
+   "opened": 21,
+   "openedShare": 1,
+   "median": 1.1230501476719361,
+   "min": 0.8751094971765778,
+   "max": 1.385304992561476,
+   "early": 7,
+   "bracketedShare": 0.3333333333333333,
+   "firstMedian": 1.1312393800201404,
+   "firstMin": 0.9025983819067015,
+   "firstMax": 1.3678092560992858,
+   "firstOpened": 8
+  },
+  {
+   "dataset": "vettori_sloped_2003",
+   "ramp": "nominal",
+   "convection": 10,
+   "cell": 0.306,
+   "reading": "late",
+   "tests": 8,
+   "heads": 21,
+   "opened": 21,
+   "openedShare": 1,
+   "median": 1.2354476620281503,
+   "min": 1.0022764789527618,
+   "max": 1.385304992561476,
+   "early": 0,
+   "bracketedShare": null,
+   "firstMedian": 1.1986303604641626,
+   "firstMin": 1.028269768188577,
+   "firstMax": 1.3678092560992858,
+   "firstOpened": 8
+  },
+  {
+   "dataset": "bittern_2004",
+   "ramp": "measured",
+   "convection": 10,
+   "cell": 0.3,
+   "reading": "estimate",
+   "tests": 8,
+   "heads": 16,
+   "opened": 16,
+   "openedShare": 1,
+   "median": 0.8762962399983596,
+   "min": 0.8097123860097857,
+   "max": 1.0154397140799374,
+   "early": 14,
+   "bracketedShare": 0,
+   "firstMedian": 0.8679685034386702,
+   "firstMin": 0.8133160501314725,
+   "firstMax": 1.0053713128231125,
+   "firstOpened": 8
+  },
+  {
+   "dataset": "bittern_2004",
+   "ramp": "measured",
+   "convection": 10,
+   "cell": 0.3,
+   "reading": "late",
+   "tests": 8,
+   "heads": 16,
+   "opened": 16,
+   "openedShare": 1,
+   "median": 0.934770898980831,
+   "min": 0.8578704591598764,
+   "max": 1.1048961505663528,
+   "early": 14,
+   "bracketedShare": null,
+   "firstMedian": 0.9467278069297538,
+   "firstMin": 0.8578704591598764,
+   "firstMax": 1.1048961505663528,
+   "firstOpened": 8
+  },
+  {
+   "dataset": "ul_nfprf_1998_series_I",
+   "ramp": "measured",
+   "convection": 10,
+   "cell": 0.507,
+   "reading": "estimate",
+   "tests": 4,
+   "heads": 16,
+   "opened": 16,
+   "openedShare": 1,
+   "median": 0.9439226848812392,
+   "min": 0.3251162410232061,
+   "max": 1.3087928888072735,
+   "early": 10,
+   "bracketedShare": 0.5625,
+   "firstMedian": 0.9850498112881279,
+   "firstMin": 0.9360683177514512,
+   "firstMax": 1.051003747336083,
+   "firstOpened": 4
+  },
+  {
+   "dataset": "ul_nfprf_1998_series_I",
+   "ramp": "measured",
+   "convection": 10,
+   "cell": 0.507,
+   "reading": "late",
+   "tests": 4,
+   "heads": 16,
+   "opened": 10,
+   "openedShare": 0.625,
+   "median": 1.5932187915889189,
+   "min": 0.8755992494364326,
+   "max": 2.9986295901651596,
+   "early": 1,
+   "bracketedShare": null,
+   "firstMedian": 1.4638909482808755,
+   "firstMin": 1.4190579583835887,
+   "firstMax": 1.7187688970418862,
+   "firstOpened": 3
+  }
+ ]
+}

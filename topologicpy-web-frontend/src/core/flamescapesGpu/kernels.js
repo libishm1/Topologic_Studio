@@ -102,6 +102,8 @@ export const PARAMS = [
   // A design-fire first item (flamescapes.js burnerStep): the cells this step,
   // where they are listed in io, and each one's heat (J) and fuel burnt (kg).
   ["burnerN", "u32"], ["burnerAt", "u32"], ["burnerShare", "f32"], ["burnerFuel", "f32"],
+  // Where in `red` the pilot's added heat (J) accumulates over a frame (the CPU's stats.pilotHeat).
+  ["redPilot", "u32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -125,9 +127,17 @@ export const CI_FIELDS = 6;
  */
 export const AT = Object.freeze({ flame: 0, depGas: 1, depSolid: 2, ember: 3, emberMax: 4 });
 export const AT_FIELDS = 5;
-/** Counters in the `ctr` buffer (burning: the cells that burned last step, for spawnFlame's share). */
-export const CTR = Object.freeze({ count: 0, countB: 1, embers: 2, spots: 3, maxT: 4, before: 5, burning: 6 });
-export const CTR_SIZE = 8;
+/**
+ * Counters in the `ctr` buffer (burning: the cells that burned last step, for
+ * spawnFlame's share). The frame's health (flamescapes.js healthReadings), set
+ * by peakTemperature: speed, the fastest cell-centred gas speed (f32 bits);
+ * heat, the gas's heat above ambient in units of HEAT_UNIT J; bad, 1 when a
+ * gas cell holds a non-finite or non-positive value.
+ */
+export const CTR = Object.freeze({ count: 0, countB: 1, embers: 2, spots: 3, maxT: 4, before: 5, burning: 6, speed: 7, heat: 8, bad: 9 });
+export const CTR_SIZE = 12;
+/** Joules per unit of the gas-heat counter: 17 GJ before it wraps. */
+export const HEAT_UNIT = 4;
 /** Floats per particle (three vec4). */
 export const PARTICLE_FLOATS = 12;
 export const WG = 64;
@@ -171,7 +181,7 @@ const particles = (d) => d.cap;
 const half = (d) => Math.floor((d.nx + 1) / 2) * d.ny * d.nz;
 const one = () => 1;
 export const KERNELS = {
-  pilot: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
+  pilot: { uses: [0, 1, 2, 3, 10, 11], threads: one, wg: 1 },
   burner: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
   ducts: { uses: [0, 1, 2, 11], threads: one, wg: 1 },
   countBurning: { uses: [0, 3, 9], threads: cells },
@@ -215,7 +225,7 @@ export const KERNELS = {
   compact: { uses: [0, 7, 8, 9], threads: particles },
   compactFinish: { uses: [0, 9], threads: one, wg: 1 },
   gather: { uses: [0, 1, 2, 4, 11], threads: (d) => d.nNodes },
-  peakTemperature: { uses: [0, 1, 3, 9], threads: cells },
+  peakTemperature: { uses: [0, 1, 3, 4, 9], threads: cells },
   snapshot: { uses: [0, 7, 9, 11], threads: (d) => d.snapMax },
 };
 
@@ -354,6 +364,9 @@ struct Sweep { s: u32, pad0: u32, pad1: u32, pad2: u32 }
 
 var<workgroup> wsum: array<vec4<f32>, 64>;
 var<workgroup> wmax: array<u32, 64>;
+var<workgroup> wspeed: array<u32, 64>;
+var<workgroup> wheat: array<f32, 64>;
+var<workgroup> wbad: array<u32, 64>;
 var<workgroup> wshare: u32;
 
 ${fieldConsts("f", CF)}
@@ -590,17 +603,24 @@ fn burner() {
 
 @compute @workgroup_size(1)
 fn pilot() {
+  // The heat added, tallied as the CPU's stats.pilotHeat (the health guard's energy check).
+  var added = 0.0;
   for (var q = 0u; q < U.pilotN; q++) {
     let c = io[q];
     if (U.pilotMode == 0u) {
-      if (cf[ix(fTs, c)] < U.pilotTemp) { cf[ix(fTs, c)] = U.pilotTemp; }
+      if (cf[ix(fTs, c)] < U.pilotTemp) {
+        added += solidCap(c) * (U.pilotTemp - cf[ix(fTs, c)]);
+        cf[ix(fTs, c)] = U.pilotTemp;
+      }
     } else {
       let share = U.pilotPower * U.dt / f32(U.pilotN);
       let C = solidCap(c);
       if (C > 0.0) { cf[ix(fTs, c)] += share / C; }
       else { cf[ix(fT, c)] += share / (cf[ix(fRho, c)] * mixtureCp(c) * U.V); }
+      added += share;
     }
   }
+  red[U.redPilot] += added;
 }
 
 // ------------------------------------------------------------------ ventilation (flamescapes.js ducts)
@@ -1630,21 +1650,63 @@ ${perThread("gather", "U.nNodes", `
     io[U.ioSpeed + t - U.speedFrom] = bitcast<u32>(speed);
   }`)}
 
+/** A non-finite f32 by its exponent bits (WGSL may assume no NaN or infinity in comparisons). */
+fn nonFinite(x: f32) -> bool { return ((bitcast<u32>(x) >> 23u) & 0xffu) == 0xffu; }
+
+/**
+ * The frame's peak gas temperature and its health (flamescapes.js
+ * healthReadings): the fastest cell-centred speed, the gas's heat above
+ * ambient at cp 1005 (in units of ${HEAT_UNIT} J) and whether any gas cell holds a
+ * non-finite or non-positive value.
+ */
 @compute @workgroup_size(64)
 fn peakTemperature(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>,
                    @builtin(local_invocation_index) li: u32) {
   let c = lin(gid, nwg);
   var v = 0u;
+  var fastest = 0u;
+  var heat = 0.0;
+  var bad = 0u;
   if (c < U.N) {
-    if (kindOf(c) != SOLID) { v = bitcast<u32>(max(cf[ix(fT, c)], 0.0)); }
+    if (kindOf(c) != SOLID) {
+      let T = cf[ix(fT, c)];
+      let rho = cf[ix(fRho, c)];
+      let i = c % U.nx;
+      let j = (c / U.nx) % U.ny;
+      let k = c / (U.nx * U.ny);
+      let a = 0.5 * (vel[uAt(i, j, k)] + vel[uAt(i + 1u, j, k)]);
+      let b = 0.5 * (vel[vAt(i, j, k)] + vel[vAt(i, j + 1u, k)]);
+      let d = 0.5 * (vel[wAt(i, j, k)] + vel[wAt(i, j, k + 1u)]);
+      let speed = sqrt(a * a + b * b + d * d);
+      if (nonFinite(T) || nonFinite(rho) || nonFinite(speed) || !(rho > 0.0)) {
+        bad = 1u;
+      } else {
+        v = bitcast<u32>(max(T, 0.0));
+        fastest = bitcast<u32>(speed);
+        heat = rho * U.V * 1005.0 * max(T - U.ambient, 0.0);
+      }
+    }
   }
   wmax[li] = v;
+  wspeed[li] = fastest;
+  wheat[li] = heat;
+  wbad[li] = bad;
   workgroupBarrier();
   for (var s = 32u; s > 0u; s >>= 1u) {
-    if (li < s) { wmax[li] = max(wmax[li], wmax[li + s]); }
+    if (li < s) {
+      wmax[li] = max(wmax[li], wmax[li + s]);
+      wspeed[li] = max(wspeed[li], wspeed[li + s]);
+      wheat[li] = wheat[li] + wheat[li + s];
+      wbad[li] = max(wbad[li], wbad[li + s]);
+    }
     workgroupBarrier();
   }
-  if (li == 0u) { atomicMax(&ctr[4], wmax[0]); }
+  if (li == 0u) {
+    atomicMax(&ctr[4], wmax[0]);
+    atomicMax(&ctr[7], wspeed[0]);
+    atomicAdd(&ctr[8], u32(round(min(wheat[0], 1.0e10) / ${HEAT_UNIT}.0)));
+    atomicMax(&ctr[9], wbad[0]);
+  }
 }
 
 /** Up to snapMax particles, evenly strided (the CPU's particleSnapshot), in grid units. */

@@ -36,12 +36,12 @@
  *     runs on the CPU solver instead.
  */
 
-import { DEFAULTS, NS, burnerCells, burnerHeat, createSolver } from "./flamescapes.js";
+import { DEFAULTS, NS, burnerCells, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor } from "./flamescapes.js";
 import {
-  KELVIN, ceilingDetectors, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
+  KELVIN, ceilingDetectors, failedHealth, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
 import {
-  AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
+  AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, HEAT_UNIT, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
   PARTICLE_FLOATS, SWEEP_BYTES, WG, buildShader,
   SUP, SYS,
 } from "./flamescapesGpu/kernels.js";
@@ -211,7 +211,9 @@ class GpuSim {
     const sysAt = { state: N, wet: N + SYS.stride * ((this.systems?.R ?? 0) + 1) };
     this.sysAt = sysAt;
     const red = { rad: 2 * this.nPart, steps: 3 * this.nPart };
-    red.size = red.steps + 4 * this.slots;
+    // After the step sums, four floats: the pilot's added heat over the frame, then padding.
+    red.pilot = red.steps + 4 * this.slots;
+    red.size = red.pilot + 4;
     this.red = red;
 
     const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
@@ -263,7 +265,7 @@ class GpuSim {
         entries: k.uses.map((binding) => ({ binding, resource: binding === B.sweep ? { buffer: byBinding[binding], size: SWEEP_BYTES } : { buffer: byBinding[binding] } })),
       });
     }
-    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 4 + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
 
     // ---- parameters
     this.paramBytes = new ArrayBuffer(PARAM_BYTES);
@@ -283,7 +285,7 @@ class GpuSim {
       flameCap: Math.min(d.cap, Math.ceil(P.flameShare * d.cap)),
       nPart: this.nPart, nNodes: d.nNodes, snapMax: d.snapMax, pilotN: io.nodes,
       pilotMode: pilot && pilot.temperature ? 0 : 1, ioNodes: io.nodes, ioOut: io.out, ioSnap: io.snap,
-      redRad: red.rad, redSteps: red.steps, seed: P.seed >>> 0, gsAt: AT_FIELDS * N,
+      redRad: red.rad, redSteps: red.steps, redPilot: red.pilot, seed: P.seed >>> 0, gsAt: AT_FIELDS * N,
       h, dt: P.dt, V: sim.V, rho0: sim.rho0, ambient: P.ambient, gravity: P.gravity, convection: P.convection, wallConvection: P.wallConvection,
       kappa: P.sootAbsorption, vorticity: P.vorticity, porousVel: P.porousVelocity, diffusivity: P.diffusivity,
       conductivity: P.conductivity, emitAbove: Math.min(P.emitAbove, 3e38), pyA: P.pyrolysisA, pyE: P.pyrolysisE,
@@ -551,6 +553,8 @@ class GpuSim {
     const { device, buf, dims: d } = this;
     if (this.ctx.lost) throw new Error("The GPU device was lost during the fire run.");
     device.queue.writeBuffer(buf.ctr, CTR.maxT * 4, Float32Array.of(this.sim.P.ambient));
+    // The frame's health counters start afresh: speed, heat and bad (peakTemperature).
+    device.queue.writeBuffer(buf.ctr, CTR.speed * 4, new Uint32Array(3));
     const enc = device.createCommandEncoder();
     const pass = enc.beginComputePass();
     this.dispatch(pass, "gather");
@@ -572,9 +576,12 @@ class GpuSim {
     o += this.gsSlots * 4;
     enc.copyBufferToBuffer(buf.red, this.red.steps * 4, this.staging, o, stepBytes);
     o += stepBytes;
+    // The pilot's added heat over the frame (and its padding), straight after the step sums.
+    enc.copyBufferToBuffer(buf.red, this.red.pilot * 4, this.staging, o, 16);
+    o += 16;
     const snapBytes = (1 + 5 * d.snapMax) * 4;
     if (snap) enc.copyBufferToBuffer(buf.io, this.io.snap * 4, this.staging, o, snapBytes);
-    enc.clearBuffer(buf.red, this.red.steps * 4, stepBytes);
+    enc.clearBuffer(buf.red, this.red.steps * 4, stepBytes + 16);
     // The smoke cloud needs the gas density and the species (soot among them),
     // read into their own buffer only when it is drawn.
     if (smoke) {
@@ -618,7 +625,12 @@ class GpuSim {
     }
     const lastReleased = this.slot > 0 ? f[at + 4 * this.lastSlot] : 0;
     at += 4 * this.slots;
+    const pilotHeat = f[at];
+    at += 4;
     const maxT = new Float32Array(counters.buffer, CTR.maxT * 4, 1)[0];
+    const maxSpeed = new Float32Array(counters.buffer, CTR.speed * 4, 1)[0];
+    const gasHeat = counters[CTR.heat] * HEAT_UNIT;
+    const nonFinite = counters[CTR.bad] > 0;
     let snapshot = null;
     if (snap) snapshot = this.snapshotFrom(f, u, at);
     else if (particles) snapshot = { positions: new Float32Array(0), temps: new Float32Array(0), kinds: new Uint8Array(0) };
@@ -631,7 +643,7 @@ class GpuSim {
     }
     this.slot = 0;
     return {
-      T, vis, co, soot, co2, o2, speed, released, burnt, radiated, maxT, lastReleased,
+      T, vis, co, soot, co2, o2, speed, released, burnt, radiated, maxT, lastReleased, maxSpeed, gasHeat, nonFinite, pilotHeat,
       particleCount: counters[CTR.count] > d.cap ? d.cap : counters[CTR.count],
       embersSpawned: counters[CTR.embers],
       spotIgnitions: counters[CTR.spots],
@@ -781,7 +793,8 @@ async function runSceneGpu(ctx, scene, opts = {}) {
     gpu = new GpuSim(ctx, sim, {
       nodeCells: withDetectors(withDetectors(withDetectors(withDetectors(cells, detectors.cells), sys ? sys.detectorCells : new Int32Array(0)), flame), spr ? spr.sensors : new Int32Array(0)),
       snapMax: particles || 0,
-      slots: Math.ceil(frameSeconds / dt) + 2,
+      // A frame's steps may be cut into up to maxSubsteps each (substepsFor).
+      slots: Math.ceil(frameSeconds / dt) * Math.max(1, sim.P.maxSubsteps || 1) + 2,
       speedFrom: n + D + Ds + B,
       suppression,
       systems: sys,
@@ -806,14 +819,19 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const o2 = new Float32Array(rows * n);
   const detectorVis = new Float32Array(rows * D);
   const hrr = new Float32Array(K);
-  const stats = { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: sim.P.ambient, released: 0, radiated: 0, sweeps: 0 };
+  const stats = { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: sim.P.ambient, released: 0, radiated: 0, sweeps: 0, pilotHeat: 0 };
   // What a design-fire item has released by the last frame (the GPU's tallies leave it out).
   let itemBefore = 0;
+  // Proposals A and B, as the CPU's runScene: each frame's steps cut by the
+  // frame before's fastest gas, and each frame checked.
+  let speed = 0, mostSubsteps = 1, health = null, frames = K;
   try {
     for (let k = 0; k < K; k += 1) {
       const end = (k + 1) * frameSeconds;
+      const substeps = substepsFor(sim.P, sim.grid.h, speed, dt);
+      mostSubsteps = Math.max(mostSubsteps, substeps);
       while (gpu.time < end - 1e-9) {
-        gpu.step(Math.min(dt, end - gpu.time));
+        gpu.step(Math.min(dt / substeps, end - gpu.time));
         if (shouldStop?.()) return null;
       }
       const frame = await gpu.readFrame({ particles: Boolean(particles), smoke });
@@ -821,6 +839,19 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       if (sim.burner) {
         frame.released += sim.burner.released - itemBefore;
         itemBefore = sim.burner.released;
+      }
+      speed = frame.maxSpeed;
+      stats.pilotHeat += frame.pilotHeat;
+      const reading = { maxT: frame.maxT, maxSpeed: frame.maxSpeed, gasHeat: frame.gasHeat, nonFinite: frame.nonFinite };
+      const verdict = healthVerdict(reading, stats.released + frame.released + stats.pilotHeat);
+      if (!verdict.ok) {
+        // Where: the same reading on the fields, read back once.
+        const fields = await gpu.readFields();
+        const where = healthReadings(fields, sim.grid, sim.P, sim.V);
+        const cell = verdict.reason === "non-finite" ? where.badCell : verdict.reason === "speed" ? where.fastCell : where.hotCell;
+        health = failedHealth(sim.grid, { ...verdict, cell }, end, reading);
+        frames = k;
+        break;
       }
       const row = keep ? k : 0;
       const nodesOf = (a) => (D + Ds + B + S ? a.subarray(0, n) : a);
@@ -881,10 +912,13 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const sprinklers = spr ? sprinklerResult(spr) : null;
   // The GPU keeps no tally of the spray's evaporation.
   if (sprinklers) sprinklers.stats = { emitted: sprinklers.stats.emitted, evaporated: null, wetted: null, floor: null };
-  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance, sprinklers };
+  // A failed run keeps the frames before the failure only (the CPU's runScene).
+  const cut = (a, per) => (frames < K ? a.slice(0, frames * per) : a);
+  const out = { n, K: frames, frameSeconds, horizon: frames * frameSeconds, hrr: cut(hrr, 1), stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance, sprinklers };
+  out.health = health || { ok: true, maxSpeed: +speed.toFixed(2), substeps: mostSubsteps };
   // The GPU keeps no per-room tallies of what the agent or the foam stopped.
   if (sys) out.systems = systemsResult(sys, { cpu: false });
   const item = itemResult(sim);
   if (item) out.designFire = item;
-  return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
+  return keep ? { ...out, T: cut(T, n), vis: cut(vis, n), co: cut(co, n), soot: cut(soot, n), co2: cut(co2, n), o2: cut(o2, n), detectorVis: cut(detectorVis, D) } : out;
 }
