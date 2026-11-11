@@ -800,6 +800,27 @@ export default function App() {
 
       studio.setLoadState({ busy: true, stage: "sampling", detail: null });
 
+      // Spaces outside the building that no door opens onto (roofs drawn as
+      // rooms) and voids are not floor to walk on (core/outdoorSpaces.js).
+      let outdoor = [];
+      if (geometry.spaces?.length) {
+        const { outdoorSpaces } = await import("./core/outdoorSpaces.js");
+        if (!latest()) return;
+        const names = new Map((studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
+        outdoor = await timer.run("outdoor", async () =>
+          outdoorSpaces(geometry.spaces, {
+            names,
+            overhead: [...(geometry.floors || []), ...(geometry.roofMeshes || [])],
+            ceilings: geometry.ceilings || [],
+            walls: geometry.walls,
+            doors: geometry.doors,
+            upAxis: settings.upAxis,
+          }),
+        );
+        if (!latest()) return;
+      }
+      const leftOut = new Set(outdoor.map((s) => s.id));
+
       // The worker receives copies so the cached geometry survives transfer.
       const clone = (meshes) =>
         meshes.map((mesh) => ({
@@ -814,7 +835,7 @@ export default function App() {
         stairs: clone(geometry.stairs),
         doors: clone(geometry.doors),
         walls: clone(geometry.walls),
-        spaces: clone(geometry.spaces || []),
+        spaces: clone((geometry.spaces || []).filter((mesh) => !leftOut.has(mesh.itemId))),
         obstacles: clone(geometry.obstacles || []),
         // Lifts, escalators and stair cores (src/core/cores.js).
         coreMeshes: clone(geometry.coreMeshes || []),
@@ -866,6 +887,8 @@ export default function App() {
         lattice: { angleDeg: built.stats.angleDeg, spacing: built.spacing, ms: built.stats.ms },
         doors: built.doors || [],
         roofs: geometry.roofs || 0,
+        // The spaces left out of the floors (core/outdoorSpaces.js), for the Graph step.
+        outdoorSpaces: outdoor.map(({ id, name, why }) => ({ id, name, why })),
         cores: built.cores || [],
         useLifts: settings.useLifts,
         // Why there is no graph at all, rather than "Graph ready, 0 nodes"

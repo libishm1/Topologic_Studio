@@ -78,6 +78,25 @@ function PartsNotice({ stats, brief = false }) {
 }
 
 /**
+ * The spaces left out of the walkable floors (core/outdoorSpaces.js): roofs
+ * drawn as rooms that no door opens onto, and voids.
+ */
+function OutdoorNotice({ spaces }) {
+  if (!spaces?.length) return null;
+  const voids = spaces.filter((s) => s.why.startsWith("named as a void"));
+  const roofs = spaces.filter((s) => !s.why.startsWith("named as a void"));
+  const names = (list) => [...new Set(list.map((s) => s.name).filter(Boolean))].slice(0, 3).join(", ");
+  const parts = [];
+  if (roofs.length) parts.push(`${roofs.length} space${roofs.length === 1 ? "" : "s"} outside the building that no door opens onto${names(roofs) ? ` (${names(roofs)})` : ""}`);
+  if (voids.length) parts.push(`${voids.length} void${voids.length === 1 ? "" : "s"}${names(voids) ? ` (${names(voids)})` : ""}`);
+  return (
+    <p className="field__hint">
+      Not walked on: {parts.join(", and ")}. A roof, terrace or balcony with a door onto it stays walkable.
+    </p>
+  );
+}
+
+/**
  * Vertical cores found in the model (core/cores.js): stairs joined along an
  * assumed walking line because their treads are not modelled, and lifts and
  * escalators, which join floors only when the setting allows them. Warns when
@@ -584,6 +603,7 @@ export function GraphPanel({ studio, onBuildGraph, onNavigationCheck, onExportTo
             </div>
             <PartsNotice stats={graph.stats} />
             <CoresNotice cores={graph.cores} stats={graph.stats} storeys={modelInfo?.stats?.storeys ?? 0} useLifts={graph.useLifts} />
+            <OutdoorNotice spaces={graph.outdoorSpaces} />
             <Toggle
               label="Show the graph"
               checked={settings.showGraph}
