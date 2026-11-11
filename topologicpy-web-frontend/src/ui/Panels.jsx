@@ -1416,7 +1416,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
  * People leaving (core/crowd.js): the switch, the look and the playback
  * speed, the clock and what the walk came to.
  */
-function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready }) {
+function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready, exitCount = 0, hasExit = false }) {
   const result = crowd?.result;
   // How many turned to another exit on the way (the quickest choice).
   const turned = result?.switches ? result.switches.reduce((sum, s) => sum + (s > 0 ? 1 : 0), 0) : 0;
@@ -1470,6 +1470,24 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready 
                   : crowd?.avoiding
                     ? "They keep the fire's time and keep out of places it has made untenable (as the plan reads them): they turn back for another exit, and anyone with no way out but through the fire stays where they are."
                     : "They keep the fire's time; they keep out of it once its run has finished computing, so play it again to see them turn back."
+            }
+          />
+          <SelectField
+            label="Exits"
+            value={settings.crowdExits}
+            onChange={(crowdExits) => setSettings({ crowdExits })}
+            options={[
+              { value: "all", label: exitCount ? `Every exit out of the building (${exitCount})` : "Every exit out of the building" },
+              { value: "picked", label: "Only the exit picked in Route" },
+            ]}
+            hint={
+              settings.crowdExits === "picked"
+                ? hasExit
+                  ? "Everyone leaves by the one exit picked: what happens if the others are lost."
+                  : "Pick an exit in Route; until then everyone uses every exit."
+                : exitCount
+                  ? null
+                  : "The model marks no exit out of the building, so they use the exit picked in Route."
             }
           />
           <SelectField
@@ -1897,7 +1915,16 @@ export function RoutePanel({
           </Notice>
         )}
       </Section>
-      <PeopleLeaving crowd={crowd} settings={settings} setSettings={setSettings} onPlay={onPlayCrowd} onRestart={onRestartCrowd} ready={Boolean(graph)} />
+      <PeopleLeaving
+        crowd={crowd}
+        settings={settings}
+        setSettings={setSettings}
+        onPlay={onPlayCrowd}
+        onRestart={onRestartCrowd}
+        ready={Boolean(graph)}
+        exitCount={exits?.final.length ?? 0}
+        hasExit={Boolean(points?.exit)}
+      />
       <SlimeMould
         slime={slime}
         settings={settings}

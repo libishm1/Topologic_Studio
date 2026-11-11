@@ -679,6 +679,20 @@ if (await peopleSection.count()) {
     .then(() => true)
     .catch(() => false);
   record(backToExact, "with the randomness off, one exact walk again", backToExact ? "no range" : "range still shown");
+  // People leave by every exit out of the building, whatever the forecast's Exits says;
+  // only the exit picked is an option of their own (2026-11-11: the NIBS Office crowd went through one door).
+  const crowdExitsField = page.getByLabel("Exits", { exact: true });
+  await crowdExitsField.selectOption("picked").catch(() => {});
+  const oneExit = await page
+    .waitForFunction(() => /through 1 exit;/.test(document.body.innerText), null, { timeout: 30000 })
+    .then(() => true)
+    .catch(() => false);
+  await crowdExitsField.selectOption("all").catch(() => {});
+  const allExits = await page
+    .waitForFunction(() => /through [2-9]\d* exits;/.test(document.body.innerText), null, { timeout: 30000 })
+    .then(() => true)
+    .catch(() => false);
+  record(oneExit && allExits, "people leave by every exit, or only the one picked when asked", `${oneExit ? "one" : "not one"}, then ${allExits ? "several" : "not several"}`);
   // Recording the view as a GIF (lib/recorder.js, workers/gif.worker.js).
   const recordButton = page.getByRole("button", { name: /^Record GIF$/ });
   if (await recordButton.count()) {

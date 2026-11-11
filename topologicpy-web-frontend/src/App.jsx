@@ -2542,6 +2542,19 @@ export default function App() {
     () => (settings.forecastExits === "model" && exits?.final.length ? exits.final : points.exit && graph ? [snap(graph, points.exit)] : []),
     [settings.forecastExits, exits, points.exit, graph],
   );
+  // The exits people leaving and the slime mould use: every exit out of the
+  // building (the picked one only where the model marks none), or, for people
+  // leaving when asked (crowdExits "picked"), the exit picked. Not the plan's
+  // setting: with the forecast on "the exit you picked", stored in the
+  // browser, the whole NIBS Office crowd went through one door (2026-11-11).
+  const buildingExitNodes = useCallback(
+    () => (exits?.final.length ? exits.final : points.exit && graph ? [snap(graph, points.exit)] : []),
+    [exits, points.exit, graph],
+  );
+  const crowdExitNodes = useCallback(
+    () => (settings.crowdExits === "picked" && points.exit && graph ? [snap(graph, points.exit)] : buildingExitNodes()),
+    [settings.crowdExits, points.exit, graph, buildingExitNodes],
+  );
 
   // ------------------------------------------------------- people leaving
 
@@ -2604,7 +2617,7 @@ export default function App() {
   const crowdKey =
     settings.crowd && graph
       ? JSON.stringify([
-          planExitNodes(),
+          crowdExitNodes(),
           settings.perfOccupantArea,
           settings.useWalls,
           settings.departAfter,
@@ -2632,7 +2645,7 @@ export default function App() {
   // had just scheduled when it marked itself busy.
   const crowdInputsRef = useRef(null);
   crowdInputsRef.current = {
-    exits: crowdKey ? planExitNodes() : [],
+    exits: crowdKey ? crowdExitNodes() : [],
     occupantArea: settings.perfOccupantArea,
     useWalls: settings.useWalls,
     departAfter: settings.departAfter,
@@ -2822,7 +2835,7 @@ export default function App() {
   }, [graph, fire.model, fire.step, points.fire, settings]);
   const growSlime = useCallback(() => {
     if (!graph) return;
-    const exits = planExitNodes();
+    const exits = buildingExitNodes();
     if (!exits.length) {
       toast("No exit to grow towards: the model marks none out of the building, so pick one in Route.", { variant: "warning" });
       return;
@@ -2857,7 +2870,7 @@ export default function App() {
         if (!isCancelled(error)) setSlimeState((s) => (s.nodes === nodes ? { ...s, busy: false, error: error?.message || String(error) } : s));
       },
     );
-  }, [graph, planExitNodes, points.start, settings.slimeWithFire, settings.useWalls, slimeFire, toast]);
+  }, [graph, buildingExitNodes, points.start, settings.slimeWithFire, settings.useWalls, slimeFire, toast]);
   const clearSlime = useCallback(() => setSlimeState(SLIME_NONE), []);
   // The weights on the graph, slime yellow, and the route along the tubes.
   useEffect(() => {

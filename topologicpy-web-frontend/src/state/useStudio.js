@@ -111,6 +111,9 @@ export const DEFAULT_SETTINGS = {
   // Each person takes the exit that gets them out soonest, queues counted
   // ("quickest"), or the nearest ("nearest"; core/crowd.js EXIT_CHOICES).
   crowdChoice: "quickest",
+  // People leave by every exit out of the building ("all"), or only by the
+  // exit picked in Route ("picked"); not the forecast plan's Exits setting.
+  crowdExits: "all",
   // Randomness in how people move (core/crowd.js; wiki/roadmap/crowd-motion-
   // randomness-plan-2026-11-11.md): each person's speed wobbles in time, and
   // each step is drawn by the floor field ("exact", or STEP_RANDOMNESS's
