@@ -19,9 +19,10 @@
  * Clinic's 3AC1).
  */
 import { roomsFromSpaces } from "./sprinklers.js";
+import { VOID_NAME } from "./spaceFloors.js";
 
-/** A name for a void drawn as a space: its bottom is no floor. */
-export const VOID_NAME = /\b(open to below|void|luftraum)\b/i;
+/** A name for a void drawn as a space: its bottom is no floor (spaceFloors.js, which the fire grid and the sprinklers share). */
+export { VOID_NAME };
 
 /** Metres between a door's sill and a space's floor for the door to open onto it. */
 export const DOOR_LEVEL = 0.5;

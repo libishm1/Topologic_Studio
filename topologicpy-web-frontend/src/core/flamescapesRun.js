@@ -59,14 +59,51 @@ export function visibility(rhoSoot, C = SIGN_CONSTANT, sigma = SOOT_EXTINCTION) 
  * The scene for the solver: meshes tagged with materials, the grid, volume
  * fractions, occupancy, the contents and the ignition cell.
  *
- * @param {object} geometry  {walls, floors, roofs, ceilings?, stairs, obstacles, doors?} meshes in the viewer
- *                           frame; doors only when they are closed, and open windows left out of obstacles
+ * @param {object} geometry  {walls, floors, roofs, ceilings?, stairs, obstacles, doors?, voids?} meshes in the viewer
+ *                           frame; doors only when they are closed, and open windows left out of obstacles;
+ *                           voids, the spaces named "open to below", are no solid: a box clipped round a
+ *                           fire under one reaches the atrium's top (atriumTop)
  * @param {object} opts      upAxis; fire: [x, y, z] in the viewer frame; maxCells; maxCell (m);
  *                           reach (m); fireLoad (J/m^2); contentsFuel, ignitionFuel; item: {mass, area};
  *                           burner: {power (W), duration (s)}; seed;
  *                           ventilation: {terminals: [[x, y, z]] in the viewer frame, flow (m^3/s a terminal)},
  *                           the running ventilation's air terminals (ductsFor)
  */
+/** How far in plan a fire may stand off a void's box and still be under its atrium (m). */
+const ATRIUM_REACH = 1;
+
+/**
+ * The top of the atrium over a fire: the voids (spaces named "open to
+ * below", in the viewer frame) whose plan box holds the fire's point, each
+ * reached from the box's top or the void under it, stacked up to the
+ * highest; `top` when none is.
+ */
+export function atriumTop(voids, axes, f, top) {
+  const boxes = (voids || []).map((m) => {
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    const p = m.positions;
+    for (let o = 0; o + 2 < p.length; o += 3) {
+      const q = toLocal({ axes }, p[o], p[o + 1], p[o + 2]);
+      for (let c = 0; c < 3; c += 1) {
+        if (q[c] < lo[c]) lo[c] = q[c];
+        if (q[c] > hi[c]) hi[c] = q[c];
+      }
+    }
+    return { lo, hi };
+  });
+  const over = boxes.filter((b) => f[0] >= b.lo[0] - ATRIUM_REACH && f[0] <= b.hi[0] + ATRIUM_REACH && f[2] >= b.lo[2] - ATRIUM_REACH && f[2] <= b.hi[2] + ATRIUM_REACH && b.hi[1] > f[1]);
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const b of over) {
+      if (b.lo[1] <= top + 0.05 && b.hi[1] > top + 0.05) {
+        top = b.hi[1];
+        grew = true;
+      }
+    }
+  }
+  return top;
+}
+
 export function buildScene(geometry, {
   upAxis = "y",
   fire,
@@ -110,6 +147,10 @@ export function buildScene(geometry, {
     const side = reach ?? Math.max(8, Math.sqrt((maxCells * maxCell ** 3) / height) - 4 * maxCell);
     const f = toLocal({ axes: grid.axes }, fire[0], fire[1], fire[2]);
     const box = { lo: [f[0] - side / 2, f[1] - storeyHeight * 0.5, f[2] - side / 2], hi: [f[0] + side / 2, f[1] + storeyHeight * 2, f[2] + side / 2] };
+    // Under an atrium, up to its top and half a storey over, so the smoke
+    // rises through it as in the building: the cells coarsen to keep the count.
+    const top = atriumTop(geometry.voids, grid.axes, f, box.hi[1]);
+    if (top > box.hi[1]) box.hi[1] = top + storeyHeight * 0.5;
     meshes = meshes.map((m) => clipMesh(m, grid.axes, box)).filter((m) => m.indices.length);
     grid = gridFor(meshes, { upAxis, cell: minCell, margin: 2, headroom: 2, maxCells, bounds: box });
     clipped = true;

@@ -24,7 +24,7 @@ import { isCancelled, workerClient } from "./lib/workerJob.js";
 import { FORECAST_COLORS, NAV_COLOR, hexToInt, routeColor } from "./lib/routeColors.js";
 import { graphIsSplit, graphStats, reachablePct } from "./core/graph.js";
 import { findRoute, snap } from "./core/route.js";
-import { floorsFromSpaces, slabsMissing } from "./core/spaceFloors.js";
+import { VOID_NAME, floorsFromSpaces, slabsMissing } from "./core/spaceFloors.js";
 import { DETECTOR_VISIBILITY, buildForecast, earliestArrival, firstDetection, forecastFromFrames, runRange, runSummary, stackFrames } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
 import { KIND_DOOR, floorLevels } from "./core/lattice.js";
@@ -1648,16 +1648,22 @@ export default function App() {
         : settings.flamescapesDoors === "random"
           ? `random (${shut.size} closed, seed ${settings.flamescapesDoorSeed})`
           : settings.flamescapesDoors;
+    // Spaces named as voids ("open to below"): no floor, and an atrium over a
+    // fire under one, which the grid then reaches the top of (flamescapesRun.js).
+    const spaceNames = new Map((studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]));
+    const isVoid = (m) => VOID_NAME.test(spaceNames.get(m.itemId) || "");
     const geo = {
       walls: clone(geometry.walls),
       // A model whose floors are its spaces' bottoms (no slabs) gets them as
-      // floor slabs, or the fire would have no floor to stand its contents on.
+      // floor slabs, or the fire would have no floor to stand its contents on;
+      // a void's would seal its atrium (the NIBS Clinic's smoke stopped there).
       floors: [
         ...clone(geometry.floors),
         ...(geometry.spaces?.length && slabsMissing(geometry.floors, geometry.spaces, { upAxis: graph.upAxis || "y" })
-          ? floorsFromSpaces(geometry.spaces, { upAxis: graph.upAxis || "y" })
+          ? floorsFromSpaces(geometry.spaces.filter((m) => !isVoid(m)), { upAxis: graph.upAxis || "y" })
           : []),
       ],
+      voids: clone((geometry.spaces || []).filter(isVoid)),
       roofs: clone(geometry.roofMeshes),
       ceilings: clone(geometry.ceilings),
       stairs: clone(geometry.stairs),

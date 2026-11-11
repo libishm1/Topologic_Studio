@@ -25,7 +25,7 @@ import {
   survives,
 } from "./flamescapes.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, volumeFractions } from "./voxelize.js";
-import { CO_LIMIT, buildScene, coDoseRate, forecastFromFrames, runScene, smokeCloud, visibility } from "./flamescapesRun.js";
+import { CO_LIMIT, atriumTop, buildScene, coDoseRate, forecastFromFrames, runScene, smokeCloud, visibility } from "./flamescapesRun.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS, fuelsFor } from "./fireClasses.js";
 
 function box(x0, y0, z0, x1, y1, z1, material = MATERIAL.STONE) {
@@ -417,6 +417,28 @@ test("regressions from the architecture review: walls are not a source of air, a
   let solid = 0;
   for (const v of clipped.solid) solid += v;
   assert.ok(solid > 1000 && clipped.ignition, `${solid} solid cells`);
+
+  // Under an atrium (two voids stacked over the fire to 12 m, the upper
+  // storeys' walls round it) the clipped box reaches its top; a fire away
+  // from it keeps the box as it was.
+  const tall = { ...big, walls: [...big.walls, box(9.8, 0, 10, 10, 12, 20)] };
+  const voids = [box(10, 3, 10, 20, 7.5, 20), box(10, 7.5, 10, 20, 12, 20)];
+  const top = (scene) => scene.grid.origin[1] + scene.grid.ny * scene.grid.h;
+  const options = (fire) => ({ fire, maxCells: 30000, contentsFuel: FIRE_CLASSES.A.fuel });
+  const atrium = buildScene({ ...tall, voids }, options([15, 0.75, 15]));
+  const without = buildScene(tall, options([15, 0.75, 15]));
+  assert.ok(atrium.clipped && top(atrium) >= 12, `the grid's top ${top(atrium).toFixed(2)} m`);
+  assert.ok(top(without) < 10, `without the voids ${top(without).toFixed(2)} m (the box's 6.75 m and the grid's margin)`);
+  assert.ok(atrium.grid.h > without.grid.h, "the cells coarsen to keep the count");
+  assert.equal(top(buildScene({ ...tall, voids }, options([4, 0.75, 4]))), top(buildScene(tall, options([4, 0.75, 4]))), "a fire away from the atrium");
+});
+
+test("atriumTop: the voids stacked over a fire, each reached from the one under it", () => {
+  const axes = [0, 1, 2];
+  const voids = [box(0, 4.5, 0, 6, 9, 6), box(0, 9, 0, 6, 13.5, 6), box(0, 20, 0, 6, 24, 6)];
+  assert.equal(atriumTop(voids, axes, [3, 0.75, 3], 6.75), 13.5, "the third void is not reached: there is a storey between");
+  assert.equal(atriumTop(voids, axes, [9, 0.75, 9], 6.75), 6.75, "a fire beyond reach of the voids' plan");
+  assert.equal(atriumTop(null, axes, [3, 0.75, 3], 6.75), 6.75);
 });
 
 test("regressions from the GPU port: only real combustion spawns flame particles; a massless contents cell exchanges nothing", () => {

@@ -50,6 +50,7 @@
  */
 
 import { EGRESS_B, storeysOf } from "./codeCheck.js";
+import { VOID_NAME } from "./spaceFloors.js";
 
 /** Both codes require NFPA 13; every placement check carries this. */
 const CODES = "SBC 801-CR-2018 903.3.1.1 and IBC 2021 903.3.1.1: installed to NFPA 13 (editions by reference: 2013 through IFC 2015, 2019 in IBC 2021)";
@@ -372,9 +373,16 @@ const MIN_ROOM_WIDTH = 0.6;
  *
  * @param {Array<{itemId, positions: Float32Array, indices: Uint32Array}>} spaceMeshes  viewer frame
  * @param {{upAxis?: string, names?: Map|object, overhead?: Array<{positions, indices}>, ceilings?: Array<{positions, indices}>, walls?: Array<{positions}>}} opts  names: itemId -> room name
- * @returns {Array<{id, name, upAxis, floor, ceiling, footprint: Float64Array|null, area: number,
- *           rect: {centre: number[], axis: number[], half: number[]}|null, problem: string|null}>}
- *          footprint: plan triangles, six numbers each
+ * A space named as a void ("open to below") makes the rooms under it part of
+ * an atrium (openAtria): they lose their heads under it, and its topmost
+ * void hangs the atrium's.
+ *
+ * @returns {Array<{id, name, upAxis, floor, ceiling, top, footprint: Float64Array|null, area: number,
+ *           rect: {centre: number[], axis: number[], half: number[]}|null, problem: string|null,
+ *           openAbove?: Float64Array[], exempt?: boolean}>}
+ *          footprint: plan triangles, six numbers each; top: the space's own top;
+ *          openAbove: the footprints of the voids over the room
+
  */
 export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overhead = null, ceilings = null, walls = null } = {}) {
   const up = upIndex(upAxis);
@@ -408,6 +416,7 @@ export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overh
     }
     room.floor = lo;
     room.ceiling = hi;
+    room.top = hi;
     const down = [], upward = [];
     for (const { positions: p, indices: ix } of meshes) {
       if (!p || !ix) continue;
@@ -499,6 +508,7 @@ export function roomsFromSpaces(spaceMeshes, { upAxis = "y", names = null, overh
     room.area = area;
     room.rect = rect;
   }
+  openAtria(rooms, hung);
   return rooms;
 }
 
@@ -515,6 +525,62 @@ const WALL_ENCLOSES = 1.5;
 const WALL_MARGIN = 0.5;
 /** A space named as an outdoor area: with nothing over it, outside the building whatever walls stand near. */
 const OUTSIDE_NAME = /\b(roof|rooftop|terrace|terrasse|balcon|balcony|balkon|deck|patio|veranda|loggia|outdoor|exterior|dach)/i;
+/** A void opens onto a room whose top is within this of its floor (m). */
+const ATRIUM_JOIN = 0.3;
+/** IBC 2021 404.3 exception 2: no heads at an atrium's ceiling more than 55 ft (m) over its floor. */
+export const ATRIUM_NO_HEADS = 16.764;
+
+/** Whether plan point (a, b) lies in footprint triangles T (six numbers each). */
+function inFootprint(T, a, b) {
+  for (let k = 0; k < T.length; k += 6) if (inTriangle(T, k, a, b)) return true;
+  return false;
+}
+
+/** Five plan points of a room's rectangle: its centre and half way to its corners. */
+function fivePoints({ centre: o, axis: x, half }) {
+  const y = [-x[1], x[0]];
+  return [[0, 0], [0.5, 0.5], [-0.5, 0.5], [0.5, -0.5], [-0.5, -0.5]].map(([a, b]) => [o[0] + a * half[0] * x[0] + b * half[1] * y[0], o[1] + a * half[0] * x[1] + b * half[1] * y[1]]);
+}
+
+/**
+ * Atria (IBC 2021 404.3): a space named as a void opens the rooms under it
+ * (their tops at its floor, overlapping it in plan) to its top, unless a
+ * suspended ceiling closes most of it there. Those rooms keep a list of the
+ * voids' footprints over them (openAbove) and lose their heads under them;
+ * a void with another over it is such a room too. The topmost void of each
+ * stack keeps its heads, at its own top, the atrium's ceiling; where that is
+ * more than ATRIUM_NO_HEADS over the atrium's floor it gets none (exempt).
+ * The NIBS Clinic hung six heads at each storey in its atria's air.
+ */
+function openAtria(rooms, hung) {
+  const voids = rooms.filter((r) => r.footprint && VOID_NAME.test(r.name || ""));
+  if (!voids.length) return;
+  const overlapping = (r, v) => fivePoints(v.rect).some(([a, b]) => inFootprint(r.footprint, a, b)) || fivePoints(r.rect).some(([a, b]) => inFootprint(v.footprint, a, b));
+  const under = (v) => rooms.filter((r) => r !== v && r.footprint && Math.abs(r.top - v.floor) <= ATRIUM_JOIN && overlapping(r, v));
+  for (const v of voids) {
+    for (const r of under(v)) {
+      const inside = fivePoints(v.rect).filter(([a, b]) => inFootprint(r.footprint, a, b));
+      const closed = hung ? inside.filter(([a, b]) => hung(a, b, r.floor + CEILING_SEARCH_FROM) < v.floor - 0.05).length : 0;
+      if (inside.length && 2 * closed > inside.length) continue;
+      (r.openAbove ||= []).push(v.footprint);
+    }
+  }
+  for (const v of voids) {
+    if (v.openAbove) continue;
+    // The atrium's floor: down through the voids under it to the rooms they open onto.
+    let floor = v.floor;
+    let level = [v];
+    for (let guard = 0; level.length && guard < 16; guard += 1) {
+      const next = level.flatMap(under);
+      for (const r of next) floor = Math.min(floor, r.floor);
+      level = next.filter((r) => voids.includes(r));
+    }
+    if (v.ceiling - floor > ATRIUM_NO_HEADS) {
+      v.exempt = true;
+      v.problem = `the atrium's ceiling, ${(v.ceiling - floor).toFixed(1)} m over its floor, is higher than 55 ft (16.8 m): IBC 2021 404.3 exception 2 needs no heads there`;
+    }
+  }
+}
 
 /** Plan boxes and tops of meshes, for the wall test. */
 function meshBoxes(meshes, up, h0, h1) {
@@ -812,16 +878,17 @@ export function layoutRooms(rooms, { hazardFor = null, response = null, obstruct
   const query = model ? boxIndex(model.list.map((o) => o.box)) : null;
   const tally = { over: new Set(), moved: 0, added: 0, unresolved: 0 };
   for (const room of rooms || []) {
-    if (!room?.footprint || !room.rect) {
+    if (!room?.footprint || !room.rect || room.exempt) {
+      // A space outside the building is not a room to sprinkler at all, nor an atrium the code exempts.
+      const none = room?.outside || room?.exempt;
       out.push({
         id: room?.id ?? null,
         name: room?.name ?? null,
         hazard: null,
         area: 0,
         heads: 0,
-        checks: [{ id: "footprint", status: room?.outside ? "n/a" : "cannot tell", text: room?.problem || "no usable footprint", clause: CODES }],
-        // A space outside the building is not a room to sprinkler at all.
-        status: room?.outside ? "n/a" : "cannot tell",
+        checks: [{ id: "footprint", status: none ? "n/a" : "cannot tell", text: room?.problem || "no usable footprint", clause: room?.exempt ? "IBC 2021 404.3" : CODES }],
+        status: none ? "n/a" : "cannot tell",
       });
       continue;
     }
@@ -874,6 +941,22 @@ export function layoutRooms(rooms, { hazardFor = null, response = null, obstruct
       placed.checks = placed.checks.map((c) =>
         c === OBSTRUCTIONS ? cleared.check : c.id === "deflector" && cleared.deflector ? cleared.deflector : c.id === "between" && cleared.between ? cleared.between : c,
       );
+    }
+    // Under an atrium (openAtria) there is no ceiling to hang heads from: the atrium's are at its top.
+    if (room.openAbove?.length) {
+      const [a0, a1] = planAxes(room.upAxis);
+      const kept = placed.heads.filter((h) => !room.openAbove.some((T) => inFootprint(T, h.position[a0], h.position[a1])));
+      const left = placed.heads.length - kept.length;
+      placed.heads = kept;
+      placed.checks = [
+        ...placed.checks,
+        {
+          id: "atrium",
+          status: "pass",
+          text: `open to an atrium above: ${left} head${left === 1 ? "" : "s"} left out under it, which the atrium's heads at its top cover`,
+          clause: "IBC 2021 404.3",
+        },
+      ];
     }
     const provenance = {
       position: "default",

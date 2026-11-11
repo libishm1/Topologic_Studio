@@ -7,6 +7,14 @@
  * on that model).
  */
 
+/**
+ * A space named as a void ("open to below"): its bottom is no floor, in the
+ * air over the atrium or stair it opens onto. The walkable graph leaves it
+ * out (outdoorSpaces.js), the fire grid takes no slab from it, and the room
+ * under it is open to its top (sprinklers.js openAtria).
+ */
+export const VOID_NAME = /\b(open to below|void|luftraum)\b/i;
+
 const BOTTOM_BAND = 0.05;
 const HORIZONTAL = 0.9;
 

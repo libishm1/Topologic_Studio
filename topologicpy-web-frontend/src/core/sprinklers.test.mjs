@@ -543,3 +543,40 @@ test("a suspended ceiling under the slab is the ceiling the heads hang from, and
   const [q3] = roomsFromSpaces(plant, { overhead: slabs });
   assert.ok(near(q3.ceiling, 2.8, 1e-5), "a model with no ceilings keeps the space's top");
 });
+
+test("an atrium: no heads in its air at each storey, its heads at its top, none over 55 ft (IBC 2021 404.3)", () => {
+  // The NIBS Clinic's atria: a waiting room, voids named "open to below" over
+  // part of it on the two storeys above, and an office beside them.
+  const names = new Map([[1, "Waiting"], [2, "2AC1-B OPEN TO BELOW"], [3, "3AC1 OPEN TO BELOW"], [4, "Office"]]);
+  const spaces = (top) => [
+    roomMesh(1, [[0, 0, 12, 10]], { y0: 0, y1: 4.5 }),
+    roomMesh(2, [[3, 3, 9, 7]], { y0: 4.5, y1: 9 }),
+    roomMesh(3, [[3, 3, 9, 7]], { y0: 9, y1: top }),
+    roomMesh(4, [[0, 0, 3, 10]], { y0: 4.5, y1: 9 }),
+  ];
+  const rooms = roomsFromSpaces(spaces(13.5), { names });
+  const [waiting, lower, upper, office] = rooms;
+  assert.equal(waiting.openAbove?.length, 1);
+  assert.equal(lower.openAbove?.length, 1, "the lower void has the upper over it");
+  assert.equal(upper.openAbove, undefined);
+  assert.equal(office.openAbove, undefined, "beside the atrium, not under it");
+  const laid = layoutRooms(rooms);
+  const under = (h) => h.position[0] > 3 && h.position[0] < 9 && h.position[2] > 3 && h.position[2] < 7;
+  const of = (id) => laid.heads.filter((h) => h.room === id);
+  assert.ok(of(1).length > 0 && !of(1).some(under), "the waiting room keeps its heads round the atrium, none under it");
+  assert.equal(of(2).length, 0, "none in the air at the middle storey");
+  assert.ok(of(3).length > 0 && of(3).every((h) => near(h.position[1], 13.5 - 0.13, 1e-6)), "the atrium's at its top");
+  assert.ok(of(4).length > 0);
+  assert.match(laid.rooms[0].checks.find((c) => c.id === "atrium")?.text || "", /open to an atrium above: \d+ heads? left out under it/);
+  // Its top more than 55 ft over the waiting room's floor: no heads at all there.
+  const tall = layoutRooms(roomsFromSpaces(spaces(18), { names }));
+  assert.equal(tall.heads.filter((h) => h.room === 3).length, 0);
+  const exempt = tall.rooms.find((r) => r.id === 3);
+  assert.equal(exempt.status, "n/a");
+  assert.match(exempt.checks[0].text, /18\.0 m over its floor, is higher than 55 ft/);
+  // A suspended ceiling under the void closes it: the waiting room keeps those heads.
+  const ceilings = [roomMesh("ceiling", [[0, 0, 12, 10]], { y0: 3, y1: 3.05 })];
+  const closed = roomsFromSpaces(spaces(13.5), { names, ceilings });
+  assert.equal(closed[0].openAbove, undefined);
+  assert.ok(layoutRooms(closed).heads.some((h) => h.room === 1 && under(h)));
+});

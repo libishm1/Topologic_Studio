@@ -30,7 +30,11 @@
 // radiation, cellStream); flame particles
 // beyond their share are refused by a hash on both paths, not in cell or
 // thread order (particleStep, kernels.js spawnFlame).
-export const RUN_CACHE_VERSION = 8;
+// 9 (2026-11-11): spaces named as voids ("open to below") give the fire grid no
+// floor, and a grid clipped round a fire under one reaches the atrium's top
+// (flamescapesRun.js atriumTop): the NIBS Clinic's atria held their smoke at
+// the ground floor.
+export const RUN_CACHE_VERSION = 9;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 
