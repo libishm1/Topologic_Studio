@@ -48,6 +48,9 @@ const MEMBERS = Number(flag("--members", 4));
 const HORIZON = Number(flag("--horizon", 180));
 const CASES = flag("--cases", "room,room-solver,duplex,office,clinic,vienna").split(",");
 const SETS = flag("--sets", "cpu,gpu-same,gpu-app").split(",");
+// Solver options for every run, e.g. the transport before proposal F:
+// --solver conservative=0,expansion=0,vorticity=10,cfl=0,vorticityStep=0
+const SOLVER = Object.fromEntries((flag("--solver", "") || "").split(",").filter(Boolean).map((kv) => kv.split("=")).map(([k, v]) => [k, Number(v)]));
 const today = new Date().toISOString().slice(0, 10);
 const OUT = flag("--out", path.join(ROOT, `benchmark/results/${today}-backends.json`));
 const EXAMPLES = { duplex: "duplex-apartment.ifc", office: "nibs-office.ifc", clinic: "nibs-clinic.ifc", vienna: "vienna-escape-route-model.ifc" };
@@ -149,7 +152,7 @@ page.on("pageerror", (error) => console.log(`  [pageerror] ${error.message}`));
 await page.goto(`${origin}/bench.html`);
 
 /** One case in the page: the grids, then each set of runs. */
-async function benchCase({ base, info, members, horizon, sets }) {
+async function benchCase({ base, info, members, horizon, sets, solver = {} }) {
   const R = await import(base + "core/flamescapesRun.js");
   const F = await import(base + "core/flamescapes.js");
   const G = await import(base + "core/flamescapesGpu.js");
@@ -225,7 +228,7 @@ async function benchCase({ base, info, members, horizon, sets }) {
     const g = scene.grid;
     const set = { grid: [g.nx, g.ny, g.nz], cells: g.cells, cell: g.h, clipped: Boolean(scene.clipped), runs: [] };
     for (let k = 0; k < members; k += 1) {
-      const opts = { nodes, upAxis: "y", horizon, frameSeconds: 5, particles: 3000, solverOptions: { ambient: 293.15 + k * 1e-3 } };
+      const opts = { nodes, upAxis: "y", horizon, frameSeconds: 5, particles: 3000, solverOptions: { ...solver, ambient: 293.15 + k * 1e-3 } };
       const t1 = performance.now();
       const frames = backend === "cpu" ? R.runScene(scene, opts) : await runner.runScene(scene, opts);
       const wall = performance.now() - t1;
@@ -257,7 +260,7 @@ const report = { generated: new Date().toISOString(), tool: "tools/backend-bench
 const t0 = Date.now();
 for (const info of cases) {
   console.log(`\n== ${info.name}`);
-  const res = await page.evaluate(benchCase, { base: `${origin}/src/`, info, members: MEMBERS, horizon: HORIZON, sets: SETS });
+  const res = await page.evaluate(benchCase, { base: `${origin}/src/`, info, members: MEMBERS, horizon: HORIZON, sets: SETS, solver: SOLVER });
   if (res.error) console.log(`  ${res.error}`);
   report.cases.push(res);
   report.adapter ??= res.adapter;

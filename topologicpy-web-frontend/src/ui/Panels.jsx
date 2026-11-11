@@ -15,7 +15,7 @@ import { formatBytes, formatMs } from "../lib/perf.js";
 import { STANDARD_CELLS } from "../lib/hardware.js";
 import { CROWD_COLOURS } from "../viewer/crowd.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
-import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
+import { DEFAULT_SETTINGS, PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS, designFireFor, waterResponse } from "../core/fireClasses.js";
 import { GAS_MEASURES, SHOW_GROUPS, SMOKE_MEASURES } from "../core/measures.js";
 import { IGNITION_CONTEXTS } from "../core/ignitionContexts.js";
@@ -1238,7 +1238,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
     setSettings({ perfOccupancy: id, ...(p.values || {}) });
   };
   // Typing a preset's value makes it custom: the values no longer are the preset's.
-  const set = (key) => (v) => setSettings({ [key]: Math.max(0, v ?? 0), perfOccupancy: "custom" });
+  const set = (key) => (v) => setSettings({ [key]: Math.max(0, v ?? DEFAULT_SETTINGS[key]), perfOccupancy: "custom" });
   const badPre = !(settings.perfPre1 > 0 && settings.perfPre99 > settings.perfPre1);
   const badArea = settings.perfQueues && !(settings.perfOccupantArea > 0);
   const seconds = (x) => (x === -Infinity ? "no safe time" : Number.isFinite(x) ? `${Math.round(x)} s` : "");
@@ -1259,7 +1259,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
         hint="With a Flamescapes fire: when the smoke reaches a smoke detector's optical density, 0.097 per metre, at virtual detectors under the ceiling 7.0 m from the fire, or as far as its room allows (NZ C/VM2 Table 3.2.2.2). Otherwise the time below."
       />
       <div className="grid-2">
-        <NumberField label="Detection (s)" value={settings.perfDetection} min={0} max={1800} step={5} onChange={(v) => setSettings({ perfDetection: Math.max(0, v ?? 0) })} />
+        <NumberField label="Detection (s)" value={settings.perfDetection} min={0} max={1800} step={5} onChange={(v) => setSettings({ perfDetection: Math.max(0, v ?? DEFAULT_SETTINGS.perfDetection) })} />
         <NumberField label="Alarm after it (s)" value={settings.perfAlarm} min={0} max={1800} step={5} onChange={set("perfAlarm")} />
       </div>
       <div className="grid-2">
@@ -3783,7 +3783,7 @@ export function SimulatePanel({
               min={0}
               max={2000}
               step={10}
-              onChange={(fireDelayMs) => setSettings({ fireDelayMs: fireDelayMs ?? 0 })}
+              onChange={(fireDelayMs) => setSettings({ fireDelayMs: fireDelayMs ?? DEFAULT_SETTINGS.fireDelayMs })}
             />
           </div>
         </Disclosure>
@@ -3836,7 +3836,7 @@ export function SimulatePanel({
               value={settings.rlEpisodes}
               min={10}
               step={50}
-              onChange={(rlEpisodes) => setSettings({ rlEpisodes: rlEpisodes ?? 200 })}
+              onChange={(rlEpisodes) => setSettings({ rlEpisodes: rlEpisodes ?? DEFAULT_SETTINGS.rlEpisodes })}
             />
           )}
           <NumberField
