@@ -228,14 +228,16 @@ self.onmessage = async (event) => {
         // speed known yet, the run starts again on the level that keeps up.
         const stepsPerFrame = Math.max(1, Math.round(payload.frameSeconds / DEFAULTS.dt));
         const totalSteps = Math.round(payload.horizon / DEFAULTS.dt);
-        let tFirst = 0, coarser = 0;
+        let tFirst = 0, tLast = 0, kLast = 0, coarser = 0;
         const measuring = {
           ...options,
           onFrame: (frame) => {
             options.onFrame(frame);
-            if (frame.k === 0) tFirst = performance.now();
+            const now = performance.now();
+            if (frame.k === 0) tFirst = now;
+            [tLast, kLast] = [now, frame.k];
             if (frame.k !== 1) return;
-            const msPerStep = (performance.now() - tFirst) / stepsPerFrame;
+            const msPerStep = (now - tFirst) / stepsPerFrame;
             gpuRate = scene.grid.cells / msPerStep;
             const fits = gpuCells(backend, gpuRate);
             if (bySpeed && !knownRate && fits < 0.8 * scene.grid.cells && msPerStep * totalSteps > RESTART_WORTH_MS) coarser = fits;
@@ -243,6 +245,10 @@ self.onmessage = async (event) => {
           shouldStop: () => coarser > 0,
         };
         result = await gpu.runScene(scene, measuring);
+        // The speed kept for later runs is the whole run's (review 2026-11-12,
+        // H): the first frames come before the fire grows and its steps are
+        // cut (substepsFor), so their speed sized later grids too fine.
+        if (result && kLast > 1) gpuRate = scene.grid.cells / ((tLast - tFirst) / (kLast * stepsPerFrame));
         if (!result && coarser) {
           backend = { ...backend, cells: coarser };
           scene = sceneFor(payload, backend);

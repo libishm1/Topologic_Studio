@@ -73,7 +73,9 @@ const SMOKE_IN_HEAT_VIEW = 0.35;
 // Frames a second the view draws while the fire solver computes on the GPU
 // (and whenever the camera moves): the playback changes it about 8 times a second.
 const GPU_RUN_DRAW_RATE = 15;
-const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate";
+// v2 (2026-11-12): the whole run's speed, cut steps and all (the worker);
+// speeds kept before were the first frames' on the old solver, and are dropped.
+const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate.v2";
 // The recording while its module loads (a click then does nothing).
 const RECORDER_STARTING = { cancel() {} };
 
