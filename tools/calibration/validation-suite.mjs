@@ -74,7 +74,11 @@
  * from the same snapshot. --wall-layers (added 2026-11-12, for 13.B) passes
  * each wall material's layers (thickness, rho, c, k, as lib/fds.mjs
  * surfaceMaterial returns them) to the solver's inert option beside the
- * lumped values; without it (13.A) only the lumped values go.
+ * lumped values; without it (13.A) only the lumped values go. --leakage
+ * (added 2026-11-12, plan 13.11 item 7, for 13.B) passes each test's leakage
+ * from its FDS input (validation-data.mjs, lib/fds.mjs leakageOf) to the
+ * solver as `leakage: [{area_m2, ...}]`, one entry per leak; 13.A runs
+ * without it.
  */
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { execFileSync } from "node:child_process";
@@ -247,7 +251,14 @@ async function runCase(c) {
   }
   const INERT_FUEL = { heatOfCombustion: 17.5e6, yields: { co2: 1.27, co: 0.004, soot: 0.015 }, embers: false, ignitionTemperature: 300 };
   const scene = { grid, fraction: G.fraction, solid, contents: { cells: [], masses: [] }, ignition: null, pilot: null, burner: spec, fuels: { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL } };
-  const sim = F.createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ambient: Ta, ...(inert ? { inert } : {}), ...c.solver });
+  // --leakage (13.B): each leak the FDS input states, one entry each (the option's name is provisional).
+  const leakage = c.leakage && T.leakage
+    ? [
+        ...T.leakage.zones.map((z) => ({ area_m2: z.area_m2, referencePressure_Pa: z.referencePressure_Pa, pressureExponent: z.pressureExponent, toZone: z.to, source: "ZONE LEAK_AREA" })),
+        ...T.leakage.hvac.filter((v) => v.area_m2 != null).map((v) => ({ area_m2: v.area_m2, ventXb: v.ventXb, to: v.vent2, source: `HVAC ${v.type || "leak"} '${v.id}'` })),
+      ]
+    : null;
+  const sim = F.createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ambient: Ta, ...(inert ? { inert } : {}), ...(leakage?.length ? { leakage } : {}), ...c.solver });
   // Whether the solver took the walls' materials (a solver without options.inert keeps its stone).
   let wallCheck = null;
   if (inert) {
@@ -538,7 +549,7 @@ async function runCase(c) {
     trees: trees.map((tr) => ({ id: tr.id, modelCeiling: tr.modelH != null ? +tr.modelH.toFixed(3) : null, nominal: tr.H, cells: tr.cells ? tr.cells.length : null, droppedCells: tr.dropped ?? null })),
     points: points.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null, ...(p.pathCells ? { pathCells: p.pathCells.length } : {}) })),
     fuel: { heatOfCombustion: fuel.heatOfCombustion, yields: fuel.yields, rule: c.fuelRule !== "app" && T.fuel ? "the test fuel's" : "class A, CO2 per joule matched" },
-    solverOptions: { ambient: Ta, ...(inert ? { inert } : {}), ...c.solver },
+    solverOptions: { ambient: Ta, ...(inert ? { inert } : {}), ...(leakage?.length ? { leakage } : {}), ...c.solver },
     door: door && door.z ? { cells: door.z.length, width: +door.width.toFixed(3), sill: door.sill != null ? +door.sill.toFixed(3) : null, soffit: door.soffit != null ? +door.soffit.toFixed(3) : null, measured: { width: T.opening?.[0]?.width ?? null, sill: T.door.sill, soffit: T.door.soffit } } : null,
     region,
     walls: inert ? { slots: T.materials.slots.map((m) => m.surface), rhoModel: inert.map((m) => +m.rho.toFixed(2)), solidCells: wallCells, check: wallCheck } : "the solver's stone",
@@ -841,6 +852,7 @@ async function main() {
   // The sealed-door rule's module from the snapshot, loaded now (its voxeliser is the snapshot's).
   const Rsnap = await import(pathToFileURL(path.join(path.dirname(snapshot.harness), "lib", "represented.mjs")).href);
   const wallLayers = args.includes("--wall-layers");
+  const leakageOn = args.includes("--leakage");
   const F = await import(pathToFileURL(path.join(snapshot.core, "flamescapes.js")).href);
   const walls = flag("--walls", "test");
   const fuelRule = flag("--fuel", "test");
@@ -864,7 +876,7 @@ async function main() {
         const bb = T.geometry.meshes.reduce((a, m) => [Math.min(a[0], m[0]), Math.max(a[1], m[1]), Math.min(a[2], m[2]), Math.max(a[3], m[3]), Math.min(a[4], m[4]), Math.max(a[5], m[5])], [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity]);
         const vol = (bb[1] - bb[0] + 2 * h) * (bb[3] - bb[2] + 2 * h) * (bb[5] - bb[4] + 2 * h);
         const cost = (vol / h ** 3) * horizon * Math.max(2, Math.sqrt(T.burner.peakW / 1e5));
-        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers });
+        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn });
       }
     }
   }

@@ -35,7 +35,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readGeometry, surfaceMaterial } from "./lib/fds.mjs";
+import { leakageOf, readGeometry, surfaceMaterial } from "./lib/fds.mjs";
 import { janssensTran } from "./lib/stats.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -1105,6 +1105,12 @@ async function main() {
     const sources = [dp.source];
     const t0 = Date.now();
     const reduced = await def.run(sources, dp.text);
+    // Each test's leakage as its FDS input states it (plan 13.11 item 7; 13.B passes it to the solver).
+    for (const T of reduced.tests) {
+      if (!T.fdsInput) continue;
+      const lk = leakageOf((await fetchFile("fds", T.fdsInput)).text);
+      if (lk) T.leakage = lk;
+    }
     const doc = {
       dataset: name,
       title: def.title,

@@ -111,6 +111,40 @@ export function parseFds(text) {
 
 const one = (g, k, fallback = undefined) => (g[k] && g[k].length ? g[k][0] : fallback);
 
+/**
+ * A test's leakage as its FDS input states it (plan 13.11 item 7, added 2026-11-12; read for 13.B, which
+ * passes it to the solver behind validation-suite.mjs --leakage; 13.A does not use it):
+ *   - zones: each `&ZONE LEAK_AREA(n)` (m2, between the zone and zone n; 0 is the ambient), with its
+ *     LEAK_REFERENCE_PRESSURE(n) (Pa) and LEAK_PRESSURE_EXPONENT(n), and the zone's XB or XYZ if given;
+ *   - paths: each `&SURF LEAK_PATH` (the surfaces the leak is spread over, and the two zones it joins);
+ *   - hvac: each `&HVAC` leak (TYPE_ID 'LEAK', or any LEAK keyword on &HVAC), its AREA and its vents, the
+ *     vents' XB where the input names them.
+ * Null when the input states none.
+ */
+export function leakageOf(text) {
+  const groups = parseFds(text);
+  const zones = [], paths = [], hvac = [];
+  const vents = {};
+  for (const g of groups) if (g.group === "VENT" && g.ID && g.XB) vents[one(g, "ID")] = sorted(g.XB);
+  for (const g of groups) {
+    if (g.group === "ZONE") {
+      for (const [k, v] of Object.entries(g)) {
+        const m = /^LEAK_AREA(?:\((\d+)\))?$/.exec(k);
+        if (!m) continue;
+        const n = m[1] ?? "0";
+        const at = (key) => (g[`${key}(${n})`] || g[key] || [null])[0];
+        zones.push({ zone: one(g, "ID", null), to: Number(n), area_m2: v[0], referencePressure_Pa: at("LEAK_REFERENCE_PRESSURE"), pressureExponent: at("LEAK_PRESSURE_EXPONENT"), xb: g.XB ? sorted(g.XB) : null, xyz: g.XYZ ? g.XYZ.slice(0, 3) : null });
+      }
+    } else if (g.group === "SURF" && (g.LEAK_PATH || g.LEAK_PATH_ID)) {
+      paths.push({ surface: one(g, "ID"), zones: g.LEAK_PATH ? g.LEAK_PATH.slice(0, 2) : null, pathId: one(g, "LEAK_PATH_ID", null) });
+    } else if (g.group === "HVAC" && (String(one(g, "TYPE_ID", "")).toUpperCase() === "LEAK" || Object.keys(g).some((k) => /LEAK/.test(k)))) {
+      const v1 = one(g, "VENT_ID", null), v2 = one(g, "VENT2_ID", null);
+      hvac.push({ id: one(g, "ID", null), type: one(g, "TYPE_ID", null), area_m2: one(g, "AREA", null), vent: v1, vent2: v2, ventXb: vents[v1] || null, vent2Xb: vents[v2] || null, keys: Object.keys(g).filter((k) => /LEAK/.test(k)) });
+    }
+  }
+  return zones.length || paths.length || hvac.length ? { zones, paths, hvac } : null;
+}
+
 /** Apply an &MULT to an XB: every copy. */
 function multiplied(xb, mult) {
   if (!mult) return [xb];
