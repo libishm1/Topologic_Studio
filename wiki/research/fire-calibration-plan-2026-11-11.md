@@ -944,3 +944,21 @@ These are dated additions, made before any model comparison of the quantities th
    - The three are run to the end of the guide's first window (580, 580 and 600 s) and compared over it. The quantities: O2 and CO2 at the front and rear sample points (dry, as measured), their thermocouples as the guide's ceiling jet, and the soot mass fraction where measured (ISOHept25 front, ISOHept26 front). Soot's σ̃E is 0.12, the smoke's; the guide gives none, so this is this project's assumption.
    - The fire: ISONG3's burner is the input's fuel mass flux times its 1 m² area at 50.0 MJ/kg. Check: that gives 755 kW in the first step, and the measured heat release reads 755 kW. The heptane tests' spray is the nozzle's flow at 684 kg/m³ and 44.6 MJ/kg onto the 0.36 m² pan (1.0 and 2.0 MW at the windows).
    - Both heptane tests are under-ventilated: the measured O2 falls to 9.5 % and 0.7 %. This solver releases the prescribed heat inside the room.
+
+### 13.8 What 13.4's checks found, and two fixes added (2026-11-12, 13:25, before any 13.B run)
+
+The physics work of 13.4 was done blind: in its own worktree, by an agent that opened no validation file or result.
+- **Item 1, the one-dimensional wall: made.** A slab against the exact series solution 0.41 %, a semi-infinite solid against erfc 0.80 % (2 % allowed). CPU and GPU agree. It is used where a material lists its layers, as the tests' boards do; the app's stone lists none, so app runs do not change.
+- **Item 2, soot deposition: made, on by default as in FDS.** Thermophoretic and gravitational, after Floyd, Overholt and Ezekoye (2014). The deposition velocity on a cold wall matches Talbot's within 0.05 % (5 % allowed), and gas plus deposited soot stays within 0.1 % in a sealed box. CPU and GPU agree.
+- **Item 3, openings narrower than a cell: not made.** Its check failed, and with whole-cell doors too. The exchange flow through a door between a hot and a cold box reads 13 to 19 % above the orifice formula at 600 K (within 5 % at 400 K). The cause found: the projection divides the pressure gradient by the ambient density, not each face's own.
+
+Two faults found by these checks, which use no measured data, are added as 13.4 items 4 and 5. Each is made only if its check passes.
+
+4. **The projection with each face's own density** (the low-Mach form, ∇·(∇p/ρ)).
+   - Check: the door exchange of item 3's check within 10 % of the orifice formula (discharge coefficient 0.68) at 400 K and 600 K, and the neutral plane within 10 % of the hydrostatic prediction.
+   - Item 3 is tried again after it.
+5. **A pressure for each sealed region**, as FDS's pressure zones: a sealed region's background pressure follows its mass and heat, so a region cooled by its walls loses pressure instead of drawing in gas. Today a sealed box cooled by its walls gains 31 % of its mass in 60 s.
+   - Check: a sealed box keeps its mass within 1 % while its walls cool it.
+   - Check: its pressure rise when heated matches the ideal gas law within 2 %.
+
+13.B runs on the solver with every change that passed. 13.A stays on d3c5751's solver, snapshotted from git.
