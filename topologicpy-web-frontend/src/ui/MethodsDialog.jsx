@@ -348,6 +348,22 @@ export function MethodsDialog({ open, onClose, studio }) {
                   </dd>
                 </div>
                 <div className="methods__card">
+                  <dt>The slime against the shortest walks</dt>
+                  <dd>
+                    When the egress map and a slime grown with no fire are both on the graph, the Slime mould section compares
+                    them within 1 m: the share of the slime&apos;s trail on a shortest walk, the share of the shortest walks under
+                    a desire line (weight 0.25 or more), and how far apart the exits&apos; shares of the slime&apos;s traffic and of
+                    the floor they are nearest for are (total variation, 0 to 1). On the Duplex, the NIBS Office and the NIBS
+                    Clinic, 54 to 70 % of the trail lay on shortest walks, 16 to 35 % of the shortest walks carried a desire line,
+                    and the exits were 0.64 to 0.86 apart. Switching the slime&apos;s differences off one at a time (3 seeds
+                    each): sensors one link out instead of three moved the exit split 35 to 45 % of the way towards the
+                    nearest-exit split; a tenth of the agents put as much of its trail next to walls as the shortest walks have
+                    (crowding, one agent a node); no trail in what the agents follow moved no reading by more than 0.02. The
+                    egress map is each room&apos;s own worst walk; the slime, where escape traffic concentrates under crowding
+                    and coarse wayfinding. Neither is calibrated against people (wiki/research/egress-vs-slime-2026-11-12.md).
+                  </dd>
+                </div>
+                <div className="methods__card">
                   <dt>The egress map and the accessibility audit (optional)</dt>
                   <dd>
                     Off until asked. The walk to the nearest exit from every place, one Dijkstra (1959) from all exits at once,

@@ -1525,6 +1525,14 @@ details.legend[open] > .legend__summary {
   border-top: 1px solid var(--border);
 }
 
+/* A short list of reasons in a folded note (the slime against the shortest walks). */
+.notes__list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
 /* The run card's lead: what the held-out tests support for what it draws (core/calibrationStatus.js validationVerdict). */
 .result__verdict {
   margin: 0;

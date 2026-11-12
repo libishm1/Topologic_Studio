@@ -40,6 +40,7 @@ import { RL_MAX_STEPS } from "./core/rl.js";
 import { RUN_SETTINGS, fireModelIn, isFlamescapes, keepGuidedBefore, planSettings, useStudio } from "./state/useStudio.js";
 import { runHorizon } from "./core/fireService.js";
 import { validationVerdict } from "./core/calibrationStatus.js";
+import { compareEgressSlime } from "./core/egressCompare.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_HOLD_MS, GUIDED_RUNS, farthestFromExits, fireStageNext, guidedHeadline, guidedOrigin, guidedResultPlace, nodeAlong, stagesFor } from "./core/guided.js";
@@ -3048,6 +3049,15 @@ export default function App() {
   const [egressState, setEgressState] = useState({ nodes: null, result: null, fine: null, busy: null, error: null });
   const egressRef = useRef(null);
   const egress = egressState.nodes === graphNodes && graphNodes ? egressState : { nodes: null, result: null, fine: null, busy: null, error: null };
+  // The slime's desire lines against the egress map's shortest walks, once
+  // both have been made on the graph on screen (core/egressCompare.js; the
+  // reasons in wiki/research/egress-vs-slime-2026-11-12.md): a few graph
+  // passes on the main thread, only then. For a slime grown with no fire, as
+  // the note measured it; a fire is another reason for them to part.
+  const slimeCompare = useMemo(
+    () => (slime.result && egress.result && !slime.result.fire ? compareEgressSlime(graph, egress.result, slime.result) : null),
+    [graph, slime.result, egress.result],
+  );
   const runEgress = useCallback(
     (kind) => {
       if (!graph) return;
@@ -5030,6 +5040,7 @@ export default function App() {
                   onPlayCrowd={playCrowd}
                   onRestartCrowd={restartCrowd}
                   slime={slime}
+                  slimeCompare={slimeCompare}
                   slimeFireReady={Boolean(graph) && (isFlamescapes(fire.model) ? Boolean(combustionRef.current?.done) : fire.model !== "zone" && fire.step > 0)}
                   onGrowSlime={growSlime}
                   onClearSlime={clearSlime}

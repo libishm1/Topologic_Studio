@@ -36,6 +36,7 @@
           <li><a href="#people-limits">What it is not</a></li>
           <li><a href="#slime">The slime mould</a></li>
           <li><a href="#readings">Its readings</a></li>
+          <li><a href="#slime-vs-egress">Against the shortest walks</a></li>
           <li><a href="#slime-limits">What it is not</a></li>
           <li><a href="#egress-map">Egress map and accessibility</a></li>
           <li><a href="#figures">Figures to capture</a></li>
@@ -125,6 +126,15 @@
       <figcaption>The NIBS Office with all five readings on: desire lines with arrows, the medial axis in cyan, bottlenecks in crimson, dead ends in dark red and abandoned branches in grey.</figcaption>
     </figure>
 
+    <h3 id="slime-vs-egress">Against the shortest walks</h3>
+    <p>When the <a href="#egress-map">egress map</a> has also been made on the graph, and the slime was grown with no fire, the section gives one line comparing the two within 1 m: the share of the slime's trail that lies on a shortest walk, the share of the shortest walks under a desire line, and how far apart the exits' shares are (0 when the slime leaves by each exit as the floor's nearest exits share it, 1 when wholly apart). The numbers are this model's. Folded under <span class="label">Why they differ</span>:</p>
+    <ul>
+      <li>The slime is a traffic map, not a route for each room: most of its trail runs on shortest walks, but it draws only the busy ones, and the walks from rooms few people leave from stay faint. On the Duplex, the NIBS Office and the NIBS Clinic, 54 to 70 % of its trail lay on shortest walks, and 16 to 35 % of the shortest walks carried a desire line.</li>
+      <li>Exits: each agent senses 3 links ahead and 60° to either side, so near a junction or a door it can turn towards another exit than the nearest. With sensors one link out, the exit split moved 35 to 45 % of the way towards the nearest-exit split in all three.</li>
+      <li>Walls: one agent fits on a node, so the lane along a wall and round a corner, where the shortest walks run, fills up and the others pass beside it. With a tenth of the agents, as much of the trail lay next to walls as of the shortest walks.</li>
+      <li>The trail itself, the desire, barely matters at its default weight (a full tube worth 3 m of walk): switched off, no reading moved by more than 0.02. On these floors the walk to the exits leads.</li>
+    </ul>
+    <p>The egress map is each room's own worst walk, the code check's question; the slime shows where escape traffic concentrates, given crowding and coarse wayfinding. Where they agree, the geometry and the traffic point the same way; where the slime leaves by another exit than the nearest, look at that junction or door. The measurements are in <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/egress-vs-slime-2026-11-12.md">the note on the two</a>.</p>
     <h3 id="slime-limits">What it is not</h3>
     <p>The slime mould is a reading of where the escape concentrates, for design. It is not a crowd, it does not time anyone, and one seed gives one run. That its networks predict where people go is a hypothesis to test, not an established result: the nearest prior work, Kalogeiton et al. (2015), checks its model against measured fundamental diagrams, which this one has not been. The plan and its open questions are in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/roadmap/egress-desire-lines-plan-2026-11-11.md">desire-lines plan</a>.</p>
     <p>Lean 4 proves the agents' rules in <code>Physarum.lean</code> (23 results): the trail's spreading keeps its total, less the fading, and never makes it negative or larger than its largest value; with absorbing walls the total never grows; an agent keeps its heading when ahead is strictly strongest and otherwise turns towards the stronger side, left on a tie; and moving never puts two agents on one place or one on a wall.</p>

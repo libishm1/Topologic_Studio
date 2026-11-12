@@ -1690,7 +1690,7 @@ function RunsRange({ runs }) {
  * walkable graph towards the exits, kept from the fire when asked; their trail
  * is drawn yellow on the graph and the start's route keeps to it.
  */
-function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasStart, fireReady }) {
+function SlimeMould({ slime, compare = null, settings, setSettings, onGrow, onClear, ready, hasStart, fireReady }) {
   const result = slime?.result;
   const m = (x) => `${x.toFixed(1)} m`;
   const flux = result ? result.exits.reduce((s, e) => s + e.flux, 0) : 0;
@@ -1797,6 +1797,34 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
             : "Dead ends not worked out (more than 32 exits). "}
           {result.abandonedArea > 0 ? `The slime gave up ${Math.round(result.abandonedArea)} m² it had explored.` : ""}
         </p>
+      )}
+      {/* Against the egress map's shortest walks on this graph (core/egressCompare.js), once both are made:
+          one line, and why they differ folded, from wiki/research/egress-vs-slime-2026-11-12.md. */}
+      {compare && (
+        <>
+          <p className="field__hint slime-compare">
+            Against the shortest walks (Egress map), within {compare.near} m: {Math.round(compare.onShortest * 100)} % of its trail on them;{" "}
+            {Math.round(compare.covered * 100)} % of them under a desire line
+            {compare.exitsApart !== null ? `; exits split ${compare.exitsApart.toFixed(2)} apart` : ""}.
+          </p>
+          <Notes summary="Why they differ">
+            <ul className="notes__list">
+              <li>
+                The slime is a traffic map, not a route for each room: most of its trail runs on shortest walks, but it draws only the busy
+                ones, and the walks from rooms few people leave from stay faint.
+              </li>
+              <li>
+                Exits: each agent senses 3 links ahead, so near a junction or a door it can turn towards another exit than the nearest. The
+                split runs from 0, as the floor&apos;s nearest exits share it, to 1, wholly apart.
+              </li>
+              <li>
+                Walls: one agent fits on a node, so the lane along a wall and round a corner, where the shortest walks run, fills up and the
+                others pass beside it.
+              </li>
+              <li>The trail itself, the desire, barely matters at its default weight: the walk to the exits leads.</li>
+            </ul>
+          </Notes>
+        </>
       )}
       <Notes summary="How it works">
         After Jones (2010) and Jones and Saeed (2007): the agents sense ahead and to either side, turn towards the strongest, step and
@@ -1986,6 +2014,7 @@ export function RoutePanel({
   onPlayCrowd,
   onRestartCrowd,
   slime = null,
+  slimeCompare = null,
   slimeFireReady = false,
   onGrowSlime,
   onClearSlime,
@@ -2172,6 +2201,7 @@ export function RoutePanel({
       />
       <SlimeMould
         slime={slime}
+        compare={slimeCompare}
         settings={settings}
         setSettings={setSettings}
         onGrow={onGrowSlime}

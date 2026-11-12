@@ -829,6 +829,23 @@ if (await egressSection.count()) {
   const accessLine = (await page.getByText(/a wheelchair reaches \d+ of \d+ rooms/).first().textContent({ timeout: 5000 }).catch(() => "")) || "";
   const audit = await page.evaluate(() => window.__viewer?.overlays?.has("accessAudit") ?? false);
   record(/a wheelchair reaches/.test(accessLine) && audit, "the wheelchair audit reads each storey and lays its map on the floors", `${accessLine.slice(0, 200)} audit layer ${audit}`);
+  // The slime grown again beside the map (no fire): one line against the
+  // shortest walks, this model's own numbers (core/egressCompare.js), and
+  // why they differ folded under it (2026-11-12).
+  await openSection("Slime mould");
+  const slimeBox = page.locator("section.section", { has: page.locator(".section__header", { hasText: /^Slime mould/ }) });
+  await slimeBox.getByRole("button", { name: /^(Grow the slime mould|Grow again)$/ }).click().catch(() => {});
+  const compareLine = await page
+    .waitForFunction(() => document.querySelector(".slime-compare")?.textContent.replace(/\s+/g, " ").trim(), null, { timeout: 60000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const reasons = await slimeBox.locator("details", { hasText: /^Why they differ/ }).locator("li").count().catch(() => 0);
+  record(
+    /^Against the shortest walks \(Egress map\), within 1 m: \d+ % of its trail on them; \d+ % of them under a desire line(; exits split [\d.]+ apart)?\.$/.test(compareLine) && reasons === 4,
+    "beside the egress map, the slime says in one line how far it follows the shortest walks, and why they differ",
+    `${compareLine.slice(0, 200) || "no line"}; ${reasons} reasons`,
+  );
+  await slimeBox.getByRole("button", { name: /^Clear$/ }).click().catch(() => {});
   await page.locator("section.section", { has: page.locator(".section__header", { hasText: /^Egress map/ }) }).getByRole("button", { name: /^Clear the map$/ }).click().catch(() => {});
   await page.waitForTimeout(300);
   const after = await page.evaluate(() => ["egressRoutes", "egressContours", "egressFine", "accessAudit"].filter((n) => window.__viewer?.overlays?.has(n)).length);
