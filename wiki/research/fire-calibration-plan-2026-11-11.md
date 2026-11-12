@@ -999,3 +999,16 @@ Two faults found by these checks, which use no measured data, are added as 13.4 
   - (b) At the stop, every cell that held fuel and burned must lie within 0.1 % oxygen by volume of its own threshold, computed from its own temperature and composition.
 
   This second check was written after the first one failed. A reader should weigh item 6 with that in mind.
+
+### 13.11 Item 7, leakage from sealed regions (2026-11-12, before any 13.B run)
+
+Item 5 gives each sealed region its own pressure. Without a way out, a region heats at constant volume: its pressure climbs (35 kPa for 2 MJ in 22.5 m³) and its gas runs up to γ ≈ 1.4 times hotter than at constant pressure. Real rooms leak, through door gaps and the fabric, so their pressure relieves within seconds. FDS pairs its pressure zones with leak areas, and the NIST/NRC closed-door tests' FDS inputs give theirs. Item 5 is therefore used in 13.B only together with item 7.
+
+7. **Leakage between a sealed region and the outside,** as FDS's leakage model: a flow C_d A_L √(2 |Δp| / ρ), with FDS's discharge coefficient, from each sealed region at its pressure to ambient.
+   - In the validation, each test's leak area is read from its FDS input (`&ZONE LEAK_AREA`, or `&SURF LEAK_PATH` areas). A test whose input gives none has none.
+   - In the app, a default leak area per region from published construction tightness (typical walls and doors, from ASHRAE or NFPA 92 tables, cited), with a setting to change it.
+   - Checks, which use no measured data:
+     - a sealed box heated at a constant rate with leak area A_L reaches the steady pressure the orifice relation gives for that heat release, within 5 %;
+     - with A_L = 0 the box behaves as item 5 alone;
+     - mass and energy, including what leaves through the leak, close within 1 %.
+   - CPU and GPU parity.
