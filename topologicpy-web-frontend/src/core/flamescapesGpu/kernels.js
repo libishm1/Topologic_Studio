@@ -76,12 +76,30 @@
  *     workgroup each) over a cell list the CPU's topology made at upload, where
  *     the CPU sums in cell order each step; only porous cells change kind on
  *     the GPU, and they stay open, so the regions do not change.
+ *   - One-dimensional walls (the CPU's walls stage, calibration plan 13.4
+ *     item 1): one thread per wall steps its profile; the heat its faces give
+ *     their gas waits in the wall buffer and each open cell gathers it in
+ *     direction order (the CPU sums it in float64), so no two threads write
+ *     one cell. Rays reaching a wall's end deposit in the fixed point of the
+ *     other deposits.
+ *   - Pressure zones (the CPU's pressureZones and zoneTransport, plan 13.8
+ *     item 5): each zone's sums are a float32 tree in ZONE_BLOCKS blocks of a
+ *     workgroup each, added by one thread per zone, where the CPU sums in
+ *     cell order in float64; each cell's mass source waits in red until the
+ *     next update, where the CPU adds it to its zone at once.
+ *   - Leakage (the CPU's zoneLeak and ventLeaks, plan 13.11 item 7): a zone's
+ *     leak is solved by one thread per zone in float32 (its pressure through
+ *     ln(1 + y) and exp(x) - 1 by their series where small); vent leaks in
+ *     open regions run on one thread in the CPU's order. The CPU tallies what
+ *     leaked (stats.leakMass, leakEnthalpy); the GPU does not.
  *   - A value every thread needs from an atomic (the particle count, the
  *     sweep's state) is read by one thread per workgroup and shared through
  *     workgroupUniformLoad; kernels that only read the atomic buffer bind it a
  *     second time as plain u32 (atomPlain). On D3D12 an atomicLoad is a
  *     read-modify-write, and thousands on one address serialise.
  */
+
+import { WALL_NODES_MAX } from "../flamescapes.js";
 
 /** Uniform parameters, all 4-byte scalars, then the two fuels' stoichiometry. */
 export const PARAMS = [
@@ -134,7 +152,35 @@ export const PARAMS = [
   // cell lists in `io` from sealedAt) and their mean expansion in `red` (redMean).
   ["conservative", "u32"], ["expansion", "u32"], ["gasAt", "u32"], ["expandAt", "u32"],
   ["sealedN", "u32"], ["sealedAt", "u32"], ["redMean", "u32"],
+  // One-dimensional walls (flamescapes.js wallSetup, calibration plan 13.4
+  // item 1): how many, their nodes each, their stacks (the `wall` buffer's
+  // layout, WALL), and where in `atom` their ends' ray deposits are (two per wall).
+  ["wallN", "u32"], ["wallNodes", "u32"], ["wallStacks", "u32"], ["wallDepAt", "u32"],
+  // Soot deposition (flamescapes.js deposition, calibration plan 13.4 item 2):
+  // on, and FDS's soot: particle density, settling and thermophoretic
+  // diameters, conductivity; where in `snap` each open cell's deposited soot
+  // is kept (the CPU's sootDeposit, N floats, only when on: in cf it would
+  // shrink every run's grid, lib/hardware.js).
+  ["sootDeposition", "u32"], ["sootDensity", "f32"], ["sootDiameter", "f32"], ["sootThDiameter", "f32"],
+  ["sootConductivity", "f32"], ["depAt", "u32"],
+  // Pressure zones (flamescapes.js pressureZones, calibration plan 13.8 item
+  // 5): on, where in `red` each sealed region's pressure share less one (pi -
+  // 1: float32 keeps the excess of a leaky zone's few pascals, where pi itself
+  // stepped by 0.012 Pa), mass, last ratio and kappa are (four arrays of
+  // sealedN), and where each cell's mass source since the last zone update is
+  // (N, the CPU's per-zone source).
+  ["zonesOn", "u32"], ["redZone", "u32"], ["zoneSrcAt", "u32"], ["zonePartAt", "u32"],
+  // Leakage (flamescapes.js leakTerms, zoneLeak, ventLeaks; plan 13.11 item
+  // 7): where in `io` each zone's leak terms start (sealedN + 1 offsets, then
+  // C_d A, n and dp_ref a term, f32 bits); the vent leaks in open regions
+  // (count, and four words each in `io`: cell, C_d A, n, dp_ref); and where in
+  // `red` each vent leak's expansion waits for expandEnd. With leaks a zone
+  // also keeps, in `red` after its kappa, the share of its gas it takes in as
+  // ambient air at its next update.
+  ["leakTermsAt", "u32"], ["leakVentN", "u32"], ["leakVentAt", "u32"], ["leakDivAt", "u32"],
 ];
+/** Blocks of 64 threads that reduce each pressure zone (zonePartial), their partial sums then added by zoneCommit. */
+export const ZONE_BLOCKS = 32;
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
  * per fuel (contents 0, first item 1): (o2, co2, co, soot), (h2o, heat,
@@ -151,13 +197,16 @@ export const CF_FIELDS = 20;
 /**
  * Per-cell integer fields in the `ci` buffer (sealed: the cell's sealed
  * region, numbered from 0, or NO_CELL; the CPU's topology, uploaded once:
- * only porous cells change kind on the GPU, and they stay open).
+ * only porous cells change kind on the GPU, and they stay open; wall: the
+ * cell's one-dimensional wall, or NO_CELL, read only with walls).
  */
-export const CI = Object.freeze({ kind: 0, fuelKind: 1, burning: 2, vapour: 3, mask: 4, count: 5, sealed: 6 });
-export const CI_FIELDS = 7;
+export const CI = Object.freeze({ kind: 0, fuelKind: 1, burning: 2, vapour: 3, mask: 4, count: 5, sealed: 6, wall: 7 });
+export const CI_FIELDS = 8;
 /**
  * Per-cell atomic fields in the `atom` buffer, then (from U.gsAt = AT_FIELDS
- * N) one slot per pressure sweep: the largest pressure change of that sweep.
+ * N) one slot per pressure sweep: the largest pressure change of that sweep;
+ * then (from U.wallDepAt) two per one-dimensional wall, its low and high
+ * ends' ray deposits.
  */
 export const AT = Object.freeze({ flame: 0, depGas: 1, depSolid: 2, ember: 3, emberMax: 4 });
 export const AT_FIELDS = 5;
@@ -182,7 +231,18 @@ export const WG = 64;
  * buffer again as plain u32, for kernels that only read it: an atomicLoad is a
  * read-modify-write on some backends (D3D12), a plain load is not.
  */
-export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13, sup: 14, sys: 15 });
+export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13, sup: 14, sys: 15, wall: 16 });
+/**
+ * The `wall` buffer (binding 16), only as large as a run with one-dimensional
+ * walls needs (16 bytes otherwise, never read), W walls of n nodes and S
+ * stacks: each wall's cell (u32 bits), from W its meta (axis + 4 stack, u32
+ * bits), from 2W its `last` mean, from 3W its nodes (n each), from (3 + n) W
+ * the heat its six faces gave their gas (J, six each); from (9 + n) W each
+ * stack's node capacities (n each, J/(m^2 K)), then its conductances (n - 1
+ * each), its heat per area and its thickness (one each). The CPU's
+ * sim.wall, in that order.
+ */
+export const WALL = Object.freeze({ faces: 6, fixed: 9 });
 /**
  * The `sys` buffer (binding 15), only as large as a run with flooded or
  * foamed rooms needs (16 bytes otherwise, never read): per cell its room
@@ -223,31 +283,31 @@ export const KERNELS = {
   spawnFlameEnd: { uses: [0, 9], threads: one, wg: 1 },
   spawnEmbers: { uses: [0, 1, 3, 4, 7, 9], threads: cells },
   moveParticles: { uses: [0, 1, 3, 4, 7, 9], threads: particles },
-  radEmit: { uses: [0, 1, 2, 3, 6, 10], threads: cells },
-  radApply: { uses: [0, 1, 13], threads: cells },
+  radEmit: { uses: [0, 1, 2, 3, 6, 10, 16], threads: cells },
+  radApply: { uses: [0, 1, 3, 13, 16], threads: cells },
   particleToGrid: { uses: [0, 1, 3, 6, 7, 9], threads: particles },
   emberDeposit: { uses: [0, 1, 3, 9, 13], threads: cells },
   // With the conservative transport the cells' T and Y are the transport's, not the back-trace's.
   advect: { uses: [0, 1, 2, 3, 4, 5], threads: (d) => d.nu + d.nv + d.nw + (d.conservative ? 0 : d.N) },
   expandBefore: { uses: [0, 1, 3, 5], threads: cells },
   // The transport's sweeps by axis and source: x, y, z on even steps, z, y, x on odd ones (the CPU's transportGas).
-  transport_x_start: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_z_start: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_y_scratch: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_z_live: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_x_live: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transportEnd: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transport_x_start: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transport_z_start: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transport_y_scratch: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transport_z_live: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transport_x_live: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transportEnd: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
   expandEnd: { uses: [0, 1, 3, 5], threads: cells },
   // One workgroup per sealed region.
   sealedMean: { uses: [0, 1, 10, 11], threads: (d) => (d.sealedN || 0) * WG },
-  density: { uses: [0, 1, 2, 3], threads: cells },
-  buoyancy: { uses: [0, 1, 3, 4], threads: (d) => d.nv },
+  density: { uses: [0, 1, 2, 3, 10], threads: cells },
+  buoyancy: { uses: [0, 1, 3, 4, 10], threads: (d) => d.nv },
   vortCurl: { uses: [0, 1, 3, 4], threads: cells },
   vortForce: { uses: [0, 1, 3], threads: cells },
   vortApply: { uses: [0, 1, 4], threads: faces },
   diffuse: { uses: [0, 1, 2, 3, 5], threads: cells },
   chemistry: { uses: [0, 1, 2, 3, 10, 13, 14, 15], threads: cells },
-  spray: { uses: [0, 1, 2, 3, 4, 14], threads: (d) => d.sprayCols || 0 },
+  spray: { uses: [0, 1, 2, 3, 4, 10, 14], threads: (d) => d.sprayCols || 0 },
   systemsWet: { uses: [0, 1, 3, 15], threads: (d) => d.sysWet || 0 },
   reduceFinish: { uses: [0, 10], threads: () => WG },
   cullFlameFront: { uses: [0, 3, 7, 9], threads: particles },
@@ -261,6 +321,24 @@ export const KERNELS = {
   conduct_bx: { uses: [0, 1, 2, 3], threads: cells },
   conduct_by: { uses: [0, 1, 2, 3], threads: cells },
   conduct_bz: { uses: [0, 1, 2, 3], threads: cells },
+  // One-dimensional walls: one thread per wall, then each open cell gathers what its wall neighbours gave it.
+  walls: { uses: [0, 1, 2, 3, 16], threads: (d) => d.wallN || 0 },
+  wallsApply: { uses: [0, 1, 2, 3, 16], threads: cells },
+  // Soot deposition: each open cell onto the solids beside it.
+  deposition: { uses: [0, 1, 2, 3, 5, 10, 16], threads: cells },
+  // Pressure zones: one workgroup per sealed region sums it and sets its pressure, then each cell takes it.
+  zonePartial: { uses: [0, 1, 2, 10, 11], threads: (d) => (d.zonesOn ? (d.sealedN || 0) * ZONE_BLOCKS * WG : 0) },
+  zoneCommit: { uses: [0, 10], threads: (d) => (d.zonesOn ? d.sealedN || 0 : 0) },
+  // After the heat sources: the same with each zone's leak over the step.
+  zoneCommitLeak: { uses: [0, 10, 11], threads: (d) => (d.zonesOn ? d.sealedN || 0 : 0) },
+  zoneApply: { uses: [0, 1, 2, 3, 10], threads: cells },
+  // Vent leaks in open regions (one thread, the CPU's order), then their expansion added after expandEnd.
+  leakVent: { uses: [0, 1, 2, 3, 10, 11], threads: (d) => (d.leakVentN ? 1 : 0), wg: 1 },
+  leakVentDiv: { uses: [0, 1, 10, 11], threads: (d) => (d.leakVentN ? 1 : 0), wg: 1 },
+  // After the advection: each zone's mass as the transport left it, its pressure scaled back to its mass, its cells' densities with it.
+  zoneMassPartial: { uses: [0, 1, 10, 11], threads: (d) => (d.zonesOn ? (d.sealedN || 0) * ZONE_BLOCKS * WG : 0) },
+  zoneMassCommit: { uses: [0, 10], threads: (d) => (d.zonesOn ? d.sealedN || 0 : 0) },
+  zoneScale: { uses: [0, 1, 3, 10], threads: cells },
   densityBoundaries: { uses: [0, 1, 2, 3], threads: cells },
   topology: { uses: [0, 3], threads: cells },
   projectZero: { uses: [0, 3, 4], threads: faces },
@@ -312,6 +390,42 @@ fn ${name}(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroup
   if (c >= U.N) { return; }
 ${body}
 }`;
+
+/**
+ * Pressure zones' commit (zonePartial's sums into each zone's pressure), with
+ * or without the step's leak (zoneLeakDm): gas let out leaves the zone's
+ * mass at once; air drawn in waits as a share of its gas for the next
+ * zonePartial. Either clears the share it used.
+ */
+const zoneCommitKernel = (name, leak) => perThread(name, "U.sealedN", `
+  let s = t;
+  let S = U.sealedN;
+  var G = 0.0;
+  var K = 0.0;
+  var src = 0.0;
+  for (var b = 0u; b < ${ZONE_BLOCKS}u; b++) {
+    let o = U.zonePartAt + 3u * (s * ${ZONE_BLOCKS}u + b);
+    G += red[o];
+    K += red[o + 1u];
+    src += red[o + 2u];
+  }
+  var mass = red[U.redZone + S + s] + src;
+  let kappa = K / G;
+  red[U.redZone + 4u * S + s] = 0.0;
+${leak ? `  let dm = zoneLeakDm(s, mass, G, kappa);
+  if (dm > 0.0) { mass -= dm; }
+  else if (dm < 0.0) { red[U.redZone + 4u * S + s] = -dm / mass; }
+` : ""}  red[U.redZone + S + s] = mass;
+  let scaled = (1.0 + red[U.redZone + s]) * G;
+  let y = (mass - scaled) / scaled;
+  var l = log(1.0 + y);
+  if (abs(y) < 1e-3) { l = y * (1.0 - y * (0.5 - y * (1.0 / 3.0 - y * 0.25))); }
+  let lr = l / (1.0 - kappa);
+  let ratio = exp(lr);
+  red[U.redZone + 2u * S + s] = ratio;
+  red[U.redZone + 3u * S + s] = exp(kappa * lr);
+  let e = red[U.redZone + s];
+  red[U.redZone + s] = e + (1.0 + e) * expMinusOne(lr);`);
 
 /** An entry point over `count` threads (index t). */
 const perThread = (name, count, body) => `
@@ -516,6 +630,7 @@ struct Sweep { s: u32, pad0: u32, pad1: u32, pad2: u32 }
 @group(0) @binding(13) var<storage, read_write> atomPlain: array<u32>;
 @group(0) @binding(14) var<storage, read_write> sup: array<f32>;
 @group(0) @binding(15) var<storage, read_write> sys: array<f32>;
+@group(0) @binding(16) var<storage, read_write> wall: array<f32>;
 
 var<workgroup> wsum: array<vec4<f32>, 64>;
 var<workgroup> wmax: array<u32, 64>;
@@ -536,10 +651,13 @@ const SIGMA: f32 = 5.670374419e-8;
 const P_AMBIENT: f32 = 101325.0;
 const KELVIN: f32 = 273.15;
 const Y_O2_AIR: f32 = 0.232;
+/** Air's c_p by the solver's species values (the CPU's CP_AIR). */
+const CP_AIR: f32 = Y_O2_AIR * 918.0 + (1.0 - Y_O2_AIR) * 1040.0;
 const PI: f32 = 3.14159265358979;
 const DEP_SCALE: f32 = ${DEP_SCALE}.0;
 const EMBER_SCALE: f32 = ${EMBER_SCALE}.0;
 const NO_CELL: u32 = 0xffffffffu;
+const WALL_MAX: u32 = ${WALL_NODES_MAX}u;
 
 // ------------------------------------------------------------------ indexing
 
@@ -649,6 +767,33 @@ fn solidCap(c: u32) -> f32 {
   return capOf(cf[ix(fInertC, c)], cf[ix(fFuel, c)], cf[ix(fArea, c)], cf[ix(fMoist, c)], fuelCp(c));
 }
 
+/** A cell's one-dimensional wall (its index in the wall buffer), or NO_CELL; the field is never read without walls. */
+fn wallOf(c: u32) -> u32 {
+  if (U.wallN == 0u) { return NO_CELL; }
+  return ci[ix(iWall, c)];
+}
+/** The wall buffer's layout (WALL): meta, last, nodes, face heats, then the stacks. */
+fn wMeta(w: u32) -> u32 { return bitcast<u32>(wall[U.wallN + w]); }
+fn wLast(w: u32) -> u32 { return 2u * U.wallN + w; }
+fn wNode(w: u32, q: u32) -> u32 { return 3u * U.wallN + w * U.wallNodes + q; }
+fn wQ(w: u32, d: u32) -> u32 { return (3u + U.wallNodes) * U.wallN + 6u * w + d; }
+fn wStacks() -> u32 { return (9u + U.wallNodes) * U.wallN; }
+fn wC(s: u32, q: u32) -> u32 { return wStacks() + s * U.wallNodes + q; }
+fn wG(s: u32, q: u32) -> u32 { return wStacks() + U.wallStacks * U.wallNodes + s * (U.wallNodes - 1u) + q; }
+fn wHeat(s: u32) -> u32 { return wStacks() + U.wallStacks * (2u * U.wallNodes - 1u) + s; }
+fn wThick(s: u32) -> u32 { return wHeat(s) + U.wallStacks; }
+/** Wall w's area on a side face: its edge, its thickness by the cell, at most the face (the CPU's wallSide). */
+fn wSide(w: u32) -> f32 { return min(wall[wThick(wMeta(w) >> 2u)], U.h) * U.h; }
+/** Heat into one end of wall w, as the rise k it would give the whole cell (the CPU's wallEnd). */
+fn wallEnd(w: u32, c: u32, end: u32, k: f32) {
+  let n = U.wallNodes;
+  let s = wMeta(w) >> 2u;
+  let q = select(0u, n - 1u, end == 1u);
+  wall[wNode(w, q)] += (k * wall[wHeat(s)]) / wall[wC(s, q)];
+  cf[ix(fTs, c)] += k;
+  wall[wLast(w)] += k;
+}
+
 /** Change a gas cell's species masses by d (kg each), nitrogen kept; renormalise (the CPU's changeGas). */
 fn changeGas(c: u32, d0: array<f32, 6>) {
   var d = d0;
@@ -667,6 +812,26 @@ fn changeGas(c: u32, d0: array<f32, 6>) {
   if (!(total > 0.0)) { return; }
   for (var q = 0u; q < NS; q++) { Y[o + q] = s[q] / total; }
   cf[ix(fRho, c)] = total / U.V;
+  // A pressure zone's gas gains or loses only what its cells' species do (the CPU's per-zone source).
+  if (U.zonesOn != 0u && ci[ix(iSealed, c)] != NO_CELL) { red[U.zoneSrcAt + c] += total - mass; }
+}
+/** Cell c's pressure as a share of ambient: its pressure zone's, else 1 (the CPU's zonePressure). */
+fn zonePi(c: u32) -> f32 {
+  if (U.zonesOn == 0u) { return 1.0; }
+  let s = ci[ix(iSealed, c)];
+  if (s == NO_CELL) { return 1.0; }
+  return 1.0 + red[U.redZone + s];
+}
+/** Moles per kg of a cell's gas, nitrogen the rest (the CPU's molarDensity). */
+fn molarInv(c: u32) -> f32 {
+  var inv = 0.0;
+  var rest = 1.0;
+  for (var s = 0u; s < NS; s++) {
+    let y = Y[c * NS + s];
+    inv += y / molar(s);
+    rest -= y;
+  }
+  return inv + max(0.0, rest) / 0.028;
 }
 fn addGas(c: u32, s: u32, dm: f32) {
   if (!(dm > 0.0)) { return; }
@@ -1026,6 +1191,62 @@ fn deposit(field: u32, c: u32, dT: f32) {
   let v = i32(round(clamp(dT, -20000.0, 20000.0) * DEP_SCALE));
   atomicAdd(&atom[ix(field, c)], bitcast<u32>(v));
 }
+/** A ray's rise into one end of wall w (the CPU's dep.lo and dep.hi), in the deposits' fixed point. */
+fn wallDeposit(w: u32, end: u32, dT: f32) {
+  let v = i32(round(clamp(dT, -20000.0, 20000.0) * DEP_SCALE));
+  atomicAdd(&atom[U.wallDepAt + 2u * w + end], bitcast<u32>(v));
+}
+
+/**
+ * Radiation leaving wall w (cell c at p) over its faces open to gas or the
+ * domain's side (the CPU's wallEmit): an end face at its end node, a side
+ * face at the cell's mean over its edge's area, each above emitAbove and at
+ * most half its node's (or the cell's) heat above ambient; faceE gets each
+ * face's energy, which leaves the nodes it came from. Returns the total.
+ */
+fn wallEmit(w: u32, c: u32, p: vec3<i32>, faceE: ptr<function, array<f32, 6>>) -> f32 {
+  let n = U.wallNodes;
+  // Cool walls cast nothing.
+  if (!(wall[wNode(w, 0u)] > U.emitAbove || wall[wNode(w, n - 1u)] > U.emitAbove || cf[ix(fTs, c)] > U.emitAbove)) { return 0.0; }
+  let A = U.h * U.h;
+  let side = wSide(w);
+  let wm = wMeta(w);
+  let axis = wm & 3u;
+  let s = wm >> 2u;
+  let total = wall[wHeat(s)] * A;
+  let Ta = U.ambient;
+  let Ta4 = Ta * Ta * Ta * Ta;
+  var all = 0.0;
+  var sides = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    (*faceE)[d] = 0.0;
+    let r = p + dirv(d);
+    if (inside(r) && kindOf(atI(r)) != GAS) { continue; }
+    let end = (d >> 1u) == axis;
+    // An odd direction is down the axis: the end at node 0.
+    let q = select(n - 1u, 0u, (d & 1u) == 1u);
+    var Tf = cf[ix(fTs, c)];
+    var cap = total;
+    if (end) {
+      Tf = wall[wNode(w, q)];
+      cap = wall[wC(s, q)] * A;
+    }
+    if (!(Tf > U.emitAbove)) { continue; }
+    var e = cf[ix(fEps, c)] * SIGMA * (Tf * Tf * Tf * Tf - Ta4) * select(side, A, end) * U.dt;
+    e = min(e, 0.5 * cap * (Tf - Ta));
+    if (!(e > 0.0)) { continue; }
+    (*faceE)[d] = e;
+    all += e;
+    if (end) { wall[wNode(w, q)] -= e / cap; } else { sides += e; }
+  }
+  if (!(all > 0.0)) { return 0.0; }
+  if (sides > 0.0) {
+    for (var q = 0u; q < n; q++) { wall[wNode(w, q)] -= sides / total; }
+  }
+  cf[ix(fTs, c)] -= all / total;
+  wall[wLast(w)] -= all / total;
+  return all;
+}
 
 /** March one ray cell by cell (Amanatides-Woo), depositing its energy (the CPU's march). */
 fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool) {
@@ -1060,7 +1281,14 @@ fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool) {
     if (!inside(q)) { return; }
     let next = atI(q);
     if (kindOf(next) != GAS && !(skipOwn && next == src)) {
-      deposit(aDepSolid, next, left / max(solidCap(next), 1e-6));
+      let rise = left / max(solidCap(next), 1e-6);
+      let w = wallOf(next);
+      if (w != NO_CELL && a == (wMeta(w) & 3u)) {
+        // A one-dimensional wall reached along its normal takes the ray on the face it crossed.
+        wallDeposit(w, select(1u, 0u, stepv[a] > 0), rise);
+        return;
+      }
+      deposit(aDepSolid, next, rise);
       return;
     }
   }
@@ -1084,7 +1312,18 @@ fn radiateCell(c: u32) -> f32 {
   var nf = 0u;
   let Ts = cf[ix(fTs, c)];
   let T = cf[ix(fT, c)];
-  if (kc != GAS && Ts > U.emitAbove) {
+  let w = wallOf(c);
+  var faceE = array<f32, 6>(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  if (w != NO_CELL) {
+    // A one-dimensional wall: each open face from its own surface (wallEmit).
+    emitted = wallEmit(w, c, p, &faceE);
+    if (!(emitted > 0.0)) { return 0.0; }
+    for (var d = 0u; d < 6u; d++) {
+      let q = p + dirv(d);
+      if (!inside(q) || kindOf(atI(q)) == GAS) { faces[nf] = d; nf++; }
+    }
+    fromSolid = true;
+  } else if (kc != GAS && Ts > U.emitAbove) {
     // Eq. 16 over the cell's faces open to gas.
     for (var d = 0u; d < 6u; d++) {
       let q = p + dirv(d);
@@ -1120,7 +1359,20 @@ fn radiateCell(c: u32) -> f32 {
     let s = sqrt(max(0.0, 1.0 - zc * zc));
     var dir = vec3<f32>(s * cos(phi), zc, s * sin(phi));
     if (fromSolid) {
-      let f = faces[min(u32(rnd(&rs) * f32(nf)), nf - 1u)];
+      var f = 0u;
+      if (w != NO_CELL) {
+        // A one-dimensional wall's face drawn by its share of the emission.
+        var u = rnd(&rs) * emitted;
+        for (var k = 0u; k < nf; k++) {
+          let d = faces[k];
+          if (!(faceE[d] > 0.0)) { continue; }
+          f = d;
+          u -= faceE[d];
+          if (u < 0.0) { break; }
+        }
+      } else {
+        f = faces[min(u32(rnd(&rs) * f32(nf)), nf - 1u)];
+      }
       dir += vec3<f32>(dirv(f));
       let len = length(dir);
       dir = dir / select(1.0, len, len > 0.0);
@@ -1149,7 +1401,15 @@ ${perCell("radApply", `
   let g = bitcast<i32>(atomPlain[ix(aDepGas, c)]);
   if (g != 0) { cf[ix(fT, c)] += f32(g) / DEP_SCALE; }
   let s = bitcast<i32>(atomPlain[ix(aDepSolid, c)]);
-  if (s != 0) { cf[ix(fTs, c)] += f32(s) / DEP_SCALE; }`)}
+  if (s != 0) { cf[ix(fTs, c)] += f32(s) / DEP_SCALE; }
+  // A one-dimensional wall's ends take what reached them (the CPU's wallEnd).
+  let w = wallOf(c);
+  if (w != NO_CELL) {
+    let lo = bitcast<i32>(atomPlain[U.wallDepAt + 2u * w]);
+    if (lo != 0) { wallEnd(w, c, 0u, f32(lo) / DEP_SCALE); }
+    let hi = bitcast<i32>(atomPlain[U.wallDepAt + 2u * w + 1u]);
+    if (hi != 0) { wallEnd(w, c, 1u, f32(hi) / DEP_SCALE); }
+  }`)}
 
 // ------------------------------------------------------------------ gas phase (Alg. 1 lines 20 to 23)
 
@@ -1218,9 +1478,10 @@ ${perThread("advect", "U.nu + U.nv + U.nw + U.N", `
     Y[c * NS + s] = y / total;
   }`)}
 
+/** The equation of state after the advection, a pressure zone's at its pressure (the CPU's updateDensity without the zones' re-solve). */
 ${perCell("density", `
   if (kindOf(c) == SOLID) { return; }
-  cf[ix(fRho, c)] = gasDensity(cf[ix(fT, c)], c);`)}
+  cf[ix(fRho, c)] = gasDensity(cf[ix(fT, c)], c) * zonePi(c);`)}
 
 // ------------------------------------------------------------------ proposal F: the conserved transport and the expansion
 
@@ -1235,7 +1496,7 @@ fn rhoStart(c: u32) -> f32 {
     rest -= y;
   }
   inv += max(0.0, rest) / 0.028;
-  return P_AMBIENT / (R_GAS * snap[U.nu + U.nv + U.nw + c] * inv);
+  return (P_AMBIENT / (R_GAS * snap[U.nu + U.nv + U.nw + c] * inv)) * zonePi(c);
 }
 
 // The gas's transport (the CPU's transportGas): the first axis from the
@@ -1250,7 +1511,7 @@ ${transportSweep(0, "live", "scratch")}
 ${perCell("transportEnd", `
   if (kindOf(c) == SOLID) { return; }
   for (var q = 0u; q < NS; q++) { Y[c * NS + q] = snap[U.gasAt + U.N + c * NS + q]; }
-  cf[ix(fT, c)] = gasDensity(1.0, c) / snap[U.gasAt + c];`)}
+  cf[ix(fT, c)] = (gasDensity(1.0, c) * zonePi(c)) / snap[U.gasAt + c];`)}
 
 /**
  * The gas's expansion (the CPU's expansionBeforeAdvect and expansionEnd): the
@@ -1299,7 +1560,227 @@ ${perThread("buoyancy", "U.nv", `
   let b = at3(i, j, k);
   if (kindOf(a) == SOLID || kindOf(b) == SOLID) { return; }
   let r = 0.5 * (cf[ix(fRho, a)] + cf[ix(fRho, b)]);
-  vel[U.nu + t] += U.dt * U.gravity * (U.rho0 / r - 1.0);`)}
+  // In a pressure zone, against the zone's own ambient density (the CPU's buoyancy).
+  vel[U.nu + t] += U.dt * U.gravity * ((U.rho0 * zonePi(a)) / r - 1.0);`)}
+
+/**
+ * Pressure zones (the CPU's pressureZones, calibration plan 13.8 item 5), 1:
+ * ZONE_BLOCKS workgroups per sealed region, each over a stride of its cells
+ * listed in io (as sealedMean): the cells' mass at ambient pressure and
+ * their present T (G), their mass-weighted kappa = R / (M c_p), and their
+ * mass sources since the last update (taken and cleared), a partial sum each
+ * into red at U.zonePartAt. Float32 trees, where the CPU sums in cell order
+ * in float64.
+ */
+@compute @workgroup_size(64)
+fn zonePartial(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let g = wid.x + wid.y * nwg.x;
+  let s = g / ${ZONE_BLOCKS}u;
+  let b = g % ${ZONE_BLOCKS}u;
+  if (s >= U.sealedN) { return; }
+  let start = io[U.sealedAt + s];
+  let end = io[U.sealedAt + s + 1u];
+  let list = U.sealedAt + U.sealedN + 1u;
+  var acc = vec4<f32>(0.0);
+  // Ambient air the last leak drew in, a share of each cell's gas (the CPU's inflow).
+  let a = red[U.redZone + 4u * U.sealedN + s];
+  for (var q = start + b * 64u + li; q < end; q += 64u * ${ZONE_BLOCKS}u) {
+    let c = io[list + q];
+    var drawn = 0.0;
+    if (a > 0.0) {
+      let m0 = cf[ix(fRho, c)] * U.V;
+      drawn = a * m0;
+      let H = m0 * mixtureCp(c) * cf[ix(fT, c)] + drawn * CP_AIR * U.ambient;
+      for (var k = 0u; k < NS; k++) { Y[c * NS + k] = (Y[c * NS + k] * m0 + select(0.0, Y_O2_AIR * drawn, k == 1u)) / (m0 + drawn); }
+      cf[ix(fT, c)] = H / ((m0 + drawn) * mixtureCp(c));
+      cf[ix(fRho, c)] = (m0 + drawn) / U.V;
+    }
+    // The gas law's moles per kg and the mixture's c_p in one pass.
+    var inv = 0.0;
+    var cp = 0.0;
+    var rest = 1.0;
+    for (var k = 0u; k < NS; k++) {
+      let y = Y[c * NS + k];
+      inv += y / molar(k);
+      cp += y * heatCap(k);
+      rest -= y;
+    }
+    inv += max(0.0, rest) / 0.028;
+    cp += max(0.0, rest) * 1040.0;
+    let m = (P_AMBIENT / (R_GAS * cf[ix(fT, c)] * inv)) * U.V;
+    acc += vec4<f32>(m, (m * R_GAS * inv) / cp, red[U.zoneSrcAt + c] + drawn, 0.0);
+    red[U.zoneSrcAt + c] = 0.0;
+  }
+  wsum[li] = acc;
+  workgroupBarrier();
+  for (var w = 32u; w > 0u; w >>= 1u) {
+    if (li < w) { wsum[li] += wsum[li + w]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) {
+    let o = U.zonePartAt + 3u * g;
+    red[o] = wsum[0].x;
+    red[o + 1u] = wsum[0].y;
+    red[o + 2u] = wsum[0].z;
+  }
+}
+/**
+ * Pressure zones, 2: one thread per region adds its blocks' sums and the
+ * mass sources to the zone's mass and sets its pressure pi_1 = pi_0 (1 +
+ * y)^(1 / (1 - kappa)), y = M / (pi_0 G) - 1 (the CPU's), ln(1 + y) by its
+ * series where y is small (float32 has no log1p); and the rise of T,
+ * ratio^kappa, for zoneApply. zoneCommitLeak first takes the zone's leak
+ * over the step (zoneLeakDm).
+ */
+${zoneCommitKernel("zoneCommit", false)}
+${zoneCommitKernel("zoneCommitLeak", true)}
+
+/** ln(1 + y), by its series where y is small (float32 has no log1p). */
+fn lnOnePlus(y: f32) -> f32 {
+  if (abs(y) < 1e-2) { return y * (1.0 - y * (0.5 - y * (1.0 / 3.0 - y * 0.25))); }
+  return log(1.0 + y);
+}
+/** exp(x) - 1, by its series where x is small (float32 has no expm1). */
+fn expMinusOne(x: f32) -> f32 {
+  if (abs(x) < 1e-2) { return x * (1.0 + x * (0.5 + x * (1.0 / 6.0 + x / 24.0))); }
+  return exp(x) - 1.0;
+}
+/** A leak's mass flow (kg/s) at dp (Pa) for gas of density rho: FDS's C_d A (dp / dp_ref)^(n - 1/2) sqrt(2 rho dp) (the CPU's leakFlow). */
+fn leakFlow(CA: f32, n: f32, dpRef: f32, dp: f32, rho: f32) -> f32 {
+  if (!(dp > 0.0)) { return 0.0; }
+  return CA * pow(dp / dpRef, n - 0.5) * sqrt(2.0 * rho * dp);
+}
+/**
+ * The gas zone s lets out (positive) or draws in over the step (the CPU's
+ * zoneLeak): the dm its leaks pass at the step's end, by bisection. Its
+ * pressure at mass m is pi_0 (m / (pi_0 G))^(1 / (1 - kappa)), taken as
+ * exp(ln pi_0 + ln(1 + y) / (1 - kappa)) - 1 over ambient, y = m / (pi_0 G)
+ * - 1 found as y_M -+ dm / (pi_0 G), so that float32 keeps the few pascals.
+ */
+fn zoneLeakDm(s: u32, mass: f32, G: f32, kappa: f32) -> f32 {
+  let qa = io[U.leakTermsAt + s];
+  let qb = io[U.leakTermsAt + s + 1u];
+  if (qb <= qa) { return 0.0; }
+  let terms = U.leakTermsAt + U.sealedN + 1u;
+  let e0 = red[U.redZone + s];
+  let base = (1.0 + e0) * G;
+  let yM = (mass - base) / base;
+  let lnPi = lnOnePlus(e0);
+  let k1 = 1.0 - kappa;
+  // The mass at ambient pressure, pi_0^kappa G, as y: pi_0^(kappa - 1) - 1.
+  let y0 = expMinusOne(-k1 * lnPi);
+  let outward = yM > y0;
+  let volume = f32(io[U.sealedAt + s + 1u] - io[U.sealedAt + s]) * U.V;
+  var lo = 0.0;
+  var hi = abs(yM - y0) * base;
+  for (var it = 0u; it < 60u; it++) {
+    let mid = 0.5 * (lo + hi);
+    var y = yM + mid / base;
+    var rho = U.rho0;
+    if (outward) {
+      y = yM - mid / base;
+      rho = (mass - mid) / volume;
+    }
+    var dp = P_AMBIENT * expMinusOne(lnPi + lnOnePlus(y) / k1);
+    if (!outward) { dp = -dp; }
+    var flow = 0.0;
+    for (var q = qa; q < qb; q++) {
+      let e = terms + 3u * q;
+      flow += leakFlow(bitcast<f32>(io[e]), bitcast<f32>(io[e + 1u]), bitcast<f32>(io[e + 2u]), dp, rho);
+    }
+    if (mid > flow * U.dt) { hi = mid; } else { lo = mid; }
+  }
+  let dm = 0.5 * (lo + hi);
+  return select(-dm, dm, outward);
+}
+
+/**
+ * Vent leaks in open regions (the CPU's ventLeaks): one thread, in the CPU's
+ * order. A cell above ambient (the projection's p) lets gas out, a sink in
+ * its expansion; one below draws ambient air in, mixed at constant pressure
+ * and its volume added to the expansion. The expansions wait in red at
+ * U.leakDivAt for leakVentDiv.
+ */
+@compute @workgroup_size(1)
+fn leakVent() {
+  for (var q = 0u; q < U.leakVentN; q++) {
+    let e = U.leakVentAt + 4u * q;
+    let c = io[e];
+    let CA = bitcast<f32>(io[e + 1u]);
+    let n = bitcast<f32>(io[e + 2u]);
+    let dpRef = bitcast<f32>(io[e + 3u]);
+    red[U.leakDivAt + q] = 0.0;
+    if (kindOf(c) == SOLID) { continue; }
+    let dp = cf[ix(fP, c)];
+    let rho = cf[ix(fRho, c)];
+    if (dp > 0.0) {
+      red[U.leakDivAt + q] = -leakFlow(CA, n, dpRef, dp, rho) / rho / U.V;
+    } else if (dp < 0.0) {
+      let m = rho * U.V;
+      let dm = leakFlow(CA, n, dpRef, -dp, U.rho0) * U.dt;
+      let H = m * mixtureCp(c) * cf[ix(fT, c)] + dm * CP_AIR * U.ambient;
+      for (var k = 0u; k < NS; k++) { Y[c * NS + k] = (Y[c * NS + k] * m + select(0.0, Y_O2_AIR * dm, k == 1u)) / (m + dm); }
+      cf[ix(fT, c)] = H / ((m + dm) * mixtureCp(c));
+      red[U.leakDivAt + q] = lnOnePlus(dm / m) / U.dt;
+    }
+  }
+}
+/** The vent leaks' expansion, added to their cells' after expandEnd (the CPU's expansionEnd), in order. */
+@compute @workgroup_size(1)
+fn leakVentDiv() {
+  for (var q = 0u; q < U.leakVentN; q++) {
+    let c = io[U.leakVentAt + 4u * q];
+    cf[ix(fD, c)] += red[U.leakDivAt + q];
+  }
+}
+
+/**
+ * A pressure zone after the advection (the CPU's zoneTransport), 1: its
+ * cells' mass as the transport left it, ZONE_BLOCKS partial sums a region.
+ */
+@compute @workgroup_size(64)
+fn zoneMassPartial(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let g = wid.x + wid.y * nwg.x;
+  let s = g / ${ZONE_BLOCKS}u;
+  let b = g % ${ZONE_BLOCKS}u;
+  if (s >= U.sealedN) { return; }
+  let start = io[U.sealedAt + s];
+  let end = io[U.sealedAt + s + 1u];
+  let list = U.sealedAt + U.sealedN + 1u;
+  var acc = 0.0;
+  for (var q = start + b * 64u + li; q < end; q += 64u * ${ZONE_BLOCKS}u) { acc += cf[ix(fRho, io[list + q])] * U.V; }
+  wheat[li] = acc;
+  workgroupBarrier();
+  for (var w = 32u; w > 0u; w >>= 1u) {
+    if (li < w) { wheat[li] = wheat[li] + wheat[li + w]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) { red[U.zonePartAt + 3u * g] = wheat[0]; }
+}
+/** 2: one thread per region scales its pressure by its mass over the transport's (the ratio for zoneScale). */
+${perThread("zoneMassCommit", "U.sealedN", `
+  let s = t;
+  let S = U.sealedN;
+  var M = 0.0;
+  for (var b = 0u; b < ${ZONE_BLOCKS}u; b++) { M += red[U.zonePartAt + 3u * (s * ${ZONE_BLOCKS}u + b)]; }
+  let mass = red[U.redZone + S + s];
+  red[U.redZone + 2u * S + s] = mass / M;
+  let e = red[U.redZone + s];
+  red[U.redZone + s] = e + (1.0 + e) * ((mass - M) / M);`)}
+/** 3: each cell of a zone, its density by the ratio at the same T. */
+${perCell("zoneScale", `
+  let s = ci[ix(iSealed, c)];
+  if (s == NO_CELL) { return; }
+  cf[ix(fRho, c)] = cf[ix(fRho, c)] * red[U.redZone + 2u * U.sealedN + s];`)}
+
+/** Each cell of a pressure zone: compressed to its zone's new pressure, T by ratio^kappa, its density the gas law's times pi. */
+${perCell("zoneApply", `
+  let s = ci[ix(iSealed, c)];
+  if (s == NO_CELL) { return; }
+  let S = U.sealedN;
+  let T = cf[ix(fT, c)] * red[U.redZone + 3u * S + s];
+  cf[ix(fT, c)] = T;
+  cf[ix(fRho, c)] = gasDensity(T, c) * (1.0 + red[U.redZone + s]);`)}
 
 fn cu(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[uAt(i, j, k)] + vel[uAt(i + 1u, j, k)]); }
 fn cv(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[vAt(i, j, k)] + vel[vAt(i, j + 1u, k)]); }
@@ -1723,6 +2204,8 @@ fn conductGas(s: u32, g: u32, Cs: f32) {
 /** Solid c's +axis face to n: solid-solid conduction (Eq. 18) or the interface with gas (Eq. 19). */
 fn conductForward(c: u32, n: u32) {
   if (kindOf(c) == GAS) { return; }
+  // A one-dimensional wall exchanges through its own profile (walls), with no solid beside it.
+  if (wallOf(c) != NO_CELL || wallOf(n) != NO_CELL) { return; }
   let Cs = solidCap(c);
   if (!(Cs > 0.0)) { return; }
   if (kindOf(n) == GAS) {
@@ -1741,7 +2224,7 @@ fn conductForward(c: u32, n: u32) {
 
 /** Solid c's -axis face to n, when n is gas (a solid there met c across its own +axis face). */
 fn conductBackward(c: u32, n: u32) {
-  if (kindOf(c) == GAS || kindOf(n) != GAS) { return; }
+  if (kindOf(c) == GAS || kindOf(n) != GAS || wallOf(c) != NO_CELL) { return; }
   let Cs = solidCap(c);
   if (!(Cs > 0.0)) { return; }
   conductGas(c, n, Cs);
@@ -1755,6 +2238,170 @@ ${conductPass(2, 1)}
 ${conductBack(0)}
 ${conductBack(1)}
 ${conductBack(2)}
+
+/**
+ * One-dimensional walls (the CPU's walls, calibration plan 13.4 item 1), one
+ * thread per wall: what other stages added to its cell's mean spread over
+ * its nodes; its side faces' exact exchange of its mean with the gas beside
+ * them over its edge's area; then its profile's backward-Euler step by the
+ * Thomas algorithm (the CPU's wallStep), each end exchanging with the gas
+ * beyond it, the gas held at its temperature at the stage's start. The heat
+ * each face gave its gas waits in the wall's Q for wallsApply, so no two
+ * threads write one gas cell.
+ */
+${perThread("walls", "U.wallN", `
+  let w = t;
+  let c = bitcast<u32>(wall[w]);
+  let wm = wMeta(w);
+  let axis = wm & 3u;
+  let s = wm >> 2u;
+  let n = U.wallNodes;
+  let A = U.h * U.h;
+  let total = wall[wHeat(s)] * A;
+  let hc = U.wallConvection;
+  var T: array<f32, WALL_MAX>;
+  let added = cf[ix(fTs, c)] - wall[wLast(w)];
+  for (var q = 0u; q < n; q++) {
+    T[q] = wall[wNode(w, q)];
+    if (added != 0.0) { T[q] += added; }
+  }
+  var mean = 0.0;
+  for (var q = 0u; q < n; q++) { mean += wall[wC(s, q)] * T[q]; }
+  mean = (mean * A) / total;
+  let p = vec3<i32>(coords(c));
+  let side = wSide(w);
+  var sides = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    wall[wQ(w, d)] = 0.0;
+    if ((d >> 1u) == axis) { continue; }
+    let r = p + dirv(d);
+    if (!inside(r) || kindOf(atI(r)) == SOLID) { continue; }
+    let nb = atI(r);
+    let q = exchange(mean, cf[ix(fT, nb)], total, gasCap(nb), hc * side, U.dt);
+    wall[wQ(w, d)] = q;
+    sides += q;
+  }
+  if (sides != 0.0) {
+    for (var q = 0u; q < n; q++) { T[q] -= sides / total; }
+  }
+  // Its ends: down the axis (an odd direction) at node 0, up it at node n - 1; insulated against a solid or the domain's side.
+  let rl = p + dirv(2u * axis + 1u);
+  let rh = p + dirv(2u * axis);
+  var hLo = 0.0; var tLo = 0.0; var hHi = 0.0; var tHi = 0.0;
+  if (inside(rl) && kindOf(atI(rl)) != SOLID) { hLo = hc; tLo = cf[ix(fT, atI(rl))]; }
+  if (inside(rh) && kindOf(atI(rh)) != SOLID) { hHi = hc; tHi = cf[ix(fT, atI(rh))]; }
+  // The nodes' changes (the delta form of the CPU's wallStep): its right-hand side of differences keeps a level wall level in float32.
+  var cp: array<f32, WALL_MAX>;
+  var dp: array<f32, WALL_MAX>;
+  for (var i = 0u; i < n; i++) {
+    var a = 0.0;
+    if (i > 0u) { a = -wall[wG(s, i - 1u)]; }
+    var cc = 0.0;
+    if (i < n - 1u) { cc = -wall[wG(s, i)]; }
+    let tt = T[i];
+    var b = wall[wC(s, i)] / U.dt - a - cc;
+    var dd = 0.0;
+    if (i > 0u) { dd = a * (tt - T[i - 1u]); }
+    if (i < n - 1u) { dd += cc * (tt - T[i + 1u]); }
+    if (i == 0u) { b += hLo; dd += hLo * (tLo - tt); }
+    if (i == n - 1u) { b += hHi; dd += hHi * (tHi - tt); }
+    var m = b;
+    if (i > 0u) { m = b - a * cp[i - 1u]; }
+    cp[i] = cc / m;
+    if (i > 0u) { dp[i] = (dd - a * dp[i - 1u]) / m; } else { dp[i] = dd / m; }
+  }
+  var change = dp[n - 1u];
+  let hi = T[n - 1u] + change;
+  T[n - 1u] = hi;
+  var lo = hi;
+  for (var i = i32(n) - 2; i >= 0; i--) {
+    change = dp[i] - cp[i] * change;
+    lo = T[i] + change;
+    T[i] = lo;
+  }
+  wall[wQ(w, 2u * axis + 1u)] = hLo * (lo - tLo) * U.dt * A;
+  wall[wQ(w, 2u * axis)] = hHi * (hi - tHi) * U.dt * A;
+  var after = 0.0;
+  for (var q = 0u; q < n; q++) {
+    wall[wNode(w, q)] = T[q];
+    after += wall[wC(s, q)] * T[q];
+  }
+  let Ts = (after * A) / total;
+  cf[ix(fTs, c)] = Ts;
+  wall[wLast(w)] = Ts;`)}
+
+// ------------------------------------------------------------------ soot deposition (the CPU's deposition, calibration plan 13.4 item 2)
+
+/** Air's viscosity by Sutherland's law (the CPU's viscosity). */
+fn viscosityOf(T: f32) -> f32 { return 1.716e-5 * pow(T / 273.15, 1.5) * ((273.15 + 110.4) / (T + 110.4)); }
+/** A particle's Knudsen number and Cunningham slip factor (the CPU's slipFactor). */
+fn slipOf(d: f32, T: f32) -> vec2<f32> {
+  let Kn = (0.065e-6 / (d / 2.0)) * (T / 298.15);
+  return vec2<f32>(Kn, 1.0 + 1.25 * Kn + 0.41 * Kn * exp(-0.88 / Kn));
+}
+/** Talbot's thermophoretic velocity with FDS's wall gradient (the CPU's thermophoreticVelocity). */
+fn thermophoretic(Tg: f32, Tw: f32, rhoGas: f32, cp: f32, h: f32) -> f32 {
+  if (!(Tg > Tw) || !(h > 0.0)) { return 0.0; }
+  let mu = viscosityOf(Tg);
+  let kg = (mu * cp) / 0.71;
+  let s = slipOf(U.sootThDiameter, Tg);
+  let a = kg / U.sootConductivity;
+  let K = (2.0 * 1.17 * (a + 2.18 * s.x) * s.y) / ((1.0 + 3.0 * 1.14 * s.x) * (1.0 + 2.0 * a + 2.0 * 2.18 * s.x));
+  return ((K * mu) / (rhoGas * Tg)) * ((h * (Tg - Tw)) / kg);
+}
+/** Stokes's settling with the slip factor (the CPU's settlingVelocity). */
+fn settling(T: f32) -> f32 {
+  let d = U.sootDiameter;
+  return (U.sootDensity * d * d * abs(U.gravity) * slipOf(d, T).y) / (18.0 * viscosityOf(T));
+}
+/** The temperature of solid n's face towards the cell in direction d from it (the CPU's surfaceTemperature). */
+fn surfaceT(n: u32, d: u32) -> f32 {
+  let w = wallOf(n);
+  if (w == NO_CELL || (d >> 1u) != (wMeta(w) & 3u)) { return cf[ix(fTs, n)]; }
+  return wall[wNode(w, select(0u, U.wallNodes - 1u, (d & 1u) == 1u))];
+}
+/**
+ * Soot deposition (the CPU's deposition): an open cell's soot falls as
+ * exp(-sum(u) dt / h) over its solid faces' deposition velocities,
+ * thermophoretic and, onto the solid below, gravitational; what leaves the
+ * gas is the cell's deposit in snap (from U.depAt).
+ */
+${perCell("deposition", `
+  // A cell with all six neighbours open (topology's mask, bits 0 to 5) has no surface.
+  if (kindOf(c) == SOLID || (ci[ix(iMask, c)] & 63u) == 63u) { return; }
+  let ys = Y[c * NS + 4u];
+  if (!(ys > 0.0)) { return; }
+  let p = vec3<i32>(coords(c));
+  let T = cf[ix(fT, c)];
+  var rate = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    let r = p + dirv(d);
+    if (!inside(r) || kindOf(atI(r)) != SOLID) { continue; }
+    rate += thermophoretic(T, surfaceT(atI(r), d), cf[ix(fRho, c)], mixtureCp(c), U.wallConvection);
+    // Settling onto the solid below (direction 3 is down).
+    if (d == 3u) { rate += settling(T); }
+  }
+  if (!(rate > 0.0)) { return; }
+  let dm = cf[ix(fRho, c)] * ys * U.V * omexp((rate * U.dt) / U.h);
+  var dd = array<f32, 6>(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  dd[4] = -dm;
+  changeGas(c, dd);
+  snap[U.depAt + c] += dm;`)}
+
+/** Each open cell takes what the faces of its wall neighbours towards it gave (the walls stage's gather). */
+${perCell("wallsApply", `
+  if (kindOf(c) == SOLID) { return; }
+  let p = vec3<i32>(coords(c));
+  var heat = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    let r = p + dirv(d);
+    if (!inside(r)) { continue; }
+    let w = wallOf(atI(r));
+    if (w == NO_CELL) { continue; }
+    // The wall's face towards this cell is the opposite direction.
+    heat += wall[wQ(w, d ^ 1u)];
+  }
+  if (heat != 0.0) { cf[ix(fT, c)] += heat / gasCap(c); }`)}
 
 /** The equation of state (line 31) and the open sides of the domain (line 32). */
 ${perCell("densityBoundaries", `

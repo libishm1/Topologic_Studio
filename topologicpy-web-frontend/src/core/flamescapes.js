@@ -50,6 +50,16 @@
  *     windows closed unless the run says otherwise: closed doors are inert
  *     leaves in their openings, open windows holes in their walls
  *     (buildScene in flamescapesRun.js).
+ *   - A wall one cell thick whose material lists its layers (a validation
+ *     scene's boards) conducts through them normal to its faces, in sub-cell
+ *     nodes, as FDS's walls do (wallSetup, walls; calibration plan 13.4 item
+ *     1); the app's materials list none and stay lumped into their cells.
+ *   - Soot deposits on solid surfaces, thermophoretically onto cooler walls
+ *     and by settling onto those below, as FDS deposits aerosols (deposition;
+ *     plan 13.4 item 2): the gas's smoke thins near cold walls.
+ *   - A sealed region (a room behind closed doors) is a pressure zone, as in
+ *     FDS: it keeps its gas's mass, and its pressure follows that mass and its
+ *     heat (pressureZones; plan 13.8 item 5). Open regions stay at ambient.
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -120,6 +130,35 @@ export const DEFAULTS = Object.freeze({
   // at medians 0.78 to 1.26 of it (FDS: 0.73 to 1.13)
   // (wiki/research/sprinkler-activation-fix-2026-11-08.md).
   wallConvection: 10,
+  // One-dimensional walls (calibration plan 13.4, item 1; wallSetup): a
+  // solid cell one cell thick whose inert material lists its `layers`
+  // conducts normal to its faces through `wallNodes` nodes across its real
+  // thickness, finer by `wallStretch` towards each layer's faces, instead of
+  // holding one temperature. 20 nodes at 1.2 keep a heated gypsum board within
+  // 0.4 % of the series solution and a concrete face within 0.8 % of erfc
+  // (flamescapes.wall.test.mjs), and the burner room's heat closes as with
+  // lumped walls (tools/calibration/heat-closure.mjs, lumped and layered); so
+  // it is on. 0 lumps every wall into its cells as before. The app's
+  // materials list no layers, so its runs are unchanged either way.
+  wallLayers: 1,
+  wallNodes: 20,
+  wallStretch: 1.2,
+  // Soot deposition on solid surfaces (calibration plan 13.4, item 2;
+  // deposition): thermophoretic onto walls cooler than their gas, and
+  // gravitational onto upward-facing surfaces, as FDS models them (Floyd,
+  // Overholt and Ezekoye 2014, FEMTC). FDS's soot: particles of 1800 kg/m^3
+  // (theirs), 0.26 W/(m K) (FDS's CONDUCTIVITY_SOLID, Ben-Dor et al. 2002),
+  // 0.03 um for thermophoresis (FDS's THERMOPHORETIC_DIAMETER, a primary
+  // particle); 1 um for settling (FDS's examples' MEAN_DIAMETER; FDS sets
+  // none). On a cold wall in 600 K gas it deposits at Talbot's velocity within
+  // 0.05 %, and the soot released is the soot in the gas, on the surfaces and
+  // gone (flamescapes.soot.test.mjs, heat-closure.mjs's soot budgets); so it
+  // is on. 0 keeps all soot in the gas, as before.
+  sootDeposition: 1,
+  sootDensity: 1800, // kg/m^3
+  sootDiameter: 1e-6, // m, settling
+  sootThermophoreticDiameter: 0.03e-6, // m
+  sootConductivity: 0.26, // W/(m K)
   sootAbsorption: 500, // the paper's residual absorption coefficient kappa
   // Confinement strength (Fedkiw, Stam and Jensen 2001: a force vorticity x h
   // x (N x omega)), the solver's one fitted parameter: 3, refitted 2026-11-12
@@ -143,6 +182,34 @@ export const DEFAULTS = Object.freeze({
   // place. 0 restores the paper's transport.
   conservative: 1,
   expansion: 1,
+  // A pressure for each sealed region (calibration plan 13.8, item 5;
+  // pressureZones), as FDS's pressure zones: a region no open side reaches
+  // keeps its gas's mass, and its pressure follows that mass and its heat.
+  // 0 holds every region at ambient pressure, as before: a sealed box cooled
+  // by its walls then drew in 31 % more gas in 60 s.
+  pressureZones: 1,
+  // Leakage to ambient (calibration plan 13.11, item 7; leakTerms): FDS's
+  // relation (FDS master 5f8f194: read.f90 READ_ZONE and READ_HVAC defaults,
+  // hvac.f90 ADJUST_LEAKAGE_AREA, a leak a duct of loss 1): the mass flow
+  // C_d A (dp / dp_ref)^(n - 1/2) sqrt(2 rho |dp|), the area A given at the
+  // reference pressure dp_ref, exponent n (FDS's defaults 4 Pa and 1/2), C_d
+  // FDS's DISCHARGE_COEFFICIENT, 1. `leakage`: the run's leaks, as the
+  // validation harness passes them from each test's FDS input: zone leaks
+  // { area_m2, referencePressure_Pa, pressureExponent, toZone } from every
+  // pressure zone (or the one holding `cell`) to the ambient (toZone 0), and
+  // vent leaks { area_m2, ventXb, to: 'AMBIENT' } between the cell at the vent
+  // (FDS's XB, its frame) and ambient; [] seals every region (item 5 alone).
+  // Without it, each pressure zone leaks as average construction in Klote,
+  // Nelson, Deal and Levin's table (NISTIR 4770, 1992, Table 1, p. 39, read in
+  // the report; from Tamura and Shaw's measurements; not checked against the
+  // current ASHRAE or NFPA 92 smoke-management tables, which could not be
+  // read): its bounding walls (exterior building walls with their
+  // windows' and doors' cracks) 0.21e-3 of their area, leakageWall, its floors
+  // and ceilings 0.52e-4, leakageFloor.
+  leakage: null,
+  leakageDischarge: 1,
+  leakageWall: 0.21e-3,
+  leakageFloor: 0.52e-4,
   porousVelocity: 0.5, // velocity multiplier in porous cells
   projection: 30, // red-black Gauss-Seidel sweeps at most
   projectionTolerance: 1e-3, // m/s: stop sweeping when a sweep changes the flow less
@@ -284,6 +351,9 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
   const solidMask = scene.solid || occupancy(grid, fraction);
   // The inert materials' properties: INERT, or a test's own (options.inert,
   // the same order) where a validation run matches its walls (2026-11-12).
+  // A material may list its `layers` from its exposed face ({thickness m,
+  // rho, c, k}): with wallLayers its one-cell-thick walls conduct through
+  // them (wallSetup).
   const inert = P.inert || INERT;
   for (let c = 0; c < N; c += 1) {
     let C = 0, K = 0, E = 0, w = 0;
@@ -303,6 +373,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     if (w > 0) eps[c] = E / w;
     if (solidMask[c]) kind[c] = SOLID;
   }
+  // One-dimensional walls, null when off or no material lists its layers.
+  const wall = P.wallLayers > 0 && inert.some((m) => m.layers?.length) ? wallSetup(grid, fraction, solidMask, inert, inertC, P) : null;
   const fuelMass = new Float32Array(N);
   const fuelKind = new Uint8Array(N); // 0 contents, 1 ignition item
   const moisture = new Float32Array(N); // kg water in the surface layer
@@ -349,6 +421,7 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     inertC,
     inertK,
     eps,
+    wall,
     fuelMass,
     fuelKind,
     moisture,
@@ -365,6 +438,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     v: new Float32Array(nx * (ny + 1) * nz),
     w: new Float32Array(nx * ny * (nz + 1)),
     p: new Float32Array(N),
+    // Soot each open cell has lost to the solid surfaces beside it (kg, deposition), when deposition is on.
+    sootDeposit: P.sootDeposition > 0 ? new Float32Array(N) : null,
     flame: new Float32Array(N), // hottest flame-front or ember temperature in a cell this step
     burning: new Uint8Array(N), // combustion took place in the cell this step
     ignitedAt: new Float32Array(N).fill(Infinity),
@@ -394,7 +469,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // Rooms flooded with clean agent or blanketed with foam
     // (suppressionSystems.js systemsSetup), set by the run; null when off.
     systems: null,
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0 },
+    // Soot's budget (kg): released by burning and pyrolysis, deposited on surfaces, carried out of the domain by its shell.
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0 },
   };
 }
 
@@ -726,7 +802,16 @@ function radiation(sim, dt) {
   const A = h * h;
   const Ta4 = P.ambient ** 4;
   const dir = [0, 0, 0];
-  const dep = { T: workArray(sim, "radGas", sim.N, Float64Array).fill(0), Ts: workArray(sim, "radSolid", sim.N, Float64Array).fill(0) };
+  // One-dimensional walls emit from, and take rays on, the face concerned
+  // (wallEmit, march): their ends' deposits wait in lo and hi with the rest.
+  const W = sim.wall;
+  const dep = {
+    T: workArray(sim, "radGas", sim.N, Float64Array).fill(0),
+    Ts: workArray(sim, "radSolid", sim.N, Float64Array).fill(0),
+    lo: W ? workArray(sim, "radWallLo", W.cells.length, Float64Array).fill(0) : null,
+    hi: W ? workArray(sim, "radWallHi", W.cells.length, Float64Array).fill(0) : null,
+  };
+  const faceE = [0, 0, 0, 0, 0, 0];
   let stream = 0;
   const draw = () => {
     stream = pcgHash(stream);
@@ -736,7 +821,12 @@ function radiation(sim, dt) {
     const kc = sim.kind[c];
     let emitted = 0;
     let fromSolid = false;
-    if (kc !== GAS && sim.Ts[c] > P.emitAbove) {
+    const w = W ? W.index[c] : -1;
+    if (w >= 0) {
+      emitted = wallEmit(sim, w, c, dt, faceE);
+      if (!(emitted > 0)) continue;
+      fromSolid = true;
+    } else if (kc !== GAS && sim.Ts[c] > P.emitAbove) {
       // Eq. 16 over the cell's faces open to gas.
       const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
       let open = 0;
@@ -779,7 +869,18 @@ function radiation(sim, dt) {
       dir[1] = zc;
       dir[2] = s * Math.sin(phi);
       if (faces) {
-        const n = DIRS[faces[Math.min(Math.floor(draw() * faces.length), faces.length - 1)]];
+        let f = 0;
+        if (w >= 0) {
+          // A one-dimensional wall's face drawn by its share of the emission (its faces differ in temperature).
+          let u = draw() * emitted;
+          for (const d of faces) {
+            if (!(faceE[d] > 0)) continue;
+            f = d;
+            u -= faceE[d];
+            if (u < 0) break;
+          }
+        } else f = faces[Math.min(Math.floor(draw() * faces.length), faces.length - 1)];
+        const n = DIRS[f];
         for (let d = 0; d < 3; d += 1) dir[d] += n[d];
         const len = Math.hypot(dir[0], dir[1], dir[2]) || 1;
         for (let d = 0; d < 3; d += 1) dir[d] /= len;
@@ -790,6 +891,12 @@ function radiation(sim, dt) {
   for (let c = 0; c < sim.N; c += 1) {
     if (dep.T[c]) sim.T[c] += dep.T[c];
     if (dep.Ts[c]) sim.Ts[c] += dep.Ts[c];
+  }
+  if (W) {
+    for (let q = 0; q < W.cells.length; q += 1) {
+      if (dep.lo[q]) wallEnd(sim, q, W.cells[q], 0, dep.lo[q]);
+      if (dep.hi[q]) wallEnd(sim, q, W.cells[q], 1, dep.hi[q]);
+    }
   }
 }
 
@@ -842,7 +949,17 @@ function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null) {
     if (i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz) return; // leaves the domain
     const next = at(g, i, j, k);
     if (sim.kind[next] !== GAS && !(skipOwn && next === from)) {
-      solidTs[next] += left / Math.max(solidCapacity(sim, next), 1e-6);
+      const rise = left / Math.max(solidCapacity(sim, next), 1e-6);
+      const w = sim.wall ? sim.wall.index[next] : -1;
+      if (w >= 0 && a === (sim.wall.meta[w] & 3)) {
+        // A one-dimensional wall reached along its normal takes the ray on the
+        // face it crossed: its low end when the ray runs up the axis.
+        const end = step[a] > 0 ? 0 : 1;
+        if (dep) (end ? dep.hi : dep.lo)[w] += rise;
+        else wallEnd(sim, w, next, end, rise);
+        return;
+      }
+      solidTs[next] += rise;
       return;
     }
   }
@@ -1016,7 +1133,7 @@ function transportGas(sim, dt, u, v, w) {
   const ry0 = workArray(sim, "gasRY0", N * NS, Float64Array);
   for (let c = 0; c < N; c += 1) {
     if (kind[c] === SOLID) continue;
-    rho[c] = rho0[c] = gasDensity(sim.T[c], sim.Y, c * NS);
+    rho[c] = rho0[c] = gasDensity(sim.T[c], sim.Y, c * NS) * zonePressure(sim, c);
     for (let q = 0; q < NS; q += 1) {
       Y[c * NS + q] = sim.Y[c * NS + q];
       ry0[c * NS + q] = rho[c] * Y[c * NS + q];
@@ -1133,7 +1250,7 @@ function transportGas(sim, dt, u, v, w) {
   for (let c = 0; c < N; c += 1) {
     if (kind[c] === SOLID) continue;
     for (let q = 0; q < NS; q += 1) sim.Y[c * NS + q] = Y[c * NS + q];
-    sim.T[c] = gasDensity(1, sim.Y, c * NS) / rho[c];
+    sim.T[c] = (gasDensity(1, sim.Y, c * NS) * zonePressure(sim, c)) / rho[c];
   }
 }
 
@@ -1150,7 +1267,8 @@ function buoyancy(sim, dt) {
         const a = at(g, i, j - 1, k), b = at(g, i, j, k);
         if (sim.kind[a] === SOLID || sim.kind[b] === SOLID) continue;
         const r = 0.5 * (sim.rho[a] + sim.rho[b]);
-        sim.v[vAt(g, i, j, k)] += dt * P.gravity * (sim.rho0 / r - 1);
+        // In a pressure zone, against the zone's own ambient density (its gas at its pressure and the ambient temperature).
+        sim.v[vAt(g, i, j, k)] += dt * P.gravity * ((sim.rho0 * zonePressure(sim, a)) / r - 1);
       }
     }
   }
@@ -1434,6 +1552,7 @@ function chemistry(sim, dt) {
         sim.Ts[c] -= (dPy * P.pyrolysisHeat) / Math.max(solidCapacity(sim, c), 1e-6);
         addGas(sim, gcell, SPECIES.FUEL, dPy * P.pyrolysisFuel);
         addGas(sim, gcell, SPECIES.SOOT, dPy * (1 - P.pyrolysisFuel));
+        if (dPy > 0) sim.stats.sootReleased += dPy * (1 - P.pyrolysisFuel);
         sim.fuelVapourKind ??= new Uint8Array(sim.N);
         sim.fuelVapourKind[gcell] = sim.fuelKind[c];
       }
@@ -1686,6 +1805,9 @@ export function changeGas(sim, c, delta) {
   if (!(total > 0)) return;
   for (let q = 0; q < NS; q += 1) sim.Y[o + q] = scratch[q] / total;
   sim.rho[c] = total / sim.V;
+  // A sealed region's gas gains or loses only what its cells' species do (pressureZones).
+  const Z = sim.zones;
+  if (Z && Z.cell[c] >= 0) Z.source[Z.cell[c]] += total - mass;
 }
 
 const delta = new Float64Array(NS);
@@ -1713,6 +1835,7 @@ function addProducts(sim, c, st, dm, vapour = false) {
   delta[SPECIES.H2O] = st.h2o * dm;
   if (vapour) delta[SPECIES.FUEL] = -dm;
   changeGas(sim, c, delta);
+  sim.stats.sootReleased += st.soot * dm;
 }
 
 // ---------------------------------------------------------- heat transfer
@@ -1726,12 +1849,15 @@ function conduct(sim, dt) {
   const { P, grid: g } = sim;
   const { nx, ny, nz, h } = g;
   const A = h * h;
+  // A one-dimensional wall exchanges through its own profile (walls), and
+  // with no solid beside it, as FDS's walls conduct normal to their faces only.
+  const wall = sim.wall ? sim.wall.index : null;
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
         const c = at(g, i, j, k);
         const kc = sim.kind[c];
-        if (kc === GAS) continue;
+        if (kc === GAS || (wall && wall[c] >= 0)) continue;
         const Cs = solidCapacity(sim, c);
         if (!(Cs > 0)) continue;
         if (kc === POROUS) {
@@ -1749,6 +1875,7 @@ function conduct(sim, dt) {
           const ii = i + a, jj = j + b, kk = k + d;
           if (ii < 0 || jj < 0 || kk < 0 || ii >= nx || jj >= ny || kk >= nz) continue;
           const n = at(g, ii, jj, kk);
+          if (wall && wall[n] >= 0) continue;
           const kn = sim.kind[n];
           if (kn === GAS) {
             const Cg = sim.rho[n] * mixtureCp(sim.Y, n * NS) * sim.V;
@@ -1767,6 +1894,454 @@ function conduct(sim, dt) {
       }
     }
   }
+}
+
+// ---------------------------------------------------- one-dimensional walls
+
+/** Most nodes a wall's profile may have (the GPU's per-thread arrays hold this many). */
+export const WALL_NODES_MAX = 24;
+
+/**
+ * A layered wall (calibration plan 13.4, item 1) as `nodes` nodes across its
+ * thickness, from its first layer's exposed face to its last layer's back:
+ * the vertex-centred finite volumes of FDS's solid phase (FDS Technical
+ * Reference Guide, chapter 7). Every layer has at least one interval; the rest
+ * go to the layers by their thermal thickness L / sqrt(alpha), the largest
+ * remainders first. Within a layer the intervals grow by `stretch` from each of
+ * its two faces towards its middle (FDS stretches from both faces too), so the
+ * steep early profile under a heated face is resolved. Per unit area: node
+ * capacities C (J/(m^2 K), half of each interval beside the node) and the
+ * conductances G between neighbouring nodes (k / interval, W/(m^2 K)); heat,
+ * their sum; x, the nodes' depths.
+ */
+export function wallStack(layers, nodes = DEFAULTS.wallNodes, stretch = DEFAULTS.wallStretch) {
+  const n = Math.min(WALL_NODES_MAX, Math.max(layers.length + 1, nodes | 0));
+  const spare = n - 1 - layers.length;
+  const weight = layers.map((l) => l.thickness / Math.sqrt(l.k / (l.rho * l.c)));
+  const total = weight.reduce((a, b) => a + b, 0);
+  const want = weight.map((w) => (spare * w) / total);
+  const intervals = want.map((w) => 1 + Math.floor(w));
+  let left = n - 1 - intervals.reduce((a, b) => a + b, 0);
+  for (const [, l] of want.map((w, l) => [w - Math.floor(w), l]).sort((a, b) => b[0] - a[0] || a[1] - b[1])) {
+    if (left <= 0) break;
+    intervals[l] += 1;
+    left -= 1;
+  }
+  const C = new Float64Array(n), G = new Float64Array(n - 1), x = new Float64Array(n);
+  let q = 0;
+  layers.forEach((l, li) => {
+    const m = intervals[li];
+    let sum = 0;
+    for (let i = 0; i < m; i += 1) sum += stretch ** Math.min(i, m - 1 - i);
+    for (let i = 0; i < m; i += 1) {
+      const d = (l.thickness * stretch ** Math.min(i, m - 1 - i)) / sum;
+      G[q] = l.k / d;
+      C[q] += (l.rho * l.c * d) / 2;
+      C[q + 1] += (l.rho * l.c * d) / 2;
+      x[q + 1] = x[q] + d;
+      q += 1;
+    }
+  });
+  return { n, C, G, x, heat: C.reduce((a, b) => a + b, 0), thickness: x[n - 1] };
+}
+
+const wallCp = new Float64Array(WALL_NODES_MAX);
+const wallDp = new Float64Array(WALL_NODES_MAX);
+
+/**
+ * One step of a wall's profile: nodes T[o .. o + n) (in place), capacities
+ * C[co ..] and conductances G[go ..] per unit area, by backward Euler, so that
+ * a thin node next to a conductive one is stable at any step. Each end
+ * exchanges with a gas at Tlo or Thi through hLo or hHi (W/(m^2 K); 0, an
+ * insulated end), the gas held at its temperature for the step. The Thomas
+ * algorithm solves the tridiagonal system for the nodes' changes (the delta
+ * form): its right-hand side is made of temperature differences, so a wall
+ * level with its gas stays exactly level in float32 too (solved for the
+ * temperatures themselves, the GPU's nodes drifted by two ulps a step).
+ * `out` gets the heat each end gave its gas over the step, J/m^2: the wall's
+ * own heat changes by exactly minus their sum.
+ */
+export function wallStep(T, o, n, C, co, G, go, dt, hLo, Tlo, hHi, Thi, out) {
+  for (let i = 0; i < n; i += 1) {
+    const a = i > 0 ? -G[go + i - 1] : 0;
+    const c = i < n - 1 ? -G[go + i] : 0;
+    const t = T[o + i];
+    let b = C[co + i] / dt - a - c;
+    let d = (i > 0 ? a * (t - T[o + i - 1]) : 0) + (i < n - 1 ? c * (t - T[o + i + 1]) : 0);
+    if (i === 0) {
+      b += hLo;
+      d += hLo * (Tlo - t);
+    }
+    if (i === n - 1) {
+      b += hHi;
+      d += hHi * (Thi - t);
+    }
+    const m = i > 0 ? b - a * wallCp[i - 1] : b;
+    wallCp[i] = c / m;
+    wallDp[i] = i > 0 ? (d - a * wallDp[i - 1]) / m : d / m;
+  }
+  let change = wallDp[n - 1];
+  const hi = T[o + n - 1] + change;
+  T[o + n - 1] = hi;
+  let lo = hi;
+  for (let i = n - 2; i >= 0; i -= 1) {
+    change = wallDp[i] - wallCp[i] * change;
+    lo = T[o + i] + change;
+    T[o + i] = lo;
+  }
+  out[0] = hLo * (lo - Tlo) * dt;
+  out[1] = hHi * (hi - Thi) * dt;
+  return out;
+}
+
+/** A stack with its nodes in the opposite order (its last layer's back at node 0). */
+function reversed(s) {
+  return { ...s, C: s.C.slice().reverse(), G: s.G.slice().reverse(), x: s.x.map((v) => s.thickness - v).reverse() };
+}
+
+/**
+ * The one-dimensional walls of a scene: the solid cells whose largest inert
+ * material lists its layers and that are one cell thick along some axis (no
+ * solid on either side along it; the domain's side counts as open), that
+ * axis the wall's normal (the most gas neighbours, then the lowest axis).
+ * The first layer faces the grid's interior along the normal (the room, in
+ * a validation scene's compartment). Each holds its stack's real heat
+ * capacity (inertC, J/K); its nodes start at ambient. Per wall: its cell, its
+ * axis and stack (meta = axis + 4 stack), its nodes, the mean temperature its
+ * nodes had when the walls stage last wrote it (last: what other stages add
+ * to Ts since is theirs), and the heat each of its six faces gave its gas in
+ * the last walls stage (Q, J). Per stack (two per material, one reversed):
+ * C, G (float32, the GPU's) and its heat and thickness.
+ */
+function wallSetup(grid, fraction, solid, inert, inertC, P) {
+  const { nx, ny, nz, h } = grid;
+  const N = nx * ny * nz;
+  // A material's layers that can be a profile: of positive thickness and
+  // properties, no more than the nodes allow. Any other stays lumped.
+  const usable = inert.map((m) => {
+    const layers = (m.layers || []).filter((l) => l.thickness > 0);
+    const ok = layers.length && layers.length < WALL_NODES_MAX && layers.every((l) => l.k > 0 && l.rho > 0 && l.c > 0);
+    return ok ? layers : null;
+  });
+  // Every wall has the same number of nodes (the GPU's layout): enough for the most layered stack.
+  const n = Math.min(WALL_NODES_MAX, Math.max(2, P.wallNodes | 0, ...usable.map((l) => (l ? l.length + 1 : 0))));
+  const stacks = [];
+  const stackOf = usable.map((layers) => {
+    if (!layers) return -1;
+    const s = wallStack(layers, n, P.wallStretch);
+    stacks.push(s, reversed(s));
+    return stacks.length - 2;
+  });
+  const dims = [nx, ny, nz], strides = [1, nx, nx * ny];
+  const index = new Int32Array(N).fill(-1);
+  const cells = [], meta = [];
+  for (let c = 0; c < N; c += 1) {
+    if (!solid[c]) continue;
+    let best = -1;
+    for (let m = 0; m < inert.length; m += 1) if (fraction[c * MATERIALS + m] > 0 && (best < 0 || fraction[c * MATERIALS + m] > fraction[c * MATERIALS + best])) best = m;
+    if (best < 0 || stackOf[best] < 0) continue;
+    const p = [c % nx, Math.floor(c / nx) % ny, Math.floor(c / (nx * ny))];
+    let axis = -1, most = -1;
+    for (let a = 0; a < 3; a += 1) {
+      const lo = p[a] > 0, hi = p[a] < dims[a] - 1;
+      if ((lo && solid[c - strides[a]]) || (hi && solid[c + strides[a]])) continue;
+      const gas = (lo ? 1 : 0) + (hi ? 1 : 0);
+      if (gas > most) {
+        most = gas;
+        axis = a;
+      }
+    }
+    if (axis < 0) continue;
+    // In the lower half along the normal the interior is up the axis: the first layer at the high end.
+    const s = stackOf[best] + (2 * p[axis] + 1 < dims[axis] ? 1 : 0);
+    index[c] = cells.length;
+    cells.push(c);
+    meta.push(axis + 4 * s);
+  }
+  const W = cells.length;
+  // No wall one cell thick (the walls are thicker than the cells): the walls stay lumped, at no cost.
+  if (!W) return null;
+  const C = new Float32Array(stacks.length * n), G = new Float32Array(stacks.length * (n - 1));
+  stacks.forEach((s, k) => {
+    C.set(s.C, k * n);
+    G.set(s.G, k * (n - 1));
+  });
+  // Each stack's heat from its float32 capacities, as both paths sum them.
+  const heat = Float32Array.from(stacks, (s, k) => C.subarray(k * n, (k + 1) * n).reduce((a, b) => a + b, 0));
+  for (let w = 0; w < W; w += 1) inertC[cells[w]] = heat[meta[w] >> 2] * h * h;
+  return {
+    n,
+    cells: Int32Array.from(cells),
+    index,
+    meta: Uint32Array.from(meta),
+    T: new Float32Array(W * n).fill(P.ambient),
+    last: new Float32Array(W).fill(P.ambient),
+    Q: new Float32Array(W * 6),
+    C,
+    G,
+    heat,
+    thickness: Float32Array.from(stacks, (s) => s.thickness),
+  };
+}
+
+/** Wall w's area on a side face (not on its normal): its edge, its thickness by the cell, at most the face. */
+function wallSide(sim, w) {
+  const h = sim.grid.h;
+  return Math.min(sim.wall.thickness[sim.wall.meta[w] >> 2], h) * h;
+}
+
+/**
+ * Heat into one end of wall w (in cell c), as the rise k (K) it would give
+ * the whole cell: its end node takes it, and the cell's mean temperature
+ * (Ts) and `last` rise by k alike, so the walls stage does not spread it again.
+ */
+function wallEnd(sim, w, c, end, k) {
+  const W = sim.wall, n = W.n, s = W.meta[w] >> 2;
+  const q = end ? n - 1 : 0;
+  W.T[w * n + q] += (k * W.heat[s]) / W.C[s * n + q];
+  sim.Ts[c] += k;
+  W.last[w] += k;
+}
+
+/**
+ * Radiation leaving wall w (cell c) over its faces open to gas or the
+ * domain's side (Eq. 16 per face): an end face at its end node's temperature,
+ * a side face at the cell's mean over its edge's area (wallSide), each above
+ * emitAbove, never more than half its node's (or the cell's) heat above
+ * ambient. `faceE` (six, by DIRS) gets each face's energy; the energy leaves
+ * the nodes it came from. Returns the total.
+ */
+function wallEmit(sim, w, c, dt, faceE) {
+  const { P, grid: g } = sim;
+  const W = sim.wall, n = W.n;
+  const o = w * n;
+  // Cool walls (most of them, most of the time) cast nothing.
+  if (!(W.T[o] > P.emitAbove || W.T[o + n - 1] > P.emitAbove || sim.Ts[c] > P.emitAbove)) return 0;
+  const A = g.h * g.h, side = wallSide(sim, w);
+  const axis = W.meta[w] & 3, s = W.meta[w] >> 2;
+  const total = W.heat[s] * A;
+  const Ta = P.ambient, Ta4 = Ta ** 4;
+  const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+  let all = 0, sides = 0;
+  for (let d = 0; d < 6; d += 1) {
+    faceE[d] = 0;
+    const dir = DIRS[d];
+    const ii = i + dir[0], jj = j + dir[1], kk = k + dir[2];
+    if (!(ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz || sim.kind[at(g, ii, jj, kk)] === GAS)) continue;
+    const end = d >> 1 === axis;
+    // An odd direction is down the axis: the end at node 0.
+    const q = d & 1 ? 0 : n - 1;
+    const Tf = end ? W.T[o + q] : sim.Ts[c];
+    if (!(Tf > P.emitAbove)) continue;
+    const cap = end ? W.C[s * n + q] * A : total;
+    let emitted = sim.eps[c] * SIGMA * (Tf ** 4 - Ta4) * (end ? A : side) * dt;
+    emitted = Math.min(emitted, 0.5 * cap * (Tf - Ta));
+    if (!(emitted > 0)) continue;
+    faceE[d] = emitted;
+    all += emitted;
+    if (end) W.T[o + q] -= emitted / cap;
+    else sides += emitted;
+  }
+  if (!(all > 0)) return 0;
+  if (sides > 0) for (let q = 0; q < n; q += 1) W.T[o + q] -= sides / total;
+  sim.Ts[c] -= all / total;
+  W.last[w] -= all / total;
+  return all;
+}
+
+/**
+ * One-dimensional walls (calibration plan 13.4, item 1), after conduct. Each
+ * wall first takes into its nodes, evenly, what other stages added to its
+ * cell's mean since its last step (embers, rays through its side faces); then
+ * its side faces exchange its mean with the gas beside them over their edge's
+ * area, exactly as conduct exchanges a lumped wall; then its profile steps
+ * (wallStep) with each end exchanging with the gas beyond it (insulated
+ * against the domain's side), the gas held at its temperature at the stage's
+ * start. Every wall reads the gas before any is changed, and each gas cell
+ * then takes what its wall neighbours gave it, gathered in direction order (as
+ * the GPU gathers it), so no wall depends on another's order and the heat each
+ * wall loses is the heat its gas gains.
+ */
+export function walls(sim, dt) {
+  const W = sim.wall;
+  if (!W) return;
+  const { P, grid: g } = sim;
+  const { nx, ny, h } = g;
+  const A = h * h, hc = P.wallConvection, n = W.n;
+  const out = wallOut;
+  for (let w = 0; w < W.cells.length; w += 1) {
+    const c = W.cells[w];
+    const axis = W.meta[w] & 3, s = W.meta[w] >> 2;
+    const o = w * n, co = s * n, total = W.heat[s] * A;
+    const added = sim.Ts[c] - W.last[w];
+    if (added !== 0) for (let q = 0; q < n; q += 1) W.T[o + q] += added;
+    let mean = 0;
+    for (let q = 0; q < n; q += 1) mean += W.C[co + q] * W.T[o + q];
+    mean = (mean * A) / total;
+    const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
+    let sides = 0;
+    const side = Math.min(W.thickness[s], h) * h;
+    for (let d = 0; d < 6; d += 1) {
+      W.Q[w * 6 + d] = 0;
+      if (d >> 1 === axis) continue;
+      const nb = openNeighbour(sim, i, j, k, d);
+      if (nb < 0) continue;
+      const q = exchange(mean, sim.T[nb], total, sim.rho[nb] * mixtureCp(sim.Y, nb * NS) * sim.V, hc * side, dt);
+      W.Q[w * 6 + d] = q;
+      sides += q;
+    }
+    if (sides !== 0) for (let q = 0; q < n; q += 1) W.T[o + q] -= sides / total;
+    // Its ends: down the axis (an odd direction) at node 0, up it at node n - 1.
+    const lo = openNeighbour(sim, i, j, k, 2 * axis + 1), hi = openNeighbour(sim, i, j, k, 2 * axis);
+    wallStep(W.T, o, n, W.C, co, W.G, s * (n - 1), dt, lo >= 0 ? hc : 0, lo >= 0 ? sim.T[lo] : 0, hi >= 0 ? hc : 0, hi >= 0 ? sim.T[hi] : 0, out);
+    W.Q[w * 6 + 2 * axis + 1] = out[0] * A;
+    W.Q[w * 6 + 2 * axis] = out[1] * A;
+    mean = 0;
+    for (let q = 0; q < n; q += 1) mean += W.C[co + q] * W.T[o + q];
+    sim.Ts[c] = (mean * A) / total;
+    W.last[w] = sim.Ts[c];
+  }
+  // Each open cell beside a wall takes what the wall's faces towards it gave
+  // (summed in float64 first: a cell between two walls takes both at once).
+  const heat = workArray(sim, "wallGas", sim.N, Float64Array);
+  for (let pass = 0; pass < 2; pass += 1) {
+    for (let w = 0; w < W.cells.length; w += 1) {
+      const c = W.cells[w];
+      for (let d = 0; d < 6; d += 1) {
+        const q = W.Q[w * 6 + d];
+        if (q === 0) continue;
+        const nb = c + (d === 0 ? 1 : d === 1 ? -1 : d === 2 ? nx : d === 3 ? -nx : d === 4 ? nx * ny : -nx * ny);
+        if (pass === 0) heat[nb] += q;
+        else if (heat[nb] !== 0) {
+          sim.T[nb] += heat[nb] / (sim.rho[nb] * mixtureCp(sim.Y, nb * NS) * sim.V);
+          heat[nb] = 0;
+        }
+      }
+    }
+  }
+}
+
+const wallOut = [0, 0];
+
+// ------------------------------------------------------ soot deposition
+
+/** Air's dynamic viscosity, Pa s: Sutherland's law (1.716e-5 Pa s at 273.15 K, S = 110.4 K). */
+export function viscosity(T) {
+  return 1.716e-5 * (T / 273.15) ** 1.5 * ((273.15 + 110.4) / (T + 110.4));
+}
+
+/**
+ * A particle's Cunningham slip factor at gas temperature T (Floyd, Overholt
+ * and Ezekoye 2014, eqs. 2 and 3): Cn = 1 + 1.25 Kn + 0.41 Kn exp(-0.88 / Kn),
+ * Kn = (lambda / r) (T / T_inf), the gas's mean free path lambda 0.065 um at 25 C.
+ */
+export function slipFactor(d, T) {
+  const Kn = (0.065e-6 / (d / 2)) * (T / 298.15);
+  return { Kn, Cn: 1 + 1.25 * Kn + 0.41 * Kn * Math.exp(-0.88 / Kn) };
+}
+
+/**
+ * Soot's thermophoretic velocity towards a wall at Tw from gas at Tg (m/s;
+ * 0 from gas no hotter than the wall): Talbot, Cheng, Schefer and Willis's
+ * (1980) u = K_th nu (dT/dx) / Tg with K_th = 2 Cs (a + Ct Kn) Cn / ((1 + 3
+ * Cm Kn)(1 + 2 a + 2 Ct Kn)), Cs 1.17, Ct 2.18, Cm 1.14, a = kg / kp; and
+ * FDS's wall gradient from the wall's heat transfer coefficient, dT/dx =
+ * h (Tg - Tw) / kg, the gradient a coarse grid cannot resolve (Floyd et al.
+ * eqs. 4 to 6). The gas's conductivity from its viscosity, kg = mu cp / 0.71.
+ */
+export function thermophoreticVelocity(Tg, Tw, rhoGas, cp, h, P) {
+  if (!(Tg > Tw) || !(h > 0)) return 0;
+  const mu = viscosity(Tg), kg = (mu * cp) / 0.71;
+  const { Kn, Cn } = slipFactor(P.sootThermophoreticDiameter, Tg);
+  const a = kg / P.sootConductivity;
+  const K = (2 * 1.17 * (a + 2.18 * Kn) * Cn) / ((1 + 3 * 1.14 * Kn) * (1 + 2 * a + 2 * 2.18 * Kn));
+  return ((K * mu) / (rhoGas * Tg)) * ((h * (Tg - Tw)) / kg);
+}
+
+/** Soot's settling velocity in gas at T (m/s): Stokes's with the slip factor, rho_p d^2 g Cn / (18 mu) (Floyd et al. eq. 1, spheres). */
+export function settlingVelocity(T, P) {
+  const d = P.sootDiameter;
+  return (P.sootDensity * d * d * Math.abs(P.gravity) * slipFactor(d, T).Cn) / (18 * viscosity(T));
+}
+
+/**
+ * Soot deposition (calibration plan 13.4, item 2), after the walls: each open
+ * cell loses soot to every solid face beside it at the deposition velocity
+ * of that face, thermophoretic towards a cooler surface (its surface
+ * temperature: a one-dimensional wall's end node facing the cell, else the
+ * cell's Ts) plus gravitational settling onto the solid below; FDS's
+ * velocities, summed per face as FDS sums them (Floyd et al.; turbulent
+ * deposition, also FDS's, is not modelled). Over the step the cell's soot
+ * falls as exp(-sum(u) dt / h), all its faces h^2 over its volume h^3 (the
+ * exact solution of FDS's explicit removal, as every rate here is
+ * integrated). What leaves the gas is the cell's sootDeposit and
+ * stats.sootDeposited, so the soot released equals that in the gas, on the
+ * surfaces and gone out of the domain. Gravitational settling within the gas
+ * (FDS's drift in the species transport) is not modelled: 1 um soot settles
+ * at about 0.1 mm/s.
+ */
+export function deposition(sim, dt) {
+  const { P, grid: g } = sim;
+  if (!(P.sootDeposition > 0) || !sim.sootDeposit) return;
+  const { nx, ny, h } = g;
+  const kind = sim.kind;
+  const hc = P.wallConvection;
+  // A cell with all six neighbours open (most of them) has no surface.
+  const mask = topology(sim).mask;
+  for (let c = 0; c < sim.N; c += 1) {
+    if (kind[c] === SOLID || mask[c] === 63) continue;
+    const ys = sim.Y[c * NS + SPECIES.SOOT];
+    if (!(ys > 0)) continue;
+    const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
+    let rate = 0;
+    for (let d = 0; d < 6; d += 1) {
+      const n = solidNeighbour(sim, i, j, k, d);
+      if (n < 0) continue;
+      rate += thermophoreticVelocity(sim.T[c], surfaceTemperature(sim, n, d), sim.rho[c], mixtureCp(sim.Y, c * NS), hc, P);
+      // Settling onto the solid below (DIRS[3] is down).
+      if (d === 3) rate += settlingVelocity(sim.T[c], P);
+    }
+    if (!(rate > 0)) continue;
+    const dm = sim.rho[c] * ys * sim.V * -Math.expm1((-rate * dt) / h);
+    delta.fill(0);
+    delta[SPECIES.SOOT] = -dm;
+    changeGas(sim, c, delta);
+    sim.sootDeposit[c] += dm;
+    sim.stats.sootDeposited += dm;
+  }
+}
+
+/** The solid neighbour of cell (i, j, k) in direction d, or -1. */
+function solidNeighbour(sim, i, j, k, d) {
+  const g = sim.grid;
+  const dir = DIRS[d];
+  const ii = i + dir[0], jj = j + dir[1], kk = k + dir[2];
+  if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz) return -1;
+  const n = at(g, ii, jj, kk);
+  return sim.kind[n] === SOLID ? n : -1;
+}
+
+/**
+ * The temperature of solid n's face towards the cell in direction d from it:
+ * a one-dimensional wall's end node when the face is on its normal (the cell
+ * up the axis faces its low end), else n's Ts.
+ */
+function surfaceTemperature(sim, n, d) {
+  const W = sim.wall;
+  const w = W ? W.index[n] : -1;
+  if (w < 0 || d >> 1 !== (W.meta[w] & 3)) return sim.Ts[n];
+  // From the cell, an even direction is up the axis: the wall is above it, the cell faces its low end (node 0).
+  return W.T[w * W.n + (d & 1 ? W.n - 1 : 0)];
+}
+
+/** The open (not solid) neighbour of cell (i, j, k) in direction d, or -1 (a solid, or outside the domain). */
+function openNeighbour(sim, i, j, k, d) {
+  const g = sim.grid;
+  const dir = DIRS[d];
+  const ii = i + dir[0], jj = j + dir[1], kk = k + dir[2];
+  if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz) return -1;
+  const nb = at(g, ii, jj, kk);
+  return sim.kind[nb] === SOLID ? -1 : nb;
 }
 
 /**
@@ -1804,23 +2379,375 @@ function expansionEnd(sim, dt) {
     if (i === 0 || k === 0 || i === nx - 1 || k === nz - 1 || j === ny - 1) D[c] = 0;
     else D[c] = (D[c] + Math.log(sim.T[c] / T1[c])) / dt;
   }
+  // Vent leaks in open regions: the gas they let out or the air they drew in (ventLeaks).
+  const L = sim.ventLeaks, leak = sim.work.leakDiv;
+  if (L && leak) for (let q = 0; q < L.length; q += 1) D[L[q].cell] += leak[q];
 }
 
-/** Line 31: the equation of state for every open cell. */
-function updateDensity(sim) {
+/**
+ * Line 31: the equation of state for every open cell, a pressure zone's at
+ * its pressure: after the heat sources (resolve) each zone's pressure is
+ * found again from its gas (pressureZones); after the advection, zoneTransport.
+ */
+function updateDensity(sim, resolve = true, leakDt = 0) {
   for (let c = 0; c < sim.N; c += 1) {
     if (sim.kind[c] === SOLID) continue;
     sim.rho[c] = gasDensity(sim.T[c], sim.Y, c * NS);
   }
+  if (resolve) pressureZones(sim, leakDt);
+  else zoneTransport(sim);
 }
+
+/**
+ * A pressure zone after the advection. Its T is the gas law's at the zone's
+ * pressure already, but the transport does not keep a zone's mass exactly
+ * (in the heat-closure mix box it lost 0.9 % in 10 s, its volume kept): the
+ * zone's densities and pressure are scaled back to its mass at the same T,
+ * so the transport's error is not taken as the zone's gas being compressed
+ * (which heated the mix box's gas by 3 % of its heat).
+ */
+function zoneTransport(sim) {
+  const Z = zoneState(sim);
+  if (!Z) return;
+  const S = Z.pi.length;
+  if (zoneScratch.G.length < S) {
+    zoneScratch.G = new Float64Array(S);
+    zoneScratch.K = new Float64Array(S);
+  }
+  const M = zoneScratch.G;
+  M.fill(0, 0, S);
+  for (let q = 0; q < Z.list.length; q += 1) {
+    const c = Z.list[q], z = Z.cell[c];
+    sim.rho[c] *= Z.pi[z];
+    M[z] += sim.rho[c] * sim.V;
+  }
+  for (let z = 0; z < S; z += 1) {
+    Z.ratio[z] = Z.mass[z] / M[z];
+    Z.pi[z] *= Z.ratio[z];
+  }
+  for (let q = 0; q < Z.list.length; q += 1) {
+    const c = Z.list[q];
+    sim.rho[c] *= Z.ratio[Z.cell[c]];
+  }
+}
+
+/**
+ * The pressure zones (calibration plan 13.8, item 5): the sealed regions of
+ * topology(), each with its pressure as a share of ambient (pi) and its gas's
+ * mass, which changes only by its cells' species sources (changeGas). At the
+ * first step every zone is at ambient pressure with the gas it has then. Null
+ * when off or no region is sealed.
+ */
+export function zoneState(sim) {
+  if (!(sim.P.pressureZones > 0)) return null;
+  const topo = topology(sim);
+  let Z = sim.zones;
+  if (Z && Z.version === topo.version) return Z;
+  const index = new Int32Array(topo.sealed.length).fill(-1);
+  let S = 0;
+  for (let r = 0; r < topo.sealed.length; r += 1) if (topo.sealed[r]) index[r] = S++;
+  if (!S) {
+    sim.zones = null;
+    return null;
+  }
+  const cell = new Int32Array(sim.N).fill(-1);
+  const list = [];
+  for (let c = 0; c < sim.N; c += 1) {
+    if (topo.region[c] >= 0) cell[c] = index[topo.region[c]];
+    if (cell[c] >= 0) list.push(c);
+  }
+  // The regions only change if a cell turns solid, which none does; should
+  // their number change, every zone starts again at ambient pressure.
+  const keep = Z && Z.pi.length === S;
+  const volume = new Float64Array(S);
+  for (const c of list) volume[cell[c]] += sim.V;
+  Z = sim.zones = {
+    version: topo.version,
+    cell,
+    // The zones' cells in cell order.
+    list: Int32Array.from(list),
+    pi: keep ? Z.pi : new Float64Array(S).fill(1),
+    mass: keep ? Z.mass : zoneMasses(sim, cell, S),
+    source: keep ? Z.source : new Float64Array(S),
+    ratio: new Float64Array(S),
+    // The last update's rise of T, ratio^kappa.
+    kappa: new Float64Array(S),
+    volume,
+    // Its leaks (leakTerms: per zone, from termStart, each C_d A, n and
+    // dp_ref), the share of its gas each zone takes in as ambient air at its
+    // next update, and the mass the last update let out.
+    ...leakTerms(sim, cell, list, S),
+    inflow: keep && Z.inflow ? Z.inflow : new Float64Array(S),
+    out: new Float64Array(S),
+  };
+  return Z;
+}
+
+/**
+ * The run's leaks (P.leakage; plan 13.11, item 7) as the solver's: each a
+ * term C_d A, n, dp_ref. Zone leaks (no ventXb; toZone 0 or 'AMBIENT') go to
+ * every pressure zone, or to the zone holding their `cell`; vent leaks
+ * (ventXb, FDS's frame: the grid's (x, z, y), as tools/calibration/lib/fds.mjs
+ * maps it) go to the zone holding the vent's cell, and in an open region
+ * stay vent leaks (ventLeaks). Leaks between two zones are not modelled and
+ * are counted (stats.leaksIgnored). Without P.leakage, each zone's
+ * construction: its faces against solids (or the ground) that stand upright
+ * times leakageWall, those that lie flat times leakageFloor, as one term of
+ * exponent 1/2.
+ */
+function leakTerms(sim, cell, list, S) {
+  const { P, grid: g } = sim;
+  const terms = Array.from({ length: S }, () => []);
+  if (Array.isArray(P.leakage)) {
+    for (const e of P.leakage) {
+      const term = leakTerm(P, e);
+      if (!term) continue;
+      if (e.ventXb) {
+        const c = ventCell(g, e.ventXb);
+        if (c >= 0 && cell[c] >= 0) terms[cell[c]].push(term);
+      } else if (e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT") {
+        if (Number.isInteger(e.cell)) {
+          if (cell[e.cell] >= 0) terms[cell[e.cell]].push(term);
+        } else for (const t of terms) t.push(term);
+      }
+    }
+  } else {
+    const A = g.h * g.h;
+    const area = new Float64Array(S);
+    for (const c of list) {
+      const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+      for (let d = 0; d < 6; d += 1) {
+        const dir = DIRS[d];
+        const ii = i + dir[0], jj = j + dir[1], kk = k + dir[2];
+        const closed = jj < 0 || (ii >= 0 && kk >= 0 && ii < g.nx && jj < g.ny && kk < g.nz && sim.kind[at(g, ii, jj, kk)] === SOLID);
+        if (closed) area[cell[c]] += A * (d === 2 || d === 3 ? P.leakageFloor : P.leakageWall);
+      }
+    }
+    for (let z = 0; z < S; z += 1) if (area[z] > 0) terms[z].push({ CA: P.leakageDischarge * area[z], n: 0.5, ref: 4 });
+  }
+  const termStart = new Int32Array(S + 1);
+  for (let z = 0; z < S; z += 1) termStart[z + 1] = termStart[z] + terms[z].length;
+  const flat = terms.flat();
+  return { termStart, termCA: Float64Array.from(flat, (t) => t.CA), termN: Float64Array.from(flat, (t) => t.n), termRef: Float64Array.from(flat, (t) => t.ref) };
+}
+
+/** A leak entry (the harness's format) as a term { CA, n, ref }, or null with no area. */
+function leakTerm(P, e) {
+  const A = e.area_m2 ?? e.area ?? 0;
+  if (!(A > 0)) return null;
+  return { CA: (e.dischargeCoefficient ?? P.leakageDischarge) * A, n: e.pressureExponent ?? 0.5, ref: e.referencePressure_Pa ?? 4 };
+}
+
+/** The grid cell at the middle of an FDS XB [x0, x1, y0, y1, z0, z1] (FDS's frame: the grid's (x, z, y)), clamped into the grid. */
+function ventCell(g, xb) {
+  const local = [(xb[0] + xb[1]) / 2, (xb[4] + xb[5]) / 2, (xb[2] + xb[3]) / 2];
+  const n = [g.nx, g.ny, g.nz];
+  const idx = local.map((x, d) => Math.min(n[d] - 1, Math.max(0, Math.floor((x - g.origin[d]) / g.h))));
+  return at(g, idx[0], idx[1], idx[2]);
+}
+
+/** The vent leaks of P.leakage whose cell is open (in an open region they stay vent leaks; ventLeaks), each { cell, CA, n, ref }; null if none. */
+export function ventLeakList(sim) {
+  const { P, grid: g } = sim;
+  if (!Array.isArray(P.leakage)) return null;
+  const out = [];
+  for (const e of P.leakage) {
+    if (!e.ventXb) continue;
+    const term = leakTerm(P, e);
+    const c = ventCell(g, e.ventXb);
+    if (term && sim.kind[c] !== SOLID) out.push({ cell: c, ...term });
+  }
+  return out.length ? out : null;
+}
+
+/** A leak's mass flow (kg/s) at a pressure difference dp (Pa) for gas of density rho: FDS's C_d A (dp / dp_ref)^(n - 1/2) sqrt(2 rho dp). */
+export function leakFlow(CA, n, ref, dp, rho) {
+  if (!(dp > 0)) return 0;
+  return CA * Math.pow(dp / ref, n - 0.5) * Math.sqrt(2 * rho * dp);
+}
+
+/**
+ * The gas a pressure zone lets out (positive) or draws in over dt (plan
+ * 13.11, item 7): the sum of its leaks' flows, the donor's density (the
+ * zone's mean leaving, ambient air entering), taken at the step's end
+ * (implicit): with pressure pi(m) = (m / (pi_0^kappa G))^(1 / (1 - kappa)) the
+ * zone's at mass m, the dm that its leaks pass at pi(M -+ dm) over dt, by
+ * bisection between nothing and the mass at ambient pressure. terms: the
+ * zone's C_d A, n and dp_ref from index `from` to `to`.
+ */
+export function zoneLeak(M, ambientMass, kappa, volume, rhoAir, dt, termCA, termN, termRef, from, to) {
+  if (to <= from || M === ambientMass) return 0;
+  const out = M > ambientMass;
+  const piOf = (m) => Math.pow(m / ambientMass, 1 / (1 - kappa));
+  let lo = 0, hi = Math.abs(M - ambientMass);
+  for (let it = 0; it < 60; it += 1) {
+    const mid = 0.5 * (lo + hi);
+    const dp = out ? P_AMBIENT * (piOf(M - mid) - 1) : P_AMBIENT * (1 - piOf(M + mid));
+    const rho = out ? (M - mid) / volume : rhoAir;
+    let flow = 0;
+    for (let q = from; q < to; q += 1) flow += leakFlow(termCA[q], termN[q], termRef[q], dp, rho);
+    if (mid > flow * dt) hi = mid;
+    else lo = mid;
+  }
+  const dm = 0.5 * (lo + hi);
+  return out ? dm : -dm;
+}
+
+/**
+ * Vent leaks in open regions (plan 13.11, item 7: an HVAC leak at a vent
+ * between its cell and ambient), before the expansion is read: the cell's
+ * pressure over ambient is the projection's (sim.p, Pa, the ambient's
+ * hydrostatics taken out); gas let out leaves as a sink in the cell's
+ * expansion (the transport carries it), ambient air drawn in is mixed into
+ * the cell at constant pressure and its volume added to the cell's
+ * expansion. The divergences wait in work.leakDiv for expansionEnd. Leaks in
+ * a pressure zone are the zone's (pressureZones).
+ */
+function ventLeaks(sim, dt) {
+  if (sim.ventLeaks === undefined) sim.ventLeaks = ventLeakList(sim);
+  const L = sim.ventLeaks;
+  if (!L) return;
+  const D = workArray(sim, "leakDiv", L.length, Float64Array);
+  const Z = sim.zones;
+  for (let q = 0; q < L.length; q += 1) {
+    const { cell: c, CA, n, ref } = L[q];
+    D[q] = 0;
+    if (sim.kind[c] === SOLID || (Z && Z.cell[c] >= 0)) continue;
+    const dp = sim.p[c], o = c * NS, m = sim.rho[c] * sim.V;
+    if (dp > 0) {
+      const flow = leakFlow(CA, n, ref, dp, sim.rho[c]);
+      D[q] = -flow / sim.rho[c] / sim.V;
+      sim.stats.leakMass += flow * dt;
+      sim.stats.leakEnthalpy += flow * dt * mixtureCp(sim.Y, o) * sim.T[c];
+    } else if (dp < 0) {
+      const dm = leakFlow(CA, n, ref, -dp, sim.rho0) * dt;
+      const H = m * mixtureCp(sim.Y, o) * sim.T[c] + dm * CP_AIR * sim.P.ambient;
+      for (let s = 0; s < NS; s += 1) sim.Y[o + s] = (sim.Y[o + s] * m + (s === SPECIES.O2 ? Y_O2_AIR * dm : 0)) / (m + dm);
+      sim.T[c] = H / ((m + dm) * mixtureCp(sim.Y, o));
+      D[q] = Math.log1p(dm / m) / dt;
+      sim.stats.leakMass -= dm;
+      sim.stats.leakEnthalpy -= dm * CP_AIR * sim.P.ambient;
+    }
+  }
+}
+
+/** Each zone's gas mass at ambient pressure (kg): its cells' gas-law densities at their T. */
+function zoneMasses(sim, cell, S) {
+  const m = new Float64Array(S);
+  for (let c = 0; c < sim.N; c += 1) if (cell[c] >= 0) m[cell[c]] += gasDensity(sim.T[c], sim.Y, c * NS) * sim.V;
+  return m;
+}
+
+/** Cell c's pressure as a share of ambient: its zone's, else 1. */
+export function zonePressure(sim, c) {
+  const Z = sim.zones;
+  return Z && Z.cell[c] >= 0 ? Z.pi[Z.cell[c]] : 1;
+}
+
+/**
+ * Each zone's pressure from its gas's mass and heat (FDS's pressure zones;
+ * plan 13.8, item 5). The heat sources add heat as at constant pressure (the
+ * solver's convention); a zone's gas cannot expand, so it is compressed
+ * adiabatically back into its volume: its pressure goes from pi_0 to pi_1 and
+ * every cell's T rises by (pi_1 / pi_0)^kappa, kappa = R / (M c_p) (the zone's
+ * mass-weighted mean), which is heating at constant volume. pi_1 is the one at
+ * which the zone's cells hold its mass exactly: with G the cells' mass at
+ * ambient pressure and their present T, M = pi_1^(1 - kappa) pi_0^kappa G, so
+ * pi_1 / pi_0 = (1 + y)^(1 / (1 - kappa)) with y = M / (pi_0 G) - 1, the
+ * zone's small imbalance (taken through ln(1 + y), which float32 keeps where
+ * a power of a number near 1 does not). Then each cell's density is the gas
+ * law's at its new T times pi_1. Run before the advection and after the heat
+ * sources.
+ */
+export function pressureZones(sim, leakDt = 0) {
+  const Z = zoneState(sim);
+  if (!Z) return;
+  const S = Z.pi.length;
+  const Ta = sim.P.ambient;
+  if (zoneScratch.G.length < S) {
+    zoneScratch.G = new Float64Array(S);
+    zoneScratch.K = new Float64Array(S);
+  }
+  const G = zoneScratch.G, K = zoneScratch.K;
+  G.fill(0, 0, S);
+  K.fill(0, 0, S);
+  for (let q = 0; q < Z.list.length; q += 1) {
+    const c = Z.list[q], z = Z.cell[c], o = c * NS;
+    // Ambient air the last update drew in, mixed into each cell by its share
+    // of the zone's gas, at ambient temperature and constant pressure (zoneLeak).
+    const a = Z.inflow[z];
+    if (a > 0) {
+      const m = sim.rho[c] * sim.V, dm = a * m;
+      const H = m * mixtureCp(sim.Y, o) * sim.T[c] + dm * CP_AIR * Ta;
+      for (let s = 0; s < NS; s += 1) sim.Y[o + s] = (sim.Y[o + s] * m + (s === SPECIES.O2 ? Y_O2_AIR * dm : 0)) / (m + dm);
+      sim.T[c] = H / ((m + dm) * mixtureCp(sim.Y, o));
+      sim.rho[c] = (m + dm) / sim.V;
+      Z.source[z] += dm;
+      sim.stats.leakMass -= dm;
+      sim.stats.leakEnthalpy -= dm * CP_AIR * Ta;
+    }
+    // The gas law's moles per kg and the mixture's c_p in one pass (gasDensity, mixtureCp).
+    let inv = 0, cp = 0, rest = 1;
+    for (let s = 0; s < NS; s += 1) {
+      const y = sim.Y[o + s];
+      inv += y / MOLAR[s];
+      cp += y * CP[s];
+      rest -= y;
+    }
+    inv += Math.max(0, rest) / MOLAR_N2;
+    cp += Math.max(0, rest) * CP_N2;
+    const m = (P_AMBIENT / (R_GAS * sim.T[c] * inv)) * sim.V;
+    G[z] += m;
+    K[z] += (m * R_GAS * inv) / cp;
+  }
+  for (let z = 0; z < S; z += 1) {
+    Z.mass[z] += Z.source[z];
+    Z.source[z] = 0;
+    Z.inflow[z] = 0;
+    Z.out[z] = 0;
+    const kappa = K[z] / G[z];
+    // Leakage over the step (zoneLeak): gas let out leaves at once, at the
+    // zone's state; air drawn in is mixed in at the next update.
+    if (leakDt > 0 && Z.termStart[z + 1] > Z.termStart[z]) {
+      const dm = zoneLeak(Z.mass[z], Math.pow(Z.pi[z], kappa) * G[z], kappa, Z.volume[z], sim.rho0, leakDt, Z.termCA, Z.termN, Z.termRef, Z.termStart[z], Z.termStart[z + 1]);
+      if (dm > 0) {
+        Z.out[z] = dm;
+        Z.mass[z] -= dm;
+      } else if (dm < 0) Z.inflow[z] = -dm / Z.mass[z];
+    }
+    const scaled = Z.pi[z] * G[z];
+    const lr = Math.log1p((Z.mass[z] - scaled) / scaled) / (1 - kappa);
+    Z.ratio[z] = Math.exp(lr);
+    // Each cell's T rises by ratio^kappa.
+    Z.kappa[z] = Math.exp(kappa * lr);
+    Z.pi[z] *= Z.ratio[z];
+  }
+  for (let q = 0; q < Z.list.length; q += 1) {
+    const c = Z.list[q], z = Z.cell[c];
+    const T = sim.T[c] * Z.kappa[z];
+    sim.T[c] = T;
+    sim.rho[c] = gasDensity(T, sim.Y, c * NS) * Z.pi[z];
+    // The gas let out, tallied at the zone's state (its share of each cell's enthalpy, absolute).
+    if (Z.out[z] > 0) {
+      const share = Z.out[z] / Z.mass[z];
+      sim.stats.leakMass += share * sim.rho[c] * sim.V;
+      sim.stats.leakEnthalpy += share * sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS) * T;
+    }
+  }
+}
+
+const zoneScratch = { G: new Float64Array(0), K: new Float64Array(0) };
+/** Air's specific heat at constant pressure, J/(kg K), by the solver's species values. */
+const CP_AIR = Y_O2_AIR * 918 + (1 - Y_O2_AIR) * 1040;
 
 /** Line 32: the domain's sides are open to still ambient air. */
 function boundaries(sim) {
   const { grid: g, P } = sim;
   const { nx, ny, nz } = g;
   const reset = (c) => {
-    // The heat the shell's gas carried, leaving the domain (for budgets only).
+    // The heat and the soot the shell's gas carried, leaving the domain (for budgets only).
     sim.stats.shellHeat += sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS) * (sim.T[c] - P.ambient);
+    sim.stats.sootLeft += sim.rho[c] * sim.V * sim.Y[c * NS + SPECIES.SOOT];
     sim.T[c] = P.ambient;
     for (let q = 0; q < NS; q += 1) sim.Y[c * NS + q] = 0;
     sim.Y[c * NS + SPECIES.O2] = Y_O2_AIR;
@@ -2479,9 +3406,11 @@ const STAGES = [
   ["radiation", radiation],
   ["particleToGrid", (sim) => particleToGrid(sim)],
   ["expansionBeforeAdvect", expansionBeforeAdvect],
+  // The heat added so far raises a pressure zone's pressure before the advection moves its gas.
+  ["zones", (sim) => pressureZones(sim)],
   ["advect", advect],
   ["expansionAfterAdvect", expansionAfterAdvect],
-  ["density", (sim) => updateDensity(sim)],
+  ["density", (sim) => updateDensity(sim, false)],
   ["buoyancy", buoyancy],
   ["vorticity", vorticityConfinement],
   ["diffuse", diffuse],
@@ -2491,7 +3420,11 @@ const STAGES = [
   ["foamWet", foamWet],
   ["cullFlameFront", (sim) => cullFlameFront(sim)],
   ["conduct", conduct],
-  ["density2", (sim) => updateDensity(sim)],
+  ["walls", walls],
+  ["deposition", deposition],
+  ["ventLeaks", ventLeaks],
+  // The leak once a step, after the heat sources (pressureZones' leakDt).
+  ["density2", (sim, dt) => updateDensity(sim, true, dt)],
   ["expansionEnd", expansionEnd],
   ["boundaries", (sim) => boundaries(sim)],
   ["project", project],
@@ -2502,6 +3435,8 @@ const STAGES = [
  * stage's wall time (ms) is added to sim.profile[stage].
  */
 export function step(sim, dt = sim.P.dt) {
+  // Pressure zones start at ambient pressure with the gas they have when the first step begins.
+  if (sim.P.pressureZones > 0 && sim.zones === undefined) zoneState(sim);
   const profile = sim.profile;
   if (profile) {
     for (const [name, fn] of STAGES) {
