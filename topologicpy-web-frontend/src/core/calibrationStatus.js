@@ -5,17 +5,23 @@
  * section 12, and benchmark/results/2026-11-12-validation-*.json). One table, so
  * the run card, the panel, Methods and the describer say the same thing.
  *
- * "calibrated": within the FDS Validation Guide's calibrated band (bias
- * 0.8 to 1.25, scatter at most 0.35) in at least three independent datasets
- * and outside the indicative band in none; "indicative": within 0.67 to 1.5,
- * scatter at most 0.5; otherwise "not calibrated".
+ * "calibrated": within this project's calibrated band (bias 0.8 to 1.25,
+ * scatter at most 0.35; 2026-11-08 plan, section 8), computed with the FDS
+ * Validation Guide's statistics, in at least three independent datasets and
+ * outside the indicative band (0.67 to 1.5, at most 0.5) in none;
+ * "indicative": within the indicative band; otherwise "not calibrated".
+ * The guide defines the statistics, not the bands.
  */
 
 /** The cell sizes the held-out tests ran on, m. */
 export const TESTED_CELLS = [0.2, 0.27, 0.34];
 
-/** The cell size the smoke layer's depth is calibrated on, m: the "calibrated" grid builds it. */
+/** The cell size the smoke layer's depth is calibrated on, m: the 0.27 m grid builds it. */
 export const CALIBRATED_CELL = 0.27;
+
+/** A run's cells count as a tested size within this, m; within NEAR_CELL they borrow its verdict, at most "indicative". */
+export const EXACT_CELL = 0.005;
+export const NEAR_CELL = 0.035;
 
 /**
  * Per quantity: its status on each tested cell, and a short note. Held-out:
@@ -36,46 +42,65 @@ export const VALIDATION = [
 ];
 
 /**
- * What the held-out tests covered. Walls: lightweight insulating boards in
- * every test; the app gives every wall the solver's stone, which they did not.
+ * What the held-out tests covered: prescribed (measured) heat release, so
+ * they judge the smoke's transport, not the fire's growth; insulating-board
+ * walls, where the app gives every wall the solver's stone.
  */
 export const COVERED = {
-  fires: "prescribed fires of 32 kW to 3.2 MW",
-  rooms: "rooms of 17 to 584 m3, open or closed, one with a corridor",
-  walls: "insulating-board walls (the app's walls are stone, which no test had)",
+  peakKW: 3200,
+  horizon: 900,
+  fires: "their measured heat release (32 kW to 3.2 MW)",
+  rooms: "rooms of 17 to 584 m³, open or closed, one with a corridor",
+  times: "up to 900 s",
+  walls: "insulating-board walls",
 };
 
-/**
- * Sprinkler activation, reported apart: the walls' convection coefficient
- * was set on these tests (2026-11-08), so they are not fully held out.
- */
-export const SPRINKLERS = "the first head's activation, by the app's estimate, within the calibrated band against NIST, University of Canterbury and UL tests with their measured fires (bias 0.95 to 1.18)";
-
-/** The tested cell size nearest a run's, or null when none is within 0.035 m. */
+/** The tested cell size nearest a run's, or null when none is within NEAR_CELL. */
 export function nearestTestedCell(cell) {
   if (!(cell > 0)) return null;
   let best = null;
-  for (const c of TESTED_CELLS) if (Math.abs(c - cell) <= 0.035 && (best === null || Math.abs(c - cell) < Math.abs(best - cell))) best = c;
+  for (const c of TESTED_CELLS) if (Math.abs(c - cell) <= NEAR_CELL && (best === null || Math.abs(c - cell) < Math.abs(best - cell))) best = c;
   return best;
 }
 
-/** Each quantity's status for a run on `cell` m cells ("not tested on cells this size" where none is near). */
+/**
+ * Each quantity's status for a run on `cell` m cells. On a tested size (within
+ * EXACT_CELL) its verdict; near one, the same at most "indicative" (the
+ * verdict holds on the cells it was found on); else not tested.
+ */
 export function statusFor(cell) {
   const near = nearestTestedCell(cell);
-  return VALIDATION.map((v) => ({ ...v, on: near, said: near === null ? "not tested on cells this size" : v.status[near] || "not calibrated" }));
+  const exact = near !== null && Math.abs(near - cell) <= EXACT_CELL;
+  return VALIDATION.map((v) => {
+    if (near === null) return { ...v, on: null, said: "not tested on cells this size" };
+    const s = v.status[near] || "not calibrated";
+    return { ...v, on: near, said: !exact && s === "calibrated" ? "indicative" : s };
+  });
 }
 
-/** One sentence for a run on `cell` m cells: what holds, what is indicative, what is not. */
-export function validationLine(cell) {
+/**
+ * The run card's and the describer's sentence for a run on `cell` m cells,
+ * with its peak heat release (kW) and length (s): what decides its untenable
+ * places, then what the held-out tests support on these cells, and under what.
+ */
+export function validationLine(cell, { peakKW = null, horizon = null } = {}) {
+  const lead = "This run's untenable places come from smoke visibility and gas temperature at head height; it reports no layer depth.";
   const near = nearestTestedCell(cell);
-  if (near === null) return `Not compared with measured fires on ${cell.toFixed(2)} m cells (tested on ${TESTED_CELLS.join(", ")} m): read it as not calibrated.`;
+  if (near === null) return `${lead} Not compared with measured fires on ${cell.toFixed(2)} m cells (tested on ${TESTED_CELLS.join(", ")} m): read it as not calibrated.`;
   const rows = statusFor(cell);
   const list = (s) => rows.filter((r) => r.said === s).map((r) => r.quantity);
   const join = (a) => (a.length > 1 ? `${a.slice(0, -1).join(", ")} and ${a.at(-1)}` : a[0]);
   const parts = [];
-  if (list("calibrated").length) parts.push(`${join(list("calibrated"))} calibrated`);
+  const depth = rows.find((r) => r.id === "layerDepth");
+  if (list("calibrated").length) parts.push(`${join(list("calibrated"))} calibrated (${depth.note})`);
   if (list("indicative").length) parts.push(`${join(list("indicative"))} indicative`);
   if (list("not calibrated").length) parts.push(`${join(list("not calibrated"))} not calibrated`);
-  const nearNote = Math.abs(near - cell) > 1e-6 ? `, the nearest tested (${near} m)` : "";
-  return `Against held-out measured fires on cells of this size${nearNote}: ${parts.join("; ")}. Those tests had ${COVERED.walls}.`;
+  const exact = Math.abs(near - cell) <= EXACT_CELL;
+  const where = exact ? "on cells of this size" : `near cells of this size (tested on ${near} m; a verdict holds only on the cells it was found on)`;
+  const outside = (peakKW !== null && peakKW > COVERED.peakKW) || (horizon !== null && horizon > COVERED.horizon);
+  return (
+    `${lead} Against held-out measured fires ${where}: ${parts.join("; ")}. ` +
+    `Those tests prescribed ${COVERED.fires} in ${COVERED.rooms}, for ${COVERED.times}, with ${COVERED.walls}; this run predicts its own heat release, which is not calibrated, and its walls are stone` +
+    (outside ? ", and it lies outside the tested range." : ".")
+  );
 }

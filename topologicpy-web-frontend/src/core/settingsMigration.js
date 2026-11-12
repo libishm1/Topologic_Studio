@@ -10,8 +10,18 @@
 export function migrateSettings(stored) {
   const { flamescapesGrid, ...rest } = stored || {};
   if (rest.flamescapesGridPolicy === undefined && flamescapesGrid === "finest") rest.flamescapesGridPolicy = "finest";
+  // Only the values this version offers: a grid it does not know ("calibrated",
+  // stored by a build of 2026-11-12 before it had its own key) becomes the
+  // standard grid, with the 0.27 m grid's own key for "calibrated".
+  if (rest.flamescapesGridPolicy === "calibrated") rest.flamescapesCalibratedGrid = true;
+  if (rest.flamescapesGridPolicy !== undefined && !GRID_POLICIES.includes(rest.flamescapesGridPolicy)) rest.flamescapesGridPolicy = "standard";
+  if (rest.flamescapesSolver !== undefined && !SOLVER_NAMES.includes(rest.flamescapesSolver)) delete rest.flamescapesSolver;
   return rest;
 }
+
+/** The fire grid policies and solvers this version offers (a stored other value is dropped). */
+export const GRID_POLICIES = ["standard", "speed", "finest"];
+export const SOLVER_NAMES = ["validated", "previous"];
 
 /**
  * Settings that last for the visit only: never written to the browser, and

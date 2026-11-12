@@ -28,6 +28,7 @@ import { VOID_NAME, floorsFromSpaces, slabsMissing } from "./core/spaceFloors.js
 import { DETECTOR_VISIBILITY, buildForecast, earliestArrival, firstDetection, forecastFromFrames, runRange, runSummary, stackFrames } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
 import { healthReason } from "./core/runHealth.js";
+import { solverOptionsFor } from "./core/solverVersions.js";
 import { KIND_DOOR, floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
@@ -1727,8 +1728,12 @@ export default function App() {
       systems: systemRooms ? { rooms: systemRooms } : null,
       fireLoad: settings.flamescapesFireLoad * 1e6,
       backend: settings.flamescapesBackend,
-      // The grid: "standard" (the same on every device), "speed" (sized to this GPU's measured speed, cells a ms) or "finest".
-      grid: settings.flamescapesGridPolicy,
+      // The grid: "standard" (the same on every device), "speed" (sized to this GPU's measured speed, cells a ms),
+      // "finest", or "calibrated" (0.27 m cells, kept under its own setting so a version without it reads "standard").
+      grid: settings.flamescapesCalibratedGrid ? "calibrated" : settings.flamescapesGridPolicy,
+      // The solver (core/solverVersions.js): the validated one, or the previous one for comparison.
+      solver: settings.flamescapesSolver,
+      solverOptions: solverOptionsFor(settings.flamescapesSolver),
       gpuRate: gpuRateRef.current?.rate ?? null,
       gpuName: gpuRateRef.current?.name ?? null,
     };
@@ -1743,6 +1748,9 @@ export default function App() {
       settings.flamescapesFireLoad,
       settings.flamescapesBackend,
       settings.flamescapesGridPolicy,
+      // Only when not the defaults, so a run with them keeps its kept-run key.
+      ...(settings.flamescapesCalibratedGrid ? [["grid", "calibrated"]] : []),
+      ...(settings.flamescapesSolver && settings.flamescapesSolver !== "validated" ? [["solver", settings.flamescapesSolver]] : []),
       settings.flamescapesDoors,
       // The doors closed, so a random or as-built set is part of the run.
       [...shut].sort((a, b) => a - b).join(","),
@@ -1929,15 +1937,18 @@ export default function App() {
     // gives the range of a fire that is partly chance, not one run. They go
     // after this run, to its worker, on its grid; a newer run ends them.
     const repeat = (result) => {
+      // A run the health guard stopped starts no repeats.
+      if (result?.health?.ok === false) return;
       const count = settings.flamescapesRepeats - 1;
       if (!(count > 0) || run.info?.backend?.kind !== "gpu" || !run.info.budget || !result?.hrr) return;
       if (combustionRef.current !== run || geometryRef.current !== geometryAtStart) return;
       const tenability = { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility };
       const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: result.frameSeconds, hrr: result.hrr, stats: result.stats };
       const members = [{ k: 0, ...runSummary(frames, tenability) }];
+      let stopped = 0;
       const show = (status) => {
         if (combustionRef.current !== run) return;
-        run.repeats = { of: count + 1, status, tenability, range: runRange(members) };
+        run.repeats = { of: count + 1, status, tenability, range: runRange(members), stopped };
         studio.setFire((c) => (c.combustion ? { ...c, combustion: { ...c.combustion, repeats: run.repeats } } : c));
       };
       show("running");
@@ -1948,7 +1959,9 @@ export default function App() {
       run.repeating = true;
       flamescapesJob({ ...again.payload, maxCells: run.info.budget, repeats: { count, tenability } }, again.transfers, (progress) => {
         if (progress.type !== "member") return;
-        members.push(progress.summary);
+        // A member the health guard stopped is left out of the range and counted.
+        if (progress.stopped) stopped += 1;
+        else members.push(progress.summary);
         show("running");
       }).then(
         (answer) => {
@@ -2639,7 +2652,8 @@ export default function App() {
   // the planners' rule (core/forecast.js): a finished Flamescapes run's
   // frames, or the graph fire model's own forecast. Null without the fire.
   const crowdRun = combustionRef.current;
-  const crowdFlames = settings.crowdWithFire && isFlamescapes(fire.model) && crowdRun?.done && !crowdRun.failed && crowdRun.graph?.nodes === graphNodes && crowdRun.result ? crowdRun : null;
+  // Not a run the health guard stopped: past its stop, nodes would read as safe.
+  const crowdFlames = settings.crowdWithFire && isFlamescapes(fire.model) && crowdRun?.done && !crowdRun.failed && crowdRun.graph?.nodes === graphNodes && crowdRun.result && crowdRun.result.health?.ok !== false ? crowdRun : null;
   const crowdGraphFire = settings.crowdWithFire && !isFlamescapes(fire.model) && fire.model !== "zone" && fire.step > 0 && points.fire && graph ? fire.model : null;
   const crowdFireKey = crowdFlames
     ? ["flames", crowdFlames.key, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility]
@@ -2857,7 +2871,7 @@ export default function App() {
     if (!graph) return null;
     const run = combustionRef.current;
     if (isFlamescapes(fire.model)) {
-      if (!run?.done || run.failed || run.graph?.nodes !== graph.nodes || !run.result) return null;
+      if (!run?.done || run.failed || run.graph?.nodes !== graph.nodes || !run.result || run.result.health?.ok === false) return null;
       const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: run.result.frameSeconds };
       const closes = forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility }).untenable;
       // The run's own smoke: its visibility at head height, frame by frame.
@@ -3893,6 +3907,14 @@ export default function App() {
           throw error;
         }
         if (gen !== planGenRef.current) return;
+        // A run the health guard stopped is cut short: nodes it never reached
+        // would read as never untenable, so the plan does not use it.
+        if (done?.health?.ok === false) {
+          planRunningRef.current = false;
+          studio.setForecastPlan(NO_PLAN);
+          toast(`The fire run was stopped at ${Math.round(done.health.time)} s: ${healthReason(done.health)}. The plan does not use a stopped run.`, { variant: "warning", ttl: 8000 });
+          return;
+        }
         // Stacked here from the run's frames, sent as copies (the worker no
         // longer sends them twice: review 6).
         const { n, K } = done;

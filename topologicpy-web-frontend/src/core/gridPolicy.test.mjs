@@ -121,5 +121,21 @@ test("a laptop's integrated graphics is told apart, so the card can say how to u
   assert.equal(integratedGpu("intel gen-12lp"), true);
   assert.equal(integratedGpu("nvidia turing"), false);
   assert.equal(integratedGpu("amd rdna-2"), false);
+  // Intel's discrete Arc cards are not integrated.
+  assert.equal(integratedGpu("intel gen-12hp"), false);
+  assert.equal(integratedGpu("intel xe-2hpg"), false);
+  assert.equal(integratedGpu("intel xe-lpg"), true);
   assert.equal(integratedGpu(""), false);
+});
+
+test("the GPU grid is sized by the solver's largest binding, cf, at its own bytes a cell", async () => {
+  const { GPU_BINDING_BYTES_PER_CELL, detectGpu } = await import("../lib/hardware.js");
+  const { CF_FIELDS } = await import("./flamescapesGpu/kernels.js");
+  assert.equal(GPU_BINDING_BYTES_PER_CELL, CF_FIELDS * 4);
+  // A device that binds 16 MiB (and makes 256 MiB buffers) holds 16 MiB / 80 B cells; a large one is capped at 400,000.
+  const gpuWith = (limits) => ({ gpu: { requestAdapter: async () => ({ info: { vendor: "test" }, limits }) } });
+  assert.equal((await detectGpu(gpuWith({ maxStorageBufferBindingSize: 16 * 2 ** 20, maxBufferSize: 256 * 2 ** 20 }))).cells, Math.floor((16 * 2 ** 20) / (CF_FIELDS * 4)));
+  assert.equal((await detectGpu(gpuWith({ maxStorageBufferBindingSize: 2 ** 31, maxBufferSize: 2 ** 31 }))).cells, 400000);
+  // The smaller of the two limits counts.
+  assert.equal((await detectGpu(gpuWith({ maxStorageBufferBindingSize: 2 ** 30, maxBufferSize: 8 * 2 ** 20 }))).cells, Math.max(30000, Math.floor((8 * 2 ** 20) / (CF_FIELDS * 4))));
 });

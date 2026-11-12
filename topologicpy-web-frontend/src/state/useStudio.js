@@ -183,6 +183,12 @@ export const DEFAULT_SETTINGS = {
   // its memory allows). The results depend on the grid, so comparisons should
   // keep one. Named flamescapesGrid before 2026-11-09, defaulting to "speed".
   flamescapesGridPolicy: "standard",
+  // The grid of 0.27 m cells (core/calibrationStatus.js CALIBRATED_CELL), kept
+  // apart from flamescapesGridPolicy so that a version without it reads "standard".
+  flamescapesCalibratedGrid: false,
+  // The solver (core/solverVersions.js): "validated", or "previous" as the site
+  // ran it until 2026-11-12, for continuity and comparison.
+  flamescapesSolver: "validated",
   // Runs of each fire on the GPU, the first watched and the rest after it with
   // the room a thousandth of a degree warmer each, for the range on the card;
   // 1 for one run. Not on the CPU, where each takes as long as the first.
@@ -287,6 +293,8 @@ export const PLAN_SETTINGS = [
   "flamescapesVentilation",
   "flamescapesTerminalFlow",
   "flamescapesGridPolicy",
+  "flamescapesCalibratedGrid",
+  "flamescapesSolver",
 ];
 
 export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));

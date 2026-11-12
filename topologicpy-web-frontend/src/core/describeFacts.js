@@ -228,7 +228,13 @@ function factLines(s, { roomNames, storeyLines }) {
         (c.grid ? ` on a ${c.grid.join(" x ")} grid of ${round(c.cell, 2)} m cells` : "") +
         (c.backend?.name ? `, on ${c.backend.kind === "gpu" ? "the GPU" : "one CPU core"}` : "") +
         // What held-out measured fires support on its cells (core/calibrationStatus.js).
-        `. ${c.cell > 0 ? validationLine(c.cell) : "The solver is not calibrated."} Its heat release depends on the grid.`,
+        `. ${
+          c.solver === "previous"
+            ? "It ran on the previous solver (the site's until 2026-11-12), which was not checked against measured fires."
+            : c.cell > 0
+              ? validationLine(c.cell, { peakKW: c.peak ?? null, horizon: c.horizon ?? null })
+              : "The solver is not calibrated."
+        } Its heat release depends on the grid.`,
     );
     const o = c.openings;
     if (o) {

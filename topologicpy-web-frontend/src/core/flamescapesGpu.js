@@ -58,7 +58,9 @@ const MAX_WG_PER_DIM = 65535;
 /** Conduction's passes, in the order that gives every solid cell the CPU's order of exchanges. */
 const CONDUCTION = ["conductPorous", "conduct_x0", "conduct_x1", "conduct_y0", "conduct_y1", "conduct_z0", "conduct_z1", "conduct_bx", "conduct_by", "conduct_bz"];
 /** The conserved transport's passes (proposal F): the CPU's three sweeps, then T from the gas law. */
-const TRANSPORT = ["transport_x", "transport_y", "transport_z", "transportEnd"];
+const TRANSPORT = ["transport_x_start", "transport_y_scratch", "transport_z_live", "transportEnd"];
+/** On odd steps the sweeps run z, y, x (the CPU's order alternates by sim.steps: a fixed one favoured the first axis). */
+const TRANSPORT_BACK = ["transport_z_start", "transport_y_scratch", "transport_x_live", "transportEnd"];
 
 /**
  * The sealed regions of the CPU's topology (open cells that reach no open
@@ -563,7 +565,7 @@ class GpuSim {
     pass = enc.beginComputePass();
     if (this.expansionOn) this.dispatch(pass, "expandBefore");
     this.dispatch(pass, "advect");
-    if (this.conservativeOn) for (const name of TRANSPORT) this.dispatch(pass, name);
+    if (this.conservativeOn) for (const name of (this.stepBase + this.stepCount) % 2 === 0 ? TRANSPORT : TRANSPORT_BACK) this.dispatch(pass, name);
     this.dispatch(pass, "density");
     this.dispatch(pass, "buoyancy");
     if (this.vorticityOn) {
@@ -832,12 +834,23 @@ function supported(sim) {
  * null when shouldStop() says so. `profileInto` (the CPU's per-stage wall
  * times) is accepted and left empty: GPU stages overlap and would need
  * timestamp queries to time.
+ *
+ * Where the GPU cannot run the scene (the device lost, its setup failed, a
+ * scene the kernels do not cover) the CPU runs it, unless `cpuFallback` is
+ * false: then it throws. The app's worker asks for that, because the scene
+ * was sized for the GPU (up to 400,000 cells, far past the CPU's budget) and
+ * its run would be reported, and its speed kept, as the GPU's; the worker
+ * rebuilds the scene on the CPU's own budget instead.
  */
 async function runSceneGpu(ctx, scene, opts = {}) {
-  const { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, keep = true } = opts;
-  if (ctx.lost) return cpuRunScene(scene, opts);
+  const { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, keep = true, cpuFallback = true } = opts;
+  const fallback = (why) => {
+    if (cpuFallback) return cpuRunScene(scene, opts);
+    throw new Error(why);
+  };
+  if (ctx.lost) return fallback("The GPU device was lost.");
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
-  if (!supported(sim)) return cpuRunScene(scene, opts);
+  if (!supported(sim)) return fallback("The GPU solver does not cover this scene.");
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
   // The ceiling detectors are read with the nodes, after them, then the
@@ -875,7 +888,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const setupErrors = [await device.popErrorScope(), await device.popErrorScope()].filter(Boolean);
   if (!gpu || setupErrors.length) {
     gpu?.destroy();
-    return cpuRunScene(scene, opts);
+    return fallback(`The GPU could not set up the run${setupErrors.length ? `: ${setupErrors[0].message}` : ""}.`);
   }
   // With keep, every frame is stacked (K x n); without, one frame's buffers
   // are reused and onFrame must copy what it keeps (the CPU's runScene).

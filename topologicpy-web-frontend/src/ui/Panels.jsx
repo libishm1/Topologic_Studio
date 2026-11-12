@@ -12,7 +12,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
-import { STANDARD_CELLS, integratedGpu } from "../lib/hardware.js";
+import { FASTER_GPU_HINT, STANDARD_CELLS, detectGpu, integratedGpu } from "../lib/hardware.js";
 import { CROWD_COLOURS } from "../viewer/crowd.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { DEFAULT_SETTINGS, PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
@@ -24,6 +24,7 @@ import { MEASURED_PRE, NO_RESPONSE_SOURCE, RSET_CRITERIA, RSET_PRESETS, criterio
 import { worstStatus } from "../core/perfReport.js";
 import { healthReason } from "../core/runHealth.js";
 import { validationLine } from "../core/calibrationStatus.js";
+import { SOLVERS } from "../core/solverVersions.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
@@ -2346,7 +2347,7 @@ function gridNote(c) {
 }
 
 /** The range over a fire's repeat runs (core/forecast.js runRange), for its card. */
-function repeatsLine({ of, status, tenability: t, range }) {
+function repeatsLine({ of, status, tenability: t, range, stopped = 0 }) {
   const span = (s, f) => (!s ? "none" : s.min === s.max ? f(s.median) : `${f(s.median)} (${f(s.min)} to ${f(s.max)})`);
   const runs =
     status === "running" ? `${range.runs} of ${of} runs so far` : status === "stopped" ? `${range.runs} of ${of} runs (the rest stopped)` : `${range.runs} runs`;
@@ -2355,7 +2356,8 @@ function repeatsLine({ of, status, tenability: t, range }) {
   return (
     `${runs}, the median and its range: ${span(range.untenable, Math.round)} nodes untenable, the first at ${first}${never}; ` +
     `peak ${span(range.peakKw, (kw) => `${(kw / 1000).toFixed(2)} MW`)}; ${span(range.releasedMJ, (mj) => `${mj.toFixed(1)} MJ`)} released. ` +
-    `Untenable at ${t.threshold} °C${t.smoke ? `, below ${t.visibilityLimit} m visibility` : ""} or by dose, as the plan reads it.`
+    `Untenable at ${t.threshold} °C${t.smoke ? `, below ${t.visibilityLimit} m visibility` : ""} or by dose, as the plan reads it.` +
+    (stopped ? ` ${stopped} of them stopped by the run check, left out.` : "")
   );
 }
 
@@ -2839,6 +2841,31 @@ function returnVsBest(r) {
   return `${r.policy_return.toFixed(2)} / ${r.optimal_return.toFixed(2)}${short}`;
 }
 
+/**
+ * The GPU the browser gives WebGPU, named before any run (one adapter
+ * request), with how to use a laptop's faster card when it is the integrated
+ * one (lib/hardware.js FASTER_GPU_HINT).
+ */
+function GpuNote() {
+  const [gpu, setGpu] = useState(undefined);
+  useEffect(() => {
+    let live = true;
+    detectGpu()
+      .then((g) => live && setGpu(g ? g.name : null))
+      .catch(() => live && setGpu(null));
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (gpu === undefined) return null;
+  if (gpu === null) return <p className="field__hint">This browser offers no WebGPU here, so the fire runs on the CPU.</p>;
+  return (
+    <p className="field__hint">
+      This browser&apos;s WebGPU device: {gpu}.{integratedGpu(gpu) ? ` That is the integrated graphics. ${FASTER_GPU_HINT}` : ""}
+    </p>
+  );
+}
+
 /** Progress and state of a Flamescapes run: backend, grid, time, heat release, embers. */
 function CombustionStatus({ combustion, running }) {
   if (!combustion) return null;
@@ -2947,7 +2974,11 @@ function CombustionStatus({ combustion, running }) {
         {combustion.cell > 0 && (
           <div className="result__item">
             <dt className="result__label">Checked against measured fires</dt>
-            <dd className="result__value">{validationLine(combustion.cell)}</dd>
+            <dd className="result__value">
+              {combustion.solver === "previous"
+                ? "Run on the previous solver (the site's until 2026-11-12), kept to compare with: it was not checked against measured fires, and its transport made heat as gases mixed (up to half again in a minute in a sealed test box)."
+                : validationLine(combustion.cell, { peakKW: combustion.peak ?? null, horizon: combustion.horizon ?? null })}
+            </dd>
           </div>
         )}
         {combustion.repeats && (
@@ -2961,7 +2992,7 @@ function CombustionStatus({ combustion, running }) {
         <p className="result__note">
           Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}.
           {combustion.backend.kind === "gpu" && integratedGpu(combustion.backend.name)
-            ? " That is the integrated graphics. On a laptop that also has an NVIDIA or AMD card, Windows decides which one the browser gets: in Settings, System, Display, Graphics, choose the browser, set it to High performance and restart the browser, and the fire runs on the faster card."
+            ? ` That is the integrated graphics. ${FASTER_GPU_HINT}`
             : ""}
           {combustion.resized
             ? " The GPU stepped the first grid slower than three times real time, so the fire started again on a coarser grid it keeps up with."
@@ -3420,6 +3451,7 @@ export function SimulatePanel({
                 { value: "cpu", label: "The CPU (one core)" },
               ]}
             />
+            <GpuNote />
             <SelectField
               label="Windows"
               value={settings.flamescapesWindows}
@@ -3466,13 +3498,23 @@ export function SimulatePanel({
               system a terminal belongs to is not read, and 100 L/s a terminal is an assumption, not a measured value.
             </Notes>
             <SelectField
+              label="Fire solver"
+              value={settings.flamescapesSolver}
+              onChange={(flamescapesSolver) => setSettings({ flamescapesSolver })}
+              options={Object.entries(SOLVERS).map(([value, s]) => ({ value, label: s.label }))}
+              hint="The validated solver conserves the gas's mass and heat and was checked against measured room fires. The previous one, as the site ran it until 2026-11-12, is kept to compare with: its transport made heat as gases mixed, and its runs say so."
+            />
+            {/* The 0.27 m grid has its own setting, so a version without it reads "standard" (rollback safety). */}
+            <SelectField
               label="Grid"
-              value={settings.flamescapesGridPolicy}
-              onChange={(flamescapesGridPolicy) => setSettings({ flamescapesGridPolicy })}
+              value={settings.flamescapesCalibratedGrid ? "calibrated" : settings.flamescapesGridPolicy}
+              onChange={(value) =>
+                setSettings(value === "calibrated" ? { flamescapesCalibratedGrid: true, flamescapesGridPolicy: "standard" } : { flamescapesCalibratedGrid: false, flamescapesGridPolicy: value })
+              }
               options={[
                 { value: "standard", label: "Standard: the same on every device, so the GPU and the CPU give one fire" },
-                { value: "calibrated", label: "Calibrated: 0.27 m cells, the size the smoke layer's depth was validated on" },
-                { value: "speed", label: "Finer on the GPU: sized to keep three times real time" },
+                { value: "calibrated", label: "0.27 m cells: the cell size of the held-out validation" },
+                { value: "speed", label: "Finer on the GPU: sized from its speed over a run's first seconds" },
                 { value: "finest", label: "Finest on the GPU: all its memory allows (slower)" },
               ]}
             />
@@ -3480,7 +3522,7 @@ export function SimulatePanel({
               The fire depends on the grid. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device,
               so the CPU gives the GPU&apos;s fire; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and its card
               says so. Checked against held-out measured room fires, the smoke layer&apos;s depth is calibrated on 0.27 m cells and only
-              indicative on 0.20 and 0.34 m: the calibrated grid builds 0.27 m cells, clipped round the fire to what the device can hold (a
+              indicative on 0.20 and 0.34 m: the 0.27 m grid builds those cells, clipped round the fire to what the device can hold (a
               GPU holds a much larger area than a CPU). The finer grids give a different fire that no measurement has checked. Keep one grid
               when comparing runs; the run card gives it and says what holds on it.
             </Notes>

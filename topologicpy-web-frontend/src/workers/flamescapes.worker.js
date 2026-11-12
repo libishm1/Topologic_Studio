@@ -79,6 +79,8 @@ function sceneFor(payload, backend) {
     seed: payload.seed ?? 1,
   });
   if (!scene.ignition) throw new Error("The fire origin is not inside the fire grid. Pick it on a floor of the building.");
+  // The solver asked for, for the run card (core/solverVersions.js).
+  scene.solver = payload.solver || "validated";
   return scene;
 }
 
@@ -91,6 +93,7 @@ function describe(scene, backend, t0, restarted, resized = false, openings = nul
   const g = scene.grid;
   return {
     backend: { kind: backend.kind, name: backend.name },
+    solver: scene.solver || "validated",
     // The grid asked for and the budget it was built to (repeat runs build theirs to it).
     policy,
     budget,
@@ -118,21 +121,34 @@ async function repeatRuns(id, payload) {
   const { count, tenability } = payload.repeats;
   const members = [];
   for (let k = 1; k <= count; k += 1) {
-    const frames = await gpu.runScene(scene, {
-      nodes: payload.nodes,
-      upAxis: payload.upAxis,
-      agentHeight: payload.agentHeight,
-      headHeight: payload.headHeight,
-      horizon: payload.horizon,
-      frameSeconds: payload.frameSeconds,
-      embers: payload.embers,
-      sprinklers: payload.sprinklers ?? null,
-      systems: payload.systems ?? null,
-      // Nothing to draw: particles and smoke snapshots only feed the view.
-      particles: 0,
-      smoke: false,
-      solverOptions: { ambient: DEFAULTS.ambient + k * 1e-3 },
-    });
+    let frames;
+    try {
+      frames = await gpu.runScene(scene, {
+        nodes: payload.nodes,
+        upAxis: payload.upAxis,
+        agentHeight: payload.agentHeight,
+        headHeight: payload.headHeight,
+        horizon: payload.horizon,
+        frameSeconds: payload.frameSeconds,
+        embers: payload.embers,
+        sprinklers: payload.sprinklers ?? null,
+        systems: payload.systems ?? null,
+        // Nothing to draw: particles and smoke snapshots only feed the view.
+        particles: 0,
+        smoke: false,
+        solverOptions: { ...(payload.solverOptions || {}), ambient: DEFAULTS.ambient + k * 1e-3 },
+        // Not on the CPU in its place: the scene is sized for the GPU.
+        cpuFallback: false,
+      });
+    } catch {
+      // The GPU stopped: the members run so far, and the rest not run.
+      return { members, skipped: "the GPU stopped" };
+    }
+    // A member the health guard stopped is cut short: left out of the range, and said.
+    if (frames?.health?.ok === false) {
+      self.postMessage({ id, progress: { type: "member", stopped: { k, time: frames.health.time } } });
+      continue;
+    }
     // CO2 and O2 count in the doses only when the page's run kept them.
     const summary = { k, ...runSummary(payload.extras ? frames : { ...frames, co2: null, o2: null }, tenability) };
     members.push(summary);
@@ -171,10 +187,15 @@ self.onmessage = async (event) => {
       embers: payload.embers,
       particles: payload.particles ?? 2500,
       smoke: payload.smoke ?? true,
+      // The solver asked for (core/solverVersions.js): none for the validated one.
+      solverOptions: payload.solverOptions || {},
       // Sprinklers (src/core/suppression.js): heads, mode and reading; none when off.
       sprinklers: payload.sprinklers ?? null,
       // Rooms flooded with clean agent or blanketed with foam (src/core/suppressionSystems.js); none when off.
       systems: payload.systems ?? null,
+      // On the GPU: a run it cannot make throws (below, the scene is rebuilt
+      // on the CPU's budget) instead of running the GPU-sized scene on the CPU.
+      cpuFallback: false,
       keep: false,
       onFrame: (frame) => {
         frames += 1;
@@ -231,7 +252,8 @@ self.onmessage = async (event) => {
           result = await gpu.runScene(scene, options);
         }
       } catch {
-        // The GPU stopped mid-run: start again on the CPU, on a grid sized for it.
+        // The GPU stopped mid-run, or could not start it (cpuFallback: false):
+        // start again on the CPU, on a grid sized for it, and keep no GPU speed.
         backend = sized(await chooseBackend("cpu"), policy);
         scene = sceneFor(payload, backend);
         info = describe(scene, backend, t0, true, false, payload.openings, policy);

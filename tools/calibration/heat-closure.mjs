@@ -12,9 +12,16 @@
  *           30 s. The heat released should equal the gas's heat plus what
  *           left the domain (stats.shellHeat: the gas the domain's shell held
  *           when it was reset to ambient).
+ *   porous: the burner room with the burner's cells porous (contents of no
+ *           mass: slowed by porousVelocity, holding no heat of their own), as
+ *           burning contents are. The projection weights a porous cell's faces
+ *           (2026-11-12; scaled after it, before, the transport made heat
+ *           there: closure 1.27, gas at 2,150 K). Accepted: closure 0.9 to 1.0
+ *           and the hottest gas's rise within 10 % of the burner run's, on
+ *           each cell where both ran.
  *
- *   node tools/calibration/heat-closure.mjs [--cases mix,burner] [--cells 0.20,0.27,0.34]
- *        [--horizon 60] [--solver volumeMixing=0,expansion=0] [--json out.json]
+ *   node tools/calibration/heat-closure.mjs [--cases mix,burner,porous] [--cells 0.20,0.27,0.34]
+ *        [--horizon 60] [--solver conservative=0,expansion=0] [--json out.json]
  */
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -27,7 +34,7 @@ const flag = (name, fallback) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : fallback;
 };
-const cases = flag("--cases", "mix,burner").split(",");
+const cases = flag("--cases", "mix,burner,porous").split(",");
 const cells = flag("--cells", "0.20,0.27,0.34").split(",").map(Number);
 const horizon = Number(flag("--horizon", 60));
 const jsonOut = flag("--json", null);
@@ -111,7 +118,8 @@ function mix(h) {
   return { case: "mix", cell: h, startHeatMJ: +(start.heat / 1e6).toFixed(3), ratios: at };
 }
 
-function burner(h) {
+/** The burner room; with `porous`, its burner's cells porous (contents of no mass). */
+function burner(h, porous = false) {
   const W = 5, D = 4, H = 2.7, t = 0.2, door = [1.5, 2.4], doorH = 2.0, Q = 150e3, RAMP = 30;
   const boxes = [box(-t, -t, -t, W + t, 0, D + t), box(-t, H, -t, W + t, H + t, D + t), box(-t, 0, -t, W + t, H, 0), box(-t, 0, D, W + t, H, D + t), box(-t, 0, 0, 0, H, D), box(W, 0, 0, W + t, H, door[0]), box(W, 0, door[1], W + t, H, D), box(W, doorH, door[0], W + t, H, door[1])];
   const lo = [-t, -t, -t], hi = [W + t + 1.0, H + t + 0.2, D + t];
@@ -128,15 +136,19 @@ function burner(h) {
       for (let l = 0; l < 4; l += 1) if (!solid[at(i, j + l, k)]) cellsOf.push(at(i, j + l, k));
     }
   }
+  // Contents of no mass make a cell porous with no fuel, water or heat capacity of its own: it burns nothing and holds no heat.
+  const contents = porous ? { cells: cellsOf, masses: cellsOf.map(() => 0) } : { cells: [], masses: [] };
   const scene = {
-    grid, fraction, solid, contents: { cells: [], masses: [] }, ignition: null, pilot: null,
+    grid, fraction, solid, contents, ignition: null, pilot: null,
     burner: { cells: cellsOf, hrr: [[0, 0], [RAMP, Q], [1e6, Q]], radiantFraction: 0, fuel: fuelsFor("A").ignitionFuel },
     fuels: { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL },
   };
   const sim = createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ...ADIABATIC, ...SOLVER });
   const start = inventory(sim);
   const rows = {};
+  let peakT = sim.P.ambient;
   run(sim, h, horizon, (s) => {
+    peakT = Math.max(peakT, sim.stats.maxT);
     if (s % 30 === 0) {
       const now = inventory(sim);
       const put = sim.stats.released + sim.stats.pilotHeat;
@@ -146,21 +158,40 @@ function burner(h) {
         left: +(sim.stats.shellHeat / put).toFixed(3),
         closure: +((now.heat - start.heat + sim.stats.shellHeat) / put).toFixed(3),
         maxT: Math.round(sim.stats.maxT),
+        // Where a closure short of 1 can go: the mass the transport's floor added, and faces it clamped to a Courant number of 1.
+        floorKg: +(sim.stats.massFloor ?? 0).toFixed(4),
+        clampedFaces: sim.stats.courantClamped ?? 0,
       };
     }
   });
-  return { case: "burner", cell: h, rows };
+  const porousCells = porous ? cellsOf.filter((c) => sim.kind[c] !== SOLID).length : 0;
+  // The hottest gas over the run, read each second.
+  return { case: porous ? "porous" : "burner", cell: h, ...(porous ? { porousCells } : {}), peakT: Math.round(peakT), rows };
 }
 
 const results = [];
 for (const h of cells) {
   for (const name of cases) {
     const t0 = performance.now();
-    const r = name === "mix" ? mix(h) : burner(h);
+    const r = name === "mix" ? mix(h) : burner(h, name === "porous");
     r.wallSeconds = +((performance.now() - t0) / 1000).toFixed(1);
     results.push(r);
     console.log(JSON.stringify(r));
   }
+}
+// The porous burner against the plain one, on each cell where both ran: the
+// closure at the horizon within 0.9 to 1.0, and the hottest gas's rise over
+// ambient within 10 % of the plain burner's.
+for (const h of cells) {
+  const plain = results.find((r) => r.case === "burner" && r.cell === h);
+  const por = results.find((r) => r.case === "porous" && r.cell === h);
+  if (!plain || !por) continue;
+  const closure = por.rows[Math.max(...Object.keys(por.rows).map(Number))]?.closure;
+  const rise = (por.peakT - TA) / (plain.peakT - TA);
+  const ok = closure >= 0.9 && closure <= 1.0 && Math.abs(rise - 1) <= 0.1;
+  const verdict = { cell: h, closure, hottestRise: +rise.toFixed(3), porousPeakK: por.peakT, plainPeakK: plain.peakT, pass: ok };
+  results.push({ case: "porous verdict", ...verdict });
+  console.log(`porous burner, cell ${h} m: closure ${closure} (0.9 to 1.0), hottest gas's rise ${verdict.hottestRise} of the plain burner's (${por.peakT} K against ${plain.peakT} K, within 10 %): ${ok ? "passes" : "fails"}`);
 }
 if (jsonOut) {
   await writeFile(path.resolve(jsonOut), JSON.stringify({ generated: new Date().toISOString(), solver: SOLVER, adiabatic: ADIABATIC, results }, null, 1));

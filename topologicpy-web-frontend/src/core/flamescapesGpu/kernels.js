@@ -63,14 +63,19 @@
  *     pass per sweep in which every cell computes both of its faces' fluxes
  *     (its neighbour computes the same numbers for the face they share),
  *     where the CPU walks each line's faces once; the sweeps ping-pong
- *     between a scratch state in `snap` and the live fields. The CPU counts
- *     the mass its floor adds (stats.massFloor) and the heat the shell's gas
- *     carries out (stats.shellHeat); the GPU keeps neither tally.
+ *     between a scratch state in `snap` and the live fields, x, y, z on even
+ *     steps and z, y, x on odd ones as the CPU's. The CPU counts the mass its
+ *     floor adds (stats.massFloor), the faces whose Courant number it clamps
+ *     (stats.courantClamped) and the heat the shell's gas carries out
+ *     (stats.shellHeat); the GPU keeps none of these tallies.
+ *   - Porous cells weight their faces inside the projection (the CPU's), but
+ *     only the cells with a porous cell among themselves and their
+ *     neighbours take the weighted sums (topology's bit 6); elsewhere every
+ *     weight is 1 and the plain sums are the same numbers.
  *   - A sealed region's mean expansion is a float32 tree per region (one
  *     workgroup each) over a cell list the CPU's topology made at upload, where
  *     the CPU sums in cell order each step; only porous cells change kind on
  *     the GPU, and they stay open, so the regions do not change.
- *   - A particle's move in half-cell pieces is capped at 64 pieces (the CPU's is not).
  *   - A value every thread needs from an atomic (the particle count, the
  *     sweep's state) is read by one thread per workgroup and shared through
  *     workgroupUniformLoad; kernels that only read the atomic buffer bind it a
@@ -218,9 +223,12 @@ export const KERNELS = {
   // With the conservative transport the cells' T and Y are the transport's, not the back-trace's.
   advect: { uses: [0, 1, 2, 3, 4, 5], threads: (d) => d.nu + d.nv + d.nw + (d.conservative ? 0 : d.N) },
   expandBefore: { uses: [0, 1, 3, 5], threads: cells },
-  transport_x: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_y: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_z: { uses: [0, 1, 2, 3, 5], threads: cells },
+  // The transport's sweeps by axis and source: x, y, z on even steps, z, y, x on odd ones (the CPU's transportGas).
+  transport_x_start: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transport_z_start: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transport_y_scratch: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transport_z_live: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transport_x_live: { uses: [0, 1, 2, 3, 5], threads: cells },
   transportEnd: { uses: [0, 1, 2, 3, 5], threads: cells },
   expandEnd: { uses: [0, 1, 3, 5], threads: cells },
   // One workgroup per sealed region.
@@ -390,23 +398,25 @@ const transportSweep = (axis, src, dst) => {
   const stride = ["1", "i32(U.nx)", "i32(U.nx * U.ny)"][axis];
   const face = ["uAt(u32(a), p.y, p.z)", "vAt(p.x, u32(a), p.z)", "wAt(p.x, p.y, u32(a))"][axis];
   const S = GAS_STATE[src], D = GAS_STATE[dst];
+  // Named by axis and source: as the order alternates, x and z each run first (from the start) or last (from the live fields).
+  const K = `${X}_${src}`;
   return `
 /** A cell along this sweep's line at position b: -1 outside the domain (ambient air), -2 a solid. */
-fn line_${X}(c: u32, pos: i32, b: i32) -> i32 {
+fn line_${K}(c: u32, pos: i32, b: i32) -> i32 {
   if (b < 0 || b >= i32(${n})) { return -1; }
   let q = i32(c) + (b - pos) * ${stride};
   if (kindOf(u32(q)) == SOLID) { return -2; }
   return q;
 }
-fn rho_${X}(q: i32) -> f32 {
+fn rho_${K}(q: i32) -> f32 {
   if (q < 0) { return U.rho0; }
   return ${S.rho("u32(q)")};
 }
-fn y_${X}(q: i32, s: u32) -> f32 {
+fn y_${K}(q: i32, s: u32) -> f32 {
   if (q < 0) { return select(0.0, Y_O2_AIR, s == 1u); }
   return ${S.y("u32(q)", "s")};
 }
-${perCell(`transport_${X}`, `
+${perCell(`transport_${K}`, `
   if (kindOf(c) == SOLID) { return; }
   let p = coords(c);
   let pos = i32(p.${X});
@@ -419,24 +429,24 @@ ${perCell(`transport_${X}`, `
     ${axis === 1 ? "if (a == 0) { continue; } // the ground carries nothing" : ""}
     let vf = snap[${face}];
     if (vf == 0.0) { continue; }
-    let left = line_${X}(c, pos, a - 1);
-    let right = line_${X}(c, pos, a);
+    let left = line_${K}(c, pos, a - 1);
+    let right = line_${K}(c, pos, a);
     let donor = select(right, left, vf > 0.0);
     let acceptor = select(left, right, vf > 0.0);
     if (donor == -2 || acceptor == -2) { continue; }
-    let back = select(line_${X}(c, pos, a + 1), line_${X}(c, pos, a - 2), vf > 0.0);
+    let back = select(line_${K}(c, pos, a + 1), line_${K}(c, pos, a - 2), vf > 0.0);
     let courant = min(1.0, abs(vf) * s);
     // The face's flow out of the cell before it and into the cell after: this cell is after the first face, before the second.
     let outflow = select(-courant, courant, vf > 0.0);
     if (f == 0) { dd -= outflow; } else { dd += outflow; }
     // The face's density: the donor's, with a van Leer limited slope towards the acceptor.
-    let rd = rho_${X}(donor);
-    let ra = rho_${X}(acceptor);
+    let rd = rho_${K}(donor);
+    let ra = rho_${K}(acceptor);
     var rf = rd;
     if (back != -2) {
       let dr = ra - rd;
       if (dr != 0.0) {
-        let ratio = (rd - rho_${X}(back)) / dr;
+        let ratio = (rd - rho_${K}(back)) / dr;
         rf += 0.5 * ((ratio + abs(ratio)) / (1.0 + abs(ratio))) * (1.0 - courant) * dr;
       }
     }
@@ -444,12 +454,12 @@ ${perCell(`transport_${X}`, `
     let sgn = select(-1.0, 1.0, acceptor == i32(c));
     dm += sgn * m;
     for (var q = 0u; q < NS; q++) {
-      let yd = y_${X}(donor, q);
+      let yd = y_${K}(donor, q);
       var yf = yd;
       if (back != -2) {
-        let dy = y_${X}(acceptor, q) - yd;
+        let dy = y_${K}(acceptor, q) - yd;
         if (dy != 0.0) {
-          let t = (yd - y_${X}(back, q)) / dy;
+          let t = (yd - y_${K}(back, q)) / dy;
           yf += 0.5 * ((t + abs(t)) / (1.0 + abs(t))) * (1.0 - courant) * dy;
         }
       }
@@ -458,13 +468,13 @@ ${perCell(`transport_${X}`, `
   }
   // The flux difference, and the cell's starting density times its faces'
   // divergence given back (the advective form: a uniform gas stays uniform).
-  let before = rho_${X}(i32(c));
+  let before = rho_${K}(i32(c));
   let r0 = rhoStart(c);
   var after = before + dm + r0 * dd;
   // A cell emptied faster than it fills is kept at a hundredth of ambient (the CPU counts the mass added; the GPU does not).
   if (after < 0.01 * U.rho0) { after = 0.01 * U.rho0; }
   for (var q = 0u; q < NS; q++) {
-    let y = y_${X}(i32(c), q);
+    let y = y_${K}(i32(c), q);
     ${D.y("c", "q")} = clamp((before * y + r0 * yStart(c, q) * dd + dY[q]) / after, 0.0, 1.0);
   }
   ${D.rho("c")} = after;`)}`;
@@ -878,9 +888,8 @@ ${perParticle("moveParticles", `
   }
   // The move, in pieces of at most half a cell, stopping in the first solid
   // it enters (the CPU's particleStep): moved whole, a particle faster than a
-  // cell a step jumped walls a cell thick. At most 64 pieces, which the CPU
-  // does not cap: a particle past 32 cells a step is past anything the cut
-  // steps allow, and an unbounded count (a non-finite speed) would hang the GPU.
+  // cell a step jumped walls a cell thick. At most 64 pieces on both paths:
+  // an unbounded count (a non-finite speed) would hang the GPU.
   let d = P.v.xyz * U.dt / U.h;
   let pieces = clamp(u32(ceil(2.0 * max(abs(d.x), max(abs(d.y), abs(d.z))))), 1u, 64u);
   var np = x;
@@ -1172,12 +1181,15 @@ fn rhoStart(c: u32) -> f32 {
   return P_AMBIENT / (R_GAS * snap[U.nu + U.nv + U.nw + c] * inv);
 }
 
-// The gas's transport (the CPU's transportGas): x from the step's start into
-// the scratch state, y from it into the live fields, z back into the scratch,
-// then the cells take their mass fractions and, by the gas law, their T.
+// The gas's transport (the CPU's transportGas): the first axis from the
+// step's start into the scratch state, y from it into the live fields, the
+// last axis back into the scratch, then the cells take their mass fractions
+// and, by the gas law, their T. x first on even steps, z first on odd ones.
 ${transportSweep(0, "start", "scratch")}
+${transportSweep(2, "start", "scratch")}
 ${transportSweep(1, "scratch", "live")}
 ${transportSweep(2, "live", "scratch")}
+${transportSweep(0, "live", "scratch")}
 ${perCell("transportEnd", `
   if (kindOf(c) == SOLID) { return; }
   for (var q = 0u; q < NS; q++) { Y[c * NS + q] = snap[U.gasAt + U.N + c * NS + q]; }
@@ -1311,7 +1323,7 @@ fn rhoD(c: u32, sT: u32) -> f32 {
  */
 ${perCell("diffuse", `
   let mask = ci[ix(iMask, c)];
-  if (mask == 0u) { return; }
+  if ((mask & 63u) == 0u) { return; }
   let nuvw = U.nu + U.nv + U.nw;
   let sT = nuvw;
   let sY = nuvw + U.N;
@@ -1702,12 +1714,28 @@ ${perCell("densityBoundaries", `
 
 // ------------------------------------------------------------------ pressure projection (line 33)
 
-/** Open neighbours (bit d for DIRS[d]) and pressure links per open cell; the ground is closed. */
+/**
+ * A cell's porous factor (the CPU's project): porousVelocity in a porous
+ * cell, 1 elsewhere and outside the domain. A face's weight is the product of
+ * its two cells' factors.
+ */
+fn porousOf(q: vec3<i32>) -> f32 {
+  if (U.porousVel < 1.0 && porousAt(q)) { return U.porousVel; }
+  return 1.0;
+}
+
+/**
+ * Open neighbours (bit d for DIRS[d]) and pressure links per open cell; the
+ * ground is closed. Bit 6: the cell or an open neighbour is porous, so its
+ * links are weighted (where none is, every weight is 1 and the weighted
+ * projection is the plain one, number for number, as the CPU's).
+ */
 ${perCell("topology", `
   if (kindOf(c) == SOLID) { ci[ix(iMask, c)] = 0u; ci[ix(iCount, c)] = 0u; return; }
   let p = vec3<i32>(coords(c));
   var m = 0u;
   var n = 0u;
+  var weighted = porousOf(p) != 1.0;
   for (var d = 0u; d < 6u; d++) {
     let q = p + dirv(d);
     if (q.y < 0) { continue; }
@@ -1715,7 +1743,9 @@ ${perCell("topology", `
     if (kindOf(atI(q)) == SOLID) { continue; }
     m |= 1u << d;
     n++;
+    if (porousOf(q) != 1.0) { weighted = true; }
   }
+  if (weighted) { m |= 64u; }
   ci[ix(iMask, c)] = m;
   ci[ix(iCount, c)] = max(1u, n);`)}
 
@@ -1739,7 +1769,17 @@ ${perCell("divergence", `
   if (kindOf(c) == SOLID) { cf[ix(fDiv, c)] = 0.0; return; }
   let p = coords(c);
   let i = p.x; let j = p.y; let k = p.z;
-  let div = (vel[uAt(i + 1u, j, k)] - vel[uAt(i, j, k)] + vel[vAt(i, j + 1u, k)] - vel[vAt(i, j, k)] + vel[wAt(i, j, k + 1u)] - vel[wAt(i, j, k)]) / U.h;
+  var div = 0.0;
+  if ((ci[ix(iMask, c)] & 64u) != 0u) {
+    // Porous links: the divergence of the weighted flow (the CPU's project).
+    let q = vec3<i32>(p);
+    let me = porousOf(q);
+    div = (me * porousOf(q + vec3<i32>(1, 0, 0)) * vel[uAt(i + 1u, j, k)] - me * porousOf(q - vec3<i32>(1, 0, 0)) * vel[uAt(i, j, k)] +
+      me * porousOf(q + vec3<i32>(0, 1, 0)) * vel[vAt(i, j + 1u, k)] - me * porousOf(q - vec3<i32>(0, 1, 0)) * vel[vAt(i, j, k)] +
+      me * porousOf(q + vec3<i32>(0, 0, 1)) * vel[wAt(i, j, k + 1u)] - me * porousOf(q - vec3<i32>(0, 0, 1)) * vel[wAt(i, j, k)]) / U.h;
+  } else {
+    div = (vel[uAt(i + 1u, j, k)] - vel[uAt(i, j, k)] + vel[vAt(i, j + 1u, k)] - vel[vAt(i, j, k)] + vel[wAt(i, j, k + 1u)] - vel[wAt(i, j, k)]) / U.h;
+  }
   // The gas's expansion is asked of the flow (proposal F), less a sealed region's mean, which has nowhere to go.
   var used = 0.0;
   if (U.expansion != 0u) {
@@ -1761,11 +1801,31 @@ fn gsCell(t: u32, colour: u32) -> f32 {
   if (ci[ix(iKind, c)] == SOLID) { return 0.0; }
   let mask = ci[ix(iMask, c)];
   var sum = 0.0;
-  for (var d = 0u; d < 6u; d++) {
-    if ((mask & (1u << d)) != 0u) { sum += cf[ix(fP, u32(i32(c) + noff(d)))]; }
+  var links = f32(ci[ix(iCount, c)]);
+  if ((mask & 64u) != 0u) {
+    // Porous links (the CPU's project): each neighbour weighted by its face's
+    // weight, over the weights' sum; an open side weighs the cell's own
+    // factor, the ground and solids nothing.
+    let q = vec3<i32>(vec3<u32>(i, j, k));
+    let me = porousOf(q);
+    links = 0.0;
+    for (var d = 0u; d < 6u; d++) {
+      let r = q + dirv(d);
+      if (r.y < 0) { continue; }
+      if (!inside(r)) { links += me; continue; }
+      if ((mask & (1u << d)) == 0u) { continue; }
+      let w = me * porousOf(r);
+      sum += w * cf[ix(fP, u32(i32(c) + noff(d)))];
+      links += w;
+    }
+    if (!(links > 0.0)) { links = 1.0; }
+  } else {
+    for (var d = 0u; d < 6u; d++) {
+      if ((mask & (1u << d)) != 0u) { sum += cf[ix(fP, u32(i32(c) + noff(d)))]; }
+    }
   }
   let scale = U.rho0 * U.h * U.h / U.dt;
-  let next = (sum - scale * cf[ix(fDiv, c)]) / f32(ci[ix(iCount, c)]);
+  let next = (sum - scale * cf[ix(fDiv, c)]) / links;
   let change = abs(next - cf[ix(fP, c)]);
   cf[ix(fP, c)] = next;
   return change;
@@ -1788,16 +1848,14 @@ fn pressureAt(q: vec3<i32>) -> f32 {
   if (!inside(q)) { return 0.0; }
   return cf[ix(fP, atI(q))];
 }
-fn porousFactor(a: vec3<i32>, b: vec3<i32>) -> f32 {
-  var f = 1.0;
-  if (U.porousVel < 1.0) {
-    if (porousAt(a)) { f *= U.porousVel; }
-    if (porousAt(b)) { f *= U.porousVel; }
-  }
-  return f;
-}
-
-/** Subtract the pressure gradient; porous cells slow the flow through their faces. */
+/**
+ * Subtract the pressure gradient. A porous cell's faces carry their weight
+ * times the result (the CPU's project): the slowed flow is the one the
+ * projection solved for, so it still carries the gas's expansion. (Scaled
+ * after the projection, before 2026-11-12, it did not, and the transport
+ * made heat in burning contents.) Faces of solids and the ground keep what
+ * projectZero left them.
+ */
 ${perThread("projectUpdate", "U.nu + U.nv + U.nw", `
   let nx = U.nx; let ny = U.ny;
   let k2 = U.dt / (U.rho0 * U.h);
@@ -1810,15 +1868,14 @@ ${perThread("projectUpdate", "U.nu + U.nv + U.nw", `
     let r = t - U.nu;
     q = vec3<i32>(vec3<u32>(r % nx, (r / nx) % (ny + 1u), r / (nx * (ny + 1u))));
     e = vec3<i32>(0, 1, 0);
-    if (q.y == 0) { vel[t] *= porousFactor(q - e, q); return; }
+    if (q.y == 0) { return; }
   } else {
     let r = t - U.nu - U.nv;
     q = vec3<i32>(vec3<u32>(r % nx, (r / nx) % ny, r / (nx * ny)));
     e = vec3<i32>(0, 0, 1);
   }
-  var x = vel[t];
-  if (!(solidAt(q - e) || solidAt(q))) { x -= k2 * (pressureAt(q) - pressureAt(q - e)); }
-  vel[t] = x * porousFactor(q - e, q);`)}
+  if (solidAt(q - e) || solidAt(q)) { return; }
+  vel[t] = porousOf(q - e) * porousOf(q) * (vel[t] - k2 * (pressureAt(q) - pressureAt(q - e)));`)}
 
 // ------------------------------------------------------------------ readings
 

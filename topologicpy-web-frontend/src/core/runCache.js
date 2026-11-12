@@ -43,7 +43,9 @@
 // in fluxes, the gas expanding as it is heated), particles that no longer
 // jump walls, and the confinement refitted on it
 // (wiki/research/fire-calibration-claim-protocol-2026-11-12.md).
-export const RUN_CACHE_VERSION = 11;
+// 12 (2026-11-12): the review's transport fixes, sweeps alternating their
+// order and porous cells slowed inside the projection, on CPU and GPU.
+export const RUN_CACHE_VERSION = 12;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 
