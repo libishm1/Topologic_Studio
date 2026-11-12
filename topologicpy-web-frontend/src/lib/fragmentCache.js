@@ -13,6 +13,7 @@
  * opens without starting web-ifc at all.
  */
 import { converterId } from "../core/importSettings.js";
+import { checkStorage, reportMemoryProblem } from "../core/memoryNotice.js";
 
 /**
  * What produced a cached buffer. The key was the IFC's hash alone, so a model
@@ -129,7 +130,8 @@ export async function writeCachedSemantics(key, semantics) {
       transaction.onabort = () => reject(transaction.error);
     });
     return Boolean(record);
-  } catch {
+  } catch (error) {
+    reportMemoryProblem(error, "caching a model");
     return false;
   }
 }
@@ -151,9 +153,12 @@ export async function writeCached(key, buffer, meta = {}, semantics = null) {
     });
     void evict(db).catch(() => {});
     askToPersist();
+    void checkStorage("caching a model");
     return true;
-  } catch {
-    // A quota error just means no cache for this model; loading still works.
+  } catch (error) {
+    // A quota error means no cache for this model; loading still works, and
+    // the page offers to clear the caches (core/memoryNotice.js).
+    reportMemoryProblem(error, "caching a model");
     return false;
   }
 }

@@ -2207,6 +2207,95 @@ for (const [call, list] of byCall) {
 }
 
 
+// Out of storage (core/memoryNotice.js, lib/caches.js; the user's request of
+// 2026-11-12): a cache write refused with QuotaExceededError (IndexedDB's
+// put stubbed for the model cache) shows one notice saying so and how much
+// the caches hold; its button clears the kept runs and converted models and
+// says what it freed; the settings stay.
+{
+  const ownContext = await browser.newContext(MOBILE ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1600, height: 950 } });
+  const p = await ownContext.newPage();
+  await p.goto(`${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`, { waitUntil: "load", timeout: 60000 });
+  await p.evaluate(() => localStorage.setItem("ts.settings", JSON.stringify({ fireMaxSteps: 77 })));
+  await p.reload({ waitUntil: "load", timeout: 60000 });
+  await p.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  // One kept run, 1 MB, as core/runCache.js keeps it.
+  const runsIn = () =>
+    p.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const open = indexedDB.open("topologic-studio-runs", 1);
+          open.onupgradeneeded = () => {
+            open.result.createObjectStore("meta", { keyPath: "key" });
+            open.result.createObjectStore("frames");
+          };
+          open.onerror = () => resolve(-1);
+          open.onsuccess = () => {
+            const db = open.result;
+            const get = db.transaction("meta").objectStore("meta").count();
+            get.onsuccess = () => {
+              db.close();
+              resolve(get.result);
+            };
+            get.onerror = () => resolve(-1);
+          };
+        }),
+    );
+  const kept = await p.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const open = indexedDB.open("topologic-studio-runs", 1);
+        open.onupgradeneeded = () => {
+          open.result.createObjectStore("meta", { keyPath: "key" });
+          open.result.createObjectStore("frames");
+        };
+        open.onerror = () => resolve(false);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction(["meta", "frames"], "readwrite");
+          tx.objectStore("frames").put({ info: {}, frames: [{ T: new Float32Array(262144) }], result: {} }, "browser-test");
+          tx.objectStore("meta").put({ key: "browser-test", bytes: 2 ** 20, usedAt: Date.now(), savedAt: Date.now() });
+          tx.oncomplete = () => {
+            db.close();
+            resolve(true);
+          };
+          tx.onerror = () => resolve(false);
+        };
+      }),
+  );
+  // The model cache's writes refused as a full store refuses them.
+  await p.evaluate(() => {
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (...args) {
+      if (this.name === "fragments") throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+      return put.apply(this, args);
+    };
+  });
+  await p.locator('input[type="file"][accept=".ifc"]').first().setInputFiles(IFC);
+  const notice = p.locator(".memory-notice");
+  const said = await notice
+    .waitFor({ state: "visible", timeout: 180000 })
+    .then(() => notice.innerText())
+    .catch(() => "");
+  const runsBefore = await runsIn();
+  await notice.getByRole("button", { name: "Clear cached runs and models" }).click().catch(() => {});
+  const freed = await p
+    .waitForFunction(() => document.querySelector(".memory-notice")?.innerText.match(/Freed [^\n]*/)?.[0], null, { timeout: 30000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const runsAfter = await runsIn();
+  const settingsAfter = await p.evaluate(() => JSON.parse(localStorage.getItem("ts.settings") || "{}"));
+  record(
+    kept && /storage for this site is full/.test(said) && /1 run\b/.test(said) && runsBefore === 1 && /^Freed .*1 kept run/.test(freed) && runsAfter === 0 && settingsAfter.fireMaxSteps === 77,
+    "a full store shows one notice; its button clears the kept runs and models and keeps the settings",
+    JSON.stringify({ said: said.replace(/\s+/g, " ").slice(0, 160), runsBefore, freed, runsAfter, fireMaxSteps: settingsAfter.fireMaxSteps }),
+  );
+  await notice.getByRole("button", { name: "Dismiss" }).click().catch(() => {});
+  record(!(await notice.isVisible().catch(() => false)), "  and Dismiss closes it");
+  await ownContext.close();
+}
+
+
 // Hints and field notes from a fresh browser (nothing stored): the count
 // starts at 0, a hint leads past the model, and a dismissed hint stays gone.
 {

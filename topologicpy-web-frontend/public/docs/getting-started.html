@@ -29,6 +29,7 @@
         <ul>
           <li><a href="#quick-start">Quick start</a></li>
           <li><a href="#model">Step 1, Model</a></li>
+          <li><a href="#memory">Out of memory or storage</a></li>
           <li><a href="#graph">Step 2, Graph</a></li>
           <li><a href="#route">Step 3, Route</a></li>
           <li><a href="#your-files">Your own IFC files</a></li>
@@ -78,6 +79,9 @@
     <p>Studio reads IFC2x3 and IFC4 files. The Model step counts the floors, stairs, doors and walls, the storeys and rooms (<code>IfcSpace</code>), and reports which doors are exits and which slabs are roofs (roofs are not walked on).</p>
     <p>Exits come from the file's own data: a door marked <code>FireExit</code> or <code>IsExternal</code> in <code>Pset_DoorCommon</code>, or a door with an external space boundary. If the file marks none, Studio falls back to doors with floor on one side only and says so. The Duplex marks 4 of its 14 doors as external.</p>
     <p>The first time you open a file it is converted and stored in your browser, so the next time it opens from the cache without being read again (up to 24 models or 512 MB; clear them under <span class="label">Local cache</span> in the Model step).</p>
+
+    <h3 id="memory">When the browser runs out of memory or storage</h3>
+    <p>Studio keeps two caches in your browser: converted models (up to 24 or 512 MB) and finished Flamescapes runs (up to 256 MB, see <a href="fire-and-smoke.html#flamescapes">Fire and smoke</a>). Your settings, theme and field notes are small and kept apart. When the browser cannot keep a run or a model because the site's storage is full, when it runs out of memory loading a model, building the graph or running a fire, or when the GPU runs out of memory for a fire's grid (the run then goes on on the CPU), a notice says which, and how much the caches hold. Its <span class="label">Clear cached runs and models</span> button empties both caches and says how much it freed; your settings are kept. Clearing frees the browser's storage; reloading the page frees its memory. For the GPU, the notice suggests the standard grid, or <span class="label">Run on</span> the CPU. Studio also warns once a visit, before a crash, when the site's storage passes 80 % of what the browser allows it, or, in Chrome, when the page passes 85 % of the memory it may use. <span class="label">Dismiss</span> closes the notice.</p>
 
     <h3 id="identify">What the elements are</h3>
     <p><span class="label">What the elements are</span> names every element: by its IFC class where the exporter typed it, and otherwise (furniture and appliances often arrive as <code>IfcBuildingElementProxy</code>) by its name, then by the size of its box. With the class hidden, these rules named 86% of 6,066 typed elements from 45 models correctly.</p>

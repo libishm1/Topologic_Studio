@@ -13,6 +13,7 @@ import { cacheSize, clearCache } from "../lib/fragmentCache.js";
 import { mark } from "../lib/perf.js";
 import { migrateSettings, withoutSessionOnly } from "../core/settingsMigration.js";
 import { DEFAULT_SERVICE_PRESET, DEFAULT_SERVICE_RESPONSE } from "../core/fireService.js";
+import { reportMemoryProblem } from "../core/memoryNotice.js";
 import { STALE_SITE_MESSAGE, effectiveEngine as engineFor, isStaleSite } from "../core/session.js";
 
 const THEME_KEY = "ts.theme";
@@ -489,6 +490,10 @@ export function useStudio() {
       // The graph store is in-memory, so restarting the backend orphans the
       // graph id the client is holding. Say what to do about it.
       const graphGone = isGraphGone(error);
+
+      // Running out of memory (an allocation in the page or a worker): the
+      // page also offers to clear its caches (core/memoryNotice.js).
+      reportMemoryProblem(error, title);
 
       // Log the full object; the toast only carries what a user can act on.
       console.error(title || "Error", error);

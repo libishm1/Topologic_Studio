@@ -976,7 +976,8 @@ export class ViewerManager {
           resolveJob({ fragments: data.bytes, semantics });
           break;
         case "failed":
-          fail(new Error(data.message));
+          // Its kind ("memory") kept for the page's notice (core/memoryNotice.js).
+          fail(Object.assign(new Error(data.message), data.kind ? { kind: data.kind } : {}));
           break;
         case "semantics":
           end();

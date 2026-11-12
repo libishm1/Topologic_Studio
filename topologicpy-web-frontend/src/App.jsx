@@ -42,6 +42,8 @@ import { runHorizon } from "./core/fireService.js";
 import { validationVerdict } from "./core/calibrationStatus.js";
 import { compareEgressSlime } from "./core/egressCompare.js";
 import { sprinklerDrawing, systemsDrawing } from "./core/suppressionView.js";
+import { checkHeap, freedText, noticeText, onMemoryProblem, reportMemoryProblem, shouldShow } from "./core/memoryNotice.js";
+import { cachedSizes, clearCaches } from "./lib/caches.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_HOLD_MS, GUIDED_RUNS, farthestFromExits, fireStageNext, guidedHeadline, guidedOrigin, guidedResultPlace, nodeAlong, stagesFor } from "./core/guided.js";
@@ -62,6 +64,7 @@ import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
 import { Viewport } from "./ui/Viewport.jsx";
+import { MemoryNotice } from "./ui/MemoryNotice.jsx";
 import { revealSections } from "./ui/reveal.js";
 
 import { Badge, Button, FileButton, Icon, Segmented } from "./ui/primitives.jsx";
@@ -738,6 +741,7 @@ export default function App() {
           });
 
         void studio.refreshCacheInfo();
+        checkHeap("after opening a model");
 
         // A converted or cached file says how long it took; an example opened
         // from its prepared fragments says nothing (the Model step gives its
@@ -1012,6 +1016,7 @@ export default function App() {
           { title: "Graph ready", variant: "success", ttl: 4000 },
         );
       }
+      checkHeap("after building the graph");
       setTab("route");
     } catch (error) {
       // Ended because another model was opened: nothing to report.
@@ -1902,6 +1907,11 @@ export default function App() {
           run.hotRead = 0;
           run.hotGas = -Infinity;
         }
+        // The GPU ran out of memory for this grid and the run went on on the CPU (the worker says so).
+        if (progress.info.memory === "gpu" && !run.gpuMemorySaid) {
+          run.gpuMemorySaid = true;
+          reportMemoryProblem({ kind: "gpu" }, "running a fire");
+        }
         run.info = progress.info;
         // The view shares the GPU with the solver: it draws less while the GPU computes.
         viewerRef.current?.setDrawRate(progress.info.backend?.kind === "gpu" ? GPU_RUN_DRAW_RATE : 0);
@@ -1968,6 +1978,8 @@ export default function App() {
         if (stopped && (!combustionRef.current || combustionRef.current === run)) {
           toast(`The fire run was stopped at ${Math.round(stopped.time)} s: ${healthReason(stopped)}. The frames before it play.`, { variant: "warning", ttl: 8000 });
         }
+        // A run holds its frames in memory: warn early where the browser says how full it is.
+        checkHeap("after a fire");
         // The first measurement on a GPU stands, so its grid does not drift between runs.
         const name = result?.info?.backend?.name;
         if (result?.info?.gpuRate > 0 && name && gpuRateRef.current?.name !== name) {
@@ -2067,6 +2079,39 @@ export default function App() {
     combustionRef.current = run;
     return run;
   }, [combustionInputs, flamescapesJob, graph, studio, toast, settings.flamescapesKeepRuns, settings.flamescapesRepeats, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, levels, systemsPlan]);
+
+  // Running out of memory or storage (core/memoryNotice.js): where it is met
+  // (a cache write refused, an allocation failed in the page or a worker, the
+  // GPU out of memory, storage or the heap nearly full) it is reported, and
+  // one notice says which, how much the caches hold, and offers to clear the
+  // kept runs and converted models (lib/caches.js), never the settings. A
+  // warning once a visit; an error again whenever it happens again.
+  const [memoryNotice, setMemoryNotice] = useState(null);
+  const memoryShownRef = useRef(new Set());
+  const memoryShowingRef = useRef(null);
+  useEffect(
+    () =>
+      onMemoryProblem(({ kind }) => {
+        if (!shouldShow(kind, { shown: memoryShownRef.current, showing: memoryShowingRef.current })) return;
+        memoryShownRef.current.add(kind);
+        memoryShowingRef.current = kind;
+        void cachedSizes()
+          .catch(() => null)
+          .then((held) => setMemoryNotice({ kind, text: noticeText(kind, { held, heap: globalThis.performance?.memory }), freed: null, busy: false }));
+      }),
+    [],
+  );
+  const { refreshCacheInfo } = studio;
+  const clearMemory = useCallback(async () => {
+    setMemoryNotice((n) => n && { ...n, busy: true });
+    const { before, after } = await clearCaches();
+    void refreshCacheInfo();
+    setMemoryNotice((n) => n && { ...n, busy: false, freed: freedText(before, after) });
+  }, [refreshCacheInfo]);
+  const dismissMemory = useCallback(() => {
+    memoryShowingRef.current = null;
+    setMemoryNotice(null);
+  }, []);
 
   const forgetRuns = useCallback(async () => {
     const { count, bytes } = await storedRuns();
@@ -5173,6 +5218,8 @@ export default function App() {
             </button>
           </div>
         ))}
+        {/* Last, so a phone, which shows the newest toast only, shows it. */}
+        {memoryNotice && <MemoryNotice notice={memoryNotice} onClear={clearMemory} onDismiss={dismissMemory} />}
       </div>
 
       <FieldNotesDialog

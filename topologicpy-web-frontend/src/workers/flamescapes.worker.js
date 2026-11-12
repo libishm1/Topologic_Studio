@@ -35,6 +35,7 @@ import { buildScene, runScene } from "../core/flamescapesRun.js";
 import { runSummary } from "../core/forecast.js";
 import { chooseBackend, standardCells } from "../lib/hardware.js";
 import { CALIBRATED_CELL } from "../core/calibrationStatus.js";
+import { memoryKind } from "../core/memoryNotice.js";
 
 // Wall time a solver step (0.1 s) may take on the GPU: three times real time,
 // about what one CPU core manages on its coarser grid.
@@ -257,12 +258,16 @@ self.onmessage = async (event) => {
           self.postMessage({ id, progress: { type: "scene", info } });
           result = await gpu.runScene(scene, options);
         }
-      } catch {
+      } catch (error) {
         // The GPU stopped mid-run, or could not start it (cpuFallback: false):
         // start again on the CPU, on a grid sized for it, and keep no GPU speed.
+        // Out of the GPU's memory (its out-of-memory error scope round the
+        // buffers, or a device error saying so), the restart says so, and the
+        // page suggests the standard grid or the CPU (core/memoryNotice.js).
+        const gpuMemory = /out of memory|not enough memory|GPUOutOfMemory/i.test(error?.message || "");
         backend = sized(await chooseBackend("cpu"), policy);
         scene = sceneFor(payload, backend);
-        info = describe(scene, backend, t0, true, false, payload.openings, policy);
+        info = { ...describe(scene, backend, t0, true, false, payload.openings, policy), ...(gpuMemory ? { memory: "gpu" } : {}) };
         frames = 0;
         self.postMessage({ id, progress: { type: "scene", info } });
       }
@@ -274,6 +279,7 @@ self.onmessage = async (event) => {
     const done = { ...result, info: { ...info, frames, ms: performance.now() - t0, gpuRate: backend.kind === "gpu" && bySpeed ? gpuRate : null } };
     self.postMessage({ id, ok: true, result: done }, [done.hrr.buffer]);
   } catch (error) {
-    self.postMessage({ id, ok: false, error: error?.message || String(error) });
+    // Typed when it is running out of memory (core/memoryNotice.js), so the page can offer to clear its caches.
+    self.postMessage({ id, ok: false, error: error?.message || String(error), kind: memoryKind(error) });
   }
 };

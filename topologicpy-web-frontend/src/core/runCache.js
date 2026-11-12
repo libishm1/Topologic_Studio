@@ -10,8 +10,11 @@
  * it was last used), so making room never reads a run's frames.
  *
  * Any failure of the store (a private window, blocked storage, a full disk)
- * leaves the run to be computed as before: the store only saves time.
+ * leaves the run to be computed as before: the store only saves time. A full
+ * store is reported, so the page can offer to clear it (core/memoryNotice.js),
+ * and a store nearly full is warned of after a run is kept.
  */
+import { checkStorage, reportMemoryProblem } from "./memoryNotice.js";
 
 /** Bump with any change to what the solver computes or how a frame is laid out. */
 // 2 (2026-11-07): frames carry the ceiling detectors (flamescapesRun.js ceilingDetectors).
@@ -174,8 +177,11 @@ export async function writeRun(key, { info, frames, result: runResult }) {
     tx.objectStore(FRAMES).put({ info, frames, result: runResult }, key);
     tx.objectStore(META).put({ key, bytes, usedAt: now, savedAt: now });
     await done(tx);
+    void checkStorage("keeping a run");
     return true;
-  } catch {
+  } catch (error) {
+    // Not kept; a full store says so (QuotaExceededError).
+    reportMemoryProblem(error, "keeping a run");
     return false;
   }
 }

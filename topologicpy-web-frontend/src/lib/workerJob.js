@@ -12,7 +12,8 @@
  * only way to stop a long job, such as a deadline map no one wants any more.
  *
  * A worker may also send { id, progress } any number of times before the
- * answer; run()'s onProgress receives each (the fire solver's frames).
+ * answer; run()'s onProgress receives each (the fire solver's frames). A
+ * failed answer may carry { kind } (core/memoryNotice.js), kept on the error.
  *
  * @param {() => Worker} create  makes the worker
  * @param {{failure?: string}} opts  failure: the message a failed worker's jobs
@@ -41,7 +42,9 @@ export function workerClient(create, { failure = "A background task stopped. Rel
       }
       pending.delete(event.data.id);
       if (event.data.ok) job.resolve(event.data.result);
-      else job.reject(new Error(event.data.error || failure));
+      // A worker may say what kind of failure it was ("memory", "gpu":
+      // core/memoryNotice.js), kept on the error for the page to read.
+      else job.reject(Object.assign(new Error(event.data.error || failure), event.data.kind ? { kind: event.data.kind } : {}));
     });
     const failed = (event) => {
       event?.preventDefault?.();
