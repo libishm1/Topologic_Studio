@@ -815,3 +815,69 @@ On 0.20 and 0.34 m cells the depth is indicative.
 - Steckler: 39, 16 and 5 s.
 
 The whole suite took 124 min.
+## 13. Validating the rest (pre-registered 2026-11-12, before any run below)
+
+At the user's request to validate every fire quantity. Written after the results of 12.10 and the data inventory ([fire-validation-data-inventory-2026-11-12.md](fire-validation-data-inventory-2026-11-12.md)), before any comparison below is run. Nothing here may change after a result below is seen; anything added later is dated, with its commit.
+
+### 13.1 What the public data allow, before any result
+
+Three or more independent laboratories (NBS and NIST count as one) measure:
+- the layer's temperature and depth;
+- the ceiling jet;
+- door and vent velocity;
+- gas temperature at head height.
+
+They do not for O2, CO2, CO, the neutral plane, smoke obscuration, held-out sprinkler activation or detectors. Wall heat flux is measured, but the solver has no gauge for it. PRISME is not counted: its reuse needs the NEA's approval.
+
+Section 12.6 counts test series, not laboratories (NIST/NRC and WTC are two series from one laboratory). That rule stays the rule that decides, so the verdicts stay comparable with 12.8 and 12.10. Beside each verdict the suite reports how many laboratories its in-band series come from. Where all come from one laboratory, the app says "from one laboratory's tests" with the verdict.
+
+### 13.2 New comparisons
+
+Each uses the test's own FDS input for its fire, radiant fraction, yields and walls (12.9, amendment 8). Each series that lacks an FDS input is named with how its scene is built.
+
+1. **Gas temperature at head height:** a new quantity, `headTemperature`, with σ̃E 0.07 (the guide's gas temperature).
+   - Devices: every thermocouple between 1.5 and 2.0 m above the floor in the five wired series' trees (Steckler 1.54 to 1.77 m, NBS 1.57 and 1.88 m, NIST/NRC 1.75 m, WTC 1.53 and 1.83 m, ATF 1.76 m), outside the burner's plume.
+   - Reduction: the rise above ambient at each device, the peak over the test, as the guide compares point temperatures.
+   - It needs a new reducer only, on the stored runs.
+2. **0.20 m cells for NIST/NRC, WTC and ATF**, skipped before for time: about 4 h at 6 jobs.
+3. **UL FSRI 2018 compartments** (UL, MIT licence), a new independent laboratory.
+   - Tests: all burner tests whose door state and burner position the scene can hold.
+   - Quantities: layer temperature and depth (four trees, Janssens and Tran), ceiling jet (top thermocouples, the plume quadrant left out), O2 (two heights), doorway velocity (seven probes, peak outflow and peak inflow), neutral plane (from the doorway profile), head-height temperature (1.5 and 1.8 m).
+   - The scene is a box built from the test report's dimensions and wall materials, because no FDS input exists.
+4. **WTC opening probes:** velocity at the inflow and outflow openings (8 probes each). WTC has no neutral plane: each opening carries flow one way.
+5. **NIST/NRC door probes:** door velocity, neutral plane and door mass flow.
+6. **UL/NIST vents** (NIST at UL's facility): layer, ceiling jet, door and vent velocity, and neutral plane, in the first interval only, before any vent changes.
+7. **NIST DelCo trainers:** layer, ceiling jet, O2, CO2, door velocity and neutral plane.
+8. **NIST FSE 2008:** layer, O2, CO2 and soot mass fraction.
+
+Left out:
+- NIST smoke alarms: neither the fire nor the soot yield was measured, so they cannot test transport;
+- FM/SNL and LLNL: a fan is needed, and their terms are not stated;
+- FAA cargo: too small for the cells;
+- PRISME;
+- any series whose terms are not stated.
+
+### 13.3 Statistics
+
+As 12.6, with one addition. The FDS Validation Guide and NUREG-1824 Supplement 1 weight the pairs over 10 bins of the measured value. The suite reports σ̃M and δ both unweighted (as 12.6) and weighted, and the stricter verdict decides. Bands, the stop rule, the sealed-door rule and the two verdict columns are as before.
+
+### 13.4 Physics changes planned before the reruns
+
+Each change is made only if its check, which uses no measured data, passes. Each is to be on the CPU and the GPU with parity, before the final rerun.
+
+1. **A one-dimensional wall:** conduction normal to each wall face in sub-cell layers, for walls thinner than a cell or with a thin lining (the tests' gypsum boards are lumped into whole cells today).
+   - Check: a slab heated on one face against the exact series solution, and a semi-infinite solid against erfc, both to 2 %.
+2. **Soot deposition on surfaces:** thermophoretic and gravitational, as FDS models them.
+   - Check: the deposition velocity on a cold wall in a hot gas against the analytic thermophoretic velocity, to 5 %.
+   - The mass-specific extinction coefficient stays 8.7 m²/g (Mulholland and Croarkin) unless a test measured its own.
+3. **Openings narrower than a cell:** each opening's area kept as a face fraction in the projection.
+   - Check: the exchange flow through a door between a hot and a cold sealed box against the orifice formula (discharge coefficient 0.68), and the neutral plane against the hydrostatic prediction, both to 10 %.
+
+A change that fails its check is not made, and that is reported.
+
+### 13.5 Order and reporting
+
+1. **13.A, on the current solver (d3c5751):** items 1 and 2 of 13.2 first, then 3 to 8 as their reducers are built. Each verdict is reported as it comes, both ways.
+2. **13.B, on the solver with the changes of 13.4:** every comparison of section 12 and 13 again. Both 13.A and 13.B are reported; the app states 13.B's verdict, with 13.A beside it.
+
+The search for faults stays as section 5 of the claim protocol says: a fault found while comparing is fixed only if a check that uses no measured data shows it, and every comparison is rerun after. A quantity that still falls short is stated as it is.
