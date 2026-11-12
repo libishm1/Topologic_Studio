@@ -8,7 +8,7 @@
  * voxeliser seals Steckler's 0.24 to 0.25 m doors on every cell size and its
  * 0.36 m doors on 0.34 m cells.
  */
-import { column, gridFor } from "./fds.mjs";
+import { burnerBase, gridFor } from "./fds.mjs";
 
 /** Tests sealed by design: the door shut, the measured leakage below a cell. */
 export const SEALED_BY_DESIGN = Object.freeze({ nistnrc: ["01", "02", "07", "08", "13"], nbs: ["100O"] });
@@ -17,7 +17,7 @@ export const SEALED_BY_DESIGN = Object.freeze({ nistnrc: ["01", "02", "07", "08"
 export function reachesOpenBoundary(T, h) {
   const G = gridFor({ ...T.geometry, fire: [] }, h);
   const { grid, solid, at } = G;
-  const base = column(G, T.burner.centre[0], T.burner.centre[1], T.burner.z0 + 1e-6).cells;
+  const base = burnerBase(G, T.burner).cells;
   if (!base.length) return false;
   const seen = new Uint8Array(grid.cells);
   const stack = [base[0].c];

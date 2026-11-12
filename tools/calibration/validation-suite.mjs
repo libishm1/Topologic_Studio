@@ -226,8 +226,8 @@ async function runCase(c) {
   }
 
   // The burner: the app's design-fire burner over the test's burner area.
-  const [bx, by] = T.burner.centre;
-  const base = L.column(G, bx, by, T.burner.z0 + 1e-6);
+  // The burner's base column: over its centre, or the nearest open one on its footprint (lib/fds.mjs burnerBase).
+  const base = L.burnerBase(G, T.burner);
   if (!base.cells.length) throw new Error(`${c.id}: no open cell over the burner`);
   const cell0 = base.cells[0].c;
   const A = FC.fuelsFor("A").ignitionFuel;
@@ -534,7 +534,7 @@ async function runCase(c) {
     openCells: solid.reduce((a, s) => a + (s ? 0 : 1), 0),
     plumeIndex: +S.plumeIndex(Qpeak, h).toFixed(2),
     peakKW: Math.round(Qpeak / 1000),
-    burner: { cells: spec.layers.reduce((a, l) => a + l.length, 0), columns: spec.layers[0]?.length ?? 0, layers: spec.layers.length, radiantFraction: spec.radiantFraction, radiantMJ: +((sim.burner?.radiant ?? 0) / 1e6).toFixed(3), released: +(sim.stats.released / 1e6).toFixed(3), expectedMJ: +(burnerIntegral(T.burner.hrrW, health.ok ? horizon : health.time) / 1e6).toFixed(3) },
+    burner: { baseMoved: base.moved, cells: spec.layers.reduce((a, l) => a + l.length, 0), columns: spec.layers[0]?.length ?? 0, layers: spec.layers.length, radiantFraction: spec.radiantFraction, radiantMJ: +((sim.burner?.radiant ?? 0) / 1e6).toFixed(3), released: +(sim.stats.released / 1e6).toFixed(3), expectedMJ: +(burnerIntegral(T.burner.hrrW, health.ok ? horizon : health.time) / 1e6).toFixed(3) },
     trees: trees.map((tr) => ({ id: tr.id, modelCeiling: tr.modelH != null ? +tr.modelH.toFixed(3) : null, nominal: tr.H, cells: tr.cells ? tr.cells.length : null, droppedCells: tr.dropped ?? null })),
     points: points.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null, ...(p.pathCells ? { pathCells: p.pathCells.length } : {}) })),
     fuel: { heatOfCombustion: fuel.heatOfCombustion, yields: fuel.yields, rule: c.fuelRule !== "app" && T.fuel ? "the test fuel's" : "class A, CO2 per joule matched" },

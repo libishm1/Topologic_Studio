@@ -365,6 +365,33 @@ export function treeCells(G, x, y, zTop, zBottom = null) {
  * fire's connected gas), the nearest one that is open and passes, within
  * four cells. Returns {c, moved (m), at: [x, y, z]} or null.
  */
+/**
+ * The burner's base column (added 2026-11-12, a harness fault found on UL FSRI's 0.3 m burner against the back
+ * wall on 0.34 m cells, where the cell holding the burner's centre is mostly wall and the voxeliser fills it):
+ * the column over the burner's centre when it has an open cell above the burner, else the open column nearest
+ * the centre among those whose centres lie on the burner's footprint grown by half a cell. Geometry only.
+ * Returns column()'s fields and `moved`, the horizontal distance from the burner's centre (m).
+ */
+export function burnerBase(G, burner) {
+  const [bx, by] = burner.centre;
+  const z0 = (burner.z0 ?? 0) + 1e-6;
+  const first = column(G, bx, by, z0);
+  if (first.cells.length) return { ...first, moved: 0 };
+  const { grid } = G;
+  const half = Math.sqrt(burner.area) / 2 + grid.h / 2;
+  let best = null;
+  for (let k = 0; k < grid.nz; k += 1) {
+    for (let i = 0; i < grid.nx; i += 1) {
+      const [x, y] = G.centre(i, 0, k);
+      if (Math.abs(x - bx) > half || Math.abs(y - by) > half) continue;
+      const c = column(G, x, y, z0);
+      const d = Math.hypot(x - bx, y - by);
+      if (c.cells.length && (!best || d < best.moved)) best = { ...c, moved: +d.toFixed(3) };
+    }
+  }
+  return best || { ...first, moved: null };
+}
+
 export function deviceCell(G, x, y, z, ok = () => true) {
   const { grid, solid, at, toCell, centre } = G;
   const [i0, j0, k0] = toCell(x, y, z);
