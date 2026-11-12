@@ -2224,6 +2224,34 @@ export function createBurner(spec, kind, grid) {
     if (j === low && d < best) [axis, best] = [c, d];
   }
   const [ai, aj, ak] = ijk(axis);
+  // Where the flame may reach for oxygen its own cells lack (burnerStep):
+  // the open cells joined to its cells, in breadth-first order, with their
+  // distance in cells, out to Heskestad's flame height at the table's
+  // largest heat release (at most 4096 cells). Fixed for the run: walls do
+  // not move, and contents that burn out stay open.
+  const diameter = spec.diameter > 0 ? spec.diameter : Math.sqrt((4 * layers[0].length * grid.h * grid.h) / Math.PI);
+  const farthest = Math.max(1, Math.ceil(flameHeight(Math.max(...values), diameter) / grid.h));
+  const reachDist = new Map(Array.from(cells, (c) => [c, 0]));
+  const reach = [];
+  let front = Array.from(cells);
+  for (let d = 1; d <= farthest && front.length && reach.length < 4096; d += 1) {
+    const next = [];
+    for (const c of front) {
+      const [i, j, k] = ijk(c);
+      for (const [a, b, e] of DIRS) {
+        const ii = i + a, jj = j + b, kk = k + e;
+        if (ii < 0 || jj < 0 || kk < 0 || ii >= nx || jj >= ny || kk >= grid.nz) continue;
+        const n = ii + nx * (jj + ny * kk);
+        if (reachDist.has(n) || !open(n)) continue;
+        reachDist.set(n, d);
+        next.push(n);
+        if (reach.length + next.length >= 4096) break;
+      }
+      if (reach.length + next.length >= 4096) break;
+    }
+    reach.push(...next);
+    front = next;
+  }
   const rays = Math.max(0, Math.round(spec.rays ?? 16));
   const dirs = new Float64Array(rays * 3);
   const golden = Math.PI * (3 - Math.sqrt(5));
@@ -2249,10 +2277,16 @@ export function createBurner(spec, kind, grid) {
     dirs,
     dir: [0, 0, 0],
     turn: 0,
-    // What it has given off so far, J.
+    // The cells beyond its own the flame may reach, and their distance in cells (burnerStep).
+    reach: Int32Array.from(reach),
+    reachDist: Int32Array.from(reach, (c) => reachDist.get(c)),
+    diameterUsed: diameter,
+    // What it has given off so far, J, and the heat whose fuel has found no
+    // oxygen yet (it burns in a later step, when oxygen comes).
     released: 0,
     convective: 0,
     radiant: 0,
+    pending: 0,
     // A design-fire item's curve (buildScene), and, set by the run, water
     // on the item ({start, tau, q, by}) and the time clean agent puts its flames out.
     design: spec.design ?? null,
@@ -2347,27 +2381,59 @@ export function burnerEnergy(b, t) {
   return F[lo] + 0.5 * (Q[lo] + q) * (t - T[lo]);
 }
 
-/** One step of the prescribed burner (createBurner): its heat, products and radiation over [time, time + dt]. */
+/**
+ * Burns up to `fuel` kg of a burner's fuel in cell c, as far as the cell's
+ * oxygen allows: its products, and the convective part of its heat into the
+ * gas (the fuel enters at ambient temperature). Returns the kg burnt.
+ */
+function burnInCell(sim, b, c, fuel) {
+  const mass = sim.rho[c] * sim.V;
+  const burnt = Math.min(fuel, Math.max(0, (sim.Y[c * NS + SPECIES.O2] * mass) / b.stoich.o2));
+  if (!(burnt > 0)) return 0;
+  const Ta = sim.P.ambient;
+  const excess = mass * mixtureCp(sim.Y, c * NS) * (sim.T[c] - Ta);
+  addProducts(sim, c, b.stoich, burnt);
+  sim.T[c] = Ta + (excess + (1 - b.radiantFraction) * burnt * b.stoich.heat) / (sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS));
+  return burnt;
+}
+
+/**
+ * One step of the prescribed burner (createBurner): its heat, products and
+ * radiation over [time, time + dt]. Its fuel burns only with oxygen
+ * (2026-11-12): each flame cell takes an equal share, as far as its own
+ * oxygen allows; what a cell cannot burn goes to the next, then to the open
+ * cells beyond the flame's own in breadth-first order (the flame lengthening
+ * and running under a ceiling to find air), no farther than Heskestad's
+ * flame height for the heat to release; what still finds no oxygen waits
+ * (b.pending) and is tried again in the next step. Before, the share heated
+ * each cell whatever its oxygen, and a cell under a corridor's ceiling with
+ * none left passed 3,000 K.
+ */
 export function burnerStep(sim, dt) {
   const b = sim.burner;
-  const E = burnerHeat(b, sim.time, sim.time + dt);
+  const E = burnerHeat(b, sim.time, sim.time + dt) + b.pending;
   b.flameCells = 0;
   if (!(E > 0)) return;
   const n = burnerCells(b, E / dt);
   b.flameCells = n;
-  b.flameRate = E / dt;
-  const convective = (1 - b.radiantFraction) * E;
-  const share = convective / n;
-  const fuel = E / b.stoich.heat / n;
-  const Ta = sim.P.ambient;
-  for (let q = 0; q < n; q += 1) {
-    const c = b.cells[q];
-    const excess = sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS) * (sim.T[c] - Ta);
-    addProducts(sim, c, b.stoich, fuel);
-    sim.T[c] = Ta + (excess + share) / (sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS));
+  const H = b.stoich.heat;
+  let left = E / H;
+  const each = left / n;
+  for (let q = 0; q < n; q += 1) left -= burnInCell(sim, b, b.cells[q], each);
+  // The burner's own cells beyond those its flame reached, then the cells round them.
+  for (let q = n; q < b.cells.length && left > 1e-12; q += 1) left -= burnInCell(sim, b, b.cells[q], left);
+  if (left > 1e-12) {
+    const far = Math.max(1, Math.ceil(flameHeight(E / dt, b.diameterUsed) / b.h));
+    for (let q = 0; q < b.reach.length && left > 1e-12 && b.reachDist[q] <= far; q += 1) left -= burnInCell(sim, b, b.reach[q], left);
   }
+  left = Math.max(0, left);
+  b.pending = left * H;
+  const burnt = E - b.pending;
+  b.flameRate = burnt / dt;
+  if (!(burnt > 0)) return;
+  const convective = (1 - b.radiantFraction) * burnt;
   const rays = b.dirs.length / 3;
-  const radiant = E - convective;
+  const radiant = burnt - convective;
   if (rays && radiant > 0) {
     // The directions turn about the vertical by the golden angle each step,
     // so the radiant heat spreads over the surfaces without random numbers.
@@ -2381,10 +2447,10 @@ export function burnerStep(sim, dt) {
       march(sim, b.origin[0], b.origin[1], b.origin[2], b.dir, radiant / rays, b.axis, false);
     }
   }
-  b.released += E;
+  b.released += burnt;
   b.convective += convective;
   b.radiant += radiant;
-  sim.stats.released += E;
+  sim.stats.released += burnt;
 }
 
 /**

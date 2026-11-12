@@ -563,3 +563,20 @@ test("flame particles that would overfill their share spawn from burning cells s
   // Refused in order, every particle came from the first cells; shared, about half from the later half.
   assert.ok(late > 0.3 * sim.parts.n && late < 0.7 * sim.parts.n, `${late} of ${sim.parts.n} from the later half of the cells`);
 });
+
+test("a pan is a design fire grown to its large-pool rate and held there: it burns on after 40 s (2026-11-12)", async () => {
+  const { designFireFor } = await import("./fireClasses.js");
+  const { poolCap } = await import("./flamescapes.js");
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("K");
+  const designFire = designFireFor("K");
+  assert.ok(designFire, "class K has a design fire");
+  const scene = buildScene(room(), { fire: [2.5, 0.3, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item, designFire });
+  // The pan alone: no contents to catch.
+  scene.contents = { cells: [], masses: [] };
+  const peak = poolCap(ignitionFuel.liquid, item.area, 1) * ignitionFuel.heatOfCombustion;
+  assert.ok(Math.abs(scene.burner.design.peak - peak) < 1e-6 * peak);
+  const frames = [];
+  runScene(scene, { nodes: Float32Array.from([1, 1.5, 1]), horizon: 90, frameSeconds: 3, particles: 0, keep: false, onFrame: (f) => frames.push(f.hrr) });
+  // Past its growth (about 10 s) it holds its pool rate, 19 kW, in a ventilated room.
+  for (const kw of frames.slice(5)) assert.ok(Math.abs(kw * 1000 - peak) < 0.02 * peak, `${kw.toFixed(1)} kW against ${(peak / 1000).toFixed(1)} kW`);
+});

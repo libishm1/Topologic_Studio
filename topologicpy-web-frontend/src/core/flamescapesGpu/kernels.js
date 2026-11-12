@@ -116,9 +116,16 @@ export const PARAMS = [
   ["sysOn", "u32"], ["sysState", "u32"], ["sysWetAt", "u32"], ["sysWetN", "u32"],
   // The interface coefficient of inert solids (the CPU's wallConvection).
   ["wallConvection", "f32"],
-  // A design-fire first item (flamescapes.js burnerStep): the cells this step,
-  // where they are listed in io, and each one's heat (J) and fuel burnt (kg).
-  ["burnerN", "u32"], ["burnerAt", "u32"], ["burnerShare", "f32"], ["burnerFuel", "f32"],
+  // A design-fire first item (flamescapes.js createBurner, burnerStep): its
+  // cells (count, where io lists them), its layers' starts in that list
+  // (layers + 1 of them, from burnerLayerAt), the cells its flame may reach
+  // beyond them and their distances (reachN of each, from reachAt), its
+  // diameter for the flame's height and the one its reach used, its radiant
+  // fraction, the table's heat this step (J, the host's burnerHeat), and
+  // where in `red` its frame's tallies and the heat still waiting for oxygen are.
+  ["burnerN", "u32"], ["burnerAt", "u32"], ["burnerLayers", "u32"], ["burnerLayerAt", "u32"],
+  ["reachN", "u32"], ["reachAt", "u32"], ["burnerD", "f32"], ["burnerDUsed", "f32"],
+  ["burnerRf", "f32"], ["burnerHeat", "f32"], ["redBurner", "u32"],
   // Where in `red` the pilot's added heat (J) accumulates over a frame (the CPU's stats.pilotHeat).
   ["redPilot", "u32"],
   // Proposal F (flamescapes.js DEFAULTS.conservative, .expansion): on or off;
@@ -209,7 +216,7 @@ const half = (d) => Math.floor((d.nx + 1) / 2) * d.ny * d.nz;
 const one = () => 1;
 export const KERNELS = {
   pilot: { uses: [0, 1, 2, 3, 10, 11], threads: one, wg: 1 },
-  burner: { uses: [0, 1, 2, 3, 11], threads: one, wg: 1 },
+  burner: { uses: [0, 1, 2, 3, 10, 11], threads: one, wg: 1 },
   ducts: { uses: [0, 1, 2, 11], threads: one, wg: 1 },
   countBurning: { uses: [0, 3, 9], threads: cells },
   spawnFlame: { uses: [0, 1, 3, 7, 9], threads: cells },
@@ -731,22 +738,72 @@ fn rnd(s: ptr<function, u32>) -> f32 {
 
 // ------------------------------------------------------------------ ignition source
 
+/** Heskestad's (1983) flame height (m) for Q W over a fire of diameter D m (flamescapes.js flameHeight). */
+fn flameHeight(Q: f32, D: f32) -> f32 {
+  // pow(0, y) is not defined in WGSL: no heat, no height.
+  let kw = max(0.0, Q / 1000.0);
+  return 0.235 * select(0.0, pow(kw, 0.4), kw > 0.0) - 1.02 * D;
+}
+
 /**
- * A design-fire first item's step (flamescapes.js burnerStep; its radiant
- * part is none): the host gives the step's heat a cell (burnerShare, J) and
- * the item's fuel burnt a cell (burnerFuel, kg) for the first burnerN cells
- * listed at io[burnerAt]; each takes the item's products, and its gas
- * enthalpy above ambient rises by its share.
+ * Burns up to fuel kg of the item's fuel in cell c, as far as the cell's
+ * oxygen allows (flamescapes.js burnInCell): its products, and the
+ * convective part of its heat into the gas. Returns the kg burnt.
+ */
+fn burnIn(c: u32, fuel: f32, st: Fuel) -> f32 {
+  let mass = cf[ix(fRho, c)] * U.V;
+  let burnt = min(fuel, max(0.0, Y[c * NS + 1u] * mass / st.o2));
+  if (!(burnt > 0.0)) { return 0.0; }
+  let excess = mass * mixtureCp(c) * (cf[ix(fT, c)] - U.ambient);
+  addProducts(c, st, burnt, false);
+  cf[ix(fT, c)] = U.ambient + (excess + (1.0 - U.burnerRf) * burnt * st.heat) / (cf[ix(fRho, c)] * U.V * mixtureCp(c));
+  return burnt;
+}
+
+/**
+ * A design-fire first item's step (flamescapes.js burnerStep; any radiant
+ * part is not cast as rays here): the table's heat this step and what found
+ * no oxygen before burn only with oxygen. Each of the flame's cells (as many
+ * as Heskestad's height for that heat reaches, burnerCells) takes an equal
+ * share as far as its oxygen allows; what is left goes to the item's other
+ * cells, then to the cells beyond them in breadth-first order out to the
+ * flame's height; what still finds none waits for the next step. One thread,
+ * in the CPU's order, so the cells burn as the CPU's do.
+ *
+ * In red from U.redBurner: the frame's heat released (J, cleared by
+ * readFrame), the last step's, the heat waiting for oxygen (J), and the last
+ * step's flame cells.
  */
 @compute @workgroup_size(1)
 fn burner() {
   let st = fuelOf(1u);
-  for (var q = 0u; q < U.burnerN; q++) {
-    let c = io[U.burnerAt + q];
-    let excess = cf[ix(fRho, c)] * U.V * mixtureCp(c) * (cf[ix(fT, c)] - U.ambient);
-    addProducts(c, st, U.burnerFuel, false);
-    cf[ix(fT, c)] = U.ambient + (excess + U.burnerShare) / (cf[ix(fRho, c)] * U.V * mixtureCp(c));
+  let E = U.burnerHeat + red[U.redBurner + 2u];
+  red[U.redBurner + 1u] = 0.0;
+  red[U.redBurner + 3u] = 0.0;
+  if (!(E > 0.0)) { return; }
+  // burnerCells: the layers Heskestad's height for this heat reaches.
+  let L = U.burnerLayers;
+  var layer = L;
+  if (L > 1u && U.burnerD > 0.0) { layer = min(L, u32(max(1.0, ceil(flameHeight(E / U.dt, U.burnerD) / U.h)))); }
+  let n = io[U.burnerLayerAt + layer];
+  // What each cell could not burn, summed: exactly zero when all burnt (as the CPU's left).
+  let each = E / st.heat / f32(n);
+  var left = 0.0;
+  for (var q = 0u; q < n; q++) { left += each - burnIn(io[U.burnerAt + q], each, st); }
+  for (var q = n; q < U.burnerN && left > 1e-12; q++) { left -= burnIn(io[U.burnerAt + q], left, st); }
+  if (left > 1e-12) {
+    let far = u32(max(1.0, ceil(flameHeight(E / U.dt, U.burnerDUsed) / U.h)));
+    for (var q = 0u; q < U.reachN && left > 1e-12 && io[U.reachAt + U.reachN + q] <= far; q++) {
+      left -= burnIn(io[U.reachAt + q], left, st);
+    }
   }
+  let pending = max(0.0, left) * st.heat;
+  let burnt = E - pending;
+  red[U.redBurner + 2u] = pending;
+  red[U.redBurner + 3u] = f32(n);
+  if (!(burnt > 0.0)) { return; }
+  red[U.redBurner] += burnt;
+  red[U.redBurner + 1u] = burnt;
 }
 
 @compute @workgroup_size(1)

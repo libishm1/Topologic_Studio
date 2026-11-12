@@ -41,7 +41,7 @@
  *     runs on the CPU solver instead.
  */
 
-import { DEFAULTS, NS, burnerCells, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor, topology } from "./flamescapes.js";
+import { DEFAULTS, NS, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor, topology } from "./flamescapes.js";
 import {
   KELVIN, ceilingDetectors, failedHealth, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
@@ -245,8 +245,12 @@ class GpuSim {
     io.speed = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
     // The design-fire item's cells, a layer at a time from its base.
     io.burner = io.speed + this.nSpeed;
+    // Then its layers' starts in that list, and the cells its flame may reach beyond its own and their distances (createBurner).
+    const b = this.burner;
+    io.burnerLayers = io.burner + (b ? b.cells.length : 0);
+    io.reach = io.burnerLayers + (b ? b.layerStart.length : 0);
     // The sealed regions' offsets and cells (sealedRegions), when the gas expands.
-    io.sealed = io.burner + (this.burner ? this.burner.cells.length : 0);
+    io.sealed = io.reach + (b ? 2 * b.reach.length : 0);
     io.size = io.sealed + (this.sealed ? this.sealed.S + 1 + this.sealed.list.length : 0);
     this.io = io;
     this.suppressionOn = Boolean(suppression);
@@ -260,7 +264,11 @@ class GpuSim {
     // After the step sums, four floats: the pilot's added heat over the frame, then padding.
     red.pilot = red.steps + 4 * this.slots;
     // Then each sealed region's mean expansion this step (sealedMean).
-    red.mean = red.pilot + 4;
+    // Then a design-fire item's four (kernels.js burner): the frame's heat
+    // released, the last step's, the heat waiting for oxygen and the last
+    // step's flame cells.
+    red.burner = red.pilot + 4;
+    red.mean = red.burner + 4;
     red.size = red.mean + d.sealedN;
     this.red = red;
     // In `snap` after the step's start (velocities, T, Y): the transport's
@@ -319,7 +327,7 @@ class GpuSim {
         entries: k.uses.map((binding) => ({ binding, resource: binding === B.sweep ? { buffer: byBinding[binding], size: SWEEP_BYTES } : { buffer: byBinding[binding] } })),
       });
     }
-    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 4 + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 4 + 4 + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
 
     // ---- parameters
     this.paramBytes = new ArrayBuffer(PARAM_BYTES);
@@ -354,7 +362,9 @@ class GpuSim {
       time: this.time, supOn: suppression ? 1 : 0, sprayN: 0, supCol: SUP.fields * N, sprayEta: suppression?.eta ?? 0, sprayWet: suppression?.wet ?? 0,
       speedFrom: this.speedFrom, ioSpeed: io.speed,
       sysOn: this.systems ? 1 : 0, sysState: sysAt.state, sysWetAt: sysAt.wet, sysWetN: d.sysWet,
-      burnerN: 0, burnerAt: io.burner, burnerShare: 0, burnerFuel: 0,
+      burnerN: b ? b.cells.length : 0, burnerAt: io.burner, burnerLayers: b ? b.layerStart.length - 1 : 0, burnerLayerAt: io.burnerLayers,
+      reachN: b ? b.reach.length : 0, reachAt: io.reach, burnerD: b?.diameter ?? 0, burnerDUsed: b?.diameterUsed ?? 0,
+      burnerRf: b?.radiantFraction ?? 0, burnerHeat: 0, redBurner: red.burner,
       conservative: this.conservativeOn ? 1 : 0, expansion: this.expansionOn ? 1 : 0, gasAt: snapAt.gas, expandAt: snapAt.expand,
       sealedN: d.sealedN, sealedAt: io.sealed, redMean: red.mean,
     });
@@ -451,7 +461,15 @@ class GpuSim {
     q.writeBuffer(this.buf.ctr, 0, ctr);
     const io = new Uint32Array(this.io.size);
     if (this.pilot) io.set(this.pilot.cells, 0);
-    if (this.burner) io.set(this.burner.cells, this.io.burner);
+    if (this.burner) {
+      const b = this.burner;
+      io.set(b.cells, this.io.burner);
+      io.set(b.layerStart, this.io.burnerLayers);
+      io.set(b.reach, this.io.reach);
+      io.set(b.reachDist, this.io.reach + b.reach.length);
+      // Heat already waiting for oxygen in the CPU state (none at a run's start).
+      if (b.pending > 0) q.writeBuffer(this.buf.red, (this.red.burner + 2) * 4, Float32Array.of(b.pending));
+    }
     if (this.ducts) {
       for (let q = 0; q < this.ducts.cells.length; q += 1) {
         io[this.io.ducts + 2 * q] = this.ducts.cells[q];
@@ -502,25 +520,11 @@ class GpuSim {
     const P = this.sim.P;
     // The projection stops once a sweep would move the flow by less than this (the CPU's settle).
     const settle = ((P.projectionTolerance ?? 0) * this.sim.rho0 * this.sim.grid.h) / dt;
-    // The design-fire item's heat this step, as the CPU's burnerStep: shared
-    // over the cells its flame reaches; counted here (the GPU's tallies
-    // count only the solver's own combustion).
-    let burnerN = 0, burnerShare = 0, burnerFuel = 0;
-    if (this.burner) {
-      const b = this.burner;
-      const E = burnerHeat(b, this.time, this.time + dt);
-      b.flameCells = 0;
-      if (E > 0) {
-        burnerN = burnerCells(b, E / dt);
-        b.flameCells = burnerN;
-        b.flameRate = E / dt;
-        burnerShare = E / burnerN;
-        burnerFuel = E / b.stoich.heat / burnerN;
-        b.released += E;
-        b.convective += E;
-      }
-    }
-    this.setParams({ dt, stepNo: this.stepBase + this.stepCount, slot, settle, time: this.time, burnerN, burnerShare, burnerFuel });
+    // The design-fire item's table heat this step (the host's: water on the
+    // item and clean agent change it); the GPU burns it, and what waited for
+    // oxygen, where there is oxygen, and tallies what burnt (kernels.js burner).
+    const burnerE = this.burner ? burnerHeat(this.burner, this.time, this.time + dt) : 0;
+    this.setParams({ dt, stepNo: this.stepBase + this.stepCount, slot, settle, time: this.time, burnerHeat: burnerE });
     this.writeParams();
     // Each flooded or foamed room's state for this step (the CPU's chemistry computes the same at its start).
     if (this.systems) device.queue.writeBuffer(buf.sys, this.sysAt.state * 4, this.systems.update(this.time));
@@ -530,7 +534,7 @@ class GpuSim {
     if (this.expansionOn) enc.copyBufferToBuffer(buf.cf, CF.T * N * 4, buf.snap, this.snapAt.expand * 4, N * 4);
     let pass = enc.beginComputePass();
     // Ignition source, then particles (lines 8 to 14).
-    if (burnerN) this.dispatch(pass, "burner");
+    if (this.burner) this.dispatch(pass, "burner");
     if (this.pilot && this.time < this.pilot.duration) this.dispatch(pass, "pilot");
     if (this.particlesOn) {
       this.dispatch(pass, "countBurning");
@@ -650,9 +654,14 @@ class GpuSim {
     // The pilot's added heat over the frame (and its padding), straight after the step sums.
     enc.copyBufferToBuffer(buf.red, this.red.pilot * 4, this.staging, o, 16);
     o += 16;
+    // A design-fire item's four (kernels.js burner), straight after.
+    enc.copyBufferToBuffer(buf.red, this.red.burner * 4, this.staging, o, 16);
+    o += 16;
     const snapBytes = (1 + 5 * d.snapMax) * 4;
     if (snap) enc.copyBufferToBuffer(buf.io, this.io.snap * 4, this.staging, o, snapBytes);
+    // The frame's sums start afresh; the item's heat waiting for oxygen does not.
     enc.clearBuffer(buf.red, this.red.steps * 4, stepBytes + 16);
+    enc.clearBuffer(buf.red, this.red.burner * 4, 4);
     // The smoke cloud needs the gas density and the species (soot among them),
     // read into their own buffer only when it is drawn.
     if (smoke) {
@@ -697,6 +706,19 @@ class GpuSim {
     const lastReleased = this.slot > 0 ? f[at + 4 * this.lastSlot] : 0;
     at += 4 * this.slots;
     const pilotHeat = f[at];
+    at += 4;
+    // What the item burnt over the frame and in its last step, what waits for
+    // oxygen, and its last flame cells: its record, as the CPU's burnerStep keeps it.
+    if (this.burner) {
+      const b = this.burner;
+      const frameBurnt = f[at];
+      b.released += frameBurnt;
+      b.convective += (1 - b.radiantFraction) * frameBurnt;
+      b.radiant += b.radiantFraction * frameBurnt;
+      b.pending = f[at + 2];
+      b.flameCells = f[at + 3];
+      b.flameRate = f[at + 1] / this.lastDt;
+    }
     at += 4;
     const maxT = new Float32Array(counters.buffer, CTR.maxT * 4, 1)[0];
     const maxSpeed = new Float32Array(counters.buffer, CTR.speed * 4, 1)[0];

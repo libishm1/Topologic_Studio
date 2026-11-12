@@ -282,7 +282,12 @@ export const GROWTH_CLASSES = Object.freeze({ slow: 0.00293, medium: 0.0117, fas
  */
 export function designFireFor(cls = "A", growth = "class") {
   const first = FIRE_CLASSES[cls] || FIRE_CLASSES.A;
-  if (growth === "solver" || first.fuel.liquid || !waterResponse(first.fuel).wets) return null;
+  // A pool (classes B and K) is a design fire too since 2026-11-12, its
+  // growth capped at its steady large-pool burning rate (itemBurner): on the
+  // coarse grid its own flame cannot hold its surface at boiling, so a pan
+  // lit by its pilot went out when the pilot stopped. Other fuels water does
+  // not wet (metals, batteries) keep the solver's burning.
+  if (growth === "solver" || (!first.fuel.liquid && !waterResponse(first.fuel).wets)) return null;
   const name = growth === "class" ? first.growth?.class : growth;
   const alpha = GROWTH_CLASSES[name];
   return alpha > 0 ? { alpha, growth: name } : null;

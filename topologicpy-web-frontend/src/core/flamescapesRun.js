@@ -36,7 +36,7 @@
  * 10 m for large spaces).
  */
 
-import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, flameHeight, healthReadings, healthVerdict, step, substepsFor } from "./flamescapes.js";
+import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, flameHeight, healthReadings, healthVerdict, poolCap, step, substepsFor } from "./flamescapes.js";
 import { EVANS_MIN_DENSITY, activationFrame, activationSummary, createActivation, createSuppression, evansTau, openHeads, sprinklerSetup } from "./suppression.js";
 import { systemsDetect, systemsSetup, systemsSummary } from "./suppressionSystems.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, rng, toLocal, toWorld, volumeFractions } from "./voxelize.js";
@@ -263,11 +263,18 @@ export function itemBurner(grid, solid, cell, { alpha, growth = null, item, fuel
   }
   const energy = item.mass * fuel.heatOfCombustion;
   const a = alpha * 1000;
-  const tEnd = Math.cbrt((3 * energy) / a);
-  const row = Math.max(1, tEnd / 400);
+  // A pool grows only to its steady burning rate, m''_inf (1 - exp(-k beta
+  // D)) A H_c (Babrauskas 1983, poolCap), and burns at it until spent.
+  const cap = fuel.liquid ? poolCap(fuel.liquid, item.area, 1) * fuel.heatOfCombustion : Infinity;
+  const tGrow = Math.min(Math.cbrt((3 * energy) / a), Math.sqrt(cap / a));
+  const grown = (a * tGrow ** 3) / 3;
+  const tEnd = tGrow + (energy - grown) / Math.max(a * tGrow * tGrow, 1e-9);
+  const row = Math.max(1, tGrow / 400);
   const hrr = [];
-  for (let t = 0; t < tEnd; t += row) hrr.push([t, a * t * t]);
-  hrr.push([tEnd, a * tEnd * tEnd], [tEnd + 1e-3, 0]);
+  for (let t = 0; t < tGrow; t += row) hrr.push([t, a * t * t]);
+  hrr.push([tGrow, a * tGrow * tGrow]);
+  if (tEnd > tGrow + 1e-6) hrr.push([tEnd, a * tGrow * tGrow]);
+  hrr.push([tEnd + 1e-3, 0]);
   return {
     layers,
     hrr,
@@ -275,7 +282,7 @@ export function itemBurner(grid, solid, cell, { alpha, growth = null, item, fuel
     rays: 0,
     fuel,
     diameter: 2 * radius,
-    design: { alpha, growth, mass: item.mass, area: item.area, energy, end: tEnd, peak: a * tEnd * tEnd },
+    design: { alpha, growth, mass: item.mass, area: item.area, energy, end: tEnd, peak: a * tGrow * tGrow, pool: Boolean(fuel.liquid), wets: fuel.water?.wets !== false },
   };
 }
 
@@ -684,7 +691,8 @@ export function sprinklerRun(scene, sim, sprinklers, upAxis = "y") {
 export function itemSuppression(sim, spr, sys, t) {
   const b = sim.burner;
   if (!b?.design) return;
-  if (spr && spr.sup.mode !== "activation" && spr.itemHeads?.length) {
+  // Water acts on an item it wets (Evans's decay); not on oil, which it throws out.
+  if (spr && b.design.wets !== false && spr.sup.mode !== "activation" && spr.itemHeads?.length) {
     const open = new Set(spr.sup.open);
     let w = 0;
     for (const h of spr.itemHeads) {
@@ -703,7 +711,9 @@ export function itemSuppression(sim, spr, sys, t) {
     const rec = b.room ? sys.rooms[b.room - 1] : null;
     if (rec && Number.isFinite(rec.t0)) {
       if (rec.system === "clean-agent") {
-        if (rec.design >= rec.extA) b.stopAt = rec.t0 + (rec.discharge * rec.extA) / rec.design;
+        // A pool's vapour needs heptane's concentration, as in the solver's flooded().
+        const ext = b.design.pool ? rec.extB ?? rec.extA : rec.extA;
+        if (rec.design >= ext) b.stopAt = rec.t0 + (rec.discharge * ext) / rec.design;
       } else if (!b.suppression && t >= rec.t0) {
         b.suppression = { start: t, tau: evansTau(rec.rate / 60), q: burnerRate(b, t), by: "foam" };
       }

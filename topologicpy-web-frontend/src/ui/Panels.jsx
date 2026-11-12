@@ -2378,12 +2378,23 @@ function itemGrowthHint(clsKey, growth) {
   const cls = FIRE_CLASSES[clsKey] || FIRE_CLASSES.A;
   const fire = designFireFor(clsKey, growth);
   if (growth === "solver") return "The solver lights and burns the item itself: about 500 kW within 15 s in the examples, faster than any design fire, so sprinklers open when the fire is already large.";
-  if (!fire) return `A class ${cls.short} item keeps its own burning (a pool, a metal or a battery pack is not a t-squared item).`;
+  if (!fire) return `A class ${cls.short} item keeps its own burning (a metal or a battery pack is not a t-squared item).`;
   const energy = cls.item.mass * cls.fuel.heatOfCombustion;
-  const end = Math.cbrt((3 * energy) / (fire.alpha * 1000));
+  const a = fire.alpha * 1000;
+  const liquid = cls.fuel.liquid;
+  // A pool grows only to its large-pool burning rate (flamescapesRun.js itemBurner, Babrauskas 1983).
+  const cap = liquid ? liquid.mInf * (1 - Math.exp(-liquid.kBeta * Math.sqrt((4 * cls.item.area) / Math.PI))) * cls.item.area * cls.fuel.heatOfCombustion : Infinity;
+  const grow = Math.min(Math.cbrt((3 * energy) / a), Math.sqrt(cap / a));
+  const peak = a * grow * grow;
+  const end = grow + (energy - (a * grow ** 3) / 3) / peak;
+  const held = end > grow + 1;
+  const water = waterResponse(cls.fuel).wets ? "Sprinkler water over it decays it as Evans measured" : "Sprinkler water does not act on it (on oil it boils and throws the oil out, which is not modelled)";
   return (
-    `${/^[aeiou]/i.test(fire.growth) ? "An" : "A"} ${fire.growth} t-squared fire, ${fire.alpha} kW/s²: the ${cls.item.mass} kg item (${Math.round(energy / 1e6)} MJ) would reach ${Math.round(fire.alpha * end * end)} kW ` +
-    `when it burns out at ${Math.round(end)} s. The room's contents catch from it. Sprinkler water over it decays it as Evans measured; clean agent at the class A concentration puts it out.`
+    `${/^[aeiou]/i.test(fire.growth) ? "An" : "A"} ${fire.growth} t-squared fire, ${fire.alpha} kW/s²: the ${cls.item.mass} kg item (${Math.round(energy / 1e6)} MJ) ` +
+    (held
+      ? `grows in ${Math.round(grow)} s to ${Math.round(peak / 1000)} kW, the pool's steady burning rate (Babrauskas), and burns at it until spent at ${Math.round(end)} s. `
+      : `would reach ${Math.round(peak / 1000)} kW when it burns out at ${Math.round(end)} s. `) +
+    `The room's contents catch from it. ${water}; clean agent at the ${liquid ? "heptane" : "class A"} concentration puts it out.`
   );
 }
 

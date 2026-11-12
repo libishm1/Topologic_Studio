@@ -183,3 +183,27 @@ test("in a full run the frame heat release is the burner's power, and the sprink
   // 20 K over a 60 kW fire: the coarse plume; see the validation note).
   assert.ok(Math.max(...frames.map((f) => f.gas)) > 293.15 + 8);
 });
+
+test("a burner's fuel burns only with oxygen: in a sealed room its heat stops at the room's oxygen, its gas stays below methane's flame temperature, and the unburnt heat waits", async () => {
+  const { step } = await import("./flamescapes.js");
+  // 200 kW in a sealed 2 x 1.5 x 1.5 m room: its 1.2 kg of oxygen burns about
+  // 16 MJ, which the table passes in 80 s; it asks for 30 MJ over 150 s.
+  const hrr = [[0, 0], [5, 200e3], [150, 200e3]];
+  const scene = roomScene({ h: 0.25, W: 2, D: 1.5, H: 1.5, door: false, burnerAt: [1, 0.75], layers: 2, hrr, radiantFraction: 0.2 });
+  const sim = createSolver(scene, { contentsFuel: FUEL, ignitionFuel: FUEL });
+  let o2 = 0;
+  for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] !== 2) o2 += sim.rho[c] * sim.V * sim.Y[c * NS + SPECIES.O2];
+  let hottest = 0;
+  while (sim.time < 150 - 1e-9) {
+    step(sim, 0.05);
+    for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] !== 2 && sim.T[c] > hottest) hottest = sim.T[c];
+  }
+  const asked = burnerEnergy(sim.burner, 150);
+  // No more heat than the room's oxygen can give (Huggett), and less than asked.
+  assert.ok(sim.burner.released <= o2 * HEAT_PER_O2 * 1.001, `${sim.burner.released} J released, ${o2 * HEAT_PER_O2} J of oxygen`);
+  assert.ok(sim.burner.released < 0.8 * asked);
+  // What it could not burn is held, not lost: released and pending make up the table.
+  assert.ok(Math.abs(sim.burner.released + sim.burner.pending - asked) < 1e-6 * asked);
+  // Methane's adiabatic flame temperature in air is about 2,230 K.
+  assert.ok(hottest < 2300, `hottest gas ${hottest.toFixed(0)} K`);
+});
