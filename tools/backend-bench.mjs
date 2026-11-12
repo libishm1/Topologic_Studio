@@ -23,7 +23,7 @@
  * fire origin. Results go to benchmark/results/<date>-backends.json.
  *
  *   node tools/backend-bench.mjs [--cases room,room-solver,duplex,office,clinic,vienna]
- *        [--members 4] [--horizon 180] [--sets cpu,gpu-same,gpu-app] [--app-cells 120000] [--out file] [--headed]
+ *        [--members 4] [--horizon 180] [--sets cpu,gpu-same,gpu-app] [--app-cells 120000] [--seed 1] [--out file] [--headed]
  *
  * Uses playwright-core with the installed Chrome (WebGPU in headless Chrome
  * on this machine) and serves topologicpy-web-frontend/ itself.
@@ -54,6 +54,9 @@ const SETS = flag("--sets", "cpu,gpu-same,gpu-app").split(",");
 // follows the GPU's measured speed and so the machine's load: runs compared
 // across settings need one grid.
 const APP_CELLS = Number(flag("--app-cells", 0)) || null;
+// --seed N draws the contents' statistical fuel anew (buildScene's seed; the app's is 1): does a result
+// hold across layouts of the contents, or is it one draw's?
+const SEED = Number(flag("--seed", 1));
 // Solver options for every run, e.g. the transport before proposal F:
 // --solver conservative=0,expansion=0,vorticity=10,cfl=0,vorticityStep=0
 const SOLVER = Object.fromEntries((flag("--solver", "") || "").split(",").filter(Boolean).map((kv) => kv.split("=")).map(([k, v]) => [k, Number(v)]));
@@ -158,7 +161,7 @@ page.on("pageerror", (error) => console.log(`  [pageerror] ${error.message}`));
 await page.goto(`${origin}/bench.html`);
 
 /** One case in the page: the grids, then each set of runs. */
-async function benchCase({ base, info, members, horizon, sets, solver = {}, pinnedCells = null }) {
+async function benchCase({ base, info, members, horizon, sets, solver = {}, pinnedCells = null, seed = 1 }) {
   const R = await import(base + "core/flamescapesRun.js");
   const F = await import(base + "core/flamescapes.js");
   const G = await import(base + "core/flamescapesGpu.js");
@@ -198,7 +201,7 @@ async function benchCase({ base, info, members, horizon, sets, solver = {}, pinn
   }
   const { contentsFuel, ignitionFuel, item } = FC.fuelsFor("A");
   const designFire = info.solver ? null : FC.designFireFor("A", "class");
-  const build = (maxCells) => R.buildScene(geometry, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item, designFire, fireLoad: 780e6, seed: 1 });
+  const build = (maxCells) => R.buildScene(geometry, { upAxis: "y", fire, maxCells, contentsFuel, ignitionFuel, item, designFire, fireLoad: 780e6, seed });
 
   // The runner, kept across cases.
   if (!window.__runner) {
@@ -262,11 +265,11 @@ async function benchCase({ base, info, members, horizon, sets, solver = {}, pinn
   return out;
 }
 
-const report = { generated: new Date().toISOString(), tool: "tools/backend-bench.mjs", members: MEMBERS, horizon: HORIZON, cases: [] };
+const report = { generated: new Date().toISOString(), tool: "tools/backend-bench.mjs", members: MEMBERS, horizon: HORIZON, seed: SEED, cases: [] };
 const t0 = Date.now();
 for (const info of cases) {
   console.log(`\n== ${info.name}`);
-  const res = await page.evaluate(benchCase, { base: `${origin}/src/`, info, members: MEMBERS, horizon: HORIZON, sets: SETS, solver: SOLVER, pinnedCells: APP_CELLS });
+  const res = await page.evaluate(benchCase, { base: `${origin}/src/`, info, members: MEMBERS, horizon: HORIZON, sets: SETS, solver: SOLVER, pinnedCells: APP_CELLS, seed: SEED });
   if (res.error) console.log(`  ${res.error}`);
   report.cases.push(res);
   report.adapter ??= res.adapter;
