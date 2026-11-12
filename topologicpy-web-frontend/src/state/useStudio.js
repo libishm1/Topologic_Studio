@@ -12,6 +12,7 @@ import { ApiError, api, isGraphGone, openFireStream } from "../lib/api.js";
 import { cacheSize, clearCache } from "../lib/fragmentCache.js";
 import { mark } from "../lib/perf.js";
 import { migrateSettings, withoutSessionOnly } from "../core/settingsMigration.js";
+import { DEFAULT_SERVICE_RESPONSE } from "../core/fireService.js";
 import { STALE_SITE_MESSAGE, effectiveEngine as engineFor, isStaleSite } from "../core/session.js";
 
 const THEME_KEY = "ts.theme";
@@ -171,6 +172,12 @@ export const DEFAULT_SETTINGS = {
   // within 15 s, faster than any design fire).
   flamescapesGrowth: "class",
   flamescapesHorizon: 180, // s
+  // Run until the fire service arrives instead (core/fireService.js): off by
+  // default, and off the run lasts flamescapesHorizon as before. On, it lasts
+  // the performance check's detection (perfDetection) plus this response, s:
+  // NFPA 1710 (2020)'s first engine company by default, at most an hour in all.
+  flamescapesUntilService: false,
+  flamescapesServiceResponse: DEFAULT_SERVICE_RESPONSE,
   flamescapesFireLoad: 780, // MJ / m^2 of floor, the contents
   flamescapesUntenableC: 60, // gas at head height
   flamescapesSmoke: true, // visibility below the limit is untenable
@@ -282,6 +289,8 @@ export const PLAN_SETTINGS = [
   "flamescapesClass",
   "flamescapesGrowth",
   "flamescapesHorizon",
+  "flamescapesUntilService",
+  "flamescapesServiceResponse",
   "flamescapesFireLoad",
   "flamescapesUntenableC",
   "flamescapesSmoke",
@@ -298,6 +307,40 @@ export const PLAN_SETTINGS = [
 ];
 
 export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));
+
+/**
+ * The settings a Flamescapes run is computed from (App.jsx combustionInputs
+ * and its key), so that the viewport's Run again can say when the next run
+ * differs from the last; the run's length is compared as it comes out
+ * (core/fireService.js runHorizon), the detection time with it.
+ */
+export const RUN_SETTINGS = [
+  "fireModel",
+  "fireMaxSteps",
+  "flamescapesClass",
+  "flamescapesGrowth",
+  "flamescapesFireLoad",
+  "flamescapesBackend",
+  "flamescapesGridPolicy",
+  "flamescapesCalibratedGrid",
+  "flamescapesSolver",
+  "flamescapesDoors",
+  "flamescapesDoorShare",
+  "flamescapesDoorSeed",
+  "flamescapesWindows",
+  "flamescapesVentilation",
+  "flamescapesTerminalFlow",
+  "flamescapesMeasures",
+  "flamescapesOverhead",
+  "sprinklers",
+  "sprinklerSource",
+  "sprinklerHazard",
+  "sprinklerResponse",
+  "sprinklerMode",
+  "sprinklerOpenOn",
+  "suppressionSystems",
+  "systemsAgentOnly",
+];
 
 /** Whether the loaded model has IfcSpace rooms, which the two-zone fire model needs. */
 export function hasRooms(modelInfo) {

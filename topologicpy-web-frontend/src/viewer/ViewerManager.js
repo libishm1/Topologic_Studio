@@ -1198,6 +1198,21 @@ export class ViewerManager {
   }
 
   /**
+   * Back to no model (App.jsx backToWelcome): a load still running is dropped,
+   * as when another file is opened, and a tour, the storey cut, a lowered draw
+   * rate, the model, its second models and every layer go. The viewer stays
+   * ready for the next model.
+   */
+  unloadModel() {
+    this._abortImport?.();
+    this._loadToken = (this._loadToken || 0) + 1;
+    this.stopTour?.();
+    this.setDrawRate(0);
+    this.setSectionHeight(null);
+    this.clearModel();
+  }
+
+  /**
    * Pull the geometry the sampler worker needs.
    * One pass per category, straight out of the fragments already in memory.
    */

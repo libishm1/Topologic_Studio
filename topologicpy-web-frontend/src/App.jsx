@@ -37,7 +37,8 @@ import { RUN_CACHE_VERSION, clearRuns, fingerprint, readRun, storedRuns, writeRu
 import { closedDoorIds, doorsLabel } from "./core/doorStates.js";
 import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
-import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
+import { RUN_SETTINGS, fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
+import { runHorizon } from "./core/fireService.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_RUNS, farthestFromExits, fireStageNext, guidedOrigin, nodeAlong, stagesFor } from "./core/guided.js";
@@ -220,6 +221,10 @@ export default function App() {
       gpuRateRef.current = false;
     }
   }
+  // How fast the last Flamescapes run computed in this visit (simulated s,
+  // wall ms, grid set-up ms, its backend and grid), for the estimate beside
+  // the run's length (core/fireService.js computeSeconds).
+  const [lastPace, setLastPace] = useState(null);
   // The run whose frames are on screen (playback reads its view from a ref,
   // so switching heat and smoke mid-run holds: review 4).
   const playingRunRef = useRef(null);
@@ -1683,9 +1688,11 @@ export default function App() {
     };
     const transfers = Object.values(geo).flatMap((list) => list.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
     const { contentsFuel, ignitionFuel, item } = fuelsFor(settings.flamescapesClass);
+    // The time set, or until the fire service arrives (core/fireService.js).
+    const horizon = runHorizon(settings);
     // At most 120 frames of at least 1 s: memory is frames x nodes x 12 bytes
     // (review 6), and a frame shorter than the solver's step means nothing.
-    const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(settings.flamescapesHorizon)));
+    const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(horizon)));
     // Suppression systems by room use: the rooms the run floods or foams, and
     // the heads it leaves out there (a foam room's ordinary heads; an agent
     // room's too when agent only).
@@ -1699,8 +1706,8 @@ export default function App() {
       nodes: graph.nodes.slice(),
       agentHeight: graph.agentHeight,
       headHeight: 1.8,
-      horizon: settings.flamescapesHorizon,
-      frameSeconds: settings.flamescapesHorizon / frames,
+      horizon,
+      frameSeconds: horizon / frames,
       embers: fireModel === "flamescapes-embers",
       // Soot, CO2 and O2 too, unless switched off or past 64 MB of stored frames
       // (12 bytes a node a frame): the run then keeps the basic three.
@@ -1745,7 +1752,10 @@ export default function App() {
       fireModel,
       settings.flamescapesClass,
       settings.flamescapesGrowth,
-      settings.flamescapesHorizon,
+      // The length it comes out at: the time set, so kept runs keep their
+      // keys, or detection plus the response; a kept run of the same length
+      // plays again whichever way the length was set.
+      horizon,
       settings.fireMaxSteps,
       settings.flamescapesFireLoad,
       settings.flamescapesBackend,
@@ -1925,6 +1935,11 @@ export default function App() {
         }
         // A run replaced by a newer one leaves the newer one's draw rate alone.
         if (!combustionRef.current || combustionRef.current === run) viewerRef.current?.setDrawRate(0);
+        // Its pace, for the next run's estimate; not a run the health guard cut short.
+        if (!stopped && result?.info?.ms > 0 && result.horizon > 0) {
+          const info = result.info;
+          setLastPace({ simulated: result.horizon, wallMs: info.ms, setupMs: info.setupMs ?? 0, kind: info.backend?.kind, name: info.backend?.name, backend: payload.backend, grid: payload.grid });
+        }
         return result;
       },
       (error) => {
@@ -2045,7 +2060,7 @@ export default function App() {
           ...(flamescapesRun
             ? {
                 fire_class: settings.flamescapesClass,
-                horizon_s: settings.flamescapesHorizon,
+                horizon_s: runHorizon(settings),
                 embers: fire.model === "flamescapes-embers" ? 1 : 0,
                 doors: flamescapesRun.info?.openings?.doors ?? null,
                 windows: flamescapesRun.info?.openings?.windows ?? null,
@@ -2086,7 +2101,7 @@ export default function App() {
       const points = viewerToIfc(graph.nodes, frameChange(coordination, graph.upAxis || "y", graph.agentHeight || 0));
       const n = graph.nodes.length / 3;
       const { blob, extension } = await runTableBlob(
-        { frames: run.frames, frameSeconds: run.result?.frameSeconds ?? settings.flamescapesHorizon / Math.max(1, run.frames.length), n, points, kinds: graph.kinds },
+        { frames: run.frames, frameSeconds: run.result?.frameSeconds ?? runHorizon(settings) / Math.max(1, run.frames.length), n, points, kinds: graph.kinds },
         { limitC: settings.flamescapesUntenableC, visibilityLimit: settings.flamescapesVisibility, smoke: settings.flamescapesSmoke },
       );
       const a = document.createElement("a");
@@ -2317,6 +2332,8 @@ export default function App() {
       // The doors this Flamescapes run was started with: the switch may change
       // while it plays, for the next run (SimulatePanel offers a restart).
       doors: combustion ? doorsLabel(settings.flamescapesDoors, { seed: settings.flamescapesDoorSeed, share: settings.flamescapesDoorShare }) : null,
+      // What it was started with, so Run again in the view can say when the next run differs.
+      started: combustion ? { settings, fire: points.fire } : null,
     }));
 
     // Every model reroutes now: temperature by hazard cost, flood and radial by
@@ -3742,9 +3759,10 @@ export default function App() {
       if (acted !== stage) {
         setTab("simulate");
         if (run.fire.model === "flamescapes") {
-          // A phone runs a shorter fire where the run says so.
+          // A phone runs a shorter fire where the run says so. The run's own
+          // length, not until the fire service arrives (core/fireService.js).
           const horizon = (isPhone() && run.fire.phoneHorizon) || run.fire.horizon || 60;
-          setSettings({ flamescapes: true, fireModel: "flamescapes", flamescapesDoors: run.fire.doors || "open", flamescapesHorizon: horizon });
+          setSettings({ flamescapes: true, fireModel: "flamescapes", flamescapesDoors: run.fire.doors || "open", flamescapesHorizon: horizon, flamescapesUntilService: false });
           act(() => void findIgnition("residential"), points.fire);
         } else {
           setSettings({ flamescapes: false, fireModel: run.fire.model, reroute: true });
@@ -3819,6 +3837,71 @@ export default function App() {
     const own = note.id === "walk-out" && path?.found !== false && path?.length > 0 ? note.text({ length: path.length }) : null;
     return { teaser: note.teaser, text: own || notes.found[note.id].text };
   }, [guided, notes.found, path]);
+
+  // ------------------------------------------------- back to the guided runs
+
+  // The welcome screen and its guided runs again, without a reload, from a
+  // load, a guided run, a fire playing or one that has ended. A guided run
+  // ends as its Stop ends it; a fire playing or starting ends as Stop fire
+  // ends it (M7); a recording is saved as its Stop saves it (M9); then the
+  // model goes as when another is opened (L1): its load, graph build, agent,
+  // plan, report fires, egress map and slime mould end, and what is kept
+  // with the graph drops itself (a Flamescapes run still computing or
+  // repeating is ended by the graph's effect below: M4). The viewer stays,
+  // without its model (ViewerManager.unloadModel).
+  const backToWelcome = useCallback(() => {
+    stopGuided();
+    if (fire.running || fire.starting) stopFire();
+    if (recordRef.current && recordRef.current !== RECORDER_STARTING) void toggleRecording();
+    ++loadSeqRef.current;
+    samplerRef.current?.cancel();
+    endFireStart();
+    rlRef.current?.cancel();
+    dropPlan();
+    stopPerfFires();
+    egressRef.current?.cancel();
+    slimeRef.current?.cancel();
+    geometryRef.current = null;
+    geometryPromiseRef.current = null;
+    studio.beginLoad(null);
+    studio.setLoadState({ busy: false, stage: null, detail: null });
+    // No newer load takes the busy flag from a build still ending (G1).
+    studio.setGraphBusy(false);
+    setLastSample(null);
+    setLevels([]);
+    setLevelShift(0);
+    setSection(null);
+    viewerRef.current?.unloadModel?.();
+    colours.set(null);
+    setTab("model");
+  }, [stopGuided, fire.running, fire.starting, stopFire, toggleRecording, endFireStart, dropPlan, stopPerfFires, studio, colours]);
+
+  // ------------------------------------------------- run again, in the view
+
+  // The Flamescapes fire started again with the settings as they are, as the
+  // panel's Start fire starts it: offered in the view once a run has ended or
+  // been stopped, not while one computes (a plan's or the repeat runs too), a
+  // guided run plays or a pick waits for its click; and saying so when the
+  // next run will differ from the last.
+  const replay = useMemo(() => {
+    const started = fire.started;
+    const offered =
+      Boolean(started && graph && points.fire) &&
+      isFlamescapes(fire.model) &&
+      isFlamescapes(fireModel) &&
+      !fire.running &&
+      !fire.starting &&
+      !forecastPlan.busy &&
+      fire.combustion?.repeats?.status !== "running" &&
+      !guided &&
+      !pickMode;
+    if (!offered) return null;
+    const changed =
+      points.fire !== started.fire ||
+      runHorizon(settings) !== runHorizon(started.settings) ||
+      RUN_SETTINGS.some((key) => settings[key] !== started.settings[key]);
+    return { changed };
+  }, [fire.started, fire.model, fire.running, fire.starting, fire.combustion?.repeats?.status, graph, points.fire, fireModel, forecastPlan.busy, guided, pickMode, settings]);
 
   // ------------------------------------------------- hints
 
@@ -4571,6 +4654,9 @@ export default function App() {
             }
             onOpenNotes={() => setNotesOpen(true)}
             onStopGuided={stopGuided}
+            onHome={backToWelcome}
+            replay={replay}
+            onReplay={startFire}
             recording={recording}
             onRecord={toggleRecording}
           />
@@ -4784,6 +4870,8 @@ export default function App() {
                   onLayOutExtinguishers={layOutExtinguishers}
                   extinguisherAttempt={settings.extinguishers ? extinguisherAttempt : null}
                   onExtinguisherAttempt={runExtinguisherAttempt}
+                  pace={lastPace}
+                  gpuSpeed={gpuRateRef.current || null}
                 />
               )}
             </div>

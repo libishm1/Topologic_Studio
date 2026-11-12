@@ -1340,6 +1340,52 @@ if (await fsToggle.isVisible().catch(() => false)) {
   const legendFs = await page.getByText("Gas temperature at head height (°C)", { exact: true }).isVisible().catch(() => false);
   record(legendFs || MOBILE, "the graph is coloured by gas temperature at head height", MOBILE ? "legend folded on a phone" : undefined);
   await shot(page, "flamescapes-run");
+  // Run again in the view (2026-11-12): once the run has ended, out of the
+  // panel where the playback bar was, clear of the legend and the view
+  // buttons; it says so when a setting has changed; reached by Tab with a
+  // focus ring and pressed with Enter, it plays the fire as Start fire does
+  // and goes while the fire plays, the focus moving to Stop fire.
+  await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent)), null, { timeout: 180000 }).catch(() => {});
+  const viewReplay = page.locator(".viewport").getByRole("button", { name: /^Run again/ });
+  const replayText = async () => ((await viewReplay.textContent().catch(() => "")) || "").trim();
+  const replayOffered = await viewReplay.isVisible().catch(() => false);
+  const replayLabel = await replayText();
+  record(replayOffered && replayLabel === "Run again", "a finished Flamescapes run offers Run again in the view", replayLabel || "not offered");
+  const replayCovers = await page.evaluate(() => {
+    const b = [...document.querySelectorAll(".viewport button")].find((x) => /^Run again/.test(x.textContent.trim()))?.getBoundingClientRect();
+    if (!b) return ["no button"];
+    const hit = (r) => r.width > 0 && r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom;
+    return [["legend", ".legend"], ["view buttons", ".viewcube"], ["view card", ".overlay--bottom-right"]].filter(([, sel]) => [...document.querySelectorAll(sel)].some((el) => hit(el.getBoundingClientRect()))).map(([name]) => name);
+  });
+  record(replayCovers.length === 0, "  clear of the legend and the view buttons", replayCovers.join(", ") || "clear");
+  const replayClass = page.getByLabel("What burns first");
+  const replayClassWas = await replayClass.inputValue().catch(() => "A");
+  await replayClass.selectOption(replayClassWas === "B" ? "A" : "B").catch(() => {});
+  const replayChanged = await replayText();
+  await replayClass.selectOption(replayClassWas).catch(() => {});
+  const replaySame = await replayText();
+  record(replayChanged === "Run again with new settings" && replaySame === "Run again", "  and says so when a setting has changed", `${replayChanged || "none"}; set back: ${replaySame || "none"}`);
+  await viewReplay.focus().catch(() => {});
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  const replayRing = await page.evaluate(() => {
+    const el = document.activeElement;
+    return el && /^Run again/.test(el.textContent.trim()) && el.matches(":focus-visible") ? getComputedStyle(el).outlineWidth : null;
+  });
+  await page.keyboard.press("Enter");
+  const replayPlays = await page
+    .waitForFunction(() => [...document.querySelectorAll(".viewport button")].some((b) => /^Stop fire$/.test(b.textContent.trim())), null, { timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
+  const replayHidden = !(await viewReplay.isVisible().catch(() => false));
+  const replayFocus = await page.evaluate(() => document.activeElement?.textContent?.trim() || "");
+  record(
+    parseFloat(replayRing) >= 2 && replayPlays && replayHidden && replayFocus === "Stop fire",
+    "  reached by Tab with a focus ring, Enter plays the fire again, and it goes while the fire plays",
+    `ring ${replayRing || "none"}, ${replayPlays ? "played" : "did not play"}, ${replayHidden ? "hidden" : "still shown"}, focus on ${replayFocus || "nothing"}`,
+  );
+  // The same run, from memory: let it end before the steps below.
+  await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent)), null, { timeout: 180000 }).catch(() => {});
   // Kept runs (core/runCache.js, 2026-11-07): after another run, this one
   // asked for again plays from the browser's store, not from memory.
   const startFs = async () => {
@@ -1457,6 +1503,45 @@ if (await fsToggle.isVisible().catch(() => false)) {
   else console.log("    (the kept runs could not be held: not checked)");
   await simulated.fill("30");
   await simulated.blur();
+  // Until the fire service arrives (core/fireService.js, 2026-11-12): off by
+  // default; on, the simulated time gives way to the response, NFPA 1710's
+  // 6.65 min, and the panel says the run lasts the detection set (60 s) plus
+  // it, 459 s; past 900 s, that it lies outside the tested range. A short
+  // response then sets the run's length: 60 s + 0.5 min = 90 s on the card.
+  const serviceSwitch = page.locator(".toggle__label", { hasText: /^Run until the fire service arrives$/ });
+  if ((await serviceSwitch.count()) > 0) {
+    await serviceSwitch.first().click();
+    const serviceResponse = page.getByLabel("Fire service response (min)");
+    const serviceNote = async () => ((await page.locator(".panel__scroll").first().innerText().catch(() => "")).match(/The fire runs [^\n]*/)?.[0] || "");
+    const shownMinutes = await serviceResponse.inputValue().catch(() => "");
+    const byDefault = await serviceNote();
+    const timeGone = !(await page.getByLabel("Simulated time (s)").isVisible().catch(() => false));
+    record(
+      shownMinutes === "6.65" && timeGone && /^The fire runs 7 min 39 s \(459 s\)/.test(byDefault) && /NFPA 1710 \(2020 edition\)/.test(byDefault),
+      "until the fire service arrives, the run lasts the detection set plus NFPA 1710's response",
+      byDefault.slice(0, 220) || `response ${shownMinutes || "not shown"}`,
+    );
+    await serviceResponse.fill("15");
+    await serviceResponse.blur();
+    const pastTested = await serviceNote();
+    record(/^The fire runs 16 min \(960 s\)/.test(pastTested) && /outside the tested range/.test(pastTested), "  past 900 s, the panel says the run lies outside the tested range", pastTested.slice(0, 220) || "no note");
+    await serviceResponse.fill("0.5");
+    await serviceResponse.blur();
+    await page.getByRole("button", { name: /^Start fire$/ }).click();
+    const ninety = await page
+      .waitForFunction(() => /Simulated\s+\d+ \/ 90 s/.test(document.querySelector('[aria-label="Flamescapes run"]')?.innerText || ""), null, { timeout: 120000 })
+      .then(() => true)
+      .catch(() => false);
+    await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
+    record(ninety, "  and a run started then lasts that long", ninety ? "90 s on the run card" : "the card did not show 90 s");
+    // Back to the default response and to the time set.
+    await serviceResponse.fill("6.65");
+    await serviceResponse.blur();
+    await serviceSwitch.first().click();
+    record(await page.getByLabel("Simulated time (s)").isVisible().catch(() => false), "  switched off, the simulated time set is back");
+  } else {
+    record(false, "the switch to run until the fire service arrives is offered in the Flamescapes settings");
+  }
   // Sprinklers (core/sprinklers.js, core/suppression.js, 2026-11-07): off by
   // default; on, the Duplex's rooms get heads by NFPA 13 with a rule report,
   // and a run reports when they open.
@@ -1941,6 +2026,61 @@ for (const [call, list] of byCall) {
   const mapped = /Farthest walk [\d.]+ m/.test(await guidedPage.locator(".panel__scroll").innerText().catch(() => ""));
   record(/^Done/.test(caption) && mapped && drawn.includes("egressDeadEnds") && drawn.includes("accessAudit"), "the egress guided run maps every room and lays the wheelchair audit on the floors", `${((Date.now() - t0) / 1000).toFixed(1)}s: ${caption || "no caption"}; drawn ${drawn.join(", ") || "nothing"}`);
   await guidedPage.close();
+}
+
+// Back to the guided runs (App.jsx backToWelcome, 2026-11-12): pressed in a
+// guided run's card while its fire plays, the run and the fire end, the model
+// goes and the welcome screen comes back at its guided runs, with no reload;
+// then from a model opened by hand, by the button at the top left of the
+// view, inside the view and below the header on a phone too.
+{
+  const p = await context.newPage();
+  await p.goto(`${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`, { waitUntil: "load", timeout: 60000 });
+  await p.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  await p.evaluate(() => {
+    window.__samePage = true;
+  });
+  await p.locator(".welcome").getByRole("button", { name: /^A fire on the route/ }).click().catch(() => {});
+  const playing = await p
+    .waitForFunction(() => [...document.querySelectorAll(".viewport button")].some((b) => /^Stop fire$/.test(b.textContent.trim())), null, { timeout: 240000 })
+    .then(() => true)
+    .catch(() => false);
+  await p.locator(".guided").getByRole("button", { name: "Back to the guided runs" }).click().catch(() => {});
+  // Long enough for a guided stage, a fire step or a late load to come back if any were left running.
+  await p.waitForTimeout(3000);
+  const after = await p.evaluate(() => ({
+    samePage: window.__samePage === true,
+    welcome: Boolean(document.querySelector(".welcome")),
+    guided: Boolean(document.querySelector(".guided")),
+    fire: [...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent.trim())),
+    model: Boolean(window.__viewer?.model || window.__viewer?.lod1),
+    layers: window.__viewer?.overlays?.size ?? -1,
+    focus: document.activeElement?.textContent?.trim() || "",
+  }));
+  record(
+    playing && after.samePage && after.welcome && !after.guided && !after.fire && !after.model && after.layers === 0,
+    "Guided runs, pressed while a guided run's fire plays, ends it and shows the welcome screen without a reload",
+    JSON.stringify(after),
+  );
+  record(after.focus === "Or watch a guided run", "  with the keyboard's focus on the guided runs", after.focus || "nowhere");
+  await p.locator(".welcome").getByRole("button", { name: /^Duplex apartment/ }).click({ timeout: 60000 }).catch(() => {});
+  await p.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Build egress graph/.test(b.textContent) && !b.disabled), null, { timeout: 120000 }).catch(() => {});
+  const home = p.locator(".viewport__top").getByRole("button", { name: "Back to the guided runs" });
+  const homeBox = await home.boundingBox().catch(() => null);
+  const placed = await p.evaluate((box) => {
+    const view = document.querySelector(".viewport")?.getBoundingClientRect();
+    const header = document.querySelector(".header")?.getBoundingClientRect();
+    return Boolean(box && view && header) && box.y >= header.bottom && box.x >= view.left && box.x + box.width <= view.right && document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+  }, homeBox);
+  await home.click().catch(() => {});
+  const back = await p.waitForFunction(() => Boolean(document.querySelector(".welcome")), null, { timeout: 10000 }).then(() => true).catch(() => false);
+  const samePage = await p.evaluate(() => window.__samePage === true);
+  record(
+    placed && back && samePage,
+    "  and from a model opened by hand, by the button at the top left of the view",
+    `${homeBox ? `at ${Math.round(homeBox.x)}, ${Math.round(homeBox.y)}, ${Math.round(homeBox.width)} px wide` : "not shown"}${placed ? "" : " (outside the view, or the page scrolls sideways)"}, ${back ? "welcome" : "no welcome"}, ${samePage ? "no reload" : "reloaded"}`,
+  );
+  await p.close();
 }
 
 // Hints and field notes from a fresh browser (nothing stored): the count

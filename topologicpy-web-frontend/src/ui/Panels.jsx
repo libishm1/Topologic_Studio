@@ -23,7 +23,18 @@ import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
 import { MEASURED_PRE, NO_RESPONSE_SOURCE, RSET_CRITERIA, RSET_PRESETS, criterionOf, measuredOf, presetOf } from "../core/rsetPresets.js";
 import { worstStatus } from "../core/perfReport.js";
 import { healthReason } from "../core/runHealth.js";
-import { validationLine } from "../core/calibrationStatus.js";
+import { COVERED, validationLine } from "../core/calibrationStatus.js";
+import {
+  DEFAULT_SERVICE_RESPONSE,
+  NFPA_1710_RESPONSE,
+  SERVICE_HORIZON_MAX,
+  SERVICE_RESPONSE_MAX,
+  SERVICE_RESPONSE_MIN,
+  computeSeconds,
+  durationText,
+  gpuPace,
+  serviceArrival,
+} from "../core/fireService.js";
 import { SOLVERS } from "../core/solverVersions.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
@@ -2877,6 +2888,49 @@ function GpuNote() {
   );
 }
 
+/**
+ * A run until the fire service arrives (core/fireService.js): how long it
+ * lasts and from what, whether it lies past the tested times, and roughly how
+ * long it takes to compute. The estimate is at the pace of the last run timed
+ * here on the same backend and grid; else, on the standard grid, at least the
+ * GPU's kept speed allows (measured on a larger grid); else not known.
+ */
+function ServiceRunNote({ settings, pace, gpuSpeed }) {
+  const { detection, response, arrival, horizon, capped, beyondTested } = serviceArrival(settings.perfDetection, settings.flamescapesServiceResponse);
+  const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(horizon)));
+  const apart = horizon / frames;
+  const grid = settings.flamescapesCalibratedGrid ? "calibrated" : settings.flamescapesGridPolicy;
+  const nfpa = NFPA_1710_RESPONSE.map((p) => `${p.seconds} s ${p.label}`).join(", ");
+  let compute;
+  if (pace && pace.backend === settings.flamescapesBackend && pace.grid === grid) {
+    compute =
+      `About ${durationText(computeSeconds(horizon, pace))} to compute, at the pace of the last run here ` +
+      `(${durationText(pace.simulated)} simulated in ${durationText(pace.wallMs / 1000)} on ${pace.kind === "gpu" ? "the GPU" : "one CPU core"}); ` +
+      "longer if the fire grows faster than that one did.";
+  } else if (gpuSpeed?.rate > 0 && grid === "standard" && settings.flamescapesBackend === "auto") {
+    compute = `At least about ${durationText(computeSeconds(horizon, gpuPace(gpuSpeed.rate, STANDARD_CELLS)))} to compute on ${gpuSpeed.name}, at the speed kept in this browser, which was measured on a larger grid.`;
+  } else {
+    compute = "How long it takes to compute is known once a run has been timed on this device.";
+  }
+  if (!(pace?.kind === "cpu" && pace.grid === grid && pace.backend === settings.flamescapesBackend)) compute += " One CPU core takes several times as long as a GPU.";
+  return (
+    <Notice tone={capped || beyondTested ? "warning" : "neutral"}>
+      <strong>
+        The fire runs {durationText(horizon)} ({horizon.toLocaleString()} s).
+      </strong>{" "}
+      Detection at {Math.round(detection)} s, the time set under Performance check in the Route step (a run&apos;s own smoke detectors are
+      read only after it), and the fire service {durationText(response)} after it
+      {response === DEFAULT_SERVICE_RESPONSE ? `: NFPA 1710 (2020 edition) for the first engine company, ${nfpa}` : ""}. Counted from
+      detection, as if the alarm reached the fire service at once.
+      {capped ? ` The run stops at ${SERVICE_HORIZON_MAX.toLocaleString()} s, before they arrive at ${Math.round(arrival).toLocaleString()} s.` : ""}
+      {beyondTested
+        ? ` Runs beyond ${COVERED.horizon} s lie outside the tested range: the held-out fire tests ran ${COVERED.times}, and the run card says so.`
+        : ""}{" "}
+      Kept as {frames} frames {apart < 10 ? apart.toFixed(1) : Math.round(apart)} s apart (Steps, under Rerouting and timing). {compute}
+    </Notice>
+  );
+}
+
 /** Progress and state of a Flamescapes run: backend, grid, time, heat release, embers. */
 function CombustionStatus({ combustion, running }) {
   if (!combustion) return null;
@@ -3228,6 +3282,8 @@ export function SimulatePanel({
   systemsPlan = null,
   systemsBusy = false,
   onLayOutSystems,
+  pace = null,
+  gpuSpeed = null,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo, semantics } = studio;
   // Running, or starting: the two-zone model computes its frames first.
@@ -3412,15 +3468,36 @@ export function SimulatePanel({
         {ready && fire.step > 0 && !fire.running && <ExportTopologic onExport={onExportTopologic} withRun={flamescapes} onExportTable={onExportTable} />}
         {flamescapes && (
           <Disclosure summary="Flamescapes settings">
+            <Toggle
+              label="Run until the fire service arrives"
+              checked={settings.flamescapesUntilService}
+              onChange={(flamescapesUntilService) => setSettings({ flamescapesUntilService })}
+              hint="Off by default: the fire runs for the simulated time set. On, it runs until detection, as the performance check sets it, plus the fire service's response, at most an hour."
+            />
+            {settings.flamescapesUntilService && (
+              <>
+                <NumberField
+                  label="Fire service response (min)"
+                  value={Math.round((settings.flamescapesServiceResponse / 60) * 100) / 100}
+                  min={SERVICE_RESPONSE_MIN / 60}
+                  max={SERVICE_RESPONSE_MAX / 60}
+                  step={0.05}
+                  onChange={(minutes) => setSettings({ flamescapesServiceResponse: Math.round((minutes ?? DEFAULT_SERVICE_RESPONSE / 60) * 60) })}
+                />
+                <ServiceRunNote settings={settings} pace={pace} gpuSpeed={gpuSpeed} />
+              </>
+            )}
             <div className="grid-2">
-              <NumberField
-                label="Simulated time (s)"
-                value={settings.flamescapesHorizon}
-                min={30}
-                max={900}
-                step={30}
-                onChange={(flamescapesHorizon) => setSettings({ flamescapesHorizon: flamescapesHorizon ?? 180 })}
-              />
+              {!settings.flamescapesUntilService && (
+                <NumberField
+                  label="Simulated time (s)"
+                  value={settings.flamescapesHorizon}
+                  min={30}
+                  max={900}
+                  step={30}
+                  onChange={(flamescapesHorizon) => setSettings({ flamescapesHorizon: flamescapesHorizon ?? 180 })}
+                />
+              )}
               <NumberField
                 label="Fire load (MJ/m²)"
                 value={settings.flamescapesFireLoad}

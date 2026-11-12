@@ -256,7 +256,7 @@ Idle, waiting for the fire run (Flamescapes), planning (a job in the plan lane),
 | Playing | `fire.running`; a fire handle set |
 | Ended / Stopped | `fire.running` false; `fireStoppedRef` tells which |
 
-Start is enabled only in Idle (or after an end); Plan and the fire settings wait while Starting or Playing; Stop is enabled while Starting or Playing. A start continues after its frames only if no stop or newer start came (`fireStartRef`).
+Start is enabled only in Idle (or after an end); Plan and the fire settings wait while Starting or Playing; Stop is enabled while Starting or Playing. A start continues after its frames only if no stop or newer start came (`fireStartRef`). Run again in the view (`App.jsx replay`, 2026-11-12) calls the same `startFire`; it is offered only in Ended or Stopped after a Flamescapes fire, with a Flamescapes model chosen, and not while a plan's run or repeat runs compute, a guided run is on screen or a pick waits.
 
 #### M8. People leaving (`App.jsx`: `crowdKey`, `crowdState`, `crowdDoneRef`, the walk effect)
 
@@ -493,6 +493,7 @@ The model and the graph live both in React state (`useStudio`) and in the viewer
 | the load answers, `seq` still latest | Loading | Shown |
 | the load answers for an older `seq` | any | ignored |
 | the viewer mode switched away | any | None *(SM-7, C3)* |
+| Guided runs, back to the welcome screen (`backToWelcome`, 2026-11-12) | any | None: the guided run ends as its Stop ends it; a fire playing or starting is stopped as Stop fire stops it (M7) and a recording saved as its Stop saves it (M9); then as for a file opened (the load's `seq` bumped, the sampler, RL, plan, report, egress and slime workers ended) with no new file; the viewer drops a load still running and its model and layers (`ViewerManager.unloadModel`); a Flamescapes run still computing or repeating is ended by the graph's effect (M4) |
 
 Invariants: only the latest load writes the page; `loadState` belongs to the latest load or build; the viewer shows the model `modelInfo` describes.
 

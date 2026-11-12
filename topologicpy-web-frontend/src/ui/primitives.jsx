@@ -372,6 +372,13 @@ const ICON_PATHS = {
     </>
   ),
   close: <path d="M5 5l10 10M15 5 5 15" />,
+  back: <path d="M16 10H4M9 5l-5 5 5 5" />,
+  replay: (
+    <>
+      <path d="M4.5 7.5A6.5 6.5 0 1 1 3.5 11" />
+      <path d="M4.5 3v4.5H9" />
+    </>
+  ),
   flag: (
     <>
       <path d="M5 17.5V3" />

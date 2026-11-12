@@ -7,6 +7,8 @@
  * or "finest"; it is now flamescapesGridPolicy, "standard" by default. A
  * chosen "finest" is kept; the old default gives way to the standard grid.
  */
+import { SERVICE_RESPONSE_MAX, SERVICE_RESPONSE_MIN } from "./fireService.js";
+
 export function migrateSettings(stored) {
   const { flamescapesGrid, ...rest } = stored || {};
   if (rest.flamescapesGridPolicy === undefined && flamescapesGrid === "finest") rest.flamescapesGridPolicy = "finest";
@@ -16,6 +18,11 @@ export function migrateSettings(stored) {
   if (rest.flamescapesGridPolicy === "calibrated") rest.flamescapesCalibratedGrid = true;
   if (rest.flamescapesGridPolicy !== undefined && !GRID_POLICIES.includes(rest.flamescapesGridPolicy)) rest.flamescapesGridPolicy = "standard";
   if (rest.flamescapesSolver !== undefined && !SOLVER_NAMES.includes(rest.flamescapesSolver)) delete rest.flamescapesSolver;
+  // A run until the fire service arrives (core/fireService.js): a switch, and a
+  // response in the field's range, s; anything else gives way to the default.
+  if (rest.flamescapesUntilService !== undefined && typeof rest.flamescapesUntilService !== "boolean") delete rest.flamescapesUntilService;
+  const response = rest.flamescapesServiceResponse;
+  if (response !== undefined && !(Number.isFinite(response) && response >= SERVICE_RESPONSE_MIN && response <= SERVICE_RESPONSE_MAX)) delete rest.flamescapesServiceResponse;
   return rest;
 }
 

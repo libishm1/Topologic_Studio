@@ -10,12 +10,26 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { formatBytes } from "../lib/perf.js";
 import { Badge, Button, FileButton, Icon } from "./primitives.jsx";
 
-/** Where a guided run is: its stage's caption, the stages as dots, and Stop (Close once it ends). */
 /**
- * A guided run's card: its stages, then the field note it ends on, found
- * (with what was found) or still a question.
+ * Back to the welcome screen and its guided runs (App.jsx backToWelcome).
+ * On a phone only its arrow shows (workflow.css), as the header's buttons
+ * show only their icons; its name says where it goes.
  */
-function GuidedCaption({ guided, onStop, onOpenNotes }) {
+function HomeButton({ onHome }) {
+  return (
+    <Button size="sm" className="viewport-btn home-btn" onClick={onHome} aria-label="Back to the guided runs" title="Back to the welcome screen and its guided runs">
+      <Icon name="back" size={16} />
+      <span className="viewport-btn__label">Guided runs</span>
+    </Button>
+  );
+}
+
+/**
+ * A guided run's card: where it is (its stage's caption and the stages as
+ * dots), then the field note it ends on, found (with what was found) or still
+ * a question; Stop (Close once it ends), and back to the guided runs.
+ */
+function GuidedCaption({ guided, onStop, onOpenNotes, onHome }) {
   const index = Math.max(0, guided.stages.findIndex((s) => s.id === guided.stage));
   const ended = guided.stage === "done" || Boolean(guided.error);
   return (
@@ -47,6 +61,7 @@ function GuidedCaption({ guided, onStop, onOpenNotes }) {
             Open field notes
           </Button>
         )}
+        {onHome && <HomeButton onHome={onHome} />}
       </div>
     </div>
   );
@@ -91,6 +106,9 @@ export function Viewport({
   guided,
   onStopGuided,
   onOpenNotes,
+  onHome = null,
+  replay = null,
+  onReplay = null,
   recording = null,
   onRecord = null,
 }) {
@@ -98,6 +116,32 @@ export function Viewport({
   const [dragOver, setDragOver] = useState(false);
   const [initError, setInitError] = useState(null);
   const [booting, setBooting] = useState(true);
+  // Where the keyboard goes after the two view buttons that go away when
+  // pressed: back on the welcome screen, to its guided runs; after Run again,
+  // to the playback bar's Stop fire.
+  const guidedHeadingRef = useRef(null);
+  const stopFireRef = useRef(null);
+  const focusAfterRef = useRef(null);
+  const welcome = !booting && !hasModel && !loadState.busy;
+  const goHome = useCallback(() => {
+    focusAfterRef.current = "guided";
+    onHome?.();
+  }, [onHome]);
+  const runAgain = useCallback(() => {
+    focusAfterRef.current = "stop";
+    onReplay?.();
+  }, [onReplay]);
+  useEffect(() => {
+    const want = focusAfterRef.current;
+    if (want === "guided" && welcome && guidedHeadingRef.current) {
+      focusAfterRef.current = null;
+      guidedHeadingRef.current.focus({ preventScroll: true });
+      guidedHeadingRef.current.scrollIntoView({ block: "start" });
+    } else if (want === "stop" && fire?.running && stopFireRef.current) {
+      focusAfterRef.current = null;
+      stopFireRef.current.focus();
+    }
+  }, [welcome, fire?.running]);
   // Open on a wide screen; on a phone the legend would cover most of the
   // model, so it starts folded to one line.
   const [legendOpen, setLegendOpen] = useState(
@@ -207,7 +251,7 @@ export function Viewport({
         </div>
       )}
 
-      {!booting && !hasModel && !loadState.busy && (
+      {welcome && (
         <div className="placeholder">
           <section className="welcome" aria-labelledby="welcome-title">
             <div>
@@ -279,7 +323,9 @@ export function Viewport({
 
             {guidedRuns?.length > 0 && (
               <div>
-                <h2 className="welcome__subtitle">Or watch a guided run</h2>
+                <h2 className="welcome__subtitle" ref={guidedHeadingRef} tabIndex={-1}>
+                  Or watch a guided run
+                </h2>
                 <p className="welcome__note">Studio opens an example and takes each step for you, then stops at the result.</p>
                 <ul className="example-grid">
                   {guidedRuns.map((run) => (
@@ -301,7 +347,7 @@ export function Viewport({
         </div>
       )}
 
-      {guided && <GuidedCaption guided={guided} onStop={onStopGuided} onOpenNotes={onOpenNotes} />}
+      {guided && <GuidedCaption guided={guided} onStop={onStopGuided} onOpenNotes={onOpenNotes} onHome={onHome ? goHome : null} />}
 
       {initError && (
         <div className="placeholder">
@@ -316,31 +362,50 @@ export function Viewport({
         </div>
       )}
 
-      {loadState.busy && (
-        <div className="overlay overlay--top-left">
-          <div className="card progress">
-            <div className="progress__row">
-              <span className="progress__label">
-                {STAGE_LABELS[loadState.stage] || "Working"}
-              </span>
-              {loadState.percent !== undefined && loadState.percent !== null && (
-                <span className="progress__detail">{Math.round(loadState.percent)}%</span>
+      {/* Top left: back to the guided runs whenever the welcome screen is gone
+          (a guided run's card, which sits here, carries its own); Run again
+          beside it once a Flamescapes run has ended or been stopped (App.jsx
+          replay), which moves to the playback bar's place at the bottom on a
+          view wide enough to keep it clear of the legend and the view card
+          (workflow.css .replay-btn); a load's progress below them. */}
+      {(loadState.busy || (!guided && ((onHome && hasModel) || (replay && onReplay)))) && (
+        <div className="overlay overlay--top-left viewport__top">
+          {!guided && (
+            <div className="viewport__row">
+              {onHome && !booting && (hasModel || loadState.busy) && <HomeButton onHome={goHome} />}
+              {replay && onReplay && (
+                <Button variant="primary" className="viewport-btn replay-btn" onClick={runAgain} title="Start the Flamescapes fire again with the settings as they are now">
+                  <Icon name="replay" size={16} />
+                  {replay.changed ? "Run again with new settings" : "Run again"}
+                </Button>
               )}
             </div>
-            <div className="progress__track">
-              <div
-                className={`progress__fill${
-                  loadState.percent === undefined || loadState.percent === null
-                    ? " progress__fill--indeterminate"
-                    : ""
-                }`}
-                style={{ width: `${loadState.percent ?? 35}%` }}
-              />
+          )}
+          {loadState.busy && (
+            <div className="card progress">
+              <div className="progress__row">
+                <span className="progress__label">
+                  {STAGE_LABELS[loadState.stage] || "Working"}
+                </span>
+                {loadState.percent !== undefined && loadState.percent !== null && (
+                  <span className="progress__detail">{Math.round(loadState.percent)}%</span>
+                )}
+              </div>
+              <div className="progress__track">
+                <div
+                  className={`progress__fill${
+                    loadState.percent === undefined || loadState.percent === null
+                      ? " progress__fill--indeterminate"
+                      : ""
+                  }`}
+                  style={{ width: `${loadState.percent ?? 35}%` }}
+                />
+              </div>
+              {loadState.detail && (
+                <div className="progress__detail">{String(loadState.detail).slice(0, 60)}</div>
+              )}
             </div>
-            {loadState.detail && (
-              <div className="progress__detail">{String(loadState.detail).slice(0, 60)}</div>
-            )}
-          </div>
+          )}
         </div>
       )}
 
@@ -384,12 +449,13 @@ export function Viewport({
                 </div>
               ) : null}
             </div>
-            <Button variant="danger" onClick={onStopFire}>
+            <Button variant="danger" onClick={onStopFire} ref={stopFireRef}>
               Stop fire
             </Button>
           </div>
         </div>
       )}
+
 
       {hasModel && (
         <>
