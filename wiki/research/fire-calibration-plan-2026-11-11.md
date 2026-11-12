@@ -1133,6 +1133,32 @@ Each physics item made, and each full rerun, reports its cost beside its accurac
 
 13.A showed that UL FSRI's analysers read almost no oxygen drop in the open-door tests, and the ratio of two changes has no meaning when the measured one is within the instrument's uncertainty. Disclosed as prompted by a held-out result. The rule, for every species pair in every series: a pair whose measured change (the drop of O2, the rise of CO2) is below 0.005 by volume fraction is left out and counted as "below the instrument". The 0.005 is a round figure chosen here, not taken from an analyser's certificate; if a series' report states its analyser's uncertainty, twice that figure replaces it for that series, looked up before 13.B's species are read. Every statistic and verdict is reported both ways, as pre-registered and with this rule, and the stricter decides the app's text. So the rule can show what the other pairs say, and can never lift a verdict.
 
+### 14.8 The analysers' stated uncertainty, and how 14.7 uses it (2026-11-12, 23:20, before 13.B's species are read)
+
+Four series compare species: NIST/NRC, WTC, FSE and UL FSRI (O2 only). Each report states a figure. All were read in the reports; I checked the NIST/NRC table and the UL FSRI sentence myself.
+
+| series | gas | stated (expanded, about 95 %) | covers | source |
+|---|---|---|---|---|
+| NIST/NRC | O2 | 0.01 volume fraction | calibration, drift, sampling, response | NIST SP 1013-1, Table 8-4 |
+| NIST/NRC | CO2 | 0.0025 volume fraction | the same | the same |
+| WTC | O2 | 5 % of the reading (Table 2-3, "typical"); 0.0007 at 0.15 (Table 6-1) | Table 6-1: the analyser alone (span gas, noise, drift) | NIST NCSTAR 1-5B, volume 1 |
+| WTC | CO2 | 2 % of the reading; 0.0008 at 0.04 | the same | the same |
+| FSE | O2, CO2 | 12 % of the reading | span gas, equipment, mixing in the sample line, random | NIST TN 1603, Table 2.6 |
+| UL FSRI | O2 | 12 %, taken from the FSE study, not derived for its own analysers | as FSE | Willi and others 2023, section 2.3 |
+
+14.7 did not say how a relative figure becomes a volume fraction, nor what happens when a report's figure is below the 0.005 floor, nor which of WTC's two O2 figures holds. Fixed here, before any species pair of 13.B is read:
+
+1. Each species statistic is reported three ways: over all pairs (as pre-registered); with the 0.005 floor; and with the series' own figure. The strictest of the three decides the app's text. So this section, like 14.7, cannot lift a verdict.
+2. With the series' own figure, a pair is left out when its measured change is below the larger of 0.005 and twice the stated uncertainty. The floor stays a floor: a report's smaller figure does not lower it. This narrows 14.7's "replaces".
+3. A relative figure is taken at the pair's own reading, rebuilt from the measured change and the nominal ambient: the O2 reading is 0.2095 less the drop; the CO2 reading is 0.0004 plus the rise. So with 12 % an O2 drop is left out below 0.0405, and with 5 % below 0.0190. For CO2 a relative figure never exceeds the floor, so the floor holds.
+4. WTC's O2 takes the 5 % of Table 2-3. Table 6-1 covers the analyser alone, without sampling, and the other three series' figures include sampling. With Table 6-1 the threshold would be the floor, which the second reading already gives.
+
+The thresholds that follow: NIST/NRC O2 0.020, CO2 0.005; WTC O2 0.0190, CO2 0.005; FSE O2 0.0405, CO2 0.005; UL FSRI O2 0.0405.
+
+Known when this was written, from 13.A: UL FSRI's open-door O2 drops are small, so the third reading will leave most of them out. That is what prompted 14.7. The number of pairs left out is reported with every statistic.
+
+The three readings are computed from each run's stored pairs (a pair keeps the measured change), so 13.B needs no flag for them.
+
 ## 15. The fire's own heat release (2026-11-12, 22:35, before any heat release record is read)
 
 14.5 asked first what UL FSRI's 2018 tests measured. Read for that: the repository's `02_Info/README.md`, `channel_list.csv` and `furniture_mass.csv` (descriptions, channel names and masses; no test record).
@@ -1170,3 +1196,26 @@ A check of the curve the app takes from the literature, not of the solver. No ve
 ### 15.5 The burner's nominal size
 
 For the open-door burner tests above 100 kW with a heat release record: the mean measured heat release over the steady period against the nominal 250 or 500 kW. Reported as a ratio per test. If the median ratio is outside 0.95 to 1.05, `fsri` is also run with the measured heat release prescribed and reported beside; 13.A's and 13.B's verdicts stand on the nominal size as pre-registered, and the stricter of the two decides the app's text.
+
+### 15.6 Results of 15.3 (the UL FSRI part) and 15.5 (2026-11-12, 23:20)
+
+Tool: `tools/calibration/heat-release-checks.mjs`; every number is in `benchmark/results/2026-11-12-heat-release-checks.json`. No model run is involved. I recomputed one burner mean and one chair's energy and raw peak from the raw records by a separate route; they agree.
+
+**The burner's nominal size (15.5).** Of 22 open-door burner tests of 250 or 500 kW, 19 have a heat release record. The steady period is the events file's, from "Ignition" to "Burner Off", with the 1 s readings as recorded. The median of measured over nominal is 1.003 (range 0.817 to 1.139), inside 0.95 to 1.05. So `fsri` is not run again with the measured heat release, and its verdicts stand on the nominal size, as 15.5 says. Three 250 kW tests read 0.82 to 0.84 (Back_3, Center_3, Corner_2) and one 500 kW test reads 1.14 (Center_3); 15.5 tests the median only, so these are recorded and nothing follows from them here.
+
+**The design fire's curve against the chair tests (15.3).** Of 14 open-door furniture tests, 13 have a record. The readings are the suite's 5 s means. Growth coefficients, in kW/s²:
+
+| item | tests | median | range | the app's medium (0.0117) | the app's fast (0.0469) |
+|---|---|---|---|---|---|
+| RedAccent chair (about 20 kg) | 6 | 0.0222 | 0.0132 to 0.0517 | below the range | inside, near the top |
+| Overstuffed (about 49 kg; the series calls it a sofa) | 7 | 0.0830 | 0.0503 to 0.1763 | below the range | below the range |
+
+Peaks: RedAccent median 1,376 kW (1,094 to 1,718); Overstuffed median 2,653 kW (1,814 to 3,192). Energy: RedAccent median 296 MJ; Overstuffed median 835 MJ, a lower bound, because every item was put out while still burning.
+
+What bends the method, for the reader to weigh: several Overstuffed records have an early bump of 50 to 90 kW before the main rise, and the free start time skips it; in two Overstuffed tests the coefficient nearly halves between the 5 s means and the raw readings (0.083 against 0.137, 0.067 against 0.127), because the window ends on a plateau. The series records no mass loss, so the energy cannot be checked against mass.
+
+**Beside it, not pre-registered** (computed from the table's own coefficients and start times after they were read): the fitted curves start 43 to 236 s after ignition, and the app's design fire grows from the moment of ignition. Counted from ignition, the fitted curves reach 1 MW at a median of about 290 s for the RedAccent chair and about 250 s for the Overstuffed item. The app's medium curve reaches 1 MW at 292 s and its fast curve at 146 s. So the medium class describes these items' time to 1 MW from ignition closely, and understates how steeply they rise once they have caught.
+
+No verdict word attaches to any of this (15.3). The app's default design fire is unchanged and changes only on the user's word.
+
+**NIST's Fire Calorimetry Database (15.3, the terms).** Its data are a NIST public data set (doi:10.18434/mds2-2314), not Standard Reference Data. NIST's licence statement for such data allows use, modified works and their distribution, asks that a modified work say that it was changed, when and how, and asks that NIST be acknowledged as the source. The database's user guide asks that each project's own report be cited, NIST TN 2077 for the method, and the database itself. The sentences were read through a fetch tool that returns fragments; they are to be read on the pages before they are quoted. The upholstered chair and sofa records can be downloaded as 1 s files and carry initial and final mass. They have not been opened. Reading them is the next step of 15.3.

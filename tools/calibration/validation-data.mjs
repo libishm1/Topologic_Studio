@@ -65,7 +65,7 @@ export const NOTICE =
 
 const known = new Map(); // repo/path -> sha256 recorded in an earlier reduced file
 
-async function fetchFile(repo, file) {
+export async function fetchFile(repo, file) {
   const local = path.join(CACHE, repo, ...file.split("/"));
   let buf;
   if (existsSync(local)) buf = readFileSync(local);
