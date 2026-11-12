@@ -38,13 +38,18 @@ the heat.*
   gained half its heat again in a minute). Its gas now moves through the
   cells conserving mass and heat, and heated gas expands, on the CPU and the
   GPU alike. Its one fitted constant was refitted, and it was then compared,
-  by rules written before the comparisons, with 74 room fire tests it was
-  never fitted to (Steckler, NBS multi-room, NIST/NRC, WTC). The smoke
-  layer's depth is calibrated on 0.27 m cells (bias 1.05, scatter 0.15, in
-  all four series) and indicative on 0.20 and 0.34 m; the layer's
-  temperature and the gas under the ceiling are indicative; gases, door
-  flows and visibility are not calibrated. The tests had insulating-board
-  walls; the app's walls are stone. Each run's card says what holds on its
+  by rules written before the comparisons, with 80 room fire tests it was
+  never fitted to (Steckler, NBS multi-room, NIST/NRC, WTC and the ATF
+  corridors). The smoke layer's depth is calibrated on 0.27 m cells (bias
+  1.08, scatter 0.15, in band in all five series) and indicative on 0.20
+  and 0.34 m; the layer's temperature and the gas under the ceiling are
+  indicative on 0.34 m and not calibrated on 0.27 m, where the corridor
+  tests scatter; gases, door flows and visibility are not calibrated.
+  "Calibrated" is this project's name for passing its pre-registered
+  bands; the standards would call it validated for that quantity on those
+  cells. A test burner now burns only with oxygen, and a pool (a spill or
+  a pan of oil) is a design fire grown to its steady burning rate. The
+  tests had insulating-board walls; the app's walls are stone. Each run's card says what holds on its
   cells. The protocol and the results:
   [wiki/research/fire-calibration-claim-protocol-2026-11-12.md](wiki/research/fire-calibration-claim-protocol-2026-11-12.md).
 - **The guide names every control,** and the panel folds long hints, adds

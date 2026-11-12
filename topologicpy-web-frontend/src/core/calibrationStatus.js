@@ -24,21 +24,25 @@ export const EXACT_CELL = 0.005;
 export const NEAR_CELL = 0.035;
 
 /**
- * Per quantity: its status on each tested cell, and a short note. Held-out:
- * Steckler (NBS 1982), NBS multi-room (1991), NIST/NRC (2006) and WTC (2005).
+ * Per quantity: its status on each tested cell, and a short note, from the
+ * held-out run on the final solver (6ee8c93, 2026-11-12,
+ * benchmark/results/2026-11-12-validation-o2.json; the stricter of plan 12.6
+ * and protocol section 4). Held-out: Steckler (NBS 1982), NBS multi-room
+ * (1991), NIST/NRC (2006), WTC (2005) and ATF corridors (2008).
  */
 export const VALIDATION = [
   {
     id: "layerDepth",
     quantity: "smoke layer depth",
     status: { 0.2: "indicative", 0.27: "calibrated", 0.34: "indicative" },
-    note: "bias 1.05, scatter 0.15 on 0.27 m cells, in band in all four held-out test series",
+    note: "bias 1.08, scatter 0.15 on 0.27 m cells, in band in all five held-out test series",
   },
-  { id: "layerTemperature", quantity: "smoke layer temperature", status: { 0.2: "not calibrated", 0.27: "indicative", 0.34: "indicative" }, note: "bias 1.06 on 0.27 m cells; NBS's multi-room tests scatter too much" },
-  { id: "ceilingJet", quantity: "gas temperature under the ceiling", status: { 0.27: "indicative", 0.34: "indicative" }, note: "bias 1.18 on 0.27 m cells; measured in two series from one laboratory" },
-  { id: "gases", quantity: "oxygen and carbon dioxide", status: { 0.27: "not calibrated", 0.34: "not calibrated" }, note: "the WTC tests read 1.6 to 1.8 times their measured change" },
-  { id: "doorFlow", quantity: "flow through a door", status: { 0.2: "not calibrated", 0.27: "not calibrated", 0.34: "not calibrated" }, note: "the peak outflow reads two thirds of measured; a door is a few cells wide" },
-  { id: "visibility", quantity: "smoke visibility", status: {}, note: "not yet compared with measurements" },
+  { id: "layerTemperature", quantity: "smoke layer temperature", status: { 0.2: "not calibrated", 0.27: "not calibrated", 0.34: "indicative" }, note: "in band in three of five series; the ATF corridors and NBS's multi-room tests scatter too much" },
+  { id: "ceilingJet", quantity: "gas temperature under the ceiling", status: { 0.27: "not calibrated", 0.34: "indicative" }, note: "in band in NIST's two series (bias 1.03 and 1.19 on 0.27 m cells); the ATF corridors scatter too much" },
+  { id: "gases", quantity: "oxygen and carbon dioxide", status: { 0.27: "not calibrated", 0.34: "not calibrated" }, note: "in band in NIST/NRC; the WTC tests read 1.7 to 2.3 times their measured change" },
+  { id: "doorFlow", quantity: "flow through a door", status: { 0.2: "not calibrated", 0.27: "not calibrated", 0.34: "not calibrated" }, note: "the peak outflow reads 0.56 to 0.69 of measured; a door is a few cells wide" },
+  { id: "neutralPlane", quantity: "neutral plane in a door", status: { 0.2: "not calibrated", 0.27: "not calibrated", 0.34: "not calibrated" }, note: "in band in its one series (Steckler, bias 0.91 to 0.97); calibrated needs three" },
+  { id: "visibility", quantity: "smoke visibility", status: { 0.27: "not calibrated", 0.34: "not calibrated" }, note: "smoke obscuration reads 1.76 times measured in the one series compared (NIST/NRC)" },
 ];
 
 /**
@@ -50,7 +54,7 @@ export const COVERED = {
   peakKW: 3200,
   horizon: 900,
   fires: "their measured heat release (32 kW to 3.2 MW)",
-  rooms: "rooms of 17 to 584 m³, open or closed, one with a corridor",
+  rooms: "rooms of 17 to 584 m³, open or closed, and corridors",
   times: "up to 900 s",
   walls: "insulating-board walls",
 };

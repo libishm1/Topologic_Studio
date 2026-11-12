@@ -24,8 +24,9 @@ test("a verdict holds on the cells it was found on; near them it is at most indi
 test("the run card's sentence: what decides untenability, what holds on its cells, and under what conditions", () => {
   const on27 = validationLine(0.27);
   assert.match(on27, /^This run's untenable places come from smoke visibility and gas temperature at head height/);
-  assert.match(on27, /smoke layer depth calibrated \(bias 1\.05, scatter 0\.15/);
-  assert.match(on27, /smoke layer temperature and gas temperature under the ceiling indicative/);
+  assert.match(on27, /smoke layer depth calibrated \(bias 1\.08, scatter 0\.15/);
+  assert.match(on27, /smoke layer temperature, gas temperature under the ceiling, .* and smoke visibility not calibrated/);
+  assert.match(validationLine(0.34), /smoke layer depth, smoke layer temperature and gas temperature under the ceiling indicative/);
   assert.match(on27, /smoke visibility not calibrated/);
   assert.match(on27, /insulating-board walls/);
   assert.match(on27, /predicts its own heat release, which is not calibrated, and its walls are stone\.$/);
