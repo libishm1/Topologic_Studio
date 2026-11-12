@@ -44,7 +44,7 @@
  * software adapter (--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader).
  *
  *   node tools/flamescapes-gpu-check.mjs [--headed] [--swiftshader] [--quick]
- *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|timing] [--horizon 120] [--members 6]
+ *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|walls|timing] [--horizon 120] [--members 6]
  *        [--json out.json] [--url http://localhost:5173] (a running Vite server)
  */
 import { chromium } from "playwright-core";
@@ -135,8 +135,9 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     return { positions: Float32Array.from(p), indices: Uint32Array.from(f), material };
   }
   const S = V.MATERIAL.STONE;
-  const W = 5, D = 4, H = 2.7, t = 0.2;
-  const meshes = [
+  const W = 5, D = 4, H = 2.7;
+  // The room's walls t m thick (0.2; thinner for the walls phase's timing, so they are one cell thick on fine cells too).
+  const meshesOf = (t) => [
     box(-t, -t, -t, W + t, 0, D + t, S),
     box(-t, H, -t, W + t, H + t, D + t, S),
     box(-t, 0, -t, W + t, H, 0, S),
@@ -146,13 +147,14 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     box(W, 0, 2.4, W + t, H, D, S),
     box(W, 2.0, 1.5, W + t, H, 2.4, S),
   ];
+  const meshes = meshesOf(0.2);
   const classA = { heatOfCombustion: 17.5e6, yields: { co2: 1.27, co: 0.004, soot: 0.015 }, embers: true, ignitionTemperature: 300 };
   const chosen = fireClass ? (await import(base + "fireClasses.js")).fuelsFor(fireClass) : null;
   const contentsFuel = chosen?.contentsFuel ?? classA;
   const ignitionFuel = chosen?.ignitionFuel ?? classA;
-  function room(cell, maxCells) {
-    const grid = V.gridFor(meshes, { upAxis: "y", cell, margin: 3, headroom: 3, maxCells });
-    const fraction = V.volumeFractions(grid, meshes, { rays: V.raysFor(grid) });
+  function room(cell, maxCells, ms = meshes) {
+    const grid = V.gridFor(ms, { upAxis: "y", cell, margin: 3, headroom: 3, maxCells });
+    const fraction = V.volumeFractions(grid, ms, { rays: V.raysFor(grid) });
     const solid = V.occupancy(grid, fraction);
     const cells = V.interiorCells(grid, fraction, { ceiling: 5, layers: 2 });
     const fuel = V.interiorFuel(grid, cells, { fireLoad: 780e6, heatOfCombustion: 17.5e6, spread: 0.3, layers: 2, seed: 3 });
@@ -229,6 +231,13 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     const c = { ...sim, P: { ...sim.P, seed }, topo: null, random: V.rng(seed), stats: { ...sim.stats }, parts: { ...sim.parts } };
     for (const key of Object.keys(sim)) if (ArrayBuffer.isView(sim[key])) c[key] = sim[key].slice();
     for (const key of Object.keys(sim.parts)) if (ArrayBuffer.isView(sim.parts[key])) c.parts[key] = sim.parts[key].slice();
+    // One-dimensional walls keep their nodes in sim.wall.
+    if (sim.wall) {
+      c.wall = { ...sim.wall };
+      for (const key of Object.keys(sim.wall)) if (ArrayBuffer.isView(sim.wall[key])) c.wall[key] = sim.wall[key].slice();
+    }
+    // Working arrays are per solver.
+    c.work = {};
     return c;
   };
 
@@ -785,6 +794,119 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     }
   }
 
+  // ---- 4. one-dimensional walls (calibration plan 13.4, item 1): the room's
+  // walls a 12.7 mm gypsum lining on 150 mm of concrete, one cell thick.
+  if (phase === "all" || phase === "walls") {
+    const lining = [{ thickness: 0.0127, rho: 1440, c: 840, k: 0.48 }, { thickness: 0.15, rho: 2100, c: 880, k: 1.0 }];
+    const layered = (h) => {
+      const mass = lining.reduce((a, l) => a + l.rho * l.thickness, 0), heat = lining.reduce((a, l) => a + l.rho * l.c * l.thickness, 0);
+      return [{ name: "lined", rho: mass / h, c: heat / mass, k: 0.48, eps: 0.9, layers: lining }, F.INERT[1], F.INERT[2]];
+    };
+    out.walls = { runs: [] };
+    const scene = room(0.25, 200000);
+    // Deterministic stages: radiation and particles off, 200 steps; the walls' nodes compared too.
+    for (const [label, extra] of [["walls, radiation and particles off", { maxParticles: 0 }]]) {
+      const opts = { emitAbove: 1e9, embers: false, dt: 0.1, wallLayers: 1, inert: layered(scene.grid.h), ...extra };
+      const cpu = solverOf(scene, opts);
+      const twin = solverOf(scene, opts);
+      for (let c = 0; c < twin.N; c += 1) if (twin.kind[c] !== 2) twin.T[c] = Math.fround(twin.T[c] * (1 + 2 ** -23));
+      const gpu = runner.createSim(solverOf(scene, opts), {});
+      out.walls.cells = cpu.wall.cells.length;
+      out.walls.grid = [scene.grid.nx, scene.grid.ny, scene.grid.nz];
+      const rows = [];
+      for (let s = 1; s <= 200; s += 1) {
+        F.step(cpu, 0.1);
+        F.step(twin, 0.1);
+        gpu.step(0.1);
+        if (![1, 10, 50, 100, 200].includes(s)) continue;
+        const g = await gpu.readFields();
+        const nodes = absDiffs(cpu.wall.T, g.wallT, () => true), twinNodes = absDiffs(cpu.wall.T, twin.wall.T, () => true);
+        let rise = 0;
+        for (let q = 0; q < cpu.wall.T.length; q += 1) rise = Math.max(rise, cpu.wall.T[q] - cpu.P.ambient);
+        rows.push({ step: s, ...range(cpu), gpu: compare(cpu, g), twin: compare(cpu, twin), nodes, twinNodes, nodeRise: rise });
+        log(`walls step ${s}: max |dT| GPU ${rows.at(-1).gpu.T.max.toExponential(2)} K, twin ${rows.at(-1).twin.T.max.toExponential(2)} K; nodes GPU ${nodes.max.toExponential(2)} K, twin ${twinNodes.max.toExponential(2)} K`);
+      }
+      gpu.destroy();
+      out.walls.runs.push({ label, rows });
+    }
+    // Radiation: one step from a developed fire, everything above 300 K casting rays, against the
+    // CPU with another seed. The walls' low faces are then set to 700 K and their high faces to
+    // 450 K (each wall's nodes graded between, its mean and `last` matched), so that every wall
+    // emits from faces of different temperatures and takes rays on both.
+    {
+      const base = solverOf(scene, { dt: 0.1, wallLayers: 1, inert: layered(scene.grid.h), emitAbove: 300 });
+      while (base.time < (quick ? 40 : 60) - 1e-9) F.step(base, 0.1);
+      const Wb = base.wall, A = base.grid.h ** 2;
+      for (let w = 0; w < Wb.cells.length; w += 1) {
+        const s = Wb.meta[w] >> 2;
+        let mean = 0;
+        for (let q = 0; q < Wb.n; q += 1) {
+          Wb.T[w * Wb.n + q] = 700 - (250 * q) / (Wb.n - 1);
+          mean += Wb.C[s * Wb.n + q] * Wb.T[w * Wb.n + q];
+        }
+        base.Ts[Wb.cells[w]] = Wb.last[w] = (mean * A) / (Wb.heat[s] * A);
+      }
+      const a = cloneSim(base, 11), b = cloneSim(base, 12);
+      // And a CPU with the GPU's own seed: both cast the same rays (cellStream), so they should differ by round-off only.
+      const same = cloneSim(base, base.P.seed);
+      const gpu = runner.createSim(base, {});
+      const r0 = base.stats.radiated;
+      F.step(a, 0.1);
+      F.step(b, 0.1);
+      F.step(same, 0.1);
+      gpu.step(0.1);
+      const frame = await gpu.readFrame({ particles: false });
+      const g = await gpu.readFields();
+      gpu.destroy();
+      const meanAbs = (A, Bf) => A.reduce((s, x, q) => s + Math.abs(x - Bf[q]), 0) / A.length;
+      let hotNodes = 0;
+      for (let q = 0; q < base.wall.T.length; q += 1) if (base.wall.T[q] > 300) hotNodes += 1;
+      const emitting = base.wall.cells.length;
+      out.walls.radiation = {
+        time: base.time, hotNodes, emitting,
+        radiatedJ: { cpu: a.stats.radiated - r0, cpuOtherSeed: b.stats.radiated - r0, gpu: frame.radiated },
+        nodes: { gpuMeanAbs: meanAbs(a.wall.T, g.wallT), seedMeanAbs: meanAbs(a.wall.T, b.wall.T), gpuMax: absDiffs(a.wall.T, g.wallT, () => true).max, seedMax: absDiffs(a.wall.T, b.wall.T, () => true).max },
+        gasT: { gpuMax: compare(a, g).T.max, seedMax: compare(a, b).T.max },
+        sameRays: { radiatedJ: same.stats.radiated - r0, nodesMax: absDiffs(same.wall.T, g.wallT, () => true).max, nodesP99: absDiffs(same.wall.T, g.wallT, () => true).p99, TsMax: compare(same, g).Ts.max, gasTMax: compare(same, g).T.max },
+      };
+      log(`walls radiation at ${base.time.toFixed(1)} s: radiated CPU ${(a.stats.radiated - r0).toFixed(0)} J, other seed ${(b.stats.radiated - r0).toFixed(0)} J, GPU ${frame.radiated.toFixed(0)} J`);
+    }
+    // ms per step, the full model, walls off and on.
+    out.walls.timing = [];
+    for (const [label, cell, cap] of [["30k", 0.15, 30000], ["200k", 0.05, 200000]]) {
+      // Walls 5 cm thick: one cell thick on either grid, so every one is a one-dimensional wall.
+      const s = room(cell, cap, meshesOf(0.05));
+      const time = async (opts) => {
+        const gpu = runner.createSim(solverOf(s, { dt: 0.1, ...opts }), {});
+        for (let k = 0; k < 5; k += 1) gpu.step(0.1);
+        await gpu.finish();
+        const n = quick ? 50 : 200;
+        const t0 = performance.now();
+        for (let k = 0; k < n; k += 1) gpu.step(0.1);
+        await gpu.finish();
+        gpu.destroy();
+        return (performance.now() - t0) / n;
+      };
+      const cpuTime = (opts) => {
+        const cpu = solverOf(s, { dt: 0.1, ...opts });
+        F.step(cpu, 0.1);
+        const n = label === "30k" ? (quick ? 10 : 30) : (quick ? 3 : 6);
+        const t0 = performance.now();
+        for (let k = 0; k < n; k += 1) F.step(cpu, 0.1);
+        return { ms: (performance.now() - t0) / n, walls: cpu.wall?.cells.length ?? 0 };
+      };
+      const on = { wallLayers: 1, inert: layered(s.grid.h) };
+      // Off and on in turn, twice, the faster of each (the first runs warm the GPU and the JIT).
+      const cpuOff = cpuTime({}), cpuOn = cpuTime(on), cpuOff2 = cpuTime({}), cpuOn2 = cpuTime(on);
+      cpuOff.ms = Math.min(cpuOff.ms, cpuOff2.ms);
+      cpuOn.ms = Math.min(cpuOn.ms, cpuOn2.ms);
+      const gpuOff1 = await time({}), gpuOn1 = await time(on), gpuOff2 = await time({}), gpuOn2 = await time(on);
+      const gpuOff = Math.min(gpuOff1, gpuOff2), gpuOn = Math.min(gpuOn1, gpuOn2);
+      out.walls.timing.push({ label, cells: s.grid.cells, walls: cpuOn.walls, cpuOff: cpuOff.ms, cpuOn: cpuOn.ms, gpuOff, gpuOn });
+      log(`walls timing ${label}: ${s.grid.cells} cells, ${cpuOn.walls} walls; CPU ${cpuOff.ms.toFixed(1)} / ${cpuOn.ms.toFixed(1)} ms, GPU ${gpuOff.toFixed(2)} / ${gpuOn.toFixed(2)} ms (off / on)`);
+    }
+  }
+
   // ---- 3. ms per step
   if (phase === "all" || phase === "timing") {
     out.timing = [];
@@ -830,7 +952,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
   return out;
 }
 
-const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "timing"] : [PHASE];
+const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "walls", "timing"] : [PHASE];
 const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
@@ -966,6 +1088,24 @@ if (report.worker) {
   }
 }
 if (report.embers) console.log(`\nEmbers on: CPU spawned ${report.embers.cpu.spawned}, spots ${report.embers.cpu.spots}, peak ${f(report.embers.cpu.peakHrr, 1)} kW; GPU spawned ${report.embers.gpu.spawned}, spots ${report.embers.gpu.spots}, peak ${f(report.embers.gpu.peakHrr, 1)} kW`);
+if (report.walls) {
+  const w = report.walls;
+  console.log(`\nOne-dimensional walls (a 12.7 mm gypsum lining on 150 mm of concrete), ${w.grid?.join("x")} cells, ${w.cells} walls: |CPU - GPU| beside |CPU - CPU twin| (one ulp warmer)`);
+  for (const run of w.runs) {
+    console.log(`\n  ${run.label}`);
+    console.log("  step | gas T (K) max / p99      | O2 max   | Ts max   | wall nodes max / p99 (largest rise) | twin: T max  Ts max   nodes max | hottest gas C");
+    for (const r of run.rows) console.log(`  ${String(r.step).padStart(4)} | ${e(r.gpu.T.max)} / ${e(r.gpu.T.p99)} | ${e(r.gpu.O2.max)} | ${e(r.gpu.Ts.max)} | ${e(r.nodes.max)} / ${e(r.nodes.p99)} (${f(r.nodeRise, 1)} K) | ${e(r.twin.T.max)} ${e(r.twin.Ts.max)} ${e(r.twinNodes.max)} | ${f(r.TmaxC, 0)}`);
+  }
+  if (w.radiation) {
+    const r = w.radiation;
+    console.log(`\n  Radiation (emitAbove 300 K), one step from the CPU state at ${f(r.time, 1)} s, every wall's faces set to 700 and 450 K (${r.hotNodes} nodes above 300 K): CPU seed 11 vs GPU, and vs CPU seed 12`);
+    console.log(`  radiated J  CPU ${f(r.radiatedJ.cpu, 0)}  other seed ${f(r.radiatedJ.cpuOtherSeed, 0)}  GPU ${f(r.radiatedJ.gpu, 0)}`);
+    console.log(`  wall nodes mean |diff| GPU ${e(r.nodes.gpuMeanAbs)} K vs other seed ${e(r.nodes.seedMeanAbs)} K; max ${e(r.nodes.gpuMax)} vs ${e(r.nodes.seedMax)} K; gas T max ${e(r.gasT.gpuMax)} vs ${e(r.gasT.seedMax)} K`);
+    const q = r.sameRays;
+    if (q) console.log(`  the CPU with the GPU's seed (the same rays): radiated ${f(q.radiatedJ, 0)} J; |CPU - GPU| wall nodes max ${e(q.nodesMax)} / p99 ${e(q.nodesP99)} K, Ts max ${e(q.TsMax)} K, gas T max ${e(q.gasTMax)} K`);
+  }
+  for (const r of w.timing || []) console.log(`  ms per step, the room with 5 cm walls, ${r.label} (${r.cells} cells, ${r.walls} walls): CPU ${f(r.cpuOff, 1)} off / ${f(r.cpuOn, 1)} on; GPU ${f(r.gpuOff, 2)} off / ${f(r.gpuOn, 2)} on`);
+}
 if (report.timing) {
   console.log("\nms per step (full model at the start of the fire; GPU steps queued, then waited for)");
   for (const r of report.timing) console.log(`  ${r.label.padEnd(5)} ${r.grid.join("x")} = ${r.cells} cells, h ${f(r.h, 3)} m: CPU ${f(r.cpuMs, 1)} ms (${r.cpuSteps} steps), GPU ${f(r.gpuMs, 2)} ms (${r.gpuSteps} steps; encode ${f(r.encodeMsPerStep, 2)} ms; grid stages only ${f(r.gpuGridOnlyMs, 2)} ms), speed-up ${f(r.cpuMs / r.gpuMs, 1)}x`);

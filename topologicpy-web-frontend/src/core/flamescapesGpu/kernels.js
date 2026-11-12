@@ -76,12 +76,20 @@
  *     workgroup each) over a cell list the CPU's topology made at upload, where
  *     the CPU sums in cell order each step; only porous cells change kind on
  *     the GPU, and they stay open, so the regions do not change.
+ *   - One-dimensional walls (the CPU's walls stage, calibration plan 13.4
+ *     item 1): one thread per wall steps its profile; the heat its faces give
+ *     their gas waits in the wall buffer and each open cell gathers it in
+ *     direction order (the CPU sums it in float64), so no two threads write
+ *     one cell. Rays reaching a wall's end deposit in the fixed point of the
+ *     other deposits.
  *   - A value every thread needs from an atomic (the particle count, the
  *     sweep's state) is read by one thread per workgroup and shared through
  *     workgroupUniformLoad; kernels that only read the atomic buffer bind it a
  *     second time as plain u32 (atomPlain). On D3D12 an atomicLoad is a
  *     read-modify-write, and thousands on one address serialise.
  */
+
+import { WALL_NODES_MAX } from "../flamescapes.js";
 
 /** Uniform parameters, all 4-byte scalars, then the two fuels' stoichiometry. */
 export const PARAMS = [
@@ -134,6 +142,10 @@ export const PARAMS = [
   // cell lists in `io` from sealedAt) and their mean expansion in `red` (redMean).
   ["conservative", "u32"], ["expansion", "u32"], ["gasAt", "u32"], ["expandAt", "u32"],
   ["sealedN", "u32"], ["sealedAt", "u32"], ["redMean", "u32"],
+  // One-dimensional walls (flamescapes.js wallSetup, calibration plan 13.4
+  // item 1): how many, their nodes each, their stacks (the `wall` buffer's
+  // layout, WALL), and where in `atom` their ends' ray deposits are (two per wall).
+  ["wallN", "u32"], ["wallNodes", "u32"], ["wallStacks", "u32"], ["wallDepAt", "u32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -151,13 +163,16 @@ export const CF_FIELDS = 20;
 /**
  * Per-cell integer fields in the `ci` buffer (sealed: the cell's sealed
  * region, numbered from 0, or NO_CELL; the CPU's topology, uploaded once:
- * only porous cells change kind on the GPU, and they stay open).
+ * only porous cells change kind on the GPU, and they stay open; wall: the
+ * cell's one-dimensional wall, or NO_CELL, read only with walls).
  */
-export const CI = Object.freeze({ kind: 0, fuelKind: 1, burning: 2, vapour: 3, mask: 4, count: 5, sealed: 6 });
-export const CI_FIELDS = 7;
+export const CI = Object.freeze({ kind: 0, fuelKind: 1, burning: 2, vapour: 3, mask: 4, count: 5, sealed: 6, wall: 7 });
+export const CI_FIELDS = 8;
 /**
  * Per-cell atomic fields in the `atom` buffer, then (from U.gsAt = AT_FIELDS
- * N) one slot per pressure sweep: the largest pressure change of that sweep.
+ * N) one slot per pressure sweep: the largest pressure change of that sweep;
+ * then (from U.wallDepAt) two per one-dimensional wall, its low and high
+ * ends' ray deposits.
  */
 export const AT = Object.freeze({ flame: 0, depGas: 1, depSolid: 2, ember: 3, emberMax: 4 });
 export const AT_FIELDS = 5;
@@ -182,7 +197,18 @@ export const WG = 64;
  * buffer again as plain u32, for kernels that only read it: an atomicLoad is a
  * read-modify-write on some backends (D3D12), a plain load is not.
  */
-export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13, sup: 14, sys: 15 });
+export const B = Object.freeze({ U: 0, cf: 1, Y: 2, ci: 3, vel: 4, snap: 5, atom: 6, parts: 7, partsB: 8, ctr: 9, red: 10, io: 11, sweep: 12, atomPlain: 13, sup: 14, sys: 15, wall: 16 });
+/**
+ * The `wall` buffer (binding 16), only as large as a run with one-dimensional
+ * walls needs (16 bytes otherwise, never read), W walls of n nodes and S
+ * stacks: each wall's cell (u32 bits), from W its meta (axis + 4 stack, u32
+ * bits), from 2W its `last` mean, from 3W its nodes (n each), from (3 + n) W
+ * the heat its six faces gave their gas (J, six each); from (9 + n) W each
+ * stack's node capacities (n each, J/(m^2 K)), then its conductances (n - 1
+ * each), its heat per area and its thickness (one each). The CPU's
+ * sim.wall, in that order.
+ */
+export const WALL = Object.freeze({ faces: 6, fixed: 9 });
 /**
  * The `sys` buffer (binding 15), only as large as a run with flooded or
  * foamed rooms needs (16 bytes otherwise, never read): per cell its room
@@ -223,8 +249,8 @@ export const KERNELS = {
   spawnFlameEnd: { uses: [0, 9], threads: one, wg: 1 },
   spawnEmbers: { uses: [0, 1, 3, 4, 7, 9], threads: cells },
   moveParticles: { uses: [0, 1, 3, 4, 7, 9], threads: particles },
-  radEmit: { uses: [0, 1, 2, 3, 6, 10], threads: cells },
-  radApply: { uses: [0, 1, 13], threads: cells },
+  radEmit: { uses: [0, 1, 2, 3, 6, 10, 16], threads: cells },
+  radApply: { uses: [0, 1, 3, 13, 16], threads: cells },
   particleToGrid: { uses: [0, 1, 3, 6, 7, 9], threads: particles },
   emberDeposit: { uses: [0, 1, 3, 9, 13], threads: cells },
   // With the conservative transport the cells' T and Y are the transport's, not the back-trace's.
@@ -261,6 +287,9 @@ export const KERNELS = {
   conduct_bx: { uses: [0, 1, 2, 3], threads: cells },
   conduct_by: { uses: [0, 1, 2, 3], threads: cells },
   conduct_bz: { uses: [0, 1, 2, 3], threads: cells },
+  // One-dimensional walls: one thread per wall, then each open cell gathers what its wall neighbours gave it.
+  walls: { uses: [0, 1, 2, 3, 16], threads: (d) => d.wallN || 0 },
+  wallsApply: { uses: [0, 1, 2, 3, 16], threads: cells },
   densityBoundaries: { uses: [0, 1, 2, 3], threads: cells },
   topology: { uses: [0, 3], threads: cells },
   projectZero: { uses: [0, 3, 4], threads: faces },
@@ -516,6 +545,7 @@ struct Sweep { s: u32, pad0: u32, pad1: u32, pad2: u32 }
 @group(0) @binding(13) var<storage, read_write> atomPlain: array<u32>;
 @group(0) @binding(14) var<storage, read_write> sup: array<f32>;
 @group(0) @binding(15) var<storage, read_write> sys: array<f32>;
+@group(0) @binding(16) var<storage, read_write> wall: array<f32>;
 
 var<workgroup> wsum: array<vec4<f32>, 64>;
 var<workgroup> wmax: array<u32, 64>;
@@ -540,6 +570,7 @@ const PI: f32 = 3.14159265358979;
 const DEP_SCALE: f32 = ${DEP_SCALE}.0;
 const EMBER_SCALE: f32 = ${EMBER_SCALE}.0;
 const NO_CELL: u32 = 0xffffffffu;
+const WALL_MAX: u32 = ${WALL_NODES_MAX}u;
 
 // ------------------------------------------------------------------ indexing
 
@@ -647,6 +678,33 @@ fn fuelCp(c: u32) -> f32 { return fuelOf(ci[ix(iFuelKind, c)]).cp; }
 /** Heat capacity of a cell's solid: inert part, fuel surface layer, water (J/K). */
 fn solidCap(c: u32) -> f32 {
   return capOf(cf[ix(fInertC, c)], cf[ix(fFuel, c)], cf[ix(fArea, c)], cf[ix(fMoist, c)], fuelCp(c));
+}
+
+/** A cell's one-dimensional wall (its index in the wall buffer), or NO_CELL; the field is never read without walls. */
+fn wallOf(c: u32) -> u32 {
+  if (U.wallN == 0u) { return NO_CELL; }
+  return ci[ix(iWall, c)];
+}
+/** The wall buffer's layout (WALL): meta, last, nodes, face heats, then the stacks. */
+fn wMeta(w: u32) -> u32 { return bitcast<u32>(wall[U.wallN + w]); }
+fn wLast(w: u32) -> u32 { return 2u * U.wallN + w; }
+fn wNode(w: u32, q: u32) -> u32 { return 3u * U.wallN + w * U.wallNodes + q; }
+fn wQ(w: u32, d: u32) -> u32 { return (3u + U.wallNodes) * U.wallN + 6u * w + d; }
+fn wStacks() -> u32 { return (9u + U.wallNodes) * U.wallN; }
+fn wC(s: u32, q: u32) -> u32 { return wStacks() + s * U.wallNodes + q; }
+fn wG(s: u32, q: u32) -> u32 { return wStacks() + U.wallStacks * U.wallNodes + s * (U.wallNodes - 1u) + q; }
+fn wHeat(s: u32) -> u32 { return wStacks() + U.wallStacks * (2u * U.wallNodes - 1u) + s; }
+fn wThick(s: u32) -> u32 { return wHeat(s) + U.wallStacks; }
+/** Wall w's area on a side face: its edge, its thickness by the cell, at most the face (the CPU's wallSide). */
+fn wSide(w: u32) -> f32 { return min(wall[wThick(wMeta(w) >> 2u)], U.h) * U.h; }
+/** Heat into one end of wall w, as the rise k it would give the whole cell (the CPU's wallEnd). */
+fn wallEnd(w: u32, c: u32, end: u32, k: f32) {
+  let n = U.wallNodes;
+  let s = wMeta(w) >> 2u;
+  let q = select(0u, n - 1u, end == 1u);
+  wall[wNode(w, q)] += (k * wall[wHeat(s)]) / wall[wC(s, q)];
+  cf[ix(fTs, c)] += k;
+  wall[wLast(w)] += k;
 }
 
 /** Change a gas cell's species masses by d (kg each), nitrogen kept; renormalise (the CPU's changeGas). */
@@ -1026,6 +1084,62 @@ fn deposit(field: u32, c: u32, dT: f32) {
   let v = i32(round(clamp(dT, -20000.0, 20000.0) * DEP_SCALE));
   atomicAdd(&atom[ix(field, c)], bitcast<u32>(v));
 }
+/** A ray's rise into one end of wall w (the CPU's dep.lo and dep.hi), in the deposits' fixed point. */
+fn wallDeposit(w: u32, end: u32, dT: f32) {
+  let v = i32(round(clamp(dT, -20000.0, 20000.0) * DEP_SCALE));
+  atomicAdd(&atom[U.wallDepAt + 2u * w + end], bitcast<u32>(v));
+}
+
+/**
+ * Radiation leaving wall w (cell c at p) over its faces open to gas or the
+ * domain's side (the CPU's wallEmit): an end face at its end node, a side
+ * face at the cell's mean over its edge's area, each above emitAbove and at
+ * most half its node's (or the cell's) heat above ambient; faceE gets each
+ * face's energy, which leaves the nodes it came from. Returns the total.
+ */
+fn wallEmit(w: u32, c: u32, p: vec3<i32>, faceE: ptr<function, array<f32, 6>>) -> f32 {
+  let n = U.wallNodes;
+  // Cool walls cast nothing.
+  if (!(wall[wNode(w, 0u)] > U.emitAbove || wall[wNode(w, n - 1u)] > U.emitAbove || cf[ix(fTs, c)] > U.emitAbove)) { return 0.0; }
+  let A = U.h * U.h;
+  let side = wSide(w);
+  let wm = wMeta(w);
+  let axis = wm & 3u;
+  let s = wm >> 2u;
+  let total = wall[wHeat(s)] * A;
+  let Ta = U.ambient;
+  let Ta4 = Ta * Ta * Ta * Ta;
+  var all = 0.0;
+  var sides = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    (*faceE)[d] = 0.0;
+    let r = p + dirv(d);
+    if (inside(r) && kindOf(atI(r)) != GAS) { continue; }
+    let end = (d >> 1u) == axis;
+    // An odd direction is down the axis: the end at node 0.
+    let q = select(n - 1u, 0u, (d & 1u) == 1u);
+    var Tf = cf[ix(fTs, c)];
+    var cap = total;
+    if (end) {
+      Tf = wall[wNode(w, q)];
+      cap = wall[wC(s, q)] * A;
+    }
+    if (!(Tf > U.emitAbove)) { continue; }
+    var e = cf[ix(fEps, c)] * SIGMA * (Tf * Tf * Tf * Tf - Ta4) * select(side, A, end) * U.dt;
+    e = min(e, 0.5 * cap * (Tf - Ta));
+    if (!(e > 0.0)) { continue; }
+    (*faceE)[d] = e;
+    all += e;
+    if (end) { wall[wNode(w, q)] -= e / cap; } else { sides += e; }
+  }
+  if (!(all > 0.0)) { return 0.0; }
+  if (sides > 0.0) {
+    for (var q = 0u; q < n; q++) { wall[wNode(w, q)] -= sides / total; }
+  }
+  cf[ix(fTs, c)] -= all / total;
+  wall[wLast(w)] -= all / total;
+  return all;
+}
 
 /** March one ray cell by cell (Amanatides-Woo), depositing its energy (the CPU's march). */
 fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool) {
@@ -1060,7 +1174,14 @@ fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool) {
     if (!inside(q)) { return; }
     let next = atI(q);
     if (kindOf(next) != GAS && !(skipOwn && next == src)) {
-      deposit(aDepSolid, next, left / max(solidCap(next), 1e-6));
+      let rise = left / max(solidCap(next), 1e-6);
+      let w = wallOf(next);
+      if (w != NO_CELL && a == (wMeta(w) & 3u)) {
+        // A one-dimensional wall reached along its normal takes the ray on the face it crossed.
+        wallDeposit(w, select(1u, 0u, stepv[a] > 0), rise);
+        return;
+      }
+      deposit(aDepSolid, next, rise);
       return;
     }
   }
@@ -1084,7 +1205,18 @@ fn radiateCell(c: u32) -> f32 {
   var nf = 0u;
   let Ts = cf[ix(fTs, c)];
   let T = cf[ix(fT, c)];
-  if (kc != GAS && Ts > U.emitAbove) {
+  let w = wallOf(c);
+  var faceE = array<f32, 6>(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  if (w != NO_CELL) {
+    // A one-dimensional wall: each open face from its own surface (wallEmit).
+    emitted = wallEmit(w, c, p, &faceE);
+    if (!(emitted > 0.0)) { return 0.0; }
+    for (var d = 0u; d < 6u; d++) {
+      let q = p + dirv(d);
+      if (!inside(q) || kindOf(atI(q)) == GAS) { faces[nf] = d; nf++; }
+    }
+    fromSolid = true;
+  } else if (kc != GAS && Ts > U.emitAbove) {
     // Eq. 16 over the cell's faces open to gas.
     for (var d = 0u; d < 6u; d++) {
       let q = p + dirv(d);
@@ -1120,7 +1252,20 @@ fn radiateCell(c: u32) -> f32 {
     let s = sqrt(max(0.0, 1.0 - zc * zc));
     var dir = vec3<f32>(s * cos(phi), zc, s * sin(phi));
     if (fromSolid) {
-      let f = faces[min(u32(rnd(&rs) * f32(nf)), nf - 1u)];
+      var f = 0u;
+      if (w != NO_CELL) {
+        // A one-dimensional wall's face drawn by its share of the emission.
+        var u = rnd(&rs) * emitted;
+        for (var k = 0u; k < nf; k++) {
+          let d = faces[k];
+          if (!(faceE[d] > 0.0)) { continue; }
+          f = d;
+          u -= faceE[d];
+          if (u < 0.0) { break; }
+        }
+      } else {
+        f = faces[min(u32(rnd(&rs) * f32(nf)), nf - 1u)];
+      }
       dir += vec3<f32>(dirv(f));
       let len = length(dir);
       dir = dir / select(1.0, len, len > 0.0);
@@ -1149,7 +1294,15 @@ ${perCell("radApply", `
   let g = bitcast<i32>(atomPlain[ix(aDepGas, c)]);
   if (g != 0) { cf[ix(fT, c)] += f32(g) / DEP_SCALE; }
   let s = bitcast<i32>(atomPlain[ix(aDepSolid, c)]);
-  if (s != 0) { cf[ix(fTs, c)] += f32(s) / DEP_SCALE; }`)}
+  if (s != 0) { cf[ix(fTs, c)] += f32(s) / DEP_SCALE; }
+  // A one-dimensional wall's ends take what reached them (the CPU's wallEnd).
+  let w = wallOf(c);
+  if (w != NO_CELL) {
+    let lo = bitcast<i32>(atomPlain[U.wallDepAt + 2u * w]);
+    if (lo != 0) { wallEnd(w, c, 0u, f32(lo) / DEP_SCALE); }
+    let hi = bitcast<i32>(atomPlain[U.wallDepAt + 2u * w + 1u]);
+    if (hi != 0) { wallEnd(w, c, 1u, f32(hi) / DEP_SCALE); }
+  }`)}
 
 // ------------------------------------------------------------------ gas phase (Alg. 1 lines 20 to 23)
 
@@ -1723,6 +1876,8 @@ fn conductGas(s: u32, g: u32, Cs: f32) {
 /** Solid c's +axis face to n: solid-solid conduction (Eq. 18) or the interface with gas (Eq. 19). */
 fn conductForward(c: u32, n: u32) {
   if (kindOf(c) == GAS) { return; }
+  // A one-dimensional wall exchanges through its own profile (walls), with no solid beside it.
+  if (wallOf(c) != NO_CELL || wallOf(n) != NO_CELL) { return; }
   let Cs = solidCap(c);
   if (!(Cs > 0.0)) { return; }
   if (kindOf(n) == GAS) {
@@ -1741,7 +1896,7 @@ fn conductForward(c: u32, n: u32) {
 
 /** Solid c's -axis face to n, when n is gas (a solid there met c across its own +axis face). */
 fn conductBackward(c: u32, n: u32) {
-  if (kindOf(c) == GAS || kindOf(n) != GAS) { return; }
+  if (kindOf(c) == GAS || kindOf(n) != GAS || wallOf(c) != NO_CELL) { return; }
   let Cs = solidCap(c);
   if (!(Cs > 0.0)) { return; }
   conductGas(c, n, Cs);
@@ -1755,6 +1910,112 @@ ${conductPass(2, 1)}
 ${conductBack(0)}
 ${conductBack(1)}
 ${conductBack(2)}
+
+/**
+ * One-dimensional walls (the CPU's walls, calibration plan 13.4 item 1), one
+ * thread per wall: what other stages added to its cell's mean spread over
+ * its nodes; its side faces' exact exchange of its mean with the gas beside
+ * them over its edge's area; then its profile's backward-Euler step by the
+ * Thomas algorithm (the CPU's wallStep), each end exchanging with the gas
+ * beyond it, the gas held at its temperature at the stage's start. The heat
+ * each face gave its gas waits in the wall's Q for wallsApply, so no two
+ * threads write one gas cell.
+ */
+${perThread("walls", "U.wallN", `
+  let w = t;
+  let c = bitcast<u32>(wall[w]);
+  let wm = wMeta(w);
+  let axis = wm & 3u;
+  let s = wm >> 2u;
+  let n = U.wallNodes;
+  let A = U.h * U.h;
+  let total = wall[wHeat(s)] * A;
+  let hc = U.wallConvection;
+  var T: array<f32, WALL_MAX>;
+  let added = cf[ix(fTs, c)] - wall[wLast(w)];
+  for (var q = 0u; q < n; q++) {
+    T[q] = wall[wNode(w, q)];
+    if (added != 0.0) { T[q] += added; }
+  }
+  var mean = 0.0;
+  for (var q = 0u; q < n; q++) { mean += wall[wC(s, q)] * T[q]; }
+  mean = (mean * A) / total;
+  let p = vec3<i32>(coords(c));
+  let side = wSide(w);
+  var sides = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    wall[wQ(w, d)] = 0.0;
+    if ((d >> 1u) == axis) { continue; }
+    let r = p + dirv(d);
+    if (!inside(r) || kindOf(atI(r)) == SOLID) { continue; }
+    let nb = atI(r);
+    let q = exchange(mean, cf[ix(fT, nb)], total, gasCap(nb), hc * side, U.dt);
+    wall[wQ(w, d)] = q;
+    sides += q;
+  }
+  if (sides != 0.0) {
+    for (var q = 0u; q < n; q++) { T[q] -= sides / total; }
+  }
+  // Its ends: down the axis (an odd direction) at node 0, up it at node n - 1; insulated against a solid or the domain's side.
+  let rl = p + dirv(2u * axis + 1u);
+  let rh = p + dirv(2u * axis);
+  var hLo = 0.0; var tLo = 0.0; var hHi = 0.0; var tHi = 0.0;
+  if (inside(rl) && kindOf(atI(rl)) != SOLID) { hLo = hc; tLo = cf[ix(fT, atI(rl))]; }
+  if (inside(rh) && kindOf(atI(rh)) != SOLID) { hHi = hc; tHi = cf[ix(fT, atI(rh))]; }
+  // The nodes' changes (the delta form of the CPU's wallStep): its right-hand side of differences keeps a level wall level in float32.
+  var cp: array<f32, WALL_MAX>;
+  var dp: array<f32, WALL_MAX>;
+  for (var i = 0u; i < n; i++) {
+    var a = 0.0;
+    if (i > 0u) { a = -wall[wG(s, i - 1u)]; }
+    var cc = 0.0;
+    if (i < n - 1u) { cc = -wall[wG(s, i)]; }
+    let tt = T[i];
+    var b = wall[wC(s, i)] / U.dt - a - cc;
+    var dd = 0.0;
+    if (i > 0u) { dd = a * (tt - T[i - 1u]); }
+    if (i < n - 1u) { dd += cc * (tt - T[i + 1u]); }
+    if (i == 0u) { b += hLo; dd += hLo * (tLo - tt); }
+    if (i == n - 1u) { b += hHi; dd += hHi * (tHi - tt); }
+    var m = b;
+    if (i > 0u) { m = b - a * cp[i - 1u]; }
+    cp[i] = cc / m;
+    if (i > 0u) { dp[i] = (dd - a * dp[i - 1u]) / m; } else { dp[i] = dd / m; }
+  }
+  var change = dp[n - 1u];
+  let hi = T[n - 1u] + change;
+  T[n - 1u] = hi;
+  var lo = hi;
+  for (var i = i32(n) - 2; i >= 0; i--) {
+    change = dp[i] - cp[i] * change;
+    lo = T[i] + change;
+    T[i] = lo;
+  }
+  wall[wQ(w, 2u * axis + 1u)] = hLo * (lo - tLo) * U.dt * A;
+  wall[wQ(w, 2u * axis)] = hHi * (hi - tHi) * U.dt * A;
+  var after = 0.0;
+  for (var q = 0u; q < n; q++) {
+    wall[wNode(w, q)] = T[q];
+    after += wall[wC(s, q)] * T[q];
+  }
+  let Ts = (after * A) / total;
+  cf[ix(fTs, c)] = Ts;
+  wall[wLast(w)] = Ts;`)}
+
+/** Each open cell takes what the faces of its wall neighbours towards it gave (the walls stage's gather). */
+${perCell("wallsApply", `
+  if (kindOf(c) == SOLID) { return; }
+  let p = vec3<i32>(coords(c));
+  var heat = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    let r = p + dirv(d);
+    if (!inside(r)) { continue; }
+    let w = wallOf(atI(r));
+    if (w == NO_CELL) { continue; }
+    // The wall's face towards this cell is the opposite direction.
+    heat += wall[wQ(w, d ^ 1u)];
+  }
+  if (heat != 0.0) { cf[ix(fT, c)] += heat / gasCap(c); }`)}
 
 /** The equation of state (line 31) and the open sides of the domain (line 32). */
 ${perCell("densityBoundaries", `

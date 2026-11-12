@@ -48,7 +48,7 @@ import {
 import {
   AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, HEAT_UNIT, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
   PARTICLE_FLOATS, SWEEP_BYTES, WG, buildShader,
-  SUP, SYS,
+  SUP, SYS, WALL,
 } from "./flamescapesGpu/kernels.js";
 
 /** A fuel's water rule (fireClasses.js waterResponse) as the bits the WGSL reads: 1 wets, 2 Evans's cap, 4 holds no water. */
@@ -224,6 +224,9 @@ class GpuSim {
     this.sealed = this.expansionOn ? sealedRegions(sim) : null;
     d.conservative = this.conservativeOn;
     d.sealedN = this.sealed ? this.sealed.S : 0;
+    // One-dimensional walls (flamescapes.js wallSetup), when the scene has any.
+    this.wall = sim.wall && sim.wall.cells.length ? sim.wall : null;
+    d.wallN = this.wall ? this.wall.cells.length : 0;
     const pilot = sim.pilot && sim.pilot.cells?.length ? sim.pilot : null;
     this.pilot = pilot;
     // A design-fire first item (flamescapes.js createBurner); its heat for each step is the host's (burnerHeat).
@@ -281,13 +284,17 @@ class GpuSim {
     const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
     const make = (label, bytes) => device.createBuffer({ label, size: Math.max(16, Math.ceil(bytes / 4) * 4), usage });
     const limit = Math.min(device.limits.maxStorageBufferBindingSize, device.limits.maxBufferSize);
+    // The wall buffer's words (kernels.js WALL): per wall its cell, meta, last, nodes and six face heats; per stack its C, G, heat and thickness.
+    const Wn = this.wall ? this.wall.n : 0, Ws = this.wall ? this.wall.heat.length : 0;
+    this.wallWords = this.wall ? (WALL.fixed + Wn) * d.wallN + Ws * (2 * Wn + 1) : 0;
     const sizes = {
       cf: CF_FIELDS * N * 4,
       Y: 6 * N * 4,
       ci: CI_FIELDS * N * 4,
       vel: nuvw * 4,
       snap: snapAt.size * 4,
-      atom: (AT_FIELDS * N + this.gsSlots) * 4,
+      // Then two ray deposits per one-dimensional wall, after the sweeps' slots.
+      atom: (AT_FIELDS * N + this.gsSlots + 2 * d.wallN) * 4,
       parts: Math.max(1, d.cap) * PARTICLE_FLOATS * 4,
       red: red.size * 4,
       io: io.size * 4,
@@ -295,6 +302,8 @@ class GpuSim {
       sup: suppression ? (SUP.fields * N + SUP.column * Math.max(1, suppression.columns)) * 4 : 16,
       // Rooms per cell, their states and the wet cells; nothing without systems.
       sys: this.systems ? (sysAt.wet + SYS.wet * Math.max(1, d.sysWet)) * 4 : 16,
+      // One-dimensional walls; nothing without them.
+      wall: this.wall ? this.wallWords * 4 : 16,
     };
     for (const [name, bytes] of Object.entries(sizes)) if (bytes > limit) throw new RangeError(`Flamescapes GPU: ${name} needs ${bytes} bytes, the device binds ${limit}`);
     this.buf = {
@@ -313,12 +322,13 @@ class GpuSim {
       sweep: device.createBuffer({ label: "sweep index", size: this.sweepStride * this.gsSlots, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }),
       sup: make("sup", sizes.sup),
       sys: make("sys", sizes.sys),
+      wall: make("wall", sizes.wall),
     };
     // Sweep s's index at offset s * sweepStride, bound at that dynamic offset.
     const index = new Uint32Array((this.sweepStride / 4) * this.gsSlots);
     for (let s = 0; s < this.gsSlots; s += 1) index[(s * this.sweepStride) / 4] = s;
     device.queue.writeBuffer(this.buf.sweep, 0, index);
-    const byBinding = [this.buf.U, this.buf.cf, this.buf.Y, this.buf.ci, this.buf.vel, this.buf.snap, this.buf.atom, this.buf.parts, this.buf.partsB, this.buf.ctr, this.buf.red, this.buf.io, this.buf.sweep, this.buf.atom, this.buf.sup, this.buf.sys];
+    const byBinding = [this.buf.U, this.buf.cf, this.buf.Y, this.buf.ci, this.buf.vel, this.buf.snap, this.buf.atom, this.buf.parts, this.buf.partsB, this.buf.ctr, this.buf.red, this.buf.io, this.buf.sweep, this.buf.atom, this.buf.sup, this.buf.sys, this.buf.wall];
     this.groups = {};
     for (const [name, k] of Object.entries(kernels)) {
       this.groups[name] = device.createBindGroup({
@@ -367,6 +377,7 @@ class GpuSim {
       burnerRf: b?.radiantFraction ?? 0, burnerHeat: 0, redBurner: red.burner,
       conservative: this.conservativeOn ? 1 : 0, expansion: this.expansionOn ? 1 : 0, gasAt: snapAt.gas, expandAt: snapAt.expand,
       sealedN: d.sealedN, sealedAt: io.sealed, redMean: red.mean,
+      wallN: d.wallN, wallNodes: Wn, wallStacks: Ws, wallDepAt: AT_FIELDS * N + this.gsSlots,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -411,7 +422,27 @@ class GpuSim {
     if (sim.fuelVapourKind) ci.set(sim.fuelVapourKind, CI.vapour * N);
     if (this.sealed) ci.set(this.sealed.cellSealed, CI.sealed * N);
     else ci.fill(0xffffffff, CI.sealed * N, (CI.sealed + 1) * N);
+    // Each cell's one-dimensional wall (-1, none, is NO_CELL's bits).
+    if (this.wall) ci.set(new Uint32Array(this.wall.index.buffer, this.wall.index.byteOffset, N), CI.wall * N);
+    else ci.fill(0xffffffff, CI.wall * N, (CI.wall + 1) * N);
     q.writeBuffer(this.buf.ci, 0, ci);
+    if (this.wall) {
+      // The CPU's sim.wall in the wall buffer's order (kernels.js WALL).
+      const W = this.wall, n = W.n, Wc = d.wallN;
+      const words = new ArrayBuffer(this.wallWords * 4);
+      const u = new Uint32Array(words), f = new Float32Array(words);
+      u.set(new Uint32Array(W.cells.buffer, W.cells.byteOffset, Wc), 0);
+      u.set(W.meta, Wc);
+      f.set(W.last, 2 * Wc);
+      f.set(W.T, 3 * Wc);
+      f.set(W.Q, (3 + n) * Wc);
+      const stacks = (WALL.fixed + n) * Wc, S = W.heat.length;
+      f.set(W.C, stacks);
+      f.set(W.G, stacks + S * n);
+      f.set(W.heat, stacks + S * (2 * n - 1));
+      f.set(W.thickness, stacks + S * (2 * n - 1) + S);
+      q.writeBuffer(this.buf.wall, 0, words);
+    }
     if (this.suppressionOn) {
       const sup = new Float32Array(SUP.fields * N);
       sup.fill(-1, SUP.rate * N);
@@ -546,6 +577,7 @@ class GpuSim {
     pass.end();
     // Radiation (line 15) and particle-to-grid (lines 16 to 18).
     if (this.radiationOn) enc.clearBuffer(buf.atom, AT.depGas * N * 4, 2 * N * 4);
+    if (this.radiationOn && d.wallN) enc.clearBuffer(buf.atom, (AT_FIELDS * N + this.gsSlots) * 4, 2 * d.wallN * 4);
     if (this.particlesOn) {
       enc.clearBuffer(buf.atom, AT.flame * N * 4, N * 4);
       if (this.embersOn) enc.clearBuffer(buf.atom, AT.ember * N * 4, 2 * N * 4);
@@ -590,6 +622,11 @@ class GpuSim {
     if (d.sysWet) this.dispatch(pass, "systemsWet");
     if (this.particlesOn) this.dispatch(pass, "cullFlameFront");
     for (const name of CONDUCTION) this.dispatch(pass, name);
+    // One-dimensional walls after conduction (the CPU's walls stage), then their gas takes what they gave.
+    if (d.wallN) {
+      this.dispatch(pass, "walls");
+      this.dispatch(pass, "wallsApply");
+    }
     // The expansion the step's heat made, and each sealed region's mean (the CPU's expansionEnd and project).
     if (this.expansionOn) {
       this.dispatch(pass, "expandEnd");
@@ -764,16 +801,19 @@ class GpuSim {
     return { positions, temps, kinds };
   }
 
-  /** Whole fields, for tests only: T, Ts, rho, p, fuel, moisture, Y, u, v, w, kind. */
+  /** Whole fields, for tests only: T, Ts, rho, p, fuel, moisture, Y, u, v, w, kind, and one-dimensional walls' nodes (wallT). */
   async readFields() {
     const { device, buf, dims: d } = this;
     const N = d.N;
     const nuvw = d.nu + d.nv + d.nw;
-    const size = (CF_FIELDS * N + 6 * N + CI_FIELDS * N + nuvw + CTR_SIZE + this.gsSlots) * 4;
+    const wallNodes = this.wall ? d.wallN * this.wall.n : 0;
+    const size = (CF_FIELDS * N + 6 * N + CI_FIELDS * N + nuvw + CTR_SIZE + this.gsSlots + wallNodes) * 4;
     const staging = device.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     const enc = device.createCommandEncoder();
     let o = 0;
-    for (const [b, from, bytes] of [[buf.cf, 0, CF_FIELDS * N * 4], [buf.Y, 0, 6 * N * 4], [buf.ci, 0, CI_FIELDS * N * 4], [buf.vel, 0, nuvw * 4], [buf.ctr, 0, CTR_SIZE * 4], [buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4]]) {
+    const parts = [[buf.cf, 0, CF_FIELDS * N * 4], [buf.Y, 0, 6 * N * 4], [buf.ci, 0, CI_FIELDS * N * 4], [buf.vel, 0, nuvw * 4], [buf.ctr, 0, CTR_SIZE * 4], [buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4]];
+    if (wallNodes) parts.push([buf.wall, 3 * d.wallN * 4, wallNodes * 4]);
+    for (const [b, from, bytes] of parts) {
       enc.copyBufferToBuffer(b, from, staging, o, bytes);
       o += bytes;
     }
@@ -794,11 +834,13 @@ class GpuSim {
     at += CI_FIELDS * N;
     const vel = f.slice(at, at + nuvw);
     at += nuvw;
+    const wallT = wallNodes ? f.slice(at + CTR_SIZE + this.gsSlots, at + CTR_SIZE + this.gsSlots + wallNodes) : null;
     return {
       T: field(CF.T), Ts: field(CF.Ts), rho: field(CF.rho), p: field(CF.p), fuelMass: field(CF.fuel), moisture: field(CF.moist),
       Y, kind, burning, u: vel.subarray(0, d.nu), v: vel.subarray(d.nu, d.nu + d.nv), w: vel.subarray(d.nu + d.nv),
       particles: Math.min(u[at + CTR.count], d.cap),
       sweeps: this.stepCount > 0 ? this.sweepsFrom(f.subarray(at + CTR_SIZE, at + CTR_SIZE + this.gsSlots)) : 0,
+      wallT,
     };
   }
 

@@ -50,6 +50,10 @@
  *     windows closed unless the run says otherwise: closed doors are inert
  *     leaves in their openings, open windows holes in their walls
  *     (buildScene in flamescapesRun.js).
+ *   - A wall one cell thick whose material lists its layers (a validation
+ *     scene's boards) conducts through them normal to its faces, in sub-cell
+ *     nodes, as FDS's walls do (wallSetup, walls; calibration plan 13.4 item
+ *     1); the app's materials list none and stay lumped into their cells.
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -120,6 +124,19 @@ export const DEFAULTS = Object.freeze({
   // at medians 0.78 to 1.26 of it (FDS: 0.73 to 1.13)
   // (wiki/research/sprinkler-activation-fix-2026-11-08.md).
   wallConvection: 10,
+  // One-dimensional walls (calibration plan 13.4, item 1; wallSetup): a
+  // solid cell one cell thick whose inert material lists its `layers`
+  // conducts normal to its faces through `wallNodes` nodes across its real
+  // thickness, finer by `wallStretch` towards each layer's faces, instead of
+  // holding one temperature. 20 nodes at 1.2 keep a heated gypsum board within
+  // 0.4 % of the series solution and a concrete face within 0.8 % of erfc
+  // (flamescapes.wall.test.mjs), and the burner room's heat closes as with
+  // lumped walls (tools/calibration/heat-closure.mjs, lumped and layered); so
+  // it is on. 0 lumps every wall into its cells as before. The app's
+  // materials list no layers, so its runs are unchanged either way.
+  wallLayers: 1,
+  wallNodes: 20,
+  wallStretch: 1.2,
   sootAbsorption: 500, // the paper's residual absorption coefficient kappa
   // Confinement strength (Fedkiw, Stam and Jensen 2001: a force vorticity x h
   // x (N x omega)), the solver's one fitted parameter: 3, refitted 2026-11-12
@@ -284,6 +301,9 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
   const solidMask = scene.solid || occupancy(grid, fraction);
   // The inert materials' properties: INERT, or a test's own (options.inert,
   // the same order) where a validation run matches its walls (2026-11-12).
+  // A material may list its `layers` from its exposed face ({thickness m,
+  // rho, c, k}): with wallLayers its one-cell-thick walls conduct through
+  // them (wallSetup).
   const inert = P.inert || INERT;
   for (let c = 0; c < N; c += 1) {
     let C = 0, K = 0, E = 0, w = 0;
@@ -303,6 +323,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     if (w > 0) eps[c] = E / w;
     if (solidMask[c]) kind[c] = SOLID;
   }
+  // One-dimensional walls, null when off or no material lists its layers.
+  const wall = P.wallLayers > 0 && inert.some((m) => m.layers?.length) ? wallSetup(grid, fraction, solidMask, inert, inertC, P) : null;
   const fuelMass = new Float32Array(N);
   const fuelKind = new Uint8Array(N); // 0 contents, 1 ignition item
   const moisture = new Float32Array(N); // kg water in the surface layer
@@ -349,6 +371,7 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     inertC,
     inertK,
     eps,
+    wall,
     fuelMass,
     fuelKind,
     moisture,
@@ -726,7 +749,16 @@ function radiation(sim, dt) {
   const A = h * h;
   const Ta4 = P.ambient ** 4;
   const dir = [0, 0, 0];
-  const dep = { T: workArray(sim, "radGas", sim.N, Float64Array).fill(0), Ts: workArray(sim, "radSolid", sim.N, Float64Array).fill(0) };
+  // One-dimensional walls emit from, and take rays on, the face concerned
+  // (wallEmit, march): their ends' deposits wait in lo and hi with the rest.
+  const W = sim.wall;
+  const dep = {
+    T: workArray(sim, "radGas", sim.N, Float64Array).fill(0),
+    Ts: workArray(sim, "radSolid", sim.N, Float64Array).fill(0),
+    lo: W ? workArray(sim, "radWallLo", W.cells.length, Float64Array).fill(0) : null,
+    hi: W ? workArray(sim, "radWallHi", W.cells.length, Float64Array).fill(0) : null,
+  };
+  const faceE = [0, 0, 0, 0, 0, 0];
   let stream = 0;
   const draw = () => {
     stream = pcgHash(stream);
@@ -736,7 +768,12 @@ function radiation(sim, dt) {
     const kc = sim.kind[c];
     let emitted = 0;
     let fromSolid = false;
-    if (kc !== GAS && sim.Ts[c] > P.emitAbove) {
+    const w = W ? W.index[c] : -1;
+    if (w >= 0) {
+      emitted = wallEmit(sim, w, c, dt, faceE);
+      if (!(emitted > 0)) continue;
+      fromSolid = true;
+    } else if (kc !== GAS && sim.Ts[c] > P.emitAbove) {
       // Eq. 16 over the cell's faces open to gas.
       const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
       let open = 0;
@@ -779,7 +816,18 @@ function radiation(sim, dt) {
       dir[1] = zc;
       dir[2] = s * Math.sin(phi);
       if (faces) {
-        const n = DIRS[faces[Math.min(Math.floor(draw() * faces.length), faces.length - 1)]];
+        let f = 0;
+        if (w >= 0) {
+          // A one-dimensional wall's face drawn by its share of the emission (its faces differ in temperature).
+          let u = draw() * emitted;
+          for (const d of faces) {
+            if (!(faceE[d] > 0)) continue;
+            f = d;
+            u -= faceE[d];
+            if (u < 0) break;
+          }
+        } else f = faces[Math.min(Math.floor(draw() * faces.length), faces.length - 1)];
+        const n = DIRS[f];
         for (let d = 0; d < 3; d += 1) dir[d] += n[d];
         const len = Math.hypot(dir[0], dir[1], dir[2]) || 1;
         for (let d = 0; d < 3; d += 1) dir[d] /= len;
@@ -790,6 +838,12 @@ function radiation(sim, dt) {
   for (let c = 0; c < sim.N; c += 1) {
     if (dep.T[c]) sim.T[c] += dep.T[c];
     if (dep.Ts[c]) sim.Ts[c] += dep.Ts[c];
+  }
+  if (W) {
+    for (let q = 0; q < W.cells.length; q += 1) {
+      if (dep.lo[q]) wallEnd(sim, q, W.cells[q], 0, dep.lo[q]);
+      if (dep.hi[q]) wallEnd(sim, q, W.cells[q], 1, dep.hi[q]);
+    }
   }
 }
 
@@ -842,7 +896,17 @@ function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null) {
     if (i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz) return; // leaves the domain
     const next = at(g, i, j, k);
     if (sim.kind[next] !== GAS && !(skipOwn && next === from)) {
-      solidTs[next] += left / Math.max(solidCapacity(sim, next), 1e-6);
+      const rise = left / Math.max(solidCapacity(sim, next), 1e-6);
+      const w = sim.wall ? sim.wall.index[next] : -1;
+      if (w >= 0 && a === (sim.wall.meta[w] & 3)) {
+        // A one-dimensional wall reached along its normal takes the ray on the
+        // face it crossed: its low end when the ray runs up the axis.
+        const end = step[a] > 0 ? 0 : 1;
+        if (dep) (end ? dep.hi : dep.lo)[w] += rise;
+        else wallEnd(sim, w, next, end, rise);
+        return;
+      }
+      solidTs[next] += rise;
       return;
     }
   }
@@ -1726,12 +1790,15 @@ function conduct(sim, dt) {
   const { P, grid: g } = sim;
   const { nx, ny, nz, h } = g;
   const A = h * h;
+  // A one-dimensional wall exchanges through its own profile (walls), and
+  // with no solid beside it, as FDS's walls conduct normal to their faces only.
+  const wall = sim.wall ? sim.wall.index : null;
   for (let k = 0; k < nz; k += 1) {
     for (let j = 0; j < ny; j += 1) {
       for (let i = 0; i < nx; i += 1) {
         const c = at(g, i, j, k);
         const kc = sim.kind[c];
-        if (kc === GAS) continue;
+        if (kc === GAS || (wall && wall[c] >= 0)) continue;
         const Cs = solidCapacity(sim, c);
         if (!(Cs > 0)) continue;
         if (kc === POROUS) {
@@ -1749,6 +1816,7 @@ function conduct(sim, dt) {
           const ii = i + a, jj = j + b, kk = k + d;
           if (ii < 0 || jj < 0 || kk < 0 || ii >= nx || jj >= ny || kk >= nz) continue;
           const n = at(g, ii, jj, kk);
+          if (wall && wall[n] >= 0) continue;
           const kn = sim.kind[n];
           if (kn === GAS) {
             const Cg = sim.rho[n] * mixtureCp(sim.Y, n * NS) * sim.V;
@@ -1767,6 +1835,343 @@ function conduct(sim, dt) {
       }
     }
   }
+}
+
+// ---------------------------------------------------- one-dimensional walls
+
+/** Most nodes a wall's profile may have (the GPU's per-thread arrays hold this many). */
+export const WALL_NODES_MAX = 24;
+
+/**
+ * A layered wall (calibration plan 13.4, item 1) as `nodes` nodes across its
+ * thickness, from its first layer's exposed face to its last layer's back:
+ * the vertex-centred finite volumes of FDS's solid phase (FDS Technical
+ * Reference Guide, chapter 7). Every layer has at least one interval; the rest
+ * go to the layers by their thermal thickness L / sqrt(alpha), the largest
+ * remainders first. Within a layer the intervals grow by `stretch` from each of
+ * its two faces towards its middle (FDS stretches from both faces too), so the
+ * steep early profile under a heated face is resolved. Per unit area: node
+ * capacities C (J/(m^2 K), half of each interval beside the node) and the
+ * conductances G between neighbouring nodes (k / interval, W/(m^2 K)); heat,
+ * their sum; x, the nodes' depths.
+ */
+export function wallStack(layers, nodes = DEFAULTS.wallNodes, stretch = DEFAULTS.wallStretch) {
+  const n = Math.min(WALL_NODES_MAX, Math.max(layers.length + 1, nodes | 0));
+  const spare = n - 1 - layers.length;
+  const weight = layers.map((l) => l.thickness / Math.sqrt(l.k / (l.rho * l.c)));
+  const total = weight.reduce((a, b) => a + b, 0);
+  const want = weight.map((w) => (spare * w) / total);
+  const intervals = want.map((w) => 1 + Math.floor(w));
+  let left = n - 1 - intervals.reduce((a, b) => a + b, 0);
+  for (const [, l] of want.map((w, l) => [w - Math.floor(w), l]).sort((a, b) => b[0] - a[0] || a[1] - b[1])) {
+    if (left <= 0) break;
+    intervals[l] += 1;
+    left -= 1;
+  }
+  const C = new Float64Array(n), G = new Float64Array(n - 1), x = new Float64Array(n);
+  let q = 0;
+  layers.forEach((l, li) => {
+    const m = intervals[li];
+    let sum = 0;
+    for (let i = 0; i < m; i += 1) sum += stretch ** Math.min(i, m - 1 - i);
+    for (let i = 0; i < m; i += 1) {
+      const d = (l.thickness * stretch ** Math.min(i, m - 1 - i)) / sum;
+      G[q] = l.k / d;
+      C[q] += (l.rho * l.c * d) / 2;
+      C[q + 1] += (l.rho * l.c * d) / 2;
+      x[q + 1] = x[q] + d;
+      q += 1;
+    }
+  });
+  return { n, C, G, x, heat: C.reduce((a, b) => a + b, 0), thickness: x[n - 1] };
+}
+
+const wallCp = new Float64Array(WALL_NODES_MAX);
+const wallDp = new Float64Array(WALL_NODES_MAX);
+
+/**
+ * One step of a wall's profile: nodes T[o .. o + n) (in place), capacities
+ * C[co ..] and conductances G[go ..] per unit area, by backward Euler, so that
+ * a thin node next to a conductive one is stable at any step. Each end
+ * exchanges with a gas at Tlo or Thi through hLo or hHi (W/(m^2 K); 0, an
+ * insulated end), the gas held at its temperature for the step. The Thomas
+ * algorithm solves the tridiagonal system for the nodes' changes (the delta
+ * form): its right-hand side is made of temperature differences, so a wall
+ * level with its gas stays exactly level in float32 too (solved for the
+ * temperatures themselves, the GPU's nodes drifted by two ulps a step).
+ * `out` gets the heat each end gave its gas over the step, J/m^2: the wall's
+ * own heat changes by exactly minus their sum.
+ */
+export function wallStep(T, o, n, C, co, G, go, dt, hLo, Tlo, hHi, Thi, out) {
+  for (let i = 0; i < n; i += 1) {
+    const a = i > 0 ? -G[go + i - 1] : 0;
+    const c = i < n - 1 ? -G[go + i] : 0;
+    const t = T[o + i];
+    let b = C[co + i] / dt - a - c;
+    let d = (i > 0 ? a * (t - T[o + i - 1]) : 0) + (i < n - 1 ? c * (t - T[o + i + 1]) : 0);
+    if (i === 0) {
+      b += hLo;
+      d += hLo * (Tlo - t);
+    }
+    if (i === n - 1) {
+      b += hHi;
+      d += hHi * (Thi - t);
+    }
+    const m = i > 0 ? b - a * wallCp[i - 1] : b;
+    wallCp[i] = c / m;
+    wallDp[i] = i > 0 ? (d - a * wallDp[i - 1]) / m : d / m;
+  }
+  let change = wallDp[n - 1];
+  const hi = T[o + n - 1] + change;
+  T[o + n - 1] = hi;
+  let lo = hi;
+  for (let i = n - 2; i >= 0; i -= 1) {
+    change = wallDp[i] - wallCp[i] * change;
+    lo = T[o + i] + change;
+    T[o + i] = lo;
+  }
+  out[0] = hLo * (lo - Tlo) * dt;
+  out[1] = hHi * (hi - Thi) * dt;
+  return out;
+}
+
+/** A stack with its nodes in the opposite order (its last layer's back at node 0). */
+function reversed(s) {
+  return { ...s, C: s.C.slice().reverse(), G: s.G.slice().reverse(), x: s.x.map((v) => s.thickness - v).reverse() };
+}
+
+/**
+ * The one-dimensional walls of a scene: the solid cells whose largest inert
+ * material lists its layers and that are one cell thick along some axis (no
+ * solid on either side along it; the domain's side counts as open), that
+ * axis the wall's normal (the most gas neighbours, then the lowest axis).
+ * The first layer faces the grid's interior along the normal (the room, in
+ * a validation scene's compartment). Each holds its stack's real heat
+ * capacity (inertC, J/K); its nodes start at ambient. Per wall: its cell, its
+ * axis and stack (meta = axis + 4 stack), its nodes, the mean temperature its
+ * nodes had when the walls stage last wrote it (last: what other stages add
+ * to Ts since is theirs), and the heat each of its six faces gave its gas in
+ * the last walls stage (Q, J). Per stack (two per material, one reversed):
+ * C, G (float32, the GPU's) and its heat and thickness.
+ */
+function wallSetup(grid, fraction, solid, inert, inertC, P) {
+  const { nx, ny, nz, h } = grid;
+  const N = nx * ny * nz;
+  // A material's layers that can be a profile: of positive thickness and
+  // properties, no more than the nodes allow. Any other stays lumped.
+  const usable = inert.map((m) => {
+    const layers = (m.layers || []).filter((l) => l.thickness > 0);
+    const ok = layers.length && layers.length < WALL_NODES_MAX && layers.every((l) => l.k > 0 && l.rho > 0 && l.c > 0);
+    return ok ? layers : null;
+  });
+  // Every wall has the same number of nodes (the GPU's layout): enough for the most layered stack.
+  const n = Math.min(WALL_NODES_MAX, Math.max(2, P.wallNodes | 0, ...usable.map((l) => (l ? l.length + 1 : 0))));
+  const stacks = [];
+  const stackOf = usable.map((layers) => {
+    if (!layers) return -1;
+    const s = wallStack(layers, n, P.wallStretch);
+    stacks.push(s, reversed(s));
+    return stacks.length - 2;
+  });
+  const dims = [nx, ny, nz], strides = [1, nx, nx * ny];
+  const index = new Int32Array(N).fill(-1);
+  const cells = [], meta = [];
+  for (let c = 0; c < N; c += 1) {
+    if (!solid[c]) continue;
+    let best = -1;
+    for (let m = 0; m < inert.length; m += 1) if (fraction[c * MATERIALS + m] > 0 && (best < 0 || fraction[c * MATERIALS + m] > fraction[c * MATERIALS + best])) best = m;
+    if (best < 0 || stackOf[best] < 0) continue;
+    const p = [c % nx, Math.floor(c / nx) % ny, Math.floor(c / (nx * ny))];
+    let axis = -1, most = -1;
+    for (let a = 0; a < 3; a += 1) {
+      const lo = p[a] > 0, hi = p[a] < dims[a] - 1;
+      if ((lo && solid[c - strides[a]]) || (hi && solid[c + strides[a]])) continue;
+      const gas = (lo ? 1 : 0) + (hi ? 1 : 0);
+      if (gas > most) {
+        most = gas;
+        axis = a;
+      }
+    }
+    if (axis < 0) continue;
+    // In the lower half along the normal the interior is up the axis: the first layer at the high end.
+    const s = stackOf[best] + (2 * p[axis] + 1 < dims[axis] ? 1 : 0);
+    index[c] = cells.length;
+    cells.push(c);
+    meta.push(axis + 4 * s);
+  }
+  const W = cells.length;
+  // No wall one cell thick (the walls are thicker than the cells): the walls stay lumped, at no cost.
+  if (!W) return null;
+  const C = new Float32Array(stacks.length * n), G = new Float32Array(stacks.length * (n - 1));
+  stacks.forEach((s, k) => {
+    C.set(s.C, k * n);
+    G.set(s.G, k * (n - 1));
+  });
+  // Each stack's heat from its float32 capacities, as both paths sum them.
+  const heat = Float32Array.from(stacks, (s, k) => C.subarray(k * n, (k + 1) * n).reduce((a, b) => a + b, 0));
+  for (let w = 0; w < W; w += 1) inertC[cells[w]] = heat[meta[w] >> 2] * h * h;
+  return {
+    n,
+    cells: Int32Array.from(cells),
+    index,
+    meta: Uint32Array.from(meta),
+    T: new Float32Array(W * n).fill(P.ambient),
+    last: new Float32Array(W).fill(P.ambient),
+    Q: new Float32Array(W * 6),
+    C,
+    G,
+    heat,
+    thickness: Float32Array.from(stacks, (s) => s.thickness),
+  };
+}
+
+/** Wall w's area on a side face (not on its normal): its edge, its thickness by the cell, at most the face. */
+function wallSide(sim, w) {
+  const h = sim.grid.h;
+  return Math.min(sim.wall.thickness[sim.wall.meta[w] >> 2], h) * h;
+}
+
+/**
+ * Heat into one end of wall w (in cell c), as the rise k (K) it would give
+ * the whole cell: its end node takes it, and the cell's mean temperature
+ * (Ts) and `last` rise by k alike, so the walls stage does not spread it again.
+ */
+function wallEnd(sim, w, c, end, k) {
+  const W = sim.wall, n = W.n, s = W.meta[w] >> 2;
+  const q = end ? n - 1 : 0;
+  W.T[w * n + q] += (k * W.heat[s]) / W.C[s * n + q];
+  sim.Ts[c] += k;
+  W.last[w] += k;
+}
+
+/**
+ * Radiation leaving wall w (cell c) over its faces open to gas or the
+ * domain's side (Eq. 16 per face): an end face at its end node's temperature,
+ * a side face at the cell's mean over its edge's area (wallSide), each above
+ * emitAbove, never more than half its node's (or the cell's) heat above
+ * ambient. `faceE` (six, by DIRS) gets each face's energy; the energy leaves
+ * the nodes it came from. Returns the total.
+ */
+function wallEmit(sim, w, c, dt, faceE) {
+  const { P, grid: g } = sim;
+  const W = sim.wall, n = W.n;
+  const o = w * n;
+  // Cool walls (most of them, most of the time) cast nothing.
+  if (!(W.T[o] > P.emitAbove || W.T[o + n - 1] > P.emitAbove || sim.Ts[c] > P.emitAbove)) return 0;
+  const A = g.h * g.h, side = wallSide(sim, w);
+  const axis = W.meta[w] & 3, s = W.meta[w] >> 2;
+  const total = W.heat[s] * A;
+  const Ta = P.ambient, Ta4 = Ta ** 4;
+  const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+  let all = 0, sides = 0;
+  for (let d = 0; d < 6; d += 1) {
+    faceE[d] = 0;
+    const dir = DIRS[d];
+    const ii = i + dir[0], jj = j + dir[1], kk = k + dir[2];
+    if (!(ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz || sim.kind[at(g, ii, jj, kk)] === GAS)) continue;
+    const end = d >> 1 === axis;
+    // An odd direction is down the axis: the end at node 0.
+    const q = d & 1 ? 0 : n - 1;
+    const Tf = end ? W.T[o + q] : sim.Ts[c];
+    if (!(Tf > P.emitAbove)) continue;
+    const cap = end ? W.C[s * n + q] * A : total;
+    let emitted = sim.eps[c] * SIGMA * (Tf ** 4 - Ta4) * (end ? A : side) * dt;
+    emitted = Math.min(emitted, 0.5 * cap * (Tf - Ta));
+    if (!(emitted > 0)) continue;
+    faceE[d] = emitted;
+    all += emitted;
+    if (end) W.T[o + q] -= emitted / cap;
+    else sides += emitted;
+  }
+  if (!(all > 0)) return 0;
+  if (sides > 0) for (let q = 0; q < n; q += 1) W.T[o + q] -= sides / total;
+  sim.Ts[c] -= all / total;
+  W.last[w] -= all / total;
+  return all;
+}
+
+/**
+ * One-dimensional walls (calibration plan 13.4, item 1), after conduct. Each
+ * wall first takes into its nodes, evenly, what other stages added to its
+ * cell's mean since its last step (embers, rays through its side faces); then
+ * its side faces exchange its mean with the gas beside them over their edge's
+ * area, exactly as conduct exchanges a lumped wall; then its profile steps
+ * (wallStep) with each end exchanging with the gas beyond it (insulated
+ * against the domain's side), the gas held at its temperature at the stage's
+ * start. Every wall reads the gas before any is changed, and each gas cell
+ * then takes what its wall neighbours gave it, gathered in direction order (as
+ * the GPU gathers it), so no wall depends on another's order and the heat each
+ * wall loses is the heat its gas gains.
+ */
+export function walls(sim, dt) {
+  const W = sim.wall;
+  if (!W) return;
+  const { P, grid: g } = sim;
+  const { nx, ny, h } = g;
+  const A = h * h, hc = P.wallConvection, n = W.n;
+  const out = wallOut;
+  for (let w = 0; w < W.cells.length; w += 1) {
+    const c = W.cells[w];
+    const axis = W.meta[w] & 3, s = W.meta[w] >> 2;
+    const o = w * n, co = s * n, total = W.heat[s] * A;
+    const added = sim.Ts[c] - W.last[w];
+    if (added !== 0) for (let q = 0; q < n; q += 1) W.T[o + q] += added;
+    let mean = 0;
+    for (let q = 0; q < n; q += 1) mean += W.C[co + q] * W.T[o + q];
+    mean = (mean * A) / total;
+    const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
+    let sides = 0;
+    const side = Math.min(W.thickness[s], h) * h;
+    for (let d = 0; d < 6; d += 1) {
+      W.Q[w * 6 + d] = 0;
+      if (d >> 1 === axis) continue;
+      const nb = openNeighbour(sim, i, j, k, d);
+      if (nb < 0) continue;
+      const q = exchange(mean, sim.T[nb], total, sim.rho[nb] * mixtureCp(sim.Y, nb * NS) * sim.V, hc * side, dt);
+      W.Q[w * 6 + d] = q;
+      sides += q;
+    }
+    if (sides !== 0) for (let q = 0; q < n; q += 1) W.T[o + q] -= sides / total;
+    // Its ends: down the axis (an odd direction) at node 0, up it at node n - 1.
+    const lo = openNeighbour(sim, i, j, k, 2 * axis + 1), hi = openNeighbour(sim, i, j, k, 2 * axis);
+    wallStep(W.T, o, n, W.C, co, W.G, s * (n - 1), dt, lo >= 0 ? hc : 0, lo >= 0 ? sim.T[lo] : 0, hi >= 0 ? hc : 0, hi >= 0 ? sim.T[hi] : 0, out);
+    W.Q[w * 6 + 2 * axis + 1] = out[0] * A;
+    W.Q[w * 6 + 2 * axis] = out[1] * A;
+    mean = 0;
+    for (let q = 0; q < n; q += 1) mean += W.C[co + q] * W.T[o + q];
+    sim.Ts[c] = (mean * A) / total;
+    W.last[w] = sim.Ts[c];
+  }
+  // Each open cell beside a wall takes what the wall's faces towards it gave
+  // (summed in float64 first: a cell between two walls takes both at once).
+  const heat = workArray(sim, "wallGas", sim.N, Float64Array);
+  for (let pass = 0; pass < 2; pass += 1) {
+    for (let w = 0; w < W.cells.length; w += 1) {
+      const c = W.cells[w];
+      for (let d = 0; d < 6; d += 1) {
+        const q = W.Q[w * 6 + d];
+        if (q === 0) continue;
+        const nb = c + (d === 0 ? 1 : d === 1 ? -1 : d === 2 ? nx : d === 3 ? -nx : d === 4 ? nx * ny : -nx * ny);
+        if (pass === 0) heat[nb] += q;
+        else if (heat[nb] !== 0) {
+          sim.T[nb] += heat[nb] / (sim.rho[nb] * mixtureCp(sim.Y, nb * NS) * sim.V);
+          heat[nb] = 0;
+        }
+      }
+    }
+  }
+}
+
+const wallOut = [0, 0];
+
+/** The open (not solid) neighbour of cell (i, j, k) in direction d, or -1 (a solid, or outside the domain). */
+function openNeighbour(sim, i, j, k, d) {
+  const g = sim.grid;
+  const dir = DIRS[d];
+  const ii = i + dir[0], jj = j + dir[1], kk = k + dir[2];
+  if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz) return -1;
+  const nb = at(g, ii, jj, kk);
+  return sim.kind[nb] === SOLID ? -1 : nb;
 }
 
 /**
@@ -2491,6 +2896,7 @@ const STAGES = [
   ["foamWet", foamWet],
   ["cullFlameFront", (sim) => cullFlameFront(sim)],
   ["conduct", conduct],
+  ["walls", walls],
   ["density2", (sim) => updateDensity(sim)],
   ["expansionEnd", expansionEnd],
   ["boundaries", (sim) => boundaries(sim)],

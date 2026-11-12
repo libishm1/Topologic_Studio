@@ -19,8 +19,15 @@
  *           there: closure 1.27, gas at 2,150 K). Accepted: closure 0.9 to 1.0
  *           and the hottest gas's rise within 10 % of the burner run's, on
  *           each cell where both ran.
+ *   lumped, layered: the burner room with its walls exchanging heat with the
+ *           gas (wallConvection, the app's), radiation still off, its walls a
+ *           12.7 mm gypsum board: lumped into their cells (rho scaled to the
+ *           board's heat per area, as validation scenes lump boards) or
+ *           one-dimensional (wallLayers, calibration plan 13.4 item 1). The
+ *           closure counts the walls' heat, inertC (Ts - Ta), with the gas's and
+ *           what left; accepted as the burner's: 0.9 to 1.0.
  *
- *   node tools/calibration/heat-closure.mjs [--cases mix,burner,porous] [--cells 0.20,0.27,0.34]
+ *   node tools/calibration/heat-closure.mjs [--cases mix,burner,porous,lumped,layered] [--cells 0.20,0.27,0.34]
  *        [--horizon 60] [--solver conservative=0,expansion=0] [--json out.json]
  */
 import { writeFile } from "node:fs/promises";
@@ -118,8 +125,18 @@ function mix(h) {
   return { case: "mix", cell: h, startHeatMJ: +(start.heat / 1e6).toFixed(3), ratios: at };
 }
 
-/** The burner room; with `porous`, its burner's cells porous (contents of no mass). */
-function burner(h, porous = false) {
+/** A 12.7 mm gypsum board (FDS's gypsum plaster), as an inert material on cells of h m: lumped (rho scaled) with its layers listed. */
+const board = (h) => {
+  const layer = { thickness: 0.0127, rho: 1440, c: 840, k: 0.48 };
+  return { name: "gypsum", rho: (layer.rho * layer.thickness) / h, c: layer.c, k: layer.k, eps: 0.9, layers: [layer] };
+};
+
+/**
+ * The burner room; with `porous`, its burner's cells porous (contents of no
+ * mass); with `walls` ("lumped" or "layered"), its walls gypsum boards that
+ * exchange heat with the gas, lumped or one-dimensional.
+ */
+function burner(h, porous = false, walls = null) {
   const W = 5, D = 4, H = 2.7, t = 0.2, door = [1.5, 2.4], doorH = 2.0, Q = 150e3, RAMP = 30;
   const boxes = [box(-t, -t, -t, W + t, 0, D + t), box(-t, H, -t, W + t, H + t, D + t), box(-t, 0, -t, W + t, H, 0), box(-t, 0, D, W + t, H, D + t), box(-t, 0, 0, 0, H, D), box(W, 0, 0, W + t, H, door[0]), box(W, 0, door[1], W + t, H, D), box(W, doorH, door[0], W + t, H, door[1])];
   const lo = [-t, -t, -t], hi = [W + t + 1.0, H + t + 0.2, D + t];
@@ -143,7 +160,13 @@ function burner(h, porous = false) {
     burner: { cells: cellsOf, hrr: [[0, 0], [RAMP, Q], [1e6, Q]], radiantFraction: 0, fuel: fuelsFor("A").ignitionFuel },
     fuels: { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL },
   };
-  const sim = createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ...ADIABATIC, ...SOLVER });
+  const exchange = walls ? { emitAbove: 1e9, inert: [board(h), board(h), board(h)], wallLayers: walls === "layered" ? 1 : 0 } : ADIABATIC;
+  const sim = createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ...exchange, ...SOLVER });
+  const wallHeat = () => {
+    let e = 0;
+    for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] === SOLID) e += sim.inertC[c] * (sim.Ts[c] - TA);
+    return e;
+  };
   const start = inventory(sim);
   const rows = {};
   let peakT = sim.P.ambient;
@@ -152,11 +175,13 @@ function burner(h, porous = false) {
     if (s % 30 === 0) {
       const now = inventory(sim);
       const put = sim.stats.released + sim.stats.pilotHeat;
+      const inWalls = wallHeat();
       rows[s] = {
         releasedMJ: +(put / 1e6).toFixed(3),
         gas: +((now.heat - start.heat) / put).toFixed(3),
+        ...(walls ? { walls: +(inWalls / put).toFixed(3) } : {}),
         left: +(sim.stats.shellHeat / put).toFixed(3),
-        closure: +((now.heat - start.heat + sim.stats.shellHeat) / put).toFixed(3),
+        closure: +((now.heat - start.heat + inWalls + sim.stats.shellHeat) / put).toFixed(3),
         maxT: Math.round(sim.stats.maxT),
         // Where a closure short of 1 can go: the mass the transport's floor added, and faces it clamped to a Courant number of 1.
         floorKg: +(sim.stats.massFloor ?? 0).toFixed(4),
@@ -166,14 +191,14 @@ function burner(h, porous = false) {
   });
   const porousCells = porous ? cellsOf.filter((c) => sim.kind[c] !== SOLID).length : 0;
   // The hottest gas over the run, read each second.
-  return { case: porous ? "porous" : "burner", cell: h, ...(porous ? { porousCells } : {}), peakT: Math.round(peakT), rows };
+  return { case: walls || (porous ? "porous" : "burner"), cell: h, ...(porous ? { porousCells } : {}), ...(walls ? { wallCells: sim.wall?.cells.length ?? 0 } : {}), peakT: Math.round(peakT), rows };
 }
 
 const results = [];
 for (const h of cells) {
   for (const name of cases) {
     const t0 = performance.now();
-    const r = name === "mix" ? mix(h) : burner(h, name === "porous");
+    const r = name === "mix" ? mix(h) : burner(h, name === "porous", name === "lumped" || name === "layered" ? name : null);
     r.wallSeconds = +((performance.now() - t0) / 1000).toFixed(1);
     results.push(r);
     console.log(JSON.stringify(r));
@@ -192,6 +217,17 @@ for (const h of cells) {
   const verdict = { cell: h, closure, hottestRise: +rise.toFixed(3), porousPeakK: por.peakT, plainPeakK: plain.peakT, pass: ok };
   results.push({ case: "porous verdict", ...verdict });
   console.log(`porous burner, cell ${h} m: closure ${closure} (0.9 to 1.0), hottest gas's rise ${verdict.hottestRise} of the plain burner's (${por.peakT} K against ${plain.peakT} K, within 10 %): ${ok ? "passes" : "fails"}`);
+}
+// The walls' cases: the closure at the horizon within 0.9 to 1.0, gas, walls and what left counted.
+for (const h of cells) {
+  for (const name of ["lumped", "layered"]) {
+    const r = results.find((x) => x.case === name && x.cell === h);
+    if (!r) continue;
+    const last = r.rows[Math.max(...Object.keys(r.rows).map(Number))];
+    const ok = last.closure >= 0.9 && last.closure <= 1.0;
+    results.push({ case: `${name} verdict`, cell: h, closure: last.closure, walls: last.walls, pass: ok });
+    console.log(`${name} walls, cell ${h} m: closure ${last.closure} (0.9 to 1.0; the walls hold ${last.walls} of the heat, ${r.wallCells} one-dimensional walls): ${ok ? "passes" : "fails"}`);
+  }
 }
 if (jsonOut) {
   await writeFile(path.resolve(jsonOut), JSON.stringify({ generated: new Date().toISOString(), solver: SOLVER, adiabatic: ADIABATIC, results }, null, 1));
