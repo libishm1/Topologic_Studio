@@ -45,7 +45,10 @@
 // (wiki/research/fire-calibration-claim-protocol-2026-11-12.md).
 // 12 (2026-11-12): the review's transport fixes, sweeps alternating their
 // order and porous cells slowed inside the projection, on CPU and GPU.
-export const RUN_CACHE_VERSION = 12;
+// 13 (2026-11-12): plan 13's physics, walls conducting through their layers,
+// soot settling on surfaces, a pressure for each sealed region and leakage
+// from it (fire-calibration-plan-2026-11-11.md, 13.8 to 13.13).
+export const RUN_CACHE_VERSION = 13;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 
