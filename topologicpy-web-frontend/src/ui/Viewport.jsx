@@ -26,10 +26,13 @@ function HomeButton({ onHome }) {
 
 /**
  * A guided run's card: where it is (its stage's caption and the stages as
- * dots), then the field note it ends on, found (with what was found) or still
- * a question; Stop (Close once it ends), and back to the guided runs.
+ * dots), with a load's progress or the fire's steps in it while they run (as
+ * cards of their own they sat on it), then the result's numbers and the field
+ * note it ends on, found (with what was found) or still a question. Its Stop
+ * (Close once it ends) is the one Stop while it plays; on a phone, Next moves
+ * on from a stage's result; and back to the guided runs.
  */
-function GuidedCaption({ guided, onStop, onOpenNotes, onHome }) {
+function GuidedCaption({ guided, onStop, onOpenNotes, onHome, onNext, loadState, fire, fireSteps }) {
   const index = Math.max(0, guided.stages.findIndex((s) => s.id === guided.stage));
   const ended = guided.stage === "done" || Boolean(guided.error);
   return (
@@ -41,6 +44,14 @@ function GuidedCaption({ guided, onStop, onOpenNotes, onHome }) {
         </span>
       </div>
       <p className="guided__caption">{guided.error ? `Stopped: ${guided.error}` : guided.stages[index]?.caption}</p>
+      {/* Not read out at every step: the card is a live region for its captions. */}
+      {(loadState?.busy || fire?.running) && (
+        <div aria-live="off">
+          {loadState?.busy && <LoadProgress loadState={loadState} />}
+          {fire?.running && <FireProgress fire={fire} fireSteps={fireSteps} />}
+        </div>
+      )}
+      {guided.result && <p className="guided__result">{guided.result}</p>}
       {guided.note && (
         <p className="guided__note">
           <strong>{guided.note.text ? "Field note found: " : "Field note: "}{guided.note.teaser}</strong>
@@ -53,6 +64,11 @@ function GuidedCaption({ guided, onStop, onOpenNotes, onHome }) {
         ))}
       </ol>
       <div className="hint__actions">
+        {guided.waiting && onNext && (
+          <Button size="sm" variant="primary" onClick={onNext}>
+            Next
+          </Button>
+        )}
         <Button size="sm" onClick={onStop}>
           {ended ? "Close" : "Stop"}
         </Button>
@@ -79,6 +95,49 @@ const STAGE_LABELS = {
   building: "Building graph",
 };
 
+/** A load's or graph build's progress: its stage, how far, and what it is on. */
+function LoadProgress({ loadState, className = "progress" }) {
+  const known = loadState.percent !== undefined && loadState.percent !== null;
+  return (
+    <div className={className}>
+      <div className="progress__row">
+        <span className="progress__label">{STAGE_LABELS[loadState.stage] || "Working"}</span>
+        {known && <span className="progress__detail">{Math.round(loadState.percent)}%</span>}
+      </div>
+      <div className="progress__track">
+        <div className={`progress__fill${known ? "" : " progress__fill--indeterminate"}`} style={{ width: `${loadState.percent ?? 35}%` }} />
+      </div>
+      {loadState.detail && <div className="progress__detail">{String(loadState.detail).slice(0, 60)}</div>}
+    </div>
+  );
+}
+
+/** The fire's step as it plays, and a track to the last step. */
+function FireProgress({ fire, fireSteps }) {
+  return (
+    <div className="playback__info">
+      <div className="playback__row">
+        <strong>
+          Fire step <span className="mono">{fire.step}</span>
+          {fireSteps ? ` of ${fireSteps}` : ""}
+        </strong>
+      </div>
+      {fireSteps ? (
+        <div
+          className="playback__track"
+          role="progressbar"
+          aria-label="Fire simulation progress"
+          aria-valuemin={0}
+          aria-valuemax={fireSteps}
+          aria-valuenow={Math.min(fire.step, fireSteps)}
+        >
+          <div className="playback__fill" style={{ width: `${Math.min(100, (fire.step / fireSteps) * 100)}%` }} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function Viewport({
   viewerRef,
   onPick,
@@ -88,7 +147,6 @@ export function Viewport({
   pickMode,
   hasModel,
   loadState,
-  graphStats,
   fire,
   levels,
   section,
@@ -105,6 +163,7 @@ export function Viewport({
   onGuided,
   guided,
   onStopGuided,
+  onNextGuided = null,
   onOpenNotes,
   onHome = null,
   replay = null,
@@ -347,7 +406,18 @@ export function Viewport({
         </div>
       )}
 
-      {guided && <GuidedCaption guided={guided} onStop={onStopGuided} onOpenNotes={onOpenNotes} onHome={onHome ? goHome : null} />}
+      {guided && (
+        <GuidedCaption
+          guided={guided}
+          onStop={onStopGuided}
+          onOpenNotes={onOpenNotes}
+          onHome={onHome ? goHome : null}
+          onNext={onNextGuided}
+          loadState={loadState}
+          fire={fire}
+          fireSteps={fireSteps}
+        />
+      )}
 
       {initError && (
         <div className="placeholder">
@@ -367,45 +437,20 @@ export function Viewport({
           beside it once a Flamescapes run has ended or been stopped (App.jsx
           replay), which moves to the playback bar's place at the bottom on a
           view wide enough to keep it clear of the legend and the view card
-          (workflow.css .replay-btn); a load's progress below them. */}
-      {(loadState.busy || (!guided && ((onHome && hasModel) || (replay && onReplay)))) && (
+          (workflow.css .replay-btn); a load's progress below them (in the
+          guided run's card during a run). */}
+      {!guided && (loadState.busy || (onHome && hasModel) || (replay && onReplay)) && (
         <div className="overlay overlay--top-left viewport__top">
-          {!guided && (
-            <div className="viewport__row">
-              {onHome && !booting && (hasModel || loadState.busy) && <HomeButton onHome={goHome} />}
-              {replay && onReplay && (
-                <Button variant="primary" className="viewport-btn replay-btn" onClick={runAgain} title="Start the Flamescapes fire again with the settings as they are now">
-                  <Icon name="replay" size={16} />
-                  {replay.changed ? "Run again with new settings" : "Run again"}
-                </Button>
-              )}
-            </div>
-          )}
-          {loadState.busy && (
-            <div className="card progress">
-              <div className="progress__row">
-                <span className="progress__label">
-                  {STAGE_LABELS[loadState.stage] || "Working"}
-                </span>
-                {loadState.percent !== undefined && loadState.percent !== null && (
-                  <span className="progress__detail">{Math.round(loadState.percent)}%</span>
-                )}
-              </div>
-              <div className="progress__track">
-                <div
-                  className={`progress__fill${
-                    loadState.percent === undefined || loadState.percent === null
-                      ? " progress__fill--indeterminate"
-                      : ""
-                  }`}
-                  style={{ width: `${loadState.percent ?? 35}%` }}
-                />
-              </div>
-              {loadState.detail && (
-                <div className="progress__detail">{String(loadState.detail).slice(0, 60)}</div>
-              )}
-            </div>
-          )}
+          <div className="viewport__row">
+            {onHome && !booting && (hasModel || loadState.busy) && <HomeButton onHome={goHome} />}
+            {replay && onReplay && (
+              <Button variant="primary" className="viewport-btn replay-btn" onClick={runAgain} title="Start the Flamescapes fire again with the settings as they are now">
+                <Icon name="replay" size={16} />
+                {replay.changed ? "Run again with new settings" : "Run again"}
+              </Button>
+            )}
+          </div>
+          {loadState.busy && <LoadProgress loadState={loadState} className="card progress" />}
         </div>
       )}
 
@@ -426,29 +471,11 @@ export function Viewport({
         </div>
       )}
 
-      {fire?.running && (
+      {/* The fire's playback; during a guided run its steps are in the run's card, whose Stop is the one Stop. */}
+      {fire?.running && !guided && (
         <div className="overlay overlay--bottom-center">
           <div className="card playback" role="group" aria-label="Fire simulation">
-            <div className="playback__info">
-              <div className="playback__row">
-                <strong>
-                  Fire step <span className="mono">{fire.step}</span>
-                  {fireSteps ? ` of ${fireSteps}` : ""}
-                </strong>
-              </div>
-              {fireSteps ? (
-                <div
-                  className="playback__track"
-                  role="progressbar"
-                  aria-label="Fire simulation progress"
-                  aria-valuemin={0}
-                  aria-valuemax={fireSteps}
-                  aria-valuenow={Math.min(fire.step, fireSteps)}
-                >
-                  <div className="playback__fill" style={{ width: `${Math.min(100, (fire.step / fireSteps) * 100)}%` }} />
-                </div>
-              ) : null}
-            </div>
+            <FireProgress fire={fire} fireSteps={fireSteps} />
             <Button variant="danger" onClick={onStopFire} ref={stopFireRef}>
               Stop fire
             </Button>
@@ -481,6 +508,12 @@ export function Viewport({
                     <span className="legend__note">
                       {heatLegend.note ?? "An index scaled to read in °C, not a measured temperature."}
                     </span>
+                    {/* Flamescapes heat: the fixed ramp or one fitted to the run, the colours only. */}
+                    {heatLegend.fit && (
+                      <button type="button" className="linklike legend__fit" aria-pressed={heatLegend.fit.on} onClick={heatLegend.fit.onToggle}>
+                        {heatLegend.fit.on ? "Back to 20 to 600 °C" : "Fit the colours to this run"}
+                      </button>
+                    )}
                   </div>
                 )}
                 {deadlineLegend && (
@@ -516,14 +549,8 @@ export function Viewport({
             )}
           </div>
 
+          {/* The graph's size is in the panel and the status bar; its own card here sat on Stop fire. */}
           <div className="overlay overlay--bottom-right">
-            {graphStats && (
-              <div className="card" style={{ fontSize: 11 }}>
-                <span className="mono">{graphStats.nodes.toLocaleString()}</span> nodes
-                {"  ·  "}
-                <span className="mono">{graphStats.edges.toLocaleString()}</span> edges
-              </div>
-            )}
             <div className="card">
               {levels?.length > 1 && (
                 <div className="section-cut">

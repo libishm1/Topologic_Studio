@@ -2021,30 +2021,86 @@ for (const [call, list] of byCall) {
     .then((h) => h.jsonValue())
     .catch(() => "");
   const drawn = await guidedPage.evaluate(() => ["egressRoutes", "egressDeadEnds", "accessAudit", "accessIssues"].filter((n) => window.__viewer?.overlays?.has(n)));
-  // The map's readings are in its section, closed until opened.
-  await guidedPage.locator(".section__header", { hasText: /^Egress map/ }).first().click().catch(() => {});
+  // The map's readings are in its section, which the finished run opens
+  // (App.jsx guidedResultPlace); opened here only if it is still closed.
+  const mapHeader = guidedPage.locator(".section__header", { hasText: /^Egress map/ }).first();
+  const mapOpened = (await mapHeader.getAttribute("aria-expanded").catch(() => null)) === "true";
+  if (!mapOpened) await mapHeader.click().catch(() => {});
   const mapped = /Farthest walk [\d.]+ m/.test(await guidedPage.locator(".panel__scroll").innerText().catch(() => ""));
+  const headline = (await guidedPage.locator(".guided__result").textContent().catch(() => "")) || "";
   record(/^Done/.test(caption) && mapped && drawn.includes("egressDeadEnds") && drawn.includes("accessAudit"), "the egress guided run maps every room and lays the wheelchair audit on the floors", `${((Date.now() - t0) / 1000).toFixed(1)}s: ${caption || "no caption"}; drawn ${drawn.join(", ") || "nothing"}`);
+  record(mapOpened && /^Farthest walk [\d.]+ m/.test(headline), "  and at the end opens its result and leads with its numbers", `${mapOpened ? "section opened" : "section closed"}; ${headline || "no numbers"}`);
   await guidedPage.close();
 }
 
-// Back to the guided runs (App.jsx backToWelcome, 2026-11-12): pressed in a
-// guided run's card while its fire plays, the run and the fire end, the model
-// goes and the welcome screen comes back at its guided runs, with no reload;
-// then from a model opened by hand, by the button at the top left of the
-// view, inside the view and below the header on a phone too.
+// A guided run in a browser of its own (2026-11-12, the interface audit of
+// that day): each stage's result is held on screen (core/guided.js
+// GUIDED_HOLD_MS, 2.5 s) where it flashed past in hundredths of a second;
+// while its fire plays the run's card holds the one Stop and the fire's
+// steps; the settings it changes are the user's again after a reload
+// mid-run, and after Guided runs (App.jsx guidedSet, useStudio.js
+// loadSettings). Guided runs, pressed in the card while the fire plays, ends
+// the run and the fire, the model goes and the welcome screen comes back at
+// its guided runs with no reload (backToWelcome); then from a model opened by
+// hand, by the button at the top left of the view, inside the view and below
+// the header on a phone too.
 {
-  const p = await context.newPage();
-  await p.goto(`${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`, { waitUntil: "load", timeout: 60000 });
+  const ownContext = await browser.newContext(MOBILE ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1600, height: 950 } });
+  const p = await ownContext.newPage();
+  const debugUrl = `${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`;
+  // The user's own choices, which "A fire on the route" changes (heat diffusion, rerouting on).
+  await p.goto(debugUrl, { waitUntil: "load", timeout: 60000 });
+  await p.evaluate(() => localStorage.setItem("ts.settings", JSON.stringify({ fireModel: "radial", reroute: false })));
+  await p.reload({ waitUntil: "load", timeout: 60000 });
   await p.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  const stored = () => p.evaluate(() => ({ settings: JSON.parse(localStorage.getItem("ts.settings") || "{}"), before: localStorage.getItem("ts.guidedBefore") }));
+  const captionClock = () =>
+    p.evaluate(() => {
+      window.__captions = [];
+      const seen = () => {
+        const text = document.querySelector(".guided__caption")?.textContent || "";
+        if (text && window.__captions.at(-1)?.text !== text) window.__captions.push({ text, t: performance.now() });
+      };
+      new MutationObserver(seen).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+  const firePlaying = () =>
+    p
+      .waitForFunction(() => /Fire step \d+/.test(document.querySelector(".guided")?.textContent || ""), null, { timeout: 240000 })
+      .then(() => true)
+      .catch(() => false);
+  await captionClock();
+  await p.locator(".welcome").getByRole("button", { name: /^A fire on the route/ }).click().catch(() => {});
+  const playing = await firePlaying();
+  const held = await p.evaluate(() => {
+    const c = window.__captions;
+    // Every stage after the opening (which waits for the model to load) up to the fire.
+    return c.slice(1, -1).map((x, i) => ({ text: x.text, s: (c[i + 2].t - x.t) / 1000 }));
+  });
+  const shortest = held.length ? Math.min(...held.map((x) => x.s)) : 0;
+  record(
+    playing && held.length >= 4 && shortest >= 2,
+    "a guided run holds each stage's result on screen before the next",
+    held.map((x) => `${x.text.slice(0, 24)} ${x.s.toFixed(1)} s`).join("; ") || "no stages seen",
+  );
+  const stops = await p.evaluate(() =>
+    [...document.querySelectorAll("button")].filter((b) => /^Stop( fire)?$/.test(b.textContent.trim()) && b.getClientRects().length > 0).map((b) => (b.closest(".guided") ? "card" : b.closest(".panel") ? "panel" : "view")),
+  );
+  record(stops.length === 1 && stops[0] === "card", "  while its fire plays, one Stop, in the run's card, with the fire's steps", stops.join(", ") || "none");
+  const during = await stored();
+  // A reload mid-run gives the user's settings back.
+  await p.reload({ waitUntil: "load", timeout: 60000 });
+  await p.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  const afterReload = await stored();
+  record(
+    during.settings.fireModel === "temperature" && Boolean(during.before) && afterReload.settings.fireModel === "radial" && afterReload.settings.reroute === false && !afterReload.before,
+    "  the settings it changed are the user's again after a reload mid-run",
+    `during ${during.settings.fireModel}, after the reload ${afterReload.settings.fireModel}, rerouting ${afterReload.settings.reroute}`,
+  );
   await p.evaluate(() => {
     window.__samePage = true;
   });
   await p.locator(".welcome").getByRole("button", { name: /^A fire on the route/ }).click().catch(() => {});
-  const playing = await p
-    .waitForFunction(() => [...document.querySelectorAll(".viewport button")].some((b) => /^Stop fire$/.test(b.textContent.trim())), null, { timeout: 240000 })
-    .then(() => true)
-    .catch(() => false);
+  const playingAgain = await firePlaying();
   await p.locator(".guided").getByRole("button", { name: "Back to the guided runs" }).click().catch(() => {});
   // Long enough for a guided stage, a fire step or a late load to come back if any were left running.
   await p.waitForTimeout(3000);
@@ -2056,12 +2112,14 @@ for (const [call, list] of byCall) {
     model: Boolean(window.__viewer?.model || window.__viewer?.lod1),
     layers: window.__viewer?.overlays?.size ?? -1,
     focus: document.activeElement?.textContent?.trim() || "",
+    fireModel: JSON.parse(localStorage.getItem("ts.settings") || "{}").fireModel,
   }));
   record(
-    playing && after.samePage && after.welcome && !after.guided && !after.fire && !after.model && after.layers === 0,
+    playingAgain && after.samePage && after.welcome && !after.guided && !after.fire && !after.model && after.layers === 0,
     "Guided runs, pressed while a guided run's fire plays, ends it and shows the welcome screen without a reload",
     JSON.stringify(after),
   );
+  record(after.fireModel === "radial", "  and gives the user's settings back", `fire model ${after.fireModel || "not stored"}`);
   record(after.focus === "Or watch a guided run", "  with the keyboard's focus on the guided runs", after.focus || "nowhere");
   await p.locator(".welcome").getByRole("button", { name: /^Duplex apartment/ }).click({ timeout: 60000 }).catch(() => {});
   await p.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Build egress graph/.test(b.textContent) && !b.disabled), null, { timeout: 120000 }).catch(() => {});
@@ -2080,8 +2138,9 @@ for (const [call, list] of byCall) {
     "  and from a model opened by hand, by the button at the top left of the view",
     `${homeBox ? `at ${Math.round(homeBox.x)}, ${Math.round(homeBox.y)}, ${Math.round(homeBox.width)} px wide` : "not shown"}${placed ? "" : " (outside the view, or the page scrolls sideways)"}, ${back ? "welcome" : "no welcome"}, ${samePage ? "no reload" : "reloaded"}`,
   );
-  await p.close();
+  await ownContext.close();
 }
+
 
 // Hints and field notes from a fresh browser (nothing stored): the count
 // starts at 0, a hint leads past the model, and a dismissed hint stays gone.

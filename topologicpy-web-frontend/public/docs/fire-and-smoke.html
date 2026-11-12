@@ -54,7 +54,7 @@
 
     <h2 id="start">Starting a fire and rerouting</h2>
     <p>Press <span class="label">Set</span> beside Fire origin (or <kbd>F</kbd>), click where the fire starts, and press <span class="label">Start fire</span>. The fire spreads step by step on the graph while the route is checked every five steps and moved away from the heat when it has to be. It may move to any exit out of the building, by another stair if it must; <span class="label">Reroute towards</span>, under <span class="label">Rerouting and timing</span>, keeps it to the exit you picked instead.</p>
-    <p>While the fire runs, the <span class="label">Route during the fire</span> card says whether the route is still clear, when it last changed, or that there is no safe route. It gives the route's cost (its length in metres, lengthened by the heat as <span class="label">Hazard weight</span> sets), whether it leaves by the exit picked or another, and the step at which it was last checked. A route that has to pass through the fire is drawn but reported as not safe.</p>
+    <p>While the fire runs, the <span class="label">Route during the fire</span> card says whether the route is still clear, or the step at which it first changed and, if it came back to the first route once the heat had gone from it, the step by which it was clear again, or that there is no safe route. It gives the route's cost (its length in metres, lengthened by the heat as <span class="label">Hazard weight</span> sets), whether it leaves by the exit picked or another, and the step at which it was last checked. A route that has to pass through the fire is drawn but reported as not safe.</p>
     <p>The other settings under <span class="label">Rerouting and timing</span>:</p>
     <dl>
       <dt class="label">Recompute the route as the fire grows</dt>
@@ -139,7 +139,7 @@
     <h2 id="readings">Smoke, gases and tenability</h2>
     <p><span class="label">Show on the graph</span> colours the nodes by one of four readings at head height:</p>
     <ul>
-      <li><span class="label">Heat:</span> the gas temperature.</li>
+      <li><span class="label">Heat:</span> the gas temperature, on a fixed ramp from 20 to 600 °C, on which a small fire hardly shows. The heat legend's <span class="label">Fit the colours to this run</span> sets the ramp's top to the run's hottest gas at head height so far, rounded up to 10 °C, and the legend gives the range; <span class="label">Back to 20 to 600 °C</span> returns to the fixed one. It changes the colours only: the run, its card and its limits are the same either way, and a colour means another temperature in another run.</li>
       <li><span class="label">Smoke:</span> the visibility (the default), or the soot concentration, extinction coefficient, obscuration or optical density it comes from, chosen under <span class="label">Smoke measure</span>. All five come from the soot at head height, so they shade the graph alike; the legend reads in the one chosen.</li>
       <li><span class="label">Gases:</span> CO, CO₂ or O₂.</li>
       <li><span class="label">Tenability index:</span> the largest share of a limit a node has reached, over its gas temperature, its visibility, and the asphyxiant and heat doses of ISO 13571 against a fractional effective dose of 0.3, so that 1 means untenable.</li>

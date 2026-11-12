@@ -23,8 +23,12 @@ export function migrateSettings(stored) {
   if (rest.flamescapesUntilService !== undefined && typeof rest.flamescapesUntilService !== "boolean") delete rest.flamescapesUntilService;
   const response = rest.flamescapesServiceResponse;
   if (response !== undefined && !(Number.isFinite(response) && response >= SERVICE_RESPONSE_MIN && response <= SERVICE_RESPONSE_MAX)) delete rest.flamescapesServiceResponse;
+  if (rest.flamescapesHeatScale !== undefined && !HEAT_SCALES.includes(rest.flamescapesHeatScale)) delete rest.flamescapesHeatScale;
   return rest;
 }
+
+/** The heat ramps this version draws (core/measures.js): fixed, or fitted to the run. */
+export const HEAT_SCALES = ["fixed", "run"];
 
 /** The fire grid policies and solvers this version offers (a stored other value is dropped). */
 export const GRID_POLICIES = ["standard", "speed", "finest"];

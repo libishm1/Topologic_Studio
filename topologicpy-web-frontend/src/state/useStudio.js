@@ -17,6 +17,8 @@ import { STALE_SITE_MESSAGE, effectiveEngine as engineFor, isStaleSite } from ".
 
 const THEME_KEY = "ts.theme";
 const SETTINGS_KEY = "ts.settings";
+// The user's settings a guided run changed, while it plays (keepGuidedBefore).
+const GUIDED_BEFORE_KEY = "ts.guidedBefore";
 
 export const DEFAULT_SETTINGS = {
   upAxis: "y",
@@ -254,6 +256,9 @@ export const DEFAULT_SETTINGS = {
   // The graph's colour while a run plays (core/measures.js): "heat", "smoke",
   // "gases" or "tenability", and which smoke or gas measure.
   flamescapesShow: "heat",
+  // The heat ramp: "fixed", 20 to 600 °C, or "run", fitted to the run's
+  // hottest gas (core/measures.js fittedHeatPeak); drawing only.
+  flamescapesHeatScale: "fixed",
   flamescapesSmokeMeasure: "visibility",
   flamescapesGasMeasure: "co",
   // Record soot, CO2 and O2 too (core/tenability.js); off, or past the
@@ -362,10 +367,32 @@ export function fireModelIn(settings, modelInfo) {
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...withoutSessionOnly(migrateSettings(JSON.parse(raw))) };
+    let settings = raw ? { ...DEFAULT_SETTINGS, ...withoutSessionOnly(migrateSettings(JSON.parse(raw))) } : DEFAULT_SETTINGS;
+    // A guided run's own settings, left by a reload before the run was
+    // stopped or closed: the user's come back, as Stop and Close give them.
+    const before = localStorage.getItem(GUIDED_BEFORE_KEY);
+    if (before) {
+      settings = { ...settings, ...withoutSessionOnly(migrateSettings(JSON.parse(before))) };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(withoutSessionOnly(settings)));
+      localStorage.removeItem(GUIDED_BEFORE_KEY);
+    }
+    return settings;
   } catch {
     return DEFAULT_SETTINGS;
+  }
+}
+
+/**
+ * The settings a guided run changed, as they were before it (App.jsx
+ * guidedSet), kept in the browser while it plays so that a reload gives
+ * them back (loadSettings); forgotten when the run gives them back itself.
+ */
+export function keepGuidedBefore(before) {
+  try {
+    if (before && Object.keys(before).length) localStorage.setItem(GUIDED_BEFORE_KEY, JSON.stringify(before));
+    else localStorage.removeItem(GUIDED_BEFORE_KEY);
+  } catch {
+    /* not fatal: Stop and Close still give them back */
   }
 }
 

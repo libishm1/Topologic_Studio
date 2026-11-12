@@ -28,7 +28,8 @@ export const GUIDED_RUNS = [
     title: "Smoke behind closed doors",
     description: "Flamescapes, from the most likely ignition point, with every door closed: heat and smoke over 60 s (a minute or more to compute).",
     example: "duplex-apartment",
-    fire: { model: "flamescapes", doors: "closed", horizon: 60 },
+    // The graph shows the smoke, which the closed doors hold back, not the heat.
+    fire: { model: "flamescapes", doors: "closed", horizon: 60, show: "smoke" },
     note: "closed-doors",
   },
   {
@@ -83,6 +84,64 @@ export const stagesFor = (run) =>
       (run.plan || s.id !== "plan") &&
       (run.tour || s.id !== "tour"),
   );
+
+/**
+ * How long a stage's result stays on screen before the next stage, ms: long
+ * enough to read its caption and see the new point, route or fire. On a
+ * phone the run waits for Next instead.
+ */
+export const GUIDED_HOLD_MS = 2500;
+
+/** Seconds to read: "35.7 s" under 90 s, else "2 min 5 s". */
+const seconds = (s) => (s < 90 ? `${(Math.round(s * 10) / 10).toFixed(1)} s` : `${Math.floor(Math.round(s) / 60)} min ${Math.round(s) % 60} s`);
+
+/**
+ * The one or two numbers a finished guided run leads with in its card, from
+ * what the panel shows (App.jsx gathers `facts`): the escape plan, the
+ * egress map, the Flamescapes run, the route during the fire, or the route.
+ * Null when the result is missing.
+ */
+export function guidedHeadline(run, facts = {}) {
+  const { route, reroute, combustion, plan, egress } = facts;
+  if (run.egress) {
+    if (!egress) return null;
+    const parts = [`Farthest walk ${egress.farthest.toFixed(1)} m`];
+    if (Number.isFinite(egress.deadEnds)) parts.push(`${egress.deadEnds} dead-end corridor${egress.deadEnds === 1 ? "" : "s"}`);
+    if (egress.onFoot > 0) parts.push(`a wheelchair reaches ${egress.byChair} of ${egress.onFoot} rooms`);
+    return `${parts.join("; ")}.`;
+  }
+  if (run.plan && plan) {
+    if (!Number.isFinite(plan.out)) return "No safe route within the forecast.";
+    return `Out in ${seconds(plan.out)} by the earliest safe route${Number.isFinite(plan.leave) ? `; leave within ${plan.leaveAtLeast ? "at least " : ""}${seconds(plan.leave)}` : ""}.`;
+  }
+  if (run.fire?.model === "flamescapes") {
+    if (!combustion) return null;
+    const detected = Number.isFinite(combustion.detectedAt) ? `a smoke detector responds at ${Math.round(combustion.detectedAt)} s` : "no smoke detector responds";
+    return `Peak ${Math.round(combustion.peak)} kW; ${detected}.`;
+  }
+  if (run.fire) {
+    if (!reroute) return null;
+    if (reroute.found === false) return "No safe route left.";
+    return Number.isFinite(reroute.firstChange)
+      ? `The route changed at step ${reroute.firstChange}${reroute.clearBy ? `; clear again by step ${reroute.clearBy}` : ""}.`
+      : `The route stayed clear to step ${reroute.step}.`;
+  }
+  if (!route?.found) return null;
+  return `Route ${route.length.toFixed(1)} m, from the room furthest from an exit.`;
+}
+
+/**
+ * Where a finished run's result sits in the panel: its step, the folded
+ * sections (Section ids in ui/Panels.jsx) to open, and the card to bring
+ * into view.
+ */
+export function guidedResultPlace(run) {
+  if (run.egress) return { tab: "route", sections: ["egress-map", "accessibility"], scroll: "#egress-map" };
+  if (run.plan) return { tab: "simulate", sections: ["forecast"], scroll: '[aria-label="Plan with the forecast"]' };
+  if (run.fire?.model === "flamescapes") return { tab: "simulate", sections: [], scroll: '[aria-label="Flamescapes run"]' };
+  if (run.fire) return { tab: "simulate", sections: [], scroll: '[aria-label="Route during the fire"]' };
+  return { tab: "route", sections: [], scroll: '[aria-label="Route result"]' };
+}
 
 /**
  * What the fire stage does next: "wait" until the fire has been seen

@@ -37,16 +37,17 @@ import { RUN_CACHE_VERSION, clearRuns, fingerprint, readRun, storedRuns, writeRu
 import { closedDoorIds, doorsLabel } from "./core/doorStates.js";
 import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
-import { RUN_SETTINGS, fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
+import { RUN_SETTINGS, fireModelIn, isFlamescapes, keepGuidedBefore, planSettings, useStudio } from "./state/useStudio.js";
 import { runHorizon } from "./core/fireService.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
-import { GUIDED_RUNS, farthestFromExits, fireStageNext, guidedOrigin, nodeAlong, stagesFor } from "./core/guided.js";
+import { GUIDED_HOLD_MS, GUIDED_RUNS, farthestFromExits, fireStageNext, guidedHeadline, guidedOrigin, guidedResultPlace, nodeAlong, stagesFor } from "./core/guided.js";
+import { withoutSessionOnly } from "./core/settingsMigration.js";
 import { describeFacts } from "./core/describeFacts.js";
 import { EGRESS_B, codeCheck, storeysOf } from "./core/codeCheck.js";
 import * as reportPages from "./core/perfReport.js";
 import * as rsetPresets from "./core/rsetPresets.js";
-import { measureView } from "./core/measures.js";
+import { fittedHeatPeak, measureView } from "./core/measures.js";
 import { runIndex } from "./core/tenability.js";
 import { fieldNote, nextHint } from "./core/fieldNotes.js";
 import { useFieldNotes } from "./state/useFieldNotes.js";
@@ -58,6 +59,7 @@ import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
 import { Viewport } from "./ui/Viewport.jsx";
+import { revealSections } from "./ui/reveal.js";
 
 import { Badge, Button, FileButton, Icon, Segmented } from "./ui/primitives.jsx";
 import { ErrorBoundary } from "./ui/ErrorBoundary.jsx";
@@ -79,6 +81,25 @@ const GPU_RUN_DRAW_RATE = 15;
 const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate.v2";
 // The recording while its module loads (a click then does nothing).
 const RECORDER_STARTING = { cancel() {} };
+
+/**
+ * The hottest gas at head height in a run's frames so far, °C, or null: each
+ * frame is read once and the answer kept with the run (a restart's frames
+ * start it again, runCombustion). For the heat ramp fitted to the run.
+ */
+function runHotGas(run) {
+  if (!run?.frames) return null;
+  if (!(run.hotRead <= run.frames.length)) {
+    run.hotRead = 0;
+    run.hotGas = -Infinity;
+  }
+  for (let k = run.hotRead; k < run.frames.length; k += 1) {
+    const T = run.frames[k].T;
+    for (let i = 0; i < T.length; i += 1) if (T[i] > run.hotGas) run.hotGas = T[i];
+  }
+  run.hotRead = run.frames.length;
+  return Number.isFinite(run.hotGas) ? run.hotGas : null;
+}
 
 /** No slime mould grown (core/slimeEgress.js). */
 const SLIME_NONE = { nodes: null, result: null, busy: false, error: null };
@@ -447,7 +468,8 @@ export default function App() {
     else {
       const temperatures = new Map();
       for (let i = 0; i < frame.T.length; i += 1) if (frame.T[i] > 21) temperatures.set(i, frame.T[i]);
-      viewer.setTemperatures(temperatures, { peak: ZONE_COLOUR_PEAK });
+      // On the fixed ramp, or one fitted to the run (drawing only).
+      viewer.setTemperatures(temperatures, { peak: view.fit ? fittedHeatPeak(runHotGas(run)) : ZONE_COLOUR_PEAK });
     }
   }, [tenabilityOf]);
 
@@ -1856,7 +1878,11 @@ export default function App() {
         // A second scene is a restart on the CPU after the GPU stopped: the
         // frames so far came from the abandoned run (a playback waiting on
         // frame k resumes when the new run reaches it).
-        if (progress.info.restarted) run.frames.length = 0;
+        if (progress.info.restarted) {
+          run.frames.length = 0;
+          run.hotRead = 0;
+          run.hotGas = -Infinity;
+        }
         run.info = progress.info;
         // The view shares the GPU with the solver: it draws less while the GPU computes.
         viewerRef.current?.setDrawRate(progress.info.backend?.kind === "gpu" ? GPU_RUN_DRAW_RATE : 0);
@@ -2341,6 +2367,9 @@ export default function App() {
     const wantsReroute = settings.reroute && Boolean(points.start && points.exit);
     // The route the fire first gives; a later one that differs is the fire's doing.
     let firstRoute = null;
+    // The step it first left that route, and the step it was back on it (the fire's heat gone from it).
+    let firstChange = null;
+    let backOnFirst = null;
     // With "any exit", the route may leave by another exit out of the building.
     const otherExits = settings.rerouteExits === "any" && exits?.final.length ? exits.final : null;
     const pickedExit = points.exit ? snap(graph, points.exit) : -1;
@@ -2390,10 +2419,16 @@ export default function App() {
             colours.set("fire");
           } else if (message.type === "path_update") {
             const otherExit = message.found && message.exit_node !== null && message.exit_node !== undefined && message.exit_node !== pickedExit;
-            studio.setDynamicPath({ ...message, otherExit });
             const key = (message.node_ids || []).join(",");
             if (firstRoute === null) firstRoute = key;
-            else if (message.found && key && key !== firstRoute) markFound("reroute");
+            else if (message.found && key && key !== firstRoute) {
+              markFound("reroute");
+              if (firstChange === null) firstChange = message.step;
+              backOnFirst = null;
+            } else if (firstChange !== null && key === firstRoute && backOnFirst === null) backOnFirst = message.step;
+            // The first change is kept: the card read only the latest update,
+            // and said "still clear" after a route that changed and came back.
+            studio.setDynamicPath({ ...message, otherExit, firstChange, clearBy: backOnFirst });
             // Straight runs keep clear of burning or heated nodes.
             const shown =
               settings.straightenRoutes && message.node_ids?.length > 2
@@ -3685,18 +3720,61 @@ export default function App() {
 
   // The welcome screen's presets (core/guided.js) step through the app as a
   // user would and stop at the result. One stage at a time: each acts once,
-  // then advances when its result appears (a new model, graph, point, route
-  // or finished fire); Stop, or a stage that waits too long, ends the run.
+  // and when its result appears (a new model, graph, point, route or finished
+  // fire) it is held on screen for GUIDED_HOLD_MS, or on a phone until Next,
+  // before the next stage; Stop, or a stage that waits too long, ends the run.
   const [guided, setGuided] = useState(null);
-  const startGuided = useCallback((run) => setGuided({ run, stage: "open", acted: null, before: null, error: null }), []);
+  // The settings the run changes, as they were before it (key: value), given
+  // back when it is stopped, closed or left for the guided runs: a run used
+  // to leave its fire, doors and people set for the user's next model. Kept
+  // in the browser too, so a reload mid-run gives them back (useStudio.js).
+  const guidedBeforeRef = useRef(null);
+  const startGuided = useCallback((run) => {
+    guidedBeforeRef.current = {};
+    keepGuidedBefore(null);
+    setGuided({ run, stage: "open", acted: null, before: null, error: null, ready: null, manual: isPhone() });
+  }, []);
+  // A setting the run changes: the user's value is kept first.
+  const guidedSet = (patch) => {
+    const before = guidedBeforeRef.current;
+    if (before) {
+      for (const key of Object.keys(patch)) if (!(key in before)) before[key] = settings[key];
+      keepGuidedBefore(withoutSessionOnly(before));
+    }
+    setSettings(patch);
+  };
   // Its field note was shown in the run's own card: not again in the panel.
   const { closeLatest } = notes;
-  const stopGuided = useCallback(() => {
+  // The run ends and the user's settings come back.
+  const endGuided = useCallback(() => {
     setGuided(null);
     closeLatest();
-  }, [closeLatest]);
+    const before = guidedBeforeRef.current;
+    guidedBeforeRef.current = null;
+    keepGuidedBefore(null);
+    if (before && Object.keys(before).length) setSettings(before);
+  }, [closeLatest, setSettings]);
+  // The guided card's Stop (Close once it has ended) is the one Stop while a
+  // run plays: it ends a fire playing or starting too, as Stop fire does (M7).
+  const stopGuided = useCallback(() => {
+    if (fire.running || fire.starting) stopFire();
+    endGuided();
+  }, [fire.running, fire.starting, stopFire, endGuided]);
+  // A stage whose result is on screen goes on after the hold; on a phone, at Next.
+  const nextGuided = useCallback(() => {
+    setGuided((g) => {
+      if (!g?.ready) return g;
+      const ids = stagesFor(g.run).map((s) => s.id);
+      return { ...g, stage: ids[ids.indexOf(g.stage) + 1], acted: null, before: null, ready: null };
+    });
+  }, []);
   useEffect(() => {
     if (!guided || guided.stage === "done" || guided.error) return undefined;
+    if (guided.ready) {
+      if (guided.manual) return undefined;
+      const timer = setTimeout(nextGuided, Math.max(0, guided.ready + GUIDED_HOLD_MS - Date.now()));
+      return () => clearTimeout(timer);
+    }
     // Deferred a tick, so the stage's state changes happen outside the effect;
     // a re-run before then cancels it, so no stage acts twice.
     const timer = setTimeout(() => guidedStep(guided), 0);
@@ -3704,8 +3782,10 @@ export default function App() {
   });
   const guidedStep = (guided) => {
     const { run, stage, acted, before } = guided;
-    const ids = stagesFor(run).map((s) => s.id);
-    const advance = () => setGuided((g) => (g && g.run === run && g.stage === stage ? { ...g, stage: ids[ids.indexOf(stage) + 1], acted: null, before: null } : g));
+    // The stage's result is on screen: held (the effect above), then the next stage.
+    const advance = () => setGuided((g) => (g && g.run === run && g.stage === stage && !g.ready ? { ...g, ready: Date.now() } : g));
+    // Every setting a stage changes keeps the user's value first.
+    const setSettings = guidedSet;
     const act = (then, was) => {
       setGuided((g) => (g && g.run === run && g.stage === stage ? { ...g, acted: stage, before: was } : g));
       then();
@@ -3762,7 +3842,15 @@ export default function App() {
           // A phone runs a shorter fire where the run says so. The run's own
           // length, not until the fire service arrives (core/fireService.js).
           const horizon = (isPhone() && run.fire.phoneHorizon) || run.fire.horizon || 60;
-          setSettings({ flamescapes: true, fireModel: "flamescapes", flamescapesDoors: run.fire.doors || "open", flamescapesHorizon: horizon, flamescapesUntilService: false });
+          // And what the graph shows, where the run says (the smoke behind closed doors).
+          setSettings({
+            flamescapes: true,
+            fireModel: "flamescapes",
+            flamescapesDoors: run.fire.doors || "open",
+            flamescapesHorizon: horizon,
+            flamescapesUntilService: false,
+            ...(run.fire.show ? { flamescapesShow: run.fire.show } : {}),
+          });
           act(() => void findIgnition("residential"), points.fire);
         } else {
           setSettings({ flamescapes: false, fireModel: run.fire.model, reroute: true });
@@ -3819,8 +3907,9 @@ export default function App() {
       else if (guided.sawReplay && !fire.running) advance();
     }
   };
-  // A stage that waits too long ends the run (a fire on the GPU or a CPU core can take minutes).
-  const guidedStage = guided && !guided.error && guided.stage !== "done" ? guided.stage : null;
+  // A stage that waits too long ends the run (a fire on the GPU or a CPU core
+  // can take minutes); not one whose result is on screen, held or waiting for Next.
+  const guidedStage = guided && !guided.error && guided.stage !== "done" && !guided.ready ? guided.stage : null;
   useEffect(() => {
     if (!guidedStage) return undefined;
     const limit = guidedStage === "fire" ? 15 * 60000 : 4 * 60000;
@@ -3837,21 +3926,63 @@ export default function App() {
     const own = note.id === "walk-out" && path?.found !== false && path?.length > 0 ? note.text({ length: path.length }) : null;
     return { teaser: note.teaser, text: own || notes.found[note.id].text };
   }, [guided, notes.found, path]);
+  // At the end the result is brought into view: its step, its folded
+  // sections opened (ui/reveal.js) and its card scrolled to the top of the
+  // panel; "Done: the result is in the panel" was not true on screen.
+  const guidedDone = guided?.stage === "done" ? guided.run : null;
+  useEffect(() => {
+    if (!guidedDone) return undefined;
+    const place = guidedResultPlace(guidedDone);
+    setTab(place.tab);
+    revealSections(place.sections);
+    // After the step and its opened sections have drawn; then the request
+    // ends, so the sections open as usual when the step is shown again.
+    const timer = setTimeout(() => {
+      document.querySelector(place.scroll)?.scrollIntoView({ block: "start" });
+      revealSections(null);
+    }, 150);
+    return () => {
+      clearTimeout(timer);
+      revealSections(null);
+    };
+  }, [guidedDone]);
+  // And the card leads with its one or two numbers (core/guided.js).
+  const guidedResult = useMemo(() => {
+    if (!guidedDone) return null;
+    const plan = forecastPlan.result;
+    const depart = forecastPlan.inputs?.departAfter || 0;
+    const safe = plan?.front?.find((p) => p.dose <= (forecastPlan.inputs?.doseLimit ?? Infinity));
+    const storeys = (egress.fine?.storeys || []).filter((s) => s.audit?.rooms.onFoot > 0);
+    return guidedHeadline(guidedDone, {
+      route: path ? { found: path.found !== false, length: path.straight_length ?? path.length } : null,
+      reroute: dynamicPath ? { found: dynamicPath.found, step: dynamicPath.step, firstChange: dynamicPath.firstChange, clearBy: dynamicPath.clearBy } : null,
+      combustion: fire.combustion ? { peak: fire.combustion.peak ?? 0, detectedAt: fire.combustion.detectedAt } : null,
+      plan: plan ? { out: safe ? safe.arrival - depart : null, leave: plan.leaveBy?.good, leaveAtLeast: Boolean(plan.leaveBy?.horizon) } : null,
+      egress: egress.result
+        ? {
+            farthest: egress.result.summary.farthest,
+            deadEnds: egress.result.deadEnds?.corridors.length,
+            byChair: storeys.reduce((n, s) => n + s.audit.rooms.byChair, 0),
+            onFoot: storeys.reduce((n, s) => n + s.audit.rooms.onFoot, 0),
+          }
+        : null,
+    });
+  }, [guidedDone, forecastPlan.result, forecastPlan.inputs, egress.result, egress.fine, path, dynamicPath, fire.combustion]);
 
   // ------------------------------------------------- back to the guided runs
 
   // The welcome screen and its guided runs again, without a reload, from a
-  // load, a guided run, a fire playing or one that has ended. A guided run
-  // ends as its Stop ends it; a fire playing or starting ends as Stop fire
-  // ends it (M7); a recording is saved as its Stop saves it (M9); then the
-  // model goes as when another is opened (L1): its load, graph build, agent,
-  // plan, report fires, egress map and slime mould end, and what is kept
-  // with the graph drops itself (a Flamescapes run still computing or
-  // repeating is ended by the graph's effect below: M4). The viewer stays,
-  // without its model (ViewerManager.unloadModel).
+  // load, a guided run, a fire playing or one that has ended. A fire playing
+  // or starting ends as Stop fire ends it (M7); a guided run ends as its Stop
+  // ends it, with the user's settings back; a recording is saved as its Stop
+  // saves it (M9); then the model goes as when another is opened (L1): its
+  // load, graph build, agent, plan, report fires, egress map and slime mould
+  // end, and what is kept with the graph drops itself (a Flamescapes run
+  // still computing or repeating is ended by the graph's effect below: M4).
+  // The viewer stays, without its model (ViewerManager.unloadModel).
   const backToWelcome = useCallback(() => {
-    stopGuided();
     if (fire.running || fire.starting) stopFire();
+    endGuided();
     if (recordRef.current && recordRef.current !== RECORDER_STARTING) void toggleRecording();
     ++loadSeqRef.current;
     samplerRef.current?.cancel();
@@ -3874,7 +4005,7 @@ export default function App() {
     viewerRef.current?.unloadModel?.();
     colours.set(null);
     setTab("model");
-  }, [stopGuided, fire.running, fire.starting, stopFire, toggleRecording, endFireStart, dropPlan, stopPerfFires, studio, colours]);
+  }, [endGuided, fire.running, fire.starting, stopFire, toggleRecording, endFireStart, dropPlan, stopPerfFires, studio, colours]);
 
   // ------------------------------------------------- run again, in the view
 
@@ -4130,7 +4261,7 @@ export default function App() {
     paintCombustion(viewerRef.current, run, fire.step);
     // Only a change of view or limits redraws; frames redraw themselves as they play.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.flamescapesShow, settings.flamescapesSmokeMeasure, settings.flamescapesGasMeasure, settings.flamescapesUntenableC, settings.flamescapesVisibility, settings.flamescapesSmoke]);
+  }, [settings.flamescapesShow, settings.flamescapesHeatScale, settings.flamescapesSmokeMeasure, settings.flamescapesGasMeasure, settings.flamescapesUntenableC, settings.flamescapesVisibility, settings.flamescapesSmoke]);
 
   // The deadline map colours the graph when a plan arrives or the toggle
   // changes, and only then. A fire that has coloured the graph since keeps
@@ -4591,7 +4722,6 @@ export default function App() {
             pickMode={pickMode}
             hasModel={Boolean(modelInfo)}
             loadState={studio.loadState}
-            graphStats={graph?.stats}
             fire={fire}
             levels={levels}
             section={section}
@@ -4616,8 +4746,16 @@ export default function App() {
                 : isFlamescapes(fire.model)
                   ? (measureView(settings, Boolean(fire.combustion?.extras)).legend ?? {
                       title: "Gas temperature at head height (°C)",
-                      max: ZONE_COLOUR_PEAK,
-                      note: "Flamescapes: the solver's gas temperature 1.8 m above each node's floor.",
+                      // The fixed ramp, or one fitted to the run, chosen in the legend: drawing only.
+                      max: settings.flamescapesHeatScale === "run" ? fittedHeatPeak(runHotGas(playingRunRef.current)) : ZONE_COLOUR_PEAK,
+                      note:
+                        settings.flamescapesHeatScale === "run"
+                          ? "Fitted to this run's hottest gas at head height so far: the colours only, not the fire; a colour means another temperature in another run."
+                          : "Flamescapes: the solver's gas temperature 1.8 m above each node's floor.",
+                      fit: {
+                        on: settings.flamescapesHeatScale === "run",
+                        onToggle: () => setSettings({ flamescapesHeatScale: settings.flamescapesHeatScale === "run" ? "fixed" : "run" }),
+                      },
                     })
                   : fire.model === "temperature")
             }
@@ -4649,9 +4787,13 @@ export default function App() {
                     stage: guided.stage,
                     error: guided.error,
                     note: guidedNote,
+                    result: guidedResult,
+                    // Its result on screen and waiting for Next (a phone).
+                    waiting: Boolean(guided.ready && guided.manual),
                   }
                 : null
             }
+            onNextGuided={nextGuided}
             onOpenNotes={() => setNotesOpen(true)}
             onStopGuided={stopGuided}
             onHome={backToWelcome}
@@ -4872,6 +5014,7 @@ export default function App() {
                   onExtinguisherAttempt={runExtinguisherAttempt}
                   pace={lastPace}
                   gpuSpeed={gpuRateRef.current || null}
+                  guided={Boolean(guided)}
                 />
               )}
             </div>

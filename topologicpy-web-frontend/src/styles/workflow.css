@@ -814,7 +814,7 @@
   }
 }
 
-/* Phones: the node count gives the small viewport back. Toasts stay under
+/* Phones: toasts stay under
    the header, which is one row on a phone: at the bottom they covered the
    workflow panel and blocked its buttons until they expired. */
 @media (max-width: 760px) {
@@ -838,7 +838,6 @@
     width: calc(100vw - 32px);
   }
 
-  .overlay--bottom-right > .card:not(:last-child),
   .header .badge {
     display: none;
   }
@@ -1200,12 +1199,12 @@ details.legend[open] > .legend__summary {
 }
 
 /* Run again where the playback bar was, bottom centre, on a view at least
-   1,140 px wide: its longer label (about 250 px) then clears the legend at the
-   bottom left (up to about 350 px with long rows) and the node count and view
-   card at the bottom right (up to about 420 px with the storey cut). Above
-   900 px the panel takes 380 px beside the view unless it is hidden.
-   Narrower, it stays beside Guided runs at the top left. */
-@media (min-width: 1520px) {
+   1,000 px wide: its longer label (about 250 px) then clears the legend at the
+   bottom left (up to about 350 px with long rows) and the view card at the
+   bottom right (up to about 230 px with the storey cut). Above 900 px the
+   panel takes 380 px beside the view unless it is hidden. Narrower, it stays
+   beside Guided runs at the top left. */
+@media (min-width: 1380px) {
   .replay-btn {
     position: absolute;
     bottom: 0;
@@ -1214,7 +1213,7 @@ details.legend[open] > .legend__summary {
   }
 }
 
-@media (min-width: 1140px) {
+@media (min-width: 1000px) {
   .app-body[data-panel-collapsed="true"] .replay-btn {
     position: absolute;
     bottom: 0;
@@ -1511,6 +1510,26 @@ details.legend[open] > .legend__summary {
 
 .guided__note strong {
   display: block;
+}
+
+/* A finished run's numbers (core/guided.js guidedHeadline). */
+.guided__result {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+/* A load's progress and the fire's steps, inside the run's card. */
+.guided .progress {
+  min-width: 0;
+}
+
+/* The heat legend's choice of ramp: a fixed one or one fitted to the run. */
+.legend__fit {
+  align-self: flex-start;
+  min-height: 24px;
+  font-size: 12px;
 }
 
 /* The human check (lib/turnstile.js): empty unless Cloudflare asks for a click. */

@@ -6,6 +6,7 @@
  */
 import React, { useId, useState } from "react";
 import { splitHint } from "../core/hintText.js";
+import { useReveal } from "./reveal.js";
 
 export function Button({
   children,
@@ -93,7 +94,15 @@ export function Segmented({ value, onChange, options, label, disabled = false })
 const guideHref = (page) => `${import.meta.env.BASE_URL}docs/${page}`;
 
 export function Section({ title, badge, children, defaultOpen = true, id, guide }) {
+  // Opened from outside when a finished guided run's result is in it (ui/reveal.js).
+  const reveal = useReveal();
   const [open, setOpen] = useState(defaultOpen);
+  // Opened once per request, as a click would open it; folding it again stays folded.
+  const [revealed, setRevealed] = useState(null);
+  if (reveal && id && reveal.ids.includes(id) && revealed !== reveal.seq) {
+    setRevealed(reveal.seq);
+    setOpen(true);
+  }
   const bodyId = useId();
   return (
     <section className="section" id={id}>

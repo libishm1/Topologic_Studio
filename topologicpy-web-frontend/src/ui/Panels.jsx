@@ -1824,7 +1824,7 @@ function EgressMap({ egress, settings, setSettings, onMap, onFine, onClear, read
   const cascade = r?.sweep.cascade || [];
   const dead = r?.deadEnds;
   return (
-    <Section title="Egress map" guide="people-and-slime.html#egress-map" badge={r ? "mapped" : null} defaultOpen={false}>
+    <Section title="Egress map" id="egress-map" guide="people-and-slime.html#egress-map" badge={r ? "mapped" : null} defaultOpen={false}>
       <p className="field__hint">The walk to the nearest exit from every place, room by room, and what closing exits does to it.</p>
       <div className="grid-2">
         <Button size="sm" onClick={onMap} disabled={!ready || Boolean(egress?.busy)}>
@@ -1906,7 +1906,7 @@ function Accessibility({ egress, settings, setSettings, onAudit, ready }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return (
-    <Section title="Accessibility" guide="people-and-slime.html#accessibility" badge={fine && !stale ? "audited" : null} defaultOpen={false}>
+    <Section title="Accessibility" id="accessibility" guide="people-and-slime.html#accessibility" badge={fine && !stale ? "audited" : null} defaultOpen={false}>
       <p className="field__hint">Where a wheelchair can go, what stops it, and whether it has a way out.</p>
       <SelectField
         label="Profile"
@@ -2424,8 +2424,8 @@ function RerouteResult({ dynamicPath, step }) {
         <Icon name={unsafe ? "alert" : "check"} size={16} />
         {unsafe
           ? "No safe route"
-          : dynamicPath.changed
-            ? `The route changed at step ${dynamicPath.step}`
+          : Number.isFinite(dynamicPath.firstChange)
+            ? `Changed at step ${dynamicPath.firstChange}${Number.isFinite(dynamicPath.clearBy) ? `; clear again by step ${dynamicPath.clearBy}` : ""}`
             : `Route still clear at step ${step}`}
       </h3>
       <dl className="result__grid">
@@ -2692,7 +2692,7 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
   const space = fireRoomId !== null && fireRoomId !== undefined ? semantics?.spaces?.find((s) => s.id === fireRoomId) : null;
   const roomName = space ? [space.longName, space.name].filter(Boolean).join(" ") || null : null;
   return (
-    <Section title="Escape deadlines and forecast routes" guide="fire-and-smoke.html#forecast" badge={forecastPlan.result?.earliest ? "planned" : null}>
+    <Section title="Escape deadlines and forecast routes" id="forecast" guide="fire-and-smoke.html#forecast" badge={forecastPlan.result?.earliest ? "planned" : null}>
       <p className="field__hint">
         Runs the fire to its last step first, then routes with the state each point will be in when you would reach it,
         and works out how long you can wait before leaving.
@@ -3284,6 +3284,7 @@ export function SimulatePanel({
   onLayOutSystems,
   pace = null,
   gpuSpeed = null,
+  guided = false,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo, semantics } = studio;
   // Running, or starting: the two-zone model computes its frames first.
@@ -3444,20 +3445,25 @@ export function SimulatePanel({
           </p>
         )}
 
-        <div className="row">
-          <Button
-            variant="primary"
-            size="lg"
-            style={{ flex: 1 }}
-            disabled={!ready || fireBusy || !points.fire}
-            onClick={onStartFire}
-          >
-            Start fire
-          </Button>
-          <Button variant="danger" size="lg" disabled={!fireBusy} onClick={onStopFire}>
-            Stop
-          </Button>
-        </div>
+        {/* A guided run starts and stops its own fire: its card's Stop is the one Stop then. */}
+        {guided ? (
+          <p className="field__hint">A guided run is on screen: its card over the model stops it, and once it is closed a fire can be started here.</p>
+        ) : (
+          <div className="row">
+            <Button
+              variant="primary"
+              size="lg"
+              style={{ flex: 1 }}
+              disabled={!ready || fireBusy || !points.fire}
+              onClick={onStartFire}
+            >
+              Start fire
+            </Button>
+            <Button variant="danger" size="lg" disabled={!fireBusy} onClick={onStopFire}>
+              Stop
+            </Button>
+          </div>
+        )}
         {ready && !points.fire && <p className="field__hint">Set a fire origin to start the simulation.</p>}
         {ready && points.fire && settings.reroute && !(points.start && points.exit) && (
           <p className="field__hint">Set a start and exit in the Route step to see the route react.</p>
