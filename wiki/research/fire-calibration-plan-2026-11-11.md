@@ -986,3 +986,16 @@ Two faults found by these checks, which use no measured data, are added as 13.4 
   - Check, which uses no measured data: a burner in a sealed box stops releasing heat when the box's oxygen falls to the volume fraction the critical flame temperature implies for its fuel (the analytic value), within 0.5 % oxygen by volume. The unit tests and closures must still hold.
 
   This item was prompted by held-out results, as the burner fault of 2026-11-12 was. Its value is FDS's, and its check uses no measured data. Both runs, 13.A and 13.B, are reported.
+
+### 13.10 Items 5 and 6 (2026-11-12, before any 13.B run)
+
+- **Item 5, a pressure for each sealed region: made** (FDS's pressure zones). A sealed box cooled by its walls keeps 1.00000 of its gas mass over 60 s (1 % allowed; it had gained 29.7 %), and its pressure falls to 0.736 of ambient. A heated sealed box rises 35.438 kPa against the ideal gas's 35.431 kPa (0.02 %; 2 % allowed). CPU and GPU agree, and open scenes are bit-identical to before.
+- **Item 6, flame extinction: its check failed.** FDS's extinction model 2 was built with FDS's default critical flame temperatures (methane 1507 °C), from FDS master 5f8f194.
+  - The pre-registered check (a 20 kW methane burner in a sealed box whose walls cool it) stopped with the box at 10.79 % oxygen against an analytic 10.13 %, a gap of 0.66 % where 0.5 % was allowed.
+  - Diagnosis: per cell the model goes out at its own threshold (10.45 % against 10.46 % in the last cell to burn). But the walls cool the box unevenly, so cooler cells stop first and keep their oxygen. The analytic value was evaluated for a mixture the box did not hold.
+  - The failed check stands as the record and is not re-scored.
+- **Item 6's second check, written now, before it is run.** Both parts must pass for item 6 to be made; the critical flame temperature stays FDS's default and is not fitted.
+  - (a) The same burner in a sealed box whose walls exchange no heat (a uniform box), so the box holds the mixture the analytic value is computed for. The box's mean oxygen at the stop must be within 0.5 % by volume of the analytic value, the same tolerance as before.
+  - (b) At the stop, every cell that held fuel and burned must lie within 0.1 % oxygen by volume of its own threshold, computed from its own temperature and composition.
+
+  This second check was written after the first one failed. A reader should weigh item 6 with that in mind.
