@@ -1120,3 +1120,41 @@ Each physics item made, and each full rerun, reports its cost beside its accurac
 ### 14.7 A measured change too small to compare (written after 13.A's O2, before 13.B's is read)
 
 13.A showed that UL FSRI's analysers read almost no oxygen drop in the open-door tests, and the ratio of two changes has no meaning when the measured one is within the instrument's uncertainty. Disclosed as prompted by a held-out result. The rule, for every species pair in every series: a pair whose measured change (the drop of O2, the rise of CO2) is below 0.005 by volume fraction is left out and counted as "below the instrument". The 0.005 is a round figure chosen here, not taken from an analyser's certificate; if a series' report states its analyser's uncertainty, twice that figure replaces it for that series, looked up before 13.B's species are read. Every statistic and verdict is reported both ways, as pre-registered and with this rule, and the stricter decides the app's text. So the rule can show what the other pairs say, and can never lift a verdict.
+
+## 15. The fire's own heat release (2026-11-12, 22:35, before any heat release record is read)
+
+14.5 asked first what UL FSRI's 2018 tests measured. Read for that: the repository's `02_Info/README.md`, `channel_list.csv` and `furniture_mass.csv` (descriptions, channel names and masses; no test record).
+
+### 15.1 What the series holds
+
+- 120 tests in one room (3.7 x 3.7 x 2.4 m, one 0.9 x 2.0 m door, open or shut throughout). 92 are the gas-burner tests of 13.A. The rest burn one upholstered chair each: a "red accent" chair of about 20 kg or an "overstuffed" chair of about 49 kg, at the centre, the corner or the back wall.
+- **Heat release:** by oxygen consumption under the laboratory's hood, "during most open door experiments with a fire size larger than 100 kW". Not in the closed-door tests.
+- **Also measured and not yet compared:** total and radiant heat flux to the side wall at two heights (and to the wall behind the fire), three pressure taps, and velocity and temperature in the plume. These serve the roadmap's phase 4 (a wall heat-flux gauge; room pressure from a second laboratory).
+
+### 15.2 What follows from it
+
+- **Spread between items cannot be checked on this series:** each test burns one item. The app's spread from the first item to the room's contents stays not calibrated, and no public series found so far measures it with terms that allow use.
+- **The design fire's curve can be checked** (15.3).
+- **The chairs add a series with a real, sooty fuel** (15.4).
+- **The burner's nominal size can be checked** (15.5).
+
+### 15.3 The design fire against measured items
+
+A check of the curve the app takes from the literature, not of the solver. No verdict word is attached; it is reported apart.
+
+- **Measured items:** the open-door chair tests with a heat release record, and the upholstered chairs and sofas of NIST's Fire Calorimetry Database (its terms read first).
+- **From each record:** the peak; the energy released; and a growth coefficient, fitted by least squares as α (t − t0)² with t0 free, from the first reading above 25 kW to the first at 90 % of the peak.
+- **Against:** the app's class A curve (medium, 0.0117 kW/s², after EN 1991-1-2 for dwellings and offices) and the fast curve its own note gives for upholstered furniture alone (0.0469 kW/s²).
+- **Reported:** the measured coefficients' median and range by item kind, and where the two curves fall in it. The app's default changes only on the user's word.
+
+### 15.4 The chair tests as a series
+
+- **Named here as held out:** `fsri-chairs`, the open-door chair tests with a heat release record. Same laboratory as `fsri`, so it adds a series and no laboratory.
+- **The fire:** the test's measured heat release, prescribed, at the chair's place and footprint.
+- **The fuel:** the app's class A fuel as it stands (`fireClasses.js`): its heat of combustion and yields are what the app would use. Nothing is fitted.
+- **Compared:** what 13.A compares in `fsri` (layer depth and temperature, the ceiling jet away from the fire's quadrant, head height, the neutral plane, door velocity, O2 under 14.7), by the same reducers and rule.
+- **The closed-door chair tests** have no heat release record and are not run.
+
+### 15.5 The burner's nominal size
+
+For the open-door burner tests above 100 kW with a heat release record: the mean measured heat release over the steady period against the nominal 250 or 500 kW. Reported as a ratio per test. If the median ratio is outside 0.95 to 1.05, `fsri` is also run with the measured heat release prescribed and reported beside; 13.A's and 13.B's verdicts stand on the nominal size as pre-registered, and the stricter of the two decides the app's text.
