@@ -51,7 +51,7 @@ test("13.8 item 5: a sealed box cooled by its walls keeps its gas's mass within 
   const h = 0.25, ny = 9;
   const board = { name: "gypsum", rho: (GYPSUM.rho * GYPSUM.thickness) / h, c: GYPSUM.c, k: GYPSUM.k, eps: 0.9, layers: [GYPSUM] };
   const run = (pressureZones) => {
-    const sim = shellBox([10, ny, 10], h, [board, board, board], { pressureZones });
+    const sim = shellBox([10, ny, 10], h, [board, board, board], { pressureZones, leakage: [] });
     for (let c = 0; c < sim.N; c += 1) {
       if (sim.kind[c] === SOLID || Math.floor(c / 10) % ny >= ny / 2) continue;
       sim.T[c] = TA + 300;
@@ -77,7 +77,7 @@ test("13.8 item 5: a sealed box cooled by its walls keeps its gas's mass within 
 
 test("13.8 item 5: a heated sealed box's pressure rises as the ideal gas's at constant volume, within 2 %", () => {
   const h = 0.25, n = [14, 12, 14];
-  const sim = shellBox(n, h, null, { pressureZones: 1, wallConvection: 0 });
+  const sim = shellBox(n, h, null, { pressureZones: 1, wallConvection: 0, leakage: [] });
   const volume = (n[0] - 2) * (n[1] - 2) * (n[2] - 2) * sim.V;
   // Air's gamma: c_p and R / M of the gas the box holds.
   let c0 = 0;
@@ -118,7 +118,7 @@ test("13.8 item 5: a heated sealed box's pressure rises as the ideal gas's at co
 
 test("13.8 item 5: open regions stay at ambient pressure, and a still zone keeps its pressure", () => {
   // The heat-closure mix box: its gas mixes at constant volume, so its pressure and its heat stay.
-  const sim = shellBox([10, 9, 10], 0.25, null, { pressureZones: 1, wallConvection: 0 });
+  const sim = shellBox([10, 9, 10], 0.25, null, { pressureZones: 1, wallConvection: 0, leakage: [] });
   for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] !== SOLID && Math.floor(c / 10) % 9 < 4) sim.T[c] = TA + 300;
   const heat = () => {
     let e = 0;

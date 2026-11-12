@@ -33,7 +33,13 @@ function talbot(Tg, Tw, rhoGas, cp, h, d = 0.03e-6) {
   return ((K * mu) / rhoGas / Tg) * ((h * (Tg - Tw)) / kg);
 }
 
-/** A sealed box whose walls are the domain's outermost cells (thick stone, lumped); its gas at T K with soot ys. */
+/**
+ * A sealed box whose walls are the domain's outermost cells (thick stone,
+ * lumped); its gas at T K with soot ys. Sealed as before leakage (leakage [],
+ * plan 13.11): with the default leaks the air drawn in as soot leaves the gas
+ * warms it by 5e-5 K (a vessel filling), enough for 1e-10 kg of thermophoretic
+ * deposit on the isothermal box's walls, against 7e-4 kg settled on its floor.
+ */
 function sootBox(options, T = 600, ys = 1e-3) {
   const nx = 8, ny = 8, nz = 8, h = 0.25, N = nx * ny * nz;
   const grid = { nx, ny, nz, h, origin: [0, 0, 0], axes: [0, 1, 2], upAxis: "y", cells: N };
@@ -47,7 +53,7 @@ function sootBox(options, T = 600, ys = 1e-3) {
     }
   }
   const scene = { grid, fraction, solid, contents: { cells: [], masses: [] } };
-  const sim = createSolver(scene, { contentsFuel: FUEL, ignitionFuel: FUEL, seed: 1, emitAbove: 1e9, sootDeposition: 1, ...options });
+  const sim = createSolver(scene, { contentsFuel: FUEL, ignitionFuel: FUEL, seed: 1, emitAbove: 1e9, sootDeposition: 1, leakage: [], ...options });
   for (let c = 0; c < N; c += 1) {
     if (sim.kind[c] === SOLID) continue;
     sim.T[c] = T;

@@ -41,7 +41,7 @@
  *     runs on the CPU solver instead.
  */
 
-import { DEFAULTS, NS, burnerHeat, createSolver, gasDensity, healthReadings, healthVerdict, substepsFor, topology } from "./flamescapes.js";
+import { DEFAULTS, NS, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor, topology, ventLeakList, zoneState } from "./flamescapes.js";
 import {
   KELVIN, ceilingDetectors, failedHealth, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
@@ -227,6 +227,13 @@ class GpuSim {
     d.conservative = this.conservativeOn;
     d.sealedN = this.sealed ? this.sealed.S : 0;
     d.zonesOn = this.zonesOn;
+    // Leakage (flamescapes.js leakTerms and ventLeaks, plan 13.11 item 7): the
+    // zones' leak terms, as the CPU's zones hold them, and the vent leaks in
+    // open regions (those in a zone are its terms).
+    this.zoneState = this.zonesOn ? sim.zones || zoneState(sim) : null;
+    if (sim.ventLeaks === undefined) sim.ventLeaks = ventLeakList(sim);
+    this.vents = (sim.ventLeaks || []).filter((e) => !(this.zonesOn && this.sealed.cellSealed[e.cell] !== 0xffffffff));
+    d.leakVentN = this.vents.length;
     // One-dimensional walls (flamescapes.js wallSetup), when the scene has any.
     this.wall = sim.wall && sim.wall.cells.length ? sim.wall : null;
     d.wallN = this.wall ? this.wall.cells.length : 0;
@@ -257,7 +264,10 @@ class GpuSim {
     io.reach = io.burnerLayers + (b ? b.layerStart.length : 0);
     // The sealed regions' offsets and cells (sealedRegions), when the gas expands.
     io.sealed = io.reach + (b ? 2 * b.reach.length : 0);
-    io.size = io.sealed + (this.sealed ? this.sealed.S + 1 + this.sealed.list.length : 0);
+    // Then each zone's leak terms (offsets, then C_d A, n, dp_ref a term), and the vent leaks (cell, C_d A, n, dp_ref).
+    io.leakTerms = io.sealed + (this.sealed ? this.sealed.S + 1 + this.sealed.list.length : 0);
+    io.vents = io.leakTerms + (this.zonesOn ? d.sealedN + 1 + 3 * this.zoneState.termCA.length : 0);
+    io.size = io.vents + 4 * d.leakVentN;
     this.io = io;
     this.suppressionOn = Boolean(suppression);
     d.sprayCols = 0;
@@ -275,12 +285,14 @@ class GpuSim {
     // step's flame cells.
     red.burner = red.pilot + 4;
     red.mean = red.burner + 4;
-    // Then each pressure zone's pi, mass, last ratio and kappa, and each cell's mass source since the last update.
+    // Then each pressure zone's pi - 1, mass, last ratio and kappa, and the share of its gas it takes in as air at its next update; and each cell's mass source since the last update.
     red.zone = red.mean + d.sealedN;
-    red.zoneSrc = red.zone + (this.zonesOn ? 4 * d.sealedN : 0);
+    red.zoneSrc = red.zone + (this.zonesOn ? 5 * d.sealedN : 0);
     // Then the reduction's partial sums, three a block (kernels.js zonePartial).
     red.zonePart = red.zoneSrc + (this.zonesOn ? N : 0);
-    red.size = red.zonePart + (this.zonesOn ? 3 * ZONE_BLOCKS * d.sealedN : 0);
+    // Then each vent leak's expansion this step (kernels.js leakVent).
+    red.leakDiv = red.zonePart + (this.zonesOn ? 3 * ZONE_BLOCKS * d.sealedN : 0);
+    red.size = red.leakDiv + d.leakVentN;
     this.red = red;
     // In `snap` after the step's start (velocities, T, Y): the transport's
     // scratch state (rho, then Y) and the step's starting T for the expansion.
@@ -392,6 +404,7 @@ class GpuSim {
       sootDeposition: P.sootDeposition > 0 ? 1 : 0, sootDensity: P.sootDensity, sootDiameter: P.sootDiameter,
       sootThDiameter: P.sootThermophoreticDiameter, sootConductivity: P.sootConductivity, depAt: snapAt.dep,
       zonesOn: this.zonesOn ? 1 : 0, redZone: red.zone, zoneSrcAt: red.zoneSrc, zonePartAt: red.zonePart,
+      leakTermsAt: io.leakTerms, leakVentN: d.leakVentN, leakVentAt: io.vents, leakDivAt: red.leakDiv,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -527,24 +540,32 @@ class GpuSim {
       io.set(this.sealed.offsets, this.io.sealed);
       io.set(this.sealed.list, this.io.sealed + this.sealed.S + 1);
     }
+    const ioF = new Float32Array(io.buffer);
     if (this.zonesOn) {
-      // The CPU's zones (sealed regions in the same order), or, before its first step, each at ambient pressure with its gas then.
-      const S = this.sealed.S, z = new Float32Array(4 * S);
-      if (sim.zones) {
-        z.set(sim.zones.pi, 0);
-        for (let s = 0; s < S; s += 1) z[S + s] = sim.zones.mass[s] + sim.zones.source[s];
-      } else {
-        z.fill(1, 0, S);
-        // Summed in float64, then stored: summed in float32 the mass drifted by 2e-5.
-        const mass = new Float64Array(S);
-        for (let c = 0; c < N; c += 1) {
-          const s = this.sealed.cellSealed[c];
-          if (s !== 0xffffffff) mass[s] += gasDensity(sim.T[c], sim.Y, c * NS) * sim.V;
-        }
-        z.set(mass, S);
-      }
+      // The CPU's zones (sealed regions in the same order; before its first
+      // step each at ambient pressure with its gas then, summed in float64:
+      // summed in float32 the mass drifted by 2e-5), with any air its last
+      // leak drew in still to mix, and their leak terms.
+      const S = this.sealed.S, z = new Float32Array(5 * S), Z = this.zoneState;
+      // Pressure as its excess, pi - 1 (kernels.js PARAMS).
+      for (let s = 0; s < S; s += 1) z[s] = Z.pi[s] - 1;
+      for (let s = 0; s < S; s += 1) z[S + s] = Z.mass[s] + Z.source[s];
+      z.set(Z.inflow, 4 * S);
       q.writeBuffer(this.buf.red, this.red.zone * 4, z);
+      io.set(Z.termStart, this.io.leakTerms);
+      const at = this.io.leakTerms + S + 1;
+      for (let t = 0; t < Z.termCA.length; t += 1) {
+        ioF[at + 3 * t] = Z.termCA[t];
+        ioF[at + 3 * t + 1] = Z.termN[t];
+        ioF[at + 3 * t + 2] = Z.termRef[t];
+      }
     }
+    this.vents.forEach((e, v) => {
+      io[this.io.vents + 4 * v] = e.cell;
+      ioF[this.io.vents + 4 * v + 1] = e.CA;
+      ioF[this.io.vents + 4 * v + 2] = e.n;
+      ioF[this.io.vents + 4 * v + 3] = e.ref;
+    });
     q.writeBuffer(this.buf.io, 0, io);
     // Open-neighbour masks for the first diffusion and projection.
     const enc = device.createCommandEncoder();
@@ -566,11 +587,11 @@ class GpuSim {
     pass.dispatchWorkgroups(x, y);
   }
 
-  /** With pressure zones, each zone's pressure from its mass and heat, then its cells (the CPU's pressureZones). */
-  zoneUpdate(pass) {
+  /** With pressure zones, each zone's pressure from its mass and heat, then its cells (the CPU's pressureZones); after the heat sources, with its leak over the step. */
+  zoneUpdate(pass, leak = false) {
     if (!this.zonesOn) return;
     this.dispatch(pass, "zonePartial");
-    this.dispatch(pass, "zoneCommit");
+    this.dispatch(pass, leak ? "zoneCommitLeak" : "zoneCommit");
     this.dispatch(pass, "zoneApply");
   }
 
@@ -683,13 +704,16 @@ class GpuSim {
     }
     // Soot deposition on the solids, after the walls (the CPU's deposition stage).
     if (this.depositOn) this.dispatch(pass, "deposition");
-    // The expansion the step's heat made, and each sealed region's mean (the CPU's expansionEnd and project).
+    // Vent leaks in open regions (the CPU's ventLeaks stage).
+    if (d.leakVentN) this.dispatch(pass, "leakVent");
+    // The expansion the step's heat made (and the vent leaks'), and each sealed region's mean (the CPU's expansionEnd and project).
     if (this.expansionOn) {
       this.dispatch(pass, "expandEnd");
+      if (d.leakVentN) this.dispatch(pass, "leakVentDiv");
       this.dispatch(pass, "sealedMean");
     }
     this.dispatch(pass, "densityBoundaries");
-    this.zoneUpdate(pass);
+    this.zoneUpdate(pass, true);
     this.dispatch(pass, "topology");
     this.dispatch(pass, "projectZero");
     this.dispatch(pass, "divergence");
@@ -899,7 +923,7 @@ class GpuSim {
     const sootDeposit = this.depositOn ? f.slice(depAt, depAt + N) : null;
     // Each pressure zone's pressure share and mass (the CPU's sim.zones.pi and .mass).
     const zoneAt = depAt + (this.depositOn ? N : 0);
-    const zones = zoneWords ? { pi: f.slice(zoneAt, zoneAt + zoneWords / 2), mass: f.slice(zoneAt + zoneWords / 2, zoneAt + zoneWords) } : null;
+    const zones = zoneWords ? { pi: Float64Array.from(f.subarray(zoneAt, zoneAt + zoneWords / 2), (e) => 1 + e), mass: f.slice(zoneAt + zoneWords / 2, zoneAt + zoneWords) } : null;
     return {
       T: field(CF.T), Ts: field(CF.Ts), rho: field(CF.rho), p: field(CF.p), fuelMass: field(CF.fuel), moisture: field(CF.moist),
       sootDeposit, Y, kind, burning, u: vel.subarray(0, d.nu), v: vel.subarray(d.nu, d.nu + d.nv), w: vel.subarray(d.nu + d.nv),

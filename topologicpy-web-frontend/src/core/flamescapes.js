@@ -188,6 +188,28 @@ export const DEFAULTS = Object.freeze({
   // 0 holds every region at ambient pressure, as before: a sealed box cooled
   // by its walls then drew in 31 % more gas in 60 s.
   pressureZones: 1,
+  // Leakage to ambient (calibration plan 13.11, item 7; leakTerms): FDS's
+  // relation (FDS master 5f8f194: read.f90 READ_ZONE and READ_HVAC defaults,
+  // hvac.f90 ADJUST_LEAKAGE_AREA, a leak a duct of loss 1): the mass flow
+  // C_d A (dp / dp_ref)^(n - 1/2) sqrt(2 rho |dp|), the area A given at the
+  // reference pressure dp_ref, exponent n (FDS's defaults 4 Pa and 1/2), C_d
+  // FDS's DISCHARGE_COEFFICIENT, 1. `leakage`: the run's leaks, as the
+  // validation harness passes them from each test's FDS input: zone leaks
+  // { area_m2, referencePressure_Pa, pressureExponent, toZone } from every
+  // pressure zone (or the one holding `cell`) to the ambient (toZone 0), and
+  // vent leaks { area_m2, ventXb, to: 'AMBIENT' } between the cell at the vent
+  // (FDS's XB, its frame) and ambient; [] seals every region (item 5 alone).
+  // Without it, each pressure zone leaks as average construction in Klote,
+  // Nelson, Deal and Levin's table (NISTIR 4770, 1992, Table 1, p. 39, read in
+  // the report; from Tamura and Shaw's measurements; not checked against the
+  // current ASHRAE or NFPA 92 smoke-management tables, which could not be
+  // read): its bounding walls (exterior building walls with their
+  // windows' and doors' cracks) 0.21e-3 of their area, leakageWall, its floors
+  // and ceilings 0.52e-4, leakageFloor.
+  leakage: null,
+  leakageDischarge: 1,
+  leakageWall: 0.21e-3,
+  leakageFloor: 0.52e-4,
   porousVelocity: 0.5, // velocity multiplier in porous cells
   projection: 30, // red-black Gauss-Seidel sweeps at most
   projectionTolerance: 1e-3, // m/s: stop sweeping when a sweep changes the flow less
@@ -448,7 +470,7 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // (suppressionSystems.js systemsSetup), set by the run; null when off.
     systems: null,
     // Soot's budget (kg): released by burning and pyrolysis, deposited on surfaces, carried out of the domain by its shell.
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0 },
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0 },
   };
 }
 
@@ -2357,6 +2379,9 @@ function expansionEnd(sim, dt) {
     if (i === 0 || k === 0 || i === nx - 1 || k === nz - 1 || j === ny - 1) D[c] = 0;
     else D[c] = (D[c] + Math.log(sim.T[c] / T1[c])) / dt;
   }
+  // Vent leaks in open regions: the gas they let out or the air they drew in (ventLeaks).
+  const L = sim.ventLeaks, leak = sim.work.leakDiv;
+  if (L && leak) for (let q = 0; q < L.length; q += 1) D[L[q].cell] += leak[q];
 }
 
 /**
@@ -2364,12 +2389,12 @@ function expansionEnd(sim, dt) {
  * its pressure: after the heat sources (resolve) each zone's pressure is
  * found again from its gas (pressureZones); after the advection, zoneTransport.
  */
-function updateDensity(sim, resolve = true) {
+function updateDensity(sim, resolve = true, leakDt = 0) {
   for (let c = 0; c < sim.N; c += 1) {
     if (sim.kind[c] === SOLID) continue;
     sim.rho[c] = gasDensity(sim.T[c], sim.Y, c * NS);
   }
-  if (resolve) pressureZones(sim);
+  if (resolve) pressureZones(sim, leakDt);
   else zoneTransport(sim);
 }
 
@@ -2434,6 +2459,8 @@ export function zoneState(sim) {
   // The regions only change if a cell turns solid, which none does; should
   // their number change, every zone starts again at ambient pressure.
   const keep = Z && Z.pi.length === S;
+  const volume = new Float64Array(S);
+  for (const c of list) volume[cell[c]] += sim.V;
   Z = sim.zones = {
     version: topo.version,
     cell,
@@ -2445,8 +2472,163 @@ export function zoneState(sim) {
     ratio: new Float64Array(S),
     // The last update's rise of T, ratio^kappa.
     kappa: new Float64Array(S),
+    volume,
+    // Its leaks (leakTerms: per zone, from termStart, each C_d A, n and
+    // dp_ref), the share of its gas each zone takes in as ambient air at its
+    // next update, and the mass the last update let out.
+    ...leakTerms(sim, cell, list, S),
+    inflow: keep && Z.inflow ? Z.inflow : new Float64Array(S),
+    out: new Float64Array(S),
   };
   return Z;
+}
+
+/**
+ * The run's leaks (P.leakage; plan 13.11, item 7) as the solver's: each a
+ * term C_d A, n, dp_ref. Zone leaks (no ventXb; toZone 0 or 'AMBIENT') go to
+ * every pressure zone, or to the zone holding their `cell`; vent leaks
+ * (ventXb, FDS's frame: the grid's (x, z, y), as tools/calibration/lib/fds.mjs
+ * maps it) go to the zone holding the vent's cell, and in an open region
+ * stay vent leaks (ventLeaks). Leaks between two zones are not modelled and
+ * are counted (stats.leaksIgnored). Without P.leakage, each zone's
+ * construction: its faces against solids (or the ground) that stand upright
+ * times leakageWall, those that lie flat times leakageFloor, as one term of
+ * exponent 1/2.
+ */
+function leakTerms(sim, cell, list, S) {
+  const { P, grid: g } = sim;
+  const terms = Array.from({ length: S }, () => []);
+  if (Array.isArray(P.leakage)) {
+    for (const e of P.leakage) {
+      const term = leakTerm(P, e);
+      if (!term) continue;
+      if (e.ventXb) {
+        const c = ventCell(g, e.ventXb);
+        if (c >= 0 && cell[c] >= 0) terms[cell[c]].push(term);
+      } else if (e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT") {
+        if (Number.isInteger(e.cell)) {
+          if (cell[e.cell] >= 0) terms[cell[e.cell]].push(term);
+        } else for (const t of terms) t.push(term);
+      }
+    }
+  } else {
+    const A = g.h * g.h;
+    const area = new Float64Array(S);
+    for (const c of list) {
+      const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+      for (let d = 0; d < 6; d += 1) {
+        const dir = DIRS[d];
+        const ii = i + dir[0], jj = j + dir[1], kk = k + dir[2];
+        const closed = jj < 0 || (ii >= 0 && kk >= 0 && ii < g.nx && jj < g.ny && kk < g.nz && sim.kind[at(g, ii, jj, kk)] === SOLID);
+        if (closed) area[cell[c]] += A * (d === 2 || d === 3 ? P.leakageFloor : P.leakageWall);
+      }
+    }
+    for (let z = 0; z < S; z += 1) if (area[z] > 0) terms[z].push({ CA: P.leakageDischarge * area[z], n: 0.5, ref: 4 });
+  }
+  const termStart = new Int32Array(S + 1);
+  for (let z = 0; z < S; z += 1) termStart[z + 1] = termStart[z] + terms[z].length;
+  const flat = terms.flat();
+  return { termStart, termCA: Float64Array.from(flat, (t) => t.CA), termN: Float64Array.from(flat, (t) => t.n), termRef: Float64Array.from(flat, (t) => t.ref) };
+}
+
+/** A leak entry (the harness's format) as a term { CA, n, ref }, or null with no area. */
+function leakTerm(P, e) {
+  const A = e.area_m2 ?? e.area ?? 0;
+  if (!(A > 0)) return null;
+  return { CA: (e.dischargeCoefficient ?? P.leakageDischarge) * A, n: e.pressureExponent ?? 0.5, ref: e.referencePressure_Pa ?? 4 };
+}
+
+/** The grid cell at the middle of an FDS XB [x0, x1, y0, y1, z0, z1] (FDS's frame: the grid's (x, z, y)), clamped into the grid. */
+function ventCell(g, xb) {
+  const local = [(xb[0] + xb[1]) / 2, (xb[4] + xb[5]) / 2, (xb[2] + xb[3]) / 2];
+  const n = [g.nx, g.ny, g.nz];
+  const idx = local.map((x, d) => Math.min(n[d] - 1, Math.max(0, Math.floor((x - g.origin[d]) / g.h))));
+  return at(g, idx[0], idx[1], idx[2]);
+}
+
+/** The vent leaks of P.leakage whose cell is open (in an open region they stay vent leaks; ventLeaks), each { cell, CA, n, ref }; null if none. */
+export function ventLeakList(sim) {
+  const { P, grid: g } = sim;
+  if (!Array.isArray(P.leakage)) return null;
+  const out = [];
+  for (const e of P.leakage) {
+    if (!e.ventXb) continue;
+    const term = leakTerm(P, e);
+    const c = ventCell(g, e.ventXb);
+    if (term && sim.kind[c] !== SOLID) out.push({ cell: c, ...term });
+  }
+  return out.length ? out : null;
+}
+
+/** A leak's mass flow (kg/s) at a pressure difference dp (Pa) for gas of density rho: FDS's C_d A (dp / dp_ref)^(n - 1/2) sqrt(2 rho dp). */
+export function leakFlow(CA, n, ref, dp, rho) {
+  if (!(dp > 0)) return 0;
+  return CA * Math.pow(dp / ref, n - 0.5) * Math.sqrt(2 * rho * dp);
+}
+
+/**
+ * The gas a pressure zone lets out (positive) or draws in over dt (plan
+ * 13.11, item 7): the sum of its leaks' flows, the donor's density (the
+ * zone's mean leaving, ambient air entering), taken at the step's end
+ * (implicit): with pressure pi(m) = (m / (pi_0^kappa G))^(1 / (1 - kappa)) the
+ * zone's at mass m, the dm that its leaks pass at pi(M -+ dm) over dt, by
+ * bisection between nothing and the mass at ambient pressure. terms: the
+ * zone's C_d A, n and dp_ref from index `from` to `to`.
+ */
+export function zoneLeak(M, ambientMass, kappa, volume, rhoAir, dt, termCA, termN, termRef, from, to) {
+  if (to <= from || M === ambientMass) return 0;
+  const out = M > ambientMass;
+  const piOf = (m) => Math.pow(m / ambientMass, 1 / (1 - kappa));
+  let lo = 0, hi = Math.abs(M - ambientMass);
+  for (let it = 0; it < 60; it += 1) {
+    const mid = 0.5 * (lo + hi);
+    const dp = out ? P_AMBIENT * (piOf(M - mid) - 1) : P_AMBIENT * (1 - piOf(M + mid));
+    const rho = out ? (M - mid) / volume : rhoAir;
+    let flow = 0;
+    for (let q = from; q < to; q += 1) flow += leakFlow(termCA[q], termN[q], termRef[q], dp, rho);
+    if (mid > flow * dt) hi = mid;
+    else lo = mid;
+  }
+  const dm = 0.5 * (lo + hi);
+  return out ? dm : -dm;
+}
+
+/**
+ * Vent leaks in open regions (plan 13.11, item 7: an HVAC leak at a vent
+ * between its cell and ambient), before the expansion is read: the cell's
+ * pressure over ambient is the projection's (sim.p, Pa, the ambient's
+ * hydrostatics taken out); gas let out leaves as a sink in the cell's
+ * expansion (the transport carries it), ambient air drawn in is mixed into
+ * the cell at constant pressure and its volume added to the cell's
+ * expansion. The divergences wait in work.leakDiv for expansionEnd. Leaks in
+ * a pressure zone are the zone's (pressureZones).
+ */
+function ventLeaks(sim, dt) {
+  if (sim.ventLeaks === undefined) sim.ventLeaks = ventLeakList(sim);
+  const L = sim.ventLeaks;
+  if (!L) return;
+  const D = workArray(sim, "leakDiv", L.length, Float64Array);
+  const Z = sim.zones;
+  for (let q = 0; q < L.length; q += 1) {
+    const { cell: c, CA, n, ref } = L[q];
+    D[q] = 0;
+    if (sim.kind[c] === SOLID || (Z && Z.cell[c] >= 0)) continue;
+    const dp = sim.p[c], o = c * NS, m = sim.rho[c] * sim.V;
+    if (dp > 0) {
+      const flow = leakFlow(CA, n, ref, dp, sim.rho[c]);
+      D[q] = -flow / sim.rho[c] / sim.V;
+      sim.stats.leakMass += flow * dt;
+      sim.stats.leakEnthalpy += flow * dt * mixtureCp(sim.Y, o) * sim.T[c];
+    } else if (dp < 0) {
+      const dm = leakFlow(CA, n, ref, -dp, sim.rho0) * dt;
+      const H = m * mixtureCp(sim.Y, o) * sim.T[c] + dm * CP_AIR * sim.P.ambient;
+      for (let s = 0; s < NS; s += 1) sim.Y[o + s] = (sim.Y[o + s] * m + (s === SPECIES.O2 ? Y_O2_AIR * dm : 0)) / (m + dm);
+      sim.T[c] = H / ((m + dm) * mixtureCp(sim.Y, o));
+      D[q] = Math.log1p(dm / m) / dt;
+      sim.stats.leakMass -= dm;
+      sim.stats.leakEnthalpy -= dm * CP_AIR * sim.P.ambient;
+    }
+  }
 }
 
 /** Each zone's gas mass at ambient pressure (kg): its cells' gas-law densities at their T. */
@@ -2477,10 +2659,11 @@ export function zonePressure(sim, c) {
  * law's at its new T times pi_1. Run before the advection and after the heat
  * sources.
  */
-export function pressureZones(sim) {
+export function pressureZones(sim, leakDt = 0) {
   const Z = zoneState(sim);
   if (!Z) return;
   const S = Z.pi.length;
+  const Ta = sim.P.ambient;
   if (zoneScratch.G.length < S) {
     zoneScratch.G = new Float64Array(S);
     zoneScratch.K = new Float64Array(S);
@@ -2490,6 +2673,19 @@ export function pressureZones(sim) {
   K.fill(0, 0, S);
   for (let q = 0; q < Z.list.length; q += 1) {
     const c = Z.list[q], z = Z.cell[c], o = c * NS;
+    // Ambient air the last update drew in, mixed into each cell by its share
+    // of the zone's gas, at ambient temperature and constant pressure (zoneLeak).
+    const a = Z.inflow[z];
+    if (a > 0) {
+      const m = sim.rho[c] * sim.V, dm = a * m;
+      const H = m * mixtureCp(sim.Y, o) * sim.T[c] + dm * CP_AIR * Ta;
+      for (let s = 0; s < NS; s += 1) sim.Y[o + s] = (sim.Y[o + s] * m + (s === SPECIES.O2 ? Y_O2_AIR * dm : 0)) / (m + dm);
+      sim.T[c] = H / ((m + dm) * mixtureCp(sim.Y, o));
+      sim.rho[c] = (m + dm) / sim.V;
+      Z.source[z] += dm;
+      sim.stats.leakMass -= dm;
+      sim.stats.leakEnthalpy -= dm * CP_AIR * Ta;
+    }
     // The gas law's moles per kg and the mixture's c_p in one pass (gasDensity, mixtureCp).
     let inv = 0, cp = 0, rest = 1;
     for (let s = 0; s < NS; s += 1) {
@@ -2507,7 +2703,18 @@ export function pressureZones(sim) {
   for (let z = 0; z < S; z += 1) {
     Z.mass[z] += Z.source[z];
     Z.source[z] = 0;
+    Z.inflow[z] = 0;
+    Z.out[z] = 0;
     const kappa = K[z] / G[z];
+    // Leakage over the step (zoneLeak): gas let out leaves at once, at the
+    // zone's state; air drawn in is mixed in at the next update.
+    if (leakDt > 0 && Z.termStart[z + 1] > Z.termStart[z]) {
+      const dm = zoneLeak(Z.mass[z], Math.pow(Z.pi[z], kappa) * G[z], kappa, Z.volume[z], sim.rho0, leakDt, Z.termCA, Z.termN, Z.termRef, Z.termStart[z], Z.termStart[z + 1]);
+      if (dm > 0) {
+        Z.out[z] = dm;
+        Z.mass[z] -= dm;
+      } else if (dm < 0) Z.inflow[z] = -dm / Z.mass[z];
+    }
     const scaled = Z.pi[z] * G[z];
     const lr = Math.log1p((Z.mass[z] - scaled) / scaled) / (1 - kappa);
     Z.ratio[z] = Math.exp(lr);
@@ -2520,10 +2727,18 @@ export function pressureZones(sim) {
     const T = sim.T[c] * Z.kappa[z];
     sim.T[c] = T;
     sim.rho[c] = gasDensity(T, sim.Y, c * NS) * Z.pi[z];
+    // The gas let out, tallied at the zone's state (its share of each cell's enthalpy, absolute).
+    if (Z.out[z] > 0) {
+      const share = Z.out[z] / Z.mass[z];
+      sim.stats.leakMass += share * sim.rho[c] * sim.V;
+      sim.stats.leakEnthalpy += share * sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS) * T;
+    }
   }
 }
 
 const zoneScratch = { G: new Float64Array(0), K: new Float64Array(0) };
+/** Air's specific heat at constant pressure, J/(kg K), by the solver's species values. */
+const CP_AIR = Y_O2_AIR * 918 + (1 - Y_O2_AIR) * 1040;
 
 /** Line 32: the domain's sides are open to still ambient air. */
 function boundaries(sim) {
@@ -3207,7 +3422,9 @@ const STAGES = [
   ["conduct", conduct],
   ["walls", walls],
   ["deposition", deposition],
-  ["density2", (sim) => updateDensity(sim)],
+  ["ventLeaks", ventLeaks],
+  // The leak once a step, after the heat sources (pressureZones' leakDt).
+  ["density2", (sim, dt) => updateDensity(sim, true, dt)],
   ["expansionEnd", expansionEnd],
   ["boundaries", (sim) => boundaries(sim)],
   ["project", project],

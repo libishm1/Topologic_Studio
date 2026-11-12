@@ -967,7 +967,9 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
   }
 
   // ---- 6. pressure zones (calibration plan 13.8, item 5): the room with its
-  // door closed, the fire burning in it, its pressure following its gas.
+  // door closed, the fire burning in it, its pressure following its gas;
+  // with leakage (plan 13.11, item 7) the solver's default, its construction's
+  // leaks. Then the open room with a vent leak under its ceiling.
   if (phase === "all" || phase === "zones") {
     const scene = room(0.25, 200000, closedMeshes);
     out.zones = { grid: [scene.grid.nx, scene.grid.ny, scene.grid.nz], rows: [] };
@@ -986,13 +988,35 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
       out.zones.rows.push({
         step: s, ...range(cpu), gpu: compare(cpu, g), twin: compare(cpu, twin), zones: cpu.zones?.pi.length ?? 0,
         pi: { cpu: cpu.zones?.pi[0], gpu: g.zones?.pi[0], twin: twin.zones?.pi[0], rel: g.zones ? rel(cpu.zones.pi, g.zones.pi) : null, twinRel: rel(cpu.zones.pi, twin.zones.pi) },
-        mass: { cpu: cpu.zones?.mass[0], gpu: g.zones?.mass[0], rel: g.zones ? rel(cpu.zones.mass, g.zones.mass) : null },
+        mass: { cpu: cpu.zones?.mass[0], gpu: g.zones?.mass[0], rel: g.zones ? rel(cpu.zones.mass, g.zones.mass) : null, twinRel: rel(cpu.zones.mass, twin.zones.mass) },
+        // What the zone let out (the CPU's tallies; with the default leaks, plan 13.11 item 7).
+        leak: { cpu: cpu.stats.leakMass, twin: twin.stats.leakMass },
         released: cpu.stats.released,
       });
       log(`zones step ${s}: pressure CPU ${cpu.zones?.pi[0]} GPU ${g.zones?.pi[0]}`);
     }
     gpu.destroy();
-    // ms per step, the full model in the closed room, zones off and on (the faster of two each).
+    // A vent leak (the harness's form: an FDS XB, x, y, z up) 0.4 m under the open room's ceiling, 0.01 m^2.
+    {
+      const vent = room(0.25, 200000);
+      const vopts = { ...opts, leakage: [{ area_m2: 0.01, ventXb: [1.0, 1.1, 1.0, 1.1, 2.25, 2.35], to: "AMBIENT", source: "gpu-check" }] };
+      const vc = solverOf(vent, vopts), vt = solverOf(vent, vopts);
+      for (let c = 0; c < vt.N; c += 1) if (vt.kind[c] !== 2) vt.T[c] = Math.fround(vt.T[c] * (1 + 2 ** -23));
+      const vg = runner.createSim(solverOf(vent, vopts), {});
+      out.zones.vent = [];
+      for (let s = 1; s <= 200; s += 1) {
+        F.step(vc, 0.1);
+        F.step(vt, 0.1);
+        vg.step(0.1);
+        if (![1, 10, 50, 100, 200].includes(s)) continue;
+        const g = await vg.readFields();
+        const cell = vc.ventLeaks?.[0]?.cell;
+        out.zones.vent.push({ step: s, ...range(vc), gpu: compare(vc, g), twin: compare(vc, vt), leaks: vc.ventLeaks?.length ?? 0, p: vc.p[cell], leakMass: vc.stats.leakMass });
+        log(`zones vent step ${s}: leak cell p ${vc.p[cell]} Pa, let out ${vc.stats.leakMass} kg`);
+      }
+      vg.destroy();
+    }
+    // ms per step, the full model in the closed room, zones off, on and sealed (no leaks), and on with the default leaks (the faster of two each).
     out.zones.timing = [];
     for (const [label, cell, cap] of [["30k", 0.15, 30000], ["200k", 0.05, 200000]]) {
       const s = room(cell, cap, closedMeshes);
@@ -1015,10 +1039,12 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
         for (let k = 0; k < n; k += 1) F.step(c, 0.1);
         return (performance.now() - t0) / n;
       };
-      const cpuOff = Math.min(cpuTime({ pressureZones: 0 }), cpuTime({ pressureZones: 0 })), cpuOn = Math.min(cpuTime({ pressureZones: 1 }), cpuTime({ pressureZones: 1 }));
-      const off1 = await time({ pressureZones: 0 }), on1 = await time({ pressureZones: 1 }), off2 = await time({ pressureZones: 0 }), on2 = await time({ pressureZones: 1 });
-      out.zones.timing.push({ label, cells: s.grid.cells, cpuOff, cpuOn, gpuOff: Math.min(off1, off2), gpuOn: Math.min(on1, on2) });
-      log(`zones timing ${label}: ${s.grid.cells} cells, CPU ${cpuOff.toFixed(1)} / ${cpuOn.toFixed(1)} ms, GPU ${Math.min(off1, off2).toFixed(2)} / ${Math.min(on1, on2).toFixed(2)} ms (off / on)`);
+      const sealed = { pressureZones: 1, leakage: [] };
+      const cpuOff = Math.min(cpuTime({ pressureZones: 0 }), cpuTime({ pressureZones: 0 })), cpuSealed = Math.min(cpuTime(sealed), cpuTime(sealed)), cpuOn = Math.min(cpuTime({ pressureZones: 1 }), cpuTime({ pressureZones: 1 }));
+      const off1 = await time({ pressureZones: 0 }), sealed1 = await time(sealed), on1 = await time({ pressureZones: 1 });
+      const off2 = await time({ pressureZones: 0 }), sealed2 = await time(sealed), on2 = await time({ pressureZones: 1 });
+      out.zones.timing.push({ label, cells: s.grid.cells, cpuOff, cpuSealed, cpuOn, gpuOff: Math.min(off1, off2), gpuSealed: Math.min(sealed1, sealed2), gpuOn: Math.min(on1, on2) });
+      log(`zones timing ${label}: ${s.grid.cells} cells, CPU ${cpuOff.toFixed(1)} / ${cpuSealed.toFixed(1)} / ${cpuOn.toFixed(1)} ms, GPU ${Math.min(off1, off2).toFixed(2)} / ${Math.min(sealed1, sealed2).toFixed(2)} / ${Math.min(on1, on2).toFixed(2)} ms (off / sealed / leaky)`);
     }
   }
 
@@ -1231,9 +1257,14 @@ if (report.soot) {
 if (report.zones) {
   const z = report.zones;
   console.log(`\nPressure zones: the room with its door closed, ${z.grid.join("x")} cells, radiation and particles off, 200 steps of 0.1 s: |CPU - GPU| beside |CPU - CPU twin| (one ulp warmer)`);
-  console.log("  step | gas T max / p99      | O2 max   | rho max  | zone pressure CPU / GPU (rel diff; twin's)     | zone mass rel diff | released J | hottest gas C");
-  for (const r of z.rows) console.log(`  ${String(r.step).padStart(4)} | ${e(r.gpu.T.max)} / ${e(r.gpu.T.p99)} | ${e(r.gpu.O2.max)} | ${e(r.gpu.rho.max)} | ${f(r.pi.cpu, 6)} / ${f(r.pi.gpu, 6)} (${e(r.pi.rel)}; ${e(r.pi.twinRel)}) | ${e(r.mass.rel)} | ${f(r.released, 0)} | ${f(r.TmaxC, 0)}`);
-  for (const r of z.timing || []) console.log(`  ms per step, ${r.label} (${r.cells} cells): CPU ${f(r.cpuOff, 1)} off / ${f(r.cpuOn, 1)} on; GPU ${f(r.gpuOff, 2)} off / ${f(r.gpuOn, 2)} on`);
+  console.log("  step | gas T max / p99 GPU; twin's        | O2 max GPU; twin's | rho max GPU; twin's | zone pressure CPU / GPU (rel diff; twin's) | zone mass rel diff GPU; twin's | let out kg CPU; twin | released J | hottest gas C");
+  for (const r of z.rows) console.log(`  ${String(r.step).padStart(4)} | ${e(r.gpu.T.max)} / ${e(r.gpu.T.p99)}; ${e(r.twin.T.max)} / ${e(r.twin.T.p99)} | ${e(r.gpu.O2.max)}; ${e(r.twin.O2.max)} | ${e(r.gpu.rho.max)}; ${e(r.twin.rho.max)} | ${f(r.pi.cpu, 8)} / ${f(r.pi.gpu, 8)} (${e(r.pi.rel)}; ${e(r.pi.twinRel)}) | ${e(r.mass.rel)}; ${e(r.mass.twinRel)} | ${e(r.leak?.cpu)}; ${e(r.leak?.twin)} | ${f(r.released, 0)} | ${f(r.TmaxC, 0)}`);
+  if (z.vent) {
+    console.log("  The open room with a 0.01 m^2 vent leak 0.4 m under its ceiling (plan 13.11, item 7):");
+    console.log("  step | gas T max / p99      | O2 max   | rho max  | leak cell p Pa | let out kg (CPU) | hottest gas C");
+    for (const r of z.vent) console.log(`  ${String(r.step).padStart(4)} | ${e(r.gpu.T.max)} / ${e(r.gpu.T.p99)} | ${e(r.gpu.O2.max)} | ${e(r.gpu.rho.max)} | ${f(r.p, 3)} | ${e(r.leakMass)} | ${f(r.TmaxC, 0)}   (twin: ${e(r.twin.T.max)} / ${e(r.twin.T.p99)} | ${e(r.twin.O2.max)} | ${e(r.twin.rho.max)})`);
+  }
+  for (const r of z.timing || []) console.log(`  ms per step, ${r.label} (${r.cells} cells): CPU ${f(r.cpuOff, 1)} off / ${f(r.cpuSealed, 1)} sealed / ${f(r.cpuOn, 1)} leaky; GPU ${f(r.gpuOff, 2)} off / ${f(r.gpuSealed, 2)} sealed / ${f(r.gpuOn, 2)} leaky`);
 }
 if (report.timing) {
   console.log("\nms per step (full model at the start of the fire; GPU steps queued, then waited for)");

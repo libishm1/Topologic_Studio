@@ -87,6 +87,11 @@
  *     workgroup each, added by one thread per zone, where the CPU sums in
  *     cell order in float64; each cell's mass source waits in red until the
  *     next update, where the CPU adds it to its zone at once.
+ *   - Leakage (the CPU's zoneLeak and ventLeaks, plan 13.11 item 7): a zone's
+ *     leak is solved by one thread per zone in float32 (its pressure through
+ *     ln(1 + y) and exp(x) - 1 by their series where small); vent leaks in
+ *     open regions run on one thread in the CPU's order. The CPU tallies what
+ *     leaked (stats.leakMass, leakEnthalpy); the GPU does not.
  *   - A value every thread needs from an atomic (the particle count, the
  *     sweep's state) is read by one thread per workgroup and shared through
  *     workgroupUniformLoad; kernels that only read the atomic buffer bind it a
@@ -159,10 +164,20 @@ export const PARAMS = [
   ["sootDeposition", "u32"], ["sootDensity", "f32"], ["sootDiameter", "f32"], ["sootThDiameter", "f32"],
   ["sootConductivity", "f32"], ["depAt", "u32"],
   // Pressure zones (flamescapes.js pressureZones, calibration plan 13.8 item
-  // 5): on, where in `red` each sealed region's pressure share, mass, last
-  // ratio and kappa are (four arrays of sealedN), and where each cell's mass
-  // source since the last zone update is (N, the CPU's per-zone source).
+  // 5): on, where in `red` each sealed region's pressure share less one (pi -
+  // 1: float32 keeps the excess of a leaky zone's few pascals, where pi itself
+  // stepped by 0.012 Pa), mass, last ratio and kappa are (four arrays of
+  // sealedN), and where each cell's mass source since the last zone update is
+  // (N, the CPU's per-zone source).
   ["zonesOn", "u32"], ["redZone", "u32"], ["zoneSrcAt", "u32"], ["zonePartAt", "u32"],
+  // Leakage (flamescapes.js leakTerms, zoneLeak, ventLeaks; plan 13.11 item
+  // 7): where in `io` each zone's leak terms start (sealedN + 1 offsets, then
+  // C_d A, n and dp_ref a term, f32 bits); the vent leaks in open regions
+  // (count, and four words each in `io`: cell, C_d A, n, dp_ref); and where in
+  // `red` each vent leak's expansion waits for expandEnd. With leaks a zone
+  // also keeps, in `red` after its kappa, the share of its gas it takes in as
+  // ambient air at its next update.
+  ["leakTermsAt", "u32"], ["leakVentN", "u32"], ["leakVentAt", "u32"], ["leakDivAt", "u32"],
 ];
 /** Blocks of 64 threads that reduce each pressure zone (zonePartial), their partial sums then added by zoneCommit. */
 export const ZONE_BLOCKS = 32;
@@ -314,7 +329,12 @@ export const KERNELS = {
   // Pressure zones: one workgroup per sealed region sums it and sets its pressure, then each cell takes it.
   zonePartial: { uses: [0, 1, 2, 10, 11], threads: (d) => (d.zonesOn ? (d.sealedN || 0) * ZONE_BLOCKS * WG : 0) },
   zoneCommit: { uses: [0, 10], threads: (d) => (d.zonesOn ? d.sealedN || 0 : 0) },
+  // After the heat sources: the same with each zone's leak over the step.
+  zoneCommitLeak: { uses: [0, 10, 11], threads: (d) => (d.zonesOn ? d.sealedN || 0 : 0) },
   zoneApply: { uses: [0, 1, 2, 3, 10], threads: cells },
+  // Vent leaks in open regions (one thread, the CPU's order), then their expansion added after expandEnd.
+  leakVent: { uses: [0, 1, 2, 3, 10, 11], threads: (d) => (d.leakVentN ? 1 : 0), wg: 1 },
+  leakVentDiv: { uses: [0, 1, 10, 11], threads: (d) => (d.leakVentN ? 1 : 0), wg: 1 },
   // After the advection: each zone's mass as the transport left it, its pressure scaled back to its mass, its cells' densities with it.
   zoneMassPartial: { uses: [0, 1, 10, 11], threads: (d) => (d.zonesOn ? (d.sealedN || 0) * ZONE_BLOCKS * WG : 0) },
   zoneMassCommit: { uses: [0, 10], threads: (d) => (d.zonesOn ? d.sealedN || 0 : 0) },
@@ -370,6 +390,42 @@ fn ${name}(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroup
   if (c >= U.N) { return; }
 ${body}
 }`;
+
+/**
+ * Pressure zones' commit (zonePartial's sums into each zone's pressure), with
+ * or without the step's leak (zoneLeakDm): gas let out leaves the zone's
+ * mass at once; air drawn in waits as a share of its gas for the next
+ * zonePartial. Either clears the share it used.
+ */
+const zoneCommitKernel = (name, leak) => perThread(name, "U.sealedN", `
+  let s = t;
+  let S = U.sealedN;
+  var G = 0.0;
+  var K = 0.0;
+  var src = 0.0;
+  for (var b = 0u; b < ${ZONE_BLOCKS}u; b++) {
+    let o = U.zonePartAt + 3u * (s * ${ZONE_BLOCKS}u + b);
+    G += red[o];
+    K += red[o + 1u];
+    src += red[o + 2u];
+  }
+  var mass = red[U.redZone + S + s] + src;
+  let kappa = K / G;
+  red[U.redZone + 4u * S + s] = 0.0;
+${leak ? `  let dm = zoneLeakDm(s, mass, G, kappa);
+  if (dm > 0.0) { mass -= dm; }
+  else if (dm < 0.0) { red[U.redZone + 4u * S + s] = -dm / mass; }
+` : ""}  red[U.redZone + S + s] = mass;
+  let scaled = (1.0 + red[U.redZone + s]) * G;
+  let y = (mass - scaled) / scaled;
+  var l = log(1.0 + y);
+  if (abs(y) < 1e-3) { l = y * (1.0 - y * (0.5 - y * (1.0 / 3.0 - y * 0.25))); }
+  let lr = l / (1.0 - kappa);
+  let ratio = exp(lr);
+  red[U.redZone + 2u * S + s] = ratio;
+  red[U.redZone + 3u * S + s] = exp(kappa * lr);
+  let e = red[U.redZone + s];
+  red[U.redZone + s] = e + (1.0 + e) * expMinusOne(lr);`);
 
 /** An entry point over `count` threads (index t). */
 const perThread = (name, count, body) => `
@@ -595,6 +651,8 @@ const SIGMA: f32 = 5.670374419e-8;
 const P_AMBIENT: f32 = 101325.0;
 const KELVIN: f32 = 273.15;
 const Y_O2_AIR: f32 = 0.232;
+/** Air's c_p by the solver's species values (the CPU's CP_AIR). */
+const CP_AIR: f32 = Y_O2_AIR * 918.0 + (1.0 - Y_O2_AIR) * 1040.0;
 const PI: f32 = 3.14159265358979;
 const DEP_SCALE: f32 = ${DEP_SCALE}.0;
 const EMBER_SCALE: f32 = ${EMBER_SCALE}.0;
@@ -762,7 +820,7 @@ fn zonePi(c: u32) -> f32 {
   if (U.zonesOn == 0u) { return 1.0; }
   let s = ci[ix(iSealed, c)];
   if (s == NO_CELL) { return 1.0; }
-  return red[U.redZone + s];
+  return 1.0 + red[U.redZone + s];
 }
 /** Moles per kg of a cell's gas, nitrogen the rest (the CPU's molarDensity). */
 fn molarInv(c: u32) -> f32 {
@@ -1524,8 +1582,19 @@ fn zonePartial(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) n
   let end = io[U.sealedAt + s + 1u];
   let list = U.sealedAt + U.sealedN + 1u;
   var acc = vec4<f32>(0.0);
+  // Ambient air the last leak drew in, a share of each cell's gas (the CPU's inflow).
+  let a = red[U.redZone + 4u * U.sealedN + s];
   for (var q = start + b * 64u + li; q < end; q += 64u * ${ZONE_BLOCKS}u) {
     let c = io[list + q];
+    var drawn = 0.0;
+    if (a > 0.0) {
+      let m0 = cf[ix(fRho, c)] * U.V;
+      drawn = a * m0;
+      let H = m0 * mixtureCp(c) * cf[ix(fT, c)] + drawn * CP_AIR * U.ambient;
+      for (var k = 0u; k < NS; k++) { Y[c * NS + k] = (Y[c * NS + k] * m0 + select(0.0, Y_O2_AIR * drawn, k == 1u)) / (m0 + drawn); }
+      cf[ix(fT, c)] = H / ((m0 + drawn) * mixtureCp(c));
+      cf[ix(fRho, c)] = (m0 + drawn) / U.V;
+    }
     // The gas law's moles per kg and the mixture's c_p in one pass.
     var inv = 0.0;
     var cp = 0.0;
@@ -1539,7 +1608,7 @@ fn zonePartial(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) n
     inv += max(0.0, rest) / 0.028;
     cp += max(0.0, rest) * 1040.0;
     let m = (P_AMBIENT / (R_GAS * cf[ix(fT, c)] * inv)) * U.V;
-    acc += vec4<f32>(m, (m * R_GAS * inv) / cp, red[U.zoneSrcAt + c], 0.0);
+    acc += vec4<f32>(m, (m * R_GAS * inv) / cp, red[U.zoneSrcAt + c] + drawn, 0.0);
     red[U.zoneSrcAt + c] = 0.0;
   }
   wsum[li] = acc;
@@ -1560,32 +1629,110 @@ fn zonePartial(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) n
  * mass sources to the zone's mass and sets its pressure pi_1 = pi_0 (1 +
  * y)^(1 / (1 - kappa)), y = M / (pi_0 G) - 1 (the CPU's), ln(1 + y) by its
  * series where y is small (float32 has no log1p); and the rise of T,
- * ratio^kappa, for zoneApply.
+ * ratio^kappa, for zoneApply. zoneCommitLeak first takes the zone's leak
+ * over the step (zoneLeakDm).
  */
-${perThread("zoneCommit", "U.sealedN", `
-  let s = t;
-  let S = U.sealedN;
-  var G = 0.0;
-  var K = 0.0;
-  var src = 0.0;
-  for (var b = 0u; b < ${ZONE_BLOCKS}u; b++) {
-    let o = U.zonePartAt + 3u * (s * ${ZONE_BLOCKS}u + b);
-    G += red[o];
-    K += red[o + 1u];
-    src += red[o + 2u];
+${zoneCommitKernel("zoneCommit", false)}
+${zoneCommitKernel("zoneCommitLeak", true)}
+
+/** ln(1 + y), by its series where y is small (float32 has no log1p). */
+fn lnOnePlus(y: f32) -> f32 {
+  if (abs(y) < 1e-2) { return y * (1.0 - y * (0.5 - y * (1.0 / 3.0 - y * 0.25))); }
+  return log(1.0 + y);
+}
+/** exp(x) - 1, by its series where x is small (float32 has no expm1). */
+fn expMinusOne(x: f32) -> f32 {
+  if (abs(x) < 1e-2) { return x * (1.0 + x * (0.5 + x * (1.0 / 6.0 + x / 24.0))); }
+  return exp(x) - 1.0;
+}
+/** A leak's mass flow (kg/s) at dp (Pa) for gas of density rho: FDS's C_d A (dp / dp_ref)^(n - 1/2) sqrt(2 rho dp) (the CPU's leakFlow). */
+fn leakFlow(CA: f32, n: f32, dpRef: f32, dp: f32, rho: f32) -> f32 {
+  if (!(dp > 0.0)) { return 0.0; }
+  return CA * pow(dp / dpRef, n - 0.5) * sqrt(2.0 * rho * dp);
+}
+/**
+ * The gas zone s lets out (positive) or draws in over the step (the CPU's
+ * zoneLeak): the dm its leaks pass at the step's end, by bisection. Its
+ * pressure at mass m is pi_0 (m / (pi_0 G))^(1 / (1 - kappa)), taken as
+ * exp(ln pi_0 + ln(1 + y) / (1 - kappa)) - 1 over ambient, y = m / (pi_0 G)
+ * - 1 found as y_M -+ dm / (pi_0 G), so that float32 keeps the few pascals.
+ */
+fn zoneLeakDm(s: u32, mass: f32, G: f32, kappa: f32) -> f32 {
+  let qa = io[U.leakTermsAt + s];
+  let qb = io[U.leakTermsAt + s + 1u];
+  if (qb <= qa) { return 0.0; }
+  let terms = U.leakTermsAt + U.sealedN + 1u;
+  let e0 = red[U.redZone + s];
+  let base = (1.0 + e0) * G;
+  let yM = (mass - base) / base;
+  let lnPi = lnOnePlus(e0);
+  let k1 = 1.0 - kappa;
+  // The mass at ambient pressure, pi_0^kappa G, as y: pi_0^(kappa - 1) - 1.
+  let y0 = expMinusOne(-k1 * lnPi);
+  let outward = yM > y0;
+  let volume = f32(io[U.sealedAt + s + 1u] - io[U.sealedAt + s]) * U.V;
+  var lo = 0.0;
+  var hi = abs(yM - y0) * base;
+  for (var it = 0u; it < 60u; it++) {
+    let mid = 0.5 * (lo + hi);
+    var y = yM + mid / base;
+    var rho = U.rho0;
+    if (outward) {
+      y = yM - mid / base;
+      rho = (mass - mid) / volume;
+    }
+    var dp = P_AMBIENT * expMinusOne(lnPi + lnOnePlus(y) / k1);
+    if (!outward) { dp = -dp; }
+    var flow = 0.0;
+    for (var q = qa; q < qb; q++) {
+      let e = terms + 3u * q;
+      flow += leakFlow(bitcast<f32>(io[e]), bitcast<f32>(io[e + 1u]), bitcast<f32>(io[e + 2u]), dp, rho);
+    }
+    if (mid > flow * U.dt) { hi = mid; } else { lo = mid; }
   }
-  let mass = red[U.redZone + S + s] + src;
-  red[U.redZone + S + s] = mass;
-  let kappa = K / G;
-  let scaled = red[U.redZone + s] * G;
-  let y = (mass - scaled) / scaled;
-  var l = log(1.0 + y);
-  if (abs(y) < 1e-3) { l = y * (1.0 - y * (0.5 - y * (1.0 / 3.0 - y * 0.25))); }
-  let lr = l / (1.0 - kappa);
-  let ratio = exp(lr);
-  red[U.redZone + 2u * S + s] = ratio;
-  red[U.redZone + 3u * S + s] = exp(kappa * lr);
-  red[U.redZone + s] = red[U.redZone + s] * ratio;`)}
+  let dm = 0.5 * (lo + hi);
+  return select(-dm, dm, outward);
+}
+
+/**
+ * Vent leaks in open regions (the CPU's ventLeaks): one thread, in the CPU's
+ * order. A cell above ambient (the projection's p) lets gas out, a sink in
+ * its expansion; one below draws ambient air in, mixed at constant pressure
+ * and its volume added to the expansion. The expansions wait in red at
+ * U.leakDivAt for leakVentDiv.
+ */
+@compute @workgroup_size(1)
+fn leakVent() {
+  for (var q = 0u; q < U.leakVentN; q++) {
+    let e = U.leakVentAt + 4u * q;
+    let c = io[e];
+    let CA = bitcast<f32>(io[e + 1u]);
+    let n = bitcast<f32>(io[e + 2u]);
+    let dpRef = bitcast<f32>(io[e + 3u]);
+    red[U.leakDivAt + q] = 0.0;
+    if (kindOf(c) == SOLID) { continue; }
+    let dp = cf[ix(fP, c)];
+    let rho = cf[ix(fRho, c)];
+    if (dp > 0.0) {
+      red[U.leakDivAt + q] = -leakFlow(CA, n, dpRef, dp, rho) / rho / U.V;
+    } else if (dp < 0.0) {
+      let m = rho * U.V;
+      let dm = leakFlow(CA, n, dpRef, -dp, U.rho0) * U.dt;
+      let H = m * mixtureCp(c) * cf[ix(fT, c)] + dm * CP_AIR * U.ambient;
+      for (var k = 0u; k < NS; k++) { Y[c * NS + k] = (Y[c * NS + k] * m + select(0.0, Y_O2_AIR * dm, k == 1u)) / (m + dm); }
+      cf[ix(fT, c)] = H / ((m + dm) * mixtureCp(c));
+      red[U.leakDivAt + q] = lnOnePlus(dm / m) / U.dt;
+    }
+  }
+}
+/** The vent leaks' expansion, added to their cells' after expandEnd (the CPU's expansionEnd), in order. */
+@compute @workgroup_size(1)
+fn leakVentDiv() {
+  for (var q = 0u; q < U.leakVentN; q++) {
+    let c = io[U.leakVentAt + 4u * q];
+    cf[ix(fD, c)] += red[U.leakDivAt + q];
+  }
+}
 
 /**
  * A pressure zone after the advection (the CPU's zoneTransport), 1: its
@@ -1616,9 +1763,10 @@ ${perThread("zoneMassCommit", "U.sealedN", `
   let S = U.sealedN;
   var M = 0.0;
   for (var b = 0u; b < ${ZONE_BLOCKS}u; b++) { M += red[U.zonePartAt + 3u * (s * ${ZONE_BLOCKS}u + b)]; }
-  let ratio = red[U.redZone + S + s] / M;
-  red[U.redZone + 2u * S + s] = ratio;
-  red[U.redZone + s] = red[U.redZone + s] * ratio;`)}
+  let mass = red[U.redZone + S + s];
+  red[U.redZone + 2u * S + s] = mass / M;
+  let e = red[U.redZone + s];
+  red[U.redZone + s] = e + (1.0 + e) * ((mass - M) / M);`)}
 /** 3: each cell of a zone, its density by the ratio at the same T. */
 ${perCell("zoneScale", `
   let s = ci[ix(iSealed, c)];
@@ -1632,7 +1780,7 @@ ${perCell("zoneApply", `
   let S = U.sealedN;
   let T = cf[ix(fT, c)] * red[U.redZone + 3u * S + s];
   cf[ix(fT, c)] = T;
-  cf[ix(fRho, c)] = gasDensity(T, c) * red[U.redZone + s];`)}
+  cf[ix(fRho, c)] = gasDensity(T, c) * (1.0 + red[U.redZone + s]);`)}
 
 fn cu(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[uAt(i, j, k)] + vel[uAt(i + 1u, j, k)]); }
 fn cv(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[vAt(i, j, k)] + vel[vAt(i, j + 1u, k)]); }

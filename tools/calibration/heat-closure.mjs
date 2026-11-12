@@ -110,7 +110,8 @@ function mix(h) {
   const fraction = V.volumeFractions(grid, boxes, { rays: V.raysFor(grid) });
   const solid = V.occupancy(grid, fraction);
   const scene = { grid, fraction, solid, contents: { cells: [], masses: [] }, ignition: null, pilot: null, fuels: { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL } };
-  const sim = createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ...ADIABATIC, ...SOLVER });
+  // Sealed (leakage []): the transport's conservation in a closed box, as before leakage (plan 13.11).
+  const sim = createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ...ADIABATIC, leakage: [], ...SOLVER });
   // The box's inside only: the air round it is open to the domain's sides.
   const inside = (c) => {
     const i = c % grid.nx, j = Math.floor(c / grid.nx) % grid.ny, k = Math.floor(c / (grid.nx * grid.ny));
