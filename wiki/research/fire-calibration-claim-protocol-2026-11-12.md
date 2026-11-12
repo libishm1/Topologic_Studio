@@ -63,7 +63,7 @@ A second harness fault, found by a check on geometry alone (each tree's modelled
 
 A fault found while comparing (in the solver or the harness) may be fixed only when a check that uses no validation data shows it, as section 1's do. After any such fix, every held-out comparison is rerun, and both the results before and after are reported.
 
-### Added 2026-11-12, 08:00, after the final-solver run and before its rerun's verdict
+### Added 2026-11-12, 06:54 (commit 7292e28), after the final-solver run and before its rerun's verdict
 
 Five records, made before any result of the rerun below is seen; the text above stays as written.
 
