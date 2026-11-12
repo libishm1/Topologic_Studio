@@ -43,12 +43,12 @@ function GuidedCaption({ guided, onStop, onOpenNotes, onHome, onNext, loadState,
           {Math.min(index + 1, guided.stages.length)} of {guided.stages.length}
         </span>
       </div>
-      <p className="guided__caption">{guided.error ? `Stopped: ${guided.error}` : guided.stages[index]?.caption}</p>
+      <p className="guided__caption">{guided.error ? `Stopped: ${guided.error}` : (guided.caption ?? guided.stages[index]?.caption)}</p>
       {/* Not read out at every step: the card is a live region for its captions. */}
-      {(loadState?.busy || fire?.running) && (
+      {(loadState?.busy || (guided.playing && fire?.running)) && (
         <div aria-live="off">
           {loadState?.busy && <LoadProgress loadState={loadState} />}
-          {fire?.running && <FireProgress fire={fire} fireSteps={fireSteps} />}
+          {guided.playing && fire?.running && <FireProgress fire={fire} fireSteps={fireSteps} />}
         </div>
       )}
       {guided.result && <p className="guided__result">{guided.result}</p>}
@@ -324,6 +324,32 @@ export function Viewport({
               </p>
             </div>
 
+            {/* The guided runs first, under the lead: they stood 1.5 screens down, after the
+                examples and their credits (the interface audit of 2026-11-12). */}
+            {guidedRuns?.length > 0 && (
+              <div>
+                <h2 className="welcome__subtitle" ref={guidedHeadingRef} tabIndex={-1}>
+                  Watch a guided run
+                </h2>
+                <p className="welcome__note">Studio opens an example and takes each step for you, then stops at the result.</p>
+                <ul className="example-grid">
+                  {guidedRuns.map((run) => (
+                    <li key={run.id}>
+                      <button type="button" className="example" onClick={() => onGuided(run)} aria-describedby={`guided-${run.id}`}>
+                        <span className="example__head">
+                          <span className="example__name">{run.title}</span>
+                          {run.time ? <span className="example__size">{run.time}</span> : null}
+                        </span>
+                        <span className="example__desc" id={`guided-${run.id}`}>
+                          {run.description}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="dropzone" data-over={dragOver}>
               <Icon name="upload" size={32} />
               <p style={{ fontWeight: 650, color: "var(--text-primary)" }}>Drop an .ifc file here</p>
@@ -363,44 +389,25 @@ export function Viewport({
                     </li>
                   ))}
                 </ul>
-                <p className="examples__credit" style={{ marginTop: 12 }}>
-                  {examples
-                    .filter((entry) => entry.source)
-                    .map((entry, i) => (
-                      <React.Fragment key={entry.id}>
-                        {i > 0 && " "}
-                        {entry.name}:{" "}
-                        <a href={entry.source} target="_blank" rel="noreferrer">
-                          {entry.credit}
-                        </a>
-                      </React.Fragment>
-                    ))}{" "}
-                  The other examples are generated for Studio and are CC0.
-                </p>
               </div>
             )}
 
-            {guidedRuns?.length > 0 && (
-              <div>
-                <h2 className="welcome__subtitle" ref={guidedHeadingRef} tabIndex={-1}>
-                  Or watch a guided run
-                </h2>
-                <p className="welcome__note">Studio opens an example and takes each step for you, then stops at the result.</p>
-                <ul className="example-grid">
-                  {guidedRuns.map((run) => (
-                    <li key={run.id}>
-                      <button type="button" className="example" onClick={() => onGuided(run)} aria-describedby={`guided-${run.id}`}>
-                        <span className="example__head">
-                          <span className="example__name">{run.title}</span>
-                        </span>
-                        <span className="example__desc" id={`guided-${run.id}`}>
-                          {run.description}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {/* The examples' credits, at the foot. */}
+            {examples?.some((entry) => entry.source) && (
+              <p className="examples__credit">
+                {examples
+                  .filter((entry) => entry.source)
+                  .map((entry, i) => (
+                    <React.Fragment key={entry.id}>
+                      {i > 0 && " "}
+                      {entry.name}:{" "}
+                      <a href={entry.source} target="_blank" rel="noreferrer">
+                        {entry.credit}
+                      </a>
+                    </React.Fragment>
+                  ))}{" "}
+                The other examples are generated for Studio and are CC0.
+              </p>
             )}
           </section>
         </div>
@@ -472,7 +479,7 @@ export function Viewport({
       )}
 
       {/* The fire's playback; during a guided run its steps are in the run's card, whose Stop is the one Stop. */}
-      {fire?.running && !guided && (
+      {fire?.running && !guided?.playing && (
         <div className="overlay overlay--bottom-center">
           <div className="card playback" role="group" aria-label="Fire simulation">
             <FireProgress fire={fire} fireSteps={fireSteps} />

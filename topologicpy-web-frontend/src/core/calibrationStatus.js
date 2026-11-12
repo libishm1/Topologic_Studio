@@ -83,6 +83,28 @@ export function statusFor(cell) {
 }
 
 /**
+ * The run card's one line, first on the card (validationLine follows under
+ * More): what the held-out tests support on these cells for what the run
+ * draws, its visibility and gas temperature (the weaker of the layer's and the
+ * ceiling's), and a quantity calibrated here that it does not draw.
+ */
+export function validationVerdict(cell, { peakKW = null, horizon = null } = {}) {
+  const outside = (peakKW !== null && peakKW > COVERED.peakKW) || (horizon !== null && horizon > COVERED.horizon);
+  const tail = outside ? " Outside the tested range." : "";
+  const size = `${cell.toFixed(2)} m`;
+  if (nearestTestedCell(cell) === null) return `Not compared with measured fires on ${size} cells: read it as a ranking, not a prediction.${tail}`;
+  const rows = statusFor(cell);
+  const said = (id) => rows.find((r) => r.id === id).said;
+  const rank = { "not calibrated": 0, indicative: 1, calibrated: 2 };
+  const temperature = [said("layerTemperature"), said("ceilingJet")].sort((a, b) => rank[a] - rank[b])[0];
+  const visibility = said("visibility");
+  const drawn = visibility === temperature ? `the visibility and temperature drawn are ${visibility}` : `the visibility drawn is ${visibility}, the temperature ${temperature}`;
+  const calibrated = rows.filter((r) => r.said === "calibrated").map((r) => r.quantity);
+  const line = calibrated.length ? `${calibrated.join(" and ")} calibrated on these ${size} cells, not drawn; ${drawn}` : `On these ${size} cells ${drawn}`;
+  return `${line[0].toUpperCase()}${line.slice(1)}.${tail}`;
+}
+
+/**
  * The run card's and the describer's sentence for a run on `cell` m cells,
  * with its peak heat release (kW) and length (s): what decides its untenable
  * places, then what the held-out tests support on these cells, and under what.

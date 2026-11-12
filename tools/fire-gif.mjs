@@ -113,8 +113,7 @@ await page.waitForTimeout(1000);
 
 console.log("Starting the Flamescapes fire at the most likely ignition point");
 await page.getByRole("tab", { name: /^Simulate/ }).click();
-await page.getByText("Flamescapes combustion solver (optional)", { exact: true }).click();
-await page.getByText("Flamescapes: fire, smoke and embers", { exact: true }).click();
+await page.getByLabel("How the fire spreads", { exact: true }).selectOption("flamescapes-embers");
 await page.getByText("Likely ignition points", { exact: true }).click();
 await page.getByRole("button", { name: /^Find in this model$/ }).click();
 await page.getByRole("button", { name: /^Start here$/ }).first().waitFor({ timeout: 60000 });

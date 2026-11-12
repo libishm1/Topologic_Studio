@@ -12,7 +12,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
-import { FASTER_GPU_HINT, STANDARD_CELLS, detectGpu, integratedGpu } from "../lib/hardware.js";
+import { STANDARD_CELLS, detectGpu, integratedGpu } from "../lib/hardware.js";
 import { CROWD_COLOURS } from "../viewer/crowd.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
 import { DEFAULT_SETTINGS, PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
@@ -23,7 +23,7 @@ import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
 import { MEASURED_PRE, NO_RESPONSE_SOURCE, RSET_CRITERIA, RSET_PRESETS, criterionOf, measuredOf, presetOf } from "../core/rsetPresets.js";
 import { worstStatus } from "../core/perfReport.js";
 import { healthReason } from "../core/runHealth.js";
-import { COVERED, validationLine } from "../core/calibrationStatus.js";
+import { COVERED, validationLine, validationVerdict } from "../core/calibrationStatus.js";
 import {
   DEFAULT_SERVICE_RESPONSE,
   NFPA_1710_RESPONSE,
@@ -2305,19 +2305,21 @@ const ZONE_MODEL = {
     "A smoke layer and its gas temperature in each room, on a clock in seconds, spreading through open doors. Needs the model's rooms (IfcSpace).",
 };
 
-// Offered when the optional Flamescapes solver is switched on
-// (src/core/flamescapes.js; Wrede, Wagner et al. 2026).
+// The optional Flamescapes solver's two models (src/core/flamescapes.js;
+// Wrede, Wagner et al. 2026): choosing one switches the solver on.
+const FLAMESCAPES_HEAVIER = " Heavier: on your GPU where the browser offers WebGPU, otherwise a minute or more on the CPU.";
 const FLAMESCAPES_MODELS = [
   {
     value: "flamescapes",
     label: "Flamescapes: fire and smoke",
     description:
-      "The Flamescapes solver on a grid built from the IFC: gas flow, burning of the room contents, radiation and smoke, read at head height.",
+      "The Flamescapes combustion solver on a grid built from the IFC: gas flow, burning of the room contents, radiation and smoke, read at head height." +
+      FLAMESCAPES_HEAVIER,
   },
   {
     value: "flamescapes-embers",
     label: "Flamescapes: fire, smoke and embers",
-    description: "As above, with embers carried by the hot gas that can start spot fires away from the flame.",
+    description: "The Flamescapes combustion solver, with embers carried by the hot gas that can start spot fires away from the flame." + FLAMESCAPES_HEAVIER,
   },
 ];
 
@@ -2865,8 +2867,8 @@ function returnVsBest(r) {
 
 /**
  * The GPU the browser gives WebGPU, named before any run (one adapter
- * request), with how to use a laptop's faster card when it is the integrated
- * one (lib/hardware.js FASTER_GPU_HINT).
+ * request), and whether it is the integrated one; how to use a laptop's
+ * faster card is a link on the run card, printed once (FasterGpuLink).
  */
 function GpuNote() {
   const [gpu, setGpu] = useState(undefined);
@@ -2883,7 +2885,7 @@ function GpuNote() {
   if (gpu === null) return <p className="field__hint">This browser offers no WebGPU here, so the fire runs on the CPU.</p>;
   return (
     <p className="field__hint">
-      This browser&apos;s WebGPU device: {gpu}.{integratedGpu(gpu) ? ` That is the integrated graphics. ${FASTER_GPU_HINT}` : ""}
+      This browser&apos;s WebGPU device: {gpu}{integratedGpu(gpu) ? ", the integrated graphics" : ""}.
     </p>
   );
 }
@@ -2931,12 +2933,34 @@ function ServiceRunNote({ settings, pace, gpuSpeed }) {
   );
 }
 
-/** Progress and state of a Flamescapes run: backend, grid, time, heat release, embers. */
+/** How to give the browser a laptop's faster card, in the guide: one line, printed once (the run card). */
+function FasterGpuLink() {
+  return (
+    <a href={`${import.meta.env.BASE_URL}docs/fire-and-smoke.html#faster-gpu`} target="_blank" rel="noopener">
+      Use the faster GPU
+    </a>
+  );
+}
+
+/**
+ * Progress and state of a Flamescapes run. It leads with one line on what the
+ * held-out tests support for what it draws (core/calibrationStatus.js
+ * validationVerdict), then the time, the heat release and what responded;
+ * the openings, embers, measures, first item, grid, the full statement and
+ * the backend's notes are under More (the card was 1,600 px long).
+ */
 function CombustionStatus({ combustion, running }) {
   if (!combustion) return null;
   const done = combustion.time >= (combustion.horizon ?? Infinity) - 1e-6;
   // A run the health guard stopped (core/flamescapes.js HEALTH) says why and when.
   const stopped = combustion.health && combustion.health.ok === false ? combustion.health : null;
+  const integrated = combustion.backend?.kind === "gpu" && integratedGpu(combustion.backend.name);
+  const verdict =
+    combustion.cell > 0
+      ? combustion.solver === "previous"
+        ? "Run on the previous solver: not checked against measured fires."
+        : validationVerdict(combustion.cell, { peakKW: combustion.peak ?? null, horizon: combustion.horizon ?? null })
+      : null;
   return (
     <section className="result" aria-live="polite" aria-label="Flamescapes run">
       <h3 className="result__title" data-tone={stopped ? "warn" : "ok"}>
@@ -2953,6 +2977,7 @@ function CombustionStatus({ combustion, running }) {
           Played from this browser&apos;s kept runs (computed {new Date(combustion.replayed).toLocaleString()}), not computed again.
         </p>
       )}
+      {verdict && <p className="result__verdict">{verdict}</p>}
       <dl className="result__grid">
         <div className="result__item">
           <dt className="result__label">Simulated</dt>
@@ -2966,36 +2991,13 @@ function CombustionStatus({ combustion, running }) {
             {Math.round(combustion.hrr ?? 0)} kW (peak {Math.round(combustion.peak ?? 0)} kW)
           </dd>
         </div>
-        {combustion.openings && (
+        {combustion.detectors > 0 && (
           <div className="result__item">
-            <dt className="result__label">Openings</dt>
+            <dt className="result__label">Smoke detectors</dt>
             <dd className="result__value">
-              {combustion.openings.doorCount} doors {combustion.openings.doors}, {combustion.openings.windowCount} windows {combustion.openings.windows}
-              {combustion.openings.ventilation === "running"
-                ? `; ventilation running through ${combustion.openings.ductCells} of ${combustion.openings.terminals} air terminals`
-                : combustion.openings.terminals
-                  ? `; ventilation off (${combustion.openings.terminals} air terminals)`
-                  : "; no air terminals in the model"}
+              {combustion.detectors} under the ceiling, 7 m from the fire or as far as its room allows:{" "}
+              {combustion.detectedAt !== null && combustion.detectedAt !== undefined ? `the first responds at ${Math.round(combustion.detectedAt)} s` : "none has responded"}
             </dd>
-          </div>
-        )}
-        {/* Off says so, so "0 thrown" never reads as embers that failed to fly. */}
-        <div className="result__item">
-          <dt className="result__label">Embers</dt>
-          <dd className="result__value">
-            {combustion.embersOn ? `on: ${combustion.embers ?? 0} thrown, ${combustion.spots ?? 0} spot fires` : "off"}
-          </dd>
-        </div>
-        <div className="result__item">
-          <dt className="result__label">Measures</dt>
-          <dd className="result__value">
-            {combustion.extras ? "heat, smoke, CO, CO₂, O₂" : combustion.extrasDropped ? "heat, smoke, CO (the rest would not fit in memory)" : "heat, smoke, CO"}
-          </dd>
-        </div>
-        {combustion.designFire && (
-          <div className="result__item">
-            <dt className="result__label">First item</dt>
-            <dd className="result__value">{itemLine(combustion.designFire, combustion.itemSummary, combustion.horizon)}</dd>
           </div>
         )}
         {combustion.sprinklers && (
@@ -3018,34 +3020,6 @@ function CombustionStatus({ combustion, running }) {
             <dd className="result__value">{systemsLine(combustion.systems, combustion.systemsSummary, combustion.horizon)}</dd>
           </div>
         )}
-        {combustion.detectors > 0 && (
-          <div className="result__item">
-            <dt className="result__label">Smoke detectors</dt>
-            <dd className="result__value">
-              {combustion.detectors} under the ceiling, 7 m from the fire or as far as its room allows:{" "}
-              {combustion.detectedAt !== null && combustion.detectedAt !== undefined ? `the first responds at ${Math.round(combustion.detectedAt)} s` : "none has responded"}
-            </dd>
-          </div>
-        )}
-        {combustion.grid && (
-          <div className="result__item">
-            <dt className="result__label">Grid</dt>
-            <dd className="result__value">
-              {combustion.grid.join(" x ")} of {combustion.cell?.toFixed(2)} m
-            </dd>
-          </div>
-        )}
-        {/* What held-out measured fires support on this run's cells (core/calibrationStatus.js). */}
-        {combustion.cell > 0 && (
-          <div className="result__item">
-            <dt className="result__label">Checked against measured fires</dt>
-            <dd className="result__value">
-              {combustion.solver === "previous"
-                ? "Run on the previous solver (the site's until 2026-11-12), kept to compare with: it was not checked against measured fires, and its transport made heat as gases mixed (up to half again in a minute in a sealed test box)."
-                : validationLine(combustion.cell, { peakKW: combustion.peak ?? null, horizon: combustion.horizon ?? null })}
-            </dd>
-          </div>
-        )}
         {combustion.repeats && (
           <div className="result__item">
             <dt className="result__label">Repeat runs</dt>
@@ -3055,24 +3029,79 @@ function CombustionStatus({ combustion, running }) {
       </dl>
       {combustion.backend && (
         <p className="result__note">
-          Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}.
-          {combustion.backend.kind === "gpu" && integratedGpu(combustion.backend.name)
-            ? ` That is the integrated graphics. ${FASTER_GPU_HINT}`
-            : ""}
-          {combustion.resized
-            ? " The GPU stepped the first grid slower than three times real time, so the fire started again on a coarser grid it keeps up with."
-            : combustion.restarted
-              ? " The GPU stopped partway, so the fire started again on the CPU."
-              : ""}
-          {gridNote(combustion)}
-          {combustion.clipped
-            ? " The model is larger than the grid allows, so the grid covers the area round the fire; its sides are open to outside air, so smoke that reaches them leaves the run even where they cut through the building, and nodes outside it read as clear air."
-            : ""}
+          Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}
+          {integrated ? ", the integrated graphics. " : ". "}
+          {integrated && <FasterGpuLink />}
         </p>
       )}
+      <Notes summary="More">
+        <dl className="result__grid">
+          {combustion.openings && (
+            <div className="result__item">
+              <dt className="result__label">Openings</dt>
+              <dd className="result__value">
+                {combustion.openings.doorCount} doors {combustion.openings.doors}, {combustion.openings.windowCount} windows {combustion.openings.windows}
+                {combustion.openings.ventilation === "running"
+                  ? `; ventilation running through ${combustion.openings.ductCells} of ${combustion.openings.terminals} air terminals`
+                  : combustion.openings.terminals
+                    ? `; ventilation off (${combustion.openings.terminals} air terminals)`
+                    : "; no air terminals in the model"}
+              </dd>
+            </div>
+          )}
+          {/* Off says so, so "0 thrown" never reads as embers that failed to fly. */}
+          <div className="result__item">
+            <dt className="result__label">Embers</dt>
+            <dd className="result__value">
+              {combustion.embersOn ? `on: ${combustion.embers ?? 0} thrown, ${combustion.spots ?? 0} spot fires` : "off"}
+            </dd>
+          </div>
+          <div className="result__item">
+            <dt className="result__label">Measures</dt>
+            <dd className="result__value">
+              {combustion.extras ? "heat, smoke, CO, CO₂, O₂" : combustion.extrasDropped ? "heat, smoke, CO (the rest would not fit in memory)" : "heat, smoke, CO"}
+            </dd>
+          </div>
+          {combustion.designFire && (
+            <div className="result__item">
+              <dt className="result__label">First item</dt>
+              <dd className="result__value">{itemLine(combustion.designFire, combustion.itemSummary, combustion.horizon)}</dd>
+            </div>
+          )}
+          {combustion.grid && (
+            <div className="result__item">
+              <dt className="result__label">Grid</dt>
+              <dd className="result__value">
+                {combustion.grid.join(" x ")} of {combustion.cell?.toFixed(2)} m
+              </dd>
+            </div>
+          )}
+          {/* What held-out measured fires support on this run's cells, in full (core/calibrationStatus.js). */}
+          {combustion.cell > 0 && (
+            <div className="result__item">
+              <dt className="result__label">Checked against measured fires</dt>
+              <dd className="result__value">
+                {combustion.solver === "previous"
+                  ? "Run on the previous solver (the site's until 2026-11-12), kept to compare with: it was not checked against measured fires, and its transport made heat as gases mixed (up to half again in a minute in a sealed test box)."
+                  : validationLine(combustion.cell, { peakKW: combustion.peak ?? null, horizon: combustion.horizon ?? null })}
+              </dd>
+            </div>
+          )}
+        </dl>
+        {combustion.resized
+          ? " The GPU stepped the first grid slower than three times real time, so the fire started again on a coarser grid it keeps up with."
+          : combustion.restarted
+            ? " The GPU stopped partway, so the fire started again on the CPU."
+            : ""}
+        {gridNote(combustion)}
+        {combustion.clipped
+          ? " The model is larger than the grid allows, so the grid covers the area round the fire; its sides are open to outside air, so smoke that reaches them leaves the run even where they cut through the building, and nodes outside it read as clear air."
+          : ""}
+      </Notes>
     </section>
   );
 }
+
 
 /** Likely ignition points: the review's scenarios matched in this model, ranked. */
 function IgnitionPoints({ ignition, onFind, onUse, disabled }) {
@@ -3299,7 +3328,7 @@ export function SimulatePanel({
   const shielded = settings.rlMethod !== "qlearning";
   const heat = fireModel === "temperature" || fireModel === "zone" || flamescapes;
   const fireClass = FIRE_CLASSES[settings.flamescapesClass] || FIRE_CLASSES.A;
-  const models = [...FIRE_MODELS, ...(rooms ? [ZONE_MODEL] : []), ...(settings.flamescapes ? FLAMESCAPES_MODELS : [])];
+  const models = [...FIRE_MODELS, ...(rooms ? [ZONE_MODEL] : []), ...FLAMESCAPES_MODELS];
 
   return (
     <>
@@ -3320,22 +3349,17 @@ export function SimulatePanel({
         {ready && <PlaceWithoutMouse kinds={["fire"]} onPlace={onPlace} />}
         {ready && <IgnitionPoints ignition={ignition} onFind={onFindIgnition} onUse={onUseIgnition} disabled={fireBusy} />}
 
-        <Choices
-          legend="How the fire spreads"
-          name="fire-model"
+        {/* One choice: the Flamescapes solver's two models are in it, and choosing one switches the solver on
+            (six cards and a switch before, two controls for one choice). Its description is the hint. */}
+        <SelectField
+          label="How the fire spreads"
           value={fireModel}
-          onChange={(fireModel) => setSettings({ fireModel })}
-          options={models}
+          onChange={(value) => setSettings({ fireModel: value, flamescapes: isFlamescapes(value) })}
+          options={models.map(({ value, label }) => ({ value, label }))}
+          hint={models.find((m) => m.value === fireModel)?.description}
           disabled={fireBusy}
         />
         {fireBusy && <p className="field__hint">Stop the fire to change how it spreads.</p>}
-        <Toggle
-          label="Flamescapes combustion solver (optional)"
-          checked={settings.flamescapes}
-          disabled={fireBusy}
-          onChange={(on) => setSettings(on ? { flamescapes: true, fireModel: "flamescapes" } : { flamescapes: false, fireModel: isFlamescapes(settings.fireModel) ? "temperature" : settings.fireModel })}
-          hint="Fire and smoke from the Flamescapes paper (Wrede, Wagner et al. 2026), with or without embers. Heavier: on your GPU where the browser offers WebGPU, otherwise a minute or more on the CPU."
-        />
         {flamescapes && (
           <>
             <SelectField
@@ -3352,15 +3376,6 @@ export function SimulatePanel({
               options={itemGrowthOptions(fireClass)}
               hint={itemGrowthHint(settings.flamescapesClass, settings.flamescapesGrowth)}
             />
-            <Notice tone={fireClass.agents.unsuitable.length ? "warning" : "neutral"}>
-              <strong>Extinguishing a class {fireClass.short} fire.</strong> Suitable: {fireClass.agents.suitable.join(", ")}.
-              {fireClass.agents.unsuitable.map((entry) => (
-                <span key={entry.agent}>
-                  {" "}
-                  Never {entry.agent.toLowerCase()}: {entry.reason}
-                </span>
-              ))}
-            </Notice>
             {/* Open or closed doors change the fire more than any other setting: here, not folded away. */}
             <div className="field">
               <div className="field__label">
@@ -3446,10 +3461,11 @@ export function SimulatePanel({
         )}
 
         {/* A guided run starts and stops its own fire: its card's Stop is the one Stop then. */}
+        {/* Start and Stop stay at the panel's foot while the settings above them are read (workflow.css .fire-actions). */}
         {guided ? (
-          <p className="field__hint">A guided run is on screen: its card over the model stops it, and once it is closed a fire can be started here.</p>
+          <p className="field__hint">A guided run is playing: the Stop in its card over the model ends it.</p>
         ) : (
-          <div className="row">
+          <div className="row fire-actions">
             <Button
               variant="primary"
               size="lg"
@@ -3596,7 +3612,7 @@ export function SimulatePanel({
               value={settings.flamescapesSolver}
               onChange={(flamescapesSolver) => setSettings({ flamescapesSolver })}
               options={Object.entries(SOLVERS).map(([value, s]) => ({ value, label: s.label }))}
-              hint="The validated solver conserves the gas's mass and heat and was checked against measured room fires. The previous one, as the site ran it until 2026-11-12, is kept to compare with: its transport made heat as gases mixed, and its runs say so."
+              hint="The current solver conserves the gas's mass and heat; held-out measured room fires support its smoke layer's depth on 0.27 m cells, and each run's card says what holds on its own cells. The previous one, as the site ran it until 2026-11-12, is kept to compare with: its transport made heat as gases mixed, and its runs say so."
             />
             {/* The 0.27 m grid has its own setting, so a version without it reads "standard" (rollback safety). */}
             <SelectField
@@ -3778,6 +3794,18 @@ export function SimulatePanel({
         )}
 
         <Disclosure summary="Extinguishers">
+          {/* What puts out the class burning first: here with the extinguishers, not always open under the class. */}
+          {flamescapes && (
+            <Notice tone={fireClass.agents.unsuitable.length ? "warning" : "neutral"}>
+              <strong>Extinguishing a class {fireClass.short} fire.</strong> Suitable: {fireClass.agents.suitable.join(", ")}.
+              {fireClass.agents.unsuitable.map((entry) => (
+                <span key={entry.agent}>
+                  {" "}
+                  Never {entry.agent.toLowerCase()}: {entry.reason}
+                </span>
+              ))}
+            </Notice>
+          )}
           <Toggle
             label="Extinguishers"
             checked={settings.extinguishers}

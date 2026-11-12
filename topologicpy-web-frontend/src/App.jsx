@@ -39,6 +39,7 @@ import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
 import { RUN_SETTINGS, fireModelIn, isFlamescapes, keepGuidedBefore, planSettings, useStudio } from "./state/useStudio.js";
 import { runHorizon } from "./core/fireService.js";
+import { validationVerdict } from "./core/calibrationStatus.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_HOLD_MS, GUIDED_RUNS, farthestFromExits, fireStageNext, guidedHeadline, guidedOrigin, guidedResultPlace, nodeAlong, stagesFor } from "./core/guided.js";
@@ -728,14 +729,16 @@ export default function App() {
 
         void studio.refreshCacheInfo();
 
-        toast(
-          result.prepared
-            ? `Opened in ${formatMs(result.totalMs)}.`
-            : result.cached
-              ? `Loaded from cache in ${formatMs(result.totalMs)}.`
-              : `Converted and cached in ${formatMs(result.totalMs)}.`,
-          { title: nextFile.name, variant: "success", ttl: 5000 },
-        );
+        // A converted or cached file says how long it took; an example opened
+        // from its prepared fragments says nothing (the Model step gives its
+        // time, and the toast covered the view: the interface audit of 2026-11-12).
+        if (!result.prepared) {
+          toast(result.cached ? `Loaded from cache in ${formatMs(result.totalMs)}.` : `Converted and cached in ${formatMs(result.totalMs)}.`, {
+            title: nextFile.name,
+            variant: "success",
+            ttl: 5000,
+          });
+        }
       } catch (error) {
         if (latest() && !isCancelled(error)) {
           reportError(error, "Could not load the IFC file");
@@ -2446,7 +2449,7 @@ export default function App() {
             const spots = combustion.frames[combustion.frames.length - 1]?.spots || 0;
             if (spots > 0) markFound("embers", { spots });
           }
-          toast("Fire simulation finished.", { variant: "info", ttl: 3500 });
+          // No toast: the playback bar goes and the cards say the run is complete.
         },
         onError: (error) => {
           studio.setFire((current) => ({ ...current, running: false }));
@@ -2455,7 +2458,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, exits, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed, paintCombustion]);
+  }, [graph, points, exits, reportError, settings, studio, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed, paintCombustion]);
 
   // A fire that ends by itself keeps its final colours. Stopping it clears
   // them, back to what the graph showed before: the deadline map if it is
@@ -3754,12 +3757,15 @@ export default function App() {
     keepGuidedBefore(null);
     if (before && Object.keys(before).length) setSettings(before);
   }, [closeLatest, setSettings]);
-  // The guided card's Stop (Close once it has ended) is the one Stop while a
-  // run plays: it ends a fire playing or starting too, as Stop fire does (M7).
+  // Playing: not yet done or stopped. While it plays its card's Stop is the
+  // one Stop (the playback's and the panel's are not shown), and it ends a
+  // fire playing or starting too, as Stop fire does (M7). Once the run has
+  // ended the panel's Start and Stop are back, and Close only closes the card.
+  const guidedPlaying = Boolean(guided) && guided.stage !== "done" && !guided.error;
   const stopGuided = useCallback(() => {
-    if (fire.running || fire.starting) stopFire();
+    if (guidedPlaying && (fire.running || fire.starting)) stopFire();
     endGuided();
-  }, [fire.running, fire.starting, stopFire, endGuided]);
+  }, [guidedPlaying, fire.running, fire.starting, stopFire, endGuided]);
   // A stage whose result is on screen goes on after the hold; on a phone, at Next.
   const nextGuided = useCallback(() => {
     setGuided((g) => {
@@ -3829,36 +3835,46 @@ export default function App() {
       } else if (egress.error) return fail(egress.error);
       else if (egress.result && egress.result !== before && !egress.busy) advance();
     } else if (stage === "measure") {
-      // The routes give way to the wheelchair audit laid on the floors.
+      // The wheelchair audit laid on the floors, every room's route kept drawn over it.
       if (acted !== stage) {
-        setSettings({ egressRoutes: false, accessOverlay: true });
+        setSettings({ accessOverlay: true });
         act(() => runEgress("fine"), egress.fine);
       } else if (egress.error) return fail(egress.error);
       else if (egress.fine && egress.fine !== before && !egress.busy) advance();
     } else if (stage === "origin") {
+      const f = run.fire;
       if (acted !== stage) {
         setTab("simulate");
-        if (run.fire.model === "flamescapes") {
+        if (f.model === "flamescapes") {
           // A phone runs a shorter fire where the run says so. The run's own
-          // length, not until the fire service arrives (core/fireService.js).
-          const horizon = (isPhone() && run.fire.phoneHorizon) || run.fire.horizon || 60;
-          // And what the graph shows, where the run says (the smoke behind closed doors).
+          // length, not until the fire service arrives (core/fireService.js);
+          // what the graph shows, what burns and how fast, sprinklers and the
+          // grid, where the run says so.
+          const horizon = (isPhone() && f.phoneHorizon) || f.horizon || 60;
           setSettings({
             flamescapes: true,
             fireModel: "flamescapes",
-            flamescapesDoors: run.fire.doors || "open",
+            flamescapesDoors: f.doors || "open",
             flamescapesHorizon: horizon,
             flamescapesUntilService: false,
-            ...(run.fire.show ? { flamescapesShow: run.fire.show } : {}),
+            ...(f.show ? { flamescapesShow: f.show } : {}),
+            ...(f.fireClass ? { flamescapesClass: f.fireClass } : {}),
+            ...(f.growth ? { flamescapesGrowth: f.growth } : {}),
+            ...(f.sprinklers ? { sprinklers: true } : {}),
+            ...(f.calibratedGrid ? { flamescapesCalibratedGrid: true, flamescapesGridPolicy: "standard" } : {}),
+            ...(f.onRoute ? { reroute: true } : {}),
           });
-          act(() => void findIgnition("residential"), points.fire);
         } else {
-          setSettings({ flamescapes: false, fireModel: run.fire.model, reroute: true });
-          const v = nodeAlong(path?.node_ids, run.fire.along ?? 0.5);
+          setSettings({ flamescapes: false, fireModel: f.model, reroute: true });
+        }
+        if (f.model === "flamescapes" && !f.onRoute) act(() => void findIgnition("residential"), points.fire);
+        else {
+          // Part-way along the route.
+          const v = nodeAlong(path?.node_ids, f.along ?? 0.5);
           if (v < 0) return fail("The route has no nodes to place the fire on.");
           act(() => handlePick("fire", at(v)), points.fire);
         }
-      } else if (run.fire.model === "flamescapes" && !guided.picked && ignition.candidates) {
+      } else if (f.model === "flamescapes" && !f.onRoute && !guided.picked && ignition.candidates) {
         // The likeliest origin near the route, on a floor that reaches an exit,
         // clear of the start and the exits (core/guided.js guidedOrigin).
         const pick = guidedOrigin(graph, {
@@ -3868,21 +3884,41 @@ export default function App() {
           start: points.start ? snap(graph, points.start) : -1,
         });
         if (!pick) return fail("No place for the fire was found in the model.");
-        setGuided((g) => (g && g.run === run ? { ...g, picked: true } : g));
-        handlePick("fire", at(pick.node));
         const cls = pick.candidate?.scenario.fireClass;
+        // The caption names what burns: a pan of oil (class K) or a liquid (B) burns as a pool.
+        const label = pick.candidate
+          ? `${pick.candidate.scenario.label}${cls === "K" ? ", a pan of oil burning as a pool" : cls === "B" ? ", a pool of flammable liquid" : ""}`
+          : null;
+        setGuided((g) => (g && g.run === run ? { ...g, picked: true, originLabel: label } : g));
+        handlePick("fire", at(pick.node));
         if (FIRE_CLASSES[cls]) setSettings({ flamescapesClass: cls });
         // As picking a likely ignition point by hand says (useIgnition).
         if (pick.candidate) {
           markUsed("ignition");
           markFound("ignition", { label: pick.candidate.scenario.label });
         }
-      } else if (points.fire && points.fire !== before && (run.fire.model !== "flamescapes" || guided.picked)) advance();
+      } else if (
+        points.fire &&
+        points.fire !== before &&
+        (f.model !== "flamescapes" || f.onRoute || guided.picked) &&
+        // Under sprinklers, once the heads are laid out: a run started before has none.
+        (!f.sprinklers || (sprinklerPlan && !sprinklerState.busy))
+      )
+        advance();
     } else if (stage === "people") {
-      // Everyone on the floors, leaving with the fire; the runner on the
-      // forecast's timeline once the plan is made; dots on a phone.
+      // Everyone on the floors: walking out (the way out), or leaving with the
+      // fire, the runner on the forecast's timeline once the plan is made; dots on a phone.
       if (acted !== stage) {
-        act(() => setSettings({ crowd: true, crowdWithFire: true, crowdStairRunner: true, crowdRunner: "forecast", crowdStyle: isPhone() ? "dots" : "figures" }), null);
+        const style = isPhone() ? "dots" : "figures";
+        act(
+          () =>
+            setSettings(
+              run.people === "walk"
+                ? { crowd: true, crowdWithFire: false, crowdStyle: style }
+                : { crowd: true, crowdWithFire: true, crowdStairRunner: true, crowdRunner: "forecast", crowdStyle: style },
+            ),
+          null,
+        );
       } else if (crowdResult) advance();
     } else if (stage === "fire") {
       if (acted !== stage) act(() => void startFire(), null);
@@ -3955,8 +3991,17 @@ export default function App() {
     const storeys = (egress.fine?.storeys || []).filter((s) => s.audit?.rooms.onFoot > 0);
     return guidedHeadline(guidedDone, {
       route: path ? { found: path.found !== false, length: path.straight_length ?? path.length } : null,
+      crowd: crowdResult ? { people: crowdResult.people, lastOut: crowdResult.lastOut } : null,
       reroute: dynamicPath ? { found: dynamicPath.found, step: dynamicPath.step, firstChange: dynamicPath.firstChange, clearBy: dynamicPath.clearBy } : null,
-      combustion: fire.combustion ? { peak: fire.combustion.peak ?? 0, detectedAt: fire.combustion.detectedAt } : null,
+      combustion: fire.combustion
+        ? {
+            peak: fire.combustion.peak ?? 0,
+            detectedAt: fire.combustion.detectedAt,
+            firstSprinkler: fire.combustion.sprinklers?.first,
+            // The run card's one line (core/calibrationStatus.js).
+            verdict: fire.combustion.cell > 0 ? validationVerdict(fire.combustion.cell, { peakKW: fire.combustion.peak ?? null, horizon: fire.combustion.horizon ?? null }) : null,
+          }
+        : null,
       plan: plan ? { out: safe ? safe.arrival - depart : null, leave: plan.leaveBy?.good, leaveAtLeast: Boolean(plan.leaveBy?.horizon) } : null,
       egress: egress.result
         ? {
@@ -3967,7 +4012,17 @@ export default function App() {
           }
         : null,
     });
-  }, [guidedDone, forecastPlan.result, forecastPlan.inputs, egress.result, egress.fine, path, dynamicPath, fire.combustion]);
+  }, [guidedDone, forecastPlan.result, forecastPlan.inputs, egress.result, egress.fine, path, dynamicPath, fire.combustion, crowdResult]);
+  // A stage's caption with what it is on: what burns, once picked (a pan of
+  // oil burns as a pool), and the GPU or CPU a Flamescapes fire runs on.
+  const guidedCaption = useMemo(() => {
+    if (!guidedPlaying) return null;
+    const base = stagesFor(guided.run).find((s) => s.id === guided.stage)?.caption;
+    if (guided.stage === "origin" && guided.originLabel) return `Placing the fire: ${guided.originLabel}`;
+    const backend = fire.combustion?.backend;
+    if (guided.stage === "fire" && isFlamescapes(fire.model) && backend) return `${base}; running on ${backend.kind === "gpu" ? backend.name : "one CPU core"}`;
+    return null;
+  }, [guidedPlaying, guided, fire.combustion?.backend, fire.model]);
 
   // ------------------------------------------------- back to the guided runs
 
@@ -4788,6 +4843,8 @@ export default function App() {
                     error: guided.error,
                     note: guidedNote,
                     result: guidedResult,
+                    caption: guidedCaption,
+                    playing: guidedPlaying,
                     // Its result on screen and waiting for Next (a phone).
                     waiting: Boolean(guided.ready && guided.manual),
                   }
@@ -5014,7 +5071,7 @@ export default function App() {
                   onExtinguisherAttempt={runExtinguisherAttempt}
                   pace={lastPace}
                   gpuSpeed={gpuRateRef.current || null}
-                  guided={Boolean(guided)}
+                  guided={guidedPlaying}
                 />
               )}
             </div>

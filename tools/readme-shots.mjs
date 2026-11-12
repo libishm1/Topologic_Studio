@@ -208,7 +208,7 @@ async function duplex() {
   await save(page, "duplex-rl");
 
   // The two-zone model needs the model's rooms (IfcSpace), which the Duplex has.
-  await page.getByText("Two-zone rooms (degrees C)", { exact: true }).click();
+  await page.getByLabel("How the fire spreads", { exact: true }).selectOption("zone");
   await page.getByRole("button", { name: /^Start fire$/ }).scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: /^Start fire$/ }).click();
   await page.waitForFunction(() => /fire step \d+/i.test(document.body.innerText), null, { timeout: 45000 });
@@ -268,8 +268,7 @@ async function flamescapes() {
   await page.mouse.wheel(0, -120);
   await page.waitForTimeout(1000);
   await tab(page, "Simulate");
-  await page.getByText("Flamescapes combustion solver (optional)", { exact: true }).click();
-  await page.getByText("Flamescapes: fire, smoke and embers", { exact: true }).click();
+  await page.getByLabel("How the fire spreads", { exact: true }).selectOption("flamescapes-embers");
   // The fire starts where the ignition review ranks it most likely in this model.
   await page.getByText("Likely ignition points", { exact: true }).click();
   await page.getByRole("button", { name: /^Find in this model$/ }).click();

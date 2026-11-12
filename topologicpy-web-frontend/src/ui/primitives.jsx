@@ -258,13 +258,13 @@ export function NumberField({ label, value, onChange, hint, min, max, optional =
   );
 }
 
-export function SelectField({ label, value, onChange, options, hint }) {
+export function SelectField({ label, value, onChange, options, hint, disabled = false }) {
   return (
     <div className="field">
       <div className="field__label">
         <span>{label}</span>
       </div>
-      <select value={value} onChange={(event) => onChange(event.target.value)} aria-label={label}>
+      <select value={value} onChange={(event) => onChange(event.target.value)} aria-label={label} disabled={disabled}>
         {options.map((option) => (
           <option key={option.value} value={option.value} disabled={option.disabled}>
             {option.label}

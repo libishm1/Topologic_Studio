@@ -94,7 +94,7 @@ async function openCase(name, spec) {
   await page.getByRole("tab", { name: /^Model/ }).click();
   await page.getByRole("radio", { name: "Ghost" }).click().catch(() => page.getByText("Ghost", { exact: true }).first().click());
   await page.getByRole("tab", { name: /^Simulate/ }).click();
-  await page.getByText("Flamescapes combustion solver (optional)", { exact: true }).click();
+  await page.getByLabel("How the fire spreads", { exact: true }).selectOption("flamescapes");
   await page.getByLabel("What burns first").selectOption(spec.cls).catch(() => {});
   // The fire: the middle of the room the case names (the lowest of its
   // namesakes), placed without the mouse; it snaps to the graph.

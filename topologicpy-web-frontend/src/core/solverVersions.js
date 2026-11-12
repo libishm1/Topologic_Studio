@@ -9,7 +9,7 @@
  * impossible runs and close leaks.
  */
 export const SOLVERS = Object.freeze({
-  validated: Object.freeze({ options: Object.freeze({}), label: "Validated (2026-11-12): conserves heat; checked against measured fires" }),
+  validated: Object.freeze({ options: Object.freeze({}), label: "Current (2026-11-12): conserves heat; what it is checked for is on the run card" }),
   previous: Object.freeze({
     options: Object.freeze({ conservative: 0, expansion: 0, vorticity: 10, cfl: 0, vorticityStep: 0 }),
     label: "Previous (the site's until 2026-11-12): not validated; its transport made heat",

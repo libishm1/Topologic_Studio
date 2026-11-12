@@ -1156,11 +1156,12 @@ if (await planBtn.isEnabled().catch(() => false)) {
 // simulation plays its gas temperatures.
 
 console.log("\n[5d] Two-zone room model");
-const zoneChoice = page.getByText("Two-zone rooms (degrees C)", { exact: true });
-const zoneOffered = await zoneChoice.isVisible().catch(() => false);
+// One list for the fire model (2026-11-12): the two-zone model is in it only on a model with rooms.
+const zoneSelect = page.getByLabel("How the fire spreads", { exact: true });
+const zoneOffered = (await zoneSelect.locator('option[value="zone"]').count().catch(() => 0)) > 0;
 record(zoneOffered, "the two-zone model is offered on a model with IfcSpace rooms");
 if (zoneOffered) {
-  await zoneChoice.click();
+  await zoneSelect.selectOption("zone");
   await page.waitForTimeout(200);
   if (await planBtn.isEnabled().catch(() => false)) {
     const tZone = Date.now();
@@ -1216,7 +1217,7 @@ if (zoneOffered) {
     await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
   }
   // Back to heat diffusion for the steps that follow.
-  await page.getByText("Heat diffusion", { exact: true }).click().catch(() => {});
+  await zoneSelect.selectOption("temperature").catch(() => {});
 }
 
 // ---- 5d'. people leaving with a graph fire started again --------------------
@@ -1272,10 +1273,10 @@ if (await startFire.isEnabled().catch(() => false)) {
 // must stream frames, finish, colour the graph and say what it ran on.
 
 console.log("\n[5e] Flamescapes solver (optional)");
-const fsToggle = page.getByText("Flamescapes combustion solver (optional)", { exact: true });
-if (await fsToggle.isVisible().catch(() => false)) {
-  await fsToggle.click();
-  await page.getByText("Flamescapes: fire, smoke and embers", { exact: true }).click();
+// One list for the fire model (2026-11-12): choosing a Flamescapes model switches the solver on.
+const fireModelSelect = page.getByLabel("How the fire spreads", { exact: true });
+if (await fireModelSelect.isVisible().catch(() => false)) {
+  await fireModelSelect.selectOption("flamescapes-embers");
   await page.getByText("Flamescapes settings", { exact: true }).click();
   await page.getByLabel("Simulated time (s)").fill("30");
   await page.getByLabel("Simulated time (s)").blur();
@@ -1299,6 +1300,9 @@ if (await fsToggle.isVisible().catch(() => false)) {
   if (fsDone) timing("Flamescapes, 30 s simulated (click to complete)", Date.now() - tFs);
   const card = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
   record(/Running on (the GPU|one CPU core)/.test(card), "the run says what it ran on", card.split("\n").find((l) => /Running on/.test(l)) || "no backend line");
+  // It leads with one line on what the held-out tests support for what it draws (calibrationStatus.js validationVerdict, 2026-11-12).
+  const verdict = (await page.locator('[aria-label="Flamescapes run"] .result__verdict').textContent().catch(() => "")) || "";
+  record(/(not calibrated|indicative|calibrated|Not compared with measured fires)/.test(verdict), "the run card leads with one line on what the held-out tests support", verdict || "no line");
   // The standard grid by default, the same on every device; a small CPU builds a lighter one and says so (lib/hardware.js, 2026-11-09).
   const gridNote = card.match(/The standard grid, the same on every device\.|This device's CPU builds a lighter grid \(at most [\d,]+ cells\)/)?.[0] || "";
   record(Boolean(gridNote), "the run is on the standard grid, and the card says so", gridNote || "no grid note");
@@ -1582,9 +1586,9 @@ if (await fsToggle.isVisible().catch(() => false)) {
   await sprinklerSwitch.first().click().catch(() => {});
   // Back to the default, so later steps see the page as before.
   await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
-  await fsToggle.click();
+  await fireModelSelect.selectOption("temperature");
 } else {
-  record(false, "the Flamescapes toggle is offered in the Simulate step");
+  record(false, "the Flamescapes models are offered in the Simulate step");
 }
 
 // ---- 5f. extinguishers -------------------------------------------------------
@@ -1858,13 +1862,13 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
       // Doors as built (core/doorStates.js, 2026-11-07): the 14 doors whose
       // EN 13501-2 class carries -C (EI2 30-C, EI2 30-C-Sm) close themselves.
       await page.getByRole("tab", { name: /^Simulate/ }).click();
-      const solver = page.getByText("Flamescapes combustion solver (optional)", { exact: true });
-      await solver.click();
+      const fireModelList = page.getByLabel("How the fire spreads", { exact: true });
+      await fireModelList.selectOption("flamescapes");
       await page.getByRole("group", { name: "Doors", exact: true }).getByRole("button", { name: "As built" }).click();
       const asBuilt = await page.getByText(/close themselves are closed/).first().textContent({ timeout: 10000 }).catch(() => "");
       record(/14 of 81 doors here/.test(asBuilt), "  and its self-closing doors are read for an as-built run", (asBuilt.match(/\d+ of \d+ doors here/) || ["not shown"])[0]);
       await page.getByRole("group", { name: "Doors", exact: true }).getByRole("button", { name: "Open" }).click();
-      await solver.click();
+      await fireModelList.selectOption("temperature");
     }
   }
 }
@@ -2004,6 +2008,13 @@ for (const [call, list] of byCall) {
   // It ends on its field note (core/fieldNotes.js), found.
   const note = (await guidedPage.locator(".guided__note").textContent().catch(() => "")) || "";
   record(/^Field note found: How far is the walk out\?/.test(note), "  and ends on the field note it found", note.slice(0, 80) || "no note");
+  // Everyone walks out, and the card ends on the check the crowd model passes (core/guided.js, 2026-11-12).
+  const wayOutNumbers = (await guidedPage.locator(".guided__result").textContent().catch(() => "")) || "";
+  record(
+    /^Route [\d.]+ m/.test(wayOutNumbers) && /people walk out/.test(wayOutNumbers) && /RiMEA and NIST TN 1822/.test(wayOutNumbers),
+    "  and leads with the route, everyone walking out and the crowd model's check",
+    wayOutNumbers.slice(0, 200) || "no numbers",
+  );
   await guidedPage.close();
 }
 
@@ -2015,7 +2026,7 @@ for (const [call, list] of byCall) {
   await guidedPage.goto(`${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`, { waitUntil: "load", timeout: 60000 });
   await guidedPage.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
   const t0 = Date.now();
-  await guidedPage.locator(".welcome").getByRole("button", { name: /^Every room's way out/ }).click().catch(() => {});
+  await guidedPage.locator(".welcome").getByRole("button", { name: /^Every room, every exit/ }).click().catch(() => {});
   const caption = await guidedPage
     .waitForFunction(() => /^(Done|Stopped)/.test(document.querySelector(".guided__caption")?.textContent || "") && document.querySelector(".guided__caption").textContent, null, { timeout: 300000 })
     .then((h) => h.jsonValue())
@@ -2048,7 +2059,7 @@ for (const [call, list] of byCall) {
   const ownContext = await browser.newContext(MOBILE ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1600, height: 950 } });
   const p = await ownContext.newPage();
   const debugUrl = `${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`;
-  // The user's own choices, which "A fire on the route" changes (heat diffusion, rerouting on).
+  // The user's own choices, which "A fire on the route" changes (a Flamescapes fire, rerouting on).
   await p.goto(debugUrl, { waitUntil: "load", timeout: 60000 });
   await p.evaluate(() => localStorage.setItem("ts.settings", JSON.stringify({ fireModel: "radial", reroute: false })));
   await p.reload({ waitUntil: "load", timeout: 60000 });
@@ -2073,8 +2084,10 @@ for (const [call, list] of byCall) {
   const playing = await firePlaying();
   const held = await p.evaluate(() => {
     const c = window.__captions;
-    // Every stage after the opening (which waits for the model to load) up to the fire.
-    return c.slice(1, -1).map((x, i) => ({ text: x.text, s: (c[i + 2].t - x.t) / 1000 }));
+    // Every stage after the opening (which waits for the model to load) up to
+    // the fire, whose caption then names the GPU it runs on.
+    const fireAt = c.findIndex((x) => /^The heads over the fire open/.test(x.text));
+    return c.slice(1, fireAt).map((x, i) => ({ text: x.text, s: (c[i + 2].t - x.t) / 1000 }));
   });
   const shortest = held.length ? Math.min(...held.map((x) => x.s)) : 0;
   record(
@@ -2092,7 +2105,7 @@ for (const [call, list] of byCall) {
   await p.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
   const afterReload = await stored();
   record(
-    during.settings.fireModel === "temperature" && Boolean(during.before) && afterReload.settings.fireModel === "radial" && afterReload.settings.reroute === false && !afterReload.before,
+    during.settings.fireModel === "flamescapes" && Boolean(during.before) && afterReload.settings.fireModel === "radial" && afterReload.settings.reroute === false && !afterReload.before,
     "  the settings it changed are the user's again after a reload mid-run",
     `during ${during.settings.fireModel}, after the reload ${afterReload.settings.fireModel}, rerouting ${afterReload.settings.reroute}`,
   );
@@ -2120,7 +2133,7 @@ for (const [call, list] of byCall) {
     JSON.stringify(after),
   );
   record(after.fireModel === "radial", "  and gives the user's settings back", `fire model ${after.fireModel || "not stored"}`);
-  record(after.focus === "Or watch a guided run", "  with the keyboard's focus on the guided runs", after.focus || "nowhere");
+  record(after.focus === "Watch a guided run", "  with the keyboard's focus on the guided runs", after.focus || "nowhere");
   await p.locator(".welcome").getByRole("button", { name: /^Duplex apartment/ }).click({ timeout: 60000 }).catch(() => {});
   await p.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Build egress graph/.test(b.textContent) && !b.disabled), null, { timeout: 120000 }).catch(() => {});
   const home = p.locator(".viewport__top").getByRole("button", { name: "Back to the guided runs" });
@@ -2196,7 +2209,7 @@ if (LINKED && existsSync(LINKED)) {
     await p.getByRole("button", { name: /Build egress graph|Rebuild graph/ }).first().click();
     await p.waitForFunction(() => /nodes/.test(document.querySelector(".statusbar")?.innerText || ""), null, { timeout: 120000 }).catch(() => {});
     await p.getByRole("tab", { name: /^Simulate/ }).click();
-    await p.getByText("Flamescapes combustion solver (optional)", { exact: true }).click().catch(() => {});
+    await p.getByLabel("How the fire spreads", { exact: true }).selectOption("flamescapes").catch(() => {});
     await openSummary(p, /^Sprinklers$/);
     await p.locator(".toggle__label", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
     await p.waitForFunction(() => /\d+ sprinkler heads/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 60000 }).catch(() => {});

@@ -5,51 +5,74 @@
  * and the choices they make on the graph.
  */
 
+/**
+ * Each run shows one of the app's features (the interface audit of
+ * 2026-11-12, section 5): the crowd and its check, sprinklers, the 0.27 m grid
+ * and the run card's verdict, the GPU and a pool fire, the egress map and the
+ * wheelchair audit. `time` is the welcome card's estimate: the audit's
+ * measured times on a laptop's integrated GPU (Intel UHD 770), plus the
+ * 2.5 s each stage's result is now held (GUIDED_HOLD_MS), plus the new
+ * stages' and fires' cost where they changed.
+ */
 export const GUIDED_RUNS = [
   {
     id: "way-out",
     title: "The way out",
-    description: "The Duplex: its walkable graph, then the shortest route from the room furthest from an exit.",
+    description: "The Duplex: its walkable graph, the shortest route from the room furthest from an exit, then everyone on its floors walking out.",
+    time: "About 20 s",
     example: "duplex-apartment",
     fire: null,
+    // Everyone walks out with no fire; the card ends on the crowd model's check.
+    people: "walk",
+    captions: { people: "Everyone on the floors walks out by the quickest exit" },
     // The field note it ends on (core/fieldNotes.js).
     note: "walk-out",
   },
   {
     id: "fire-on-route",
     title: "A fire on the route",
-    description: "The same route, then a fire part-way along it: heat spreads through the graph and the route bends round it.",
+    description:
+      "The same route, then a sofa fire part-way along it, growing fast under sprinklers: when the heads over it open, and whether the route has to leave it.",
+    time: "About 45 s on a laptop GPU",
     example: "duplex-apartment",
-    fire: { model: "temperature", along: 0.45 },
+    // A Flamescapes fire on the route (no ignition search): class A, upholstered
+    // furniture's fast growth (fireClasses.js), the Duplex's sprinklers, 120 s.
+    fire: { model: "flamescapes", along: 0.45, onRoute: true, fireClass: "A", growth: "fast", sprinklers: true, doors: "open", horizon: 120 },
+    captions: { fire: "The heads over the fire open; the route reacts" },
     note: "reroute",
   },
   {
     id: "smoke-doors",
     title: "Smoke behind closed doors",
-    description: "Flamescapes, from the most likely ignition point, with every door closed: heat and smoke over 60 s (a minute or more to compute).",
+    description:
+      "Flamescapes from the most likely ignition point, with every door closed, on the 0.27 m grid the smoke layer was calibrated on: the smoke over 60 s, and what the held-out tests support.",
+    time: "About 45 s on a laptop GPU",
     example: "duplex-apartment",
     // The graph shows the smoke, which the closed doors hold back, not the heat.
-    fire: { model: "flamescapes", doors: "closed", horizon: 60, show: "smoke" },
+    fire: { model: "flamescapes", doors: "closed", horizon: 60, show: "smoke", calibratedGrid: true },
+    captions: { fire: "The smoke spreads; the closed doors hold it back" },
     note: "closed-doors",
   },
   {
     id: "vienna-gpu",
     title: "Vienna on the GPU",
     description:
-      "The TU Wien building end to end: its graph and way out, a Flamescapes fire from the likeliest origin near the route (on your GPU where the browser offers WebGPU), everyone leaving with the fire, the forecast's escape, then a tour as it all plays again. A few minutes.",
+      "The TU Wien building end to end: its graph and way out, a Flamescapes fire from the likeliest origin near the route, on the GPU it names, everyone leaving with the fire, the forecast's escape, then a tour as it all plays again.",
+    time: "About 50 s on a laptop GPU",
     example: "vienna-escape-route-model",
     fire: { model: "flamescapes", doors: "open", horizon: 120, phoneHorizon: 60 },
     // The extra stages: people leaving with the fire, the forecast's plan, a tour.
-    people: true,
+    people: "fire",
     plan: true,
     tour: true,
     note: "ignition",
   },
   {
     id: "egress-access",
-    title: "Every room's way out",
+    title: "Every room, every exit (clinic)",
     description:
       "The NIBS Clinic: its walkable graph, the walk from every room to its nearest exit with the common paths and dead ends against IBC 2021, then each floor measured on a fine grid for a wheelchair.",
+    time: "About 20 s",
     example: "nibs-clinic",
     fire: null,
     // The extra stages: the egress map, then the fine grid and the accessibility audit (no route).
@@ -74,6 +97,7 @@ export const GUIDED_STAGES = [
   { id: "done", caption: "Done: the result is in the panel" },
 ];
 
+// A run may say a stage its own way (run.captions).
 export const stagesFor = (run) =>
   GUIDED_STAGES.filter(
     (s) =>
@@ -83,7 +107,7 @@ export const stagesFor = (run) =>
       (run.people || s.id !== "people") &&
       (run.plan || s.id !== "plan") &&
       (run.tour || s.id !== "tour"),
-  );
+  ).map((s) => (run.captions?.[s.id] ? { ...s, caption: run.captions[s.id] } : s));
 
 /**
  * How long a stage's result stays on screen before the next stage, ms: long
@@ -97,12 +121,14 @@ const seconds = (s) => (s < 90 ? `${(Math.round(s * 10) / 10).toFixed(1)} s` : `
 
 /**
  * The one or two numbers a finished guided run leads with in its card, from
- * what the panel shows (App.jsx gathers `facts`): the escape plan, the
- * egress map, the Flamescapes run, the route during the fire, or the route.
- * Null when the result is missing.
+ * what the panel shows (App.jsx gathers `facts`): the escape plan; the
+ * egress map; the Flamescapes run, with its first sprinkler or detector, the
+ * route during it, and on the 0.27 m grid the run card's verdict; the route
+ * during a graph fire; or the route and, once everyone has walked out, the
+ * check the crowd model passes. Null when the result is missing.
  */
 export function guidedHeadline(run, facts = {}) {
-  const { route, reroute, combustion, plan, egress } = facts;
+  const { route, reroute, combustion, plan, egress, crowd } = facts;
   if (run.egress) {
     if (!egress) return null;
     const parts = [`Farthest walk ${egress.farthest.toFixed(1)} m`];
@@ -114,21 +140,38 @@ export function guidedHeadline(run, facts = {}) {
     if (!Number.isFinite(plan.out)) return "No safe route within the forecast.";
     return `Out in ${seconds(plan.out)} by the earliest safe route${Number.isFinite(plan.leave) ? `; leave within ${plan.leaveAtLeast ? "at least " : ""}${seconds(plan.leave)}` : ""}.`;
   }
+  // The route during the fire: its first change kept, and when it was clear again.
+  const rerouted = () =>
+    !reroute
+      ? null
+      : reroute.found === false
+        ? "no safe route left"
+        : Number.isFinite(reroute.firstChange)
+          ? `the route changed at step ${reroute.firstChange}${reroute.clearBy ? `; clear again by step ${reroute.clearBy}` : ""}`
+          : `the route stayed clear to step ${reroute.step}`;
   if (run.fire?.model === "flamescapes") {
     if (!combustion) return null;
-    const detected = Number.isFinite(combustion.detectedAt) ? `a smoke detector responds at ${Math.round(combustion.detectedAt)} s` : "no smoke detector responds";
-    return `Peak ${Math.round(combustion.peak)} kW; ${detected}.`;
+    const parts = [`Peak ${Math.round(combustion.peak)} kW`];
+    // Under sprinklers, when the first head opened; else when a smoke detector did.
+    if (run.fire.sprinklers) parts.push(Number.isFinite(combustion.firstSprinkler) ? `the first sprinkler opens at ${Math.round(combustion.firstSprinkler)} s` : "no sprinkler opens");
+    else parts.push(Number.isFinite(combustion.detectedAt) ? `a smoke detector responds at ${Math.round(combustion.detectedAt)} s` : "no smoke detector responds");
+    if (run.fire.onRoute && rerouted()) parts.push(rerouted());
+    // On the validated grid, the run card's one-line verdict too.
+    return `${parts.join("; ")}.${run.fire.calibratedGrid && combustion.verdict ? ` ${combustion.verdict}` : ""}`;
   }
   if (run.fire) {
-    if (!reroute) return null;
-    if (reroute.found === false) return "No safe route left.";
-    return Number.isFinite(reroute.firstChange)
-      ? `The route changed at step ${reroute.firstChange}${reroute.clearBy ? `; clear again by step ${reroute.clearBy}` : ""}.`
-      : `The route stayed clear to step ${reroute.step}.`;
+    const line = rerouted();
+    return line ? `${line[0].toUpperCase()}${line.slice(1)}.` : null;
   }
   if (!route?.found) return null;
-  return `Route ${route.length.toFixed(1)} m, from the room furthest from an exit.`;
+  const walk = `Route ${route.length.toFixed(1)} m, from the room furthest from an exit.`;
+  // Everyone walking out, and the check the crowd model passes (Route, People leaving).
+  if (!run.people || !crowd) return walk;
+  return `${walk} ${crowd.people.toLocaleString("en")} people walk out, the last at ${Math.round(crowd.lastOut)} s. ${CROWD_CHECK}`;
 }
+
+/** What the people-leaving model is checked against (ui/Panels.jsx, People leaving; Methods). */
+export const CROWD_CHECK = "The crowd model passes 16 of 18 RiMEA and NIST TN 1822 test cases; dense corridors and single file still run fast.";
 
 /**
  * Where a finished run's result sits in the panel: its step, the folded
