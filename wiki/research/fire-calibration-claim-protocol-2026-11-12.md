@@ -62,3 +62,24 @@ A second harness fault, found by a check on geometry alone (each tree's modelled
 ## 5. If the comparisons find a fault
 
 A fault found while comparing (in the solver or the harness) may be fixed only when a check that uses no validation data shows it, as section 1's do. After any such fix, every held-out comparison is rerun, and both the results before and after are reported.
+
+### Added 2026-11-12, 08:00, after the final-solver run and before its rerun's verdict
+
+Five records, made before any result of the rerun below is seen; the text above stays as written.
+
+1. **Dates.** This protocol was written on 2026-11-11 and first committed at 22:31 (+0300) in 7e2e9f5, not "on 2026-11-12" as its second line says; its file name keeps the date it was planned for.
+2. **Section 3 and the sprinkler row.** Section 3 calls its tests "never used to fit anything", but section 2 says the walls' convection coefficient was set on the sprinkler data, and section 4 reports them apart for that reason. The sprinkler row is not held out for that coefficient.
+3. **The bands are this project's.** The calibrated band (0.8 <= delta <= 1.25, sigma_M <= 0.35) and the indicative band (0.67 to 1.5, sigma_M <= 0.5) were set by this project in the 2026-11-08 plan, section 8. The FDS Validation Guide gives the statistics (delta, sigma_M, sigma_E), not these bands.
+4. **Two transport faults (section 5).** An independent multi-agent review on 2026-11-12 reproduced two faults with checks that use no measured data:
+   - the transport's sweep order favoured one axis (a centred burner under a flat ceiling heated it 11 % more along x than z);
+   - porous cells were slowed after the projection, so their gas made heat (a porous burner room closed to 1.27).
+
+   They were fixed in 2ac6141 (CPU) and 6773eae (GPU). The confinement was refitted by section 2's unchanged rule on that solver and stayed at 3 (scores 0.131 for 3, 0.179 for 2, on all three cells). The 218-run held-out comparison was rerun on 0c62bd9 (2026-11-12 02:46 to 04:17, `benchmark/results/2026-11-12-validation-final.json`), which added ATF's corridors as the plan's 12.9 pre-registered.
+5. **A burner fault (section 5).** That run stopped two ATF corridor runs on 0.27 m cells on the temperature guard (500 kW at 56 s, 3,105 K; the pulsed fire at 545 s). Tracing the hottest cell found a fault that needs no measured data to show it: the prescribed burner heated each flame cell whatever its oxygen, and the top flame cell under the corridor's ceiling, with no oxygen left, kept taking its share.
+   - The fix (6ee8c93, CPU and GPU): a burner's fuel burns only with oxygen. What a flame cell cannot burn goes to the burner's other cells, then to the open cells round them out to Heskestad's flame height. What still finds no oxygen waits.
+   - The check: a 200 kW burner in a sealed room releases no more than its oxygen allows and its gas stays below methane's flame temperature (a unit test that fails on the old burner).
+   - The same commit gives pools (classes B and K) design fires in the app; no held-out test uses a pool.
+
+   Under section 5 every held-out comparison is rerun on 6ee8c93 (`benchmark/results/2026-11-12-validation-o2.json`). Both runs are reported: the one before this fix with its stopped runs, and the rerun. The claim the app states is the rerun's, by section 4 and the stricter reading of the 00:26 addendum, with the run before it stated beside it.
+
+This fault was found because a held-out run stopped, not by a check made in advance. A reader should weigh the rerun's verdict with that in mind: the fix was chosen by physics that needs no measured data, but the search for it was prompted by held-out data.
