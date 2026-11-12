@@ -1012,3 +1012,14 @@ Item 5 gives each sealed region its own pressure. Without a way out, a region he
      - with A_L = 0 the box behaves as item 5 alone;
      - mass and energy, including what leaves through the leak, close within 1 %.
    - CPU and GPU parity.
+
+### 13.12 Trying a failed item again (2026-11-12, at the user's request, before any further attempt)
+
+The user asked that a physics item that fails its check be tried again, or a better solution found. The rule for every further attempt:
+1. **A new attempt changes the method, never the tolerance.** A check may be rewritten only where it computes its reference wrongly for the case it runs, and the rewrite is disclosed as written after a failure.
+2. **Its method and check are committed to this plan before it runs.** The physics agent drafts them blind; the coordinator commits them; then the agent runs.
+3. **Every attempt is reported,** failed ones included, with its numbers and commit. An item is made only on an attempt that passes.
+4. **No value is fitted to make a check pass.** Constants come from their cited sources (FDS's defaults, published coefficients), and none from a test that 12 or 13 holds out. For example, Steckler's own discharge coefficient may not be used for doors, because Steckler's tests are held out.
+5. **13.B runs on the items made by the time it starts.** An item made later gets its own full rerun, reported beside 13.B.
+
+Open for another attempt now: item 4 (door flow on the grid) together with item 3 (openings narrower than a cell), and item 6 (extinction), whose second check is written in 13.10.
