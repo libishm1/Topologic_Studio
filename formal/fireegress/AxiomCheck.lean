@@ -589,3 +589,16 @@ import FireEgress
 #print axioms FireEgress.Sixteen.knight_cos_gt
 #print axioms FireEgress.Sixteen.sixteen_bound
 #print axioms FireEgress.Sixteen.sixteen_percent
+#print axioms FireEgress.Transport.mix_conserves_mass
+#print axioms FireEgress.Transport.mix_conserves_enthalpy
+#print axioms FireEgress.Transport.sum_sq_le
+#print axioms FireEgress.Transport.arith_T_ge_mixed_T
+#print axioms FireEgress.Transport.flux_line_conserves
+#print axioms FireEgress.Transport.giveback_uniform
+#print axioms FireEgress.Transport.giveback_start_density
+#print axioms FireEgress.Transport.giveback_current_density_errs
+#print axioms FireEgress.Transport.expansion_volume
+#print axioms FireEgress.Transport.substeps_courant
+#print axioms FireEgress.Transport.calibrated_indicative
+#print axioms FireEgress.Transport.burn_heat_le_oxygen
+#print axioms FireEgress.Transport.burner_pending_closes

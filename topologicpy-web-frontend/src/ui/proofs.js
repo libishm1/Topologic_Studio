@@ -416,4 +416,17 @@ export const PROOFS = [
     files: ["Sixteen"],
     status: "Proved",
   },
+  {
+    property: "The fire's transport conserves the gas's heat and mass, and a burner releases no more heat than its oxygen allows",
+    meaning:
+      "Gases mix by volume at constant pressure, so the solver moves density, not temperature: mixing volumes keeps their mass and, with ρT constant, their enthalpy, while averaging T (the old transport) is at least the mixed temperature by the AM–HM inequality, so it made heat. Fluxes through a line of faces sum to nothing; giving back the step's starting density times each sweep's divergence adds nothing to a divergence-free flow; the expansion ln(T₁/T₀)/dt grows a volume by exactly T₁/T₀; cutting a step into n ≥ s·dt/(C·h) pieces keeps the gas within C cells a piece. A burner cell burns at most its oxygen's worth of fuel, so its heat is at most that oxygen times Huggett's 13.1 MJ/kg, and what it cannot burn waits.",
+    tex: [
+      String.raw`\bar\rho = \tfrac{\sum v_i \rho_i}{\sum v_i},\ \ \textstyle\sum v_i\,\bar\rho = \sum v_i \rho_i`,
+      String.raw`\tfrac{\sum v_i T_i}{\sum v_i} \ge \tfrac{k}{\bar\rho}\quad (\rho_i T_i = k)`,
+      String.raw`V_0\,e^{\ln(T_1/T_0)} = V_0\,T_1/T_0`,
+      String.raw`\min(f, M/o)\,(o\,q) \le M\,q`,
+    ],
+    files: ["Transport"],
+    status: "Proved",
+  },
 ];
