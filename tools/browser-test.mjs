@@ -1601,6 +1601,31 @@ if (await fireModelSelect.isVisible().catch(() => false)) {
   record(/\d+ rooms: \d+ water, \d+ clean agent .*, \d+ foam, \d+ none/.test(systemsLine), "systems by room use give every room water, clean agent, foam or none", systemsLine.slice(0, 160) || "no plan");
   await systemsSwitch.first().click().catch(() => {});
   await sprinklerSwitch.first().click().catch(() => {});
+  // Turned off after a run that had them, the sprinklers go and stay gone: a
+  // repaint of that run's frame (another view of the graph) drew its heads and
+  // spray again, and they stayed through later runs (the user's report of
+  // 2026-11-12; core/suppressionView.js). The next run has none.
+  const sprinklersOff = async () =>
+    page.evaluate(() => ({
+      on: [...document.querySelectorAll(".toggle")].find((t) => /^Sprinklers$/.test(t.querySelector(".toggle__label")?.textContent || ""))?.querySelector("input")?.checked ?? null,
+      heads: window.__viewer?.overlays?.has("sprinklers") ?? null,
+      spray: window.__viewer?.overlays?.has("spray") ?? null,
+    }));
+  const offNow = await sprinklersOff();
+  const showOn = page.getByRole("group", { name: "Show on the graph", exact: true });
+  await showOn.getByRole("button", { name: "Smoke" }).click().catch(() => {});
+  await page.waitForTimeout(400);
+  await showOn.getByRole("button", { name: "Heat" }).click().catch(() => {});
+  await page.waitForTimeout(400);
+  const offAfterRepaint = await sprinklersOff();
+  await startFs();
+  const offRunCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
+  const offAfterRun = await sprinklersOff();
+  record(
+    offNow.on === false && !offNow.heads && !offNow.spray && !offAfterRepaint.heads && !offAfterRepaint.spray && !offAfterRun.heads && !/\nSprinklers\n/.test(offRunCard),
+    "sprinklers turned off after a run with them: the switch is off, no heads are drawn, and the next run has none",
+    JSON.stringify({ off: offNow, afterRepaint: offAfterRepaint, afterRun: offAfterRun, cardSprinklers: /\nSprinklers\n/.test(offRunCard) }),
+  );
   // Back to the default, so later steps see the page as before.
   await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
   await fireModelSelect.selectOption("temperature");

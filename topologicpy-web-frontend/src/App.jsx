@@ -41,6 +41,7 @@ import { RUN_SETTINGS, fireModelIn, isFlamescapes, keepGuidedBefore, planSetting
 import { runHorizon } from "./core/fireService.js";
 import { validationVerdict } from "./core/calibrationStatus.js";
 import { compareEgressSlime } from "./core/egressCompare.js";
+import { sprinklerDrawing, systemsDrawing } from "./core/suppressionView.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
 import { GUIDED_HOLD_MS, GUIDED_RUNS, farthestFromExits, fireStageNext, guidedHeadline, guidedOrigin, guidedResultPlace, nodeAlong, stagesFor } from "./core/guided.js";
@@ -267,6 +268,9 @@ export default function App() {
   // What a Flamescapes run colours the graph by (core/measures.js), and the
   // limits its tenability index is worked out with (core/tenability.js).
   const showRef = useRef(measureView({}, false));
+  // Whether the sprinklers and the systems' rooms are shown (their switches,
+  // with a Flamescapes model): the frames of a run read it as they are drawn.
+  const suppressionShownRef = useRef({ sprinklers: false, systems: false });
   const tenabilityRef = useRef({ limitC: 60, visibilityLimit: 10, smoke: true });
   const geometryRef = useRef(null);
   // Counts file loads, so only the latest one updates the page.
@@ -461,10 +465,15 @@ export default function App() {
     if (!viewer || !frame) return;
     const view = showRef.current;
     viewer.setSmokeCloud(frame.smoke || null, { strength: view.kind === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
-    // The heads open by this frame (core/suppression.js).
-    if (run.sprinklerPoints) viewer.setSprinklers?.(run.sprinklerPoints, new Set(frame.sprinklers?.open || []), run.sprinklerDrops);
-    // The rooms flooded or foamed by this frame (core/suppressionSystems.js).
-    if (run.systemRooms) viewer.setSystemRooms?.(run.systemRooms, new Set(frame.systems?.discharged || []), run.systemUnits);
+    // The heads open by this frame (core/suppression.js), and the rooms
+    // flooded or foamed by it (core/suppressionSystems.js): only while their
+    // switches are on (core/suppressionView.js). Drawn whatever the switch
+    // said, they came back at a repaint once it was off and stayed.
+    const shown = suppressionShownRef.current;
+    const heads = sprinklerDrawing({ on: shown.sprinklers, run, frame });
+    if (heads && run.sprinklerPoints) viewer.setSprinklers?.(heads.points, heads.open, heads.drops);
+    const rooms = systemsDrawing({ on: shown.systems, run, frame });
+    if (rooms && run.systemRooms) viewer.setSystemRooms?.(rooms.rooms, rooms.discharged, rooms.units);
     if (view.kind === "smoke") viewer.setSmoke(frame.vis);
     else if (view.kind === "levels") viewer.setNodeLevels(view.levels(frame, view.key === "tenability" ? tenabilityOf(run, k) : null));
     else {
@@ -1608,10 +1617,14 @@ export default function App() {
   useEffect(() => {
     if (settings.sprinklers && graph && geometryRef.current) layOutSprinklers();
   }, [settings.sprinklers, layOutSprinklers, graph]);
+  // The heads drawn: the switch's, with a Flamescapes model, the one rule the
+  // frames of a run follow too (core/suppressionView.js, paintCombustion).
   useEffect(() => {
-    const heads = settings.sprinklers ? sprinklerPlan?.heads : null;
-    viewerRef.current?.setSprinklers?.(heads?.length ? heads.map((h) => h.position) : null);
-  }, [settings.sprinklers, sprinklerPlan]);
+    const on = Boolean(settings.sprinklers) && isFlamescapes(fireModel);
+    suppressionShownRef.current.sprinklers = on;
+    const drawing = sprinklerDrawing({ on, plan: sprinklerPlan });
+    viewerRef.current?.setSprinklers?.(drawing?.points ?? null);
+  }, [settings.sprinklers, sprinklerPlan, fireModel]);
 
   // Suppression systems by room use (core/suppressionSystems.js), off by
   // default: each room's system from its name and the occupancy, the rooms a
@@ -1650,9 +1663,11 @@ export default function App() {
     if (settings.suppressionSystems && graph && geometryRef.current) layOutSystems();
   }, [settings.suppressionSystems, layOutSystems, graph]);
   useEffect(() => {
-    const plan = settings.suppressionSystems ? systemsPlan : null;
-    viewerRef.current?.setSystemRooms?.(plan?.special ?? null, null, plan?.units ?? null);
-  }, [settings.suppressionSystems, systemsPlan]);
+    const on = Boolean(settings.suppressionSystems) && isFlamescapes(fireModel);
+    suppressionShownRef.current.systems = on;
+    const drawing = systemsDrawing({ on, plan: systemsPlan });
+    viewerRef.current?.setSystemRooms?.(drawing?.rooms ?? null, null, drawing?.units ?? null);
+  }, [settings.suppressionSystems, systemsPlan, fireModel]);
 
   // What the Flamescapes solver needs (src/core/flamescapesRun.js): the
   // IFC's walls, slabs, roofs, stairs and obstacles, the graph's nodes, the
@@ -4612,10 +4627,12 @@ export default function App() {
       items.push({ label: exits.finalSource ? "Exits out of the building (rings)" : "Exit doors (rings)", color: "var(--viz-exit)" });
     }
     if (points.fire) items.push({ label: "Fire origin (spike)", color: "var(--viz-fire)", dot: true });
-    if (settings.sprinklers && sprinklerPlan?.heads?.length) items.push({ label: "Sprinkler heads (blue once open, with their spray)", color: "#0284c7", dot: true });
+    // As drawn: with their switches and a Flamescapes model (core/suppressionView.js).
+    const suppressionOn = isFlamescapes(fireModel);
+    if (suppressionOn && settings.sprinklers && sprinklerPlan?.heads?.length) items.push({ label: "Sprinkler heads (blue once open, with their spray)", color: "#0284c7", dot: true });
     if (settings.extinguishers && extinguisherPlan?.sites?.length) items.push({ label: "Extinguishers", color: "#dc2626", dot: true });
-    if (settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "clean-agent")) items.push({ label: "Clean agent rooms (filled once flooded)", color: "#0d9488" });
-    if (settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "foam")) items.push({ label: "Foam rooms (filled once foamed)", color: "#ca8a04" });
+    if (suppressionOn && settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "clean-agent")) items.push({ label: "Clean agent rooms (filled once flooded)", color: "#0d9488" });
+    if (suppressionOn && settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "foam")) items.push({ label: "Foam rooms (filled once foamed)", color: "#ca8a04" });
     if (alternatives?.routes.length > 1) {
       alternatives.routes.forEach((route, i) =>
         items.push({ label: `Route ${route.rank} (${route.length.toFixed(1)} m)`, color: routeColor(i) }),
@@ -4656,6 +4673,7 @@ export default function App() {
     extinguisherPlan?.sites?.length,
     settings.suppressionSystems,
     systemsPlan?.special,
+    fireModel,
   ]);
 
   // ------------------------------------------------------------------ render

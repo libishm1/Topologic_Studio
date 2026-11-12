@@ -173,3 +173,14 @@ Details and evidence: [state-machines.md](../architecture/state-machines.md), SM
   second model being added when the first was replaced stayed in the scene; the
   markers stayed after another model opened; a late identification answer
   overwrote the newer model's.
+
+## Sprinkler heads drawn after the switch was off (2026-11-12)
+
+The user's report on the local preview: "the sprinklers stayed on when I turned it off." Reproduced with playwright-core against the preview of 27ca4f0, after the guided run "A fire on the route" (which switches sprinklers on):
+
+- the switch, the stored setting, the guided run's restore of the user's value (on Stop, Close and a reload) and the next run's inputs were all right;
+- turned off, the heads and spray went, but came back at the next repaint of the frame on screen (Show on the graph: Smoke), and then stayed through Close, a change of fire model and a whole new run without sprinklers.
+
+Cause: the heads were drawn from two places. The settings effect drew the plan's heads only while the switch was on, but each Flamescapes frame (`paintCombustion` in `App.jsx`) drew its run's own heads, open as they opened, whatever the switch said; a run without sprinklers draws none of its own, so nothing cleared them. The rooms a run floods or foams were drawn the same way.
+
+Fix: one rule for both, `core/suppressionView.js` (`sprinklerDrawing`, `systemsDrawing`): drawn only with the switch on and a Flamescapes model chosen, for the plan and for a run's frames alike; the legend follows it. Unit tests: `core/suppressionView.test.mjs`. Browser suite 5e: "sprinklers turned off after a run with them: the switch is off, no heads are drawn, and the next run has none" (a repaint between). Checked in a browser on a scratch build of the fix: no heads or spray after the switch, the repaint, Close, the model change, a new run or a reload.
