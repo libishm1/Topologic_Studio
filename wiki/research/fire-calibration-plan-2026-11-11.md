@@ -1078,6 +1078,18 @@ What the series show:
 - **FSE on 0.20 m:** ISONG3 stopped on the speed check at 76 s, so FSE is out of band there for all it measures.
 - **DelCo is not built** (13.7, item 7).
 
+### 13.15 A heat ledger in every run (2026-11-12, 22:40, before any 13.B run)
+
+13.A showed the layer too hot in the small lined rooms and in band in the large NIST rooms (13.14). To see why, 13.B would have to be run again with more output, at 9 to 11 hours a time. So from now on the suite writes a heat ledger into each run's record, and 13.B itself gives the diagnosis.
+
+About ten times a run, and at its end, `tools/calibration/validation-suite.mjs` records, in MJ: the heat the burner has released; the heat radiated; the heat held by the gas above ambient (the health guard's sum over the whole grid); the heat held by the inert solids (each cell's heat capacity by its mean rise, for lumped and layered walls alike); the heat carried out through the grid's sides; and the mass (kg) and heat leaked from sealed regions. A solver without one of these counts gives `null` for it.
+
+The ledger is the model's own account. It is compared with no measurement, enters no statistic and decides no verdict. It reads the state after a step and changes none, and a failure inside it is caught, so it cannot stop a run.
+
+Checked before use: Steckler tests 14 and 410 on 0.34 m, on 13.A's solver (d3c5751), gave pairs identical to those in `benchmark/results/2026-11-12-validation-13a-034.json`. In test 14 at 300 s, of 18.55 MJ released the gas held 1.24, the walls 5.76 and 10.67 had left through the grid's sides; 0.89 MJ (5 %) is not in these three.
+
+What I will read from it after 13.B, named now: for each series, the walls' share of the heat released over the steady period, against the share that the McCaffrey, Quintiere and Harkleroad correlation implies for the same room (as `tools/calibration/energy-budget.mjs` computes it for the stone room). This is a diagnosis. Whatever it shows, a change to the solver follows 13.12: stated and checked blind before it runs, and fitted on no held-out series (14.1).
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.

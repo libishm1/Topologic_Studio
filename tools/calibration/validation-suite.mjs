@@ -383,6 +383,14 @@ async function runCase(c) {
   const flowIn = [], flowOut = [];
   const doorU = [];
   let speed = 0, mostSubsteps = 1, health = null, peakSpeed = 0;
+  // Where the fire's heat is, about ten times a run (MJ; the model's own, no measurement, for the diagnosis
+  // of plan 13.15): released by the burner, radiated, held by the gas above ambient (the health guard's
+  // sum over the whole grid), held by the inert solids (their capacity by their mean rise), carried out
+  // of the grid's sides, and leaked from sealed regions (kg, and MJ at the gas's own temperature). It
+  // reads the state after a step and changes none; null where the pinned solver keeps no such count.
+  const ledger = [];
+  const ledgerEvery = Math.max(1, Math.round(horizon / 10));
+  const MJ = (x) => (Number.isFinite(x) ? +(x / 1e6).toFixed(4) : null);
   const dt = sim.P.dt;
   const built = performance.now();
   for (let k = 0; k < horizon; k += 1) {
@@ -397,6 +405,16 @@ async function runCase(c) {
     if (!verdict.ok) {
       health = { ok: false, reason: verdict.reason, time: end, value: Number.isFinite(verdict.value) ? +verdict.value.toFixed(1) : null };
       break;
+    }
+    if (end % ledgerEvery === 0 || end === horizon) {
+      try {
+        let walls = 0;
+        for (let cc = 0; cc < sim.N; cc += 1) if (sim.inertC[cc] > 0) walls += sim.inertC[cc] * (sim.Ts[cc] - Ta);
+        const st = sim.stats;
+        ledger.push({ t: end, released: MJ(st.released), radiated: MJ(st.radiated), gas: MJ(reading.gasHeat), walls: MJ(walls), shell: MJ(st.shellHeat), leakKg: Number.isFinite(st.leakMass) ? +st.leakMass.toFixed(4) : null, leak: MJ(st.leakEnthalpy) });
+      } catch {
+        // A diagnosis only: a run is never lost to it.
+      }
     }
     if (k === 0) {
       connect();
@@ -554,6 +572,7 @@ async function runCase(c) {
     region,
     walls: inert ? { slots: T.materials.slots.map((m) => m.surface), rhoModel: inert.map((m) => +m.rho.toFixed(2)), solidCells: wallCells, check: wallCheck } : "the solver's stone",
     health,
+    ledger,
     series: { from: 1, step: 1, head: headSeries, ...(probes.length ? { probes: probeSeries } : {}), ...(flowSeries ? { doorFlow: flowSeries } : {}) },
     head: { excluded: head.excluded, missing: head.missing },
     ...(probes.length ? { probes: { cells: probes.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null })), notes: probed.notes } } : {}),
