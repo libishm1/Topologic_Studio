@@ -21,17 +21,18 @@ It changes no rule. The acceptance rule is section 12.6 of [fire-calibration-pla
 
 ## 3. Where each quantity stands
 
-13.A: solver d3c5751, walls lumped, no leakage, eight series. Verdicts from the commits 2c03117 and 7924880 and their result files (`benchmark/results/2026-11-12-validation-13a-*.json`).
+13.A: solver d3c5751, walls lumped, no leakage, eight series, complete on the three cell sizes. Verdicts from the result files (`benchmark/results/2026-11-12-validation-13a-*.json`); the plan's section 13.14 has the counts. (Corrected 2026-11-12, 22:30, when the 0.20 m runs finished: depth on 0.20 m is from two laboratories; O2 is not calibrated on any cell; the neutral plane is indicative on all three; door mass flow added.)
 
 | Quantity | 0.20 m | 0.27 m | 0.34 m | Series that measure it | Most the data allow |
 | --- | --- | --- | --- | --- | --- |
-| Smoke layer depth | calibrated, one laboratory | calibrated, 7 series, three laboratories (pooled 1.06, 0.11) | calibrated, two laboratories | all eight | reached; 13.B must keep it |
+| Smoke layer depth | calibrated, 6 of 7 series, two laboratories (pooled 1.00, 0.14) | calibrated, 7 of 7 series, three laboratories (1.06, 0.11) | calibrated, 4 of 7 series, two laboratories (1.12, 0.14) | all eight | reached; 13.B must keep it |
 | Layer temperature | indicative | not calibrated | not calibrated | all eight, three laboratories | calibrated |
 | Ceiling jet | indicative | not calibrated | not calibrated | three laboratories | calibrated |
 | Gas temperature at head height | indicative | not calibrated | not calibrated | seven, three laboratories | calibrated |
 | Door and vent velocity | not calibrated | not calibrated | not calibrated | Steckler, NIST/NRC, WTC, UL/NIST, UL FSRI | calibrated |
-| Neutral plane | not calibrated | indicative | indicative | Steckler, NIST/NRC, UL/NIST, UL FSRI: two laboratories | calibrated by series, "from two laboratories' tests" |
-| O2 | indicative | not calibrated | not calibrated | NIST/NRC, WTC, FSE, UL FSRI: two laboratories | calibrated by series, "from two laboratories' tests" |
+| Neutral plane | indicative | indicative | indicative | Steckler, NIST/NRC, UL/NIST, UL FSRI: two laboratories | calibrated by series, "from two laboratories' tests" |
+| O2 | not calibrated | not calibrated | not calibrated | NIST/NRC, WTC, FSE, UL FSRI: two laboratories (UL FSRI's open-door analysers read almost no drop: plan 14.7) | calibrated by series, "from two laboratories' tests" |
+| Door mass flow | not run | one series, in band (0.94, 0.08) | one series | NIST/NRC | indicative, until other series measure it |
 | CO2 | indicative | indicative | not calibrated | NIST/NRC, WTC, FSE: one laboratory | calibrated by series, "from one laboratory's tests" |
 | CO | not compared | not compared | not compared | NIST/NRC (5 tests), FSE | indicative, if the solver carries CO at all (check first) |
 | Smoke obscuration and soot | not calibrated | not calibrated | not calibrated | NIST/NRC; FSE weakly | indicative, until a third series is found |
@@ -43,7 +44,8 @@ It changes no rule. The acceptance rule is section 12.6 of [fire-calibration-pla
 | The fire's own heat release | design fires come from the literature; spread is not calibrated | | | none wired | section 6.5 |
 
 Notes:
-- On 0.20 m, UL FSRI, UL/NIST and FSE were still running when this was written (43 of 104, one stopped run, fse/ISONG3). Under 12.6 that stop puts FSE out of band on 0.20 m for all it measures.
+- On 0.20 m one run stopped (fse/ISONG3, on the speed check at 76 s). Under 12.6 that puts FSE out of band on 0.20 m for all it measures.
+- On 0.20 m the large NIST rooms (NIST/NRC, WTC) are in band for layer temperature; the small lined rooms read hot (Steckler 1.31, UL FSRI 1.38, UL/NIST 1.91).
 - UL/NIST, ATF and UL FSRI read hot on 0.27 and 0.34 m. That is what keeps layer temperature, the ceiling jet and head height from passing.
 - `calibrationStatus.js` in the app still states the earlier run. It changes once, from 13.B (phase 1).
 
@@ -52,7 +54,7 @@ Notes:
 1. **GPU against CPU on the Office example, with the merged physics:** 254.7 MJ and 499 untenable places on the GPU, 106.0 MJ and 30 on the CPU. The physics agent is bisecting (zones, leakage, deposition, walls, each switched off on the GPU). Nothing is pushed until it is found, fixed and covered by a parity check on a scene with many sealed regions.
 2. **Extinction, attempt 3** (13.13): result and GPU port to confirm.
 3. **Door flow, items 4 and 3, attempt 1** (13.13): to run; attempt 2 only if it fails, pre-registered first.
-4. **13.A on 0.20 m, three new series:** to merge into `13a-020-all` and report.
+4. **13.A on 0.20 m, three new series:** done (plan 13.14).
 5. **Local commits not pushed:** 0495fb1, e6889c9, 2c03117, 7924880, 550fce5, and this note's.
 
 ## 5. Phases
@@ -120,7 +122,7 @@ Every held-out run so far is on the CPU, and the app runs on the GPU where it ca
 
 App text, guide, Methods, README, Lean statements where a new closure is proved, the visual report, the before and after note, the PR description, `HANDOFF.md`, memory. Then the user's local audit, and the user's merge.
 
-## 6. Proposals that need the user's word
+## 6. Proposals that needed the user's word (all five approved 2026-11-12; the rules are the plan's section 14)
 
 1. **Nothing is fitted on a held-out series.** This stands (13.12, rule 4). If a constant must be fitted after phase 3, it is fitted only on a series named as a tuning series before anyone reads its results (a new series from phase 4), and that series never counts towards a verdict.
 2. **The GPU tolerance** of phase 6: proposed as δ within 5 % of the CPU's for each quantity, to be fixed before the first GPU run.

@@ -1052,3 +1052,71 @@ Open for another attempt now: item 4 (door flow on the grid) together with item 
   - Plus the closures, and parity once on the GPU.
   - Disclosed: this reference was drafted after item 4's first check found the boxes layered. It tests the door's flow law given the rooms' states, not how the rooms layer.
 - **Items 4 and 3, attempt 2** (only if attempt 1 fails): a sub-grid vent for doors under three cells wide, coupled into the projection. Its full method and check are to be committed here before it runs.
+
+### 13.14 13.A complete (2026-11-12)
+
+Solver d3c5751 (pinned from git), walls lumped, no leakage, eight series on each cell size. Files: `benchmark/results/2026-11-12-validation-13a-020-all.json`, `-13a-027.json`, `-13a-034-all.json`. Each verdict is the strictest of four readings (12.6 and the protocol's section 4, each unweighted and weighted). The sealed-door rule changes none.
+
+| Quantity | 0.20 m | 0.27 m | 0.34 m |
+| --- | --- | --- | --- |
+| Smoke layer depth | calibrated: 6 of 7 series, two laboratories, pooled 1.00 / 0.14 | calibrated: 7 of 7, three laboratories, 1.06 / 0.11 | calibrated: 4 of 7, two laboratories, 1.12 / 0.14 |
+| Layer temperature | indicative: 2 of 7, one laboratory, 1.30 / 0.32 | not calibrated | not calibrated |
+| Ceiling jet | indicative: 2 of 6 | not calibrated | not calibrated |
+| Gas temperature at head height | indicative: 1 of 7 | not calibrated: 3 of 7, two laboratories | not calibrated: 3 of 7, one laboratory |
+| Neutral plane | indicative: 2 of 3, two laboratories | indicative: 2 of 4, two laboratories | indicative: 1 of 4 |
+| Door and vent velocity | not calibrated: 0 of 4 | not calibrated: 0 of 5 | not calibrated: 0 of 5 |
+| CO2 | indicative, one laboratory | indicative, one laboratory | not calibrated |
+| O2 | not calibrated | not calibrated | not calibrated |
+| Smoke obscuration, soot | not calibrated | not calibrated | not calibrated |
+| Door mass flow | not run | one series (NIST/NRC, 0.94 / 0.08) | one series |
+
+What the series show:
+- **The large NIST rooms read well, the small lined rooms read hot.** On 0.20 m the layer temperature is in band in NIST/NRC (0.93) and WTC (0.92), and reads 1.31 in Steckler, 1.38 in UL FSRI and 1.91 in UL/NIST; NBS reads 0.70 with a scatter of 0.65, and ATF scatters 0.56. This is a pattern, not a cause: phase 2 of the roadmap lists the candidates, and 13.B tests the first of them (the layered walls).
+- **UL FSRI's door** is held as 0.58 of 1.80 m² on 0.34 m cells, 1.53 m² on 0.27 m and 1.20 m² on 0.20 m. Its verdicts follow that.
+- **UL FSRI's O2 is not usable in the open-door tests:** the analysers 1.8 m below the ceiling read almost no drop, so the ratio of changes has no meaning there. It pulls the pooled O2 out of every band (3.92 on 0.20 m). To pre-register before 13.B's O2 is read: section 14.7.
+- **UL FSRI's closed-door tests at 250 and 500 kW:** the measured fire went out, and the prescribed burner goes on. Extinction (item 6) bears on it.
+- **FSE on 0.20 m:** ISONG3 stopped on the speed check at 76 s, so FSE is out of band there for all it measures.
+- **DelCo is not built** (13.7, item 7).
+
+## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
+
+The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
+
+### 14.1 Fitting
+
+No constant is fitted on a series that 12 or 13 holds out. If a constant has to be fitted, it is fitted only on a tuning series: a series new to this work, named as a tuning series in this plan before any of its measured data is compared with the model. A tuning series never counts towards a verdict.
+
+### 14.2 The verdicts on the GPU
+
+- **Runs:** the first and the last test by name of each series, on each cell size, on the GPU with the CPU's grid (the bench's `gpu-same`), with the same scene, reducers and flags as the CPU run it is compared with.
+- **Reading:** per quantity and cell, δ over the subset's pairs on the GPU against δ over the same pairs on the CPU.
+- **Passes** when every quantity's ratio of the two is within 0.95 to 1.05 and no GPU run stops where its CPU run did not.
+- **If it fails,** the app states the verdicts for CPU runs only, and says on a GPU run that they were found on the CPU.
+- The CPU pairs are 13.B's (or the latest full rerun's). No verdict is drawn from the GPU pairs themselves.
+
+### 14.3 Sprinkler activation, cross-validated
+
+The walls' convection coefficient was set on the four sprinkler series, so none is held out (claim protocol, section 4). This gives a held-out reading without new data.
+
+- **Runs:** `tools/sprinkler-validation.mjs` as it stands (46 runs, its cells), on the solver of the latest full rerun, with the coefficient at 5, 7, 10, 14 and 20 W/m²K.
+- **Folds:** by laboratory (NIST: Vettori flat and sloped; Canterbury: Bittern; UL: UL/NFPRF series I), three folds. By series, four folds, reported beside; Vettori's two series share a room, so the laboratory folds decide.
+- **In each fold:** the coefficient is the candidate with the lowest (ln δ)² + σ̃M² over the training folds' pooled first-head pairs (`tools/calibration/sprinkler-stats.mjs`, tabulated or measured fires only, σ̃E taken as 0). Then δ and σ̃M of the held-out fold at that coefficient.
+- **"Cross-validated"** when every held-out laboratory is within the calibrated band and none of its runs stopped. The app then says "cross-validated on four series from three laboratories", never "calibrated".
+- The coefficient chosen in each fold is reported. The app's value changes only if all three folds choose the same value and it is not 10.
+
+### 14.4 Requests for terms
+
+Drafts for the user to send: UL (the UL/NIJ houses), VTT (the large hall), LLNL (the enclosure), FM Global and Sandia (FM/SNL), the NEA (PRISME). A series is wired only after its terms allow it, and is named here as held-out or tuning before its data are compared.
+
+### 14.5 The fire's own heat release
+
+- **Design fires:** each class's curve against the items of that kind in NIST's Fire Calorimetry Database: a check of the curve's source, not of the solver. Reported apart.
+- **Spread:** against UL FSRI 2018's furnished tests, if their heat release was measured. To confirm from the report, without reading results, before its own pre-registration (section 15).
+
+### 14.6 Speed
+
+Each physics item made, and each full rerun, reports its cost beside its accuracy: milliseconds a step and run time on Duplex, Office and Clinic, CPU and GPU (`tools/backend-bench.mjs`), against the build before it. The app's default is the configuration its verdicts were found on. An item that costs more than 10 % a step on the GPU goes behind a switch, and the app states the verdicts found without it when it is off, which means a second full run for that configuration.
+
+### 14.7 A measured change too small to compare (written after 13.A's O2, before 13.B's is read)
+
+13.A showed that UL FSRI's analysers read almost no oxygen drop in the open-door tests, and the ratio of two changes has no meaning when the measured one is within the instrument's uncertainty. Disclosed as prompted by a held-out result. The rule, for every species pair in every series: a pair whose measured change (the drop of O2, the rise of CO2) is below 0.005 by volume fraction is left out and counted as "below the instrument". The 0.005 is a round figure chosen here, not taken from an analyser's certificate; if a series' report states its analyser's uncertainty, twice that figure replaces it for that series, looked up before 13.B's species are read. Every statistic and verdict is reported both ways, as pre-registered and with this rule, and the stricter decides the app's text. So the rule can show what the other pairs say, and can never lift a verdict.
