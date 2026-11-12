@@ -953,6 +953,11 @@ These are dated additions, made before any model comparison of the quantities th
    - The fire: ISONG3's burner is the input's fuel mass flux times its 1 m² area at 50.0 MJ/kg. Check: that gives 755 kW in the first step, and the measured heat release reads 755 kW. The heptane tests' spray is the nozzle's flow at 684 kg/m³ and 44.6 MJ/kg onto the 0.36 m² pan (1.0 and 2.0 MW at the windows).
    - Both heptane tests are under-ventilated: the measured O2 falls to 9.5 % and 0.7 %. This solver releases the prescribed heat inside the room.
 
+9. **A harness fault on UL FSRI's back-wall burner (16:30, after the 0.34 m run).** Six runs stopped with "no open cell over the burner": `100kWSB_{Open,Closed}_Back_{1,2,3}` on 0.34 m cells. The 0.3 m burner stands against the back wall. On 0.34 m cells the cell that holds its centre is mostly wall, and the voxeliser fills it.
+   - **The check (geometry only, no measured data):** every test of every dataset on all three cells. Only these six runs lack an open cell over the burner's centre.
+   - **The fix:** `lib/fds.mjs burnerBase` takes the open column nearest the burner's centre on its footprint, grown by half a cell, when the centre's column is solid. Here that moves the base 0.283 m. The suite and the sealed-door rule both use it, and each run records `burner.baseMoved`.
+   - **The rerun:** no other run takes the new path, so only these six are rerun (`-13a-new-034-burnerfix`).
+
 ### 13.8 What 13.4's checks found, and two fixes added (2026-11-12, 13:21, commit 37afd3f, before any 13.B run)
 
 The physics work of 13.4 was done blind: in its own worktree, by an agent that opened no validation file or result.
@@ -970,3 +975,14 @@ Two faults found by these checks, which use no measured data, are added as 13.4 
    - Check: its pressure rise when heated matches the ideal gas law within 2 %.
 
 13.B runs on the solver with every change that passed. 13.A stays on d3c5751's solver, snapshotted from git.
+
+### 13.9 Item 4's outcome, and a sixth item (2026-11-12, before any 13.B run)
+
+- **Item 4, the projection with each face's own density: not made.** It brought the 600 K door exchange within 8 % of the orifice formula. But it failed its check in three of four cases: a door two cells wide flowed 8 to 16 % short, and the neutral plane sat 10 to 13 % high in boxes that had already layered. The check is not changed after its result. A check for layered rooms would have to be written and committed before any new attempt. The prototype is kept on a side branch.
+- **Item 6, the flame put out where it cannot burn** (added after 13.A's 0.34 m results).
+  - In those results, closed FSRI tests at 250 and 500 kW, whose fires went out in the test for lack of oxygen, read 1.5 to 1.9 times hot.
+  - Today a burner cell burns its fuel until the cell's oxygen is gone, but a real flame goes out long before that.
+  - The change: the burner's fuel, and the gas reaction, burn in a cell only where the mixture there could reach the critical flame temperature. That is FDS's extinction model, with FDS's default value, read from FDS's source and Technical Reference Guide, not fitted.
+  - Check, which uses no measured data: a burner in a sealed box stops releasing heat when the box's oxygen falls to the volume fraction the critical flame temperature implies for its fuel (the analytic value), within 0.5 % oxygen by volume. The unit tests and closures must still hold.
+
+  This item was prompted by held-out results, as the burner fault of 2026-11-12 was. Its value is FDS's, and its check uses no measured data. Both runs, 13.A and 13.B, are reported.
