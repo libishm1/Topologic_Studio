@@ -11,6 +11,8 @@
  *   gpu-app    the GPU on the grid the app's worker gives it here (its
  *              memory's budget, capped by the level its measured speed keeps
  *              to 33 ms a step; flamescapes.worker.js gpuCells)
+ *   cpu-app    the CPU on the gpu-app grid (slow): does the GPU reproduce the
+ *              CPU on the app's GPU grid? (not run unless named)
  *
  * Recorded per run: wall time, ms a step and the multiple of real time; the
  * energy released, the peak heat release and the fuel burnt; from the
@@ -21,7 +23,7 @@
  * fire origin. Results go to benchmark/results/<date>-backends.json.
  *
  *   node tools/backend-bench.mjs [--cases room,room-solver,duplex,office,clinic,vienna]
- *        [--members 4] [--horizon 180] [--sets cpu,gpu-same,gpu-app] [--out file] [--headed]
+ *        [--members 4] [--horizon 180] [--sets cpu,gpu-same,gpu-app] [--app-cells 120000] [--out file] [--headed]
  *
  * Uses playwright-core with the installed Chrome (WebGPU in headless Chrome
  * on this machine) and serves topologicpy-web-frontend/ itself.
@@ -48,6 +50,10 @@ const MEMBERS = Number(flag("--members", 4));
 const HORIZON = Number(flag("--horizon", 180));
 const CASES = flag("--cases", "room,room-solver,duplex,office,clinic,vienna").split(",");
 const SETS = flag("--sets", "cpu,gpu-same,gpu-app").split(",");
+// --app-cells N pins the gpu-app (and cpu-app) grid's budget, which otherwise
+// follows the GPU's measured speed and so the machine's load: runs compared
+// across settings need one grid.
+const APP_CELLS = Number(flag("--app-cells", 0)) || null;
 // Solver options for every run, e.g. the transport before proposal F:
 // --solver conservative=0,expansion=0,vorticity=10,cfl=0,vorticityStep=0
 const SOLVER = Object.fromEntries((flag("--solver", "") || "").split(",").filter(Boolean).map((kv) => kv.split("=")).map(([k, v]) => [k, Number(v)]));
@@ -152,7 +158,7 @@ page.on("pageerror", (error) => console.log(`  [pageerror] ${error.message}`));
 await page.goto(`${origin}/bench.html`);
 
 /** One case in the page: the grids, then each set of runs. */
-async function benchCase({ base, info, members, horizon, sets, solver = {} }) {
+async function benchCase({ base, info, members, horizon, sets, solver = {}, pinnedCells = null }) {
   const R = await import(base + "core/flamescapesRun.js");
   const F = await import(base + "core/flamescapes.js");
   const G = await import(base + "core/flamescapesGpu.js");
@@ -218,11 +224,11 @@ async function benchCase({ base, info, members, horizon, sets, solver = {} }) {
   const msProbe = (performance.now() - t0) / 20;
   sim.destroy();
   const rate = probe.grid.cells / msProbe;
-  const appCells = Math.min(gpuBackend.cells, LEVELS.find((n) => n <= rate * 33) ?? LEVELS.at(-1));
+  const appCells = pinnedCells ?? Math.min(gpuBackend.cells, LEVELS.find((n) => n <= rate * 33) ?? LEVELS.at(-1));
   log(`${info.name}: CPU budget ${cpuCells} cells; GPU memory budget ${gpuBackend.cells}, ${rate.toFixed(0)} cells a ms on ${probe.grid.cells} -> ${appCells}`);
 
   const out = { name: info.name, solver: Boolean(info.solver), adapter: window.__adapter, cpuCells, gpuMemoryCells: gpuBackend.cells, gpuRate: rate, gpuAppCells: appCells, sets: {} };
-  for (const [label, backend, maxCells] of [["cpu", "cpu", cpuCells], ["gpu-same", "gpu", cpuCells], ["gpu-app", "gpu", appCells]].filter(([label]) => sets.includes(label))) {
+  for (const [label, backend, maxCells] of [["cpu", "cpu", cpuCells], ["gpu-same", "gpu", cpuCells], ["gpu-app", "gpu", appCells], ["cpu-app", "cpu", appCells]].filter(([label]) => sets.includes(label))) {
     const scene = build(maxCells);
     if (!scene.ignition) return { ...out, error: "no place for the first item at the fire origin" };
     const g = scene.grid;
@@ -260,7 +266,7 @@ const report = { generated: new Date().toISOString(), tool: "tools/backend-bench
 const t0 = Date.now();
 for (const info of cases) {
   console.log(`\n== ${info.name}`);
-  const res = await page.evaluate(benchCase, { base: `${origin}/src/`, info, members: MEMBERS, horizon: HORIZON, sets: SETS, solver: SOLVER });
+  const res = await page.evaluate(benchCase, { base: `${origin}/src/`, info, members: MEMBERS, horizon: HORIZON, sets: SETS, solver: SOLVER, pinnedCells: APP_CELLS });
   if (res.error) console.log(`  ${res.error}`);
   report.cases.push(res);
   report.adapter ??= res.adapter;

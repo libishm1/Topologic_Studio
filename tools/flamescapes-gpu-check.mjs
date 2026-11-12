@@ -44,7 +44,7 @@
  * software adapter (--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader).
  *
  *   node tools/flamescapes-gpu-check.mjs [--headed] [--swiftshader] [--quick]
- *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|walls|soot|zones|timing] [--horizon 120] [--members 6]
+ *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|walls|soot|zones|manyzones|timing] [--horizon 120] [--members 6]
  *        [--json out.json] [--url http://localhost:5173] (a running Vite server)
  */
 import { chromium } from "playwright-core";
@@ -1048,6 +1048,60 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     }
   }
 
+  // ---- 6b. many pressure zones (2026-11-12, after the NIBS Office's GPU run
+  // burnt 2.4 times the CPU's): a 10 x 8 m block of twenty sealed rooms, the
+  // fire in one, its walls a gypsum lining on concrete (one-dimensional
+  // walls, item 1), soot deposition (item 2), pressure zones (item 5) and
+  // their default leaks (item 7) all on; radiation off and on (its rays the
+  // CPU's, cellStream), particles off. Every zone's pressure and mass, the
+  // walls' nodes and the gas, |CPU - GPU| beside the one-ulp twin's.
+  if (phase === "all" || phase === "manyzones") {
+    const t = 0.2, BW = 10, BD = 8, H = 2.7;
+    const blockMeshes = [
+      box(-t, -t, -t, BW + t, 0, BD + t, S),
+      box(-t, H, -t, BW + t, H + t, BD + t, S),
+      box(-t, 0, -t, BW + t, H, 0, S),
+      box(-t, 0, BD, BW + t, H, BD + t, S),
+      box(-t, 0, 0, 0, H, BD, S),
+      box(BW, 0, 0, BW + t, H, BD, S),
+      ...[1.5, 3.5, 5.5, 7.5].map((x) => box(x, 0, 0, x + t, H, BD, S)),
+      ...[1.0, 3.0, 5.0].map((z) => box(0, 0, z, BW, H, z + t, S)),
+    ];
+    const lining = [{ thickness: 0.0127, rho: 1440, c: 840, k: 0.48 }, { thickness: 0.15, rho: 2100, c: 880, k: 1.0 }];
+    const scene = room(0.25, 200000, blockMeshes);
+    const mass = lining.reduce((a, l) => a + l.rho * l.thickness, 0), heat = lining.reduce((a, l) => a + l.rho * l.c * l.thickness, 0);
+    const inert = [{ name: "lined", rho: mass / scene.grid.h, c: heat / mass, k: 0.48, eps: 0.9, layers: lining }, F.INERT[1], F.INERT[2]];
+    out.manyzones = { grid: [scene.grid.nx, scene.grid.ny, scene.grid.nz], runs: [] };
+    const rel = (a, b) => Math.max(0, ...Array.from(a, (x, q) => Math.abs(x - b[q]) / Math.abs(x)));
+    for (const [label, extra] of [["radiation off", { emitAbove: 1e9 }], ["radiation off, sealed (no leaks)", { emitAbove: 1e9, leakage: [] }], ["radiation from 330 K", { emitAbove: 330 }]]) {
+      const opts = { embers: false, dt: 0.1, maxParticles: 0, wallLayers: 1, inert, ...extra };
+      const cpu = solverOf(scene, opts), twin = solverOf(scene, opts);
+      for (let c = 0; c < twin.N; c += 1) if (twin.kind[c] !== 2) twin.T[c] = Math.fround(twin.T[c] * (1 + 2 ** -23));
+      const gpu = runner.createSim(solverOf(scene, opts), {});
+      const rows = [];
+      for (let s = 1; s <= 300; s += 1) {
+        F.step(cpu, 0.1);
+        F.step(twin, 0.1);
+        gpu.step(0.1);
+        if (![1, 10, 50, 100, 200, 300].includes(s)) continue;
+        const g = await gpu.readFields();
+        const Z = cpu.zones;
+        rows.push({
+          step: s, ...range(cpu), gpu: compare(cpu, g), twin: compare(cpu, twin), zones: Z?.pi.length ?? 0, walls: cpu.wall?.cells.length ?? 0,
+          pi: { rel: g.zones ? rel(Z.pi, g.zones.pi) : null, twinRel: rel(Z.pi, twin.zones.pi), excess: Math.max(...Array.from(Z.pi, (x) => x - 1)) },
+          mass: { rel: g.zones ? rel(Z.mass, g.zones.mass) : null, twinRel: rel(Z.mass, twin.zones.mass), worst: g.zones ? Array.from(Z.mass, (x, q) => Math.abs(x - g.zones.mass[q]) / x).reduce((b, x, q, a) => (x > a[b] ? q : b), 0) : null, leak: cpu.stats.leakMass },
+          nodes: absDiffs(cpu.wall.T, g.wallT, () => true), twinNodes: absDiffs(cpu.wall.T, twin.wall.T, () => true),
+          soot: { cpu: cpu.stats.sootDeposited, twin: twin.stats.sootDeposited, gpu: g.sootDeposit ? g.sootDeposit.reduce((a, x) => a + x, 0) : null },
+          released: cpu.stats.released, radiated: cpu.stats.radiated,
+        });
+        const r = rows.at(-1);
+        log(`manyzones ${label} step ${s}: ${r.zones} zones; pressure rel GPU ${r.pi.rel?.toExponential(2)}, twin ${r.pi.twinRel.toExponential(2)}; gas T max GPU ${r.gpu.T.max.toExponential(2)}, twin ${r.twin.T.max.toExponential(2)}`);
+      }
+      gpu.destroy();
+      out.manyzones.runs.push({ label, rows });
+    }
+  }
+
   // ---- 3. ms per step
   if (phase === "all" || phase === "timing") {
     out.timing = [];
@@ -1093,7 +1147,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
   return out;
 }
 
-const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "walls", "soot", "zones", "timing"] : [PHASE];
+const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "walls", "soot", "zones", "manyzones", "timing"] : [PHASE];
 const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
@@ -1265,6 +1319,15 @@ if (report.zones) {
     for (const r of z.vent) console.log(`  ${String(r.step).padStart(4)} | ${e(r.gpu.T.max)} / ${e(r.gpu.T.p99)} | ${e(r.gpu.O2.max)} | ${e(r.gpu.rho.max)} | ${f(r.p, 3)} | ${e(r.leakMass)} | ${f(r.TmaxC, 0)}   (twin: ${e(r.twin.T.max)} / ${e(r.twin.T.p99)} | ${e(r.twin.O2.max)} | ${e(r.twin.rho.max)})`);
   }
   for (const r of z.timing || []) console.log(`  ms per step, ${r.label} (${r.cells} cells): CPU ${f(r.cpuOff, 1)} off / ${f(r.cpuSealed, 1)} sealed / ${f(r.cpuOn, 1)} leaky; GPU ${f(r.gpuOff, 2)} off / ${f(r.gpuSealed, 2)} sealed / ${f(r.gpuOn, 2)} leaky`);
+}
+if (report.manyzones) {
+  const z = report.manyzones;
+  console.log(`\nMany pressure zones: twenty sealed rooms, ${z.grid.join("x")} cells, lined walls, soot deposition, zones and their leaks on, particles off: |CPU - GPU| beside |CPU - CPU twin| (one ulp warmer)`);
+  for (const run of z.runs) {
+    console.log(`  ${run.label}`);
+    console.log("  step | zones | gas T max / p99 GPU; twin                 | O2 max GPU; twin   | zone pressure rel GPU; twin (largest excess) | zone mass rel GPU; twin | wall nodes max GPU; twin | soot deposited g CPU / GPU / twin | hottest gas C");
+    for (const r of run.rows) console.log(`  ${String(r.step).padStart(4)} | ${String(r.zones).padStart(5)} | ${e(r.gpu.T.max)} / ${e(r.gpu.T.p99)}; ${e(r.twin.T.max)} / ${e(r.twin.T.p99)} | ${e(r.gpu.O2.max)}; ${e(r.twin.O2.max)} | ${e(r.pi.rel)}; ${e(r.pi.twinRel)} (${e(r.pi.excess)}) | ${e(r.mass.rel)}; ${e(r.mass.twinRel)} (zone ${r.mass.worst}; let out ${e(r.mass.leak)} kg) | ${e(r.nodes.max)}; ${e(r.twinNodes.max)} | ${f(1e3 * r.soot.cpu, 3)} / ${f(1e3 * (r.soot.gpu ?? NaN), 3)} / ${f(1e3 * r.soot.twin, 3)} | ${f(r.TmaxC, 0)} (released ${f(r.released / 1e3, 1)} kJ, radiated ${f((r.radiated ?? 0) / 1e3, 1)} kJ)`);
+  }
 }
 if (report.timing) {
   console.log("\nms per step (full model at the start of the fire; GPU steps queued, then waited for)");
