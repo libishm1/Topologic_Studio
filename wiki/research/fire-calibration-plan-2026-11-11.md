@@ -672,3 +672,146 @@ Known mismatches:
 - O2 and CO2: two (NIST/NRC and WTC), so indicative at most.
 - Smoke obscuration, and with it visibility: one (NIST/NRC), so not calibrated whatever its result.
 - Door velocity and neutral plane: one (Steckler), so not calibrated.
+
+### 12.10 Results on the next solver (2026-11-12)
+
+The hot layer's depth is calibrated on 0.27 m cells, by both rules and both ways. Every other quantity is indicative or not calibrated on every cell. The numbers come from two result files only, each recomputed from its runs to the third decimal.
+
+**The two runs.**
+- **The first run.** The suite as pre-registered in 12.9, with amendment 8: 218 runs, 6 jobs.
+  - The solver was that of 0c62bd9, vorticity 3 after the refit. The run records its git head as the handoff commit 04c5d54, which carries the same `flamescapes.js` (SHA-256 80787713). The working tree held uncommitted changes to the GPU kernels and some interface modules, not to the CPU solver.
+  - It started at 02:46 and took 5,510 s. Output: `benchmark/results/2026-11-12-validation-final.json` and `.log`.
+- **Two runs stopped.** Both ATF runs on 0.27 m cells were stopped by the health guard's temperature limit: the 485 kW test at 56 s (3,105 K) and the pulsed test at 545 s (3,033 K).
+- **The fault and its fix.** The main session traced the stops to the prescribed burner heating cells that had no oxygen left. Commit 6ee8c93 fixes it: a burner's fuel burns only with oxygen, and the rest reaches outward up to Heskestad's flame height or waits, pending. The claim protocol's addendum (7292e28, its time corrected in 51674ec) was committed before the rerun's verdict. It records the fault, the fix and that both runs are reported.
+- **How the fault was found.** The search was prompted by held-out data: the two stopped runs are runs of the held-out tests. The fix rests on a check that uses no measured data. In every run of both files the burner released exactly its table's heat up to the run's end.
+- **The second run.** The same 218 runs on 6ee8c93 (git head 6ee8c93, a clean solver tree), 6 jobs, 7,433 s. No run stopped. Output: `benchmark/results/2026-11-12-validation-o2.json` and `.log`.
+- **The harness.** Both runs record the same harness digests as the present one.
+
+**The verdicts on 6ee8c93, with the sealed-door rule.** Each row gives the pooled δ (σ̃M) and pairs, the series in band, the verdict of plan 12.6 and of the claim protocol's section 4, the stricter of the two, and the stricter on 0c62bd9.
+
+| Quantity | Cell | Pooled δ (σ̃M), pairs | Series in band | Plan 12.6 | Protocol 4 | Verdict | On 0c62bd9 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Layer temperature rise | 0.20 m | 1.21 (0.45), 64 | 0 of 2 | indicative | not calibrated | **not calibrated** | same |
+| Layer temperature rise | 0.27 m | 1.10 (0.61), 166 | 3 of 5 | not calibrated | indicative | **not calibrated** | same |
+| Layer temperature rise | 0.34 m | 1.03 (0.39), 163 | 3 of 5 | indicative | indicative | **indicative** | same |
+| Layer depth | 0.20 m | 1.01 (0.19), 64 | 2 of 2 | indicative | indicative | **indicative** | same |
+| Layer depth | 0.27 m | 1.08 (0.15), 166 | 5 of 5 | calibrated | calibrated | **calibrated** | indicative |
+| Layer depth | 0.34 m | 1.16 (0.18), 163 | 2 of 5 | indicative | indicative | **indicative** | same |
+| Ceiling jet rise | 0.27 m | 1.23 (0.75), 123 | 2 of 3 | not calibrated | indicative | **not calibrated** | same |
+| Ceiling jet rise | 0.34 m | 1.07 (0.49), 123 | 2 of 3 | indicative | indicative | **indicative** | same |
+| O2 drop | 0.27 m | 1.34 (0.21), 21 | 1 of 2 | indicative | not calibrated | **not calibrated** | same |
+| O2 drop | 0.34 m | 1.55 (0.29), 21 | 0 of 2 | not calibrated | not calibrated | **not calibrated** | same |
+| CO2 rise | 0.27 m | 1.30 (0.27), 16 | 1 of 2 | indicative | not calibrated | **not calibrated** | same |
+| CO2 rise | 0.34 m | 1.51 (0.34), 16 | 1 of 2 | not calibrated | not calibrated | **not calibrated** | same |
+| Smoke obscuration | 0.27 m | 1.76 (0.37), 10 | 0 of 1 | not calibrated | not calibrated | **not calibrated** | same |
+| Smoke obscuration | 0.34 m | 1.77 (0.37), 10 | 0 of 1 | not calibrated | not calibrated | **not calibrated** | same |
+| Door peak outflow | 0.20 m | 0.69 (0.08), 52 | 0 of 1 | indicative | not calibrated | **not calibrated** | same |
+| Door peak outflow | 0.27 m | 0.63 (0.10), 52 | 0 of 1 | not calibrated | not calibrated | **not calibrated** | same |
+| Door peak outflow | 0.34 m | 0.56 (0.35), 48 | 0 of 1 | not calibrated | not calibrated | **not calibrated** | same |
+| Neutral plane height | 0.20 m | 0.96 (0.07), 52 | 1 of 1 | indicative | not calibrated | **not calibrated** | same |
+| Neutral plane height | 0.27 m | 0.97 (0.09), 52 | 1 of 1 | indicative | not calibrated | **not calibrated** | same |
+| Neutral plane height | 0.34 m | 0.91 (0.15), 47 | 1 of 1 | indicative | not calibrated | **not calibrated** | same |
+
+**By series, with the sealed-door rule.** Each cell gives δ, σ̃M in brackets, pairs and tier on 6ee8c93, with 0c62bd9's in square brackets where they print differently. NIST/NRC and WTC were not run on 0.20 m, nor ATF.
+
+| Quantity | Series | 0.20 m | 0.27 m | 0.34 m |
+| --- | --- | --- | --- | --- |
+| Layer temperature rise | Steckler | 1.29 (0.18), 52: indicative | 1.08 (0.09), 52: in band | 1.09 (0.11), 49: in band |
+| | NBS multi-room | 0.70 (0.65), 12: not calibrated | 1.08 (0.70), 12: not calibrated | 0.87 (0.77), 12: not calibrated |
+| | NIST/NRC | not run | 0.92 (0.14), 60: in band | 0.99 (0.14), 60: in band |
+| | WTC | not run | 1.02 (0.07), 12: in band [1.03 (0.07)] | 1.10 (0.07), 12: in band |
+| | ATF corridors | not run | 1.66 (1.32), 30: not calibrated [1.63 (1.38), 20, 2 stopped] | 0.99 (0.66), 30: not calibrated [0.96 (0.65)] |
+| Layer depth | Steckler | 0.99 (0.16), 52: in band | 1.15 (0.11), 52: in band | 1.28 (0.12), 49: indicative |
+| | NBS multi-room | 1.13 (0.28), 12: in band | 1.10 (0.21), 12: in band | 1.26 (0.25), 12: indicative |
+| | NIST/NRC | not run | 0.95 (0.11), 60: in band | 0.97 (0.12), 60: in band |
+| | WTC | not run | 1.12 (0.05), 12: in band | 1.12 (0.05), 12: in band |
+| | ATF corridors | not run | 1.20 (0.12), 30: in band [1.21 (0.12), 20, 2 stopped] | 1.29 (0.14), 30: indicative [1.28 (0.14)] |
+| Ceiling jet rise | NIST/NRC | not run | 1.03 (0.20), 69: in band | 1.10 (0.15), 69: in band |
+| | WTC | not run | 1.19 (0.07), 12: in band | 1.19 (0.07), 12: in band |
+| | ATF corridors | not run | 1.61 (1.24), 42: not calibrated [1.55 (1.29), 28, 2 stopped] | 0.93 (0.73), 42: not calibrated [0.89 (0.71)] |
+| O2 drop | NIST/NRC | not run | 1.17 (0.08), 15: in band | 1.26 (0.09), 15: indicative |
+| | WTC | not run | 1.78 (0.16), 6: not calibrated [1.77 (0.18)] | 2.27 (0.17), 6: not calibrated [2.23 (0.19)] |
+| CO2 rise | NIST/NRC | not run | 1.07 (0.08), 10: in band [1.06 (0.08)] | 1.14 (0.08), 10: in band |
+| | WTC | not run | 1.71 (0.31), 6: not calibrated [1.71 (0.33)] | 2.17 (0.28), 6: not calibrated [2.17 (0.30)] |
+| Smoke obscuration | NIST/NRC | not run | 1.76 (0.37), 10: not calibrated | 1.77 (0.37), 10: not calibrated |
+| Door peak outflow | Steckler | 0.69 (0.08), 52: indicative | 0.63 (0.10), 52: not calibrated | 0.56 (0.35), 48: not calibrated |
+| Neutral plane height | Steckler | 0.96 (0.07), 52: in band | 0.97 (0.09), 52: in band | 0.91 (0.15), 47: in band |
+
+**As pre-registered, with every test.** Every verdict is the same as with the rule, in both runs. Only Steckler's rows differ, the same in both runs:
+- its layer temperature: 1.31 (0.18), 1.11 (0.14) and 1.15 (0.18) over 55 tests on the three cells;
+- its layer depth: 1.00 (0.16), 1.15 (0.11) and 1.28 (0.12).
+
+With them the pooled values move:
+
+| Quantity | Cell | 6ee8c93 | 0c62bd9 |
+| --- | --- | --- | --- |
+| Layer temperature rise | 0.20 m | 1.23 (0.45), 67 | 1.23 (0.45), 67 |
+| Layer temperature rise | 0.27 m | 1.11 (0.61), 169 | 1.09 (0.55), 159 |
+| Layer temperature rise | 0.34 m | 1.05 (0.40), 169 | 1.04 (0.40), 169 |
+| Layer depth | 0.20 m | 1.02 (0.19), 67 | 1.02 (0.19), 67 |
+| Layer depth | 0.27 m | 1.08 (0.15), 169 | 1.07 (0.15), 159 |
+| Layer depth | 0.34 m | 1.16 (0.18), 169 | 1.16 (0.18), 169 |
+
+The layer depth on 0.27 m is calibrated on 6ee8c93 as pre-registered too: 5 of 5 series in band.
+
+**What changed between the runs, and why.**
+- **Bit-identical.** Steckler (165 runs), NBS (9) and NIST/NRC (19 of 20) repeat exactly: their burners never ran short of oxygen.
+- **Changed a little.** NIST/NRC test 13 on 0.27 m cells (2.3 MW, door shut) moved by up to 5.8 % per pair. Nine of WTC's 12 runs moved by up to 5 %.
+- **Changed most.** ATF: 7 of its 12 runs, by up to 16 % on 0.27 m and 29 % on 0.34 m, and its two stopped runs now finish.
+- **The one verdict that moved.** The layer depth on 0.27 m went from indicative to calibrated.
+  - On 0c62bd9, ATF's two stops put ATF outside the band for every quantity it measures on 0.27 m (12.6, rule 1). Plan 12.6 still gave calibrated (4 of 5 in band, pooled 1.07 (0.15)), but the protocol counted the stopped series as outside the indicative band and gave indicative.
+  - On 6ee8c93 all five series are in band.
+  - ATF's own depth barely moved (1.21 to 1.20): the verdict moved because the runs finished, not because their numbers changed.
+
+**How independent the five are.** Counting NIST/NRC and WTC as one series, and setting Steckler aside as it shares NBS with the multi-room tests, the depth on 0.27 m still has three groups in band:
+- NBS 1.10 (0.21);
+- NIST/NRC and WTC merged, 0.98 (0.12), 72 pairs;
+- ATF 1.20 (0.12), a laboratory other than NIST's.
+
+They pool to 1.05 (0.16) over 114 pairs. ATF removes the weakness that 12.8 found.
+
+**What the calibrated verdict covers.** The hot layer's depth, by Janssens and Tran's reduction of a thermocouple tree, on 0.27 m cells:
+- **Fires.** Prescribed heat releases of 32 kW to 3.2 MW, D*/δx 0.9 to 5.6: ATF 1.1 to 2.7, the others as 12.8.
+- **Enclosures.** Single rooms of 17 to 584 m³, a burn room off a 12.2 m corridor, and two 17 m corridors joined by a stairwell; ceilings 2.1 to 3.8 m.
+- **Burners.** Each burner takes its test fuel and its FDS input's radiant fraction (12.9, amendments 3 and 8).
+- **Openings.** Doors at least about a cell wide.
+- **Walls.** Lightweight boards with gypsum, concrete or fire-brick floors.
+- **Times.** Up to 600 to 900 s, or Steckler's steady state.
+
+On 0.20 and 0.34 m cells the depth is indicative.
+
+**What the rest says.**
+- **The layer temperature on 0.27 m.** Pooled it reaches only σ̃M 0.61, so plan 12.6 says not calibrated, which is the verdict. Three series are in band; NBS (1.08 (0.70)) and ATF (1.66 (1.32)) scatter widely.
+  - ATF's scatter has a shape, tree by tree as a share of the measured rise on 0.27 m cells:
+    - the lower corridor's tree A, 2 m from the burner: 1.9 to 2.6;
+    - tree B: 1.3 to 1.8;
+    - tree C at the foot of the stairs: 0.7 to 1.2;
+    - the upper corridor's tree F: 0.1 to 1.3;
+    - tree G, near its open end: 0.03 to 0.5.
+  - The model keeps the heat downstairs and lets too little reach the upper corridor. On these cells the corridors' ceilings snap to 2.16 m (2.4 m nominal), and the ceiling thermocouples move up to 0.36 m to a connected cell.
+  - On 0.34 m cells the temperature is indicative, with the same two series outside.
+- **The ceiling jet.** Not calibrated on 0.27 m (pooled σ̃M 0.75, from ATF) and indicative on 0.34 m. NIST/NRC and WTC are in band on 0.27 m.
+- **O2 and CO2.** Not calibrated. NIST/NRC is in band or indicative, but WTC runs 1.7 to 2.3 times the measured, which the test fuel's yields (12.9, amendment 3) did not change.
+- **Smoke obscuration.** It reads 1.76 times the measured with σ̃M 0.37 on both cells, over 10 tests, so visibility (3/K) would read short. It has one dataset, so it is not calibrated whatever its value.
+- **The door.** Steckler's peak outflow stays a third low. The neutral plane is in band on every cell, but has one dataset.
+
+**Sprinkler activation, reported apart.** The walls' convection coefficient was set on these tests, so they are not fully held out (claim protocol, section 4). `benchmark/results/2026-11-12-sprinkler-o2-stats.txt` compares the first head to open with the first measured opening on 6ee8c93, with σ̃E taken as 0, so σ̃M can only overstate. All are within the calibrated band:
+
+| Series | Tests | δ | σ̃M |
+| --- | --- | --- | --- |
+| Vettori, flat ceiling (1998) | 9 | 1.165 | 0.118 |
+| Vettori, sloped set (2003) | 8 | 0.939 | 0.228 |
+| Bittern (2004) | 8 | 1.01 | 0.051 |
+| UL/NFPRF series I | 4 | 0.977 | 0.046 |
+| Pooled | 29 | 1.033 | 0.163 |
+
+**A record fault in the harness, found while writing this section.** For ATF's five steady tests, each run's `burner.expectedMJ` in both files is low by 15 to 19 times. The harness's `burnerIntegral` integrates a heat release table only up to its last row, while the burner holds the last value, and those ramps end at 60 s (the pulsed test's runs to the end). Checked against the table held at its end, every ATF run released exactly its heat. No comparison uses the field. It is to be fixed in the harness before the next run; the two files are left as they are.
+
+**Costs** (6 jobs; median solver time a run on 6ee8c93):
+- NIST/NRC: 38 min on 0.27 m, 8 min on 0.34 m;
+- WTC: 15 and 5 min;
+- ATF: 9 and 4 min;
+- NBS: 19, 5 and 1.5 min on the three cells;
+- Steckler: 39, 16 and 5 s.
+
+The whole suite took 124 min.
