@@ -881,3 +881,66 @@ A change that fails its check is not made, and that is reported.
 2. **13.B, on the solver with the changes of 13.4:** every comparison of section 12 and 13 again. Both 13.A and 13.B are reported; the app states 13.B's verdict, with 13.A beside it.
 
 The search for faults stays as section 5 of the claim protocol says: a fault found while comparing is fixed only if a check that uses no measured data shows it, and every comparison is rerun after. A quantity that still falls short is stated as it is.
+
+### 13.6 Added while carrying out 13.A (2026-11-12, 12:15, before any comparison they govern)
+
+These are dated additions. None changes a criterion of 13.1 to 13.5.
+
+1. **The burner's energy record.** `burnerIntegral` now holds a table's last value past its last row, as the burner does. ATF's tables end at 60 s, so its `expectedMJ` was the energy to 60 s only (12.10). A 90 s check on ATF at 0.34 m gives released = expected in all six tests. The physics is unchanged.
+2. **The harness is snapshotted.** At the start of a run, the suite copies itself and `lib/*.mjs` beside the solver's copy, and the workers run from the copies. Before, each worker loaded the live harness, so an edit made during a run could reach that run's later tests. The harness digests are taken at the start.
+3. **Head height: which devices.** The rule of 13.2 item 1 is "every thermocouple between 1.5 and 2.0 m above the floor". Its list in brackets is short of that rule; the rule governs. The rule adds:
+   - Steckler 1.88 and 2.00 m;
+   - NBS trees 3, 4, 5 and 8 at 1.52, 1.83 and 1.93 m;
+   - ATF's upper-corridor trees F and G at 1.79 m over their floor.
+   That makes 414 device readings over all tests.
+4. **Head height: the plume.** A device is in the burner's plume when r < D/2 + 0.25 (z − z_burner). Here r is its horizontal distance from the burner's centre, D = √(4A/π), and z its height. The 0.25 is about twice Heskestad's spread of the temperature half-width, 0.12 (z − z0) at Tc/Ta near 1, so the cone holds the plume's edge. A device with a floor between it and the burner is not in the plume. The rule uses geometry only. It leaves out one device: NIST/NRC test 15, tree 5 at 1.75 m (r 0.70 m, reach 0.94 m). ATF tree G stands 0.02 m from the burner's axis but one floor up, so it stays.
+5. **Head height: the model.** The model reads the tree's open cell nearest the device's height over the column's model floor. Its value at a measured time is the mean of its 1 s readings within half the measured interval, as for the point devices of section 12. The runs made before this keep no such series, so the head-height verdict comes from runs that keep them (`series.head` in each run). `tools/calibration/head-temperature.mjs` reduces those runs.
+6. **The head-height reducer's check (no model).** The reducer is fed each device's measured series as if it were the model, each second taking the reading nearest it. It returns δ = 1 and σ̃M = 0 in every series (`head-temperature.mjs --check`).
+7. **Two features of the measured data,** found by the same check (pre-ignition readings against the FDS input's ambient). Both are kept as measured, as the FDS Validation Guide keeps them:
+   - In WTC tests 1 and 2, the fire was lit about 20 s before the file's time zero. The heat release is 173 to 310 kW at −10 s and 1.0 to 1.4 MW at 0 s, and head-height readings at t ≤ 0 are 25 to 72 K over the ambient. The FDS inputs ramp from t = 0.
+   - In NBS, the burn room's tree read 21 to 51 K over the FDS input's ambient before ignition, at 1.57 and 1.88 m. Its layer temperature reads the same.
+8. **The weighted statistics (13.3)** follow the FDS plotting code (`fdsplotlib.py`, its bin-weighted branch). Ten bins split the measured values from 0 to their largest, and each pair is weighted by n over its bin's count. σ̃E is capped at u/√2. A port in Python and the suite agree to three decimals on four random sets. The guide also drops pairs outside its plots' ranges; the suite has no plot ranges and keeps every positive pair. "The stricter verdict decides" is read as the strictest of four: 12.6 and the protocol's section 4, each unweighted and weighted.
+9. **The 0.20 m run** (13.2 item 2) also runs Steckler and NBS on 0.20 m cells, so that head height has all five series on that cell. Its output is `benchmark/results/2026-11-12-validation-13a-020.{json,log}`.
+
+### 13.7 Added while building items 3 to 8 (2026-11-12, 13:00, before any of their comparisons)
+
+These are dated additions, made before any model comparison of the quantities they govern.
+
+1. **One quantity for door and vent velocity.** `doorVelocity` now holds Steckler's door (as before) and the opening probes of WTC, NIST/NRC, UL FSRI and UL/NIST. Each probe's value is its largest speed through the opening over the window, either way: the guide's "maxabs" for the WTC probes. σ̃E is 0.08, the guide's gas velocity.
+2. **WTC opening probes (item 4).** These are the probes the guide compares, each over its own row's window: inflow 1, 2, 3, 6, 7 and 8, and outflow 1 to 8 (1 to 10 in tests 2 to 6). That gives 93 pairs a cell. In test 1 the guide leaves out inflow probes 4 and 5. A check (`probe-checks.mjs`) shows why: their thermocouples read the hot layer's 230 to 280 °C while the probes read inflow. They stay out.
+3. **NIST/NRC door (item 5).** This uses the five open-door tests (3, 9, 14, 15 and 18) and their 14 recorded probes (`BP Door-12` is not in the file). Three quantities are compared:
+   - each probe's velocity;
+   - the neutral plane of each of the three probe columns, on the mean profile over 300 s to the run's end (the layer depth's window);
+   - the door's largest inflow and outflow (kg/s, from file 1). Its σ̃E is 0.08, the velocity's; the guide gives none for a mass flow, so this is this project's assumption.
+   Check: the file's door mass flows, divided by the probes' volume flows, give densities of 1.16 to 1.21 kg/m³ in (19 to 32 °C) and 0.80 to 0.91 kg/m³ out (113 to 169 °C), in all five tests.
+4. **The door-probe rule.** A single column of door probes is compared only when it carries about as much mass out as in. The mass comes from the probes and their paired thermocouples (ρ = 353/T), each probe over its share of the door. Out over in, over the compared window, must lie within 1/3 to 3. Otherwise that test's door velocities and neutral plane are left out. The rule leaves out:
+   - UL FSRI: 10 of the 46 open-door tests, with out/in 3.0 to 18.7;
+   - UL/NIST: tests 1 (19.9) and 3 (3.2).
+   NIST/NRC's three columns are checked against the file's own door flows instead (item 3).
+5. **UL FSRI 2018 (item 3).** No FDS input exists, so the scene is a box built from the data's README and Willi et al. (2023):
+   - the room: 3.66 × 3.66 × 2.44 m;
+   - the door: 0.9 × 2.0 m in the front wall, 2.44 to 3.34 m from the left wall;
+   - walls and ceiling: 13 mm marinite on 16 mm type X gypsum, with properties from NIST's WTC input;
+   - the floor: concrete, with ATF's input's properties (the 13 mm cement board is not matched);
+   - the burner: a 0.6 m or 0.3 m square, its top 0.5 m up on a solid block (the steel frame, simplified), against the walls as the README draws it.
+   The fire: natural gas taken as methane, with FDS's default radiant fraction (0.20) and no soot, at the set heat release from ignition after a 10 s rise.
+   - **The run:** from ignition to the first of Burner Off, a door or fan event, the file's end and 900 s. This leaves 91 of the 92 burner tests. 500kW_Closed_Center_1 is left out: its door was opened and shut at 12 s.
+   - **The ambient:** the trees' mean over the 60 s before ignition.
+   - **The data:** measured channels are kept as 5 s means, and the model's 1 s readings are averaged over the same 5 s.
+   - **Quantities:** the layer by Janssens and Tran at four trees, with the depth's window from 120 s. The ceiling jet: each top thermocouple in a quadrant the burner's footprint does not overlap (none for the centre burner). O2 at the eight analysers. Door velocity and the neutral plane in the open-door tests, the plane on the mean over the run's last 180 s. Head-height temperature at 1.54 and 1.84 m.
+   - **Sealed by design:** the closed-door tests (no leakage measured).
+   - **The door on the grid:** its modelled area is 1.20, 1.53 and 0.58 m² of 1.80 m² on 0.20, 0.27 and 0.34 m cells.
+   - **Checks without a model:** O2 reads 0.2087 to 0.2098 before ignition. The reducers return the measured values exactly. The doorway's centreline column carries a median 2.05 times as much mass out as in, a three-dimensional inflow that one column cannot close.
+6. **UL/NIST vents (item 6).** Each fire's first interval only, the run ending at its end (1215, 570, 450 and 525 s). Both ceiling vents are shut throughout: the FDS inputs' lids are present until their controls change. The heat release follows the FDS ramp. Each quantity is compared over the guide's window, the interval's last 60 s:
+   - the layer at two trees;
+   - the guide's two ceiling-jet thermocouples;
+   - head height at 1.5 and 1.8 m;
+   - the door's ten probes and their neutral plane, in tests 2 and 4 only (item 4).
+   There is no vent velocity, since the vents stay shut in the first interval.
+7. **DelCo (item 7) is not built.** Its tests light three propane pans at 0, 180 and 360 s. They open a door slit at 2 s, a roof cavity at 128 s and doors from 420 to 600 s. The harness holds one burner and fixed openings, and the solver cannot change openings in time; that would be a solver change, which this work may not make. The longest fixed interval, 2 to 128 s with one pan and a 0.1 m slit, is too short to form a layer.
+8. **FSE 2008 (item 8)** is limited by its data and its doors.
+   - The repository holds only the guide's reduced layer for it (`_HGL.csv`), not the trees, so the layer cannot be reduced by the suite's own code and is not compared.
+   - Of its 25 inputs, ISONG3 has a 0.8 m door and ISOHept25 and 26 have 0.4 m doors. The rest have 0.1 to 0.2 m doors, which the grid seals (the sealed-door rule), and are not built.
+   - The three are run to the end of the guide's first window (580, 580 and 600 s) and compared over it. The quantities: O2 and CO2 at the front and rear sample points (dry, as measured), their thermocouples as the guide's ceiling jet, and the soot mass fraction where measured (ISOHept25 front, ISOHept26 front). Soot's σ̃E is 0.12, the smoke's; the guide gives none, so this is this project's assumption.
+   - The fire: ISONG3's burner is the input's fuel mass flux times its 1 m² area at 50.0 MJ/kg. Check: that gives 755 kW in the first step, and the measured heat release reads 755 kW. The heptane tests' spray is the nozzle's flow at 684 kg/m³ and 44.6 MJ/kg onto the 0.36 m² pan (1.0 and 2.0 MW at the windows).
+   - Both heptane tests are under-ventilated: the measured O2 falls to 9.5 % and 0.7 %. This solver releases the prescribed heat inside the room.
