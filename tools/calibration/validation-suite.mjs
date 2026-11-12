@@ -805,7 +805,17 @@ async function main() {
     for (const f of files) {
       const r = JSON.parse(readFileSync(f, "utf8"));
       sources.push({ file: f.split("\\").join("/").replace(/^.*benchmark\//, "benchmark/"), generated: r.generated, git: r.git, jobs: r.jobs, wallSeconds: r.wallSeconds, runs: r.runs.length });
-      for (const run of r.runs) byId.set(run.id, run);
+      // A later file's run replaces an earlier one's pairs quantity by quantity: the quantities it has win, the
+      // earlier run's other quantities stay (so head-temperature.mjs's head-only runs add to a full run).
+      for (const run of r.runs) {
+        const was = byId.get(run.id);
+        if (!was) {
+          byId.set(run.id, run);
+          continue;
+        }
+        const has = new Set(run.pairs.map((p) => p.quantity));
+        byId.set(run.id, { ...was, ...run, pairs: [...was.pairs.filter((p) => !has.has(p.quantity)), ...run.pairs] });
+      }
       for (const [d, qs] of Object.entries(r.settings?.measures || {})) for (const q of qs) (measures[d] ||= new Set()).add(q);
     }
     const report = { generated: new Date().toISOString(), tool: "tools/calibration/validation-suite.mjs --merge", plan: "wiki/research/fire-calibration-plan-2026-11-11.md, sections 12 and 13", sources, solverRev: rev, jobs: "-", wallSeconds: 0, settings: { verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) }, runs: [...byId.values()] };
