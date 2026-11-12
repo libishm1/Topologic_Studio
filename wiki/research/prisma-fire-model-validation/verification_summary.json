@@ -1,6 +1,6 @@
 {
  "generated": "2026-11-12T04:34:48.158Z",
- "method": "double-blind DOI check (aec-research-workflow verify_run_A: doi.org handle + Crossref; verify_run_B: OpenAlex without a key, Semantic Scholar rate-limited, DataCite fallback; verify_reconcile against the claimed record). The OpenAlex key supplied was rejected (HTTP 401, key not found); run B used OpenAlex without one.",
+ "method": "double-blind DOI check (aec-research-workflow verify_run_A: doi.org handle + Crossref; verify_run_B: OpenAlex, Semantic Scholar (rate-limited), DataCite fallback; verify_reconcile against the claimed record). Run B used OpenAlex without a key: a first attempt sent the key with the key file's UTF-8 byte-order mark and was refused (HTTP 401); the key itself is valid once the mark is stripped (checked 2026-11-12). Single-DOI lookups need no key.",
  "included": 189,
  "withDoi": 146,
  "withoutDoi": 43,
