@@ -22,7 +22,9 @@
  *   - each thermocouple tree's hot gas layer by Janssens and Tran (1992), as
  *     the FDS Validation Guide reduces it, at each measured time;
  *   - point readings (ceiling-jet thermocouples, O2 and CO2) as measured;
- *   - Steckler's steady profiles as measured (room tree, door centreline).
+ *   - Steckler's steady profiles as measured (room tree, door centreline);
+ *   - each tree's thermocouples at head height, 1.5 to 2.0 m over its floor,
+ *     as measured (plan 13.2 item 1; added 2026-11-12).
  *
  *   node tools/calibration/validation-data.mjs [--datasets steckler,nbs,nistnrc,wtc] [--offline]
  *
@@ -50,7 +52,11 @@ const OFFLINE = args.includes("--offline");
 export const COMMITS = Object.freeze({
   exp: "704e0d91f15088ae41c6a30a662a7524bf5ff4e8",
   fds: "193faffb1a7607e62f1c28ee98a4a66b6daa8c39",
+  // UL FSRI's 2018 compartments (read 2026-11-12, plan 13.2 item 3).
+  fsri: "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
 });
+/** Each repository's GitHub owner and name. */
+const REPOS = Object.freeze({ exp: "firemodels/exp", fds: "firemodels/fds", fsri: "ulfsri/fsri-compartments-2018" });
 
 export const NOTICE =
   "Measurements from NIST's Fire Research Division Experimental Database (github.com/firemodels/exp) and test conditions from NIST's FDS validation inputs (github.com/firemodels/fds), both carrying NIST's notice: NIST-developed works, not subject to copyright protection within the United States; acknowledge the National Institute of Standards and Technology as the source; modified works should note the date and nature of any change. Changed here (2026-11-11): reduced to the numbers compared by tools/calibration/validation-suite.mjs (thermocouple trees reduced by Janssens and Tran's method at each measured time; point readings within the compared windows; geometry and burner read from the FDS inputs).";
@@ -65,7 +71,7 @@ async function fetchFile(repo, file) {
   if (existsSync(local)) buf = readFileSync(local);
   else {
     if (OFFLINE) throw new Error(`not in the cache (offline): ${repo}/${file}`);
-    const url = `https://raw.githubusercontent.com/firemodels/${repo}/${COMMITS[repo]}/${file.split("/").map(encodeURIComponent).join("/")}`;
+    const url = `https://raw.githubusercontent.com/${REPOS[repo]}/${COMMITS[repo]}/${file.split("/").map(encodeURIComponent).join("/")}`;
     const r = await fetch(url);
     if (!r.ok) throw new Error(`${r.status} for ${url}`);
     buf = Buffer.from(await r.arrayBuffer());
@@ -75,7 +81,7 @@ async function fetchFile(repo, file) {
   const sha256 = createHash("sha256").update(buf).digest("hex");
   const key = `${repo}/${file}`;
   if (known.has(key) && known.get(key) !== sha256) throw new Error(`digest mismatch for ${key}: ${sha256} against ${known.get(key)} recorded`);
-  return { text: buf.toString("utf8"), source: { repo: `github.com/firemodels/${repo}`, commit: COMMITS[repo], path: file, sha256, bytes: buf.length } };
+  return { text: buf.toString("utf8"), source: { repo: `github.com/${REPOS[repo]}`, commit: COMMITS[repo], path: file, sha256, bytes: buf.length } };
 }
 
 // ---------------------------------------------------------------- CSV
@@ -153,6 +159,54 @@ function reduceTree(table, columns, heights, H) {
     Tl.push(r.lower == null ? null : r3(r.lower - K));
   }
   return { Tu, zi, Tl };
+}
+
+/**
+ * A tree's head-height thermocouples (plan 13.2 item 1, added 2026-11-12):
+ * those 1.5 to 2.0 m over the tree's floor, each with its measured series
+ * (°C, null where invalid). The plume rule is the suite's (lib/head.mjs).
+ */
+const HEAD_BAND = [1.5, 2.0];
+function headOf(table, columns, heights) {
+  const devices = [], series = {};
+  columns.forEach((c, q) => {
+    const z = heights[q];
+    if (!(z >= HEAD_BAND[0] - 1e-9 && z <= HEAD_BAND[1] + 1e-9)) return;
+    const i = table.col(c);
+    if (i < 0) throw new Error(`missing head column ${c}`);
+    devices.push({ id: c, z });
+    series[c] = table.rows.map((r) => (valid(r[i]) ? r3(r[i]) : null));
+  });
+  return { devices, series };
+}
+
+/**
+ * The door-probe rule (2026-11-12, before any model comparison of door
+ * velocity): a single column of door probes is compared only when it carries
+ * about as much mass out as in. Each probe stands for its band of the door
+ * (halfway to its neighbours, the sill to the soffit) across the door's width,
+ * the gas's density 353 / T from its paired thermocouple; out over in, over
+ * the compared window, must lie within 1/3 to 3. A column outside it misreads
+ * the flow (a probe not reading, or the inflow passing beside the column),
+ * and its velocities and neutral plane are left out of that test.
+ */
+function doorBalance(probes, M, width, sill, soffit, window, outSign) {
+  const col = probes.slice().sort((a, b) => a.z - b.z);
+  let mIn = 0, mOut = 0;
+  M.times.forEach((t, iq) => {
+    if (t < window[0] || t > window[1]) return;
+    col.forEach((p, q) => {
+      const lo = q === 0 ? sill : (col[q - 1].z + p.z) / 2;
+      const hi = q === col.length - 1 ? soffit : (p.z + col[q + 1].z) / 2;
+      const v = M.series[p.id][iq], T = M.temperatures?.[p.id]?.[iq];
+      if (v == null || T == null) return;
+      const m = (353 / (T + 273.15)) * Math.abs(v) * width * (hi - lo);
+      if (v * outSign > 0) mOut += m;
+      else mIn += m;
+    });
+  });
+  const ratio = mIn > 0 ? mOut / mIn : Infinity;
+  return { outOverIn: Number.isFinite(ratio) ? r3(ratio) : null, window, usable: ratio >= 1 / 3 && ratio <= 3 };
 }
 
 /** The hold window of an FDS ramp [[t, f]]: from where it first reaches its top to where it leaves it. */
@@ -275,10 +329,12 @@ async function steckler(sources, dataplot) {
       // Walls, ceiling, floor and the burner's block: the FDS input's default surface (13 mm ceramic fibre board).
       materials: materialsOf(geo, [defaultSurface(geo)]),
       steady: true,
-      trees: [{ id: "room", x: room[0], y: room[1], H, heights: z.filter((_, q) => keep[q]).reverse(), quantities: ["hglTemperature", "hglDepth"] }],
+      trees: [{ id: "room", x: room[0], y: room[1], H, heights: z.filter((_, q) => keep[q]).reverse(), quantities: ["hglTemperature", "hglDepth"], head: z.map((zz, q) => (keep[q] && zz >= HEAD_BAND[0] - 1e-9 && zz <= HEAD_BAND[1] + 1e-9 ? { id: `T_in ${zz}`, z: zz } : null)).filter(Boolean) }],
       door: { x: door.xb[0], y: door.xb[2], soffit: opening.length ? opening[0].soffit : 1.83, sill: opening.length ? opening[0].sill : 0 },
       measured: {
         trees: { room: { T: Tin.filter((_, q) => keep[q]).reverse(), Tu: r3(jt.upper - K), zi: r3(jt.height), H } },
+        // The steady profile's readings at head height (°C), by device.
+        head: { room: Object.fromEntries(z.map((zz, q) => (keep[q] && zz >= HEAD_BAND[0] - 1e-9 && zz <= HEAD_BAND[1] + 1e-9 ? [`T_in ${zz}`, r3(Tin[q])] : null)).filter(Boolean)) },
         door: { z: z.filter((_, q) => Number.isFinite(VC[q])), V: VC.filter(Number.isFinite), T: TC.filter((_, q) => Number.isFinite(VC[q])) },
         guideLayer: layer,
       },
@@ -303,7 +359,7 @@ async function nbs(sources, dataplot) {
     const ramp = geo.ramps[surf.rampQ];
     const table = csv(m.text);
     const times = table.rows.map((r) => r[0]);
-    const out = { times, trees: {} };
+    const out = { times, trees: {}, head: {} };
     const treeSpecs = [];
     for (const n of trees) {
       // Columns "T#n hh": hh inches over the floor (T#1 84 = 2.13 m in the 2.2 m burn room; T#3 96 = 2.44 m, the corridor's 8 ft ceiling).
@@ -313,7 +369,9 @@ async function nbs(sources, dataplot) {
       const H = ceilingAt(geo, x, y);
       const red = reduceTree(table, columns, heights, H);
       out.trees[String(n)] = { Tu: red.Tu, zi: red.zi, H };
-      treeSpecs.push({ id: String(n), x, y, H, heights, quantities: ["hglTemperature", "hglDepth"] });
+      const hd = headOf(table, columns, heights);
+      out.head[String(n)] = hd.series;
+      treeSpecs.push({ id: String(n), x, y, H, heights, quantities: ["hglTemperature", "hglDepth"], head: hd.devices });
     }
     tests.push({
       id,
@@ -373,7 +431,7 @@ async function nistNrc(sources, dataplotText) {
     const cj = rows.find((r) => r.quantity === "Ceiling Jet Temperature");
     const o2 = rows.find((r) => r.quantity === "Oxygen Concentration");
     const co2 = rows.find((r) => r.quantity === "Carbon Dioxide Concentration");
-    const out = { times, trees: {}, points: {} };
+    const out = { times, trees: {}, points: {}, head: {} };
     const treeSpecs = [];
     for (const n of trees) {
       const columns = Array.from({ length: 10 }, (_, q) => `Tree ${n}-${q + 1}`);
@@ -382,7 +440,9 @@ async function nistNrc(sources, dataplotText) {
       const H = 3.82;
       const red = reduceTree(table, columns, heights, H);
       out.trees[String(n)] = { Tu: red.Tu, zi: red.zi, H };
-      treeSpecs.push({ id: String(n), x, y, H, heights, quantities: ["hglTemperature", "hglDepth"] });
+      const hd = headOf(table, columns, heights);
+      out.head[String(n)] = hd.series;
+      treeSpecs.push({ id: String(n), x, y, H, heights, quantities: ["hglTemperature", "hglDepth"], head: hd.devices });
     }
     const points = [];
     const addPoint = (column, device, quantity, scale = 1) => {
@@ -408,6 +468,34 @@ async function nistNrc(sources, dataplotText) {
       }
     }
     const closed = !geo.open.length;
+    // The door's bi-directional probes (file_2, BP Door-1 to -15 where recorded; positions from the FDS input's
+    // 'BP Door n'), positive into the room (+x), in the open-door tests (13.2 item 5, added 2026-11-12); the
+    // three columns of five as profiles for the neutral plane; the door's mass flow in and out (file_1, kg/s).
+    let probes = [], profiles = [], doorFlow = null;
+    if (!closed) {
+      const f2 = `NIST_NRC/NIST_NRC_Test_${id}_file_2.csv`;
+      const m2 = await fetchFile("exp", f2);
+      sources.push(m2.source);
+      const t2 = csv(m2.text);
+      const series = {};
+      for (let q = 1; q <= 15; q += 1) {
+        const col = `BP Door-${q}`;
+        const i = t2.col(col);
+        const dev = geo.devices.find((d) => d.id === `BP Door ${q}`);
+        if (i < 0 || !dev) continue;
+        series[col] = t2.rows.map((r) => (Number.isFinite(r[i]) && Math.abs(r[i]) < 20 ? r4(r[i]) : null));
+        probes.push({ id: col, x: dev.xyz[0], y: dev.xyz[1], z: dev.xyz[2], axis: "x", sign: 1, quantity: "doorVelocity" });
+      }
+      const ys = [...new Set(probes.map((p) => p.y))].sort((a, b) => a - b);
+      profiles = ys.map((y) => ({ id: `door y ${y}`, probes: probes.filter((p) => p.y === y).sort((a, b) => a.z - b.z).map((p) => p.id), outSign: -1 }));
+      out.probes = { times: t2.rows.map((r) => r[0]), series };
+      const ci = table.col("Door flow in (kg/s)"), co = table.col("Door flow out (kg/s)");
+      if (ci < 0 || co < 0) throw new Error(`NIST/NRC ${id}: no door flow columns`);
+      // The file gives the outflow as negative; kept here as a positive rate.
+      out.doorFlow = { times, in: table.rows.map((r) => (Number.isFinite(r[ci]) ? r4(r[ci]) : null)), out: table.rows.map((r) => (Number.isFinite(r[co]) ? r4(-r[co]) : null)) };
+      const o = geo.open[0].xb;
+      doorFlow = { plane: o[0], y: [o[2], o[3]], z: [o[4], o[5]], inward: 1, area: r3((o[3] - o[2]) * (o[5] - o[4])) };
+    }
     tests.push({
       id,
       fdsInput: fdsFile,
@@ -420,9 +508,10 @@ async function nistNrc(sources, dataplotText) {
       fuel: testFuel("heptane", 0.0149, 0.008, "heptane; soot yield 0.0149 as measured in the tests (Hamins et al. 2006, as the FDS Validation Guide quotes it); CO 0.008 from the FDS input's lumped products"),
       // Walls and ceiling: the default 25.4 mm marinite; the floor: 12.7 mm gypsum plaster on 18.3 mm pine (FDS's 'GYPSUM BOARD').
       materials: materialsOf(geo, [defaultSurface(geo), "GYPSUM BOARD"], [{ slot: 1, floor: true }]),
-      windows: { hglTemperature: [0, 10000], hglDepth: [300, h1], ceilingJet: [cj?.start ?? 0, cj?.end ?? 10000], o2: [o2?.start ?? 0, o2?.end ?? 10000], co2: [co2?.start ?? 0, co2?.end ?? 10000], smoke: [0, 10000] },
+      windows: { hglTemperature: [0, 10000], hglDepth: [300, h1], ceilingJet: [cj?.start ?? 0, cj?.end ?? 10000], o2: [o2?.start ?? 0, o2?.end ?? 10000], co2: [co2?.start ?? 0, co2?.end ?? 10000], smoke: [0, 10000], doorVelocity: [0, 10000], neutralPlane: [300, h1], doorMassFlow: [0, 10000] },
       trees: treeSpecs,
       points,
+      ...(probes.length ? { probes, profiles, doorFlow } : {}),
       measured: out,
     });
   }
@@ -452,7 +541,7 @@ async function wtc(sources, dataplotText) {
     const cj = rows.find((r) => r.quantity === "Ceiling Jet Temperature");
     const o2 = rows.find((r) => r.quantity === "Oxygen Concentration");
     const co2 = rows.find((r) => r.quantity === "Carbon Dioxide Concentration");
-    const out = { times, trees: {}, points: {} };
+    const out = { times, trees: {}, points: {}, head: {} };
     const treeSpecs = [];
     for (const [id, prefix] of [["west", "TTRW"], ["east", "TTRE"]]) {
       const devs = geo.devices.filter((d) => d.id && new RegExp(`^${prefix}\\d+$`).test(d.id) && table.col(d.id) >= 0);
@@ -462,7 +551,9 @@ async function wtc(sources, dataplotText) {
       const H = 3.82;
       const red = reduceTree(table, columns, heights, H);
       out.trees[id] = { Tu: red.Tu, zi: red.zi, H };
-      treeSpecs.push({ id, x, y, H, heights, quantities: ["hglTemperature", "hglDepth"] });
+      const hd = headOf(table, columns, heights);
+      out.head[id] = hd.series;
+      treeSpecs.push({ id, x, y, H, heights, quantities: ["hglTemperature", "hglDepth"], head: hd.devices });
     }
     const points = [];
     const addPoint = (column, quantity) => {
@@ -476,6 +567,30 @@ async function wtc(sources, dataplotText) {
     for (const c of o2 ? o2.columns : []) addPoint(c, "o2");
     for (const c of co2 ? co2.columns : []) addPoint(c, "co2");
     const depth = dataplotRows(dataplotText, `WTC/WTCP1T${n}_layer.csv`).find((r) => r.quantity === "HGL Depth");
+    // The opening probes (13.2 item 4, added 2026-11-12): bi-directional probes along x in the low west opening
+    // ("n Vel in", PIn) and the high east one ("n Vel out", POn; 9 and 10 in tests 2 to 6), positive along +x
+    // (into the room at the west, out of it at the east); the probes the guide compares, each with its row's
+    // window. Each opening carries flow one way: no neutral plane.
+    const vf = `WTC/WTCP1T${n}_velo.csv`;
+    const vm = await fetchFile("exp", vf);
+    sources.push(vm.source);
+    const vt = csv(vm.text);
+    const vrows = dataplotRows(dataplotText, vf);
+    const probes = [], probeSeries = {};
+    for (const side of ["in", "out"]) {
+      for (let q = 1; q <= 10; q += 1) {
+        const col = `${q} Vel ${side}`;
+        const i = vt.col(col);
+        const dev = geo.devices.find((d) => d.id === `P${side === "in" ? "I" : "O"}${q}`);
+        const row = vrows.find((r) => r.columns.includes(col));
+        // The probes the guide compares: in test 1 it leaves out inflow probes 4 and 5, whose thermocouples
+        // read the hot layer's 230 to 280 °C while the probes read inflow (probe-checks.mjs, 2026-11-12).
+        if (i < 0 || !dev || !row) continue;
+        probeSeries[col] = vt.rows.map((r) => (Number.isFinite(r[i]) && Math.abs(r[i]) < 20 ? r4(r[i]) : null));
+        probes.push({ id: col, x: dev.xyz[0], y: dev.xyz[1], z: dev.xyz[2], axis: "x", sign: 1, quantity: "doorVelocity", window: [row.start, row.end] });
+      }
+    }
+    out.probes = { times: vt.rows.map((r) => r[0]), series: probeSeries, temperatures: Object.fromEntries(["in", "out"].flatMap((side) => Array.from({ length: 10 }, (_, q) => `T${side} ${q + 1}`)).map((c) => [c, vt.head.findIndex((x) => x.replace(/\s+/g, " ") === c)]).filter(([, i]) => i >= 0).map(([c, i]) => [c, vt.rows.map((r) => (Number.isFinite(r[i]) ? r3(r[i]) : null))])) };
     tests.push({
       id: String(n),
       fdsInput: fdsFile,
@@ -487,9 +602,10 @@ async function wtc(sources, dataplotText) {
       fuel: testFuel("heptane", geo.reac?.soot ?? 0.015, geo.reac?.co ?? 0.008, `heptane; soot ${geo.reac?.soot} and CO ${geo.reac?.co} from the FDS input's REAC`),
       // Walls and ceiling: the default 25.4 mm marinite; the floor: 25.4 mm gypsum board.
       materials: materialsOf(geo, [defaultSurface(geo), "GYPSUM BOARD"], [{ slot: 1, floor: true }]),
-      windows: { hglTemperature: [0, 10000], hglDepth: [depth?.start ?? 0, depth?.end ?? h1], ceilingJet: [cj?.start ?? 0, cj?.end ?? 10000], o2: [o2?.start ?? 0, o2?.end ?? 10000], co2: [co2?.start ?? 0, co2?.end ?? 10000] },
+      windows: { hglTemperature: [0, 10000], hglDepth: [depth?.start ?? 0, depth?.end ?? h1], ceilingJet: [cj?.start ?? 0, cj?.end ?? 10000], o2: [o2?.start ?? 0, o2?.end ?? 10000], co2: [co2?.start ?? 0, co2?.end ?? 10000], doorVelocity: [0, 10000] },
       trees: treeSpecs,
       points,
+      probes,
       measured: out,
     });
   }
@@ -516,7 +632,7 @@ async function atf(sources, dataplotText) {
     const times = table.rows.map((r) => r[0]);
     const rows = dataplotRows(dataplotText, expFile);
     const cj = rows.filter((r) => r.quantity === "Ceiling Jet Temperature");
-    const out = { times, trees: {}, points: {} };
+    const out = { times, trees: {}, points: {}, head: {} };
     const treeSpecs = [];
     // The layer: trees A and B in the lower corridor and C at the foot of the stairs (floor 0, ceiling 2.4 m),
     // F and G in the upper corridor (floor 2.6, ceiling 5.0 m), each its own pair.
@@ -529,7 +645,9 @@ async function atf(sources, dataplotText) {
       const H = +(top - z0).toFixed(3);
       const red = reduceTree(table, columns, heights, H);
       out.trees[id] = { Tu: red.Tu, zi: red.zi, H };
-      treeSpecs.push({ id, x, y, z0, H, heights, quantities: ["hglTemperature", "hglDepth"] });
+      const hd = headOf(table, columns, heights);
+      out.head[id] = hd.series;
+      treeSpecs.push({ id, x, y, z0, H, heights, quantities: ["hglTemperature", "hglDepth"], head: hd.devices });
     }
     const points = [];
     for (const r of cj) {
@@ -562,6 +680,371 @@ async function atf(sources, dataplotText) {
   return { dataset: "atf", tests };
 }
 
+// ------------------------------------------------------------ UL FSRI 2018 (13.2 item 3, added 2026-11-12)
+
+/** UL FSRI's licence (MIT), kept with the reduced numbers as it asks. */
+export const FSRI_NOTICE =
+  "Measurements from UL FSRI's 2018 compartment fire experiments (github.com/ulfsri/fsri-compartments-2018; Willi, Madrzykowski, McKinnon and Dow 2023, Data in Brief 47, 108934, doi:10.1016/j.dib.2023.108934; data doi:10.5281/zenodo.5703475). MIT License, Copyright (c) 2021 UL FSRI: Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. Changed here (2026-11-12): reduced to 5 s means of the compared channels from 60 s before ignition to the end of the compared run, and the trees' layer by Janssens and Tran's method.";
+
+/**
+ * UL FSRI 2018 (Willi et al. 2023): a 3.66 x 3.66 x 2.44 m room (the
+ * README's plan), its walls and ceiling 13 mm marinite on 16 mm type X
+ * gypsum, its floor 13 mm cement board (Data in Brief, section 2), one 0.9 x
+ * 2.0 m door in the front wall 2.44 to 3.34 m from the left wall, open or
+ * shut for the whole test. Natural gas burners, 0.6 m square (100, 250, 500
+ * kW) or 0.3 m (100kWSB), their top 0.5 m over the floor, set by gas flow
+ * from ignition to "Burner Off", in the corner (back left), at the back wall's
+ * middle, the left wall's middle, or the centre, against the walls as the
+ * README's schematic draws them. No FDS input exists: the scene is a box.
+ *
+ * Coordinates: x from the left wall, y from the front wall, z from the floor.
+ * Trees at the quadrants' centres, 0.92 m from the walls: A front left, B back
+ * left, C back right, D front right; thermocouples 25 mm and 0.3 to 2.1 m in
+ * 0.3 m steps below the ceiling; O2 0.6 and 1.8 m below it. Seven doorway
+ * probes on the door's centreline, 0.25 to 1.75 m below the lintel, positive
+ * out of the room (the README's arrow; the data: the top probe reads out).
+ *
+ * The compared run: from ignition to the first of Burner Off, a door or fan
+ * event, the file's end and 900 s; a test whose run would be under 120 s is
+ * left out (500kW_Closed_Center_1, its door opened and shut at 12 s). The
+ * ambient: the trees' mean over the 60 s before ignition (the room was
+ * stratified by several kelvin before each test). Measured channels are
+ * kept as 5 s means (the model's are its 1 s readings' means over the same
+ * 5 s).
+ */
+async function fsri(sources) {
+  const listing = await fetchFile("fsri", "01_Data/README.md");
+  sources.push(listing.source);
+  // The material properties: marinite and gypsum from NIST's WTC input, concrete from ATF's.
+  const wtcGeo = readGeometry((await fetchFile("fds", "Validation/WTC/FDS_Input_Files/WTC_01.fds")).text);
+  const atfGeo = readGeometry((await fetchFile("fds", "Validation/ATF_Corridors/FDS_Input_Files/ATF_Corridors_050_kW.fds")).text);
+  const wall = surfaceMaterial({ ...wtcGeo, surfs: { ...wtcGeo.surfs, "FSRI WALL": { matl: ["MARINITE", "GYPSUM"], thickness: [0.013, 0.016] } } }, "FSRI WALL");
+  const floor = surfaceMaterial(atfGeo, "CONCRETE FLOOR");
+  const names = [];
+  for (const fuel of ["100kWSB", "100kW", "250kW", "500kW"]) for (const door of ["Open", "Closed"]) for (const pos of ["Back", "Center", "Corner", "Side"]) for (const n of [1, 2, 3]) names.push(`${fuel}_${door}_${pos}_${n}`);
+  const W = 3.66, D = 3.66, H = 2.44, STEP = 5;
+  const below = ["25 mm", "0.3 m", "0.6 m", "0.9 m", "1.2 m", "1.5 m", "1.8 m", "2.1 m"];
+  const depth = (b) => (b === "25 mm" ? 0.025 : Number(b.split(" ")[0]));
+  const quads = { A: [0.92, 0.92], B: [0.92, D - 0.92], C: [W - 0.92, D - 0.92], D: [W - 0.92, 0.92] };
+  const tests = [], left = [];
+  for (const name of names) {
+    let m, ev;
+    try {
+      ev = await fetchFile("fsri", `01_Data/${name}_Events.csv`);
+      m = await fetchFile("fsri", `01_Data/${name}.csv`);
+    } catch {
+      continue; // not every configuration was run three times
+    }
+    sources.push(ev.source, m.source);
+    const [fuelName, doorState, pos] = name.split("_");
+    // Events: clock times; their offset from ignition in seconds.
+    const clock = (s) => Date.parse(s.trim().replace(/^(\d{4}-\d\d-\d\d)-/, "$1T") + "Z") / 1000;
+    const events = ev.text.split(/\r?\n/).slice(1).filter((l) => l.trim()).map((l) => l.split(",")).map(([t, e]) => ({ t: clock(t), e: e.trim() }));
+    const ign = events.find((e) => /ignition/i.test(e.e));
+    if (!ign) throw new Error(`FSRI ${name}: no ignition`);
+    const table = csv(m.text);
+    const t = table.rows.map((r) => r[table.col("Time")]);
+    const stops = events.filter((e) => e !== ign && /burner off|door|fan/i.test(e.e)).map((e) => e.t - ign.t);
+    const horizon = Math.floor(Math.min(900, Math.max(...t), ...stops));
+    if (horizon < 120) {
+      left.push(`${name}: run ${horizon} s (${events.map((e) => e.e).join(", ")})`);
+      continue;
+    }
+    // 5 s means from -60 s to the horizon (the model's readings are averaged over the same 5 s).
+    const times = [];
+    for (let s = -60; s <= horizon; s += STEP) times.push(s);
+    const blocks = times.map((s) => table.rows.filter((r, q) => t[q] > s - STEP / 2 && t[q] <= s + STEP / 2));
+    const memo = new Map();
+    const series = (column, scale = 1, ok = valid) => {
+      const i = table.col(column);
+      if (i < 0) return null;
+      const key = `${column}|${scale}`;
+      if (memo.has(key)) return memo.get(key);
+      const v = blocks.map((rows) => {
+        const v = rows.map((r) => r[i]).filter(ok);
+        return v.length ? r4((v.reduce((a, b) => a + b, 0) / v.length) * scale) : null;
+      });
+      memo.set(key, v);
+      return v;
+    };
+    // The ambient: every tree thermocouple's mean over the 60 s before ignition.
+    const pre = [];
+    for (const q of Object.keys(quads)) for (const b of below) {
+      const i = table.col(`Quadrant ${q} Temperature ${b} Below Ceiling`);
+      if (i >= 0) table.rows.forEach((r, k) => t[k] >= -60 && t[k] <= 0 && valid(r[i]) && pre.push(r[i]));
+    }
+    const ambientC = r3(pre.reduce((a, b) => a + b, 0) / pre.length);
+    const side = fuelName === "100kWSB" ? 0.3 : 0.6;
+    const Q = Number(fuelName.replace(/kW.*/, "")) * 1000;
+    const cx = pos === "Corner" || pos === "Side" ? side / 2 : W / 2;
+    const cy = pos === "Corner" || pos === "Back" ? D - side / 2 : D / 2;
+    const foot = [cx - side / 2, cx + side / 2, cy - side / 2, cy + side / 2];
+    const out = { times, trees: {}, points: {}, head: {} };
+    const treeSpecs = [], points = [];
+    for (const [q, [x, y]] of Object.entries(quads)) {
+      const columns = below.map((b) => `Quadrant ${q} Temperature ${b} Below Ceiling`).filter((c) => table.col(c) >= 0);
+      const heights = columns.map((c) => +(H - depth(c.split("Temperature ")[1].replace(" Below Ceiling", ""))).toFixed(3)).reverse();
+      const cols = columns.slice().reverse();
+      // The tree's columns as 5 s means, then each time's Janssens and Tran reduction.
+      const avg = { head: [...cols], rows: times.map((_, k) => cols.map((c) => series(c)[k])), col: (n) => cols.indexOf(n) };
+      const red = reduceTree(avg, cols, heights, H);
+      out.trees[q] = { Tu: red.Tu, zi: red.zi, H };
+      const hd = headOf(avg, cols, heights);
+      out.head[q] = hd.series;
+      treeSpecs.push({ id: q, x, y, H, heights, quantities: ["hglTemperature", "hglDepth"], head: hd.devices });
+      // The ceiling jet: the top thermocouple, in each quadrant the burner's footprint does not overlap.
+      const qx = x < W / 2 ? [0, W / 2] : [W / 2, W], qy = y < D / 2 ? [0, D / 2] : [D / 2, D];
+      const overlaps = foot[0] < qx[1] && foot[1] > qx[0] && foot[2] < qy[1] && foot[3] > qy[0];
+      const top = `Quadrant ${q} Temperature 25 mm Below Ceiling`;
+      if (!overlaps && table.col(top) >= 0) {
+        out.points[top] = series(top);
+        points.push({ id: top, x, y, z: H - 0.025, quantity: "ceilingJet" });
+      }
+      for (const b of ["0.6 m", "1.8 m"]) {
+        const c = `Quad ${q} Oxygen ${b} Below Ceiling`;
+        if (table.col(c) < 0) continue;
+        out.points[c] = series(c, 0.01, (v) => Number.isFinite(v) && v > 0 && v < 25);
+        points.push({ id: c, x, y, z: +(H - depth(b)).toFixed(3), quantity: "o2" });
+      }
+    }
+    const open = doorState === "Open";
+    let probes = [], profiles = [], balance = null;
+    if (open) {
+      const series1 = {};
+      for (const b of ["0.25", "0.50", "0.75", "1.00", "1.25", "1.50", "1.75"]) {
+        const c = `Doorway Velocity ${b} m Below Lintel`;
+        if (table.col(c) < 0) continue;
+        series1[c] = series(c, 1, (v) => Number.isFinite(v) && Math.abs(v) < 20);
+        probes.push({ id: c, x: 2.89, y: 0, z: +(2.0 - Number(b)).toFixed(3), axis: "y", sign: -1, quantity: "doorVelocity" });
+      }
+      // The doorway's thermocouples beside the probes (for probe-checks.mjs's mass balance).
+      const temps = {};
+      for (const b of ["0.25", "0.50", "0.75", "1.00", "1.25", "1.50", "1.75"]) {
+        const c = `Doorway Temperature ${b} m Below Lintel`;
+        if (table.col(c) >= 0) temps[`Doorway Velocity ${b} m Below Lintel`] = series(c);
+      }
+      out.probes = { times, series: series1, temperatures: temps };
+      profiles = [{ id: "door", probes: probes.slice().sort((a, b) => a.z - b.z).map((p) => p.id), outSign: 1 }];
+      balance = doorBalance(probes, out.probes, 0.9, 0, 2.0, [horizon - 180, horizon], 1);
+      if (!balance.usable) (probes = []), (profiles = []);
+    }
+    tests.push({
+      id: name,
+      source: `01_Data/${name}.csv`,
+      geometry: { meshes: [[0, W, 0, D, 0, H]], obsts: [{ xb: [...foot, 0, 0.5], surf: "BURNER" }], holes: [], open: open ? [{ xb: [2.44, 3.34, 0, 0, 0, 2.0] }] : [], tmpa: ambientC },
+      ventilation: open ? "door open (0.9 m x 2.0 m)" : "door shut (the room sealed here; its leakage was not measured)",
+      sealedByDesign: !open,
+      ambientC,
+      horizon,
+      events: events.map((e) => `${e.e} @ ${Math.round(e.t - ign.t)} s`),
+      burner: { centre: [r3(cx), r3(cy)], area: r4(side * side), z0: 0.5, peakW: Q, hrrW: [[0, 0], [10, Q], [1e6, Q]], ramp: `the gas flow's setting, ${Q / 1000} kW (calibrated by oxygen consumption calorimetry, Data in Brief section 2), from ignition; here a 10 s linear rise`, radiantFraction: FDS_DEFAULT_RF.METHANE, radiantSource: "FDS's default for METHANE (0.20; no FDS input)" },
+      co2PerJ: CO2_PER_J.methane,
+      fuel: testFuel("methane", 0, null, "natural gas as methane, no soot (as the NIST methane inputs)"),
+      // Walls and ceiling: 13 mm marinite on 16 mm type X gypsum (properties from NIST's WTC input); the floor:
+      // concrete (ATF's input). Not matched: the floor's 13 mm cement board and the burner's steel frame (a solid block here).
+      materials: { slots: [wall, floor], rules: [{ slot: 1, floor: true }] },
+      windows: { hglTemperature: [0, horizon], hglDepth: [120, horizon], ceilingJet: [0, horizon], o2: [0, horizon], doorVelocity: [0, horizon], neutralPlane: [horizon - 180, horizon] },
+      trees: treeSpecs,
+      points,
+      ...(probes.length ? { probes, profiles } : {}),
+      ...(balance ? { doorBalance: balance } : {}),
+      measured: out,
+    });
+  }
+  if (left.length) console.log(`fsri: left out: ${left.join("; ")}`);
+  const off = tests.filter((T) => T.doorBalance && !T.doorBalance.usable);
+  if (off.length) console.log(`fsri: door probes left out by the door-probe rule: ${off.map((T) => `${T.id} (${T.doorBalance.outOverIn})`).join(", ")}`);
+  return { dataset: "fsri", tests, notice: FSRI_NOTICE, leftOut: left };
+}
+
+/**
+ * UL/NIST vents (NIST's Fire Fighting Technology Group at UL, 2012; plan 13.2
+ * item 6, added 2026-11-12): four fires in a 6.1 x 4.3 x 2.4 m room with one
+ * door and two ceiling vents opened and shut in time. Only each fire's first
+ * interval is compared, before any vent changes: both vents shut (the FDS
+ * inputs' lids, present at t = 0), the door open, the heat release the FDS
+ * ramp's to the interval's end (the guide's table: 430, 2144, 476 and 1011
+ * kW). The run ends at the interval's end; each quantity is compared over the
+ * guide's window for that interval (its last 60 s), as the guide does: two
+ * trees (Janssens and Tran), the ceiling jet at the guide's two thermocouples,
+ * the trees' head-height thermocouples, and the door's ten probes with the
+ * profile's neutral plane.
+ */
+async function ulnist(sources, dataplotText) {
+  const tests = [];
+  for (let n = 1; n <= 4; n += 1) {
+    const fdsFile = `Validation/UL_NIST_Vents/FDS_Input_Files/UL_NIST_Vents_Test_${n}.fds`;
+    const expFile = `UL_NIST_Vents/UL_NIST_Vents_Test_${n}.csv`;
+    const f = await fetchFile("fds", fdsFile);
+    const m = await fetchFile("exp", expFile);
+    sources.push(f.source, m.source);
+    const geo = readGeometry(f.text);
+    const table = csv(m.text);
+    const times = table.rows.map((r) => r[0]);
+    const rows = dataplotRows(dataplotText, expFile);
+    const first = rows.filter((r) => /^HGL Temperature/.test(r.quantity)).sort((a, b) => a.start - b.start)[0];
+    const [w0, w1] = [first.start, first.end];
+    const fire = geo.fire[0];
+    const surf = geo.surfs[fire.surf];
+    const area = (fire.xb[1] - fire.xb[0]) * (fire.xb[3] - fire.xb[2]);
+    const Q0 = surf.hrrpua * area * 1000;
+    const ramp = geo.ramps[surf.rampQ];
+    // The ramp to the first interval's end, then held (the run ends there).
+    const hrrW = ramp.filter(([t]) => t <= w1).map(([t, fr]) => [t, Math.round(Q0 * fr)]);
+    const out = { times, trees: {}, points: {}, head: {} };
+    const treeSpecs = [], points = [];
+    const H = 2.4;
+    for (const k of [1, 2]) {
+      const devs = geo.devices.filter((d) => new RegExp(`^T${k}-TC\\d+$`).test(d.id || ""));
+      const columns = devs.map((d) => `T${k}-${d.id.split("TC")[1]}`).filter((c) => table.col(c) >= 0);
+      const used = devs.filter((d) => table.col(`T${k}-${d.id.split("TC")[1]}`) >= 0);
+      const heights = used.map((d) => d.xyz[2]);
+      const red = reduceTree(table, columns, heights, H);
+      out.trees[`T${k}`] = { Tu: red.Tu, zi: red.zi, H };
+      const hd = headOf(table, columns, heights);
+      out.head[`T${k}`] = hd.series;
+      treeSpecs.push({ id: `T${k}`, x: used[0].xyz[0], y: used[0].xyz[1], H, heights, quantities: ["hglTemperature", "hglDepth"], head: hd.devices });
+    }
+    // The ceiling jet: the guide's thermocouples for the first interval.
+    const cj = rows.filter((r) => r.quantity === "Ceiling Jet Temperature" && r.start === w0);
+    for (const c of [...new Set(cj.flatMap((r) => r.columns))]) {
+      const i = table.col(c);
+      if (i < 0) continue;
+      const [x, y, z] = deviceXyz(geo, c.replace("-", "-TC"));
+      out.points[c] = table.rows.map((r) => (Number.isFinite(r[i]) ? r4(r[i]) : null));
+      points.push({ id: c, x, y, z, quantity: "ceilingJet" });
+    }
+    // The door's probes (D-V1 to D-V10, along y, positive into the room) and thermocouples.
+    const probes = [], series = {}, temps = {};
+    for (let q = 1; q <= 10; q += 1) {
+      const c = `Door_V${q}`, i = table.col(c);
+      const dev = geo.devices.find((d) => d.id === `D-V${q}`);
+      if (i < 0 || !dev) continue;
+      series[c] = table.rows.map((r) => (Number.isFinite(r[i]) && Math.abs(r[i]) < 20 ? r4(r[i]) : null));
+      const it = table.col(`Door_TC${q}`);
+      if (it >= 0) temps[c] = table.rows.map((r) => (valid(r[it]) ? r3(r[it]) : null));
+      probes.push({ id: c, x: dev.xyz[0], y: dev.xyz[1], z: dev.xyz[2], axis: "y", sign: 1, quantity: "doorVelocity" });
+    }
+    out.probes = { times, series, temperatures: temps };
+    const door = geo.holes.find((hb) => hb[4] <= 0.01 && hb[5] > 1.5) || [0, 0.9, 0, 0, 0, 2.1];
+    const balance = doorBalance(probes, out.probes, door[1] - door[0], door[4], door[5], [w0, w1], -1);
+    tests.push({
+      id: String(n),
+      fdsInput: fdsFile,
+      geometry: geometryOf(geo),
+      ventilation: "door open (0.9 m x 2.1 m), both ceiling vents shut (the first interval)",
+      ambientC: geo.tmpa,
+      horizon: w1,
+      interval: [w0, w1],
+      burner: { centre: [r3((fire.xb[0] + fire.xb[1]) / 2), r3((fire.xb[2] + fire.xb[3]) / 2)], area: r4(area), z0: r3(fire.xb[4]), peakW: Math.max(...hrrW.map((r) => r[1])), hrrW, ramp: `FDS RAMP_Q '${surf.rampQ}' x HRRPUA ${surf.hrrpua} kW/m2 x ${area.toFixed(3)} m2, to the first interval's end (${w1} s)`, ...radiantOf(geo) },
+      co2PerJ: CO2_PER_J.methane,
+      fuel: testFuel("methane", geo.reac?.soot ?? 0, null, "natural gas as methane; soot yield from the FDS input's REAC (none given: 0)"),
+      // Walls and ceiling: the default 16 mm type X gypsum board; the floor: concrete.
+      materials: materialsOf(geo, [defaultSurface(geo), "CONCRETE FLOOR"], [{ slot: 1, floor: true }]),
+      windows: { hglTemperature: [w0, w1], hglDepth: [w0, w1], ceilingJet: [w0, w1], doorVelocity: [w0, w1], neutralPlane: [w0, w1] },
+      trees: treeSpecs,
+      points,
+      ...(balance.usable ? { probes, profiles: [{ id: "door", probes: probes.slice().sort((a, b) => a.z - b.z).map((p) => p.id), outSign: -1 }] } : {}),
+      doorBalance: balance,
+      measured: out,
+    });
+  }
+  const off = tests.filter((T) => !T.doorBalance.usable);
+  if (off.length) console.log(`ulnist: door probes left out by the door-probe rule: ${off.map((T) => `${T.id} (${T.doorBalance.outOverIn})`).join(", ")}`);
+  return { dataset: "ulnist", tests };
+}
+
+/**
+ * NIST FSE 2008 (Lock et al.; plan 13.2 item 8, added 2026-11-12): an ISO 9705
+ * room, 2.4 x 3.6 x 2.4 m, its door 0.1 to 0.8 m wide. Only the tests with a
+ * door of 0.4 m or more are built (ISONG3, 0.8 m; ISOHept25 and 26, 0.4 m);
+ * the rest have 0.1 to 0.2 m doors, which the grid seals. The fire: the FDS
+ * input's fuel mass flux ramp times the burner's area and the fuel's heat of
+ * combustion (natural gas as methane, 50.0 MJ/kg, which the measured heat
+ * release confirms within 1 %; heptane 44.6 MJ/kg). The run ends at the end
+ * of the guide's first window for the test, and each quantity is compared
+ * over that window: O2 and CO2 at the front and rear sample points (dry, as
+ * measured), their thermocouples as the guide's ceiling jet, and the soot
+ * mass fraction where measured. The layer is not compared: the repository
+ * holds only the guide's reduced layer, not the trees.
+ */
+async function fse(sources, dataplotText) {
+  const tests = [];
+  for (const [id, fuelName, door] of [["ISONG3", "methane", 0.8], ["ISOHept25", "heptane", 0.4], ["ISOHept26", "heptane", 0.4]]) {
+    const fdsFile = `Validation/NIST_FSE_2008/FDS_Input_Files/${id}.fds`;
+    const expFile = `NIST_FSE_2008/${id}.csv`;
+    const f = await fetchFile("fds", fdsFile);
+    const m = await fetchFile("exp", expFile);
+    sources.push(f.source, m.source);
+    const geo = readGeometry(f.text);
+    const table = csv(m.text);
+    const times = table.rows.map((r) => r[0]);
+    const rows = dataplotRows(dataplotText, expFile);
+    const o2row = rows.filter((r) => r.quantity === "Oxygen Concentration").sort((a, b) => a.start - b.start)[0];
+    if (!o2row) {
+      console.log(`fse: ${id}: the guide compares nothing; left out`);
+      continue;
+    }
+    const [w0, w1] = [o2row.start, o2row.end];
+    // The fire: the vent whose surface has a mass flux (readGeometry finds heat release per area only).
+    const fireSurf = /&SURF\s+ID\s*=\s*'fire'[^/]*MASS_FLUX\(1\)\s*=\s*([0-9.]+)/i.exec(f.text);
+    const fireVent = /&VENT\s+XB\s*=\s*([-0-9., ]+?),\s*SURF_ID\s*=\s*'fire'/i.exec(f.text);
+    const dH = TEST_FUELS[fuelName].heatOfCombustion;
+    const ramp = geo.ramps.fire_ramp;
+    let xb, area, rate, how;
+    if (fireSurf && fireVent) {
+      // A gas burner: its vent's fuel mass flux (kg/(m2 s)).
+      xb = fireVent[1].split(",").map(Number);
+      area = (xb[1] - xb[0]) * (xb[3] - xb[2]);
+      rate = Number(fireSurf[1]) * area;
+      how = `FDS MASS_FLUX ${fireSurf[1]} kg/(m2 s) x ${area.toFixed(2)} m2`;
+    } else if (geo.props.nozzle) {
+      // A heptane spray onto a pan (as NIST/NRC and WTC): the nozzle's flow (L/min) at 684 kg/m3; the pan as the burner.
+      const pan = geo.obsts.find((o) => o.xb[4] === o.xb[5] && o.xb[1] - o.xb[0] > 0.3 && o.xb[3] - o.xb[2] > 0.3);
+      if (!pan) throw new Error(`fse ${id}: no pan`);
+      xb = pan.xb;
+      area = (xb[1] - xb[0]) * (xb[3] - xb[2]);
+      rate = (geo.props.nozzle.flowRate * 684) / 60000;
+      how = `the FDS nozzle's ${geo.props.nozzle.flowRate} L/min of heptane at 684 kg/m3, onto the ${area.toFixed(2)} m2 pan`;
+    } else throw new Error(`fse ${id}: no fire`);
+    const hrrW = ramp.filter(([t]) => t <= w1).map(([t, fr]) => [t, Math.round(rate * dH * fr)]);
+    const out = { times, trees: {}, points: {} };
+    const points = [];
+    const add = (column, device, quantity, scale = 1) => {
+      const i = table.col(column);
+      if (i < 0) return;
+      const vals = table.rows.map((r) => (Number.isFinite(r[i]) ? r4(r[i] * scale) : null));
+      if (!vals.some((v) => v != null)) return;
+      const d = geo.devices.find((x) => x.id === device);
+      const [x, y, z] = d ? d.xyz : column.endsWith("F") || /Front|TF/.test(column) ? [1.89, 0.25, 2.08] : [1.89, 2.86, 2.08];
+      out.points[column] = vals;
+      points.push({ id: column, x, y, z, quantity });
+    };
+    for (const c of ["O2Front", "O2Rear"]) add(c, c, "o2");
+    for (const c of ["CO2Front", "CO2Rear"]) add(c, c, "co2");
+    for (const c of ["TFSampPtRh", "TRSampPtRh"]) add(c, c, "ceilingJet");
+    if (fuelName === "heptane") for (const c of ["YsootF", "YsootR"]) add(c, c, "soot");
+    tests.push({
+      id,
+      fdsInput: fdsFile,
+      geometry: geometryOf(geo),
+      ventilation: `door ${door} m wide, 1.9 to 2.0 m high`,
+      ambientC: geo.tmpa,
+      horizon: w1,
+      burner: { centre: [r3((xb[0] + xb[1]) / 2), r3((xb[2] + xb[3]) / 2)], area: r4(area), z0: r3(xb[4]), peakW: Math.max(...hrrW.map((r) => r[1])), hrrW, ramp: `${how} x 'fire_ramp' x ${dH / 1e6} MJ/kg, to the guide's first window's end (${w1} s)`, radiantFraction: FDS_DEFAULT_RF[fuelName === "methane" ? "METHANE" : "N-HEPTANE"], radiantSource: `FDS's default for ${fuelName === "methane" ? "METHANE" : "N-HEPTANE"} (the input sets 0 because FDS there computes the flame's radiation; this solver's burner needs a fraction)` },
+      co2PerJ: CO2_PER_J[fuelName],
+      fuel: fuelName === "methane" ? testFuel("methane", 0, null, "natural gas (93 % methane) as methane; no soot") : testFuel("heptane", geo.reac?.soot ?? 0.0149, geo.reac?.co ?? 0.008, `heptane; soot ${geo.reac?.soot} and CO ${geo.reac?.co} from the FDS input's REAC`),
+      // Walls and ceiling: the input's default (25 mm ceramic fibre board on 13 mm gypsum); the floor: concrete.
+      materials: materialsOf(geo, [defaultSurface(geo), "CONCRETE"], [{ slot: 1, floor: true }]),
+      windows: { ceilingJet: [w0, w1], o2: [w0, w1], co2: [w0, w1], soot: [w0, w1] },
+      trees: [],
+      points,
+      measured: out,
+    });
+  }
+  return { dataset: "fse", tests };
+}
+
 export const DATASETS = {
   steckler: {
     run: steckler,
@@ -583,6 +1066,24 @@ export const DATASETS = {
     title: "NIST WTC investigation, phase 1 spray-burner compartment tests (NIST NCSTAR 1-5B)",
     reference: "Hamins, A. et al. (2005). Federal building and fire safety investigation of the World Trade Center disaster: experiments and modeling of structural steel elements exposed to fire. NIST NCSTAR 1-5B, volume 1. doi:10.6028/NIST.NCSTAR.1-5Bv1",
   },
+};
+
+DATASETS.fse = {
+  run: fse,
+  title: "NIST FSE 2008: fires in an ISO 9705 room, the tests with a door of 0.4 m or more, first window (NIST, Lock et al.)",
+  reference: "Lock, A., Bundy, M., Johnsson, E. L., Hamins, A., Ko, G. H., Hwang, C. and Fuss, P. (2008), as described in the FDS Validation Guide (NIST SP 1018-3), section NIST Full-Scale Enclosure Experiments, 2008",
+};
+
+DATASETS.ulnist = {
+  run: ulnist,
+  title: "UL/NIST vents: four natural gas fires in a 6.1 x 4.3 x 2.4 m room with a door and two ceiling vents, the first interval of each (NIST at UL, 2012)",
+  reference: "Opert, K. (2012). Assessment of natural vertical ventilation for structural fire fighting. M.S. thesis, University of Maryland, as described in the FDS Validation Guide (NIST SP 1018-3), section UL/NIST Vent Experiments",
+};
+
+DATASETS.fsri = {
+  run: fsri,
+  title: "UL FSRI 2018 compartment fires: natural gas burners 100 to 500 kW in a 3.66 x 3.66 x 2.44 m room, door open or shut (UL FSRI)",
+  reference: "Willi, J., Madrzykowski, D., McKinnon, M. and Dow, N. (2023). Experimental data from compartment fires with gas burner and upholstered furniture fuels. Data in Brief 47, 108934. doi:10.1016/j.dib.2023.108934 (data: doi:10.5281/zenodo.5703475)",
 };
 
 DATASETS.atf = {
@@ -608,7 +1109,8 @@ async function main() {
       dataset: name,
       title: def.title,
       reference: def.reference,
-      notice: NOTICE,
+      notice: reduced.notice || NOTICE,
+      ...(reduced.leftOut ? { leftOut: reduced.leftOut } : {}),
       generated: new Date().toISOString().slice(0, 10),
       tool: "tools/calibration/validation-data.mjs",
       heldOut: "never used to fit any solver parameter (fire-calibration-plan-2026-11-11.md, section 12)",

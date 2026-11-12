@@ -14,8 +14,9 @@
  * CO2 0.08, smoke obscuration 0.12; gas velocity 0.08 (Table 4.1).
  * neutralPlane 0.05 is NOT the guide's: it is this project's assumption,
  * taken from the layer depth's (the guide gives none for a neutral plane).
+ * headTemperature 0.07 is the guide's gas temperature (plan 13.2 item 1).
  */
-export const SIGMA_E = Object.freeze({ hglTemperature: 0.07, hglDepth: 0.05, ceilingJet: 0.07, plume: 0.07, o2: 0.08, co2: 0.08, smoke: 0.12, velocity: 0.08, neutralPlane: 0.05 });
+export const SIGMA_E = Object.freeze({ hglTemperature: 0.07, hglDepth: 0.05, ceilingJet: 0.07, plume: 0.07, o2: 0.08, co2: 0.08, smoke: 0.12, velocity: 0.08, neutralPlane: 0.05, headTemperature: 0.07 });
 
 /**
  * The FDS Validation Guide's statistics (section 4.4, Eqs. 4.19 to 4.21) on
@@ -33,6 +34,47 @@ export function statistics(pairs, sigmaE) {
   const sigmaM = Math.max(sigmaE, Math.sqrt(Math.max(0, varLog - sigmaE * sigmaE)));
   const delta = Math.exp(mean + (sigmaM * sigmaM) / 2 - (sigmaE * sigmaE) / 2);
   return { n: logs.length, dropped, delta: +delta.toFixed(3), sigmaM: +sigmaM.toFixed(3), meanRatio: +Math.exp(mean).toFixed(3) };
+}
+
+/**
+ * The FDS Validation Guide's weighted statistics (plan section 13.3), as its
+ * scatter plots compute them (firemodels/fds, Utilities/Python/fdsplotlib.py,
+ * "MATLAB bin-weighted logic"): the measured values split into 10 equal bins
+ * from 0 to their largest; each pair weighs n / (the pairs in its bin); the
+ * log-means and the variance u^2 of ln(M/E) are weighted (denominator the
+ * weights' sum less 1); sigma_E is capped at u / sqrt(2); sigma_M =
+ * sqrt(u^2 - sigma_E^2); delta = exp(mean ln M - mean ln E + sigma_M^2/2 -
+ * sigma_E^2/2). The guide also drops pairs outside its plot's range; this
+ * suite has no plot ranges and keeps every positive pair.
+ */
+export function weightedStatistics(pairs, sigmaE) {
+  const P = pairs.filter(([m, e]) => m > 0 && e > 0 && Number.isFinite(m) && Number.isFinite(e));
+  const n = P.length;
+  if (n < 2) return { n, delta: n ? +(P[0][0] / P[0][1]).toFixed(3) : null, sigmaM: null, weighted: true };
+  const maxE = Math.max(...P.map((p) => p[1]));
+  const size = maxE / 10;
+  const binOf = (e) => {
+    for (let ib = 0; ib < 10; ib += 1) if (e > ib * size && e <= (ib + 1) * size) return ib;
+    return -1; // as the guide's code: a pair in no bin keeps weight 1
+  };
+  const count = new Array(10).fill(0);
+  for (const [, e] of P) {
+    const b = binOf(e);
+    if (b >= 0) count[b] += 1;
+  }
+  const w = P.map(([, e]) => {
+    const b = binOf(e);
+    return b >= 0 && count[b] > 0 ? n / count[b] : 1;
+  });
+  const sw = w.reduce((a, b) => a + b, 0);
+  const lE = P.reduce((a, [, e], q) => a + Math.log(e) * w[q], 0) / sw;
+  const lM = P.reduce((a, [m], q) => a + Math.log(m) * w[q], 0) / sw;
+  const u2 = sw - 1 > 0 ? P.reduce((a, [m, e], q) => a + w[q] * (Math.log(m) - Math.log(e) - (lM - lE)) ** 2, 0) / (sw - 1) : 0;
+  const u = Math.sqrt(u2);
+  const sE = Math.min(u / Math.SQRT2, sigmaE);
+  const sM = Math.sqrt(Math.max(0, u2 - sE * sE));
+  const delta = Math.exp(lM - lE + (sM * sM) / 2 - (sE * sE) / 2);
+  return { n, delta: +delta.toFixed(3), sigmaM: +sM.toFixed(3), sigmaEUsed: +sE.toFixed(3), weighted: true };
 }
 
 /**

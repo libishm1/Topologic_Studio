@@ -1,0 +1,93 @@
+Checks without a model, 2026-11-12 (plan 13.6 and 13.7); run before any model comparison of these quantities.
+
+== node tools/calibration/head-temperature.mjs --check
+head-height devices: 1158 (all tests); left out by the plume rule (the same in every run):
+  nistnrc/15 5/Tree 5-5: in the plume: r 0.7 m < 0.938 m
+pre-ignition offset, worst: {"ratio":0.189,"off":69.38,"peak":367,"at":"wtc/2 east/TTRE11"}; devices more than 5 K off at t <= 0: 23
+  nbs/100A 1/T#1 62 21.3 K
+  nbs/100A 1/T#1 74 29.0 K
+  nbs/100O 1/T#1 62 43.5 K
+  nbs/100O 1/T#1 74 50.7 K
+  nbs/100Z 1/T#1 62 22.3 K
+  nbs/100Z 1/T#1 74 22.9 K
+  nbs/100Z 5/T#5 72 5.7 K
+  nbs/100Z 8/T#8 72 5.1 K
+  nbs/100Z 8/T#8 76 6.0 K
+  wtc/1 west/TTRW11 55.5 K
+  wtc/1 west/TTRW12 35.3 K
+  wtc/1 east/TTRE11 45.8 K
+  wtc/1 east/TTRE12 25.7 K
+  wtc/2 west/TTRW11 71.6 K
+  wtc/2 west/TTRW12 58.1 K
+  wtc/2 east/TTRE11 69.4 K
+  wtc/2 east/TTRE12 44.1 K
+  ulnist/3 T1/T1-3 11.6 K
+  ulnist/3 T2/T2-3 15.6 K
+  ulnist/4 T1/T1-3 15.2 K
+  ulnist/4 T1/T1-4 10.4 K
+  ulnist/4 T2/T2-3 16.8 K
+  ulnist/4 T2/T2-4 6.1 K
+the reducer on the measured series as the model, worst |M/E - 1|: {"err":0}
+  steckler: 275 pairs, delta 1, sigmaM 0 (sigma_E 0; 1 and 0 when the reducer reads the data as they are)
+  nbs: 25 pairs, delta 1, sigmaM 0 (sigma_E 0; 1 and 0 when the reducer reads the data as they are)
+  nistnrc: 59 pairs, delta 1, sigmaM 0 (sigma_E 0; 1 and 0 when the reducer reads the data as they are)
+  wtc: 24 pairs, delta 1, sigmaM 0 (sigma_E 0; 1 and 0 when the reducer reads the data as they are)
+  atf: 30 pairs, delta 1, sigmaM 0 (sigma_E 0; 1 and 0 when the reducer reads the data as they are)
+  fsri: 728 pairs, delta 1, sigmaM 0 (sigma_E 0; 1 and 0 when the reducer reads the data as they are)
+  ulnist: 16 pairs, delta 1, sigmaM 0 (sigma_E 0; 1 and 0 when the reducer reads the data as they are)
+
+== node tools/calibration/probe-checks.mjs
+1. the reducer on the measured series as the model (delta 1, sigmaM 0 when it reads the data as they are; sigma_E 0):
+  nistnrc doorVelocity        70 pairs, delta 1, sigmaM 0, worst |M/E - 1| 0.000
+  nistnrc neutralPlane        15 pairs, delta 1, sigmaM 0, worst |M/E - 1| 0.000
+  nistnrc doorMassFlow        10 pairs, delta 1, sigmaM 0, worst |M/E - 1| 0.000
+  wtc doorVelocity            93 pairs, delta 1, sigmaM 0, worst |M/E - 1| 0.000
+  fsri doorVelocity          252 pairs, delta 1, sigmaM 0, worst |M/E - 1| 0.000
+  fsri neutralPlane           36 pairs, delta 1, sigmaM 0, worst |M/E - 1| 0.000
+  ulnist doorVelocity         20 pairs, delta 1, sigmaM 0, worst |M/E - 1| 0.000
+  ulnist neutralPlane          2 pairs, delta 1, sigmaM 0, worst |M/E - 1| 0.000
+2. NIST/NRC: door mass flow from the probes and door thermocouples against the file's (mean over 300 to 1200 s):
+  test 03: inflow 1.80 m3/s and 2.12 kg/s: rho 1.18 kg/m3 (27 °C); outflow 2.46 m3/s and 1.96 kg/s: rho 0.80 kg/m3 (169 °C)
+  test 09: inflow 1.81 m3/s and 2.15 kg/s: rho 1.19 kg/m3 (24 °C); outflow 2.23 m3/s and 1.93 kg/s: rho 0.87 kg/m3 (134 °C)
+  test 14: inflow 2.02 m3/s and 2.36 kg/s: rho 1.17 kg/m3 (29 °C); outflow 2.25 m3/s and 1.81 kg/s: rho 0.80 kg/m3 (166 °C)
+  test 15: inflow 1.97 m3/s and 2.38 kg/s: rho 1.21 kg/m3 (19 °C); outflow 2.08 m3/s and 1.90 kg/s: rho 0.91 kg/m3 (113 °C)
+  test 18: inflow 2.02 m3/s and 2.33 kg/s: rho 1.16 kg/m3 (32 °C); outflow 2.19 m3/s and 1.85 kg/s: rho 0.85 kg/m3 (144 °C)
+3. WTC: the opening probes over 100 to 600 s (mean velocity, positive along +x; mean temperature):
+  test 1 (ambient 24 °C): in: v 1.46 to 1.74 m/s, T 25 to 26 °C; out: v 2.64 to 5.61 m/s, T 216 to 394 °C
+  test 2 (ambient 25 °C): in: v 1.37 to 1.62 m/s, T 24 to 24 °C; out: v 2.31 to 4.29 m/s, T 175 to 290 °C
+  test 3 (ambient 20 °C): in: v 1.64 to 1.80 m/s, T 20 to 21 °C; out: v 2.94 to 5.51 m/s, T 195 to 367 °C
+  test 4 (ambient 20 °C): in: v 1.57 to 1.87 m/s, T 25 to 29 °C; out: v 3.67 to 6.85 m/s, T 261 to 534 °C
+  test 5 (ambient 20 °C): in: v 1.58 to 1.81 m/s, T 27 to 32 °C; out: v 3.57 to 6.94 m/s, T 255 to 569 °C
+  test 6 (ambient 20 °C): in: v NaN to NaN m/s, T 28 to 33 °C; out: v 3.38 to 6.61 m/s, T 273 to 580 °C
+4. UL FSRI: doorway mass balance over each open test's last 180 s (out / in; about 1 when read right):
+  36 open tests: out/in median 1.76, range 0.90 to 2.92
+  100kWSB_Open_Back_2: 1.62
+  100kWSB_Open_Back_3: 2.05
+  100kWSB_Open_Center_2: 2.81
+  100kWSB_Open_Center_3: 2.17
+  100kWSB_Open_Corner_3: 2.10
+  100kW_Open_Back_3: 2.44
+  100kW_Open_Center_1: 1.47
+  100kW_Open_Center_3: 1.65
+  100kW_Open_Corner_1: 1.63
+  100kW_Open_Corner_2: 1.61
+  100kW_Open_Corner_3: 1.82
+  100kW_Open_Side_1: 1.66
+  100kW_Open_Side_2: 1.63
+  250kW_Open_Back_1: 2.35
+  250kW_Open_Back_3: 1.76
+  250kW_Open_Center_3: 1.48
+  250kW_Open_Corner_1: 2.92
+  250kW_Open_Corner_2: 2.57
+  250kW_Open_Corner_3: 2.59
+  250kW_Open_Side_1: 1.96
+  250kW_Open_Side_2: 1.83
+  250kW_Open_Side_3: 2.05
+  500kW_Open_Back_1: 1.74
+  500kW_Open_Back_3: 2.43
+  500kW_Open_Center_1: 2.23
+  500kW_Open_Center_2: 1.58
+  500kW_Open_Center_3: 2.15
+  500kW_Open_Side_1: 1.70
+  500kW_Open_Side_2: 2.28
+  500kW_Open_Side_3: 1.71

@@ -53,6 +53,11 @@ export function representation(runs, tests) {
       continue;
     }
     const T = tests[key];
+    // A test the data mark as shut (UL FSRI's closed-door tests, 2026-11-12) is sealed by design too.
+    if (T?.sealedByDesign) {
+      out[r.id] = { represented: true, why: "sealed by design (door shut)" };
+      continue;
+    }
     if (!T) {
       out[r.id] = { represented: true, why: "test not found; kept" };
       continue;

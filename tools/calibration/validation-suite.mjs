@@ -42,7 +42,15 @@
  *   ceilingJet      each ceiling thermocouple's largest rise over the window;
  *   o2, co2         each analyser's largest drop of O2 and rise of CO2 (volume fractions);
  *   doorVelocity    Steckler: the door centreline's peak outflow (steady);
- *   neutralPlane    Steckler: the door centreline's flow reversal height (steady).
+ *   neutralPlane    Steckler: the door centreline's flow reversal height (steady);
+ *   doorVelocity    (13.2 items 4, 5) each opening probe's largest speed, either
+ *                   way (the guide's maxabs); lib/probes.mjs;
+ *   neutralPlane    (13.2 item 5) each probe column's reversal height, mean
+ *                   profile over the window; doorMassFlow the door's largest
+ *                   inflow and outflow (kg/s); lib/probes.mjs;
+ *   headTemperature each tree's thermocouples 1.5 to 2.0 m over its floor, out
+ *                   of the burner's plume: the peak rise over the run (steady:
+ *                   the 200 to 300 s mean); lib/head.mjs (plan 13.2 item 1).
  * The model is read in the open cells (a tree: its column's open cells, the
  * open top as its ceiling; a point: its cell, or the nearest open one) at
  * the measurement's own times, each a mean of the model's 1 s readings over
@@ -58,6 +66,15 @@
  * stone walls instead of each test's (a diagnostic); --all-cells runs the
  * datasets the plan skips on 0.20 m cells; --horizon-cap S shortens every
  * run (a smoke test only).
+ *
+ * --solver-rev REV (added 2026-11-12, plan 13.5) takes the solver's modules
+ * (every src/core/*.js) from git at REV instead of the working tree, so a run
+ * of 13.A keeps d3c5751's solver while 13.B's changes are merged:
+ * --solver-rev d3c5751. The voxeliser that the sealed-door rule uses comes
+ * from the same snapshot. --wall-layers (added 2026-11-12, for 13.B) passes
+ * each wall material's layers (thickness, rho, c, k, as lib/fds.mjs
+ * surfaceMaterial returns them) to the solver's inert option beside the
+ * lumped values; without it (13.A) only the lumped values go.
  */
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { execFileSync } from "node:child_process";
@@ -92,6 +109,13 @@ export const PLAN = Object.freeze({
   wtc: { horizon: (t) => Math.min(600, Math.ceil(lastBurning(t.burner.hrrW)) + 30), skipCells: [0.2] },
   // Added 2026-11-12 (plan section 12.9): 600 s; about 78,000 cells on 0.20 m, so not run there by default.
   atf: { horizon: () => 600, skipCells: [0.2] },
+  // Added 2026-11-12 (plan 13.2 item 3): each test's own run, ignition to the first of Burner Off, a door or
+  // fan event, the file's end and 900 s (validation-data.mjs fsri).
+  fsri: { horizon: (t) => t.horizon },
+  // Added 2026-11-12 (plan 13.2 item 6): each fire's first interval, to its end (validation-data.mjs ulnist).
+  ulnist: { horizon: (t) => t.horizon },
+  // Added 2026-11-12 (plan 13.2 item 8): to the end of the guide's first window (validation-data.mjs fse).
+  fse: { horizon: (t) => t.horizon },
 });
 
 /** The independent test series and what makes each independent (plan section 12). */
@@ -101,10 +125,22 @@ export const SERIES = Object.freeze({
   nistnrc: "NIST 2003, Hamins et al. for the US NRC; large compartment (shares NIST's large fire laboratory and lead with wtc)",
   wtc: "NIST 2004, Hamins et al. for the WTC investigation; spray-burner compartment (shares the laboratory and lead with nistnrc)",
   atf: "ATF Fire Research Laboratory 2008, Sheppard; two corridors joined by a stairwell (a federal laboratory other than NIST)",
+  fsri: "UL FSRI 2018, Willi et al.; gas burners in a 3.66 m room with one door (a laboratory other than NIST and ATF; a box scene, no FDS input)",
+  ulnist: "NIST at UL 2012, Opert; gas fires in a 6.1 x 4.3 m room with a door and ceiling vents, first interval (NIST's fire fighting group; UL's building)",
+  fse: "NIST 2008, Lock et al.; an ISO 9705 room, the tests with doors of 0.4 m or more, first window",
 });
 
+/**
+ * The laboratory of each series (plan section 13.1): NBS and NIST count as
+ * one. The verdict counts series (12.6); the laboratories of the in-band
+ * series are reported beside it.
+ */
+export const LAB = Object.freeze({ steckler: "NBS/NIST", nbs: "NBS/NIST", nistnrc: "NBS/NIST", wtc: "NBS/NIST", atf: "ATF", fsri: "UL FSRI", ulnist: "NBS/NIST", delco: "NBS/NIST", fse: "NBS/NIST" });
+
 /** Which sigma_E (lib/stats.mjs SIGMA_E) each quantity takes. */
-const SIGMA_KEY = { hglTemperature: "hglTemperature", hglDepth: "hglDepth", ceilingJet: "ceilingJet", o2: "o2", co2: "co2", smoke: "smoke", doorVelocity: "velocity", neutralPlane: "neutralPlane" };
+// doorMassFlow takes the velocity's 0.08: the guide gives none for a mass flow (this project's assumption, 2026-11-12).
+// soot (a mass fraction) takes the smoke's 0.12: the guide gives none for it (this project's assumption, 2026-11-12).
+const SIGMA_KEY = { hglTemperature: "hglTemperature", hglDepth: "hglDepth", ceilingJet: "ceilingJet", o2: "o2", co2: "co2", smoke: "smoke", doorVelocity: "velocity", neutralPlane: "neutralPlane", headTemperature: "headTemperature", doorMassFlow: "velocity", soot: "smoke" };
 
 /**
  * The verdict, fixed before the baseline (plan section 12): per quantity and
@@ -183,7 +219,9 @@ async function runCase(c) {
     }
     inert = [0, 1, 2].map((q) => {
       const m = slots[q] || slots[0];
-      return { rho: m.arealMass / h, c: m.c, k: m.k, eps: m.eps };
+      const lumped = { rho: m.arealMass / h, c: m.c, k: m.k, eps: m.eps };
+      // --wall-layers (13.B): the wall's real layers too, exposed layer first, for a solver that conducts through them.
+      return c.wallLayers && m.layers?.length ? { ...lumped, layers: m.layers.map((l) => ({ thickness: l.thickness, rho: l.rho, c: l.c, k: l.k })) } : lumped;
     });
   }
 
@@ -229,6 +267,14 @@ async function runCase(c) {
   let points = (T.points || []).map((p) => ({ ...p, cell: null }));
   let door = T.door ? { col: L.column(G, T.door.x, T.door.y, null) } : null;
   const uAt = (i, j, k) => i + (grid.nx + 1) * (j + grid.ny * k);
+  // Opening probes (13.2 items 4, 5): the connected open cell nearest each; FDS x, y, z are the solver's i, k, j.
+  let probes = (T.probes || []).map((p) => ({ ...p, cell: null }));
+  const vAt = (i, j, k) => i + grid.nx * (j + (grid.ny + 1) * k);
+  const wAt = (i, j, k) => i + grid.nx * (j + grid.ny * k);
+  const along = (axis, { i, j, k }) =>
+    axis === "x" ? 0.5 * (sim.u[uAt(i, j, k)] + sim.u[uAt(i + 1, j, k)]) : axis === "z" ? 0.5 * (sim.v[vAt(i, j, k)] + sim.v[vAt(i, j + 1, k)]) : 0.5 * (sim.w[wAt(i, j, k)] + sim.w[wAt(i, j, k + 1)]);
+  // The door's faces (13.2 item 5): the x faces nearest its plane whose cells' centres lie in the opening.
+  let doorFlow = null;
   let region = null;
   const connect = () => {
     const home = cell0;
@@ -285,6 +331,21 @@ async function runCase(c) {
       for (let k = 0; k < grid.nz; k += 1) if (ok(G.at(d.i, jm, k))) w += 1;
       door.width = w * h;
     }
+    probes = probes.map((p) => ({ ...p, cell: L.deviceCell(G, p.x, p.y, p.z, ok) }));
+    if (T.doorFlow) {
+      const f = T.doorFlow;
+      const iF = Math.round((f.plane - grid.origin[0]) / h);
+      const faces = [];
+      for (let k = 0; k < grid.nz; k += 1) for (let j = 0; j < grid.ny; j += 1) {
+        const [, y, z] = G.centre(iF, j, k);
+        if (y < f.y[0] || y > f.y[1] || z < f.z[0] || z > f.z[1] || iF < 1 || iF >= grid.nx) continue;
+        const a = G.at(iF - 1, j, k), b = G.at(iF, j, k);
+        if (!ok(a) || !ok(b)) continue;
+        // inward +1: +x leads into the room, so the cell at iF - 1 is outside.
+        faces.push({ u: uAt(iF, j, k), outside: f.inward > 0 ? a : b, inside: f.inward > 0 ? b : a });
+      }
+      doorFlow = { faces, inward: f.inward, area: faces.length * h * h, plane: grid.origin[0] + iF * h };
+    }
     let n = 0;
     for (let cc = 0; cc < sim.N; cc += 1) if (ok(cc)) n += 1;
     region = { source: reg && reg.length === sim.N ? "solver regions" : "flood fill", openCells: n };
@@ -307,7 +368,8 @@ async function runCase(c) {
 
   // Each second's readings, from the end of the first second (when the devices are connected).
   const seconds = [];
-  let treeT = [], pointV = [];
+  let treeT = [], pointV = [], probeV = [];
+  const flowIn = [], flowOut = [];
   const doorU = [];
   let speed = 0, mostSubsteps = 1, health = null, peakSpeed = 0;
   const dt = sim.P.dt;
@@ -329,6 +391,7 @@ async function runCase(c) {
       connect();
       treeT = trees.map(() => []);
       pointV = points.map(() => []);
+      probeV = probes.map(() => []);
     }
     seconds.push(end);
     trees.forEach((tr, q) => treeT[q].push(Float32Array.from(tr.cells, (cc) => sim.T[cc])));
@@ -344,12 +407,33 @@ async function runCase(c) {
         const K = R.SOOT_EXTINCTION * (rs / list.length);
         return pointV[q].push(100 * (1 - Math.exp(-K)));
       }
-      pointV[q].push(p.quantity === "o2" ? moleFraction(cc, SP.O2) : p.quantity === "co2" ? moleFraction(cc, SP.CO2) : sim.T[cc]);
+      pointV[q].push(p.quantity === "o2" ? moleFraction(cc, SP.O2) : p.quantity === "co2" ? moleFraction(cc, SP.CO2) : p.quantity === "soot" ? sim.Y[cc * NS + SP.SOOT] : sim.T[cc]);
     });
     if (door) doorU.push(Float32Array.from(door.faces, ([a, b]) => 0.5 * (sim.u[a] + sim.u[b])));
+    probes.forEach((p, q) => probeV[q].push(p.cell ? +(p.sign * along(p.axis, p.cell)).toFixed(3) : null));
+    if (doorFlow) {
+      let fin = 0, fout = 0;
+      for (const fc of doorFlow.faces) {
+        const un = doorFlow.inward * sim.u[fc.u];
+        if (un > 0) fin += un * sim.rho[fc.outside] * h * h;
+        else fout -= un * sim.rho[fc.inside] * h * h;
+      }
+      flowIn.push(+fin.toFixed(4));
+      flowOut.push(+fout.toFixed(4));
+    }
   }
   const ran = performance.now();
   health ||= { ok: true, maxSpeed: +peakSpeed.toFixed(2), substeps: mostSubsteps };
+  // Each tree's open cells around head height (centres 1.5 - h to 2.0 + h over the column's model floor),
+  // their 1 s temperatures (K, from 1 s on), kept so that head-height temperature (plan 13.2 item 1) is
+  // a reducer on the stored runs (added 2026-11-12: the runs before kept no series).
+  const headSeries = {};
+  trees.forEach((tr, q) => {
+    if (!tr.z) return;
+    const pick = tr.z.map((z, i) => (z >= 1.5 - h && z <= 2.0 + h ? i : -1)).filter((i) => i >= 0);
+    if (!pick.length) return;
+    headSeries[tr.id] = { z: pick.map((i) => +tr.z[i].toFixed(3)), T: pick.map((i) => treeT[q].map((row) => +row[i].toFixed(2))) };
+  });
 
   // ------------------------------------------------ comparisons
   const pairs = [];
@@ -419,8 +503,8 @@ async function runCase(c) {
           const meas = series[iq];
           if (!rows || meas == null || (p.quantity === "o2" && meas < 0.01)) continue;
           const mv = mean(rows)[0];
-          const model = p.quantity === "o2" ? x0O2 - mv : p.quantity === "co2" || p.quantity === "smoke" ? mv : mv - Ta;
-          const measured = p.quantity === "o2" ? x0 - meas : p.quantity === "co2" || p.quantity === "smoke" ? meas - x0 : meas - T.ambientC;
+          const model = p.quantity === "o2" ? x0O2 - mv : p.quantity === "co2" || p.quantity === "smoke" || p.quantity === "soot" ? mv : mv - Ta;
+          const measured = p.quantity === "o2" ? x0 - meas : p.quantity === "co2" || p.quantity === "smoke" || p.quantity === "soot" ? meas - x0 : meas - T.ambientC;
           best = best == null ? model : Math.max(best, model);
           bestM = bestM == null ? measured : Math.max(bestM, measured);
         }
@@ -428,6 +512,16 @@ async function runCase(c) {
       });
     }
   }
+  // Head-height temperature (plan 13.2 item 1): the same reducer as on stored runs (lib/head.mjs).
+  const HD = await import("./lib/head.mjs");
+  const head = HD.headPairs({ dataset, cell: h, horizon, health, series: { from: 1, step: 1, head: headSeries } }, T, c.steadyFrom);
+  pairs.push(...head.pairs);
+  // Opening probes, neutral planes and door mass flow (13.2 items 4, 5): lib/probes.mjs, as on stored runs.
+  const probeSeries = Object.fromEntries(probes.map((p, q) => [p.id, probeV[q] || []]));
+  const flowSeries = doorFlow ? { in: flowIn, out: flowOut } : null;
+  const PR = await import("./lib/probes.mjs");
+  const probed = PR.probePairs({ dataset, cell: h, horizon, health, series: { from: 1, step: 1, probes: probeSeries, doorFlow: flowSeries } }, T);
+  pairs.push(...probed.pairs);
   const Qpeak = Math.max(...T.burner.hrrW.map((r) => r[1]));
   return {
     id: c.id,
@@ -449,6 +543,10 @@ async function runCase(c) {
     region,
     walls: inert ? { slots: T.materials.slots.map((m) => m.surface), rhoModel: inert.map((m) => +m.rho.toFixed(2)), solidCells: wallCells, check: wallCheck } : "the solver's stone",
     health,
+    series: { from: 1, step: 1, head: headSeries, ...(probes.length ? { probes: probeSeries } : {}), ...(flowSeries ? { doorFlow: flowSeries } : {}) },
+    head: { excluded: head.excluded, missing: head.missing },
+    ...(probes.length ? { probes: { cells: probes.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null })), notes: probed.notes } } : {}),
+    ...(doorFlow ? { doorFlow: { faces: doorFlow.faces.length, area: +doorFlow.area.toFixed(3), plane: +doorFlow.plane.toFixed(3), measuredArea: T.doorFlow.area ?? null } } : {}),
     wallSeconds: +((ran - built) / 1000).toFixed(1),
     buildSeconds: +((built - t0) / 1000).toFixed(1),
     pairs,
@@ -465,6 +563,10 @@ function burnerIntegral(table, t1) {
     const qe = b > a ? qa + ((qb - qa) * (e - a)) / (b - a) : qb;
     E += 0.5 * (qa + qe) * (e - a);
   }
+  // Past its last row the burner holds the last value (flamescapes.js burnerRate), so the record does too
+  // (fixed 2026-11-12: before, ATF's tables, ending at 60 s, were integrated to 60 s only; plan 12.10).
+  const [tl, ql] = table[table.length - 1];
+  if (t1 > tl) E += ql * (t1 - tl);
   return E;
 }
 
@@ -476,10 +578,12 @@ function burnerIntegral(table, t1) {
  * not represent their test's ventilation left out (lib/represented.mjs,
  * geometry only).
  */
-async function bothWays(report, S, measures) {
-  const R = await import("./lib/represented.mjs");
-  const tests = {};
-  for (const d of new Set(report.runs.map((r) => r.dataset))) {
+export async function bothWays(report, S, measures, given = null, Rin = null) {
+  // The sealed-door rule's module: the snapshot's (its voxeliser pinned with the solver) when a run passes it.
+  const R = Rin || (await import("./lib/represented.mjs"));
+  // A run passes the tests it read at its start (given); --summary reads the data files.
+  const tests = given || {};
+  if (!given) for (const d of new Set(report.runs.map((r) => r.dataset))) {
     const data = JSON.parse(readFileSync(path.join(HERE, "data", `${d}.json`), "utf8"));
     for (const T of data.tests) tests[`${d}/${T.id}`] = T;
   }
@@ -492,7 +596,7 @@ async function bothWays(report, S, measures) {
   report.settings = { ...report.settings, rule: "claim protocol addendum 2026-11-12 00:28: a run whose fire's gas cannot reach the open boundary, though its test had an opening, is left out and reported as not represented on this grid (lib/represented.mjs; sealed by design: " + JSON.stringify(R.SEALED_BY_DESIGN) + ")" };
 }
 
-function summarise(runs, S, measures = {}) {
+export function summarise(runs, S, measures = {}) {
   const pairs = runs.flatMap((r) => r.pairs);
   const quantities = [...new Set(pairs.map((p) => p.quantity))];
   const cells = [...new Set(runs.map((r) => r.cell))].sort((a, b) => a - b);
@@ -511,7 +615,10 @@ function summarise(runs, S, measures = {}) {
         const stopped = rs.filter((r) => !r.health.ok).length;
         const s = S.statistics(ps.map((p) => [p.model, p.measured]), sE);
         const t = S.tier(s);
-        per[d] = { ...s, tier: t, tests: new Set(ps.map((p) => p.test)).size, runs: rs.length, stopped, inBand: t === "within the calibrated band" && stopped === 0 };
+        // The 10-bin weighted statistics (13.3), within the series.
+        const sw = S.weightedStatistics(ps.map((p) => [p.model, p.measured]), sE);
+        const tw = S.tier(sw);
+        per[d] = { ...s, tier: t, weighted: { delta: sw.delta, sigmaM: sw.sigmaM, sigmaEUsed: sw.sigmaEUsed, tier: tw, inBand: tw === "within the calibrated band" && stopped === 0 }, lab: LAB[d] || d, tests: new Set(ps.map((p) => p.test)).size, runs: rs.length, stopped, inBand: t === "within the calibrated band" && stopped === 0 };
         ((byDataset[d] ||= {})[q] ||= {})[h] = per[d];
       }
       if (!Object.keys(per).length) continue;
@@ -528,14 +635,30 @@ function summarise(runs, S, measures = {}) {
       const claim = n >= 3 && inBand.length >= 3 && outside === 0 ? "calibrated" : n >= 2 && nIndicative >= 2 ? "indicative" : "not calibrated";
       // Where the two rules differ, the stricter gives the verdict (plan 12.6; protocol addendum).
       const rank = { calibrated: 2, indicative: 1, "not calibrated": 0 };
-      const final = rank[verdict] <= rank[claim] ? verdict : claim;
-      byQuantity[q][h] = { pooled: { ...pooled, tier: pooledTier }, datasets: Object.keys(per), datasetsInBand: inBand, datasetsIndicativeOrBetter: Object.entries(per).filter(([, v]) => okIndicative(v)).map(([d]) => d), verdict, claim, final };
+      // The same two rules on the weighted statistics (13.3).
+      const pooledW = S.weightedStatistics(all.map((p) => [p.model, p.measured]), sE);
+      const pooledTierW = S.tier(pooledW);
+      const inBandW = Object.entries(per).filter(([, v]) => v.weighted.inBand).map(([d]) => d);
+      const verdictW = inBandW.length >= 3 && pooledTierW === "within the calibrated band" ? "calibrated" : pooledTierW === "within the calibrated band" || pooledTierW === "indicative" ? "indicative" : "not calibrated";
+      const okIndicativeW = (v) => v.stopped === 0 && (v.weighted.tier === "within the calibrated band" || v.weighted.tier === "indicative");
+      const nIndicativeW = Object.values(per).filter(okIndicativeW).length;
+      const outsideW = Object.values(per).filter((v) => !okIndicativeW(v)).length;
+      const claimW = n >= 3 && inBandW.length >= 3 && outsideW === 0 ? "calibrated" : n >= 2 && nIndicativeW >= 2 ? "indicative" : "not calibrated";
+      // The strictest of the four decides (12.6, the protocol's section 4, each unweighted and weighted).
+      const final = [verdict, claim, verdictW, claimW].reduce((a, b) => (rank[b] < rank[a] ? b : a));
+      const labs = (ds) => [...new Set(ds.map((d) => LAB[d] || d))];
+      byQuantity[q][h] = {
+        pooled: { ...pooled, tier: pooledTier }, datasets: Object.keys(per), datasetsInBand: inBand, datasetsIndicativeOrBetter: Object.entries(per).filter(([, v]) => okIndicative(v)).map(([d]) => d), verdict, claim,
+        weighted: { pooled: { ...pooledW, tier: pooledTierW }, datasetsInBand: inBandW, verdict: verdictW, claim: claimW },
+        labs: labs(Object.keys(per)), labsInBand: labs(inBand), labsInBandWeighted: labs(inBandW),
+        final, fromOneLab: labs(final === "calibrated" ? inBand : Object.keys(per)).length === 1,
+      };
     }
   }
   return { byDataset, byQuantity };
 }
 
-function printTables(report) {
+export function printTables(report) {
   printStats(report, report.stats, "as pre-registered (every test)");
   if (report.statsRule) {
     console.log(`\nNot represented on their grids (left out under the 2026-11-12 rule): ${report.notRepresented.join(", ") || "none"}`);
@@ -559,15 +682,22 @@ function printStats(report, stats, title, brief = false) {
     const pi = rs.map((r) => r.plumeIndex);
     console.log(`${k.split(" ")[0].padEnd(9)} ${k.split(" ")[1].padEnd(6)} ${String(rs.length).padStart(4)} ${String(rs.filter((r) => !r.health.ok).length).padStart(7)}  ${String(Math.max(...rs.map((r) => r.cells))).padStart(10)}  ${f(Math.min(...pi), 1)}-${f(Math.max(...pi), 1)}`.padEnd(60) + `${f(ws[ws.length >> 1], 0)}, ${f(ws[ws.length - 1], 0)}`);
   }
-  console.log("\nquantity        dataset    cell   n   delta  sigmaM  tier");
+  console.log("\nquantity        dataset    cell   n   delta  sigmaM  tier                       | weighted delta sigmaM tier                       | laboratory");
   for (const [d, qs] of Object.entries(stats.byDataset)) {
     for (const [q, hs] of Object.entries(qs)) {
-      for (const [h, s] of Object.entries(hs)) console.log(`${q.padEnd(15)} ${d.padEnd(10)} ${String(h).padEnd(5)} ${String(s.n).padStart(3)}  ${f(s.delta).padStart(6)}  ${f(s.sigmaM).padStart(6)}  ${s.tier}${s.stopped ? ` (${s.stopped} of ${s.runs} runs stopped)` : ""}`);
+      for (const [h, s] of Object.entries(hs)) {
+        const w = s.weighted || {};
+        console.log(`${q.padEnd(15)} ${d.padEnd(10)} ${String(h).padEnd(5)} ${String(s.n).padStart(3)}  ${f(s.delta).padStart(6)}  ${f(s.sigmaM).padStart(6)}  ${String(s.tier).padEnd(26)} | ${f(w.delta).padStart(14)} ${f(w.sigmaM).padStart(6)} ${String(w.tier ?? "-").padEnd(26)} | ${s.lab ?? "-"}${s.stopped ? ` (${s.stopped} of ${s.runs} runs stopped)` : ""}`);
+      }
     }
   }
-  console.log("\nquantity        cell   pooled n  delta  sigmaM  datasets in band          verdict (plan 12.6)   claim (protocol 4)   final (the stricter)");
+  console.log("\nquantity        cell   pooled n  delta  sigmaM | weighted delta sigmaM | series in band (labs)          plan 12.6 / protocol 4 | weighted            final (the strictest)");
   for (const [q, hs] of Object.entries(stats.byQuantity)) {
-    for (const [h, v] of Object.entries(hs)) console.log(`${q.padEnd(15)} ${String(h).padEnd(5)} ${String(v.pooled.n).padStart(9)}  ${f(v.pooled.delta).padStart(5)}  ${f(v.pooled.sigmaM).padStart(6)}  ${`${v.datasetsInBand.length}/${v.datasets.length} ${v.datasetsInBand.join(",")}`.padEnd(25)} ${v.verdict.padEnd(21)} ${(v.claim ?? "-").padEnd(20)} ${v.final ?? "-"}`);
+    for (const [h, v] of Object.entries(hs)) {
+      const w = v.weighted || { pooled: {}, verdict: "-", claim: "-", datasetsInBand: [] };
+      const labs = v.labsInBand ? ` (${v.labsInBand.length} lab${v.labsInBand.length === 1 ? "" : "s"})` : "";
+      console.log(`${q.padEnd(15)} ${String(h).padEnd(5)} ${String(v.pooled.n).padStart(9)}  ${f(v.pooled.delta).padStart(5)}  ${f(v.pooled.sigmaM).padStart(6)} | ${f(w.pooled.delta).padStart(14)} ${f(w.pooled.sigmaM).padStart(6)} | ${`${v.datasetsInBand.length}/${v.datasets.length}${labs}; w ${w.datasetsInBand.length}`.padEnd(30)} ${`${v.verdict} / ${v.claim ?? "-"}`.padEnd(22)} | ${`${w.verdict} / ${w.claim}`.padEnd(19)} ${v.final ?? "-"}${v.fromOneLab ? " (one laboratory)" : ""}`);
+    }
   }
 }
 
@@ -577,17 +707,35 @@ function printStats(report, stats, title, brief = false) {
  * working tree changes during the suite. Returns the folder and the copies'
  * SHA-256 digests (the first 16 hex digits).
  */
-function snapshotCore() {
+function snapshotCore(rev = null) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "flamescapes-core-"));
+  // The repository's layout, so the harness's relative imports (lib/fds.mjs: voxelize.js) reach the copies.
+  const core = path.join(dir, "topologicpy-web-frontend", "src", "core");
+  mkdirSync(core, { recursive: true });
   const digests = {};
-  for (const f of readdirSync(CORE)) {
-    if (!f.endsWith(".js")) continue;
-    const buf = readFileSync(path.join(CORE, f));
-    writeFileSync(path.join(dir, f), buf);
+  // From git at rev (--solver-rev), else the working tree. Git's blobs have LF line endings and this working
+  // tree CRLF (core.autocrlf), so a file's digest is also given with CRLF turned to LF (lfDigests): equal
+  // lfDigests mean the same code.
+  const lfDigests = {};
+  let resolved = null;
+  const files = rev
+    ? execFileSync("git", ["ls-tree", "--name-only", rev, "topologicpy-web-frontend/src/core/"], { cwd: ROOT, encoding: "utf8" }).split("\n").map((p) => p.split("/").pop()).filter((f) => f.endsWith(".js"))
+    : readdirSync(CORE).filter((f) => f.endsWith(".js"));
+  if (rev) resolved = execFileSync("git", ["rev-parse", rev], { cwd: ROOT, encoding: "utf8" }).trim();
+  for (const f of files) {
+    const buf = rev ? execFileSync("git", ["show", `${rev}:topologicpy-web-frontend/src/core/${f}`], { cwd: ROOT, maxBuffer: 1 << 28 }) : readFileSync(path.join(CORE, f));
+    writeFileSync(path.join(core, f), buf);
     digests[f] = createHash("sha256").update(buf).digest("hex").slice(0, 16);
+    lfDigests[f] = createHash("sha256").update(Buffer.from(buf.toString("utf8").split("\r\n").join("\n"))).digest("hex").slice(0, 16);
   }
   writeFileSync(path.join(dir, "package.json"), JSON.stringify({ type: "module" }));
-  return { dir, digests };
+  // The harness too (this file and lib/*.mjs), so the workers run the code the suite started with even
+  // if the harness is edited during a long run (added 2026-11-12: workers loaded the live file before).
+  const harness = path.join(dir, "tools", "calibration");
+  mkdirSync(path.join(harness, "lib"), { recursive: true });
+  writeFileSync(path.join(harness, "validation-suite.mjs"), readFileSync(fileURLToPath(import.meta.url)));
+  for (const f of readdirSync(path.join(HERE, "lib")).filter((f) => f.endsWith(".mjs"))) writeFileSync(path.join(harness, "lib", f), readFileSync(path.join(HERE, "lib", f)));
+  return { dir, core, digests, lfDigests, rev: resolved, harness: path.join(harness, "validation-suite.mjs"), harnessDigests: harnessDigests() };
 }
 
 /**
@@ -631,6 +779,35 @@ async function main() {
     return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
   };
   const S = await import("./lib/stats.mjs");
+  const rev = flag("--solver-rev", null);
+  // For --merge and --summary with --solver-rev: the sealed-door rule's voxeliser from that revision.
+  const pinnedR = async () => {
+    if (!rev) return null;
+    const snap = snapshotCore(rev);
+    return import(pathToFileURL(path.join(path.dirname(snap.harness), "lib", "represented.mjs")).href);
+  };
+  if (args.includes("--merge")) {
+    // Several results files as one (added 2026-11-12): a run in a later file replaces the same run (dataset/test@cell)
+    // in an earlier one; the statistics are recomputed on the union, both ways. Each source's state is kept.
+    const files = flag("--merge").split(",");
+    const byId = new Map(), measures = {}, sources = [];
+    for (const f of files) {
+      const r = JSON.parse(readFileSync(f, "utf8"));
+      sources.push({ file: f.split("\\").join("/").replace(/^.*benchmark\//, "benchmark/"), generated: r.generated, git: r.git, jobs: r.jobs, wallSeconds: r.wallSeconds, runs: r.runs.length });
+      for (const run of r.runs) byId.set(run.id, run);
+      for (const [d, qs] of Object.entries(r.settings?.measures || {})) for (const q of qs) (measures[d] ||= new Set()).add(q);
+    }
+    const report = { generated: new Date().toISOString(), tool: "tools/calibration/validation-suite.mjs --merge", plan: "wiki/research/fire-calibration-plan-2026-11-11.md, sections 12 and 13", sources, solverRev: rev, jobs: "-", wallSeconds: 0, settings: { verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) }, runs: [...byId.values()] };
+    await bothWays(report, S, measures, null, await pinnedR());
+    printTables(report);
+    const out = flag("--json", null);
+    if (out) {
+      mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
+      writeFileSync(path.resolve(out), JSON.stringify(report, null, 1) + "\n");
+      console.log(`\nwrote ${out}`);
+    }
+    return;
+  }
   if (args.includes("--summary")) {
     const file = flag("--summary");
     const report = JSON.parse(readFileSync(file, "utf8"));
@@ -639,7 +816,7 @@ async function main() {
     if (stored) for (const [d, qs] of Object.entries(stored)) measures[d] = new Set(qs);
     else for (const p of report.runs.flatMap((r) => r.pairs)) (measures[p.dataset] ||= new Set()).add(p.quantity);
     report.settings = { ...report.settings, verdictRule: VERDICT, claimRule: CLAIM };
-    await bothWays(report, S, measures);
+    await bothWays(report, S, measures, null, await pinnedR());
     printTables(report);
     if (args.includes("--write")) {
       const was = report.git?.harnessDigests;
@@ -659,9 +836,12 @@ async function main() {
   const solver = Object.fromEntries((flag("--solver", "") || "").split(",").filter(Boolean).map((kv) => kv.split("=")).map(([k, v]) => [k, Number(v)]));
   const only = flag("--tests", null);
   const jsonOut = flag("--json", null);
-  const snapshot = snapshotCore();
+  const snapshot = snapshotCore(rev);
   const git = gitState();
-  const F = await import(pathToFileURL(path.join(snapshot.dir, "flamescapes.js")).href);
+  // The sealed-door rule's module from the snapshot, loaded now (its voxeliser is the snapshot's).
+  const Rsnap = await import(pathToFileURL(path.join(path.dirname(snapshot.harness), "lib", "represented.mjs")).href);
+  const wallLayers = args.includes("--wall-layers");
+  const F = await import(pathToFileURL(path.join(snapshot.core, "flamescapes.js")).href);
   const walls = flag("--walls", "test");
   const fuelRule = flag("--fuel", "test");
   const cases = [];
@@ -684,7 +864,7 @@ async function main() {
         const bb = T.geometry.meshes.reduce((a, m) => [Math.min(a[0], m[0]), Math.max(a[1], m[1]), Math.min(a[2], m[2]), Math.max(a[3], m[3]), Math.min(a[4], m[4]), Math.max(a[5], m[5])], [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity]);
         const vol = (bb[1] - bb[0] + 2 * h) * (bb[3] - bb[2] + 2 * h) * (bb[5] - bb[4] + 2 * h);
         const cost = (vol / h ** 3) * horizon * Math.max(2, Math.sqrt(T.burner.peakW / 1e5));
-        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.dir, walls, fuelRule });
+        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers });
       }
     }
   }
@@ -694,6 +874,10 @@ async function main() {
   for (const cs of cases) {
     const m = (measures[cs.dataset] ||= new Set());
     if (cs.test.trees?.length) (m.add("hglTemperature"), m.add("hglDepth"));
+    if (cs.test.trees?.some((tr) => tr.head?.length)) m.add("headTemperature");
+    if (cs.test.probes?.length) m.add("doorVelocity");
+    if (cs.test.profiles?.length) m.add("neutralPlane");
+    if (cs.test.doorFlow) m.add("doorMassFlow");
     for (const p of cs.test.points || []) m.add(p.quantity);
     if (cs.test.door && cs.test.measured?.door?.z?.length) (m.add("doorVelocity"), m.add("neutralPlane"));
   }
@@ -709,7 +893,7 @@ async function main() {
         const q = next;
         next += 1;
         runs[q] = await new Promise((resolve) => {
-          const w = new Worker(fileURLToPath(import.meta.url), { workerData: cases[q] });
+          const w = new Worker(snapshot.harness, { workerData: cases[q] });
           w.once("message", resolve);
           w.once("error", (e) => resolve({ id: cases[q].id, dataset: cases[q].dataset, test: cases[q].test.id, cell: cases[q].h, horizon: cases[q].horizon, health: { ok: false, reason: `error: ${e.message}` }, pairs: [], wallSeconds: 0, cells: 0, plumeIndex: null }));
         });
@@ -728,12 +912,12 @@ async function main() {
     cpu: os.cpus()[0]?.model?.trim(),
     jobs,
     wallSeconds: (performance.now() - t0) / 1000,
-    git: { ...git, snapshotDigests: snapshot.digests, harnessDigests: harnessDigests() },
+    git: { ...git, solverRev: snapshot.rev, snapshotDigests: snapshot.digests, snapshotLfDigests: snapshot.lfDigests, harnessDigests: snapshot.harnessDigests },
     solver: { overrides: solver, defaults: { ...F.DEFAULTS }, health: { ...F.HEALTH } },
-    settings: { datasets, cells: cellsArg, tests: only, fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : "each test's own surfaces from its FDS input, areal heat capacity matched over one cell", plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
+    settings: { datasets, cells: cellsArg, tests: only, fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
     runs,
   };
-  await bothWays(report, S, measures);
+  await bothWays(report, S, measures, Object.fromEntries(cases.map((cs) => [`${cs.dataset}/${cs.test.id}`, cs.test])), Rsnap);
   rmSync(snapshot.dir, { recursive: true, force: true });
   printTables(report);
   if (jsonOut) {
@@ -743,5 +927,6 @@ async function main() {
   }
 }
 
-if (isMainThread) await main();
-else parentPort.postMessage(await runCase(workerData));
+// Run only as a script (head-temperature.mjs imports the summary functions).
+if (isMainThread && process.argv[1] && path.resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()) await main();
+else if (!isMainThread) parentPort.postMessage(await runCase(workerData));

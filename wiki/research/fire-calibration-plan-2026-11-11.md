@@ -901,6 +901,14 @@ These are dated additions. None changes a criterion of 13.1 to 13.5.
    - In NBS, the burn room's tree read 21 to 51 K over the FDS input's ambient before ignition, at 1.57 and 1.88 m. Its layer temperature reads the same.
 8. **The weighted statistics (13.3)** follow the FDS plotting code (`fdsplotlib.py`, its bin-weighted branch). Ten bins split the measured values from 0 to their largest, and each pair is weighted by n over its bin's count. σ̃E is capped at u/√2. A port in Python and the suite agree to three decimals on four random sets. The guide also drops pairs outside its plots' ranges; the suite has no plot ranges and keeps every positive pair. "The stricter verdict decides" is read as the strictest of four: 12.6 and the protocol's section 4, each unweighted and weighted.
 9. **The 0.20 m run** (13.2 item 2) also runs Steckler and NBS on 0.20 m cells, so that head height has all five series on that cell. Its output is `benchmark/results/2026-11-12-validation-13a-020.{json,log}`.
+10. **13.A's solver is pinned to git (13:30).** 13.B's changes are to be merged into this worktree, so 13.A runs started after 13:30 take the solver from git, `--solver-rev d3c5751`: every `src/core/*.js` at that commit. That includes the voxeliser the sealed-door rule uses.
+    - The two runs started before then, `-13a-020` and `-13a-034`, took the working tree. Their snapshots match d3c5751 in all 13 modules the suite reaches (`benchmark/results/2026-11-12-validation-13a-solver-pin.txt`). Seven of the 13 differ from git's blobs only in line endings: the working tree is CRLF, the blobs LF.
+    - Results files now record `solverRev` and each module's digest with and without that normalisation.
+11. **Wall layers stay lumped in 13.A.** The suite passes each wall material to the solver as lumped values only:
+    - density: the layers' areal mass over one cell, ρ = Σρ_i L_i / h;
+    - specific heat: the layers' areal heat capacity over their areal mass;
+    - conductivity and emissivity: the exposed layer's.
+    For 13.B, `--wall-layers` also passes the layers themselves (thickness, ρ, c, k, exposed layer first, as `lib/fds.mjs` returns them). 13.A runs without it.
 
 ### 13.7 Added while building items 3 to 8 (2026-11-12, 13:00, before any of their comparisons)
 
