@@ -23,8 +23,9 @@ export function standardCells(backend) {
  * Bytes a cell in the GPU solver's largest single binding, the per-cell
  * float fields `cf` (flamescapesGpu/kernels.js CF_FIELDS x 4; a unit test
  * holds the two together). All its buffers hold about 236 bytes a cell (cf
- * 80, the transport's snapshot and scratch state 72, ci 28, Y 24, atom 20,
- * faces 12; sprinklers add 12) plus 96 per particle slot.
+ * 80, the transport's snapshot and scratch state 72 (76 with soot
+ * deposition), ci 32, Y 24, atom 20, faces 12; sprinklers add 12) plus 96
+ * per particle slot; one-dimensional walls add their own buffer.
  */
 export const GPU_BINDING_BYTES_PER_CELL = 80;
 

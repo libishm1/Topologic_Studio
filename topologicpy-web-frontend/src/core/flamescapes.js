@@ -54,6 +54,9 @@
  *     scene's boards) conducts through them normal to its faces, in sub-cell
  *     nodes, as FDS's walls do (wallSetup, walls; calibration plan 13.4 item
  *     1); the app's materials list none and stay lumped into their cells.
+ *   - Soot deposits on solid surfaces, thermophoretically onto cooler walls
+ *     and by settling onto those below, as FDS deposits aerosols (deposition;
+ *     plan 13.4 item 2): the gas's smoke thins near cold walls.
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -137,6 +140,22 @@ export const DEFAULTS = Object.freeze({
   wallLayers: 1,
   wallNodes: 20,
   wallStretch: 1.2,
+  // Soot deposition on solid surfaces (calibration plan 13.4, item 2;
+  // deposition): thermophoretic onto walls cooler than their gas, and
+  // gravitational onto upward-facing surfaces, as FDS models them (Floyd,
+  // Overholt and Ezekoye 2014, FEMTC). FDS's soot: particles of 1800 kg/m^3
+  // (theirs), 0.26 W/(m K) (FDS's CONDUCTIVITY_SOLID, Ben-Dor et al. 2002),
+  // 0.03 um for thermophoresis (FDS's THERMOPHORETIC_DIAMETER, a primary
+  // particle); 1 um for settling (FDS's examples' MEAN_DIAMETER; FDS sets
+  // none). On a cold wall in 600 K gas it deposits at Talbot's velocity within
+  // 0.05 %, and the soot released is the soot in the gas, on the surfaces and
+  // gone (flamescapes.soot.test.mjs, heat-closure.mjs's soot budgets); so it
+  // is on. 0 keeps all soot in the gas, as before.
+  sootDeposition: 1,
+  sootDensity: 1800, // kg/m^3
+  sootDiameter: 1e-6, // m, settling
+  sootThermophoreticDiameter: 0.03e-6, // m
+  sootConductivity: 0.26, // W/(m K)
   sootAbsorption: 500, // the paper's residual absorption coefficient kappa
   // Confinement strength (Fedkiw, Stam and Jensen 2001: a force vorticity x h
   // x (N x omega)), the solver's one fitted parameter: 3, refitted 2026-11-12
@@ -388,6 +407,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     v: new Float32Array(nx * (ny + 1) * nz),
     w: new Float32Array(nx * ny * (nz + 1)),
     p: new Float32Array(N),
+    // Soot each open cell has lost to the solid surfaces beside it (kg, deposition), when deposition is on.
+    sootDeposit: P.sootDeposition > 0 ? new Float32Array(N) : null,
     flame: new Float32Array(N), // hottest flame-front or ember temperature in a cell this step
     burning: new Uint8Array(N), // combustion took place in the cell this step
     ignitedAt: new Float32Array(N).fill(Infinity),
@@ -417,7 +438,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // Rooms flooded with clean agent or blanketed with foam
     // (suppressionSystems.js systemsSetup), set by the run; null when off.
     systems: null,
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0 },
+    // Soot's budget (kg): released by burning and pyrolysis, deposited on surfaces, carried out of the domain by its shell.
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0 },
   };
 }
 
@@ -1498,6 +1520,7 @@ function chemistry(sim, dt) {
         sim.Ts[c] -= (dPy * P.pyrolysisHeat) / Math.max(solidCapacity(sim, c), 1e-6);
         addGas(sim, gcell, SPECIES.FUEL, dPy * P.pyrolysisFuel);
         addGas(sim, gcell, SPECIES.SOOT, dPy * (1 - P.pyrolysisFuel));
+        if (dPy > 0) sim.stats.sootReleased += dPy * (1 - P.pyrolysisFuel);
         sim.fuelVapourKind ??= new Uint8Array(sim.N);
         sim.fuelVapourKind[gcell] = sim.fuelKind[c];
       }
@@ -1777,6 +1800,7 @@ function addProducts(sim, c, st, dm, vapour = false) {
   delta[SPECIES.H2O] = st.h2o * dm;
   if (vapour) delta[SPECIES.FUEL] = -dm;
   changeGas(sim, c, delta);
+  sim.stats.sootReleased += st.soot * dm;
 }
 
 // ---------------------------------------------------------- heat transfer
@@ -2164,6 +2188,117 @@ export function walls(sim, dt) {
 
 const wallOut = [0, 0];
 
+// ------------------------------------------------------ soot deposition
+
+/** Air's dynamic viscosity, Pa s: Sutherland's law (1.716e-5 Pa s at 273.15 K, S = 110.4 K). */
+export function viscosity(T) {
+  return 1.716e-5 * (T / 273.15) ** 1.5 * ((273.15 + 110.4) / (T + 110.4));
+}
+
+/**
+ * A particle's Cunningham slip factor at gas temperature T (Floyd, Overholt
+ * and Ezekoye 2014, eqs. 2 and 3): Cn = 1 + 1.25 Kn + 0.41 Kn exp(-0.88 / Kn),
+ * Kn = (lambda / r) (T / T_inf), the gas's mean free path lambda 0.065 um at 25 C.
+ */
+export function slipFactor(d, T) {
+  const Kn = (0.065e-6 / (d / 2)) * (T / 298.15);
+  return { Kn, Cn: 1 + 1.25 * Kn + 0.41 * Kn * Math.exp(-0.88 / Kn) };
+}
+
+/**
+ * Soot's thermophoretic velocity towards a wall at Tw from gas at Tg (m/s;
+ * 0 from gas no hotter than the wall): Talbot, Cheng, Schefer and Willis's
+ * (1980) u = K_th nu (dT/dx) / Tg with K_th = 2 Cs (a + Ct Kn) Cn / ((1 + 3
+ * Cm Kn)(1 + 2 a + 2 Ct Kn)), Cs 1.17, Ct 2.18, Cm 1.14, a = kg / kp; and
+ * FDS's wall gradient from the wall's heat transfer coefficient, dT/dx =
+ * h (Tg - Tw) / kg, the gradient a coarse grid cannot resolve (Floyd et al.
+ * eqs. 4 to 6). The gas's conductivity from its viscosity, kg = mu cp / 0.71.
+ */
+export function thermophoreticVelocity(Tg, Tw, rhoGas, cp, h, P) {
+  if (!(Tg > Tw) || !(h > 0)) return 0;
+  const mu = viscosity(Tg), kg = (mu * cp) / 0.71;
+  const { Kn, Cn } = slipFactor(P.sootThermophoreticDiameter, Tg);
+  const a = kg / P.sootConductivity;
+  const K = (2 * 1.17 * (a + 2.18 * Kn) * Cn) / ((1 + 3 * 1.14 * Kn) * (1 + 2 * a + 2 * 2.18 * Kn));
+  return ((K * mu) / (rhoGas * Tg)) * ((h * (Tg - Tw)) / kg);
+}
+
+/** Soot's settling velocity in gas at T (m/s): Stokes's with the slip factor, rho_p d^2 g Cn / (18 mu) (Floyd et al. eq. 1, spheres). */
+export function settlingVelocity(T, P) {
+  const d = P.sootDiameter;
+  return (P.sootDensity * d * d * Math.abs(P.gravity) * slipFactor(d, T).Cn) / (18 * viscosity(T));
+}
+
+/**
+ * Soot deposition (calibration plan 13.4, item 2), after the walls: each open
+ * cell loses soot to every solid face beside it at the deposition velocity
+ * of that face, thermophoretic towards a cooler surface (its surface
+ * temperature: a one-dimensional wall's end node facing the cell, else the
+ * cell's Ts) plus gravitational settling onto the solid below; FDS's
+ * velocities, summed per face as FDS sums them (Floyd et al.; turbulent
+ * deposition, also FDS's, is not modelled). Over the step the cell's soot
+ * falls as exp(-sum(u) dt / h), all its faces h^2 over its volume h^3 (the
+ * exact solution of FDS's explicit removal, as every rate here is
+ * integrated). What leaves the gas is the cell's sootDeposit and
+ * stats.sootDeposited, so the soot released equals that in the gas, on the
+ * surfaces and gone out of the domain. Gravitational settling within the gas
+ * (FDS's drift in the species transport) is not modelled: 1 um soot settles
+ * at about 0.1 mm/s.
+ */
+export function deposition(sim, dt) {
+  const { P, grid: g } = sim;
+  if (!(P.sootDeposition > 0) || !sim.sootDeposit) return;
+  const { nx, ny, h } = g;
+  const kind = sim.kind;
+  const hc = P.wallConvection;
+  // A cell with all six neighbours open (most of them) has no surface.
+  const mask = topology(sim).mask;
+  for (let c = 0; c < sim.N; c += 1) {
+    if (kind[c] === SOLID || mask[c] === 63) continue;
+    const ys = sim.Y[c * NS + SPECIES.SOOT];
+    if (!(ys > 0)) continue;
+    const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
+    let rate = 0;
+    for (let d = 0; d < 6; d += 1) {
+      const n = solidNeighbour(sim, i, j, k, d);
+      if (n < 0) continue;
+      rate += thermophoreticVelocity(sim.T[c], surfaceTemperature(sim, n, d), sim.rho[c], mixtureCp(sim.Y, c * NS), hc, P);
+      // Settling onto the solid below (DIRS[3] is down).
+      if (d === 3) rate += settlingVelocity(sim.T[c], P);
+    }
+    if (!(rate > 0)) continue;
+    const dm = sim.rho[c] * ys * sim.V * -Math.expm1((-rate * dt) / h);
+    delta.fill(0);
+    delta[SPECIES.SOOT] = -dm;
+    changeGas(sim, c, delta);
+    sim.sootDeposit[c] += dm;
+    sim.stats.sootDeposited += dm;
+  }
+}
+
+/** The solid neighbour of cell (i, j, k) in direction d, or -1. */
+function solidNeighbour(sim, i, j, k, d) {
+  const g = sim.grid;
+  const dir = DIRS[d];
+  const ii = i + dir[0], jj = j + dir[1], kk = k + dir[2];
+  if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz) return -1;
+  const n = at(g, ii, jj, kk);
+  return sim.kind[n] === SOLID ? n : -1;
+}
+
+/**
+ * The temperature of solid n's face towards the cell in direction d from it:
+ * a one-dimensional wall's end node when the face is on its normal (the cell
+ * up the axis faces its low end), else n's Ts.
+ */
+function surfaceTemperature(sim, n, d) {
+  const W = sim.wall;
+  const w = W ? W.index[n] : -1;
+  if (w < 0 || d >> 1 !== (W.meta[w] & 3)) return sim.Ts[n];
+  // From the cell, an even direction is up the axis: the wall is above it, the cell faces its low end (node 0).
+  return W.T[w * W.n + (d & 1 ? W.n - 1 : 0)];
+}
+
 /** The open (not solid) neighbour of cell (i, j, k) in direction d, or -1 (a solid, or outside the domain). */
 function openNeighbour(sim, i, j, k, d) {
   const g = sim.grid;
@@ -2224,8 +2359,9 @@ function boundaries(sim) {
   const { grid: g, P } = sim;
   const { nx, ny, nz } = g;
   const reset = (c) => {
-    // The heat the shell's gas carried, leaving the domain (for budgets only).
+    // The heat and the soot the shell's gas carried, leaving the domain (for budgets only).
     sim.stats.shellHeat += sim.rho[c] * sim.V * mixtureCp(sim.Y, c * NS) * (sim.T[c] - P.ambient);
+    sim.stats.sootLeft += sim.rho[c] * sim.V * sim.Y[c * NS + SPECIES.SOOT];
     sim.T[c] = P.ambient;
     for (let q = 0; q < NS; q += 1) sim.Y[c * NS + q] = 0;
     sim.Y[c * NS + SPECIES.O2] = Y_O2_AIR;
@@ -2897,6 +3033,7 @@ const STAGES = [
   ["cullFlameFront", (sim) => cullFlameFront(sim)],
   ["conduct", conduct],
   ["walls", walls],
+  ["deposition", deposition],
   ["density2", (sim) => updateDensity(sim)],
   ["expansionEnd", expansionEnd],
   ["boundaries", (sim) => boundaries(sim)],

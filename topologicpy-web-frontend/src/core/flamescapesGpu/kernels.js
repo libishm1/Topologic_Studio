@@ -146,6 +146,13 @@ export const PARAMS = [
   // item 1): how many, their nodes each, their stacks (the `wall` buffer's
   // layout, WALL), and where in `atom` their ends' ray deposits are (two per wall).
   ["wallN", "u32"], ["wallNodes", "u32"], ["wallStacks", "u32"], ["wallDepAt", "u32"],
+  // Soot deposition (flamescapes.js deposition, calibration plan 13.4 item 2):
+  // on, and FDS's soot: particle density, settling and thermophoretic
+  // diameters, conductivity; where in `snap` each open cell's deposited soot
+  // is kept (the CPU's sootDeposit, N floats, only when on: in cf it would
+  // shrink every run's grid, lib/hardware.js).
+  ["sootDeposition", "u32"], ["sootDensity", "f32"], ["sootDiameter", "f32"], ["sootThDiameter", "f32"],
+  ["sootConductivity", "f32"], ["depAt", "u32"],
 ];
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
@@ -290,6 +297,8 @@ export const KERNELS = {
   // One-dimensional walls: one thread per wall, then each open cell gathers what its wall neighbours gave it.
   walls: { uses: [0, 1, 2, 3, 16], threads: (d) => d.wallN || 0 },
   wallsApply: { uses: [0, 1, 2, 3, 16], threads: cells },
+  // Soot deposition: each open cell onto the solids beside it.
+  deposition: { uses: [0, 1, 2, 3, 5, 16], threads: cells },
   densityBoundaries: { uses: [0, 1, 2, 3], threads: cells },
   topology: { uses: [0, 3], threads: cells },
   projectZero: { uses: [0, 3, 4], threads: faces },
@@ -2001,6 +2010,64 @@ ${perThread("walls", "U.wallN", `
   let Ts = (after * A) / total;
   cf[ix(fTs, c)] = Ts;
   wall[wLast(w)] = Ts;`)}
+
+// ------------------------------------------------------------------ soot deposition (the CPU's deposition, calibration plan 13.4 item 2)
+
+/** Air's viscosity by Sutherland's law (the CPU's viscosity). */
+fn viscosityOf(T: f32) -> f32 { return 1.716e-5 * pow(T / 273.15, 1.5) * ((273.15 + 110.4) / (T + 110.4)); }
+/** A particle's Knudsen number and Cunningham slip factor (the CPU's slipFactor). */
+fn slipOf(d: f32, T: f32) -> vec2<f32> {
+  let Kn = (0.065e-6 / (d / 2.0)) * (T / 298.15);
+  return vec2<f32>(Kn, 1.0 + 1.25 * Kn + 0.41 * Kn * exp(-0.88 / Kn));
+}
+/** Talbot's thermophoretic velocity with FDS's wall gradient (the CPU's thermophoreticVelocity). */
+fn thermophoretic(Tg: f32, Tw: f32, rhoGas: f32, cp: f32, h: f32) -> f32 {
+  if (!(Tg > Tw) || !(h > 0.0)) { return 0.0; }
+  let mu = viscosityOf(Tg);
+  let kg = (mu * cp) / 0.71;
+  let s = slipOf(U.sootThDiameter, Tg);
+  let a = kg / U.sootConductivity;
+  let K = (2.0 * 1.17 * (a + 2.18 * s.x) * s.y) / ((1.0 + 3.0 * 1.14 * s.x) * (1.0 + 2.0 * a + 2.0 * 2.18 * s.x));
+  return ((K * mu) / (rhoGas * Tg)) * ((h * (Tg - Tw)) / kg);
+}
+/** Stokes's settling with the slip factor (the CPU's settlingVelocity). */
+fn settling(T: f32) -> f32 {
+  let d = U.sootDiameter;
+  return (U.sootDensity * d * d * abs(U.gravity) * slipOf(d, T).y) / (18.0 * viscosityOf(T));
+}
+/** The temperature of solid n's face towards the cell in direction d from it (the CPU's surfaceTemperature). */
+fn surfaceT(n: u32, d: u32) -> f32 {
+  let w = wallOf(n);
+  if (w == NO_CELL || (d >> 1u) != (wMeta(w) & 3u)) { return cf[ix(fTs, n)]; }
+  return wall[wNode(w, select(0u, U.wallNodes - 1u, (d & 1u) == 1u))];
+}
+/**
+ * Soot deposition (the CPU's deposition): an open cell's soot falls as
+ * exp(-sum(u) dt / h) over its solid faces' deposition velocities,
+ * thermophoretic and, onto the solid below, gravitational; what leaves the
+ * gas is the cell's deposit in snap (from U.depAt).
+ */
+${perCell("deposition", `
+  // A cell with all six neighbours open (topology's mask, bits 0 to 5) has no surface.
+  if (kindOf(c) == SOLID || (ci[ix(iMask, c)] & 63u) == 63u) { return; }
+  let ys = Y[c * NS + 4u];
+  if (!(ys > 0.0)) { return; }
+  let p = vec3<i32>(coords(c));
+  let T = cf[ix(fT, c)];
+  var rate = 0.0;
+  for (var d = 0u; d < 6u; d++) {
+    let r = p + dirv(d);
+    if (!inside(r) || kindOf(atI(r)) != SOLID) { continue; }
+    rate += thermophoretic(T, surfaceT(atI(r), d), cf[ix(fRho, c)], mixtureCp(c), U.wallConvection);
+    // Settling onto the solid below (direction 3 is down).
+    if (d == 3u) { rate += settling(T); }
+  }
+  if (!(rate > 0.0)) { return; }
+  let dm = cf[ix(fRho, c)] * ys * U.V * omexp((rate * U.dt) / U.h);
+  var dd = array<f32, 6>(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  dd[4] = -dm;
+  changeGas(c, dd);
+  snap[U.depAt + c] += dm;`)}
 
 /** Each open cell takes what the faces of its wall neighbours towards it gave (the walls stage's gather). */
 ${perCell("wallsApply", `

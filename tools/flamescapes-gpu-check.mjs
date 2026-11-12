@@ -44,7 +44,7 @@
  * software adapter (--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader).
  *
  *   node tools/flamescapes-gpu-check.mjs [--headed] [--swiftshader] [--quick]
- *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|walls|timing] [--horizon 120] [--members 6]
+ *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|walls|soot|timing] [--horizon 120] [--members 6]
  *        [--json out.json] [--url http://localhost:5173] (a running Vite server)
  */
 import { chromium } from "playwright-core";
@@ -907,6 +907,58 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     }
   }
 
+  // ---- 5. soot deposition (calibration plan 13.4, item 2): the room's walls
+  // the walls phase's lining (one-dimensional where one cell thick, lumped at
+  // edges and corners), so soot deposits on both kinds of surface.
+  if (phase === "all" || phase === "soot") {
+    const lining = [{ thickness: 0.0127, rho: 1440, c: 840, k: 0.48 }, { thickness: 0.15, rho: 2100, c: 880, k: 1.0 }];
+    const layered = (h) => {
+      const mass = lining.reduce((a, l) => a + l.rho * l.thickness, 0), heat = lining.reduce((a, l) => a + l.rho * l.c * l.thickness, 0);
+      return [{ name: "lined", rho: mass / h, c: heat / mass, k: 0.48, eps: 0.9, layers: lining }, F.INERT[1], F.INERT[2]];
+    };
+    const scene = room(0.25, 200000);
+    out.soot = { grid: [scene.grid.nx, scene.grid.ny, scene.grid.nz], rows: [] };
+    const opts = { emitAbove: 1e9, embers: false, dt: 0.1, maxParticles: 0, sootDeposition: 1, inert: layered(scene.grid.h) };
+    const cpu = solverOf(scene, opts);
+    const twin = solverOf(scene, opts);
+    for (let c = 0; c < twin.N; c += 1) if (twin.kind[c] !== 2) twin.T[c] = Math.fround(twin.T[c] * (1 + 2 ** -23));
+    const gpu = runner.createSim(solverOf(scene, opts), {});
+    for (let s = 1; s <= 200; s += 1) {
+      F.step(cpu, 0.1);
+      F.step(twin, 0.1);
+      gpu.step(0.1);
+      if (![1, 10, 50, 100, 200].includes(s)) continue;
+      const g = await gpu.readFields();
+      const total = (a) => a.reduce((x, y) => x + y, 0);
+      const dep = absDiffs(cpu.sootDeposit, g.sootDeposit, () => true), depTwin = absDiffs(cpu.sootDeposit, twin.sootDeposit, () => true);
+      out.soot.rows.push({
+        step: s, ...range(cpu), gpu: compare(cpu, g), twin: compare(cpu, twin),
+        deposited: { cpu: total(cpu.sootDeposit), gpu: total(g.sootDeposit), twin: total(twin.sootDeposit), cellMax: dep.max, twinCellMax: depTwin.max, cellLargest: Math.max(...cpu.sootDeposit) },
+      });
+      log(`soot step ${s}: deposited CPU ${total(cpu.sootDeposit).toExponential(4)} kg, GPU ${total(g.sootDeposit).toExponential(4)} kg`);
+    }
+    gpu.destroy();
+    // ms per step, the full model, deposition off and on (the faster of two each).
+    out.soot.timing = [];
+    for (const [label, cell, cap] of [["30k", 0.15, 30000], ["200k", 0.05, 200000]]) {
+      const s = room(cell, cap);
+      const time = async (o) => {
+        const g2 = runner.createSim(solverOf(s, { dt: 0.1, ...o }), {});
+        for (let k = 0; k < 5; k += 1) g2.step(0.1);
+        await g2.finish();
+        const n = quick ? 50 : 200;
+        const t0 = performance.now();
+        for (let k = 0; k < n; k += 1) g2.step(0.1);
+        await g2.finish();
+        g2.destroy();
+        return (performance.now() - t0) / n;
+      };
+      const off1 = await time({ sootDeposition: 0 }), on1 = await time({ sootDeposition: 1 }), off2 = await time({ sootDeposition: 0 }), on2 = await time({ sootDeposition: 1 });
+      out.soot.timing.push({ label, cells: s.grid.cells, gpuOff: Math.min(off1, off2), gpuOn: Math.min(on1, on2) });
+      log(`soot timing ${label}: ${s.grid.cells} cells, GPU ${Math.min(off1, off2).toFixed(2)} / ${Math.min(on1, on2).toFixed(2)} ms (off / on)`);
+    }
+  }
+
   // ---- 3. ms per step
   if (phase === "all" || phase === "timing") {
     out.timing = [];
@@ -952,7 +1004,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
   return out;
 }
 
-const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "walls", "timing"] : [PHASE];
+const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "walls", "soot", "timing"] : [PHASE];
 const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
@@ -1105,6 +1157,13 @@ if (report.walls) {
     if (q) console.log(`  the CPU with the GPU's seed (the same rays): radiated ${f(q.radiatedJ, 0)} J; |CPU - GPU| wall nodes max ${e(q.nodesMax)} / p99 ${e(q.nodesP99)} K, Ts max ${e(q.TsMax)} K, gas T max ${e(q.gasTMax)} K`);
   }
   for (const r of w.timing || []) console.log(`  ms per step, the room with 5 cm walls, ${r.label} (${r.cells} cells, ${r.walls} walls): CPU ${f(r.cpuOff, 1)} off / ${f(r.cpuOn, 1)} on; GPU ${f(r.gpuOff, 2)} off / ${f(r.gpuOn, 2)} on`);
+}
+if (report.soot) {
+  const s = report.soot;
+  console.log(`\nSoot deposition (lined walls), ${s.grid.join("x")} cells, radiation and particles off, 200 steps of 0.1 s: |CPU - GPU| beside |CPU - CPU twin| (one ulp warmer)`);
+  console.log("  step | gas T max | soot max  | deposited kg CPU / GPU / twin       | per cell max GPU / twin (largest cell) | hottest gas C");
+  for (const r of s.rows) console.log(`  ${String(r.step).padStart(4)} | ${e(r.gpu.T.max)} | ${e(r.gpu.soot.max)} | ${e(r.deposited.cpu)} / ${e(r.deposited.gpu)} / ${e(r.deposited.twin)} | ${e(r.deposited.cellMax)} / ${e(r.deposited.twinCellMax)} (${e(r.deposited.cellLargest)}) | ${f(r.TmaxC, 0)}`);
+  for (const r of s.timing || []) console.log(`  ms per step, ${r.label} (${r.cells} cells): GPU ${f(r.gpuOff, 2)} off / ${f(r.gpuOn, 2)} on`);
 }
 if (report.timing) {
   console.log("\nms per step (full model at the start of the fire; GPU steps queued, then waited for)");

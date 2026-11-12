@@ -26,13 +26,17 @@
  *           one-dimensional (wallLayers, calibration plan 13.4 item 1). The
  *           closure counts the walls' heat, inertC (Ts - Ta), with the gas's and
  *           what left; accepted as the burner's: 0.9 to 1.0.
+ *   soot:   the layered case with soot deposition on (calibration plan 13.4
+ *           item 2). Every burner case also reports its soot's budget: the
+ *           soot in the gas, on the surfaces and gone out of the domain, over
+ *           the soot released.
  *
- *   node tools/calibration/heat-closure.mjs [--cases mix,burner,porous,lumped,layered] [--cells 0.20,0.27,0.34]
+ *   node tools/calibration/heat-closure.mjs [--cases mix,burner,porous,lumped,layered,soot] [--cells 0.20,0.27,0.34]
  *        [--horizon 60] [--solver conservative=0,expansion=0] [--json out.json]
  */
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { DEFAULTS, NS, SOLID, createSolver, gasDensity, mixtureCp, step, substepsFor } from "../../topologicpy-web-frontend/src/core/flamescapes.js";
+import { DEFAULTS, NS, SOLID, SPECIES, createSolver, gasDensity, mixtureCp, step, substepsFor } from "../../topologicpy-web-frontend/src/core/flamescapes.js";
 import { fuelsFor } from "../../topologicpy-web-frontend/src/core/fireClasses.js";
 import * as V from "../../topologicpy-web-frontend/src/core/voxelize.js";
 
@@ -63,12 +67,12 @@ function gridOf(lo, hi, h) {
 }
 
 /**
- * The gas's heat above ambient and its mass, over the open cells not on the
- * domain's shell, or over those `keep` accepts.
+ * The gas's heat above ambient, its mass and its soot, over the open cells
+ * not on the domain's shell, or over those `keep` accepts.
  */
 function inventory(sim, keep = null) {
   const { nx, ny, nz } = sim.grid;
-  let heat = 0, mass = 0;
+  let heat = 0, mass = 0, soot = 0;
   for (let c = 0; c < sim.N; c += 1) {
     if (sim.kind[c] === SOLID || (keep && !keep(c))) continue;
     const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
@@ -76,8 +80,9 @@ function inventory(sim, keep = null) {
     const rho = gasDensity(sim.T[c], sim.Y, c * NS);
     heat += rho * sim.V * mixtureCp(sim.Y, c * NS) * (sim.T[c] - TA);
     mass += rho * sim.V;
+    soot += rho * sim.V * sim.Y[c * NS + SPECIES.SOOT];
   }
-  return { heat, mass };
+  return { heat, mass, soot };
 }
 
 function run(sim, h, until, each) {
@@ -134,7 +139,8 @@ const board = (h) => {
 /**
  * The burner room; with `porous`, its burner's cells porous (contents of no
  * mass); with `walls` ("lumped" or "layered"), its walls gypsum boards that
- * exchange heat with the gas, lumped or one-dimensional.
+ * exchange heat with the gas, lumped or one-dimensional; "soot", layered with
+ * soot deposition on.
  */
 function burner(h, porous = false, walls = null) {
   const W = 5, D = 4, H = 2.7, t = 0.2, door = [1.5, 2.4], doorH = 2.0, Q = 150e3, RAMP = 30;
@@ -160,7 +166,7 @@ function burner(h, porous = false, walls = null) {
     burner: { cells: cellsOf, hrr: [[0, 0], [RAMP, Q], [1e6, Q]], radiantFraction: 0, fuel: fuelsFor("A").ignitionFuel },
     fuels: { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL },
   };
-  const exchange = walls ? { emitAbove: 1e9, inert: [board(h), board(h), board(h)], wallLayers: walls === "layered" ? 1 : 0 } : ADIABATIC;
+  const exchange = walls ? { emitAbove: 1e9, inert: [board(h), board(h), board(h)], wallLayers: walls === "lumped" ? 0 : 1, sootDeposition: walls === "soot" ? 1 : 0 } : ADIABATIC;
   const sim = createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ...exchange, ...SOLVER });
   const wallHeat = () => {
     let e = 0;
@@ -186,6 +192,14 @@ function burner(h, porous = false, walls = null) {
         // Where a closure short of 1 can go: the mass the transport's floor added, and faces it clamped to a Courant number of 1.
         floorKg: +(sim.stats.massFloor ?? 0).toFixed(4),
         clampedFaces: sim.stats.courantClamped ?? 0,
+        // Soot: released, and in the gas, on the surfaces and gone, each over it.
+        soot: {
+          releasedG: +(sim.stats.sootReleased * 1000).toFixed(2),
+          gas: +((now.soot - start.soot) / sim.stats.sootReleased).toFixed(3),
+          deposited: +(sim.stats.sootDeposited / sim.stats.sootReleased).toFixed(3),
+          left: +(sim.stats.sootLeft / sim.stats.sootReleased).toFixed(3),
+          closure: +((now.soot - start.soot + sim.stats.sootDeposited + sim.stats.sootLeft) / sim.stats.sootReleased).toFixed(3),
+        },
       };
     }
   });
@@ -198,7 +212,7 @@ const results = [];
 for (const h of cells) {
   for (const name of cases) {
     const t0 = performance.now();
-    const r = name === "mix" ? mix(h) : burner(h, name === "porous", name === "lumped" || name === "layered" ? name : null);
+    const r = name === "mix" ? mix(h) : burner(h, name === "porous", ["lumped", "layered", "soot"].includes(name) ? name : null);
     r.wallSeconds = +((performance.now() - t0) / 1000).toFixed(1);
     results.push(r);
     console.log(JSON.stringify(r));
@@ -220,13 +234,13 @@ for (const h of cells) {
 }
 // The walls' cases: the closure at the horizon within 0.9 to 1.0, gas, walls and what left counted.
 for (const h of cells) {
-  for (const name of ["lumped", "layered"]) {
+  for (const name of ["lumped", "layered", "soot"]) {
     const r = results.find((x) => x.case === name && x.cell === h);
     if (!r) continue;
     const last = r.rows[Math.max(...Object.keys(r.rows).map(Number))];
     const ok = last.closure >= 0.9 && last.closure <= 1.0;
     results.push({ case: `${name} verdict`, cell: h, closure: last.closure, walls: last.walls, pass: ok });
-    console.log(`${name} walls, cell ${h} m: closure ${last.closure} (0.9 to 1.0; the walls hold ${last.walls} of the heat, ${r.wallCells} one-dimensional walls): ${ok ? "passes" : "fails"}`);
+    console.log(`${name} walls, cell ${h} m: closure ${last.closure} (0.9 to 1.0; the walls hold ${last.walls} of the heat, ${r.wallCells} one-dimensional walls): ${ok ? "passes" : "fails"}; soot closure ${last.soot.closure} (deposited ${last.soot.deposited}, gone ${last.soot.left})`);
   }
 }
 if (jsonOut) {

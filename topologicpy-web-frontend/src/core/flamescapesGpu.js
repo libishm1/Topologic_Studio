@@ -278,7 +278,10 @@ class GpuSim {
     // scratch state (rho, then Y) and the step's starting T for the expansion.
     const snapAt = { gas: nuvw + 7 * N };
     snapAt.expand = snapAt.gas + (this.conservativeOn ? 7 * N : 0);
-    snapAt.size = snapAt.expand + (this.expansionOn ? N : 0);
+    // Then, with soot deposition, each open cell's deposited soot (the CPU's sootDeposit).
+    this.depositOn = P.sootDeposition > 0 && Boolean(sim.sootDeposit);
+    snapAt.dep = snapAt.expand + (this.expansionOn ? N : 0);
+    snapAt.size = snapAt.dep + (this.depositOn ? N : 0);
     this.snapAt = snapAt;
 
     const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
@@ -378,6 +381,8 @@ class GpuSim {
       conservative: this.conservativeOn ? 1 : 0, expansion: this.expansionOn ? 1 : 0, gasAt: snapAt.gas, expandAt: snapAt.expand,
       sealedN: d.sealedN, sealedAt: io.sealed, redMean: red.mean,
       wallN: d.wallN, wallNodes: Wn, wallStacks: Ws, wallDepAt: AT_FIELDS * N + this.gsSlots,
+      sootDeposition: P.sootDeposition > 0 ? 1 : 0, sootDensity: P.sootDensity, sootDiameter: P.sootDiameter,
+      sootThDiameter: P.sootThermophoreticDiameter, sootConductivity: P.sootConductivity, depAt: snapAt.dep,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -426,6 +431,7 @@ class GpuSim {
     if (this.wall) ci.set(new Uint32Array(this.wall.index.buffer, this.wall.index.byteOffset, N), CI.wall * N);
     else ci.fill(0xffffffff, CI.wall * N, (CI.wall + 1) * N);
     q.writeBuffer(this.buf.ci, 0, ci);
+    if (this.depositOn) q.writeBuffer(this.buf.snap, this.snapAt.dep * 4, sim.sootDeposit);
     if (this.wall) {
       // The CPU's sim.wall in the wall buffer's order (kernels.js WALL).
       const W = this.wall, n = W.n, Wc = d.wallN;
@@ -627,6 +633,8 @@ class GpuSim {
       this.dispatch(pass, "walls");
       this.dispatch(pass, "wallsApply");
     }
+    // Soot deposition on the solids, after the walls (the CPU's deposition stage).
+    if (this.depositOn) this.dispatch(pass, "deposition");
     // The expansion the step's heat made, and each sealed region's mean (the CPU's expansionEnd and project).
     if (this.expansionOn) {
       this.dispatch(pass, "expandEnd");
@@ -801,18 +809,19 @@ class GpuSim {
     return { positions, temps, kinds };
   }
 
-  /** Whole fields, for tests only: T, Ts, rho, p, fuel, moisture, Y, u, v, w, kind, and one-dimensional walls' nodes (wallT). */
+  /** Whole fields, for tests only: T, Ts, rho, p, fuel, moisture, Y, u, v, w, kind, soot deposited per cell (sootDeposit), and one-dimensional walls' nodes (wallT). */
   async readFields() {
     const { device, buf, dims: d } = this;
     const N = d.N;
     const nuvw = d.nu + d.nv + d.nw;
     const wallNodes = this.wall ? d.wallN * this.wall.n : 0;
-    const size = (CF_FIELDS * N + 6 * N + CI_FIELDS * N + nuvw + CTR_SIZE + this.gsSlots + wallNodes) * 4;
+    const size = (CF_FIELDS * N + 6 * N + CI_FIELDS * N + nuvw + CTR_SIZE + this.gsSlots + wallNodes + (this.depositOn ? N : 0)) * 4;
     const staging = device.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     const enc = device.createCommandEncoder();
     let o = 0;
     const parts = [[buf.cf, 0, CF_FIELDS * N * 4], [buf.Y, 0, 6 * N * 4], [buf.ci, 0, CI_FIELDS * N * 4], [buf.vel, 0, nuvw * 4], [buf.ctr, 0, CTR_SIZE * 4], [buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4]];
     if (wallNodes) parts.push([buf.wall, 3 * d.wallN * 4, wallNodes * 4]);
+    if (this.depositOn) parts.push([buf.snap, this.snapAt.dep * 4, N * 4]);
     for (const [b, from, bytes] of parts) {
       enc.copyBufferToBuffer(b, from, staging, o, bytes);
       o += bytes;
@@ -835,9 +844,11 @@ class GpuSim {
     const vel = f.slice(at, at + nuvw);
     at += nuvw;
     const wallT = wallNodes ? f.slice(at + CTR_SIZE + this.gsSlots, at + CTR_SIZE + this.gsSlots + wallNodes) : null;
+    const depAt = at + CTR_SIZE + this.gsSlots + wallNodes;
+    const sootDeposit = this.depositOn ? f.slice(depAt, depAt + N) : null;
     return {
       T: field(CF.T), Ts: field(CF.Ts), rho: field(CF.rho), p: field(CF.p), fuelMass: field(CF.fuel), moisture: field(CF.moist),
-      Y, kind, burning, u: vel.subarray(0, d.nu), v: vel.subarray(d.nu, d.nu + d.nv), w: vel.subarray(d.nu + d.nv),
+      sootDeposit, Y, kind, burning, u: vel.subarray(0, d.nu), v: vel.subarray(d.nu, d.nu + d.nv), w: vel.subarray(d.nu + d.nv),
       particles: Math.min(u[at + CTR.count], d.cap),
       sweeps: this.stepCount > 0 ? this.sweepsFrom(f.subarray(at + CTR_SIZE, at + CTR_SIZE + this.gsSlots)) : 0,
       wallT,
