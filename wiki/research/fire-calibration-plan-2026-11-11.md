@@ -945,7 +945,7 @@ These are dated additions, made before any model comparison of the quantities th
    - The fire: ISONG3's burner is the input's fuel mass flux times its 1 m² area at 50.0 MJ/kg. Check: that gives 755 kW in the first step, and the measured heat release reads 755 kW. The heptane tests' spray is the nozzle's flow at 684 kg/m³ and 44.6 MJ/kg onto the 0.36 m² pan (1.0 and 2.0 MW at the windows).
    - Both heptane tests are under-ventilated: the measured O2 falls to 9.5 % and 0.7 %. This solver releases the prescribed heat inside the room.
 
-### 13.8 What 13.4's checks found, and two fixes added (2026-11-12, 13:25, before any 13.B run)
+### 13.8 What 13.4's checks found, and two fixes added (2026-11-12, 13:21, commit 37afd3f, before any 13.B run)
 
 The physics work of 13.4 was done blind: in its own worktree, by an agent that opened no validation file or result.
 - **Item 1, the one-dimensional wall: made.** A slab against the exact series solution 0.41 %, a semi-infinite solid against erfc 0.80 % (2 % allowed). CPU and GPU agree. It is used where a material lists its layers, as the tests' boards do; the app's stone lists none, so app runs do not change.
