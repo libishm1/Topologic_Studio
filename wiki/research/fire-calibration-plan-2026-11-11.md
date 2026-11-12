@@ -1023,3 +1023,32 @@ The user asked that a physics item that fails its check be tried again, or a bet
 5. **13.B runs on the items made by the time it starts.** An item made later gets its own full rerun, reported beside 13.B.
 
 Open for another attempt now: item 4 (door flow on the grid) together with item 3 (openings narrower than a cell), and item 6 (extinction), whose second check is written in 13.10.
+
+### 13.13 Items 6 and 7, and the next attempts at 6 and at 4 with 3 (2026-11-12, before any run below)
+
+- **Item 7, leakage: made.** FDS's leak relation (master 5f8f194), ṁ = C_d A (Δp/Δp_ref)^(n−½) √(2ρ|Δp|), with each test's leak from its FDS input. The app's default is average construction from Klote, Nelson, Deal and Levin, NISTIR 4770 (1992), Table 1: walls 0.21 × 10⁻³ of their area, floors 0.52 × 10⁻⁴.
+  - Steady pressure 224.7 Pa against the orifice relation's 224.0 Pa (0.32 %; 5 % allowed).
+  - Mass and energy close to 1.00000, with 52.6 % of the gas let out.
+  - With A_L = 0 it reproduces item 5 exactly. CPU and GPU agree.
+- **Item 6, second check: passed, but it could not fail, so it is not counted.** In the box whose walls exchange no heat, the gas rose past the critical flame temperature and the model was never exercised: the run is bit-identical with extinction off. Not made.
+- **Item 6, attempt 3** (rule 1 of 13.12: the first check computed its reference for a mixture the box did not hold; disclosed as written after two failures).
+  - Case: the first check's own: a 20 kW methane burner in a sealed box whose walls cool it, leakage off.
+  - Reference: each cell's threshold, from its own temperature and composition, at the stop.
+  - Passes if (a) the gas-mass-weighted mean oxygen of the box at the stop is within 0.5 % by volume of the gas-mass-weighted mean of the cells' thresholds; (b) every cell that burned is within 0.1 % of its own threshold; and (c) the run differs from the same run with extinction off, so that it is exercised.
+- **Items 4 and 3, attempt 1: method.**
+  - Each face's own density in the projection (u −= dt Δp / (ρ_f h), ρ_f the mean of its two cells; Poisson links weighted ρ₀ / ρ_f with the porous weights).
+  - Each partly open face's open share (FAVOR) in the divergence, Poisson, transport and diffusion, found by the voxeliser's rays (a geometry unit test: a 0.5 m door on 0.2 m cells is two cells and a half).
+  - No discharge coefficient in the solver.
+- **Items 4 and 3, attempt 1: check.**
+  - Six cases: two sealed boxes 3.0 × 2.4 × 3.0 m on 0.2 m cells; a door 2.0 m high and 0.4, 0.5 or 0.6 m wide; the hot box at 400 K or 600 K. Radiation, wall exchange and deposition off; no leakage; read every 0.05 s from 2 to 6 s.
+  - The reference at each read is Emmons' vent integral on each box's own layered density profile (the slab form CFAST uses), measured at least 0.4 m from the dividing wall:
+    - Δp(z) = Δp₀ − g ∫ (ρ_hot − ρ_cold) dz′, with Δp₀ from volume balance;
+    - ṁ_out = C_d w ∫_{Δp>0} √(2 ρ_hot Δp) dz, with C_d = 0.68 from Prahl and Emmons (1975, Combustion and Flame 25:369), independent of Steckler;
+    - the neutral plane is Δp's lowest zero.
+  - Passes in all six cases if:
+    - (a) the mean outflow is within 10 %;
+    - (b) the mean neutral plane is within 10 %;
+    - (c) the hot box's change of mass over 2 to 6 s equals the net flow through the door within 1 % of the mass exchanged.
+  - Plus the closures, and parity once on the GPU.
+  - Disclosed: this reference was drafted after item 4's first check found the boxes layered. It tests the door's flow law given the rooms' states, not how the rooms layer.
+- **Items 4 and 3, attempt 2** (only if attempt 1 fails): a sub-grid vent for doors under three cells wide, coupled into the projection. Its full method and check are to be committed here before it runs.
