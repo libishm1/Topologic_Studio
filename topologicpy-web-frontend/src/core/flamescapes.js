@@ -57,6 +57,9 @@
  *   - Soot deposits on solid surfaces, thermophoretically onto cooler walls
  *     and by settling onto those below, as FDS deposits aerosols (deposition;
  *     plan 13.4 item 2): the gas's smoke thins near cold walls.
+ *   - A sealed region (a room behind closed doors) is a pressure zone, as in
+ *     FDS: it keeps its gas's mass, and its pressure follows that mass and its
+ *     heat (pressureZones; plan 13.8 item 5). Open regions stay at ambient.
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -179,6 +182,12 @@ export const DEFAULTS = Object.freeze({
   // place. 0 restores the paper's transport.
   conservative: 1,
   expansion: 1,
+  // A pressure for each sealed region (calibration plan 13.8, item 5;
+  // pressureZones), as FDS's pressure zones: a region no open side reaches
+  // keeps its gas's mass, and its pressure follows that mass and its heat.
+  // 0 holds every region at ambient pressure, as before: a sealed box cooled
+  // by its walls then drew in 31 % more gas in 60 s.
+  pressureZones: 1,
   porousVelocity: 0.5, // velocity multiplier in porous cells
   projection: 30, // red-black Gauss-Seidel sweeps at most
   projectionTolerance: 1e-3, // m/s: stop sweeping when a sweep changes the flow less
@@ -1102,7 +1111,7 @@ function transportGas(sim, dt, u, v, w) {
   const ry0 = workArray(sim, "gasRY0", N * NS, Float64Array);
   for (let c = 0; c < N; c += 1) {
     if (kind[c] === SOLID) continue;
-    rho[c] = rho0[c] = gasDensity(sim.T[c], sim.Y, c * NS);
+    rho[c] = rho0[c] = gasDensity(sim.T[c], sim.Y, c * NS) * zonePressure(sim, c);
     for (let q = 0; q < NS; q += 1) {
       Y[c * NS + q] = sim.Y[c * NS + q];
       ry0[c * NS + q] = rho[c] * Y[c * NS + q];
@@ -1219,7 +1228,7 @@ function transportGas(sim, dt, u, v, w) {
   for (let c = 0; c < N; c += 1) {
     if (kind[c] === SOLID) continue;
     for (let q = 0; q < NS; q += 1) sim.Y[c * NS + q] = Y[c * NS + q];
-    sim.T[c] = gasDensity(1, sim.Y, c * NS) / rho[c];
+    sim.T[c] = (gasDensity(1, sim.Y, c * NS) * zonePressure(sim, c)) / rho[c];
   }
 }
 
@@ -1236,7 +1245,8 @@ function buoyancy(sim, dt) {
         const a = at(g, i, j - 1, k), b = at(g, i, j, k);
         if (sim.kind[a] === SOLID || sim.kind[b] === SOLID) continue;
         const r = 0.5 * (sim.rho[a] + sim.rho[b]);
-        sim.v[vAt(g, i, j, k)] += dt * P.gravity * (sim.rho0 / r - 1);
+        // In a pressure zone, against the zone's own ambient density (its gas at its pressure and the ambient temperature).
+        sim.v[vAt(g, i, j, k)] += dt * P.gravity * ((sim.rho0 * zonePressure(sim, a)) / r - 1);
       }
     }
   }
@@ -1773,6 +1783,9 @@ export function changeGas(sim, c, delta) {
   if (!(total > 0)) return;
   for (let q = 0; q < NS; q += 1) sim.Y[o + q] = scratch[q] / total;
   sim.rho[c] = total / sim.V;
+  // A sealed region's gas gains or loses only what its cells' species do (pressureZones).
+  const Z = sim.zones;
+  if (Z && Z.cell[c] >= 0) Z.source[Z.cell[c]] += total - mass;
 }
 
 const delta = new Float64Array(NS);
@@ -2346,13 +2359,171 @@ function expansionEnd(sim, dt) {
   }
 }
 
-/** Line 31: the equation of state for every open cell. */
-function updateDensity(sim) {
+/**
+ * Line 31: the equation of state for every open cell, a pressure zone's at
+ * its pressure: after the heat sources (resolve) each zone's pressure is
+ * found again from its gas (pressureZones); after the advection, zoneTransport.
+ */
+function updateDensity(sim, resolve = true) {
   for (let c = 0; c < sim.N; c += 1) {
     if (sim.kind[c] === SOLID) continue;
     sim.rho[c] = gasDensity(sim.T[c], sim.Y, c * NS);
   }
+  if (resolve) pressureZones(sim);
+  else zoneTransport(sim);
 }
+
+/**
+ * A pressure zone after the advection. Its T is the gas law's at the zone's
+ * pressure already, but the transport does not keep a zone's mass exactly
+ * (in the heat-closure mix box it lost 0.9 % in 10 s, its volume kept): the
+ * zone's densities and pressure are scaled back to its mass at the same T,
+ * so the transport's error is not taken as the zone's gas being compressed
+ * (which heated the mix box's gas by 3 % of its heat).
+ */
+function zoneTransport(sim) {
+  const Z = zoneState(sim);
+  if (!Z) return;
+  const S = Z.pi.length;
+  if (zoneScratch.G.length < S) {
+    zoneScratch.G = new Float64Array(S);
+    zoneScratch.K = new Float64Array(S);
+  }
+  const M = zoneScratch.G;
+  M.fill(0, 0, S);
+  for (let q = 0; q < Z.list.length; q += 1) {
+    const c = Z.list[q], z = Z.cell[c];
+    sim.rho[c] *= Z.pi[z];
+    M[z] += sim.rho[c] * sim.V;
+  }
+  for (let z = 0; z < S; z += 1) {
+    Z.ratio[z] = Z.mass[z] / M[z];
+    Z.pi[z] *= Z.ratio[z];
+  }
+  for (let q = 0; q < Z.list.length; q += 1) {
+    const c = Z.list[q];
+    sim.rho[c] *= Z.ratio[Z.cell[c]];
+  }
+}
+
+/**
+ * The pressure zones (calibration plan 13.8, item 5): the sealed regions of
+ * topology(), each with its pressure as a share of ambient (pi) and its gas's
+ * mass, which changes only by its cells' species sources (changeGas). At the
+ * first step every zone is at ambient pressure with the gas it has then. Null
+ * when off or no region is sealed.
+ */
+export function zoneState(sim) {
+  if (!(sim.P.pressureZones > 0)) return null;
+  const topo = topology(sim);
+  let Z = sim.zones;
+  if (Z && Z.version === topo.version) return Z;
+  const index = new Int32Array(topo.sealed.length).fill(-1);
+  let S = 0;
+  for (let r = 0; r < topo.sealed.length; r += 1) if (topo.sealed[r]) index[r] = S++;
+  if (!S) {
+    sim.zones = null;
+    return null;
+  }
+  const cell = new Int32Array(sim.N).fill(-1);
+  const list = [];
+  for (let c = 0; c < sim.N; c += 1) {
+    if (topo.region[c] >= 0) cell[c] = index[topo.region[c]];
+    if (cell[c] >= 0) list.push(c);
+  }
+  // The regions only change if a cell turns solid, which none does; should
+  // their number change, every zone starts again at ambient pressure.
+  const keep = Z && Z.pi.length === S;
+  Z = sim.zones = {
+    version: topo.version,
+    cell,
+    // The zones' cells in cell order.
+    list: Int32Array.from(list),
+    pi: keep ? Z.pi : new Float64Array(S).fill(1),
+    mass: keep ? Z.mass : zoneMasses(sim, cell, S),
+    source: keep ? Z.source : new Float64Array(S),
+    ratio: new Float64Array(S),
+    // The last update's rise of T, ratio^kappa.
+    kappa: new Float64Array(S),
+  };
+  return Z;
+}
+
+/** Each zone's gas mass at ambient pressure (kg): its cells' gas-law densities at their T. */
+function zoneMasses(sim, cell, S) {
+  const m = new Float64Array(S);
+  for (let c = 0; c < sim.N; c += 1) if (cell[c] >= 0) m[cell[c]] += gasDensity(sim.T[c], sim.Y, c * NS) * sim.V;
+  return m;
+}
+
+/** Cell c's pressure as a share of ambient: its zone's, else 1. */
+export function zonePressure(sim, c) {
+  const Z = sim.zones;
+  return Z && Z.cell[c] >= 0 ? Z.pi[Z.cell[c]] : 1;
+}
+
+/**
+ * Each zone's pressure from its gas's mass and heat (FDS's pressure zones;
+ * plan 13.8, item 5). The heat sources add heat as at constant pressure (the
+ * solver's convention); a zone's gas cannot expand, so it is compressed
+ * adiabatically back into its volume: its pressure goes from pi_0 to pi_1 and
+ * every cell's T rises by (pi_1 / pi_0)^kappa, kappa = R / (M c_p) (the zone's
+ * mass-weighted mean), which is heating at constant volume. pi_1 is the one at
+ * which the zone's cells hold its mass exactly: with G the cells' mass at
+ * ambient pressure and their present T, M = pi_1^(1 - kappa) pi_0^kappa G, so
+ * pi_1 / pi_0 = (1 + y)^(1 / (1 - kappa)) with y = M / (pi_0 G) - 1, the
+ * zone's small imbalance (taken through ln(1 + y), which float32 keeps where
+ * a power of a number near 1 does not). Then each cell's density is the gas
+ * law's at its new T times pi_1. Run before the advection and after the heat
+ * sources.
+ */
+export function pressureZones(sim) {
+  const Z = zoneState(sim);
+  if (!Z) return;
+  const S = Z.pi.length;
+  if (zoneScratch.G.length < S) {
+    zoneScratch.G = new Float64Array(S);
+    zoneScratch.K = new Float64Array(S);
+  }
+  const G = zoneScratch.G, K = zoneScratch.K;
+  G.fill(0, 0, S);
+  K.fill(0, 0, S);
+  for (let q = 0; q < Z.list.length; q += 1) {
+    const c = Z.list[q], z = Z.cell[c], o = c * NS;
+    // The gas law's moles per kg and the mixture's c_p in one pass (gasDensity, mixtureCp).
+    let inv = 0, cp = 0, rest = 1;
+    for (let s = 0; s < NS; s += 1) {
+      const y = sim.Y[o + s];
+      inv += y / MOLAR[s];
+      cp += y * CP[s];
+      rest -= y;
+    }
+    inv += Math.max(0, rest) / MOLAR_N2;
+    cp += Math.max(0, rest) * CP_N2;
+    const m = (P_AMBIENT / (R_GAS * sim.T[c] * inv)) * sim.V;
+    G[z] += m;
+    K[z] += (m * R_GAS * inv) / cp;
+  }
+  for (let z = 0; z < S; z += 1) {
+    Z.mass[z] += Z.source[z];
+    Z.source[z] = 0;
+    const kappa = K[z] / G[z];
+    const scaled = Z.pi[z] * G[z];
+    const lr = Math.log1p((Z.mass[z] - scaled) / scaled) / (1 - kappa);
+    Z.ratio[z] = Math.exp(lr);
+    // Each cell's T rises by ratio^kappa.
+    Z.kappa[z] = Math.exp(kappa * lr);
+    Z.pi[z] *= Z.ratio[z];
+  }
+  for (let q = 0; q < Z.list.length; q += 1) {
+    const c = Z.list[q], z = Z.cell[c];
+    const T = sim.T[c] * Z.kappa[z];
+    sim.T[c] = T;
+    sim.rho[c] = gasDensity(T, sim.Y, c * NS) * Z.pi[z];
+  }
+}
+
+const zoneScratch = { G: new Float64Array(0), K: new Float64Array(0) };
 
 /** Line 32: the domain's sides are open to still ambient air. */
 function boundaries(sim) {
@@ -3020,9 +3191,11 @@ const STAGES = [
   ["radiation", radiation],
   ["particleToGrid", (sim) => particleToGrid(sim)],
   ["expansionBeforeAdvect", expansionBeforeAdvect],
+  // The heat added so far raises a pressure zone's pressure before the advection moves its gas.
+  ["zones", (sim) => pressureZones(sim)],
   ["advect", advect],
   ["expansionAfterAdvect", expansionAfterAdvect],
-  ["density", (sim) => updateDensity(sim)],
+  ["density", (sim) => updateDensity(sim, false)],
   ["buoyancy", buoyancy],
   ["vorticity", vorticityConfinement],
   ["diffuse", diffuse],
@@ -3045,6 +3218,8 @@ const STAGES = [
  * stage's wall time (ms) is added to sim.profile[stage].
  */
 export function step(sim, dt = sim.P.dt) {
+  // Pressure zones start at ambient pressure with the gas they have when the first step begins.
+  if (sim.P.pressureZones > 0 && sim.zones === undefined) zoneState(sim);
   const profile = sim.profile;
   if (profile) {
     for (const [name, fn] of STAGES) {

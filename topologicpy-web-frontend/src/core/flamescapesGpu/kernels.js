@@ -82,6 +82,11 @@
  *     direction order (the CPU sums it in float64), so no two threads write
  *     one cell. Rays reaching a wall's end deposit in the fixed point of the
  *     other deposits.
+ *   - Pressure zones (the CPU's pressureZones and zoneTransport, plan 13.8
+ *     item 5): each zone's sums are a float32 tree in ZONE_BLOCKS blocks of a
+ *     workgroup each, added by one thread per zone, where the CPU sums in
+ *     cell order in float64; each cell's mass source waits in red until the
+ *     next update, where the CPU adds it to its zone at once.
  *   - A value every thread needs from an atomic (the particle count, the
  *     sweep's state) is read by one thread per workgroup and shared through
  *     workgroupUniformLoad; kernels that only read the atomic buffer bind it a
@@ -153,7 +158,14 @@ export const PARAMS = [
   // shrink every run's grid, lib/hardware.js).
   ["sootDeposition", "u32"], ["sootDensity", "f32"], ["sootDiameter", "f32"], ["sootThDiameter", "f32"],
   ["sootConductivity", "f32"], ["depAt", "u32"],
+  // Pressure zones (flamescapes.js pressureZones, calibration plan 13.8 item
+  // 5): on, where in `red` each sealed region's pressure share, mass, last
+  // ratio and kappa are (four arrays of sealedN), and where each cell's mass
+  // source since the last zone update is (N, the CPU's per-zone source).
+  ["zonesOn", "u32"], ["redZone", "u32"], ["zoneSrcAt", "u32"], ["zonePartAt", "u32"],
 ];
+/** Blocks of 64 threads that reduce each pressure zone (zonePartial), their partial sums then added by zoneCommit. */
+export const ZONE_BLOCKS = 32;
 /**
  * Scalars padded to a 16-byte boundary; the fuel table follows, four vec4
  * per fuel (contents 0, first item 1): (o2, co2, co, soot), (h2o, heat,
@@ -264,23 +276,23 @@ export const KERNELS = {
   advect: { uses: [0, 1, 2, 3, 4, 5], threads: (d) => d.nu + d.nv + d.nw + (d.conservative ? 0 : d.N) },
   expandBefore: { uses: [0, 1, 3, 5], threads: cells },
   // The transport's sweeps by axis and source: x, y, z on even steps, z, y, x on odd ones (the CPU's transportGas).
-  transport_x_start: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_z_start: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_y_scratch: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_z_live: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transport_x_live: { uses: [0, 1, 2, 3, 5], threads: cells },
-  transportEnd: { uses: [0, 1, 2, 3, 5], threads: cells },
+  transport_x_start: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transport_z_start: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transport_y_scratch: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transport_z_live: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transport_x_live: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
+  transportEnd: { uses: [0, 1, 2, 3, 5, 10], threads: cells },
   expandEnd: { uses: [0, 1, 3, 5], threads: cells },
   // One workgroup per sealed region.
   sealedMean: { uses: [0, 1, 10, 11], threads: (d) => (d.sealedN || 0) * WG },
-  density: { uses: [0, 1, 2, 3], threads: cells },
-  buoyancy: { uses: [0, 1, 3, 4], threads: (d) => d.nv },
+  density: { uses: [0, 1, 2, 3, 10], threads: cells },
+  buoyancy: { uses: [0, 1, 3, 4, 10], threads: (d) => d.nv },
   vortCurl: { uses: [0, 1, 3, 4], threads: cells },
   vortForce: { uses: [0, 1, 3], threads: cells },
   vortApply: { uses: [0, 1, 4], threads: faces },
   diffuse: { uses: [0, 1, 2, 3, 5], threads: cells },
   chemistry: { uses: [0, 1, 2, 3, 10, 13, 14, 15], threads: cells },
-  spray: { uses: [0, 1, 2, 3, 4, 14], threads: (d) => d.sprayCols || 0 },
+  spray: { uses: [0, 1, 2, 3, 4, 10, 14], threads: (d) => d.sprayCols || 0 },
   systemsWet: { uses: [0, 1, 3, 15], threads: (d) => d.sysWet || 0 },
   reduceFinish: { uses: [0, 10], threads: () => WG },
   cullFlameFront: { uses: [0, 3, 7, 9], threads: particles },
@@ -298,7 +310,15 @@ export const KERNELS = {
   walls: { uses: [0, 1, 2, 3, 16], threads: (d) => d.wallN || 0 },
   wallsApply: { uses: [0, 1, 2, 3, 16], threads: cells },
   // Soot deposition: each open cell onto the solids beside it.
-  deposition: { uses: [0, 1, 2, 3, 5, 16], threads: cells },
+  deposition: { uses: [0, 1, 2, 3, 5, 10, 16], threads: cells },
+  // Pressure zones: one workgroup per sealed region sums it and sets its pressure, then each cell takes it.
+  zonePartial: { uses: [0, 1, 2, 10, 11], threads: (d) => (d.zonesOn ? (d.sealedN || 0) * ZONE_BLOCKS * WG : 0) },
+  zoneCommit: { uses: [0, 10], threads: (d) => (d.zonesOn ? d.sealedN || 0 : 0) },
+  zoneApply: { uses: [0, 1, 2, 3, 10], threads: cells },
+  // After the advection: each zone's mass as the transport left it, its pressure scaled back to its mass, its cells' densities with it.
+  zoneMassPartial: { uses: [0, 1, 10, 11], threads: (d) => (d.zonesOn ? (d.sealedN || 0) * ZONE_BLOCKS * WG : 0) },
+  zoneMassCommit: { uses: [0, 10], threads: (d) => (d.zonesOn ? d.sealedN || 0 : 0) },
+  zoneScale: { uses: [0, 1, 3, 10], threads: cells },
   densityBoundaries: { uses: [0, 1, 2, 3], threads: cells },
   topology: { uses: [0, 3], threads: cells },
   projectZero: { uses: [0, 3, 4], threads: faces },
@@ -734,6 +754,26 @@ fn changeGas(c: u32, d0: array<f32, 6>) {
   if (!(total > 0.0)) { return; }
   for (var q = 0u; q < NS; q++) { Y[o + q] = s[q] / total; }
   cf[ix(fRho, c)] = total / U.V;
+  // A pressure zone's gas gains or loses only what its cells' species do (the CPU's per-zone source).
+  if (U.zonesOn != 0u && ci[ix(iSealed, c)] != NO_CELL) { red[U.zoneSrcAt + c] += total - mass; }
+}
+/** Cell c's pressure as a share of ambient: its pressure zone's, else 1 (the CPU's zonePressure). */
+fn zonePi(c: u32) -> f32 {
+  if (U.zonesOn == 0u) { return 1.0; }
+  let s = ci[ix(iSealed, c)];
+  if (s == NO_CELL) { return 1.0; }
+  return red[U.redZone + s];
+}
+/** Moles per kg of a cell's gas, nitrogen the rest (the CPU's molarDensity). */
+fn molarInv(c: u32) -> f32 {
+  var inv = 0.0;
+  var rest = 1.0;
+  for (var s = 0u; s < NS; s++) {
+    let y = Y[c * NS + s];
+    inv += y / molar(s);
+    rest -= y;
+  }
+  return inv + max(0.0, rest) / 0.028;
 }
 fn addGas(c: u32, s: u32, dm: f32) {
   if (!(dm > 0.0)) { return; }
@@ -1380,9 +1420,10 @@ ${perThread("advect", "U.nu + U.nv + U.nw + U.N", `
     Y[c * NS + s] = y / total;
   }`)}
 
+/** The equation of state after the advection, a pressure zone's at its pressure (the CPU's updateDensity without the zones' re-solve). */
 ${perCell("density", `
   if (kindOf(c) == SOLID) { return; }
-  cf[ix(fRho, c)] = gasDensity(cf[ix(fT, c)], c);`)}
+  cf[ix(fRho, c)] = gasDensity(cf[ix(fT, c)], c) * zonePi(c);`)}
 
 // ------------------------------------------------------------------ proposal F: the conserved transport and the expansion
 
@@ -1397,7 +1438,7 @@ fn rhoStart(c: u32) -> f32 {
     rest -= y;
   }
   inv += max(0.0, rest) / 0.028;
-  return P_AMBIENT / (R_GAS * snap[U.nu + U.nv + U.nw + c] * inv);
+  return (P_AMBIENT / (R_GAS * snap[U.nu + U.nv + U.nw + c] * inv)) * zonePi(c);
 }
 
 // The gas's transport (the CPU's transportGas): the first axis from the
@@ -1412,7 +1453,7 @@ ${transportSweep(0, "live", "scratch")}
 ${perCell("transportEnd", `
   if (kindOf(c) == SOLID) { return; }
   for (var q = 0u; q < NS; q++) { Y[c * NS + q] = snap[U.gasAt + U.N + c * NS + q]; }
-  cf[ix(fT, c)] = gasDensity(1.0, c) / snap[U.gasAt + c];`)}
+  cf[ix(fT, c)] = (gasDensity(1.0, c) * zonePi(c)) / snap[U.gasAt + c];`)}
 
 /**
  * The gas's expansion (the CPU's expansionBeforeAdvect and expansionEnd): the
@@ -1461,7 +1502,137 @@ ${perThread("buoyancy", "U.nv", `
   let b = at3(i, j, k);
   if (kindOf(a) == SOLID || kindOf(b) == SOLID) { return; }
   let r = 0.5 * (cf[ix(fRho, a)] + cf[ix(fRho, b)]);
-  vel[U.nu + t] += U.dt * U.gravity * (U.rho0 / r - 1.0);`)}
+  // In a pressure zone, against the zone's own ambient density (the CPU's buoyancy).
+  vel[U.nu + t] += U.dt * U.gravity * ((U.rho0 * zonePi(a)) / r - 1.0);`)}
+
+/**
+ * Pressure zones (the CPU's pressureZones, calibration plan 13.8 item 5), 1:
+ * ZONE_BLOCKS workgroups per sealed region, each over a stride of its cells
+ * listed in io (as sealedMean): the cells' mass at ambient pressure and
+ * their present T (G), their mass-weighted kappa = R / (M c_p), and their
+ * mass sources since the last update (taken and cleared), a partial sum each
+ * into red at U.zonePartAt. Float32 trees, where the CPU sums in cell order
+ * in float64.
+ */
+@compute @workgroup_size(64)
+fn zonePartial(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let g = wid.x + wid.y * nwg.x;
+  let s = g / ${ZONE_BLOCKS}u;
+  let b = g % ${ZONE_BLOCKS}u;
+  if (s >= U.sealedN) { return; }
+  let start = io[U.sealedAt + s];
+  let end = io[U.sealedAt + s + 1u];
+  let list = U.sealedAt + U.sealedN + 1u;
+  var acc = vec4<f32>(0.0);
+  for (var q = start + b * 64u + li; q < end; q += 64u * ${ZONE_BLOCKS}u) {
+    let c = io[list + q];
+    // The gas law's moles per kg and the mixture's c_p in one pass.
+    var inv = 0.0;
+    var cp = 0.0;
+    var rest = 1.0;
+    for (var k = 0u; k < NS; k++) {
+      let y = Y[c * NS + k];
+      inv += y / molar(k);
+      cp += y * heatCap(k);
+      rest -= y;
+    }
+    inv += max(0.0, rest) / 0.028;
+    cp += max(0.0, rest) * 1040.0;
+    let m = (P_AMBIENT / (R_GAS * cf[ix(fT, c)] * inv)) * U.V;
+    acc += vec4<f32>(m, (m * R_GAS * inv) / cp, red[U.zoneSrcAt + c], 0.0);
+    red[U.zoneSrcAt + c] = 0.0;
+  }
+  wsum[li] = acc;
+  workgroupBarrier();
+  for (var w = 32u; w > 0u; w >>= 1u) {
+    if (li < w) { wsum[li] += wsum[li + w]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) {
+    let o = U.zonePartAt + 3u * g;
+    red[o] = wsum[0].x;
+    red[o + 1u] = wsum[0].y;
+    red[o + 2u] = wsum[0].z;
+  }
+}
+/**
+ * Pressure zones, 2: one thread per region adds its blocks' sums and the
+ * mass sources to the zone's mass and sets its pressure pi_1 = pi_0 (1 +
+ * y)^(1 / (1 - kappa)), y = M / (pi_0 G) - 1 (the CPU's), ln(1 + y) by its
+ * series where y is small (float32 has no log1p); and the rise of T,
+ * ratio^kappa, for zoneApply.
+ */
+${perThread("zoneCommit", "U.sealedN", `
+  let s = t;
+  let S = U.sealedN;
+  var G = 0.0;
+  var K = 0.0;
+  var src = 0.0;
+  for (var b = 0u; b < ${ZONE_BLOCKS}u; b++) {
+    let o = U.zonePartAt + 3u * (s * ${ZONE_BLOCKS}u + b);
+    G += red[o];
+    K += red[o + 1u];
+    src += red[o + 2u];
+  }
+  let mass = red[U.redZone + S + s] + src;
+  red[U.redZone + S + s] = mass;
+  let kappa = K / G;
+  let scaled = red[U.redZone + s] * G;
+  let y = (mass - scaled) / scaled;
+  var l = log(1.0 + y);
+  if (abs(y) < 1e-3) { l = y * (1.0 - y * (0.5 - y * (1.0 / 3.0 - y * 0.25))); }
+  let lr = l / (1.0 - kappa);
+  let ratio = exp(lr);
+  red[U.redZone + 2u * S + s] = ratio;
+  red[U.redZone + 3u * S + s] = exp(kappa * lr);
+  red[U.redZone + s] = red[U.redZone + s] * ratio;`)}
+
+/**
+ * A pressure zone after the advection (the CPU's zoneTransport), 1: its
+ * cells' mass as the transport left it, ZONE_BLOCKS partial sums a region.
+ */
+@compute @workgroup_size(64)
+fn zoneMassPartial(@builtin(workgroup_id) wid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let g = wid.x + wid.y * nwg.x;
+  let s = g / ${ZONE_BLOCKS}u;
+  let b = g % ${ZONE_BLOCKS}u;
+  if (s >= U.sealedN) { return; }
+  let start = io[U.sealedAt + s];
+  let end = io[U.sealedAt + s + 1u];
+  let list = U.sealedAt + U.sealedN + 1u;
+  var acc = 0.0;
+  for (var q = start + b * 64u + li; q < end; q += 64u * ${ZONE_BLOCKS}u) { acc += cf[ix(fRho, io[list + q])] * U.V; }
+  wheat[li] = acc;
+  workgroupBarrier();
+  for (var w = 32u; w > 0u; w >>= 1u) {
+    if (li < w) { wheat[li] = wheat[li] + wheat[li + w]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) { red[U.zonePartAt + 3u * g] = wheat[0]; }
+}
+/** 2: one thread per region scales its pressure by its mass over the transport's (the ratio for zoneScale). */
+${perThread("zoneMassCommit", "U.sealedN", `
+  let s = t;
+  let S = U.sealedN;
+  var M = 0.0;
+  for (var b = 0u; b < ${ZONE_BLOCKS}u; b++) { M += red[U.zonePartAt + 3u * (s * ${ZONE_BLOCKS}u + b)]; }
+  let ratio = red[U.redZone + S + s] / M;
+  red[U.redZone + 2u * S + s] = ratio;
+  red[U.redZone + s] = red[U.redZone + s] * ratio;`)}
+/** 3: each cell of a zone, its density by the ratio at the same T. */
+${perCell("zoneScale", `
+  let s = ci[ix(iSealed, c)];
+  if (s == NO_CELL) { return; }
+  cf[ix(fRho, c)] = cf[ix(fRho, c)] * red[U.redZone + 2u * U.sealedN + s];`)}
+
+/** Each cell of a pressure zone: compressed to its zone's new pressure, T by ratio^kappa, its density the gas law's times pi. */
+${perCell("zoneApply", `
+  let s = ci[ix(iSealed, c)];
+  if (s == NO_CELL) { return; }
+  let S = U.sealedN;
+  let T = cf[ix(fT, c)] * red[U.redZone + 3u * S + s];
+  cf[ix(fT, c)] = T;
+  cf[ix(fRho, c)] = gasDensity(T, c) * red[U.redZone + s];`)}
 
 fn cu(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[uAt(i, j, k)] + vel[uAt(i + 1u, j, k)]); }
 fn cv(i: u32, j: u32, k: u32) -> f32 { return 0.5 * (vel[vAt(i, j, k)] + vel[vAt(i, j + 1u, k)]); }

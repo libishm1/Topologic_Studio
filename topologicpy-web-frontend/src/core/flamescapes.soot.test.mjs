@@ -71,15 +71,17 @@ test("13.4 item 2: on a cold wall in hot gas, soot deposits at Talbot's thermoph
   const h = sim.grid.h;
   let worst = 0, read = 0, speed = 0;
   while (sim.time < 10 - 1e-9) {
-    const before = cells.map((c) => ({ m: sim.rho[c] * sim.Y[c * NS + SPECIES.SOOT] * sim.V, T: sim.T[c], Tw: sim.Ts[c - 1], dep: sim.sootDeposit[c] }));
+    const before = cells.map((c) => ({ m: sim.rho[c] * sim.Y[c * NS + SPECIES.SOOT] * sim.V, T: sim.T[c], Tw: sim.Ts[c - 1], rho: sim.rho[c], dep: sim.sootDeposit[c] }));
     step(sim, DT);
     cells.forEach((c, q) => {
       const b = before[q];
       const dm = sim.sootDeposit[c] - b.dep;
       const measured = -(h / DT) * Math.log(1 - dm / b.m);
-      // At the step's mean temperatures (the stage runs after the step's heat transfer).
+      // At the step's mean temperatures (the stage runs after the step's heat
+      // transfer), and the gas's own mean density (in the sealed box its
+      // pressure falls as the walls cool it, plan 13.8 item 5).
       const Tg = (b.T + sim.T[c]) / 2, Tw = (b.Tw + sim.Ts[c - 1]) / 2;
-      const exact = talbot(Tg, Tw, gasDensity(Tg, sim.Y, c * NS), mixtureCp(sim.Y, c * NS), sim.P.wallConvection);
+      const exact = talbot(Tg, Tw, (b.rho + sim.rho[c]) / 2, mixtureCp(sim.Y, c * NS), sim.P.wallConvection);
       const err = Math.abs(measured / exact - 1);
       worst = Math.max(worst, err);
       speed = exact;

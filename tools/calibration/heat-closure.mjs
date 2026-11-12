@@ -68,7 +68,10 @@ function gridOf(lo, hi, h) {
 
 /**
  * The gas's heat above ambient, its mass and its soot, over the open cells
- * not on the domain's shell, or over those `keep` accepts.
+ * not on the domain's shell, or over those `keep` accepts. Its density is the
+ * solver's own once it has stepped (a sealed region's at its pressure,
+ * pressureZones), and the gas law's at ambient pressure before (the cases
+ * set T without it, and pressure zones start at ambient pressure).
  */
 function inventory(sim, keep = null) {
   const { nx, ny, nz } = sim.grid;
@@ -77,7 +80,7 @@ function inventory(sim, keep = null) {
     if (sim.kind[c] === SOLID || (keep && !keep(c))) continue;
     const i = c % nx, j = Math.floor(c / nx) % ny, k = Math.floor(c / (nx * ny));
     if (i === 0 || k === 0 || i === nx - 1 || k === nz - 1 || j === ny - 1) continue;
-    const rho = gasDensity(sim.T[c], sim.Y, c * NS);
+    const rho = sim.steps > 0 ? sim.rho[c] : gasDensity(sim.T[c], sim.Y, c * NS);
     heat += rho * sim.V * mixtureCp(sim.Y, c * NS) * (sim.T[c] - TA);
     mass += rho * sim.V;
     soot += rho * sim.V * sim.Y[c * NS + SPECIES.SOOT];

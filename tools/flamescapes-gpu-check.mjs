@@ -44,7 +44,7 @@
  * software adapter (--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader).
  *
  *   node tools/flamescapes-gpu-check.mjs [--headed] [--swiftshader] [--quick]
- *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|walls|soot|timing] [--horizon 120] [--members 6]
+ *        [--phase agreement|onestep|ensemble|radiation|full|worker|sprinklers|spread|design|leak|systems|walls|soot|zones|timing] [--horizon 120] [--members 6]
  *        [--json out.json] [--url http://localhost:5173] (a running Vite server)
  */
 import { chromium } from "playwright-core";
@@ -148,6 +148,8 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     box(W, 2.0, 1.5, W + t, H, 2.4, S),
   ];
   const meshes = meshesOf(0.2);
+  // The room with its door closed (a leaf in the opening): a sealed room, a pressure zone.
+  const closedMeshes = [...meshes, box(W, 0, 1.5, W + 0.2, 2.0, 2.4, S)];
   const classA = { heatOfCombustion: 17.5e6, yields: { co2: 1.27, co: 0.004, soot: 0.015 }, embers: true, ignitionTemperature: 300 };
   const chosen = fireClass ? (await import(base + "fireClasses.js")).fuelsFor(fireClass) : null;
   const contentsFuel = chosen?.contentsFuel ?? classA;
@@ -235,6 +237,11 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     if (sim.wall) {
       c.wall = { ...sim.wall };
       for (const key of Object.keys(sim.wall)) if (ArrayBuffer.isView(sim.wall[key])) c.wall[key] = sim.wall[key].slice();
+    }
+    // Pressure zones keep their state in sim.zones.
+    if (sim.zones) {
+      c.zones = { ...sim.zones };
+      for (const key of Object.keys(sim.zones)) if (ArrayBuffer.isView(sim.zones[key])) c.zones[key] = sim.zones[key].slice();
     }
     // Working arrays are per solver.
     c.work = {};
@@ -959,6 +966,62 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
     }
   }
 
+  // ---- 6. pressure zones (calibration plan 13.8, item 5): the room with its
+  // door closed, the fire burning in it, its pressure following its gas.
+  if (phase === "all" || phase === "zones") {
+    const scene = room(0.25, 200000, closedMeshes);
+    out.zones = { grid: [scene.grid.nx, scene.grid.ny, scene.grid.nz], rows: [] };
+    const opts = { emitAbove: 1e9, embers: false, dt: 0.1, maxParticles: 0 };
+    const cpu = solverOf(scene, opts);
+    const twin = solverOf(scene, opts);
+    for (let c = 0; c < twin.N; c += 1) if (twin.kind[c] !== 2) twin.T[c] = Math.fround(twin.T[c] * (1 + 2 ** -23));
+    const gpu = runner.createSim(solverOf(scene, opts), {});
+    for (let s = 1; s <= 200; s += 1) {
+      F.step(cpu, 0.1);
+      F.step(twin, 0.1);
+      gpu.step(0.1);
+      if (![1, 10, 50, 100, 200].includes(s)) continue;
+      const g = await gpu.readFields();
+      const rel = (a, b) => Math.max(...Array.from(a, (x, q) => Math.abs(x - b[q]) / Math.abs(x)));
+      out.zones.rows.push({
+        step: s, ...range(cpu), gpu: compare(cpu, g), twin: compare(cpu, twin), zones: cpu.zones?.pi.length ?? 0,
+        pi: { cpu: cpu.zones?.pi[0], gpu: g.zones?.pi[0], twin: twin.zones?.pi[0], rel: g.zones ? rel(cpu.zones.pi, g.zones.pi) : null, twinRel: rel(cpu.zones.pi, twin.zones.pi) },
+        mass: { cpu: cpu.zones?.mass[0], gpu: g.zones?.mass[0], rel: g.zones ? rel(cpu.zones.mass, g.zones.mass) : null },
+        released: cpu.stats.released,
+      });
+      log(`zones step ${s}: pressure CPU ${cpu.zones?.pi[0]} GPU ${g.zones?.pi[0]}`);
+    }
+    gpu.destroy();
+    // ms per step, the full model in the closed room, zones off and on (the faster of two each).
+    out.zones.timing = [];
+    for (const [label, cell, cap] of [["30k", 0.15, 30000], ["200k", 0.05, 200000]]) {
+      const s = room(cell, cap, closedMeshes);
+      const time = async (o) => {
+        const g2 = runner.createSim(solverOf(s, { dt: 0.1, ...o }), {});
+        for (let k = 0; k < 5; k += 1) g2.step(0.1);
+        await g2.finish();
+        const n = quick ? 50 : 200;
+        const t0 = performance.now();
+        for (let k = 0; k < n; k += 1) g2.step(0.1);
+        await g2.finish();
+        g2.destroy();
+        return (performance.now() - t0) / n;
+      };
+      const cpuTime = (o) => {
+        const c = solverOf(s, { dt: 0.1, ...o });
+        F.step(c, 0.1);
+        const n = label === "30k" ? (quick ? 10 : 30) : (quick ? 3 : 6);
+        const t0 = performance.now();
+        for (let k = 0; k < n; k += 1) F.step(c, 0.1);
+        return (performance.now() - t0) / n;
+      };
+      const cpuOff = Math.min(cpuTime({ pressureZones: 0 }), cpuTime({ pressureZones: 0 })), cpuOn = Math.min(cpuTime({ pressureZones: 1 }), cpuTime({ pressureZones: 1 }));
+      const off1 = await time({ pressureZones: 0 }), on1 = await time({ pressureZones: 1 }), off2 = await time({ pressureZones: 0 }), on2 = await time({ pressureZones: 1 });
+      out.zones.timing.push({ label, cells: s.grid.cells, cpuOff, cpuOn, gpuOff: Math.min(off1, off2), gpuOn: Math.min(on1, on2) });
+      log(`zones timing ${label}: ${s.grid.cells} cells, CPU ${cpuOff.toFixed(1)} / ${cpuOn.toFixed(1)} ms, GPU ${Math.min(off1, off2).toFixed(2)} / ${Math.min(on1, on2).toFixed(2)} ms (off / on)`);
+    }
+  }
+
   // ---- 3. ms per step
   if (phase === "all" || phase === "timing") {
     out.timing = [];
@@ -1004,7 +1067,7 @@ async function suite({ base, phase, horizon, quick, fireClass, ducts, members: s
   return out;
 }
 
-const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "walls", "soot", "timing"] : [PHASE];
+const phases = PHASE === "all" ? ["agreement", "onestep", "ensemble", "radiation", "full", "worker", "sprinklers", "design", "systems", "walls", "soot", "zones", "timing"] : [PHASE];
 const report = {};
 const t0 = Date.now();
 for (const phase of phases) {
@@ -1164,6 +1227,13 @@ if (report.soot) {
   console.log("  step | gas T max | soot max  | deposited kg CPU / GPU / twin       | per cell max GPU / twin (largest cell) | hottest gas C");
   for (const r of s.rows) console.log(`  ${String(r.step).padStart(4)} | ${e(r.gpu.T.max)} | ${e(r.gpu.soot.max)} | ${e(r.deposited.cpu)} / ${e(r.deposited.gpu)} / ${e(r.deposited.twin)} | ${e(r.deposited.cellMax)} / ${e(r.deposited.twinCellMax)} (${e(r.deposited.cellLargest)}) | ${f(r.TmaxC, 0)}`);
   for (const r of s.timing || []) console.log(`  ms per step, ${r.label} (${r.cells} cells): GPU ${f(r.gpuOff, 2)} off / ${f(r.gpuOn, 2)} on`);
+}
+if (report.zones) {
+  const z = report.zones;
+  console.log(`\nPressure zones: the room with its door closed, ${z.grid.join("x")} cells, radiation and particles off, 200 steps of 0.1 s: |CPU - GPU| beside |CPU - CPU twin| (one ulp warmer)`);
+  console.log("  step | gas T max / p99      | O2 max   | rho max  | zone pressure CPU / GPU (rel diff; twin's)     | zone mass rel diff | released J | hottest gas C");
+  for (const r of z.rows) console.log(`  ${String(r.step).padStart(4)} | ${e(r.gpu.T.max)} / ${e(r.gpu.T.p99)} | ${e(r.gpu.O2.max)} | ${e(r.gpu.rho.max)} | ${f(r.pi.cpu, 6)} / ${f(r.pi.gpu, 6)} (${e(r.pi.rel)}; ${e(r.pi.twinRel)}) | ${e(r.mass.rel)} | ${f(r.released, 0)} | ${f(r.TmaxC, 0)}`);
+  for (const r of z.timing || []) console.log(`  ms per step, ${r.label} (${r.cells} cells): CPU ${f(r.cpuOff, 1)} off / ${f(r.cpuOn, 1)} on; GPU ${f(r.gpuOff, 2)} off / ${f(r.gpuOn, 2)} on`);
 }
 if (report.timing) {
   console.log("\nms per step (full model at the start of the fire; GPU steps queued, then waited for)");
