@@ -12,7 +12,7 @@ import { ApiError, api, isGraphGone, openFireStream } from "../lib/api.js";
 import { cacheSize, clearCache } from "../lib/fragmentCache.js";
 import { mark } from "../lib/perf.js";
 import { migrateSettings, withoutSessionOnly } from "../core/settingsMigration.js";
-import { DEFAULT_SERVICE_RESPONSE } from "../core/fireService.js";
+import { DEFAULT_SERVICE_PRESET, DEFAULT_SERVICE_RESPONSE } from "../core/fireService.js";
 import { STALE_SITE_MESSAGE, effectiveEngine as engineFor, isStaleSite } from "../core/session.js";
 
 const THEME_KEY = "ts.theme";
@@ -179,6 +179,9 @@ export const DEFAULT_SETTINGS = {
   // the performance check's detection (perfDetection) plus this response, s:
   // NFPA 1710 (2020)'s first engine company by default, at most an hour in all.
   flamescapesUntilService: false,
+  // The response: a preset (core/fireService.js SERVICE_PRESETS), NFPA 1710's
+  // first engine by default, or "custom" with the response here, s.
+  flamescapesServicePreset: DEFAULT_SERVICE_PRESET,
   flamescapesServiceResponse: DEFAULT_SERVICE_RESPONSE,
   flamescapesFireLoad: 780, // MJ / m^2 of floor, the contents
   flamescapesUntenableC: 60, // gas at head height
@@ -295,6 +298,7 @@ export const PLAN_SETTINGS = [
   "flamescapesGrowth",
   "flamescapesHorizon",
   "flamescapesUntilService",
+  "flamescapesServicePreset",
   "flamescapesServiceResponse",
   "flamescapesFireLoad",
   "flamescapesUntenableC",

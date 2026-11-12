@@ -7,7 +7,7 @@
  * or "finest"; it is now flamescapesGridPolicy, "standard" by default. A
  * chosen "finest" is kept; the old default gives way to the standard grid.
  */
-import { SERVICE_RESPONSE_MAX, SERVICE_RESPONSE_MIN } from "./fireService.js";
+import { DEFAULT_SERVICE_RESPONSE, SERVICE_PRESET_IDS, SERVICE_RESPONSE_MAX, SERVICE_RESPONSE_MIN } from "./fireService.js";
 
 export function migrateSettings(stored) {
   const { flamescapesGrid, ...rest } = stored || {};
@@ -23,6 +23,13 @@ export function migrateSettings(stored) {
   if (rest.flamescapesUntilService !== undefined && typeof rest.flamescapesUntilService !== "boolean") delete rest.flamescapesUntilService;
   const response = rest.flamescapesServiceResponse;
   if (response !== undefined && !(Number.isFinite(response) && response >= SERVICE_RESPONSE_MIN && response <= SERVICE_RESPONSE_MAX)) delete rest.flamescapesServiceResponse;
+  // Its preset (SERVICE_PRESETS): only those this version offers. A response
+  // stored before the presets that is not NFPA 1710's 399 s was set by hand, so
+  // it stays, as "custom".
+  if (rest.flamescapesServicePreset !== undefined && !SERVICE_PRESET_IDS.includes(rest.flamescapesServicePreset)) delete rest.flamescapesServicePreset;
+  if (rest.flamescapesServicePreset === undefined && rest.flamescapesServiceResponse !== undefined && rest.flamescapesServiceResponse !== DEFAULT_SERVICE_RESPONSE) {
+    rest.flamescapesServicePreset = "custom";
+  }
   if (rest.flamescapesHeatScale !== undefined && !HEAT_SCALES.includes(rest.flamescapesHeatScale)) delete rest.flamescapesHeatScale;
   return rest;
 }

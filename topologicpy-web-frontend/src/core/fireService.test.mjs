@@ -2,8 +2,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  ALARM_HANDLING_S,
+  DEFAULT_SERVICE_PRESET,
   DEFAULT_SERVICE_RESPONSE,
   NFPA_1710_RESPONSE,
+  SERVICE_PRESETS,
   SERVICE_HORIZON_MAX,
   SOLVER_STEP_S,
   beyondTested,
@@ -12,6 +15,7 @@ import {
   gpuPace,
   runHorizon,
   serviceArrival,
+  serviceResponse,
 } from "./fireService.js";
 import { DEFAULTS } from "./flamescapes.js";
 import { migrateSettings } from "./settingsMigration.js";
@@ -92,9 +96,50 @@ test("lengths of time read in seconds, minutes or hours", () => {
 });
 
 test("stored settings: only a switch and a response time this version takes", () => {
-  assert.deepEqual(migrateSettings({ flamescapesUntilService: true, flamescapesServiceResponse: 480 }), { flamescapesUntilService: true, flamescapesServiceResponse: 480 });
+  // A response set by hand before the presets (not NFPA 1710's 399 s) stays, as "custom".
+  assert.deepEqual(migrateSettings({ flamescapesUntilService: true, flamescapesServiceResponse: 480 }), {
+    flamescapesUntilService: true,
+    flamescapesServiceResponse: 480,
+    flamescapesServicePreset: "custom",
+  });
+  assert.deepEqual(migrateSettings({ flamescapesServiceResponse: 399 }), { flamescapesServiceResponse: 399 });
+  // Only the presets this version offers.
+  assert.deepEqual(migrateSettings({ flamescapesServicePreset: "nfpa1720rural" }), { flamescapesServicePreset: "nfpa1720rural" });
+  assert.deepEqual(migrateSettings({ flamescapesServicePreset: "nfpa1730" }), {});
+  assert.deepEqual(migrateSettings({ flamescapesServicePreset: "nfpa1720", flamescapesServiceResponse: 600 }), { flamescapesServicePreset: "custom", flamescapesServiceResponse: 600 });
   assert.deepEqual(migrateSettings({ flamescapesUntilService: "yes", flamescapesServiceResponse: "399" }), {});
   assert.deepEqual(migrateSettings({ flamescapesServiceResponse: 10 }), {});
   assert.deepEqual(migrateSettings({ flamescapesServiceResponse: 99999 }), {});
   assert.deepEqual(migrateSettings({ flamescapesServiceResponse: null }), {});
+});
+
+test("the presets: NFPA 1710's first engine, and NFPA 1720 (2020) Table 4.3.2 from dispatch plus 1710's 79 s of alarm handling", () => {
+  assert.equal(ALARM_HANDLING_S, 15 + 64);
+  assert.deepEqual(
+    SERVICE_PRESETS.map((p) => [p.id, p.seconds]),
+    [
+      ["nfpa1710", 399],
+      ["nfpa1720urban", 79 + 9 * 60],
+      ["nfpa1720suburban", 79 + 10 * 60],
+      ["nfpa1720rural", 79 + 14 * 60],
+      ["custom", null],
+    ],
+  );
+  assert.equal(DEFAULT_SERVICE_PRESET, "nfpa1710");
+  // Each standard says where it comes from; the 1720 ones that their time runs from dispatch.
+  for (const p of SERVICE_PRESETS.filter((x) => x.id.startsWith("nfpa1720"))) assert.match(p.source, /^NFPA 1720 \(2020 edition\) Table 4\.3\.2, .*from dispatch, plus 79 s of alarm handling$/);
+});
+
+test("the response the settings ask for: a preset's, or the user's own with Custom", () => {
+  assert.equal(serviceResponse({ flamescapesServicePreset: "nfpa1710", flamescapesServiceResponse: 600 }), 399);
+  assert.equal(serviceResponse({ flamescapesServicePreset: "nfpa1720urban" }), 619);
+  assert.equal(serviceResponse({ flamescapesServicePreset: "custom", flamescapesServiceResponse: 600 }), 600);
+  // Stored before the presets: the response it holds; an unknown preset: the default.
+  assert.equal(serviceResponse({ flamescapesServiceResponse: 600 }), 600);
+  assert.equal(serviceResponse({ flamescapesServicePreset: "nfpa1730", flamescapesServiceResponse: 600 }), DEFAULT_SERVICE_RESPONSE);
+  // Rural, with the default 60 s detection: 979 s, past the tested 900 s, as the note then says.
+  const rural = { flamescapesUntilService: true, perfDetection: 60, flamescapesServicePreset: "nfpa1720rural", flamescapesHorizon: 180 };
+  assert.equal(runHorizon(rural), 979);
+  assert.equal(beyondTested(runHorizon(rural)), true);
+  assert.equal(runHorizon({ ...rural, flamescapesServicePreset: "nfpa1720suburban" }), 739);
 });

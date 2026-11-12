@@ -1525,27 +1525,36 @@ if (await fireModelSelect.isVisible().catch(() => false)) {
   await simulated.fill("30");
   await simulated.blur();
   // Until the fire service arrives (core/fireService.js, 2026-11-12): off by
-  // default; on, the simulated time gives way to the response, NFPA 1710's
-  // 6.65 min, and the panel says the run lasts the detection set (60 s) plus
-  // it, 459 s; past 900 s, that it lies outside the tested range. A short
-  // response then sets the run's length: 60 s + 0.5 min = 90 s on the card.
+  // default; on, the simulated time gives way to the fire service, NFPA 1710's
+  // first engine (6.65 min) by default, and the panel says the run lasts the
+  // detection set (60 s) plus it, 459 s. NFPA 1720's rural zone (14 min from
+  // dispatch, plus 79 s of alarm handling) makes it 979 s, past 900 s, which
+  // the panel says lies outside the tested range. Custom shows the minutes
+  // field: 60 s + 0.5 min = 90 s on the run card.
   const serviceSwitch = page.locator(".toggle__label", { hasText: /^Run until the fire service arrives$/ });
   if ((await serviceSwitch.count()) > 0) {
     await serviceSwitch.first().click();
+    const servicePreset = page.getByLabel("Fire service", { exact: true });
     const serviceResponse = page.getByLabel("Fire service response (min)");
     const serviceNote = async () => ((await page.locator(".panel__scroll").first().innerText().catch(() => "")).match(/The fire runs [^\n]*/)?.[0] || "");
-    const shownMinutes = await serviceResponse.inputValue().catch(() => "");
+    const presetNow = await servicePreset.inputValue().catch(() => "");
+    const minutesHidden = !(await serviceResponse.isVisible().catch(() => false));
     const byDefault = await serviceNote();
     const timeGone = !(await page.getByLabel("Simulated time (s)").isVisible().catch(() => false));
     record(
-      shownMinutes === "6.65" && timeGone && /^The fire runs 7 min 39 s \(459 s\)/.test(byDefault) && /NFPA 1710 \(2020 edition\)/.test(byDefault),
-      "until the fire service arrives, the run lasts the detection set plus NFPA 1710's response",
-      byDefault.slice(0, 220) || `response ${shownMinutes || "not shown"}`,
+      presetNow === "nfpa1710" && minutesHidden && timeGone && /^The fire runs 7 min 39 s \(459 s\)/.test(byDefault) && /NFPA 1710 \(2020 edition\)/.test(byDefault),
+      "until the fire service arrives, the run lasts the detection set plus NFPA 1710's first engine",
+      byDefault.slice(0, 220) || `preset ${presetNow || "not shown"}`,
     );
-    await serviceResponse.fill("15");
-    await serviceResponse.blur();
-    const pastTested = await serviceNote();
-    record(/^The fire runs 16 min \(960 s\)/.test(pastTested) && /outside the tested range/.test(pastTested), "  past 900 s, the panel says the run lies outside the tested range", pastTested.slice(0, 220) || "no note");
+    await servicePreset.selectOption("nfpa1720rural");
+    const rural = await serviceNote();
+    record(
+      /^The fire runs 16 min 19 s \(979 s\)/.test(rural) && /NFPA 1720 \(2020 edition\) Table 4\.3\.2/.test(rural) && /from dispatch, plus 79 s of alarm handling/.test(rural) && /outside the tested range/.test(rural),
+      "  NFPA 1720's rural zone: 14 min from dispatch plus the alarm handling, past 900 s, outside the tested range",
+      rural.slice(0, 220) || "no note",
+    );
+    await servicePreset.selectOption("custom");
+    const minutesShown = await serviceResponse.isVisible().catch(() => false);
     await serviceResponse.fill("0.5");
     await serviceResponse.blur();
     await page.getByRole("button", { name: /^Start fire$/ }).click();
@@ -1554,10 +1563,11 @@ if (await fireModelSelect.isVisible().catch(() => false)) {
       .then(() => true)
       .catch(() => false);
     await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
-    record(ninety, "  and a run started then lasts that long", ninety ? "90 s on the run card" : "the card did not show 90 s");
+    record(minutesShown && ninety, "  Custom shows the minutes, and a run started then lasts that long", ninety ? "90 s on the run card" : `${minutesShown ? "minutes shown" : "no minutes field"}; the card did not show 90 s`);
     // Back to the default response and to the time set.
     await serviceResponse.fill("6.65");
     await serviceResponse.blur();
+    await servicePreset.selectOption("nfpa1710");
     await serviceSwitch.first().click();
     record(await page.getByLabel("Simulated time (s)").isVisible().catch(() => false), "  switched off, the simulated time set is back");
   } else {

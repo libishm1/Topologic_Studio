@@ -26,14 +26,15 @@ import { healthReason } from "../core/runHealth.js";
 import { COVERED, validationLine, validationVerdict } from "../core/calibrationStatus.js";
 import {
   DEFAULT_SERVICE_RESPONSE,
-  NFPA_1710_RESPONSE,
   SERVICE_HORIZON_MAX,
+  SERVICE_PRESETS,
   SERVICE_RESPONSE_MAX,
   SERVICE_RESPONSE_MIN,
   computeSeconds,
   durationText,
   gpuPace,
   serviceArrival,
+  serviceResponse,
 } from "../core/fireService.js";
 import { SOLVERS } from "../core/solverVersions.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
@@ -2928,11 +2929,12 @@ function GpuNote() {
  * GPU's kept speed allows (measured on a larger grid); else not known.
  */
 function ServiceRunNote({ settings, pace, gpuSpeed }) {
-  const { detection, response, arrival, horizon, capped, beyondTested } = serviceArrival(settings.perfDetection, settings.flamescapesServiceResponse);
+  const { detection, response, arrival, horizon, capped, beyondTested } = serviceArrival(settings.perfDetection, serviceResponse(settings));
+  // Where the response comes from: the preset's standard, or nothing for the user's own.
+  const preset = SERVICE_PRESETS.find((p) => p.id === settings.flamescapesServicePreset && p.source);
   const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(horizon)));
   const apart = horizon / frames;
   const grid = settings.flamescapesCalibratedGrid ? "calibrated" : settings.flamescapesGridPolicy;
-  const nfpa = NFPA_1710_RESPONSE.map((p) => `${p.seconds} s ${p.label}`).join(", ");
   let compute;
   if (pace && pace.backend === settings.flamescapesBackend && pace.grid === grid) {
     compute =
@@ -2952,7 +2954,7 @@ function ServiceRunNote({ settings, pace, gpuSpeed }) {
       </strong>{" "}
       Detection at {Math.round(detection)} s, the time set under Performance check in the Route step (a run&apos;s own smoke detectors are
       read only after it), and the fire service {durationText(response)} after it
-      {response === DEFAULT_SERVICE_RESPONSE ? `: NFPA 1710 (2020 edition) for the first engine company, ${nfpa}` : ""}. Counted from
+      {preset ? `: ${preset.source}` : ""}. Counted from
       detection, as if the alarm reached the fire service at once.
       {capped ? ` The run stops at ${SERVICE_HORIZON_MAX.toLocaleString()} s, before they arrive at ${Math.round(arrival).toLocaleString()} s.` : ""}
       {beyondTested
@@ -3528,14 +3530,32 @@ export function SimulatePanel({
             />
             {settings.flamescapesUntilService && (
               <>
-                <NumberField
-                  label="Fire service response (min)"
-                  value={Math.round((settings.flamescapesServiceResponse / 60) * 100) / 100}
-                  min={SERVICE_RESPONSE_MIN / 60}
-                  max={SERVICE_RESPONSE_MAX / 60}
-                  step={0.05}
-                  onChange={(minutes) => setSettings({ flamescapesServiceResponse: Math.round((minutes ?? DEFAULT_SERVICE_RESPONSE / 60) * 60) })}
-                />
+                {/* The response from a standard, or Custom with the user's own minutes beside it. */}
+                <div className={settings.flamescapesServicePreset === "custom" ? "grid-2" : undefined}>
+                  <SelectField
+                    label="Fire service"
+                    value={settings.flamescapesServicePreset}
+                    onChange={(flamescapesServicePreset) => setSettings({ flamescapesServicePreset })}
+                    options={SERVICE_PRESETS.map(({ id, label }) => ({ value: id, label }))}
+                    hint={
+                      settings.flamescapesServicePreset === "custom"
+                        ? "Your fire service's own time, from the alarm reaching it to the first crew on scene."
+                        : settings.flamescapesServicePreset === "nfpa1710"
+                          ? "From the alarm: answering, processing, turnout and travel, for a career department (NFPA 1710, 2020)."
+                          : "From dispatch, plus 79 s of alarm handling: NFPA 1720 (2020) Table 4.3.2, for a volunteer department."
+                    }
+                  />
+                  {settings.flamescapesServicePreset === "custom" && (
+                    <NumberField
+                      label="Fire service response (min)"
+                      value={Math.round((settings.flamescapesServiceResponse / 60) * 100) / 100}
+                      min={SERVICE_RESPONSE_MIN / 60}
+                      max={SERVICE_RESPONSE_MAX / 60}
+                      step={0.05}
+                      onChange={(minutes) => setSettings({ flamescapesServiceResponse: Math.round((minutes ?? DEFAULT_SERVICE_RESPONSE / 60) * 60) })}
+                    />
+                  )}
+                </div>
                 <ServiceRunNote settings={settings} pace={pace} gpuSpeed={gpuSpeed} />
               </>
             )}

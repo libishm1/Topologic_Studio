@@ -5,7 +5,9 @@
  * service's response. Off by default; off, the run lasts the simulated time
  * set, as before.
  *
- * The response defaults to NFPA 1710, Standard for the Organization and
+ * The response is chosen from presets (SERVICE_PRESETS, below: NFPA 1710's
+ * first engine, NFPA 1720's urban, suburban and rural zones) or set by hand.
+ * It defaults to NFPA 1710, Standard for the Organization and
  * Deployment of Fire Suppression Operations, Emergency Medical Operations,
  * and Special Operations to the Public by Career Fire Departments, 2020
  * edition: its objectives for the first engine company at a fire
@@ -27,6 +29,78 @@ export const NFPA_1710_RESPONSE = [
 
 /** Their sum, the default response: 399 s, 6.65 min. */
 export const DEFAULT_SERVICE_RESPONSE = NFPA_1710_RESPONSE.reduce((s, part) => s + part.seconds, 0);
+
+/** NFPA 1710's alarm handling, answering and processing, s: added to the NFPA 1720 times, which run from dispatch. */
+export const ALARM_HANDLING_S = NFPA_1710_RESPONSE.filter((p) => p.id === "answering" || p.id === "processing").reduce((s, p) => s + p.seconds, 0);
+
+/**
+ * The fire service's response, chosen (settings.flamescapesServicePreset):
+ * NFPA 1710's first engine, the default; NFPA 1720's demand zones; or the
+ * user's own time ("custom", settings.flamescapesServiceResponse).
+ *
+ * NFPA 1720, Standard for the Organization and Deployment of Fire Suppression
+ * Operations, Emergency Medical Operations, and Special Operations to the
+ * Public by Volunteer Fire Departments, 2020 edition, Table 4.3.2, for a
+ * department mostly of volunteers: by the zone's population per square mile,
+ * the staff to assemble on scene and the minutes to do it in, met the share
+ * of the time given. Its times run from dispatch, call handling not included,
+ * so each preset adds the 79 s of NFPA 1710's alarm answering and processing
+ * that the 1710 preset counts.
+ *
+ * The standard is not open to read, so the table's figures were read from
+ * secondary sources: Fire Engineering, A. Zielinski, "From Arrival to Action:
+ * The Impact of Assembly Time" (2026-05-29), its table "NFPA 1720 Staff and
+ * Time Requirements" (urban, suburban, rural and remote, with no edition
+ * named); and Firehouse, N. Sohyda (chair of the NFPA 1720 committee), "NFPA
+ * Standards: NFPA 1720: An Update on the Volunteer Deployment Standard"
+ * (2021-10-18), on the 2020 edition and its times running from dispatch with
+ * call handling not included. The 1720 times are a volunteer department's
+ * objectives, as 1710's are a career one's: not what any town achieves.
+ */
+export const SERVICE_PRESETS = [
+  {
+    id: "nfpa1710",
+    label: "NFPA 1710, first engine (6.65 min)",
+    seconds: DEFAULT_SERVICE_RESPONSE,
+    source: `NFPA 1710 (2020 edition) for the first engine company, ${NFPA_1710_RESPONSE.map((p) => `${p.seconds} s ${p.label}`).join(", ")}`,
+  },
+  {
+    id: "nfpa1720urban",
+    label: "NFPA 1720 urban (9 min from dispatch)",
+    seconds: ALARM_HANDLING_S + 9 * 60,
+    source: "NFPA 1720 (2020 edition) Table 4.3.2, urban (over 1,000 people a square mile): 15 staff in 9 min, 90 % of the time, from dispatch, plus 79 s of alarm handling",
+  },
+  {
+    id: "nfpa1720suburban",
+    label: "NFPA 1720 suburban (10 min from dispatch)",
+    seconds: ALARM_HANDLING_S + 10 * 60,
+    source: "NFPA 1720 (2020 edition) Table 4.3.2, suburban (500 to 1,000 people a square mile): 10 staff in 10 min, 80 % of the time, from dispatch, plus 79 s of alarm handling",
+  },
+  {
+    id: "nfpa1720rural",
+    label: "NFPA 1720 rural (14 min from dispatch)",
+    seconds: ALARM_HANDLING_S + 14 * 60,
+    source: "NFPA 1720 (2020 edition) Table 4.3.2, rural (under 500 people a square mile): 6 staff in 14 min, 80 % of the time, from dispatch, plus 79 s of alarm handling",
+  },
+  { id: "custom", label: "Custom", seconds: null, source: null },
+];
+
+/** The presets' ids, for the stored settings' allow-list (core/settingsMigration.js). */
+export const SERVICE_PRESET_IDS = SERVICE_PRESETS.map((p) => p.id);
+export const DEFAULT_SERVICE_PRESET = "nfpa1710";
+
+/**
+ * The response the settings ask for, s: a preset's, or the user's own with
+ * "custom". Settings stored before the presets (no preset) mean the response
+ * they hold, as their migration reads them; an unknown preset, the default.
+ */
+export function serviceResponse(settings) {
+  const id = settings?.flamescapesServicePreset;
+  const preset = SERVICE_PRESETS.find((p) => p.id === id);
+  if (preset?.seconds) return preset.seconds;
+  if (id === "custom" || id === undefined) return settings?.flamescapesServiceResponse ?? DEFAULT_SERVICE_RESPONSE;
+  return DEFAULT_SERVICE_RESPONSE;
+}
 
 /** A response time the field takes, s (0.5 to 60 min). */
 export const SERVICE_RESPONSE_MIN = 30;
@@ -62,7 +136,7 @@ export const beyondTested = (horizon) => horizon > COVERED.horizon;
 /** The simulated time a Flamescapes run lasts under these settings, s: the time set, or until the fire service arrives. */
 export function runHorizon(settings) {
   if (!settings?.flamescapesUntilService) return settings?.flamescapesHorizon;
-  return serviceArrival(settings.perfDetection, settings.flamescapesServiceResponse).horizon;
+  return serviceArrival(settings.perfDetection, serviceResponse(settings)).horizon;
 }
 
 /**
