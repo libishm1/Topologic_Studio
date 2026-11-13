@@ -1431,3 +1431,53 @@ What bends the method, for the reader to weigh: several Overstuffed records have
 No verdict word attaches to any of this (15.3). The app's default design fire is unchanged and changes only on the user's word.
 
 **NIST's Fire Calorimetry Database (15.3, the terms).** Its data are a NIST public data set (doi:10.18434/mds2-2314), not Standard Reference Data. NIST's licence statement for such data allows use, modified works and their distribution, asks that a modified work say that it was changed, when and how, and asks that NIST be acknowledged as the source. The database's user guide asks that each project's own report be cited, NIST TN 2077 for the method, and the database itself. The sentences were read through a fetch tool that returns fragments; they are to be read on the pages before they are quoted. The upholstered chair and sofa records can be downloaded as 1 s files and carry initial and final mass. They have not been opened. Reading them is the next step of 15.3.
+
+### 15.7 Results of 15.3 (the NIST part) (2026-11-13, 04:06)
+
+Tool: `tools/calibration/heat-release-checks.mjs --nist`; every number is in `benchmark/results/2026-11-13-heat-release-checks-nist.json`. No model run is involved. The method is the UL FSRI part's, through the same functions: 5 s means, the window from the first mean above 25 kW to the first at 90 % of the peak, and α (t − t0)² fitted with t0 free.
+
+**The items.** 31 were chosen from the database's listing by specimen name and description, before any record was opened: every single upholstered seat or sofa, and every full-scale upholstered chair mock-up, burnt alone under the hood. The file lists the search words and what was left out, with the reason. One record (D2) was not served, so 30 were read. Stacks of three chairs and mock-ups with a fire barrier are kept apart, because a stack is several items and a barrier is there to slow the fire.
+
+Growth coefficients, in kW/s²:
+
+| kind | fitted | median | range | the app's medium (0.0117) | the app's fast (0.0469) |
+|---|---|---|---|---|---|
+| chair | 9 of 10 | 0.0922 | 0.0012 to 0.2432 | inside | inside |
+| sofa | 7 of 7 | 0.0546 | 0.0139 to 0.1841 | below the range | inside |
+| chair mock-up, no barrier | 3 of 3 | 0.0871 | 0.0732 to 0.1258 | below the range | below the range |
+| three stacked chairs (apart) | 3 of 3 | 0.0016 | 0.0006 to 0.0128 | inside | above the range |
+| chair mock-up, fire barrier (apart) | 6 of 6 | 0.0006 | 0.00003 to 1.04 | inside | inside |
+
+One chair (Test048) and the cigarette-lit mock-up never passed 25 kW and have no fit. The chairs' range spans a factor of 200, so "inside" says little for them: the kind runs from stackable, conference and office chairs of 7 to 18 kg, two of which barely burnt, to a 27 kg armchair.
+
+Peaks: chairs median 430 kW (17 to 1,693); sofas median 2,988 kW (1,811 to 5,108); mock-ups without a barrier median 2,669 kW (2,506 to 2,823). Energy: chairs median 46 MJ (1.4 to 384); sofas median 891 MJ (634 to 1,438); mock-ups without a barrier median 321 MJ.
+
+**A check of the reduction.** I recomputed one sofa (Test029) from its raw record by a separate route: raw peak 1,983.8 kW at 373 s, 5 s peak 1,943.9 kW at 375 s, 832.1 MJ from ignition to the record's end. All three agree with the file. The test's own page gives a peak of 1,984 ± 102 kW and 811 ± 45 MJ to its Fire Out event.
+
+**Beside it, not pre-registered** (chosen after the table was read, as 15.6 did for the UL FSRI chairs):
+- *Time to 1 MW from ignition.* The sofas' fitted curves reach 1 MW at a median of 295 s (244 to 501); the mock-ups without a barrier at 130 s (127 to 141). The app's medium curve reaches it at 292 s and its fast curve at 146 s. So, as in 15.6, the medium class gives a sofa's time to 1 MW from ignition closely and understates how steeply it rises once it has caught. The mock-ups, lit by an 18 kW burner for 80 s, follow the fast curve.
+- *Heat of combustion.* NIST weighed each item before and after, so the energy over the mass lost is an effective heat of combustion: chairs median 19.2 MJ/kg (12.8 to 37.0), sofas 18.2 MJ/kg (16.0 to 18.6), mock-ups without a barrier 25.1 MJ/kg (24.6 to 25.6). The app's class A fuel has 18.0 MJ/kg, inside the sofas' range and near both medians.
+
+No verdict word attaches to any of this (15.3). The app's default design fire is unchanged and changes only on the user's word. Taken with 15.6, the evidence for that decision is: two laboratories; 20 sofas and armchairs that burnt freely (13 at UL FSRI, 7 sofas at NIST), with medium below the fitted coefficient of every one; medium close on their time to 1 MW from ignition; and NIST's ten lighter chairs, whose coefficients lie on both sides of medium.
+
+**The terms, read on the pages.** The licence statement's sentences that 15.6 summarised are on NIST's page as quoted in the results file (`terms`): the data are not subject to copyright in the United States; modified works may be made and distributed; a modified work should say that it was changed, when and how; NIST is to be acknowledged as the source. I fetched the licence page and the database's page again on 2026-11-13 and found each quoted sentence in the page's text. The results file carries NIST's notice, the database's citation, NIST TN 2077 for the method, and each project's report. Only reduced numbers are in the repository; the records stay in a cache that git ignores.
+
+### 15.8 `fsri-chairs`: its open choices, fixed before any run of it (2026-11-13, 04:06)
+
+15.4 named the series and left its details open. The agent that prepared it (without running it) listed eight choices and a recommendation for each; they are in `tools/calibration/data/fsri-chairs.json` (`openChoices`). The coordinator has read 13.A and 13.B's first two files, so each decision below takes the agent's recommendation as written, or 15.4's own words. No alternative is run.
+
+1. **The items' size and place:** as recommended. Chair 0.685 × 0.755 m, sofa 2.19 × 0.94 m (read off Willi et al. 2023, Fig. 4), a solid block over each footprint up to 0.445 m. The sofa's seat height is not dimensioned and is taken as the chair's.
+2. **The fire's shape:** the suite's burner over the footprint's area from ignition, as the app does. The fire does not spread from the matchbook. A known mismatch, stated with any result.
+3. **The prescribed heat release:** the record's 5 s means from ignition, negative means set to 0, a missing mean from its neighbours, no shift for the hood's delay.
+4. **The radiant fraction:** 0 along rays, the app's design-fire burner, since 15.4 asks for what the app would use.
+5. **The fuel:** the app's class A fuel, from `fireClasses.js` at the solver revision that runs.
+6. **The run and the windows:** `fsri`'s, as 15.4 says ("by the same reducers and rule"). The chairs peak and decay, so the last 180 s are the decay. That is known, and the windows are not moved for it.
+7. **O2:** under 14.7 and 14.8, with UL FSRI's stated 12 %.
+8. **The cells:** 0.20, 0.27 and 0.34 m.
+9. **The solver and flags** (not in the agent's list): 13.B's, revision 550fce5 with walls in layers and `--leakage`. The tests have no FDS input and an open door, so no leak is stated and no region is sealed.
+
+How it is reported:
+- **As a ninth series, beside 13.B.** 13.B's verdicts are read on its eight series, as pre-registered. They are read again with `fsri-chairs` added. Where the two words differ, the stricter stands, because the series' details were fixed after 13.B's first results were seen.
+- **It is the only series whose fire is the app's own design-fire burner** (class A fuel, no test fuel, no radiant fraction along rays). So its result says more about the app as used than a burner series does, and less about any one sub-model.
+- **A stopped run counts as 12.6 counts it.**
+- Later items (13.17 onward) run it with the other series in their own reruns.
