@@ -463,10 +463,9 @@ export function MethodsDialog({ open, onClose, studio }) {
                   the building. Its transport keeps the gas&apos;s mass and heat, and heated gas expands (the low-Mach
                   form). {validationSummary()} The series are Steckler, NBS multi-room, NIST/NRC, WTC, the ATF corridors, UL
                   FSRI&apos;s compartments, UL/NIST&apos;s vents and NIST FSE. Each word is the strictest of the ways the
-                  comparison was read. The smoke layer&apos;s depth is within 0 to 11 % of measured, pooled, with a scatter of
-                  0.14 on the cells where it is calibrated; on 0.27 m it was in band in all seven series as first run (bias
-                  1.05, scatter 0.12) and is indicative once three tests whose 0.24 m door the grid closes are sealed as the plan
-                  asked. The temperatures read warm: the layer&apos;s pooled bias is 1.35 to 1.48, in band in NIST&apos;s two
+                  comparison was read. The smoke layer&apos;s depth is calibrated on all three cell sizes, within 0 to 11 % of
+                  measured, pooled, with a scatter of 0.11 to 0.14; on 0.27 m that holds once each measuring tree ends below a
+                  one-cell pocket at its top, as the plan&apos;s tree rule has it. The temperatures read warm: the layer&apos;s pooled bias is 1.35 to 1.48, in band in NIST&apos;s two
                   series and 1.4 to 2.2 times the measured rise in UL&apos;s small lined rooms. {validationBefore()}{" "}
                   &ldquo;Calibrated&rdquo; is this
                   project&apos;s name for passing its pre-registered bands; the standards (ASTM E1355, NUREG-1824) would
