@@ -2177,6 +2177,36 @@ Known when this was written, from 13.A: UL FSRI's open-door O2 drops are small, 
 
 The three readings are computed from each run's stored pairs (a pair keeps the measured change), so 13.B needs no flag for them.
 
+### 14.9 Sprinkler activation: the cross-validation's result (2026-11-13, 08:50)
+
+Run as 14.3 set it, after 13.B in the night's chain: `tools/sprinkler-validation.mjs` as it stands, its 46 runs at each of 5, 7, 10, 14 and 20 W/m²K, 230 runs on 13.B's solver (550fce5). None stopped. The folds were scored by `tools/calibration/sprinkler-crossval.mjs`, committed before the runs (012d287). Files: `benchmark/results/2026-11-13-sprinkler-crossval-runs.json` (the runs) and `benchmark/results/2026-11-13-sprinkler-crossval.json` (the folds).
+
+Leaving one laboratory out, which decides:
+
+| Left out | Coefficient chosen on the others, W/m²K | Tests | δ | σ̃M | Reading |
+|---|---|---|---|---|---|
+| NIST (Vettori flat and sloped) | 7 | 17 | 1.03 | 0.21 | in the calibrated band |
+| Canterbury (Bittern) | 5 | 8 | 1.00 | 0.06 | in the calibrated band |
+| UL (UL/NFPRF series I) | 5 | 4 | 0.98 | 0.05 | in the calibrated band |
+
+Leaving one series out, beside:
+
+| Left out | Coefficient chosen on the others, W/m²K | Tests | δ | σ̃M | Reading |
+|---|---|---|---|---|---|
+| Vettori flat (1998) | 10 | 9 | 1.17 | 0.12 | in the calibrated band |
+| Vettori sloped (2003) | 5 | 8 | 0.88 | 0.20 | in the calibrated band |
+| Bittern (2004) | 5 | 8 | 1.00 | 0.06 | in the calibrated band |
+| UL/NFPRF series I (1998) | 5 | 4 | 0.98 | 0.05 | in the calibrated band |
+
+**The word: cross-validated on four series from three laboratories.** Every laboratory left out is within the calibrated band at a coefficient chosen without it, and no run stopped. It is never "calibrated": the coefficient was first set on these four series, and none is held out from the solver's making.
+
+**The app's value stays 10 W/m²K.** The laboratory folds chose 7, 5 and 5, not one value, so 14.3's condition for a change is not met.
+
+What this reading does and does not carry:
+- The score a fold minimises is nearly flat over the candidates: 0.0024 to 0.0050 with NIST left out, 0.034 to 0.060 with Canterbury left out, 0.029 to 0.052 with UL left out. The first head's time depends weakly on the coefficient between 5 and 20 W/m²K, so the folds' choices are weakly determined, and the reading says more about that weak dependence than about any one value.
+- It covers the first head's opening time in the tests with a tabulated or measured fire (29 pairs), with the experiments' own scatter taken as 0. UL's fold holds four tests.
+- It was run under the present voxeliser. If item 9 (13.21) becomes the app's default, the runs are made again with it (13.21, decision 7).
+
 ## 15. The fire's own heat release (2026-11-12, 22:35, before any heat release record is read)
 
 14.5 asked first what UL FSRI's 2018 tests measured. Read for that: the repository's `02_Info/README.md`, `channel_list.csv` and `furniture_mass.csv` (descriptions, channel names and masses; no test record).
