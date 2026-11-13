@@ -2154,6 +2154,333 @@ Not checked: where the GPU path starts its rays (the two paths are held to the s
 
 **Item 8 stays not made.** Nothing here changes 13.23.
 
+### 13.25 Item 10: a surface's rays start on its emitting face (2026-11-13, before any run of it)
+
+Drafted blind to every validation result, as 13.12 sets. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of commit 6038006, which the working tree's `src/core` equals. The figures called "the model" below come from a model of the solver's surface rays written for this draft: the same draws (the solver's own `pcgHash` and `cellStream`, imported read only), the same directions and faces, and the same march (Amanatides and Woo, with the tie rule of line 932), in boxes of cells with transparent gas. They are not the solver's output, and none is a fire result.
+
+#### What the solver does now
+
+The claim to check (13.24): every ray of an emitting solid, porous or one-dimensional wall cell starts at the cell's centre, in a direction drawn by Lambert's law about the normal of one of its open faces, and `march` leaves it in the first other solid or porous cell it enters, so a ray that crosses a side face of the emitting cell stays in the wall beside it. The code bears it out on both paths.
+
+The CPU (`flamescapes.js`):
+- Which cells emit, and how much (`radiation`, 799 to 901). A one-dimensional wall cell emits through `wallEmit` (826; 2114 to 2150): each face open to gas or to the grid's side at its own temperature (an end face at its end node, a side face at the cell's mean over its edge's area, `wallSide`, 2088), each above `emitAbove`; `faceE` holds each face's energy. Any other non-gas cell above `emitAbove` (829) emits ε σ (T_s⁴ − T_a⁴) over A times its open faces, a porous cell over max(area, A) (838), capped at half its heat above ambient (841), and its own T_s falls at once (843). `emitAbove` is 500 K (218).
+- Its rays (855 to 889). `rays` = 8 (219), each carrying emitted / 8 (857). The open faces are those whose neighbour is gas or lies beyond the grid's side (`openFaces`, 904 to 914). The draws come from the cell's stream of the step, `cellStream(c, steps, 2, seed)` (860): two for a uniform direction on the sphere (865 to 870), a third for the face, drawn by its share of `faceE` for a one-dimensional wall (873 to 881) and uniformly among the open faces otherwise (882). The face's normal is added and the sum normalised (883 to 886), which gives Lambert's law about that normal. Then `march(sim, i + 0.5, j + 0.5, k + 0.5, dir, share, c, fromSolid, dep)` (888): the cell's centre.
+- `march` (919 to 973). Its first cell is the one holding the start point (923), with tMax from absolute positions (928). It absorbs by soot in each gas cell crossed except the emitting one (936 to 944). A step beyond the grid returns, and what the ray carries is counted nowhere (949). The first non-gas cell takes all that is left (951 to 963): a one-dimensional wall entered along its normal on the end it crossed (954 to 960), any other cell into its mean T_s (962). After `rayReach` = 40 crossings (220, 931) what is left goes into the cell where the ray stopped (966 to 972). The `skipOwn` test (951) never acts: a straight ray cannot re-enter the convex cell it left.
+- Deposits wait in `dep` and are added once every cell has emitted (891 to 900). What a ray puts into a one-dimensional wall's mean is spread over its nodes at the walls stage, the same rise in each node (2176 to 2177).
+
+The GPU (`flamescapesGpu/kernels.js`). 13.24 did not read it. It has the same geometry. `radiateCell` (1304 onward) has the same three cases and floors (1210, 1234, 1326) and draws from `seedOf(c, 2u)` (1354), which gives the same integers as `cellStream` (898 to 902; `flamescapes.js` 543), in the same order. It calls `march(c, p, dir, share, fromSolid)` (1380) from the cell p with tMax = 0.5 / |d| on each axis (1260): the centre. A step beyond the grid returns uncounted (1281). Deposits are fixed point, 16 384 steps a kelvin (`DEP_SCALE`, 357; `deposit`, 1190 to 1193), each clamped at ±20 000 K. A validation burner is sent to the CPU (`flamescapesGpu.js` `supported`, 978).
+
+So 13.24's geometry holds on both paths. What it does, from the model (8 rays, 200 steps, the solver's draws):
+- A flat wall. From an interior cell the share that leaves through the open face is the view factor from the cube's centre to one face, (4/π)(1/√2) atan(1/√2) = 0.5541; 0.4459 enters the four cells beside it. In closed boxes of 8 × 8 × 8, 12 × 10 × 14, 6 × 16 × 10 and 40 × 8 × 8 cells, 0.443 to 0.447 of a whole hot wall's emission stays in that wall. What leaves is shared out wrongly as well: in the 12 × 10 × 14 box the walls beside the hot one take 0.111 and 0.074 each against view factors of 0.236 and 0.168, the opposite wall 0.184 against 0.194.
+- Inside edges and corners. A wall cell behind the meeting of two or three walls' faces has no open face. It never emits, and it takes the rays its neighbours leak into it. In an isothermal box of 12 × 10 × 14 cells with black walls and transparent gas (check (c)'s enclosure), cells beside an edge lose 15.1 % of their emission net, cells beside a corner 28.5 %, plane face cells gain 2.9 %, and the cells with no open face gain 3.7 % of all the emission.
+- Outside corners. A 2 × 2 × 2 block (three open faces a cell) puts 22 % of its emission into itself, and each wall of a cube box round it takes 0.130 against 1/6. A pillar one cell square from floor to ceiling (four open faces a cell) is 18.4 % short of balance in the isothermal box. A cell that stands alone loses nothing (13.24).
+- A wall one cell thick. A lumped partition puts 0.447 of its emission into itself. In a one-dimensional partition, 0.444 of a heated face's emission enters the neighbouring cells' means, which the walls stage spreads through their thickness (2176 to 2177): that heat crosses the board within one step.
+- The grid's side. A plate whose back is the grid's side puts 0.445 of its emission into itself.
+- The reach. In the 40 × 8 × 8 box no ray from the hot end reaches the far wall within 40 crossings (its view factor is 0.0124), and 1.9 % of the hot end's emission is dropped into transparent gas. With rays started on the face, 2.0 % of all surface rays in a closed box of 25 × 13 × 20 cells (5.0 × 2.6 × 4.0 m on 0.2 m cells) need more than 40 crossings.
+
+#### The burner's rays, and why they are outside this item
+
+`createBurner` (3113 onward) sets 16 fixed directions on a golden spiral about the vertical (3182 to 3191) and its origin at the centre of the axis cell (3198), the lowest layer's cell nearest the burner cells' centroid, an open cell. `burnerStep` turns the directions about the vertical each step (3367) and calls `march(sim, b.origin[0], b.origin[1], b.origin[2], b.dir, radiant / rays, b.axis, false)` (3374), with no `dep`.
+
+13.24's defect does not apply. The start cell is open, so each ray's first cell beyond it is the cell it truly enters, gas or a surface it faces. Another question does apply: the radiant part leaves a point half a cell above the burner's top, and 8 of the 16 directions point below the horizontal (y_r = 1 − 2(r + ½)/16), so half of χ_r goes into the burner's top and the floor round it. That concerns where a flame's radiation comes from, not how a surface emits, and it is not in this item. It is stated as a limit below. With this item on, the burner's rays are unchanged, and what they carry beyond the grid stays uncounted.
+
+#### Porous cells, and why they do not change
+
+A porous cell is gas and fuel in one cell. The flow passes through it, and its fuel exchanges heat with its own gas over max(area, A) (`conduct`, 1863 to 1868). Its fuel's exposed area is `contentsArea` = 2 h² a contents cell (235, 388), or the ignition item's (`itemArea`, 1 m², 236). It emits over max(area, A) (838), which may exceed the area of its open faces: a cell in a layer of contents has one open face and emits over 2 h². It has no single emitting face. Started on its open faces, all of that would leave the pack, twice what a black face at T_s could send. So the rays of a porous cell keep their present start, the cell's centre, and their present reach, and the cells beside it in the pack keep taking what crosses into them. Whether that matches a pack's own absorption (a medium of opaque elements, whose absorption coefficient is its elements' projected area per volume) is not checked; it is stated as a limit. A ray from a solid face that enters a porous cell is absorbed there whole, as now.
+
+#### The method
+
+Chosen: the rule of Monte Carlo ray tracing for a diffuse, isothermal surface element, a point drawn uniformly on the element and a direction drawn by the cosine law about its normal (Howell, Mengüç, Daun and Siegel 2020; Modest 2013). The solver already draws the direction by that law and the face by its share. The item moves only the start, from the cell's centre to a uniform point on the drawn face, and enters the march in the gas cell beyond that face.
+
+Considered and set aside:
+- A start at the face's centre. It removes the leak, but every ray of a face then leaves one point, so the face sends the view factor of a point, not of the face. From a face in an inside edge the error is of the order of the leak it removes.
+- Scaling the energy by 1/0.5541. It is right only for interior cells of a flat wall. At edges, corners and pillars the leak differs (above).
+- Moving the start point off the face by a small length and finding its cell with `floor`. On the GPU, positions are float32: at cell 500 one step is 3 × 10⁻⁵ of a cell, so any smaller nudge rounds back onto the face, and `floor` then finds the emitting cell. Naming the start cell by its index avoids this.
+
+1. Scope. The item applies to the rays of a lumped solid cell (kind `SOLID`, not a one-dimensional wall) and of a one-dimensional wall cell. The rays of porous cells, of gas cells and of the burner are as now.
+2. Direction and face, as now. Per ray, from the salt-2 stream in the present order: two draws for the uniform direction u, the third for the face f (by `faceE` for a one-dimensional wall, uniformly among the open faces otherwise); d = (u + n_f) / |u + n_f|. These are the draws of the item off, ray for ray.
+3. A guard. If d · n_f ≤ 0, then d = n_f. This happens only when u equals −n_f to round-off: on a face whose normal is +y when the first draw is 0 (one ray in 2²⁴), on other faces when two draws take exact values (one in 2⁴⁸). The present path leaves a zero or tangent direction there (885).
+4. The start point. Two draws a ray, u₁ and u₂, from a second stream of the cell in the step, `cellStream(c, steps, 3, seed)`, taken in ray order. Salt 3 is drawn by no path now (1, 2 and 5 are in use), and nothing else draws from this stream. Let a be the axis of n_f, and b₁ and b₂ the two other axes in the order of the grid's indices i, j, k. In the frame of the gas cell beyond the face, the start's fractions φ are: along a, 0 if n_f points up the axis and 1 if down it; along b₁, u₁; along b₂, u₂. The start is then uniform on the face. A second stream keeps every ray's direction and face as with the item off, so on and off differ in the start alone.
+5. One-dimensional walls. An end face (across the wall's axis) is the whole cell face. A side face emits over its edge's area, thickness × h (`wallSide`), but the solver does not hold where in the cell the wall lies, so its start is uniform on the whole cell face.
+6. The start cell. It is named by index: g = (i, j, k) + n_f. If g lies beyond the grid's side, the ray leaves the grid at once: its share is added to `radiatedOut` (point 9) and no march is made. Otherwise the march starts in g, which is gas, being an open face's neighbour.
+7. The march's entry. `march` is entered with the start cell g and the fractions φ in place of a position. On each axis tMax = (1 − φ)/|d| if d > 0, φ/|d| if d < 0, and ∞ if d = 0; tDelta is as now. Along n_f's axis this is 1/|d|: the ray crosses g. The first segment lies in g, and g absorbs by soot over it like any gas cell (g is not `from`, which stays c). Everything after is as now: absorption in gas cells, the whole remainder into the first non-gas cell, a one-dimensional wall's end when it is entered along its normal. Because g is named by index, the first cell is the gas cell beyond the face on both paths, whatever the rounding of positions; because φ is local, float32 on the GPU is as exact as float64 on the CPU at any cell index.
+8. The reach. These rays march until they enter a non-gas cell, leave the grid, or carry less than 10⁻⁹ of their energy (as now): at most n_x + n_y + n_z crossings, the most a straight line can make in the grid. `rayReach` does not stop them. With the leak gone, a surface's rays cross the room, and dropping one after 40 crossings into gas that cannot absorb it would heat that gas (above: 2.0 % of rays in a 5 m room on 0.2 m cells). The rays of gas and porous cells keep `rayReach`.
+9. Tallies, in J, only with the item on: `stats.radiatedOut`, what the stage's rays carry beyond the grid's sides (every ray of the radiation stage; the burner's rays, cast in the `pilot` stage with no `dep`, stay uncounted); `stats.surfaceRays` and `stats.surfaceCrossings`, the number of rays of point 1 and of the cells they cross. 13.19 point 10 gives the first the same name, so if both items are made they share it.
+10. On the CPU.
+    - `DEFAULTS`: `surfaceRayStart` 0.
+    - `radiation`: with it 1, for the cells of point 1, the salt-3 stream, points 3 to 8, and the tallies. `dep` gains `out`, a Float64Array of one element.
+    - `march` takes an optional start {cell g, fractions φ, crossing limit}. Without it (the item off, gas and porous rays, the burner) lines 923 to 928 and 931 run as now. When `dep.out` exists, a step beyond the grid adds what is left to it before returning (949).
+    - The stage is exported for the check tool (`radiationStage`); no run calls it.
+11. On the GPU.
+    - `PARAMS`: `surfaceRayStart` (u32).
+    - `radiateCell`: with it 1 and the cell `SOLID` or a one-dimensional wall, the stream `seedOf(c, 3u)` seeded before the ray loop, the guard, u₁ and u₂, the start cell named by index, and the outflow when the start cell lies beyond the grid, tested with `inside` before any `atI`.
+    - `march` gains the start fractions (vec3) and its crossing limit, and returns what it carried beyond the grid (0 otherwise). The present call passes (0.5, 0.5, 0.5) and `U.rayReach`, for which tMax is 0.5/|d| as at 1260.
+    - `radEmit` reduces the outflow beside the emission (its vec4's second slot) into a second reduction slot, read back with `radiated` as the frame's `radiatedOut`.
+    - Deposits stay in kelvin, as now. A validation burner stays on the CPU.
+12. What stays exactly as now: which cells emit and when (the floors); how much (A per open face, max(area, A) for porous cells, ε, the cap); the emitting cell's own update; the deferred deposits; 8 rays a cell and their shares; every direction and face drawn; `march`'s absorption rule (soot in gas, the rest whole in the first non-gas cell, absorptivity 1); one-dimensional walls' ends; porous cells; gas cells; the burner; `stats.radiated`; the GPU's fixed point.
+
+#### The switch
+
+`surfaceRayStart`: 0 (default), the cell's centre, as now; 1, the emitting face. With 0 the new code costs one test of the flag for each surface cell that emits and one untaken test for each ray that leaves the grid, and every output is bit-identical to the build before (check (h)). When the default changes, `RUN_CACHE_VERSION` (`runCache.js` 54, now 13) rises.
+
+#### Checks (fixed now, before any run)
+
+All but (h) to (j) run in a new tool, `tools/surface-rays-check.mjs`. It builds each scene as a grid of cells by hand (as `flamescapes.wall.test.mjs` builds its mask), sets every gas cell to T_a with no soot, so the gas is transparent, and every surface to its temperature. It calls the radiation stage alone for the steps stated, dt 0.05 s, seed 1, adds 1 to `sim.steps` after each call, and sets every temperature back (gas, T_s, wall nodes, `last`). Each step it reads the deposits before anything else adds to them, from `sim.work`'s `radGas`, `radSolid`, `radWallLo` and `radWallHi`, turned into J by the capacity the stage divided by (ρ c_p V; max(`solidCapacity`, 10⁻⁶)), and the tallies. The material is stone's ρ and c with ε = 1 (passed as `inert`). A box is given by its inner size in cells, n_x × n_y × n_z, with walls two cells thick whose outer layer stays at T_a and does not emit; a wall's share is read from the cells of its two layers, an edge column counted with the first of x-low, x-high, y-low, y-high, z-low, z-high that holds it. Cells of 0.20 m and 0.34 m. No measured data enters any check.
+
+Tolerances. Where the rays of a case carry equal shares, a share F read from N rays has standard deviation √(F(1 − F)/N), F being the reference, and the case passes within 4 of them. Where shares differ (cells with several open faces), the energy a group g receives has a standard deviation of at most √(s_max E_g), s_max being the largest share of any ray in the scene and E_g what the group should receive, and the case passes within 4 of that. Reason: these are the ray-count statistics of a method whose expectation is the reference exactly. A correct code exceeds 4 standard deviations in one case in 16 000, so in under 0.4 % of the 60 or so cases below together. The numbers of rays are fixed here, and the tolerances follow from them.
+
+(a) A flat wall's emission reaches the room. Boxes of 8 × 8 × 8, 12 × 10 × 14, 6 × 16 × 10 and 40 × 8 × 8 cells, the x-low wall's inner layer at 1000 K, 200 steps.
+1. The x-low wall (both layers, its edge columns included), the gas and the grid's sides take exactly 0. This is an equality, not a tolerance: no ray can deposit there.
+2. Each other wall takes its view factor within 4 standard deviations: the opposite wall F₁₁(n_y, n_z; n_x), each y wall F₁₄(n_y, n_x; n_z), each z wall F₁₄(n_z, n_x; n_y). Here F₁₁(a, b; c) is the view factor between directly opposed parallel rectangles a × b at distance c; with X = a/c and Y = b/c,
+
+   F₁₁ = (2/(πXY)) [½ ln((1 + X²)(1 + Y²)/(1 + X² + Y²)) + X √(1 + Y²) atan(X/√(1 + Y²)) + Y √(1 + X²) atan(Y/√(1 + X²)) − X atan X − Y atan Y];
+
+   and F₁₄(w, h; l) is the view factor from a w × l rectangle to an h × l rectangle at 90° that shares its edge of length l; with W = w/l, H = h/l and S² = W² + H²,
+
+   F₁₄ = (1/(πW)) [W atan(1/W) + H atan(1/H) − S atan(1/S) + ¼ ln( (1 + W²)(1 + H²)/(1 + S²) · (W²(1 + S²)/((1 + W²) S²))^(W²) · (H²(1 + S²)/((1 + H²) S²))^(H²) )].
+
+   Both were transcribed for this draft and checked against an independent Monte Carlo quadrature of 4 × 10⁶ samples (uniform points, cosine directions, exact intersection of a ray with a plane) on twelve configurations; every one agreed within its standard error of 2.5 × 10⁻⁴, and in each box the five shares sum to 1 within 10⁻⁸. The references, ± 4 standard deviations:
+
+   | Box | Rays | Opposite wall | Each y wall | Each z wall |
+   |---|---|---|---|---|
+   | 8 × 8 × 8 | 102 400 | 0.1998 ± 0.0050 | 0.2000 ± 0.0050 | 0.2000 ± 0.0050 |
+   | 12 × 10 × 14 | 224 000 | 0.1938 ± 0.0033 | 0.2355 ± 0.0036 | 0.1676 ± 0.0032 |
+   | 6 × 16 × 10 | 256 000 | 0.4237 ± 0.0039 | 0.1083 ± 0.0025 | 0.1798 ± 0.0030 |
+   | 40 × 8 × 8 | 102 400 | 0.0124 ± 0.0014 | 0.2469 ± 0.0054 | 0.2469 ± 0.0054 |
+
+   The 40 × 8 × 8 box tests point 8: its far wall lies beyond 40 crossings.
+3. Reciprocity. In the 12 × 10 × 14 box with the floor (y-low) at 1000 K instead, A_x F̂(x-low → floor) from the first run and A_y F̂(floor → x-low) from this one agree within 4 standard deviations of their difference, 0.72 cell² on 32.97 cell² (2.2 %), and each lies within its own 4 standard deviations of A_x F₁₄(10, 12; 14) = A_y F₁₄(12, 10; 14) = 32.97 cell².
+
+Reported beside, with the item off: the hot wall's own share (the model: 0.443 to 0.447) and each wall's. A failure of 1 means a ray starts in, or returns to, its own wall. A failure of 2 or 3 means the start point, the direction or the march's entry departs from the method.
+
+(b) Outside corners. A 2 × 2 × 2 block at the centre of a 12 × 12 × 12 box, at 1000 K, all else at T_a, 1000 steps (64 000 rays). The block takes exactly 0 of its own emission (a convex block cannot see itself). Each of the six walls takes 1/6 within 0.0059 (4 standard deviations); 1/6 is exact by the symmetry of a centred cube in a cube. Reported beside, with the item off: the model's 0.222 into the block and 0.130 a wall.
+
+(c) An isothermal enclosure with transparent gas. The 12 × 10 × 14 box with a 2 × 2 × 2 block at its centre (inner cells 5 to 6, 4 to 5, 6 to 7) and a pillar one cell square from floor to ceiling at inner cell (2, ·, 3); every solid cell not on the grid's outer layer at 1000 K, ε = 1; 200 steps. The groups, by geometry: a wall's face cells whose gas neighbour touches no other solid cell in the face's plane (group i, 582 cells), one (ii, edges, 248), two (iii, corners, 24); cells of the walls' inner layer with no open face (iv, 154); the block (v, 8); the pillar (vi, 10).
+- Each group's net, what it receives less what it emits, lies within 4 √(s_max E_g), s_max being a pillar cell's share, 4 A σ (T⁴ − T_a⁴) dt / 8: that is 0.8 %, 1.3 %, 4.1 %, 4.1 % and 3.2 % of the emission of groups i, ii, iii, v and vi.
+- Group iv receives exactly 0.
+- Reference: 0 for every group, by reciprocity. Every face emits σ (T⁴ − T_a⁴) over its area and absorbs all that reaches it, and each face's view factors to a closed enclosure sum to 1.
+
+The model gives, item on, nets of +0.04 %, −0.07 %, −0.5 %, +0.4 % and −0.2 %; item off, +2.9 %, −15.1 %, −28.5 %, +5.3 % and −18.4 %, with group iv taking 3.7 % of all the emission. The solver's own figures with the item off are reported beside, not judged.
+
+(d) Walls one cell thick with gas on both sides. The 12 × 10 × 14 box divided at inner x = 6 by a partition across its whole section, 200 steps.
+1. Lumped, at 1000 K, all else at T_a. The partition takes exactly 0. The half-box on its low side takes ½ of its emission within 0.0042 (4 standard deviations of 224 000 rays at ½: the face is drawn uniformly between two), and the high side the rest.
+2. One-dimensional (`wallLayers` on, the board of `flamescapes.wall.test.mjs`, ε = 1): its high end node at 1000 K, its other nodes at T_a, its T_s and `last` at its nodes' mean, and every other surface at T_a, so its high face alone emits. The partition's cells, means and ends take exactly 0. The high side's half-box takes the whole emission and the low side's nothing, within 10⁻⁹ of the emission (no ray can cross the plane of the face it left).
+
+Reported beside, with the item off: the share that enters the partition (the model: 0.447 lumped, 0.444 one-dimensional) and, for 2, what the walls stage then puts into the low end node in one step.
+
+(e) The grid's side. A gas region of 10 × 10 × 10 cells closed on five sides by walls two cells thick at T_a; on its sixth (x-low) side a layer one cell thick on the grid's side, whose 10 × 10 cells facing the gas are at 1000 K and whose rim is at T_a, so each hot cell has two open faces, its back on the grid's side and its front on the gas. 200 steps (160 000 rays). The layer takes exactly 0. `radiatedOut` (the rays drawn on the back face, point 6) is ½ of the emission within 0.0050, and the walls take the other ½ within the same. Reported beside, with the item off: the share into the layer (the model: 0.445).
+
+(f) Energy. In every step of (a) to (e), what the stage emitted (`stats.radiated`) equals the J deposited in gas, solids and walls' ends plus `radiatedOut`, within 10⁻⁹ of the emission. Reason: conservation holds by construction, and float64 sums of 10⁵ deposits err by about 10⁻¹³.
+
+(g) The CPU and the GPU cast the same rays. On 0.20 m cells: (a)'s 8 × 8 × 8 and 12 × 10 × 14 boxes, (c)'s enclosure and (d)1. From one state, one radiation stage on each path: on the GPU its radiation passes alone (`radEmit` on a state copied from the CPU's, through a hook the build adds, as 13.19's parity needed), its deposits read from the fixed-point accumulators before `radApply` and turned into J with the CPU's capacities.
+1. The emission agrees within 10⁻⁵ relative.
+2. Each wall's and group's received energy, and `radiatedOut`, lie within 1 % of the CPU's.
+3. The mean absolute difference of the cells' deposits, GPU against CPU, is at most 0.1 of the CPU's own difference between seeds 1 and 2.
+
+Then (a), (b) and (c) run 200 steps on the GPU's passes and pass as on the CPU, and the GPU's books close within 1 %.
+
+Reason. The two paths draw the same integers (`cellStream` and `seedOf`) and name the same start cell, and their fractions k/2²⁴ are exact in float32. They differ by the float32 rounding of the direction, which changes the cell a ray enters only where its path passes within about 10⁻⁵ of a cell of an edge, and by the fixed point: at 1000 K a ray's share into a 0.20 m stone cell is 13.3 steps, so rounding is at most ±4 % of a deposit, unbiased, and about 0.2 % of the smallest group's sum in one stage. Between seeds, a cell's difference is of the order of a share times the square root of its hits, about 45 times the rounding, so 0.1 separates the same rays from different ones with a margin of 4. The 1 % is 13.4's closure, applied here.
+
+(h) Off is off. With `surfaceRayStart` 0: `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's fingerprints; the unit suite passes with the same count; `tools/flamescapes-gpu-check.mjs`'s phases give the base's state comparisons bit for bit (timings aside). With 1 the fingerprints differ, which is reported.
+
+(i) The unit suite passes unbent with the default set to 1 for the run (a one-line change, not committed). A test that fails is not edited, and its failure is reported.
+
+(j) Speed, reported, not judged. Ms a step and the radiation stage's ms (the fingerprint tool's profile), on and off; `tools/backend-bench.mjs` on its room, Duplex, Office, Clinic and Vienna, CPU and GPU, on and off; `stats.surfaceRays` and the mean crossings a surface ray. In the model the mean crossings a surface ray rise from 8.1 to 11.8 in the 12 × 10 × 14 box and from 11.6 to 18.0 in the 25 × 13 × 20 box, since a leaked ray stopped after one crossing.
+
+#### Default
+
+Off until (a) to (i) pass. Then on, with `RUN_CACHE_VERSION` raised. Made after 13.B began, it gets its own full rerun on 13.B's base, reported beside 13.B (13.12, rule 5).
+
+#### What ends this line
+
+If any check of (a) to (i) fails in any case, the attempt fails, and it is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted; the item has no free constant. The rays stay at the cell's centre, 13.24's geometry is stated as a limit of every verdict, and item 11 (13.26) cannot be made. Checks (a) to (e) have references that the method meets exactly in expectation, so a failure there is a departure of the code from the method; whether corrected code counts as the same attempt is for the coordinator to settle before the run. No second attempt with another method is drafted. It would need the user's word and a new method committed here first.
+
+#### Declared limits
+
+- Surfaces still take all of each ray that reaches them and emit at their ε, with no reflection, as now. The exchange between two gray surfaces is then overstated: between parallel plates of ε 0.9 the solver's ε σ (T₁⁴ − T₂⁴) against the gray value σ (T₁⁴ − T₂⁴)/(2/ε − 1), 0.900 against 0.818 (0.700 against 0.538 at ε 0.7). 13.26 says what this does to a balance.
+- Porous cells keep the centre start, and the cells beside them in a pack keep taking what a cell's rays carry into them.
+- The burner's radiant part leaves a point half a cell above its top, half of it downward into the burner and the floor.
+- A one-dimensional wall's side face starts its rays on the whole cell face, not on its edge's strip.
+- An oblique or curved surface is a staircase of cell faces, each emitting about its own axis's normal. The item makes each face exact, not the staircase.
+- Gas cells' rays still start at the centre and skip their own cell (that is item 8's point 6, 13.19).
+- Surfaces still emit only above 500 K (item 11, 13.26, is separate).
+
+#### Not verified
+
+- The size of the change in any validation run or app scene.
+- The present figures above are the model's, not the solver's. Checks (a) to (e) report the solver's own beside.
+- That no ray on the GPU enters a different cell from the CPU's beyond the float32 rounding argued in (g).
+- The sources' Monte Carlo chapters were not re-read for this draft; the rule is the field's standard one, quoted from them. FDS's treatment of a wall's emission was not read.
+
+#### Sources (read, or run for this draft)
+
+- This repository at 6038006: `flamescapes.js` 70, 94 to 107, 114 to 265 (parts of `DEFAULTS`), 340 to 410, 473, 520 to 600, 767 to 973, 1855 to 1880, 2060 to 2200, 3095 to 3240 and 3339 to 3456; `flamescapesGpu/kernels.js` 95 to 140, 890 to 905 and 1180 to 1415; `flamescapesGpu.js` 978 (and its `radiated` read-back, by search); `runCache.js` 54; `tools/flamescapes-fingerprint.mjs`; `tools/flamescapes-gpu-check.mjs` 124 to 180 and 281 to 320; `tools/backend-bench.mjs` 1 to 70; the unit tests that set `emitAbove` (by search).
+- Howell, Mengüç, Daun and Siegel (2020). Thermal Radiation Heat Transfer, 7th edition. CRC Press. doi:10.1201/9780429327308. Checked on Crossref; metadata only.
+- Modest (2013). Radiative Heat Transfer, 3rd edition. Academic Press (Elsevier). doi:10.1016/C2010-0-65874-3. Checked on Crossref, which gives its title, publisher and year but no author; metadata only.
+- Run for this draft: the model of the present and the proposed ray geometry described at the head of this section, and the independent Monte Carlo quadrature of F₁₁ and F₁₄. No validation run, no fire simulation, no result file.
+
+### 13.26 Item 11: surfaces emit from just above ambient (2026-11-13, before any run of it)
+
+Drafted blind with 13.25, as 13.12 sets, and with its line numbers. Nothing below changes after a run of it; anything added later is dated, with its commit.
+
+#### What the solver does now
+
+The claim to check (13.19, decision 7; 13.24): a surface emits only above `emitAbove` = 500 K, and absorbs whatever reaches it, at any temperature. The code bears it out.
+- The floors. A lumped or porous cell emits when T_s > `emitAbove` (829). A one-dimensional wall casts only if an end node or its mean exceeds `emitAbove` (2119), and each face only if its own temperature does (2135). The GPU has the same (1210, 1234, 1326).
+- Absorption. The first non-gas cell takes all that a ray carries, whatever its temperature and ε (951 to 963; the GPU 1283 to 1293).
+- Emission is written net of the ambient's, ε σ (T_s⁴ − T_a⁴) (839, 2137), so a surface at T_a emits nothing, and one below T_a nothing either (842).
+
+So a wall between T_a and 500 K is black to every ray and returns none. It takes the gas's and the hot surfaces' radiation and gives nothing back, and two such walls exchange nothing however different their temperatures. The floor is a step in a surface's emission: at ε 0.9, 2.81 kW/m² just above 500 K and nothing just below. At 450 K the emission omitted is 1.72 kW/m².
+
+Two facts of the present storage bear on a lower floor.
+- Float32 temperatures. T and T_s are Float32Arrays (407 to 408; the GPU's `cf` likewise). Between 256 and 512 K a float32 step is 3.05 × 10⁻⁵ K, so a change below 1.53 × 10⁻⁵ K in one write is lost. A lumped stone cell (ρ c = 2.16 × 10⁶ J/(m³ K)) with one open face at ε 0.9 changes by less than that in a step of 0.1 s while its surface is within 12.1, 16.0 and 19.7 K of ambient on 0.20, 0.27 and 0.34 m cells (22.8, 29.8 and 36.3 K at 0.05 s). Its convection near ambient is lost in the same way now.
+- The GPU's fixed point. At T_a + 10 K (ε 0.9, dt 0.1 s) a ray carries 0.027, 0.049 and 0.078 J on 0.20, 0.27 and 0.34 m cells. Into a stone cell that is 0.026, 0.019 and 0.015 of a step of 1/16 384 K, which rounds to 0. A lower floor on the GPU in kelvin would deliver nothing.
+
+#### Item 11 needs item 10
+
+It may not be made without item 10, and its switch does nothing while item 10's is 0.
+- With centre starts, 45 % of a flat wall's emission stays in the wall (13.25). A lower floor would extend that to every warm wall.
+- In one-dimensional walls the leak enters the neighbours' means, which the walls stage spreads through the board (2176 to 2177): 44 % of a warm face's emission would cross the board within a step. The validation's rooms are lined with one-dimensional boards (13.4, item 1), so every warm board would conduct by this path.
+- With centre starts an isothermal enclosure does not balance at edges and corners (13.25, What the solver does now: −15 % and −29 %, and the cells with no open face gaining). Item 11's balance checks would then fail on item 10's geometry, not on item 11.
+
+#### Emission and absorption: what balances
+
+Surfaces emit at ε and absorb at 1, with no reflection. In an enclosure at one temperature T with transparent gas, a surface i of area A_i emits ε_i σ (T⁴ − T_a⁴) A_i and receives Σ_j ε_j σ (T⁴ − T_a⁴) A_j F_ji, which by reciprocity is σ (T⁴ − T_a⁴) A_i Σ_j ε_j F_ij. Its net gain is
+
+σ (T⁴ − T_a⁴) A_i (Σ_j ε_j F_ij − ε_i).
+
+- With one ε everywhere, Σ_j F_ij = 1 makes it 0. The balance closes for every surface, at any T, on item 10's geometry (13.25, check (c)). Nothing must change for that.
+- With mixed ε it does not close. A surface whose ε is below that of the surfaces it sees gains heat at one temperature, which the second law forbids. The solver's materials are stone and glass at ε 0.9 and metal at 0.7 (103 to 107), and the validation passes its own. A metal surface among stone ones gains 0.2 σ (T⁴ − T_a⁴): 40, 86, 207 and 625 W/m² at 323, 350, 400 and 500 K.
+- The 500 K floor makes this worse, not better. Below it a surface's emissivity is in effect 0 against an absorptivity of 1, so every cool surface keeps whatever reaches it. With item 11 a surface above T_a + 10 K has the imbalance 1 − ε in place of 1, and none when all share one ε.
+- For the balance to close with mixed ε, a surface must absorb ε of each ray and reflect the rest diffusely (Kirchhoff's law for a gray, diffuse surface). That changes `march` and casts a new ray at each reflection. It is not in this item; it is declared below, and it is a candidate for its own item, drafted blind.
+
+Check (d) holds both: 0 with one ε, and with a block at 0.7 among surfaces at 0.9, the gain the formula gives, which measures the declared limit.
+
+#### The method
+
+1. The floor. With `surfaceEmitFloor` 1 and `surfaceRayStart` 1, a lumped solid cell (kind `SOLID`, not a one-dimensional wall) emits when T_s > θ, and a one-dimensional wall when an end node or its mean exceeds θ (the test at 2119), each face when its own temperature does (2135), where θ, the surfaces' floor, is
+
+   θ = min(`emitAbove`, T_a + `surfaceEmitRise`) if `emitAbove` < 10⁴ K, and θ = `emitAbove` otherwise,
+
+   with `surfaceEmitRise` = 10 K. The item never raises the floor: an `emitAbove` set below T_a + 10 K stays. An `emitAbove` of 10⁴ K or more lies above any temperature the solver reaches; five unit-test files use 10⁹ K to remove radiation (`flamescapes.leak`, `flamescapes.soot`, `flamescapes.wall`, `flamescapes.zones` and `flamescapesConservation`), and the item keeps that meaning. Porous cells and gas keep `emitAbove`.
+2. Why T_a + 10 K. It is a numerical cut fixed here from no data, the same rise 13.19 point 5 fixed for the gas (`gasEmitRise`), so that a surface the fire has not warmed casts no rays; with no floor, every surface that any ray had touched would cast 8 rays a step. Its size: at T_a + 10 K a surface of ε 0.9 would emit 54 W/m², 1.9 % of what it emits at 500 K and about half its convection at the same rise (10 W/m² K, so 100 W/m²). What it omits is counted (point 5).
+3. Emission, as now: ε σ (T_s⁴ − T_a⁴) over A per open face (a wall's side over `wallSide`), net of the ambient's, with the cell's ε. The rays are cast as item 10 casts them.
+4. The cap, as now: at most half the heat above ambient in a step (841; 2138 for a wall's node). Near ambient the emission, about 4 ε σ T_a³ (T_s − T_a) A dt, and the cap, ½ C (T_s − T_a), are both linear in the rise, so the cap binds only where C < 8 ε σ T_a³ A dt = 10.3 A dt J/K (ε 0.9). On 0.27 m cells at dt 0.1 s that is C < 0.075 J/K, a cell holding under 2 × 10⁻⁶ of a cell of stone. What it withholds is counted.
+5. Tallies on the CPU, in J, with the item on:
+   - `stats.surfaceFloor`: what lumped and one-dimensional surfaces with T_a < T ≤ θ would have emitted over their open faces, computed without casting. 13.19's decision 7 names the same quantity with θ = 500 K.
+   - `stats.surfaceCapped`: what the cap withheld from surfaces.
+   - `stats.radRoundoff`, two sums: the J by which the stage's float32 writes of the emitting cells' own temperatures (843; wall nodes in `wallEmit`), and of its deposits (891 to 900), differ from the float64 changes the stage meant, each (stored − meant) × capacity.
+6. The GPU's deposits in joules, with the item on. Every radiation deposit (gas, solid, a wall's end) is accumulated in J at 4096 steps a joule, the representation 13.19 point 12 fixed for item 8 (if both are made, they share it). Each deposit is clamped at ±4096 J and the clamps are counted. `radApply` divides by the capacity the CPU divides by: ρ c_p V for gas, max(`solidCap`, 10⁻⁶) for a solid, the same for a wall's end through `wallEnd`. The smallest step is 0.24 mJ, so a ray at T_a + 10 K is 111 to 320 steps (0.20 to 0.34 m, dt 0.1 s); the most a cell can hold in a step is 2³¹/4096 J = 524 kJ. With the item off the deposits stay in kelvin.
+7. GPU uniforms: `surfaceFloor` (f32), which the host sets to θ with the item on and to `emitAbove` with it off, read in `wallEmit` (1210, 1234) and in `radiateCell`'s branch for a `SOLID` cell (1326) in place of `U.emitAbove`; and `depJoules` (u32). The porous and gas branches read `U.emitAbove` as now.
+8. What stays as now: gas and porous cells, the burner, absorption at 1, emission at ε, item 10's rays, and the cap.
+
+#### The switch
+
+`surfaceEmitFloor`: 0 (default), θ = `emitAbove`, as now; 1, θ as in point 1, with `surfaceEmitRise` 10 K. It acts only with `surfaceRayStart` 1. With 0 the stage compares with one floor computed once a stage, of the same value as now, and every output is bit-identical (check (a)). `RUN_CACHE_VERSION` rises when the default changes.
+
+#### Cost
+
+With the item on, every surface above T_a + 10 K casts 8 rays a step, where now only those above 500 K do, and with item 10 each crosses the room: in the model, about 12 crossings a ray in a 2.4 × 2.0 × 2.8 m box and 18 in a 5.0 × 2.6 × 4.0 m one, on 0.2 m cells. The 5.0 × 2.6 × 4.0 m room has 2170 face cells, so once all its walls are warm it casts about 17 000 surface rays and 3 × 10⁵ crossings a step. Surfaces the fire has not warmed by 10 K cast nothing, so the cost follows the warmed region, not the size of the building. The cost on is reported (check (h)), not judged. Off it is nothing: the switch changes one number the stage already compares with.
+
+The user's rule asks that a feature be off by default, cost nothing when off, and still run Vienna on the web. Check (h) runs Vienna on the GPU in the browser with both items on and reports whether it reaches its horizon, and at what ms a step.
+
+#### An option that holds the cost down
+
+`surfaceWarmRays`, an integer from 1 to `rays`, default `rays` (8), at which it changes nothing. Set lower, a surface cell all of whose emitting faces are at or below `emitAbove` casts that many rays, each carrying its emission divided by that number, with the same draws in the same order (fewer of them). Each ray is drawn as before, so the expected deposit in every cell is unchanged, and the cell's whole emission is carried every step; only the noise grows, as 1/√(number of rays). Both paths decide the count by comparing a float32 temperature with 500 K, which is exact on both. Its check is (k). It is not proposed as a default; the coordinator decides before any run whether to take it.
+
+#### Checks (fixed now, before any run)
+
+In `tools/surface-rays-check.mjs`, set up as in 13.25, with `surfaceRayStart` 1 throughout unless stated. Tolerances as in 13.25: 4 standard deviations of the ray counts.
+
+(a) Off is off. With `surfaceEmitFloor` 0, and with `surfaceEmitFloor` 1 and `surfaceRayStart` 0: fingerprints, unit suite and the GPU parity phases' state comparisons identical to the build with item 10 alone at the same `surfaceRayStart`.
+
+(b) The floor. In a box of 4 × 4 × 4 cells with every surface at T_a, one floor cell at T_a + Δ, Δ ∈ {−5, 0, 5, 9.99, 10.01, 11, 50, 206.84, 206.86} K (the last two about 500 K), one step. With the item on, the stage emits ε σ (T_s⁴ − T_a⁴) A dt from that cell exactly when T_s > T_a + 10 K, and `stats.surfaceFloor` holds that same formula's value exactly when T_a < T_s ≤ T_a + 10 K, each within 10⁻¹² relative; with the item off, the cell emits only at 206.86 K above ambient. With `emitAbove` 10⁹ K nothing emits, on or off; with `emitAbove` 300 K and the item on, θ is 300 K. The same for a one-dimensional wall's end face, its end node at each temperature. Reason: one formula in float64; this checks which cells pass the floor.
+
+(c) Exchange near ambient. 13.25 (a)'s 12 × 10 × 14 box on 0.20 and 0.34 m cells: the x-low face at 323.15 K, the x-high face at 313.15 K, every other surface at T_a + 5 K (below θ: they absorb and do not emit); 200 steps.
+- The x-high face receives F₁₁(10, 14; 12) E_lo = 0.1938 E_lo, and the x-low face 0.1938 E_hi, each within 4 standard deviations (1.7 % of each). Each y wall receives 0.2355 (E_lo + E_hi) and each z wall 0.1676 (E_lo + E_hi), within 4 standard deviations of the sum of two binomials.
+- The net exchange between the two faces is σ (323.15⁴ − 313.15⁴) A F₁₁, 14.16 W/m² of face, within 4 standard deviations (5.6 % of it).
+- With the item off nothing is emitted, which is reported.
+- On the GPU (joule deposits), every wall's received energy lies within 1 % of the CPU's. With kelvin deposits it is reported beside; by the figures above each share is 0.04 of a kelvin step, so it should read 0.
+
+(d) An isothermal enclosure near ambient. 13.25 (c)'s enclosure at 323.15 K, 200 steps.
+1. ε = 1: every group within 13.25 (c)'s bound, and group iv exactly 0.
+2. ε = 0.9 everywhere: the same.
+3. The block at ε 0.7, all else at 0.9: the block's net gain within 4 √(s_max E_g) of 0.2 σ (T⁴ − T_a⁴) × its open area × dt × steps, which is 0.286 of its emission, and the other groups' nets summing to minus the block's within 10⁻⁹ of the emission. This checks the code against the declared model, not the physics; the figure is the declared limit's size.
+
+(e) Energy. In every step of (b) to (d): on the CPU as in 13.25 (f), within 10⁻⁹; on the GPU (joules), the emission equals the accumulators' J plus `radiatedOut` within 1 %, with no deposit clamped. Reason: as 13.25 (f) and (g); in joules a share in (c) and (d) is 130 to 600 steps (313.15 to 323.15 K, 0.20 to 0.34 m, dt 0.05 s), so rounding is under 0.4 % of a deposit and unbiased.
+
+(f) GPU parity near ambient. (c)'s box and (d)1 on 0.20 m cells, one stage from one state: the emission within 10⁻⁵ relative; each wall's and group's received energy within 1 % of the CPU's; the mean per-cell difference at most 0.1 of the CPU's between two seeds. Reason as in 13.25 (g), with about 200 joule steps a share.
+
+(g) The unit suite passes unbent with both items' defaults set to 1 for the run (not committed). By point 1, the five files that pass `emitAbove` 10⁹ K keep no radiation.
+
+(h) Speed and the floor's size, reported, not judged: as in 13.25 (j), with both items on against item 10 alone; the number of emitting surface cells a step; `stats.surfaceFloor` and `stats.surfaceCapped`; and Vienna (`backend-bench` case `vienna`) on the GPU in the browser with both items on, whether it reaches its horizon, and its ms a step.
+
+(i) Float32 rounding, reported, not judged. (c)'s box on 0.27 m cells, stone, ε 0.9, dt 0.1 s, the x-low face at T_a + 15, 30 and 60 K in turn and every other surface at T_a + 12 K, with the temperatures written and not set back, 200 steps: both sums of `stats.radRoundoff` against `stats.radiated`.
+
+(k) The option, only if the coordinator takes it before the run: (c) and (d)1 again with `surfaceWarmRays` 1 and 1600 steps (the same number of rays) pass with the same tolerances, and the standard deviation of each wall's received power in a step is reported with 8 rays and with 1.
+
+#### Default
+
+Off until (a) to (g) pass and item 10 is made. Then on with item 10, with `RUN_CACHE_VERSION` raised. Made after 13.B began, it gets its own full rerun on 13.B's base, reported beside 13.B and beside item 10's own rerun, so that each item's effect is read alone (13.12, rule 5; 13.19, decision 11).
+
+#### What ends this line
+
+If any check of (a) to (g) fails in any case, the attempt fails and is reported (13.12, rule 3). No tolerance moves, and T_a + 10 K is not tuned. Surfaces keep the 500 K floor, and 13.19's decision 7 stands as a limit stated in words. A failure of (c), (d) or (e) on the GPU alone, with the CPU passing, is a fault of the joule path; a failure of (d)3 means the code does not do what the declared model says. No second attempt is drafted. It would need the user's word and a new method committed here first.
+
+#### Declared limits
+
+- No reflection, absorptivity 1. With mixed ε an isothermal enclosure does not balance: a surface's net gain is σ (T⁴ − T_a⁴)(Σ_j ε_j F_ij − ε_i) per unit area, 0.2 σ (T⁴ − T_a⁴) for metal among stone. The exchange between gray surfaces is overstated, as 13.25 states. Gray reflection is a candidate for its own item.
+- Porous cells keep the 500 K floor. A pack below 500 K absorbs all that reaches it and re-radiates nothing: at 450 K and ε 0.9 it omits 1.7 kW/m² of fuel area, so its heating before it ignites is overstated by that.
+- Surfaces between T_a and T_a + 10 K emit nothing; it is counted (`stats.surfaceFloor`).
+- Float32 storage. Where a lumped cell's own change in a step falls below half a float32 step (stone within about 12 to 20 K of ambient at dt 0.1 s, above), the cell's temperature does not fall when it emits, though its rays carry the energy, and a deposit into it is lost. Energy then appears wherever a receiver resolves the deposit (a light wall node, the gas) and vanishes where one does not. It is counted (`stats.radRoundoff`), not corrected. The solver's convection near ambient has the same property now. A compensated sum, a per-cell remainder carried to the next write, would correct it; it is not in this item.
+- The GPU's deposits are in joules only with the item on.
+- The gas keeps `emitAbove` unless item 8 is made (13.19, point 5).
+
+#### Not verified
+
+- The size of the change in any run, and its real cost.
+- Whether Vienna on the web stays usable with the items on (reported in (h)).
+- Whether the float32 loss matters in the validation's rooms. Their linings are one-dimensional boards, whose end nodes are light and resolve small changes; lumped cells there are the thick ones.
+- That 4096 J per deposit is never reached on the GPU. A ray from the hottest cells the GPU runs carries an estimated 2.3 kJ at most (a lone stone cell at 1500 K, six open faces, 0.34 m, dt 0.1 s); clamps are counted.
+
+#### Sources
+
+As in 13.25, and in this repository 13.25's lines with `flamescapes.js` 407 to 408 and 2114 to 2150 and `flamescapesGpu/kernels.js` 1283 to 1293. Kirchhoff's law for a gray, diffuse surface and the gray exchange between parallel plates are the standard results of Howell et al. (2020) and Modest (2013), quoted, not re-read.
+
+#### The coordinator's decisions on 13.25 and 13.26 (2026-11-13, 09:49, before any run of either)
+
+The two drafts above are the physics agent's, written blind (13.12, rule 2). It opened the plan's headings, 12.4, 12.6, 13.12, 13.19 and 13.24, and no result file. 13.19's decisions and 13.24 told it that the rooms read hot and gave item 8's check figures; that is declared, and nothing in the drafts rests on either. **Both items were conceived after results were read, and that is declared here** (13.24): item 10 came from item 8's check (h), and item 11 from the limit that 13.19's decision 7 stated. The coordinator has read 13.A and 13.B, and knows which way item 11 leans: with the floor lowered, warm walls under a hot layer radiate to the cooler surfaces they face, stay cooler, and take more heat from the gas. That cools the layer, which is the direction the rooms' reading would welcome. So the decisions below add no constant to the physics and move no tolerance, and both items are judged only by checks whose references are closed forms (view factors, symmetry, reciprocity, conservation, bit-identity). No measured datum enters any of them. Each decision takes the draft's own choice or the stricter reading, except decision 5, whose reason is arithmetic done before any run.
+
+**Checked by the coordinator,** apart from the agent, in the solver at d028c0a (its solver files equal 550fce5's):
+- The CPU casts a surface's rays from the cell's centre (`flamescapes.js` 888), and `march` leaves a ray whole in the first non-gas cell it enters (951 to 963).
+- The GPU does the same, which 13.24 left unchecked: `march` sets tMax = 0.5/|d| on each axis (`kernels.js` 1260) and `radiateCell` calls it from the emitting cell (1380).
+- The GPU's deposits are fixed point in kelvin, 16 384 steps a kelvin (357, 1190 to 1197). The CPU's wait in float64 arrays (809 to 812). T and T_s are float32 (407, 408).
+- The GPU draws from salts 1, 2 and 5 only (1042, 1071, 1354) and the CPU's stage from salt 2 (860), so salt 3 is free.
+- Five unit-test files pass `emitAbove: 1e9`.
+- F₁₁ and F₁₄, evaluated by the coordinator from the formulas as written above, give every figure of (a)'s table, references and tolerances; the five shares of each box sum to 1 within 10⁻⁸; and 32.97 cell² both ways in (a)3. The cube's two values are the known 0.1998 and 0.2000.
+- Hand calculations repeated: the centre's view factor, 0.5541 (13.24); 54 W/m² at T_a + 10 K and ε 0.9, a ray of 0.027 J on 0.20 m cells at dt 0.1 s, 0.026 of a kelvin step in a stone cell; the float32 step of 3.05 × 10⁻⁵ K; (b)'s 0.0059 and (d)1's 0.0042; 13.26 (c)'s 14.16 W/m², 1.7 % and 5.6 %.
+
+Not checked: the agent's model figures (the shares of 0.443 to 0.447, the nets at edges and corners, the crossing counts), which no check depends on; the sources' chapters.
+
+1. **Item 10's method stands as drafted,** points 1 to 12, read with decision 5. The start comes from salt 3; each ray's direction and face are the draws of the item off.
+2. **Porous cells are unchanged in both items,** as drafted, and keep the 500 K floor under item 11. The limit is declared: a pack below 500 K takes all that reaches it and returns none. Bringing packs in is another item.
+3. **The burner's rays are outside both items.** What the draft read is recorded as a finding in the solver as it stands: the validation burner's radiant part leaves one point half a cell above its top, in 16 fixed directions of which 8 point below the horizontal. Every run of 13.A and 13.B carries it, and no word of either changes for it. It is a candidate for its own item, not drafted now.
+4. **The reach.** `rayReach` does not stop a surface's rays (point 8), as drafted. (a)'s 40 × 8 × 8 box tests it.
+5. **The GPU's deposits are in joules whenever item 10 is on,** not with item 11 alone. The agent offered this choice (its note 5). The reason is arithmetic from the draft's own figure, done before any run. In (g)'s scenes on 0.20 m cells every ray of a flat wall carries the same 14.07 J into stone cells of one capacity. That is 13.34 kelvin steps, and each rounds to 13. The rounding is then a bias of -2.6 % on every deposit and not noise, so correct code could not meet (g)'s 1 %. In joules the same deposit is 57 636 steps. So 13.26's point 6 belongs to item 10: with `surfaceRayStart` 1 every radiation deposit on the GPU is accumulated in joules at 4096 steps a joule, clamped at ±4096 J a deposit, the clamps counted in number and in J, and `radApply` divides by the capacity the CPU divides by. With `surfaceRayStart` 0 the deposits stay in kelvin, bit for bit. 13.25's point 11 (its last line) and (g)'s reason are read with this, and (g)'s tolerances do not move. The same arithmetic on 13.26's GPU checks: the smallest deposit is (b)'s ray at T_a + 10.01 K on 0.20 m, 61.6 joule steps, which rounds to 62, 0.6 % high and inside (e)'s 1 %.
+6. **The floor's rule stands** (13.26, point 1). T_a + 10 K is 13.19 point 5's numerical cut, fixed from no data, and it is not tuned. One addition, for parity: with item 11 on, θ is rounded to float32 on both paths, so that the CPU and the GPU compare a float32 temperature with the same number. With the item off the comparison is the present one.
+7. **Float32 storage is counted, not corrected,** as drafted. `stats.radRoundoff` is reported by (i) and beside `radiated` in every validation run made with item 11 on. A compensated sum is another item.
+8. **No reflection.** A surface takes all of each ray and emits at its ε, as now. Gray reflection is a candidate for its own item, and (d)3 measures the limit.
+9. **`surfaceWarmRays` is taken,** built inert (default 8), with check (k). (k) is outside what ends the line. If (k) fails, the option is withdrawn (held at 8), that is reported, and item 11 stands or falls on (a) to (g). The reason for taking it is the user's rule on cost; it changes no expected deposit.
+10. **A one-dimensional wall's side face starts on the whole cell face,** as drafted, a declared limit.
+11. **The tallies' names are the drafts'.**
+12. **The tolerances stand,** 4 standard deviations of the ray counts, with the seed fixed at 1. A case that falls outside fails like any other. It is not run again with another seed.
+13. **A fault of the code against the method** (13.21's rule). Every check of 13.25 (a) to (h) and of 13.26 (a) to (f) has a reference that the method meets exactly, in expectation or bit for bit. A failure there is a fault of the code. Corrected code, run again in full, is the same attempt, reported with both commits. The method, the seed, the ray counts and the tolerances do not change, and a change to the method ends the attempt. For the unit suite ((i); 13.26 (g)) the rule is 13.21's decision 9: a test that fails is not edited, and only a test whose reference is the present ray geometry itself (the centre start, or the 500 K floor for a surface) may be rewritten, disclosed as written after a failure.
+14. **The default: stricter than the drafts.** Passing its checks makes an item's switch available to the harness and to the solver's options. It does not change the app's default, which stays 0 for both. A default changes only after all of these: the item's full rerun on three cells, reported beside 13.B; the app's verdict text rewritten from the rerun that the default follows; and the user's agreement, given with the step cost (CPU, GPU, and Vienna in the browser) and `radRoundoff` before them. `RUN_CACHE_VERSION` rises with a default, not before. A cached run's key carries both switches, so a run made under one setting is never reused under another.
+15. **The order, and the reruns** (13.12, rule 5; 13.19, decision 11). Item 10 is built and checked first, on its own commit. Item 11 is built only if item 10's attempt passes. Then two reruns: item 10 alone, and items 10 and 11 together (item 11 cannot run alone). Each is the eight series, with the chair series beside them as 15.9 read it, on 0.20, 0.27 and 0.34 m, on 13.B's solver and flags and the harness as 13.16 corrected it. Each is reported beside 13.B, verdict by verdict, before anything else is combined. Their place beside item 9's reruns is set when the builds have reported. 13.B's words stay the app's until the user has seen them.
+16. **The base** is `next/calibration-ui` at the commit the items' branch (`flamescapes/surface-rays`) starts from. Its solver's physics is 13.B's (550fce5).
+17. **The gas's radiation.** A second attempt at item 8 still needs the user's word (13.23). If one is made, its check (h) runs on item 10's geometry. Nothing of item 8 is in these items.
+18. **What ends each line stands as drafted,** read with decision 13.
+
 ### 13.27 13.B complete on the three cells, beside 13.A (2026-11-13, 09:13)
 
 13.25 and 13.26 are held for the two surface items in draft (13.24).
