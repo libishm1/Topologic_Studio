@@ -2108,6 +2108,52 @@ Part of the absorptivity's failure is in the model's form. Its absorptivity for 
 
 **A second attempt needs the user's word,** and a new method committed here first (13.19). None is drafted. Two candidates, for the user's decision: a weighted sum of gray gases whose fit reaches ambient temperature, judged by this same check against these same 72 values, with nothing moved; or FDS's default gray gas from RadCal's own coefficients, which 13.19 notes would need another independent reference. Until then the hot reading of the burner rooms and the cold reading of the chair rooms (15.9) stand as 13.B reports them.
 
+### 13.24 Item 8: the build's other checks, and a finding in the solver as it stands (2026-11-13, 08:54)
+
+13.23 ended the attempt on check (b). The build agent then stopped and handed back its report. This section records its other checks, so that every check of the attempt is reported (13.12, rule 3), and one finding that concerns the solver with the item off.
+
+**The branch.** `flamescapes/gas-radiation` holds three commits: a269323 (the solver, `gasRadiation` 0 by default), 0e15df5 (the suite's `--gas-radiation` and the ledger's tallies, never run) and 29ef017 (`tools/gas-radiation-check.mjs`). It is kept, not merged and not pushed.
+
+**The checks.** These are the agent's figures. The coordinator repeated only (b) apart from the agent (13.23), and the geometry of (h) below.
+
+| Check | Result | What was run |
+|---|---|---|
+| (a) constants and functions | pass: 170 constants, worst difference 0 | in full; the GPU's tolerance not run |
+| (b) emissivity and absorptivity against RadCal | **fail**, 38 of 72 (13.23) | in full |
+| (c) gray cube | within ±2 % (0.9991 to 1.0023) | 20 steps, where 13.19 fixed 200 |
+| (d) band cube | within ±2 % (0.9963 to 1.0026) | 20 steps, where 13.19 fixed 200 |
+| (e) soot-free layer | within ±3 % (worst 1.0212, the floor on 0.27 m) | 20 steps, where 13.19 fixed 200 |
+| (f) energy | pass: 6e-13 of emission a step against 1e-9 | the trials and both burner runs; no GPU run |
+| (g) radiant fraction counted once | pass | both burner runs |
+| (h) isothermal box | **fail**: the gas's net gain is -6.95 % of its emission on 0.2 m and -7.08 % on 0.3 m, against ±2 % | 20 steps |
+| (i) off is off | identical fingerprints (0b8778bd, beaa010f); unit suite 536 of 536 on base and branch | the tool's own comparison with the base and the GPU phases not run |
+| (j) unit suite with the item on | **not run** | |
+| (k) ledger | **fail**: methane at 1 of 10 times, by 0.00006 MJ beyond the allowance; class A at 8 of 10, by up to 0.0157 MJ | both burner runs |
+
+GPU parity and speed (14.6) were not started. So the attempt fails (b), (h) and (k). (c), (d) and (e) are not complete as fixed, and (j) and the GPU were not run. Had (b) passed, the item would still not have been made.
+
+**What (h) found: a surface's rays start at the centre of its solid cell.** This is in the solver as it stands, with the item off. 13.19's point 8 kept the surfaces "as now", and (h) is the first check in this plan that closes a radiation balance between surfaces and the gas, so it is the first that could see it.
+
+The coordinator read it in the code on `next/calibration-ui`: `radiation` casts every ray of a solid, porous or one-dimensional wall cell from the cell's centre, in a direction drawn by Lambert's law about the normal of one of its open faces, and `march` skips the emitting cell and leaves the ray in the first other solid or porous cell it enters. A ray that crosses a side face of the emitting cell enters the neighbouring wall cell and stays there. The share that leaves through the open face is the view factor from a point to a coaxial parallel square of side 1 at distance ½:
+
+(4/π) (1/√2) atan(1/√2) = 0.5541.
+
+4 000 000 directions drawn as the solver draws them give 0.5542. The agent's own sampling gave 55.4 %.
+
+So a flat wall of solid cells sends into the room 55 % of ε σ (T_s⁴ − T_a⁴) A. The other 45 % passes sideways into the wall cells beside it and stays in the wall. No energy is lost and the books close (f). The exchange between a hot surface and the room is too small by that factor on a flat wall, by other factors at edges and corners, and by nothing for a cell that stands alone. It acts only where a surface emits, above 500 K in the solver as it stands (13.19, the code as read there).
+
+In (h) the walls emitted 855 kW on 0.2 m, the solids took 688 kW and 278 kW left the grid. In a copy outside any branch the agent started each ray at a uniform point on the emitting face, and (h) read +0.048 % and -0.014 %. That copy is a diagnostic, not a method, and the coordinator did not run it.
+
+Not checked: where the GPU path starts its rays (the two paths are held to the same rays by the parity checks, so the same is expected); the size of the effect in any validation run. 13.B's runs carry this geometry on every surface above 500 K, and no word of 13.B changes for it.
+
+**What follows from it.** A candidate item: a surface's rays start on its emitting face. It was found during item 8's build, after 13.A and 13.B were read, and that is declared. It gets a blind draft and its own checks, committed here before any code (13.12). It belongs with the limit 13.19's decision 7 declared, the surfaces' 500 K floor: lowering that floor would let every warm wall emit, and with this geometry 45 % of that emission would stay in the wall. Any second attempt at the gas's radiation must also pass (h), which this geometry fails by itself. So the surfaces come before the gas.
+
+**The ledger's remainder under (k).** With the item on, the unexplained remainder grows: class A at 120 s, 1.345 MJ on against 1.225 MJ off, of 12.0 MJ released. The agent computed it again with each cell's own heat capacity in place of the ledger's fixed 1005 J/(kg K), and the gap stays (1.330 against 1.210 MJ). The radiation stage's own books close to 3e-13. The cause was not found. The agent's guess is the flow's own lack of conservation under a different temperature field, and it is a guess. The remainder with the item off is 13.15's, not new.
+
+**Departures the agent declared,** none judged: a band share that comes out negative is set to 0 and the rest rescaled, counted in a tally of its own (never triggered); the surface floor's count uses the gas's 10 K rise as its lower bound; the burner's rays pass through the silenced flame cells, and their deposits are added after all rays of the stage.
+
+**Item 8 stays not made.** Nothing here changes 13.23.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
