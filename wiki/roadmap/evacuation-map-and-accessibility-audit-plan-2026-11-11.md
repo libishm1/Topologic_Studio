@@ -24,7 +24,7 @@ The kits work on classified point clouds of S3DIS (Armeni et al., CVPR 2016), wh
 | Clear width | Coarse: the brushfire clearance on the 0.5 m lattice (skeleton.js), used for bottlenecks | 0.5 m steps cannot tell 0.80 from 0.90 m: a fine raster is needed |
 | Door widths | Yes for exit doors: the IFC's widths against 1010.1.1 (0.80 m SBC, 0.813 m IBC) | Every door, against the accessible-route width |
 | Turning space, wheelchair reach, issues, act | No | All of it |
-| Point-cloud input | No: Studio reads IFC | Scan to the same raster (with a collaborator's scan-to-BIM work) |
+| Point-cloud input | No: Studio reads IFC | Scan to the same raster (with Dr Oriol's scan-to-BIM work) |
 
 So the evacuation map is largely there, at a coarser metric and with three missing readings (per-room routes, catchments, the exit sweep); the accessibility audit is not there at all.
 
@@ -46,7 +46,7 @@ So the evacuation map is largely there, at a coarser metric and with three missi
 - **E3. The fine raster.** Per storey in a worker, off by default, sized to the device (10 cm on phones): exact transform, widths, 16-neighbour field, Fast Marching check. Port the kits' known-answer tests (synthetic corridors, doors and floors; MIT) and measure against them.
 - **A1. The wheelchair audit.** Profiles, reach, the issue list on the plan and as CSV, the act step.
 - **A2. Accessible means of egress**, then wheelchair users in the crowd.
-- **S1. Scan input, with a collaborator.** A classified point cloud (S3DIS's 13 classes) onto the same raster, so a scanned building gets the same map and audit, and an as-built scan can be set against its design IFC.
+- **S1. Scan input, with Dr Oriol.** A classified point cloud (S3DIS's 13 classes) onto the same raster, so a scanned building gets the same map and audit, and an as-built scan can be set against its design IFC.
 
 ## Built (2026-11-11, not released)
 

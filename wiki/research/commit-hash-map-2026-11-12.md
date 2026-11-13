@@ -39,3 +39,5 @@ Before this branch was first pushed, its local history (every commit after `ae81
 | `60b04a9` | `e810d88` | 2026-11-12 08:01 | Fire model validation review: synthesis and PRISMA 2020 flow |
 | `ed64296` | `ca84c69` | 2026-11-12 09:01 | The app states the final held-out verdict (6ee8c93) |
 | `b0991ec` | `f9e20fa` | 2026-11-12 11:12 | Validation 12.10: the final held-out results, before and after the burner fix |
+
+**2026-11-13.** At the user's request the name is restored, in the same two lines of `wiki/roadmap/evacuation-map-and-accessibility-audit-plan-2026-11-11.md`, by a new commit on top of the published history. The hashes above stay as published; nothing was rewritten again.
