@@ -15,6 +15,7 @@
  * the same way, so neither crossing is a copy.
  */
 import { buildLatticeGraph } from "../core/lattice.js";
+import { memoryKind } from "../core/memoryNotice.js";
 
 self.onmessage = (event) => {
   const { id, payload } = event.data || {};
@@ -73,6 +74,7 @@ self.onmessage = (event) => {
       ...result.sections.map((section) => section.segs.buffer),
     ]);
   } catch (error) {
-    self.postMessage({ id, ok: false, error: error?.message || String(error) });
+    // Typed when it is running out of memory (core/memoryNotice.js), so the page can offer to clear its caches.
+    self.postMessage({ id, ok: false, error: error?.message || String(error), kind: memoryKind(error) });
   }
 };

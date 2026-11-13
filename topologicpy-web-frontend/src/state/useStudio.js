@@ -12,10 +12,14 @@ import { ApiError, api, isGraphGone, openFireStream } from "../lib/api.js";
 import { cacheSize, clearCache } from "../lib/fragmentCache.js";
 import { mark } from "../lib/perf.js";
 import { migrateSettings, withoutSessionOnly } from "../core/settingsMigration.js";
+import { DEFAULT_SERVICE_PRESET, DEFAULT_SERVICE_RESPONSE } from "../core/fireService.js";
+import { reportMemoryProblem } from "../core/memoryNotice.js";
 import { STALE_SITE_MESSAGE, effectiveEngine as engineFor, isStaleSite } from "../core/session.js";
 
 const THEME_KEY = "ts.theme";
 const SETTINGS_KEY = "ts.settings";
+// The user's settings a guided run changed, while it plays (keepGuidedBefore).
+const GUIDED_BEFORE_KEY = "ts.guidedBefore";
 
 export const DEFAULT_SETTINGS = {
   upAxis: "y",
@@ -134,6 +138,18 @@ export const DEFAULT_SETTINGS = {
   slimeBottlenecks: false,
   slimeDeadEnds: false,
   slimeAbandoned: false,
+  // The egress map (core/egressMap.js, Route step), each layer off until
+  // asked: every room's route from its worst place, contours of the walk,
+  // dead-end corridors, the doors no way out can do without, and the fine
+  // grid's walk (core/floorRaster.js) laid on the floors.
+  egressRoutes: false,
+  egressContours: false,
+  egressDeadEnds: false,
+  egressCritical: false,
+  egressFine: false,
+  // The wheelchair audit (core/accessAudit.js): its profile, and its map on the floors once run.
+  accessProfile: "icc",
+  accessOverlay: true,
   // Gathering places hold crowdShelterArea m^2 of people when on; once full,
   // the earliest there fade as newcomers arrive.
   crowdShelterOn: false,
@@ -159,6 +175,15 @@ export const DEFAULT_SETTINGS = {
   // within 15 s, faster than any design fire).
   flamescapesGrowth: "class",
   flamescapesHorizon: 180, // s
+  // Run until the fire service arrives instead (core/fireService.js): off by
+  // default, and off the run lasts flamescapesHorizon as before. On, it lasts
+  // the performance check's detection (perfDetection) plus this response, s:
+  // NFPA 1710 (2020)'s first engine company by default, at most an hour in all.
+  flamescapesUntilService: false,
+  // The response: a preset (core/fireService.js SERVICE_PRESETS), NFPA 1710's
+  // first engine by default, or "custom" with the response here, s.
+  flamescapesServicePreset: DEFAULT_SERVICE_PRESET,
+  flamescapesServiceResponse: DEFAULT_SERVICE_RESPONSE,
   flamescapesFireLoad: 780, // MJ / m^2 of floor, the contents
   flamescapesUntenableC: 60, // gas at head height
   flamescapesSmoke: true, // visibility below the limit is untenable
@@ -171,6 +196,12 @@ export const DEFAULT_SETTINGS = {
   // its memory allows). The results depend on the grid, so comparisons should
   // keep one. Named flamescapesGrid before 2026-11-09, defaulting to "speed".
   flamescapesGridPolicy: "standard",
+  // The grid of 0.27 m cells (core/calibrationStatus.js TESTED_GRID_CELL), kept
+  // apart from flamescapesGridPolicy so that a version without it reads "standard".
+  flamescapesCalibratedGrid: false,
+  // The solver (core/solverVersions.js): "validated", or "previous" as the site
+  // ran it until 2026-11-12, for continuity and comparison.
+  flamescapesSolver: "validated",
   // Runs of each fire on the GPU, the first watched and the rest after it with
   // the room a thousandth of a degree warmer each, for the range on the card;
   // 1 for one run. Not on the CPU, where each takes as long as the first.
@@ -229,6 +260,9 @@ export const DEFAULT_SETTINGS = {
   // The graph's colour while a run plays (core/measures.js): "heat", "smoke",
   // "gases" or "tenability", and which smoke or gas measure.
   flamescapesShow: "heat",
+  // The heat ramp: "fixed", 20 to 600 °C, or "run", fitted to the run's
+  // hottest gas (core/measures.js fittedHeatPeak); drawing only.
+  flamescapesHeatScale: "fixed",
   flamescapesSmokeMeasure: "visibility",
   flamescapesGasMeasure: "co",
   // Record soot, CO2 and O2 too (core/tenability.js); off, or past the
@@ -264,6 +298,9 @@ export const PLAN_SETTINGS = [
   "flamescapesClass",
   "flamescapesGrowth",
   "flamescapesHorizon",
+  "flamescapesUntilService",
+  "flamescapesServicePreset",
+  "flamescapesServiceResponse",
   "flamescapesFireLoad",
   "flamescapesUntenableC",
   "flamescapesSmoke",
@@ -275,9 +312,45 @@ export const PLAN_SETTINGS = [
   "flamescapesVentilation",
   "flamescapesTerminalFlow",
   "flamescapesGridPolicy",
+  "flamescapesCalibratedGrid",
+  "flamescapesSolver",
 ];
 
 export const planSettings = (settings) => Object.fromEntries(PLAN_SETTINGS.map((key) => [key, settings[key]]));
+
+/**
+ * The settings a Flamescapes run is computed from (App.jsx combustionInputs
+ * and its key), so that the viewport's Run again can say when the next run
+ * differs from the last; the run's length is compared as it comes out
+ * (core/fireService.js runHorizon), the detection time with it.
+ */
+export const RUN_SETTINGS = [
+  "fireModel",
+  "fireMaxSteps",
+  "flamescapesClass",
+  "flamescapesGrowth",
+  "flamescapesFireLoad",
+  "flamescapesBackend",
+  "flamescapesGridPolicy",
+  "flamescapesCalibratedGrid",
+  "flamescapesSolver",
+  "flamescapesDoors",
+  "flamescapesDoorShare",
+  "flamescapesDoorSeed",
+  "flamescapesWindows",
+  "flamescapesVentilation",
+  "flamescapesTerminalFlow",
+  "flamescapesMeasures",
+  "flamescapesOverhead",
+  "sprinklers",
+  "sprinklerSource",
+  "sprinklerHazard",
+  "sprinklerResponse",
+  "sprinklerMode",
+  "sprinklerOpenOn",
+  "suppressionSystems",
+  "systemsAgentOnly",
+];
 
 /** Whether the loaded model has IfcSpace rooms, which the two-zone fire model needs. */
 export function hasRooms(modelInfo) {
@@ -299,10 +372,32 @@ export function fireModelIn(settings, modelInfo) {
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...withoutSessionOnly(migrateSettings(JSON.parse(raw))) };
+    let settings = raw ? { ...DEFAULT_SETTINGS, ...withoutSessionOnly(migrateSettings(JSON.parse(raw))) } : DEFAULT_SETTINGS;
+    // A guided run's own settings, left by a reload before the run was
+    // stopped or closed: the user's come back, as Stop and Close give them.
+    const before = localStorage.getItem(GUIDED_BEFORE_KEY);
+    if (before) {
+      settings = { ...settings, ...withoutSessionOnly(migrateSettings(JSON.parse(before))) };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(withoutSessionOnly(settings)));
+      localStorage.removeItem(GUIDED_BEFORE_KEY);
+    }
+    return settings;
   } catch {
     return DEFAULT_SETTINGS;
+  }
+}
+
+/**
+ * The settings a guided run changed, as they were before it (App.jsx
+ * guidedSet), kept in the browser while it plays so that a reload gives
+ * them back (loadSettings); forgotten when the run gives them back itself.
+ */
+export function keepGuidedBefore(before) {
+  try {
+    if (before && Object.keys(before).length) localStorage.setItem(GUIDED_BEFORE_KEY, JSON.stringify(before));
+    else localStorage.removeItem(GUIDED_BEFORE_KEY);
+  } catch {
+    /* not fatal: Stop and Close still give them back */
   }
 }
 
@@ -395,6 +490,10 @@ export function useStudio() {
       // The graph store is in-memory, so restarting the backend orphans the
       // graph id the client is holding. Say what to do about it.
       const graphGone = isGraphGone(error);
+
+      // Running out of memory (an allocation in the page or a worker): the
+      // page also offers to clear its caches (core/memoryNotice.js).
+      reportMemoryProblem(error, title);
 
       // Log the full object; the toast only carries what a user can act on.
       console.error(title || "Error", error);

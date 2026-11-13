@@ -26,6 +26,11 @@
  *     off, the GPU agrees with the CPU to float32 round-off and summation
  *     order: no more than the CPU differs from itself started one ulp apart
  *     (tools/flamescapes-gpu-check.mjs).
+ *   - The conserved transport and the expansion (proposal F, behind the
+ *     CPU's own flags): each transport sweep a pass in which every cell
+ *     computes both its faces, a sealed region's mean expansion a float32
+ *     tree over the regions the CPU's topology found at upload; the CPU's
+ *     tallies of the mass floor and the shell's heat are not kept.
  *   - The initial state is the CPU's createSolver, uploaded, so both paths
  *     start from the same state; node cells are the CPU's headCells.
  *   - Per frame only the node readings, the frame's per-step heat release,
@@ -36,14 +41,14 @@
  *     runs on the CPU solver instead.
  */
 
-import { DEFAULTS, NS, burnerCells, burnerHeat, createSolver } from "./flamescapes.js";
+import { DEFAULTS, NS, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor, topology, ventLeakList, zoneState } from "./flamescapes.js";
 import {
-  KELVIN, ceilingDetectors, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
+  KELVIN, ceilingDetectors, failedHealth, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
 import {
-  AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
+  AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, HEAT_UNIT, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
   PARTICLE_FLOATS, SWEEP_BYTES, WG, buildShader,
-  SUP, SYS,
+  SUP, SYS, WALL, ZONE_BLOCKS,
 } from "./flamescapesGpu/kernels.js";
 
 /** A fuel's water rule (fireClasses.js waterResponse) as the bits the WGSL reads: 1 wets, 2 Evans's cap, 4 holds no water. */
@@ -52,6 +57,39 @@ const waterFlags = (fuel) => (fuel?.water?.wets === false ? 0 : 1) + (fuel?.wate
 const MAX_WG_PER_DIM = 65535;
 /** Conduction's passes, in the order that gives every solid cell the CPU's order of exchanges. */
 const CONDUCTION = ["conductPorous", "conduct_x0", "conduct_x1", "conduct_y0", "conduct_y1", "conduct_z0", "conduct_z1", "conduct_bx", "conduct_by", "conduct_bz"];
+/** The conserved transport's passes (proposal F): the CPU's three sweeps, then T from the gas law. */
+const TRANSPORT = ["transport_x_start", "transport_y_scratch", "transport_z_live", "transportEnd"];
+/** On odd steps the sweeps run z, y, x (the CPU's order alternates by sim.steps: a fixed one favoured the first axis). */
+const TRANSPORT_BACK = ["transport_z_start", "transport_y_scratch", "transport_x_live", "transportEnd"];
+
+/**
+ * The sealed regions of the CPU's topology (open cells that reach no open
+ * side of the domain), for the GPU's expansion: per cell its sealed region
+ * (0xffffffff none), and per region its cells in cell order, as offsets into
+ * one list. Only porous cells change kind on the GPU, and they stay open, so
+ * the regions hold for the whole run.
+ */
+function sealedRegions(sim) {
+  const topo = topology(sim);
+  const index = new Int32Array(topo.sealed.length).fill(-1);
+  let S = 0;
+  for (let r = 0; r < topo.sealed.length; r += 1) if (topo.sealed[r]) index[r] = S++;
+  const cellSealed = new Uint32Array(sim.N).fill(0xffffffff);
+  const counts = new Uint32Array(S);
+  for (let c = 0; c < sim.N; c += 1) {
+    const r = topo.region[c];
+    if (r >= 0 && index[r] >= 0) {
+      cellSealed[c] = index[r];
+      counts[index[r]] += 1;
+    }
+  }
+  const offsets = new Uint32Array(S + 1);
+  for (let s = 0; s < S; s += 1) offsets[s + 1] = offsets[s] + counts[s];
+  const list = new Uint32Array(offsets[S]);
+  const next = offsets.slice(0, S);
+  for (let c = 0; c < sim.N; c += 1) if (cellSealed[c] !== 0xffffffff) list[next[cellSealed[c]]++] = c;
+  return { S, cellSealed, offsets, list };
+}
 /** Workgroups for a 1D thread count, folded into 2D past the per-dimension limit (kernels use `lin`). */
 function workgroups(threads, size) {
   const wg = Math.ceil(threads / size);
@@ -180,6 +218,25 @@ class GpuSim {
     this.radiationOn = Number.isFinite(P.emitAbove) && P.emitAbove < 1e8;
     this.embersOn = Boolean(P.embers) && this.particlesOn;
     this.vorticityOn = P.vorticity > 0;
+    // Proposal F, as the CPU's flags: the conserved transport and the expansion.
+    this.conservativeOn = P.conservative > 0;
+    this.expansionOn = P.expansion > 0;
+    // Pressure zones (flamescapes.js pressureZones): the sealed regions with a pressure each, when the CPU has them.
+    this.zonesOn = P.pressureZones > 0 && sim.zones !== null && topology(sim).sealed.some((x) => x);
+    this.sealed = this.expansionOn || this.zonesOn ? sealedRegions(sim) : null;
+    d.conservative = this.conservativeOn;
+    d.sealedN = this.sealed ? this.sealed.S : 0;
+    d.zonesOn = this.zonesOn;
+    // Leakage (flamescapes.js leakTerms and ventLeaks, plan 13.11 item 7): the
+    // zones' leak terms, as the CPU's zones hold them, and the vent leaks in
+    // open regions (those in a zone are its terms).
+    this.zoneState = this.zonesOn ? sim.zones || zoneState(sim) : null;
+    if (sim.ventLeaks === undefined) sim.ventLeaks = ventLeakList(sim);
+    this.vents = (sim.ventLeaks || []).filter((e) => !(this.zonesOn && this.sealed.cellSealed[e.cell] !== 0xffffffff));
+    d.leakVentN = this.vents.length;
+    // One-dimensional walls (flamescapes.js wallSetup), when the scene has any.
+    this.wall = sim.wall && sim.wall.cells.length ? sim.wall : null;
+    d.wallN = this.wall ? this.wall.cells.length : 0;
     const pilot = sim.pilot && sim.pilot.cells?.length ? sim.pilot : null;
     this.pilot = pilot;
     // A design-fire first item (flamescapes.js createBurner); its heat for each step is the host's (burnerHeat).
@@ -201,7 +258,16 @@ class GpuSim {
     io.speed = io.ducts + (ducts ? 2 * ducts.cells.length : 0);
     // The design-fire item's cells, a layer at a time from its base.
     io.burner = io.speed + this.nSpeed;
-    io.size = io.burner + (this.burner ? this.burner.cells.length : 0);
+    // Then its layers' starts in that list, and the cells its flame may reach beyond its own and their distances (createBurner).
+    const b = this.burner;
+    io.burnerLayers = io.burner + (b ? b.cells.length : 0);
+    io.reach = io.burnerLayers + (b ? b.layerStart.length : 0);
+    // The sealed regions' offsets and cells (sealedRegions), when the gas expands.
+    io.sealed = io.reach + (b ? 2 * b.reach.length : 0);
+    // Then each zone's leak terms (offsets, then C_d A, n, dp_ref a term), and the vent leaks (cell, C_d A, n, dp_ref).
+    io.leakTerms = io.sealed + (this.sealed ? this.sealed.S + 1 + this.sealed.list.length : 0);
+    io.vents = io.leakTerms + (this.zonesOn ? d.sealedN + 1 + 3 * this.zoneState.termCA.length : 0);
+    io.size = io.vents + 4 * d.leakVentN;
     this.io = io;
     this.suppressionOn = Boolean(suppression);
     d.sprayCols = 0;
@@ -211,19 +277,47 @@ class GpuSim {
     const sysAt = { state: N, wet: N + SYS.stride * ((this.systems?.R ?? 0) + 1) };
     this.sysAt = sysAt;
     const red = { rad: 2 * this.nPart, steps: 3 * this.nPart };
-    red.size = red.steps + 4 * this.slots;
+    // After the step sums, four floats: the pilot's added heat over the frame, then padding.
+    red.pilot = red.steps + 4 * this.slots;
+    // Then each sealed region's mean expansion this step (sealedMean).
+    // Then a design-fire item's four (kernels.js burner): the frame's heat
+    // released, the last step's, the heat waiting for oxygen and the last
+    // step's flame cells.
+    red.burner = red.pilot + 4;
+    red.mean = red.burner + 4;
+    // Then each pressure zone's pi - 1, mass, last ratio and kappa, and the share of its gas it takes in as air at its next update; and each cell's mass source since the last update.
+    red.zone = red.mean + d.sealedN;
+    red.zoneSrc = red.zone + (this.zonesOn ? 5 * d.sealedN : 0);
+    // Then the reduction's partial sums, three a block (kernels.js zonePartial).
+    red.zonePart = red.zoneSrc + (this.zonesOn ? N : 0);
+    // Then each vent leak's expansion this step (kernels.js leakVent).
+    red.leakDiv = red.zonePart + (this.zonesOn ? 3 * ZONE_BLOCKS * d.sealedN : 0);
+    red.size = red.leakDiv + d.leakVentN;
     this.red = red;
+    // In `snap` after the step's start (velocities, T, Y): the transport's
+    // scratch state (rho, then Y) and the step's starting T for the expansion.
+    const snapAt = { gas: nuvw + 7 * N };
+    snapAt.expand = snapAt.gas + (this.conservativeOn ? 7 * N : 0);
+    // Then, with soot deposition, each open cell's deposited soot (the CPU's sootDeposit).
+    this.depositOn = P.sootDeposition > 0 && Boolean(sim.sootDeposit);
+    snapAt.dep = snapAt.expand + (this.expansionOn ? N : 0);
+    snapAt.size = snapAt.dep + (this.depositOn ? N : 0);
+    this.snapAt = snapAt;
 
     const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
     const make = (label, bytes) => device.createBuffer({ label, size: Math.max(16, Math.ceil(bytes / 4) * 4), usage });
     const limit = Math.min(device.limits.maxStorageBufferBindingSize, device.limits.maxBufferSize);
+    // The wall buffer's words (kernels.js WALL): per wall its cell, meta, last, nodes and six face heats; per stack its C, G, heat and thickness.
+    const Wn = this.wall ? this.wall.n : 0, Ws = this.wall ? this.wall.heat.length : 0;
+    this.wallWords = this.wall ? (WALL.fixed + Wn) * d.wallN + Ws * (2 * Wn + 1) : 0;
     const sizes = {
       cf: CF_FIELDS * N * 4,
       Y: 6 * N * 4,
       ci: CI_FIELDS * N * 4,
       vel: nuvw * 4,
-      snap: (nuvw + 7 * N) * 4,
-      atom: (AT_FIELDS * N + this.gsSlots) * 4,
+      snap: snapAt.size * 4,
+      // Then two ray deposits per one-dimensional wall, after the sweeps' slots.
+      atom: (AT_FIELDS * N + this.gsSlots + 2 * d.wallN) * 4,
       parts: Math.max(1, d.cap) * PARTICLE_FLOATS * 4,
       red: red.size * 4,
       io: io.size * 4,
@@ -231,6 +325,8 @@ class GpuSim {
       sup: suppression ? (SUP.fields * N + SUP.column * Math.max(1, suppression.columns)) * 4 : 16,
       // Rooms per cell, their states and the wet cells; nothing without systems.
       sys: this.systems ? (sysAt.wet + SYS.wet * Math.max(1, d.sysWet)) * 4 : 16,
+      // One-dimensional walls; nothing without them.
+      wall: this.wall ? this.wallWords * 4 : 16,
     };
     for (const [name, bytes] of Object.entries(sizes)) if (bytes > limit) throw new RangeError(`Flamescapes GPU: ${name} needs ${bytes} bytes, the device binds ${limit}`);
     this.buf = {
@@ -249,12 +345,13 @@ class GpuSim {
       sweep: device.createBuffer({ label: "sweep index", size: this.sweepStride * this.gsSlots, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }),
       sup: make("sup", sizes.sup),
       sys: make("sys", sizes.sys),
+      wall: make("wall", sizes.wall),
     };
     // Sweep s's index at offset s * sweepStride, bound at that dynamic offset.
     const index = new Uint32Array((this.sweepStride / 4) * this.gsSlots);
     for (let s = 0; s < this.gsSlots; s += 1) index[(s * this.sweepStride) / 4] = s;
     device.queue.writeBuffer(this.buf.sweep, 0, index);
-    const byBinding = [this.buf.U, this.buf.cf, this.buf.Y, this.buf.ci, this.buf.vel, this.buf.snap, this.buf.atom, this.buf.parts, this.buf.partsB, this.buf.ctr, this.buf.red, this.buf.io, this.buf.sweep, this.buf.atom, this.buf.sup, this.buf.sys];
+    const byBinding = [this.buf.U, this.buf.cf, this.buf.Y, this.buf.ci, this.buf.vel, this.buf.snap, this.buf.atom, this.buf.parts, this.buf.partsB, this.buf.ctr, this.buf.red, this.buf.io, this.buf.sweep, this.buf.atom, this.buf.sup, this.buf.sys, this.buf.wall];
     this.groups = {};
     for (const [name, k] of Object.entries(kernels)) {
       this.groups[name] = device.createBindGroup({
@@ -263,7 +360,7 @@ class GpuSim {
         entries: k.uses.map((binding) => ({ binding, resource: binding === B.sweep ? { buffer: byBinding[binding], size: SWEEP_BYTES } : { buffer: byBinding[binding] } })),
       });
     }
-    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 4 + 4 + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
 
     // ---- parameters
     this.paramBytes = new ArrayBuffer(PARAM_BYTES);
@@ -283,7 +380,7 @@ class GpuSim {
       flameCap: Math.min(d.cap, Math.ceil(P.flameShare * d.cap)),
       nPart: this.nPart, nNodes: d.nNodes, snapMax: d.snapMax, pilotN: io.nodes,
       pilotMode: pilot && pilot.temperature ? 0 : 1, ioNodes: io.nodes, ioOut: io.out, ioSnap: io.snap,
-      redRad: red.rad, redSteps: red.steps, seed: P.seed >>> 0, gsAt: AT_FIELDS * N,
+      redRad: red.rad, redSteps: red.steps, redPilot: red.pilot, seed: P.seed >>> 0, gsAt: AT_FIELDS * N,
       h, dt: P.dt, V: sim.V, rho0: sim.rho0, ambient: P.ambient, gravity: P.gravity, convection: P.convection, wallConvection: P.wallConvection,
       kappa: P.sootAbsorption, vorticity: P.vorticity, porousVel: P.porousVelocity, diffusivity: P.diffusivity,
       conductivity: P.conductivity, emitAbove: Math.min(P.emitAbove, 3e38), pyA: P.pyrolysisA, pyE: P.pyrolysisE,
@@ -298,7 +395,16 @@ class GpuSim {
       time: this.time, supOn: suppression ? 1 : 0, sprayN: 0, supCol: SUP.fields * N, sprayEta: suppression?.eta ?? 0, sprayWet: suppression?.wet ?? 0,
       speedFrom: this.speedFrom, ioSpeed: io.speed,
       sysOn: this.systems ? 1 : 0, sysState: sysAt.state, sysWetAt: sysAt.wet, sysWetN: d.sysWet,
-      burnerN: 0, burnerAt: io.burner, burnerShare: 0, burnerFuel: 0,
+      burnerN: b ? b.cells.length : 0, burnerAt: io.burner, burnerLayers: b ? b.layerStart.length - 1 : 0, burnerLayerAt: io.burnerLayers,
+      reachN: b ? b.reach.length : 0, reachAt: io.reach, burnerD: b?.diameter ?? 0, burnerDUsed: b?.diameterUsed ?? 0,
+      burnerRf: b?.radiantFraction ?? 0, burnerHeat: 0, redBurner: red.burner,
+      conservative: this.conservativeOn ? 1 : 0, expansion: this.expansionOn ? 1 : 0, gasAt: snapAt.gas, expandAt: snapAt.expand,
+      sealedN: d.sealedN, sealedAt: io.sealed, redMean: red.mean,
+      wallN: d.wallN, wallNodes: Wn, wallStacks: Ws, wallDepAt: AT_FIELDS * N + this.gsSlots,
+      sootDeposition: P.sootDeposition > 0 ? 1 : 0, sootDensity: P.sootDensity, sootDiameter: P.sootDiameter,
+      sootThDiameter: P.sootThermophoreticDiameter, sootConductivity: P.sootConductivity, depAt: snapAt.dep,
+      zonesOn: this.zonesOn ? 1 : 0, redZone: red.zone, zoneSrcAt: red.zoneSrc, zonePartAt: red.zonePart,
+      leakTermsAt: io.leakTerms, leakVentN: d.leakVentN, leakVentAt: io.vents, leakDivAt: red.leakDiv,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -341,7 +447,30 @@ class GpuSim {
     ci.set(sim.fuelKind, CI.fuelKind * N);
     ci.set(sim.burning, CI.burning * N);
     if (sim.fuelVapourKind) ci.set(sim.fuelVapourKind, CI.vapour * N);
+    if (this.sealed) ci.set(this.sealed.cellSealed, CI.sealed * N);
+    else ci.fill(0xffffffff, CI.sealed * N, (CI.sealed + 1) * N);
+    // Each cell's one-dimensional wall (-1, none, is NO_CELL's bits).
+    if (this.wall) ci.set(new Uint32Array(this.wall.index.buffer, this.wall.index.byteOffset, N), CI.wall * N);
+    else ci.fill(0xffffffff, CI.wall * N, (CI.wall + 1) * N);
     q.writeBuffer(this.buf.ci, 0, ci);
+    if (this.depositOn) q.writeBuffer(this.buf.snap, this.snapAt.dep * 4, sim.sootDeposit);
+    if (this.wall) {
+      // The CPU's sim.wall in the wall buffer's order (kernels.js WALL).
+      const W = this.wall, n = W.n, Wc = d.wallN;
+      const words = new ArrayBuffer(this.wallWords * 4);
+      const u = new Uint32Array(words), f = new Float32Array(words);
+      u.set(new Uint32Array(W.cells.buffer, W.cells.byteOffset, Wc), 0);
+      u.set(W.meta, Wc);
+      f.set(W.last, 2 * Wc);
+      f.set(W.T, 3 * Wc);
+      f.set(W.Q, (3 + n) * Wc);
+      const stacks = (WALL.fixed + n) * Wc, S = W.heat.length;
+      f.set(W.C, stacks);
+      f.set(W.G, stacks + S * n);
+      f.set(W.heat, stacks + S * (2 * n - 1));
+      f.set(W.thickness, stacks + S * (2 * n - 1) + S);
+      q.writeBuffer(this.buf.wall, 0, words);
+    }
     if (this.suppressionOn) {
       const sup = new Float32Array(SUP.fields * N);
       sup.fill(-1, SUP.rate * N);
@@ -391,7 +520,15 @@ class GpuSim {
     q.writeBuffer(this.buf.ctr, 0, ctr);
     const io = new Uint32Array(this.io.size);
     if (this.pilot) io.set(this.pilot.cells, 0);
-    if (this.burner) io.set(this.burner.cells, this.io.burner);
+    if (this.burner) {
+      const b = this.burner;
+      io.set(b.cells, this.io.burner);
+      io.set(b.layerStart, this.io.burnerLayers);
+      io.set(b.reach, this.io.reach);
+      io.set(b.reachDist, this.io.reach + b.reach.length);
+      // Heat already waiting for oxygen in the CPU state (none at a run's start).
+      if (b.pending > 0) q.writeBuffer(this.buf.red, (this.red.burner + 2) * 4, Float32Array.of(b.pending));
+    }
     if (this.ducts) {
       for (let q = 0; q < this.ducts.cells.length; q += 1) {
         io[this.io.ducts + 2 * q] = this.ducts.cells[q];
@@ -399,6 +536,36 @@ class GpuSim {
       }
     }
     for (let v = 0; v < nodeCells.length; v += 1) io[this.io.nodes + v] = nodeCells[v] < 0 ? 0xffffffff : nodeCells[v];
+    if (this.sealed) {
+      io.set(this.sealed.offsets, this.io.sealed);
+      io.set(this.sealed.list, this.io.sealed + this.sealed.S + 1);
+    }
+    const ioF = new Float32Array(io.buffer);
+    if (this.zonesOn) {
+      // The CPU's zones (sealed regions in the same order; before its first
+      // step each at ambient pressure with its gas then, summed in float64:
+      // summed in float32 the mass drifted by 2e-5), with any air its last
+      // leak drew in still to mix, and their leak terms.
+      const S = this.sealed.S, z = new Float32Array(5 * S), Z = this.zoneState;
+      // Pressure as its excess, pi - 1 (kernels.js PARAMS).
+      for (let s = 0; s < S; s += 1) z[s] = Z.pi[s] - 1;
+      for (let s = 0; s < S; s += 1) z[S + s] = Z.mass[s] + Z.source[s];
+      z.set(Z.inflow, 4 * S);
+      q.writeBuffer(this.buf.red, this.red.zone * 4, z);
+      io.set(Z.termStart, this.io.leakTerms);
+      const at = this.io.leakTerms + S + 1;
+      for (let t = 0; t < Z.termCA.length; t += 1) {
+        ioF[at + 3 * t] = Z.termCA[t];
+        ioF[at + 3 * t + 1] = Z.termN[t];
+        ioF[at + 3 * t + 2] = Z.termRef[t];
+      }
+    }
+    this.vents.forEach((e, v) => {
+      io[this.io.vents + 4 * v] = e.cell;
+      ioF[this.io.vents + 4 * v + 1] = e.CA;
+      ioF[this.io.vents + 4 * v + 2] = e.n;
+      ioF[this.io.vents + 4 * v + 3] = e.ref;
+    });
     q.writeBuffer(this.buf.io, 0, io);
     // Open-neighbour masks for the first diffusion and projection.
     const enc = device.createCommandEncoder();
@@ -420,6 +587,14 @@ class GpuSim {
     pass.dispatchWorkgroups(x, y);
   }
 
+  /** With pressure zones, each zone's pressure from its mass and heat, then its cells (the CPU's pressureZones); after the heat sources, with its leak over the step. */
+  zoneUpdate(pass, leak = false) {
+    if (!this.zonesOn) return;
+    this.dispatch(pass, "zonePartial");
+    this.dispatch(pass, leak ? "zoneCommitLeak" : "zoneCommit");
+    this.dispatch(pass, "zoneApply");
+  }
+
   /** Sweeps the last step ran, by the CPU's stopping rule on the sweeps' largest changes. */
   sweepsFrom(change) {
     const P = this.sim.P;
@@ -438,33 +613,21 @@ class GpuSim {
     const P = this.sim.P;
     // The projection stops once a sweep would move the flow by less than this (the CPU's settle).
     const settle = ((P.projectionTolerance ?? 0) * this.sim.rho0 * this.sim.grid.h) / dt;
-    // The design-fire item's heat this step, as the CPU's burnerStep: shared
-    // over the cells its flame reaches; counted here (the GPU's tallies
-    // count only the solver's own combustion).
-    let burnerN = 0, burnerShare = 0, burnerFuel = 0;
-    if (this.burner) {
-      const b = this.burner;
-      const E = burnerHeat(b, this.time, this.time + dt);
-      b.flameCells = 0;
-      if (E > 0) {
-        burnerN = burnerCells(b, E / dt);
-        b.flameCells = burnerN;
-        b.flameRate = E / dt;
-        burnerShare = E / burnerN;
-        burnerFuel = E / b.stoich.heat / burnerN;
-        b.released += E;
-        b.convective += E;
-      }
-    }
-    this.setParams({ dt, stepNo: this.stepBase + this.stepCount, slot, settle, time: this.time, burnerN, burnerShare, burnerFuel });
+    // The design-fire item's table heat this step (the host's: water on the
+    // item and clean agent change it); the GPU burns it, and what waited for
+    // oxygen, where there is oxygen, and tallies what burnt (kernels.js burner).
+    const burnerE = this.burner ? burnerHeat(this.burner, this.time, this.time + dt) : 0;
+    this.setParams({ dt, stepNo: this.stepBase + this.stepCount, slot, settle, time: this.time, burnerHeat: burnerE });
     this.writeParams();
     // Each flooded or foamed room's state for this step (the CPU's chemistry computes the same at its start).
     if (this.systems) device.queue.writeBuffer(buf.sys, this.sysAt.state * 4, this.systems.update(this.time));
     const enc = device.createCommandEncoder();
     enc.clearBuffer(buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4);
+    // The step's starting T, from which the expansion reads what the heat sources did (the CPU's expansionStart).
+    if (this.expansionOn) enc.copyBufferToBuffer(buf.cf, CF.T * N * 4, buf.snap, this.snapAt.expand * 4, N * 4);
     let pass = enc.beginComputePass();
     // Ignition source, then particles (lines 8 to 14).
-    if (burnerN) this.dispatch(pass, "burner");
+    if (this.burner) this.dispatch(pass, "burner");
     if (this.pilot && this.time < this.pilot.duration) this.dispatch(pass, "pilot");
     if (this.particlesOn) {
       this.dispatch(pass, "countBurning");
@@ -476,6 +639,7 @@ class GpuSim {
     pass.end();
     // Radiation (line 15) and particle-to-grid (lines 16 to 18).
     if (this.radiationOn) enc.clearBuffer(buf.atom, AT.depGas * N * 4, 2 * N * 4);
+    if (this.radiationOn && d.wallN) enc.clearBuffer(buf.atom, (AT_FIELDS * N + this.gsSlots) * 4, 2 * d.wallN * 4);
     if (this.particlesOn) {
       enc.clearBuffer(buf.atom, AT.flame * N * 4, N * 4);
       if (this.embersOn) enc.clearBuffer(buf.atom, AT.ember * N * 4, 2 * N * 4);
@@ -492,13 +656,28 @@ class GpuSim {
       }
       pass.end();
     }
+    // The expansion the heat sources made so far, and with pressure zones each zone's pressure from its heat (the CPU's zones stage), before the advection's snapshot.
+    if (this.zonesOn) {
+      pass = enc.beginComputePass();
+      if (this.expansionOn) this.dispatch(pass, "expandBefore");
+      this.zoneUpdate(pass);
+      pass.end();
+    }
     // Advection reads the step's start (line 20).
     enc.copyBufferToBuffer(buf.vel, 0, buf.snap, 0, nuvw * 4);
     enc.copyBufferToBuffer(buf.cf, CF.T * N * 4, buf.snap, nuvw * 4, N * 4);
     enc.copyBufferToBuffer(buf.Y, 0, buf.snap, (nuvw + N) * 4, 6 * N * 4);
     pass = enc.beginComputePass();
+    if (this.expansionOn && !this.zonesOn) this.dispatch(pass, "expandBefore");
     this.dispatch(pass, "advect");
+    if (this.conservativeOn) for (const name of (this.stepBase + this.stepCount) % 2 === 0 ? TRANSPORT : TRANSPORT_BACK) this.dispatch(pass, name);
+    // The equation of state; a pressure zone's at its pressure, scaled back to its mass (the CPU's zoneTransport).
     this.dispatch(pass, "density");
+    if (this.zonesOn) {
+      this.dispatch(pass, "zoneMassPartial");
+      this.dispatch(pass, "zoneMassCommit");
+      this.dispatch(pass, "zoneScale");
+    }
     this.dispatch(pass, "buoyancy");
     if (this.vorticityOn) {
       this.dispatch(pass, "vortCurl");
@@ -518,7 +697,23 @@ class GpuSim {
     if (d.sysWet) this.dispatch(pass, "systemsWet");
     if (this.particlesOn) this.dispatch(pass, "cullFlameFront");
     for (const name of CONDUCTION) this.dispatch(pass, name);
+    // One-dimensional walls after conduction (the CPU's walls stage), then their gas takes what they gave.
+    if (d.wallN) {
+      this.dispatch(pass, "walls");
+      this.dispatch(pass, "wallsApply");
+    }
+    // Soot deposition on the solids, after the walls (the CPU's deposition stage).
+    if (this.depositOn) this.dispatch(pass, "deposition");
+    // Vent leaks in open regions (the CPU's ventLeaks stage).
+    if (d.leakVentN) this.dispatch(pass, "leakVent");
+    // The expansion the step's heat made (and the vent leaks'), and each sealed region's mean (the CPU's expansionEnd and project).
+    if (this.expansionOn) {
+      this.dispatch(pass, "expandEnd");
+      if (d.leakVentN) this.dispatch(pass, "leakVentDiv");
+      this.dispatch(pass, "sealedMean");
+    }
     this.dispatch(pass, "densityBoundaries");
+    this.zoneUpdate(pass, true);
     this.dispatch(pass, "topology");
     this.dispatch(pass, "projectZero");
     this.dispatch(pass, "divergence");
@@ -551,6 +746,8 @@ class GpuSim {
     const { device, buf, dims: d } = this;
     if (this.ctx.lost) throw new Error("The GPU device was lost during the fire run.");
     device.queue.writeBuffer(buf.ctr, CTR.maxT * 4, Float32Array.of(this.sim.P.ambient));
+    // The frame's health counters start afresh: speed, heat and bad (peakTemperature).
+    device.queue.writeBuffer(buf.ctr, CTR.speed * 4, new Uint32Array(3));
     const enc = device.createCommandEncoder();
     const pass = enc.beginComputePass();
     this.dispatch(pass, "gather");
@@ -572,9 +769,17 @@ class GpuSim {
     o += this.gsSlots * 4;
     enc.copyBufferToBuffer(buf.red, this.red.steps * 4, this.staging, o, stepBytes);
     o += stepBytes;
+    // The pilot's added heat over the frame (and its padding), straight after the step sums.
+    enc.copyBufferToBuffer(buf.red, this.red.pilot * 4, this.staging, o, 16);
+    o += 16;
+    // A design-fire item's four (kernels.js burner), straight after.
+    enc.copyBufferToBuffer(buf.red, this.red.burner * 4, this.staging, o, 16);
+    o += 16;
     const snapBytes = (1 + 5 * d.snapMax) * 4;
     if (snap) enc.copyBufferToBuffer(buf.io, this.io.snap * 4, this.staging, o, snapBytes);
-    enc.clearBuffer(buf.red, this.red.steps * 4, stepBytes);
+    // The frame's sums start afresh; the item's heat waiting for oxygen does not.
+    enc.clearBuffer(buf.red, this.red.steps * 4, stepBytes + 16);
+    enc.clearBuffer(buf.red, this.red.burner * 4, 4);
     // The smoke cloud needs the gas density and the species (soot among them),
     // read into their own buffer only when it is drawn.
     if (smoke) {
@@ -618,7 +823,25 @@ class GpuSim {
     }
     const lastReleased = this.slot > 0 ? f[at + 4 * this.lastSlot] : 0;
     at += 4 * this.slots;
+    const pilotHeat = f[at];
+    at += 4;
+    // What the item burnt over the frame and in its last step, what waits for
+    // oxygen, and its last flame cells: its record, as the CPU's burnerStep keeps it.
+    if (this.burner) {
+      const b = this.burner;
+      const frameBurnt = f[at];
+      b.released += frameBurnt;
+      b.convective += (1 - b.radiantFraction) * frameBurnt;
+      b.radiant += b.radiantFraction * frameBurnt;
+      b.pending = f[at + 2];
+      b.flameCells = f[at + 3];
+      b.flameRate = f[at + 1] / this.lastDt;
+    }
+    at += 4;
     const maxT = new Float32Array(counters.buffer, CTR.maxT * 4, 1)[0];
+    const maxSpeed = new Float32Array(counters.buffer, CTR.speed * 4, 1)[0];
+    const gasHeat = counters[CTR.heat] * HEAT_UNIT;
+    const nonFinite = counters[CTR.bad] > 0;
     let snapshot = null;
     if (snap) snapshot = this.snapshotFrom(f, u, at);
     else if (particles) snapshot = { positions: new Float32Array(0), temps: new Float32Array(0), kinds: new Uint8Array(0) };
@@ -631,7 +854,7 @@ class GpuSim {
     }
     this.slot = 0;
     return {
-      T, vis, co, soot, co2, o2, speed, released, burnt, radiated, maxT, lastReleased,
+      T, vis, co, soot, co2, o2, speed, released, burnt, radiated, maxT, lastReleased, maxSpeed, gasHeat, nonFinite, pilotHeat,
       particleCount: counters[CTR.count] > d.cap ? d.cap : counters[CTR.count],
       embersSpawned: counters[CTR.embers],
       spotIgnitions: counters[CTR.spots],
@@ -659,16 +882,22 @@ class GpuSim {
     return { positions, temps, kinds };
   }
 
-  /** Whole fields, for tests only: T, Ts, rho, p, fuel, moisture, Y, u, v, w, kind. */
+  /** Whole fields, for tests only: T, Ts, rho, p, fuel, moisture, Y, u, v, w, kind, soot deposited per cell (sootDeposit), one-dimensional walls' nodes (wallT), and pressure zones' pi and mass (zones). */
   async readFields() {
     const { device, buf, dims: d } = this;
     const N = d.N;
     const nuvw = d.nu + d.nv + d.nw;
-    const size = (CF_FIELDS * N + 6 * N + CI_FIELDS * N + nuvw + CTR_SIZE + this.gsSlots) * 4;
+    const wallNodes = this.wall ? d.wallN * this.wall.n : 0;
+    const zoneWords = this.zonesOn ? 2 * this.sealed.S : 0;
+    const size = (CF_FIELDS * N + 6 * N + CI_FIELDS * N + nuvw + CTR_SIZE + this.gsSlots + wallNodes + (this.depositOn ? N : 0) + zoneWords) * 4;
     const staging = device.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     const enc = device.createCommandEncoder();
     let o = 0;
-    for (const [b, from, bytes] of [[buf.cf, 0, CF_FIELDS * N * 4], [buf.Y, 0, 6 * N * 4], [buf.ci, 0, CI_FIELDS * N * 4], [buf.vel, 0, nuvw * 4], [buf.ctr, 0, CTR_SIZE * 4], [buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4]]) {
+    const parts = [[buf.cf, 0, CF_FIELDS * N * 4], [buf.Y, 0, 6 * N * 4], [buf.ci, 0, CI_FIELDS * N * 4], [buf.vel, 0, nuvw * 4], [buf.ctr, 0, CTR_SIZE * 4], [buf.atom, AT_FIELDS * N * 4, this.gsSlots * 4]];
+    if (wallNodes) parts.push([buf.wall, 3 * d.wallN * 4, wallNodes * 4]);
+    if (this.depositOn) parts.push([buf.snap, this.snapAt.dep * 4, N * 4]);
+    if (zoneWords) parts.push([buf.red, this.red.zone * 4, zoneWords * 4]);
+    for (const [b, from, bytes] of parts) {
       enc.copyBufferToBuffer(b, from, staging, o, bytes);
       o += bytes;
     }
@@ -689,11 +918,19 @@ class GpuSim {
     at += CI_FIELDS * N;
     const vel = f.slice(at, at + nuvw);
     at += nuvw;
+    const wallT = wallNodes ? f.slice(at + CTR_SIZE + this.gsSlots, at + CTR_SIZE + this.gsSlots + wallNodes) : null;
+    const depAt = at + CTR_SIZE + this.gsSlots + wallNodes;
+    const sootDeposit = this.depositOn ? f.slice(depAt, depAt + N) : null;
+    // Each pressure zone's pressure share and mass (the CPU's sim.zones.pi and .mass).
+    const zoneAt = depAt + (this.depositOn ? N : 0);
+    const zones = zoneWords ? { pi: Float64Array.from(f.subarray(zoneAt, zoneAt + zoneWords / 2), (e) => 1 + e), mass: f.slice(zoneAt + zoneWords / 2, zoneAt + zoneWords) } : null;
     return {
       T: field(CF.T), Ts: field(CF.Ts), rho: field(CF.rho), p: field(CF.p), fuelMass: field(CF.fuel), moisture: field(CF.moist),
-      Y, kind, burning, u: vel.subarray(0, d.nu), v: vel.subarray(d.nu, d.nu + d.nv), w: vel.subarray(d.nu + d.nv),
+      sootDeposit, Y, kind, burning, u: vel.subarray(0, d.nu), v: vel.subarray(d.nu, d.nu + d.nv), w: vel.subarray(d.nu + d.nv),
       particles: Math.min(u[at + CTR.count], d.cap),
       sweeps: this.stepCount > 0 ? this.sweepsFrom(f.subarray(at + CTR_SIZE, at + CTR_SIZE + this.gsSlots)) : 0,
+      wallT,
+      zones,
     };
   }
 
@@ -751,12 +988,23 @@ function supported(sim) {
  * null when shouldStop() says so. `profileInto` (the CPU's per-stage wall
  * times) is accepted and left empty: GPU stages overlap and would need
  * timestamp queries to time.
+ *
+ * Where the GPU cannot run the scene (the device lost, its setup failed, a
+ * scene the kernels do not cover) the CPU runs it, unless `cpuFallback` is
+ * false: then it throws. The app's worker asks for that, because the scene
+ * was sized for the GPU (up to 400,000 cells, far past the CPU's budget) and
+ * its run would be reported, and its speed kept, as the GPU's; the worker
+ * rebuilds the scene on the CPU's own budget instead.
  */
 async function runSceneGpu(ctx, scene, opts = {}) {
-  const { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, keep = true } = opts;
-  if (ctx.lost) return cpuRunScene(scene, opts);
+  const { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, keep = true, cpuFallback = true } = opts;
+  const fallback = (why) => {
+    if (cpuFallback) return cpuRunScene(scene, opts);
+    throw new Error(why);
+  };
+  if (ctx.lost) return fallback("The GPU device was lost.");
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
-  if (!supported(sim)) return cpuRunScene(scene, opts);
+  if (!supported(sim)) return fallback("The GPU solver does not cover this scene.");
   const cells = headCells(sim, nodes, { agentHeight, headHeight });
   const n = cells.length;
   // The ceiling detectors are read with the nodes, after them, then the
@@ -781,7 +1029,8 @@ async function runSceneGpu(ctx, scene, opts = {}) {
     gpu = new GpuSim(ctx, sim, {
       nodeCells: withDetectors(withDetectors(withDetectors(withDetectors(cells, detectors.cells), sys ? sys.detectorCells : new Int32Array(0)), flame), spr ? spr.sensors : new Int32Array(0)),
       snapMax: particles || 0,
-      slots: Math.ceil(frameSeconds / dt) + 2,
+      // A frame's steps may be cut into up to maxSubsteps each (substepsFor).
+      slots: Math.ceil(frameSeconds / dt) * Math.max(1, sim.P.maxSubsteps || 1) + 2,
       speedFrom: n + D + Ds + B,
       suppression,
       systems: sys,
@@ -793,7 +1042,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const setupErrors = [await device.popErrorScope(), await device.popErrorScope()].filter(Boolean);
   if (!gpu || setupErrors.length) {
     gpu?.destroy();
-    return cpuRunScene(scene, opts);
+    return fallback(`The GPU could not set up the run${setupErrors.length ? `: ${setupErrors[0].message}` : ""}.`);
   }
   // With keep, every frame is stacked (K x n); without, one frame's buffers
   // are reused and onFrame must copy what it keeps (the CPU's runScene).
@@ -806,14 +1055,19 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const o2 = new Float32Array(rows * n);
   const detectorVis = new Float32Array(rows * D);
   const hrr = new Float32Array(K);
-  const stats = { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: sim.P.ambient, released: 0, radiated: 0, sweeps: 0 };
+  const stats = { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: sim.P.ambient, released: 0, radiated: 0, sweeps: 0, pilotHeat: 0 };
   // What a design-fire item has released by the last frame (the GPU's tallies leave it out).
   let itemBefore = 0;
+  // Proposals A and B, as the CPU's runScene: each frame's steps cut by the
+  // frame before's fastest gas, and each frame checked.
+  let speed = 0, mostSubsteps = 1, health = null, frames = K;
   try {
     for (let k = 0; k < K; k += 1) {
       const end = (k + 1) * frameSeconds;
+      const substeps = substepsFor(sim.P, sim.grid.h, speed, dt);
+      mostSubsteps = Math.max(mostSubsteps, substeps);
       while (gpu.time < end - 1e-9) {
-        gpu.step(Math.min(dt, end - gpu.time));
+        gpu.step(Math.min(dt / substeps, end - gpu.time));
         if (shouldStop?.()) return null;
       }
       const frame = await gpu.readFrame({ particles: Boolean(particles), smoke });
@@ -821,6 +1075,19 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       if (sim.burner) {
         frame.released += sim.burner.released - itemBefore;
         itemBefore = sim.burner.released;
+      }
+      speed = frame.maxSpeed;
+      stats.pilotHeat += frame.pilotHeat;
+      const reading = { maxT: frame.maxT, maxSpeed: frame.maxSpeed, gasHeat: frame.gasHeat, nonFinite: frame.nonFinite };
+      const verdict = healthVerdict(reading, stats.released + frame.released + stats.pilotHeat);
+      if (!verdict.ok) {
+        // Where: the same reading on the fields, read back once.
+        const fields = await gpu.readFields();
+        const where = healthReadings(fields, sim.grid, sim.P, sim.V);
+        const cell = verdict.reason === "non-finite" ? where.badCell : verdict.reason === "speed" ? where.fastCell : where.hotCell;
+        health = failedHealth(sim.grid, { ...verdict, cell }, end, reading);
+        frames = k;
+        break;
       }
       const row = keep ? k : 0;
       const nodesOf = (a) => (D + Ds + B + S ? a.subarray(0, n) : a);
@@ -881,10 +1148,13 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const sprinklers = spr ? sprinklerResult(spr) : null;
   // The GPU keeps no tally of the spray's evaporation.
   if (sprinklers) sprinklers.stats = { emitted: sprinklers.stats.emitted, evaporated: null, wetted: null, floor: null };
-  const out = { n, K, frameSeconds, horizon: K * frameSeconds, hrr, stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance, sprinklers };
+  // A failed run keeps the frames before the failure only (the CPU's runScene).
+  const cut = (a, per) => (frames < K ? a.slice(0, frames * per) : a);
+  const out = { n, K: frames, frameSeconds, horizon: frames * frameSeconds, hrr: cut(hrr, 1), stats, inGrid: cells.reduce((a, c) => a + (c >= 0 ? 1 : 0), 0), detectorDistance: detectors.distance, sprinklers };
+  out.health = health || { ok: true, maxSpeed: +speed.toFixed(2), substeps: mostSubsteps };
   // The GPU keeps no per-room tallies of what the agent or the foam stopped.
   if (sys) out.systems = systemsResult(sys, { cpu: false });
   const item = itemResult(sim);
   if (item) out.designFire = item;
-  return keep ? { ...out, T, vis, co, soot, co2, o2, detectorVis } : out;
+  return keep ? { ...out, T: cut(T, n), vis: cut(vis, n), co: cut(co, n), soot: cut(soot, n), co2: cut(co2, n), o2: cut(o2, n), detectorVis: cut(detectorVis, D) } : out;
 }

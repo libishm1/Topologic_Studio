@@ -37,3 +37,5 @@ import FireEgress.Extinguishers
 import FireEgress.Wetting
 import FireEgress.SprinklerActivation
 import FireEgress.Physarum
+import FireEgress.Sixteen
+import FireEgress.Transport

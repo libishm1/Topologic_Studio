@@ -27,6 +27,8 @@ import { findRoute, snap } from "./core/route.js";
 import { VOID_NAME, floorsFromSpaces, slabsMissing } from "./core/spaceFloors.js";
 import { DETECTOR_VISIBILITY, buildForecast, earliestArrival, firstDetection, forecastFromFrames, runRange, runSummary, stackFrames } from "./core/forecast.js";
 import { exitDoors } from "./core/ifcSemantics.js";
+import { healthReason } from "./core/runHealth.js";
+import { solverOptionsFor } from "./core/solverVersions.js";
 import { KIND_DOOR, floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
@@ -35,15 +37,22 @@ import { RUN_CACHE_VERSION, clearRuns, fingerprint, readRun, storedRuns, writeRu
 import { closedDoorIds, doorsLabel } from "./core/doorStates.js";
 import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
-import { fireModelIn, isFlamescapes, planSettings, useStudio } from "./state/useStudio.js";
+import { RUN_SETTINGS, fireModelIn, isFlamescapes, keepGuidedBefore, planSettings, useStudio } from "./state/useStudio.js";
+import { runHorizon } from "./core/fireService.js";
+import { validationVerdict } from "./core/calibrationStatus.js";
+import { compareEgressSlime } from "./core/egressCompare.js";
+import { sprinklerDrawing, systemsDrawing } from "./core/suppressionView.js";
+import { checkHeap, freedText, noticeText, onMemoryProblem, reportMemoryProblem, shouldShow } from "./core/memoryNotice.js";
+import { cachedSizes, clearCaches } from "./lib/caches.js";
 import { FIRE_CLASSES, designFireFor, fuelsFor } from "./core/fireClasses.js";
 import { centroidOf } from "./core/centroid.js";
-import { GUIDED_RUNS, farthestFromExits, fireStageNext, guidedOrigin, nodeAlong, stagesFor } from "./core/guided.js";
+import { GUIDED_HOLD_MS, GUIDED_RUNS, farthestFromExits, fireStageNext, guidedHeadline, guidedOrigin, guidedResultPlace, nodeAlong, stagesFor } from "./core/guided.js";
+import { withoutSessionOnly } from "./core/settingsMigration.js";
 import { describeFacts } from "./core/describeFacts.js";
 import { EGRESS_B, codeCheck, storeysOf } from "./core/codeCheck.js";
 import * as reportPages from "./core/perfReport.js";
 import * as rsetPresets from "./core/rsetPresets.js";
-import { measureView } from "./core/measures.js";
+import { fittedHeatPeak, measureView } from "./core/measures.js";
 import { runIndex } from "./core/tenability.js";
 import { fieldNote, nextHint } from "./core/fieldNotes.js";
 import { useFieldNotes } from "./state/useFieldNotes.js";
@@ -55,6 +64,8 @@ import { SECTION_ABOVE_FLOOR } from "./viewer/sectionConstants.js";
 import { Stepper } from "./ui/Stepper.jsx";
 import { TopologyPanel } from "./ui/TopologyPanel.jsx";
 import { Viewport } from "./ui/Viewport.jsx";
+import { MemoryNotice } from "./ui/MemoryNotice.jsx";
+import { revealSections } from "./ui/reveal.js";
 
 import { Badge, Button, FileButton, Icon, Segmented } from "./ui/primitives.jsx";
 import { ErrorBoundary } from "./ui/ErrorBoundary.jsx";
@@ -71,9 +82,30 @@ const SMOKE_IN_HEAT_VIEW = 0.35;
 // Frames a second the view draws while the fire solver computes on the GPU
 // (and whenever the camera moves): the playback changes it about 8 times a second.
 const GPU_RUN_DRAW_RATE = 15;
-const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate";
+// v2 (2026-11-12): the whole run's speed, cut steps and all (the worker);
+// speeds kept before were the first frames' on the old solver, and are dropped.
+const GPU_RATE_KEY = "topologic-studio.flamescapes.gpuRate.v2";
 // The recording while its module loads (a click then does nothing).
 const RECORDER_STARTING = { cancel() {} };
+
+/**
+ * The hottest gas at head height in a run's frames so far, °C, or null: each
+ * frame is read once and the answer kept with the run (a restart's frames
+ * start it again, runCombustion). For the heat ramp fitted to the run.
+ */
+function runHotGas(run) {
+  if (!run?.frames) return null;
+  if (!(run.hotRead <= run.frames.length)) {
+    run.hotRead = 0;
+    run.hotGas = -Infinity;
+  }
+  for (let k = run.hotRead; k < run.frames.length; k += 1) {
+    const T = run.frames[k].T;
+    for (let i = 0; i < T.length; i += 1) if (T[i] > run.hotGas) run.hotGas = T[i];
+  }
+  run.hotRead = run.frames.length;
+  return Number.isFinite(run.hotGas) ? run.hotGas : null;
+}
 
 /** No slime mould grown (core/slimeEgress.js). */
 const SLIME_NONE = { nodes: null, result: null, busy: false, error: null };
@@ -216,6 +248,10 @@ export default function App() {
       gpuRateRef.current = false;
     }
   }
+  // How fast the last Flamescapes run computed in this visit (simulated s,
+  // wall ms, grid set-up ms, its backend and grid), for the estimate beside
+  // the run's length (core/fireService.js computeSeconds).
+  const [lastPace, setLastPace] = useState(null);
   // The run whose frames are on screen (playback reads its view from a ref,
   // so switching heat and smoke mid-run holds: review 4).
   const playingRunRef = useRef(null);
@@ -235,6 +271,9 @@ export default function App() {
   // What a Flamescapes run colours the graph by (core/measures.js), and the
   // limits its tenability index is worked out with (core/tenability.js).
   const showRef = useRef(measureView({}, false));
+  // Whether the sprinklers and the systems' rooms are shown (their switches,
+  // with a Flamescapes model): the frames of a run read it as they are drawn.
+  const suppressionShownRef = useRef({ sprinklers: false, systems: false });
   const tenabilityRef = useRef({ limitC: 60, visibilityLimit: 10, smoke: true });
   const geometryRef = useRef(null);
   // Counts file loads, so only the latest one updates the page.
@@ -246,6 +285,9 @@ export default function App() {
   const temperatureRef = useRef(new Map());
   const [tab, setTab] = useState("model");
   const [panelOpen, setPanelOpen] = useState(true);
+  // On a phone the panel takes half the screen; "Taller panel" gives it most
+  // of the screen for a long step and hands it back (workflow.css).
+  const [panelTall, setPanelTall] = useState(false);
   const [methodsOpen, setMethodsOpen] = useState(false);
   // Field notes and hints (core/fieldNotes.js): found from the app's own
   // results where they appear below, kept in this browser.
@@ -426,16 +468,22 @@ export default function App() {
     if (!viewer || !frame) return;
     const view = showRef.current;
     viewer.setSmokeCloud(frame.smoke || null, { strength: view.kind === "smoke" ? 1 : SMOKE_IN_HEAT_VIEW });
-    // The heads open by this frame (core/suppression.js).
-    if (run.sprinklerPoints) viewer.setSprinklers?.(run.sprinklerPoints, new Set(frame.sprinklers?.open || []), run.sprinklerDrops);
-    // The rooms flooded or foamed by this frame (core/suppressionSystems.js).
-    if (run.systemRooms) viewer.setSystemRooms?.(run.systemRooms, new Set(frame.systems?.discharged || []), run.systemUnits);
+    // The heads open by this frame (core/suppression.js), and the rooms
+    // flooded or foamed by it (core/suppressionSystems.js): only while their
+    // switches are on (core/suppressionView.js). Drawn whatever the switch
+    // said, they came back at a repaint once it was off and stayed.
+    const shown = suppressionShownRef.current;
+    const heads = sprinklerDrawing({ on: shown.sprinklers, run, frame });
+    if (heads && run.sprinklerPoints) viewer.setSprinklers?.(heads.points, heads.open, heads.drops);
+    const rooms = systemsDrawing({ on: shown.systems, run, frame });
+    if (rooms && run.systemRooms) viewer.setSystemRooms?.(rooms.rooms, rooms.discharged, rooms.units);
     if (view.kind === "smoke") viewer.setSmoke(frame.vis);
     else if (view.kind === "levels") viewer.setNodeLevels(view.levels(frame, view.key === "tenability" ? tenabilityOf(run, k) : null));
     else {
       const temperatures = new Map();
       for (let i = 0; i < frame.T.length; i += 1) if (frame.T[i] > 21) temperatures.set(i, frame.T[i]);
-      viewer.setTemperatures(temperatures, { peak: ZONE_COLOUR_PEAK });
+      // On the fixed ramp, or one fitted to the run (drawing only).
+      viewer.setTemperatures(temperatures, { peak: view.fit ? fittedHeatPeak(runHotGas(run)) : ZONE_COLOUR_PEAK });
     }
   }, [tenabilityOf]);
 
@@ -693,15 +741,18 @@ export default function App() {
           });
 
         void studio.refreshCacheInfo();
+        checkHeap("after opening a model");
 
-        toast(
-          result.prepared
-            ? `Opened in ${formatMs(result.totalMs)}.`
-            : result.cached
-              ? `Loaded from cache in ${formatMs(result.totalMs)}.`
-              : `Converted and cached in ${formatMs(result.totalMs)}.`,
-          { title: nextFile.name, variant: "success", ttl: 5000 },
-        );
+        // A converted or cached file says how long it took; an example opened
+        // from its prepared fragments says nothing (the Model step gives its
+        // time, and the toast covered the view: the interface audit of 2026-11-12).
+        if (!result.prepared) {
+          toast(result.cached ? `Loaded from cache in ${formatMs(result.totalMs)}.` : `Converted and cached in ${formatMs(result.totalMs)}.`, {
+            title: nextFile.name,
+            variant: "success",
+            ttl: 5000,
+          });
+        }
       } catch (error) {
         if (latest() && !isCancelled(error)) {
           reportError(error, "Could not load the IFC file");
@@ -965,6 +1016,7 @@ export default function App() {
           { title: "Graph ready", variant: "success", ttl: 4000 },
         );
       }
+      checkHeap("after building the graph");
       setTab("route");
     } catch (error) {
       // Ended because another model was opened: nothing to report.
@@ -1570,10 +1622,14 @@ export default function App() {
   useEffect(() => {
     if (settings.sprinklers && graph && geometryRef.current) layOutSprinklers();
   }, [settings.sprinklers, layOutSprinklers, graph]);
+  // The heads drawn: the switch's, with a Flamescapes model, the one rule the
+  // frames of a run follow too (core/suppressionView.js, paintCombustion).
   useEffect(() => {
-    const heads = settings.sprinklers ? sprinklerPlan?.heads : null;
-    viewerRef.current?.setSprinklers?.(heads?.length ? heads.map((h) => h.position) : null);
-  }, [settings.sprinklers, sprinklerPlan]);
+    const on = Boolean(settings.sprinklers) && isFlamescapes(fireModel);
+    suppressionShownRef.current.sprinklers = on;
+    const drawing = sprinklerDrawing({ on, plan: sprinklerPlan });
+    viewerRef.current?.setSprinklers?.(drawing?.points ?? null);
+  }, [settings.sprinklers, sprinklerPlan, fireModel]);
 
   // Suppression systems by room use (core/suppressionSystems.js), off by
   // default: each room's system from its name and the occupancy, the rooms a
@@ -1612,9 +1668,11 @@ export default function App() {
     if (settings.suppressionSystems && graph && geometryRef.current) layOutSystems();
   }, [settings.suppressionSystems, layOutSystems, graph]);
   useEffect(() => {
-    const plan = settings.suppressionSystems ? systemsPlan : null;
-    viewerRef.current?.setSystemRooms?.(plan?.special ?? null, null, plan?.units ?? null);
-  }, [settings.suppressionSystems, systemsPlan]);
+    const on = Boolean(settings.suppressionSystems) && isFlamescapes(fireModel);
+    suppressionShownRef.current.systems = on;
+    const drawing = systemsDrawing({ on, plan: systemsPlan });
+    viewerRef.current?.setSystemRooms?.(drawing?.rooms ?? null, null, drawing?.units ?? null);
+  }, [settings.suppressionSystems, systemsPlan, fireModel]);
 
   // What the Flamescapes solver needs (src/core/flamescapesRun.js): the
   // IFC's walls, slabs, roofs, stairs and obstacles, the graph's nodes, the
@@ -1676,9 +1734,11 @@ export default function App() {
     };
     const transfers = Object.values(geo).flatMap((list) => list.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
     const { contentsFuel, ignitionFuel, item } = fuelsFor(settings.flamescapesClass);
+    // The time set, or until the fire service arrives (core/fireService.js).
+    const horizon = runHorizon(settings);
     // At most 120 frames of at least 1 s: memory is frames x nodes x 12 bytes
     // (review 6), and a frame shorter than the solver's step means nothing.
-    const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(settings.flamescapesHorizon)));
+    const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(horizon)));
     // Suppression systems by room use: the rooms the run floods or foams, and
     // the heads it leaves out there (a foam room's ordinary heads; an agent
     // room's too when agent only).
@@ -1692,8 +1752,8 @@ export default function App() {
       nodes: graph.nodes.slice(),
       agentHeight: graph.agentHeight,
       headHeight: 1.8,
-      horizon: settings.flamescapesHorizon,
-      frameSeconds: settings.flamescapesHorizon / frames,
+      horizon,
+      frameSeconds: horizon / frames,
       embers: fireModel === "flamescapes-embers",
       // Soot, CO2 and O2 too, unless switched off or past 64 MB of stored frames
       // (12 bytes a node a frame): the run then keeps the basic three.
@@ -1723,8 +1783,12 @@ export default function App() {
       systems: systemRooms ? { rooms: systemRooms } : null,
       fireLoad: settings.flamescapesFireLoad * 1e6,
       backend: settings.flamescapesBackend,
-      // The grid: "standard" (the same on every device), "speed" (sized to this GPU's measured speed, cells a ms) or "finest".
-      grid: settings.flamescapesGridPolicy,
+      // The grid: "standard" (the same on every device), "speed" (sized to this GPU's measured speed, cells a ms),
+      // "finest", or "calibrated" (0.27 m cells, kept under its own setting so a version without it reads "standard").
+      grid: settings.flamescapesCalibratedGrid ? "calibrated" : settings.flamescapesGridPolicy,
+      // The solver (core/solverVersions.js): the validated one, or the previous one for comparison.
+      solver: settings.flamescapesSolver,
+      solverOptions: solverOptionsFor(settings.flamescapesSolver),
       gpuRate: gpuRateRef.current?.rate ?? null,
       gpuName: gpuRateRef.current?.name ?? null,
     };
@@ -1734,11 +1798,17 @@ export default function App() {
       fireModel,
       settings.flamescapesClass,
       settings.flamescapesGrowth,
-      settings.flamescapesHorizon,
+      // The length it comes out at: the time set, so kept runs keep their
+      // keys, or detection plus the response; a kept run of the same length
+      // plays again whichever way the length was set.
+      horizon,
       settings.fireMaxSteps,
       settings.flamescapesFireLoad,
       settings.flamescapesBackend,
       settings.flamescapesGridPolicy,
+      // Only when not the defaults, so a run with them keeps its kept-run key.
+      ...(settings.flamescapesCalibratedGrid ? [["grid", "calibrated"]] : []),
+      ...(settings.flamescapesSolver && settings.flamescapesSolver !== "validated" ? [["solver", settings.flamescapesSolver]] : []),
       settings.flamescapesDoors,
       // The doors closed, so a random or as-built set is part of the run.
       [...shut].sort((a, b) => a - b).join(","),
@@ -1815,6 +1885,7 @@ export default function App() {
           sprinklerSummary: stored.result?.sprinklers ?? null,
           systemsSummary: stored.result?.systems?.rooms ?? null,
           itemSummary: stored.result?.designFire ?? null,
+          health: stored.result?.health ?? null,
           horizon: payload.horizon,
           embersOn: payload.embers,
           extras: payload.extras,
@@ -1831,7 +1902,16 @@ export default function App() {
         // A second scene is a restart on the CPU after the GPU stopped: the
         // frames so far came from the abandoned run (a playback waiting on
         // frame k resumes when the new run reaches it).
-        if (progress.info.restarted) run.frames.length = 0;
+        if (progress.info.restarted) {
+          run.frames.length = 0;
+          run.hotRead = 0;
+          run.hotGas = -Infinity;
+        }
+        // The GPU ran out of memory for this grid and the run went on on the CPU (the worker says so).
+        if (progress.info.memory === "gpu" && !run.gpuMemorySaid) {
+          run.gpuMemorySaid = true;
+          reportMemoryProblem({ kind: "gpu" }, "running a fire");
+        }
         run.info = progress.info;
         // The view shares the GPU with the solver: it draws less while the GPU computes.
         viewerRef.current?.setDrawRate(progress.info.backend?.kind === "gpu" ? GPU_RUN_DRAW_RATE : 0);
@@ -1885,14 +1965,21 @@ export default function App() {
         // When each head opened by both readings, and the water (core/suppression.js).
         // And when each room's system was detected, discharged and acted (core/suppressionSystems.js).
         // And what became of a design-fire first item.
-        if ((result?.sprinklers || result?.systems || result?.designFire) && (!combustionRef.current || combustionRef.current === run)) {
+        // And a run the health guard stopped: why and when (flamescapes.js HEALTH).
+        const stopped = result?.health && !result.health.ok ? result.health : null;
+        if ((result?.sprinklers || result?.systems || result?.designFire || stopped) && (!combustionRef.current || combustionRef.current === run)) {
           studio.setFire((c) => ({
             ...c,
             combustion: c.combustion
-              ? { ...c.combustion, sprinklerSummary: result.sprinklers ?? null, systemsSummary: result.systems?.rooms ?? null, itemSummary: result.designFire ?? null }
+              ? { ...c.combustion, sprinklerSummary: result.sprinklers ?? null, systemsSummary: result.systems?.rooms ?? null, itemSummary: result.designFire ?? null, health: stopped }
               : c.combustion,
           }));
         }
+        if (stopped && (!combustionRef.current || combustionRef.current === run)) {
+          toast(`The fire run was stopped at ${Math.round(stopped.time)} s: ${healthReason(stopped)}. The frames before it play.`, { variant: "warning", ttl: 8000 });
+        }
+        // A run holds its frames in memory: warn early where the browser says how full it is.
+        checkHeap("after a fire");
         // The first measurement on a GPU stands, so its grid does not drift between runs.
         const name = result?.info?.backend?.name;
         if (result?.info?.gpuRate > 0 && name && gpuRateRef.current?.name !== name) {
@@ -1905,6 +1992,11 @@ export default function App() {
         }
         // A run replaced by a newer one leaves the newer one's draw rate alone.
         if (!combustionRef.current || combustionRef.current === run) viewerRef.current?.setDrawRate(0);
+        // Its pace, for the next run's estimate; not a run the health guard cut short.
+        if (!stopped && result?.info?.ms > 0 && result.horizon > 0) {
+          const info = result.info;
+          setLastPace({ simulated: result.horizon, wallMs: info.ms, setupMs: info.setupMs ?? 0, kind: info.backend?.kind, name: info.backend?.name, backend: payload.backend, grid: payload.grid });
+        }
         return result;
       },
       (error) => {
@@ -1919,15 +2011,18 @@ export default function App() {
     // gives the range of a fire that is partly chance, not one run. They go
     // after this run, to its worker, on its grid; a newer run ends them.
     const repeat = (result) => {
+      // A run the health guard stopped starts no repeats.
+      if (result?.health?.ok === false) return;
       const count = settings.flamescapesRepeats - 1;
       if (!(count > 0) || run.info?.backend?.kind !== "gpu" || !run.info.budget || !result?.hrr) return;
       if (combustionRef.current !== run || geometryRef.current !== geometryAtStart) return;
       const tenability = { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility };
       const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: result.frameSeconds, hrr: result.hrr, stats: result.stats };
       const members = [{ k: 0, ...runSummary(frames, tenability) }];
+      let stopped = 0;
       const show = (status) => {
         if (combustionRef.current !== run) return;
-        run.repeats = { of: count + 1, status, tenability, range: runRange(members) };
+        run.repeats = { of: count + 1, status, tenability, range: runRange(members), stopped };
         studio.setFire((c) => (c.combustion ? { ...c, combustion: { ...c.combustion, repeats: run.repeats } } : c));
       };
       show("running");
@@ -1938,7 +2033,9 @@ export default function App() {
       run.repeating = true;
       flamescapesJob({ ...again.payload, maxCells: run.info.budget, repeats: { count, tenability } }, again.transfers, (progress) => {
         if (progress.type !== "member") return;
-        members.push(progress.summary);
+        // A member the health guard stopped is left out of the range and counted.
+        if (progress.stopped) stopped += 1;
+        else members.push(progress.summary);
         show("running");
       }).then(
         (answer) => {
@@ -1969,7 +2066,8 @@ export default function App() {
       }
       return compute().then((result) => {
         // Kept once the browser is idle: copying the frames takes a moment.
-        if (storeKey) {
+        // A run the health guard stopped is not kept, so it never replays as a result.
+        if (storeKey && result?.health?.ok !== false) {
           const keep = () => void writeRun(storeKey, { info: run.info, frames: run.frames, result });
           if (typeof requestIdleCallback === "function") requestIdleCallback(keep, { timeout: 5000 });
           else setTimeout(keep, 1000);
@@ -1980,7 +2078,40 @@ export default function App() {
     });
     combustionRef.current = run;
     return run;
-  }, [combustionInputs, flamescapesJob, graph, studio, settings.flamescapesKeepRuns, settings.flamescapesRepeats, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, levels, systemsPlan]);
+  }, [combustionInputs, flamescapesJob, graph, studio, toast, settings.flamescapesKeepRuns, settings.flamescapesRepeats, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, levels, systemsPlan]);
+
+  // Running out of memory or storage (core/memoryNotice.js): where it is met
+  // (a cache write refused, an allocation failed in the page or a worker, the
+  // GPU out of memory, storage or the heap nearly full) it is reported, and
+  // one notice says which, how much the caches hold, and offers to clear the
+  // kept runs and converted models (lib/caches.js), never the settings. A
+  // warning once a visit; an error again whenever it happens again.
+  const [memoryNotice, setMemoryNotice] = useState(null);
+  const memoryShownRef = useRef(new Set());
+  const memoryShowingRef = useRef(null);
+  useEffect(
+    () =>
+      onMemoryProblem(({ kind }) => {
+        if (!shouldShow(kind, { shown: memoryShownRef.current, showing: memoryShowingRef.current })) return;
+        memoryShownRef.current.add(kind);
+        memoryShowingRef.current = kind;
+        void cachedSizes()
+          .catch(() => null)
+          .then((held) => setMemoryNotice({ kind, text: noticeText(kind, { held, heap: globalThis.performance?.memory }), freed: null, busy: false }));
+      }),
+    [],
+  );
+  const { refreshCacheInfo } = studio;
+  const clearMemory = useCallback(async () => {
+    setMemoryNotice((n) => n && { ...n, busy: true });
+    const { before, after } = await clearCaches();
+    void refreshCacheInfo();
+    setMemoryNotice((n) => n && { ...n, busy: false, freed: freedText(before, after) });
+  }, [refreshCacheInfo]);
+  const dismissMemory = useCallback(() => {
+    memoryShowingRef.current = null;
+    setMemoryNotice(null);
+  }, []);
 
   const forgetRuns = useCallback(async () => {
     const { count, bytes } = await storedRuns();
@@ -2019,7 +2150,7 @@ export default function App() {
           ...(flamescapesRun
             ? {
                 fire_class: settings.flamescapesClass,
-                horizon_s: settings.flamescapesHorizon,
+                horizon_s: runHorizon(settings),
                 embers: fire.model === "flamescapes-embers" ? 1 : 0,
                 doors: flamescapesRun.info?.openings?.doors ?? null,
                 windows: flamescapesRun.info?.openings?.windows ?? null,
@@ -2060,7 +2191,7 @@ export default function App() {
       const points = viewerToIfc(graph.nodes, frameChange(coordination, graph.upAxis || "y", graph.agentHeight || 0));
       const n = graph.nodes.length / 3;
       const { blob, extension } = await runTableBlob(
-        { frames: run.frames, frameSeconds: run.result?.frameSeconds ?? settings.flamescapesHorizon / Math.max(1, run.frames.length), n, points, kinds: graph.kinds },
+        { frames: run.frames, frameSeconds: run.result?.frameSeconds ?? runHorizon(settings) / Math.max(1, run.frames.length), n, points, kinds: graph.kinds },
         { limitC: settings.flamescapesUntenableC, visibilityLimit: settings.flamescapesVisibility, smoke: settings.flamescapesSmoke },
       );
       const a = document.createElement("a");
@@ -2291,6 +2422,8 @@ export default function App() {
       // The doors this Flamescapes run was started with: the switch may change
       // while it plays, for the next run (SimulatePanel offers a restart).
       doors: combustion ? doorsLabel(settings.flamescapesDoors, { seed: settings.flamescapesDoorSeed, share: settings.flamescapesDoorShare }) : null,
+      // What it was started with, so Run again in the view can say when the next run differs.
+      started: combustion ? { settings, fire: points.fire } : null,
     }));
 
     // Every model reroutes now: temperature by hazard cost, flood and radial by
@@ -2298,6 +2431,9 @@ export default function App() {
     const wantsReroute = settings.reroute && Boolean(points.start && points.exit);
     // The route the fire first gives; a later one that differs is the fire's doing.
     let firstRoute = null;
+    // The step it first left that route, and the step it was back on it (the fire's heat gone from it).
+    let firstChange = null;
+    let backOnFirst = null;
     // With "any exit", the route may leave by another exit out of the building.
     const otherExits = settings.rerouteExits === "any" && exits?.final.length ? exits.final : null;
     const pickedExit = points.exit ? snap(graph, points.exit) : -1;
@@ -2347,10 +2483,16 @@ export default function App() {
             colours.set("fire");
           } else if (message.type === "path_update") {
             const otherExit = message.found && message.exit_node !== null && message.exit_node !== undefined && message.exit_node !== pickedExit;
-            studio.setDynamicPath({ ...message, otherExit });
             const key = (message.node_ids || []).join(",");
             if (firstRoute === null) firstRoute = key;
-            else if (message.found && key && key !== firstRoute) markFound("reroute");
+            else if (message.found && key && key !== firstRoute) {
+              markFound("reroute");
+              if (firstChange === null) firstChange = message.step;
+              backOnFirst = null;
+            } else if (firstChange !== null && key === firstRoute && backOnFirst === null) backOnFirst = message.step;
+            // The first change is kept: the card read only the latest update,
+            // and said "still clear" after a route that changed and came back.
+            studio.setDynamicPath({ ...message, otherExit, firstChange, clearBy: backOnFirst });
             // Straight runs keep clear of burning or heated nodes.
             const shown =
               settings.straightenRoutes && message.node_ids?.length > 2
@@ -2368,7 +2510,7 @@ export default function App() {
             const spots = combustion.frames[combustion.frames.length - 1]?.spots || 0;
             if (spots > 0) markFound("embers", { spots });
           }
-          toast("Fire simulation finished.", { variant: "info", ttl: 3500 });
+          // No toast: the playback bar goes and the cards say the run is complete.
         },
         onError: (error) => {
           studio.setFire((current) => ({ ...current, running: false }));
@@ -2377,7 +2519,7 @@ export default function App() {
       },
     );
     studio.setFireHandle(handle);
-  }, [graph, points, exits, reportError, settings, studio, toast, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed, paintCombustion]);
+  }, [graph, points, exits, reportError, settings, studio, fireModel, zoneInputs, forecastJob, dropPlan, colours, runCombustion, markFound, markUsed, paintCombustion]);
 
   // A fire that ends by itself keeps its final colours. Stopping it clears
   // them, back to what the graph showed before: the deadline map if it is
@@ -2628,7 +2770,8 @@ export default function App() {
   // the planners' rule (core/forecast.js): a finished Flamescapes run's
   // frames, or the graph fire model's own forecast. Null without the fire.
   const crowdRun = combustionRef.current;
-  const crowdFlames = settings.crowdWithFire && isFlamescapes(fire.model) && crowdRun?.done && !crowdRun.failed && crowdRun.graph?.nodes === graphNodes && crowdRun.result ? crowdRun : null;
+  // Not a run the health guard stopped: past its stop, nodes would read as safe.
+  const crowdFlames = settings.crowdWithFire && isFlamescapes(fire.model) && crowdRun?.done && !crowdRun.failed && crowdRun.graph?.nodes === graphNodes && crowdRun.result && crowdRun.result.health?.ok !== false ? crowdRun : null;
   const crowdGraphFire = settings.crowdWithFire && !isFlamescapes(fire.model) && fire.model !== "zone" && fire.step > 0 && points.fire && graph ? fire.model : null;
   const crowdFireKey = crowdFlames
     ? ["flames", crowdFlames.key, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility]
@@ -2648,6 +2791,8 @@ export default function App() {
           settings.crowdFluctuate,
           settings.crowdSteps,
           settings.crowdRuns,
+          // The IFC's door widths may arrive after the graph: the walk is worked out again with them.
+          (studio.semantics?.doors || []).length,
         ])
       : null;
   const crowdAvoiding = Boolean(crowdFireKey);
@@ -2675,6 +2820,8 @@ export default function App() {
     // Randomness in how people move (core/crowd.js; off by default) and how many seeds to run with it.
     motion: { fluctuate: settings.crowdFluctuate, steps: settings.crowdSteps },
     runs: settings.crowdRuns,
+    // Each door's own width (the IFC's, else measured): its capacity sets the flow through it.
+    doorWidths: () => (graph ? slimeDoorWidths(graph, studio.semantics) : null),
     // Each node's untenable time (s; Infinity never), worked out when the walk is.
     closes: () => {
       if (crowdFlames) {
@@ -2706,7 +2853,7 @@ export default function App() {
       setCrowdState(done.state);
       return undefined;
     }
-    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, choice, motion, runs } = crowdInputsRef.current;
+    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, choice, motion, runs, doorWidths: widthsOf } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
@@ -2727,9 +2874,11 @@ export default function App() {
           const kS = STEP_RANDOMNESS[motion.steps] ?? null;
           const varied = Boolean(motion.fluctuate) || kS !== null;
           const fire = closes();
+          const doorWidths = widthsOf();
           const optsFor = (seed) => ({
             exits: exitNodes,
             occupantArea,
+            doorWidths,
             blocked: useWalls ? graph.blocked : null,
             start: [departAfter, departAfter + 10],
             shelterArea: shelter > 0 ? shelter : Infinity,
@@ -2840,7 +2989,7 @@ export default function App() {
     if (!graph) return null;
     const run = combustionRef.current;
     if (isFlamescapes(fire.model)) {
-      if (!run?.done || run.failed || run.graph?.nodes !== graph.nodes || !run.result) return null;
+      if (!run?.done || run.failed || run.graph?.nodes !== graph.nodes || !run.result || run.result.health?.ok === false) return null;
       const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: run.result.frameSeconds };
       const closes = forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility }).untenable;
       // The run's own smoke: its visibility at head height, frame by frame.
@@ -2951,6 +3100,146 @@ export default function App() {
       viewer.setMarkers?.("slimeBottlenecks", null);
     };
   }, [slime.result, graph, settings.slimeDesire, settings.slimeMedial, settings.slimeDeadEnds, settings.slimeAbandoned, settings.slimeBottlenecks]);
+  // ------------------------------------------------------- egress map and accessibility
+
+  // The egress map (core/egressMap.js) and, when asked, each storey's
+  // measuring grid with the wheelchair audit (core/floorRaster.js,
+  // core/accessAudit.js), in a worker (workers/egress.worker.js). Kept with
+  // the graph they were made on; nothing runs until asked.
+  const [egressState, setEgressState] = useState({ nodes: null, result: null, fine: null, busy: null, error: null });
+  const egressRef = useRef(null);
+  const egress = egressState.nodes === graphNodes && graphNodes ? egressState : { nodes: null, result: null, fine: null, busy: null, error: null };
+  // The slime's desire lines against the egress map's shortest walks, once
+  // both have been made on the graph on screen (core/egressCompare.js; the
+  // reasons in wiki/research/egress-vs-slime-2026-11-12.md): a few graph
+  // passes on the main thread, only then. For a slime grown with no fire, as
+  // the note measured it; a fire is another reason for them to part.
+  const slimeCompare = useMemo(
+    () => (slime.result && egress.result && !slime.result.fire ? compareEgressSlime(graph, egress.result, slime.result) : null),
+    [graph, slime.result, egress.result],
+  );
+  const runEgress = useCallback(
+    (kind) => {
+      if (!graph) return;
+      const exits = buildingExitNodes();
+      if (!exits.length) {
+        toast("No exit to map towards: the model marks none out of the building, so pick one in Route.", { variant: "warning" });
+        return;
+      }
+      egressRef.current ||= workerClient(() => new Worker(new URL("./workers/egress.worker.js", import.meta.url), { type: "module" }), {
+        failure: "The egress map stopped, usually because the browser ran out of memory. Reload the page and try again.",
+      });
+      const geometry = geometryRef.current;
+      if (kind === "fine" && !geometry) {
+        toast("Build the walkable graph again first: the model's geometry is not loaded.", { variant: "warning" });
+        return;
+      }
+      const nodes = graph.nodes;
+      setEgressState((s) => ({ ...(s.nodes === nodes ? s : { result: null, fine: null }), nodes, busy: kind, error: null }));
+      const names = (studio.semantics?.spaces || []).map((sp) => [sp.id, sp.longName || sp.name]);
+      const doorNames = {};
+      for (const d of graph.doors || []) {
+        const sem = (studio.semantics?.doors || []).find((x) => x.id === d.itemId);
+        if (d.node >= 0 && sem?.name) doorNames[d.node] = sem.name;
+      }
+      const limit = settings.codeSprinklered ? EGRESS_B.travel.sprinklered : EGRESS_B.travel.unsprinklered;
+      const clone = (meshes) => (meshes || []).map((m) => ({ itemId: m.itemId, positions: m.positions.slice(), indices: m.indices.slice() }));
+      const payload = {
+        kind,
+        graph: { nodes: graph.nodes.slice(), edges: graph.edges.slice(), kinds: graph.kinds ? graph.kinds.slice() : null, blocked: graph.blocked ? graph.blocked.slice() : null, upAxis: graph.upAxis, spacing: graph.spacing, agentHeight: graph.agentHeight },
+        opts: {
+          exits,
+          levels,
+          useWalls: settings.useWalls,
+          limit,
+          sprinklered: Boolean(settings.codeSprinklered),
+          occupantArea: settings.perfOccupantArea,
+          doorWidth: slimeDoorWidths(graph, studio.semantics),
+          doorNames,
+          spaceNames: names,
+          profile: settings.accessProfile,
+          fastMarching: true,
+          // Phones measure at 10 cm: four times fewer cells.
+          cell: window.matchMedia?.("(max-width: 720px)").matches ? 0.1 : 0.05,
+        },
+        // The rooms (their IfcSpaces, checked against the slabs, ceilings and walls) for both;
+        // the fine grid also cuts the obstacles, stairs and doors.
+        geometry: {
+          floors: clone(geometry?.floors),
+          spaces: clone(geometry?.spaces),
+          walls: clone(geometry?.walls),
+          ceilings: clone(geometry?.ceilings),
+          roofMeshes: clone(geometry?.roofMeshes),
+          ...(kind === "fine" ? { obstacles: clone(geometry?.obstacles), stairs: clone(geometry?.stairs), doors: clone(geometry?.doors) } : {}),
+        },
+      };
+      const t0 = performance.now();
+      // Each storey by its IFC name within 0.6 m, else its IFC height (the viewer's less the coordination shift).
+      const storeyLabel = (h) => {
+        const ifc = h - (levelShift || 0);
+        const near = (studio.semantics?.storeys || []).filter((x) => Number.isFinite(x.elevation)).reduce((best, x) => (!best || Math.abs(x.elevation - ifc) < Math.abs(best.elevation - ifc) ? x : best), null);
+        return near?.name && Math.abs(near.elevation - ifc) <= 0.6 ? near.name : `the floor at ${ifc.toFixed(1)} m`;
+      };
+      egressRef.current.run({ payload }).then(
+        (result) =>
+          setEgressState((s) =>
+            s.nodes !== nodes
+              ? s
+              : kind === "map"
+                ? { ...s, busy: null, result: { ...result, ms: performance.now() - t0 } }
+                : {
+                    ...s,
+                    busy: null,
+                    result: { ...result.map, ms: result.map.ms },
+                    fine: { ...result, storeys: result.storeys.map((x) => ({ ...x, label: storeyLabel(x.level) })), profile: settings.accessProfile, ms: performance.now() - t0 },
+                  },
+          ),
+        (error) => {
+          if (!isCancelled(error)) setEgressState((s) => (s.nodes === nodes ? { ...s, busy: null, error: error?.message || String(error) } : s));
+        },
+      );
+    },
+    [graph, buildingExitNodes, levels, levelShift, settings.useWalls, settings.codeSprinklered, settings.perfOccupantArea, settings.accessProfile, studio.semantics, toast],
+  );
+  const clearEgress = useCallback(() => setEgressState({ nodes: null, result: null, fine: null, busy: null, error: null }), []);
+  // What the map draws, each layer when asked.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const r = egress.result;
+    if (!viewer || !r) return undefined;
+    if (settings.egressRoutes && r.routeLinks?.length) viewer.setSkeleton?.("egressRoutes", r.routeLinks, { color: 0xdc2626, arrows: true });
+    if (settings.egressContours && r.contours?.length) viewer.setSkeleton?.("egressContours", r.contours, { color: 0x334155 });
+    if (settings.egressDeadEnds && r.deadLinks?.length) viewer.setSkeleton?.("egressDeadEnds", r.deadLinks, { color: 0x9d174d });
+    if (settings.egressCritical && r.critical?.doors?.length) {
+      viewer.setMarkers?.(
+        "egressCritical",
+        r.critical.doors.map((d) => d.position),
+        { color: 0x7c3aed, sizes: r.critical.doors.map((d) => 0.5 + 0.25 * Math.min(4, d.rooms.length)) },
+      );
+    }
+    return () => {
+      for (const layer of ["egressRoutes", "egressContours", "egressDeadEnds"]) viewer.setSkeleton?.(layer, null);
+      viewer.setMarkers?.("egressCritical", null);
+    };
+  }, [egress.result, settings.egressRoutes, settings.egressContours, settings.egressDeadEnds, settings.egressCritical]);
+  // The fine grid's walk, and the wheelchair audit, laid on the floors.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const f = egress.fine;
+    if (!viewer || !f?.images?.length) return undefined;
+    if (settings.egressFine) viewer.setFloorImages?.("egressFine", f.images.map((im) => ({ ...im, rgba: im.distance })));
+    if (settings.accessOverlay) {
+      viewer.setFloorImages?.("accessAudit", f.images.map((im) => ({ ...im, rgba: im.access })), { lift: 0.06 });
+      const issues = f.storeys.flatMap((s) => s.audit.issues).filter((i) => i.at && i.severity !== "low");
+      viewer.setMarkers?.("accessIssues", issues.map((i) => i.at), { color: 0xb91c1c, sizes: issues.map((i) => (i.severity === "high" ? 1 : 0.7)) });
+    }
+    return () => {
+      viewer.setFloorImages?.("egressFine", null);
+      viewer.setFloorImages?.("accessAudit", null);
+      viewer.setMarkers?.("accessIssues", null);
+    };
+  }, [egress.fine, settings.egressFine, settings.accessOverlay]);
+
   // ------------------------------------------------------- recording
 
   // The view recorded as a GIF (lib/recorder.js): the fire, the smoke and the
@@ -3094,12 +3383,27 @@ export default function App() {
         return prev.hrr;
       };
     } else {
-      const growth = { slow: 600, medium: 300, fast: 150, ultrafast: 75 }[settings.zoneGrowth] ?? 300;
-      source = `a ${settings.zoneGrowth || "medium"} t-squared design fire (1 MW in ${growth} s, at most ${settings.zonePeakKw} kW)`;
-      hrrAt = (t) => Math.min(settings.zonePeakKw, 1000 * (t / growth) ** 2);
+      const design = E.designFire(settings.zoneGrowth, settings.zonePeakKw);
+      source = design.text;
+      hrrAt = design.hrrAt;
     }
+    // After the alarm: detection as the performance check takes it, from the
+    // plan's run when asked and found, else the time typed.
+    const plan = forecastPlan.nodes === graph.nodes ? forecastPlan.result : null;
+    const detected = reportPages.planDetection(plan, { fromRun: settings.perfDetectionFromRun, typed: settings.perfDetection });
     const median = Math.sqrt(Math.max(1, settings.perfPre1) * Math.max(1, settings.perfPre99));
-    const tGo = settings.extinguisherStart === "alarm" ? settings.perfDetection + settings.perfAlarm + median : 30;
+    const alarm = settings.extinguisherStart === "alarm";
+    const tGo = alarm ? detected.seconds + settings.perfAlarm + median : 30;
+    const start = alarm
+      ? {
+          detection: detected.seconds,
+          // No plan and no Flamescapes fire: no run would give one either.
+          detectionFrom: detected.from === "no plan" && !isFlamescapes(fireModel) ? "no run" : detected.from,
+          detectors: plan?.detectors ?? 0,
+          alarm: settings.perfAlarm,
+          median,
+        }
+      : null;
     try {
       const out = E.attempt({
         graph,
@@ -3116,12 +3420,12 @@ export default function App() {
         useWalls: settings.useWalls,
       });
       const late = out.times?.tS > horizon;
-      setAttemptState({ graph, result: { ...out, source, tGo, late, horizon } });
+      setAttemptState({ graph, result: { ...out, source, tGo, start, late, horizon } });
       markUsed("extinguisherAttempt");
     } catch (error) {
-      setAttemptState({ graph, result: { outcome: "cannot tell", reasons: [{ id: "error", status: "cannot tell", text: error.message }], source, tGo } });
+      setAttemptState({ graph, result: { outcome: "cannot tell", reasons: [{ id: "error", status: "cannot tell", text: error.message }], source, tGo, start } });
     }
-  }, [settings.extinguishers, settings.extinguisherStart, settings.extinguisherUnit, settings.extinguisherTrained, settings.zoneGrowth, settings.zonePeakKw, settings.perfPre1, settings.perfPre99, settings.perfDetection, settings.perfAlarm, settings.walkSpeed, settings.flamescapesClass, settings.useWalls, graph, points.fire, extinguisherPlan, fireModel, planExitNodes, markUsed]);
+  }, [settings.extinguishers, settings.extinguisherStart, settings.extinguisherUnit, settings.extinguisherTrained, settings.zoneGrowth, settings.zonePeakKw, settings.perfPre1, settings.perfPre99, settings.perfDetection, settings.perfDetectionFromRun, settings.perfAlarm, settings.walkSpeed, settings.flamescapesClass, settings.useWalls, graph, points.fire, extinguisherPlan, fireModel, forecastPlan.nodes, forecastPlan.result, planExitNodes, markUsed]);
 
   // A report entry's name: the fire's storey and how it was placed, and the model.
   const fireLabel = useCallback(
@@ -3140,7 +3444,7 @@ export default function App() {
     (presets, plan, planExits) => {
       const criterion = presets.criterionOf(settings.perfCriterion);
       const sensitivity = presets.criterionOf("sensitivity");
-      const fromRun = settings.perfDetectionFromRun && Number.isFinite(plan.detection);
+      const detected = reportPages.planDetection(plan, { fromRun: settings.perfDetectionFromRun, typed: settings.perfDetection });
       const measured = presets.measuredOf(settings.perfMeasured);
       // Door widths where the IFC gives them; the stricter code minimum elsewhere.
       let widths = null;
@@ -3155,14 +3459,14 @@ export default function App() {
       return {
         criterion,
         sensitivity,
-        fromCeiling: fromRun && plan.detectionAt === "ceiling",
-        detectionFrom: fromRun ? (plan.detectionAt === "ceiling" ? "ceiling" : "run") : !settings.perfDetectionFromRun ? "set" : isFlamescapes(plan.model) ? "not in the run" : "no run",
+        fromCeiling: detected.from === "ceiling",
+        detectionFrom: detected.from,
         levels,
         exits: planExits,
         horizon: plan.horizon,
         step: plan.mapStep ?? 0,
         speed: forecastPlan.result === plan ? (forecastPlan.inputs?.walkSpeed ?? settings.walkSpeed) : settings.walkSpeed,
-        detection: fromRun ? plan.detection : settings.perfDetection,
+        detection: detected.seconds,
         alarm: settings.perfAlarm,
         pre1: settings.perfPre1,
         pre99: settings.perfPre99,
@@ -3489,18 +3793,64 @@ export default function App() {
 
   // The welcome screen's presets (core/guided.js) step through the app as a
   // user would and stop at the result. One stage at a time: each acts once,
-  // then advances when its result appears (a new model, graph, point, route
-  // or finished fire); Stop, or a stage that waits too long, ends the run.
+  // and when its result appears (a new model, graph, point, route or finished
+  // fire) it is held on screen for GUIDED_HOLD_MS, or on a phone until Next,
+  // before the next stage; Stop, or a stage that waits too long, ends the run.
   const [guided, setGuided] = useState(null);
-  const startGuided = useCallback((run) => setGuided({ run, stage: "open", acted: null, before: null, error: null }), []);
+  // The settings the run changes, as they were before it (key: value), given
+  // back when it is stopped, closed or left for the guided runs: a run used
+  // to leave its fire, doors and people set for the user's next model. Kept
+  // in the browser too, so a reload mid-run gives them back (useStudio.js).
+  const guidedBeforeRef = useRef(null);
+  const startGuided = useCallback((run) => {
+    guidedBeforeRef.current = {};
+    keepGuidedBefore(null);
+    setGuided({ run, stage: "open", acted: null, before: null, error: null, ready: null, manual: isPhone() });
+  }, []);
+  // A setting the run changes: the user's value is kept first.
+  const guidedSet = (patch) => {
+    const before = guidedBeforeRef.current;
+    if (before) {
+      for (const key of Object.keys(patch)) if (!(key in before)) before[key] = settings[key];
+      keepGuidedBefore(withoutSessionOnly(before));
+    }
+    setSettings(patch);
+  };
   // Its field note was shown in the run's own card: not again in the panel.
   const { closeLatest } = notes;
-  const stopGuided = useCallback(() => {
+  // The run ends and the user's settings come back.
+  const endGuided = useCallback(() => {
     setGuided(null);
     closeLatest();
-  }, [closeLatest]);
+    const before = guidedBeforeRef.current;
+    guidedBeforeRef.current = null;
+    keepGuidedBefore(null);
+    if (before && Object.keys(before).length) setSettings(before);
+  }, [closeLatest, setSettings]);
+  // Playing: not yet done or stopped. While it plays its card's Stop is the
+  // one Stop (the playback's and the panel's are not shown), and it ends a
+  // fire playing or starting too, as Stop fire does (M7). Once the run has
+  // ended the panel's Start and Stop are back, and Close only closes the card.
+  const guidedPlaying = Boolean(guided) && guided.stage !== "done" && !guided.error;
+  const stopGuided = useCallback(() => {
+    if (guidedPlaying && (fire.running || fire.starting)) stopFire();
+    endGuided();
+  }, [guidedPlaying, fire.running, fire.starting, stopFire, endGuided]);
+  // A stage whose result is on screen goes on after the hold; on a phone, at Next.
+  const nextGuided = useCallback(() => {
+    setGuided((g) => {
+      if (!g?.ready) return g;
+      const ids = stagesFor(g.run).map((s) => s.id);
+      return { ...g, stage: ids[ids.indexOf(g.stage) + 1], acted: null, before: null, ready: null };
+    });
+  }, []);
   useEffect(() => {
     if (!guided || guided.stage === "done" || guided.error) return undefined;
+    if (guided.ready) {
+      if (guided.manual) return undefined;
+      const timer = setTimeout(nextGuided, Math.max(0, guided.ready + GUIDED_HOLD_MS - Date.now()));
+      return () => clearTimeout(timer);
+    }
     // Deferred a tick, so the stage's state changes happen outside the effect;
     // a re-run before then cancels it, so no stage acts twice.
     const timer = setTimeout(() => guidedStep(guided), 0);
@@ -3508,8 +3858,10 @@ export default function App() {
   });
   const guidedStep = (guided) => {
     const { run, stage, acted, before } = guided;
-    const ids = stagesFor(run).map((s) => s.id);
-    const advance = () => setGuided((g) => (g && g.run === run && g.stage === stage ? { ...g, stage: ids[ids.indexOf(stage) + 1], acted: null, before: null } : g));
+    // The stage's result is on screen: held (the effect above), then the next stage.
+    const advance = () => setGuided((g) => (g && g.run === run && g.stage === stage && !g.ready ? { ...g, ready: Date.now() } : g));
+    // Every setting a stage changes keeps the user's value first.
+    const setSettings = guidedSet;
     const act = (then, was) => {
       setGuided((g) => (g && g.run === run && g.stage === stage ? { ...g, acted: stage, before: was } : g));
       then();
@@ -3544,21 +3896,55 @@ export default function App() {
         if (path.found === false) return fail("No route was found.");
         advance();
       }
+    } else if (stage === "map") {
+      // The egress map's readings drawn: each room's worst walk and the dead ends.
+      if (acted !== stage) {
+        setTab("route");
+        setSettings({ egressRoutes: true, egressDeadEnds: true });
+        act(() => runEgress("map"), egress.result);
+      } else if (egress.error) return fail(egress.error);
+      else if (egress.result && egress.result !== before && !egress.busy) advance();
+    } else if (stage === "measure") {
+      // The wheelchair audit laid on the floors, every room's route kept drawn over it.
+      if (acted !== stage) {
+        setSettings({ accessOverlay: true });
+        act(() => runEgress("fine"), egress.fine);
+      } else if (egress.error) return fail(egress.error);
+      else if (egress.fine && egress.fine !== before && !egress.busy) advance();
     } else if (stage === "origin") {
+      const f = run.fire;
       if (acted !== stage) {
         setTab("simulate");
-        if (run.fire.model === "flamescapes") {
-          // A phone runs a shorter fire where the run says so.
-          const horizon = (isPhone() && run.fire.phoneHorizon) || run.fire.horizon || 60;
-          setSettings({ flamescapes: true, fireModel: "flamescapes", flamescapesDoors: run.fire.doors || "open", flamescapesHorizon: horizon });
-          act(() => void findIgnition("residential"), points.fire);
+        if (f.model === "flamescapes") {
+          // A phone runs a shorter fire where the run says so. The run's own
+          // length, not until the fire service arrives (core/fireService.js);
+          // what the graph shows, what burns and how fast, sprinklers and the
+          // grid, where the run says so.
+          const horizon = (isPhone() && f.phoneHorizon) || f.horizon || 60;
+          setSettings({
+            flamescapes: true,
+            fireModel: "flamescapes",
+            flamescapesDoors: f.doors || "open",
+            flamescapesHorizon: horizon,
+            flamescapesUntilService: false,
+            ...(f.show ? { flamescapesShow: f.show } : {}),
+            ...(f.fireClass ? { flamescapesClass: f.fireClass } : {}),
+            ...(f.growth ? { flamescapesGrowth: f.growth } : {}),
+            ...(f.sprinklers ? { sprinklers: true } : {}),
+            ...(f.calibratedGrid ? { flamescapesCalibratedGrid: true, flamescapesGridPolicy: "standard" } : {}),
+            ...(f.onRoute ? { reroute: true } : {}),
+          });
         } else {
-          setSettings({ flamescapes: false, fireModel: run.fire.model, reroute: true });
-          const v = nodeAlong(path?.node_ids, run.fire.along ?? 0.5);
+          setSettings({ flamescapes: false, fireModel: f.model, reroute: true });
+        }
+        if (f.model === "flamescapes" && !f.onRoute) act(() => void findIgnition("residential"), points.fire);
+        else {
+          // Part-way along the route.
+          const v = nodeAlong(path?.node_ids, f.along ?? 0.5);
           if (v < 0) return fail("The route has no nodes to place the fire on.");
           act(() => handlePick("fire", at(v)), points.fire);
         }
-      } else if (run.fire.model === "flamescapes" && !guided.picked && ignition.candidates) {
+      } else if (f.model === "flamescapes" && !f.onRoute && !guided.picked && ignition.candidates) {
         // The likeliest origin near the route, on a floor that reaches an exit,
         // clear of the start and the exits (core/guided.js guidedOrigin).
         const pick = guidedOrigin(graph, {
@@ -3568,21 +3954,41 @@ export default function App() {
           start: points.start ? snap(graph, points.start) : -1,
         });
         if (!pick) return fail("No place for the fire was found in the model.");
-        setGuided((g) => (g && g.run === run ? { ...g, picked: true } : g));
-        handlePick("fire", at(pick.node));
         const cls = pick.candidate?.scenario.fireClass;
+        // The caption names what burns: a pan of oil (class K) or a liquid (B) burns as a pool.
+        const label = pick.candidate
+          ? `${pick.candidate.scenario.label}${cls === "K" ? ", a pan of oil burning as a pool" : cls === "B" ? ", a pool of flammable liquid" : ""}`
+          : null;
+        setGuided((g) => (g && g.run === run ? { ...g, picked: true, originLabel: label } : g));
+        handlePick("fire", at(pick.node));
         if (FIRE_CLASSES[cls]) setSettings({ flamescapesClass: cls });
         // As picking a likely ignition point by hand says (useIgnition).
         if (pick.candidate) {
           markUsed("ignition");
           markFound("ignition", { label: pick.candidate.scenario.label });
         }
-      } else if (points.fire && points.fire !== before && (run.fire.model !== "flamescapes" || guided.picked)) advance();
+      } else if (
+        points.fire &&
+        points.fire !== before &&
+        (f.model !== "flamescapes" || f.onRoute || guided.picked) &&
+        // Under sprinklers, once the heads are laid out: a run started before has none.
+        (!f.sprinklers || (sprinklerPlan && !sprinklerState.busy))
+      )
+        advance();
     } else if (stage === "people") {
-      // Everyone on the floors, leaving with the fire; the runner on the
-      // forecast's timeline once the plan is made; dots on a phone.
+      // Everyone on the floors: walking out (the way out), or leaving with the
+      // fire, the runner on the forecast's timeline once the plan is made; dots on a phone.
       if (acted !== stage) {
-        act(() => setSettings({ crowd: true, crowdWithFire: true, crowdStairRunner: true, crowdRunner: "forecast", crowdStyle: isPhone() ? "dots" : "figures" }), null);
+        const style = isPhone() ? "dots" : "figures";
+        act(
+          () =>
+            setSettings(
+              run.people === "walk"
+                ? { crowd: true, crowdWithFire: false, crowdStyle: style }
+                : { crowd: true, crowdWithFire: true, crowdStairRunner: true, crowdRunner: "forecast", crowdStyle: style },
+            ),
+          null,
+        );
       } else if (crowdResult) advance();
     } else if (stage === "fire") {
       if (acted !== stage) act(() => void startFire(), null);
@@ -3607,8 +4013,9 @@ export default function App() {
       else if (guided.sawReplay && !fire.running) advance();
     }
   };
-  // A stage that waits too long ends the run (a fire on the GPU or a CPU core can take minutes).
-  const guidedStage = guided && !guided.error && guided.stage !== "done" ? guided.stage : null;
+  // A stage that waits too long ends the run (a fire on the GPU or a CPU core
+  // can take minutes); not one whose result is on screen, held or waiting for Next.
+  const guidedStage = guided && !guided.error && guided.stage !== "done" && !guided.ready ? guided.stage : null;
   useEffect(() => {
     if (!guidedStage) return undefined;
     const limit = guidedStage === "fire" ? 15 * 60000 : 4 * 60000;
@@ -3625,6 +4032,132 @@ export default function App() {
     const own = note.id === "walk-out" && path?.found !== false && path?.length > 0 ? note.text({ length: path.length }) : null;
     return { teaser: note.teaser, text: own || notes.found[note.id].text };
   }, [guided, notes.found, path]);
+  // At the end the result is brought into view: its step, its folded
+  // sections opened (ui/reveal.js) and its card scrolled to the top of the
+  // panel; "Done: the result is in the panel" was not true on screen.
+  const guidedDone = guided?.stage === "done" ? guided.run : null;
+  useEffect(() => {
+    if (!guidedDone) return undefined;
+    const place = guidedResultPlace(guidedDone);
+    setTab(place.tab);
+    revealSections(place.sections);
+    // After the step and its opened sections have drawn; then the request
+    // ends, so the sections open as usual when the step is shown again.
+    const timer = setTimeout(() => {
+      document.querySelector(place.scroll)?.scrollIntoView({ block: "start" });
+      revealSections(null);
+    }, 150);
+    return () => {
+      clearTimeout(timer);
+      revealSections(null);
+    };
+  }, [guidedDone]);
+  // And the card leads with its one or two numbers (core/guided.js).
+  const guidedResult = useMemo(() => {
+    if (!guidedDone) return null;
+    const plan = forecastPlan.result;
+    const depart = forecastPlan.inputs?.departAfter || 0;
+    const safe = plan?.front?.find((p) => p.dose <= (forecastPlan.inputs?.doseLimit ?? Infinity));
+    const storeys = (egress.fine?.storeys || []).filter((s) => s.audit?.rooms.onFoot > 0);
+    return guidedHeadline(guidedDone, {
+      route: path ? { found: path.found !== false, length: path.straight_length ?? path.length } : null,
+      crowd: crowdResult ? { people: crowdResult.people, lastOut: crowdResult.lastOut } : null,
+      reroute: dynamicPath ? { found: dynamicPath.found, step: dynamicPath.step, firstChange: dynamicPath.firstChange, clearBy: dynamicPath.clearBy } : null,
+      combustion: fire.combustion
+        ? {
+            peak: fire.combustion.peak ?? 0,
+            detectedAt: fire.combustion.detectedAt,
+            firstSprinkler: fire.combustion.sprinklers?.first,
+            // The run card's one line (core/calibrationStatus.js).
+            verdict: fire.combustion.cell > 0 ? validationVerdict(fire.combustion.cell, { peakKW: fire.combustion.peak ?? null, horizon: fire.combustion.horizon ?? null }) : null,
+          }
+        : null,
+      plan: plan ? { out: safe ? safe.arrival - depart : null, leave: plan.leaveBy?.good, leaveAtLeast: Boolean(plan.leaveBy?.horizon) } : null,
+      egress: egress.result
+        ? {
+            farthest: egress.result.summary.farthest,
+            deadEnds: egress.result.deadEnds?.corridors.length,
+            byChair: storeys.reduce((n, s) => n + s.audit.rooms.byChair, 0),
+            onFoot: storeys.reduce((n, s) => n + s.audit.rooms.onFoot, 0),
+          }
+        : null,
+    });
+  }, [guidedDone, forecastPlan.result, forecastPlan.inputs, egress.result, egress.fine, path, dynamicPath, fire.combustion, crowdResult]);
+  // A stage's caption with what it is on: what burns, once picked (a pan of
+  // oil burns as a pool), and the GPU or CPU a Flamescapes fire runs on.
+  const guidedCaption = useMemo(() => {
+    if (!guidedPlaying) return null;
+    const base = stagesFor(guided.run).find((s) => s.id === guided.stage)?.caption;
+    if (guided.stage === "origin" && guided.originLabel) return `Placing the fire: ${guided.originLabel}`;
+    const backend = fire.combustion?.backend;
+    if (guided.stage === "fire" && isFlamescapes(fire.model) && backend) return `${base}; running on ${backend.kind === "gpu" ? backend.name : "one CPU core"}`;
+    return null;
+  }, [guidedPlaying, guided, fire.combustion?.backend, fire.model]);
+
+  // ------------------------------------------------- back to the guided runs
+
+  // The welcome screen and its guided runs again, without a reload, from a
+  // load, a guided run, a fire playing or one that has ended. A fire playing
+  // or starting ends as Stop fire ends it (M7); a guided run ends as its Stop
+  // ends it, with the user's settings back; a recording is saved as its Stop
+  // saves it (M9); then the model goes as when another is opened (L1): its
+  // load, graph build, agent, plan, report fires, egress map and slime mould
+  // end, and what is kept with the graph drops itself (a Flamescapes run
+  // still computing or repeating is ended by the graph's effect below: M4).
+  // The viewer stays, without its model (ViewerManager.unloadModel).
+  const backToWelcome = useCallback(() => {
+    if (fire.running || fire.starting) stopFire();
+    endGuided();
+    if (recordRef.current && recordRef.current !== RECORDER_STARTING) void toggleRecording();
+    ++loadSeqRef.current;
+    samplerRef.current?.cancel();
+    endFireStart();
+    rlRef.current?.cancel();
+    dropPlan();
+    stopPerfFires();
+    egressRef.current?.cancel();
+    slimeRef.current?.cancel();
+    geometryRef.current = null;
+    geometryPromiseRef.current = null;
+    studio.beginLoad(null);
+    studio.setLoadState({ busy: false, stage: null, detail: null });
+    // No newer load takes the busy flag from a build still ending (G1).
+    studio.setGraphBusy(false);
+    setLastSample(null);
+    setLevels([]);
+    setLevelShift(0);
+    setSection(null);
+    viewerRef.current?.unloadModel?.();
+    colours.set(null);
+    setTab("model");
+  }, [endGuided, fire.running, fire.starting, stopFire, toggleRecording, endFireStart, dropPlan, stopPerfFires, studio, colours]);
+
+  // ------------------------------------------------- run again, in the view
+
+  // The Flamescapes fire started again with the settings as they are, as the
+  // panel's Start fire starts it: offered in the view once a run has ended or
+  // been stopped, not while one computes (a plan's or the repeat runs too), a
+  // guided run plays or a pick waits for its click; and saying so when the
+  // next run will differ from the last.
+  const replay = useMemo(() => {
+    const started = fire.started;
+    const offered =
+      Boolean(started && graph && points.fire) &&
+      isFlamescapes(fire.model) &&
+      isFlamescapes(fireModel) &&
+      !fire.running &&
+      !fire.starting &&
+      !forecastPlan.busy &&
+      fire.combustion?.repeats?.status !== "running" &&
+      !guided &&
+      !pickMode;
+    if (!offered) return null;
+    const changed =
+      points.fire !== started.fire ||
+      runHorizon(settings) !== runHorizon(started.settings) ||
+      RUN_SETTINGS.some((key) => settings[key] !== started.settings[key]);
+    return { changed };
+  }, [fire.started, fire.model, fire.running, fire.starting, fire.combustion?.repeats?.status, graph, points.fire, fireModel, forecastPlan.busy, guided, pickMode, settings]);
 
   // ------------------------------------------------- hints
 
@@ -3715,6 +4248,14 @@ export default function App() {
           throw error;
         }
         if (gen !== planGenRef.current) return;
+        // A run the health guard stopped is cut short: nodes it never reached
+        // would read as never untenable, so the plan does not use it.
+        if (done?.health?.ok === false) {
+          planRunningRef.current = false;
+          studio.setForecastPlan(NO_PLAN);
+          toast(`The fire run was stopped at ${Math.round(done.health.time)} s: ${healthReason(done.health)}. The plan does not use a stopped run.`, { variant: "warning", ttl: 8000 });
+          return;
+        }
         // Stacked here from the run's frames, sent as copies (the worker no
         // longer sends them twice: review 6).
         const { n, K } = done;
@@ -3845,7 +4386,7 @@ export default function App() {
     paintCombustion(viewerRef.current, run, fire.step);
     // Only a change of view or limits redraws; frames redraw themselves as they play.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.flamescapesShow, settings.flamescapesSmokeMeasure, settings.flamescapesGasMeasure, settings.flamescapesUntenableC, settings.flamescapesVisibility, settings.flamescapesSmoke]);
+  }, [settings.flamescapesShow, settings.flamescapesHeatScale, settings.flamescapesSmokeMeasure, settings.flamescapesGasMeasure, settings.flamescapesUntenableC, settings.flamescapesVisibility, settings.flamescapesSmoke]);
 
   // The deadline map colours the graph when a plan arrives or the toggle
   // changes, and only then. A fire that has coloured the graph since keeps
@@ -4131,10 +4672,12 @@ export default function App() {
       items.push({ label: exits.finalSource ? "Exits out of the building (rings)" : "Exit doors (rings)", color: "var(--viz-exit)" });
     }
     if (points.fire) items.push({ label: "Fire origin (spike)", color: "var(--viz-fire)", dot: true });
-    if (settings.sprinklers && sprinklerPlan?.heads?.length) items.push({ label: "Sprinkler heads (blue once open, with their spray)", color: "#0284c7", dot: true });
+    // As drawn: with their switches and a Flamescapes model (core/suppressionView.js).
+    const suppressionOn = isFlamescapes(fireModel);
+    if (suppressionOn && settings.sprinklers && sprinklerPlan?.heads?.length) items.push({ label: "Sprinkler heads (blue once open, with their spray)", color: "#0284c7", dot: true });
     if (settings.extinguishers && extinguisherPlan?.sites?.length) items.push({ label: "Extinguishers", color: "#dc2626", dot: true });
-    if (settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "clean-agent")) items.push({ label: "Clean agent rooms (filled once flooded)", color: "#0d9488" });
-    if (settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "foam")) items.push({ label: "Foam rooms (filled once foamed)", color: "#ca8a04" });
+    if (suppressionOn && settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "clean-agent")) items.push({ label: "Clean agent rooms (filled once flooded)", color: "#0d9488" });
+    if (suppressionOn && settings.suppressionSystems && systemsPlan?.special?.some((r) => r.system === "foam")) items.push({ label: "Foam rooms (filled once foamed)", color: "#ca8a04" });
     if (alternatives?.routes.length > 1) {
       alternatives.routes.forEach((route, i) =>
         items.push({ label: `Route ${route.rank} (${route.length.toFixed(1)} m)`, color: routeColor(i) }),
@@ -4175,6 +4718,7 @@ export default function App() {
     extinguisherPlan?.sites?.length,
     settings.suppressionSystems,
     systemsPlan?.special,
+    fireModel,
   ]);
 
   // ------------------------------------------------------------------ render
@@ -4296,7 +4840,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="app-body" data-panel-collapsed={!panelOpen}>
+      <div className="app-body" data-panel-collapsed={!panelOpen} data-panel-tall={panelTall}>
         {mode === "ifc" ? (
           <Viewport
             viewerRef={viewerRef}
@@ -4306,7 +4850,6 @@ export default function App() {
             pickMode={pickMode}
             hasModel={Boolean(modelInfo)}
             loadState={studio.loadState}
-            graphStats={graph?.stats}
             fire={fire}
             levels={levels}
             section={section}
@@ -4331,8 +4874,16 @@ export default function App() {
                 : isFlamescapes(fire.model)
                   ? (measureView(settings, Boolean(fire.combustion?.extras)).legend ?? {
                       title: "Gas temperature at head height (°C)",
-                      max: ZONE_COLOUR_PEAK,
-                      note: "Flamescapes: the solver's gas temperature 1.8 m above each node's floor.",
+                      // The fixed ramp, or one fitted to the run, chosen in the legend: drawing only.
+                      max: settings.flamescapesHeatScale === "run" ? fittedHeatPeak(runHotGas(playingRunRef.current)) : ZONE_COLOUR_PEAK,
+                      note:
+                        settings.flamescapesHeatScale === "run"
+                          ? "Fitted to this run's hottest gas at head height so far: the colours only, not the fire; a colour means another temperature in another run."
+                          : "Flamescapes: the solver's gas temperature 1.8 m above each node's floor.",
+                      fit: {
+                        on: settings.flamescapesHeatScale === "run",
+                        onToggle: () => setSettings({ flamescapesHeatScale: settings.flamescapesHeatScale === "run" ? "fixed" : "run" }),
+                      },
                     })
                   : fire.model === "temperature")
             }
@@ -4364,11 +4915,20 @@ export default function App() {
                     stage: guided.stage,
                     error: guided.error,
                     note: guidedNote,
+                    result: guidedResult,
+                    caption: guidedCaption,
+                    playing: guidedPlaying,
+                    // Its result on screen and waiting for Next (a phone).
+                    waiting: Boolean(guided.ready && guided.manual),
                   }
                 : null
             }
+            onNextGuided={nextGuided}
             onOpenNotes={() => setNotesOpen(true)}
             onStopGuided={stopGuided}
+            onHome={backToWelcome}
+            replay={replay}
+            onReplay={startFire}
             recording={recording}
             onRecord={toggleRecording}
           />
@@ -4429,6 +4989,14 @@ export default function App() {
 
         {panelOpen && (
           <aside className="panel" aria-label="Workflow">
+            <button
+              type="button"
+              className="panel__grow"
+              aria-pressed={panelTall}
+              onClick={() => setPanelTall((v) => !v)}
+            >
+              {panelTall ? "Shorter panel" : "Taller panel"}
+            </button>
             {mode === "ifc" ? (
               <Stepper steps={tabs} active={activeTab} status={stepStatus} onSelect={setTab} />
             ) : (
@@ -4535,9 +5103,14 @@ export default function App() {
                   onPlayCrowd={playCrowd}
                   onRestartCrowd={restartCrowd}
                   slime={slime}
+                  slimeCompare={slimeCompare}
                   slimeFireReady={Boolean(graph) && (isFlamescapes(fire.model) ? Boolean(combustionRef.current?.done) : fire.model !== "zone" && fire.step > 0)}
                   onGrowSlime={growSlime}
                   onClearSlime={clearSlime}
+                  egress={egress}
+                  onMapEgress={() => runEgress("map")}
+                  onMeasureFinely={() => runEgress("fine")}
+                  onClearEgress={clearEgress}
                 />
               )}
               {activeTab === "simulate" && (
@@ -4570,6 +5143,9 @@ export default function App() {
                   onLayOutExtinguishers={layOutExtinguishers}
                   extinguisherAttempt={settings.extinguishers ? extinguisherAttempt : null}
                   onExtinguisherAttempt={runExtinguisherAttempt}
+                  pace={lastPace}
+                  gpuSpeed={gpuRateRef.current || null}
+                  guided={guidedPlaying}
                 />
               )}
             </div>
@@ -4642,6 +5218,8 @@ export default function App() {
             </button>
           </div>
         ))}
+        {/* Last, so a phone, which shows the newest toast only, shows it. */}
+        {memoryNotice && <MemoryNotice notice={memoryNotice} onClear={clearMemory} onDismiss={dismissMemory} />}
       </div>
 
       <FieldNotesDialog

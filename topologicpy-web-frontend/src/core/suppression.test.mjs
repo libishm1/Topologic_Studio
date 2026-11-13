@@ -150,8 +150,10 @@ test("the estimate takes each head's own height over the fire and its distance f
 test("a design-fire first item follows its t-squared curve with the room's contents stepped aside, and the water over it decays it", () => {
   assert.deepEqual(designFireFor("A", "fast"), { alpha: 0.0469, growth: "fast" });
   assert.deepEqual(designFireFor("A"), { alpha: 0.0117, growth: "medium" }, "class A's own: medium");
-  assert.equal(designFireFor("B"), null, "a pool keeps its burning rate");
-  assert.equal(designFireFor("L"), null, "so does a battery pack");
+  // Pools are design fires since 2026-11-12, grown to their large-pool rate (itemBurner).
+  assert.equal(designFireFor("B")?.growth, "ultra-fast", "a pool: its class's growth");
+  assert.ok(designFireFor("K"), "a pan too");
+  assert.equal(designFireFor("L"), null, "a battery pack keeps the solver's burning");
   assert.equal(designFireFor("A", "solver"), null);
   const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
   const designFire = designFireFor("A", "fast");

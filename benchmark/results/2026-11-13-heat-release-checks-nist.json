@@ -1,0 +1,5150 @@
+{
+ "generated": "2026-11-13",
+ "tool": "tools/calibration/heat-release-checks.mjs --nist",
+ "plan": "wiki/research/fire-calibration-plan-2026-11-11.md, section 15.3 (the NIST part); no verdict word attaches (15.3)",
+ "data": {
+  "database": "NIST Fire Calorimetry Database (FCD)",
+  "doi": "10.18434/mds2-2314",
+  "page": "https://www.nist.gov/el/fcd",
+  "channel": "Heat Release Rate (kW)",
+  "read": "2026-11-13"
+ },
+ "terms": {
+  "database": {
+   "url": "https://www.nist.gov/el/fcd",
+   "sentences": [
+    "This Fire Calorimetry Database (FCD) contains results of fire experiments conducted at the NFRL.",
+    "Certain commercial entities, equipment, or materials may be identified in this database to describe an experimental procedure or concept adequately. Such identification is not intended to imply recommendation or endorsement by the National Institute of Standards and Technology, nor is it intended to imply that the entities, materials, or equipment are necessarily the best available for the purpose."
+   ],
+   "citationBox": [
+    "Bryant, R. and Bundy, M. The NIST 20 MW Calorimetry Measurement System for Large-Fire Research, Technical Note (NIST TN) 2077, 2019 https://doi.org/10.6028/NIST.TN.2077",
+    "NIST Fire Calorimetry Database (FCD) https://doi.org/10.18434/mds2-2314"
+   ]
+  },
+  "record": {
+   "url": "https://data.nist.gov/rmm/records?@id=ark:/88434/mds2-2314",
+   "fields": {
+    "license": "https://www.nist.gov/open/license",
+    "accessLevel": "public",
+    "version": "1.0.2"
+   }
+  },
+  "userGuide": {
+   "url": "https://www.nist.gov/document/fcd-user-guide-pdf (served as https://www.nist.gov/system/files/documents/2020/11/19/FCD_User_Guide_v4a.pdf, revised 10/23/2020)",
+   "sentences": [
+    "There are multiple citations for experiments contained in this database. Each project has at least one report or journal article that describes the test methods, results and conclusions of the study. This reference should be cited when referring to experiments from a single project. The NIST Technical Note 2077 [1] should be cited when referencing the calorimetry methods or uncertainty analysis in this database. Finally, the NIST Fire Calorimetry Database [2] should be cited when using video, images, or data files or summary calculations found here."
+   ]
+  },
+  "licence": {
+   "url": "https://www.nist.gov/open/license (served as https://www.nist.gov/open/copyright-fair-use-and-licensing-statements-srd-data-software-and-technical-series-publications), section Fair Use of Other NIST Data/Works",
+   "sentences": [
+    "Data/works created by NIST employees that are not covered by the Standard Reference Data Act are subject to 17 U.S.C. §105 and generally are not subject to copyright protection within the United States.",
+    "Distributions of non-SRD products should include the following statement:",
+    "To the extent that NIST may hold copyright in countries other than the United States, you are hereby granted the non-exclusive irrevocable and unconditional right to print, publish, prepare derivative works and distribute the NIST data, in any medium, or authorize others to do so on your behalf, on a royalty-free basis throughout the world.",
+    "You may improve, modify, and create derivative works of the data or any portion of the data, and you may copy and distribute such modifications or works. Modified works should carry a notice stating that you changed the data and should note the date and nature of any such change. Please explicitly acknowledge the National Institute of Standards and Technology as the source of the data: Data citation recommendations are provided at https://www.nist.gov/open/license .",
+    "Permission to use this data is contingent upon your acceptance of the terms of this agreement and upon your providing appropriate acknowledgments of NIST’s creation of the data/work."
+   ]
+  }
+ },
+ "notice": "Data from the NIST Fire Calorimetry Database (FCD), National Institute of Standards and Technology (Bundy, M. and Bryant, R. (2020), NIST Fire Calorimetry Database (FCD), doi:10.18434/mds2-2314, read 2026-11-13); calorimetry method: Bryant, R. and Bundy, M. (2019), The NIST 20 MW calorimetry measurement system for large-fire research, NIST TN 2077, doi:10.6028/NIST.TN.2077; each project's report under `references`. NIST's statement: This data/work was created by employees of the National Institute of Standards and Technology (NIST), an agency of the Federal Government. Pursuant to title 17 United States Code Section 105, works of NIST employees are not subject to copyright protection in the United States. This data/work may be subject to foreign copyright. The data/work is provided by NIST as a public service and is expressly provided “AS IS.” NIST MAKES NO WARRANTY OF ANY KIND, EXPRESS, IMPLIED OR STATUTORY, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT AND DATA ACCURACY. NIST does not warrant or make any representations regarding the use of the data or the results thereof, including but not limited to the correctness, accuracy, reliability or usefulness of the data. NIST SHALL NOT BE LIABLE AND YOU HEREBY RELEASE NIST FROM LIABILITY FOR ANY INDIRECT, CONSEQUENTIAL, SPECIAL, OR INCIDENTAL DAMAGES (INCLUDING DAMAGES FOR LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION, AND THE LIKE), WHETHER ARISING IN TORT, CONTRACT, OR OTHERWISE, ARISING FROM OR RELATING TO THE DATA (OR THE USE OF OR INABILITY TO USE THIS DATA), EVEN IF NIST HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. Changed here (2026-11-13): each test's heat release channel (1 s) reduced to peaks, energies and fitted growth coefficients, and its page's initial and final mass to an energy per mass lost, by tools/calibration/heat-release-checks.mjs; the pages' own summaries are copied beside as published. The National Institute of Standards and Technology is the source of the data.",
+ "references": {
+  "Design Fires - Residential and Office Items": "Hamins, A., Di Cristina, G., Bundy, M., Chakalis, T., Fernandez, M., Kim, I., Ramesh, S. and Zammarano, M. (2025). The character of burning residential and office items. NIST Technical Note 2303. doi:10.6028/NIST.TN.2303",
+  "Fire Barriers in Full-Scale Chair Mock-ups": "Thompson, A. L., Kim, I., Hamins, A., Bundy, M. and Zammarano, M. (2022). Performance and failure mechanism of fire barriers in full-scale chair mock-ups. Fire and Materials 46, 329-346. doi:10.1002/fam.3007",
+  "(none named)": "D2's page names no project and no report; the database is cited for it"
+ },
+ "selection": {
+  "rule": "every single upholstered seat or sofa, and every full-scale upholstered chair mock-up, burnt alone under the NFRL's hood, with a 1 s record; chosen from the database's listing by specimen name and description before any record was opened",
+  "searched": "www.nist.gov/el/fcd/experiments?k=<word> for chair, sofa, couch, loveseat, recliner, armchair, upholstered, mockup, barrier, cushion, seat, furniture, foam (2026-11-13)",
+  "kinds": [
+   "chair",
+   "sofa",
+   "three stacked chairs",
+   "chair mock-up, no barrier",
+   "chair mock-up, cigarette ignition",
+   "chair mock-up, fire barrier"
+  ],
+  "leftOut": [
+   "Design Fires - Residential and Office Items, Test023 (Beanbag Chair F): expanded polystyrene beads in a bag, not an upholstered seat",
+   "Room Flashover Experiments to Demonstrate the Effectiveness of Barrier Fabrics, Test_1 to Test_10: each sofa burnt in a furnished room, so the record is the room's",
+   "Dry Tree Fire Hazard, WateredTree3 and Dry_Pine_Tree: a pine tree beside an upholstered chair and a shelf, so the record is not the chair's",
+   "Transient Combustion Calorimetry, Test084 to Test086 (PatioChair): plastic chairs, not upholstered",
+   "Fire Barriers in Full-Scale Chair Mock-ups, Propane Burner Check: the burner alone"
+  ]
+ },
+ "parameters": {
+  "startKW": 25,
+  "peakFraction": 0.9,
+  "meanStepS": 5
+ },
+ "method": {
+  "readings": "the suite's 5 s means of the 1 s record (each the mean of the readings in (s - 2.5, s + 2.5], s = 0, 5, 10 ... s from ignition, the file's Time column), for the peak, the window and the fit; as the FSRI part",
+  "window": "from the first 5 s mean above 25 kW (t >= 0) to the first at 90 % of the 5 s peak, both included; as the FSRI part",
+  "fit": "least squares of q = alpha max(0, t - t0)^2, t0 free (scanned in 0.5 s steps over [window start - 1200 s, window end), refined by golden section); as the FSRI part",
+  "energy": "the 1 s readings of the Heat Release Rate column summed from ignition to the record's end (kJ to MJ), and to the page's Fire Out event; no baseline taken off; as the FSRI part (which sums to its Suppression event)",
+  "mass": "the page's Table 3 initial and final specimen mass (gravimetric); the effective heat of combustion is the energy over their difference",
+  "pageSummary": "the page's Table 2 (and its hood size from Table 3), copied as published with its expanded uncertainty, for checking the reduction: the database sums from ignition to Fire Out",
+  "burnerChannel": "the record's Burner HRR (2023 items) or NG Burner HRR (2018 mock-ups) column summed like the energy, reported beside; the 2018 mock-ups' 18 kW propane ignition burner (80 s, about 1.4 MJ) is not metered and so stays in their Heat Release Rate, which is used as it is",
+  "timeCheck": "peakEventLessRawPeakS: the page's Peak HRR event (minutes to 0.01) less the record's raw peak time; it shows whether the record's Time column is the page's clock"
+ },
+ "classes": {
+  "medium": 0.0117,
+  "fast": 0.0469,
+  "all": {
+   "slow": 0.00293,
+   "medium": 0.0117,
+   "fast": 0.0469,
+   "ultra-fast": 0.188
+  },
+  "source": "topologicpy-web-frontend/src/core/fireClasses.js GROWTH_CLASSES"
+ },
+ "tests": [
+  {
+   "id": "Test016",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Stackable Chair A",
+   "description": "Single Stackable Chair A (metal frame with particle board seat and back); 1\" propane flame ignition. 9677g. Camera setting: F4.0,1/30,Gain:0. LED 50% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test016",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1701963874_Test016.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "reignited @ 45 s",
+    "pilot increased to 120 ml per min @ 67.2 s",
+    "Chair ignition @ 84 s",
+    "Chair Dripping @ 1026 s",
+    "Peak HRR @ 1143 s",
+    "water suppression @ 3760.8 s",
+    "Fire Out @ 3768 s"
+   ],
+   "recordS": [
+    -282,
+    4005
+   ],
+   "peakKW": 616,
+   "peakAtS": 1145,
+   "rawPeakKW": 621.5,
+   "rawPeakAtS": 1143,
+   "energyMJ": 115.1,
+   "energyToFireOutMJ": 115.1,
+   "hrrAtFireOutKW": 0.4,
+   "burnerChannelMJ": 2.93,
+   "massInitialKg": 9.68,
+   "massFinalKg": 6.44,
+   "massLostKg": 3.24,
+   "effectiveHeatOfCombustionMJkg": 35.53,
+   "effectiveHeatOfCombustionToFireOutMJkg": 35.52,
+   "fit": {
+    "windowS": [
+     820,
+     1130
+    ],
+    "windowKW": [
+     25.1,
+     577.2
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.03732,
+    "t0S": 1007.6,
+    "t0AfterWindowStart": true,
+    "n": 63,
+    "rmsKW": 37.5,
+    "r2": 0.9223,
+    "overMedium": 3.19,
+    "overFast": 0.8,
+    "place": "between medium and fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      819,
+      1128
+     ],
+     "alpha": 0.03637,
+     "t0S": 1006.6,
+     "n": 310,
+     "readingsAtOrBelow25kWInWindow": 1
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00175,
+     "t0S": 767
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 1171,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 621,
+     "printed": "621",
+     "uc": 32,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 19.05,
+     "printed": "19.05",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 115.1,
+     "printed": "115.1",
+     "uc": 6.4,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 3,
+     "printed": "3",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 3.241,
+     "printed": "3.241",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 35.5,
+     "printed": "35.5",
+     "uc": 2,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 62.8,
+     "printed": "62.80",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 3
+   }
+  },
+  {
+   "id": "Test017",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Conference Room Chair B",
+   "description": "Conference Room Chair B (40% urithane foam, 60% blended fiber batting) 1\" propane flame ignition. 7424g. Camera setting: F4.0,1/30,Gain:0. LED 50% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test017",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1701973093_Test017.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": -0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Chair Dripping @ 70.2 s",
+    "Peak HRR @ 205.8 s",
+    "water suppression @ 943.8 s",
+    "Fire Out @ 1000.8 s"
+   ],
+   "recordS": [
+    -269,
+    1183
+   ],
+   "peakKW": 441,
+   "peakAtS": 205,
+   "rawPeakKW": 447.3,
+   "rawPeakAtS": 206,
+   "energyMJ": 38.9,
+   "energyToFireOutMJ": 38.9,
+   "hrrAtFireOutKW": 0.3,
+   "burnerChannelMJ": 0.91,
+   "massInitialKg": 7.42,
+   "massFinalKg": 5.54,
+   "massLostKg": 1.88,
+   "effectiveHeatOfCombustionMJkg": 20.71,
+   "effectiveHeatOfCombustionToFireOutMJkg": 20.7,
+   "fit": {
+    "windowS": [
+     115,
+     205
+    ],
+    "windowKW": [
+     26.9,
+     441
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.10606,
+    "t0S": 141.9,
+    "t0AfterWindowStart": true,
+    "n": 19,
+    "rmsKW": 35.1,
+    "r2": 0.9171,
+    "overMedium": 9.06,
+    "overFast": 2.26,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      111,
+      202
+     ],
+     "alpha": 0.08743,
+     "t0S": 137.6,
+     "n": 92,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.02467,
+     "t0S": 96.3
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 239,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 447,
+     "printed": "447",
+     "uc": 23,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 3.43,
+     "printed": "3.43",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 38.9,
+     "printed": "38.9",
+     "uc": 2.2,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 1,
+     "printed": "1",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 1.889,
+     "printed": "1.889",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 20.6,
+     "printed": "20.6",
+     "uc": 1.2,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 16.68,
+     "printed": "16.68",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 3
+   }
+  },
+  {
+   "id": "Test019",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Conference Room Chair C",
+   "description": "Conference Room Chair C (polyurethane foam); 1\" propane flame ignition. 7187g. Camera setting: F4.0,1/30,Gain:0. LED 50% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test019",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1701977909_Test019.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Flame Dripping @ 60 s",
+    "Peak HRR @ 235.2 s",
+    "water suppression @ 967.8 s",
+    "Fire Out @ 1009.2 s"
+   ],
+   "recordS": [
+    -240,
+    1138
+   ],
+   "peakKW": 408.3,
+   "peakAtS": 235,
+   "rawPeakKW": 413.6,
+   "rawPeakAtS": 235,
+   "energyMJ": 24.8,
+   "energyToFireOutMJ": 24.8,
+   "hrrAtFireOutKW": 0.6,
+   "burnerChannelMJ": 0.81,
+   "massInitialKg": 7.19,
+   "massFinalKg": 5.83,
+   "massLostKg": 1.36,
+   "effectiveHeatOfCombustionMJkg": 18.22,
+   "effectiveHeatOfCombustionToFireOutMJkg": 18.21,
+   "fit": {
+    "windowS": [
+     155,
+     235
+    ],
+    "windowKW": [
+     26.5,
+     408.3
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.09216,
+    "t0S": 171.4,
+    "t0AfterWindowStart": true,
+    "n": 17,
+    "rmsKW": 32.4,
+    "r2": 0.9133,
+    "overMedium": 7.88,
+    "overFast": 1.97,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      152,
+      232
+     ],
+     "alpha": 0.05929,
+     "t0S": 161,
+     "n": 81,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.02768,
+     "t0S": 135.3
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 276,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 414,
+     "printed": "414",
+     "uc": 21,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 3.92,
+     "printed": "3.92",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 24.8,
+     "printed": "24.8",
+     "uc": 1.5,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 1,
+     "printed": "1",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 1.362,
+     "printed": "1.362",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 18.2,
+     "printed": "18.2",
+     "uc": 1.1,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 16.82,
+     "printed": "16.82",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 3
+   }
+  },
+  {
+   "id": "Test020",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Stackable Chair D",
+   "description": "Single Stackable Chair D (Foam Unknown); 1\" propane flame ignition. 7276g. Camera setting: F4.0,1/30,Gain:0. LED 50% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test020",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1701980339_Test020.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "Flame Dripping @ 81 s",
+    "Peak HRR @ 597 s",
+    "water suppression @ 2530.2 s",
+    "Fire Out @ 2554.2 s"
+   ],
+   "recordS": [
+    -260,
+    2654
+   ],
+   "peakKW": 114.7,
+   "peakAtS": 600,
+   "rawPeakKW": 117.8,
+   "rawPeakAtS": 597,
+   "energyMJ": 41.7,
+   "energyToFireOutMJ": 41.7,
+   "hrrAtFireOutKW": 0.5,
+   "burnerChannelMJ": 1.9,
+   "massInitialKg": 7.28,
+   "massFinalKg": 5.21,
+   "massLostKg": 2.07,
+   "effectiveHeatOfCombustionMJkg": 20.13,
+   "effectiveHeatOfCombustionToFireOutMJkg": 20.13,
+   "fit": {
+    "windowS": [
+     395,
+     565
+    ],
+    "windowKW": [
+     25.4,
+     103.3
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.00117,
+    "t0S": 295,
+    "t0AfterWindowStart": false,
+    "n": 35,
+    "rmsKW": 10.2,
+    "r2": 0.8041,
+    "overMedium": 0.1,
+    "overFast": 0.02,
+    "place": "below slow"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      391,
+      568
+     ],
+     "alpha": 0.00117,
+     "t0S": 294.6,
+     "n": 178,
+     "readingsAtOrBelow25kWInWindow": 3
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00073,
+     "t0S": 243.5
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 1221,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 117.9,
+     "printed": "117.9",
+     "uc": 6.2,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 9.95,
+     "printed": "9.95",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 41.7,
+     "printed": "41.7",
+     "uc": 2.6,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 2,
+     "printed": "2",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 2.066,
+     "printed": "2.066",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 20.2,
+     "printed": "20.2",
+     "uc": 1.3,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 42.57,
+     "printed": "42.57",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 3
+   }
+  },
+  {
+   "id": "Test021",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Stackable Chair A",
+   "description": "Single Stackable Chair A (metal frame with particle board seat and back); 1\" propane flame ignition. 9703g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test021",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702318511_Test021.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Increased hood flow to 20 kg/s @ 1267.8 s",
+    "Flame Dripping @ 1591.8 s",
+    "Peak HRR @ 1732.2 s",
+    "water suppression @ 2947.8 s",
+    "Fire Out @ 2959.8 s"
+   ],
+   "recordS": [
+    -287,
+    3082
+   ],
+   "peakKW": 682.4,
+   "peakAtS": 1730,
+   "rawPeakKW": 689.8,
+   "rawPeakAtS": 1732,
+   "energyMJ": 96.2,
+   "energyToFireOutMJ": 96.1,
+   "hrrAtFireOutKW": 6.1,
+   "burnerChannelMJ": 0.39,
+   "massInitialKg": 9.7,
+   "massFinalKg": 6.74,
+   "massLostKg": 2.96,
+   "effectiveHeatOfCombustionMJkg": 32.5,
+   "effectiveHeatOfCombustionToFireOutMJkg": 32.45,
+   "fit": {
+    "windowS": [
+     1465,
+     1725
+    ],
+    "windowKW": [
+     25.8,
+     630.5
+    ],
+    "readingsAtOrBelow25kWInWindow": [
+     1470
+    ],
+    "alpha": 0.07125,
+    "t0S": 1634.1,
+    "t0AfterWindowStart": true,
+    "n": 53,
+    "rmsKW": 30.9,
+    "r2": 0.9494,
+    "overMedium": 6.09,
+    "overFast": 1.52,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      1462,
+      1725
+     ],
+     "alpha": 0.06795,
+     "t0S": 1632.7,
+     "n": 264,
+     "readingsAtOrBelow25kWInWindow": 6
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00233,
+     "t0S": 1420.7
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 1753,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 690,
+     "printed": "690",
+     "uc": 36,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 28.87,
+     "printed": "28.87",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 96.1,
+     "printed": "96.1",
+     "uc": 7,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 2.969,
+     "printed": "2.969",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 32.4,
+     "printed": "32.4",
+     "uc": 2.4,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 49.33,
+     "printed": "49.33",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test022",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Arm Chair E",
+   "description": "ArmChair E (50% Urethane 50% Cotton) 1\" propane flame ignition. 9701g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test022",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702325783_Test022.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "Flame Dripping @ 322.8 s",
+    "Peak HRR @ 579 s",
+    "water suppression @ 1633.8 s",
+    "Fire Out @ 1648.8 s"
+   ],
+   "recordS": [
+    -422,
+    1983
+   ],
+   "peakKW": 418.4,
+   "peakAtS": 580,
+   "rawPeakKW": 421.2,
+   "rawPeakAtS": 579,
+   "energyMJ": 49.2,
+   "energyToFireOutMJ": 49.2,
+   "hrrAtFireOutKW": 4.9,
+   "burnerChannelMJ": 0.45,
+   "massInitialKg": 10.04,
+   "massFinalKg": 6.34,
+   "massLostKg": 3.7,
+   "effectiveHeatOfCombustionMJkg": 13.28,
+   "effectiveHeatOfCombustionToFireOutMJkg": 13.29,
+   "fit": {
+    "windowS": [
+     275,
+     575
+    ],
+    "windowKW": [
+     29.2,
+     410.4
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.24324,
+    "t0S": 533,
+    "t0AfterWindowStart": true,
+    "n": 61,
+    "rmsKW": 42.8,
+    "r2": 0.6309,
+    "overMedium": 20.79,
+    "overFast": 5.19,
+    "place": "above ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      270,
+      572
+     ],
+     "alpha": 0.31668,
+     "t0S": 536.4,
+     "n": 303,
+     "readingsAtOrBelow25kWInWindow": 2
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00007,
+     "t0S": -454.2
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 597,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 421,
+     "printed": "421",
+     "uc": 23,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 9.65,
+     "printed": "9.65",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 49.2,
+     "printed": "49.2",
+     "uc": 4.3,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 3.7,
+     "printed": "3.700",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 13.3,
+     "printed": "13.3",
+     "uc": 1.2,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 27.48,
+     "printed": "27.48",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test024",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Chair G",
+   "description": "High-back Chair G with Polyurethane foam and polyester cover; 1\" propane flame ignition. 8872g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test024",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702393541_Test024.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "Flame Dripping @ 85.8 s",
+    "Peak HRR @ 138 s",
+    "water suppression @ 622.2 s",
+    "Fire Out @ 630 s"
+   ],
+   "recordS": [
+    -458,
+    749
+   ],
+   "peakKW": 362.5,
+   "peakAtS": 140,
+   "rawPeakKW": 365.7,
+   "rawPeakAtS": 138,
+   "energyMJ": 43.2,
+   "energyToFireOutMJ": 43.1,
+   "hrrAtFireOutKW": 1.7,
+   "burnerChannelMJ": 0.02,
+   "massInitialKg": 8.87,
+   "massFinalKg": 6.43,
+   "massLostKg": 2.44,
+   "effectiveHeatOfCombustionMJkg": 17.69,
+   "effectiveHeatOfCombustionToFireOutMJkg": 17.68,
+   "fit": {
+    "windowS": [
+     90,
+     135
+    ],
+    "windowKW": [
+     33.4,
+     343.8
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.11463,
+    "t0S": 79,
+    "t0AfterWindowStart": false,
+    "n": 10,
+    "rmsKW": 17.3,
+    "r2": 0.9759,
+    "overMedium": 9.8,
+    "overFast": 2.44,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      85,
+      134
+     ],
+     "alpha": 0.12112,
+     "t0S": 79.8,
+     "n": 50,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.09588,
+     "t0S": 75.2
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 172,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 366,
+     "printed": "366",
+     "uc": 20,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 2.3,
+     "printed": "2.30",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 43.1,
+     "printed": "43.1",
+     "uc": 2.9,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 2.442,
+     "printed": "2.442",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 17.7,
+     "printed": "17.7",
+     "uc": 1.2,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 10.5,
+     "printed": "10.50",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test027",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Arm Chair H",
+   "description": "Arm Chair H (polyurethane foam); polyester cushions; 1\" propane flame ignition. 26594g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test027",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702411504_Test027.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "Pool fire underneath @ 180 s",
+    "Peak HRR @ 207 s",
+    "raking coals @ 1471.8 s",
+    "Fire Out @ 1524 s"
+   ],
+   "recordS": [
+    -304,
+    2005
+   ],
+   "peakKW": 1693.1,
+   "peakAtS": 205,
+   "rawPeakKW": 1733.3,
+   "rawPeakAtS": 207,
+   "energyMJ": 384.3,
+   "energyToFireOutMJ": 380.7,
+   "hrrAtFireOutKW": 26.6,
+   "burnerChannelMJ": 0.27,
+   "massInitialKg": 26.59,
+   "massFinalKg": 4.28,
+   "massLostKg": 22.31,
+   "effectiveHeatOfCombustionMJkg": 17.23,
+   "effectiveHeatOfCombustionToFireOutMJkg": 17.07,
+   "fit": {
+    "windowS": [
+     80,
+     200
+    ],
+    "windowKW": [
+     32.2,
+     1587.3
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.12708,
+    "t0S": 91.7,
+    "t0AfterWindowStart": true,
+    "n": 25,
+    "rmsKW": 88.4,
+    "r2": 0.9617,
+    "overMedium": 10.86,
+    "overFast": 2.71,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      78,
+      199
+     ],
+     "alpha": 0.12066,
+     "t0S": 89.9,
+     "n": 122,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.07061,
+     "t0S": 65.9
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 180,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 1733,
+     "printed": "1,733",
+     "uc": 89,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 3.45,
+     "printed": "3.45",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 381,
+     "printed": "381",
+     "uc": 22,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 22.312,
+     "printed": "22.312",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 17.07,
+     "printed": "17.07",
+     "uc": 0.98,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 25.4,
+     "printed": "25.40",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test046",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Office Chair J",
+   "description": "Office Chair J; 1\" propane flame ignition. 17876 g. Camera setting: F4.0,1/60,Gain=10dv. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test046",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702930602_Test046.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "Pool Fire @ 397.2 s",
+    "Peak HRR @ 597 s",
+    "water suppression @ 2406 s",
+    "Fire Out @ 2416.2 s"
+   ],
+   "recordS": [
+    -197,
+    2560
+   ],
+   "peakKW": 555.9,
+   "peakAtS": 560,
+   "rawPeakKW": 562.7,
+   "rawPeakAtS": 597,
+   "energyMJ": 259.3,
+   "energyToFireOutMJ": 259.2,
+   "hrrAtFireOutKW": 12.2,
+   "burnerChannelMJ": 0.31,
+   "massInitialKg": 17.88,
+   "massFinalKg": 10.88,
+   "massLostKg": 7,
+   "effectiveHeatOfCombustionMJkg": 37.04,
+   "effectiveHeatOfCombustionToFireOutMJkg": 37.02,
+   "fit": {
+    "windowS": [
+     225,
+     525
+    ],
+    "windowKW": [
+     26.6,
+     534.5
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.0024,
+    "t0S": 74.5,
+    "t0AfterWindowStart": false,
+    "n": 61,
+    "rmsKW": 27.2,
+    "r2": 0.9577,
+    "overMedium": 0.21,
+    "overFast": 0.05,
+    "place": "below slow"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      224,
+      523
+     ],
+     "alpha": 0.00234,
+     "t0S": 70.8,
+     "n": 300,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00262,
+     "t0S": 89.4
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 720,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 563,
+     "printed": "563",
+     "uc": 31,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 9.95,
+     "printed": "9.95",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 259,
+     "printed": "259",
+     "uc": 17,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 6.992,
+     "printed": "6.992",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 37.1,
+     "printed": "37.1",
+     "uc": 2.4,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 40.27,
+     "printed": "40.27",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test048",
+   "kind": "chair",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Office Chair K",
+   "description": "Office Chair K; 1\" propane flame ignition. 12368 g. Camera setting: F4.0,1/60,Gain=10db. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test048",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702938569_Test048.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": -0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Flame Dripping @ 106.2 s",
+    "Peak HRR @ 196.8 s",
+    "Fire Out @ 358.8 s"
+   ],
+   "recordS": [
+    -169,
+    466
+   ],
+   "peakKW": 17.1,
+   "peakAtS": 195,
+   "rawPeakKW": 18.8,
+   "rawPeakAtS": 197,
+   "energyMJ": 1.4,
+   "energyToFireOutMJ": 1.4,
+   "hrrAtFireOutKW": 0.8,
+   "burnerChannelMJ": 0.07,
+   "massInitialKg": 12.37,
+   "massFinalKg": 12.26,
+   "massLostKg": 0.11,
+   "effectiveHeatOfCombustionMJkg": 12.78,
+   "effectiveHeatOfCombustionToFireOutMJkg": 12.89,
+   "fit": {
+    "why": "no reading above 25 kW"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "why": "no reading above 25 kW"
+    },
+    "sqrtLine5s": {
+     "why": "no reading above 25 kW"
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": null,
+    "extrapolated": null
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 18.8,
+     "printed": "18.8",
+     "uc": 7.3,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 3.28,
+     "printed": "3.28",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": null,
+     "printed": "below detection limit",
+     "uc": 1.1,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 0.106,
+     "printed": "0.106",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": null,
+     "printed": "below detection limit",
+     "uc": 11,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 5.98,
+     "printed": "5.98",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test029",
+   "kind": "sofa",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Sofa A (K-Loveseat)",
+   "description": "Sofa A (K-Loveseat ) with two A pillows and modified bottom cushion inserts (2 layers of Polyurethane Foam with springs removed); polyester batting back cushions; 1\" propane flame ignition. 57199.3g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test029",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702479452_Test029.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Pool Fire underneath @ 277.2 s",
+    "Peak HRR @ 373.2 s",
+    "Raking coals @ 1921.8 s",
+    "water suppression @ 2058 s",
+    "Fire Out @ 2080.2 s"
+   ],
+   "recordS": [
+    -292,
+    2868
+   ],
+   "peakKW": 1943.9,
+   "peakAtS": 375,
+   "rawPeakKW": 1983.8,
+   "rawPeakAtS": 373,
+   "energyMJ": 832.1,
+   "energyToFireOutMJ": 811,
+   "hrrAtFireOutKW": 54.2,
+   "burnerChannelMJ": -0.28,
+   "massInitialKg": 57.64,
+   "massFinalKg": 5.52,
+   "massLostKg": 52.12,
+   "effectiveHeatOfCombustionMJkg": 15.97,
+   "effectiveHeatOfCombustionToFireOutMJkg": 15.56,
+   "fit": {
+    "windowS": [
+     130,
+     345
+    ],
+    "windowKW": [
+     32,
+     1765.6
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.05457,
+    "t0S": 159.7,
+    "t0AfterWindowStart": true,
+    "n": 44,
+    "rmsKW": 73.6,
+    "r2": 0.9833,
+    "overMedium": 4.66,
+    "overFast": 1.16,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      128,
+      365
+     ],
+     "alpha": 0.04117,
+     "t0S": 142.2,
+     "n": 238,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.03531,
+     "t0S": 129.6
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 295,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 1984,
+     "printed": "1,984",
+     "uc": 102,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 6.22,
+     "printed": "6.22",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 811,
+     "printed": "811",
+     "uc": 45,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 52.116,
+     "printed": "52.116",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 15.56,
+     "printed": "15.56",
+     "uc": 0.86,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 34.67,
+     "printed": "34.67",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test030",
+   "kind": "sofa",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Sofa B (K-Loveseat+Chaise) with two A pillows",
+   "description": "Sofa B (K-Loveseat + Chase with Polyurethane Foam bottom cushions; polyester batting back cushions;) with 2 A pillows (one at each armrest); 1\" propane flame ignition under right pillow. 96582g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test030",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702484624_Test030.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Pool Fire Underneath @ 286.8 s",
+    "Peak HRR @ 550.2 s",
+    "Raking coals @ 2041.2 s",
+    "Fire Out @ 2211 s"
+   ],
+   "recordS": [
+    -375,
+    2841
+   ],
+   "peakKW": 2988.2,
+   "peakAtS": 550,
+   "rawPeakKW": 2994.3,
+   "rawPeakAtS": 550,
+   "energyMJ": 1437.8,
+   "energyToFireOutMJ": 1425.5,
+   "hrrAtFireOutKW": 61.3,
+   "burnerChannelMJ": 0.12,
+   "massInitialKg": 96.58,
+   "massFinalKg": 18.69,
+   "massLostKg": 77.89,
+   "effectiveHeatOfCombustionMJkg": 18.46,
+   "effectiveHeatOfCombustionToFireOutMJkg": 18.3,
+   "fit": {
+    "windowS": [
+     135,
+     540
+    ],
+    "windowKW": [
+     28.3,
+     2713.5
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.0139,
+    "t0S": 77.8,
+    "t0AfterWindowStart": false,
+    "n": 82,
+    "rmsKW": 246.9,
+    "r2": 0.9294,
+    "overMedium": 1.19,
+    "overFast": 0.3,
+    "place": "between medium and fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      132,
+      537
+     ],
+     "alpha": 0.01415,
+     "t0S": 80.2,
+     "n": 406,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.01777,
+     "t0S": 118.8
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 346,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 2994,
+     "printed": "2,994",
+     "uc": 153,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 9.17,
+     "printed": "9.17",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 1426,
+     "printed": "1,426",
+     "uc": 78,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 77.888,
+     "printed": "77.888",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 18.3,
+     "printed": "18.3",
+     "uc": 1,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 36.85,
+     "printed": "36.85",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test034",
+   "kind": "sofa",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Sofa C with two A pillows",
+   "description": "Sofa C (Polyurethane Foam with Polyester batting) and two A pillows; 1\" propane flame ignition. 50849g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test034",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702501453_Test034.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "Whole back is flaming @ 277.8 s",
+    "Pool Fire @ 307.8 s",
+    "Peak HRR @ 363 s",
+    "water suppression @ 1801.2 s",
+    "Fire Out @ 1813.2 s"
+   ],
+   "recordS": [
+    -231,
+    1988
+   ],
+   "peakKW": 4016.2,
+   "peakAtS": 365,
+   "rawPeakKW": 4020.9,
+   "rawPeakAtS": 363,
+   "energyMJ": 634.1,
+   "energyToFireOutMJ": 633.5,
+   "hrrAtFireOutKW": 32.4,
+   "burnerChannelMJ": 0.2,
+   "massInitialKg": 50.85,
+   "massFinalKg": 16.66,
+   "massLostKg": 34.19,
+   "effectiveHeatOfCombustionMJkg": 18.55,
+   "effectiveHeatOfCombustionToFireOutMJkg": 18.53,
+   "fit": {
+    "windowS": [
+     80,
+     360
+    ],
+    "windowKW": [
+     37.1,
+     3880.9
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.18409,
+    "t0S": 215.5,
+    "t0AfterWindowStart": true,
+    "n": 57,
+    "rmsKW": 140.7,
+    "r2": 0.9813,
+    "overMedium": 15.73,
+    "overFast": 3.93,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      77,
+      356
+     ],
+     "alpha": 0.18242,
+     "t0S": 215.1,
+     "n": 280,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.02998,
+     "t0S": 88.5
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 289,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 4021,
+     "printed": "4,021",
+     "uc": 205,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 6.05,
+     "printed": "6.05",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 633,
+     "printed": "633",
+     "uc": 37,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 34.191,
+     "printed": "34.191",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 18.5,
+     "printed": "18.5",
+     "uc": 1.1,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 30.22,
+     "printed": "30.22",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test035",
+   "kind": "sofa",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Sofa A (Loveseat) with two A pillows",
+   "description": "Sofa A (H19K-Loveseat with Polyurethane Foam and modified seat cushions: 2 layers of PUF + polyester batting) with 2 A pillows; 1\" propane flame ignition. 5752g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test035",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702565036_Test035.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Pool Fire Underneath @ 196.8 s",
+    "Peak HRR @ 379.2 s",
+    "Raking Coals @ 2404.2 s",
+    "Fire Out @ 2590.2 s"
+   ],
+   "recordS": [
+    -216,
+    2895
+   ],
+   "peakKW": 1810.9,
+   "peakAtS": 380,
+   "rawPeakKW": 1823.5,
+   "rawPeakAtS": 379,
+   "energyMJ": 840.7,
+   "energyToFireOutMJ": 838.3,
+   "hrrAtFireOutKW": 35.2,
+   "burnerChannelMJ": 0.33,
+   "massInitialKg": 56.73,
+   "massFinalKg": 8.17,
+   "massLostKg": 48.56,
+   "effectiveHeatOfCombustionMJkg": 17.31,
+   "effectiveHeatOfCombustionToFireOutMJkg": 17.26,
+   "fit": {
+    "windowS": [
+     130,
+     370
+    ],
+    "windowKW": [
+     41.8,
+     1708.6
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.02203,
+    "t0S": 79.8,
+    "t0AfterWindowStart": false,
+    "n": 49,
+    "rmsKW": 108.4,
+    "r2": 0.9629,
+    "overMedium": 1.88,
+    "overFast": 0.47,
+    "place": "between medium and fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      126,
+      367
+     ],
+     "alpha": 0.02266,
+     "t0S": 82.2,
+     "n": 242,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.02748,
+     "t0S": 102.6
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 293,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 1823,
+     "printed": "1,823",
+     "uc": 94,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 6.32,
+     "printed": "6.32",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 838,
+     "printed": "838",
+     "uc": 48,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 48.557,
+     "printed": "48.557",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 17.27,
+     "printed": "17.27",
+     "uc": 0.98,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 43.17,
+     "printed": "43.17",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test036",
+   "kind": "sofa",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Sofa B (Loveseat + Chaise) with two A pillows",
+   "description": "Sofa B (K-Loveseat + Chase with Polyurethane Foam bottom cushions; polyester batting back cushions;) with 2 A pillows in middle of sofa; 1\" propane flame ignition under pillows. 97393g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test036",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702570732_Test036.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "Pool Fire Underneath @ 214.2 s",
+    "Peak HRR @ 351 s",
+    "Raking Coals @ 1780.8 s",
+    "water suppression @ 2097 s",
+    "Fire Out @ 2100 s"
+   ],
+   "recordS": [
+    -348,
+    2478
+   ],
+   "peakKW": 5107.5,
+   "peakAtS": 350,
+   "rawPeakKW": 5152.6,
+   "rawPeakAtS": 351,
+   "energyMJ": 1414.4,
+   "energyToFireOutMJ": 1411.8,
+   "hrrAtFireOutKW": 48.5,
+   "burnerChannelMJ": 0.4,
+   "massInitialKg": 97.39,
+   "massFinalKg": 19.85,
+   "massLostKg": 77.54,
+   "effectiveHeatOfCombustionMJkg": 18.24,
+   "effectiveHeatOfCombustionToFireOutMJkg": 18.21,
+   "fit": {
+    "windowS": [
+     105,
+     345
+    ],
+    "windowKW": [
+     50,
+     4844
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.15046,
+    "t0S": 162.5,
+    "t0AfterWindowStart": true,
+    "n": 49,
+    "rmsKW": 171.1,
+    "r2": 0.9866,
+    "overMedium": 12.86,
+    "overFast": 3.21,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      100,
+      342
+     ],
+     "alpha": 0.15407,
+     "t0S": 163.9,
+     "n": 243,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.06783,
+     "t0S": 104.1
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 244,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 5153,
+     "printed": "5,153",
+     "uc": 264,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 5.85,
+     "printed": "5.85",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 1412,
+     "printed": "1,412",
+     "uc": 80,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 77.541,
+     "printed": "77.541",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 18.2,
+     "printed": "18.2",
+     "uc": 1,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 35,
+     "printed": "35.00",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test040",
+   "kind": "sofa",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Sofa B (K-Loveseat) with two A pillows",
+   "description": "K-Loveseat with Polyurethane Foam; 1\" propane flame ignition. 56090g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test040",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702651637_Test040.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": -0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Pool Fire Underneath @ 258 s",
+    "Peak HRR @ 391.8 s",
+    "increased hood flow to 40 kg/s @ 393 s",
+    "hood flow back to 30 kg/s @ 673.2 s",
+    "Raking Coals @ 1984.2 s",
+    "water suppression @ 2122.8 s",
+    "Fire Out @ 2166 s"
+   ],
+   "recordS": [
+    -1050,
+    2607
+   ],
+   "peakKW": 2199.1,
+   "peakAtS": 390,
+   "rawPeakKW": 2217.2,
+   "rawPeakAtS": 392,
+   "energyMJ": 891.1,
+   "energyToFireOutMJ": 890.9,
+   "hrrAtFireOutKW": 23.7,
+   "burnerChannelMJ": 0.2,
+   "massInitialKg": 58.87,
+   "massFinalKg": 9.14,
+   "massLostKg": 49.73,
+   "effectiveHeatOfCombustionMJkg": 17.92,
+   "effectiveHeatOfCombustionToFireOutMJkg": 17.91,
+   "fit": {
+    "windowS": [
+     70,
+     380
+    ],
+    "windowKW": [
+     32.5,
+     1979.8
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.03269,
+    "t0S": 155,
+    "t0AfterWindowStart": true,
+    "n": 63,
+    "rmsKW": 181.9,
+    "r2": 0.8485,
+    "overMedium": 2.79,
+    "overFast": 0.7,
+    "place": "between medium and fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      66,
+      381
+     ],
+     "alpha": 0.03073,
+     "t0S": 149.7,
+     "n": 316,
+     "readingsAtOrBelow25kWInWindow": 1
+    },
+    "sqrtLine5s": {
+     "alpha": 0.0088,
+     "t0S": 14.2
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 330,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 2217,
+     "printed": "2,217",
+     "uc": 115,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 6.53,
+     "printed": "6.53",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 891,
+     "printed": "891",
+     "uc": 51,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 49.738,
+     "printed": "49.738",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 17.9,
+     "printed": "17.9",
+     "uc": 1,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 36.1,
+     "printed": "36.10",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test041",
+   "kind": "sofa",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Sofa B (K-Loveseat + Chaise) with two A pillows",
+   "description": "Sofa B (K-Loveseat + Chase with Polyurethane Foam bottom cushions; polyester batting back cushions;) with 2 A pillows (one behind sofa); 1\" propane flame ignition under pillow behind sofa. 97960g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test041",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702658643_Test041.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": -0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Pool Fire Underneath @ 487.2 s",
+    "Increased Hood Flow @ 610.8 s",
+    "Peak HRR @ 637.8 s",
+    "Water cooling on the curtain @ 694.2 s",
+    "Raking Coals @ 2242.8 s",
+    "water suppression @ 2347.2 s",
+    "Fire Out @ 2358 s"
+   ],
+   "recordS": [
+    -341,
+    2533
+   ],
+   "peakKW": 3968.7,
+   "peakAtS": 635,
+   "rawPeakKW": 4035.8,
+   "rawPeakAtS": 638,
+   "energyMJ": 1414.7,
+   "energyToFireOutMJ": 1413.1,
+   "hrrAtFireOutKW": 76.2,
+   "burnerChannelMJ": 0.2,
+   "massInitialKg": 97.76,
+   "massFinalKg": 20.63,
+   "massLostKg": 77.13,
+   "effectiveHeatOfCombustionMJkg": 18.34,
+   "effectiveHeatOfCombustionToFireOutMJkg": 18.32,
+   "fit": {
+    "windowS": [
+     150,
+     605
+    ],
+    "windowKW": [
+     26.5,
+     3684.2
+    ],
+    "readingsAtOrBelow25kWInWindow": [
+     155,
+     160,
+     165,
+     170,
+     175,
+     180,
+     185,
+     190,
+     195
+    ],
+    "alpha": 0.06728,
+    "t0S": 378.9,
+    "t0AfterWindowStart": true,
+    "n": 92,
+    "rmsKW": 104.6,
+    "r2": 0.987,
+    "overMedium": 5.75,
+    "overFast": 1.43,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      149,
+      604
+     ],
+     "alpha": 0.06563,
+     "t0S": 377.1,
+     "n": 456,
+     "readingsAtOrBelow25kWInWindow": 38
+    },
+    "sqrtLine5s": {
+     "alpha": 0.01212,
+     "t0S": 201
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 501,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 4036,
+     "printed": "4,036",
+     "uc": 207,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 10.63,
+     "printed": "10.63",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 1413,
+     "printed": "1,413",
+     "uc": 80,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 77.132,
+     "printed": "77.132",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 18.3,
+     "printed": "18.3",
+     "uc": 1,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 39.3,
+     "printed": "39.30",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test025",
+   "kind": "three stacked chairs",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Three Stacked A Chairs",
+   "description": "3 Stacked A chairs (metal frame with particle board seat and back); 1\" propane flame ignition. 29008g. Camera setting: F4.0,1/60,Gain:0. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test025",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702396196_Test025.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": -0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Flame Dripping @ 1938 s",
+    "Peak HRR @ 2941.8 s",
+    "water suppression @ 4801.2 s",
+    "Fire Out @ 4822.2 s"
+   ],
+   "recordS": [
+    -247,
+    4966
+   ],
+   "peakKW": 756.1,
+   "peakAtS": 2940,
+   "rawPeakKW": 765.9,
+   "rawPeakAtS": 2942,
+   "energyMJ": 318.9,
+   "energyToFireOutMJ": 318.9,
+   "hrrAtFireOutKW": 7,
+   "burnerChannelMJ": 0.79,
+   "massInitialKg": 29.01,
+   "massFinalKg": 19.6,
+   "massLostKg": 9.41,
+   "effectiveHeatOfCombustionMJkg": 33.89,
+   "effectiveHeatOfCombustionToFireOutMJkg": 33.89,
+   "fit": {
+    "windowS": [
+     1305,
+     2915
+    ],
+    "windowKW": [
+     25.1,
+     702.3
+    ],
+    "readingsAtOrBelow25kWInWindow": [
+     1585,
+     1595,
+     1600,
+     1610,
+     1615,
+     1620,
+     1625,
+     1630,
+     1635,
+     1665,
+     1675,
+     1685,
+     1690,
+     1700,
+     1705,
+     1710,
+     1715,
+     1720,
+     1725,
+     1730,
+     1735,
+     1740,
+     1745,
+     1750,
+     1755,
+     1760,
+     1765,
+     1770,
+     1775,
+     1780,
+     1785,
+     1790,
+     1795,
+     1800,
+     1805,
+     1810,
+     1815,
+     1820,
+     1825,
+     1830,
+     1835,
+     1840,
+     1845,
+     1850,
+     1855,
+     1860,
+     1865,
+     1870,
+     1875,
+     1880,
+     1885,
+     1890,
+     1895,
+     1900,
+     1905,
+     1910,
+     1915,
+     1920,
+     1925,
+     1930,
+     1935,
+     1940,
+     1945,
+     1950,
+     1955,
+     1960,
+     1965,
+     1970,
+     1975,
+     1980,
+     1985,
+     1990,
+     1995,
+     2000,
+     2005,
+     2010,
+     2015,
+     2020,
+     2030,
+     2035,
+     2040,
+     2065,
+     2070,
+     2075
+    ],
+    "alpha": 0.00163,
+    "t0S": 2324.6,
+    "t0AfterWindowStart": true,
+    "n": 323,
+    "rmsKW": 44.7,
+    "r2": 0.8836,
+    "overMedium": 0.14,
+    "overFast": 0.03,
+    "place": "below slow"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      1299,
+      2913
+     ],
+     "alpha": 0.00153,
+     "t0S": 2312,
+     "n": 1615,
+     "readingsAtOrBelow25kWInWindow": 423
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00007,
+     "t0S": 1083.2
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 3108,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 766,
+     "printed": "766",
+     "uc": 40,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 49.03,
+     "printed": "49.03",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 319,
+     "printed": "319",
+     "uc": 22,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 1,
+     "printed": "1",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 9.4,
+     "printed": "9.4",
+     "uc": 1.1,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 33.9,
+     "printed": "33.9",
+     "uc": 4.6,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 80.37,
+     "printed": "80.37",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test045",
+   "kind": "three stacked chairs",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Three Stacked I Chairs",
+   "description": "3 Stackable I Chairs; 1\" propane flame ignition. 20126 g. Camera setting: F4.0,1/60,Gain=10dv. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test045",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702926869_Test045.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0,
+   "events": [
+    "Ignition @ 0 s",
+    "Flame Dripping @ 99 s",
+    "Peak HRR @ 645 s",
+    "Pool Fire @ 1131 s",
+    "raking coals @ 1704 s",
+    "water suppression @ 1791 s",
+    "Fire Out @ 1795.8 s"
+   ],
+   "recordS": [
+    -257,
+    1933
+   ],
+   "peakKW": 274.6,
+   "peakAtS": 645,
+   "rawPeakKW": 281.8,
+   "rawPeakAtS": 645,
+   "energyMJ": 132.5,
+   "energyToFireOutMJ": 132.1,
+   "hrrAtFireOutKW": 21.5,
+   "burnerChannelMJ": 0.2,
+   "massInitialKg": 20.13,
+   "massFinalKg": 12.37,
+   "massLostKg": 7.76,
+   "effectiveHeatOfCombustionMJkg": 17.08,
+   "effectiveHeatOfCombustionToFireOutMJkg": 17.02,
+   "fit": {
+    "windowS": [
+     335,
+     645
+    ],
+    "windowKW": [
+     34.3,
+     274.6
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.0006,
+    "t0S": 88.7,
+    "t0AfterWindowStart": false,
+    "n": 63,
+    "rmsKW": 21.1,
+    "r2": 0.8036,
+    "overMedium": 0.05,
+    "overFast": 0.01,
+    "place": "below slow"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      333,
+      642
+     ],
+     "alpha": 0.00051,
+     "t0S": 58.4,
+     "n": 310,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00047,
+     "t0S": 37.2
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 1381,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 282,
+     "printed": "282",
+     "uc": 16,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 10.75,
+     "printed": "10.75",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 132.1,
+     "printed": "132.1",
+     "uc": 9.9,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 7.754,
+     "printed": "7.754",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 17,
+     "printed": "17.0",
+     "uc": 1.3,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 29.93,
+     "printed": "29.93",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "Test047",
+   "kind": "three stacked chairs",
+   "project": "Design Fires - Residential and Office Items",
+   "specimen": "Three Stacked D Chairs",
+   "description": "3 Stacked D Chairs; 1\" propane flame ignition. 23148 g. Camera setting: F4.0,1/60,Gain=10db. LED 100% power",
+   "ignition": "propane wand",
+   "page": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test047",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702934916_Test047.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)",
+    "Ksmoke (1/m)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 0.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Flame Dripping @ 196.8 s",
+    "Peak HRR @ 295.2 s",
+    "Pool Fire @ 430.2 s",
+    "Pool fire flamed out @ 598.2 s",
+    "water suppression @ 1806 s",
+    "Fire Out @ 1807.8 s"
+   ],
+   "recordS": [
+    -255,
+    2022
+   ],
+   "peakKW": 370.9,
+   "peakAtS": 295,
+   "rawPeakKW": 376.9,
+   "rawPeakAtS": 295,
+   "energyMJ": 115.1,
+   "energyToFireOutMJ": 114.8,
+   "hrrAtFireOutKW": 6.3,
+   "burnerChannelMJ": 0.26,
+   "massInitialKg": 23.15,
+   "massFinalKg": 16.73,
+   "massLostKg": 6.42,
+   "effectiveHeatOfCombustionMJkg": 17.92,
+   "effectiveHeatOfCombustionToFireOutMJkg": 17.87,
+   "fit": {
+    "windowS": [
+     140,
+     240
+    ],
+    "windowKW": [
+     34,
+     347.2
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.01276,
+    "t0S": 68.3,
+    "t0AfterWindowStart": false,
+    "n": 21,
+    "rmsKW": 20.1,
+    "r2": 0.9586,
+    "overMedium": 1.09,
+    "overFast": 0.27,
+    "place": "between medium and fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      136,
+      237
+     ],
+     "alpha": 0.01388,
+     "t0S": 73.2,
+     "n": 102,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.01571,
+     "t0S": 81.6
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 348,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 377,
+     "printed": "377",
+     "uc": 21,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 4.92,
+     "printed": "4.92",
+     "uc": 0.07,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 114.8,
+     "printed": "114.8",
+     "uc": 8.5,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 6.414,
+     "printed": "6.414",
+     "uc": 0.028,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 17.9,
+     "printed": "17.9",
+     "uc": 1.3,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 30.13,
+     "printed": "30.13",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 9
+   }
+  },
+  {
+   "id": "C0-1",
+   "kind": "chair mock-up, no barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: None, Cover Fabric: Polypropylene (3kg), Filling Material: Polyethalene (6kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-1",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528740682_C0-1.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 2.2,
+   "events": [
+    "Ignition @ 0 s",
+    "burner removed @ 81 s",
+    "Flame dripping @ 142.8 s",
+    "Peak HRR @ 184.2 s",
+    "Suppression @ 862.2 s",
+    "Fire Out @ 876 s"
+   ],
+   "recordS": [
+    -492,
+    1138
+   ],
+   "peakKW": 2822.6,
+   "peakAtS": 195,
+   "rawPeakKW": 2834.2,
+   "rawPeakAtS": 182,
+   "energyMJ": 314.7,
+   "energyToFireOutMJ": 314.8,
+   "hrrAtFireOutKW": 2.5,
+   "burnerChannelMJ": 0.06,
+   "massInitialKg": 14.07,
+   "massFinalKg": 1.51,
+   "massLostKg": 12.56,
+   "effectiveHeatOfCombustionMJkg": 25.06,
+   "effectiveHeatOfCombustionToFireOutMJkg": 25.07,
+   "fit": {
+    "windowS": [
+     20,
+     180
+    ],
+    "windowKW": [
+     28.7,
+     2769.5
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.12576,
+    "t0S": 40.5,
+    "t0AfterWindowStart": true,
+    "n": 33,
+    "rmsKW": 177.5,
+    "r2": 0.9425,
+    "overMedium": 10.75,
+    "overFast": 2.68,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      16,
+      176
+     ],
+     "alpha": 0.1037,
+     "t0S": 31.4,
+     "n": 161,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.06955,
+     "t0S": 7
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 130,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 2834,
+     "printed": "2,834",
+     "uc": 168,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 3.07,
+     "printed": "3.07",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 315,
+     "printed": "315",
+     "uc": 20,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 12.56,
+     "printed": "12.56",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 25.1,
+     "printed": "25.1",
+     "uc": 1.6,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 14.6,
+     "printed": "14.60",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "C0-2",
+   "kind": "chair mock-up, no barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: None , Cover Fabric: Polypropylene (3kg), Filling Material: Polyethalene (6kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-2",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1529333117_C0-2.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 2,
+   "events": [
+    "Ignition @ 0 s",
+    "Burner removed @ 81 s",
+    "Dripping @ 103.8 s",
+    "Pool Fire @ 154.8 s",
+    "Peak HRR @ 210 s",
+    "Suppression @ 958.8 s",
+    "Fire Out @ 970.2 s"
+   ],
+   "recordS": [
+    -160,
+    1209
+   ],
+   "peakKW": 2668.9,
+   "peakAtS": 210,
+   "rawPeakKW": 2696.6,
+   "rawPeakAtS": 208,
+   "energyMJ": 324.6,
+   "energyToFireOutMJ": 324.7,
+   "hrrAtFireOutKW": 2.6,
+   "burnerChannelMJ": -0.1,
+   "massInitialKg": 13.96,
+   "massFinalKg": 0.76,
+   "massLostKg": 13.2,
+   "effectiveHeatOfCombustionMJkg": 24.59,
+   "effectiveHeatOfCombustionToFireOutMJkg": 24.6,
+   "fit": {
+    "windowS": [
+     20,
+     195
+    ],
+    "windowKW": [
+     32.1,
+     2472.6
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.08712,
+    "t0S": 33.5,
+    "t0AfterWindowStart": true,
+    "n": 36,
+    "rmsKW": 188.5,
+    "r2": 0.9249,
+    "overMedium": 7.45,
+    "overFast": 1.86,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      18,
+      193
+     ],
+     "alpha": 0.0814,
+     "t0S": 29.9,
+     "n": 176,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.0499,
+     "t0S": -2.5
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 141,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 2697,
+     "printed": "2,697",
+     "uc": 160,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 3.5,
+     "printed": "3.50",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 325,
+     "printed": "325",
+     "uc": 20,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 13.19,
+     "printed": "13.19",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 24.6,
+     "printed": "24.6",
+     "uc": 1.6,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 16.17,
+     "printed": "16.17",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "C0-3",
+   "kind": "chair mock-up, no barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: None , Cover Fabric: Polypropylene (3kg), Filling Material: Polyethalene (6kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-3",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1529500540_C0-3.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 2,
+   "events": [
+    "Ignition @ 0 s",
+    "Burner removed @ 81 s",
+    "Dripping @ 97.2 s",
+    "Pool Fire @ 142.2 s",
+    "Peak HRR @ 198 s",
+    "Fire Out @ 1165.8 s"
+   ],
+   "recordS": [
+    -166,
+    1402
+   ],
+   "peakKW": 2506,
+   "peakAtS": 195,
+   "rawPeakKW": 2517.2,
+   "rawPeakAtS": 196,
+   "energyMJ": 320.8,
+   "energyToFireOutMJ": 320.7,
+   "hrrAtFireOutKW": 2.5,
+   "burnerChannelMJ": -0.06,
+   "massInitialKg": 13.23,
+   "massFinalKg": 0.68,
+   "massLostKg": 12.55,
+   "effectiveHeatOfCombustionMJkg": 25.56,
+   "effectiveHeatOfCombustionToFireOutMJkg": 25.56,
+   "fit": {
+    "windowS": [
+     20,
+     185
+    ],
+    "windowKW": [
+     31.7,
+     2344.3
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.07315,
+    "t0S": 10.2,
+    "t0AfterWindowStart": false,
+    "n": 34,
+    "rmsKW": 140.6,
+    "r2": 0.9571,
+    "overMedium": 6.25,
+    "overFast": 1.56,
+    "place": "between fast and ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      15,
+      184
+     ],
+     "alpha": 0.07135,
+     "t0S": 8.9,
+     "n": 170,
+     "readingsAtOrBelow25kWInWindow": 0
+    },
+    "sqrtLine5s": {
+     "alpha": 0.05988,
+     "t0S": -2.7
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 127,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 2517,
+     "printed": "2,517",
+     "uc": 149,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 3.3,
+     "printed": "3.30",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 321,
+     "printed": "321",
+     "uc": 20,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 12.56,
+     "printed": "12.56",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 25.5,
+     "printed": "25.5",
+     "uc": 1.6,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 19.43,
+     "printed": "19.43",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "Control-Smoldering",
+   "kind": "chair mock-up, cigarette ignition",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: None , Cover Fabric: Polypropylene (3kg), Filling Material: Polyethalene (6kg) and Polyester (4 kg) Ignition with smodering cigarette",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/control-smoldering",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1529344888_Control-Smoldering.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 1.8,
+   "events": [
+    "Ignition @ 0 s",
+    "3 smoldering cigarttes placed in crevise @ 31.2 s",
+    "Peak HRR @ 1357.8 s",
+    "Fire Out @ 2416.8 s"
+   ],
+   "recordS": [
+    -821,
+    2519
+   ],
+   "peakKW": 2.9,
+   "peakAtS": 1825,
+   "rawPeakKW": 9.3,
+   "rawPeakAtS": 1356,
+   "energyMJ": -0.9,
+   "energyToFireOutMJ": -0.9,
+   "hrrAtFireOutKW": -1.2,
+   "burnerChannelMJ": -0.44,
+   "massInitialKg": null,
+   "massFinalKg": null,
+   "massLostKg": null,
+   "effectiveHeatOfCombustionMJkg": null,
+   "effectiveHeatOfCombustionToFireOutMJkg": null,
+   "fit": {
+    "why": "no reading above 25 kW"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "why": "no reading above 25 kW"
+    },
+    "sqrtLine5s": {
+     "why": "no reading above 25 kW"
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": null,
+    "extrapolated": null
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 9.4,
+     "printed": "9.4",
+     "uc": 4.8,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 22.63,
+     "printed": "22.63",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": null,
+     "printed": "below detection limit",
+     "uc": 6.4,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": null,
+     "printed": "Not measured",
+     "uc": null,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": null,
+     "printed": "Not measured",
+     "uc": null,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 40.28,
+     "printed": "40.28",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "B1-2",
+   "kind": "chair mock-up, fire barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: B1, Cover Fabric: Polypropylene (3kg), Filling Material: Polyethalene (6kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b1-2",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528896022_B1-2.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 2,
+   "events": [
+    "Ignition @ 0 s",
+    "Burner removed @ 81 s",
+    "Dripping @ 265.8 s",
+    "Pool fire @ 718.2 s",
+    "Peak HRR @ 1182 s",
+    "Suppression @ 2220 s",
+    "Fire Out @ 2260.8 s"
+   ],
+   "recordS": [
+    -176,
+    2587
+   ],
+   "peakKW": 1059.4,
+   "peakAtS": 1180,
+   "rawPeakKW": 1062.6,
+   "rawPeakAtS": 1180,
+   "energyMJ": 313.3,
+   "energyToFireOutMJ": 313.2,
+   "hrrAtFireOutKW": 5.7,
+   "burnerChannelMJ": -0.2,
+   "massInitialKg": 15.68,
+   "massFinalKg": 2.14,
+   "massLostKg": 13.54,
+   "effectiveHeatOfCombustionMJkg": 23.14,
+   "effectiveHeatOfCombustionToFireOutMJkg": 23.13,
+   "fit": {
+    "windowS": [
+     45,
+     1175
+    ],
+    "windowKW": [
+     27.5,
+     1023.2
+    ],
+    "readingsAtOrBelow25kWInWindow": [
+     90,
+     95,
+     100,
+     105,
+     110,
+     115,
+     120,
+     125,
+     130,
+     135,
+     140
+    ],
+    "alpha": 0.00004,
+    "t0S": -1155.5,
+    "t0AfterWindowStart": false,
+    "n": 227,
+    "rmsKW": 108.4,
+    "r2": -0.0598,
+    "overMedium": 0,
+    "overFast": 0,
+    "place": "below slow"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      43,
+      1173
+     ],
+     "alpha": 0.00004,
+     "t0S": -1157.5,
+     "n": 1131,
+     "readingsAtOrBelow25kWInWindow": 55
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00001,
+     "t0S": -3939.1
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 3638,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 1063,
+     "printed": "1,063",
+     "uc": 64,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 19.7,
+     "printed": "19.70",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 313,
+     "printed": "313",
+     "uc": 22,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 13.54,
+     "printed": "13.54",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 23.1,
+     "printed": "23.1",
+     "uc": 1.6,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 37.68,
+     "printed": "37.68",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "B2-1",
+   "kind": "chair mock-up, fire barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: B2, Cover Fabric: Polypropylene (3 kg), Filling Material: Polyethalene (6 kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b2-1",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528827554_B2-1.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 2.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Burner removed @ 81 s",
+    "Dripping @ 265.8 s",
+    "Pool Fire @ 553.2 s",
+    "Peak HRR @ 631.2 s",
+    "Suppression @ 1201.8 s",
+    "Fire Out @ 1222.8 s"
+   ],
+   "recordS": [
+    -312,
+    1793
+   ],
+   "peakKW": 2287.5,
+   "peakAtS": 630,
+   "rawPeakKW": 2320.3,
+   "rawPeakAtS": 629,
+   "energyMJ": 315,
+   "energyToFireOutMJ": 314.4,
+   "hrrAtFireOutKW": 11.9,
+   "burnerChannelMJ": -0.2,
+   "massInitialKg": 14.88,
+   "massFinalKg": 2.54,
+   "massLostKg": 12.34,
+   "effectiveHeatOfCombustionMJkg": 25.53,
+   "effectiveHeatOfCombustionToFireOutMJkg": 25.48,
+   "fit": {
+    "windowS": [
+     30,
+     620
+    ],
+    "windowKW": [
+     26.1,
+     2061.4
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 1.03806,
+    "t0S": 575.7,
+    "t0AfterWindowStart": true,
+    "n": 119,
+    "rmsKW": 202.3,
+    "r2": 0.4051,
+    "overMedium": 88.72,
+    "overFast": 22.13,
+    "place": "above ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      23,
+      621
+     ],
+     "alpha": 1.07032,
+     "t0S": 576.2,
+     "n": 599,
+     "readingsAtOrBelow25kWInWindow": 4
+    },
+    "sqrtLine5s": {
+     "alpha": 0.0007,
+     "t0S": -196.7
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 607,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 2320,
+     "printed": "2,320",
+     "uc": 138,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 10.52,
+     "printed": "10.52",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 314,
+     "printed": "314",
+     "uc": 20,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 12.34,
+     "printed": "12.34",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 25.5,
+     "printed": "25.5",
+     "uc": 1.7,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 20.38,
+     "printed": "20.38",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "B3-1",
+   "kind": "chair mock-up, fire barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: B3, Cover Fabric: Polypropylene (3kg), Filling Material: Polyethalene (6kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b3-1",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528823581_B3-1.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 1.8,
+   "events": [
+    "Ignition @ 0 s",
+    "Burner removed @ 81 s",
+    "Dripping @ 273 s",
+    "Pool Fire @ 526.2 s",
+    "Peak HRR @ 805.8 s",
+    "Suppression @ 1314 s",
+    "Fire Out @ 1339.8 s"
+   ],
+   "recordS": [
+    -159,
+    1705
+   ],
+   "peakKW": 652.4,
+   "peakAtS": 805,
+   "rawPeakKW": 656.9,
+   "rawPeakAtS": 804,
+   "energyMJ": 339.1,
+   "energyToFireOutMJ": 339.1,
+   "hrrAtFireOutKW": 5.5,
+   "burnerChannelMJ": -0.07,
+   "massInitialKg": 16,
+   "massFinalKg": 2.15,
+   "massLostKg": 13.85,
+   "effectiveHeatOfCombustionMJkg": 24.48,
+   "effectiveHeatOfCombustionToFireOutMJkg": 24.48,
+   "fit": {
+    "windowS": [
+     25,
+     670
+    ],
+    "windowKW": [
+     25.7,
+     589.3
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.00046,
+    "t0S": -419.9,
+    "t0AfterWindowStart": false,
+    "n": 130,
+    "rmsKW": 70.7,
+    "r2": 0.7916,
+    "overMedium": 0.04,
+    "overFast": 0.01,
+    "place": "below slow"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      19,
+      670
+     ],
+     "alpha": 0.00046,
+     "t0S": -417.7,
+     "n": 652,
+     "readingsAtOrBelow25kWInWindow": 12
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00071,
+     "t0S": -250.9
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 1056,
+    "extrapolated": true
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 657,
+     "printed": "657",
+     "uc": 40,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 13.43,
+     "printed": "13.43",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 339,
+     "printed": "339",
+     "uc": 22,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 13.85,
+     "printed": "13.85",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 24.5,
+     "printed": "24.5",
+     "uc": 1.6,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 22.33,
+     "printed": "22.33",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "B4-1",
+   "kind": "chair mock-up, fire barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: Glass B4, Cover Fabric: Polypropylene (3kg) Filling Material: Polyethalene (6kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b4-1",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528731061_B4-1.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 2,
+   "events": [
+    "Ignition @ 0 s",
+    "Gas off and burner removed @ 81 s",
+    "Flame dripping @ 202.8 s",
+    "Peak HRR @ 675 s",
+    "Suppression @ 1156.2 s",
+    "Fire Out @ 1179 s"
+   ],
+   "recordS": [
+    -326,
+    1517
+   ],
+   "peakKW": 2028.7,
+   "peakAtS": 675,
+   "rawPeakKW": 2084.1,
+   "rawPeakAtS": 673,
+   "energyMJ": 311.1,
+   "energyToFireOutMJ": 310.3,
+   "hrrAtFireOutKW": 9.2,
+   "burnerChannelMJ": 0.14,
+   "massInitialKg": 14.26,
+   "massFinalKg": 1.62,
+   "massLostKg": 12.64,
+   "effectiveHeatOfCombustionMJkg": 24.62,
+   "effectiveHeatOfCombustionToFireOutMJkg": 24.55,
+   "fit": {
+    "windowS": [
+     30,
+     670
+    ],
+    "windowKW": [
+     29,
+     1995.2
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.37919,
+    "t0S": 595,
+    "t0AfterWindowStart": true,
+    "n": 129,
+    "rmsKW": 213.5,
+    "r2": 0.5445,
+    "overMedium": 32.41,
+    "overFast": 8.09,
+    "place": "above ultra-fast"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      25,
+      668
+     ],
+     "alpha": 0.42043,
+     "t0S": 597.5,
+     "n": 644,
+     "readingsAtOrBelow25kWInWindow": 2
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00067,
+     "t0S": -215.9
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 646,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 2084,
+     "printed": "2,084",
+     "uc": 124,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 11.25,
+     "printed": "11.25",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 310,
+     "printed": "310",
+     "uc": 20,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 12.63,
+     "printed": "12.63",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 24.6,
+     "printed": "24.6",
+     "uc": 1.6,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 19.65,
+     "printed": "19.65",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "B5-1",
+   "kind": "chair mock-up, fire barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: B5 Cover Fabric: Polypropylene (3 kg), Filling Material: Polyethalene (6 kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b5-1",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528814873_B5-1.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 2.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Burner removed @ 81 s",
+    "Flame dripping @ 295.8 s",
+    "Pool Fire @ 675 s",
+    "Peak HRR @ 739.2 s",
+    "Suppression @ 1354.2 s",
+    "Fire Out @ 1377 s"
+   ],
+   "recordS": [
+    -173,
+    1838
+   ],
+   "peakKW": 1526.9,
+   "peakAtS": 740,
+   "rawPeakKW": 1547,
+   "rawPeakAtS": 737,
+   "energyMJ": 327.3,
+   "energyToFireOutMJ": 326.8,
+   "hrrAtFireOutKW": 11.7,
+   "burnerChannelMJ": 0.07,
+   "massInitialKg": 16.04,
+   "massFinalKg": 2.83,
+   "massLostKg": 13.21,
+   "effectiveHeatOfCombustionMJkg": 24.78,
+   "effectiveHeatOfCombustionToFireOutMJkg": 24.74,
+   "fit": {
+    "windowS": [
+     40,
+     725
+    ],
+    "windowKW": [
+     25.1,
+     1495.6
+    ],
+    "readingsAtOrBelow25kWInWindow": [
+     95,
+     100,
+     110
+    ],
+    "alpha": 0.00067,
+    "t0S": -115.8,
+    "t0AfterWindowStart": false,
+    "n": 138,
+    "rmsKW": 147.2,
+    "r2": 0.4477,
+    "overMedium": 0.06,
+    "overFast": 0.01,
+    "place": "below slow"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      39,
+      722
+     ],
+     "alpha": 0.0005,
+     "t0S": -195.7,
+     "n": 684,
+     "readingsAtOrBelow25kWInWindow": 18
+    },
+    "sqrtLine5s": {
+     "alpha": 0.00055,
+     "t0S": -158.8
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 1108,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 1547,
+     "printed": "1,547",
+     "uc": 92,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 12.32,
+     "printed": "12.32",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 327,
+     "printed": "327",
+     "uc": 21,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 13.21,
+     "printed": "13.21",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 24.7,
+     "printed": "24.7",
+     "uc": 1.6,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 22.95,
+     "printed": "22.95",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "B6-1",
+   "kind": "chair mock-up, fire barrier",
+   "project": "Fire Barriers in Full-Scale Chair Mock-ups",
+   "specimen": "upholstered chair mockup",
+   "description": "Fire Barrier: B6, Cover Fabric: Polypropylene (3kg), Filling Material: Polyethalene (6kg) and Polyester (4 kg)",
+   "ignition": "18 kW propane square burner",
+   "page": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b6-1",
+   "record": true,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528807400_B6-1.csv",
+   "columns": [
+    "Time (s)",
+    "Heat Release Rate (kW)",
+    "NG Burner HRR (kW)",
+    "Exhaust Mass Flow Rate (kg/s)",
+    "Oxygen (Vol Fr)",
+    "CO2 (Vol Fr)",
+    "CO (Vol Fr)",
+    "Radiant Heat Flux (kW/m^2)"
+   ],
+   "ignitionAtZero": true,
+   "peakEventLessRawPeakS": 2.2,
+   "events": [
+    "Ignition @ 0 s",
+    "Burner removed @ 82.2 s",
+    "Flame Dripping @ 228 s",
+    "Pool Fire @ 1449 s",
+    "Peak HRR @ 1492.2 s",
+    "Suppression @ 2436 s",
+    "Fire Out @ 2464.2 s"
+   ],
+   "recordS": [
+    -232,
+    2984
+   ],
+   "peakKW": 1075.6,
+   "peakAtS": 1490,
+   "rawPeakKW": 1080,
+   "rawPeakAtS": 1490,
+   "energyMJ": 301.7,
+   "energyToFireOutMJ": 300.9,
+   "hrrAtFireOutKW": 8.1,
+   "burnerChannelMJ": 0.38,
+   "massInitialKg": 16.16,
+   "massFinalKg": 2.96,
+   "massLostKg": 13.2,
+   "effectiveHeatOfCombustionMJkg": 22.86,
+   "effectiveHeatOfCombustionToFireOutMJkg": 22.79,
+   "fit": {
+    "windowS": [
+     30,
+     1485
+    ],
+    "windowKW": [
+     26.7,
+     1031.5
+    ],
+    "readingsAtOrBelow25kWInWindow": [],
+    "alpha": 0.00003,
+    "t0S": -1170.5,
+    "t0AfterWindowStart": false,
+    "n": 292,
+    "rmsKW": 94.8,
+    "r2": 0.0506,
+    "overMedium": 0,
+    "overFast": 0,
+    "place": "below slow"
+   },
+   "secondRoutes": {
+    "raw1s": {
+     "windowS": [
+      29,
+      1481
+     ],
+     "alpha": 0.00003,
+     "t0S": -1171.5,
+     "n": 1453,
+     "readingsAtOrBelow25kWInWindow": 8
+    },
+    "sqrtLine5s": {
+     "alpha": 0,
+     "t0S": -3890.9
+    }
+   },
+   "beside": {
+    "note": "not pre-registered (as 15.6's note on the FSRI chairs): the fitted curve's time to 1 MW counted from ignition, t0 + sqrt(1000 / alpha); extrapolated where the item's 5 s peak is under 1 MW",
+    "oneMWFromIgnitionS": 4819,
+    "extrapolated": false
+   },
+   "pageSummary": {
+    "peakKW": {
+     "value": 1080,
+     "printed": "1,080",
+     "uc": 65,
+     "unit": "kW"
+    },
+    "timeToPeakMin": {
+     "value": 24.87,
+     "printed": "24.87",
+     "uc": 0.17,
+     "unit": "min"
+    },
+    "thrMJ": {
+     "value": 301,
+     "printed": "301",
+     "uc": 22,
+     "unit": "MJ"
+    },
+    "burnerThrMJ": {
+     "value": 0,
+     "printed": "0",
+     "uc": null,
+     "unit": "MJ"
+    },
+    "massLostKg": {
+     "value": 13.21,
+     "printed": "13.21",
+     "uc": 0.11,
+     "unit": "kg"
+    },
+    "effectiveHeatOfCombustionMJkg": {
+     "value": 22.8,
+     "printed": "22.8",
+     "uc": 1.7,
+     "unit": "MJ/kg"
+    },
+    "durationMin": {
+     "value": 41.07,
+     "printed": "41.07",
+     "uc": 0.03,
+     "unit": "min"
+    },
+    "hoodM": 6
+   }
+  },
+  {
+   "id": "D2",
+   "kind": "chair mock-up, fire barrier",
+   "project": "(none named)",
+   "specimen": "Chair mockup",
+   "description": "Fire Barrier: B9 , Cover Fabric: Cotton 2518.2g, Polyester 5295.6g, Polyurethane 5477.8g, Plywood 2595.8g, Barrier 2195.3g.",
+   "ignition": "propane ring burner",
+   "page": "https://www.nist.gov/el/fcd/d2",
+   "record": false,
+   "csv": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Barrier_Fabric_Chair_Mockup/data/1650388787_D2.csv",
+   "why": "the record the page links was not served: 403"
+  }
+ ],
+ "noRecord": [
+  "D2 (the record the page links was not served: 403)"
+ ],
+ "byKind": {
+  "chair": {
+   "n": 10,
+   "fitted": 9,
+   "noFit": [
+    "Test048 (no reading above 25 kW)"
+   ],
+   "alpha": {
+    "n": 9,
+    "median": 0.09216,
+    "min": 0.00117,
+    "max": 0.24324,
+    "medium": "inside the range",
+    "fast": "inside the range"
+   },
+   "alphaRaw1s": {
+    "n": 9,
+    "median": 0.06795,
+    "min": 0.00117,
+    "max": 0.31668,
+    "medium": "inside the range",
+    "fast": "inside the range"
+   },
+   "alphaSqrtLine5s": {
+    "n": 9,
+    "median": 0.00262,
+    "min": 0.00007,
+    "max": 0.09588,
+    "medium": "inside the range",
+    "fast": "inside the range"
+   },
+   "peakKW": {
+    "n": 10,
+    "median": 429.7,
+    "min": 17.1,
+    "max": 1693.1
+   },
+   "rawPeakKW": {
+    "n": 10,
+    "median": 434.3,
+    "min": 18.8,
+    "max": 1733.3
+   },
+   "energyMJ": {
+    "n": 10,
+    "median": 46.2,
+    "min": 1.4,
+    "max": 384.3
+   },
+   "energyToFireOutMJ": {
+    "n": 10,
+    "median": 46.2,
+    "min": 1.4,
+    "max": 380.7
+   },
+   "massLostKg": {
+    "n": 10,
+    "median": 2.7,
+    "min": 0.11,
+    "max": 22.31
+   },
+   "effectiveHeatOfCombustionMJkg": {
+    "n": 10,
+    "median": 19.17,
+    "min": 12.78,
+    "max": 37.04
+   },
+   "effectiveHeatOfCombustionToFireOutMJkg": {
+    "n": 10,
+    "median": 19.17,
+    "min": 12.89,
+    "max": 37.02
+   },
+   "beside": {
+    "oneMWFromIgnitionS": {
+     "n": 1,
+     "median": 180,
+     "min": 180,
+     "max": 180
+    },
+    "note": "items whose 5 s peak reaches 1 MW only"
+   }
+  },
+  "sofa": {
+   "n": 7,
+   "fitted": 7,
+   "noFit": [],
+   "alpha": {
+    "n": 7,
+    "median": 0.05457,
+    "min": 0.0139,
+    "max": 0.18409,
+    "medium": "below the range",
+    "fast": "inside the range"
+   },
+   "alphaRaw1s": {
+    "n": 7,
+    "median": 0.04117,
+    "min": 0.01415,
+    "max": 0.18242,
+    "medium": "below the range",
+    "fast": "inside the range"
+   },
+   "alphaSqrtLine5s": {
+    "n": 7,
+    "median": 0.02748,
+    "min": 0.0088,
+    "max": 0.06783,
+    "medium": "inside the range",
+    "fast": "inside the range"
+   },
+   "peakKW": {
+    "n": 7,
+    "median": 2988.2,
+    "min": 1810.9,
+    "max": 5107.5
+   },
+   "rawPeakKW": {
+    "n": 7,
+    "median": 2994.3,
+    "min": 1823.5,
+    "max": 5152.6
+   },
+   "energyMJ": {
+    "n": 7,
+    "median": 891.1,
+    "min": 634.1,
+    "max": 1437.8
+   },
+   "energyToFireOutMJ": {
+    "n": 7,
+    "median": 890.9,
+    "min": 633.5,
+    "max": 1425.5
+   },
+   "massLostKg": {
+    "n": 7,
+    "median": 52.12,
+    "min": 34.19,
+    "max": 77.89
+   },
+   "effectiveHeatOfCombustionMJkg": {
+    "n": 7,
+    "median": 18.24,
+    "min": 15.97,
+    "max": 18.55
+   },
+   "effectiveHeatOfCombustionToFireOutMJkg": {
+    "n": 7,
+    "median": 18.21,
+    "min": 15.56,
+    "max": 18.53
+   },
+   "beside": {
+    "oneMWFromIgnitionS": {
+     "n": 7,
+     "median": 295,
+     "min": 244,
+     "max": 501
+    },
+    "note": "items whose 5 s peak reaches 1 MW only"
+   }
+  },
+  "three stacked chairs": {
+   "n": 3,
+   "fitted": 3,
+   "noFit": [],
+   "alpha": {
+    "n": 3,
+    "median": 0.00163,
+    "min": 0.0006,
+    "max": 0.01276,
+    "medium": "inside the range",
+    "fast": "above the range"
+   },
+   "alphaRaw1s": {
+    "n": 3,
+    "median": 0.00153,
+    "min": 0.00051,
+    "max": 0.01388,
+    "medium": "inside the range",
+    "fast": "above the range"
+   },
+   "alphaSqrtLine5s": {
+    "n": 3,
+    "median": 0.00047,
+    "min": 0.00007,
+    "max": 0.01571,
+    "medium": "inside the range",
+    "fast": "above the range"
+   },
+   "peakKW": {
+    "n": 3,
+    "median": 370.9,
+    "min": 274.6,
+    "max": 756.1
+   },
+   "rawPeakKW": {
+    "n": 3,
+    "median": 376.9,
+    "min": 281.8,
+    "max": 765.9
+   },
+   "energyMJ": {
+    "n": 3,
+    "median": 132.5,
+    "min": 115.1,
+    "max": 318.9
+   },
+   "energyToFireOutMJ": {
+    "n": 3,
+    "median": 132.1,
+    "min": 114.8,
+    "max": 318.9
+   },
+   "massLostKg": {
+    "n": 3,
+    "median": 7.76,
+    "min": 6.42,
+    "max": 9.41
+   },
+   "effectiveHeatOfCombustionMJkg": {
+    "n": 3,
+    "median": 17.92,
+    "min": 17.08,
+    "max": 33.89
+   },
+   "effectiveHeatOfCombustionToFireOutMJkg": {
+    "n": 3,
+    "median": 17.87,
+    "min": 17.02,
+    "max": 33.89
+   },
+   "beside": {
+    "oneMWFromIgnitionS": null,
+    "note": "items whose 5 s peak reaches 1 MW only"
+   }
+  },
+  "chair mock-up, no barrier": {
+   "n": 3,
+   "fitted": 3,
+   "noFit": [],
+   "alpha": {
+    "n": 3,
+    "median": 0.08712,
+    "min": 0.07315,
+    "max": 0.12576,
+    "medium": "below the range",
+    "fast": "below the range"
+   },
+   "alphaRaw1s": {
+    "n": 3,
+    "median": 0.0814,
+    "min": 0.07135,
+    "max": 0.1037,
+    "medium": "below the range",
+    "fast": "below the range"
+   },
+   "alphaSqrtLine5s": {
+    "n": 3,
+    "median": 0.05988,
+    "min": 0.0499,
+    "max": 0.06955,
+    "medium": "below the range",
+    "fast": "below the range"
+   },
+   "peakKW": {
+    "n": 3,
+    "median": 2668.9,
+    "min": 2506,
+    "max": 2822.6
+   },
+   "rawPeakKW": {
+    "n": 3,
+    "median": 2696.6,
+    "min": 2517.2,
+    "max": 2834.2
+   },
+   "energyMJ": {
+    "n": 3,
+    "median": 320.8,
+    "min": 314.7,
+    "max": 324.6
+   },
+   "energyToFireOutMJ": {
+    "n": 3,
+    "median": 320.7,
+    "min": 314.8,
+    "max": 324.7
+   },
+   "massLostKg": {
+    "n": 3,
+    "median": 12.56,
+    "min": 12.55,
+    "max": 13.2
+   },
+   "effectiveHeatOfCombustionMJkg": {
+    "n": 3,
+    "median": 25.06,
+    "min": 24.59,
+    "max": 25.56
+   },
+   "effectiveHeatOfCombustionToFireOutMJkg": {
+    "n": 3,
+    "median": 25.07,
+    "min": 24.6,
+    "max": 25.56
+   },
+   "beside": {
+    "oneMWFromIgnitionS": {
+     "n": 3,
+     "median": 130,
+     "min": 127,
+     "max": 141
+    },
+    "note": "items whose 5 s peak reaches 1 MW only"
+   }
+  },
+  "chair mock-up, cigarette ignition": {
+   "n": 1,
+   "fitted": 0,
+   "noFit": [
+    "Control-Smoldering (no reading above 25 kW)"
+   ],
+   "alpha": null,
+   "alphaRaw1s": null,
+   "alphaSqrtLine5s": null,
+   "peakKW": {
+    "n": 1,
+    "median": 2.9,
+    "min": 2.9,
+    "max": 2.9
+   },
+   "rawPeakKW": {
+    "n": 1,
+    "median": 9.3,
+    "min": 9.3,
+    "max": 9.3
+   },
+   "energyMJ": {
+    "n": 1,
+    "median": -0.9,
+    "min": -0.9,
+    "max": -0.9
+   },
+   "energyToFireOutMJ": {
+    "n": 1,
+    "median": -0.9,
+    "min": -0.9,
+    "max": -0.9
+   },
+   "massLostKg": null,
+   "effectiveHeatOfCombustionMJkg": null,
+   "effectiveHeatOfCombustionToFireOutMJkg": null,
+   "beside": {
+    "oneMWFromIgnitionS": null,
+    "note": "items whose 5 s peak reaches 1 MW only"
+   }
+  },
+  "chair mock-up, fire barrier": {
+   "n": 6,
+   "fitted": 6,
+   "noFit": [],
+   "alpha": {
+    "n": 6,
+    "median": 0.00056,
+    "min": 0.00003,
+    "max": 1.03806,
+    "medium": "inside the range",
+    "fast": "inside the range"
+   },
+   "alphaRaw1s": {
+    "n": 6,
+    "median": 0.00048,
+    "min": 0.00003,
+    "max": 1.07032,
+    "medium": "inside the range",
+    "fast": "inside the range"
+   },
+   "alphaSqrtLine5s": {
+    "n": 6,
+    "median": 0.00061,
+    "min": 0,
+    "max": 0.00071,
+    "medium": "above the range",
+    "fast": "above the range"
+   },
+   "peakKW": {
+    "n": 6,
+    "median": 1301.3,
+    "min": 652.4,
+    "max": 2287.5
+   },
+   "rawPeakKW": {
+    "n": 6,
+    "median": 1313.5,
+    "min": 656.9,
+    "max": 2320.3
+   },
+   "energyMJ": {
+    "n": 6,
+    "median": 314.1,
+    "min": 301.7,
+    "max": 339.1
+   },
+   "energyToFireOutMJ": {
+    "n": 6,
+    "median": 313.8,
+    "min": 300.9,
+    "max": 339.1
+   },
+   "massLostKg": {
+    "n": 6,
+    "median": 13.21,
+    "min": 12.34,
+    "max": 13.85
+   },
+   "effectiveHeatOfCombustionMJkg": {
+    "n": 6,
+    "median": 24.55,
+    "min": 22.86,
+    "max": 25.53
+   },
+   "effectiveHeatOfCombustionToFireOutMJkg": {
+    "n": 6,
+    "median": 24.52,
+    "min": 22.79,
+    "max": 25.48
+   },
+   "beside": {
+    "oneMWFromIgnitionS": {
+     "n": 5,
+     "median": 1108,
+     "min": 607,
+     "max": 4819
+    },
+    "note": "items whose 5 s peak reaches 1 MW only"
+   }
+  }
+ },
+ "sources": [
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test016",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test016",
+   "sha256": "92aef1170041c277ec6633a364d9fba7f45a69921e669e1010618a920c6fc07b",
+   "bytes": 98044
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1701963874_Test016.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1701963874_Test016.csv",
+   "sha256": "11fc0edc4ea4bec9f5487e7e23349b23cdc0894c7585a8b26077e9dc0d5ac4e1",
+   "bytes": 263936
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test017",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test017",
+   "sha256": "1f8fcc5570802311bca2e048a2d2a0991e1e68590bbc61f45d4378485bcdd10c",
+   "bytes": 96240
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1701973093_Test017.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1701973093_Test017.csv",
+   "sha256": "ddc526ac899f9fbd17380a831c6cfa39fb2136464361d834bc102277f7721eaf",
+   "bytes": 88355
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test019",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test019",
+   "sha256": "d4cdf4f8ea9ece89e17e24b1cb1ebe7ac9204333ad86e1991396df9b63888fec",
+   "bytes": 96089
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1701977909_Test019.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1701977909_Test019.csv",
+   "sha256": "5409c120bc5ad81c8593768968f83e0966a4d7bd02ff0d5ae6910b10266c182a",
+   "bytes": 83120
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test020",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test020",
+   "sha256": "27e3e9ae06d15f253ab50fe00ea5a5edae34b9dbc9a4825efa2050c77c7135e1",
+   "bytes": 96044
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1701980339_Test020.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1701980339_Test020.csv",
+   "sha256": "2d543d21f7f937fcb618c4bc10132c14e549ea41ed88650e0871095f3796c7dd",
+   "bytes": 180717
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test021",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test021",
+   "sha256": "8c580b6090fe01950509b93c103cb5e994a594b0c050887809689367bb6a1874",
+   "bytes": 96917
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702318511_Test021.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702318511_Test021.csv",
+   "sha256": "c6f106da98e74552cb6a7bdd397480472c18191ab3996a53603009e7a009860c",
+   "bytes": 205865
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test022",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test022",
+   "sha256": "41ef4d62d1c9e068ae7087ca05599ce56c835c25a54bdcdbcbc2c4ba9cf76c09",
+   "bytes": 96044
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702325783_Test022.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702325783_Test022.csv",
+   "sha256": "14484a7ccb6e1a2da387cb78b68f9ae18e47092594e20181a2e561dcb8002e33",
+   "bytes": 148579
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test024",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test024",
+   "sha256": "424dccdfffbf31bd546276c4850a550745dddfea9001b1b42c7fd66aaa0fdf52",
+   "bytes": 96132
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702393541_Test024.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702393541_Test024.csv",
+   "sha256": "62cb9b0a687b9799bad72c1c03564020c6d91d13754e484cf85c307157d03a78",
+   "bytes": 73630
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test027",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test027",
+   "sha256": "6f1eb66a215cd85af7246601a8a1ffe127f19fbe5cd69c0d10b717b38024adaa",
+   "bytes": 96121
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702411504_Test027.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702411504_Test027.csv",
+   "sha256": "3b3a0a71ac3c2ad56d57d90297d15c28f89b945fbf5142798d6cbd23f3ab1176",
+   "bytes": 144402
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test046",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test046",
+   "sha256": "2ccb1f5839f68e52377caa7ad9ed889d2564e418cde8151e57fe66131e658c17",
+   "bytes": 95958
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702930602_Test046.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702930602_Test046.csv",
+   "sha256": "745a793acffa2b3b633278fa24e00569845775cafcd9010466bad5c86270378e",
+   "bytes": 170889
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test048",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test048",
+   "sha256": "dac923f65e3ec06be8317e7b7db874e72ba1b04b504730509a541d013fff4d33",
+   "bytes": 95470
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702938569_Test048.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702938569_Test048.csv",
+   "sha256": "571630c261b6620e00971ab37edd9cd655cb073f5099170df6bfd046f9f9fcc3",
+   "bytes": 38209
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test029",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test029",
+   "sha256": "63bd9a08ea3aee5b8546892e35cbdbe6fc8e3eba1aaa25ae49ee09f072146901",
+   "bytes": 97374
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702479452_Test029.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702479452_Test029.csv",
+   "sha256": "c588f8803729e6742c2d7e91cdf37b3908628c7408c2456e4db1a6767da21631",
+   "bytes": 204377
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test030",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test030",
+   "sha256": "f449ff34927f3a20aa9288052df2ac8c04cfa25894290ebae849f084ef2bd734",
+   "bytes": 96745
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702484624_Test030.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702484624_Test030.csv",
+   "sha256": "8ba0f6bb59cc1c8112367a03a0ea4fdcf63883cba5d15a031af5be499fe7bd5c",
+   "bytes": 202542
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test034",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test034",
+   "sha256": "5c426fa41fff2894208e8546691fbee91e98e375dd8c6567326fbcc77a806c32",
+   "bytes": 96852
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702501453_Test034.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702501453_Test034.csv",
+   "sha256": "2d0e4efc35af5f6369171964b907499dbddc57895a4c755d49cc3cd287f3947d",
+   "bytes": 139169
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test035",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test035",
+   "sha256": "09c4d4e4c980b4cd3935be84b0fe47bdf21959e849444426fa0bf2396f167e5b",
+   "bytes": 96586
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702565036_Test035.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702565036_Test035.csv",
+   "sha256": "dc40210231d6d0ebd1d3feb8280fade236424bb807580c20186e4f1eac482e91",
+   "bytes": 197381
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test036",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test036",
+   "sha256": "35ef22825bced94814f93018501492685aa9f86b7c1b7887e43a24a46d5c6fa4",
+   "bytes": 97273
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702570732_Test036.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702570732_Test036.csv",
+   "sha256": "d0b5990688e68e29366c80a154b617ec5e39884a25c07ec958d5cfb292fb391e",
+   "bytes": 178413
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test040",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test040",
+   "sha256": "144d434e3cf45995342f305a3337aa60ef0b2d6403d7eba02a826403c62ac1b2",
+   "bytes": 97975
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702651637_Test040.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702651637_Test040.csv",
+   "sha256": "44ad319d24428150d1e6ddcc765dc3a0b23e170e547e7e281706b9fbd8b035c2",
+   "bytes": 231107
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test041",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test041",
+   "sha256": "72cc0c3e0b39c46cbe9ec3925ef30aaaef247d9e66b1c83882d8340f22846357",
+   "bytes": 98589
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702658643_Test041.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702658643_Test041.csv",
+   "sha256": "50dc56e1ff67c4b04b2d1bae7d70f78607e03fafd5d77d3f06eaefcff4f70865",
+   "bytes": 180125
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test025",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test025",
+   "sha256": "93abfffdc23fa7783d69271073f528d82b3dc208c5278395df32c0132d0e129c",
+   "bytes": 96247
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702396196_Test025.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702396196_Test025.csv",
+   "sha256": "513a6700e491f935728b5f401f360f8acd13fed06ef8f0730c138f12dae4d3be",
+   "bytes": 323396
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test045",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test045",
+   "sha256": "e92e2f9580e058fa691db24410d8bd323197147d6baa91e2eb2ff5271f62beb0",
+   "bytes": 97205
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702926869_Test045.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702926869_Test045.csv",
+   "sha256": "686d2ec48ca211b2a8b91a3441bcba605454cfe5c72de76eec4899bbb88b3f08",
+   "bytes": 137261
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/design-fires-residential-and-office-items/test047",
+   "read": "2026-11-13",
+   "path": "el/fcd/design-fires-residential-and-office-items/test047",
+   "sha256": "feb80bca933a251c26ee56864c9c2c354ddee2b4fd4b329df40fd0218e1ceeb0",
+   "bytes": 97241
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/DesignFires_Furniture/data/1702934916_Test047.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/DesignFires_Furniture/data/1702934916_Test047.csv",
+   "sha256": "778faee5af4301aa58b2b023e4d63239502e17891c8366ccd3fe39d072e4d1c1",
+   "bytes": 141872
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-1",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-1",
+   "sha256": "61b8b2cab94dda4d89e897da08af910b791169ca7cb1d78b12453a7784399d0b",
+   "bytes": 96068
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528740682_C0-1.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1528740682_C0-1.csv",
+   "sha256": "af7fe99d5eae671201124b40af6c75b0d50d5235910ab51720c403e698c6a9bc",
+   "bytes": 91240
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-2",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-2",
+   "sha256": "2e385f06ed70be18a9d8635333cbf3a6f0e6c6c50b8097bc7a45316aa3ba7339",
+   "bytes": 96699
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1529333117_C0-2.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1529333117_C0-2.csv",
+   "sha256": "3b0eb65604c1dfc0c563a42f9aa2508330ff1e88e41464bd5cd1028e5fca6650",
+   "bytes": 77051
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-3",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/c0-3",
+   "sha256": "0fb8fb2d3a0aadd2b43e80cb63364105ddb5042ff8ec7e011accea7950b7f056",
+   "bytes": 96122
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1529500540_C0-3.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1529500540_C0-3.csv",
+   "sha256": "cc3f11456fdb421892fb4ef9fcdf4dd4bfebbb821152ca3f3d59db77e49ead01",
+   "bytes": 87106
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/control-smoldering",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/control-smoldering",
+   "sha256": "5f75c1ab8c29e853f1527e82952450f2eeb38fabc33f38d95eca20cc4ce97ea6",
+   "bytes": 95343
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1529344888_Control-Smoldering.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1529344888_Control-Smoldering.csv",
+   "sha256": "ed90511f79908b091f3b87df2fffc239b645fd3031db964ceeff76261b01f5e7",
+   "bytes": 186173
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b1-2",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/b1-2",
+   "sha256": "895fb94105bbb94f783b15f7c5955c5ec5b002f1986c106a6744af407639cdea",
+   "bytes": 96682
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528896022_B1-2.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1528896022_B1-2.csv",
+   "sha256": "73e6d0c150c08020309f1783c0ecbdd257b74a9e1c0adfb3f09a5ba71b44bbd1",
+   "bytes": 157736
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b2-1",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/b2-1",
+   "sha256": "8078c088e848640ec174bb04dd0c58763e13d92807227b7072033c160817cb7c",
+   "bytes": 96700
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528827554_B2-1.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1528827554_B2-1.csv",
+   "sha256": "e17e3f793211cf1ae62a0c8d70327e680590f255d2beea11253510936fa3de14",
+   "bytes": 117722
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b3-1",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/b3-1",
+   "sha256": "5fb9c8442e94bdbb9fd22dc806431e45257c0bdcac62689d740c2b028486e51a",
+   "bytes": 96666
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528823581_B3-1.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1528823581_B3-1.csv",
+   "sha256": "22513c01315931ffe1d5b94b68fdfa34ac1fdab79f08e0534ee6a3e56dcf43a7",
+   "bytes": 104968
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b4-1",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/b4-1",
+   "sha256": "d35a842c70ef7ce71a152dcad68a222c31d1f9b77126a38269ac43275844ab7a",
+   "bytes": 96169
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528731061_B4-1.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1528731061_B4-1.csv",
+   "sha256": "e6208060e32b7e14748b98e912e9c5a52aa77bdb1fc5aab6fdb90a938a4c5ce4",
+   "bytes": 102925
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b5-1",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/b5-1",
+   "sha256": "a9f68b95234d3af0ec2cb471e87fb76686bc1a7e2b69f906657ca2b99bab4ec2",
+   "bytes": 96684
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528814873_B5-1.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1528814873_B5-1.csv",
+   "sha256": "a72ff6ec6ff1888a2f2baa17e39bafdbc34bcf4e1ebdcc366056ff16f569701b",
+   "bytes": 112630
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/fire-barriers-full-scale-chair-mock-ups/b6-1",
+   "read": "2026-11-13",
+   "path": "el/fcd/fire-barriers-full-scale-chair-mock-ups/b6-1",
+   "sha256": "47772049227f82f4d39ddce32ca071141f92655e6137efe4a62fcc911b035f84",
+   "bytes": 96695
+  },
+  {
+   "repo": "www.nist.gov/fcd",
+   "url": "https://www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/Chair_Mockup/data/1528807400_B6-1.csv",
+   "read": "2026-11-13",
+   "path": "HRR/ASSET_FILES/Chair_Mockup/data/1528807400_B6-1.csv",
+   "sha256": "5d2723ee549dab0753e3fe0e839e33c27f1cf4f97b49d353060953aa956a5b9c",
+   "bytes": 180372
+  },
+  {
+   "repo": "www.nist.gov/fcd-page",
+   "url": "https://www.nist.gov/el/fcd/d2",
+   "read": "2026-11-13",
+   "path": "el/fcd/d2",
+   "sha256": "51f0290b8347a23c22a3d97ac7f598e291a0484a03370efcdacc8ec8cb0aec29",
+   "bytes": 97267
+  }
+ ]
+}

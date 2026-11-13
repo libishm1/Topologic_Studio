@@ -36,12 +36,21 @@
  * queues form behind doors rather than in single file.
  *
  * How fast. Unimpeded speeds spread about SFPE's maximum, 0.85 k = 1.19 m/s
- * with k = 1.40 m/s, and slow with the density D round the node ahead as
- * k (1 - a D), a = 0.266; on a stair k is 1.08 m/s along the slope (7 in
- * risers, 11 in treads), 0.92 m/s at most. A door passes at
- * most the SFPE specific flow of 1.3 persons/s per metre of effective width,
- * the door's less 0.15 m a side (performanceCheck.js doorCapacity): a door
- * of 0.9 m lets about 0.8 persons a second through.
+ * with k = 1.40 m/s; with the others within DENSITY_RADIUS of the node ahead
+ * at D persons/m^2 over the walkable area there (the walker not counted), a
+ * step is at the person's own speed below FREE_DENSITY and at most
+ * k (1 - a D), a = 0.266, above it; down a stair k is 1.08 m/s along the
+ * slope (7 in risers, 11 in treads), 0.92 m/s at most for the mean walker,
+ * up it STAIR_UP of that. A door passes at most the SFPE specific flow of
+ * 1.3 persons/s per metre of effective width, the door's less 0.15 m a side
+ * (performanceCheck.js doorCapacity; each door node's own width with
+ * `doorWidths`): a door of 0.9 m lets about 0.8 persons a second through, and
+ * in the queue before it (DOOR_QUEUE_M) the density slowing a step is taken
+ * at most at that greatest flow's, so the door, not the crawl into the queue,
+ * sets what passes. Each person keeps their own clock: a step begins when
+ * they reached their node, the node ahead was left and its door opens,
+ * whichever is latest, not at the next time step, so speeds do not depend on
+ * a link's direction (tools/validation/crowd-validation.mjs, RiMEA Test 1).
  *
  * With a fire (`closes`, each node's untenable time by the planners' rule,
  * core/forecast.js), no one steps on to a place the fire has made
@@ -97,6 +106,36 @@ export const SFPE = {
 };
 /** The unimpeded walking speed, SFPE's 0.85 k: 1.19 m/s. */
 export const FREE_SPEED = SFPE.free * SFPE.k;
+
+/**
+ * Below this density (persons/m^2) people walk at their own unimpeded speed;
+ * above it, at k (1 - a D): SFPE's own threshold for the speed-density
+ * relation. A walker never counts themselves (tools/validation: counting the
+ * mover capped a lone walker at 1.235 m/s in the open, 0.90 in single file).
+ */
+export const FREE_DENSITY = 0.54;
+
+/** The density round a node is the persons within this many metres of it over the walkable area there (its nodes' cells). */
+export const DENSITY_RADIUS = 1.0;
+
+/**
+ * Within this walk (m) of a door or an exit, the density slowing a step is
+ * taken at most at QUEUE_DENSITY, the density of SFPE's greatest specific
+ * flow, so that the queue feeds the door and the door's capacity (its
+ * specific flow times its effective width) governs what passes. Crawling into
+ * a packed queue at the 0.15 m/s floor passed 0.29 persons/s through a door
+ * of any width (tools/validation, RiMEA Test 12d).
+ */
+export const DOOR_QUEUE_M = 2.0;
+export const QUEUE_DENSITY = 1.9;
+
+/**
+ * Up a stair at this share of the speed down it: Fruin's ascending over
+ * descending speeds on internal stairs, averaged over his three age groups
+ * (0.55/0.76, 0.50/0.65, 0.42/0.55), as RiMEA 4.1.1 Table 3 gives them. SFPE's
+ * kStair is kept for the way down.
+ */
+export const STAIR_UP = 0.75;
 
 /** Metres a place the fire has made untenable adds to a way out: only taken by those already in it. */
 export const FIRE_PENALTY = 1000;
@@ -168,7 +207,8 @@ function random(seed) {
  *   speed         the mean unimpeded speed, m/s (FREE_SPEED)
  *   spread        each person's speed is speed x (1 +- spread), uniform
  *   start         [earliest, latest] start, s: a short stagger, not a pre-movement time
- *   doorWidth     m, every door's (the IFC's widths are not read)
+ *   doorWidth     m, every door's that `doorWidths` gives none
+ *   doorWidths    m a node, each door node's own clear width (0: doorWidth); null: doorWidth for all
  *   dt            s, the step
  *   horizon       s, stop then; anyone still inside is reported
  *   seed          for where people are and how fast they walk
@@ -204,6 +244,7 @@ export function simulateCrowd(graph, opts = {}) {
     spread = 0.25,
     start = [0, 10],
     doorWidth = 0.9,
+    doorWidths = null,
     dt = 0.1,
     horizon = 900,
     seed = 1,
@@ -334,14 +375,76 @@ export function simulateCrowd(graph, opts = {}) {
     return g.spots[k];
   };
 
+  // Each door node's capacity: its own width where `doorWidths` gives one.
   const capacity = doorCapacity(doorWidth);
+  const capOf = (u) => (doorWidths && doorWidths[u] > 0 ? doorCapacity(doorWidths[u]) : capacity);
+  // The earliest time each door may be stepped on to next, one 1/capacity after the last.
   const doorFree = new Float64Array(n);
+  // When each node was last left (its holder's step away began), and each
+  // person's own clock: when they reached the node they stand on. A step begins
+  // at the later of the two (and of the door's next opening), not at the next
+  // time step, so speeds keep to the person's whatever the link's direction.
+  const leftAt = new Float64Array(n).fill(-Infinity);
+  const clock = Float64Array.from(ready);
+  // The time of each person's last look that found no way on (-Infinity once they step).
+  const tried = new Float64Array(people).fill(-Infinity);
   const segs = Array.from({ length: people }, () => []);
   const exitOf = new Int32Array(people).fill(-1);
   const outAt = new Float32Array(people).fill(Infinity);
-  const waitSince = new Float64Array(people).fill(-1);
   let longestWait = 0;
   let left = people;
+
+  // The walk from each node to the nearest door or exit, for the queue before it (DOOR_QUEUE_M).
+  const toDoor = new Float64Array(n).fill(Infinity);
+  {
+    const heap = new Heap();
+    for (let v = 0; v < n; v += 1) {
+      if (kinds[v] === KIND_DOOR || isExit[v]) {
+        toDoor[v] = 0;
+        heap.push(0, v);
+      }
+    }
+    const done = new Uint8Array(n);
+    while (heap.size) {
+      const a = heap.pop();
+      if (done[a]) continue;
+      done[a] = 1;
+      for (let k = indptr[a]; k < indptr[a + 1]; k += 1) {
+        if (blocked?.[edgeIds[k]]) continue;
+        const b = neighbours[k], d = toDoor[a] + length[edgeIds[k]];
+        if (d < toDoor[b] && d <= DOOR_QUEUE_M) {
+          toDoor[b] = d;
+          heap.push(d, b);
+        }
+      }
+    }
+  }
+  // The nodes within DENSITY_RADIUS of each (in space, so a storey above is not
+  // near), as lists; kept on the graph, as route.js keeps its csr, for the next run.
+  const near = graph._crowdNear?.radius === DENSITY_RADIUS && graph._crowdNear.n === n ? graph._crowdNear : (graph._crowdNear = (() => {
+    const R = DENSITY_RADIUS, P = graph.nodes;
+    const cellOf = (v) => [0, 1, 2].map((c) => Math.floor(P[v * 3 + c] / R));
+    const buckets = new Map();
+    for (let v = 0; v < n; v += 1) {
+      const key = cellOf(v).join(",");
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(v);
+    }
+    const start = new Int32Array(n + 1);
+    const list = [];
+    for (let v = 0; v < n; v += 1) {
+      start[v] = list.length;
+      const [a, b, c] = cellOf(v);
+      for (let da = -1; da <= 1; da += 1) for (let db = -1; db <= 1; db += 1) for (let dc = -1; dc <= 1; dc += 1) {
+        for (const w of buckets.get(`${a + da},${b + db},${c + dc}`) || []) {
+          const d2 = (P[w * 3] - P[v * 3]) ** 2 + (P[w * 3 + 1] - P[v * 3 + 1]) ** 2 + (P[w * 3 + 2] - P[v * 3 + 2]) ** 2;
+          if (d2 <= R * R + 1e-9) list.push(w);
+        }
+      }
+    }
+    start[n] = list.length;
+    return { radius: R, n, start, list: Int32Array.from(list) };
+  })());
 
   // The quickest choice: a walk tree to each exit, and the one each person
   // heads for (goal, an index into them; -1: the way out worked out with the
@@ -378,7 +481,8 @@ export function simulateCrowd(graph, opts = {}) {
   // than its door passes looks as slow as it is. With no one held up for it,
   // what passes says how many want it, not how many it takes: its flow goes
   // back towards the door's capacity.
-  const flow = new Float64Array(exitList.length).fill(capacity);
+  const exitCap = Float64Array.from(exitList, (e) => capOf(e));
+  const flow = Float64Array.from(exitCap);
   const passed = new Int32Array(exitList.length);
   const held = new Uint8Array(exitList.length);
   const exitIndex = new Map(exitList.map((e, g) => [e, g]));
@@ -386,7 +490,7 @@ export function simulateCrowd(graph, opts = {}) {
   // Seconds till person i at v is out by exit g: the walk there, or those ahead through it at its flow, whichever is longer.
   const outBy = (i, g, v) => {
     const before = ahead(g, trees[g].time[v]);
-    return Math.max(trees[g].time[v] / vmax[i], before > 0 ? before / Math.max(flow[g], FLOW_FLOOR * capacity) : 0);
+    return Math.max(trees[g].time[v] / vmax[i], before > 0 ? before / Math.max(flow[g], FLOW_FLOOR * exitCap[g]) : 0);
   };
   // Whether the walk from v to exit g is clear of the fire at t.
   const clear = (g, v, t) => {
@@ -402,7 +506,7 @@ export function simulateCrowd(graph, opts = {}) {
   const weigh = (t) => {
     if (t > lastWeigh) {
       const span = t - lastWeigh, a = 1 - Math.exp(-span / FLOW_SECONDS);
-      for (let g = 0; g < flow.length; g += 1) flow[g] += ((held[g] ? passed[g] / span : capacity) - flow[g]) * a;
+      for (let g = 0; g < flow.length; g += 1) flow[g] += ((held[g] ? passed[g] / span : exitCap[g]) - flow[g]) * a;
       passed.fill(0);
       held.fill(0);
       lastWeigh = t;
@@ -472,12 +576,16 @@ export function simulateCrowd(graph, opts = {}) {
     if (stairGap > 0 && kinds[u] === KIND_STAIR) for (const w of stairNear(u)) if (w !== v && holder[w] >= 0) return false;
     return true;
   };
-  // The density round a node: those holding it and its neighbours, over their floor.
-  const densityAt = (u) => {
-    let held = holder[u] >= 0 ? 1 : 0;
-    const deg = indptr[u + 1] - indptr[u];
-    for (let k = indptr[u]; k < indptr[u + 1]; k += 1) if (holder[neighbours[k]] >= 0) held += 1;
-    return held / ((deg + 1) * cell);
+  // The density round a node: the others within DENSITY_RADIUS of it (not the
+  // one stepping from v), over the walkable area there.
+  const densityAt = (u, v) => {
+    let held = 0;
+    const { start, list } = near;
+    for (let k = start[u]; k < start[u + 1]; k += 1) {
+      const w = list[k];
+      if (w !== v && holder[w] >= 0) held += 1;
+    }
+    return held / ((start[u + 1] - start[u]) * cell);
   };
 
   // Randomness in how people move (wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md,
@@ -554,6 +662,7 @@ export function simulateCrowd(graph, opts = {}) {
         u = pickStep(i, v, D, inFire, t);
         if (u === v) {
           ready[i] = t + dt;
+          clock[i] = t + dt;
           continue;
         }
       } else if (u >= 0 && closedAt(u, t) && !inFire) u = -1;
@@ -570,27 +679,39 @@ export function simulateCrowd(graph, opts = {}) {
       }
       const doorShut = u >= 0 && (kinds[u] === KIND_DOOR || isExit[u]) && doorFree[u] > t + 1e-9;
       if (u < 0 || doorShut) {
-        if (waitSince[i] < 0) waitSince[i] = t;
         if (goal[i] >= 0) held[goal[i]] = 1;
+        tried[i] = t;
         // Cut off by the fire: wait for the next look at the ways out.
         const cut = u < 0 && goal[i] < 0 && dist[v] >= FIRE_PENALTY;
         ready[i] = doorShut ? Math.max(t + dt, Math.ceil((doorFree[u] - 1e-9) / dt) * dt) : cut ? (Math.floor(step / every) + 1) * every * dt : t + dt;
         continue;
       }
-      if (waitSince[i] >= 0) {
-        longestWait = Math.max(longestWait, t - waitSince[i]);
-        waitSince[i] = -1;
-      }
+      // The step begins on the person's own clock: when they reached v, the
+      // node ahead was left and the door opens, whichever is latest, and not
+      // before a look that found no way on; never later than now.
+      const door = kinds[u] === KIND_DOOR || isExit[u];
+      // On a stair, also not before the others near the next node had left (stairGap).
+      let gapClear = -Infinity;
+      if (stairGap > 0 && kinds[u] === KIND_STAIR) for (const w of stairNear(u)) if (w !== v) gapClear = Math.max(gapClear, leftAt[w]);
+      const t0 = Math.max(clock[i], leftAt[u], tried[i], gapClear, door ? doorFree[u] : -Infinity);
+      longestWait = Math.max(longestWait, t0 - clock[i]);
+      tried[i] = -Infinity;
       let len = 0;
       for (let k = indptr[v]; k < indptr[v + 1]; k += 1) if (neighbours[k] === u) len = length[edgeIds[k]];
+      // Stairs at SFPE's kStair down, STAIR_UP of it up; the floor at k.
       const stair = kinds[u] === KIND_STAIR || kinds[v] === KIND_STAIR;
-      const k0 = stair ? SFPE.kStair : SFPE.k;
-      const own = (stair ? vmax[i] * (SFPE.kStair / SFPE.k) : vmax[i]) * speedFactor(i, t);
-      const crowded = k0 * (1 - SFPE.a * densityAt(u));
-      const vel = Math.max(0.15, Math.min(own, crowded));
-      const arrive = t + len / vel;
-      segs[i].push(t, arrive, v, u);
-      if (kinds[u] === KIND_DOOR || isExit[u]) doorFree[u] = Math.max(doorFree[u], t) + 1 / capacity;
+      const rise = graph.nodes[u * 3 + up] - graph.nodes[v * 3 + up];
+      const k0 = stair ? SFPE.kStair * (rise > 0.02 ? STAIR_UP : 1) : SFPE.k;
+      const own = vmax[i] * (k0 / SFPE.k) * speedFactor(i, t0);
+      // Slowed by the others round the node ahead above SFPE's threshold; in
+      // the queue before a door at most as by its greatest flow's density.
+      const around = densityAt(u, v);
+      const crowd = toDoor[u] <= DOOR_QUEUE_M ? Math.min(around, QUEUE_DENSITY) : around;
+      const vel = Math.max(0.15, crowd < FREE_DENSITY ? own : Math.min(own, k0 * (1 - SFPE.a * crowd)));
+      const arrive = t0 + len / vel;
+      segs[i].push(t0, arrive, v, u);
+      if (door) doorFree[u] = Math.max(doorFree[u], t0) + 1 / capOf(u);
+      leftAt[v] = t0;
       holder[v] = -1;
       if (isExit[u]) {
         // Out: on to the gathering place, and the exit is free at once.
@@ -609,6 +730,7 @@ export function simulateCrowd(graph, opts = {}) {
       holder[u] = i;
       at[i] = u;
       ready[i] = arrive;
+      clock[i] = arrive;
     }
   }
 

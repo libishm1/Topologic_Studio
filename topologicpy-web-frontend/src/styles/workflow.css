@@ -814,7 +814,7 @@
   }
 }
 
-/* Phones: the node count gives the small viewport back. Toasts stay under
+/* Phones: toasts stay under
    the header, which is one row on a phone: at the bottom they covered the
    workflow panel and blocked its buttons until they expired. */
 @media (max-width: 760px) {
@@ -838,7 +838,6 @@
     width: calc(100vw - 32px);
   }
 
-  .overlay--bottom-right > .card:not(:last-child),
   .header .badge {
     display: none;
   }
@@ -917,6 +916,25 @@ details.legend[open] > .legend__summary {
 
   .panel {
     max-height: 50vh;
+  }
+
+  /* "Taller panel": most of the screen for a long step, the view kept in sight. */
+  .app-body[data-panel-tall="true"] {
+    grid-template-rows: minmax(18vh, 1fr) auto;
+  }
+
+  .app-body[data-panel-tall="true"] .panel {
+    max-height: 78vh;
+  }
+
+  /* The legend and the view card would cover what is left of the view. */
+  .app-body[data-panel-tall="true"] .overlay--bottom-left,
+  .app-body[data-panel-tall="true"] .overlay--bottom-right {
+    display: none;
+  }
+
+  .panel__grow {
+    display: block;
   }
 
   .viewcube {
@@ -1140,6 +1158,107 @@ details.legend[open] > .legend__summary {
 
 .guided .btn {
   justify-self: start;
+}
+
+.guided .hint__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------- guided runs and run again, in the view
+
+   Top left (Viewport.jsx): Guided runs, back to the welcome screen; Run again
+   beside it; a load's progress below. The overlay spans the view so that Run
+   again can take the playback bar's place at the bottom centre where the view
+   is wide enough; it lets every click through to the model but its buttons'. */
+.viewport__top {
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.viewport__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Lifted off the model, with a focus ring that reads on any colour under it. */
+.viewport-btn {
+  box-shadow: var(--shadow);
+}
+
+.viewport-btn:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--surface-1), var(--shadow);
+}
+
+/* Run again where the playback bar was, bottom centre, on a view at least
+   1,000 px wide: its longer label (about 250 px) then clears the legend at the
+   bottom left (up to about 350 px with long rows) and the view card at the
+   bottom right (up to about 230 px with the storey cut). Above 900 px the
+   panel takes 380 px beside the view unless it is hidden. Narrower, it stays
+   beside Guided runs at the top left. */
+@media (min-width: 1380px) {
+  .replay-btn {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+@media (min-width: 1000px) {
+  .app-body[data-panel-collapsed="true"] .replay-btn {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* A phone: Guided runs shows its arrow only, as the header's buttons show
+   their icons, and the playback bar at the top takes the rest of the row. */
+@media (max-width: 760px) {
+  .viewport-btn__label {
+    display: none;
+  }
+
+  .viewport__top .home-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .viewport__top {
+    top: var(--space-2);
+    left: var(--space-2);
+    right: var(--space-2);
+    bottom: var(--space-2);
+  }
+
+  .viewport:has(.viewport__top .home-btn) .overlay--bottom-center {
+    left: calc(var(--space-2) + 48px);
+    right: var(--space-2);
+    transform: none;
+  }
+
+  .viewport:has(.viewport__top .home-btn) .playback {
+    width: auto;
+  }
+
+  .viewport:has(.viewport__top .home-btn) .playback__info {
+    flex-basis: 140px;
+  }
+}
+
+/* In a guided run's card there is room for its name. */
+.guided .viewport-btn__label {
+  display: inline;
 }
 
 /* ------------------------------------------------------ describe this model */
@@ -1391,6 +1510,63 @@ details.legend[open] > .legend__summary {
 
 .guided__note strong {
   display: block;
+}
+
+/* Start fire and Stop (Simulate): held at the panel's foot while the settings
+   above them are read, back in place once scrolled to. They stood 1,772 px
+   down with Flamescapes on (the interface audit of 2026-11-12). */
+.fire-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 0 calc(-1 * var(--space-5));
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-1);
+  border-top: 1px solid var(--border);
+}
+
+/* The notice on running out of memory or storage (ui/MemoryNotice.jsx): its button and Dismiss. */
+.memory-notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* A short list of reasons in a folded note (the slime against the shortest walks). */
+.notes__list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+/* The run card's lead: what the held-out tests support for what it draws (core/calibrationStatus.js validationVerdict). */
+.result__verdict {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* A finished run's numbers (core/guided.js guidedHeadline). */
+.guided__result {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+/* A load's progress and the fire's steps, inside the run's card. */
+.guided .progress {
+  min-width: 0;
+}
+
+/* The heat legend's choice of ramp: a fixed one or one fitted to the run. */
+.legend__fit {
+  align-self: flex-start;
+  min-height: 24px;
+  font-size: 12px;
 }
 
 /* The human check (lib/turnstile.js): empty unless Cloudflare asks for a click. */

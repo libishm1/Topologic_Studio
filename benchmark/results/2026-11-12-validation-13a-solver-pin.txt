@@ -1,0 +1,9 @@
+13.A solver pin check, 2026-11-12 13:32 (plan 13.5, 13.6 item 10).
+The solver modules the suite imports (flamescapes.js, flamescapesRun.js, fireClasses.js, voxelize.js) and every module they reach under src/core, at d3c5751 (d3c57510b3f280b2d49d502f70a0da802ec9f1c8), against the snapshots of the two runs started before the pin:
+  -13a-020 (started 12:03) and -13a-034 (started 12:17), snapshot folders taken from the working tree.
+Digests: SHA-256, first 16 hex digits, with CRLF turned to LF (the working tree has CRLF under core.autocrlf, the blobs LF; 7 of the 13 files differ only in line endings).
+
+d3c5751: 13 files: cores.js, fire.js, fireClasses.js, flamescapes.js, flamescapesRun.js, forecast.js, lattice.js, route.js, stairs.js, suppression.js, suppressionSystems.js, tenability.js, voxelize.js
+the -13a-034 run's snapshot: all 13 match d3c5751
+the -13a-020 run's snapshot: all 13 match d3c5751
+{"cores.js":"89f35b3c1ad824a2","fire.js":"8791e424b274404c","fireClasses.js":"5647c3c7ce2b367f","flamescapes.js":"df3dcb6fb785f1b4","flamescapesRun.js":"11b2aad96bc3d5fc","forecast.js":"b50c5934df538da4","lattice.js":"3548bed0e529aecd","route.js":"599d73ac8ee42834","stairs.js":"2f248561b86e57f2","suppression.js":"bbc1b42d7f8f25f7","suppressionSystems.js":"03ef194b43bc4d91","tenability.js":"b1f1a28c50d71068","voxelize.js":"8289af718e9eaa6a"}

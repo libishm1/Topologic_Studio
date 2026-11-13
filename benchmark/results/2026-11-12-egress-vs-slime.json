@@ -1,0 +1,187 @@
+{
+ "generated": "2026-11-12T09:08:07.058Z",
+ "tool": "tools/egress-vs-slime.mjs",
+ "near": 1,
+ "lineMin": 0.25,
+ "variants": [
+  {
+   "label": "as the app runs it",
+   "options": {}
+  },
+  {
+   "label": "no trail in what they follow (trailWeight 0)",
+   "options": {
+    "trailWeight": 0
+   }
+  },
+  {
+   "label": "sensors one link out (so 1)",
+   "options": {
+    "so": 1
+   }
+  },
+  {
+   "label": "a tenth of the agents (200): little crowding",
+   "options": {
+    "agents": 200
+   }
+  },
+  {
+   "label": "all three off",
+   "options": {
+    "trailWeight": 0,
+    "so": 1,
+    "agents": 200
+   }
+  }
+ ],
+ "results": [
+  {
+   "model": "duplex-apartment.ifc",
+   "nodes": 1540,
+   "exits": 6,
+   "rooms": 20,
+   "seeds": 3,
+   "rows": [
+    {
+     "variant": "as the app runs it",
+     "onShortest": 0.698,
+     "covered": 0.159,
+     "exitsApart": 0.638,
+     "atWallsSlime": 0.204,
+     "atWallsShortest": 0.417
+    },
+    {
+     "variant": "no trail in what they follow (trailWeight 0)",
+     "onShortest": 0.704,
+     "covered": 0.162,
+     "exitsApart": 0.638,
+     "atWallsSlime": 0.198,
+     "atWallsShortest": 0.417
+    },
+    {
+     "variant": "sensors one link out (so 1)",
+     "onShortest": 0.747,
+     "covered": 0.173,
+     "exitsApart": 0.419,
+     "atWallsSlime": 0.226,
+     "atWallsShortest": 0.417
+    },
+    {
+     "variant": "a tenth of the agents (200): little crowding",
+     "onShortest": 0.748,
+     "covered": 0.401,
+     "exitsApart": 0.639,
+     "atWallsSlime": 0.393,
+     "atWallsShortest": 0.417
+    },
+    {
+     "variant": "all three off",
+     "onShortest": 0.721,
+     "covered": 0.222,
+     "exitsApart": 0.419,
+     "atWallsSlime": 0.431,
+     "atWallsShortest": 0.417
+    }
+   ]
+  },
+  {
+   "model": "nibs-office.ifc",
+   "nodes": 17470,
+   "exits": 8,
+   "rooms": 98,
+   "seeds": 3,
+   "rows": [
+    {
+     "variant": "as the app runs it",
+     "onShortest": 0.542,
+     "covered": 0.354,
+     "exitsApart": 0.859,
+     "atWallsSlime": 0.147,
+     "atWallsShortest": 0.239
+    },
+    {
+     "variant": "no trail in what they follow (trailWeight 0)",
+     "onShortest": 0.54,
+     "covered": 0.354,
+     "exitsApart": 0.862,
+     "atWallsSlime": 0.144,
+     "atWallsShortest": 0.239
+    },
+    {
+     "variant": "sensors one link out (so 1)",
+     "onShortest": 0.598,
+     "covered": 0.305,
+     "exitsApart": 0.481,
+     "atWallsSlime": 0.155,
+     "atWallsShortest": 0.239
+    },
+    {
+     "variant": "a tenth of the agents (200): little crowding",
+     "onShortest": 0.525,
+     "covered": 0.122,
+     "exitsApart": 0.867,
+     "atWallsSlime": 0.241,
+     "atWallsShortest": 0.239
+    },
+    {
+     "variant": "all three off",
+     "onShortest": 0.616,
+     "covered": 0.131,
+     "exitsApart": 0.481,
+     "atWallsSlime": 0.217,
+     "atWallsShortest": 0.239
+    }
+   ]
+  },
+  {
+   "model": "nibs-clinic.ifc",
+   "nodes": 25407,
+   "exits": 19,
+   "rooms": 260,
+   "seeds": 3,
+   "rows": [
+    {
+     "variant": "as the app runs it",
+     "onShortest": 0.666,
+     "covered": 0.331,
+     "exitsApart": 0.728,
+     "atWallsSlime": 0.241,
+     "atWallsShortest": 0.311
+    },
+    {
+     "variant": "no trail in what they follow (trailWeight 0)",
+     "onShortest": 0.645,
+     "covered": 0.316,
+     "exitsApart": 0.728,
+     "atWallsSlime": 0.243,
+     "atWallsShortest": 0.311
+    },
+    {
+     "variant": "sensors one link out (so 1)",
+     "onShortest": 0.705,
+     "covered": 0.264,
+     "exitsApart": 0.464,
+     "atWallsSlime": 0.248,
+     "atWallsShortest": 0.311
+    },
+    {
+     "variant": "a tenth of the agents (200): little crowding",
+     "onShortest": 0.78,
+     "covered": 0.145,
+     "exitsApart": 0.731,
+     "atWallsSlime": 0.322,
+     "atWallsShortest": 0.311
+    },
+    {
+     "variant": "all three off",
+     "onShortest": 0.741,
+     "covered": 0.108,
+     "exitsApart": 0.492,
+     "atWallsSlime": 0.344,
+     "atWallsShortest": 0.311
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,129 @@
+{
+ "Q01_hot_gas_layer": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark) AND (\"hot gas layer\" OR \"upper layer\" OR \"smoke layer\" OR \"layer temperature\" OR \"layer height\" OR \"layer interface\")",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 150,
+  "retrieved": 150
+ },
+ "Q02_ceiling_jet": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark) AND (\"ceiling jet\")",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 33,
+  "retrieved": 33
+ },
+ "Q03_plume": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark) AND (\"fire plume\" OR \"buoyant plume\" OR \"plume temperature\" OR McCaffrey)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 84,
+  "retrieved": 84
+ },
+ "Q04_species": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark) AND (oxygen OR \"carbon dioxide\" OR \"carbon monoxide\" OR \"gas concentration\" OR \"gas species\") AND (compartment OR room OR enclosure OR corridor OR building OR atrium OR \"multi-room\")",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 171,
+  "retrieved": 171
+ },
+ "Q05_opening_flows": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark) AND (\"door flow\" OR doorway OR \"vent flow\" OR \"neutral plane\" OR Steckler OR \"opening flow\")",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 60,
+  "retrieved": 60
+ },
+ "Q06_smoke_visibility": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark) AND (\"smoke visibility\" OR \"optical density\" OR \"extinction coefficient\" OR soot OR \"smoke concentration\" OR obscuration)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 610,
+  "retrieved": 400,
+  "pages_by_number": [
+   2
+  ]
+ },
+ "Q07_activation": {
+  "query": "(\"sprinkler activation\" OR \"detector activation\" OR \"smoke detector\" OR \"heat detector\" OR \"activation time\") AND ((\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") OR \"response time index\") AND (validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 25,
+  "retrieved": 25
+ },
+ "Q08_resolution": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (\"grid resolution\" OR \"mesh resolution\" OR \"grid sensitivity\" OR \"plume resolution index\" OR \"cell size\" OR \"grid size\") AND (fire OR compartment)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 191,
+  "retrieved": 191
+ },
+ "Q09_uncertainty": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (\"uncertainty quantification\" OR \"model uncertainty\" OR \"sensitivity analysis\" OR \"model bias\") AND (fire OR compartment)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 256,
+  "retrieved": 256,
+  "pages_by_number": [
+   2
+  ]
+ },
+ "Q10_experiment_datasets": {
+  "query": "(\"full-scale\" OR \"large-scale\" OR \"compartment fire\" OR \"room fire\") AND (experiment OR experiments OR tests) AND (\"hot gas layer\" OR \"ceiling jet\" OR \"smoke layer\" OR \"upper layer temperature\")",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 276,
+  "retrieved": 276,
+  "pages_by_number": [
+   2
+  ]
+ },
+ "Q11_fast_models": {
+  "query": "(GPU OR \"real-time\" OR \"faster than real time\" OR \"coarse grid\" OR \"reduced order\" OR surrogate OR \"machine learning\") AND (\"fire simulation\" OR \"smoke spread\" OR \"fire model\" OR \"smoke movement\") AND (validation OR calibration OR accuracy)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 142,
+  "retrieved": 142
+ },
+ "Q12_zone_and_cfd": {
+  "query": "(CFAST OR \"zone model\") AND (FDS OR CFD OR \"field model\") AND (comparison OR validation) AND (compartment OR building)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 41,
+  "retrieved": 41
+ },
+ "Q13_correlations": {
+  "query": "(MQH OR McCaffrey OR Alpert OR Heskestad OR \"empirical correlation\") AND fire AND (\"layer temperature\" OR \"ceiling jet\" OR plume) AND (comparison OR validation)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 35,
+  "retrieved": 35
+ },
+ "Q14_wall_heat": {
+  "query": "(\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (validation OR validated OR calibration OR calibrated OR \"model uncertainty\" OR \"comparison with experiment\" OR \"comparison with experiments\" OR \"comparison with measurements\" OR benchmark) AND (\"wall heat transfer\" OR \"heat flux\" OR \"surface temperature\" OR \"heat losses\") AND (compartment OR room OR enclosure OR corridor OR building OR atrium OR \"multi-room\")",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 249,
+  "retrieved": 249,
+  "pages_by_number": [
+   2
+  ]
+ },
+ "Q15_numerics": {
+  "query": "(\"low Mach\" OR \"conservative scheme\" OR \"energy conservation\" OR \"semi-Lagrangian\" OR \"vorticity confinement\") AND (fire OR \"buoyant flow\" OR smoke) AND (simulation OR model)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 468,
+  "retrieved": 400,
+  "pages_by_number": [
+   2
+  ]
+ },
+ "Q16_tenability": {
+  "query": "(tenability OR ASET OR \"available safe egress time\") AND (\"Fire Dynamics Simulator\" OR FDS OR CFAST OR \"zone model\" OR \"fire model\" OR \"fire models\" OR \"fire simulation\" OR FireFOAM OR \"computational fluid dynamics\" OR CFD OR \"large eddy simulation\") AND (validation OR uncertainty OR calibration)",
+  "date_from": "1980-01-01",
+  "date_to": "2026-12-31",
+  "total_hits": 48,
+  "retrieved": 48
+ }
+}

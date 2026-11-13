@@ -22,6 +22,7 @@ import { doseDeadline, doseDeadlineMap, escapeDeadlines } from "../core/deadline
 import { buildRoomGraph } from "../core/rooms.js";
 import { GROWTH, buildZoneForecast, fireRoomOf, roomTemperatureFrames, simulateRooms } from "../core/zone.js";
 import { ceilingDetection, forecastFromFrames, smokeDetection } from "../core/forecast.js";
+import { memoryKind } from "../core/memoryNotice.js";
 
 /** Exit nodes this close (m) to the one nearest the fire are the same exit: the other leaf of a double door. */
 const SAME_EXIT_M = 2;
@@ -144,6 +145,7 @@ self.onmessage = (event) => {
     if (mapBlocked) transfers.push(mapBlocked.deadline.buffer);
     self.postMessage({ id, ok: true, result }, transfers);
   } catch (error) {
-    self.postMessage({ id, ok: false, error: error?.message || String(error) });
+    // Typed when it is running out of memory (core/memoryNotice.js), so the page can offer to clear its caches.
+    self.postMessage({ id, ok: false, error: error?.message || String(error), kind: memoryKind(error) });
   }
 };

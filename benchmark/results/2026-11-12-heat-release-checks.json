@@ -1,0 +1,2212 @@
+{
+ "generated": "2026-11-12",
+ "tool": "tools/calibration/heat-release-checks.mjs",
+ "plan": "wiki/research/fire-calibration-plan-2026-11-11.md, section 15 (15.3 and 15.5)",
+ "data": {
+  "repo": "github.com/ulfsri/fsri-compartments-2018",
+  "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+  "channel": "Heat Release Rate",
+  "units": "kW (03_Scripts/plot.py's axis label 'Heat Release Rate (kW)')"
+ },
+ "notice": "Measurements from UL FSRI's 2018 compartment fire experiments (github.com/ulfsri/fsri-compartments-2018; Willi, Madrzykowski, McKinnon and Dow 2023, Data in Brief 47, 108934, doi:10.1016/j.dib.2023.108934; data doi:10.5281/zenodo.5703475). MIT License, Copyright (c) 2021 UL FSRI: Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. Changed here (2026-11-12): the heat release channel reduced to means, peaks, energies and fitted growth coefficients by tools/calibration/heat-release-checks.mjs.",
+ "parameters": {
+  "band": [
+   0.95,
+   1.05
+  ],
+  "startKW": 25,
+  "peakFraction": 0.9,
+  "meanStepS": 5,
+  "sensitivityLeadS": 60
+ },
+ "check1": {
+  "plan": "fire-calibration-plan-2026-11-11.md, section 15.5",
+  "set": "open-door gas-burner tests of nominal 250 or 500 kW (above 100 kW)",
+  "steadyPeriod": "from the events file's Ignition to its Burner Off (the file's Time column is seconds from Ignition; checked: the row at Time 0 carries Ignition's clock time); every 1 s reading with 0 <= t < Burner Off, as recorded (no lag shift, no pre-ignition baseline taken off)",
+  "band": [
+   0.95,
+   1.05
+  ],
+  "tests": [
+   {
+    "id": "250kW_Open_Back_1",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     781
+    ],
+    "readings": 781,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 249.1,
+    "ratio": 0.996,
+    "preIgnitionMeanKW": 0,
+    "sd5sAfter60sKW": 19.6,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 254.6,
+      "ratio": 1.019
+     },
+     "energyOverPeriod": {
+      "energyMJ": 197.64,
+      "meanKW": 253.1,
+      "ratio": 1.012
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Back_2",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     784
+    ],
+    "readings": 784,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 252.5,
+    "ratio": 1.01,
+    "preIgnitionMeanKW": 0.2,
+    "sd5sAfter60sKW": 14.9,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 258,
+      "ratio": 1.032
+     },
+     "energyOverPeriod": {
+      "energyMJ": 200.03,
+      "meanKW": 255.1,
+      "ratio": 1.021
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Back_3",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     722
+    ],
+    "readings": 722,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 0,
+    "meanKW": 204.3,
+    "ratio": 0.817,
+    "preIgnitionMeanKW": 0,
+    "sd5sAfter60sKW": 20.1,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 208.9,
+      "ratio": 0.836
+     },
+     "energyOverPeriod": {
+      "energyMJ": 148.78,
+      "meanKW": 206.1,
+      "ratio": 0.824
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Center_1",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     603
+    ],
+    "readings": 603,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 0,
+    "meanKW": 249.5,
+    "ratio": 0.998,
+    "preIgnitionMeanKW": 0,
+    "sd5sAfter60sKW": 23.8,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 256.4,
+      "ratio": 1.026
+     },
+     "energyOverPeriod": {
+      "energyMJ": 151.55,
+      "meanKW": 251.3,
+      "ratio": 1.005
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Center_2",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     601
+    ],
+    "readings": 601,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 0,
+    "meanKW": 270,
+    "ratio": 1.08,
+    "preIgnitionMeanKW": 4.1,
+    "sd5sAfter60sKW": 26,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 276.6,
+      "ratio": 1.106
+     },
+     "energyOverPeriod": {
+      "energyMJ": 164.23,
+      "meanKW": 273.3,
+      "ratio": 1.093
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Center_3",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     602
+    ],
+    "readings": 602,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 208.9,
+    "ratio": 0.836,
+    "preIgnitionMeanKW": 0,
+    "sd5sAfter60sKW": 22.3,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 213,
+      "ratio": 0.852
+     },
+     "energyOverPeriod": {
+      "energyMJ": 126.39,
+      "meanKW": 210,
+      "ratio": 0.84
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Corner_1",
+    "nominalKW": 250,
+    "record": false,
+    "why": "no \"Heat Release Rate\" column"
+   },
+   {
+    "id": "250kW_Open_Corner_2",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     601
+    ],
+    "readings": 601,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 0,
+    "meanKW": 209.4,
+    "ratio": 0.838,
+    "preIgnitionMeanKW": 0,
+    "sd5sAfter60sKW": 18.1,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 215.1,
+      "ratio": 0.86
+     },
+     "energyOverPeriod": {
+      "energyMJ": 126.63,
+      "meanKW": 210.7,
+      "ratio": 0.843
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Corner_3",
+    "nominalKW": 250,
+    "record": false,
+    "why": "no \"Heat Release Rate\" column"
+   },
+   {
+    "id": "250kW_Open_Side_1",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     601
+    ],
+    "readings": 601,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 0,
+    "meanKW": 250.7,
+    "ratio": 1.003,
+    "preIgnitionMeanKW": 0,
+    "sd5sAfter60sKW": 21.7,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 259.8,
+      "ratio": 1.039
+     },
+     "energyOverPeriod": {
+      "energyMJ": 153.28,
+      "meanKW": 255,
+      "ratio": 1.02
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Side_2",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     602
+    ],
+    "readings": 602,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 238.8,
+    "ratio": 0.955,
+    "preIgnitionMeanKW": 0,
+    "sd5sAfter60sKW": 21,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 244.8,
+      "ratio": 0.979
+     },
+     "energyOverPeriod": {
+      "energyMJ": 145.62,
+      "meanKW": 241.9,
+      "ratio": 0.968
+     }
+    }
+   },
+   {
+    "id": "250kW_Open_Side_3",
+    "nominalKW": 250,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     722
+    ],
+    "readings": 722,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 264.5,
+    "ratio": 1.058,
+    "preIgnitionMeanKW": 0.8,
+    "sd5sAfter60sKW": 17.5,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 271.3,
+      "ratio": 1.085
+     },
+     "energyOverPeriod": {
+      "energyMJ": 198,
+      "meanKW": 274.2,
+      "ratio": 1.097
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Back_1",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     722
+    ],
+    "readings": 722,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 503.1,
+    "ratio": 1.006,
+    "preIgnitionMeanKW": 5.3,
+    "sd5sAfter60sKW": 33.5,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 510.6,
+      "ratio": 1.021
+     },
+     "energyOverPeriod": {
+      "energyMJ": 365.81,
+      "meanKW": 506.7,
+      "ratio": 1.013
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Back_2",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     722
+    ],
+    "readings": 722,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 502.3,
+    "ratio": 1.005,
+    "preIgnitionMeanKW": 0.6,
+    "sd5sAfter60sKW": 28.9,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 509.3,
+      "ratio": 1.019
+     },
+     "energyOverPeriod": {
+      "energyMJ": 365.74,
+      "meanKW": 506.6,
+      "ratio": 1.013
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Back_3",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     722
+    ],
+    "readings": 722,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 531.2,
+    "ratio": 1.062,
+    "preIgnitionMeanKW": 3.8,
+    "sd5sAfter60sKW": 36,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 539,
+      "ratio": 1.078
+     },
+     "energyOverPeriod": {
+      "energyMJ": 391.8,
+      "meanKW": 542.7,
+      "ratio": 1.085
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Center_1",
+    "nominalKW": 500,
+    "record": false,
+    "why": "no \"Heat Release Rate\" column"
+   },
+   {
+    "id": "500kW_Open_Center_2",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     603
+    ],
+    "readings": 603,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 475.8,
+    "ratio": 0.952,
+    "preIgnitionMeanKW": 0,
+    "sd5sAfter60sKW": 36.8,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 488.3,
+      "ratio": 0.977
+     },
+     "energyOverPeriod": {
+      "energyMJ": 288.74,
+      "meanKW": 478.8,
+      "ratio": 0.958
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Center_3",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     721
+    ],
+    "readings": 721,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 0,
+    "meanKW": 569.5,
+    "ratio": 1.139,
+    "preIgnitionMeanKW": 0.2,
+    "sd5sAfter60sKW": 36.2,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 581.2,
+      "ratio": 1.162
+     },
+     "energyOverPeriod": {
+      "energyMJ": 416.24,
+      "meanKW": 577.3,
+      "ratio": 1.155
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Corner_1",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     601
+    ],
+    "readings": 601,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 542.4,
+    "ratio": 1.085,
+    "preIgnitionMeanKW": 1.5,
+    "sd5sAfter60sKW": 37.4,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 553.5,
+      "ratio": 1.107
+     },
+     "energyOverPeriod": {
+      "energyMJ": 331,
+      "meanKW": 550.8,
+      "ratio": 1.102
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Side_1",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     601
+    ],
+    "readings": 601,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 0,
+    "meanKW": 529.8,
+    "ratio": 1.06,
+    "preIgnitionMeanKW": 1.8,
+    "sd5sAfter60sKW": 35.4,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 538.4,
+      "ratio": 1.077
+     },
+     "energyOverPeriod": {
+      "energyMJ": 323.41,
+      "meanKW": 538.1,
+      "ratio": 1.076
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Side_2",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     902
+    ],
+    "readings": 902,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 485.9,
+    "ratio": 0.972,
+    "preIgnitionMeanKW": 3.8,
+    "sd5sAfter60sKW": 30.5,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 491.1,
+      "ratio": 0.982
+     },
+     "energyOverPeriod": {
+      "energyMJ": 440.58,
+      "meanKW": 488.4,
+      "ratio": 0.977
+     }
+    }
+   },
+   {
+    "id": "500kW_Open_Side_3",
+    "nominalKW": 500,
+    "record": true,
+    "steadyPeriodS": [
+     0,
+     902
+    ],
+    "readings": 902,
+    "blankReadings": 0,
+    "timeColumnVsIgnitionS": 1,
+    "meanKW": 487.6,
+    "ratio": 0.975,
+    "preIgnitionMeanKW": 3.7,
+    "sd5sAfter60sKW": 33.9,
+    "sensitivity": {
+     "lessFirst60s": {
+      "meanKW": 492.1,
+      "ratio": 0.984
+     },
+     "energyOverPeriod": {
+      "energyMJ": 441.67,
+      "meanKW": 489.7,
+      "ratio": 0.979
+     }
+    }
+   }
+  ],
+  "noRecord": [
+   "250kW_Open_Corner_1 (no \"Heat Release Rate\" column)",
+   "250kW_Open_Corner_3 (no \"Heat Release Rate\" column)",
+   "500kW_Open_Center_1 (no \"Heat Release Rate\" column)"
+  ],
+  "summary": {
+   "preRegistered": {
+    "n": 19,
+    "median": 1.003,
+    "min": 0.817,
+    "max": 1.139,
+    "insideBand": true
+   },
+   "by250": {
+    "n": 10,
+    "median": 0.997,
+    "min": 0.817,
+    "max": 1.08,
+    "insideBand": true
+   },
+   "by500": {
+    "n": 9,
+    "median": 1.006,
+    "min": 0.952,
+    "max": 1.139,
+    "insideBand": true
+   },
+   "notPreRegistered": {
+    "lessFirst60s": {
+     "n": 19,
+     "median": 1.021,
+     "min": 0.836,
+     "max": 1.162,
+     "insideBand": true
+    },
+    "energyOverPeriod": {
+     "n": 19,
+     "median": 1.013,
+     "min": 0.824,
+     "max": 1.155,
+     "insideBand": true
+    }
+   }
+  },
+  "aside100kW": {
+   "note": "nominal 100 kW: outside 15.5's set (above 100 kW); kept apart, not in any summary",
+   "tests": [
+    {
+     "id": "100kW_Open_Back_2",
+     "nominalKW": 100,
+     "record": true,
+     "steadyPeriodS": [
+      0,
+      722
+     ],
+     "readings": 722,
+     "blankReadings": 0,
+     "timeColumnVsIgnitionS": 0,
+     "meanKW": 75.7,
+     "ratio": 0.757,
+     "preIgnitionMeanKW": 0,
+     "sd5sAfter60sKW": 14.1,
+     "sensitivity": {
+      "lessFirst60s": {
+       "meanKW": 76.7,
+       "ratio": 0.767
+      },
+      "energyOverPeriod": {
+       "energyMJ": 56.18,
+       "meanKW": 77.8,
+       "ratio": 0.778
+      }
+     }
+    },
+    {
+     "id": "100kW_Open_Back_3",
+     "nominalKW": 100,
+     "record": true,
+     "steadyPeriodS": [
+      0,
+      601
+     ],
+     "readings": 601,
+     "blankReadings": 0,
+     "timeColumnVsIgnitionS": 0,
+     "meanKW": 74,
+     "ratio": 0.74,
+     "preIgnitionMeanKW": 0,
+     "sd5sAfter60sKW": 11.8,
+     "sensitivity": {
+      "lessFirst60s": {
+       "meanKW": 74.9,
+       "ratio": 0.749
+      },
+      "energyOverPeriod": {
+       "energyMJ": 44.73,
+       "meanKW": 74.4,
+       "ratio": 0.744
+      }
+     }
+    }
+   ]
+  }
+ },
+ "check2": {
+  "plan": "fire-calibration-plan-2026-11-11.md, section 15.3 (the FSRI part; NIST's Fire Calorimetry Database not read here)",
+  "set": "open-door upholstered chair tests (RedAccent: the README's Red Accent Chair; Overstuffed: the README's Overstuffed Sofa, the plan's overstuffed chair)",
+  "readings": "the suite's 5 s means of the 1 s record (each the mean of the readings in (s - 2.5, s + 2.5], s = 0, 5, 10 ... s from Ignition), for the peak, the window and the fit",
+  "window": "from the first 5 s mean above 25 kW (t >= 0) to the first at 90 % of the 5 s peak, both included",
+  "fit": "least squares of q = alpha max(0, t - t0)^2, t0 free (scanned in 0.5 s steps over [window start - 1200 s, window end), refined by golden section)",
+  "energy": "the 1 s readings summed from Ignition to the record's end (kJ to MJ), and to the Suppression event; no baseline taken off",
+  "massSource": "02_Info/furniture_mass.csv (initial mass only; no mass-loss record exists in the series, so the energy is not recomputed from mass loss)",
+  "classes": {
+   "medium": 0.0117,
+   "fast": 0.0469,
+   "all": {
+    "slow": 0.00293,
+    "medium": 0.0117,
+    "fast": 0.0469,
+    "ultra-fast": 0.188
+   },
+   "source": "topologicpy-web-frontend/src/core/fireClasses.js GROWTH_CLASSES"
+  },
+  "tests": [
+   {
+    "id": "RedAccent_Open_Back_1",
+    "kind": "RedAccent",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 902 s",
+     "Moved Door Probes @ 990 s"
+    ],
+    "recordEndS": 1102,
+    "peakKW": 1718,
+    "peakAtS": 325,
+    "rawPeakKW": 1922.5,
+    "rawPeakAtS": 322,
+    "energyMJ": 282.9,
+    "energyToSuppressionMJ": 282.4,
+    "hrrAtSuppressionKW": 50,
+    "massKg": 20.6,
+    "energyPerInitialMassMJkg": 13.73,
+    "fit": {
+     "windowS": [
+      170,
+      310
+     ],
+     "windowKW": [
+      26.5,
+      1564.3
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.05167,
+     "t0S": 138.3,
+     "t0AfterWindowStart": false,
+     "n": 29,
+     "rmsKW": 29.9,
+     "r2": 0.9956,
+     "overMedium": 4.42,
+     "overFast": 1.1,
+     "place": "between fast and ultra-fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       168,
+       321
+      ],
+      "alpha": 0.05075,
+      "t0S": 137.4,
+      "n": 154,
+      "readingsAtOrBelow25kWInWindow": 1
+     },
+     "sqrtLine5s": {
+      "alpha": 0.05385,
+      "t0S": 140.9
+     }
+    }
+   },
+   {
+    "id": "RedAccent_Open_Center_1",
+    "kind": "RedAccent",
+    "record": false,
+    "why": "no \"Heat Release Rate\" column"
+   },
+   {
+    "id": "RedAccent_Open_Center_2",
+    "kind": "RedAccent",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 922 s"
+    ],
+    "recordEndS": 1034,
+    "peakKW": 1208.5,
+    "peakAtS": 340,
+    "rawPeakKW": 1383.2,
+    "rawPeakAtS": 339,
+    "energyMJ": 272.3,
+    "energyToSuppressionMJ": 270.5,
+    "hrrAtSuppressionKW": 73.5,
+    "massKg": 20.2,
+    "energyPerInitialMassMJkg": 13.48,
+    "fit": {
+     "windowS": [
+      170,
+      335
+     ],
+     "windowKW": [
+      36.6,
+      1131.2
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.01959,
+     "t0S": 97.3,
+     "t0AfterWindowStart": false,
+     "n": 34,
+     "rmsKW": 36.6,
+     "r2": 0.9855,
+     "overMedium": 1.67,
+     "overFast": 0.42,
+     "place": "between medium and fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       169,
+       338
+      ],
+      "alpha": 0.01979,
+      "t0S": 97.9,
+      "n": 170,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.02074,
+      "t0S": 102.4
+     }
+    }
+   },
+   {
+    "id": "RedAccent_Open_Center_3",
+    "kind": "RedAccent",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 941 s"
+    ],
+    "recordEndS": 1113,
+    "peakKW": 1093.8,
+    "peakAtS": 355,
+    "rawPeakKW": 1168.1,
+    "rawPeakAtS": 357,
+    "energyMJ": 309.1,
+    "energyToSuppressionMJ": 300.4,
+    "hrrAtSuppressionKW": 107.1,
+    "massKg": 20.2,
+    "energyPerInitialMassMJkg": 15.3,
+    "fit": {
+     "windowS": [
+      135,
+      320
+     ],
+     "windowKW": [
+      28.5,
+      1067.5
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.0132,
+     "t0S": 49.7,
+     "t0AfterWindowStart": false,
+     "n": 38,
+     "rmsKW": 47.4,
+     "r2": 0.9679,
+     "overMedium": 1.13,
+     "overFast": 0.28,
+     "place": "between medium and fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       134,
+       317
+      ],
+      "alpha": 0.01249,
+      "t0S": 44.8,
+      "n": 184,
+      "readingsAtOrBelow25kWInWindow": 1
+     },
+     "sqrtLine5s": {
+      "alpha": 0.01451,
+      "t0S": 59.3
+     }
+    }
+   },
+   {
+    "id": "RedAccent_Open_Corner_1",
+    "kind": "RedAccent",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Shovel Suppression (WUI?) @ 934 s"
+    ],
+    "recordEndS": 1106,
+    "peakKW": 1528.5,
+    "peakAtS": 315,
+    "rawPeakKW": 1582.3,
+    "rawPeakAtS": 316,
+    "energyMJ": 344.1,
+    "energyToSuppressionMJ": 331.6,
+    "hrrAtSuppressionKW": 128.9,
+    "massKg": 20.1,
+    "energyPerInitialMassMJkg": 17.12,
+    "fit": {
+     "windowS": [
+      140,
+      285
+     ],
+     "windowKW": [
+      37.6,
+      1424.2
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.03595,
+     "t0S": 84.3,
+     "t0AfterWindowStart": false,
+     "n": 30,
+     "rmsKW": 58.7,
+     "r2": 0.98,
+     "overMedium": 3.07,
+     "overFast": 0.77,
+     "place": "between medium and fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       138,
+       277
+      ],
+      "alpha": 0.03662,
+      "t0S": 85.4,
+      "n": 140,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.04484,
+      "t0S": 100
+     }
+    }
+   },
+   {
+    "id": "RedAccent_Open_Corner_2",
+    "kind": "RedAccent",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Shovel Suppression @ 931 s"
+    ],
+    "recordEndS": 1072,
+    "peakKW": 1512.4,
+    "peakAtS": 320,
+    "rawPeakKW": 1567.7,
+    "rawPeakAtS": 317,
+    "energyMJ": 323.2,
+    "energyToSuppressionMJ": 318.2,
+    "hrrAtSuppressionKW": 75.8,
+    "massKg": 20,
+    "energyPerInitialMassMJkg": 16.16,
+    "fit": {
+     "windowS": [
+      145,
+      315
+     ],
+     "windowKW": [
+      28.9,
+      1388.4
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.02479,
+     "t0S": 72,
+     "t0AfterWindowStart": false,
+     "n": 35,
+     "rmsKW": 70.7,
+     "r2": 0.971,
+     "overMedium": 2.12,
+     "overFast": 0.53,
+     "place": "between medium and fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       143,
+       317
+      ],
+      "alpha": 0.02481,
+      "t0S": 72,
+      "n": 175,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.03242,
+      "t0S": 95
+     }
+    }
+   },
+   {
+    "id": "RedAccent_Open_Corner_3",
+    "kind": "RedAccent",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Shovel Suppression @ 914 s"
+    ],
+    "recordEndS": 1085,
+    "peakKW": 1239.4,
+    "peakAtS": 360,
+    "rawPeakKW": 1293.4,
+    "rawPeakAtS": 362,
+    "energyMJ": 271.5,
+    "energyToSuppressionMJ": 271,
+    "hrrAtSuppressionKW": 20.1,
+    "massKg": 20.5,
+    "energyPerInitialMassMJkg": 13.24,
+    "fit": {
+     "windowS": [
+      165,
+      335
+     ],
+     "windowKW": [
+      38.1,
+      1158.8
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.01443,
+     "t0S": 43,
+     "t0AfterWindowStart": false,
+     "n": 35,
+     "rmsKW": 91.2,
+     "r2": 0.9213,
+     "overMedium": 1.23,
+     "overFast": 0.31,
+     "place": "between medium and fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       162,
+       336
+      ],
+      "alpha": 0.01456,
+      "t0S": 44.1,
+      "n": 175,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.0201,
+      "t0S": 78.2
+     }
+    }
+   },
+   {
+    "id": "Overstuffed_Open_Back_1",
+    "kind": "Overstuffed",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 916 s"
+    ],
+    "recordEndS": 1088,
+    "peakKW": 2653.1,
+    "peakAtS": 370,
+    "rawPeakKW": 2751.4,
+    "rawPeakAtS": 438,
+    "energyMJ": 902,
+    "energyToSuppressionMJ": 891.2,
+    "hrrAtSuppressionKW": 286.3,
+    "massKg": 50.1,
+    "energyPerInitialMassMJkg": 18,
+    "fit": {
+     "windowS": [
+      205,
+      340
+     ],
+     "windowKW": [
+      33.5,
+      2396.1
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.08303,
+     "t0S": 155.2,
+     "t0AfterWindowStart": false,
+     "n": 28,
+     "rmsKW": 223.4,
+     "r2": 0.9317,
+     "overMedium": 7.1,
+     "overFast": 1.77,
+     "place": "between fast and ultra-fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       202,
+       317
+      ],
+      "alpha": 0.13649,
+      "t0S": 179.4,
+      "n": 116,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.12066,
+      "t0S": 179.2
+     }
+    }
+   },
+   {
+    "id": "Overstuffed_Open_Back_2",
+    "kind": "Overstuffed",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 1068 s"
+    ],
+    "recordEndS": 1179,
+    "peakKW": 2624,
+    "peakAtS": 375,
+    "rawPeakKW": 2826,
+    "rawPeakAtS": 416,
+    "energyMJ": 884,
+    "energyToSuppressionMJ": 874.4,
+    "hrrAtSuppressionKW": 205.4,
+    "massKg": 49,
+    "energyPerInitialMassMJkg": 18.04,
+    "fit": {
+     "windowS": [
+      210,
+      365
+     ],
+     "windowKW": [
+      40.5,
+      2438.8
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.1466,
+     "t0S": 236.1,
+     "t0AfterWindowStart": true,
+     "n": 32,
+     "rmsKW": 96.4,
+     "r2": 0.9835,
+     "overMedium": 12.53,
+     "overFast": 3.13,
+     "place": "between fast and ultra-fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       207,
+       367
+      ],
+      "alpha": 0.14664,
+      "t0S": 236.1,
+      "n": 161,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.0904,
+      "t0S": 213.4
+     }
+    }
+   },
+   {
+    "id": "Overstuffed_Open_Back_3",
+    "kind": "Overstuffed",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 975 s"
+    ],
+    "recordEndS": 1131,
+    "peakKW": 2612.5,
+    "peakAtS": 375,
+    "rawPeakKW": 2770.4,
+    "rawPeakAtS": 292,
+    "energyMJ": 817.8,
+    "energyToSuppressionMJ": 816.5,
+    "hrrAtSuppressionKW": 94.2,
+    "massKg": 50.7,
+    "energyPerInitialMassMJkg": 16.13,
+    "fit": {
+     "windowS": [
+      150,
+      290
+     ],
+     "windowKW": [
+      32.3,
+      2570.8
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.17631,
+     "t0S": 171.4,
+     "t0AfterWindowStart": true,
+     "n": 29,
+     "rmsKW": 90.8,
+     "r2": 0.9859,
+     "overMedium": 15.07,
+     "overFast": 3.76,
+     "place": "between fast and ultra-fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       148,
+       290
+      ],
+      "alpha": 0.17271,
+      "t0S": 170.7,
+      "n": 143,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.10905,
+      "t0S": 150.3
+     }
+    }
+   },
+   {
+    "id": "Overstuffed_Open_Center_1",
+    "kind": "Overstuffed",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 901 s"
+    ],
+    "recordEndS": 1013,
+    "peakKW": 3191.8,
+    "peakAtS": 325,
+    "rawPeakKW": 3487.3,
+    "rawPeakAtS": 324,
+    "energyMJ": 835.3,
+    "energyToSuppressionMJ": 827.6,
+    "hrrAtSuppressionKW": 206,
+    "massKg": 48.8,
+    "energyPerInitialMassMJkg": 17.12,
+    "fit": {
+     "windowS": [
+      115,
+      315
+     ],
+     "windowKW": [
+      35.7,
+      2885.3
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.06663,
+     "t0S": 85.2,
+     "t0AfterWindowStart": false,
+     "n": 41,
+     "rmsKW": 343.3,
+     "r2": 0.9086,
+     "overMedium": 5.69,
+     "overFast": 1.42,
+     "place": "between fast and ultra-fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       112,
+       283
+      ],
+      "alpha": 0.12711,
+      "t0S": 121.6,
+      "n": 172,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.09325,
+      "t0S": 113.2
+     }
+    }
+   },
+   {
+    "id": "Overstuffed_Open_Corner_1",
+    "kind": "Overstuffed",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 926 s"
+    ],
+    "recordEndS": 1040,
+    "peakKW": 2845.1,
+    "peakAtS": 365,
+    "rawPeakKW": 2999.8,
+    "rawPeakAtS": 357,
+    "energyMJ": 899.1,
+    "energyToSuppressionMJ": 880.3,
+    "hrrAtSuppressionKW": 335.4,
+    "massKg": 48.1,
+    "energyPerInitialMassMJkg": 18.69,
+    "fit": {
+     "windowS": [
+      145,
+      355
+     ],
+     "windowKW": [
+      28.8,
+      2754.9
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.05028,
+     "t0S": 109.4,
+     "t0AfterWindowStart": false,
+     "n": 43,
+     "rmsKW": 226.4,
+     "r2": 0.9431,
+     "overMedium": 4.3,
+     "overFast": 1.07,
+     "place": "between fast and ultra-fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       144,
+       355
+      ],
+      "alpha": 0.05077,
+      "t0S": 110.1,
+      "n": 212,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.06707,
+      "t0S": 134.7
+     }
+    }
+   },
+   {
+    "id": "Overstuffed_Open_Corner_2",
+    "kind": "Overstuffed",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 902 s"
+    ],
+    "recordEndS": 1088,
+    "peakKW": 1813.8,
+    "peakAtS": 360,
+    "rawPeakKW": 2038.5,
+    "rawPeakAtS": 399,
+    "energyMJ": 529.8,
+    "energyToSuppressionMJ": 524.4,
+    "hrrAtSuppressionKW": 167.3,
+    "massKg": 48.8,
+    "energyPerInitialMassMJkg": 10.86,
+    "fit": {
+     "windowS": [
+      160,
+      320
+     ],
+     "windowKW": [
+      25.2,
+      1671.7
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.05229,
+     "t0S": 131.3,
+     "t0AfterWindowStart": false,
+     "n": 33,
+     "rmsKW": 101,
+     "r2": 0.9689,
+     "overMedium": 4.47,
+     "overFast": 1.11,
+     "place": "between fast and ultra-fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       159,
+       336
+      ],
+      "alpha": 0.04242,
+      "t0S": 118.7,
+      "n": 178,
+      "readingsAtOrBelow25kWInWindow": 1
+     },
+     "sqrtLine5s": {
+      "alpha": 0.06525,
+      "t0S": 146.3
+     }
+    }
+   },
+   {
+    "id": "Overstuffed_Open_Corner_3",
+    "kind": "Overstuffed",
+    "record": true,
+    "timeColumnVsIgnitionS": 1,
+    "events": [
+     "Ignition @ 0 s",
+     "Suppression @ 927 s"
+    ],
+    "recordEndS": 1098,
+    "peakKW": 2724,
+    "peakAtS": 350,
+    "rawPeakKW": 2888.1,
+    "rawPeakAtS": 350,
+    "energyMJ": 832.2,
+    "energyToSuppressionMJ": 819.5,
+    "hrrAtSuppressionKW": 261.1,
+    "massKg": 48.4,
+    "energyPerInitialMassMJkg": 17.19,
+    "fit": {
+     "windowS": [
+      135,
+      300
+     ],
+     "windowKW": [
+      29,
+      2470
+     ],
+     "readingsAtOrBelow25kWInWindow": [],
+     "alpha": 0.10756,
+     "t0S": 139.6,
+     "t0AfterWindowStart": true,
+     "n": 34,
+     "rmsKW": 123.5,
+     "r2": 0.9797,
+     "overMedium": 9.19,
+     "overFast": 2.29,
+     "place": "between fast and ultra-fast"
+    },
+    "secondRoutes": {
+     "raw1s": {
+      "windowS": [
+       134,
+       304
+      ],
+      "alpha": 0.1048,
+      "t0S": 138.3,
+      "n": 171,
+      "readingsAtOrBelow25kWInWindow": 0
+     },
+     "sqrtLine5s": {
+      "alpha": 0.09836,
+      "t0S": 135.6
+     }
+    }
+   }
+  ],
+  "noRecord": [
+   "RedAccent_Open_Center_1 (no \"Heat Release Rate\" column)"
+  ],
+  "byKind": {
+   "RedAccent": {
+    "n": 6,
+    "alpha": {
+     "n": 6,
+     "median": 0.02219,
+     "min": 0.0132,
+     "max": 0.05167,
+     "medium": "below the range",
+     "fast": "inside the range"
+    },
+    "alphaRaw1s": {
+     "n": 6,
+     "median": 0.0223,
+     "min": 0.01249,
+     "max": 0.05075,
+     "medium": "below the range",
+     "fast": "inside the range"
+    },
+    "alphaSqrtLine5s": {
+     "n": 6,
+     "median": 0.02658,
+     "min": 0.01451,
+     "max": 0.05385,
+     "medium": "below the range",
+     "fast": "inside the range"
+    },
+    "peakKW": {
+     "n": 6,
+     "median": 1375.9,
+     "min": 1093.8,
+     "max": 1718
+    },
+    "rawPeakKW": {
+     "n": 6,
+     "median": 1475.5,
+     "min": 1168.1,
+     "max": 1922.5
+    },
+    "energyMJ": {
+     "n": 6,
+     "median": 296,
+     "min": 271.5,
+     "max": 344.1
+    },
+    "energyPerInitialMassMJkg": {
+     "n": 6,
+     "median": 14.52,
+     "min": 13.24,
+     "max": 17.12
+    }
+   },
+   "Overstuffed": {
+    "n": 7,
+    "alpha": {
+     "n": 7,
+     "median": 0.08303,
+     "min": 0.05028,
+     "max": 0.17631,
+     "medium": "below the range",
+     "fast": "below the range"
+    },
+    "alphaRaw1s": {
+     "n": 7,
+     "median": 0.12711,
+     "min": 0.04242,
+     "max": 0.17271,
+     "medium": "below the range",
+     "fast": "inside the range"
+    },
+    "alphaSqrtLine5s": {
+     "n": 7,
+     "median": 0.09325,
+     "min": 0.06525,
+     "max": 0.12066,
+     "medium": "below the range",
+     "fast": "below the range"
+    },
+    "peakKW": {
+     "n": 7,
+     "median": 2653.1,
+     "min": 1813.8,
+     "max": 3191.8
+    },
+    "rawPeakKW": {
+     "n": 7,
+     "median": 2826,
+     "min": 2038.5,
+     "max": 3487.3
+    },
+    "energyMJ": {
+     "n": 7,
+     "median": 835.3,
+     "min": 529.8,
+     "max": 902
+    },
+    "energyPerInitialMassMJkg": {
+     "n": 7,
+     "median": 17.19,
+     "min": 10.86,
+     "max": 18.69
+    }
+   }
+  }
+ },
+ "sources": [
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Back_1_Events.csv",
+   "sha256": "2c5bb490d193f90202e9516006ac103776392eb561667451af57fe41f67d2a80",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Back_1.csv",
+   "sha256": "dbe6c24c7a4d3d67dc8614067f85b3289cccf084c6e1cf0ab966bb5431760a44",
+   "bytes": 484887
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Back_2_Events.csv",
+   "sha256": "6fbfec444b90b70c911b7e8e2f084f8f33bc70e181c2b5ab9259365d3caa2653",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Back_2.csv",
+   "sha256": "c936aa59070f2ed48dd61a49c148cc306a3705cfa7967263bc725dceb8deb1d0",
+   "bytes": 448378
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Back_3_Events.csv",
+   "sha256": "3a7607e7ecb40a986751ca8d45a6f6ddc9dcb5c2beca73f17333bdc5fc9de6ed",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Back_3.csv",
+   "sha256": "ebcb29fac8b1010306550bfab72fb3d4394b25843fa04105fc8fce2a47e20634",
+   "bytes": 442897
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Center_1_Events.csv",
+   "sha256": "a064d5c71b34f45070a4306908983e931ad82b3cad2c2657fff0a9ca2afddf25",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Center_1.csv",
+   "sha256": "6287a2fc122c2371015349d987377d004cdeb5eac4e14eb3927fd6c9148a795e",
+   "bytes": 331105
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Center_2_Events.csv",
+   "sha256": "94bcc5603d291afbe0f1305e7aad70d1e7a1660c8a3918455f625cd6bc69621d",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Center_2.csv",
+   "sha256": "83d42aca3fe482ad721e9637a600192e926f711e0230552299a6bff6ca1fae49",
+   "bytes": 342224
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Center_3_Events.csv",
+   "sha256": "fe3c358fd2c43fd869f7f762c5539d449ab55768a4c927b2f38366db4ab3805e",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Center_3.csv",
+   "sha256": "2374fd9132ea8ba1ddfd72482c6169842845cc44a508583ddcd2a1debedb3796",
+   "bytes": 352861
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Corner_1_Events.csv",
+   "sha256": "8fb7bea64a4e37f5c3a417b78e46081d16888d26c5b7216f0683eeeaec739db7",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Corner_1.csv",
+   "sha256": "da6df82720770711f708fbf2d128208bcce6e92292c51d7d045c533a7ec6dac6",
+   "bytes": 342897
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Corner_2_Events.csv",
+   "sha256": "4833ec1c487879335a1673205da9d85ab33bd4ad9bb7772ad3aea876927686e8",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Corner_2.csv",
+   "sha256": "76ad24699647b9feede1b7f7b7e5e1bb0715f7b1e023219f8b0083c234508070",
+   "bytes": 374710
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Corner_3_Events.csv",
+   "sha256": "7e94e2d85b869aea1f09f97826b80ea6b6b62a7a0dc38c251d3f647361f355d5",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Corner_3.csv",
+   "sha256": "f771ccef36f246a5d775088b5278aea34eda1f4759169a60ff86851fee314b48",
+   "bytes": 379059
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Side_1_Events.csv",
+   "sha256": "fcd59c34bb80dc405bc743b3b55622afb941adc11cab0684c9f4acb7b58fcc76",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Side_1.csv",
+   "sha256": "c160cbd52298e2c0d25904ab4094037e6180d2d1d2c3d7321ee2586c5e949c9e",
+   "bytes": 366673
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Side_2_Events.csv",
+   "sha256": "f305e8b1bbd463c27f4758e2aa09a15ad53c99610c7d33753b7b580f4709f9f3",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Side_2.csv",
+   "sha256": "03a6012a1b1259284de8cc745f69602a9061fd48619b56a236fbdeb59a8141c9",
+   "bytes": 392789
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Side_3_Events.csv",
+   "sha256": "30cf3c10771ebe1c8cee8f3df9e94f591db2b45e831db25d9343445baf1129a5",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/250kW_Open_Side_3.csv",
+   "sha256": "24e1da4c4d90e2c0c0f0b4513660dab39fb4269d78b3ccb076167bb4843a68da",
+   "bytes": 434443
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Back_1_Events.csv",
+   "sha256": "a3ce255f8eed3600bb549102d906ac8f9749f94640390d88d19fa072a2a4571a",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Back_1.csv",
+   "sha256": "f046823216835c1fcabe95519a6db14c6cbc0030139249155694441f9294af64",
+   "bytes": 427322
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Back_2_Events.csv",
+   "sha256": "ee7054653c9cf99bc6c79336b6abaf0e53153fa4994948740ff29b0d1a037af3",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Back_2.csv",
+   "sha256": "8e310e5851be7489af0e122bccf728f7ec5ef9b032e0660f90e7fb7fddeb17df",
+   "bytes": 427557
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Back_3_Events.csv",
+   "sha256": "7592bc68dc22b82840f30cb7ccaf0774bf66474b7d46070050cb1bba0313e170",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Back_3.csv",
+   "sha256": "eae585b39ee24bf42229555a97fde351629cebc434a8ae9790746044935b2283",
+   "bytes": 452102
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Center_1_Events.csv",
+   "sha256": "10d030afc75ebf75c73a1e7e2764dffe4d610fca4161c9e8e9ac53aa3e255bdd",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Center_1.csv",
+   "sha256": "19bde34c4ab4763e2a48c35b00806dc79f17d7c1a867cb63a9db5772f0270ba1",
+   "bytes": 493641
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Center_2_Events.csv",
+   "sha256": "f2471d7ad2a45c3f4dfc724c8306605aba59b2a3fc3ae47b57ebbe6f6f14f9da",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Center_2.csv",
+   "sha256": "d1d17c77c0a036ab82aa912fedd4b48b31b24fe2c19cdfa47a871679638aabcd",
+   "bytes": 348538
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Center_3_Events.csv",
+   "sha256": "32b3a8cb9a1b10e28fab2d6137c7f87bbeb41b6202fdff11290641f90585b086",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Center_3.csv",
+   "sha256": "8805faf7b71777ebe211325d31e97c251879d48492ad57274667a85875812236",
+   "bytes": 426391
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Corner_1_Events.csv",
+   "sha256": "4fce0e7400c6e8942a452fc0ccd9fdc4f8907f71f62cad64f1a8f9da34c01115",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Corner_1.csv",
+   "sha256": "87b6b700df9d56066d4cb3d338e27105bb5b3aabd9b10ccd14b8ddf09fdf3df7",
+   "bytes": 398556
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Side_1_Events.csv",
+   "sha256": "f9f71b9ebeef1e7c990765bbff6fcaa809ee54f43ac2b9eb99b18ccd7ab15549",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Side_1.csv",
+   "sha256": "cc9a656d3d7955e518e919fbd913a85f56a1010da7487b54e9aa223525be7348",
+   "bytes": 398337
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Side_2_Events.csv",
+   "sha256": "19cbcd7b230e04f44055aa9d9d7098d5d3f8c875b21df11da53df838cdf12c51",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Side_2.csv",
+   "sha256": "4f5493130e9025a6cf84450dc8380f434c5440694874b68bbee890f7c9a07913",
+   "bytes": 536036
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Side_3_Events.csv",
+   "sha256": "23c23dbd710398b2558b7d32aaccb51b13a157229fe15ba119be338115a8d140",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/500kW_Open_Side_3.csv",
+   "sha256": "121ca81a4b486a7cd2ce8d5d1144b5878e1cfb63ea192e5d1cb2c3c5b90c3da2",
+   "bytes": 506765
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Back_1_Events.csv",
+   "sha256": "877db25c02798b7c0144cd0627f67bd1b815d9f473e104cb7a9fb302c930153e",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Back_1.csv",
+   "sha256": "e1efb8e969ef20604ef883f4278e763b66bad8c6d2fb0976e5d4ae6c60562813",
+   "bytes": 433117
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Back_2_Events.csv",
+   "sha256": "703415da72a610566e49e95d1cb1def812e42e8bcdd1177fc73120968189f94f",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Back_2.csv",
+   "sha256": "52b3a569711bbf070ca7388697ba301ef5f250165079a580570b97c50f0ab570",
+   "bytes": 438514
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Back_3_Events.csv",
+   "sha256": "61dfc195a8442a65ff82c2df99b73fab6114ac50049caf8acf93a27f256c6c4a",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Back_3.csv",
+   "sha256": "12a48859b49e1b9b28f0d233d399f0ee63a545e1e4612553ad58995f4abf0af5",
+   "bytes": 363012
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Center_1_Events.csv",
+   "sha256": "5199a6a03aeed8bb7523ce80eb288d6a1199e5e550dfcf21df917e4e8ec5b116",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Center_1.csv",
+   "sha256": "bb01977b3d67190b371e490509b8e024127f0df4bf720d7d42d61788c9ec854e",
+   "bytes": 341608
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Center_2_Events.csv",
+   "sha256": "478e00f91d0f28ca737fdc506b42a4ca75a1aba324f302080ae1dd47ae35094f",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Center_2.csv",
+   "sha256": "a2ddce337f42ac866f2a0e6cab827297e494ec0c571b9e1f2d0555b088a2523e",
+   "bytes": 465408
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Center_3_Events.csv",
+   "sha256": "24488a211a61d2e7001440670fff451f29e0c901d90b44412c4bcacc9d0ca05c",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Center_3.csv",
+   "sha256": "841b1ba542196b95cdf87c48ecb285366f0590f56a1742dd088ec232a101b80b",
+   "bytes": 472869
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Corner_1_Events.csv",
+   "sha256": "6ec2d110c15c965ca75c9deecf68c1b617081a84abe74c7f64572dd1bb286ae8",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Corner_1.csv",
+   "sha256": "1b37c0a0c787429ce6149983efb5488565ee13051b636f7f970e9afca928d662",
+   "bytes": 357904
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Corner_2_Events.csv",
+   "sha256": "81cb005abfdd9bdd66149e713b3f2f4563bd1cadc06eb7263200b989794bad3d",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Corner_2.csv",
+   "sha256": "e611ee165e96b2ac1131140fd9c2db20ae7fc6a01ab70ee2e0bfe48e5fd481ce",
+   "bytes": 357051
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Corner_3_Events.csv",
+   "sha256": "a58496192f83c8c1c7a68e2a57be9015fa08bdc98e6e5140f6e3d7aa7e27e3b2",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Corner_3.csv",
+   "sha256": "0f18c2c1a9bcb61d9ed675c515e1964da12207f5dc1f08ff3df0402e120e93d6",
+   "bytes": 363707
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Side_1_Events.csv",
+   "sha256": "0ff3576aca71f55598aa63a3f8440a32850219678091fc8be581eb7061244b59",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Side_1.csv",
+   "sha256": "069d13b037ec0e36f00c99db5dd9d2c5192a88d33a819ae4d0c33bdb0fd271f3",
+   "bytes": 365155
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Side_2_Events.csv",
+   "sha256": "400831ceeccbded25278e3a1e3e8cf405bd7b7a4ae8aadc244d0008fd68b05ce",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Side_2.csv",
+   "sha256": "ceb5c7a3b7d06128292993d09ba88c919457985131de284ef5a9998b034bf763",
+   "bytes": 358031
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Side_3_Events.csv",
+   "sha256": "a5d66f43392a168586fb5c4360a182b0834f086e089ff93857037f019878e698",
+   "bytes": 71
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/100kW_Open_Side_3.csv",
+   "sha256": "6c1ab7b82a220fe1bfb54d56f14844a1e662989d91523b5808ed48b5495397a5",
+   "bytes": 363274
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "02_Info/furniture_mass.csv",
+   "sha256": "9a82044ced2c4264e26125c84ea58c61e016801a5103192334a99bedfaf5b0b7",
+   "bytes": 906
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Back_1_Events.csv",
+   "sha256": "bb114d6f7dc5f8f832aa9fed174ce17a3e70a733fcc91f3bff19f739d54555a7",
+   "bytes": 110
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Back_1.csv",
+   "sha256": "d8bb2fc64a69cb8b9bbaa620e4f81d0fa338feb268f03847ee5ca1c490b6970b",
+   "bytes": 538442
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Center_1_Events.csv",
+   "sha256": "f17a78ad0a3e2752f15927dda5b89eba214836a140bb1f402e5cf1b74214105a",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Center_1.csv",
+   "sha256": "ba523eaa249b7ae5075a8c73448620d845b17187ada087ab4277898913248d31",
+   "bytes": 330375
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Center_2_Events.csv",
+   "sha256": "ccecd01b949dabf9c160198259e457da2e90bdd107dd200a7e0841ba71090026",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Center_2.csv",
+   "sha256": "fb027554b9f9dd1ffaffc26a75179043e2131c00be94b966592b8eeb24ff6d5f",
+   "bytes": 485390
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Center_3_Events.csv",
+   "sha256": "322d5af5e9923377580fdaf9db8eb6f7d99a547e53303ec8772a8085d9f177bf",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Center_3.csv",
+   "sha256": "b38377b80926918721ed37b345561560c1ad76409eb80937290d6e3274b85b53",
+   "bytes": 542913
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Corner_1_Events.csv",
+   "sha256": "2783d77796e3f5ea7222deabd80c42b976c5f0f36a1342d53dc27e98c41134de",
+   "bytes": 86
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Corner_1.csv",
+   "sha256": "be7c85df41d082fae15059427c784b6d5be4329c7c6869ba593b9294560a08ad",
+   "bytes": 570662
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Corner_2_Events.csv",
+   "sha256": "3916513e36158fc5d7ce598ccfe44eabdcfbb0ad22bc4ca856cb3be991d10a88",
+   "bytes": 79
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Corner_2.csv",
+   "sha256": "d6580169f322e4c06aaafaa70a2e66bcb20c1ed57fd31650325d9c0ca1ad67db",
+   "bytes": 529863
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Corner_3_Events.csv",
+   "sha256": "af61f3fc725f5d52a3c81aea419edb29db652fea4398912558516f6552e879fb",
+   "bytes": 79
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/RedAccent_Open_Corner_3.csv",
+   "sha256": "136f7cd4652096506a8771251a159fcdebc7f7f8f922332795f0f19fd0b78c03",
+   "bytes": 534960
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Back_1_Events.csv",
+   "sha256": "e76628bc6f2c393f4e59d8892463dccb3e4b1ddfc5cbfb1cf7cfd89fba846471",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Back_1.csv",
+   "sha256": "6d8c8e80a888715cf6f89eb4edec7ca27d31b582f5f6006e62d0aa692acff5c7",
+   "bytes": 547015
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Back_2_Events.csv",
+   "sha256": "bdd6863a92397178d5c5e07bcb52138a32af61b3ae7d6db6604546626cc2d29e",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Back_2.csv",
+   "sha256": "a71cf32f356926c4c1d82184074fdc3e225fc77ec04f7423cdb5346d842cee26",
+   "bytes": 586987
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Back_3_Events.csv",
+   "sha256": "6933d7f563c0d825f7229568fd73f7fb21ce07a704051fad5e788e3d28dea5d1",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Back_3.csv",
+   "sha256": "bd6bed99842ea288d2f3f339b904ce8cdda5e6de54a779f4ebfa37770ec5cc13",
+   "bytes": 564794
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Center_1_Events.csv",
+   "sha256": "1e5f09563c1f7e86554e1941490f80616174f6407647d3b48f5510c97d7858e5",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Center_1.csv",
+   "sha256": "64c4f7fc0942cfcd2cd50e311b4a29e871a093a731df572e16da992c9a061816",
+   "bytes": 480368
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Corner_1_Events.csv",
+   "sha256": "7063715fc07e93138318bd3a8cb7768259db4e7dce1771ca8cf94ec9932e36cc",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Corner_1.csv",
+   "sha256": "cd4fa47c0f9e9150a66136c0e738fd79b10f6ef76fb14bbf96538c514a88ca5a",
+   "bytes": 524645
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Corner_2_Events.csv",
+   "sha256": "61cd410ad3108321eb3c5933e9c2662dc194c14b71ba6895734a29f60ba698da",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Corner_2.csv",
+   "sha256": "3e79c3c3165b273ae5f606384813b97cfddf89293f882a01b5ab8590631f7033",
+   "bytes": 563889
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Corner_3_Events.csv",
+   "sha256": "85e73fbb39aa73de54bd3116fd869db7769b9782df971078b46689c2bd817d18",
+   "bytes": 72
+  },
+  {
+   "repo": "github.com/ulfsri/fsri-compartments-2018",
+   "commit": "b7d3929f80131e3e99c62fbf5baf7d17048ad94b",
+   "path": "01_Data/Overstuffed_Open_Corner_3.csv",
+   "sha256": "163d96879f7fbd020712316f1476563a36b47936c776ef638bab404f77e659b8",
+   "bytes": 563063
+  }
+ ]
+}

@@ -1,0 +1,4433 @@
+{
+ "generated": "2026-11-11T22:08:37.717Z",
+ "tool": "tools/calibration/validation-suite.mjs",
+ "plan": "wiki/research/fire-calibration-plan-2026-11-11.md, section 12 (pre-registered before the baseline)",
+ "node": "v24.21.0",
+ "cpu": "Intel(R) Core(TM) i7-14700",
+ "jobs": 4,
+ "wallSeconds": 1379.1907226,
+ "git": {
+  "head": "41415f7e6efc1b2b59cc5c2d186254164bebc304",
+  "branch": "next/calibration-ui",
+  "status": [
+   "M .gitignore",
+   " M topologicpy-web-frontend/public/docs/fire-and-smoke.html",
+   " M wiki/research/fire-calibration-plan-2026-11-11.md",
+   "?? benchmark/results/2026-11-12-validation-baseline.json",
+   "?? benchmark/results/2026-11-12-validation-old-transport-partial.json",
+   "?? tools/calibration/data/",
+   "?? tools/calibration/lib/",
+   "?? tools/calibration/validation-data.mjs",
+   "?? tools/calibration/validation-suite.mjs",
+   "?? wiki/research/free-inference-gpu-options-2026-11-05.md"
+  ],
+  "solverDiff": [],
+  "solverDigests": {
+   "flamescapes.js": "352694a972e2543b",
+   "flamescapesRun.js": "4db0b24a2f00b727",
+   "flamescapesGpu.js": "29acac8d2b45885d",
+   "voxelize.js": "1cbb116d52fa56ff",
+   "fireClasses.js": "0a33dea6dc75b222"
+  },
+  "snapshotDigests": {
+   "accessAudit.js": "40ed9d4947ca5e7f",
+   "alternatives.js": "3409d985e0eba9e2",
+   "centroid.js": "c5e939216a8bf9c7",
+   "codeCheck.js": "a2c46d185f99b38a",
+   "cores.js": "89f35b3c1ad824a2",
+   "crowd.js": "e95a3384f91ce6e9",
+   "deadline.js": "2b55bd3d0f812030",
+   "describeFacts.js": "601f8e2829c81585",
+   "doorStates.js": "e5141e1ed1f1e92c",
+   "drawingToLod1.js": "45c7ebd65f1acf3c",
+   "egressMap.js": "b0cef306123eec0a",
+   "egressRun.js": "313fdb2a7a4ffbd8",
+   "extinguishers.js": "854d569476ba94a8",
+   "federation.js": "828f5b91264d9f18",
+   "fieldNotes.js": "d8511b9d94b89175",
+   "fire.js": "5bc1fea6589a6378",
+   "fireClasses.js": "0a33dea6dc75b222",
+   "flamescapes.js": "352694a972e2543b",
+   "flamescapesGpu.js": "29acac8d2b45885d",
+   "flamescapesRun.js": "4db0b24a2f00b727",
+   "floorRaster.js": "2d2a71261acc69c3",
+   "forecast.js": "2c4fbbff73b774e6",
+   "graph.js": "5dfbecb6c2556534",
+   "guided.js": "2a4e8d0dc44de208",
+   "hintText.js": "7d84b82b129c374e",
+   "identify.js": "a991c119206a84a1",
+   "identifyGeometry.js": "47d3de466a9cb5db",
+   "ifcSemantics.js": "a0d3df1b9b826a39",
+   "ignition.js": "e462288b77f13952",
+   "ignitionCatalog.js": "ead38de976f3365b",
+   "ignitionClasses.js": "6e0d37e41424c3d4",
+   "ignitionContexts.js": "0c322c05e506b286",
+   "importSettings.js": "bb13549913f4cd28",
+   "lattice.js": "3548bed0e529aecd",
+   "lod1.js": "04bb348701446745",
+   "measures.js": "892eec2abd637021",
+   "outdoorSpaces.js": "3844cea5c7ee5a5b",
+   "performanceCheck.js": "e6e313a5bc8ae84c",
+   "perfReport.js": "fc75485a0c68807e",
+   "physarum.js": "5c43aadf1c1f5fc2",
+   "rl.js": "dae22f1d5de84752",
+   "rlSafe.js": "cc8e3d8268fc6ea9",
+   "rooms.js": "8ebec9371f9889e8",
+   "route.js": "930301fba43b1557",
+   "rsetPresets.js": "0238cf14b64789d4",
+   "runCache.js": "a9df513fa0701b80",
+   "runHealth.js": "0916a0f8e8cbc8db",
+   "runTable.js": "cb5dae22a4f6b9ed",
+   "session.js": "a16e42a9efab70a8",
+   "settingsMigration.js": "3fbfe6d0e913034f",
+   "skeleton.js": "59065f929bbfd324",
+   "slimeEgress.js": "b61ca1ee452942ed",
+   "spaceFloors.js": "2b36f82524ad4e1f",
+   "sprinklers.js": "46f70b762473f975",
+   "stairs.js": "2f248561b86e57f2",
+   "straighten.js": "b5dd3d74cf349ae4",
+   "suppression.js": "1295cc7cd58914b3",
+   "suppressionSystems.js": "03ef194b43bc4d91",
+   "surrogate.js": "8698ff3359280127",
+   "tenability.js": "fc328b4250d2cce8",
+   "topologicExport.js": "41094bc2c87b00f3",
+   "voxelize.js": "1cbb116d52fa56ff",
+   "zone.js": "fb21e41b346be840"
+  }
+ },
+ "solver": {
+  "overrides": {},
+  "defaults": {
+   "dt": 0.1,
+   "ambient": 293.15,
+   "gravity": 9.81,
+   "convection": 200,
+   "wallConvection": 10,
+   "sootAbsorption": 500,
+   "vorticity": 3,
+   "cfl": 1,
+   "vorticityStep": 0.5,
+   "maxSubsteps": 8,
+   "conservative": 1,
+   "expansion": 1,
+   "porousVelocity": 0.5,
+   "projection": 30,
+   "projectionTolerance": 0.001,
+   "diffusivity": 0.00002,
+   "conductivity": 0.026,
+   "emitAbove": 500,
+   "rays": 8,
+   "rayReach": 40,
+   "pyrolysisA": 47800,
+   "pyrolysisE": 92200,
+   "pyrolysisHeat": 250000,
+   "oxidationA": 180000000,
+   "oxidationE": 92200,
+   "pyrolysisFuel": 0.9,
+   "latentHeat": 2258601.5538290786,
+   "moisture": 0.1,
+   "fuelHeatCapacity": 2000,
+   "skinDensity": 1,
+   "contentsArea": 2,
+   "itemArea": 1,
+   "gasA": 830000,
+   "gasE": 126000,
+   "gasFuelExponent": -0.3,
+   "gasOxygenExponent": 1.3,
+   "flameSpeed": 1,
+   "flameLifetime": 0.5,
+   "flameShare": 0.75,
+   "burningFlux": 1000,
+   "embers": false,
+   "emberRate": 20,
+   "emberPatch": 0.001,
+   "emberMass": [
+    0.00002,
+    0.0002
+   ],
+   "emberLifetime": 10,
+   "emberMassLoss": 0.05,
+   "emberDrag": 0.5,
+   "emberEmissivity": 0.95,
+   "emberHeatCapacity": 2000,
+   "maxParticles": 20000,
+   "seed": 1
+  },
+  "health": {
+   "maxT": 3000,
+   "maxSpeed": 50,
+   "energyFactor": 1.5,
+   "energySlack": 1000000,
+   "cp": 1005
+  }
+ },
+ "settings": {
+  "datasets": [
+   "wtc",
+   "steckler",
+   "nbs"
+  ],
+  "cells": [
+   0.27,
+   0.34
+  ],
+  "tests": "^wtc/[1-6]$|^steckler/14$|^nbs/100A$",
+  "walls": "each test's own surfaces from its FDS input, areal heat capacity matched over one cell",
+  "plan": {
+   "steckler": {
+    "horizon": "() => 300",
+    "steadyFrom": 200,
+    "skipCells": []
+   },
+   "nbs": {
+    "horizon": "() => 900",
+    "steadyFrom": null,
+    "skipCells": []
+   },
+   "nistnrc": {
+    "horizon": "() => 600",
+    "steadyFrom": null,
+    "skipCells": [
+     0.2
+    ]
+   },
+   "wtc": {
+    "horizon": "(t) => Math.min(600, Math.ceil(lastBurning(t.burner.hrrW)) + 30)",
+    "steadyFrom": null,
+    "skipCells": [
+     0.2
+    ]
+   }
+  },
+  "skipped": [],
+  "series": {
+   "steckler": "NBS 1980 to 1981, Steckler, Quintiere, Rinkinen; small room doorway flows",
+   "nbs": "NBS 1985, Peacock, Davis, Babrauskas; three-room suite with a corridor",
+   "nistnrc": "NIST 2003, Hamins et al. for the US NRC; large compartment (shares NIST's large fire laboratory and lead with wtc)",
+   "wtc": "NIST 2004, Hamins et al. for the WTC investigation; spray-burner compartment (shares the laboratory and lead with nistnrc)"
+  },
+  "verdictRule": "calibrated on a cell: at least three independent datasets each within the calibrated band (0.8 <= delta <= 1.25, sigmaM <= 0.35) with none of their runs stopped, and the pooled pairs within that band too; indicative: pooled within 0.67 <= delta <= 1.5, sigmaM <= 0.5; otherwise not calibrated",
+  "claimRule": "claim protocol 2026-11-12, section 4: calibrated if in the calibrated band in >= 3 datasets and outside the indicative band in none; indicative if in the indicative band (or better) in >= 2; else not calibrated; a dataset with a stopped run counts as outside",
+  "sigmaE": {
+   "hglTemperature": 0.07,
+   "hglDepth": 0.05,
+   "ceilingJet": 0.07,
+   "plume": 0.07,
+   "o2": 0.08,
+   "co2": 0.08,
+   "velocity": 0.08,
+   "neutralPlane": 0.05
+  },
+  "measures": {
+   "wtc": [
+    "hglTemperature",
+    "hglDepth",
+    "ceilingJet",
+    "o2",
+    "co2"
+   ],
+   "nbs": [
+    "hglTemperature",
+    "hglDepth"
+   ],
+   "steckler": [
+    "hglTemperature",
+    "hglDepth",
+    "doorVelocity",
+    "neutralPlane"
+   ]
+  },
+  "rule": "claim protocol addendum 2026-11-12 00:28: a run whose fire's gas cannot reach the open boundary, though its test had an opening, is left out and reported as not represented on this grid (lib/represented.mjs; sealed by design: {\"nistnrc\":[\"01\",\"02\",\"07\",\"08\",\"13\"],\"nbs\":[\"100O\"]})"
+ },
+ "runs": [
+  {
+   "id": "wtc/4@0.27",
+   "dataset": "wtc",
+   "test": "4",
+   "cell": 0.27,
+   "horizon": 600,
+   "grid": [
+    36,
+    17,
+    16
+   ],
+   "cells": 9792,
+   "openCells": 6297,
+   "plumeIndex": 5.63,
+   "peakKW": 3159,
+   "burner": {
+    "cells": 329,
+    "columns": 24,
+    "layers": 14,
+    "released": 1887.454,
+    "expectedMJ": 1887.454
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 14,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.147
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.187
+    },
+    {
+     "id": "EO2",
+     "moved": 0.128
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.128
+    }
+   ],
+   "solverOptions": {
+    "ambient": 293.15,
+    "inert": [
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 74.31851851851852,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 6248
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     69.33,
+     74.32,
+     69.33
+    ],
+    "solidCells": [
+     2919,
+     576,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 1316.5,
+     "expected": 1316.5
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.96,
+    "substeps": 5
+   },
+   "wallSeconds": 823.9,
+   "buildSeconds": 0.1,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 551.2285,
+     "measured": 542.971
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 3.033,
+     "measured": 2.723
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 604.332,
+     "measured": 571.604
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.9715,
+     "measured": 2.864
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 765.6858,
+     "measured": 593,
+     "moved": 0.147
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 822.9024,
+     "measured": 723,
+     "moved": 0.187
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.27,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1556,
+     "measured": 0.107,
+     "moved": 0.128
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.27,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0813,
+     "measured": 0.074,
+     "moved": 0.128
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/5@0.27",
+   "dataset": "wtc",
+   "test": "5",
+   "cell": 0.27,
+   "horizon": 600,
+   "grid": [
+    36,
+    17,
+    16
+   ],
+   "cells": 9792,
+   "openCells": 6297,
+   "plumeIndex": 5.51,
+   "peakKW": 2997,
+   "burner": {
+    "cells": 329,
+    "columns": 24,
+    "layers": 14,
+    "released": 1790.435,
+    "expectedMJ": 1790.435
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 14,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.147
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.187
+    },
+    {
+     "id": "EO2",
+     "moved": 0.128
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.128
+    }
+   ],
+   "solverOptions": {
+    "ambient": 293.15,
+    "inert": [
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 74.31851851851852,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 6248
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     69.33,
+     74.32,
+     69.33
+    ],
+    "solidCells": [
+     2919,
+     576,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 1316.5,
+     "expected": 1316.5
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.72,
+    "substeps": 4
+   },
+   "wallSeconds": 791.5,
+   "buildSeconds": 0.1,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 535.0737,
+     "measured": 521.979
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 3.0059,
+     "measured": 2.692
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 586.544,
+     "measured": 556.011
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.957,
+     "measured": 2.79
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 751.7338,
+     "measured": 613,
+     "moved": 0.147
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 808.5117,
+     "measured": 701,
+     "moved": 0.187
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.27,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1537,
+     "measured": 0.1,
+     "moved": 0.128
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.27,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0793,
+     "measured": 0.0678,
+     "moved": 0.128
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/6@0.27",
+   "dataset": "wtc",
+   "test": "6",
+   "cell": 0.27,
+   "horizon": 600,
+   "grid": [
+    36,
+    17,
+    16
+   ],
+   "cells": 9792,
+   "openCells": 6297,
+   "plumeIndex": 5.49,
+   "peakKW": 2968,
+   "burner": {
+    "cells": 329,
+    "columns": 24,
+    "layers": 14,
+    "released": 1773.596,
+    "expectedMJ": 1773.596
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 14,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.147
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.187
+    },
+    {
+     "id": "EO2",
+     "moved": 0.128
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.128
+    }
+   ],
+   "solverOptions": {
+    "ambient": 293.15,
+    "inert": [
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 74.31851851851852,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 6248
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     69.33,
+     74.32,
+     69.33
+    ],
+    "solidCells": [
+     2919,
+     576,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 1316.5,
+     "expected": 1316.5
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.65,
+    "substeps": 4
+   },
+   "wallSeconds": 782.6,
+   "buildSeconds": 0.1,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 531.796,
+     "measured": 528.822
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 3.0057,
+     "measured": 2.641
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 587.5626,
+     "measured": 566.777
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.951,
+     "measured": 2.674
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 746.6619,
+     "measured": 607,
+     "moved": 0.147
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 806.2255,
+     "measured": 696,
+     "moved": 0.187
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.27,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1488,
+     "measured": 0.1,
+     "moved": 0.128
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.27,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0768,
+     "measured": 0.0672,
+     "moved": 0.128
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/3@0.27",
+   "dataset": "wtc",
+   "test": "3",
+   "cell": 0.27,
+   "horizon": 600,
+   "grid": [
+    36,
+    17,
+    16
+   ],
+   "cells": 9792,
+   "openCells": 6285,
+   "plumeIndex": 4.72,
+   "peakKW": 2042,
+   "burner": {
+    "cells": 329,
+    "columns": 24,
+    "layers": 14,
+    "released": 1220.108,
+    "expectedMJ": 1220.108
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 14,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.147
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.187
+    },
+    {
+     "id": "EO2",
+     "moved": 0.128
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.128
+    }
+   ],
+   "solverOptions": {
+    "ambient": 293.15,
+    "inert": [
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 74.31851851851852,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 6236
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     69.33,
+     74.32,
+     69.33
+    ],
+    "solidCells": [
+     2931,
+     576,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 1316.5,
+     "expected": 1316.5
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 9.79,
+    "substeps": 4
+   },
+   "wallSeconds": 655.1,
+   "buildSeconds": 0.1,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 443.7444,
+     "measured": 358.751
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.9083,
+     "measured": 2.7
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 462.8586,
+     "measured": 352.135
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.9138,
+     "measured": 2.801
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 633.1527,
+     "measured": 411,
+     "moved": 0.147
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 658.5993,
+     "measured": 431,
+     "moved": 0.187
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.27,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1103,
+     "measured": 0.0527,
+     "moved": 0.128
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.27,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0568,
+     "measured": 0.0372,
+     "moved": 0.128
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/1@0.27",
+   "dataset": "wtc",
+   "test": "1",
+   "cell": 0.27,
+   "horizon": 600,
+   "grid": [
+    36,
+    17,
+    16
+   ],
+   "cells": 9792,
+   "openCells": 6285,
+   "plumeIndex": 4.77,
+   "peakKW": 2091,
+   "burner": {
+    "cells": 329,
+    "columns": 24,
+    "layers": 14,
+    "released": 1210.256,
+    "expectedMJ": 1210.256
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 14,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.147
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.187
+    },
+    {
+     "id": "EO2",
+     "moved": 0.128
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.128
+    }
+   ],
+   "solverOptions": {
+    "ambient": 297.15,
+    "inert": [
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 74.31851851851852,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 6236
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     69.33,
+     74.32,
+     69.33
+    ],
+    "solidCells": [
+     2931,
+     576,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 1316.5,
+     "expected": 1316.5
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 9.33,
+    "substeps": 4
+   },
+   "wallSeconds": 579.6,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 439.0744,
+     "measured": 373.298
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.917,
+     "measured": 2.61
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 466.9128,
+     "measured": 385.513
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.9174,
+     "measured": 2.468
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 628.0665,
+     "measured": 423,
+     "moved": 0.147
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 659.3453,
+     "measured": 448,
+     "moved": 0.187
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.27,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1121,
+     "measured": 0.0527,
+     "moved": 0.128
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.27,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0578,
+     "measured": 0.0252,
+     "moved": 0.128
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nbs/100A@0.27",
+   "dataset": "nbs",
+   "test": "100A",
+   "cell": 0.27,
+   "horizon": 900,
+   "grid": [
+    48,
+    11,
+    24
+   ],
+   "cells": 12672,
+   "openCells": 3516,
+   "plumeIndex": 1.47,
+   "peakKW": 110,
+   "burner": {
+    "cells": 6,
+    "columns": 1,
+    "layers": 6,
+    "released": 98.927,
+    "expectedMJ": 98.927
+   },
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 2.16,
+     "nominal": 2.2,
+     "cells": 8,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 2.16,
+     "nominal": 2.4,
+     "cells": 8,
+     "droppedCells": 0
+    },
+    {
+     "id": "4",
+     "modelCeiling": 2.16,
+     "nominal": 2.4,
+     "cells": 8,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 2.16,
+     "nominal": 2.4,
+     "cells": 8,
+     "droppedCells": 0
+    }
+   ],
+   "points": [],
+   "solverOptions": {
+    "ambient": 296.15,
+    "inert": [
+     {
+      "rho": 79.44444444444444,
+      "c": 1159.8181818181818,
+      "k": 0.12,
+      "eps": 0.83
+     },
+     {
+      "rho": 23.703703703703702,
+      "c": 1040,
+      "k": 0.09,
+      "eps": 0.97
+     },
+     {
+      "rho": 313.88888888888886,
+      "c": 1040,
+      "k": 0.36,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 3515
+   },
+   "walls": {
+    "slots": [
+     "HALLWAY",
+     "INSULATION",
+     "FIRE BRICK"
+    ],
+    "rhoModel": [
+     79.44,
+     23.7,
+     313.89
+    ],
+    "solidCells": [
+     8204,
+     787,
+     165
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 1813.6,
+     "expected": 1813.6
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.26,
+    "substeps": 2
+   },
+   "wallSeconds": 211.5,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 321.3782,
+     "measured": 251.882
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "1",
+     "model": 1.3577,
+     "measured": 1.315
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 126.8176,
+     "measured": 87.333
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "3",
+     "model": 1.2457,
+     "measured": 1.173
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "4",
+     "model": 73.3553,
+     "measured": 81.098
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "4",
+     "model": 1.551,
+     "measured": 1.131
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "5",
+     "model": 34.1292,
+     "measured": 75.633
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "5",
+     "model": 1.757,
+     "measured": 1.251
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/2@0.27",
+   "dataset": "wtc",
+   "test": "2",
+   "cell": 0.27,
+   "horizon": 400,
+   "grid": [
+    36,
+    17,
+    16
+   ],
+   "cells": 9792,
+   "openCells": 6285,
+   "plumeIndex": 5.05,
+   "peakKW": 2407,
+   "burner": {
+    "cells": 329,
+    "columns": 24,
+    "layers": 14,
+    "released": 896.528,
+    "expectedMJ": 896.528
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.78,
+     "nominal": 3.82,
+     "cells": 14,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.147
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.187
+    },
+    {
+     "id": "EO2",
+     "moved": 0.128
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.128
+    }
+   ],
+   "solverOptions": {
+    "ambient": 298.15,
+    "inert": [
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 74.31851851851852,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 69.33259259259259,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 6236
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     69.33,
+     74.32,
+     69.33
+    ],
+    "solidCells": [
+     2931,
+     576,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 1316.5,
+     "expected": 1316.5
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 9.99,
+    "substeps": 4
+   },
+   "wallSeconds": 372.7,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 424.249,
+     "measured": 402.765
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.9158,
+     "measured": 2.72
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 445.7639,
+     "measured": 403.281
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.952,
+     "measured": 2.761
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 630.4953,
+     "measured": 461,
+     "moved": 0.147
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.27,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 653.889,
+     "measured": 492,
+     "moved": 0.187
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.27,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1255,
+     "measured": 0.0638,
+     "moved": 0.128
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.27,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0646,
+     "measured": 0.028,
+     "moved": 0.128
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/4@0.34",
+   "dataset": "wtc",
+   "test": "4",
+   "cell": 0.34,
+   "horizon": 600,
+   "grid": [
+    29,
+    14,
+    13
+   ],
+   "cells": 5278,
+   "openCells": 2995,
+   "plumeIndex": 4.47,
+   "peakKW": 3159,
+   "burner": {
+    "cells": 214,
+    "columns": 20,
+    "layers": 11,
+    "released": 1887.454,
+    "expectedMJ": 1887.454
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.237
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.256
+    },
+    {
+     "id": "EO2",
+     "moved": 0.168
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.168
+    }
+   ],
+   "solverOptions": {
+    "ambient": 293.15,
+    "inert": [
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 59.01764705882352,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 2994
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     55.06,
+     59.02,
+     55.06
+    ],
+    "solidCells": [
+     1906,
+     377,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 2087.7,
+     "expected": 2087.7
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.77,
+    "substeps": 3
+   },
+   "wallSeconds": 233.8,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 583.6902,
+     "measured": 542.971
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.9713,
+     "measured": 2.723
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 674.8081,
+     "measured": 571.604
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.9721,
+     "measured": 2.864
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 718.8394,
+     "measured": 593,
+     "moved": 0.237
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 831.5667,
+     "measured": 723,
+     "moved": 0.256
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.34,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1897,
+     "measured": 0.107,
+     "moved": 0.168
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.34,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.1034,
+     "measured": 0.074,
+     "moved": 0.168
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/5@0.34",
+   "dataset": "wtc",
+   "test": "5",
+   "cell": 0.34,
+   "horizon": 600,
+   "grid": [
+    29,
+    14,
+    13
+   ],
+   "cells": 5278,
+   "openCells": 2995,
+   "plumeIndex": 4.37,
+   "peakKW": 2997,
+   "burner": {
+    "cells": 214,
+    "columns": 20,
+    "layers": 11,
+    "released": 1790.435,
+    "expectedMJ": 1790.435
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.237
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.256
+    },
+    {
+     "id": "EO2",
+     "moved": 0.168
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.168
+    }
+   ],
+   "solverOptions": {
+    "ambient": 293.15,
+    "inert": [
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 59.01764705882352,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 2994
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     55.06,
+     59.02,
+     55.06
+    ],
+    "solidCells": [
+     1906,
+     377,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 2087.7,
+     "expected": 2087.7
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.62,
+    "substeps": 3
+   },
+   "wallSeconds": 212.3,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 567.3515,
+     "measured": 521.979
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.9715,
+     "measured": 2.692
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 645.8967,
+     "measured": 556.011
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.9734,
+     "measured": 2.79
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 710.1862,
+     "measured": 613,
+     "moved": 0.237
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 810.4526,
+     "measured": 701,
+     "moved": 0.256
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.34,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1861,
+     "measured": 0.1,
+     "moved": 0.168
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.34,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.1004,
+     "measured": 0.0678,
+     "moved": 0.168
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/6@0.34",
+   "dataset": "wtc",
+   "test": "6",
+   "cell": 0.34,
+   "horizon": 600,
+   "grid": [
+    29,
+    14,
+    13
+   ],
+   "cells": 5278,
+   "openCells": 2995,
+   "plumeIndex": 4.36,
+   "peakKW": 2968,
+   "burner": {
+    "cells": 214,
+    "columns": 20,
+    "layers": 11,
+    "released": 1773.596,
+    "expectedMJ": 1773.596
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.237
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.256
+    },
+    {
+     "id": "EO2",
+     "moved": 0.168
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.168
+    }
+   ],
+   "solverOptions": {
+    "ambient": 293.15,
+    "inert": [
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 59.01764705882352,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 2994
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     55.06,
+     59.02,
+     55.06
+    ],
+    "solidCells": [
+     1906,
+     377,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 2087.7,
+     "expected": 2087.7
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.59,
+    "substeps": 3
+   },
+   "wallSeconds": 212.7,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 565.1962,
+     "measured": 528.822
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.9675,
+     "measured": 2.641
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 641.5333,
+     "measured": 566.777
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 3.0301,
+     "measured": 2.674
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 709.067,
+     "measured": 607,
+     "moved": 0.237
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 809.6347,
+     "measured": 696,
+     "moved": 0.256
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.34,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1858,
+     "measured": 0.1,
+     "moved": 0.168
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.34,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0996,
+     "measured": 0.0672,
+     "moved": 0.168
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/3@0.34",
+   "dataset": "wtc",
+   "test": "3",
+   "cell": 0.34,
+   "horizon": 600,
+   "grid": [
+    29,
+    14,
+    13
+   ],
+   "cells": 5278,
+   "openCells": 2987,
+   "plumeIndex": 3.75,
+   "peakKW": 2042,
+   "burner": {
+    "cells": 214,
+    "columns": 20,
+    "layers": 11,
+    "released": 1220.108,
+    "expectedMJ": 1220.108
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.237
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.256
+    },
+    {
+     "id": "EO2",
+     "moved": 0.168
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.168
+    }
+   ],
+   "solverOptions": {
+    "ambient": 293.15,
+    "inert": [
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 59.01764705882352,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 2986
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     55.06,
+     59.02,
+     55.06
+    ],
+    "solidCells": [
+     1914,
+     377,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 2087.7,
+     "expected": 2087.7
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 7.29,
+    "substeps": 3
+   },
+   "wallSeconds": 178,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 452.1995,
+     "measured": 358.751
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.9192,
+     "measured": 2.7
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 514.9489,
+     "measured": 352.135
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.986,
+     "measured": 2.801
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 603.5462,
+     "measured": 411,
+     "moved": 0.237
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 681.2291,
+     "measured": 431,
+     "moved": 0.256
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.34,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.136,
+     "measured": 0.0527,
+     "moved": 0.168
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.34,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0701,
+     "measured": 0.0372,
+     "moved": 0.168
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/1@0.34",
+   "dataset": "wtc",
+   "test": "1",
+   "cell": 0.34,
+   "horizon": 600,
+   "grid": [
+    29,
+    14,
+    13
+   ],
+   "cells": 5278,
+   "openCells": 2987,
+   "plumeIndex": 3.79,
+   "peakKW": 2091,
+   "burner": {
+    "cells": 214,
+    "columns": 20,
+    "layers": 11,
+    "released": 1210.256,
+    "expectedMJ": 1210.256
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.237
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.256
+    },
+    {
+     "id": "EO2",
+     "moved": 0.168
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.168
+    }
+   ],
+   "solverOptions": {
+    "ambient": 297.15,
+    "inert": [
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 59.01764705882352,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 2986
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     55.06,
+     59.02,
+     55.06
+    ],
+    "solidCells": [
+     1914,
+     377,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 2087.7,
+     "expected": 2087.7
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 7.14,
+    "substeps": 3
+   },
+   "wallSeconds": 170.2,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 450.4954,
+     "measured": 373.298
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.9286,
+     "measured": 2.61
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 516.4778,
+     "measured": 385.513
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 3.003,
+     "measured": 2.468
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 597.0609,
+     "measured": 423,
+     "moved": 0.237
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 684.19,
+     "measured": 448,
+     "moved": 0.256
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.34,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.137,
+     "measured": 0.0527,
+     "moved": 0.168
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.34,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0706,
+     "measured": 0.0252,
+     "moved": 0.168
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nbs/100A@0.34",
+   "dataset": "nbs",
+   "test": "100A",
+   "cell": 0.34,
+   "horizon": 900,
+   "grid": [
+    38,
+    10,
+    20
+   ],
+   "cells": 7600,
+   "openCells": 3039,
+   "plumeIndex": 1.17,
+   "peakKW": 110,
+   "burner": {
+    "cells": 4,
+    "columns": 1,
+    "layers": 4,
+    "released": 98.927,
+    "expectedMJ": 98.927
+   },
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 2.04,
+     "nominal": 2.2,
+     "cells": 6,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 2.38,
+     "nominal": 2.4,
+     "cells": 7,
+     "droppedCells": 0
+    },
+    {
+     "id": "4",
+     "modelCeiling": 2.38,
+     "nominal": 2.4,
+     "cells": 7,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 2.38,
+     "nominal": 2.4,
+     "cells": 7,
+     "droppedCells": 0
+    }
+   ],
+   "points": [],
+   "solverOptions": {
+    "ambient": 296.15,
+    "inert": [
+     {
+      "rho": 63.08823529411764,
+      "c": 1159.8181818181818,
+      "k": 0.12,
+      "eps": 0.83
+     },
+     {
+      "rho": 18.823529411764707,
+      "c": 1040,
+      "k": 0.09,
+      "eps": 0.97
+     },
+     {
+      "rho": 249.26470588235293,
+      "c": 1040,
+      "k": 0.36,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 1993
+   },
+   "walls": {
+    "slots": [
+     "HALLWAY",
+     "INSULATION",
+     "FIRE BRICK"
+    ],
+    "rhoModel": [
+     63.09,
+     18.82,
+     249.26
+    ],
+    "solidCells": [
+     4017,
+     436,
+     108
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 2875.9,
+     "expected": 2875.9
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 2.76,
+    "substeps": 1
+   },
+   "wallSeconds": 64.9,
+   "buildSeconds": 0.1,
+   "pairs": [
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 323.8975,
+     "measured": 251.882
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "1",
+     "model": 1.3824,
+     "measured": 1.315
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 93.0546,
+     "measured": 87.333
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "3",
+     "model": 1.5236,
+     "measured": 1.173
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "4",
+     "model": 51.1158,
+     "measured": 81.098
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "4",
+     "model": 1.9064,
+     "measured": 1.131
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "5",
+     "model": 20.744,
+     "measured": 75.633
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "5",
+     "model": 2.0188,
+     "measured": 1.251
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/2@0.34",
+   "dataset": "wtc",
+   "test": "2",
+   "cell": 0.34,
+   "horizon": 400,
+   "grid": [
+    29,
+    14,
+    13
+   ],
+   "cells": 5278,
+   "openCells": 2987,
+   "plumeIndex": 4.01,
+   "peakKW": 2407,
+   "burner": {
+    "cells": 214,
+    "columns": 20,
+    "layers": 11,
+    "released": 896.528,
+    "expectedMJ": 896.528
+   },
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0
+    }
+   ],
+   "points": [
+    {
+     "id": "TTRW1",
+     "moved": 0.237
+    },
+    {
+     "id": "TTRE1",
+     "moved": 0.256
+    },
+    {
+     "id": "EO2",
+     "moved": 0.168
+    },
+    {
+     "id": "ECO2",
+     "moved": 0.168
+    }
+   ],
+   "solverOptions": {
+    "ambient": 298.15,
+    "inert": [
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     },
+     {
+      "rho": 59.01764705882352,
+      "c": 899.9999999999999,
+      "k": 0.16,
+      "eps": 0.9
+     },
+     {
+      "rho": 55.058235294117644,
+      "c": 1172,
+      "k": 0.13,
+      "eps": 0.8
+     }
+    ]
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 2986
+   },
+   "walls": {
+    "slots": [
+     "MARINITE BOARD",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     55.06,
+     59.02,
+     55.06
+    ],
+    "solidCells": [
+     1914,
+     377,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 2087.7,
+     "expected": 2087.7
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 7.98,
+    "substeps": 3
+   },
+   "wallSeconds": 108.3,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 425.8434,
+     "measured": 402.765
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "west",
+     "model": 2.9154,
+     "measured": 2.72
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 487.1996,
+     "measured": 403.281
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "east",
+     "model": 2.9973,
+     "measured": 2.761
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 596.8615,
+     "measured": 461,
+     "moved": 0.237
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "TTRE1",
+     "model": 682.2831,
+     "measured": 492,
+     "moved": 0.256
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.34,
+     "quantity": "o2",
+     "device": "EO2",
+     "model": 0.1599,
+     "measured": 0.0638,
+     "moved": 0.168
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.34,
+     "quantity": "co2",
+     "device": "ECO2",
+     "model": 0.0827,
+     "measured": 0.028,
+     "moved": 0.168
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/14@0.27",
+   "dataset": "steckler",
+   "test": "14",
+   "cell": 0.27,
+   "horizon": 300,
+   "grid": [
+    16,
+    10,
+    13
+   ],
+   "cells": 2080,
+   "openCells": 1096,
+   "plumeIndex": 1.17,
+   "peakKW": 63,
+   "burner": {
+    "cells": 7,
+    "columns": 1,
+    "layers": 7,
+    "released": 18.555,
+    "expectedMJ": 18.555
+   },
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2.16,
+     "nominal": 2.13,
+     "cells": 8,
+     "droppedCells": 0
+    }
+   ],
+   "points": [],
+   "solverOptions": {
+    "ambient": 301.15,
+    "inert": [
+     {
+      "rho": 9.62962962962963,
+      "c": 1000,
+      "k": 0.1,
+      "eps": 0.9
+     },
+     {
+      "rho": 9.62962962962963,
+      "c": 1000,
+      "k": 0.1,
+      "eps": 0.9
+     },
+     {
+      "rho": 9.62962962962963,
+      "c": 1000,
+      "k": 0.1,
+      "eps": 0.9
+     }
+    ]
+   },
+   "door": {
+    "cells": 7,
+    "width": 0.54,
+    "sill": 0,
+    "soffit": 1.89,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 1095
+   },
+   "walls": {
+    "slots": [
+     "FIBER BOARD"
+    ],
+    "rhoModel": [
+     9.63,
+     9.63,
+     9.63
+    ],
+    "solidCells": [
+     984,
+     0,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 189.5,
+     "expected": 189.5
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.15,
+    "substeps": 2
+   },
+   "wallSeconds": 7.7,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.27,
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 106.1935,
+     "measured": 91
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.27,
+     "quantity": "hglDepth",
+     "device": "room",
+     "model": 1.4801,
+     "measured": 1.346
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.27,
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.5546,
+     "measured": 2.15
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.27,
+     "quantity": "neutralPlane",
+     "device": "door",
+     "model": 0.914,
+     "measured": 1.0107
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/14@0.34",
+   "dataset": "steckler",
+   "test": "14",
+   "cell": 0.34,
+   "horizon": 300,
+   "grid": [
+    13,
+    9,
+    11
+   ],
+   "cells": 1287,
+   "openCells": 592,
+   "plumeIndex": 0.93,
+   "peakKW": 63,
+   "burner": {
+    "cells": 6,
+    "columns": 1,
+    "layers": 6,
+    "released": 18.555,
+    "expectedMJ": 18.555
+   },
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2.04,
+     "nominal": 2.13,
+     "cells": 6,
+     "droppedCells": 0
+    }
+   ],
+   "points": [],
+   "solverOptions": {
+    "ambient": 301.15,
+    "inert": [
+     {
+      "rho": 7.647058823529411,
+      "c": 1000,
+      "k": 0.1,
+      "eps": 0.9
+     },
+     {
+      "rho": 7.647058823529411,
+      "c": 1000,
+      "k": 0.1,
+      "eps": 0.9
+     },
+     {
+      "rho": 7.647058823529411,
+      "c": 1000,
+      "k": 0.1,
+      "eps": 0.9
+     }
+    ]
+   },
+   "door": {
+    "cells": 5,
+    "width": 0.68,
+    "sill": 0,
+    "soffit": 1.7,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 580
+   },
+   "walls": {
+    "slots": [
+     "FIBER BOARD"
+    ],
+    "rhoModel": [
+     7.65,
+     7.65,
+     7.65
+    ],
+    "solidCells": [
+     695,
+     0,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 300.6,
+     "expected": 300.6
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.64,
+    "substeps": 2
+   },
+   "wallSeconds": 3.6,
+   "buildSeconds": 0,
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 110.4694,
+     "measured": 91
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "room",
+     "model": 1.5515,
+     "measured": 1.346
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.3991,
+     "measured": 2.15
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.34,
+     "quantity": "neutralPlane",
+     "device": "door",
+     "model": 1.0262,
+     "measured": 1.0107
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  }
+ ],
+ "stats": {
+  "byDataset": {
+   "wtc": {
+    "hglTemperature": {
+     "0.27": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.104,
+      "sigmaM": 0.07,
+      "meanRatio": 1.104,
+      "tier": "within the calibrated band",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     },
+     "0.34": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.181,
+      "sigmaM": 0.07,
+      "meanRatio": 1.181,
+      "tier": "within the calibrated band",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     }
+    },
+    "hglDepth": {
+     "0.27": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.093,
+      "sigmaM": 0.05,
+      "meanRatio": 1.093,
+      "tier": "within the calibrated band",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     },
+     "0.34": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.099,
+      "sigmaM": 0.05,
+      "meanRatio": 1.099,
+      "tier": "within the calibrated band",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     }
+    },
+    "ceilingJet": {
+     "0.27": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.321,
+      "sigmaM": 0.089,
+      "meanRatio": 1.319,
+      "tier": "indicative",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.301,
+      "sigmaM": 0.098,
+      "meanRatio": 1.298,
+      "tier": "indicative",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "o2": {
+     "0.27": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 1.771,
+      "sigmaM": 0.161,
+      "meanRatio": 1.754,
+      "tier": "not calibrated",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 2.189,
+      "sigmaM": 0.167,
+      "meanRatio": 2.165,
+      "tier": "not calibrated",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "co2": {
+     "0.27": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 1.593,
+      "sigmaM": 0.337,
+      "meanRatio": 1.51,
+      "tier": "not calibrated",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 2.003,
+      "sigmaM": 0.326,
+      "meanRatio": 1.905,
+      "tier": "not calibrated",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "nbs": {
+    "hglTemperature": {
+     "0.27": {
+      "n": 4,
+      "dropped": 0,
+      "delta": 1.064,
+      "sigmaM": 0.519,
+      "meanRatio": 0.933,
+      "tier": "not calibrated",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 4,
+      "dropped": 0,
+      "delta": 0.882,
+      "sigmaM": 0.688,
+      "meanRatio": 0.698,
+      "tier": "not calibrated",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "hglDepth": {
+     "0.27": {
+      "n": 4,
+      "dropped": 0,
+      "delta": 1.219,
+      "sigmaM": 0.155,
+      "meanRatio": 1.205,
+      "tier": "within the calibrated band",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": true
+     },
+     "0.34": {
+      "n": 4,
+      "dropped": 0,
+      "delta": 1.418,
+      "sigmaM": 0.212,
+      "meanRatio": 1.388,
+      "tier": "indicative",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "steckler": {
+    "hglTemperature": {
+     "0.27": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.167,
+      "sigmaM": null,
+      "meanRatio": 1.167,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.214,
+      "sigmaM": null,
+      "meanRatio": 1.214,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "hglDepth": {
+     "0.27": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.1,
+      "sigmaM": null,
+      "meanRatio": 1.1,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.153,
+      "sigmaM": null,
+      "meanRatio": 1.153,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "doorVelocity": {
+     "0.27": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.723,
+      "sigmaM": null,
+      "meanRatio": 0.723,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.651,
+      "sigmaM": null,
+      "meanRatio": 0.651,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "neutralPlane": {
+     "0.27": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.904,
+      "sigmaM": null,
+      "meanRatio": 0.904,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.015,
+      "sigmaM": null,
+      "meanRatio": 1.015,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   }
+  },
+  "byQuantity": {
+   "hglTemperature": {
+    "0.27": {
+     "pooled": {
+      "n": 17,
+      "dropped": 0,
+      "delta": 1.093,
+      "sigmaM": 0.24,
+      "meanRatio": 1.064,
+      "tier": "within the calibrated band"
+     },
+     "datasets": [
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "wtc"
+     ],
+     "verdict": "indicative",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 17,
+      "dropped": 0,
+      "delta": 1.121,
+      "sigmaM": 0.381,
+      "meanRatio": 1.045,
+      "tier": "indicative"
+     },
+     "datasets": [
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "wtc"
+     ],
+     "verdict": "indicative",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "hglDepth": {
+    "0.27": {
+     "pooled": {
+      "n": 17,
+      "dropped": 0,
+      "delta": 1.121,
+      "sigmaM": 0.073,
+      "meanRatio": 1.119,
+      "tier": "within the calibrated band"
+     },
+     "datasets": [
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc",
+      "nbs"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "wtc",
+      "nbs"
+     ],
+     "verdict": "indicative",
+     "claim": "indicative",
+     "final": "indicative"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 17,
+      "dropped": 0,
+      "delta": 1.173,
+      "sigmaM": 0.133,
+      "meanRatio": 1.164,
+      "tier": "within the calibrated band"
+     },
+     "datasets": [
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "wtc",
+      "nbs"
+     ],
+     "verdict": "indicative",
+     "claim": "indicative",
+     "final": "indicative"
+    }
+   },
+   "ceilingJet": {
+    "0.27": {
+     "pooled": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.321,
+      "sigmaM": 0.089,
+      "meanRatio": 1.319,
+      "tier": "indicative"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [
+      "wtc"
+     ],
+     "verdict": "indicative",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.301,
+      "sigmaM": 0.098,
+      "meanRatio": 1.298,
+      "tier": "indicative"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [
+      "wtc"
+     ],
+     "verdict": "indicative",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "o2": {
+    "0.27": {
+     "pooled": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 1.771,
+      "sigmaM": 0.161,
+      "meanRatio": 1.754,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 2.189,
+      "sigmaM": 0.167,
+      "meanRatio": 2.165,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "co2": {
+    "0.27": {
+     "pooled": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 1.593,
+      "sigmaM": 0.337,
+      "meanRatio": 1.51,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 2.003,
+      "sigmaM": 0.326,
+      "meanRatio": 1.905,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "doorVelocity": {
+    "0.27": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.723,
+      "sigmaM": null,
+      "meanRatio": 0.723,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "steckler"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.651,
+      "sigmaM": null,
+      "meanRatio": 0.651,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "steckler"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "neutralPlane": {
+    "0.27": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.904,
+      "sigmaM": null,
+      "meanRatio": 0.904,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "steckler"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.015,
+      "sigmaM": null,
+      "meanRatio": 1.015,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "steckler"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   }
+  }
+ },
+ "statsRule": {
+  "byDataset": {
+   "wtc": {
+    "hglTemperature": {
+     "0.27": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.104,
+      "sigmaM": 0.07,
+      "meanRatio": 1.104,
+      "tier": "within the calibrated band",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     },
+     "0.34": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.181,
+      "sigmaM": 0.07,
+      "meanRatio": 1.181,
+      "tier": "within the calibrated band",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     }
+    },
+    "hglDepth": {
+     "0.27": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.093,
+      "sigmaM": 0.05,
+      "meanRatio": 1.093,
+      "tier": "within the calibrated band",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     },
+     "0.34": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.099,
+      "sigmaM": 0.05,
+      "meanRatio": 1.099,
+      "tier": "within the calibrated band",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     }
+    },
+    "ceilingJet": {
+     "0.27": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.321,
+      "sigmaM": 0.089,
+      "meanRatio": 1.319,
+      "tier": "indicative",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.301,
+      "sigmaM": 0.098,
+      "meanRatio": 1.298,
+      "tier": "indicative",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "o2": {
+     "0.27": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 1.771,
+      "sigmaM": 0.161,
+      "meanRatio": 1.754,
+      "tier": "not calibrated",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 2.189,
+      "sigmaM": 0.167,
+      "meanRatio": 2.165,
+      "tier": "not calibrated",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "co2": {
+     "0.27": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 1.593,
+      "sigmaM": 0.337,
+      "meanRatio": 1.51,
+      "tier": "not calibrated",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 2.003,
+      "sigmaM": 0.326,
+      "meanRatio": 1.905,
+      "tier": "not calibrated",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "nbs": {
+    "hglTemperature": {
+     "0.27": {
+      "n": 4,
+      "dropped": 0,
+      "delta": 1.064,
+      "sigmaM": 0.519,
+      "meanRatio": 0.933,
+      "tier": "not calibrated",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 4,
+      "dropped": 0,
+      "delta": 0.882,
+      "sigmaM": 0.688,
+      "meanRatio": 0.698,
+      "tier": "not calibrated",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "hglDepth": {
+     "0.27": {
+      "n": 4,
+      "dropped": 0,
+      "delta": 1.219,
+      "sigmaM": 0.155,
+      "meanRatio": 1.205,
+      "tier": "within the calibrated band",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": true
+     },
+     "0.34": {
+      "n": 4,
+      "dropped": 0,
+      "delta": 1.418,
+      "sigmaM": 0.212,
+      "meanRatio": 1.388,
+      "tier": "indicative",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "steckler": {
+    "hglTemperature": {
+     "0.27": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.167,
+      "sigmaM": null,
+      "meanRatio": 1.167,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.214,
+      "sigmaM": null,
+      "meanRatio": 1.214,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "hglDepth": {
+     "0.27": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.1,
+      "sigmaM": null,
+      "meanRatio": 1.1,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.153,
+      "sigmaM": null,
+      "meanRatio": 1.153,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "doorVelocity": {
+     "0.27": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.723,
+      "sigmaM": null,
+      "meanRatio": 0.723,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.651,
+      "sigmaM": null,
+      "meanRatio": 0.651,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "neutralPlane": {
+     "0.27": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.904,
+      "sigmaM": null,
+      "meanRatio": 0.904,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     },
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.015,
+      "sigmaM": null,
+      "meanRatio": 1.015,
+      "tier": "too few points",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   }
+  },
+  "byQuantity": {
+   "hglTemperature": {
+    "0.27": {
+     "pooled": {
+      "n": 17,
+      "dropped": 0,
+      "delta": 1.093,
+      "sigmaM": 0.24,
+      "meanRatio": 1.064,
+      "tier": "within the calibrated band"
+     },
+     "datasets": [
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "wtc"
+     ],
+     "verdict": "indicative",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 17,
+      "dropped": 0,
+      "delta": 1.121,
+      "sigmaM": 0.381,
+      "meanRatio": 1.045,
+      "tier": "indicative"
+     },
+     "datasets": [
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "wtc"
+     ],
+     "verdict": "indicative",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "hglDepth": {
+    "0.27": {
+     "pooled": {
+      "n": 17,
+      "dropped": 0,
+      "delta": 1.121,
+      "sigmaM": 0.073,
+      "meanRatio": 1.119,
+      "tier": "within the calibrated band"
+     },
+     "datasets": [
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc",
+      "nbs"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "wtc",
+      "nbs"
+     ],
+     "verdict": "indicative",
+     "claim": "indicative",
+     "final": "indicative"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 17,
+      "dropped": 0,
+      "delta": 1.173,
+      "sigmaM": 0.133,
+      "meanRatio": 1.164,
+      "tier": "within the calibrated band"
+     },
+     "datasets": [
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "wtc",
+      "nbs"
+     ],
+     "verdict": "indicative",
+     "claim": "indicative",
+     "final": "indicative"
+    }
+   },
+   "ceilingJet": {
+    "0.27": {
+     "pooled": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.321,
+      "sigmaM": 0.089,
+      "meanRatio": 1.319,
+      "tier": "indicative"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [
+      "wtc"
+     ],
+     "verdict": "indicative",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 12,
+      "dropped": 0,
+      "delta": 1.301,
+      "sigmaM": 0.098,
+      "meanRatio": 1.298,
+      "tier": "indicative"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [
+      "wtc"
+     ],
+     "verdict": "indicative",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "o2": {
+    "0.27": {
+     "pooled": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 1.771,
+      "sigmaM": 0.161,
+      "meanRatio": 1.754,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 2.189,
+      "sigmaM": 0.167,
+      "meanRatio": 2.165,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "co2": {
+    "0.27": {
+     "pooled": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 1.593,
+      "sigmaM": 0.337,
+      "meanRatio": 1.51,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 6,
+      "dropped": 0,
+      "delta": 2.003,
+      "sigmaM": 0.326,
+      "meanRatio": 1.905,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "wtc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "doorVelocity": {
+    "0.27": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.723,
+      "sigmaM": null,
+      "meanRatio": 0.723,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "steckler"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.651,
+      "sigmaM": null,
+      "meanRatio": 0.651,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "steckler"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   },
+   "neutralPlane": {
+    "0.27": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.904,
+      "sigmaM": null,
+      "meanRatio": 0.904,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "steckler"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    },
+    "0.34": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 1.015,
+      "sigmaM": null,
+      "meanRatio": 1.015,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "steckler"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "final": "not calibrated"
+    }
+   }
+  }
+ },
+ "notRepresented": []
+}

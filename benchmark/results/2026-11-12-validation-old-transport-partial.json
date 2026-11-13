@@ -1,0 +1,1483 @@
+{
+ "generated": "2026-11-12",
+ "tool": "tools/calibration/validation-suite.mjs",
+ "what": "partial comparison run of the old transport (before proposal F), kept as the before evidence; reconstructed from the suite's log because the run was stopped before it wrote its JSON",
+ "command": "node tools/calibration/validation-suite.mjs --datasets steckler,nbs,nistnrc,wtc --cells 0.20,0.27,0.34 --jobs 2 --solver conservative=0,expansion=0,vorticity=6",
+ "solver": {
+  "snapshotFlamescapesSha256": "352694a972e2543b (the same file as the final run; the old transport by the overrides)",
+  "overrides": {
+   "conservative": 0,
+   "expansion": 0,
+   "vorticity": 6
+  }
+ },
+ "stopped": "by the main session's choice on 2026-11-12, to give the final run the CPU, after 67 of 206 runs (queue order: costliest first)",
+ "stoppedRuns": 19,
+ "note": "firstPairs are the first three comparisons the log printed per run (model/measured, rises in K), not the full set",
+ "runs": [
+  {
+   "order": 1,
+   "dataset": "nistnrc",
+   "test": "13",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 11.4,
+   "stopped": true,
+   "reason": "energy",
+   "at": 7,
+   "firstPairs": []
+  },
+  {
+   "order": 2,
+   "dataset": "nistnrc",
+   "test": "02",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 14,
+   "stopped": true,
+   "reason": "energy",
+   "at": 8,
+   "firstPairs": []
+  },
+  {
+   "order": 3,
+   "dataset": "nistnrc",
+   "test": "08",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 15.3,
+   "stopped": true,
+   "reason": "energy",
+   "at": 9,
+   "firstPairs": []
+  },
+  {
+   "order": 4,
+   "dataset": "nistnrc",
+   "test": "15",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 16.9,
+   "stopped": true,
+   "reason": "energy",
+   "at": 10,
+   "firstPairs": []
+  },
+  {
+   "order": 5,
+   "dataset": "nistnrc",
+   "test": "14",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 13.6,
+   "stopped": true,
+   "reason": "energy",
+   "at": 9,
+   "firstPairs": []
+  },
+  {
+   "order": 6,
+   "dataset": "nistnrc",
+   "test": "09",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 11.7,
+   "stopped": true,
+   "reason": "energy",
+   "at": 8,
+   "firstPairs": []
+  },
+  {
+   "order": 7,
+   "dataset": "nistnrc",
+   "test": "03",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 12.1,
+   "stopped": true,
+   "reason": "energy",
+   "at": 8,
+   "firstPairs": []
+  },
+  {
+   "order": 8,
+   "dataset": "nistnrc",
+   "test": "18",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 12,
+   "stopped": true,
+   "reason": "energy",
+   "at": 9,
+   "firstPairs": []
+  },
+  {
+   "order": 9,
+   "dataset": "nistnrc",
+   "test": "13",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 4.2,
+   "stopped": true,
+   "reason": "energy",
+   "at": 7,
+   "firstPairs": []
+  },
+  {
+   "order": 10,
+   "dataset": "nbs",
+   "test": "100O",
+   "cell": 0.2,
+   "cells": 27342,
+   "wallSeconds": 1025.9,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 248.7,
+     "measured": 307.9
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 98.3,
+     "measured": 112.6
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "4",
+     "model": 79,
+     "measured": 102.8
+    }
+   ]
+  },
+  {
+   "order": 11,
+   "dataset": "nbs",
+   "test": "100A",
+   "cell": 0.2,
+   "cells": 27342,
+   "wallSeconds": 1041.6,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 256.4,
+     "measured": 251.9
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 85.5,
+     "measured": 87.3
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "4",
+     "model": 65.5,
+     "measured": 81.1
+    }
+   ]
+  },
+  {
+   "order": 12,
+   "dataset": "nistnrc",
+   "test": "01",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 21.4,
+   "stopped": true,
+   "reason": "energy",
+   "at": 18,
+   "firstPairs": []
+  },
+  {
+   "order": 13,
+   "dataset": "nistnrc",
+   "test": "07",
+   "cell": 0.27,
+   "cells": 40919,
+   "wallSeconds": 14,
+   "stopped": true,
+   "reason": "energy",
+   "at": 11,
+   "firstPairs": []
+  },
+  {
+   "order": 14,
+   "dataset": "nistnrc",
+   "test": "02",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 5.3,
+   "stopped": true,
+   "reason": "energy",
+   "at": 9,
+   "firstPairs": []
+  },
+  {
+   "order": 15,
+   "dataset": "nistnrc",
+   "test": "08",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 5.8,
+   "stopped": true,
+   "reason": "energy",
+   "at": 10,
+   "firstPairs": []
+  },
+  {
+   "order": 16,
+   "dataset": "nistnrc",
+   "test": "15",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 639.9,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 183.3,
+     "measured": 162.9
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "2",
+     "model": 193.2,
+     "measured": 170.4
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 290.3,
+     "measured": 240.8
+    }
+   ]
+  },
+  {
+   "order": 17,
+   "dataset": "nistnrc",
+   "test": "14",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 7.3,
+   "stopped": true,
+   "reason": "energy",
+   "at": 10,
+   "firstPairs": []
+  },
+  {
+   "order": 18,
+   "dataset": "nistnrc",
+   "test": "09",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 8,
+   "stopped": true,
+   "reason": "energy",
+   "at": 11,
+   "firstPairs": []
+  },
+  {
+   "order": 19,
+   "dataset": "nistnrc",
+   "test": "03",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 7.2,
+   "stopped": true,
+   "reason": "energy",
+   "at": 11,
+   "firstPairs": []
+  },
+  {
+   "order": 20,
+   "dataset": "nistnrc",
+   "test": "18",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 10.4,
+   "stopped": true,
+   "reason": "energy",
+   "at": 16,
+   "firstPairs": []
+  },
+  {
+   "order": 21,
+   "dataset": "nbs",
+   "test": "100Z",
+   "cell": 0.2,
+   "cells": 27342,
+   "wallSeconds": 1136.2,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 260.2,
+     "measured": 285.3
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 85.9,
+     "measured": 71.2
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "5",
+     "model": 41.4,
+     "measured": 65.6
+    }
+   ]
+  },
+  {
+   "order": 22,
+   "dataset": "wtc",
+   "test": "4",
+   "cell": 0.27,
+   "cells": 9792,
+   "wallSeconds": 1004.9,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 467.1,
+     "measured": 543
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 611.1,
+     "measured": 571.6
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 707.5,
+     "measured": 593
+    }
+   ]
+  },
+  {
+   "order": 23,
+   "dataset": "wtc",
+   "test": "5",
+   "cell": 0.27,
+   "cells": 9792,
+   "wallSeconds": 922,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 455.8,
+     "measured": 522
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 594.4,
+     "measured": 556
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 685.6,
+     "measured": 613
+    }
+   ]
+  },
+  {
+   "order": 24,
+   "dataset": "nistnrc",
+   "test": "01",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 13,
+   "stopped": true,
+   "reason": "energy",
+   "at": 25,
+   "firstPairs": []
+  },
+  {
+   "order": 25,
+   "dataset": "nistnrc",
+   "test": "07",
+   "cell": 0.34,
+   "cells": 21252,
+   "wallSeconds": 10.3,
+   "stopped": true,
+   "reason": "energy",
+   "at": 19,
+   "firstPairs": []
+  },
+  {
+   "order": 26,
+   "dataset": "wtc",
+   "test": "6",
+   "cell": 0.27,
+   "cells": 9792,
+   "wallSeconds": 897.3,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 467,
+     "measured": 528.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 592.4,
+     "measured": 566.8
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 671.2,
+     "measured": 607
+    }
+   ]
+  },
+  {
+   "order": 27,
+   "dataset": "wtc",
+   "test": "3",
+   "cell": 0.27,
+   "cells": 9792,
+   "wallSeconds": 806.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 359.3,
+     "measured": 358.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 482.4,
+     "measured": 352.1
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 543.7,
+     "measured": 411
+    }
+   ]
+  },
+  {
+   "order": 28,
+   "dataset": "nbs",
+   "test": "100A",
+   "cell": 0.27,
+   "cells": 12672,
+   "wallSeconds": 269,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 341.2,
+     "measured": 251.9
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 126.8,
+     "measured": 87.3
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "4",
+     "model": 67.8,
+     "measured": 81.1
+    }
+   ]
+  },
+  {
+   "order": 29,
+   "dataset": "nbs",
+   "test": "100O",
+   "cell": 0.27,
+   "cells": 12672,
+   "wallSeconds": 253.7,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 336,
+     "measured": 307.9
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 127.3,
+     "measured": 112.6
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "4",
+     "model": 67,
+     "measured": 102.8
+    }
+   ]
+  },
+  {
+   "order": 30,
+   "dataset": "wtc",
+   "test": "1",
+   "cell": 0.27,
+   "cells": 9792,
+   "wallSeconds": 787.9,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 370.7,
+     "measured": 373.3
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 481.4,
+     "measured": 385.5
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 552.7,
+     "measured": 423
+    }
+   ]
+  },
+  {
+   "order": 31,
+   "dataset": "nbs",
+   "test": "100Z",
+   "cell": 0.27,
+   "cells": 12672,
+   "wallSeconds": 247.6,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 341.3,
+     "measured": 285.3
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 125.1,
+     "measured": 71.2
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "5",
+     "model": 13,
+     "measured": 65.6
+    }
+   ]
+  },
+  {
+   "order": 32,
+   "dataset": "wtc",
+   "test": "2",
+   "cell": 0.27,
+   "cells": 9792,
+   "wallSeconds": 455.9,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 339.8,
+     "measured": 402.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 459,
+     "measured": 403.3
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 541,
+     "measured": 461
+    }
+   ]
+  },
+  {
+   "order": 33,
+   "dataset": "wtc",
+   "test": "4",
+   "cell": 0.34,
+   "cells": 5278,
+   "wallSeconds": 256,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 537.4,
+     "measured": 543
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 656.7,
+     "measured": 571.6
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 654.7,
+     "measured": 593
+    }
+   ]
+  },
+  {
+   "order": 34,
+   "dataset": "wtc",
+   "test": "5",
+   "cell": 0.34,
+   "cells": 5278,
+   "wallSeconds": 248.2,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 523.8,
+     "measured": 522
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 630.9,
+     "measured": 556
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 641.5,
+     "measured": 613
+    }
+   ]
+  },
+  {
+   "order": 35,
+   "dataset": "wtc",
+   "test": "6",
+   "cell": 0.34,
+   "cells": 5278,
+   "wallSeconds": 252.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 518.6,
+     "measured": 528.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 629.3,
+     "measured": 566.8
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 629.9,
+     "measured": 607
+    }
+   ]
+  },
+  {
+   "order": 36,
+   "dataset": "wtc",
+   "test": "3",
+   "cell": 0.34,
+   "cells": 5278,
+   "wallSeconds": 224.7,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 412.2,
+     "measured": 358.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 501.1,
+     "measured": 352.1
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 517.9,
+     "measured": 411
+    }
+   ]
+  },
+  {
+   "order": 37,
+   "dataset": "wtc",
+   "test": "1",
+   "cell": 0.34,
+   "cells": 5278,
+   "wallSeconds": 226.9,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 411.7,
+     "measured": 373.3
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 503.3,
+     "measured": 385.5
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 513.7,
+     "measured": 423
+    }
+   ]
+  },
+  {
+   "order": 38,
+   "dataset": "nbs",
+   "test": "100A",
+   "cell": 0.34,
+   "cells": 7600,
+   "wallSeconds": 155.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 351.8,
+     "measured": 251.9
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 90.4,
+     "measured": 87.3
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "4",
+     "model": 39.8,
+     "measured": 81.1
+    }
+   ]
+  },
+  {
+   "order": 39,
+   "dataset": "nbs",
+   "test": "100O",
+   "cell": 0.34,
+   "cells": 7600,
+   "wallSeconds": 155.4,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 350.4,
+     "measured": 307.9
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 91.8,
+     "measured": 112.6
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "4",
+     "model": 41.4,
+     "measured": 102.8
+    }
+   ]
+  },
+  {
+   "order": 40,
+   "dataset": "nbs",
+   "test": "100Z",
+   "cell": 0.34,
+   "cells": 7600,
+   "wallSeconds": 158.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 351.6,
+     "measured": 285.3
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 92.2,
+     "measured": 71.2
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "5",
+     "model": 6.6,
+     "measured": 65.6
+    }
+   ]
+  },
+  {
+   "order": 41,
+   "dataset": "wtc",
+   "test": "2",
+   "cell": 0.34,
+   "cells": 5278,
+   "wallSeconds": 152.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "west",
+     "model": 387,
+     "measured": 402.8
+    },
+    {
+     "quantity": "hglTemperature",
+     "device": "east",
+     "model": 472.4,
+     "measured": 403.3
+    },
+    {
+     "quantity": "ceilingJet",
+     "device": "TTRW1",
+     "model": 478.8,
+     "measured": 461
+    }
+   ]
+  },
+  {
+   "order": 42,
+   "dataset": "steckler",
+   "test": "11",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 51.4,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 177.1,
+     "measured": 128.6
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.8,
+     "measured": 2.7
+    }
+   ]
+  },
+  {
+   "order": 43,
+   "dataset": "steckler",
+   "test": "10",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 136.2,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 246.7,
+     "measured": 158.1
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": null,
+     "measured": 3.1
+    }
+   ]
+  },
+  {
+   "order": 44,
+   "dataset": "steckler",
+   "test": "12",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 50.7,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 180.1,
+     "measured": 110.9
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.9,
+     "measured": 2.5
+    }
+   ]
+  },
+  {
+   "order": 45,
+   "dataset": "steckler",
+   "test": "14",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 49.9,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 171.4,
+     "measured": 91
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.9,
+     "measured": 2.1
+    }
+   ]
+  },
+  {
+   "order": 46,
+   "dataset": "steckler",
+   "test": "13",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 51.3,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 175,
+     "measured": 98.3
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.9,
+     "measured": 2.4
+    }
+   ]
+  },
+  {
+   "order": 47,
+   "dataset": "steckler",
+   "test": "17",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 34.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 125.1,
+     "measured": 79.5
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.8,
+     "measured": 2.2
+    }
+   ]
+  },
+  {
+   "order": 48,
+   "dataset": "steckler",
+   "test": "16",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 36.6,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 129.5,
+     "measured": 84.3
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.9,
+     "measured": 2.1
+    }
+   ]
+  },
+  {
+   "order": 49,
+   "dataset": "steckler",
+   "test": "19",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 30.5,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 97.7,
+     "measured": 51.5
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.3,
+     "measured": 1.6
+    }
+   ]
+  },
+  {
+   "order": 50,
+   "dataset": "steckler",
+   "test": "18",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 55,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 179.2,
+     "measured": 92.8
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.9,
+     "measured": 2.2
+    }
+   ]
+  },
+  {
+   "order": 51,
+   "dataset": "steckler",
+   "test": "20",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 95.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 255.6,
+     "measured": 136.8
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 2.4,
+     "measured": 2.7
+    }
+   ]
+  },
+  {
+   "order": 52,
+   "dataset": "steckler",
+   "test": "21",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 134.3,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 305,
+     "measured": 189.4
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 2.7,
+     "measured": 3.2
+    }
+   ]
+  },
+  {
+   "order": 53,
+   "dataset": "steckler",
+   "test": "22",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 99.1,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 226.8,
+     "measured": 104.3
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.8,
+     "measured": 2.1
+    }
+   ]
+  },
+  {
+   "order": 54,
+   "dataset": "steckler",
+   "test": "23",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 127.4,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 242.7,
+     "measured": 143.5
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.3,
+     "measured": 2
+    }
+   ]
+  },
+  {
+   "order": 55,
+   "dataset": "steckler",
+   "test": "30",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 127.1,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 242.7,
+     "measured": 143.9
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.3,
+     "measured": 2.1
+    }
+   ]
+  },
+  {
+   "order": 56,
+   "dataset": "steckler",
+   "test": "41",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 138.2,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 250.5,
+     "measured": 241.9
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 0.6,
+     "measured": 1.9
+    }
+   ]
+  },
+  {
+   "order": 57,
+   "dataset": "steckler",
+   "test": "114",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 110.1,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 207.8,
+     "measured": 183.6
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": null,
+     "measured": 3
+    }
+   ]
+  },
+  {
+   "order": 58,
+   "dataset": "steckler",
+   "test": "116",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 84.4,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 173.3,
+     "measured": 116.3
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 2,
+     "measured": 2
+    }
+   ]
+  },
+  {
+   "order": 59,
+   "dataset": "steckler",
+   "test": "122",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 93.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 201.7,
+     "measured": 140.3
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.5,
+     "measured": 2.1
+    }
+   ]
+  },
+  {
+   "order": 60,
+   "dataset": "steckler",
+   "test": "144",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 93.7,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 194.1,
+     "measured": 156.3
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.8,
+     "measured": 2.7
+    }
+   ]
+  },
+  {
+   "order": 61,
+   "dataset": "steckler",
+   "test": "160",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 86.3,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 225.8,
+     "measured": 115.9
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 2.2,
+     "measured": 2.5
+    }
+   ]
+  },
+  {
+   "order": 62,
+   "dataset": "steckler",
+   "test": "161",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 50.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 217.6,
+     "measured": 100.2
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 2,
+     "measured": 2.5
+    }
+   ]
+  },
+  {
+   "order": 63,
+   "dataset": "steckler",
+   "test": "162",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 75.4,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 254.4,
+     "measured": 127.7
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 2.3,
+     "measured": 2.3
+    }
+   ]
+  },
+  {
+   "order": 64,
+   "dataset": "steckler",
+   "test": "163",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 79.7,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 202.2,
+     "measured": 147.9
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 2,
+     "measured": 2.2
+    }
+   ]
+  },
+  {
+   "order": 65,
+   "dataset": "steckler",
+   "test": "164",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 70,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 208.2,
+     "measured": 127.5
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 2.1,
+     "measured": 2.2
+    }
+   ]
+  },
+  {
+   "order": 66,
+   "dataset": "steckler",
+   "test": "165",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 97.2,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 210.2,
+     "measured": 125.5
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.9,
+     "measured": 2.2
+    }
+   ]
+  },
+  {
+   "order": 67,
+   "dataset": "steckler",
+   "test": "166",
+   "cell": 0.2,
+   "cells": 4160,
+   "wallSeconds": 92.8,
+   "stopped": false,
+   "firstPairs": [
+    {
+     "quantity": "hglTemperature",
+     "device": "room",
+     "model": 205,
+     "measured": 128.7
+    },
+    {
+     "quantity": "doorVelocity",
+     "device": "door",
+     "model": 1.9,
+     "measured": 2.1
+    }
+   ]
+  }
+ ]
+}

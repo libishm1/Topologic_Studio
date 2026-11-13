@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>People leaving and the slime mould: Topologic Studio guide</title>
+<meta name="description" content="Topologic Studio's egress animation, people leaving the building by every exit at the SFPE speeds, and its slime mould: Jones's Physarum agents grown over the walkable graph, with desire lines, the medial axis, bottlenecks, dead ends and abandoned branches.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="../favicon.svg" alt="" width="26" height="26">Topologic Studio <span class="brand__tag">Guide</span></a>
+  <nav class="site-links" aria-label="Elsewhere">
+    <a href="../">Open the app</a>
+    <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Guide">
+    <p class="toc__label">Guide</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
+      <li><a href="suppression.html">Fire suppression</a></li>
+      <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="people-and-slime.html" aria-current="page">People leaving and the slime mould</a>
+        <ul>
+          <li><a href="#people">People leaving</a></li>
+          <li><a href="#how-they-move">How they choose and move</a></li>
+          <li><a href="#people-limits">What it is not</a></li>
+          <li><a href="#slime">The slime mould</a></li>
+          <li><a href="#readings">Its readings</a></li>
+          <li><a href="#slime-vs-egress">Against the shortest walks</a></li>
+          <li><a href="#slime-limits">What it is not</a></li>
+          <li><a href="#egress-map">Egress map and accessibility</a></li>
+          <li><a href="#figures">Figures to capture</a></li>
+        </ul>
+      </li>
+      <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
+    </ol>
+    <p class="toc__out"><a href="../">Open the app</a></p>
+  </nav>
+
+  <main id="main">
+    <h1>People leaving and the slime mould</h1>
+    <p class="lead">Two optional sections of the Route step show where the escape goes. People leaving walks everyone out of the building; the slime mould grows over the floor towards the exits and leaves a trail where the escape concentrates. Both are off until you open them, and neither is an evacuation result to quote.</p>
+
+    <h2 id="people">People leaving</h2>
+    <p>Open <span class="label">People leaving</span> in the Route step and switch on <span class="label">Show people leaving</span>. Everyone on the floors, one person for every 9 m² of walkable floor, walks out and gathers a few metres outside the exit they used, so each exit's crowd shows how many chose it. The walk is worked out once for the graph on screen, and the GPU then moves everyone from the playback clock. A new graph switches the animation off.</p>
+    <figure class="pending still">
+      <figcaption>People leaving the NIBS Office by every exit out of the building: the queues at the doors and the crowds gathered outside.</figcaption>
+    </figure>
+    <dl>
+      <dt class="label">Show them as</dt>
+      <dd><p>Figures (the default) or dots. People are coloured by what each is doing: not yet off, walking, held up, out, and still inside when the walk stopped.</p></dd>
+      <dt class="label">Playback</dt>
+      <dd><p>Real time, or 5, 10 (the default) or 30 times real time.</p></dd>
+      <dt class="label">Egress</dt>
+      <dd><p>Without the fire (the default), or with it. With the fire, people wait for it to start in the Simulate step and keep its clock. They do not step on to a place the fire has made untenable, by the plan's rule (60 °C, visibility under 10 m, or the ISO 13571 doses), and they work out their way out again every 2 s, so they turn back for another exit when the fire cuts theirs. Anyone whose only way out is through the fire stays where they are and is counted as cut off.</p></dd>
+      <dt class="label">Exits</dt>
+      <dd><p>Every exit out of the building (the default), or only the exit picked in Route. The second shows what happens if the other exits are lost: on a large floor the one door's queue sets the time. Where the model marks no exit out of the building, people use the exit picked in Route.</p></dd>
+    </dl>
+    <p>How many people there are comes from the performance check's <span class="label">Floor area per occupant (m²)</span>, 9 m² by default (see <a href="checks.html#rset">What RSET is made of</a>). The notice under the view gives the number of people, the time the last one is out, how many used each exit, the longest hold-up and how many turned to another exit on the way.</p>
+
+    <h3 id="how-they-move">How they choose and move</h3>
+    <p>These options sit folded under <span class="label">How people move</span>.</p>
+    <dl>
+      <dt class="label">Each person takes</dt>
+      <dd><p>The quickest exit, queues counted (the default), or the nearest exit. With the quickest, each person weighs every exit out of the building: the walk there at their own speed, or the people ahead of them for it passing at the flow seen through it, whichever is longer. They look again every 2 s and turn to another exit only where the two ways part and when it saves at least 5 s and a fifth of their time, so a queue's back leaves for a free door while its front stays. Pathfinder's "locally quickest" door choice weighs a door the same way. On the examples with no fire, the last person was out sooner where queues formed at some exits while others stood free: the NIBS Clinic from 459 s to 333 s, the NIBS Office from 433 s to 350 s. With the nearest, each person walks to the nearest exit by the shortest walk and waits in its queue even while another door stands free.</p></dd>
+      <dt class="label">Walking speed varies over time</dt>
+      <dd><p>Off by default. Each person's speed then drifts about their own and recovers within a few seconds, as Corbetta et al. (2017) measured 72,376 walkers' speeds do: a spread of about 16 %.</p></dd>
+      <dt class="label">Step randomness</dt>
+      <dd><p>Straight on (the default), or drawn at random as the floor-field model draws it (Kirchner and Schadschneider 2002): mostly direct (kS 10), wandering (kS 2) or disoriented (kS 0.4). A step that brings a person nearer the exit is likelier, but people sometimes step aside or hesitate, the more so the smaller kS.</p></dd>
+      <dt class="label">Runs</dt>
+      <dd><p>Shown when either kind of randomness is on: one run, or 3, 5 (the default) or 10 seeds. With randomness one run is one sample, so the view plays the first and the notice gives the range of the time the last person is out over the rest, with the median. A phone runs 3 at most. With both kinds of randomness off a run is exactly as before.</p></dd>
+      <dt class="label">A runner in an orange shirt</dt>
+      <dd><p>On by default: one person picked out in orange. <span class="label">The runner</span> chooses which: <em>Down a stair, on a loop</em> (the default), one of the walks down a stair looped in real time at that walk's own speeds; or <em>The forecast's way out, on its timeline</em>, the forecast's evacuee on its earliest safe route, reaching each place when the plan says, at the fire's time when the fire is on. Until you plan with the forecast in Simulate, the runner takes a stair; where no walk goes down a stair, the panel says so.</p></dd>
+      <dt class="label">Full gathering places clear</dt>
+      <dd><p>Off by default. A gathering place then holds only what its area takes, about 0.64 m² a person standing, and once it is full the earliest there fade away as newcomers arrive. <span class="label">Each gathering place</span> sets its area: 10, 25 (the default), 50 or 100 m², about 15, 39, 78 or 157 people.</p></dd>
+    </dl>
+    <p>Speeds come from the SFPE Handbook's hydraulic model: about 1.19 m/s unimpeded, slower as the crowd round the next place thickens (a walker never counts themselves), at most 0.92 m/s down a stair and 0.69 m/s up one. A door passes at most 1.3 persons a second per metre of effective width, its width less 0.15 m a side, each door at its own width: the IFC's, else the width of the door's geometry in the model, else 0.9 m. The performance check's queues differ here: where the IFC gives no width they take 0.813 m, the code's least clear width, not the door's geometry (see <a href="checks.html#performance">Code and performance checks</a>). Each person keeps their own clock, so a step does not wait for the next tick and the walk is as fast on the diagonal as along the grid. Each holds one graph node at a time, as a cell of a floor-field model holds one (Burstedde et al. 2001), and steps round whoever is ahead.</p>
+    <p>Checked against the RiMEA guideline's test cases and NIST Technical Note 1822's verification tests (<code>tools/validation/crowd-validation.mjs</code>): 16 of 18 pass, among them the walking speed in a corridor, stairs up and down, the speed distribution, the flow from a room and the flow through bottlenecks of 0.8 to 1.2 m. Two fail: a long narrow corridor passes more people than a door of its width, and dense crowds in a corridor or in single file walk faster than measured. Calibration on the Jülich experiments is the next step.</p>
+
+    <h3 id="people-limits">What it is not</h3>
+    <p>People leaving is an illustration of the walk out. Everyone sets off within 10 s of the plan's departure time: pre-movement, smoke and the fire's heat do not slow anyone, and no one helps or follows another. The performance check (see <a href="checks.html#performance">Code and performance checks</a>), not the animation, gives escape times. The plan for what comes next is the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md">crowd motion plan</a>.</p>
+
+    <h2 id="slime">The slime mould</h2>
+    <p>Open <span class="label">Slime mould</span> in the Route step and press <span class="label">Grow the slime mould</span>. Up to 2,000 agents, after Jeff Jones's model of the slime mould <em>Physarum polycephalum</em> (Jones 2010), grow over the walkable graph for 400 steps towards the exits. Each senses ahead and to either side, turns towards the strongest trail, steps and lays trail, which spreads to its neighbours and fades; walls absorb it. The exits are its food, and they also draw by the walk to them, so far rooms keep a way out. An agent that steps through an exit starts again at a random free place, so the trail measures the escape traffic each place carries. The run takes about a second on the examples, in a worker.</p>
+    <p>The trail is drawn yellow on the graph, and the route from the start, if one is set, keeps to its tubes. The notice gives the agents, the steps, how many reached an exit and through which, and the route along the tubes against the shortest walk.</p>
+    <figure class="pending still">
+      <figcaption>The slime mould's trail in yellow over the NIBS Office from above, with the route from a start along its tubes.</figcaption>
+    </figure>
+    <dl>
+      <dt class="label">The fire</dt>
+      <dd>
+        <p>Three choices; the first two need a fire started in the Simulate step (for a Flamescapes fire, a finished run).</p>
+        <ul>
+          <li><span class="label">Grow as if there were none</span> (the default).</li>
+          <li><span class="label">Held back by the fire and its smoke.</span> The run keeps the fire's clock, a step being the time to walk a link (about 0.42 s). A place's smoke starts to hold the slime back 30 s before the fire makes it untenable: its trail fades faster there, it repels the agents, and the way out goes round it at a cost. It is never walled off, so where the only way out is through smoke the slime still goes. With a Flamescapes run the smoke is the run's own visibility at head height, frame by frame (clear at 30 m, untenable at 10 m), and each agent senses less far ahead in it, as sight does.</li>
+          <li><span class="label">Walled off from every untenable place.</span> Every place the fire makes untenable during its run is a wall. With a large fire little may be left to grow in, which is why the held-back choice exists.</li>
+        </ul>
+      </dd>
+    </dl>
+
+    <h3 id="readings">Its readings</h3>
+    <p>Five switches under <span class="label">Readings</span>, below the buttons, draw what the trail says, each off until asked. A line of readings appears under the notice.</p>
+    <dl>
+      <dt class="label">Desire lines</dt>
+      <dd><p>The slime's ways out from every part of the floor, along its tubes: one way out traced from each 2 m square of floor, where a link costs its length times 1 + 2 (1 - its trail weight), bundled where they share a tube. Drawn dark over the yellow, thicker where more of them bundle, with arrows towards the exits. They carry people, one per 9 m² of floor (the performance check's floor area per occupant), not floor samples.</p></dd>
+      <dt class="label">Bottlenecks</dt>
+      <dd><p>Crimson markers, larger the worse: where the people the desire lines carry would take longest to pass, at 1.3 persons a second per metre of clear width less 0.15 m a side. Where the passage is a door the width is the IFC's, else the width of the door's geometry in the model, as for people leaving; elsewhere it is twice the largest clearance from the walls within two links. On the NIBS Office, the worst is 202 people through a 0.92 m door, 250 s; on the NIBS Clinic, 264 people through a 0.92 m door, 326 s.</p></dd>
+      <dt class="label">Dead ends</dt>
+      <dd><p>Dark red: places where the walk before a second, separate way out opens is longer than the IBC 2021 dead-end limit of 6.1 m, or 15.2 m with sprinklers (the code check's switch <span class="label">The building has automatic sprinklers</span>). The walk is half of the walks to the two nearest exits less the walk between them. The code's limit is for corridors; for rooms, whose own limit is the common path of egress travel, it is a reference. The values come from an ICC interpretation and summaries of the code, to be checked against its text.</p></dd>
+      <dt class="label">Corridors it abandoned</dt>
+      <dd><p>Grey: where the slime went early in the run and left no trail late, branches it explored and abandoned. They are corridors that look like ways out and are not.</p></dd>
+      <dt class="label">Centre lines of rooms and corridors</dt>
+      <dd><p>Cyan: the line through each room and corridor furthest from its walls, the robot planner's roadmap of most clearance, as the lambda-medial axis (Chazal and Lieutier 2005) with lambda 1 m. Where the desire lines leave it, the slime takes another line than the geometry centres. The notice gives the share of the desire lines within half a metre of the axis (71 % on the NIBS Office and 80 % on the Clinic with no fire) and the route that keeps to the axis.</p></dd>
+    </dl>
+    <figure class="pending still">
+      <figcaption>The NIBS Office with all five readings on: desire lines with arrows, the medial axis in cyan, bottlenecks in crimson, dead ends in dark red and abandoned branches in grey.</figcaption>
+    </figure>
+
+    <h3 id="slime-vs-egress">Against the shortest walks</h3>
+    <p>When the <a href="#egress-map">egress map</a> has also been made on the graph, and the slime was grown with no fire, the section gives one line comparing the two within 1 m: the share of the slime's trail that lies on a shortest walk, the share of the shortest walks under a desire line, and how far apart the exits' shares are (0 when the slime leaves by each exit as the floor's nearest exits share it, 1 when wholly apart). The numbers are this model's. Folded under <span class="label">Why they differ</span>:</p>
+    <ul>
+      <li>The slime is a traffic map, not a route for each room: most of its trail runs on shortest walks, but it draws only the busy ones, and the walks from rooms few people leave from stay faint. On the Duplex, the NIBS Office and the NIBS Clinic, 54 to 70 % of its trail lay on shortest walks, and 16 to 35 % of the shortest walks carried a desire line.</li>
+      <li>Exits: each agent senses 3 links ahead and 60° to either side, so near a junction or a door it can turn towards another exit than the nearest. With sensors one link out, the exit split moved 35 to 45 % of the way towards the nearest-exit split in all three.</li>
+      <li>Walls: one agent fits on a node, so the lane along a wall and round a corner, where the shortest walks run, fills up and the others pass beside it. With a tenth of the agents, as much of the trail lay next to walls as of the shortest walks.</li>
+      <li>The trail itself, the desire, barely matters at its default weight (a full tube worth 3 m of walk): switched off, no reading moved by more than 0.02. On these floors the walk to the exits leads.</li>
+    </ul>
+    <p>The egress map is each room's own worst walk, the code check's question; the slime shows where escape traffic concentrates, given crowding and coarse wayfinding. Where they agree, the geometry and the traffic point the same way; where the slime leaves by another exit than the nearest, look at that junction or door. The measurements are in <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/egress-vs-slime-2026-11-12.md">the note on the two</a>.</p>
+    <h3 id="slime-limits">What it is not</h3>
+    <p>The slime mould is a reading of where the escape concentrates, for design. It is not a crowd, it does not time anyone, and one seed gives one run. That its networks predict where people go is a hypothesis to test, not an established result: the nearest prior work, Kalogeiton et al. (2015), checks its model against measured fundamental diagrams, which this one has not been. The plan and its open questions are in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/roadmap/egress-desire-lines-plan-2026-11-11.md">desire-lines plan</a>.</p>
+    <p>Lean 4 proves the agents' rules in <code>Physarum.lean</code> (23 results): the trail's spreading keeps its total, less the fading, and never makes it negative or larger than its largest value; with absorbing walls the total never grows; an agent keeps its heading when ahead is strictly strongest and otherwise turns towards the stronger side, left on a tie; and moving never puts two agents on one place or one on a wall.</p>
+
+    <h2 id="egress-map">Egress map</h2>
+    <p>In Route, <span class="label">Egress map</span>, then <span class="label">Map the egress</span>. It reads the walk to the nearest exit from every place on the walkable graph, the same walk the code check measures (exit doors on the storeys that have them, stair entrances on the others), and reads it room by room and exit by exit. Nothing is drawn until you ask.</p>
+    <dl>
+      <dt class="label">The notice</dt>
+      <dd><p>The farthest walk, the room it starts in and the exit it reaches, against the code check's limit; how many rooms are routed, and how many sit within 5 % below the limit, to be measured on site rather than taken as a pass. Then the blocked-exit test: each exit closed in turn and the whole building solved again, the worst of them named with the farthest walk it leaves and the rooms that change exit; and the worst-first cascade, the exit whose loss lengthens the farthest walk most closed next, round after round, which finds the pair of exits a building cannot lose together.</p></dd>
+      <dt class="label">Routes from every room</dt>
+      <dd><p>Off by default. Red, from each room's worst place (where the code measures travel from) to its exit.</p></dd>
+      <dt class="label">Contours every 5 m</dt>
+      <dd><p>Off by default. Lines of equal walk to the nearest exit.</p></dd>
+      <dt class="label">Dead-end corridors</dt>
+      <dd><p>Off by default. Where a person has only one way out, as the walk before a second, separate way opens (the Gromov product of the walks to the two nearest exits), its depth measured by a search back to where two ways open. In a corridor (told by the room's name, or by its shape, or, for a space whose name says nothing, by Poux's rule: the storey's largest space, one an exit opens from, or one with four doors or more) it is a dead-end corridor, against IBC 2021 1020.5 (6.1 m, 15.2 m sprinklered; none where shorter than 2.5 times its width). In a room it is the common path, against Table 1006.2.1 (22.9 m for more than 30 occupants without sprinklers, else 30.5 m). The values come from ICC interpretations and summaries; check the code's text and the code that applies.</p></dd>
+      <dt class="label">Doors no way out can lose</dt>
+      <dd><p>Off by default. Violet, larger for more rooms behind: each door that is the only way out of the rooms behind it, the bridges of the graph of rooms joined by doors (Tarjan 1974), with the suites of more than one room behind one door listed.</p></dd>
+      <dt class="label">Measure finely</dt>
+      <dd><p>Lays a measuring grid over each storey, 5 cm cells (10 cm on a phone): the floor from the model's floor faces, cut by the walls and fixed obstacles across a walking body's height (0.10 to 1.80 m), less the stairs, with each door opened at its leaf. The clearance everywhere is the exact distance transform (Felzenszwalb and Huttenlocher 2012); a walker's centre keeps 0.25 m off obstacles. The walk to the exits is measured on 16 directions, at most 2.75 % long in the open (proved in <code>Sixteen.lean</code>) against the graph's 8.24 %, and checked by Fast Marching (Sethian 1996), which has no lattice directions at all. <span class="label">Walk measured finely</span> lays it on the floors in 5 m bands, red past the limit. On the NIBS Clinic's ground floor the farthest walk is 36.0 m on the grid against 37.1 m on the graph, and Fast Marching agrees within 0.3 % on average. It takes a few seconds on a large model.</p></dd>
+    </dl>
+
+    <h2 id="accessibility">Accessibility</h2>
+    <p>In Route, <span class="label">Accessibility</span>, a profile, then <span class="label">Audit for a wheelchair</span> (it runs the measuring grid if it has not run).</p>
+    <dl>
+      <dt class="label">Profile</dt>
+      <dd><p>ICC A117.1-2017 and the 2010 ADA Standards (the default): an accessible route 36 in (0.915 m) wide, doors 32 in (0.815 m) clear, a 60 in (1.525 m) turning circle, changes of level up to 1/2 in and slopes up to 1 in 12. Or a metric set: 0.90 m, 0.80 m and 1.50 m. Check the values against the codes' texts; the Saudi requirement is SBC 201's, not read here.</p></dd>
+      <dt class="label">The reading</dt>
+      <dd><p>For each storey, the rooms a wheelchair reaches from the building's accessible ways in (the exit doors on the storey that has them; lifts elsewhere, so switch lifts on in Graph to audit upper floors) against the rooms reached on foot, and how many have a turning circle. Each room reached on foot but not by a wheelchair is diagnosed by relaxing one rule at a time: a door too narrow, a step or stairs only, or a passage too narrow with the narrowest place on the way.</p></dd>
+      <dt class="label">First changes</dt>
+      <dd><p>The change that lets a wheelchair into the most rooms (a door widened, a ramp at a step), then the next, as Poux's audit chooses them: options, not a design.</p></dd>
+      <dt class="label">Accessible ways out</dt>
+      <dd><p>From each room a wheelchair reaches, the exits, stairs and lifts it can get to (IBC 2021 1009): two where the storey has more than 49 people. A stair counts as an area of refuge only if 1.219 m wide between handrails (1009.3.2); its enclosure and a lift's standby power are not read.</p></dd>
+      <dt class="label">Show it on the floors</dt>
+      <dd><p>Green where a wheelchair goes, darker where it can turn; amber on foot only; red reached by neither; dark red spheres at the issues. <span class="label">Download the issues (CSV)</span> gives the list.</p></dd>
+    </dl>
+    <p>The audit reads the model's fixed construction: movable furniture is not in it, as a scan would have it. It is not a certification.</p>
+
+    <h3 id="egress-credits">Whose methods</h3>
+    <p>The algorithms are the original works': Dijkstra (1959) for the walk from all exits at once; the Gromov product for the common path; Tarjan (1974) for bridges; the exact distance transform of Felzenszwalb and Huttenlocher (2012); Fast Marching (Sethian 1996); openings by a disc from mathematical morphology (Matheron 1975; Serra 1982); configuration space (Lozano-Pérez 1983) for a body's centre; and the codes' own definitions of travel, common path and dead ends (IBC 2021, ICC A117.1). Florent Poux's evacuation and accessibility kits (2026, MIT) chain them for scanned floors; from them come the worst-first blocked-exit cascade read as "redundant alone, critical together", the list of values near a limit to measure with a tape, his rule for telling circulation from rooms, the dead end's depth by a search rather than a difference of distances, the exit cells' own step to the door, the greedy act step, and a known answer this grid reproduces (a 1.60 m corridor leaves a 1.10 m strip for a body's centre). Studio's walkable graph, code check, fire and Lean proofs were built independently of his kits.</p>
+
+    <h2 id="figures">Figures to capture</h2>
+    <ul>
+      <li>People leaving the NIBS Office by every exit, mid-walk, with queues at the doors.</li>
+      <li>The same with <span class="label">Exits</span> set to only the exit picked, at the same moment.</li>
+      <li>The slime mould's trail over the NIBS Office from above, with a route along its tubes.</li>
+      <li>The five readings on the NIBS Office, one figure each or all together.</li>
+      <li>The slime held back by a Flamescapes fire on the Clinic, against the same run with no fire.</li>
+    </ul>
+
+    <h2 id="sources">Sources for this page</h2>
+    <ul>
+      <li>Jones (2010). <em>Characteristics of pattern formation and evolution in approximations of Physarum transport networks</em>. Artificial Life 16(2), 127-153. <a href="https://doi.org/10.1162/artl.2010.16.2.16202">doi:10.1162/artl.2010.16.2.16202</a>.</li>
+      <li>Jones and Saeed (2007). <em>Image enhancement: an emergent pattern formation approach via decentralised multi-agent systems</em>. Multiagent and Grid Systems 3(1). <a href="https://doi.org/10.3233/mgs-2007-3108">doi:10.3233/mgs-2007-3108</a>. Paths through a maze by agents on a diffusing field, the walled-off fire's model.</li>
+      <li>Chazal and Lieutier (2005). <em>The lambda-medial axis</em>. Graphical Models 67, 304-331. <a href="https://doi.org/10.1016/j.gmod.2005.01.002">doi:10.1016/j.gmod.2005.01.002</a>.</li>
+      <li>Corbetta, Lee, Benzi, Muntean and Toschi (2017). <em>Fluctuations around mean walking behaviors in diluted pedestrian flows</em>. Physical Review E 95, 032316. <a href="https://doi.org/10.1103/PhysRevE.95.032316">doi:10.1103/PhysRevE.95.032316</a>.</li>
+      <li>Burstedde, Klauck, Schadschneider and Zittartz (2001). <em>Simulation of pedestrian dynamics using a two-dimensional cellular automaton</em>. Physica A 295, 507-525. <a href="https://doi.org/10.1016/S0378-4371(01)00141-8">doi:10.1016/S0378-4371(01)00141-8</a>.</li>
+      <li>Kirchner and Schadschneider (2002). <em>Simulation of evacuation processes using a bionics-inspired cellular automaton model for pedestrian dynamics</em>. Physica A 312, 260-276. <a href="https://doi.org/10.1016/S0378-4371(02)00857-9">doi:10.1016/S0378-4371(02)00857-9</a>.</li>
+      <li>Gwynne and Rosenbaum (2016). <em>Employing the Hydraulic Model in Assessing Emergency Movement</em>. SFPE Handbook of Fire Protection Engineering, 5th ed., ch. 59. <a href="https://doi.org/10.1007/978-1-4939-2565-0_59">doi:10.1007/978-1-4939-2565-0_59</a>.</li>
+      <li>Carrera et al. (2019), <a href="https://doi.org/10.1007/978-3-319-99608-0_16">doi:10.1007/978-3-319-99608-0_16</a>, and Park, Han and Spicer (2019), <a href="https://doi.org/10.1109/iemcon.2019.8936208">doi:10.1109/iemcon.2019.8936208</a>: the nearest exit by the shortest walk.</li>
+      <li>Thunderhead Engineering. <em>Pathfinder Technical Reference</em>, Path Planning: the "locally quickest" door choice.</li>
+      <li>Kalogeiton, Papadopoulos, Georgilas, Sirakoulis and Adamatzky (2015). International Journal of General Systems 44, 354-391. <a href="https://doi.org/10.1080/03081079.2014.997527">doi:10.1080/03081079.2014.997527</a>. A slime-mould crowd model checked against fundamental diagrams.</li>
+    </ul>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="checks.html">Previous: Code and performance checks</a>
+      <a href="methods-and-proofs.html">Next: Methods, proofs and sources</a>
+    </nav>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This page describes the version of 2026-11-12.</p>
+    <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
+  </div>
+</footer>
+</body>
+</html>

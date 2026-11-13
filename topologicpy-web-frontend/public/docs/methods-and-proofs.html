@@ -29,6 +29,7 @@
       <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
       <li><a href="suppression.html">Fire suppression</a></li>
       <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="people-and-slime.html">People leaving and the slime mould</a></li>
       <li><a href="methods-and-proofs.html" aria-current="page">Methods, proofs and sources</a>
         <ul>
           <li><a href="#how-it-works">How it works</a></li>
@@ -78,6 +79,7 @@
           <tr><td>Sprinklers, extinguishers, the code check and the performance check</td><td></td></tr>
           <tr><td>Reinforcement learning</td><td></td></tr>
           <tr><td>People leaving, the optional egress animation (worked out once, then moved on your GPU by a shader)</td><td></td></tr>
+          <tr><td>The slime mould and its readings (in a worker)</td><td></td></tr>
         </tbody>
       </table>
     </div>
@@ -112,6 +114,7 @@
           <tr><th scope="row">Sprinklers and the performance check</th><td data-label="Modules">Sprinklers, Performance, DoorQueue, PreMovement</td><td data-label="Among what is proved">The layout, the link and Evans's cap; the check's soundness, door queues and pre-movement.</td></tr>
           <tr><th scope="row">Suppression</th><td data-label="Modules">Suppression</td><td data-label="Among what is proved">Water and energy balances of the spray, steam dilution, cooling and the cap.</td></tr>
           <tr><th scope="row">Sprinkler activation (2026-11-08)</th><td data-label="Modules">SprinklerActivation</td><td data-label="Among what is proved">A lower walls' coefficient leaves the gas at least as hot and never opens a head later; Alpert's excess never rises with distance; a head's distance from its own position errs by at most half a cell's diagonal; with the speed free, more heat can open a head later (a counterexample).</td></tr>
+          <tr><th scope="row">The slime mould (2026-11-11)</th><td data-label="Modules">Physarum</td><td data-label="Among what is proved">23 results on Jones's agents: the trail's spreading keeps its total less the fading, never makes it negative or larger than its largest value, and with absorbing walls never adds to it; the turn keeps the heading when ahead is strictly strongest, else turns to the stronger side, left on a tie; moving never puts two agents on one place or one on a wall.</td></tr>
           <tr><th scope="row">Second model, obstructions, extinguishers and wetting</th><td data-label="Modules">Federation, Obstructions, Extinguishers, Wetting</td><td data-label="Among what is proved">The second model's frame, the obstruction rules, the extinguisher walk and count rules, and the wetting step's balances.</td></tr>
         </tbody>
       </table>
@@ -139,7 +142,8 @@
       <li><span class="label">Time in steps.</span> The graph models count fire time in steps; the forecast converts steps to seconds with a factor you set. Fire growth is not calibrated.</li>
       <li><span class="label">Waiting.</span> In the live simulation the evacuee waits while the fire grows, and each reroute starts from the original start. A route that has to pass through fire is drawn but reported as not safe. A route stays within one part of the graph.</li>
       <li><span class="label">Walking.</span> Stairs are walked at level speed (reference tools use about half to nine tenths of it). The routes have no queues at doors, no slowing in smoke and no pre-movement time; the performance check adds pre-movement and queues at doors, but not stair flow or speed classes.</li>
-      <li><span class="label">People leaving.</span> The egress animation is an illustration, not an evacuation model to quote. Everyone takes the nearest exit, holds one graph node at a time as in a floor-field model and walks at the SFPE hydraulic model's speeds, slower in a crowd and on stairs; every door is taken as 0.9 m wide, since the IFC's widths are not read, and passes about 0.8 people a second. Everyone sets off within 10 s: pre-movement and smoke do not slow anyone, and no one helps or follows another. On a stair people keep 0.9 m clear ahead, a visual choice. Egress with the fire is an option: people keep the fire's playback time and do not step into a place once it is untenable by the plan's rule (60 °C, visibility under 10 m, or the ISO 13571 doses), working out their way out again every 2 s; anyone the fire reaches walks out of it the shortest way, and anyone whose only way out is through it stays put and is counted as cut off. With the gathering places' capacity on, a place holds its area at about 0.64 m² a person and the earliest there fade as newcomers arrive. The performance check, not the animation, gives escape times.</li>
+      <li><span class="label">People leaving.</span> The egress animation is an illustration, not an evacuation model to quote. By default each person takes the exit that gets them out soonest, the walk there or the queue ahead at the flow seen through its door, and the nearest exit is an option; everyone uses every exit out of the building unless the exit picked in Route is chosen. Each holds one graph node at a time as in a floor-field model and walks at the SFPE hydraulic model's speeds, slower in a crowd and on stairs; each door passes people at its own width, the IFC's, else the width of the door's geometry, else 0.9 m (about 0.8 people a second), where the performance check's queues take 0.813 m for a door the IFC gives no width. Walking speeds that vary over time and steps drawn at random are options, off by default; with either on, one run is one sample and the notice gives the range over several seeds. Everyone sets off within 10 s: pre-movement and smoke do not slow anyone, and no one helps or follows another. On a stair people keep 0.9 m clear ahead, a visual choice. Egress with the fire is an option: people keep the fire's playback time and do not step into a place once it is untenable by the plan's rule (60 °C, visibility under 10 m, or the ISO 13571 doses), working out their way out again every 2 s; anyone the fire reaches walks out of it the shortest way, and anyone whose only way out is through it stays put and is counted as cut off. With the gathering places' capacity on, a place holds its area at about 0.64 m² a person and the earliest there fade as newcomers arrive. The performance check, not the animation, gives escape times.</li>
+      <li><span class="label">The slime mould.</span> A reading of where the escape concentrates, for design: agents, not people, one seed a run, and no time to quote. Its bottlenecks count one person per 9 m² of floor; its dead ends read the IBC 2021 dead-end limit for corridors, applied to rooms only as a reference, with values from summaries of the code still to be checked against its text. That its networks predict where people go is a hypothesis to test. See <a href="people-and-slime.html#slime-limits">People leaving and the slime mould</a>.</li>
       <li><span class="label">Assumed stairs and lifts.</span> They are approximate: an assumed stair has no known width, and a lift ride counts as walking its rise, with no wait for the car.</li>
     </ul>
 
@@ -149,11 +153,18 @@
       <li>Wrede, Wagner, Pałubicki, Michels and Pirk (2026). <em>Flamescapes: Simulating the Wildlandfire Urban Interface</em>. ACM Transactions on Graphics 45(6) 246. <a href="https://helgewrede.github.io/flamescapes/">Project page</a>; its DOI, 10.1145/3842518, was not yet registered on 2026-11-05. CC BY 4.0.</li>
       <li>Wrede et al. (2025). <em>Fire-X: Extinguishing Fire with Stoichiometric Heat Release</em>. <a href="https://doi.org/10.1145/3763338">doi:10.1145/3763338</a>. CC BY 4.0.</li>
       <li>Jabi et al. (2019). <em>The synergy of non-manifold topology and reinforcement learning for fire egress</em>. <a href="https://doi.org/10.5151/proceedings-ecaadesigradi2019_671">doi:10.5151/proceedings-ecaadesigradi2019_671</a>.</li>
-      <li>Gwynne and Rosenbaum (2016). <em>Employing the Hydraulic Model in Assessing Emergency Movement</em>. SFPE Handbook of Fire Protection Engineering, 5th ed., ch. 59. <a href="https://doi.org/10.1007/978-1-4939-2565-0_59">doi:10.1007/978-1-4939-2565-0_59</a>. The walking speeds and door flows of the performance check and of people leaving.</li>
+      <li>Gwynne and Rosenbaum (2016). <em>Employing the Hydraulic Model in Assessing Emergency Movement</em>. SFPE Handbook of Fire Protection Engineering, 5th ed., ch. 59. <a href="https://doi.org/10.1007/978-1-4939-2565-0_59">doi:10.1007/978-1-4939-2565-0_59</a>. The walking speeds and door flows of the performance check and of people leaving, building on Fruin's measurements (1971, <em>Pedestrian Planning and Design</em>, cited through this chapter).</li>
+      <li>Corbetta, Lee, Benzi, Muntean and Toschi (2017). <em>Fluctuations around mean walking behaviors in diluted pedestrian flows</em>. Physical Review E 95, 032316. <a href="https://doi.org/10.1103/PhysRevE.95.032316">doi:10.1103/PhysRevE.95.032316</a>. Walking speeds that vary over time.</li>
+      <li>Kirchner and Schadschneider (2002). <em>Simulation of evacuation processes using a bionics-inspired cellular automaton model for pedestrian dynamics</em>. Physica A 312, 260-276. <a href="https://doi.org/10.1016/S0378-4371(02)00857-9">doi:10.1016/S0378-4371(02)00857-9</a>. Steps drawn by the floor field, and the trail the slime mould's agents add to it.</li>
+      <li>Thunderhead Engineering. <em>Pathfinder Technical Reference</em>, Path Planning. The "locally quickest" door choice that people leaving's quickest exit follows.</li>
+      <li>Jones (2010). <em>Characteristics of pattern formation and evolution in approximations of Physarum transport networks</em>. Artificial Life 16(2), 127-153. <a href="https://doi.org/10.1162/artl.2010.16.2.16202">doi:10.1162/artl.2010.16.2.16202</a>; Jones and Saeed (2007), Multiagent and Grid Systems 3(1), <a href="https://doi.org/10.3233/mgs-2007-3108">doi:10.3233/mgs-2007-3108</a>. The slime mould's agents.</li>
+      <li>Chazal and Lieutier (2005). <em>The lambda-medial axis</em>. Graphical Models 67, 304-331. <a href="https://doi.org/10.1016/j.gmod.2005.01.002">doi:10.1016/j.gmod.2005.01.002</a>. The medial axis of the floor.</li>
       <li>Burstedde, Klauck, Schadschneider and Zittartz (2001). <em>Simulation of pedestrian dynamics using a two-dimensional cellular automaton</em>. Physica A 295, 507-525. <a href="https://doi.org/10.1016/S0378-4371(01)00141-8">doi:10.1016/S0378-4371(01)00141-8</a>. One person a cell, as people leaving holds one a graph node.</li>
       <li>Carrera, Merino, Aznar, Fernández and Iglesias (2019). <em>An Agent-Based Simulation Model for Emergency Egress</em>. <a href="https://doi.org/10.1007/978-3-319-99608-0_16">doi:10.1007/978-3-319-99608-0_16</a>; Park, Han and Spicer (2019). <em>Agent-Based Behavioral Model and Simulation of Fire Egress</em>. IEEE IEMCON. <a href="https://doi.org/10.1109/iemcon.2019.8936208">doi:10.1109/iemcon.2019.8936208</a>. The nearest exit by the shortest walk.</li>
       <li>ISO 13571 for the asphyxiant and heat doses; EN 13501-2 for door fire classes; Babrauskas (1983) for pool burning rates.</li>
       <li>McCaffrey (1979). <em>Purely Buoyant Diffusion Flames: Some Experimental Results</em>. NBSIR 79-1910. <a href="https://doi.org/10.6028/NBS.IR.79-1910">doi:10.6028/NBS.IR.79-1910</a>. Its Table 1 colours the design-fire item's drawn flame.</li>
+      <li>NFPA 1710, 2020 edition, 4.1.2.1(2) and (3), 4.1.2.3.1, 4.1.2.3.3 and 4.1.2.4, with NFPA's Tentative Interim Amendment 20-1 (2022), for the fire service's response in a run until it arrives: 15 s alarm answering, 64 s alarm processing, 80 s turnout and 240 s travel for the first engine company.</li>
+      <li>NFPA 1720, 2020 edition, Table 4.3.2, for the volunteer fire service presets: urban, 15 staff within 9 minutes, 90 % of the time; suburban, 10 within 10, 80 %; rural, 6 within 14, 80 %; from dispatch, so NFPA 1710's 79 s of alarm handling is added. Read from Fire Engineering (A. Zielinski, <em>From Arrival to Action: The Impact of Assembly Time</em>, 2026, <a href="https://www.fireengineering.com/firefighting/from-arrival-to-action-the-impact-of-assembly-time/">fireengineering.com</a>) and Firehouse (N. Sohyda, <em>NFPA 1720: An Update on the Volunteer Deployment Standard</em>, 2021, <a href="https://firehouse.com/careers-education/article/21238058/nfpa-standards-nfpa-1720-an-update-on-the-volunteer-deployment-standard">firehouse.com</a>), as the standard is not open to read.</li>
       <li>NFPA 10 and ISO 3941:2026 for the fire classes; the classes' values come from a literature review cited in <a href="https://github.com/libishm1/Topologic_Studio/blob/main/topologicpy-web-frontend/src/core/fireClasses.js">fireClasses.js</a>, among them peer-reviewed calorimetry and cooktop studies.</li>
     </ul>
     <h3 id="sources-checks">The checks</h3>
@@ -191,7 +202,7 @@
     </ul>
 
     <nav class="pager" aria-label="Previous page">
-      <a href="checks.html">Previous: Code and performance checks</a>
+      <a href="people-and-slime.html">Previous: People leaving and the slime mould</a>
       <a href="index.html">Back to the overview</a>
     </nav>
   </main>
@@ -199,7 +210,7 @@
 
 <footer class="site-footer">
   <div>
-    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-12.</p>
     <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
   </div>
 </footer>

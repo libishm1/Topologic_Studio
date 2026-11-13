@@ -96,3 +96,46 @@ test("people leaving is never remembered between visits: not stored, and dropped
   assert.deepEqual(withoutSessionOnly({ crowd: true, crowdStyle: "dots", walkSpeed: 1.2 }), { crowdStyle: "dots", walkSpeed: 1.2 });
   assert.deepEqual(withoutSessionOnly(null), {});
 });
+
+test("the calibrated grid builds cells of exactly the validated size, clipped round the fire to the budget", async () => {
+  const { buildScene } = await import("./flamescapesRun.js");
+  const { TESTED_GRID_CELL } = await import("./calibrationStatus.js");
+  const { MATERIAL } = await import("./voxelize.js");
+  const box = (x0, y0, z0, x1, y1, z1) => ({
+    positions: Float32Array.from([x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1]),
+    indices: Uint32Array.from([0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 2, 3, 7, 2, 7, 6, 1, 2, 6, 1, 6, 5, 0, 4, 7, 0, 7, 3]),
+    material: MATERIAL.STONE,
+  });
+  // A 40 x 30 m storey: too large for 30,000 cells of 0.27 m, so the grid is clipped round the fire.
+  const geometry = { walls: [box(-0.2, 0, -0.2, 40.2, 3, 0)], floors: [box(-0.2, -0.2, -0.2, 40.2, 0, 30.2)], roofs: [box(-0.2, 3, -0.2, 40.2, 3.2, 30.2)], stairs: [], obstacles: [], doors: [], windows: [] };
+  const { fuelsFor } = await import("./fireClasses.js");
+  const { contentsFuel, ignitionFuel } = fuelsFor("A");
+  const scene = buildScene(geometry, { fire: [20, 0.75, 15], maxCells: 30000, minCell: TESTED_GRID_CELL, maxCell: TESTED_GRID_CELL, contentsFuel, ignitionFuel });
+  assert.ok(Math.abs(scene.grid.h - TESTED_GRID_CELL) < 1e-9, `cell ${scene.grid.h}`);
+  assert.ok(scene.grid.cells <= 30000);
+  assert.equal(scene.clipped, true);
+});
+
+test("a laptop's integrated graphics is told apart, so the card can say how to use its faster card", async () => {
+  const { integratedGpu } = await import("../lib/hardware.js");
+  assert.equal(integratedGpu("intel gen-12lp"), true);
+  assert.equal(integratedGpu("nvidia turing"), false);
+  assert.equal(integratedGpu("amd rdna-2"), false);
+  // Intel's discrete Arc cards are not integrated.
+  assert.equal(integratedGpu("intel gen-12hp"), false);
+  assert.equal(integratedGpu("intel xe-2hpg"), false);
+  assert.equal(integratedGpu("intel xe-lpg"), true);
+  assert.equal(integratedGpu(""), false);
+});
+
+test("the GPU grid is sized by the solver's largest binding, cf, at its own bytes a cell", async () => {
+  const { GPU_BINDING_BYTES_PER_CELL, detectGpu } = await import("../lib/hardware.js");
+  const { CF_FIELDS } = await import("./flamescapesGpu/kernels.js");
+  assert.equal(GPU_BINDING_BYTES_PER_CELL, CF_FIELDS * 4);
+  // A device that binds 16 MiB (and makes 256 MiB buffers) holds 16 MiB / 80 B cells; a large one is capped at 400,000.
+  const gpuWith = (limits) => ({ gpu: { requestAdapter: async () => ({ info: { vendor: "test" }, limits }) } });
+  assert.equal((await detectGpu(gpuWith({ maxStorageBufferBindingSize: 16 * 2 ** 20, maxBufferSize: 256 * 2 ** 20 }))).cells, Math.floor((16 * 2 ** 20) / (CF_FIELDS * 4)));
+  assert.equal((await detectGpu(gpuWith({ maxStorageBufferBindingSize: 2 ** 31, maxBufferSize: 2 ** 31 }))).cells, 400000);
+  // The smaller of the two limits counts.
+  assert.equal((await detectGpu(gpuWith({ maxStorageBufferBindingSize: 2 ** 30, maxBufferSize: 8 * 2 ** 20 }))).cells, Math.max(30000, Math.floor((8 * 2 ** 20) / (CF_FIELDS * 4))));
+});

@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FREE_SPEED, GATHER_AREA, SFPE, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, simulateCrowd } from "./crowd.js";
+import { FREE_SPEED, GATHER_AREA, SFPE, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, simulateCrowd } from "./crowd.js";
 import { doorCapacity } from "./performanceCheck.js";
 import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "./lattice.js";
 
@@ -428,9 +428,8 @@ test("speeds wobble as Corbetta et al. measured: about the person's own, a sprea
   assert.equal(Math.abs(fluctuationDrift(1)), 0);
   assert.equal(Math.abs(fluctuationDrift(0)), 0);
   assert.ok(Math.abs((fluctuationDrift(1.001) - fluctuationDrift(0.999)) / 0.002 + 8 * WALK_FLUCTUATION.alpha) < 1e-6);
-  // One person walking a corridor 500 m long at 0.6 m/s with no spread (slow
-  // enough that the crowding cap, 0.9 m/s in a corridor one node wide, does not
-  // clip the wobble): each step's speed over 0.6 is the factor.
+  // One person walking a corridor 500 m long at 0.6 m/s with no spread: alone,
+  // nothing slows them, so each step's speed over 0.6 is the factor.
   const { graph, exits } = room(1000, 1, { exits: ["right"] });
   const n = graph.nodes.length / 3;
   const ratios = [];
@@ -474,4 +473,118 @@ test("the floor field's steps: still one a node and out of the fire; the larger 
   const c = simulateCrowd(graph, { exits, occupantArea: 0.5, seed: 10, kS: 2, fluctuate: true });
   assert.deepEqual(Array.from(a.segments), Array.from(b.segments));
   assert.notDeepEqual(Array.from(a.segments), Array.from(c.segments));
+});
+
+// ---- validation informs the model (wiki/research/crowd-validation-plan-2026-11-11.md; tools/validation/crowd-validation.mjs)
+
+/** Each segment's speed, m/s, on the graph's own nodes. */
+function speedsOf(graph, out) {
+  const n = graph.nodes.length / 3;
+  const out2 = [];
+  for (const list of walks(out)) {
+    for (const s of list) {
+      if (s.b >= n || s.a === s.b || s.t1 <= s.t0) continue;
+      const len = Math.hypot(...[0, 1, 2].map((c) => graph.nodes[s.b * 3 + c] - graph.nodes[s.a * 3 + c]));
+      out2.push({ ...s, v: len / (s.t1 - s.t0), len });
+    }
+  }
+  return out2;
+}
+
+test("a walker alone never counts themselves: they keep their own speed in single file and by a wall", () => {
+  // Counting the mover capped a lone walker at 0.90 m/s in single file (RiMEA Test 16) and 1.15 by a wall.
+  for (const [nx, nz] of [[60, 1], [40, 3]]) {
+    const { graph, exits } = room(nx, nz);
+    const out = simulateCrowd(graph, { exits, occupantArea: 1e9, maxPeople: 1, speed: 1.3, spread: 0, start: [0, 0], seed: 2 });
+    const speeds = speedsOf(graph, out);
+    assert.ok(speeds.length > 5);
+    for (const s of speeds) assert.ok(Math.abs(s.v - 1.3) < 1e-3, `${nx} x ${nz}: ${s.v.toFixed(3)} m/s`);
+  }
+});
+
+test("each walker keeps their own clock: unimpeded, their steps follow on without waiting for the time step, along the lattice or across it", () => {
+  // Steps used to wait for the next 0.1 s: 1.33 m/s became 0.99 along the lattice and 1.16 across it (RiMEA Test 1).
+  const { graph, exits } = room(40, 40);
+  for (const seed of [1, 2, 3]) {
+    const out = simulateCrowd(graph, { exits, occupantArea: 1e9, maxPeople: 1, speed: 1.33, spread: 0, start: [0, 0], seed });
+    const list = walks(out)[0].filter((s) => s.b < graph.nodes.length / 3);
+    for (let j = 1; j < list.length; j += 1) assert.ok(Math.abs(list[j].t0 - list[j - 1].t1) < 1e-4, `seed ${seed}: a gap of ${(list[j].t0 - list[j - 1].t1).toFixed(3)} s`);
+    const length = speedsOf(graph, out).reduce((s, x) => s + x.len, 0);
+    assert.ok(Math.abs(length / (out.outAt[0] - list[0].t0) - 1.33) < 0.005, `seed ${seed}: realised ${(length / (out.outAt[0] - list[0].t0)).toFixed(3)} m/s`);
+  }
+});
+
+/** Two rooms of 12 x 12 nodes joined by one door node, the exit at the far side of the second; returns the graph, exit and door. */
+function twoRooms() {
+  const s = 0.5, h = 0.75, N = 12;
+  const nodes = [], kinds = [], edges = [];
+  const id = new Map();
+  const add = (i, k, kind) => {
+    id.set(`${i},${k}`, nodes.length / 3);
+    nodes.push(i * s, h, k * s);
+    kinds.push(kind);
+  };
+  for (let i = 0; i < N; i += 1) for (let k = 0; k < N; k += 1) add(i, k, KIND_FLOOR);
+  add(N, N / 2, KIND_DOOR);
+  for (let i = N + 1; i < 2 * N + 1; i += 1) for (let k = 0; k < N; k += 1) add(i, k, KIND_FLOOR);
+  add(2 * N + 1, N / 2, KIND_DOOR);
+  for (const [key, a] of id) {
+    const [i, k] = key.split(",").map(Number);
+    for (const [di, dk] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+      const b = id.get(`${i + di},${k + dk}`);
+      if (b === undefined) continue;
+      if (di && dk && (!id.has(`${i + di},${k}`) || !id.has(`${i},${k + dk}`))) continue;
+      edges.push(a, b);
+    }
+  }
+  const graph = { nodes: Float32Array.from(nodes), edges: Int32Array.from(edges), kinds: Uint8Array.from(kinds), spacing: s, agentHeight: h, upAxis: "y" };
+  return { graph, exit: id.get(`${2 * N + 1},${N / 2}`), door: id.get(`${N},${N / 2}`), n: nodes.length / 3 };
+}
+
+test("the door, not the crawl into its queue, sets what passes: the flow rises with each door node's own width", () => {
+  // The crawl into a packed queue passed 0.29 persons/s through a door of any width (RiMEA Test 12d).
+  const { graph, exit, door, n } = twoRooms();
+  const flows = [];
+  for (const w of [0.8, 1.0, 1.2]) {
+    const doorWidths = new Float32Array(n);
+    doorWidths[door] = w;
+    doorWidths[exit] = 3;
+    const out = simulateCrowd(graph, { exits: [exit], occupantArea: 0.3, start: [0, 0], seed: 1, doorWidths, choice: "nearest" });
+    assert.equal(out.inside, 0);
+    const through = speedsOf(graph, out).filter((s) => s.b === door).map((s) => s.t0).sort((a, b) => a - b);
+    const c = doorCapacity(w);
+    for (let j = 1; j < through.length; j += 1) assert.ok(through[j] - through[j - 1] >= 1 / c - 1e-4, `${w} m: at most its capacity`);
+    // The steady part of the queue passes near the door's capacity.
+    const k0 = 10, k1 = through.length - 10;
+    const J = (k1 - k0) / (through[k1] - through[k0]);
+    assert.ok(J > 0.85 * c && J <= c + 1e-6, `${w} m: ${J.toFixed(3)} persons/s against its capacity ${c.toFixed(3)}`);
+    flows.push(J);
+  }
+  assert.ok(flows[1] > flows[0] && flows[2] > flows[1], flows.map((f) => f.toFixed(3)).join(" < "));
+  // With no widths given, every door takes doorWidth.
+  const plain = simulateCrowd(graph, { exits: [exit], occupantArea: 0.3, start: [0, 0], seed: 1, doorWidth: 1.2, choice: "nearest" });
+  const through = speedsOf(graph, plain).filter((s) => s.b === door).map((s) => s.t0).sort((a, b) => a - b);
+  for (let j = 1; j < through.length; j += 1) assert.ok(through[j] - through[j - 1] >= 1 / doorCapacity(1.2) - 1e-4);
+});
+
+test("up a stair at STAIR_UP of the speed down it", () => {
+  // Down: twoFloors' upper room walks down its stair. Up: the same stair, the exit upstairs.
+  const down = twoFloors(4, 2, 10);
+  const outDown = simulateCrowd(down.graph, { exits: [down.exit], occupantArea: 1e9, maxPeople: 1, spread: 0, start: [0, 0], seed: 1 });
+  const onStair = (graph, out) => speedsOf(graph, out).filter((s) => graph.kinds[s.a] === KIND_STAIR && graph.kinds[s.b] === KIND_STAIR);
+  const vDown = onStair(down.graph, outDown);
+  assert.ok(vDown.length > 3);
+  for (const s of vDown) assert.ok(Math.abs(s.v - FREE_SPEED * (SFPE.kStair / SFPE.k)) < 1e-3, `down ${s.v.toFixed(3)}`);
+  // The same graph mirrored in height: the room is now below, the stair climbs from it to the exit.
+  const g = down.graph;
+  const flipped = { ...g, nodes: Float32Array.from(g.nodes, (x, j) => (j % 3 === 1 ? 4.5 - x : x)) };
+  let climbed = 0;
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const outUp = simulateCrowd(flipped, { exits: [down.exit], occupantArea: 1e9, maxPeople: 1, spread: 0, start: [0, 0], seed });
+    for (const s of onStair(flipped, outUp)) {
+      climbed += 1;
+      assert.ok(Math.abs(s.v - FREE_SPEED * (SFPE.kStair / SFPE.k) * STAIR_UP) < 1e-3, `up ${s.v.toFixed(3)}`);
+    }
+  }
+  assert.ok(climbed > 3, "someone climbed the stair");
 });

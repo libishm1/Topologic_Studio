@@ -39,6 +39,7 @@
           <li><a href="#not-yet">Not covered yet</a></li>
         </ul>
       </li>
+      <li><a href="people-and-slime.html">People leaving and the slime mould</a></li>
       <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
     </ol>
     <p class="toc__out"><a href="../">Open the app</a></p>
@@ -57,6 +58,13 @@
       <li>whether the building is high-rise.</li>
     </ul>
     <p>Each limit is the stricter of the Saudi Fire Code SBC 801-CR-2018 and the International Building Code 2021, so a pass meets both, and every result names both clauses. The exits it counts are the exits out of the building and the stairs; places on a storey that reach none of that storey's exit doors leave by a stair.</p>
+    <dl>
+      <dt class="label">The building has automatic sprinklers</dt>
+      <dd><p>Off by default. On, the check allows longer walks, 90 m to the nearest exit against 60 m, and exits closer together, a third of the storey's diagonal apart against a half. The slime mould's dead ends and the egress map read the same switch for their limits.</p></dd>
+      <dt class="label">Show the distance to spare on the graph</dt>
+      <dd><p>Shown once the check has run. It colours the graph by how far each place's walk to the nearest exit is from the limit: red at or over it, yellow well within it, grey where no exit can be reached on its storey.</p></dd>
+    </dl>
+    <p>Not checked yet: the common path of travel, dead ends, stair widths and capacity, and whether each stair is enclosed. The egress map reads the common path and dead ends separately (see <a href="people-and-slime.html#egress-map">Egress map</a>).</p>
     <p>In the Vienna example, two doors lead out and there is one stairwell, so the storeys above the second fail the two-exit rule on Group B values. Residential buildings have their own single-exit rule, which is not yet checked.</p>
     <div class="note">
       <p>The current edition is SBC 801-CR-2024, whose text was not obtained. Until it is, the checks pass SBC 801-CR-2018, with IBC 2021 where it is stricter. This guide cites clause numbers and values only.</p>
@@ -79,15 +87,23 @@
     <h3 id="rset">What RSET is made of</h3>
     <dl>
       <dt class="label">Presets</dt>
-      <dd><p>Office (the default), classroom, apartments, the flat of origin, hotel and assembly. Each gives the alarm and pre-movement times, the share of occupants who never respond and the floor area per occupant, from PD 7974-6, ISO/TR 16738, the Australian FSVM data sheets, New Zealand's C/VM2 and IBC 2021 Table 1004.5. The design pre-movement time is a log-normal through PD 7974-6's two percentiles.</p></dd>
-      <dt class="label">Detection</dt>
-      <dd><p>With a Flamescapes fire, detection is when the smoke reaches a smoke detector's optical density (0.097 per metre, C/VM2) at virtual detectors under the ceiling. Up to 16 are placed round the fire, 7 m from it (C/VM2) or as far as its room allows: a wall or a lintel ends the search. They are read every frame on the CPU and the GPU and shown on the run card. In the GPU check's test room, 9 detectors gave a visibility correlation of 0.994 between CPU and GPU and the first alarm at 40 s on both. Without a Flamescapes fire, the detection time is the one set.</p></dd>
-      <dt class="label">No response</dt>
-      <dd><p>Each preset carries the share of occupants who never respond, from the Australian guidance (0 % for offices and assembly, 1 % on an apartment fire floor and in hotels). They are never counted as starting in time, and the percentiles are those of the people who respond.</p></dd>
-      <dt class="label">Measured pre-movement</dt>
-      <dd><p>A measured spread, the Weibull fits of Lovreglio et al. (2019), is judged per storey beside the design log-normal and drawn with it, without changing the verdict.</p></dd>
+      <dd><p>Chosen under <span class="label">Occupants</span>: office (the default), classroom, apartments, the flat of origin, hotel, assembly, or custom. Each gives the alarm and pre-movement times, the share of occupants who never respond and the floor area per occupant, from PD 7974-6, ISO/TR 16738, the Australian FSVM data sheets, New Zealand's C/VM2 and IBC 2021 Table 1004.5. The design pre-movement time is a log-normal through PD 7974-6's two percentiles. Typing a different alarm, pre-movement, no-response or floor-area value below makes the occupants custom.</p></dd>
+      <dt class="label">Detection from the fire run's smoke</dt>
+      <dd><p>On by default. With a Flamescapes fire, detection is when the smoke reaches a smoke detector's optical density (0.097 per metre, C/VM2) at virtual detectors under the ceiling. Up to 16 are placed round the fire, 7 m from it (C/VM2) or as far as its room allows: a wall or a lintel ends the search. They are read every frame on the CPU and the GPU and shown on the run card. In the GPU check's test room, 9 detectors gave a visibility correlation of 0.994 between CPU and GPU and the first alarm at 40 s on both. Without a Flamescapes fire, when the run's smoke never reaches a detector's threshold, or with the switch off, the check uses <span class="label">Detection (s)</span>, and its result says which it used.</p></dd>
+      <dt class="label">Detection (s) and Alarm after it (s)</dt>
+      <dd><p>Seconds, 0 to 1,800. Detection is counted from ignition, 60 s by default; the alarm from detection, 30 s for an immediate general alarm (the office preset) or 120 s for a staged one (the hotel preset).</p></dd>
+      <dt class="label">Pre-movement, 1st percentile (s) and Pre-movement, 99th percentile (s)</dt>
+      <dd><p>The two percentiles of the design log-normal, in seconds after the alarm: 60 and 180 s for the office preset. The 99th must be longer than the 1st, and both above zero, before the check runs.</p></dd>
+      <dt class="label">Never respond (%)</dt>
+      <dd><p>0 to 50 %. Each preset carries the share of occupants who never respond, from the Australian guidance (0 % for offices and assembly, 1 % on an apartment fire floor and in hotels). They are never counted as starting in time, and the percentiles are those of the people who respond. Staff or the fire service must reach them.</p></dd>
+      <dt class="label">Measured pre-movement, shown beside</dt>
+      <dd><p>A measured spread, the Weibull fits of Lovreglio et al. (2019) to one cluster of drills or fires (offices, lecture halls, libraries, homes with a working alarm, homes in real fires with poor alarms, hotels or theatres), or none. It is judged per storey beside the design log-normal and drawn with it in the chart, without changing the verdict. Each preset picks its own cluster.</p></dd>
       <dt class="label">Queues at the doors</dt>
-      <dd><p>Occupants on every place, at the preset's floor area per occupant, walk to the nearest exit with no fire and queue at each door at 1.32 persons a second per metre of effective width (C/VM2 3.5.3), with the door widths from the IFC, doors upstream first (Lindley's recursion). The wait W of the 99th-percentile starter enters the requirement. The queues take 59 ms on Vienna and are computed only when the check is run.</p></dd>
+      <dd><p>On by default (<span class="label">Queues at doors</span>). Occupants on every place walk to the nearest exit with no fire and queue at each door at 1.32 persons a second per metre of effective width, the door's width less 0.15 m a side (C/VM2 3.5.3), with the door widths from the IFC (0.813 m, the stricter code's least clear width, where it gives none; people leaving and the slime mould take the width of the door's geometry there instead), doors upstream first (Lindley's recursion). The wait W of the 99th-percentile starter enters the requirement. The queues take 59 ms on Vienna and are computed only when the check is run.</p></dd>
+      <dt class="label">Floor area per occupant (m²)</dt>
+      <dd><p>Shown with the queues on: how many people stand on the floor for the queues, one per this many square metres, 0.3 to 100 m². Each preset sets it: 9 m² for offices (the stricter of SBC 801-CR-2018 and IBC 2021), 1.86 m² for classrooms, 18.58 m² for apartments and hotels and 1.39 m² for assembly (IBC 2021 Table 1004.5). People leaving and the slime mould's desire lines use the same value.</p></dd>
+      <dt class="label">Also with the exit nearest the fire blocked</dt>
+      <dd><p>Off by default. On, planning with the forecast makes a second deadline map without the exit nearest the fire, which about doubles the map's time, and the check judges it as a sensitivity case (SFEG 2025 test 5) at 1.2 times RSET. Plan again after switching it on.</p></dd>
     </dl>
 
     <h3 id="report">Several fires and the report</h3>
@@ -117,14 +133,14 @@
 
     <nav class="pager" aria-label="Previous and next page">
       <a href="suppression.html">Previous: Fire suppression</a>
-      <a href="methods-and-proofs.html">Next: Methods, proofs and sources</a>
+      <a href="people-and-slime.html">Next: People leaving and the slime mould</a>
     </nav>
   </main>
 </div>
 
 <footer class="site-footer">
   <div>
-    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-12.</p>
     <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
   </div>
 </footer>

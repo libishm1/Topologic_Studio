@@ -12,16 +12,31 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { graphIsSplit, reachablePct } from "../core/graph.js";
 import { RL_MAX_STEPS } from "../core/rl.js";
 import { formatBytes, formatMs } from "../lib/perf.js";
-import { STANDARD_CELLS } from "../lib/hardware.js";
+import { STANDARD_CELLS, detectGpu, integratedGpu } from "../lib/hardware.js";
 import { CROWD_COLOURS } from "../viewer/crowd.js";
 import { FORECAST_COLORS, routeColor } from "../lib/routeColors.js";
-import { PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
+import { DEFAULT_SETTINGS, PLAN_SETTINGS, fireModelIn, hasRooms, isFlamescapes } from "../state/useStudio.js";
 import { FIRE_CLASSES, FIRE_CLASS_KEYS, designFireFor, waterResponse } from "../core/fireClasses.js";
 import { GAS_MEASURES, SHOW_GROUPS, SMOKE_MEASURES } from "../core/measures.js";
 import { IGNITION_CONTEXTS } from "../core/ignitionContexts.js";
 import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
 import { MEASURED_PRE, NO_RESPONSE_SOURCE, RSET_CRITERIA, RSET_PRESETS, criterionOf, measuredOf, presetOf } from "../core/rsetPresets.js";
 import { worstStatus } from "../core/perfReport.js";
+import { healthReason } from "../core/runHealth.js";
+import { COVERED, validationLine, validationSummary, validationVerdict } from "../core/calibrationStatus.js";
+import {
+  DEFAULT_SERVICE_RESPONSE,
+  SERVICE_HORIZON_MAX,
+  SERVICE_PRESETS,
+  SERVICE_RESPONSE_MAX,
+  SERVICE_RESPONSE_MIN,
+  computeSeconds,
+  durationText,
+  gpuPace,
+  serviceArrival,
+  serviceResponse,
+} from "../core/fireService.js";
+import { SOLVERS } from "../core/solverVersions.js";
 import { TURNSTILE_SITE_KEY, mountHumanCheck, unmountHumanCheck } from "../lib/turnstile.js";
 import {
   Button,
@@ -31,6 +46,7 @@ import {
   FileButton,
   Icon,
   KeyValue,
+  Notes,
   Notice,
   NumberField,
   Section,
@@ -244,12 +260,12 @@ function ElementIdentification({ identification, onIdentify, onIdentifyByShape }
                     ? "Checked by shape"
                     : `Identify ${fmt(open)} by shape (IFCNet)`}
               </Button>
-              <p className="field__hint">
+              <Notes summary="About the classifier">
                 IFCNet&apos;s point-cloud network (Emunds et al. 2021) looks at the shape of each element the name could not place, and its answer replaces
                 the size&apos;s when it is at least 90% sure. The first use downloads 4.5 MB (the model from this site, onnxruntime-web from jsDelivr) and
                 takes about 0.2 s an element.
                 {identification.shapeRun && ` It identified ${fmt(identification.byShape)}; the rest keep the rules' answer.`}
-              </p>
+              </Notes>
             </>
           )}
         </>
@@ -519,10 +535,10 @@ export function ModelPanel({
       )}
 
       <Section title="Rooms models (LOD1)" defaultOpen={false}>
-        <p className="field__hint">
+        <Notes summary="About rooms models">
           A building as rooms, storeys, doors and stairs, with no IFC: a TopologicPy LOD1 export (the CellComplex JSON, with its circulation and
           adjacency graphs chosen together with it) or a GeoJSON plan. The graph, routes, code check and both fire models run on it as on an IFC.
-        </p>
+        </Notes>
         <FileButton accept=".json,.geojson" multiple onFile={onOpenRooms}>
           Open a rooms model
         </FileButton>
@@ -698,12 +714,12 @@ function NavigationCheckSection({ studio, onRun }) {
 
   return (
     <Section title="Cross-check with TopologicPy" defaultOpen={false} badge={navCheck ? pct(navCheck.studio_covered) : null}>
-      <p className="field__hint">
+      <Notes summary="How it works">
         TopologicPy&apos;s <code>Navigation</code> class builds its own walkable graph from the IFC, an
         independent estimate of the same space: where the two disagree, one of them is wrong about the
         building. The IFC is uploaded and parsed on the server, which takes seconds here and up to a
         minute on a small host.
-      </p>
+      </Notes>
       <NumberField
         label="Grid spacing (m)"
         value={settings.navSpacing}
@@ -797,10 +813,10 @@ function LinkedModels({ linked, onAdd, onAlign, onRemove }) {
   const { list, busy } = linked;
   return (
     <Section title="Second model (MEP, structure)" defaultOpen={false} badge={list.length ? `${list.length} added` : null}>
-      <p className="field__hint">
+      <Notes summary="How it works">
         An MEP or structural IFC of the same building. It is drawn in this model&apos;s frame and checked against it; its sprinklers, ducts and beams are
         used by the sprinklers in step 4. The graph and the fire&apos;s walls stay this model&apos;s.
-      </p>
+      </Notes>
       <FileButton accept=".ifc" onFile={onAdd} disabled={Boolean(busy)}>
         {busy ? `Adding ${busy}...` : "Add a model"}
       </FileButton>
@@ -901,6 +917,11 @@ function ExtinguisherAttempt({ attempt }) {
   const [tone, word] = OUTCOME_WORDS[attempt.outcome] || ["plan", attempt.outcome];
   const t = attempt.times || {};
   const s = (x) => (Number.isFinite(x) ? `${Math.round(x)} s` : "-");
+  // After the alarm: which detection it waited for, as the performance check words it.
+  const st = attempt.start;
+  const cue = st
+    ? `detection at ${s(st.detection)}, ${detectedBy(st.detectionFrom, st.detectors)}; the alarm ${s(st.alarm)} after it; the median pre-movement ${s(st.median)}`
+    : "on seeing the fire";
   return (
     <div className="linked-model">
       <div className="summary__row">
@@ -909,7 +930,7 @@ function ExtinguisherAttempt({ attempt }) {
       </div>
       {attempt.attempted !== false && Number.isFinite(t.tS) && (
         <p className="field__hint">
-          Sets off at {s(attempt.tGo)}, reaches the extinguisher at {s(attempt.tGo + (t.toExtinguisher || 0))}, readies it, and starts at {s(t.tS)}
+          Sets off at {s(attempt.tGo)} ({cue}), reaches the extinguisher at {s(attempt.tGo + (t.toExtinguisher || 0))}, readies it, and starts at {s(t.tS)}
           {Number.isFinite(attempt.hrr) ? ` against ${kwText(attempt.hrr)}` : ""}
           {attempt.capacity?.units === "kW"
             ? `; the unit puts out up to ${kwText(attempt.capacity.low)} for sure and nothing above ${kwText(attempt.capacity.high)}`
@@ -1032,13 +1053,13 @@ function CodeCheck({ code, settings, setSettings, onRun, onShow, ready }) {
   const tone = { pass: "ok", fail: "warn" };
   const mark = { pass: "Pass", fail: "Fail", "cannot tell": "Cannot tell", "n/a": "Not applicable" };
   return (
-    <Section title="Code check" defaultOpen={false}>
-      <p className="field__hint">
+    <Section title="Code check" guide="checks.html#code" defaultOpen={false}>
+      <Notes summary="The codes and their values">
         Offices (occupancy group B). Each limit is the stricter of the Saudi Fire Code SBC 801-CR-2018 (Chapter 10, means of egress) and the
         International Building Code 2021, so a pass meets both; SBC 2024 replaces the 2018 values when its text is available, and the high-rise
         provisions are the IBC&apos;s until SBC 201 is read. Distances are walked on the graph to the nearest exit out of the building, or, above and
         below it, to the nearest stair; the occupant load uses the walkable area, a lower bound.
-      </p>
+      </Notes>
       <Toggle
         label="The building has automatic sprinklers"
         checked={settings.codeSprinklered}
@@ -1207,6 +1228,19 @@ function PreMovementChart({ curves, measuredLabel }) {
   );
 }
 
+/** Where the detection time came from, in words (perfReport.js planDetection's `from`). */
+function detectedBy(from, detectors) {
+  const words = {
+    ceiling: `from the run's ${detectors ? `${detectors} ` : ""}ceiling detectors`,
+    run: "from the run's smoke at head height (a run kept from before the ceiling detectors)",
+    "not in the run": "as set: the run's smoke never reached a detector's threshold",
+    "no run": "as set: only a Flamescapes run gives smoke to detect",
+    "no plan": "as set: the run's smoke is read when you plan with the forecast",
+    set: "as set",
+  };
+  return words[from] || "as set";
+}
+
 function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, report, batch, canAddFires, onAddFires, onStopFires, onDownloadReport, onClearReport }) {
   const tone = { pass: "ok", fail: "warn" };
   const mark = { pass: "Pass", fail: "Fail", "cannot tell": "Cannot tell" };
@@ -1218,26 +1252,19 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
     setSettings({ perfOccupancy: id, ...(p.values || {}) });
   };
   // Typing a preset's value makes it custom: the values no longer are the preset's.
-  const set = (key) => (v) => setSettings({ [key]: Math.max(0, v ?? 0), perfOccupancy: "custom" });
+  const set = (key) => (v) => setSettings({ [key]: Math.max(0, v ?? DEFAULT_SETTINGS[key]), perfOccupancy: "custom" });
   const badPre = !(settings.perfPre1 > 0 && settings.perfPre99 > settings.perfPre1);
   const badArea = settings.perfQueues && !(settings.perfOccupantArea > 0);
-  const detectedBy = {
-    ceiling: `from the run's ${perf?.detectors || ""} ceiling detectors`.replace("  ", " "),
-    run: "from the run's smoke at head height (a run kept from before the ceiling detectors)",
-    "not in the run": "as set: the run's smoke never reached a detector's threshold",
-    "no run": "as set: only a Flamescapes run gives smoke to detect",
-    set: "as set",
-  };
   const seconds = (x) => (x === -Infinity ? "no safe time" : Number.isFinite(x) ? `${Math.round(x)} s` : "");
   const status = report.length ? worstStatus(report.flatMap((e) => e.cases.map((c) => c.result?.status ?? "cannot tell"))) : null;
   return (
-    <Section title="Performance check (with the fire)" defaultOpen={false}>
-      <p className="field__hint">
+    <Section title="Performance check (with the fire)" guide="checks.html#performance" defaultOpen={false}>
+      <Notes summary="How it works">
         Performance-based: each place passes when someone there can wait for detection, the alarm, the 99th percentile of pre-movement
         time and any queue at the doors, and still get out with a dose under the limit, with the margin the criterion asks. It reads the
         escape-deadline map of the forecast (Simulate step, Plan with the forecast); every check joins a report of fires. Evidence for an
         alternative method (SBC 801-CR-2018 104.9) beside the code check, not a replacement for it.
-      </p>
+      </Notes>
       <SelectField label="Occupants" value={settings.perfOccupancy} onChange={choose} options={RSET_PRESETS.map((p) => ({ value: p.id, label: p.label }))} hint={preset.source} />
       <Toggle
         label="Detection from the fire run's smoke"
@@ -1246,7 +1273,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
         hint="With a Flamescapes fire: when the smoke reaches a smoke detector's optical density, 0.097 per metre, at virtual detectors under the ceiling 7.0 m from the fire, or as far as its room allows (NZ C/VM2 Table 3.2.2.2). Otherwise the time below."
       />
       <div className="grid-2">
-        <NumberField label="Detection (s)" value={settings.perfDetection} min={0} max={1800} step={5} onChange={(v) => setSettings({ perfDetection: Math.max(0, v ?? 0) })} />
+        <NumberField label="Detection (s)" value={settings.perfDetection} min={0} max={1800} step={5} onChange={(v) => setSettings({ perfDetection: Math.max(0, v ?? DEFAULT_SETTINGS.perfDetection) })} />
         <NumberField label="Alarm after it (s)" value={settings.perfAlarm} min={0} max={1800} step={5} onChange={set("perfAlarm")} />
       </div>
       <div className="grid-2">
@@ -1265,7 +1292,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
         label="Queues at doors"
         checked={settings.perfQueues}
         onChange={(perfQueues) => setSettings({ perfQueues })}
-        hint="Occupants on every place walk to the nearest exit and queue at each door on the way: 1.32 persons a second per metre of the door's width less 0.15 m a side (NZ C/VM2 3.5.3). Widths from the IFC; 0.813 m where it gives none."
+        hint="Occupants on every place walk to the nearest exit and queue at each door on the way: 1.32 persons a second per metre of the door's width less 0.15 m a side (NZ C/VM2 3.5.3). Widths from the IFC; 0.813 m, the code's least clear width, where it gives none (people leaving and the slime mould take the width of the door's geometry instead)."
       />
       {settings.perfQueues && (
         <NumberField label="Floor area per occupant (m²)" value={settings.perfOccupantArea} min={0.3} max={100} step={0.5} onChange={set("perfOccupantArea")} hint={preset.load} />
@@ -1301,7 +1328,7 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
           <Notice tone={perf.status === "pass" ? "neutral" : "warning"}>
             <strong>{mark[perf.status]}.</strong> Occupants must be able to set off up to {Math.round(perf.start)} s after ignition
             {perf.factor > 1 ? " beside an exit, and later farther away" : ""}: detection at {Math.round(perf.detection)} s,{" "}
-            {detectedBy[perf.detectionFrom] || "as set"}; the alarm at {Math.round(perf.cue)} s; then pre-movement
+            {detectedBy(perf.detectionFrom, perf.detectors)}; the alarm at {Math.round(perf.cue)} s; then pre-movement
             {perf.queues ? " and the queues at doors" : ""}. {perf.criterion?.label}.
           </Notice>
           <ul className="code-list">
@@ -1346,12 +1373,12 @@ function PerformanceCheck({ perf, settings, setSettings, onRun, ready, onGoTo, r
           {perf.blockedAsked && !perf.cases?.some((c) => c.id === "exit-blocked") && (
             <p className="field__hint">The case with an exit blocked needs a plan made with that switch on and at least two exits: plan again.</p>
           )}
-          <p className="field__hint">
+          <Notes summary="How the times are worked out">
             ASET from the forecast (ISO 13571 dose against the limit set under Clock, speed and limits), RSET as detection, alarm,
             pre-movement (a log-normal through the two percentiles, PD 7974-6), the walk with no fire and any queue. The margin is ASET less
             RSET at the 99th percentile. One walking speed; time in a queue is added to RSET as in a hand calculation, without its own dose;
             the room of fire origin is judged like any other place.
-          </p>
+          </Notes>
         </>
       )}
       {(report.length > 0 || canAddFires) && (
@@ -1427,13 +1454,15 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
     </span>
   );
   return (
-    <Section title="People leaving" badge={result ? `${result.people.toLocaleString()} people` : null} defaultOpen={false}>
+    <Section title="People leaving" guide="people-and-slime.html#people" badge={result ? `${result.people.toLocaleString()} people` : null} defaultOpen={false}>
       <Toggle
         label="Show people leaving"
         checked={settings.crowd}
         disabled={!ready}
         onChange={(on) => setSettings({ crowd: on })}
-        hint="Everyone on the floors walks out by the exit that gets them out soonest and gathers outside it, played faster than real time."
+        hint={`Everyone on the floors walks out by ${
+          settings.crowdChoice === "nearest" ? "the nearest exit" : "the exit that gets them out soonest"
+        } and gathers outside it${settings.crowdRate > 1 ? ", played faster than real time" : ""}.`}
       />
       {settings.crowd && (
         <>
@@ -1490,6 +1519,8 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                   : "The model marks no exit out of the building, so they use the exit picked in Route."
             }
           />
+          <p className="field__hint">One person per {settings.perfOccupantArea} m² of floor (the floor area per occupant, set in Performance check).</p>
+          <Disclosure summary="How people move">
           <SelectField
             label="Each person takes"
             value={settings.crowdChoice}
@@ -1511,7 +1542,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
             hint="Each person's speed drifts about their own and recovers within a few seconds, as Corbetta et al. (2017) measured 72,376 walkers' does: a spread of about 16 %."
           />
           <SelectField
-            label="Each step"
+            label="Step randomness"
             value={settings.crowdSteps}
             onChange={(crowdSteps) => setSettings({ crowdSteps })}
             options={[
@@ -1574,6 +1605,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
               options={[10, 25, 50, 100].map((a) => ({ value: String(a), label: `${a} m², about ${Math.floor(a / 0.636)} people` }))}
             />
           )}
+          </Disclosure>
           {crowd?.busy && <p className="field__hint">Working out everyone&apos;s walk…</p>}
           {crowd?.error && <Notice tone="warning">{crowd.error}</Notice>}
           {result && (
@@ -1613,16 +1645,19 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
               </Notice>
               {crowd.runs && <RunsRange runs={crowd.runs} />}
               {crowd.gpu && <p className="field__hint">Moved and drawn on the GPU: {crowd.gpu}.</p>}
-              <p className="field__hint">
+              <Notes summary="How people move">
                 {result.choice === "quickest"
                   ? "Each person takes the exit that gets them out soonest: the walk there, or the people ahead of them through it at the flow seen at its door, whichever is longer, looked at again every 2 s, as Pathfinder's “locally quickest” door choice weighs a door. "
                   : "Each person heads for the nearest exit by the shortest walk (the “nearest exit” choice that gave the shortest times in Carrera et al. 2019). "}
                 Each holds one place of the graph at a time, as a cell of a floor-field model does
                 (Burstedde et al. 2001), stepping round whoever is ahead. Speeds spread about 1.19 m/s and slow as the crowd
-                thickens, 0.92 m/s at most on stairs, and a 0.9 m door passes about 0.8 people a second (SFPE Handbook). Everyone
-                sets off within 10 s of the plan&apos;s departure time: the performance check, not this animation, models how
-                long people take to start. An illustration of the walk out, not an evacuation model to quote.
-              </p>
+                thickens, at most 0.92 m/s down stairs and 0.69 m/s up them, and each door passes people at its own width&apos;s
+                capacity (SFPE Handbook): the IFC&apos;s width, else the width of the door&apos;s geometry, else 0.9 m (the performance
+                check&apos;s queues take 0.813 m where the IFC gives none). Everyone sets off within 10 s of the plan&apos;s departure time: the performance check,
+                not this animation, models how long people take to start. Checked against the RiMEA and NIST TN 1822 test cases
+                (16 of 18 pass; dense corridors and single file still run fast): an illustration of the walk out, not an
+                evacuation model to quote.
+              </Notes>
             </>
           )}
         </>
@@ -1656,16 +1691,17 @@ function RunsRange({ runs }) {
  * walkable graph towards the exits, kept from the fire when asked; their trail
  * is drawn yellow on the graph and the start's route keeps to it.
  */
-function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasStart, fireReady }) {
+function SlimeMould({ slime, compare = null, settings, setSettings, onGrow, onClear, ready, hasStart, fireReady }) {
   const result = slime?.result;
   const m = (x) => `${x.toFixed(1)} m`;
   const flux = result ? result.exits.reduce((s, e) => s + e.flux, 0) : 0;
   return (
-    <Section title="Slime mould" badge={result ? "grown" : null} defaultOpen={false}>
+    <Section title="Slime mould" guide="people-and-slime.html#slime" badge={result ? "grown" : "research"} defaultOpen={false}>
       <p className="field__hint">
         Slime mould agents (Jones&apos;s <em>Physarum</em> model) grow over the walkable graph towards the exits. Their trail, drawn yellow,
         shows which corridors and stairs the building&apos;s escape leans on; the route from the start keeps to it.
       </p>
+      <p className="field__hint">Floor area per occupant: {settings.perfOccupantArea} m² (set in Performance check), for the bottlenecks&apos; people.</p>
       <SelectField
         label="The fire"
         value={settings.slimeFire}
@@ -1693,36 +1729,38 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
           Clear
         </Button>
       </div>
-      <Toggle
-        label="Desire lines"
-        checked={settings.slimeDesire}
-        onChange={(slimeDesire) => setSettings({ slimeDesire })}
-        hint="The slime's ways out from every part of the floor, along its tubes: dark over the yellow, thicker where more of them bundle, with arrows towards the exits."
-      />
-      <Toggle
-        label="Bottlenecks"
-        checked={settings.slimeBottlenecks}
-        onChange={(slimeBottlenecks) => setSettings({ slimeBottlenecks })}
-        hint="Crimson, larger the worse: where the people the desire lines carry (one per occupant area) would take longest to pass, a door's clear width or a corridor's at 1.3 persons a second a metre."
-      />
-      <Toggle
-        label="Dead ends"
-        checked={settings.slimeDeadEnds}
-        onChange={(slimeDeadEnds) => setSettings({ slimeDeadEnds })}
-        hint="Dark red: places with one way out for longer than the IBC 2021 dead-end limit (6.1 m; 15.2 m sprinklered, as the code check's setting says) before a second, separate way out opens. The code's limit is for corridors; for rooms it is a reference."
-      />
-      <Toggle
-        label="Branches it gave up"
-        checked={settings.slimeAbandoned}
-        onChange={(slimeAbandoned) => setSettings({ slimeAbandoned })}
-        hint="Grey: where the slime went early and left no trail late, branches it explored and abandoned: corridors that look like ways out and are not."
-      />
-      <Toggle
-        label="Medial axis of the floor"
-        checked={settings.slimeMedial}
-        onChange={(slimeMedial) => setSettings({ slimeMedial })}
-        hint="In cyan, the line through each room and corridor furthest from its walls (the robot planner's roadmap of most clearance): where the desire lines leave it, the slime takes another line than the geometry centres."
-      />
+      <Disclosure summary="Readings">
+        <Toggle
+          label="Desire lines"
+          checked={settings.slimeDesire}
+          onChange={(slimeDesire) => setSettings({ slimeDesire })}
+          hint="The slime's ways out from every part of the floor, along its tubes: dark over the yellow, thicker where more of them bundle, with arrows towards the exits."
+        />
+        <Toggle
+          label="Bottlenecks"
+          checked={settings.slimeBottlenecks}
+          onChange={(slimeBottlenecks) => setSettings({ slimeBottlenecks })}
+          hint="Crimson, larger the worse: where the people the desire lines carry (one per occupant area) would take longest to pass at 1.3 persons a second a metre: a door's width from the IFC, else from its geometry; elsewhere twice the clearance from the walls."
+        />
+        <Toggle
+          label="Dead ends"
+          checked={settings.slimeDeadEnds}
+          onChange={(slimeDeadEnds) => setSettings({ slimeDeadEnds })}
+          hint="Dark red: places with one way out for longer than the IBC 2021 dead-end limit (6.1 m; 15.2 m sprinklered, as the code check's setting says) before a second, separate way out opens. The code's limit is for corridors; for rooms it is a reference."
+        />
+        <Toggle
+          label="Corridors it abandoned"
+          checked={settings.slimeAbandoned}
+          onChange={(slimeAbandoned) => setSettings({ slimeAbandoned })}
+          hint="Grey: where the slime went early and left no trail late, the branches it explored and gave up: corridors that look like ways out and are not."
+        />
+        <Toggle
+          label="Centre lines of rooms and corridors"
+          checked={settings.slimeMedial}
+          onChange={(slimeMedial) => setSettings({ slimeMedial })}
+          hint="In cyan, the floor's medial axis: the line through each room and corridor furthest from its walls (the robot planner's roadmap of most clearance). Where the desire lines leave it, the slime takes another line than the geometry centres."
+        />
+      </Disclosure>
       {slime?.error && <Notice tone="warning">{slime.error}</Notice>}
       {result && (
         <Notice>
@@ -1761,11 +1799,188 @@ function SlimeMould({ slime, settings, setSettings, onGrow, onClear, ready, hasS
           {result.abandonedArea > 0 ? `The slime gave up ${Math.round(result.abandonedArea)} m² it had explored.` : ""}
         </p>
       )}
-      <p className="field__hint">
+      {/* Against the egress map's shortest walks on this graph (core/egressCompare.js), once both are made:
+          one line, and why they differ folded, from wiki/research/egress-vs-slime-2026-11-12.md. */}
+      {compare && (
+        <>
+          <p className="field__hint slime-compare">
+            Against the shortest walks (Egress map), within {compare.near} m: {Math.round(compare.onShortest * 100)} % of its trail on them;{" "}
+            {Math.round(compare.covered * 100)} % of them under a desire line
+            {compare.exitsApart !== null ? `; exits split ${compare.exitsApart.toFixed(2)} apart` : ""}.
+          </p>
+          <Notes summary="Why they differ">
+            <ul className="notes__list">
+              <li>
+                The slime is a traffic map, not a route for each room: most of its trail runs on shortest walks, but it draws only the busy
+                ones, and the walks from rooms few people leave from stay faint.
+              </li>
+              <li>
+                Exits: each agent senses 3 links ahead, so near a junction or a door it can turn towards another exit than the nearest. The
+                split runs from 0, as the floor&apos;s nearest exits share it, to 1, wholly apart.
+              </li>
+              <li>
+                Walls: one agent fits on a node, so the lane along a wall and round a corner, where the shortest walks run, fills up and the
+                others pass beside it.
+              </li>
+              <li>The trail itself, the desire, barely matters at its default weight: the walk to the exits leads.</li>
+            </ul>
+          </Notes>
+        </>
+      )}
+      <Notes summary="How it works">
         After Jones (2010) and Jones and Saeed (2007): the agents sense ahead and to either side, turn towards the strongest, step and
         lay trail, which spreads and fades; walls absorb it. Here the exits also draw by the walking distance to them, so far rooms keep a
         way out. An illustration of where the escape concentrates, not an evacuation model to quote.
+      </Notes>
+    </Section>
+  );
+}
+
+/**
+ * The egress map (core/egressMap.js): each room's walk from its worst place,
+ * the blocked-exit sweep and worst-first cascade, dead-end corridors and
+ * rooms' common paths, the doors no way out can do without; and, when asked,
+ * the fine grid's walk (core/floorRaster.js). Readings of the geometry, as
+ * the code check's; not a compliance verdict.
+ */
+function EgressMap({ egress, settings, setSettings, onMap, onFine, onClear, ready }) {
+  const r = egress?.result;
+  const fine = egress?.fine;
+  const m = (x) => (Number.isFinite(x) ? `${x.toFixed(1)} m` : "none");
+  const worstRoom = r?.rooms?.find((x) => Number.isFinite(x.dist));
+  const near = r ? r.rooms.filter((x) => x.near).length : 0;
+  const singles = r ? [...r.sweep.single].sort((a, b) => b.unreachedArea - a.unreachedArea || b.farthest - a.farthest) : [];
+  const cascade = r?.sweep.cascade || [];
+  const dead = r?.deadEnds;
+  return (
+    <Section title="Egress map" id="egress-map" guide="people-and-slime.html#egress-map" badge={r ? "mapped" : null} defaultOpen={false}>
+      <p className="field__hint">The walk to the nearest exit from every place, room by room, and what closing exits does to it.</p>
+      <div className="grid-2">
+        <Button size="sm" onClick={onMap} disabled={!ready || Boolean(egress?.busy)}>
+          {egress?.busy === "map" ? "Mapping…" : r ? "Map again" : "Map the egress"}
+        </Button>
+        <Button size="sm" onClick={onFine} disabled={!r || Boolean(egress?.busy)}>
+          {egress?.busy === "fine" ? "Measuring…" : "Measure finely"}
+        </Button>
+      </div>
+      {egress?.error && <Notice tone="warning">{egress.error}</Notice>}
+      {r && (
+        <Notice>
+          Farthest walk {m(r.summary.farthest)}
+          {worstRoom ? `, from ${worstRoom.name || "an unnamed space"} to ${worstRoom.exitLabel}` : ""}, against {m(r.limit)}; {r.rooms.length} rooms routed
+          {near ? `; ${near} within 5 % of the limit: measure them on site` : ""}.
+          {singles[0]
+            ? ` Closing one exit at a time, the worst is ${singles[0].label}: the farthest walk ${m(singles[0].farthest)}, ${singles[0].roomsRerouted} rooms rerouted${singles[0].unreachedArea ? `, ${Math.round(singles[0].unreachedArea)} m² left with no way out` : ""}.`
+            : ""}
+          {cascade.length > 1
+            ? ` Worst first: losing ${cascade.slice(0, 2).map((c) => c.label).join(" then ")} takes it to ${m(cascade[1].farthest)}${cascade[1].unreachedArea ? ` with ${Math.round(cascade[1].unreachedArea)} m² cut off` : ""}.`
+            : ""}
+        </Notice>
+      )}
+      {r && (
+        <>
+          <Toggle label="Routes from every room" checked={settings.egressRoutes} onChange={(egressRoutes) => setSettings({ egressRoutes })} hint="Red, from each room's worst place to its exit." />
+          <Toggle label="Contours every 5 m" checked={settings.egressContours} onChange={(egressContours) => setSettings({ egressContours })} hint="Lines of equal walk to the nearest exit." />
+          <Toggle
+            label="Dead-end corridors"
+            checked={settings.egressDeadEnds}
+            onChange={(egressDeadEnds) => setSettings({ egressDeadEnds })}
+            hint="Corridors with one way out, against IBC 2021 1020.5; rooms are held to the common path instead."
+          />
+          <Toggle label="Doors no way out can lose" checked={settings.egressCritical} onChange={(egressCritical) => setSettings({ egressCritical })} hint="Violet, larger for more rooms behind the door." />
+          {fine && <Toggle label="Walk measured finely" checked={settings.egressFine} onChange={(egressFine) => setSettings({ egressFine })} hint="The fine grid's walk on the floors, in 5 m bands; red past the limit." />}
+          <p className="field__hint">
+            {dead
+              ? `Dead-end corridors: ${dead.corridors.length}${dead.corridors.length ? `, ${dead.corridors.filter((c) => c.over).length} past ${m(dead.limit)}, the longest ${m(dead.corridors[0].length)}${dead.corridors[0].width ? ` and ${dead.corridors[0].width.toFixed(2)} m wide` : ""}` : ""}. Rooms whose common path passes Table 1006.2.1: ${dead.rooms.filter((x) => x.over).length}. `
+              : "Dead ends not worked out (more than 40 exits). "}
+            {r.critical.doors.length ? `${r.critical.doors.length} doors are the only way out of the rooms behind them; ${r.critical.suites.length} of them serve more than one room.` : ""}
+          </p>
+          {fine && (
+            <p className="field__hint">
+              Measured finely ({fine.storeys[0]?.cell ?? 0.05} m cells, 16 directions):{" "}
+              {fine.storeys
+                .filter((s) => s.walkArea > 20 && s.farthest > 0)
+                .map((s) => `${s.label || "a floor"} ${m(s.farthest)} against the graph's ${m(s.graphFarthest)}${s.fastMarching ? `, Fast Marching within ${(Math.abs(s.fastMarching.mean) * 100).toFixed(1)} %` : ""}`)
+                .join("; ")}
+              .
+            </p>
+          )}
+          <Button size="sm" variant="ghost" onClick={onClear}>
+            Clear the map
+          </Button>
+        </>
+      )}
+      <p className="field__hint">
+        Dijkstra 1959; Gromov's product; Tarjan 1974; Felzenszwalb and Huttenlocher 2012; Sethian 1996. The worst-first exit cascade and the near-limit list are Poux's (2026).
       </p>
+    </Section>
+  );
+}
+
+/** The wheelchair audit and accessible means of egress (core/accessAudit.js), from the fine grid. */
+function Accessibility({ egress, settings, setSettings, onAudit, ready }) {
+  const fine = egress?.fine;
+  const storeys = (fine?.storeys || []).filter((s) => s.audit.rooms.onFoot > 0);
+  const issues = storeys.flatMap((s) => s.audit.issues.map((i) => ({ ...i, storeyLabel: s.label || "" })));
+  const act = storeys.flatMap((s) => s.audit.act);
+  const stale = fine && fine.profile !== settings.accessProfile;
+  const download = () => {
+    const rows = [["storey", "severity", "issue", "room", "measured", "required"], ...issues.map((i) => [i.storeyLabel, i.severity, i.kind, i.name || "", i.measured, i.required])];
+    const csv = rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "accessibility-issues.csv";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return (
+    <Section title="Accessibility" id="accessibility" guide="people-and-slime.html#accessibility" badge={fine && !stale ? "audited" : null} defaultOpen={false}>
+      <p className="field__hint">Where a wheelchair can go, what stops it, and whether it has a way out.</p>
+      <SelectField
+        label="Profile"
+        value={settings.accessProfile}
+        onChange={(accessProfile) => setSettings({ accessProfile })}
+        options={[
+          { value: "icc", label: "ICC A117.1 / 2010 ADA (0.915, 0.815, 1.525 m)" },
+          { value: "metric", label: "Metric (0.90, 0.80, 1.50 m)" },
+        ]}
+        hint="Passage, door and turning circle; the Saudi code's values are to be read from SBC 201."
+      />
+      <Button size="sm" block onClick={onAudit} disabled={!ready || Boolean(egress?.busy)}>
+        {egress?.busy === "fine" ? "Auditing…" : fine && !stale ? "Audit again" : "Audit for a wheelchair"}
+      </Button>
+      {fine && !stale && (
+        <>
+          {storeys.map((s) => (
+            <p key={s.storey} className="field__hint">
+              {(s.label || "A floor").replace(/^the/, "The")}: a wheelchair reaches {s.audit.rooms.byChair} of {s.audit.rooms.onFoot} rooms ({s.audit.rooms.turnable} with a turning circle)
+              {s.audit.rooms.byChair === 0 ? "; no lift on the graph reaches it (switch lifts on in Graph)" : ""}; {s.audit.egress.filter((e) => e.ok).length} of {s.audit.egress.length} rooms have{" "}
+              {s.audit.required === 2 ? "two" : "one"} accessible way{s.audit.required === 2 ? "s" : ""} out.
+            </p>
+          ))}
+          {issues.length > 0 && (
+            <ul className="code-list">
+              {issues
+                .filter((i) => i.severity !== "low")
+                .slice(0, 8)
+                .map((i, k) => (
+                  <li key={k} className="code-list__storey" data-tone={i.severity === "high" ? "warn" : "neutral"}>
+                    <span className="pill">{i.severity}</span> <strong>{i.kind}</strong> <span className="field__hint">{i.name || ""}: {i.measured}, needs {i.required}.</span>
+                  </li>
+                ))}
+            </ul>
+          )}
+          {act.length > 0 && <p className="field__hint">First changes: {act.map((a) => `${a.kind.toLowerCase()} ${a.label} (+${a.gain} room${a.gain === 1 ? "" : "s"})`).join("; ")}.</p>}
+          <Toggle label="Show it on the floors" checked={settings.accessOverlay} onChange={(accessOverlay) => setSettings({ accessOverlay })} hint="Green a wheelchair, darker where it turns; amber on foot only; red neither." />
+          {issues.length > 0 && (
+            <Button size="sm" variant="ghost" onClick={download}>
+              Download the issues (CSV)
+            </Button>
+          )}
+        </>
+      )}
+      <p className="field__hint">An audit of the model's fixed construction, not a certification; movable furniture is not in the model.</p>
     </Section>
   );
 }
@@ -1800,9 +2015,14 @@ export function RoutePanel({
   onPlayCrowd,
   onRestartCrowd,
   slime = null,
+  slimeCompare = null,
   slimeFireReady = false,
   onGrowSlime,
   onClearSlime,
+  egress = null,
+  onMapEgress,
+  onMeasureFinely,
+  onClearEgress,
 }) {
   const { graph, points, pickMode, path, pathBusy, comparison, alternatives, settings, setSettings, capabilities } =
     studio;
@@ -1937,7 +2157,7 @@ export function RoutePanel({
             onChange={(altMethod) => setSettings({ altMethod })}
             options={[
               { value: "distinct", label: "Different space" },
-              { value: "yen", label: "Yen k-shortest" },
+              { value: "yen", label: "Next-shortest routes (Yen)" },
             ]}
           />
         </div>
@@ -1982,6 +2202,7 @@ export function RoutePanel({
       />
       <SlimeMould
         slime={slime}
+        compare={slimeCompare}
         settings={settings}
         setSettings={setSettings}
         onGrow={onGrowSlime}
@@ -1991,6 +2212,8 @@ export function RoutePanel({
         fireReady={slimeFireReady}
       />
       <CodeCheck code={code} settings={settings} setSettings={setSettings} onRun={onCodeCheck} onShow={onShowTravel} ready={Boolean(graph)} />
+      <EgressMap egress={egress} settings={settings} setSettings={setSettings} onMap={onMapEgress} onFine={onMeasureFinely} onClear={onClearEgress} ready={Boolean(graph)} />
+      <Accessibility egress={egress} settings={settings} setSettings={setSettings} onAudit={onMeasureFinely} ready={Boolean(graph)} />
       <PerformanceCheck
         perf={perf}
         settings={settings}
@@ -2113,19 +2336,21 @@ const ZONE_MODEL = {
     "A smoke layer and its gas temperature in each room, on a clock in seconds, spreading through open doors. Needs the model's rooms (IfcSpace).",
 };
 
-// Offered when the optional Flamescapes solver is switched on
-// (src/core/flamescapes.js; Wrede, Wagner et al. 2026).
+// The optional Flamescapes solver's two models (src/core/flamescapes.js;
+// Wrede, Wagner et al. 2026): choosing one switches the solver on.
+const FLAMESCAPES_HEAVIER = " Heavier: on your GPU where the browser offers WebGPU, otherwise a minute or more on the CPU.";
 const FLAMESCAPES_MODELS = [
   {
     value: "flamescapes",
     label: "Flamescapes: fire and smoke",
     description:
-      "The Flamescapes solver on a grid built from the IFC: gas flow, burning of the room contents, radiation and smoke, read at head height.",
+      "The Flamescapes combustion solver on a grid built from the IFC: gas flow, burning of the room contents, radiation and smoke, read at head height." +
+      FLAMESCAPES_HEAVIER,
   },
   {
     value: "flamescapes-embers",
     label: "Flamescapes: fire, smoke and embers",
-    description: "As above, with embers carried by the hot gas that can start spot fires away from the flame.",
+    description: "The Flamescapes combustion solver, with embers carried by the hot gas that can start spot fires away from the flame." + FLAMESCAPES_HEAVIER,
   },
 ];
 
@@ -2133,10 +2358,12 @@ const FLAMESCAPES_MODELS = [
 const FLAMESCAPES_LIMITS =
   "A browser version of a graphics fire solver: grid cells of 0.2 to 0.45 m, not centimetres, so flames and " +
   "thin walls are coarse; room contents are a statistical fire load, not the model's furniture; walls and slabs " +
-  "do not burn; doors and windows as set above. The flow is incompressible, so heated gas takes no extra volume " +
-  "and smoke may reach head height later than it would; the grid's sides are open to outside air, so a large " +
-  "model clipped round the fire is never fully closed. It shows how heat and smoke may move through this " +
-  "building; it is not a calibrated fire engineering model.";
+  "do not burn; doors and windows as set above. Heated gas expands and the transport keeps its mass and heat, " +
+  "but a room sealed by closed doors does not pressurise; an opening narrower than about a cell closes; the " +
+  "grid's sides are open to outside air, so a large model clipped round the fire is never fully closed. It " +
+  "shows how heat and smoke may move through this building; it is not a fire engineering model. " +
+  validationSummary() +
+  " The tests had their own walls, conducted in layers; the app's walls are stone.";
 
 const ZONE_GROWTH = [
   { value: "slow", label: "Slow (1 MW in 600 s)" },
@@ -2163,7 +2390,7 @@ function gridNote(c) {
 }
 
 /** The range over a fire's repeat runs (core/forecast.js runRange), for its card. */
-function repeatsLine({ of, status, tenability: t, range }) {
+function repeatsLine({ of, status, tenability: t, range, stopped = 0 }) {
   const span = (s, f) => (!s ? "none" : s.min === s.max ? f(s.median) : `${f(s.median)} (${f(s.min)} to ${f(s.max)})`);
   const runs =
     status === "running" ? `${range.runs} of ${of} runs so far` : status === "stopped" ? `${range.runs} of ${of} runs (the rest stopped)` : `${range.runs} runs`;
@@ -2172,7 +2399,8 @@ function repeatsLine({ of, status, tenability: t, range }) {
   return (
     `${runs}, the median and its range: ${span(range.untenable, Math.round)} nodes untenable, the first at ${first}${never}; ` +
     `peak ${span(range.peakKw, (kw) => `${(kw / 1000).toFixed(2)} MW`)}; ${span(range.releasedMJ, (mj) => `${mj.toFixed(1)} MJ`)} released. ` +
-    `Untenable at ${t.threshold} °C${t.smoke ? `, below ${t.visibilityLimit} m visibility` : ""} or by dose, as the plan reads it.`
+    `Untenable at ${t.threshold} °C${t.smoke ? `, below ${t.visibilityLimit} m visibility` : ""} or by dose, as the plan reads it.` +
+    (stopped ? ` ${stopped} of them stopped by the run check, left out.` : "")
   );
 }
 
@@ -2193,12 +2421,23 @@ function itemGrowthHint(clsKey, growth) {
   const cls = FIRE_CLASSES[clsKey] || FIRE_CLASSES.A;
   const fire = designFireFor(clsKey, growth);
   if (growth === "solver") return "The solver lights and burns the item itself: about 500 kW within 15 s in the examples, faster than any design fire, so sprinklers open when the fire is already large.";
-  if (!fire) return `A class ${cls.short} item keeps its own burning (a pool, a metal or a battery pack is not a t-squared item).`;
+  if (!fire) return `A class ${cls.short} item keeps its own burning (a metal or a battery pack is not a t-squared item).`;
   const energy = cls.item.mass * cls.fuel.heatOfCombustion;
-  const end = Math.cbrt((3 * energy) / (fire.alpha * 1000));
+  const a = fire.alpha * 1000;
+  const liquid = cls.fuel.liquid;
+  // A pool grows only to its large-pool burning rate (flamescapesRun.js itemBurner, Babrauskas 1983).
+  const cap = liquid ? liquid.mInf * (1 - Math.exp(-liquid.kBeta * Math.sqrt((4 * cls.item.area) / Math.PI))) * cls.item.area * cls.fuel.heatOfCombustion : Infinity;
+  const grow = Math.min(Math.cbrt((3 * energy) / a), Math.sqrt(cap / a));
+  const peak = a * grow * grow;
+  const end = grow + (energy - (a * grow ** 3) / 3) / peak;
+  const held = end > grow + 1;
+  const water = waterResponse(cls.fuel).wets ? "Sprinkler water over it decays it as Evans measured" : "Sprinkler water does not act on it (on oil it boils and throws the oil out, which is not modelled)";
   return (
-    `${/^[aeiou]/i.test(fire.growth) ? "An" : "A"} ${fire.growth} t-squared fire, ${fire.alpha} kW/s²: the ${cls.item.mass} kg item (${Math.round(energy / 1e6)} MJ) would reach ${Math.round(fire.alpha * end * end)} kW ` +
-    `when it burns out at ${Math.round(end)} s. The room's contents catch from it. Sprinkler water over it decays it as Evans measured; clean agent at the class A concentration puts it out.`
+    `${/^[aeiou]/i.test(fire.growth) ? "An" : "A"} ${fire.growth} t-squared fire, ${fire.alpha} kW/s²: the ${cls.item.mass} kg item (${Math.round(energy / 1e6)} MJ) ` +
+    (held
+      ? `grows in ${Math.round(grow)} s to ${Math.round(peak / 1000)} kW, the pool's steady burning rate (Babrauskas), and burns at it until spent at ${Math.round(end)} s. `
+      : `would reach ${Math.round(peak / 1000)} kW when it burns out at ${Math.round(end)} s. `) +
+    `The room's contents catch from it. ${water}; clean agent at the ${liquid ? "heptane" : "class A"} concentration puts it out.`
   );
 }
 
@@ -2217,8 +2456,8 @@ function RerouteResult({ dynamicPath, step }) {
         <Icon name={unsafe ? "alert" : "check"} size={16} />
         {unsafe
           ? "No safe route"
-          : dynamicPath.changed
-            ? `The route changed at step ${dynamicPath.step}`
+          : Number.isFinite(dynamicPath.firstChange)
+            ? `Changed at step ${dynamicPath.firstChange}${Number.isFinite(dynamicPath.clearBy) ? `; clear again by step ${dynamicPath.clearBy}` : ""}`
             : `Route still clear at step ${step}`}
       </h3>
       <dl className="result__grid">
@@ -2440,6 +2679,11 @@ function ForecastResult({ plan, settings, deadlinesShown, roomName }) {
         )}
         {zone ? (
           <ZoneNotes zone={zone} roomName={roomName} />
+        ) : isFlamescapes(result.model) ? (
+          <span className="field__hint">
+            Times are counted from ignition, on the Flamescapes run&apos;s own clock. The dose is ISO 13571&apos;s, from the run&apos;s
+            gas temperature and gases at head height.
+          </span>
         ) : (
           <span className="field__hint">
             Times are counted from ignition, on the clock set for this plan ({inputs.forecastSecondsPerStep} s per fire
@@ -2473,16 +2717,19 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
   const modelExits = settings.forecastExits === "model" && exits?.final.length > 0;
   const ready = Boolean(graph && points.start && points.fire && (modelExits || points.exit));
   const zone = fireModelIn(settings, modelInfo) === "zone";
+  // A Flamescapes plan keeps the run's own clock and limits (forecast.worker.js).
+  const flamescapes = isFlamescapes(fireModelIn(settings, modelInfo));
   // The fire room's IfcSpace name, from the model's own data (ifcSemantics.js).
   const fireRoomId = forecastPlan.result?.zone?.fireRoomId;
   const space = fireRoomId !== null && fireRoomId !== undefined ? semantics?.spaces?.find((s) => s.id === fireRoomId) : null;
   const roomName = space ? [space.longName, space.name].filter(Boolean).join(" ") || null : null;
   return (
-    <Section title="Escape deadlines and forecast routes" badge={forecastPlan.result?.earliest ? "planned" : null}>
+    <Section title="Escape deadlines and forecast routes" id="forecast" guide="fire-and-smoke.html#forecast" badge={forecastPlan.result?.earliest ? "planned" : null}>
       <p className="field__hint">
         Runs the fire to its last step first, then routes with the state each point will be in when you would reach it,
         and works out how long you can wait before leaving.
         {zone && " The fire is the two-zone room model chosen above: gas temperatures in degrees C, on a clock in seconds."}
+        {flamescapes && " The fire is the Flamescapes run, on its own clock and with the limits under Flamescapes settings."}
       </p>
       {exits?.final.length > 0 && (
         <Choices
@@ -2548,8 +2795,13 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
               min={0.5}
               max={60}
               step={0.5}
+              disabled={flamescapes}
               onChange={(v) => setSettings({ forecastSecondsPerStep: v ?? 5 })}
-              hint="The fire models count steps; this sets the clock."
+              hint={
+                flamescapes
+                  ? "Not used with Flamescapes: the plan keeps the run's own clock, its simulated time over its frames."
+                  : "The fire models count steps; this sets the clock."
+              }
             />
           )}
           <NumberField
@@ -2576,7 +2828,13 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
               min={25}
               max={120}
               step={5}
+              disabled={flamescapes}
               onChange={(v) => setSettings({ untenableAbove: v ?? 80 })}
+              hint={
+                flamescapes
+                  ? "Not used with Flamescapes: the plan takes Untenable from (gas °C) and the visibility limit under Flamescapes settings."
+                  : undefined
+              }
             />
           )}
           <NumberField
@@ -2589,7 +2847,7 @@ function ForecastSection({ studio, exits, onPlan, deadlinesShown }) {
           />
         </div>
         <NumberField
-          label="Dose limit (FED)"
+          label="Toxic dose limit (FED)"
           value={settings.doseLimit}
           min={0.01}
           max={1}
@@ -2637,21 +2895,120 @@ function returnVsBest(r) {
   return `${r.policy_return.toFixed(2)} / ${r.optimal_return.toFixed(2)}${short}`;
 }
 
-/** Progress and state of a Flamescapes run: backend, grid, time, heat release, embers. */
+/**
+ * The GPU the browser gives WebGPU, named before any run (one adapter
+ * request), and whether it is the integrated one; how to use a laptop's
+ * faster card is a link on the run card, printed once (FasterGpuLink).
+ */
+function GpuNote() {
+  const [gpu, setGpu] = useState(undefined);
+  useEffect(() => {
+    let live = true;
+    detectGpu()
+      .then((g) => live && setGpu(g ? g.name : null))
+      .catch(() => live && setGpu(null));
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (gpu === undefined) return null;
+  if (gpu === null) return <p className="field__hint">This browser offers no WebGPU here, so the fire runs on the CPU.</p>;
+  return (
+    <p className="field__hint">
+      This browser&apos;s WebGPU device: {gpu}{integratedGpu(gpu) ? ", the integrated graphics" : ""}.
+    </p>
+  );
+}
+
+/**
+ * A run until the fire service arrives (core/fireService.js): how long it
+ * lasts and from what, whether it lies past the tested times, and roughly how
+ * long it takes to compute. The estimate is at the pace of the last run timed
+ * here on the same backend and grid; else, on the standard grid, at least the
+ * GPU's kept speed allows (measured on a larger grid); else not known.
+ */
+function ServiceRunNote({ settings, pace, gpuSpeed }) {
+  const { detection, response, arrival, horizon, capped, beyondTested } = serviceArrival(settings.perfDetection, serviceResponse(settings));
+  // Where the response comes from: the preset's standard, or nothing for the user's own.
+  const preset = SERVICE_PRESETS.find((p) => p.id === settings.flamescapesServicePreset && p.source);
+  const frames = Math.max(1, Math.min(120, settings.fireMaxSteps, Math.floor(horizon)));
+  const apart = horizon / frames;
+  const grid = settings.flamescapesCalibratedGrid ? "calibrated" : settings.flamescapesGridPolicy;
+  let compute;
+  if (pace && pace.backend === settings.flamescapesBackend && pace.grid === grid) {
+    compute =
+      `About ${durationText(computeSeconds(horizon, pace))} to compute, at the pace of the last run here ` +
+      `(${durationText(pace.simulated)} simulated in ${durationText(pace.wallMs / 1000)} on ${pace.kind === "gpu" ? "the GPU" : "one CPU core"}); ` +
+      "longer if the fire grows faster than that one did.";
+  } else if (gpuSpeed?.rate > 0 && grid === "standard" && settings.flamescapesBackend === "auto") {
+    compute = `At least about ${durationText(computeSeconds(horizon, gpuPace(gpuSpeed.rate, STANDARD_CELLS)))} to compute on ${gpuSpeed.name}, at the speed kept in this browser, which was measured on a larger grid.`;
+  } else {
+    compute = "How long it takes to compute is known once a run has been timed on this device.";
+  }
+  if (!(pace?.kind === "cpu" && pace.grid === grid && pace.backend === settings.flamescapesBackend)) compute += " One CPU core takes several times as long as a GPU.";
+  return (
+    <Notice tone={capped || beyondTested ? "warning" : "neutral"}>
+      <strong>
+        The fire runs {durationText(horizon)} ({horizon.toLocaleString()} s).
+      </strong>{" "}
+      Detection at {Math.round(detection)} s, the time set under Performance check in the Route step (a run&apos;s own smoke detectors are
+      read only after it), and the fire service {durationText(response)} after it
+      {preset ? `: ${preset.source}` : ""}. Counted from
+      detection, as if the alarm reached the fire service at once.
+      {capped ? ` The run stops at ${SERVICE_HORIZON_MAX.toLocaleString()} s, before they arrive at ${Math.round(arrival).toLocaleString()} s.` : ""}
+      {beyondTested
+        ? ` Runs beyond ${COVERED.horizon} s lie outside the tested range: the held-out fire tests ran ${COVERED.times}, and the run card says so.`
+        : ""}{" "}
+      Kept as {frames} frames {apart < 10 ? apart.toFixed(1) : Math.round(apart)} s apart (Steps, under Rerouting and timing). {compute}
+    </Notice>
+  );
+}
+
+/** How to give the browser a laptop's faster card, in the guide: one line, printed once (the run card). */
+function FasterGpuLink() {
+  return (
+    <a href={`${import.meta.env.BASE_URL}docs/fire-and-smoke.html#faster-gpu`} target="_blank" rel="noopener">
+      Use the faster GPU
+    </a>
+  );
+}
+
+/**
+ * Progress and state of a Flamescapes run. It leads with one line on what the
+ * held-out tests support for what it draws (core/calibrationStatus.js
+ * validationVerdict), then the time, the heat release and what responded;
+ * the openings, embers, measures, first item, grid, the full statement and
+ * the backend's notes are under More (the card was 1,600 px long).
+ */
 function CombustionStatus({ combustion, running }) {
   if (!combustion) return null;
   const done = combustion.time >= (combustion.horizon ?? Infinity) - 1e-6;
+  // A run the health guard stopped (core/flamescapes.js HEALTH) says why and when.
+  const stopped = combustion.health && combustion.health.ok === false ? combustion.health : null;
+  const integrated = combustion.backend?.kind === "gpu" && integratedGpu(combustion.backend.name);
+  const verdict =
+    combustion.cell > 0
+      ? combustion.solver === "previous"
+        ? "Run on the previous solver: not checked against measured fires."
+        : validationVerdict(combustion.cell, { peakKW: combustion.peak ?? null, horizon: combustion.horizon ?? null })
+      : null;
   return (
     <section className="result" aria-live="polite" aria-label="Flamescapes run">
-      <h3 className="result__title" data-tone="ok">
-        <Icon name={done ? "check" : "info"} size={16} />
-        {done ? "Flamescapes run complete" : running ? "Flamescapes is computing" : "Flamescapes run"}
+      <h3 className="result__title" data-tone={stopped ? "warn" : "ok"}>
+        <Icon name={stopped ? "alert" : done ? "check" : "info"} size={16} />
+        {stopped ? "Flamescapes run stopped" : done ? "Flamescapes run complete" : running ? "Flamescapes is computing" : "Flamescapes run"}
       </h3>
+      {stopped && (
+        <p className="result__note">
+          Stopped at {Math.round(stopped.time)} s: {healthReason(stopped)}. The frames before it play; the run is not kept in this browser.
+        </p>
+      )}
       {combustion.replayed && (
         <p className="result__note">
           Played from this browser&apos;s kept runs (computed {new Date(combustion.replayed).toLocaleString()}), not computed again.
         </p>
       )}
+      {verdict && <p className="result__verdict">{verdict}</p>}
       <dl className="result__grid">
         <div className="result__item">
           <dt className="result__label">Simulated</dt>
@@ -2665,36 +3022,13 @@ function CombustionStatus({ combustion, running }) {
             {Math.round(combustion.hrr ?? 0)} kW (peak {Math.round(combustion.peak ?? 0)} kW)
           </dd>
         </div>
-        {combustion.openings && (
+        {combustion.detectors > 0 && (
           <div className="result__item">
-            <dt className="result__label">Openings</dt>
+            <dt className="result__label">Smoke detectors</dt>
             <dd className="result__value">
-              {combustion.openings.doorCount} doors {combustion.openings.doors}, {combustion.openings.windowCount} windows {combustion.openings.windows}
-              {combustion.openings.ventilation === "running"
-                ? `; ventilation running through ${combustion.openings.ductCells} of ${combustion.openings.terminals} air terminals`
-                : combustion.openings.terminals
-                  ? `; ventilation off (${combustion.openings.terminals} air terminals)`
-                  : "; no air terminals in the model"}
+              {combustion.detectors} under the ceiling, 7 m from the fire or as far as its room allows:{" "}
+              {combustion.detectedAt !== null && combustion.detectedAt !== undefined ? `the first responds at ${Math.round(combustion.detectedAt)} s` : "none has responded"}
             </dd>
-          </div>
-        )}
-        {/* Off says so, so "0 thrown" never reads as embers that failed to fly. */}
-        <div className="result__item">
-          <dt className="result__label">Embers</dt>
-          <dd className="result__value">
-            {combustion.embersOn ? `on: ${combustion.embers ?? 0} thrown, ${combustion.spots ?? 0} spot fires` : "off"}
-          </dd>
-        </div>
-        <div className="result__item">
-          <dt className="result__label">Measures</dt>
-          <dd className="result__value">
-            {combustion.extras ? "heat, smoke, CO, CO₂, O₂" : combustion.extrasDropped ? "heat, smoke, CO (the rest would not fit in memory)" : "heat, smoke, CO"}
-          </dd>
-        </div>
-        {combustion.designFire && (
-          <div className="result__item">
-            <dt className="result__label">First item</dt>
-            <dd className="result__value">{itemLine(combustion.designFire, combustion.itemSummary, combustion.horizon)}</dd>
           </div>
         )}
         {combustion.sprinklers && (
@@ -2717,23 +3051,6 @@ function CombustionStatus({ combustion, running }) {
             <dd className="result__value">{systemsLine(combustion.systems, combustion.systemsSummary, combustion.horizon)}</dd>
           </div>
         )}
-        {combustion.detectors > 0 && (
-          <div className="result__item">
-            <dt className="result__label">Smoke detectors</dt>
-            <dd className="result__value">
-              {combustion.detectors} under the ceiling, 7 m from the fire or as far as its room allows:{" "}
-              {combustion.detectedAt !== null && combustion.detectedAt !== undefined ? `the first responds at ${Math.round(combustion.detectedAt)} s` : "none has responded"}
-            </dd>
-          </div>
-        )}
-        {combustion.grid && (
-          <div className="result__item">
-            <dt className="result__label">Grid</dt>
-            <dd className="result__value">
-              {combustion.grid.join(" x ")} of {combustion.cell?.toFixed(2)} m
-            </dd>
-          </div>
-        )}
         {combustion.repeats && (
           <div className="result__item">
             <dt className="result__label">Repeat runs</dt>
@@ -2743,21 +3060,79 @@ function CombustionStatus({ combustion, running }) {
       </dl>
       {combustion.backend && (
         <p className="result__note">
-          Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}.
-          {combustion.resized
-            ? " The GPU stepped the first grid slower than three times real time, so the fire started again on a coarser grid it keeps up with."
-            : combustion.restarted
-              ? " The GPU stopped partway, so the fire started again on the CPU."
-              : ""}
-          {gridNote(combustion)}
-          {combustion.clipped
-            ? " The model is larger than the grid allows, so the grid covers the area round the fire; its sides are open to outside air, so smoke that reaches them leaves the run even where they cut through the building, and nodes outside it read as clear air."
-            : ""}
+          Running on {combustion.backend.kind === "gpu" ? "the GPU (WebGPU)" : "one CPU core"}: {combustion.backend.name}
+          {integrated ? ", the integrated graphics. " : ". "}
+          {integrated && <FasterGpuLink />}
         </p>
       )}
+      <Notes summary="More">
+        <dl className="result__grid">
+          {combustion.openings && (
+            <div className="result__item">
+              <dt className="result__label">Openings</dt>
+              <dd className="result__value">
+                {combustion.openings.doorCount} doors {combustion.openings.doors}, {combustion.openings.windowCount} windows {combustion.openings.windows}
+                {combustion.openings.ventilation === "running"
+                  ? `; ventilation running through ${combustion.openings.ductCells} of ${combustion.openings.terminals} air terminals`
+                  : combustion.openings.terminals
+                    ? `; ventilation off (${combustion.openings.terminals} air terminals)`
+                    : "; no air terminals in the model"}
+              </dd>
+            </div>
+          )}
+          {/* Off says so, so "0 thrown" never reads as embers that failed to fly. */}
+          <div className="result__item">
+            <dt className="result__label">Embers</dt>
+            <dd className="result__value">
+              {combustion.embersOn ? `on: ${combustion.embers ?? 0} thrown, ${combustion.spots ?? 0} spot fires` : "off"}
+            </dd>
+          </div>
+          <div className="result__item">
+            <dt className="result__label">Measures</dt>
+            <dd className="result__value">
+              {combustion.extras ? "heat, smoke, CO, CO₂, O₂" : combustion.extrasDropped ? "heat, smoke, CO (the rest would not fit in memory)" : "heat, smoke, CO"}
+            </dd>
+          </div>
+          {combustion.designFire && (
+            <div className="result__item">
+              <dt className="result__label">First item</dt>
+              <dd className="result__value">{itemLine(combustion.designFire, combustion.itemSummary, combustion.horizon)}</dd>
+            </div>
+          )}
+          {combustion.grid && (
+            <div className="result__item">
+              <dt className="result__label">Grid</dt>
+              <dd className="result__value">
+                {combustion.grid.join(" x ")} of {combustion.cell?.toFixed(2)} m
+              </dd>
+            </div>
+          )}
+          {/* What held-out measured fires support on this run's cells, in full (core/calibrationStatus.js). */}
+          {combustion.cell > 0 && (
+            <div className="result__item">
+              <dt className="result__label">Checked against measured fires</dt>
+              <dd className="result__value">
+                {combustion.solver === "previous"
+                  ? "Run on the previous solver (the site's until 2026-11-12), kept to compare with: it was not checked against measured fires, and its transport made heat as gases mixed (up to half again in a minute in a sealed test box)."
+                  : validationLine(combustion.cell, { peakKW: combustion.peak ?? null, horizon: combustion.horizon ?? null })}
+              </dd>
+            </div>
+          )}
+        </dl>
+        {combustion.resized
+          ? " The GPU stepped the first grid slower than three times real time, so the fire started again on a coarser grid it keeps up with."
+          : combustion.restarted
+            ? " The GPU stopped partway, so the fire started again on the CPU."
+            : ""}
+        {gridNote(combustion)}
+        {combustion.clipped
+          ? " The model is larger than the grid allows, so the grid covers the area round the fire; its sides are open to outside air, so smoke that reaches them leaves the run even where they cut through the building, and nodes outside it read as clear air."
+          : ""}
+      </Notes>
     </section>
   );
 }
+
 
 /** Likely ignition points: the review's scenarios matched in this model, ranked. */
 function IgnitionPoints({ ignition, onFind, onUse, disabled }) {
@@ -2967,6 +3342,9 @@ export function SimulatePanel({
   systemsPlan = null,
   systemsBusy = false,
   onLayOutSystems,
+  pace = null,
+  gpuSpeed = null,
+  guided = false,
 }) {
   const { graph, points, pickMode, settings, setSettings, fire, dynamicPath, rl, modelInfo, semantics } = studio;
   // Running, or starting: the two-zone model computes its frames first.
@@ -2981,7 +3359,7 @@ export function SimulatePanel({
   const shielded = settings.rlMethod !== "qlearning";
   const heat = fireModel === "temperature" || fireModel === "zone" || flamescapes;
   const fireClass = FIRE_CLASSES[settings.flamescapesClass] || FIRE_CLASSES.A;
-  const models = [...FIRE_MODELS, ...(rooms ? [ZONE_MODEL] : []), ...(settings.flamescapes ? FLAMESCAPES_MODELS : [])];
+  const models = [...FIRE_MODELS, ...(rooms ? [ZONE_MODEL] : []), ...FLAMESCAPES_MODELS];
 
   return (
     <>
@@ -3002,22 +3380,17 @@ export function SimulatePanel({
         {ready && <PlaceWithoutMouse kinds={["fire"]} onPlace={onPlace} />}
         {ready && <IgnitionPoints ignition={ignition} onFind={onFindIgnition} onUse={onUseIgnition} disabled={fireBusy} />}
 
-        <Choices
-          legend="How the fire spreads"
-          name="fire-model"
+        {/* One choice: the Flamescapes solver's two models are in it, and choosing one switches the solver on
+            (six cards and a switch before, two controls for one choice). Its description is the hint. */}
+        <SelectField
+          label="How the fire spreads"
           value={fireModel}
-          onChange={(fireModel) => setSettings({ fireModel })}
-          options={models}
+          onChange={(value) => setSettings({ fireModel: value, flamescapes: isFlamescapes(value) })}
+          options={models.map(({ value, label }) => ({ value, label }))}
+          hint={models.find((m) => m.value === fireModel)?.description}
           disabled={fireBusy}
         />
         {fireBusy && <p className="field__hint">Stop the fire to change how it spreads.</p>}
-        <Toggle
-          label="Flamescapes combustion solver (optional)"
-          checked={settings.flamescapes}
-          disabled={fireBusy}
-          onChange={(on) => setSettings(on ? { flamescapes: true, fireModel: "flamescapes" } : { flamescapes: false, fireModel: isFlamescapes(settings.fireModel) ? "temperature" : settings.fireModel })}
-          hint="Fire and smoke from the Flamescapes paper (Wrede, Wagner et al. 2026), with or without embers. Heavier: on your GPU where the browser offers WebGPU, otherwise a minute or more on the CPU."
-        />
         {flamescapes && (
           <>
             <SelectField
@@ -3034,15 +3407,6 @@ export function SimulatePanel({
               options={itemGrowthOptions(fireClass)}
               hint={itemGrowthHint(settings.flamescapesClass, settings.flamescapesGrowth)}
             />
-            <Notice tone={fireClass.agents.unsuitable.length ? "warning" : "neutral"}>
-              <strong>Extinguishing a class {fireClass.short} fire.</strong> Suitable: {fireClass.agents.suitable.join(", ")}.
-              {fireClass.agents.unsuitable.map((entry) => (
-                <span key={entry.agent}>
-                  {" "}
-                  Never {entry.agent.toLowerCase()}: {entry.reason}
-                </span>
-              ))}
-            </Notice>
             {/* Open or closed doors change the fire more than any other setting: here, not folded away. */}
             <div className="field">
               <div className="field__label">
@@ -3127,20 +3491,26 @@ export function SimulatePanel({
           </p>
         )}
 
-        <div className="row">
-          <Button
-            variant="primary"
-            size="lg"
-            style={{ flex: 1 }}
-            disabled={!ready || fireBusy || !points.fire}
-            onClick={onStartFire}
-          >
-            Start fire
-          </Button>
-          <Button variant="danger" size="lg" disabled={!fireBusy} onClick={onStopFire}>
-            Stop
-          </Button>
-        </div>
+        {/* A guided run starts and stops its own fire: its card's Stop is the one Stop then. */}
+        {/* Start and Stop stay at the panel's foot while the settings above them are read (workflow.css .fire-actions). */}
+        {guided ? (
+          <p className="field__hint">A guided run is playing: the Stop in its card over the model ends it.</p>
+        ) : (
+          <div className="row fire-actions">
+            <Button
+              variant="primary"
+              size="lg"
+              style={{ flex: 1 }}
+              disabled={!ready || fireBusy || !points.fire}
+              onClick={onStartFire}
+            >
+              Start fire
+            </Button>
+            <Button variant="danger" size="lg" disabled={!fireBusy} onClick={onStopFire}>
+              Stop
+            </Button>
+          </div>
+        )}
         {ready && !points.fire && <p className="field__hint">Set a fire origin to start the simulation.</p>}
         {ready && points.fire && settings.reroute && !(points.start && points.exit) && (
           <p className="field__hint">Set a start and exit in the Route step to see the route react.</p>
@@ -3151,15 +3521,54 @@ export function SimulatePanel({
         {ready && fire.step > 0 && !fire.running && <ExportTopologic onExport={onExportTopologic} withRun={flamescapes} onExportTable={onExportTable} />}
         {flamescapes && (
           <Disclosure summary="Flamescapes settings">
+            <Toggle
+              label="Run until the fire service arrives"
+              checked={settings.flamescapesUntilService}
+              onChange={(flamescapesUntilService) => setSettings({ flamescapesUntilService })}
+              hint="Off by default: the fire runs for the simulated time set. On, it runs until detection, as the performance check sets it, plus the fire service's response, at most an hour."
+            />
+            {settings.flamescapesUntilService && (
+              <>
+                {/* The response from a standard, or Custom with the user's own minutes beside it. */}
+                <div className={settings.flamescapesServicePreset === "custom" ? "grid-2" : undefined}>
+                  <SelectField
+                    label="Fire service"
+                    value={settings.flamescapesServicePreset}
+                    onChange={(flamescapesServicePreset) => setSettings({ flamescapesServicePreset })}
+                    options={SERVICE_PRESETS.map(({ id, label }) => ({ value: id, label }))}
+                    hint={
+                      settings.flamescapesServicePreset === "custom"
+                        ? "Your fire service's own time, from the alarm reaching it to the first crew on scene."
+                        : settings.flamescapesServicePreset === "nfpa1710"
+                          ? "From the alarm: answering, processing, turnout and travel, for a career department (NFPA 1710, 2020)."
+                          : "From dispatch, plus 79 s of alarm handling: NFPA 1720 (2020) Table 4.3.2, for a volunteer department."
+                    }
+                  />
+                  {settings.flamescapesServicePreset === "custom" && (
+                    <NumberField
+                      label="Fire service response (min)"
+                      value={Math.round((settings.flamescapesServiceResponse / 60) * 100) / 100}
+                      min={SERVICE_RESPONSE_MIN / 60}
+                      max={SERVICE_RESPONSE_MAX / 60}
+                      step={0.05}
+                      onChange={(minutes) => setSettings({ flamescapesServiceResponse: Math.round((minutes ?? DEFAULT_SERVICE_RESPONSE / 60) * 60) })}
+                    />
+                  )}
+                </div>
+                <ServiceRunNote settings={settings} pace={pace} gpuSpeed={gpuSpeed} />
+              </>
+            )}
             <div className="grid-2">
-              <NumberField
-                label="Simulated time (s)"
-                value={settings.flamescapesHorizon}
-                min={30}
-                max={900}
-                step={30}
-                onChange={(flamescapesHorizon) => setSettings({ flamescapesHorizon: flamescapesHorizon ?? 180 })}
-              />
+              {!settings.flamescapesUntilService && (
+                <NumberField
+                  label="Simulated time (s)"
+                  value={settings.flamescapesHorizon}
+                  min={30}
+                  max={900}
+                  step={30}
+                  onChange={(flamescapesHorizon) => setSettings({ flamescapesHorizon: flamescapesHorizon ?? 180 })}
+                />
+              )}
               <NumberField
                 label="Fire load (MJ/m²)"
                 value={settings.flamescapesFireLoad}
@@ -3201,6 +3610,7 @@ export function SimulatePanel({
                 { value: "cpu", label: "The CPU (one core)" },
               ]}
             />
+            <GpuNote />
             <SelectField
               label="Windows"
               value={settings.flamescapesWindows}
@@ -3239,30 +3649,43 @@ export function SimulatePanel({
                 onChange={(flamescapesTerminalFlow) => setSettings({ flamescapesTerminalFlow: flamescapesTerminalFlow ?? 100 })}
               />
             )}
-            <p className="field__hint">
+            <Notes summary="Openings and the smoke">
               For the smoke only: a route still goes through every door. A closed door or window is airtight and never breaks or burns through, so
               smoke leaves the building only through open doorways and open windows. Real ones leak at their gaps and glass can fail in a hot layer,
               so a run with everything closed keeps the most smoke in its rooms. Running ventilation joins
               every air terminal in the model (IfcAirTerminal) through one well-mixed duct volume, the case that spreads smoke furthest: which
               system a terminal belongs to is not read, and 100 L/s a terminal is an assumption, not a measured value.
-            </p>
+            </Notes>
+            <SelectField
+              label="Fire solver"
+              value={settings.flamescapesSolver}
+              onChange={(flamescapesSolver) => setSettings({ flamescapesSolver })}
+              options={Object.entries(SOLVERS).map(([value, s]) => ({ value, label: s.label }))}
+              hint="The current solver conserves the gas's mass and heat; held-out measured room fires support its smoke layer's depth, and each run's card says what holds on its own cells. The previous one, as the site ran it until 2026-11-12, is kept to compare with: its transport made heat as gases mixed, and its runs say so."
+            />
+            {/* The 0.27 m grid has its own setting, so a version without it reads "standard" (rollback safety). */}
             <SelectField
               label="Grid"
-              value={settings.flamescapesGridPolicy}
-              onChange={(flamescapesGridPolicy) => setSettings({ flamescapesGridPolicy })}
+              value={settings.flamescapesCalibratedGrid ? "calibrated" : settings.flamescapesGridPolicy}
+              onChange={(value) =>
+                setSettings(value === "calibrated" ? { flamescapesCalibratedGrid: true, flamescapesGridPolicy: "standard" } : { flamescapesCalibratedGrid: false, flamescapesGridPolicy: value })
+              }
               options={[
                 { value: "standard", label: "Standard: the same on every device, so the GPU and the CPU give one fire" },
-                { value: "speed", label: "Finer on the GPU: sized to keep three times real time" },
+                { value: "calibrated", label: "0.27 m cells: a cell size of the held-out validation" },
+                { value: "speed", label: "Finer on the GPU: sized from its speed over a run's first seconds" },
                 { value: "finest", label: "Finest on the GPU: all its memory allows (slower)" },
               ]}
             />
-            <p className="field__hint">
-              The fire depends on the grid: on the Duplex a sofa fire peaked at 0.09 MW on a 0.20 m grid, 2.5 MW on 0.23 m and 6.1 MW on
-              0.27 m. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device, so the CPU gives the
-              GPU&apos;s fire at about a ninth of its speed; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and
-              its card says so. The finer grids are for the GPU (the CPU builds the standard one) and give a different fire; which grid is
-              nearer a real fire has not been measured. Keep one grid when comparing runs; the run card gives it.
-            </p>
+            <Notes summary="Why the grid matters">
+              The fire depends on the grid. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device,
+              so the CPU gives the GPU&apos;s fire; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and its card
+              says so. The held-out measured room fires were run on cells of 0.20, 0.27 and 0.34 m, and a verdict holds only on the cells it
+              was found on. The 0.27 m grid builds the middle size, clipped round the fire to what the device can hold (a GPU holds a
+              much larger area than a CPU); on it the smoke layer&apos;s depth is indicative, and on 0.20 and 0.34 m calibrated. The
+              finer grids give a different fire that no measurement has checked. Keep one grid when comparing runs; the run card gives
+              it and says what holds on it.
+            </Notes>
             <SelectField
               label="Repeat runs on the GPU"
               value={String(settings.flamescapesRepeats)}
@@ -3273,13 +3696,13 @@ export function SimulatePanel({
                 { value: "8", label: "8: the run you watch, then 7 more" },
               ]}
             />
-            <p className="field__hint">
+            <Notes summary="Why two runs differ">
               A fire that catches the room&apos;s contents is partly chance: the same run with the room a thousandth of a degree warmer can
               hold or die back. After the run you watch, the GPU makes the rest on the same grid, each a thousandth of a degree warmer,
               while the view plays on, and the card gives the median and range of the untenable nodes, the first untenable time, the peak
               and the energy. On the standard grid each takes a few seconds; none are made on the CPU, where each would take as long as
               the first.
-            </p>
+            </Notes>
             <Toggle
               label="Record soot, CO₂ and O₂ too"
               checked={settings.flamescapesMeasures}
@@ -3366,7 +3789,7 @@ export function SimulatePanel({
                   ]}
                 />
                 <SprinklerLayout plan={sprinklerPlan} busy={sprinklerBusy} onRedo={onLayOutSprinklers} />
-                <p className="field__hint">
+                <Notes summary="How a head opens">
                   A head opens when its link reaches its rating: the RTI equation with conduction to the mount, stepped exactly on the gas at
                   the top cell of its column and, under the fire&apos;s ceiling, on Alpert&apos;s jet for the run&apos;s heat release. The run
                   card gives both times. What an open head then does is the choice above. Wetting: the water left at the end of each column
@@ -3375,7 +3798,7 @@ export function SimulatePanel({
                   the water evaporates in the hot gas on the way down (1 mm drops), the steam diluting the oxygen. Liquids, metals and cooking
                   oil are not wetted (the notice above). The heads read no RTI or C from the IFC (none carries them): quick 50, standard 100,
                   C 0.4. Portable extinguishers have their own section below; clean agent and foam rooms are in Systems by room use.
-                </p>
+                </Notes>
               </>
             )}
           </Disclosure>
@@ -3406,7 +3829,7 @@ export function SimulatePanel({
                 />
                 {!settings.sprinklers && <Notice tone="warning">Sprinklers are off, so the water rooms have no system. Switch them on in Sprinklers above.</Notice>}
                 <SystemsPlan plan={systemsPlan} busy={systemsBusy} onRedo={onLayOutSystems} />
-                <p className="field__hint">
+                <Notes summary="How the systems act">
                   Clean agent: once a detector in each of two zones sees smoke and 30 s have passed (specification practice; the code sets no
                   number), the agent rises to 7 % over 10 s and holds for 10 minutes. At 5.2 % or more (6.62 % over a liquid&apos;s vapour)
                   flames and smouldering stop; hot fuel goes on giving off vapour, which can burn again outside the room or once the agent is
@@ -3414,13 +3837,25 @@ export function SimulatePanel({
                   not close the model&apos;s doors. Foam: once one detector sees smoke and 30 s have passed (assumed), the blanket cuts a
                   pool&apos;s evaporation to a tenth in about 10 s and to nothing in about 30 s (Back and Farley 2020), and its water wets the
                   ordinary fuel it lands on, as sprinklers do.
-                </p>
+                </Notes>
               </>
             )}
           </Disclosure>
         )}
 
         <Disclosure summary="Extinguishers">
+          {/* What puts out the class burning first: here with the extinguishers, not always open under the class. */}
+          {flamescapes && (
+            <Notice tone={fireClass.agents.unsuitable.length ? "warning" : "neutral"}>
+              <strong>Extinguishing a class {fireClass.short} fire.</strong> Suitable: {fireClass.agents.suitable.join(", ")}.
+              {fireClass.agents.unsuitable.map((entry) => (
+                <span key={entry.agent}>
+                  {" "}
+                  Never {entry.agent.toLowerCase()}: {entry.reason}
+                </span>
+              ))}
+            </Notice>
+          )}
           <Toggle
             label="Extinguishers"
             checked={settings.extinguishers}
@@ -3464,6 +3899,11 @@ export function SimulatePanel({
                   { value: "seen", label: "When they see the fire (30 s after ignition)" },
                   { value: "alarm", label: "After detection, the alarm and the median pre-movement (Route step, performance check)" },
                 ]}
+                hint={
+                  settings.extinguisherStart === "alarm"
+                    ? "Detection as the performance check takes it: from the Flamescapes run's smoke when Detection from the fire run's smoke is on and the plan with the forecast found it, else Detection (s). The result says which."
+                    : undefined
+                }
               />
               <Toggle
                 label="Trained to use it (7.2 s to ready it, not 13.4 s)"
@@ -3514,7 +3954,11 @@ export function SimulatePanel({
             onChange={(hazardAlpha) => setSettings({ hazardAlpha })}
             format={(v) => v.toFixed(1)}
             disabled={!settings.reroute || !heat}
-            hint="Heat diffusion and two-zone rooms only. Link cost is length x (1 + weight x degrees above ambient / 100); zero ignores the fire."
+            hint={
+              heat
+                ? "Link cost is length x (1 + weight x degrees above 20 °C / 100), from heat diffusion's index or the gas temperature of two-zone rooms and Flamescapes; zero ignores the fire."
+                : "Only with a model that gives temperatures: heat diffusion, two-zone rooms or Flamescapes. Spread along links and distance bands close burning nodes instead."
+            }
           />
           <Slider
             label="Recompute every"
@@ -3526,8 +3970,9 @@ export function SimulatePanel({
             format={(v) => `${v} steps`}
             disabled={!settings.reroute}
           />
+          {/* What the threshold is compared with depends on the model: an index for heat diffusion, gas °C for the others. */}
           <NumberField
-            label="Impassable above (model °C)"
+            label="Impassable above (°C)"
             value={settings.lethalityThreshold}
             min={30}
             max={200}
@@ -3535,7 +3980,17 @@ export function SimulatePanel({
             optional
             placeholder="none"
             onChange={(lethalityThreshold) => setSettings({ lethalityThreshold })}
-            hint="Links hotter than this are closed. Left blank, heat only adds cost. The scale is an index, not a measured temperature (see Methods)."
+            hint={
+              !heat
+                ? "Only with a model that gives temperatures: heat diffusion, two-zone rooms or Flamescapes. Spread along links and distance bands close burning nodes instead."
+                : `Links hotter than this are closed; left blank, heat only adds cost. ${
+                    fireModel === "temperature"
+                      ? "With heat diffusion it is compared with the model's index, 20 to 120, not a measured temperature (see Methods)."
+                      : fireModel === "zone"
+                        ? "With two-zone rooms it is compared with each room's gas temperature at head height."
+                        : "With Flamescapes it is compared with the run's gas temperature at head height."
+                  }`
+            }
           />
           <div className="grid-2">
             <NumberField
@@ -3544,6 +3999,13 @@ export function SimulatePanel({
               min={1}
               max={2000}
               onChange={(fireMaxSteps) => setSettings({ fireMaxSteps: fireMaxSteps ?? 60 })}
+              hint={
+                flamescapes
+                  ? "Also the frames a Flamescapes run keeps, at most 120 and at most one a second; a kept run is replayed only for the same Steps, so changing it starts a new run."
+                  : fireModel === "zone"
+                    ? "The two-zone fire plays its forecast length in this many frames."
+                    : undefined
+              }
             />
             <NumberField
               label="Step delay (ms)"
@@ -3551,7 +4013,7 @@ export function SimulatePanel({
               min={0}
               max={2000}
               step={10}
-              onChange={(fireDelayMs) => setSettings({ fireDelayMs: fireDelayMs ?? 0 })}
+              onChange={(fireDelayMs) => setSettings({ fireDelayMs: fireDelayMs ?? DEFAULT_SETTINGS.fireDelayMs })}
             />
           </div>
         </Disclosure>
@@ -3559,7 +4021,7 @@ export function SimulatePanel({
 
       <ForecastSection studio={studio} exits={exits} onPlan={onPlanForecast} deadlinesShown={deadlinesShown} />
 
-      <Section title="Train an agent against this fire" defaultOpen={false}>
+      <Section title="Train an agent against this fire" guide="fire-and-smoke.html#learned" badge="research" defaultOpen={false}>
         <div className="field">
           <div className="field__label">
             <span>Method</span>
@@ -3569,7 +4031,7 @@ export function SimulatePanel({
             value={settings.rlMethod}
             onChange={(rlMethod) => setSettings({ rlMethod })}
             options={[
-              { value: "shielded", label: "Shielded (proved)" },
+              { value: "shielded", label: "Safe learner (proved)" },
               { value: "qlearning", label: "Q-learning" },
             ]}
           />
@@ -3577,7 +4039,8 @@ export function SimulatePanel({
             {shielded
               ? "Learns the escape on (node, time) behind a shield that never lets it step where the fire will seal it in, and stops when it can prove its route is the earliest escape. Both properties are proved in Lean."
               : "Tabular Q-learning over the same graph, with the spreading fire as a penalty (after Jabi et al. 2019). It is drawn by a walk that never revisits a node, and on the study's corpus it missed 15% of the escapes that existed."}{" "}
-            Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart.
+            Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart. The agent&apos;s fire is
+            its own, not the fire model chosen above: it spreads along the links from the fire origin at the fire speed below.
           </p>
         </div>
         {shielded && (
@@ -3590,7 +4053,7 @@ export function SimulatePanel({
               value={settings.rlExits}
               onChange={(rlExits) => setSettings({ rlExits })}
               options={[
-                { value: "any", label: "Any exit door" },
+                { value: "any", label: "Any exit" },
                 { value: "chosen", label: "The chosen exit" },
               ]}
             />
@@ -3603,7 +4066,7 @@ export function SimulatePanel({
               value={settings.rlEpisodes}
               min={10}
               step={50}
-              onChange={(rlEpisodes) => setSettings({ rlEpisodes: rlEpisodes ?? 200 })}
+              onChange={(rlEpisodes) => setSettings({ rlEpisodes: rlEpisodes ?? DEFAULT_SETTINGS.rlEpisodes })}
             />
           )}
           <NumberField
@@ -3615,14 +4078,19 @@ export function SimulatePanel({
             onChange={(rlMaxSteps) => setSettings({ rlMaxSteps: rlMaxSteps ?? 200 })}
           />
         </div>
+        {/* Q-learning penalises the fire; the safe learner's shield keeps out of it: the switch only turns that fire on or off. */}
         <Toggle
-          label="Penalise reaching burning nodes"
+          label="Train with the fire"
           checked={settings.rlUseFire}
           onChange={(rlUseFire) => setSettings({ rlUseFire })}
           hint={
             settings.rlUseFire && !points.fire
               ? "Set a fire origin (F); without one the policy trains without fire."
-              : undefined
+              : !settings.rlUseFire
+                ? "Off, the agent learns its way out as if there were no fire."
+                : shielded
+                  ? "The shield never lets the learner step where its fire will seal it in."
+                  : "Stepping into a burning node costs 10 and ends the episode."
           }
         />
         <NumberField

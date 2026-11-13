@@ -74,6 +74,20 @@ const context = await browser.newContext(
     : { viewport: { width: 1600, height: 950 }, deviceScaleFactor: 1 },
 );
 const page = await context.newPage();
+// The checks read hints and method notes that the panels fold by default
+// (primitives.jsx Hint and Notes; the interface audit of 2026-11-11):
+// unfolded here, so the checks see them as before. Option lists (Disclosure)
+// stay folded and the checks open them.
+await context.addInitScript(() => {
+  window.__studioExpandAll = true;
+});
+// A folded option list (<details>) opened by its summary, left open when it
+// already is, so a click never folds it.
+async function openSummary(p, name) {
+  const summary = p.locator("summary", { hasText: name }).first();
+  const open = await summary.evaluate((el) => el.parentElement?.open === true).catch(() => false);
+  if (!open) await summary.click().catch(() => {});
+}
 // Every worker the page starts, by its script, and the kind of each job sent
 // to one, so a check can count them (wiki/architecture/state-machines.md: a
 // stopped fire starts none, a double click makes one recorder or one fire).
@@ -634,6 +648,8 @@ if (await peopleSection.count()) {
   const dots = await page.evaluate(() => window.__viewer?.overlays?.get("crowd")?.type ?? null);
   record(dots === "Points", "the people can be drawn as dots", dots || "none");
   await page.getByLabel("Show them as").selectOption("figures").catch(() => {});
+  // The options below sit under "How people move" (the interface audit, 2026-11-11).
+  await openSummary(page, /^How people move$/);
   // Full gathering places clear (core/crowd.js shelterArea), an option.
   await page.locator(".toggle__label", { hasText: /^Full gathering places clear$/ }).first().click().catch(() => {});
   await page.getByLabel("Each gathering place").selectOption("10").catch(() => {});
@@ -666,13 +682,13 @@ if (await peopleSection.count()) {
   // Randomness in how people move (wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md, stage 1):
   // speeds that wobble and floor-field steps, run over five seeds, the range reported.
   await page.locator(".toggle__label", { hasText: /^Walking speed varies over time$/ }).first().click().catch(() => {});
-  await page.getByLabel("Each step").selectOption("wandering").catch(() => {});
+  await page.getByLabel("Step randomness").selectOption("wandering").catch(() => {});
   const rangeLine = await page
     .waitForFunction(() => document.body.innerText.match(/Over 5 of 5 runs: the last out between \d+ and \d+ s \(median \d+ s\)[^\n]*/)?.[0], null, { timeout: 60000 })
     .then((h) => h.jsonValue())
     .catch(() => "");
   record(Boolean(rangeLine), "people's motion varies: five seeds, the range of the last one out", rangeLine.slice(0, 140) || "no range");
-  await page.getByLabel("Each step").selectOption("exact").catch(() => {});
+  await page.getByLabel("Step randomness").selectOption("exact").catch(() => {});
   await page.locator(".toggle__label", { hasText: /^Walking speed varies over time$/ }).first().click().catch(() => {});
   const backToExact = await page
     .waitForFunction(() => !/Over \d+ of \d+ runs/.test(document.body.innerText), null, { timeout: 30000 })
@@ -745,25 +761,26 @@ if (await slimeSection.count()) {
     .catch(() => "");
   const slimeRoute = await page.evaluate(() => window.__viewer?.overlays?.has("slimePath") ?? false);
   record(/reached an exit/.test(slimeLine) && /along its tubes/.test(slimeLine) && slimeRoute, "the slime mould grows to the exits and the start's route keeps to its tubes", `${slimeLine.slice(0, 180)} (${((Date.now() - tSlime) / 1000).toFixed(1)}s)`);
-  // Its skeletons (core/skeleton.js, 2026-11-11): the desire lines and the floor's medial axis, each when asked.
+  // Its skeletons (core/skeleton.js, 2026-11-11): the desire lines and the floor's medial axis, each when asked, under Readings.
+  await openSummary(page, /^Readings$/);
   const skeletonsBefore = await page.evaluate(() => ["slimeDesire", "slimeMedial"].filter((n) => window.__viewer?.overlays?.has(n)).length);
   await page.locator(".toggle__label", { hasText: /^Desire lines$/ }).first().click().catch(() => {});
-  await page.locator(".toggle__label", { hasText: /^Medial axis of the floor$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Centre lines of rooms and corridors$/ }).first().click().catch(() => {});
   await page.waitForTimeout(400);
   const skeletons = await page.evaluate(() => ({ desire: window.__viewer?.overlays?.has("slimeDesire") ?? false, medial: window.__viewer?.overlays?.has("slimeMedial") ?? false }));
   const agreeLine = await page.getByText(/within half a metre of the medial axis/).count();
   record(skeletonsBefore === 0 && skeletons.desire && skeletons.medial && agreeLine > 0, "the slime's desire lines and the floor's medial axis are drawn when asked", JSON.stringify(skeletons));
   await page.locator(".toggle__label", { hasText: /^Desire lines$/ }).first().click().catch(() => {});
-  await page.locator(".toggle__label", { hasText: /^Medial axis of the floor$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Centre lines of rooms and corridors$/ }).first().click().catch(() => {});
   // Its readings (2026-11-11): bottlenecks, dead ends and the branches it gave up, each drawn when asked.
   const readingsBefore = await page.evaluate(() => ["slimeBottlenecks", "slimeDead", "slimeAbandoned"].filter((n) => window.__viewer?.overlays?.has(n)).length);
   const readingsLine = (await page.getByText(/^(Bottlenecks: |No bottleneck )/).first().textContent().catch(() => "")) || "";
-  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Branches it gave up$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
+  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Corridors it abandoned$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
   await page.waitForTimeout(400);
   const readings = await page.evaluate(() => Object.fromEntries(["slimeBottlenecks", "slimeDead", "slimeAbandoned"].map((n) => [n, window.__viewer?.overlays?.has(n) ?? false])));
   const drawnAsSaid = readings.slimeBottlenecks === readingsLine.startsWith("Bottlenecks: ") && readings.slimeDead === /Dead ends: /.test(readingsLine) && readings.slimeAbandoned === /gave up/.test(readingsLine);
   record(readingsBefore === 0 && readingsLine.length > 0 && drawnAsSaid, "the slime's bottlenecks, dead ends and abandoned branches are read out and drawn when asked", `${readingsLine.slice(0, 200)} ${JSON.stringify(readings)}`);
-  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Branches it gave up$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
+  for (const label of [/^Bottlenecks$/, /^Dead ends$/, /^Corridors it abandoned$/]) await page.locator(".toggle__label", { hasText: label }).first().click().catch(() => {});
   await page
     .locator("section.section", { has: page.locator(".section__header", { hasText: /^Slime mould/ }) })
     .getByRole("button", { name: /^Clear$/ })
@@ -773,6 +790,68 @@ if (await slimeSection.count()) {
   record(!(await page.evaluate(() => window.__viewer?.overlays?.has("slimePath") ?? false)), "cleared, the slime route goes");
 } else {
   record(false, "the Slime mould section is offered in Route");
+}
+
+// ---- 4b'''. egress map and accessibility -------------------------------------
+// core/egressMap.js on the graph, then each storey's measuring grid and the
+// wheelchair audit (core/floorRaster.js, core/accessAudit.js), in a worker:
+// nothing runs or draws until asked (2026-11-11).
+console.log("\n[4b'''] Egress map and accessibility");
+const egressSection = page.locator("summary, button", { hasText: /^Egress map/ }).first();
+if (await egressSection.count()) {
+  await egressSection.scrollIntoViewIfNeeded();
+  await egressSection.click();
+  const drawnBefore = await page.evaluate(() => ["egressRoutes", "egressContours", "egressDeadEnds", "egressCritical", "egressFine", "accessAudit"].filter((n) => window.__viewer?.overlays?.has(n)).length);
+  const tMap = Date.now();
+  await page.getByRole("button", { name: /^Map the egress$/ }).click();
+  const mapLine = await page
+    .waitForFunction(() => document.body.innerText.match(/Farthest walk [\d.]+ m[^\n]*/)?.[0], null, { timeout: 60000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  record(drawnBefore === 0 && /rooms routed|against/.test(mapLine), "the egress map reads the farthest walk and closes each exit in turn, drawing nothing until asked", `${mapLine.slice(0, 200)} (${((Date.now() - tMap) / 1000).toFixed(1)}s)`);
+  await page.locator(".toggle__label", { hasText: /^Routes from every room$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Contours every 5 m$/ }).first().click().catch(() => {});
+  await page.waitForTimeout(400);
+  const layers = await page.evaluate(() => ({ routes: window.__viewer?.overlays?.has("egressRoutes") ?? false, contours: window.__viewer?.overlays?.has("egressContours") ?? false }));
+  record(layers.routes && layers.contours, "every room's route and the contours are drawn when asked", JSON.stringify(layers));
+  await page.locator(".toggle__label", { hasText: /^Routes from every room$/ }).first().click().catch(() => {});
+  await page.locator(".toggle__label", { hasText: /^Contours every 5 m$/ }).first().click().catch(() => {});
+  const tFine = Date.now();
+  await page.getByRole("button", { name: /^Measure finely$/ }).click();
+  const fineLine = await page
+    .waitForFunction(() => document.body.innerText.match(/Measured finely[^\n]*/)?.[0], null, { timeout: 120000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  record(/16 directions/.test(fineLine) && /against the graph's/.test(fineLine), "measured finely, the walk on 16 directions is set against the graph's and Fast Marching", `${fineLine.slice(0, 200)} (${((Date.now() - tFine) / 1000).toFixed(1)}s)`);
+  const accessSection = page.locator("summary, button", { hasText: /^Accessibility/ }).first();
+  await accessSection.scrollIntoViewIfNeeded().catch(() => {});
+  await accessSection.click().catch(() => {});
+  const accessLine = (await page.getByText(/a wheelchair reaches \d+ of \d+ rooms/).first().textContent({ timeout: 5000 }).catch(() => "")) || "";
+  const audit = await page.evaluate(() => window.__viewer?.overlays?.has("accessAudit") ?? false);
+  record(/a wheelchair reaches/.test(accessLine) && audit, "the wheelchair audit reads each storey and lays its map on the floors", `${accessLine.slice(0, 200)} audit layer ${audit}`);
+  // The slime grown again beside the map (no fire): one line against the
+  // shortest walks, this model's own numbers (core/egressCompare.js), and
+  // why they differ folded under it (2026-11-12).
+  await openSection("Slime mould");
+  const slimeBox = page.locator("section.section", { has: page.locator(".section__header", { hasText: /^Slime mould/ }) });
+  await slimeBox.getByRole("button", { name: /^(Grow the slime mould|Grow again)$/ }).click().catch(() => {});
+  const compareLine = await page
+    .waitForFunction(() => document.querySelector(".slime-compare")?.textContent.replace(/\s+/g, " ").trim(), null, { timeout: 60000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const reasons = await slimeBox.locator("details", { hasText: /^Why they differ/ }).locator("li").count().catch(() => 0);
+  record(
+    /^Against the shortest walks \(Egress map\), within 1 m: \d+ % of its trail on them; \d+ % of them under a desire line(; exits split [\d.]+ apart)?\.$/.test(compareLine) && reasons === 4,
+    "beside the egress map, the slime says in one line how far it follows the shortest walks, and why they differ",
+    `${compareLine.slice(0, 200) || "no line"}; ${reasons} reasons`,
+  );
+  await slimeBox.getByRole("button", { name: /^Clear$/ }).click().catch(() => {});
+  await page.locator("section.section", { has: page.locator(".section__header", { hasText: /^Egress map/ }) }).getByRole("button", { name: /^Clear the map$/ }).click().catch(() => {});
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() => ["egressRoutes", "egressContours", "egressFine", "accessAudit"].filter((n) => window.__viewer?.overlays?.has(n)).length);
+  record(after === 0, "cleared, the map's layers go", `${after} left`);
+} else {
+  record(false, "the Egress map section is offered in Route");
 }
 
 // ---- 4c. TopologicPy Navigation cross-check ---------------------------------
@@ -918,7 +997,7 @@ if (await trainBtn.isEnabled()) {
     "Q-learning reports its return against the exact optimum (backward induction)",
     q["Return vs best within the step limit"],
   );
-  await page.getByRole("group", { name: "Learning method" }).getByRole("button", { name: "Shielded (proved)" }).click();
+  await page.getByRole("group", { name: "Learning method" }).getByRole("button", { name: "Safe learner (proved)" }).click();
   // Moving the fire while the agent trains drops the training and its
   // answer: still training, it drew a route for the old points when it ended
   // (SM-3). The fire is placed again where it is, by its coordinates, which
@@ -1094,11 +1173,12 @@ if (await planBtn.isEnabled().catch(() => false)) {
 // simulation plays its gas temperatures.
 
 console.log("\n[5d] Two-zone room model");
-const zoneChoice = page.getByText("Two-zone rooms (degrees C)", { exact: true });
-const zoneOffered = await zoneChoice.isVisible().catch(() => false);
+// One list for the fire model (2026-11-12): the two-zone model is in it only on a model with rooms.
+const zoneSelect = page.getByLabel("How the fire spreads", { exact: true });
+const zoneOffered = (await zoneSelect.locator('option[value="zone"]').count().catch(() => 0)) > 0;
 record(zoneOffered, "the two-zone model is offered on a model with IfcSpace rooms");
 if (zoneOffered) {
-  await zoneChoice.click();
+  await zoneSelect.selectOption("zone");
   await page.waitForTimeout(200);
   if (await planBtn.isEnabled().catch(() => false)) {
     const tZone = Date.now();
@@ -1154,7 +1234,7 @@ if (zoneOffered) {
     await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
   }
   // Back to heat diffusion for the steps that follow.
-  await page.getByText("Heat diffusion", { exact: true }).click().catch(() => {});
+  await zoneSelect.selectOption("temperature").catch(() => {});
 }
 
 // ---- 5d'. people leaving with a graph fire started again --------------------
@@ -1210,10 +1290,10 @@ if (await startFire.isEnabled().catch(() => false)) {
 // must stream frames, finish, colour the graph and say what it ran on.
 
 console.log("\n[5e] Flamescapes solver (optional)");
-const fsToggle = page.getByText("Flamescapes combustion solver (optional)", { exact: true });
-if (await fsToggle.isVisible().catch(() => false)) {
-  await fsToggle.click();
-  await page.getByText("Flamescapes: fire, smoke and embers", { exact: true }).click();
+// One list for the fire model (2026-11-12): choosing a Flamescapes model switches the solver on.
+const fireModelSelect = page.getByLabel("How the fire spreads", { exact: true });
+if (await fireModelSelect.isVisible().catch(() => false)) {
+  await fireModelSelect.selectOption("flamescapes-embers");
   await page.getByText("Flamescapes settings", { exact: true }).click();
   await page.getByLabel("Simulated time (s)").fill("30");
   await page.getByLabel("Simulated time (s)").blur();
@@ -1237,6 +1317,9 @@ if (await fsToggle.isVisible().catch(() => false)) {
   if (fsDone) timing("Flamescapes, 30 s simulated (click to complete)", Date.now() - tFs);
   const card = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
   record(/Running on (the GPU|one CPU core)/.test(card), "the run says what it ran on", card.split("\n").find((l) => /Running on/.test(l)) || "no backend line");
+  // It leads with one line on what the held-out tests support for what it draws (calibrationStatus.js validationVerdict, 2026-11-12).
+  const verdict = (await page.locator('[aria-label="Flamescapes run"] .result__verdict').textContent().catch(() => "")) || "";
+  record(/(not calibrated|indicative|calibrated|Not compared with measured fires)/.test(verdict), "the run card leads with one line on what the held-out tests support", verdict || "no line");
   // The standard grid by default, the same on every device; a small CPU builds a lighter one and says so (lib/hardware.js, 2026-11-09).
   const gridNote = card.match(/The standard grid, the same on every device\.|This device's CPU builds a lighter grid \(at most [\d,]+ cells\)/)?.[0] || "";
   record(Boolean(gridNote), "the run is on the standard grid, and the card says so", gridNote || "no grid note");
@@ -1278,6 +1361,52 @@ if (await fsToggle.isVisible().catch(() => false)) {
   const legendFs = await page.getByText("Gas temperature at head height (°C)", { exact: true }).isVisible().catch(() => false);
   record(legendFs || MOBILE, "the graph is coloured by gas temperature at head height", MOBILE ? "legend folded on a phone" : undefined);
   await shot(page, "flamescapes-run");
+  // Run again in the view (2026-11-12): once the run has ended, out of the
+  // panel where the playback bar was, clear of the legend and the view
+  // buttons; it says so when a setting has changed; reached by Tab with a
+  // focus ring and pressed with Enter, it plays the fire as Start fire does
+  // and goes while the fire plays, the focus moving to Stop fire.
+  await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent)), null, { timeout: 180000 }).catch(() => {});
+  const viewReplay = page.locator(".viewport").getByRole("button", { name: /^Run again/ });
+  const replayText = async () => ((await viewReplay.textContent().catch(() => "")) || "").trim();
+  const replayOffered = await viewReplay.isVisible().catch(() => false);
+  const replayLabel = await replayText();
+  record(replayOffered && replayLabel === "Run again", "a finished Flamescapes run offers Run again in the view", replayLabel || "not offered");
+  const replayCovers = await page.evaluate(() => {
+    const b = [...document.querySelectorAll(".viewport button")].find((x) => /^Run again/.test(x.textContent.trim()))?.getBoundingClientRect();
+    if (!b) return ["no button"];
+    const hit = (r) => r.width > 0 && r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom;
+    return [["legend", ".legend"], ["view buttons", ".viewcube"], ["view card", ".overlay--bottom-right"]].filter(([, sel]) => [...document.querySelectorAll(sel)].some((el) => hit(el.getBoundingClientRect()))).map(([name]) => name);
+  });
+  record(replayCovers.length === 0, "  clear of the legend and the view buttons", replayCovers.join(", ") || "clear");
+  const replayClass = page.getByLabel("What burns first");
+  const replayClassWas = await replayClass.inputValue().catch(() => "A");
+  await replayClass.selectOption(replayClassWas === "B" ? "A" : "B").catch(() => {});
+  const replayChanged = await replayText();
+  await replayClass.selectOption(replayClassWas).catch(() => {});
+  const replaySame = await replayText();
+  record(replayChanged === "Run again with new settings" && replaySame === "Run again", "  and says so when a setting has changed", `${replayChanged || "none"}; set back: ${replaySame || "none"}`);
+  await viewReplay.focus().catch(() => {});
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  const replayRing = await page.evaluate(() => {
+    const el = document.activeElement;
+    return el && /^Run again/.test(el.textContent.trim()) && el.matches(":focus-visible") ? getComputedStyle(el).outlineWidth : null;
+  });
+  await page.keyboard.press("Enter");
+  const replayPlays = await page
+    .waitForFunction(() => [...document.querySelectorAll(".viewport button")].some((b) => /^Stop fire$/.test(b.textContent.trim())), null, { timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
+  const replayHidden = !(await viewReplay.isVisible().catch(() => false));
+  const replayFocus = await page.evaluate(() => document.activeElement?.textContent?.trim() || "");
+  record(
+    parseFloat(replayRing) >= 2 && replayPlays && replayHidden && replayFocus === "Stop fire",
+    "  reached by Tab with a focus ring, Enter plays the fire again, and it goes while the fire plays",
+    `ring ${replayRing || "none"}, ${replayPlays ? "played" : "did not play"}, ${replayHidden ? "hidden" : "still shown"}, focus on ${replayFocus || "nothing"}`,
+  );
+  // The same run, from memory: let it end before the steps below.
+  await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent)), null, { timeout: 180000 }).catch(() => {});
   // Kept runs (core/runCache.js, 2026-11-07): after another run, this one
   // asked for again plays from the browser's store, not from memory.
   const startFs = async () => {
@@ -1395,10 +1524,59 @@ if (await fsToggle.isVisible().catch(() => false)) {
   else console.log("    (the kept runs could not be held: not checked)");
   await simulated.fill("30");
   await simulated.blur();
+  // Until the fire service arrives (core/fireService.js, 2026-11-12): off by
+  // default; on, the simulated time gives way to the fire service, NFPA 1710's
+  // first engine (6.65 min) by default, and the panel says the run lasts the
+  // detection set (60 s) plus it, 459 s. NFPA 1720's rural zone (14 min from
+  // dispatch, plus 79 s of alarm handling) makes it 979 s, past 900 s, which
+  // the panel says lies outside the tested range. Custom shows the minutes
+  // field: 60 s + 0.5 min = 90 s on the run card.
+  const serviceSwitch = page.locator(".toggle__label", { hasText: /^Run until the fire service arrives$/ });
+  if ((await serviceSwitch.count()) > 0) {
+    await serviceSwitch.first().click();
+    const servicePreset = page.getByLabel("Fire service", { exact: true });
+    const serviceResponse = page.getByLabel("Fire service response (min)");
+    const serviceNote = async () => ((await page.locator(".panel__scroll").first().innerText().catch(() => "")).match(/The fire runs [^\n]*/)?.[0] || "");
+    const presetNow = await servicePreset.inputValue().catch(() => "");
+    const minutesHidden = !(await serviceResponse.isVisible().catch(() => false));
+    const byDefault = await serviceNote();
+    const timeGone = !(await page.getByLabel("Simulated time (s)").isVisible().catch(() => false));
+    record(
+      presetNow === "nfpa1710" && minutesHidden && timeGone && /^The fire runs 7 min 39 s \(459 s\)/.test(byDefault) && /NFPA 1710 \(2020 edition\)/.test(byDefault),
+      "until the fire service arrives, the run lasts the detection set plus NFPA 1710's first engine",
+      byDefault.slice(0, 220) || `preset ${presetNow || "not shown"}`,
+    );
+    await servicePreset.selectOption("nfpa1720rural");
+    const rural = await serviceNote();
+    record(
+      /^The fire runs 16 min 19 s \(979 s\)/.test(rural) && /NFPA 1720 \(2020 edition\) Table 4\.3\.2/.test(rural) && /from dispatch, plus 79 s of alarm handling/.test(rural) && /outside the tested range/.test(rural),
+      "  NFPA 1720's rural zone: 14 min from dispatch plus the alarm handling, past 900 s, outside the tested range",
+      rural.slice(0, 220) || "no note",
+    );
+    await servicePreset.selectOption("custom");
+    const minutesShown = await serviceResponse.isVisible().catch(() => false);
+    await serviceResponse.fill("0.5");
+    await serviceResponse.blur();
+    await page.getByRole("button", { name: /^Start fire$/ }).click();
+    const ninety = await page
+      .waitForFunction(() => /Simulated\s+\d+ \/ 90 s/.test(document.querySelector('[aria-label="Flamescapes run"]')?.innerText || ""), null, { timeout: 120000 })
+      .then(() => true)
+      .catch(() => false);
+    await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
+    record(minutesShown && ninety, "  Custom shows the minutes, and a run started then lasts that long", ninety ? "90 s on the run card" : `${minutesShown ? "minutes shown" : "no minutes field"}; the card did not show 90 s`);
+    // Back to the default response and to the time set.
+    await serviceResponse.fill("6.65");
+    await serviceResponse.blur();
+    await servicePreset.selectOption("nfpa1710");
+    await serviceSwitch.first().click();
+    record(await page.getByLabel("Simulated time (s)").isVisible().catch(() => false), "  switched off, the simulated time set is back");
+  } else {
+    record(false, "the switch to run until the fire service arrives is offered in the Flamescapes settings");
+  }
   // Sprinklers (core/sprinklers.js, core/suppression.js, 2026-11-07): off by
   // default; on, the Duplex's rooms get heads by NFPA 13 with a rule report,
   // and a run reports when they open.
-  await page.locator("summary", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
+  await openSummary(page, /^Sprinklers$/);
   const sprinklerSwitch = page.locator(".toggle__label", { hasText: /^Sprinklers$/ });
   await sprinklerSwitch.first().click().catch(() => {});
   await page.waitForFunction(() => /\d+ sprinkler heads/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 30000 }).catch(() => {});
@@ -1424,7 +1602,7 @@ if (await fsToggle.isVisible().catch(() => false)) {
   // Systems by room use (core/suppressionSystems.js, 2026-11-07): off by
   // default; on, every room gets water, clean agent, foam or none by its name
   // and the occupancy, with a report (the Duplex has no agent or foam rooms).
-  await page.locator("summary", { hasText: /^Systems by room use$/ }).first().click().catch(() => {});
+  await openSummary(page, /^Systems by room use$/);
   const systemsSwitch = page.locator(".toggle__label", { hasText: /^Systems by room use$/ });
   await systemsSwitch.first().click().catch(() => {});
   await page.waitForFunction(() => /\d+ rooms: \d+ water/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 30000 }).catch(() => {});
@@ -1433,11 +1611,36 @@ if (await fsToggle.isVisible().catch(() => false)) {
   record(/\d+ rooms: \d+ water, \d+ clean agent .*, \d+ foam, \d+ none/.test(systemsLine), "systems by room use give every room water, clean agent, foam or none", systemsLine.slice(0, 160) || "no plan");
   await systemsSwitch.first().click().catch(() => {});
   await sprinklerSwitch.first().click().catch(() => {});
+  // Turned off after a run that had them, the sprinklers go and stay gone: a
+  // repaint of that run's frame (another view of the graph) drew its heads and
+  // spray again, and they stayed through later runs (the user's report of
+  // 2026-11-12; core/suppressionView.js). The next run has none.
+  const sprinklersOff = async () =>
+    page.evaluate(() => ({
+      on: [...document.querySelectorAll(".toggle")].find((t) => /^Sprinklers$/.test(t.querySelector(".toggle__label")?.textContent || ""))?.querySelector("input")?.checked ?? null,
+      heads: window.__viewer?.overlays?.has("sprinklers") ?? null,
+      spray: window.__viewer?.overlays?.has("spray") ?? null,
+    }));
+  const offNow = await sprinklersOff();
+  const showOn = page.getByRole("group", { name: "Show on the graph", exact: true });
+  await showOn.getByRole("button", { name: "Smoke" }).click().catch(() => {});
+  await page.waitForTimeout(400);
+  await showOn.getByRole("button", { name: "Heat" }).click().catch(() => {});
+  await page.waitForTimeout(400);
+  const offAfterRepaint = await sprinklersOff();
+  await startFs();
+  const offRunCard = await page.locator('[aria-label="Flamescapes run"]').innerText().catch(() => "");
+  const offAfterRun = await sprinklersOff();
+  record(
+    offNow.on === false && !offNow.heads && !offNow.spray && !offAfterRepaint.heads && !offAfterRepaint.spray && !offAfterRun.heads && !/\nSprinklers\n/.test(offRunCard),
+    "sprinklers turned off after a run with them: the switch is off, no heads are drawn, and the next run has none",
+    JSON.stringify({ off: offNow, afterRepaint: offAfterRepaint, afterRun: offAfterRun, cardSprinklers: /\nSprinklers\n/.test(offRunCard) }),
+  );
   // Back to the default, so later steps see the page as before.
   await page.getByRole("button", { name: /^Stop$/ }).click().catch(() => {});
-  await fsToggle.click();
+  await fireModelSelect.selectOption("temperature");
 } else {
-  record(false, "the Flamescapes toggle is offered in the Simulate step");
+  record(false, "the Flamescapes models are offered in the Simulate step");
 }
 
 // ---- 5f. extinguishers -------------------------------------------------------
@@ -1447,7 +1650,7 @@ if (await fsToggle.isVisible().catch(() => false)) {
 // attempt on the fire on show reads put out, not put out or cannot tell.
 console.log("\n[5f] Extinguishers");
 await page.getByRole("tab", { name: /^Simulate/ }).click();
-await page.locator("summary", { hasText: /^Extinguishers$/ }).first().click().catch(() => {});
+await openSummary(page, /^Extinguishers$/);
 const extSwitch = page.locator(".toggle__label", { hasText: /^Extinguishers$/ });
 const tExt = Date.now();
 await extSwitch.first().click().catch(() => {});
@@ -1711,13 +1914,13 @@ for (const name of ["Courtyard ring", "Office, two storeys"]) {
       // Doors as built (core/doorStates.js, 2026-11-07): the 14 doors whose
       // EN 13501-2 class carries -C (EI2 30-C, EI2 30-C-Sm) close themselves.
       await page.getByRole("tab", { name: /^Simulate/ }).click();
-      const solver = page.getByText("Flamescapes combustion solver (optional)", { exact: true });
-      await solver.click();
+      const fireModelList = page.getByLabel("How the fire spreads", { exact: true });
+      await fireModelList.selectOption("flamescapes");
       await page.getByRole("group", { name: "Doors", exact: true }).getByRole("button", { name: "As built" }).click();
       const asBuilt = await page.getByText(/close themselves are closed/).first().textContent({ timeout: 10000 }).catch(() => "");
       record(/14 of 81 doors here/.test(asBuilt), "  and its self-closing doors are read for an as-built run", (asBuilt.match(/\d+ of \d+ doors here/) || ["not shown"])[0]);
       await page.getByRole("group", { name: "Doors", exact: true }).getByRole("button", { name: "Open" }).click();
-      await solver.click();
+      await fireModelList.selectOption("temperature");
     }
   }
 }
@@ -1857,8 +2060,241 @@ for (const [call, list] of byCall) {
   // It ends on its field note (core/fieldNotes.js), found.
   const note = (await guidedPage.locator(".guided__note").textContent().catch(() => "")) || "";
   record(/^Field note found: How far is the walk out\?/.test(note), "  and ends on the field note it found", note.slice(0, 80) || "no note");
+  // Everyone walks out, and the card ends on the check the crowd model passes (core/guided.js, 2026-11-12).
+  const wayOutNumbers = (await guidedPage.locator(".guided__result").textContent().catch(() => "")) || "";
+  record(
+    /^Route [\d.]+ m/.test(wayOutNumbers) && /people walk out/.test(wayOutNumbers) && /RiMEA and NIST TN 1822/.test(wayOutNumbers),
+    "  and leads with the route, everyone walking out and the crowd model's check",
+    wayOutNumbers.slice(0, 200) || "no numbers",
+  );
   await guidedPage.close();
 }
+
+// The egress guided run (core/guided.js, the interface audit 2026-11-11): the
+// NIBS Clinic's graph, its egress map and dead ends drawn, then its fine grid
+// and the wheelchair audit laid on the floors. ?debug exposes the viewer to read its layers.
+{
+  const guidedPage = await context.newPage();
+  await guidedPage.goto(`${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`, { waitUntil: "load", timeout: 60000 });
+  await guidedPage.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  const t0 = Date.now();
+  await guidedPage.locator(".welcome").getByRole("button", { name: /^Every room, every exit/ }).click().catch(() => {});
+  const caption = await guidedPage
+    .waitForFunction(() => /^(Done|Stopped)/.test(document.querySelector(".guided__caption")?.textContent || "") && document.querySelector(".guided__caption").textContent, null, { timeout: 300000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const drawn = await guidedPage.evaluate(() => ["egressRoutes", "egressDeadEnds", "accessAudit", "accessIssues"].filter((n) => window.__viewer?.overlays?.has(n)));
+  // The map's readings are in its section, which the finished run opens
+  // (App.jsx guidedResultPlace); opened here only if it is still closed.
+  const mapHeader = guidedPage.locator(".section__header", { hasText: /^Egress map/ }).first();
+  const mapOpened = (await mapHeader.getAttribute("aria-expanded").catch(() => null)) === "true";
+  if (!mapOpened) await mapHeader.click().catch(() => {});
+  const mapped = /Farthest walk [\d.]+ m/.test(await guidedPage.locator(".panel__scroll").innerText().catch(() => ""));
+  const headline = (await guidedPage.locator(".guided__result").textContent().catch(() => "")) || "";
+  record(/^Done/.test(caption) && mapped && drawn.includes("egressDeadEnds") && drawn.includes("accessAudit"), "the egress guided run maps every room and lays the wheelchair audit on the floors", `${((Date.now() - t0) / 1000).toFixed(1)}s: ${caption || "no caption"}; drawn ${drawn.join(", ") || "nothing"}`);
+  record(mapOpened && /^Farthest walk [\d.]+ m/.test(headline), "  and at the end opens its result and leads with its numbers", `${mapOpened ? "section opened" : "section closed"}; ${headline || "no numbers"}`);
+  await guidedPage.close();
+}
+
+// A guided run in a browser of its own (2026-11-12, the interface audit of
+// that day): each stage's result is held on screen (core/guided.js
+// GUIDED_HOLD_MS, 2.5 s) where it flashed past in hundredths of a second;
+// while its fire plays the run's card holds the one Stop and the fire's
+// steps; the settings it changes are the user's again after a reload
+// mid-run, and after Guided runs (App.jsx guidedSet, useStudio.js
+// loadSettings). Guided runs, pressed in the card while the fire plays, ends
+// the run and the fire, the model goes and the welcome screen comes back at
+// its guided runs with no reload (backToWelcome); then from a model opened by
+// hand, by the button at the top left of the view, inside the view and below
+// the header on a phone too.
+{
+  const ownContext = await browser.newContext(MOBILE ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1600, height: 950 } });
+  const p = await ownContext.newPage();
+  const debugUrl = `${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`;
+  // The user's own choices, which "A fire on the route" changes (a Flamescapes fire, rerouting on).
+  await p.goto(debugUrl, { waitUntil: "load", timeout: 60000 });
+  await p.evaluate(() => localStorage.setItem("ts.settings", JSON.stringify({ fireModel: "radial", reroute: false })));
+  await p.reload({ waitUntil: "load", timeout: 60000 });
+  await p.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  const stored = () => p.evaluate(() => ({ settings: JSON.parse(localStorage.getItem("ts.settings") || "{}"), before: localStorage.getItem("ts.guidedBefore") }));
+  const captionClock = () =>
+    p.evaluate(() => {
+      window.__captions = [];
+      const seen = () => {
+        const text = document.querySelector(".guided__caption")?.textContent || "";
+        if (text && window.__captions.at(-1)?.text !== text) window.__captions.push({ text, t: performance.now() });
+      };
+      new MutationObserver(seen).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+  const firePlaying = () =>
+    p
+      .waitForFunction(() => /Fire step \d+/.test(document.querySelector(".guided")?.textContent || ""), null, { timeout: 240000 })
+      .then(() => true)
+      .catch(() => false);
+  await captionClock();
+  await p.locator(".welcome").getByRole("button", { name: /^A fire on the route/ }).click().catch(() => {});
+  const playing = await firePlaying();
+  const held = await p.evaluate(() => {
+    const c = window.__captions;
+    // Every stage after the opening (which waits for the model to load) up to
+    // the fire, whose caption then names the GPU it runs on.
+    const fireAt = c.findIndex((x) => /^The heads over the fire open/.test(x.text));
+    return c.slice(1, fireAt).map((x, i) => ({ text: x.text, s: (c[i + 2].t - x.t) / 1000 }));
+  });
+  const shortest = held.length ? Math.min(...held.map((x) => x.s)) : 0;
+  record(
+    playing && held.length >= 4 && shortest >= 2,
+    "a guided run holds each stage's result on screen before the next",
+    held.map((x) => `${x.text.slice(0, 24)} ${x.s.toFixed(1)} s`).join("; ") || "no stages seen",
+  );
+  const stops = await p.evaluate(() =>
+    [...document.querySelectorAll("button")].filter((b) => /^Stop( fire)?$/.test(b.textContent.trim()) && b.getClientRects().length > 0).map((b) => (b.closest(".guided") ? "card" : b.closest(".panel") ? "panel" : "view")),
+  );
+  record(stops.length === 1 && stops[0] === "card", "  while its fire plays, one Stop, in the run's card, with the fire's steps", stops.join(", ") || "none");
+  const during = await stored();
+  // A reload mid-run gives the user's settings back.
+  await p.reload({ waitUntil: "load", timeout: 60000 });
+  await p.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  const afterReload = await stored();
+  record(
+    during.settings.fireModel === "flamescapes" && Boolean(during.before) && afterReload.settings.fireModel === "radial" && afterReload.settings.reroute === false && !afterReload.before,
+    "  the settings it changed are the user's again after a reload mid-run",
+    `during ${during.settings.fireModel}, after the reload ${afterReload.settings.fireModel}, rerouting ${afterReload.settings.reroute}`,
+  );
+  await p.evaluate(() => {
+    window.__samePage = true;
+  });
+  await p.locator(".welcome").getByRole("button", { name: /^A fire on the route/ }).click().catch(() => {});
+  const playingAgain = await firePlaying();
+  await p.locator(".guided").getByRole("button", { name: "Back to the guided runs" }).click().catch(() => {});
+  // Long enough for a guided stage, a fire step or a late load to come back if any were left running.
+  await p.waitForTimeout(3000);
+  const after = await p.evaluate(() => ({
+    samePage: window.__samePage === true,
+    welcome: Boolean(document.querySelector(".welcome")),
+    guided: Boolean(document.querySelector(".guided")),
+    fire: [...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent.trim())),
+    model: Boolean(window.__viewer?.model || window.__viewer?.lod1),
+    layers: window.__viewer?.overlays?.size ?? -1,
+    focus: document.activeElement?.textContent?.trim() || "",
+    fireModel: JSON.parse(localStorage.getItem("ts.settings") || "{}").fireModel,
+  }));
+  record(
+    playingAgain && after.samePage && after.welcome && !after.guided && !after.fire && !after.model && after.layers === 0,
+    "Guided runs, pressed while a guided run's fire plays, ends it and shows the welcome screen without a reload",
+    JSON.stringify(after),
+  );
+  record(after.fireModel === "radial", "  and gives the user's settings back", `fire model ${after.fireModel || "not stored"}`);
+  record(after.focus === "Watch a guided run", "  with the keyboard's focus on the guided runs", after.focus || "nowhere");
+  await p.locator(".welcome").getByRole("button", { name: /^Duplex apartment/ }).click({ timeout: 60000 }).catch(() => {});
+  await p.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Build egress graph/.test(b.textContent) && !b.disabled), null, { timeout: 120000 }).catch(() => {});
+  const home = p.locator(".viewport__top").getByRole("button", { name: "Back to the guided runs" });
+  const homeBox = await home.boundingBox().catch(() => null);
+  const placed = await p.evaluate((box) => {
+    const view = document.querySelector(".viewport")?.getBoundingClientRect();
+    const header = document.querySelector(".header")?.getBoundingClientRect();
+    return Boolean(box && view && header) && box.y >= header.bottom && box.x >= view.left && box.x + box.width <= view.right && document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+  }, homeBox);
+  await home.click().catch(() => {});
+  const back = await p.waitForFunction(() => Boolean(document.querySelector(".welcome")), null, { timeout: 10000 }).then(() => true).catch(() => false);
+  const samePage = await p.evaluate(() => window.__samePage === true);
+  record(
+    placed && back && samePage,
+    "  and from a model opened by hand, by the button at the top left of the view",
+    `${homeBox ? `at ${Math.round(homeBox.x)}, ${Math.round(homeBox.y)}, ${Math.round(homeBox.width)} px wide` : "not shown"}${placed ? "" : " (outside the view, or the page scrolls sideways)"}, ${back ? "welcome" : "no welcome"}, ${samePage ? "no reload" : "reloaded"}`,
+  );
+  await ownContext.close();
+}
+
+
+// Out of storage (core/memoryNotice.js, lib/caches.js; the user's request of
+// 2026-11-12): a cache write refused with QuotaExceededError (IndexedDB's
+// put stubbed for the model cache) shows one notice saying so and how much
+// the caches hold; its button clears the kept runs and converted models and
+// says what it freed; the settings stay.
+{
+  const ownContext = await browser.newContext(MOBILE ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1600, height: 950 } });
+  const p = await ownContext.newPage();
+  await p.goto(`${URL_BASE}${URL_BASE.includes("?") ? "&" : "?"}debug`, { waitUntil: "load", timeout: 60000 });
+  await p.evaluate(() => localStorage.setItem("ts.settings", JSON.stringify({ fireMaxSteps: 77 })));
+  await p.reload({ waitUntil: "load", timeout: 60000 });
+  await p.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 }).catch(() => {});
+  // One kept run, 1 MB, as core/runCache.js keeps it.
+  const runsIn = () =>
+    p.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const open = indexedDB.open("topologic-studio-runs", 1);
+          open.onupgradeneeded = () => {
+            open.result.createObjectStore("meta", { keyPath: "key" });
+            open.result.createObjectStore("frames");
+          };
+          open.onerror = () => resolve(-1);
+          open.onsuccess = () => {
+            const db = open.result;
+            const get = db.transaction("meta").objectStore("meta").count();
+            get.onsuccess = () => {
+              db.close();
+              resolve(get.result);
+            };
+            get.onerror = () => resolve(-1);
+          };
+        }),
+    );
+  const kept = await p.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const open = indexedDB.open("topologic-studio-runs", 1);
+        open.onupgradeneeded = () => {
+          open.result.createObjectStore("meta", { keyPath: "key" });
+          open.result.createObjectStore("frames");
+        };
+        open.onerror = () => resolve(false);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction(["meta", "frames"], "readwrite");
+          tx.objectStore("frames").put({ info: {}, frames: [{ T: new Float32Array(262144) }], result: {} }, "browser-test");
+          tx.objectStore("meta").put({ key: "browser-test", bytes: 2 ** 20, usedAt: Date.now(), savedAt: Date.now() });
+          tx.oncomplete = () => {
+            db.close();
+            resolve(true);
+          };
+          tx.onerror = () => resolve(false);
+        };
+      }),
+  );
+  // The model cache's writes refused as a full store refuses them.
+  await p.evaluate(() => {
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (...args) {
+      if (this.name === "fragments") throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+      return put.apply(this, args);
+    };
+  });
+  await p.locator('input[type="file"][accept=".ifc"]').first().setInputFiles(IFC);
+  const notice = p.locator(".memory-notice");
+  const said = await notice
+    .waitFor({ state: "visible", timeout: 180000 })
+    .then(() => notice.innerText())
+    .catch(() => "");
+  const runsBefore = await runsIn();
+  await notice.getByRole("button", { name: "Clear cached runs and models" }).click().catch(() => {});
+  const freed = await p
+    .waitForFunction(() => document.querySelector(".memory-notice")?.innerText.match(/Freed [^\n]*/)?.[0], null, { timeout: 30000 })
+    .then((h) => h.jsonValue())
+    .catch(() => "");
+  const runsAfter = await runsIn();
+  const settingsAfter = await p.evaluate(() => JSON.parse(localStorage.getItem("ts.settings") || "{}"));
+  record(
+    kept && /storage for this site is full/.test(said) && /1 run\b/.test(said) && runsBefore === 1 && /^Freed .*1 kept run/.test(freed) && runsAfter === 0 && settingsAfter.fireMaxSteps === 77,
+    "a full store shows one notice; its button clears the kept runs and models and keeps the settings",
+    JSON.stringify({ said: said.replace(/\s+/g, " ").slice(0, 160), runsBefore, freed, runsAfter, fireMaxSteps: settingsAfter.fireMaxSteps }),
+  );
+  await notice.getByRole("button", { name: "Dismiss" }).click().catch(() => {});
+  record(!(await notice.isVisible().catch(() => false)), "  and Dismiss closes it");
+  await ownContext.close();
+}
+
 
 // Hints and field notes from a fresh browser (nothing stored): the count
 // starts at 0, a hint leads past the model, and a dismissed hint stays gone.
@@ -1914,8 +2350,8 @@ if (LINKED && existsSync(LINKED)) {
     await p.getByRole("button", { name: /Build egress graph|Rebuild graph/ }).first().click();
     await p.waitForFunction(() => /nodes/.test(document.querySelector(".statusbar")?.innerText || ""), null, { timeout: 120000 }).catch(() => {});
     await p.getByRole("tab", { name: /^Simulate/ }).click();
-    await p.getByText("Flamescapes combustion solver (optional)", { exact: true }).click().catch(() => {});
-    await p.locator("summary", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
+    await p.getByLabel("How the fire spreads", { exact: true }).selectOption("flamescapes").catch(() => {});
+    await openSummary(p, /^Sprinklers$/);
     await p.locator(".toggle__label", { hasText: /^Sprinklers$/ }).first().click().catch(() => {});
     await p.waitForFunction(() => /\d+ sprinkler heads/.test(document.querySelector(".panel__scroll")?.innerText || ""), null, { timeout: 60000 }).catch(() => {});
     const line = ((await p.locator(".panel__scroll").first().innerText().catch(() => "")).match(/\d+ sprinkler heads[^\n]*/)?.[0] || "").trim();

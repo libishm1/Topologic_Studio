@@ -305,11 +305,15 @@ test("a closed door keeps the smoke in: outside the room it stays clearer than w
 
 test("running ventilation: the ducts conserve each species and the heat, and carry smoke to a sealed room", () => {
   const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
-  // The fire room, and a sealed room beside it (x 6 to 9) joined to it only by the ducts.
-  const sealed = [box(5.8, 0, -0.2, 9.2, 2.7, 0), box(5.8, 0, 4, 9.2, 2.7, 4.2), box(5.8, 0, 0, 6, 2.7, 4), box(9, 0, 0, 9.2, 2.7, 4)];
+  // The fire room, and a sealed room beside it (x 6 to 9) joined to it only
+  // by the ducts. Its walls, floor and roof are 0.4 m, more than a cell, so
+  // the 0.3 m grid seals it: 0.2 m elements fell a third in each of two cells
+  // and left gaps, which the heat-conserving transport's expansion pushed
+  // smoke through (2026-11-12).
+  const sealed = [box(5.6, 0, -0.4, 9.4, 2.7, 0), box(5.6, 0, 4, 9.4, 2.7, 4.4), box(5.6, 0, 0, 6, 2.7, 4), box(9, 0, 0, 9.4, 2.7, 4)];
   const geometry = () => {
     const g = room();
-    return { ...g, walls: [...g.walls, ...sealed], floors: [...g.floors, box(5.8, -0.2, -0.2, 9.2, 0, 4.2)], roofs: [...g.roofs, box(5.8, 2.7, -0.2, 9.2, 2.9, 4.2)] };
+    return { ...g, walls: [...g.walls, ...sealed], floors: [...g.floors, box(5.6, -0.4, -0.4, 9.4, 0, 4.4)], roofs: [...g.roofs, box(5.6, 2.7, -0.4, 9.4, 3.1, 4.4)] };
   };
   const terminals = [[2.5, 2.6, 2], [7.5, 2.6, 2]];
   const nodes = Float32Array.from([7.5, 0.75, 2]);
@@ -482,11 +486,14 @@ test("every fire class burns: liquid pools give off at most their burning rate",
   assert.equal(poolCap({ boiling: 300, latent: 1e5 }, 1, 0.1), Infinity);
   assert.ok(Math.abs(poolCap({ mInf: 0.017 }, 2, 0.1) - 0.017 * 2 * 0.1) < 1e-12, "no k beta: no diameter dependence");
   // Without the cap the pilot boiled a liquid pool off in a few steps into
-  // one cell, too rich to burn: classes B and K released nothing.
+  // one cell, too rich to burn: classes B and K released nothing. Over 10 s:
+  // with the heat-conserving transport (2026-11-12) a pool no longer flashes
+  // 40 to 50 kW in its first 5 s (the old transport's mixing made heat) and
+  // burns 13 to 25 kW from the start, as it did after the flash.
   for (const cls of FIRE_CLASS_KEYS) {
     const { contentsFuel, ignitionFuel, item } = fuelsFor(cls);
     const scene = buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item });
-    const out = runScene(scene, { nodes: Float32Array.from([2.5, 0.75, 2]), horizon: 5, frameSeconds: 5, particles: 0 });
+    const out = runScene(scene, { nodes: Float32Array.from([2.5, 0.75, 2]), horizon: 10, frameSeconds: 5, particles: 0 });
     assert.ok(out.stats.released > 1e5, `class ${cls}: released ${out.stats.released} J`);
   }
 });
@@ -555,4 +562,21 @@ test("flame particles that would overfill their share spawn from burning cells s
   for (let q = 0; q < sim.parts.n; q += 1) if (sim.parts.T[q] - 400 >= burning.length / 2) late += 1;
   // Refused in order, every particle came from the first cells; shared, about half from the later half.
   assert.ok(late > 0.3 * sim.parts.n && late < 0.7 * sim.parts.n, `${late} of ${sim.parts.n} from the later half of the cells`);
+});
+
+test("a pan is a design fire grown to its large-pool rate and held there: it burns on after 40 s (2026-11-12)", async () => {
+  const { designFireFor } = await import("./fireClasses.js");
+  const { poolCap } = await import("./flamescapes.js");
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("K");
+  const designFire = designFireFor("K");
+  assert.ok(designFire, "class K has a design fire");
+  const scene = buildScene(room(), { fire: [2.5, 0.3, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item, designFire });
+  // The pan alone: no contents to catch.
+  scene.contents = { cells: [], masses: [] };
+  const peak = poolCap(ignitionFuel.liquid, item.area, 1) * ignitionFuel.heatOfCombustion;
+  assert.ok(Math.abs(scene.burner.design.peak - peak) < 1e-6 * peak);
+  const frames = [];
+  runScene(scene, { nodes: Float32Array.from([1, 1.5, 1]), horizon: 90, frameSeconds: 3, particles: 0, keep: false, onFrame: (f) => frames.push(f.hrr) });
+  // Past its growth (about 10 s) it holds its pool rate, 19 kW, in a ventilated room.
+  for (const kw of frames.slice(5)) assert.ok(Math.abs(kw * 1000 - peak) < 0.02 * peak, `${kw.toFixed(1)} kW against ${(peak / 1000).toFixed(1)} kW`);
 });

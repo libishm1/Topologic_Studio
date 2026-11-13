@@ -10,8 +10,11 @@
  * it was last used), so making room never reads a run's frames.
  *
  * Any failure of the store (a private window, blocked storage, a full disk)
- * leaves the run to be computed as before: the store only saves time.
+ * leaves the run to be computed as before: the store only saves time. A full
+ * store is reported, so the page can offer to clear it (core/memoryNotice.js),
+ * and a store nearly full is warned of after a run is kept.
  */
+import { checkStorage, reportMemoryProblem } from "./memoryNotice.js";
 
 /** Bump with any change to what the solver computes or how a frame is laid out. */
 // 2 (2026-11-07): frames carry the ceiling detectors (flamescapesRun.js ceilingDetectors).
@@ -34,7 +37,21 @@
 // floor, and a grid clipped round a fire under one reaches the atrium's top
 // (flamescapesRun.js atriumTop): the NIBS Clinic's atria held their smoke at
 // the ground floor.
-export const RUN_CACHE_VERSION = 9;
+// 10 (2026-11-11): the fire calibration's proposals A to C
+// (wiki/research/fire-calibration-plan-2026-11-11.md): each frame's steps cut
+// by the fastest gas and the confinement (flamescapes.js substepsFor), the
+// confinement strength fitted to 6 (was 10), and a run that diverges stopped
+// with its health in the result (healthVerdict).
+// 11 (2026-11-12): proposal F, the heat-conserving transport (density moved
+// in fluxes, the gas expanding as it is heated), particles that no longer
+// jump walls, and the confinement refitted on it
+// (wiki/research/fire-calibration-claim-protocol-2026-11-12.md).
+// 12 (2026-11-12): the review's transport fixes, sweeps alternating their
+// order and porous cells slowed inside the projection, on CPU and GPU.
+// 13 (2026-11-12): plan 13's physics, walls conducting through their layers,
+// soot settling on surfaces, a pressure for each sealed region and leakage
+// from it (fire-calibration-plan-2026-11-11.md, 13.8 to 13.13).
+export const RUN_CACHE_VERSION = 13;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 
@@ -160,8 +177,11 @@ export async function writeRun(key, { info, frames, result: runResult }) {
     tx.objectStore(FRAMES).put({ info, frames, result: runResult }, key);
     tx.objectStore(META).put({ key, bytes, usedAt: now, savedAt: now });
     await done(tx);
+    void checkStorage("keeping a run");
     return true;
-  } catch {
+  } catch (error) {
+    // Not kept; a full store says so (QuotaExceededError).
+    reportMemoryProblem(error, "keeping a run");
     return false;
   }
 }

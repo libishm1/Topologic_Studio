@@ -1,0 +1,5110 @@
+{
+ "generated": "2026-11-12T04:57:32.474Z",
+ "screened": 638,
+ "byRelevance": {
+  "0": 347,
+  "1": 102,
+  "2": 129,
+  "3": 60
+ },
+ "byBatch": {
+  "coded_00.json": [
+   53,
+   20,
+   24,
+   10
+  ],
+  "coded_01.json": [
+   59,
+   15,
+   20,
+   13
+  ],
+  "coded_02.json": [
+   61,
+   13,
+   18,
+   14
+  ],
+  "coded_03.json": [
+   58,
+   17,
+   24,
+   7
+  ],
+  "coded_04.json": [
+   57,
+   17,
+   22,
+   10
+  ],
+  "coded_05.json": [
+   59,
+   20,
+   21,
+   6
+  ]
+ },
+ "included": 189,
+ "secondScreen": {
+  "sample": 66,
+  "matched": 66,
+  "includeKappa": {
+   "kappa": 0.835,
+   "observed": 0.939,
+   "matrix": [
+    [
+     48,
+     3
+    ],
+    [
+     1,
+     14
+    ]
+   ]
+  },
+  "weightedKappa": {
+   "kappa": 0.877,
+   "observed": 0.96,
+   "matrix": [
+    [
+     32,
+     4,
+     0,
+     0
+    ],
+    [
+     0,
+     12,
+     3,
+     0
+    ],
+    [
+     0,
+     1,
+     10,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     4
+    ]
+   ]
+  }
+ },
+ "adjudication": {
+  "rule": "conservative title and abstract rule: a record is included if either screener coded it relevance 2 or 3",
+  "addedBySecondScreen": [
+   {
+    "id": "W7167739235",
+    "first": 1,
+    "second": 2,
+    "adjudicated": 2
+   },
+   {
+    "id": "W4411236800",
+    "first": 1,
+    "second": 2,
+    "adjudicated": 2
+   },
+   {
+    "id": "W2182996281",
+    "first": 1,
+    "second": 2,
+    "adjudicated": 2
+   }
+  ],
+  "keptIncludedAgainstSecondScreen": [
+   {
+    "id": "W7220741902",
+    "first": 2,
+    "second": 1
+   }
+  ],
+  "byRelevance": {
+   "0": 347,
+   "1": 99,
+   "2": 132,
+   "3": 60
+  },
+  "excludedAtScreening": 446,
+  "included": 192
+ },
+ "languageExclusion": {
+  "criterion": "PROTOCOL.md section 2 (English only), applied after screening",
+  "rule": "language is judged by the record's own title and abstract (each in English throughout); the OpenAlex language tag decides only when those are not in English or are absent",
+  "tagNotEnglish": [
+   {
+    "id": "W2232823732",
+    "tag": "ko",
+    "title": false,
+    "abstract": true,
+    "decidedBy": "OpenAlex tag",
+    "english": false
+   },
+   {
+    "id": "W2205970482",
+    "tag": "ko",
+    "title": false,
+    "abstract": true,
+    "decidedBy": "OpenAlex tag",
+    "english": false
+   },
+   {
+    "id": "W2078136457",
+    "tag": "de",
+    "title": false,
+    "abstract": false,
+    "decidedBy": "OpenAlex tag",
+    "english": false
+   },
+   {
+    "id": "W2963893295",
+    "tag": "ko",
+    "title": false,
+    "abstract": true,
+    "decidedBy": "OpenAlex tag",
+    "english": false
+   },
+   {
+    "id": "W1944898881",
+    "tag": "ko",
+    "title": false,
+    "abstract": false,
+    "decidedBy": "OpenAlex tag",
+    "english": false
+   },
+   {
+    "id": "W2625495185",
+    "tag": "fr",
+    "title": true,
+    "abstract": true,
+    "decidedBy": "title and abstract",
+    "english": true
+   },
+   {
+    "id": "W2017227797",
+    "tag": "ko",
+    "title": true,
+    "abstract": false,
+    "decidedBy": "OpenAlex tag",
+    "english": false
+   },
+   {
+    "id": "W7216890124",
+    "tag": "ru",
+    "title": false,
+    "abstract": true,
+    "decidedBy": "OpenAlex tag",
+    "english": false
+   }
+  ],
+  "decidedByTagWithEnglishTag": 9,
+  "excluded": [
+   {
+    "id": "W2232823732",
+    "language": "ko",
+    "relevance": 2,
+    "decidedBy": "OpenAlex tag"
+   },
+   {
+    "id": "W2205970482",
+    "language": "ko",
+    "relevance": 3,
+    "decidedBy": "OpenAlex tag"
+   },
+   {
+    "id": "W2078136457",
+    "language": "de",
+    "relevance": 3,
+    "decidedBy": "OpenAlex tag"
+   },
+   {
+    "id": "W2963893295",
+    "language": "ko",
+    "relevance": 3,
+    "decidedBy": "OpenAlex tag"
+   },
+   {
+    "id": "W1944898881",
+    "language": "ko",
+    "relevance": 2,
+    "decidedBy": "OpenAlex tag"
+   },
+   {
+    "id": "W2017227797",
+    "language": "ko",
+    "relevance": 3,
+    "decidedBy": "OpenAlex tag"
+   },
+   {
+    "id": "W7216890124",
+    "language": "ru",
+    "relevance": 2,
+    "decidedBy": "OpenAlex tag"
+   }
+  ],
+  "count": 7
+ },
+ "final": {
+  "included": 185,
+  "byRelevance": {
+   "2": 129,
+   "3": 56
+  },
+  "withDoi": 146,
+  "withoutDoi": 39,
+  "coreWithDoi": 44,
+  "coreWithoutDoi": 12
+ },
+ "includedRecords": [
+  {
+   "id": "W4224030699",
+   "relevance": 3,
+   "quantities": [
+    "SP",
+    "HGL-T",
+    "HGL-D",
+    "CJ",
+    "HF"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W7203562589",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "SP",
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G5",
+    "G4",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4246788443",
+   "relevance": 2,
+   "quantities": [
+    "SP",
+    "HGL-T",
+    "HF",
+    "VF",
+    "P"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2089265701",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W7223163330",
+   "relevance": 2,
+   "quantities": [
+    "CJ",
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W1984249543",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2967451391",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "review",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2752644946",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2064698187",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W1983728628",
+   "relevance": 3,
+   "quantities": [
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2889931307",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7",
+    "G2"
+   ]
+  },
+  {
+   "id": "W3214375004",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2052542752",
+   "relevance": 2,
+   "quantities": [
+    "CJ"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2298702331",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "CJ",
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2",
+    "G7"
+   ]
+  },
+  {
+   "id": "W207304312",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "CJ",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2"
+   ]
+  },
+  {
+   "id": "W4367319975",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2164552768",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "SP"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W1680672348",
+   "relevance": 2,
+   "quantities": [
+    "VF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W7162752252",
+   "relevance": 2,
+   "quantities": [
+    "VF",
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G4"
+   ]
+  },
+  {
+   "id": "W2006929048",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "application",
+   "links": [
+    "G1",
+    "G8"
+   ]
+  },
+  {
+   "id": "W1967273431",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HRR"
+   ],
+   "study_type": "other",
+   "links": [
+    "G8",
+    "G2"
+   ]
+  },
+  {
+   "id": "W7220741902",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W1974392234",
+   "relevance": 2,
+   "quantities": [
+    "CJ",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2083947450",
+   "relevance": 2,
+   "quantities": [
+    "SP"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W7222945094",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G1",
+    "G7"
+   ]
+  },
+  {
+   "id": "W1996209461",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T",
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4234496869",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G6",
+    "G7"
+   ]
+  },
+  {
+   "id": "W3126579825",
+   "relevance": 2,
+   "quantities": [
+    "HGL-D",
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G8"
+   ]
+  },
+  {
+   "id": "W2107843747",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4288826200",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2",
+    "G5",
+    "G8"
+   ]
+  },
+  {
+   "id": "W4235862514",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2793047552",
+   "relevance": 2,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W1998489501",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G5"
+   ]
+  },
+  {
+   "id": "W7204007328",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "application",
+   "links": [
+    "G3",
+    "G7",
+    "G8"
+   ]
+  },
+  {
+   "id": "W630713911",
+   "relevance": 2,
+   "quantities": [
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W3035585175",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF",
+    "ACT"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W3180733075",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HF",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2153712086",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2377144712",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2054589644",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "SP"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2068727399",
+   "relevance": 2,
+   "quantities": [
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2365964331",
+   "relevance": 3,
+   "quantities": [
+    "HRR",
+    "HGL-T",
+    "SP",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G4"
+   ]
+  },
+  {
+   "id": "W4413961797",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2049739590",
+   "relevance": 3,
+   "quantities": [
+    "VIS",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2171186102",
+   "relevance": 2,
+   "quantities": [
+    "VF",
+    "HGL-D",
+    "PL"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2148575280",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VF",
+    "HF",
+    "P",
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2948670800",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "P",
+    "HRR"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W1990985893",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2012321095",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2965299916",
+   "relevance": 2,
+   "quantities": [
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W7225654353",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2348649765",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "PL"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4280580788",
+   "relevance": 3,
+   "quantities": [
+    "HF",
+    "HGL-T",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2232823732",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "HF",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2205970482",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HF",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W7115932960",
+   "relevance": 3,
+   "quantities": [
+    "HRR",
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2351063404",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2385288541",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "CJ",
+    "ACT"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4256333735",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "PL"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2358257972",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "review",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2349379097",
+   "relevance": 2,
+   "quantities": [
+    "VF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2941756747",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HF"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G3",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4390689435",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W7204246184",
+   "relevance": 2,
+   "quantities": [
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2169373766",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "review",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2921131578",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7",
+    "G1"
+   ]
+  },
+  {
+   "id": "W17150629",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "P",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W37191607",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS",
+    "ACT",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2131637209",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "CJ",
+    "ACT"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G3",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2961146534",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "HGL-D",
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G5",
+    "G6",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2295222537",
+   "relevance": 3,
+   "quantities": [
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4200295039",
+   "relevance": 2,
+   "quantities": [
+    "SP",
+    "VIS",
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G4"
+   ]
+  },
+  {
+   "id": "W7118521359",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2070084311",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W4410867227",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G5"
+   ]
+  },
+  {
+   "id": "W4322722381",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "ACT",
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2225884227",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G6"
+   ]
+  },
+  {
+   "id": "W2099483237",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "PL",
+    "ACT",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W1971053176",
+   "relevance": 2,
+   "quantities": [
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2535847608",
+   "relevance": 3,
+   "quantities": [
+    "PL",
+    "VF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G1",
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2367539038",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2964154046",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VF",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2078136457",
+   "relevance": 3,
+   "quantities": [
+    "SP",
+    "HGL-T",
+    "HF",
+    "HRR"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G4",
+    "G6",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2140002002",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "PL",
+    "VF",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2922279254",
+   "relevance": 3,
+   "quantities": [
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G6",
+    "G8"
+   ]
+  },
+  {
+   "id": "W834005631",
+   "relevance": 2,
+   "quantities": [
+    "HF",
+    "HGL-T",
+    "VIS"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G6",
+    "G3"
+   ]
+  },
+  {
+   "id": "W2149496916",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2",
+    "G7",
+    "G8"
+   ]
+  },
+  {
+   "id": "W4283164986",
+   "relevance": 2,
+   "quantities": [
+    "VF"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G5",
+    "G1"
+   ]
+  },
+  {
+   "id": "W4400476723",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T",
+    "PL"
+   ],
+   "study_type": "application",
+   "links": [
+    "G1",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2166049825",
+   "relevance": 3,
+   "quantities": [
+    "HRR",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2385904724",
+   "relevance": 3,
+   "quantities": [
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2319320566",
+   "relevance": 2,
+   "quantities": [
+    "CJ"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2136620645",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4414038121",
+   "relevance": 3,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2552739385",
+   "relevance": 2,
+   "quantities": [
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2527972284",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2963893295",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HF",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G4"
+   ]
+  },
+  {
+   "id": "W2014296295",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W7153080563",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HRR"
+   ],
+   "study_type": "application",
+   "links": [
+    "G8"
+   ]
+  },
+  {
+   "id": "W321386387",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G4"
+   ]
+  },
+  {
+   "id": "W4288906181",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF",
+    "VIS"
+   ],
+   "study_type": "application",
+   "links": [
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2054672389",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HF",
+    "SP",
+    "HRR"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2189156523",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2322216265",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W4387173920",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "HGL-T",
+    "CJ",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G5",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4220963718",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2139525571",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W4206162084",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2256247035",
+   "relevance": 2,
+   "quantities": [
+    "HGL-D",
+    "VIS",
+    "SP",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2170566917",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2280453142",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2787217931",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2044447670",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS",
+    "VF"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2145241919",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF",
+    "HRR"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4386392776",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "P",
+    "VF",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G7"
+   ]
+  },
+  {
+   "id": "W4416197017",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5"
+   ]
+  },
+  {
+   "id": "W1968927787",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VIS",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G5"
+   ]
+  },
+  {
+   "id": "W4386459933",
+   "relevance": 3,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2096720047",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W310756976",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HF",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G4",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2075361024",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4389548772",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "CJ",
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7",
+    "G8"
+   ]
+  },
+  {
+   "id": "W3192610989",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2958868006",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W1944898881",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2965088074",
+   "relevance": 2,
+   "quantities": [
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2184685784",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2899736209",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G5"
+   ]
+  },
+  {
+   "id": "W4406650129",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2166433387",
+   "relevance": 2,
+   "quantities": [
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2"
+   ]
+  },
+  {
+   "id": "W194912415",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W7126436594",
+   "relevance": 2,
+   "quantities": [
+    "CJ",
+    "SP",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2406155498",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2943923149",
+   "relevance": 2,
+   "quantities": [
+    "HGL-D",
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4293256377",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4392563790",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "SP",
+    "HGL-T"
+   ],
+   "study_type": "review",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W3133571523",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G4"
+   ]
+  },
+  {
+   "id": "W4410193881",
+   "relevance": 3,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2767364241",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2790456418",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "PL",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2625495185",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T",
+    "HGL-D",
+    "ACT",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4391500057",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2593206074",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "SP",
+    "HF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2",
+    "G4",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2106970469",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G3",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2001836338",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2802384651",
+   "relevance": 3,
+   "quantities": [
+    "ACT",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2964760121",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2154086057",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VIS"
+   ],
+   "study_type": "review",
+   "links": [
+    "G1",
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W4405902547",
+   "relevance": 2,
+   "quantities": [
+    "HF",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4405763289",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W4387121986",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2576581862",
+   "relevance": 2,
+   "quantities": [
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W7214071870",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "VIS"
+   ],
+   "study_type": "application",
+   "links": [
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W284748975",
+   "relevance": 2,
+   "quantities": [
+    "SP"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2969649548",
+   "relevance": 2,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2367449549",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "CJ"
+   ],
+   "study_type": "experiment-dataset",
+   "links": []
+  },
+  {
+   "id": "W3203715070",
+   "relevance": 3,
+   "quantities": [
+    "P",
+    "VF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2104577099",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2358095607",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2490967968",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2017227797",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G7"
+   ]
+  },
+  {
+   "id": "W7133320689",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2015102212",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "CJ",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W4200428390",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VIS",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2918152810",
+   "relevance": 3,
+   "quantities": [
+    "HF",
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G6"
+   ]
+  },
+  {
+   "id": "W2554421255",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W3121697780",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4236469861",
+   "relevance": 2,
+   "quantities": [
+    "CJ",
+    "PL",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2770197473",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G6"
+   ]
+  },
+  {
+   "id": "W7216890124",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2059781924",
+   "relevance": 3,
+   "quantities": [
+    "VIS",
+    "CJ",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2119374026",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4401564464",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G3"
+   ]
+  },
+  {
+   "id": "W2071507235",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2902405022",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G6"
+   ]
+  },
+  {
+   "id": "W2003967179",
+   "relevance": 2,
+   "quantities": [
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W7213621458",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W3120322951",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2039119418",
+   "relevance": 2,
+   "quantities": [
+    "HRR"
+   ],
+   "study_type": "experiment-dataset",
+   "links": []
+  },
+  {
+   "id": "W2965576949",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "VF",
+    "P",
+    "SP"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2",
+    "G4",
+    "G5"
+   ]
+  },
+  {
+   "id": "W3134612654",
+   "relevance": 2,
+   "quantities": [
+    "HF",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2154786117",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G5"
+   ]
+  },
+  {
+   "id": "W3134459342",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T",
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2117680649",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4405009244",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W7225382650",
+   "relevance": 2,
+   "quantities": [
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2031640449",
+   "relevance": 2,
+   "quantities": [
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W7150803117",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W7155095810",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G4",
+    "G5"
+   ]
+  }
+ ],
+ "finalIncludedRecords": [
+  {
+   "id": "W4224030699",
+   "relevance": 3,
+   "quantities": [
+    "SP",
+    "HGL-T",
+    "HGL-D",
+    "CJ",
+    "HF"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W7203562589",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "SP",
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G5",
+    "G4",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4246788443",
+   "relevance": 2,
+   "quantities": [
+    "SP",
+    "HGL-T",
+    "HF",
+    "VF",
+    "P"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2089265701",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W7223163330",
+   "relevance": 2,
+   "quantities": [
+    "CJ",
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W1984249543",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2967451391",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "review",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2752644946",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2064698187",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W1983728628",
+   "relevance": 3,
+   "quantities": [
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2889931307",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7",
+    "G2"
+   ]
+  },
+  {
+   "id": "W3214375004",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2052542752",
+   "relevance": 2,
+   "quantities": [
+    "CJ"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2298702331",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "CJ",
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2",
+    "G7"
+   ]
+  },
+  {
+   "id": "W207304312",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "CJ",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2"
+   ]
+  },
+  {
+   "id": "W4367319975",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2164552768",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "SP"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W1680672348",
+   "relevance": 2,
+   "quantities": [
+    "VF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W7162752252",
+   "relevance": 2,
+   "quantities": [
+    "VF",
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G4"
+   ]
+  },
+  {
+   "id": "W2006929048",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "application",
+   "links": [
+    "G1",
+    "G8"
+   ]
+  },
+  {
+   "id": "W1967273431",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HRR"
+   ],
+   "study_type": "other",
+   "links": [
+    "G8",
+    "G2"
+   ]
+  },
+  {
+   "id": "W7220741902",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W1974392234",
+   "relevance": 2,
+   "quantities": [
+    "CJ",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2083947450",
+   "relevance": 2,
+   "quantities": [
+    "SP"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W7222945094",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G1",
+    "G7"
+   ]
+  },
+  {
+   "id": "W1996209461",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T",
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4234496869",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G6",
+    "G7"
+   ]
+  },
+  {
+   "id": "W3126579825",
+   "relevance": 2,
+   "quantities": [
+    "HGL-D",
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G8"
+   ]
+  },
+  {
+   "id": "W2107843747",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4288826200",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2",
+    "G5",
+    "G8"
+   ]
+  },
+  {
+   "id": "W4235862514",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2793047552",
+   "relevance": 2,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W1998489501",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G5"
+   ]
+  },
+  {
+   "id": "W7204007328",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "application",
+   "links": [
+    "G3",
+    "G7",
+    "G8"
+   ]
+  },
+  {
+   "id": "W630713911",
+   "relevance": 2,
+   "quantities": [
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W3035585175",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF",
+    "ACT"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W3180733075",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HF",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2153712086",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2377144712",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2054589644",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "SP"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G4",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2068727399",
+   "relevance": 2,
+   "quantities": [
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2365964331",
+   "relevance": 3,
+   "quantities": [
+    "HRR",
+    "HGL-T",
+    "SP",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G4"
+   ]
+  },
+  {
+   "id": "W4413961797",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2049739590",
+   "relevance": 3,
+   "quantities": [
+    "VIS",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2171186102",
+   "relevance": 2,
+   "quantities": [
+    "VF",
+    "HGL-D",
+    "PL"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2148575280",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VF",
+    "HF",
+    "P",
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2948670800",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "P",
+    "HRR"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W1990985893",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2012321095",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2965299916",
+   "relevance": 2,
+   "quantities": [
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W7225654353",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2348649765",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "PL"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4280580788",
+   "relevance": 3,
+   "quantities": [
+    "HF",
+    "HGL-T",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W7115932960",
+   "relevance": 3,
+   "quantities": [
+    "HRR",
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2351063404",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2385288541",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "CJ",
+    "ACT"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4256333735",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "PL"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2358257972",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "review",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2349379097",
+   "relevance": 2,
+   "quantities": [
+    "VF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2941756747",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HF"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G3",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4390689435",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W7204246184",
+   "relevance": 2,
+   "quantities": [
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2169373766",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "review",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2921131578",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7",
+    "G1"
+   ]
+  },
+  {
+   "id": "W17150629",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "P",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W37191607",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS",
+    "ACT",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2131637209",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "CJ",
+    "ACT"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G3",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2961146534",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "HGL-D",
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G5",
+    "G6",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2295222537",
+   "relevance": 3,
+   "quantities": [
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4200295039",
+   "relevance": 2,
+   "quantities": [
+    "SP",
+    "VIS",
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G4"
+   ]
+  },
+  {
+   "id": "W7118521359",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2070084311",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W4410867227",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G5"
+   ]
+  },
+  {
+   "id": "W4322722381",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "ACT",
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2225884227",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G6"
+   ]
+  },
+  {
+   "id": "W2099483237",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "PL",
+    "ACT",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W1971053176",
+   "relevance": 2,
+   "quantities": [
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2535847608",
+   "relevance": 3,
+   "quantities": [
+    "PL",
+    "VF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G1",
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2367539038",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2964154046",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VF",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2140002002",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "PL",
+    "VF",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2922279254",
+   "relevance": 3,
+   "quantities": [
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G6",
+    "G8"
+   ]
+  },
+  {
+   "id": "W834005631",
+   "relevance": 2,
+   "quantities": [
+    "HF",
+    "HGL-T",
+    "VIS"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G6",
+    "G3"
+   ]
+  },
+  {
+   "id": "W2149496916",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2",
+    "G7",
+    "G8"
+   ]
+  },
+  {
+   "id": "W4283164986",
+   "relevance": 2,
+   "quantities": [
+    "VF"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G5",
+    "G1"
+   ]
+  },
+  {
+   "id": "W4400476723",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T",
+    "PL"
+   ],
+   "study_type": "application",
+   "links": [
+    "G1",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2166049825",
+   "relevance": 3,
+   "quantities": [
+    "HRR",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2385904724",
+   "relevance": 3,
+   "quantities": [
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G7"
+   ]
+  },
+  {
+   "id": "W2319320566",
+   "relevance": 2,
+   "quantities": [
+    "CJ"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2136620645",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4414038121",
+   "relevance": 3,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2552739385",
+   "relevance": 2,
+   "quantities": [
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2527972284",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2014296295",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W7153080563",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HRR"
+   ],
+   "study_type": "application",
+   "links": [
+    "G8"
+   ]
+  },
+  {
+   "id": "W321386387",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G4"
+   ]
+  },
+  {
+   "id": "W4288906181",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF",
+    "VIS"
+   ],
+   "study_type": "application",
+   "links": [
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2054672389",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HF",
+    "SP",
+    "HRR"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2189156523",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "HGL-D",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2322216265",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W4387173920",
+   "relevance": 3,
+   "quantities": [
+    "VF",
+    "HGL-T",
+    "CJ",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G5",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4220963718",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2139525571",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W4206162084",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2256247035",
+   "relevance": 2,
+   "quantities": [
+    "HGL-D",
+    "VIS",
+    "SP",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2170566917",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2280453142",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2787217931",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2044447670",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS",
+    "VF"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2145241919",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF",
+    "HRR"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4386392776",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "P",
+    "VF",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G7"
+   ]
+  },
+  {
+   "id": "W4416197017",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G5"
+   ]
+  },
+  {
+   "id": "W1968927787",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VIS",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G5"
+   ]
+  },
+  {
+   "id": "W4386459933",
+   "relevance": 3,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2096720047",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W310756976",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "HF",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G4",
+    "G5"
+   ]
+  },
+  {
+   "id": "W2075361024",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4389548772",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "CJ",
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7",
+    "G8"
+   ]
+  },
+  {
+   "id": "W3192610989",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2958868006",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2965088074",
+   "relevance": 2,
+   "quantities": [
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2184685784",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2899736209",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G5"
+   ]
+  },
+  {
+   "id": "W4406650129",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2166433387",
+   "relevance": 2,
+   "quantities": [
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2"
+   ]
+  },
+  {
+   "id": "W194912415",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W7126436594",
+   "relevance": 2,
+   "quantities": [
+    "CJ",
+    "SP",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W2406155498",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2943923149",
+   "relevance": 2,
+   "quantities": [
+    "HGL-D",
+    "VIS",
+    "HGL-T"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4293256377",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4392563790",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "SP",
+    "HGL-T"
+   ],
+   "study_type": "review",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W3133571523",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3",
+    "G4"
+   ]
+  },
+  {
+   "id": "W4410193881",
+   "relevance": 3,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2767364241",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2790456418",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "PL",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2625495185",
+   "relevance": 3,
+   "quantities": [
+    "CJ",
+    "HGL-T",
+    "HGL-D",
+    "ACT",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4391500057",
+   "relevance": 2,
+   "quantities": [
+    "HRR",
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2593206074",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HRR",
+    "SP",
+    "HF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G2",
+    "G4",
+    "G6"
+   ]
+  },
+  {
+   "id": "W7167739235",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VIS"
+   ],
+   "study_type": "application",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2106970469",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "HF"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G3",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2001836338",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "VIS"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2802384651",
+   "relevance": 3,
+   "quantities": [
+    "ACT",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2964760121",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF",
+    "HRR"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2154086057",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VIS"
+   ],
+   "study_type": "review",
+   "links": [
+    "G1",
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W4405902547",
+   "relevance": 2,
+   "quantities": [
+    "HF",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4405763289",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W4387121986",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2576581862",
+   "relevance": 2,
+   "quantities": [
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W7214071870",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "VIS"
+   ],
+   "study_type": "application",
+   "links": [
+    "G3",
+    "G8"
+   ]
+  },
+  {
+   "id": "W284748975",
+   "relevance": 2,
+   "quantities": [
+    "SP"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G4"
+   ]
+  },
+  {
+   "id": "W4411236800",
+   "relevance": 2,
+   "quantities": [
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2969649548",
+   "relevance": 2,
+   "quantities": [
+    "VIS"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2367449549",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "CJ"
+   ],
+   "study_type": "experiment-dataset",
+   "links": []
+  },
+  {
+   "id": "W3203715070",
+   "relevance": 3,
+   "quantities": [
+    "P",
+    "VF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5",
+    "G2"
+   ]
+  },
+  {
+   "id": "W2104577099",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G2",
+    "G6"
+   ]
+  },
+  {
+   "id": "W2358095607",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2490967968",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G8"
+   ]
+  },
+  {
+   "id": "W7133320689",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G4",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2015102212",
+   "relevance": 2,
+   "quantities": [
+    "VIS",
+    "CJ",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W4200428390",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VIS",
+    "SP"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2918152810",
+   "relevance": 3,
+   "quantities": [
+    "HF",
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G6"
+   ]
+  },
+  {
+   "id": "W2554421255",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W3121697780",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W4236469861",
+   "relevance": 2,
+   "quantities": [
+    "CJ",
+    "PL",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W2770197473",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G6"
+   ]
+  },
+  {
+   "id": "W2059781924",
+   "relevance": 3,
+   "quantities": [
+    "VIS",
+    "CJ",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G3"
+   ]
+  },
+  {
+   "id": "W2119374026",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G7"
+   ]
+  },
+  {
+   "id": "W4401564464",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "ACT"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G3"
+   ]
+  },
+  {
+   "id": "W2071507235",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2902405022",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G6"
+   ]
+  },
+  {
+   "id": "W2003967179",
+   "relevance": 2,
+   "quantities": [
+    "PL"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W7213621458",
+   "relevance": 2,
+   "quantities": [
+    "PL",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W3120322951",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W2039119418",
+   "relevance": 2,
+   "quantities": [
+    "HRR"
+   ],
+   "study_type": "experiment-dataset",
+   "links": []
+  },
+  {
+   "id": "W2965576949",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "VF",
+    "P",
+    "SP"
+   ],
+   "study_type": "guide",
+   "links": [
+    "G2",
+    "G4",
+    "G5"
+   ]
+  },
+  {
+   "id": "W3134612654",
+   "relevance": 2,
+   "quantities": [
+    "HF",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G5"
+   ]
+  },
+  {
+   "id": "W2182996281",
+   "relevance": 2,
+   "quantities": [
+    "SP",
+    "VIS"
+   ],
+   "study_type": "experiment-dataset",
+   "links": [
+    "G3",
+    "G4",
+    "G8"
+   ]
+  },
+  {
+   "id": "W2154786117",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "VF",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G5"
+   ]
+  },
+  {
+   "id": "W3134459342",
+   "relevance": 2,
+   "quantities": [
+    "ACT",
+    "HGL-T",
+    "CJ"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W2117680649",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HGL-D"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2"
+   ]
+  },
+  {
+   "id": "W4405009244",
+   "relevance": 2,
+   "quantities": [
+    "HGL-T",
+    "HF"
+   ],
+   "study_type": "validation",
+   "links": []
+  },
+  {
+   "id": "W7225382650",
+   "relevance": 2,
+   "quantities": [
+    "HRR"
+   ],
+   "study_type": "model-development",
+   "links": [
+    "G1"
+   ]
+  },
+  {
+   "id": "W2031640449",
+   "relevance": 2,
+   "quantities": [
+    "HF",
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G1",
+    "G6"
+   ]
+  },
+  {
+   "id": "W7150803117",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G8"
+   ]
+  },
+  {
+   "id": "W7155095810",
+   "relevance": 3,
+   "quantities": [
+    "HGL-T",
+    "SP",
+    "VF"
+   ],
+   "study_type": "validation",
+   "links": [
+    "G2",
+    "G4",
+    "G5"
+   ]
+  }
+ ]
+}

@@ -20,7 +20,10 @@
  * GPU_STEP_MS a step, starts again on the coarser grid level that keeps up;
  * the page keeps the measured speed per GPU (payload.gpuRate, gpuName), so
  * later runs on that GPU start on the same level. "finest" asks for the
- * finest grid the GPU's memory allows.
+ * finest grid the GPU's memory allows. "calibrated" builds cells of exactly
+ * the size the held-out tests calibrated the smoke layer's depth on
+ * (core/calibrationStatus.js TESTED_GRID_CELL, 0.27 m), clipped round the fire
+ * to the backend's own budget, so the run lies on a validated grid.
  *
  * Repeat runs (payload.repeats, a second job after a GPU run): the same fire
  * on the first run's grid (payload.maxCells) with the room k thousandths of
@@ -31,6 +34,8 @@ import { DEFAULTS } from "../core/flamescapes.js";
 import { buildScene, runScene } from "../core/flamescapesRun.js";
 import { runSummary } from "../core/forecast.js";
 import { chooseBackend, standardCells } from "../lib/hardware.js";
+import { TESTED_GRID_CELL } from "../core/calibrationStatus.js";
+import { memoryKind } from "../core/memoryNotice.js";
 
 // Wall time a solver step (0.1 s) may take on the GPU: three times real time,
 // about what one CPU core manages on its coarser grid.
@@ -63,6 +68,8 @@ function sceneFor(payload, backend) {
     upAxis: payload.upAxis,
     fire: payload.fire,
     maxCells: payload.maxCells || backend.cells,
+    // The calibrated grid: cells of exactly the validated size, clipped to the budget.
+    ...(payload.grid === "calibrated" ? { minCell: TESTED_GRID_CELL, maxCell: TESTED_GRID_CELL } : {}),
     fireLoad: payload.fireLoad,
     contentsFuel: payload.contentsFuel,
     ignitionFuel: payload.ignitionFuel,
@@ -73,6 +80,8 @@ function sceneFor(payload, backend) {
     seed: payload.seed ?? 1,
   });
   if (!scene.ignition) throw new Error("The fire origin is not inside the fire grid. Pick it on a floor of the building.");
+  // The solver asked for, for the run card (core/solverVersions.js).
+  scene.solver = payload.solver || "validated";
   return scene;
 }
 
@@ -85,6 +94,7 @@ function describe(scene, backend, t0, restarted, resized = false, openings = nul
   const g = scene.grid;
   return {
     backend: { kind: backend.kind, name: backend.name },
+    solver: scene.solver || "validated",
     // The grid asked for and the budget it was built to (repeat runs build theirs to it).
     policy,
     budget,
@@ -112,21 +122,34 @@ async function repeatRuns(id, payload) {
   const { count, tenability } = payload.repeats;
   const members = [];
   for (let k = 1; k <= count; k += 1) {
-    const frames = await gpu.runScene(scene, {
-      nodes: payload.nodes,
-      upAxis: payload.upAxis,
-      agentHeight: payload.agentHeight,
-      headHeight: payload.headHeight,
-      horizon: payload.horizon,
-      frameSeconds: payload.frameSeconds,
-      embers: payload.embers,
-      sprinklers: payload.sprinklers ?? null,
-      systems: payload.systems ?? null,
-      // Nothing to draw: particles and smoke snapshots only feed the view.
-      particles: 0,
-      smoke: false,
-      solverOptions: { ambient: DEFAULTS.ambient + k * 1e-3 },
-    });
+    let frames;
+    try {
+      frames = await gpu.runScene(scene, {
+        nodes: payload.nodes,
+        upAxis: payload.upAxis,
+        agentHeight: payload.agentHeight,
+        headHeight: payload.headHeight,
+        horizon: payload.horizon,
+        frameSeconds: payload.frameSeconds,
+        embers: payload.embers,
+        sprinklers: payload.sprinklers ?? null,
+        systems: payload.systems ?? null,
+        // Nothing to draw: particles and smoke snapshots only feed the view.
+        particles: 0,
+        smoke: false,
+        solverOptions: { ...(payload.solverOptions || {}), ambient: DEFAULTS.ambient + k * 1e-3 },
+        // Not on the CPU in its place: the scene is sized for the GPU.
+        cpuFallback: false,
+      });
+    } catch {
+      // The GPU stopped: the members run so far, and the rest not run.
+      return { members, skipped: "the GPU stopped" };
+    }
+    // A member the health guard stopped is cut short: left out of the range, and said.
+    if (frames?.health?.ok === false) {
+      self.postMessage({ id, progress: { type: "member", stopped: { k, time: frames.health.time } } });
+      continue;
+    }
     // CO2 and O2 count in the doses only when the page's run kept them.
     const summary = { k, ...runSummary(payload.extras ? frames : { ...frames, co2: null, o2: null }, tenability) };
     members.push(summary);
@@ -165,10 +188,15 @@ self.onmessage = async (event) => {
       embers: payload.embers,
       particles: payload.particles ?? 2500,
       smoke: payload.smoke ?? true,
+      // The solver asked for (core/solverVersions.js): none for the validated one.
+      solverOptions: payload.solverOptions || {},
       // Sprinklers (src/core/suppression.js): heads, mode and reading; none when off.
       sprinklers: payload.sprinklers ?? null,
       // Rooms flooded with clean agent or blanketed with foam (src/core/suppressionSystems.js); none when off.
       systems: payload.systems ?? null,
+      // On the GPU: a run it cannot make throws (below, the scene is rebuilt
+      // on the CPU's budget) instead of running the GPU-sized scene on the CPU.
+      cpuFallback: false,
       keep: false,
       onFrame: (frame) => {
         frames += 1;
@@ -201,14 +229,16 @@ self.onmessage = async (event) => {
         // speed known yet, the run starts again on the level that keeps up.
         const stepsPerFrame = Math.max(1, Math.round(payload.frameSeconds / DEFAULTS.dt));
         const totalSteps = Math.round(payload.horizon / DEFAULTS.dt);
-        let tFirst = 0, coarser = 0;
+        let tFirst = 0, tLast = 0, kLast = 0, coarser = 0;
         const measuring = {
           ...options,
           onFrame: (frame) => {
             options.onFrame(frame);
-            if (frame.k === 0) tFirst = performance.now();
+            const now = performance.now();
+            if (frame.k === 0) tFirst = now;
+            [tLast, kLast] = [now, frame.k];
             if (frame.k !== 1) return;
-            const msPerStep = (performance.now() - tFirst) / stepsPerFrame;
+            const msPerStep = (now - tFirst) / stepsPerFrame;
             gpuRate = scene.grid.cells / msPerStep;
             const fits = gpuCells(backend, gpuRate);
             if (bySpeed && !knownRate && fits < 0.8 * scene.grid.cells && msPerStep * totalSteps > RESTART_WORTH_MS) coarser = fits;
@@ -216,6 +246,10 @@ self.onmessage = async (event) => {
           shouldStop: () => coarser > 0,
         };
         result = await gpu.runScene(scene, measuring);
+        // The speed kept for later runs is the whole run's (review 2026-11-12,
+        // H): the first frames come before the fire grows and its steps are
+        // cut (substepsFor), so their speed sized later grids too fine.
+        if (result && kLast > 1) gpuRate = scene.grid.cells / ((tLast - tFirst) / (kLast * stepsPerFrame));
         if (!result && coarser) {
           backend = { ...backend, cells: coarser };
           scene = sceneFor(payload, backend);
@@ -224,11 +258,16 @@ self.onmessage = async (event) => {
           self.postMessage({ id, progress: { type: "scene", info } });
           result = await gpu.runScene(scene, options);
         }
-      } catch {
-        // The GPU stopped mid-run: start again on the CPU, on a grid sized for it.
+      } catch (error) {
+        // The GPU stopped mid-run, or could not start it (cpuFallback: false):
+        // start again on the CPU, on a grid sized for it, and keep no GPU speed.
+        // Out of the GPU's memory (its out-of-memory error scope round the
+        // buffers, or a device error saying so), the restart says so, and the
+        // page suggests the standard grid or the CPU (core/memoryNotice.js).
+        const gpuMemory = /out of memory|not enough memory|GPUOutOfMemory/i.test(error?.message || "");
         backend = sized(await chooseBackend("cpu"), policy);
         scene = sceneFor(payload, backend);
-        info = describe(scene, backend, t0, true, false, payload.openings, policy);
+        info = { ...describe(scene, backend, t0, true, false, payload.openings, policy), ...(gpuMemory ? { memory: "gpu" } : {}) };
         frames = 0;
         self.postMessage({ id, progress: { type: "scene", info } });
       }
@@ -240,6 +279,7 @@ self.onmessage = async (event) => {
     const done = { ...result, info: { ...info, frames, ms: performance.now() - t0, gpuRate: backend.kind === "gpu" && bySpeed ? gpuRate : null } };
     self.postMessage({ id, ok: true, result: done }, [done.hrr.buffer]);
   } catch (error) {
-    self.postMessage({ id, ok: false, error: error?.message || String(error) });
+    // Typed when it is running out of memory (core/memoryNotice.js), so the page can offer to clear its caches.
+    self.postMessage({ id, ok: false, error: error?.message || String(error), kind: memoryKind(error) });
   }
 };

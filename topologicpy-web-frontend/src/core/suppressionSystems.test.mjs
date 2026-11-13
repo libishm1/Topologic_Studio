@@ -302,7 +302,13 @@ test("foam on a heptane pool: the blanket stops the pool's evaporation by the ex
   assert.ok(r.outAt < 100 && r.controlAt < r.outAt);
   assert.ok(foamed.stats.released < 0.5 * free.stats.released, `released ${(foamed.stats.released / 1e6).toFixed(1)} MJ against ${(free.stats.released / 1e6).toFixed(1)} MJ`);
   const lastFrames = (out) => out.hrr.slice(-4).reduce((a, b) => a + b, 0);
-  assert.ok(lastFrames(free) > 200, `the free pool still burns at the end: ${lastFrames(free).toFixed(0)} kW over the last frames`);
+  // Still burning: at least 25 kW a frame, a sixth of the pool's free burn
+  // (about 150 kW). Once the room's air runs low the air, not the pool, sets
+  // the rate: about 50 kW a frame with the cut steps (proposal B), 197 kW
+  // over the four frames. The 200 kW asked before came from the uncut step,
+  // whose flame left the pool while the air held 17 % oxygen
+  // (wiki/research/fire-calibration-plan-2026-11-11.md, 9.7 and 10).
+  assert.ok(lastFrames(free) > 100, `the free pool still burns at the end: ${lastFrames(free).toFixed(0)} kW over the last frames`);
   assert.ok(lastFrames(foamed) < 0.1 * lastFrames(free), `the foamed pool is out: ${lastFrames(foamed).toFixed(2)} kW over the last frames`);
 });
 

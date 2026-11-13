@@ -29,6 +29,7 @@
         <ul>
           <li><a href="#quick-start">Quick start</a></li>
           <li><a href="#model">Step 1, Model</a></li>
+          <li><a href="#memory">Out of memory or storage</a></li>
           <li><a href="#graph">Step 2, Graph</a></li>
           <li><a href="#route">Step 3, Route</a></li>
           <li><a href="#your-files">Your own IFC files</a></li>
@@ -41,6 +42,7 @@
       <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
       <li><a href="suppression.html">Fire suppression</a></li>
       <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="people-and-slime.html">People leaving and the slime mould</a></li>
       <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
     </ol>
     <p class="toc__out"><a href="../">Open the app</a></p>
@@ -56,11 +58,13 @@
       <li>In the <span class="label">Graph</span> step, press <span class="label">Build egress graph</span>.</li>
       <li>In the <span class="label">Route</span> step, press <span class="label">Set</span> beside Start (or <kbd>S</kbd>) and click a point on the graph, then press <span class="label">Use the nearest exit door</span> and <span class="label">Find egress route</span>.</li>
       <li>In the <span class="label">Simulate</span> step, press <span class="label">Set</span> beside Fire origin (or <kbd>F</kbd>), click where the fire starts, and press <span class="label">Start fire</span>. The route moves away from the heat when it has to.</li>
-      <li>To go further, switch on the <span class="label">Flamescapes combustion solver (optional)</span> and then <span class="label">Sprinklers</span> in the Simulate step (see <a href="fire-and-smoke.html">Fire and smoke</a> and <a href="suppression.html">Fire suppression</a>), or run the checks in the Route step (see <a href="checks.html">Code and performance checks</a>).</li>
+      <li>To go further, choose a Flamescapes model under <span class="label">How the fire spreads</span> and then switch on <span class="label">Sprinklers</span> in the Simulate step (see <a href="fire-and-smoke.html">Fire and smoke</a> and <a href="suppression.html">Fire suppression</a>), or run the checks in the Route step (see <a href="checks.html">Code and performance checks</a>).</li>
     </ol>
 
     <h3 id="guided-runs">Guided runs</h3>
-    <p>The welcome screen also offers guided runs. Studio opens the Duplex and takes each step itself, with a caption for each, then stops at the result. <em>The way out</em> builds the graph and finds the route from the room furthest from an exit; <em>A fire on the route</em> adds a fire part-way along it; <em>Smoke behind closed doors</em> runs the Flamescapes solver with every door closed. <span class="label">Stop</span> ends a run where it is.</p>
+    <p>The welcome screen opens on its guided runs, each showing one feature, with about how long it takes on a laptop's integrated GPU. Studio opens an example and takes each step itself, with a caption for each, then stops at the result. On the Duplex, <em>The way out</em> builds the graph, finds the route from the room furthest from an exit and has everyone on the floors walk out, then gives the check the crowd model passes (see <a href="people-and-slime.html#people">People leaving</a>); <em>A fire on the route</em> lights a sofa fire part-way along it that grows fast under sprinklers, and says when the first head opens and whether the route had to change (see <a href="suppression.html">Fire suppression</a>); <em>Smoke behind closed doors</em> runs the Flamescapes solver with every door closed, on the 0.27 m grid, a cell size the held-out tests ran on, shows the smoke, and ends on the run card's one line on what the held-out tests support. <em>Vienna on the GPU</em> takes the TU Wien building end to end, naming what burns and the GPU it runs on: its way out, a Flamescapes fire, everyone leaving with it, the forecast's escape and a tour. <em>Every room, every exit (clinic)</em> opens the NIBS Clinic and draws its <a href="people-and-slime.html#egress-map">egress map</a>, keeps every room's route drawn while it measures each floor finely and audits it for a wheelchair (<a href="people-and-slime.html#accessibility">Accessibility</a>), and ends on the farthest walk, the dead ends and the rooms a wheelchair reaches.</p>
+    <p>Each step's result stays on screen for about 2.5 seconds before the next step, so the new point, route or fire can be seen; on a phone a run waits at each result until you tap <span class="label">Next</span>. A load's progress and the fire's steps show in the run's own card, and its <span class="label">Stop</span> is the one stop button while it plays: it ends the run where it is, the fire with it. At the end the card leads with the result's numbers (the route's length, the fire's peak and first detector, the escape plan, or the egress map's farthest walk, dead ends and wheelchair reach), and the panel opens the result and scrolls to it. A run changes settings to show what it shows (the fire model, the doors, the people); <span class="label">Stop</span>, <span class="label">Close</span> and <span class="label">Guided runs</span> give your own back, and so does reloading the page before the run has ended.</p>
+    <p>To come back to the guided runs from anywhere, press <span class="label">Guided runs</span>, the button with a back arrow at the top left of the view (on a phone the arrow alone), or in a guided run's own card. It stops whatever is running, as the stop buttons do (a fire, its solver, a graph build, a plan, a GIF recording, which is saved), closes the model and shows the welcome screen at its guided runs, without reloading the page. Your settings are kept, and a guided run's are undone.</p>
 
     <figure>
       <img src="media/welcome.jpg" width="1440" height="900" loading="lazy" alt="The welcome screen: a drop zone for an IFC file and the example buildings.">
@@ -76,19 +80,27 @@
     <p>Exits come from the file's own data: a door marked <code>FireExit</code> or <code>IsExternal</code> in <code>Pset_DoorCommon</code>, or a door with an external space boundary. If the file marks none, Studio falls back to doors with floor on one side only and says so. The Duplex marks 4 of its 14 doors as external.</p>
     <p>The first time you open a file it is converted and stored in your browser, so the next time it opens from the cache without being read again (up to 24 models or 512 MB; clear them under <span class="label">Local cache</span> in the Model step).</p>
 
+    <h3 id="memory">When the browser runs out of memory or storage</h3>
+    <p>Studio keeps two caches in your browser: converted models (up to 24 or 512 MB) and finished Flamescapes runs (up to 256 MB, see <a href="fire-and-smoke.html#flamescapes">Fire and smoke</a>). Your settings, theme and field notes are small and kept apart. When the browser cannot keep a run or a model because the site's storage is full, when it runs out of memory loading a model, building the graph or running a fire, or when the GPU runs out of memory for a fire's grid (the run then goes on on the CPU), a notice says which, and how much the caches hold. Its <span class="label">Clear cached runs and models</span> button empties both caches and says how much it freed; your settings are kept. Clearing frees the browser's storage; reloading the page frees its memory. For the GPU, the notice suggests the standard grid, or <span class="label">Run on</span> the CPU. Studio also warns once a visit, before a crash, when the site's storage passes 80 % of what the browser allows it, or, in Chrome, when the page passes 85 % of the memory it may use. <span class="label">Dismiss</span> closes the notice.</p>
+
     <h3 id="identify">What the elements are</h3>
     <p><span class="label">What the elements are</span> names every element: by its IFC class where the exporter typed it, and otherwise (furniture and appliances often arrive as <code>IfcBuildingElementProxy</code>) by its name, then by the size of its box. With the class hidden, these rules named 86% of 6,066 typed elements from 45 models correctly.</p>
     <p><span class="label">Identify by shape</span> then runs IFCNet's point-cloud classifier (Emunds et al. 2021) in your browser on the elements only the box could place, and keeps its answer when it is at least 90% sure. The first use downloads 4.5 MB. The comparison with IFCNet, text embeddings and small language models is in the <a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/ifc-identification-benchmark-2026-11-05.md">identification benchmark</a>.</p>
 
     <h3 id="describe">Describe this model</h3>
-    <p><span class="label">Describe this model</span> writes a short plain description of the building, its ways out and its fire. A language model writes it from the facts Studio has already worked out (storeys, rooms, doors and exits, the walkable graph, the route, the fire's results) and from nothing else. Once the graph is built, each storey gets a line of its own: its ways out and its longest walk to one, worked out on the graph, and the code check's verdicts if you ran it; the model words them instead of finding paths itself. The facts are listed under it before anything is written.</p>
+    <p><span class="label">Describe this model</span> writes a short plain description of the building, its ways out and its fire. A language model writes it from the facts Studio has already worked out (storeys, rooms, doors and exits, the walkable graph, the route, the fire's results) and from nothing else. Once the graph is built, each storey gets a line of its own: its ways out and its longest walk to one, worked out on the graph, and the code check's verdicts if you ran it; the model words them instead of finding paths itself. <span class="label">The facts it is given</span>, folded under the switch, lists those facts word for word before anything is written or sent.</p>
+    <p>Whatever else you have run joins the facts, and nothing you have not: people leaving (how they chose their exits, and the range over seeds), the slime mould and its readings, said to be a reading for design, the performance check, sprinklers, suppression systems and extinguishers, the spaces not walked on, and a much nearer exit than the route's. On a tall building with everything run, the facts list fewer room names and storey lines until they fit the 8,000 characters the Cloudflare describer reads.</p>
+    <p><span class="label">Written by</span> chooses where the description is written. It starts on This device where the browser's own model can run, or where the site has no Cloudflare describer, and on Cloudflare otherwise.</p>
     <ul>
-      <li>On Chrome 148 or later on a desktop computer, Chrome's built-in model writes it on the computer, and nothing is sent.</li>
-      <li>On other browsers, a site deployed with the Cloudflare describer can send those facts, never the IFC, to a Workers AI model on Cloudflare's free allowance instead.</li>
+      <li><em>This device:</em> on Chrome 148 or later on a desktop computer, Chrome's built-in model writes it on the computer, and nothing is sent. Chrome downloads its model the first time (once, a few GB), and it needs more than 4 GB of GPU memory or 16 GB of RAM.</li>
+      <li><em>Cloudflare:</em> on other browsers, a site deployed with the Cloudflare describer can send those facts, never the IFC, to a Workers AI model on Cloudflare's free allowance instead.</li>
     </ul>
 
     <h3 id="view">Showing the building</h3>
     <p><span class="label">Show the building as</span> switches the model between Solid, Ghost (see-through, so the graph shows inside) and Hidden. The view buttons give top, front, side and isometric views, and <span class="label">Show</span> cuts the building at a storey. A <span class="label">Second model</span> (an MEP or structural IFC of the same building) can be added here; it is described under <a href="suppression.html#second-model">Fire suppression</a>.</p>
+
+    <h3 id="rooms-models">Rooms models (LOD1)</h3>
+    <p><span class="label">Rooms models (LOD1)</span>, folded at the foot of the Model step, opens a building given as rooms, storeys, doors and stairs instead of an IFC: a TopologicPy LOD1 export (the CellComplex JSON that <code>Topology.ExportToJSON</code> writes, one cell per room, opened together with its circulation and adjacency graphs) or a GeoJSON plan. Studio draws it as rooms: walls 0.2 m thick on the rooms' outlines, a slab under each floor, and stairs as treads along their walking lines. Shafts, voids and tanks are not walked in. The graph, routes, code check and fire models, Flamescapes too, run on it as on an IFC. The step then counts its rooms, storeys, doors and stairs, lists any warnings from reading it, and offers <span class="label">Export as a GeoJSON plan</span>: rooms, doors, stairs and storeys in plan metres, the format Studio reads back and other tools can edit.</p>
 
     <h2 id="graph">Step 2, Graph: where a person can walk</h2>
     <figure>
@@ -97,17 +109,54 @@
     </figure>
     <p><span class="label">Build egress graph</span> lays a grid of points over every floor, 0.5 m apart and turned to line up with the walls, and joins neighbouring points that a person could walk between. Walls cut 0.75 m above each floor block the links that cross them, doors join the rooms on either side, and each stair is walked along its flight. The whole graph is built in your browser, in a few hundredths of a second for the Duplex (1,597 points and 4,597 links).</p>
     <p>The step reports how much of the building one can reach from its largest part. The Duplex is two homes side by side, so its graph is in two parts and the app says so: a route can only join two points in the same part.</p>
-    <p><span class="label">Graph settings</span> change the grid spacing, the largest step a person can climb, the agent's height, whether walls block links, and whether lifts and escalators join floors (off by default, as in an evacuation). <span class="label">Cross-check with TopologicPy</span> builds TopologicPy's own navigation graph on the server and reports how much of each graph the other covers.</p>
+    <p>Two kinds of room are not walked on, and the step says which: spaces outside the building that no door opens onto, such as roofs drawn as rooms, and spaces named as voids ("open to below", "void", "Luftraum"). A roof, terrace or balcony with a door onto it stays walkable. The NIBS Clinic draws five of its roofs as rooms that no stair or door reaches; without this its graph had parts on the roof that reached no exit.</p>
+    <p><span class="label">Show the graph</span>, on by default, draws the graph over the building; <kbd>G</kbd> does the same.</p>
+    <p><span class="label">Graph settings</span> change how the graph is built. Changes apply when the graph is rebuilt.</p>
+    <dl>
+      <dt class="label">Grid spacing</dt>
+      <dd><p>0.5 m by default, 0.2 to 2 m. A smaller spacing follows narrow passages better and makes a bigger graph.</p></dd>
+      <dt class="label">Max vertical step</dt>
+      <dd><p>0.35 m by default, 0.05 to 1.5 m: the most height one floor link may span. Raise it only for ramps or split levels.</p></dd>
+      <dt class="label">Agent height</dt>
+      <dd><p>0.75 m by default, 0 to 2 m. It lifts the graph's points off the floor so the graph draws above it. It does not move where walls are cut (0.75 m above the floor) or where the fire is read (1.8 m above the floor), and the export to TopologicPy takes the lift off again.</p></dd>
+      <dt class="label">Walls block routes</dt>
+      <dd><p>On by default. Links that cross a wall 0.75 m above the floor are left out of routing; links that only touch a wall stay in, and door links always stay open. Off, routes, the forecast and the heat diffusion and spread-along-links fires pass through walls.</p></dd>
+      <dt class="label">No diagonal links</dt>
+      <dd><p>Off by default. On, routes use only grid-aligned links. On an open floor the grid route can then be up to 41 % (the square root of 2) longer than with diagonals; <span class="label">Draw routes straight</span> recovers much of that.</p></dd>
+      <dt class="label">Use lifts and escalators</dt>
+      <dd><p>Off by default, as in an evacuation: lifts are not used in a fire unless they are evacuation lifts. On, a lift joins every floor beside it, and a ride counts as walking its rise, with no wait for the car.</p></dd>
+      <dt class="label">Up axis</dt>
+      <dd><p>Y up (the default, typical for viewers), Z up (typical for IFC) or X up. Get it wrong and floors read as walls.</p></dd>
+    </dl>
+
+    <h3 id="cross-check">Cross-check with TopologicPy</h3>
+    <p><span class="label">Cross-check with TopologicPy</span> builds TopologicPy's own navigation graph from the IFC on the server, an independent estimate of the same space, and reports how much of each graph the other covers: where the two disagree, one of them is wrong about the building. The IFC is uploaded for this, and the server needs topologicpy 0.9.86 or later with IfcOpenShell.</p>
+    <dl>
+      <dt class="label">Grid spacing (m)</dt>
+      <dd><p>0.5 m by default, 0.25 to 5 m: the spacing of TopologicPy's graph, and also the radius within which a node counts as covered. Match it to the graph's spacing for a fair comparison.</p></dd>
+      <dt class="label">Its nodes we cover</dt>
+      <dd><p>The share of TopologicPy's nodes with one of Studio's nodes within that radius. Flagged below 90 %.</p></dd>
+      <dt class="label">Our nodes it covers</dt>
+      <dd><p>The share of Studio's nodes with one of TopologicPy's within that radius, also given per kind of node. Flagged below 90 %.</p></dd>
+      <dt class="label">Its nodes</dt>
+      <dd><p>How many nodes TopologicPy's graph has.</p></dd>
+      <dt class="label">Its parts</dt>
+      <dd><p>How many separate parts TopologicPy's graph falls into. Flagged when there is more than one, since a route cannot cross between parts.</p></dd>
+      <dt class="label">Show TopologicPy's graph</dt>
+      <dd><p>On by default: draws TopologicPy's graph beside Studio's.</p></dd>
+    </dl>
+    <p>Under the figures come the same shares per storey, and, with a start and an exit set, the route's length on each graph. When the two graphs do not line up (their median gap is larger than the spacing), a note says the coverage figures are not meaningful.</p>
 
     <h2 id="route">Step 3, Route: the shortest way out</h2>
     <figure>
       <img src="media/duplex-route.jpg" width="1440" height="900" loading="lazy" alt="A route from an upstairs room of the Duplex, down the stair and out of the front door, 18.8 m long.">
       <figcaption>A route from an upstairs room, down the stair and out of the front door: 18.8 m.</figcaption>
     </figure>
-    <p>Press <span class="label">Set</span> beside Start (or <kbd>S</kbd>) and click a point on the graph, then set the Exit the same way, or press <span class="label">Use the nearest exit door</span>. <span class="label">Find egress route</span> draws the shortest route and straightens it, so it reads as a person would walk it rather than as a zigzag across the grid. The result gives its length, the length on the grid before straightening, and its turns.</p>
+    <p>Press <span class="label">Set</span> beside Start (or <kbd>S</kbd>) and click a point on the graph, then set the Exit the same way, or press <span class="label">Use the nearest exit door</span>. <span class="label">Find egress route</span> draws the shortest route and straightens it, so it reads as a person would walk it rather than as a zigzag across the grid. The <span class="label">Route result</span> under the button gives its length as drawn, its length on the grid before straightening, its turns (changes of direction of more than 25 degrees, between points at least 0.75 m apart), and whether it was computed in your browser or on the server.</p>
     <p>The nearest exit door is one of the doors out of the building, drawn as orange rings. Where the model says which doors are external, these are the external doors at street level and the fire exits that open onto no walkable floor. A flat's front door flagged as a fire exit leads only to the stair, and a balcony door leads nowhere, so neither counts: of the Vienna model's 35 exit doors, two lead out, the street door and a fire exit at the back of the first floor.</p>
-    <p>Without a mouse, <span class="label">Place without the mouse</span> puts the exit at any door from a list, or any point at typed coordinates. <span class="label">Route options</span> switch between the built-in A* search (in your browser) and TopologicPy's <code>TGraph</code> engine (on the server). <span class="label">Alternative routes</span> look for other ways out: <em>Different space</em> keeps routes that do not run along one already found, and <em>Yen</em> lists the next cheapest routes exactly.</p>
-    <p>The <span class="label">Code check</span> and the <span class="label">Performance check (with the fire)</span> are also in this step; see <a href="checks.html">Code and performance checks</a>.</p>
+    <p>Without a mouse, <span class="label">Place without the mouse</span> puts the exit at any door from a list, or any point at typed coordinates. <span class="label">Route options</span> switch between the built-in A* search (in your browser) and TopologicPy's <code>TGraph</code> engine (on the server). There, <span class="label">Draw routes straight</span>, on by default, straightens each route as TopologicPy's <code>Wire.Straighten</code> does, never longer than the grid route: a run whose ends both stand 0.25 m clear keeps about 0.24 m from walls on the 0.5 m grid (less on a coarser grid), and doors and stairs stay on the route. Off, routes are drawn along the grid's links. It applies to the next route. <span class="label">Alternative routes</span> look for other ways out: <em>Different space</em> keeps routes that do not run along one already found, and <em>Yen</em> lists the next cheapest routes exactly.</p>
+    <p>When the start stands much nearer another exit out of the building than the one picked (the route would save at least half its walk and 10 m), a note under the route says so and offers <span class="label">Use the nearest exit door</span>. The route stays the one asked for. On the NIBS Clinic, a start beside an exit had crossed the building to the exit picked before: 54.9 m against 5.7 m.</p>
+    <p>The <span class="label">Code check</span> and the <span class="label">Performance check (with the fire)</span> are also in this step; see <a href="checks.html">Code and performance checks</a>. So are <span class="label">People leaving</span> and the <span class="label">Slime mould</span>; see <a href="people-and-slime.html">People leaving and the slime mould</a>.</p>
 
     <h2 id="your-files">Using your own IFC files</h2>
     <p>Studio works best on architectural models with slabs or floors, walls, doors and stairs. Some things that help, and what Studio does when they are missing:</p>
@@ -181,7 +230,7 @@ npm run dev   # http://localhost:5173</code></pre>
 
 <footer class="site-footer">
   <div>
-    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-12.</p>
     <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
   </div>
 </footer>

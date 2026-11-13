@@ -10,12 +10,29 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { formatBytes } from "../lib/perf.js";
 import { Badge, Button, FileButton, Icon } from "./primitives.jsx";
 
-/** Where a guided run is: its stage's caption, the stages as dots, and Stop (Close once it ends). */
 /**
- * A guided run's card: its stages, then the field note it ends on, found
- * (with what was found) or still a question.
+ * Back to the welcome screen and its guided runs (App.jsx backToWelcome).
+ * On a phone only its arrow shows (workflow.css), as the header's buttons
+ * show only their icons; its name says where it goes.
  */
-function GuidedCaption({ guided, onStop, onOpenNotes }) {
+function HomeButton({ onHome }) {
+  return (
+    <Button size="sm" className="viewport-btn home-btn" onClick={onHome} aria-label="Back to the guided runs" title="Back to the welcome screen and its guided runs">
+      <Icon name="back" size={16} />
+      <span className="viewport-btn__label">Guided runs</span>
+    </Button>
+  );
+}
+
+/**
+ * A guided run's card: where it is (its stage's caption and the stages as
+ * dots), with a load's progress or the fire's steps in it while they run (as
+ * cards of their own they sat on it), then the result's numbers and the field
+ * note it ends on, found (with what was found) or still a question. Its Stop
+ * (Close once it ends) is the one Stop while it plays; on a phone, Next moves
+ * on from a stage's result; and back to the guided runs.
+ */
+function GuidedCaption({ guided, onStop, onOpenNotes, onHome, onNext, loadState, fire, fireSteps }) {
   const index = Math.max(0, guided.stages.findIndex((s) => s.id === guided.stage));
   const ended = guided.stage === "done" || Boolean(guided.error);
   return (
@@ -26,7 +43,15 @@ function GuidedCaption({ guided, onStop, onOpenNotes }) {
           {Math.min(index + 1, guided.stages.length)} of {guided.stages.length}
         </span>
       </div>
-      <p className="guided__caption">{guided.error ? `Stopped: ${guided.error}` : guided.stages[index]?.caption}</p>
+      <p className="guided__caption">{guided.error ? `Stopped: ${guided.error}` : (guided.caption ?? guided.stages[index]?.caption)}</p>
+      {/* Not read out at every step: the card is a live region for its captions. */}
+      {(loadState?.busy || (guided.playing && fire?.running)) && (
+        <div aria-live="off">
+          {loadState?.busy && <LoadProgress loadState={loadState} />}
+          {guided.playing && fire?.running && <FireProgress fire={fire} fireSteps={fireSteps} />}
+        </div>
+      )}
+      {guided.result && <p className="guided__result">{guided.result}</p>}
       {guided.note && (
         <p className="guided__note">
           <strong>{guided.note.text ? "Field note found: " : "Field note: "}{guided.note.teaser}</strong>
@@ -39,6 +64,11 @@ function GuidedCaption({ guided, onStop, onOpenNotes }) {
         ))}
       </ol>
       <div className="hint__actions">
+        {guided.waiting && onNext && (
+          <Button size="sm" variant="primary" onClick={onNext}>
+            Next
+          </Button>
+        )}
         <Button size="sm" onClick={onStop}>
           {ended ? "Close" : "Stop"}
         </Button>
@@ -47,6 +77,7 @@ function GuidedCaption({ guided, onStop, onOpenNotes }) {
             Open field notes
           </Button>
         )}
+        {onHome && <HomeButton onHome={onHome} />}
       </div>
     </div>
   );
@@ -64,6 +95,49 @@ const STAGE_LABELS = {
   building: "Building graph",
 };
 
+/** A load's or graph build's progress: its stage, how far, and what it is on. */
+function LoadProgress({ loadState, className = "progress" }) {
+  const known = loadState.percent !== undefined && loadState.percent !== null;
+  return (
+    <div className={className}>
+      <div className="progress__row">
+        <span className="progress__label">{STAGE_LABELS[loadState.stage] || "Working"}</span>
+        {known && <span className="progress__detail">{Math.round(loadState.percent)}%</span>}
+      </div>
+      <div className="progress__track">
+        <div className={`progress__fill${known ? "" : " progress__fill--indeterminate"}`} style={{ width: `${loadState.percent ?? 35}%` }} />
+      </div>
+      {loadState.detail && <div className="progress__detail">{String(loadState.detail).slice(0, 60)}</div>}
+    </div>
+  );
+}
+
+/** The fire's step as it plays, and a track to the last step. */
+function FireProgress({ fire, fireSteps }) {
+  return (
+    <div className="playback__info">
+      <div className="playback__row">
+        <strong>
+          Fire step <span className="mono">{fire.step}</span>
+          {fireSteps ? ` of ${fireSteps}` : ""}
+        </strong>
+      </div>
+      {fireSteps ? (
+        <div
+          className="playback__track"
+          role="progressbar"
+          aria-label="Fire simulation progress"
+          aria-valuemin={0}
+          aria-valuemax={fireSteps}
+          aria-valuenow={Math.min(fire.step, fireSteps)}
+        >
+          <div className="playback__fill" style={{ width: `${Math.min(100, (fire.step / fireSteps) * 100)}%` }} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function Viewport({
   viewerRef,
   onPick,
@@ -73,7 +147,6 @@ export function Viewport({
   pickMode,
   hasModel,
   loadState,
-  graphStats,
   fire,
   levels,
   section,
@@ -90,7 +163,11 @@ export function Viewport({
   onGuided,
   guided,
   onStopGuided,
+  onNextGuided = null,
   onOpenNotes,
+  onHome = null,
+  replay = null,
+  onReplay = null,
   recording = null,
   onRecord = null,
 }) {
@@ -98,6 +175,32 @@ export function Viewport({
   const [dragOver, setDragOver] = useState(false);
   const [initError, setInitError] = useState(null);
   const [booting, setBooting] = useState(true);
+  // Where the keyboard goes after the two view buttons that go away when
+  // pressed: back on the welcome screen, to its guided runs; after Run again,
+  // to the playback bar's Stop fire.
+  const guidedHeadingRef = useRef(null);
+  const stopFireRef = useRef(null);
+  const focusAfterRef = useRef(null);
+  const welcome = !booting && !hasModel && !loadState.busy;
+  const goHome = useCallback(() => {
+    focusAfterRef.current = "guided";
+    onHome?.();
+  }, [onHome]);
+  const runAgain = useCallback(() => {
+    focusAfterRef.current = "stop";
+    onReplay?.();
+  }, [onReplay]);
+  useEffect(() => {
+    const want = focusAfterRef.current;
+    if (want === "guided" && welcome && guidedHeadingRef.current) {
+      focusAfterRef.current = null;
+      guidedHeadingRef.current.focus({ preventScroll: true });
+      guidedHeadingRef.current.scrollIntoView({ block: "start" });
+    } else if (want === "stop" && fire?.running && stopFireRef.current) {
+      focusAfterRef.current = null;
+      stopFireRef.current.focus();
+    }
+  }, [welcome, fire?.running]);
   // Open on a wide screen; on a phone the legend would cover most of the
   // model, so it starts folded to one line.
   const [legendOpen, setLegendOpen] = useState(
@@ -207,7 +310,7 @@ export function Viewport({
         </div>
       )}
 
-      {!booting && !hasModel && !loadState.busy && (
+      {welcome && (
         <div className="placeholder">
           <section className="welcome" aria-labelledby="welcome-title">
             <div>
@@ -220,6 +323,32 @@ export function Viewport({
                 TopologicPy cross-check.
               </p>
             </div>
+
+            {/* The guided runs first, under the lead: they stood 1.5 screens down, after the
+                examples and their credits (the interface audit of 2026-11-12). */}
+            {guidedRuns?.length > 0 && (
+              <div>
+                <h2 className="welcome__subtitle" ref={guidedHeadingRef} tabIndex={-1}>
+                  Watch a guided run
+                </h2>
+                <p className="welcome__note">Studio opens an example and takes each step for you, then stops at the result.</p>
+                <ul className="example-grid">
+                  {guidedRuns.map((run) => (
+                    <li key={run.id}>
+                      <button type="button" className="example" onClick={() => onGuided(run)} aria-describedby={`guided-${run.id}`}>
+                        <span className="example__head">
+                          <span className="example__name">{run.title}</span>
+                          {run.time ? <span className="example__size">{run.time}</span> : null}
+                        </span>
+                        <span className="example__desc" id={`guided-${run.id}`}>
+                          {run.description}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="dropzone" data-over={dragOver}>
               <Icon name="upload" size={32} />
@@ -260,48 +389,42 @@ export function Viewport({
                     </li>
                   ))}
                 </ul>
-                <p className="examples__credit" style={{ marginTop: 12 }}>
-                  {examples
-                    .filter((entry) => entry.source)
-                    .map((entry, i) => (
-                      <React.Fragment key={entry.id}>
-                        {i > 0 && " "}
-                        {entry.name}:{" "}
-                        <a href={entry.source} target="_blank" rel="noreferrer">
-                          {entry.credit}
-                        </a>
-                      </React.Fragment>
-                    ))}{" "}
-                  The other examples are generated for Studio and are CC0.
-                </p>
               </div>
             )}
 
-            {guidedRuns?.length > 0 && (
-              <div>
-                <h2 className="welcome__subtitle">Or watch a guided run</h2>
-                <p className="welcome__note">Studio opens an example and takes each step for you, then stops at the result.</p>
-                <ul className="example-grid">
-                  {guidedRuns.map((run) => (
-                    <li key={run.id}>
-                      <button type="button" className="example" onClick={() => onGuided(run)} aria-describedby={`guided-${run.id}`}>
-                        <span className="example__head">
-                          <span className="example__name">{run.title}</span>
-                        </span>
-                        <span className="example__desc" id={`guided-${run.id}`}>
-                          {run.description}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {/* The examples' credits, at the foot. */}
+            {examples?.some((entry) => entry.source) && (
+              <p className="examples__credit">
+                {examples
+                  .filter((entry) => entry.source)
+                  .map((entry, i) => (
+                    <React.Fragment key={entry.id}>
+                      {i > 0 && " "}
+                      {entry.name}:{" "}
+                      <a href={entry.source} target="_blank" rel="noreferrer">
+                        {entry.credit}
+                      </a>
+                    </React.Fragment>
+                  ))}{" "}
+                The other examples are generated for Studio and are CC0.
+              </p>
             )}
           </section>
         </div>
       )}
 
-      {guided && <GuidedCaption guided={guided} onStop={onStopGuided} onOpenNotes={onOpenNotes} />}
+      {guided && (
+        <GuidedCaption
+          guided={guided}
+          onStop={onStopGuided}
+          onOpenNotes={onOpenNotes}
+          onHome={onHome ? goHome : null}
+          onNext={onNextGuided}
+          loadState={loadState}
+          fire={fire}
+          fireSteps={fireSteps}
+        />
+      )}
 
       {initError && (
         <div className="placeholder">
@@ -316,31 +439,25 @@ export function Viewport({
         </div>
       )}
 
-      {loadState.busy && (
-        <div className="overlay overlay--top-left">
-          <div className="card progress">
-            <div className="progress__row">
-              <span className="progress__label">
-                {STAGE_LABELS[loadState.stage] || "Working"}
-              </span>
-              {loadState.percent !== undefined && loadState.percent !== null && (
-                <span className="progress__detail">{Math.round(loadState.percent)}%</span>
-              )}
-            </div>
-            <div className="progress__track">
-              <div
-                className={`progress__fill${
-                  loadState.percent === undefined || loadState.percent === null
-                    ? " progress__fill--indeterminate"
-                    : ""
-                }`}
-                style={{ width: `${loadState.percent ?? 35}%` }}
-              />
-            </div>
-            {loadState.detail && (
-              <div className="progress__detail">{String(loadState.detail).slice(0, 60)}</div>
+      {/* Top left: back to the guided runs whenever the welcome screen is gone
+          (a guided run's card, which sits here, carries its own); Run again
+          beside it once a Flamescapes run has ended or been stopped (App.jsx
+          replay), which moves to the playback bar's place at the bottom on a
+          view wide enough to keep it clear of the legend and the view card
+          (workflow.css .replay-btn); a load's progress below them (in the
+          guided run's card during a run). */}
+      {!guided && (loadState.busy || (onHome && hasModel) || (replay && onReplay)) && (
+        <div className="overlay overlay--top-left viewport__top">
+          <div className="viewport__row">
+            {onHome && !booting && (hasModel || loadState.busy) && <HomeButton onHome={goHome} />}
+            {replay && onReplay && (
+              <Button variant="primary" className="viewport-btn replay-btn" onClick={runAgain} title="Start the Flamescapes fire again with the settings as they are now">
+                <Icon name="replay" size={16} />
+                {replay.changed ? "Run again with new settings" : "Run again"}
+              </Button>
             )}
           </div>
+          {loadState.busy && <LoadProgress loadState={loadState} className="card progress" />}
         </div>
       )}
 
@@ -361,35 +478,18 @@ export function Viewport({
         </div>
       )}
 
-      {fire?.running && (
+      {/* The fire's playback; during a guided run its steps are in the run's card, whose Stop is the one Stop. */}
+      {fire?.running && !guided?.playing && (
         <div className="overlay overlay--bottom-center">
           <div className="card playback" role="group" aria-label="Fire simulation">
-            <div className="playback__info">
-              <div className="playback__row">
-                <strong>
-                  Fire step <span className="mono">{fire.step}</span>
-                  {fireSteps ? ` of ${fireSteps}` : ""}
-                </strong>
-              </div>
-              {fireSteps ? (
-                <div
-                  className="playback__track"
-                  role="progressbar"
-                  aria-label="Fire simulation progress"
-                  aria-valuemin={0}
-                  aria-valuemax={fireSteps}
-                  aria-valuenow={Math.min(fire.step, fireSteps)}
-                >
-                  <div className="playback__fill" style={{ width: `${Math.min(100, (fire.step / fireSteps) * 100)}%` }} />
-                </div>
-              ) : null}
-            </div>
-            <Button variant="danger" onClick={onStopFire}>
+            <FireProgress fire={fire} fireSteps={fireSteps} />
+            <Button variant="danger" onClick={onStopFire} ref={stopFireRef}>
               Stop fire
             </Button>
           </div>
         </div>
       )}
+
 
       {hasModel && (
         <>
@@ -415,6 +515,12 @@ export function Viewport({
                     <span className="legend__note">
                       {heatLegend.note ?? "An index scaled to read in °C, not a measured temperature."}
                     </span>
+                    {/* Flamescapes heat: the fixed ramp or one fitted to the run, the colours only. */}
+                    {heatLegend.fit && (
+                      <button type="button" className="linklike legend__fit" aria-pressed={heatLegend.fit.on} onClick={heatLegend.fit.onToggle}>
+                        {heatLegend.fit.on ? "Back to 20 to 600 °C" : "Fit the colours to this run"}
+                      </button>
+                    )}
                   </div>
                 )}
                 {deadlineLegend && (
@@ -450,14 +556,8 @@ export function Viewport({
             )}
           </div>
 
+          {/* The graph's size is in the panel and the status bar; its own card here sat on Stop fire. */}
           <div className="overlay overlay--bottom-right">
-            {graphStats && (
-              <div className="card" style={{ fontSize: 11 }}>
-                <span className="mono">{graphStats.nodes.toLocaleString()}</span> nodes
-                {"  ·  "}
-                <span className="mono">{graphStats.edges.toLocaleString()}</span> edges
-              </div>
-            )}
             <div className="card">
               {levels?.length > 1 && (
                 <div className="section-cut">

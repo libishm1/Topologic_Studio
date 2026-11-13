@@ -976,7 +976,8 @@ export class ViewerManager {
           resolveJob({ fragments: data.bytes, semantics });
           break;
         case "failed":
-          fail(new Error(data.message));
+          // Its kind ("memory") kept for the page's notice (core/memoryNotice.js).
+          fail(Object.assign(new Error(data.message), data.kind ? { kind: data.kind } : {}));
           break;
         case "semantics":
           end();
@@ -1195,6 +1196,21 @@ export class ViewerManager {
     }
     this.categoryIds = null;
     this.clearOverlays();
+  }
+
+  /**
+   * Back to no model (App.jsx backToWelcome): a load still running is dropped,
+   * as when another file is opened, and a tour, the storey cut, a lowered draw
+   * rate, the model, its second models and every layer go. The viewer stays
+   * ready for the next model.
+   */
+  unloadModel() {
+    this._abortImport?.();
+    this._loadToken = (this._loadToken || 0) + 1;
+    this.stopTour?.();
+    this.setDrawRate(0);
+    this.setSectionHeight(null);
+    this.clearModel();
   }
 
   /**
@@ -2081,6 +2097,42 @@ export class ViewerManager {
     balls.renderOrder = 905;
     balls.frustumCulled = false;
     this._setOverlay(name, balls);
+  }
+
+  /**
+   * Images laid on the storeys' floors (the egress map's fine walk, the
+   * wheelchair audit): each {a0, b0, cell, w, h, level, rgba}, the grid's
+   * plan origin and size on the horizontal axes, its row 0 at b0, a few
+   * centimetres over the floor; null clears the layer `name`.
+   */
+  setFloorImages(name, images, { lift = 0.04, opacity = 0.92 } = {}) {
+    // _destroyObject frees the group itself, not its members.
+    this.overlays.get(name)?.children?.forEach((o) => {
+      o.material?.map?.dispose();
+      o.geometry?.dispose();
+      o.material?.dispose();
+    });
+    this._setOverlay(name, null);
+    if (!images?.length) return;
+    const group = new THREE.Group();
+    for (const im of images) {
+      if (!im?.rgba || !im.w || !im.h) continue;
+      const texture = new THREE.DataTexture(im.rgba, im.w, im.h, THREE.RGBAFormat);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
+      texture.needsUpdate = true;
+      const W = im.w * im.cell, H = im.h * im.cell;
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(W, H), material);
+      // The plane's +y turned to the world's +z, so row 0 (v = 0) lies at b0 and column 0 at a0.
+      plane.rotation.x = Math.PI / 2;
+      plane.position.set(im.a0 + W / 2, im.level + lift, im.b0 + H / 2);
+      plane.renderOrder = 880;
+      group.add(plane);
+    }
+    this._setOverlay(name, group);
   }
 
   setSlimeWeights(weights) {

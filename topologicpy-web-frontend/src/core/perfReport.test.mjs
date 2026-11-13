@@ -1,7 +1,7 @@
 /** Several fire scenarios in one report (perfReport.js), and the ceiling detectors that time detection (flamescapesRun.js, forecast.js). */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { caseFigures, planCases, reportHtml, reportStatus, worstStatus } from "./perfReport.js";
+import { caseFigures, planCases, planDetection, reportHtml, reportStatus, worstStatus } from "./perfReport.js";
 import { ceilingDetection } from "./forecast.js";
 import { DETECTOR_RADIUS, ceilingDetectors } from "./flamescapesRun.js";
 
@@ -32,6 +32,17 @@ test("one plan gives its base case, the exit-blocked case and the failed-detecto
   assert.equal(reportStatus([{ cases: open }]), "cannot tell");
   assert.equal(worstStatus([]), "cannot tell");
   assert.equal(worstStatus(["pass", "pass"]), "pass");
+});
+
+test("detection for the check and the extinguisher: the run's when asked and found, else the time typed, saying which", () => {
+  const typed = 60;
+  const ceiling = { model: "flamescapes", detection: 42, detectionAt: "ceiling" };
+  assert.deepEqual(planDetection(ceiling, { fromRun: true, typed }), { seconds: 42, from: "ceiling" });
+  assert.deepEqual(planDetection({ ...ceiling, detectionAt: "head height" }, { fromRun: true, typed }), { seconds: 42, from: "run" });
+  assert.deepEqual(planDetection(ceiling, { fromRun: false, typed }), { seconds: 60, from: "set" });
+  assert.deepEqual(planDetection({ model: "flamescapes-embers", detection: null }, { fromRun: true, typed }), { seconds: 60, from: "not in the run" });
+  assert.deepEqual(planDetection({ model: "zone", detection: null }, { fromRun: true, typed }), { seconds: 60, from: "no run" });
+  assert.deepEqual(planDetection(null, { fromRun: true, typed }), { seconds: 60, from: "no plan" });
 });
 
 test("the report page names every fire and case, escapes text and gives the verdict over all of them", () => {

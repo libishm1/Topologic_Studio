@@ -39,6 +39,7 @@ import * as WEBIFC from "web-ifc";
 
 import { trimImporter } from "../core/importSettings.js";
 import { ifcSemantics } from "../core/ifcSemantics.js";
+import { memoryKind } from "../core/memoryNotice.js";
 
 // The loader's tape is reserved up front, 64 MiB by default. Reading the
 // relations needs far less: with 4 MiB the heap is 16 MiB after the Duplex
@@ -107,7 +108,8 @@ async function convert({ bytes: buffer, name = "the file", wasm = {}, webIfc = {
       );
       return;
     }
-    self.postMessage({ type: "failed", message: describeFailure(error, name, bytes) });
+    // Typed when the conversion ran out of memory (core/memoryNotice.js).
+    self.postMessage({ type: "failed", message: describeFailure(error, name, bytes), kind: memoryKind(error) });
     return;
   }
   await semantics(bytes, wasm);

@@ -38,7 +38,7 @@ test("the facts come from the app's state, with units, and leave out what it doe
   assert.match(text, /2 furniture, 1 wall; 1 were generic/);
   assert.match(text, /in 2 parts \(the largest holds 50%\)/);
   assert.match(text, /19\.1 m, about 16 s at 1\.2 m\/s/);
-  assert.match(text, /peaked at 2313 kW on a 42 x 40 x 118 grid of 0\.23 m cells, on the GPU\. The solver is not calibrated/);
+  assert.match(text, /peaked at 2313 kW on a 42 x 40 x 118 grid of 0\.23 m cells, on the GPU\. This run's untenable places come from smoke visibility and gas temperature at head height; it reports no layer depth\. Against held-out measured fires near cells of this size \(tested on 0\.2 m/);
   assert.match(text, /14 doors closed, 24 windows closed\./);
   assert.match(text, /out in 39 moves, certified as the earliest escape/);
   assert.ok(lines.every((l) => !/undefined|NaN/.test(l)), text);

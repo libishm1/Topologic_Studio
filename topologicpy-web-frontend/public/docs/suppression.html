@@ -43,6 +43,7 @@
         </ul>
       </li>
       <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="people-and-slime.html">People leaving and the slime mould</a></li>
       <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
     </ol>
     <p class="toc__out"><a href="../">Open the app</a></p>
@@ -87,6 +88,7 @@
       <li>every point of the floor covered, checked on a 0.25 m sample, with extra heads where a bay centre is not clear of the walls, and both orientations of the bays tried.</li>
     </ul>
     <p>Heads hang under the slab or roof over each room: Studio looks straight up from five points of the room for the nearest slab or roof, which is the ceiling when it is lower than the space's top. A space with nothing over it, such as a terrace or a balcony, is taken as outside when no wall round it rises 1.5 m above its floor or its name says so, and gets no heads, with the reason. Models with no slabs at all keep the space's top. Shafts and spaces drawn over smaller rooms are reported, not laid out. Without rooms, the heads are placed on a lattice over the walkable floor. Vienna's heads are laid out in under 50 ms.</p>
+    <p>Atria follow IBC 2021 404.3: heads at the atrium's ceiling, none in its air at each storey, and none at a ceiling more than 55 ft (16.8 m) above the atrium's floor (exception 2; read in secondary sources). A space named as a void ("open to below") opens the room under it to the void's top: the room loses its heads under the void unless a suspended ceiling closes it there, and the topmost void of each atrium hangs its heads at its own top. On the NIBS Clinic, the central waiting room's six heads under one atrium went, and the atria's heads hang at 7.24 m and 12.52 m.</p>
 
     <h3 id="rule-report">The rule report and the requirement</h3>
     <p>Each room gets a rule report. Every rule cites SBC 801-CR-2018 903.3.1.1 and IBC 2021 903.3.1.1 with the NFPA 13-2019 clause; the obstruction rules say "cannot tell" until a structural or MEP model is added. The codes' requirement for sprinklers is checked for the occupancy chosen for the performance check: 903.2.8 (Group R throughout), 903.2.11.3 (a storey with 30 or more occupants at 16.764 m or more, IBC's 55 ft, against SBC's 17 m), high-rise, and the A-3 and E triggers.</p>
@@ -213,15 +215,17 @@
     <ul>
       <li><span class="label">Hazard (NFPA 10):</span> light (offices, classrooms, hotels: 279 m² per A unit), ordinary (shops, car parks, workshops: 139 m²) or extra (kitchens, storage of flammables: 92.9 m², 4-A).</li>
       <li><span class="label">The unit used:</span> ABC dry chemical 2.3 kg (2-A:10-B:C, 14 s of discharge) or 4.5 kg (4-A:80-B:C, 20 s), water 9.5 L (2-A, 60 s), foam 9.5 L (3-A:20-B, 50 s), or CO2 2 kg (34B, 8.5 s).</li>
+      <li><span class="label">The person sets off:</span> when they see the fire, 30 s after ignition (the default), or after detection, the alarm and the median pre-movement time, from the performance check (Route step). Detection is taken as the check takes it: from the Flamescapes run's smoke when <span class="label">Detection from the fire run's smoke</span> is on and the plan with the forecast found it, else <span class="label">Detection (s)</span>. The result says which.</li>
+      <li><span class="label">Trained to use it (7.2 s to ready it, not 13.4 s):</span> off by default.</li>
     </ul>
-    <p>After a fire, one person near it sets off when they see it (30 s), or after detection, the alarm and the median pre-movement time. They walk to the nearest suitable unit, ready it (13.4 s, or 7.2 s if trained) and attack from 1.8 m. The heat release then, from the Flamescapes run or else from the two-zone settings' t-squared fire (the result says which), is judged against what the unit's rating can put out: put out, not put out, or cannot tell.</p>
+    <p>After a fire, <span class="label">Try to put the fire out</span> sends one person near it. They set off as chosen, walk to the nearest suitable unit at the forecast's walking speed, ready it (13.4 s, or 7.2 s if trained) and attack from 1.8 m. The heat release then, from the Flamescapes run or else from the two-zone settings' t-squared fire (the result says which), is judged against what the unit's rating can put out: put out, not put out, or cannot tell.</p>
     <p>On the Duplex, a person who sets off on seeing the fire attacks at 58 s against 37 kW (put out); one who waits for the alarm attacks at 222 s against 547 kW (cannot tell: between 80 and 900 kW for a 2-A unit). Not yet modelled: the unit's effect on the fire in the run, mounting heights, and the rule for units on the escape route.</p>
 
     <h2 id="systems">Suppression systems by room use</h2>
     <p><span class="label">Systems by room use</span>, under the Flamescapes models and off by default, gives each room its system from its name and the building's occupancy. The occupancy is the performance check's occupants setting, shared with it.</p>
     <ul>
       <li><span class="label">Apartments and hotels (Group R):</span> water sprinklers in every room, whatever its name (SBC 801-CR-2018 903.2.8).</li>
-      <li><span class="label">Server, computer, telecom, electrical and UPS or battery rooms:</span> a clean agent, HFC-227ea (FM-200), at NFPA 2001's class C design concentration of 7 %. The room keeps its sprinklers, as NFPA 75 asks; <span class="label">Agent only</span> leaves them out, which needs the fire official's approval. A computer lab or classroom is a room of desks and stays on sprinklers.</li>
+      <li><span class="label">Server, computer, telecom, electrical and UPS or battery rooms:</span> a clean agent, HFC-227ea (FM-200), at NFPA 2001's class C design concentration of 7 %. The room keeps its sprinklers, as NFPA 75 asks (9.1.1, 9.4.1); <span class="label">Agent only in the agent rooms</span>, off by default, leaves them out, which needs the fire official's approval (SBC 801-CR-2018 903.3.1.1.1). A computer lab or classroom is a room of desks and stays on sprinklers.</li>
       <li><span class="label">Generator, fuel, oil, flammable-liquid and hazardous storage rooms:</span> foam-water sprinklers at 6.5 L/(min m²) (NFPA 11), since water does not put out a burning pool.</li>
       <li><span class="label">Every other room:</span> water.</li>
     </ul>
@@ -279,7 +283,7 @@
 
 <footer class="site-footer">
   <div>
-    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-07.</p>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-12.</p>
     <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
   </div>
 </footer>

@@ -1,0 +1,323 @@
+{
+ "generated": "2026-11-13T05:34:36.598Z",
+ "tool": "tools/calibration/sprinkler-crossval.mjs",
+ "plan": "wiki/research/fire-calibration-plan-2026-11-11.md, section 14.3",
+ "sources": [
+  "benchmark/results/2026-11-13-sprinkler-crossval-runs.json"
+ ],
+ "candidates": [
+  5,
+  7,
+  10,
+  14,
+  20
+ ],
+ "series": [
+  "vettori_flat_1998",
+  "vettori_sloped_2003",
+  "bittern_2004",
+  "ul_nfprf_1998_series_I"
+ ],
+ "laboratories": {
+  "vettori_flat_1998": "NIST",
+  "vettori_sloped_2003": "NIST",
+  "bittern_2004": "Canterbury",
+  "ul_nfprf_1998_series_I": "UL"
+ },
+ "byLaboratory": [
+  {
+   "leftOut": "NIST",
+   "series": [
+    "vettori_flat_1998",
+    "vettori_sloped_2003"
+   ],
+   "trainedOn": [
+    "bittern_2004",
+    "ul_nfprf_1998_series_I"
+   ],
+   "chosen": 7,
+   "tie": false,
+   "scores": [
+    {
+     "coefficient": 5,
+     "score": 0.0027
+    },
+    {
+     "coefficient": 7,
+     "score": 0.0024
+    },
+    {
+     "coefficient": 10,
+     "score": 0.0028
+    },
+    {
+     "coefficient": 14,
+     "score": 0.0039
+    },
+    {
+     "coefficient": 20,
+     "score": 0.005
+    }
+   ],
+   "tests": 17,
+   "delta": 1.027,
+   "sigmaM": 0.208,
+   "band": "within the calibrated band",
+   "stopped": 0,
+   "passes": true
+  },
+  {
+   "leftOut": "Canterbury",
+   "series": [
+    "bittern_2004"
+   ],
+   "trainedOn": [
+    "vettori_flat_1998",
+    "vettori_sloped_2003",
+    "ul_nfprf_1998_series_I"
+   ],
+   "chosen": 5,
+   "tie": false,
+   "scores": [
+    {
+     "coefficient": 5,
+     "score": 0.0341
+    },
+    {
+     "coefficient": 7,
+     "score": 0.0356
+    },
+    {
+     "coefficient": 10,
+     "score": 0.0381
+    },
+    {
+     "coefficient": 14,
+     "score": 0.044
+    },
+    {
+     "coefficient": 20,
+     "score": 0.0603
+    }
+   ],
+   "tests": 8,
+   "delta": 1,
+   "sigmaM": 0.055,
+   "band": "within the calibrated band",
+   "stopped": 0,
+   "passes": true
+  },
+  {
+   "leftOut": "UL",
+   "series": [
+    "ul_nfprf_1998_series_I"
+   ],
+   "trainedOn": [
+    "vettori_flat_1998",
+    "vettori_sloped_2003",
+    "bittern_2004"
+   ],
+   "chosen": 5,
+   "tie": false,
+   "scores": [
+    {
+     "coefficient": 5,
+     "score": 0.0291
+    },
+    {
+     "coefficient": 7,
+     "score": 0.0301
+    },
+    {
+     "coefficient": 10,
+     "score": 0.0324
+    },
+    {
+     "coefficient": 14,
+     "score": 0.0378
+    },
+    {
+     "coefficient": 20,
+     "score": 0.0517
+    }
+   ],
+   "tests": 4,
+   "delta": 0.975,
+   "sigmaM": 0.047,
+   "band": "within the calibrated band",
+   "stopped": 0,
+   "passes": true
+  }
+ ],
+ "bySeries": [
+  {
+   "leftOut": "vettori_flat_1998",
+   "series": [
+    "vettori_flat_1998"
+   ],
+   "trainedOn": [
+    "vettori_sloped_2003",
+    "bittern_2004",
+    "ul_nfprf_1998_series_I"
+   ],
+   "chosen": 10,
+   "tie": false,
+   "scores": [
+    {
+     "coefficient": 5,
+     "score": 0.0247
+    },
+    {
+     "coefficient": 7,
+     "score": 0.0241
+    },
+    {
+     "coefficient": 10,
+     "score": 0.0234
+    },
+    {
+     "coefficient": 14,
+     "score": 0.0245
+    },
+    {
+     "coefficient": 20,
+     "score": 0.0343
+    }
+   ],
+   "tests": 9,
+   "delta": 1.165,
+   "sigmaM": 0.118,
+   "band": "within the calibrated band",
+   "stopped": 0,
+   "passes": true
+  },
+  {
+   "leftOut": "vettori_sloped_2003",
+   "series": [
+    "vettori_sloped_2003"
+   ],
+   "trainedOn": [
+    "vettori_flat_1998",
+    "bittern_2004",
+    "ul_nfprf_1998_series_I"
+   ],
+   "chosen": 5,
+   "tie": false,
+   "scores": [
+    {
+     "coefficient": 5,
+     "score": 0.0123
+    },
+    {
+     "coefficient": 7,
+     "score": 0.0138
+    },
+    {
+     "coefficient": 10,
+     "score": 0.0173
+    },
+    {
+     "coefficient": 14,
+     "score": 0.0232
+    },
+    {
+     "coefficient": 20,
+     "score": 0.0306
+    }
+   ],
+   "tests": 8,
+   "delta": 0.879,
+   "sigmaM": 0.203,
+   "band": "within the calibrated band",
+   "stopped": 0,
+   "passes": true
+  },
+  {
+   "leftOut": "bittern_2004",
+   "series": [
+    "bittern_2004"
+   ],
+   "trainedOn": [
+    "vettori_flat_1998",
+    "vettori_sloped_2003",
+    "ul_nfprf_1998_series_I"
+   ],
+   "chosen": 5,
+   "tie": false,
+   "scores": [
+    {
+     "coefficient": 5,
+     "score": 0.0341
+    },
+    {
+     "coefficient": 7,
+     "score": 0.0356
+    },
+    {
+     "coefficient": 10,
+     "score": 0.0381
+    },
+    {
+     "coefficient": 14,
+     "score": 0.044
+    },
+    {
+     "coefficient": 20,
+     "score": 0.0603
+    }
+   ],
+   "tests": 8,
+   "delta": 1,
+   "sigmaM": 0.055,
+   "band": "within the calibrated band",
+   "stopped": 0,
+   "passes": true
+  },
+  {
+   "leftOut": "ul_nfprf_1998_series_I",
+   "series": [
+    "ul_nfprf_1998_series_I"
+   ],
+   "trainedOn": [
+    "vettori_flat_1998",
+    "vettori_sloped_2003",
+    "bittern_2004"
+   ],
+   "chosen": 5,
+   "tie": false,
+   "scores": [
+    {
+     "coefficient": 5,
+     "score": 0.0291
+    },
+    {
+     "coefficient": 7,
+     "score": 0.0301
+    },
+    {
+     "coefficient": 10,
+     "score": 0.0324
+    },
+    {
+     "coefficient": 14,
+     "score": 0.0378
+    },
+    {
+     "coefficient": 20,
+     "score": 0.0517
+    }
+   ],
+   "tests": 4,
+   "delta": 0.975,
+   "sigmaM": 0.047,
+   "band": "within the calibrated band",
+   "stopped": 0,
+   "passes": true
+  }
+ ],
+ "crossValidated": true,
+ "chosen": [
+  7,
+  5
+ ]
+}

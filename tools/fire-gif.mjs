@@ -6,14 +6,19 @@
  *
  *   node tools/fire-gif.mjs [--url http://localhost:5173/] [--out fire.gif]
  *        [--width 640] [--horizon 120] [--smoke-at 60] [--delay 120]
+ *        [--example "NIBS Office"] [--frames-dir dir]
  *
+ * --example names the welcome screen's example (the Duplex by default);
+ * --frames-dir also keeps each step's PNG there, named by the fire step it
+ * shows (step-012.png; the last, after the run ends, one past it), so two
+ * runs, say the live site and a local build, can be laid side by side.
  * --smoke-at switches the view to smoke at that step (off by default);
  * --delay is the GIF's time per frame in ms. Like readme-shots.mjs it aims
  * at graph nodes through window.__viewer, which a dev server exposes and a
  * production build exposes with ?debug.
  */
 import { chromium } from "playwright-core";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { decodePng, downscale, encodeGif } from "./gif.mjs";
 
@@ -32,6 +37,8 @@ const DELAY = Number(argOf("--delay", 120));
 const CHROME = argOf("--chrome", "C:/Program Files/Google/Chrome/Application/chrome.exe");
 const ORIGIN = args.includes("--origin") ? new RegExp(argOf("--origin", ""), "i") : null;
 const ZOOM = Number(argOf("--zoom", 0.55));
+const EXAMPLE = argOf("--example", "Duplex apartment");
+const FRAMES_DIR = argOf("--frames-dir", null);
 
 // ------------------------------------------------------------------ the app
 
@@ -74,8 +81,8 @@ await page.goto(URL_DEBUG, { waitUntil: "load" });
 await page.waitForFunction(() => document.querySelector(".welcome .example"), null, { timeout: 120000 });
 await page.waitForTimeout(1500);
 
-console.log("Opening the Duplex example and building its graph");
-await page.locator(".welcome").getByRole("button", { name: /^Duplex apartment/ }).click();
+console.log(`Opening the ${EXAMPLE} example and building its graph`);
+await page.locator(".welcome").getByRole("button", { name: new RegExp(`^${EXAMPLE}`) }).click();
 await page.waitForFunction(
   () => [...document.querySelectorAll("button")].some((b) => /Build egress graph|Rebuild graph/.test(b.textContent) && !b.disabled),
   null,
@@ -106,8 +113,7 @@ await page.waitForTimeout(1000);
 
 console.log("Starting the Flamescapes fire at the most likely ignition point");
 await page.getByRole("tab", { name: /^Simulate/ }).click();
-await page.getByText("Flamescapes combustion solver (optional)", { exact: true }).click();
-await page.getByText("Flamescapes: fire, smoke and embers", { exact: true }).click();
+await page.getByLabel("How the fire spreads", { exact: true }).selectOption("flamescapes-embers");
 await page.getByText("Likely ignition points", { exact: true }).click();
 await page.getByRole("button", { name: /^Find in this model$/ }).click();
 await page.getByRole("button", { name: /^Start here$/ }).first().waitFor({ timeout: 60000 });
@@ -147,6 +153,7 @@ const backend = await page.locator(".result__note", { hasText: "Running on" }).f
 console.log(`  ${backend.split(".")[0] || "backend not shown"}`);
 const view = page.locator(".viewport");
 const shots = [];
+const steps = [];
 let last = -1, smoke = false;
 const t0 = Date.now();
 while (Date.now() - t0 < 900000) {
@@ -157,6 +164,7 @@ while (Date.now() - t0 < 900000) {
       smoke = true;
     }
     shots.push(await view.screenshot({ type: "png" }));
+    steps.push(step);
     if (step > last + 1) console.log(`  steps ${last + 1} to ${step - 1} played before they could be captured`);
     last = step;
     if (shots.length % 10 === 0) console.log(`  ${shots.length} frames (step ${step})`);
@@ -167,7 +175,12 @@ while (Date.now() - t0 < 900000) {
 // The last step, after the run ends.
 await page.waitForTimeout(800);
 shots.push(await view.screenshot({ type: "png" }));
+steps.push(last + 1);
 await browser.close();
+if (FRAMES_DIR) {
+  await mkdir(FRAMES_DIR, { recursive: true });
+  await Promise.all(shots.map((png, i) => writeFile(path.join(FRAMES_DIR, `step-${String(steps[i]).padStart(3, "0")}.png`), png)));
+}
 const frames = shots.map((png) => downscale(decodePng(png), WIDTH));
 
 const gif = encodeGif(frames, DELAY);

@@ -17,3 +17,10 @@ tools/shots/
 # Local reading copies of papers (PDFs, tens of MB). Open-licence papers are
 # transcribed into wiki/sources/papers/ with attribution; the PDFs stay here.
 reference/papers/
+# Raw files of the held-out fire validation (NIST firemodels/exp and fds at
+# fixed commits), fetched by tools/calibration/validation-data.mjs; only the
+# reduced numbers in tools/calibration/data/*.json are kept.
+tools/calibration/data/cache/
+# The fire model validation review's raw harvests, abstracts and full texts
+# (wiki/research/prisma-fire-model-validation/PROTOCOL.md section 8): not redistributed.
+wiki/research/prisma-fire-model-validation/work/

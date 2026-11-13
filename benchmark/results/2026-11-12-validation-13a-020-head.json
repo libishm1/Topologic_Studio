@@ -1,0 +1,9266 @@
+{
+ "generated": "2026-11-12T15:09:52.595Z",
+ "tool": "tools/calibration/head-temperature.mjs",
+ "plan": "wiki/research/fire-calibration-plan-2026-11-11.md, section 13.2 item 1",
+ "sources": [
+  {
+   "file": "benchmark/results/2026-11-12-validation-13a-020.json",
+   "generated": "2026-11-12T15:09:23.290Z",
+   "head": "07db6f1c8ef9f7d6303f1e0bd7d8233ec8353439",
+   "solverDigests": {
+    "flamescapes.js": "df3dcb6fb785f1b4",
+    "flamescapesRun.js": "11b2aad96bc3d5fc",
+    "flamescapesGpu.js": "310125788491b0bf",
+    "voxelize.js": "1cbb116d52fa56ff",
+    "fireClasses.js": "e6b1b13f5a5110a9"
+   },
+   "harnessDigests": {
+    "validation-suite.mjs": "595a9da62da67e89",
+    "lib/fds.mjs": "38be6012a4c85da6",
+    "lib/represented.mjs": "16f06b9a20281fad",
+    "lib/stats.mjs": "39da8cc201873346",
+    "data/atf.json": "91d707ed5c343167",
+    "data/nbs.json": "b331cc6dcd5de6d8",
+    "data/nistnrc.json": "80dc26aa719f48fc",
+    "data/steckler.json": "fdfafe1ebde43a88",
+    "data/wtc.json": "86496b79a9caaf99"
+   }
+  }
+ ],
+ "reducer": {
+  "head-temperature.mjs": "91676268ffbe597c",
+  "lib/head.mjs": "612dd140afe8084f",
+  "lib/stats.mjs": "c80aafd6e57faea3",
+  "data/steckler.json": "ac9c38bde93d28d0",
+  "data/nbs.json": "2bfe634d67bf7086",
+  "data/nistnrc.json": "62bf784ece288f5a",
+  "data/wtc.json": "d4c457dfaeaba273",
+  "data/atf.json": "3f3e69ad453922c1",
+  "data/fsri.json": "5fccee80b139a580",
+  "data/ulnist.json": "03554b4d05bc8ceb",
+  "data/fse.json": "86ff830a7bb7670c"
+ },
+ "plumeRule": "r < D/2 + 0.25 (z - z_burner), unless a floor lies between (lib/head.mjs)",
+ "jobs": "-",
+ "wallSeconds": 0,
+ "settings": {
+  "measures": {
+   "nistnrc": [
+    "headTemperature"
+   ],
+   "atf": [
+    "headTemperature"
+   ],
+   "wtc": [
+    "headTemperature"
+   ],
+   "nbs": [
+    "headTemperature"
+   ],
+   "steckler": [
+    "headTemperature"
+   ]
+  },
+  "sigmaE": 0.07,
+  "rule": "claim protocol addendum 2026-11-12 00:28: a run whose fire's gas cannot reach the open boundary, though its test had an opening, is left out and reported as not represented on this grid (lib/represented.mjs; sealed by design: {\"nistnrc\":[\"01\",\"02\",\"07\",\"08\",\"13\"],\"nbs\":[\"100O\"]})"
+ },
+ "runs": [
+  {
+   "id": "nistnrc/13@0.2",
+   "dataset": "nistnrc",
+   "test": "13",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 6.74,
+   "wallSeconds": 13567.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 13.7,
+    "substeps": 7
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71820
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 196.829,
+     "measured": 240,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 201.343,
+     "measured": 248,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 214.908,
+     "measured": 275,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 202.167,
+     "measured": 232,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 216.186,
+     "measured": 414,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 196.612,
+     "measured": 231,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "sealed by design (door shut)"
+   }
+  },
+  {
+   "id": "nistnrc/02@0.2",
+   "dataset": "nistnrc",
+   "test": "02",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 5.15,
+   "wallSeconds": 10945.7,
+   "health": {
+    "ok": true,
+    "maxSpeed": 11.48,
+    "substeps": 6
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71820
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "02",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 166.87,
+     "measured": 188,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "02",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 167.414,
+     "measured": 185,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "02",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 168.465,
+     "measured": 191,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "02",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 170.584,
+     "measured": 187,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "02",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 171.463,
+     "measured": 276,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "02",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 166.321,
+     "measured": 179,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "sealed by design (door shut)"
+   }
+  },
+  {
+   "id": "nistnrc/08@0.2",
+   "dataset": "nistnrc",
+   "test": "08",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 5.15,
+   "wallSeconds": 11555,
+   "health": {
+    "ok": true,
+    "maxSpeed": 11.36,
+    "substeps": 6
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71820
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "08",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 183.36,
+     "measured": 193,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "08",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 184.468,
+     "measured": 192,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "08",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 183.638,
+     "measured": 201,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "08",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 186.758,
+     "measured": 191,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "08",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 185.006,
+     "measured": 227,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "08",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 181.016,
+     "measured": 185,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "sealed by design (door shut)"
+   }
+  },
+  {
+   "id": "nistnrc/15@0.2",
+   "dataset": "nistnrc",
+   "test": "15",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 5.1,
+   "wallSeconds": 8160.6,
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.14,
+    "substeps": 6
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71910
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "15",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 135.498,
+     "measured": 149,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "15",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 122.532,
+     "measured": 157,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "15",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 127.802,
+     "measured": 221,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "15",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 122.198,
+     "measured": 172,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "15",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 129.098,
+     "measured": 152,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [
+     {
+      "device": "5/Tree 5-5",
+      "why": "in the plume: r 0.7 m < 0.938 m"
+     }
+    ],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nistnrc/14@0.2",
+   "dataset": "nistnrc",
+   "test": "14",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 5.04,
+   "wallSeconds": 8399,
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.01,
+    "substeps": 6
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71910
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 132.942,
+     "measured": 146,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 122.277,
+     "measured": 203,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 122.336,
+     "measured": 164,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 118.164,
+     "measured": 151,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 120.312,
+     "measured": 188,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 123.861,
+     "measured": 144,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nistnrc/09@0.2",
+   "dataset": "nistnrc",
+   "test": "09",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 4.94,
+   "wallSeconds": 8097.5,
+   "health": {
+    "ok": true,
+    "maxSpeed": 9.96,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71910
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "09",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 122.742,
+     "measured": 152,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "09",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 119.568,
+     "measured": 156,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "09",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 119.4,
+     "measured": 187,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "09",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 118.312,
+     "measured": 165,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "09",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 122.242,
+     "measured": 302,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "09",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 117.89,
+     "measured": 148,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nistnrc/03@0.2",
+   "dataset": "nistnrc",
+   "test": "03",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 4.92,
+   "wallSeconds": 6926.5,
+   "health": {
+    "ok": true,
+    "maxSpeed": 9.93,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71910
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 130.301,
+     "measured": 149,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 116.681,
+     "measured": 154,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 119.222,
+     "measured": 198,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 117.63,
+     "measured": 164,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 122.889,
+     "measured": 299,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 112.585,
+     "measured": 148,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nistnrc/18@0.2",
+   "dataset": "nistnrc",
+   "test": "18",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 4.91,
+   "wallSeconds": 7068.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.06,
+    "substeps": 6
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71910
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 124.616,
+     "measured": 138,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 113.378,
+     "measured": 141,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 112.824,
+     "measured": 156,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 113.969,
+     "measured": 171,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 114.786,
+     "measured": 156,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 116.778,
+     "measured": 141,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nistnrc/01@0.2",
+   "dataset": "nistnrc",
+   "test": "01",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 3.36,
+   "wallSeconds": 4051.5,
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.36,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71820
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "01",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 66.348,
+     "measured": 67.8,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "01",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 65.044,
+     "measured": 71.5,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "01",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 67.038,
+     "measured": 83,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "01",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 64.544,
+     "measured": 70,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "01",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 66.528,
+     "measured": 80,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "01",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 67.474,
+     "measured": 66,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "sealed by design (door shut)"
+   }
+  },
+  {
+   "id": "nistnrc/07@0.2",
+   "dataset": "nistnrc",
+   "test": "07",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 92796,
+   "plumeIndex": 3.33,
+   "wallSeconds": 3593.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.62,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 71820
+   },
+   "door": null,
+   "grid": [
+    111,
+    22,
+    38
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "07",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 65.854,
+     "measured": 64.8,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "07",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 64.134,
+     "measured": 72.1,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "07",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 61.489,
+     "measured": 88,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "07",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 61.863,
+     "measured": 71.7,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "07",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 62.983,
+     "measured": 101,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "07",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 65.515,
+     "measured": 63,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "sealed by design (door shut)"
+   }
+  },
+  {
+   "id": "atf/500@0.2",
+   "dataset": "atf",
+   "test": "500",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 77517,
+   "plumeIndex": 3.59,
+   "wallSeconds": 2134,
+   "health": {
+    "ok": true,
+    "maxSpeed": 7.81,
+    "substeps": 4
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 21669
+   },
+   "door": null,
+   "grid": [
+    87,
+    27,
+    33
+   ],
+   "trees": [
+    {
+     "id": "A",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "B",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "C",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "F",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "G",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "atf",
+     "test": "500",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "A/TC_A06",
+     "model": 520.918,
+     "measured": 293.6,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "500",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "B/TC_B06",
+     "model": 339.52,
+     "measured": 226.5,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "500",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "C/TC_C06",
+     "model": 231.899,
+     "measured": 253.5,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "500",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "F/TC_F06",
+     "model": 124.801,
+     "measured": 108.8,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "500",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "G/TC_G06",
+     "model": 64.203,
+     "measured": 93.3,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "atf/Mix@0.2",
+   "dataset": "atf",
+   "test": "Mix",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 77517,
+   "plumeIndex": 3.59,
+   "wallSeconds": 1291.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.08,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 21669
+   },
+   "door": null,
+   "grid": [
+    87,
+    27,
+    33
+   ],
+   "trees": [
+    {
+     "id": "A",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "B",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "C",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "F",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "G",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "atf",
+     "test": "Mix",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "A/TC_A06",
+     "model": 415.772,
+     "measured": 251.6,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "Mix",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "B/TC_B06",
+     "model": 236.858,
+     "measured": 161.7,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "Mix",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "C/TC_C06",
+     "model": 130.56,
+     "measured": 225.5,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "Mix",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "F/TC_F06",
+     "model": 44.786,
+     "measured": 69.4,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "Mix",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "G/TC_G06",
+     "model": 15.38,
+     "measured": 53,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "atf/050@0.2",
+   "dataset": "atf",
+   "test": "050",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 77517,
+   "plumeIndex": 1.42,
+   "wallSeconds": 1045.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.78,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 21669
+   },
+   "door": null,
+   "grid": [
+    87,
+    27,
+    33
+   ],
+   "trees": [
+    {
+     "id": "A",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "B",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "C",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "F",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "G",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "atf",
+     "test": "050",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "A/TC_A06",
+     "model": 92.523,
+     "measured": 50.3,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "050",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "B/TC_B06",
+     "model": 53.637,
+     "measured": 37.6,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "050",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "C/TC_C06",
+     "model": 30.464,
+     "measured": 46,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "050",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "F/TC_F06",
+     "model": 5.436,
+     "measured": 19.5,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "050",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "G/TC_G06",
+     "model": 6.29,
+     "measured": 17.6,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "atf/100@0.2",
+   "dataset": "atf",
+   "test": "100",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 77517,
+   "plumeIndex": 1.89,
+   "wallSeconds": 1151,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.54,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 21669
+   },
+   "door": null,
+   "grid": [
+    87,
+    27,
+    33
+   ],
+   "trees": [
+    {
+     "id": "A",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "B",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "C",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "F",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "G",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "atf",
+     "test": "100",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "A/TC_A06",
+     "model": 174.516,
+     "measured": 88.2,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "100",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "B/TC_B06",
+     "model": 106.037,
+     "measured": 64.8,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "100",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "C/TC_C06",
+     "model": 69.79,
+     "measured": 77.8,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "100",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "F/TC_F06",
+     "model": 20.956,
+     "measured": 32.1,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "100",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "G/TC_G06",
+     "model": 10.275,
+     "measured": 29.1,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "atf/240@0.2",
+   "dataset": "atf",
+   "test": "240",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 77517,
+   "plumeIndex": 2.72,
+   "wallSeconds": 1596.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.78,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 21669
+   },
+   "door": null,
+   "grid": [
+    87,
+    27,
+    33
+   ],
+   "trees": [
+    {
+     "id": "A",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "B",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "C",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "F",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "G",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "atf",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "A/TC_A06",
+     "model": 343.536,
+     "measured": 180.3,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "B/TC_B06",
+     "model": 217.824,
+     "measured": 131.6,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "C/TC_C06",
+     "model": 139.972,
+     "measured": 158.4,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "F/TC_F06",
+     "model": 64.868,
+     "measured": 67.1,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "G/TC_G06",
+     "model": 27.426,
+     "measured": 58.6,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "atf/250@0.2",
+   "dataset": "atf",
+   "test": "250",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 77517,
+   "plumeIndex": 2.75,
+   "wallSeconds": 1869.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.88,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 21669
+   },
+   "door": null,
+   "grid": [
+    87,
+    27,
+    33
+   ],
+   "trees": [
+    {
+     "id": "A",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "B",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "C",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "F",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "G",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "atf",
+     "test": "250",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "A/TC_A06",
+     "model": 331.654,
+     "measured": 173,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "250",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "B/TC_B06",
+     "model": 222.767,
+     "measured": 123.8,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "250",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "C/TC_C06",
+     "model": 145.065,
+     "measured": 153,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "250",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "F/TC_F06",
+     "model": 67.501,
+     "measured": 64,
+     "moved": 0
+    },
+    {
+     "dataset": "atf",
+     "test": "250",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "G/TC_G06",
+     "model": 25.674,
+     "measured": 55.4,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/4@0.2",
+   "dataset": "wtc",
+   "test": "4",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 20680,
+   "plumeIndex": 7.59,
+   "wallSeconds": 4079.3,
+   "health": {
+    "ok": true,
+    "maxSpeed": 10,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 15850
+   },
+   "door": null,
+   "grid": [
+    47,
+    22,
+    20
+   ],
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW11",
+     "model": 442.318,
+     "measured": 556,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW12",
+     "model": 389.45,
+     "measured": 535,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE11",
+     "model": 453.742,
+     "measured": 526,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "4",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE12",
+     "model": 364.116,
+     "measured": 474,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/5@0.2",
+   "dataset": "wtc",
+   "test": "5",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 20680,
+   "plumeIndex": 7.44,
+   "wallSeconds": 3983.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 9.69,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 15850
+   },
+   "door": null,
+   "grid": [
+    47,
+    22,
+    20
+   ],
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW11",
+     "model": 423.272,
+     "measured": 528,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW12",
+     "model": 381.228,
+     "measured": 495,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE11",
+     "model": 441.358,
+     "measured": 510,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "5",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE12",
+     "model": 344.453,
+     "measured": 434,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/6@0.2",
+   "dataset": "wtc",
+   "test": "6",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 20680,
+   "plumeIndex": 7.41,
+   "wallSeconds": 3996.7,
+   "health": {
+    "ok": true,
+    "maxSpeed": 9.63,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 15850
+   },
+   "door": null,
+   "grid": [
+    47,
+    22,
+    20
+   ],
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW11",
+     "model": 425.131,
+     "measured": 539,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW12",
+     "model": 378.294,
+     "measured": 504,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE11",
+     "model": 434.185,
+     "measured": 472,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "6",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE12",
+     "model": 337.602,
+     "measured": 395,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/3@0.2",
+   "dataset": "wtc",
+   "test": "3",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 20680,
+   "plumeIndex": 6.38,
+   "wallSeconds": 4871.6,
+   "health": {
+    "ok": true,
+    "maxSpeed": 10.97,
+    "substeps": 6
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 15834
+   },
+   "door": null,
+   "grid": [
+    47,
+    22,
+    20
+   ],
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW11",
+     "model": 332.122,
+     "measured": 363,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW12",
+     "model": 264.896,
+     "measured": 333,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE11",
+     "model": 312.628,
+     "measured": 340,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "3",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE12",
+     "model": 268.148,
+     "measured": 287,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/1@0.2",
+   "dataset": "wtc",
+   "test": "1",
+   "cell": 0.2,
+   "horizon": 600,
+   "cells": 20680,
+   "plumeIndex": 6.44,
+   "wallSeconds": 3033,
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.49,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 15834
+   },
+   "door": null,
+   "grid": [
+    47,
+    22,
+    20
+   ],
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW11",
+     "model": 360.232,
+     "measured": 379,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW12",
+     "model": 296.394,
+     "measured": 328,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE11",
+     "model": 354.902,
+     "measured": 332,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "1",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE12",
+     "model": 265.339,
+     "measured": 208,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nbs/100A@0.2",
+   "dataset": "nbs",
+   "test": "100A",
+   "cell": 0.2,
+   "horizon": 900,
+   "cells": 27342,
+   "plumeIndex": 1.98,
+   "wallSeconds": 1134.5,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.54,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 10556
+   },
+   "door": null,
+   "grid": [
+    63,
+    14,
+    31
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 2.2,
+     "nominal": 2.2,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "4",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/T#1 62",
+     "model": 398.316,
+     "measured": 327,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/T#1 74",
+     "model": 425.728,
+     "measured": 354,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/T#3 60",
+     "model": 24.346,
+     "measured": 60,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/T#3 72",
+     "model": 62.887,
+     "measured": 87,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "4/T#4 60",
+     "model": 32.755,
+     "measured": 52,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "4/T#4 72",
+     "model": 46.653,
+     "measured": 86,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/T#5 60",
+     "model": 34.772,
+     "measured": 73,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100A",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/T#5 72",
+     "model": 37.288,
+     "measured": 90,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "nbs/100O@0.2",
+   "dataset": "nbs",
+   "test": "100O",
+   "cell": 0.2,
+   "horizon": 900,
+   "cells": 27342,
+   "plumeIndex": 1.98,
+   "wallSeconds": 1235.4,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.11,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 10516
+   },
+   "door": null,
+   "grid": [
+    63,
+    14,
+    31
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 2.2,
+     "nominal": 2.2,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "4",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nbs",
+     "test": "100O",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/T#1 62",
+     "model": 328.613,
+     "measured": 374,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100O",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/T#1 74",
+     "model": 356.19,
+     "measured": 376,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100O",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/T#3 60",
+     "model": 45.386,
+     "measured": 104,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100O",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/T#3 72",
+     "model": 75.42,
+     "measured": 114,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100O",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "4/T#4 60",
+     "model": 49.077,
+     "measured": 102,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100O",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "4/T#4 72",
+     "model": 60.752,
+     "measured": 112,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100O",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/T#5 60",
+     "model": 43.246,
+     "measured": 107,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100O",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/T#5 72",
+     "model": 44.244,
+     "measured": 107,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "sealed by design (door shut)"
+   }
+  },
+  {
+   "id": "nbs/100Z@0.2",
+   "dataset": "nbs",
+   "test": "100Z",
+   "cell": 0.2,
+   "horizon": 900,
+   "cells": 27342,
+   "plumeIndex": 1.98,
+   "wallSeconds": 1504.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.17,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 12288
+   },
+   "door": null,
+   "grid": [
+    63,
+    14,
+    31
+   ],
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 2.2,
+     "nominal": 2.2,
+     "cells": 11,
+     "droppedCells": 0
+    },
+    {
+     "id": "3",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "5",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    },
+    {
+     "id": "8",
+     "modelCeiling": 2.4,
+     "nominal": 2.4,
+     "cells": 12,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/T#1 62",
+     "model": 344.521,
+     "measured": 336,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "1/T#1 74",
+     "model": 374.743,
+     "measured": 337,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/T#3 60",
+     "model": 25.475,
+     "measured": 49,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "3/T#3 72",
+     "model": 55.334,
+     "measured": 78,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/T#5 60",
+     "model": 33.418,
+     "measured": 56,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "5/T#5 72",
+     "model": 35.15,
+     "measured": 75,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "8/T#8 60",
+     "model": 6.607,
+     "measured": 38,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "8/T#8 72",
+     "model": 6.736,
+     "measured": 61,
+     "moved": 0
+    },
+    {
+     "dataset": "nbs",
+     "test": "100Z",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "8/T#8 76",
+     "model": 6.736,
+     "measured": 72,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "wtc/2@0.2",
+   "dataset": "wtc",
+   "test": "2",
+   "cell": 0.2,
+   "horizon": 400,
+   "cells": 20680,
+   "plumeIndex": 6.81,
+   "wallSeconds": 3136.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 11.1,
+    "substeps": 6
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 15834
+   },
+   "door": null,
+   "grid": [
+    47,
+    22,
+    20
+   ],
+   "trees": [
+    {
+     "id": "west",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    },
+    {
+     "id": "east",
+     "modelCeiling": 3.8,
+     "nominal": 3.82,
+     "cells": 19,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW11",
+     "model": 328.127,
+     "measured": 401,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "west/TTRW12",
+     "model": 271.273,
+     "measured": 367,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE11",
+     "model": 306.97,
+     "measured": 367,
+     "moved": 0
+    },
+    {
+     "dataset": "wtc",
+     "test": "2",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "east/TTRE12",
+     "model": 255.947,
+     "measured": 307,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/10@0.2",
+   "dataset": "steckler",
+   "test": "10",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 83.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 6.17,
+    "substeps": 4
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 1964
+   },
+   "door": {
+    "cells": 0,
+    "width": 0,
+    "sill": null,
+    "soffit": null,
+    "measured": {
+     "width": 0.25,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "10",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 348.2762,
+     "measured": 170.98,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "10",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 348.2762,
+     "measured": 171.14,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "10",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 345.7369,
+     "measured": 171.06,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "10",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 345.7369,
+     "measured": 169.98,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "10",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 329.9238,
+     "measured": 168.51,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": false,
+    "why": "not represented on this grid: the grid seals the test's opening"
+   }
+  },
+  {
+   "id": "steckler/11@0.2",
+   "dataset": "steckler",
+   "test": "11",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 57.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.44,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.36,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "11",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 192.8757,
+     "measured": 140.81,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "11",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 192.8757,
+     "measured": 140.97,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "11",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 182.6884,
+     "measured": 141.19,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "11",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 182.6884,
+     "measured": 140.44,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "11",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 169.4105,
+     "measured": 139.34,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/12@0.2",
+   "dataset": "steckler",
+   "test": "12",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 53.7,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.39,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.5,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "12",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 190.3488,
+     "measured": 122.75,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "12",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 190.3488,
+     "measured": 122.71,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "12",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 182.1159,
+     "measured": 122.97,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "12",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 182.1159,
+     "measured": 122.37,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "12",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 168.8077,
+     "measured": 121.83,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/13@0.2",
+   "dataset": "steckler",
+   "test": "13",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 53.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.46,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.62,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 196.147,
+     "measured": 110.24,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 196.147,
+     "measured": 110.13,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 186.4241,
+     "measured": 110.41,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 186.4241,
+     "measured": 109.95,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "13",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 174.6415,
+     "measured": 109.58,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/14@0.2",
+   "dataset": "steckler",
+   "test": "14",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 57.7,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.38,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 200.4054,
+     "measured": 101.26,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 200.4054,
+     "measured": 101.32,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 188.3628,
+     "measured": 101.63,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 188.3628,
+     "measured": 101.19,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "14",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 173.2374,
+     "measured": 100.77,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/16@0.2",
+   "dataset": "steckler",
+   "test": "16",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 56.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.27,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2706
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.8,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.86,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "16",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 147.9634,
+     "measured": 96.95,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "16",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 147.9634,
+     "measured": 96.93,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "16",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 135.8465,
+     "measured": 97.26,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "16",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 135.8465,
+     "measured": 96.72,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "16",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 120.3493,
+     "measured": 96.49,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/17@0.2",
+   "dataset": "steckler",
+   "test": "17",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 57.9,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.47,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2706
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.8,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 1,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "17",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 151.8229,
+     "measured": 90.22,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "17",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 151.8229,
+     "measured": 90.25,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "17",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 141.0825,
+     "measured": 90.66,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "17",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 141.0825,
+     "measured": 90.25,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "17",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 123.5171,
+     "measured": 90.08,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/18@0.2",
+   "dataset": "steckler",
+   "test": "18",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 58.7,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.44,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 196.7736,
+     "measured": 101.73,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 196.7736,
+     "measured": 101.73,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 188.0765,
+     "measured": 102.15,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 188.0765,
+     "measured": 101.76,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "18",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 173.5869,
+     "measured": 101.47,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/19@0.2",
+   "dataset": "steckler",
+   "test": "19",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.2,
+   "wallSeconds": 49.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.85,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "19",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 90.542,
+     "measured": 57.12,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "19",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 90.542,
+     "measured": 57.1,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "19",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 87.9164,
+     "measured": 57.51,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "19",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 87.9164,
+     "measured": 57.18,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "19",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 82.8731,
+     "measured": 54.93,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/20@0.2",
+   "dataset": "steckler",
+   "test": "20",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.95,
+   "wallSeconds": 82.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 6.66,
+    "substeps": 4
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "20",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 339.2533,
+     "measured": 154.96,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "20",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 339.2533,
+     "measured": 154.96,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "20",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 321.9724,
+     "measured": 155.21,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "20",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 321.9724,
+     "measured": 154.48,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "20",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 289.1797,
+     "measured": 153.79,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/21@0.2",
+   "dataset": "steckler",
+   "test": "21",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 2.29,
+   "wallSeconds": 111.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 8.53,
+    "substeps": 5
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "21",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 525.5622,
+     "measured": 215.88,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "21",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 525.5622,
+     "measured": 216,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "21",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 482.599,
+     "measured": 215.88,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "21",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 482.599,
+     "measured": 214.96,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "21",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 406.9964,
+     "measured": 213.58,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/22@0.2",
+   "dataset": "steckler",
+   "test": "22",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 74.3,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.87,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2682
+   },
+   "door": {
+    "cells": 6,
+    "width": 0.4,
+    "sill": 0.6,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.45,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "22",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 247.5953,
+     "measured": 118.16,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "22",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 247.5953,
+     "measured": 118.12,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "22",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 235.2031,
+     "measured": 118.37,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "22",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 235.2031,
+     "measured": 117.69,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "22",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 216.3634,
+     "measured": 116.87,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/23@0.2",
+   "dataset": "steckler",
+   "test": "23",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 79.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 6.1,
+    "substeps": 4
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2678
+   },
+   "door": {
+    "cells": 4,
+    "width": 0.4,
+    "sill": 1,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.91,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "23",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 280.8849,
+     "measured": 155.7,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "23",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 280.8849,
+     "measured": 155.89,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "23",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 270.7914,
+     "measured": 156.06,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "23",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 270.7914,
+     "measured": 155.27,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "23",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 252.6488,
+     "measured": 154.2,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/30@0.2",
+   "dataset": "steckler",
+   "test": "30",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 75.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 6.1,
+    "substeps": 4
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2678
+   },
+   "door": {
+    "cells": 4,
+    "width": 0.4,
+    "sill": 1,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.91,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "30",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 280.8849,
+     "measured": 155.77,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "30",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 280.8849,
+     "measured": 156.02,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "30",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 270.7914,
+     "measured": 156.56,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "30",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 270.7914,
+     "measured": 156,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "30",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 252.6488,
+     "measured": 154.99,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/41@0.2",
+   "dataset": "steckler",
+   "test": "41",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 76.4,
+   "health": {
+    "ok": true,
+    "maxSpeed": 6.26,
+    "substeps": 4
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2674
+   },
+   "door": {
+    "cells": 2,
+    "width": 0.4,
+    "sill": 1.4,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 1.37,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "41",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 320.2002,
+     "measured": 260.01,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "41",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 320.2002,
+     "measured": 259.92,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "41",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 308.9696,
+     "measured": 259.76,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "41",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 308.9696,
+     "measured": 258.21,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "41",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 291.728,
+     "measured": 254.75,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/114@0.2",
+   "dataset": "steckler",
+   "test": "114",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 79.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.99,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 1964
+   },
+   "door": {
+    "cells": 0,
+    "width": 0,
+    "sill": null,
+    "soffit": null,
+    "measured": {
+     "width": 0.24,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "114",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 301.2683,
+     "measured": 219.7,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "114",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 301.2683,
+     "measured": 219.8,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "114",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 308.3115,
+     "measured": 219.27,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "114",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 308.3115,
+     "measured": 217.93,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "114",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 298.4636,
+     "measured": 215.27,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": false,
+    "why": "not represented on this grid: the grid seals the test's opening"
+   }
+  },
+  {
+   "id": "steckler/116@0.2",
+   "dataset": "steckler",
+   "test": "116",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 66.7,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.54,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2706
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.8,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 1,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "116",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 153.7216,
+     "measured": 143.01,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "116",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 153.7216,
+     "measured": 143.13,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "116",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 151.075,
+     "measured": 143.04,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "116",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 151.075,
+     "measured": 140.88,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "116",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 136.2533,
+     "measured": 130.15,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/122@0.2",
+   "dataset": "steckler",
+   "test": "122",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 70.5,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.56,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2682
+   },
+   "door": {
+    "cells": 6,
+    "width": 0.4,
+    "sill": 0.6,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.45,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "122",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 202.521,
+     "measured": 168.14,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "122",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 202.521,
+     "measured": 168.02,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "122",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 204.7947,
+     "measured": 167.91,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "122",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 204.7947,
+     "measured": 166.34,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "122",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 195.3927,
+     "measured": 162.18,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/144@0.2",
+   "dataset": "steckler",
+   "test": "144",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 66.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.69,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.36,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "144",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 182.6085,
+     "measured": 187.57,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "144",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 182.6085,
+     "measured": 187.73,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "144",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 184.8704,
+     "measured": 187.43,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "144",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 184.8704,
+     "measured": 186.16,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "144",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 175.0479,
+     "measured": 184.05,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/160@0.2",
+   "dataset": "steckler",
+   "test": "160",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 73.9,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.2,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2672
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "160",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 265.7959,
+     "measured": 130.4,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "160",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 265.7959,
+     "measured": 130.38,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "160",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 243.6841,
+     "measured": 130.17,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "160",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 243.6841,
+     "measured": 129.73,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "160",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 199.4296,
+     "measured": 129.25,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/161@0.2",
+   "dataset": "steckler",
+   "test": "161",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 58.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.01,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2676
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "161",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 275.1627,
+     "measured": 111.33,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "161",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 275.1627,
+     "measured": 110.96,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "161",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 244.8468,
+     "measured": 110.98,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "161",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 244.8468,
+     "measured": 111.1,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "161",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 199.8721,
+     "measured": 111.29,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/162@0.2",
+   "dataset": "steckler",
+   "test": "162",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 59.3,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.15,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2676
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "162",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 263.2734,
+     "measured": 149.92,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "162",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 263.2734,
+     "measured": 144.13,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "162",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 253.8471,
+     "measured": 140.15,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "162",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 253.8471,
+     "measured": 135.42,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "162",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 204.0635,
+     "measured": 131.99,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/163@0.2",
+   "dataset": "steckler",
+   "test": "163",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 60.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.24,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2677
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "163",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 223.8876,
+     "measured": 185.42,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "163",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 223.8876,
+     "measured": 185.35,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "163",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 217.3494,
+     "measured": 183.99,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "163",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 217.3494,
+     "measured": 180.89,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "163",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 200.7109,
+     "measured": 159.07,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/164@0.2",
+   "dataset": "steckler",
+   "test": "164",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 59.6,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.03,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2676
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "164",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 256.3965,
+     "measured": 155.17,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "164",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 256.3965,
+     "measured": 155.51,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "164",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 240.2198,
+     "measured": 155.49,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "164",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 240.2198,
+     "measured": 154.06,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "164",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 211.6786,
+     "measured": 148.78,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/165@0.2",
+   "dataset": "steckler",
+   "test": "165",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 72.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.76,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2676
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "165",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 239.1212,
+     "measured": 148.36,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "165",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 239.1212,
+     "measured": 148.61,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "165",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 229.1118,
+     "measured": 148.14,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "165",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 229.1118,
+     "measured": 146.88,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "165",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 205.1217,
+     "measured": 144.38,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/166@0.2",
+   "dataset": "steckler",
+   "test": "166",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 80.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.23,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2674
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "166",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 274.9047,
+     "measured": 145.19,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "166",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 274.9047,
+     "measured": 145.65,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "166",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 252.3534,
+     "measured": 145.52,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "166",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 252.3534,
+     "measured": 144.87,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "166",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 205.7333,
+     "measured": 143.42,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/167@0.2",
+   "dataset": "steckler",
+   "test": "167",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 74.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.15,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2672
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "167",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 288.9294,
+     "measured": 123.65,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "167",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 288.9294,
+     "measured": 123.12,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "167",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 263.9865,
+     "measured": 122.94,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "167",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 263.9865,
+     "measured": 123,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "167",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 200.213,
+     "measured": 123.27,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/210@0.2",
+   "dataset": "steckler",
+   "test": "210",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 67.3,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.48,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "210",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 182.4962,
+     "measured": 157.2,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "210",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 182.4962,
+     "measured": 157.47,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "210",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 184.0321,
+     "measured": 157.59,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "210",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 184.0321,
+     "measured": 156.22,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "210",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 175.3596,
+     "measured": 152.47,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/212@0.2",
+   "dataset": "steckler",
+   "test": "212",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 64.5,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.48,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.5,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "212",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 179.1367,
+     "measured": 170.44,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "212",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 179.1367,
+     "measured": 170.6,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "212",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 181.4011,
+     "measured": 170.63,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "212",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 181.4011,
+     "measured": 169.66,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "212",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 171.6374,
+     "measured": 167.25,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/220@0.2",
+   "dataset": "steckler",
+   "test": "220",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.2,
+   "wallSeconds": 54.3,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.74,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "220",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 92.8162,
+     "measured": 94.28,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "220",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 92.8162,
+     "measured": 94.22,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "220",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 94.4848,
+     "measured": 93.92,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "220",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 94.4848,
+     "measured": 93.08,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "220",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 89.9567,
+     "measured": 91.08,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/221@0.2",
+   "dataset": "steckler",
+   "test": "221",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.95,
+   "wallSeconds": 101.9,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.49,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "221",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 297.3479,
+     "measured": 209.83,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "221",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 297.3479,
+     "measured": 210.51,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "221",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 301.6613,
+     "measured": 210.48,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "221",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 301.6613,
+     "measured": 208.82,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "221",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 284.2963,
+     "measured": 203.38,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/224@0.2",
+   "dataset": "steckler",
+   "test": "224",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 90.8,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.78,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2678
+   },
+   "door": {
+    "cells": 4,
+    "width": 0.4,
+    "sill": 1,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.91,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "224",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 233.6958,
+     "measured": 191.46,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "224",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 233.6958,
+     "measured": 191.18,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "224",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 236.7356,
+     "measured": 190.8,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "224",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 236.7356,
+     "measured": 189.29,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "224",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 226.6911,
+     "measured": 184.91,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/240@0.2",
+   "dataset": "steckler",
+   "test": "240",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 77.6,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.6,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2706
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.8,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.86,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 152.1753,
+     "measured": 152.82,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 152.1753,
+     "measured": 153.17,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 149.9007,
+     "measured": 153.31,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 149.9007,
+     "measured": 151.53,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "240",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 134.3635,
+     "measured": 145.63,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/242@0.2",
+   "dataset": "steckler",
+   "test": "242",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 77.4,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.55,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.62,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "242",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 185.1459,
+     "measured": 169.16,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "242",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 185.1459,
+     "measured": 169.22,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "242",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 184.9407,
+     "measured": 169.25,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "242",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 184.9407,
+     "measured": 167.77,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "242",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 175.9193,
+     "measured": 163.81,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/310@0.2",
+   "dataset": "steckler",
+   "test": "310",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 73.9,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.86,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "310",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 177.6911,
+     "measured": 157.74,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "310",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 177.6911,
+     "measured": 157.9,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "310",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 180.0934,
+     "measured": 157.28,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "310",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 180.0934,
+     "measured": 155.73,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "310",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 171.6579,
+     "measured": 150.89,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/324@0.2",
+   "dataset": "steckler",
+   "test": "324",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 84.4,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.71,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2678
+   },
+   "door": {
+    "cells": 4,
+    "width": 0.4,
+    "sill": 1,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.91,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "324",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 233.8025,
+     "measured": 195.23,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "324",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 233.8025,
+     "measured": 195.2,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "324",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 236.7107,
+     "measured": 194.25,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "324",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 236.7107,
+     "measured": 192.64,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "324",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 227.8456,
+     "measured": 188.28,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/410@0.2",
+   "dataset": "steckler",
+   "test": "410",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 72.3,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.7,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "410",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 180.0129,
+     "measured": 160.54,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "410",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 180.0129,
+     "measured": 160.74,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "410",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 182.0043,
+     "measured": 160.12,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "410",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 182.0043,
+     "measured": 158.74,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "410",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 174.3032,
+     "measured": 154.33,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/510@0.2",
+   "dataset": "steckler",
+   "test": "510",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 61.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.83,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "510",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 193.6278,
+     "measured": 134.43,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "510",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 193.6278,
+     "measured": 134.98,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "510",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 189.9991,
+     "measured": 135.2,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "510",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 189.9991,
+     "measured": 134.66,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "510",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 180.2239,
+     "measured": 132.78,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/512@0.2",
+   "dataset": "steckler",
+   "test": "512",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 61.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.85,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.5,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "512",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 197.5323,
+     "measured": 154.07,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "512",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 197.5323,
+     "measured": 154.64,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "512",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 192.3271,
+     "measured": 154.44,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "512",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 192.3271,
+     "measured": 153.95,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "512",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 175.1302,
+     "measured": 152.55,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/513@0.2",
+   "dataset": "steckler",
+   "test": "513",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 2.29,
+   "wallSeconds": 99.7,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.78,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "513",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 490.7189,
+     "measured": 278.41,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "513",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 490.7189,
+     "measured": 279.67,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "513",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 474.2547,
+     "measured": 279.74,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "513",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 474.2547,
+     "measured": 278.22,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "513",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 432.6374,
+     "measured": 273.94,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/514@0.2",
+   "dataset": "steckler",
+   "test": "514",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 59.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.1,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 1964
+   },
+   "door": {
+    "cells": 0,
+    "width": 0,
+    "sill": null,
+    "soffit": null,
+    "measured": {
+     "width": 0.24,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "514",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 315.1779,
+     "measured": 202.11,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "514",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 315.1779,
+     "measured": 203,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "514",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 318.5515,
+     "measured": 202.85,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "514",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 318.5515,
+     "measured": 202.35,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "514",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 308.1701,
+     "measured": 200.63,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": false,
+    "why": "not represented on this grid: the grid seals the test's opening"
+   }
+  },
+  {
+   "id": "steckler/517@0.2",
+   "dataset": "steckler",
+   "test": "517",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 55.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.99,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2706
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.8,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 1,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "517",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 161.0719,
+     "measured": 119.96,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "517",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 161.0719,
+     "measured": 120.44,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "517",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 152.339,
+     "measured": 120.68,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "517",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 152.339,
+     "measured": 120.07,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "517",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 135.0916,
+     "measured": 117.88,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/520@0.2",
+   "dataset": "steckler",
+   "test": "520",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.2,
+   "wallSeconds": 52,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.09,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "520",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 95.0809,
+     "measured": 76.91,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "520",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 95.0809,
+     "measured": 77.15,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "520",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 94.8188,
+     "measured": 77.4,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "520",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 94.8188,
+     "measured": 77.11,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "520",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 91.0473,
+     "measured": 76.31,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/521@0.2",
+   "dataset": "steckler",
+   "test": "521",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.95,
+   "wallSeconds": 70.9,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.27,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "521",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 332.0345,
+     "measured": 194.62,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "521",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 332.0345,
+     "measured": 195.18,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "521",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 321.883,
+     "measured": 195.33,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "521",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 321.883,
+     "measured": 194.29,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "521",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 295.7144,
+     "measured": 190.84,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/522@0.2",
+   "dataset": "steckler",
+   "test": "522",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 54.5,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.95,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2682
+   },
+   "door": {
+    "cells": 6,
+    "width": 0.4,
+    "sill": 0.6,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.45,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "522",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 220.7855,
+     "measured": 145.98,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "522",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 220.7855,
+     "measured": 146.4,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "522",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 216.6913,
+     "measured": 146.57,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "522",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 216.6913,
+     "measured": 145.97,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "522",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 205.4777,
+     "measured": 143.95,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/524@0.2",
+   "dataset": "steckler",
+   "test": "524",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 55.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.47,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2678
+   },
+   "door": {
+    "cells": 4,
+    "width": 0.4,
+    "sill": 1,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.91,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "524",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 243.9392,
+     "measured": 170.25,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "524",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 243.9392,
+     "measured": 170.85,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "524",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 241.1577,
+     "measured": 170.84,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "524",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 241.1577,
+     "measured": 170.32,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "524",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 229.6543,
+     "measured": 168.69,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/540@0.2",
+   "dataset": "steckler",
+   "test": "540",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 53.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.98,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2706
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.8,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.86,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "540",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 163.3206,
+     "measured": 128.04,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "540",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 163.3206,
+     "measured": 128.4,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "540",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 153.2851,
+     "measured": 128.43,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "540",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 153.2851,
+     "measured": 127.33,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "540",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 133.4281,
+     "measured": 124.24,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/541@0.2",
+   "dataset": "steckler",
+   "test": "541",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 56.4,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2674
+   },
+   "door": {
+    "cells": 2,
+    "width": 0.4,
+    "sill": 1.4,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 1.37,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "541",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 287.0702,
+     "measured": 283.26,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "541",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 287.0702,
+     "measured": 284.45,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "541",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 286.8515,
+     "measured": 284.27,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "541",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 286.8515,
+     "measured": 283.39,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "541",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 274.306,
+     "measured": 280.27,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/542@0.2",
+   "dataset": "steckler",
+   "test": "542",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 54.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.88,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.62,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "542",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 198.3736,
+     "measured": 141.67,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "542",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 198.3736,
+     "measured": 142.02,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "542",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 193.5174,
+     "measured": 141.96,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "542",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 193.5174,
+     "measured": 141.15,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "542",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 181.642,
+     "measured": 138.97,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/544@0.2",
+   "dataset": "steckler",
+   "test": "544",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 54.2,
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.9,
+    "substeps": 2
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.36,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "544",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 192.3132,
+     "measured": 165.52,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "544",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 192.3132,
+     "measured": 166.25,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "544",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 187.5715,
+     "measured": 166.18,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "544",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 187.5715,
+     "measured": 165.56,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "544",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 174.9319,
+     "measured": 164.24,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/610@0.2",
+   "dataset": "steckler",
+   "test": "610",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 54.1,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.62,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "610",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 191.4467,
+     "measured": 133.81,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "610",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 191.4467,
+     "measured": 134.25,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "610",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 187.9048,
+     "measured": 134.34,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "610",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 187.9048,
+     "measured": 133.83,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "610",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 174.4211,
+     "measured": 131.63,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/612@0.2",
+   "dataset": "steckler",
+   "test": "612",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 56.5,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.39,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.5,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "612",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 190.3488,
+     "measured": 116.82,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "612",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 190.3488,
+     "measured": 117.09,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "612",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 182.1159,
+     "measured": 117.08,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "612",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 182.1159,
+     "measured": 116.63,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "612",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 168.8077,
+     "measured": 116.1,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/622@0.2",
+   "dataset": "steckler",
+   "test": "622",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 52.7,
+   "health": {
+    "ok": true,
+    "maxSpeed": 4.18,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2682
+   },
+   "door": {
+    "cells": 6,
+    "width": 0.4,
+    "sill": 0.6,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0.45,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "622",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 214.3393,
+     "measured": 144.37,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "622",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 214.3393,
+     "measured": 144.94,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "622",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 212.355,
+     "measured": 145.09,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "622",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 212.355,
+     "measured": 144.65,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "622",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 199.7732,
+     "measured": 143.1,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/710@0.2",
+   "dataset": "steckler",
+   "test": "710",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 57,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.68,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "710",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 181.5626,
+     "measured": 96.83,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "710",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 181.5626,
+     "measured": 96.76,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "710",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 174.4843,
+     "measured": 96.78,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "710",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 174.4843,
+     "measured": 96.61,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "710",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 162.6894,
+     "measured": 96.64,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  },
+  {
+   "id": "steckler/810@0.2",
+   "dataset": "steckler",
+   "test": "810",
+   "cell": 0.2,
+   "horizon": 300,
+   "cells": 4160,
+   "plumeIndex": 1.59,
+   "wallSeconds": 58,
+   "health": {
+    "ok": true,
+    "maxSpeed": 5.64,
+    "substeps": 3
+   },
+   "region": {
+    "source": "solver regions",
+    "openCells": 2688
+   },
+   "door": {
+    "cells": 9,
+    "width": 0.4,
+    "sill": 0,
+    "soffit": 1.8,
+    "measured": {
+     "width": 0.74,
+     "sill": 0,
+     "soffit": 1.83
+    }
+   },
+   "grid": [
+    20,
+    13,
+    16
+   ],
+   "trees": [
+    {
+     "id": "room",
+     "modelCeiling": 2,
+     "nominal": 2.13,
+     "cells": 10,
+     "droppedCells": 0
+    }
+   ],
+   "pairs": [
+    {
+     "dataset": "steckler",
+     "test": "810",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 2",
+     "model": 195.728,
+     "measured": 101.1,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "810",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.88",
+     "model": 195.728,
+     "measured": 101.16,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "810",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.77",
+     "model": 184.3643,
+     "measured": 101.13,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "810",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.66",
+     "model": 184.3643,
+     "measured": 100.9,
+     "moved": 0
+    },
+    {
+     "dataset": "steckler",
+     "test": "810",
+     "cell": 0.2,
+     "quantity": "headTemperature",
+     "device": "room/T_in 1.54",
+     "model": 171.9136,
+     "measured": 100.79,
+     "moved": 0
+    }
+   ],
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  }
+ ],
+ "stats": {
+  "byDataset": {
+   "nistnrc": {
+    "headTemperature": {
+     "0.2": {
+      "n": 59,
+      "dropped": 0,
+      "delta": 0.799,
+      "sigmaM": 0.186,
+      "meanRatio": 0.787,
+      "tier": "indicative",
+      "weighted": {
+       "delta": 0.71,
+       "sigmaM": 0.266,
+       "sigmaEUsed": 0.07,
+       "tier": "indicative",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 10,
+      "runs": 10,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "atf": {
+    "headTemperature": {
+     "0.2": {
+      "n": 30,
+      "dropped": 0,
+      "delta": 1.118,
+      "sigmaM": 0.609,
+      "meanRatio": 0.931,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 1.284,
+       "sigmaM": 0.593,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "ATF",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "wtc": {
+    "headTemperature": {
+     "0.2": {
+      "n": 24,
+      "dropped": 0,
+      "delta": 0.858,
+      "sigmaM": 0.104,
+      "meanRatio": 0.855,
+      "tier": "within the calibrated band",
+      "weighted": {
+       "delta": 0.911,
+       "sigmaM": 0.162,
+       "sigmaEUsed": 0.07,
+       "tier": "within the calibrated band",
+       "inBand": true
+      },
+      "lab": "NBS/NIST",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     }
+    }
+   },
+   "nbs": {
+    "headTemperature": {
+     "0.2": {
+      "n": 25,
+      "dropped": 0,
+      "delta": 0.635,
+      "sigmaM": 0.65,
+      "meanRatio": 0.516,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 0.765,
+       "sigmaM": 0.568,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 3,
+      "runs": 3,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "steckler": {
+    "headTemperature": {
+     "0.2": {
+      "n": 275,
+      "dropped": 0,
+      "delta": 1.477,
+      "sigmaM": 0.219,
+      "meanRatio": 1.446,
+      "tier": "indicative",
+      "weighted": {
+       "delta": 1.434,
+       "sigmaM": 0.201,
+       "sigmaEUsed": 0.07,
+       "tier": "indicative",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 55,
+      "runs": 55,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   }
+  },
+  "byQuantity": {
+   "headTemperature": {
+    "0.2": {
+     "pooled": {
+      "n": 413,
+      "dropped": 0,
+      "delta": 1.284,
+      "sigmaM": 0.437,
+      "meanRatio": 1.17,
+      "tier": "indicative"
+     },
+     "datasets": [
+      "nistnrc",
+      "atf",
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "nistnrc",
+      "wtc",
+      "steckler"
+     ],
+     "verdict": "indicative",
+     "claim": "indicative",
+     "weighted": {
+      "pooled": {
+       "n": 413,
+       "delta": 1.021,
+       "sigmaM": 0.441,
+       "sigmaEUsed": 0.07,
+       "weighted": true,
+       "tier": "indicative"
+      },
+      "datasetsInBand": [
+       "wtc"
+      ],
+      "verdict": "indicative",
+      "claim": "indicative"
+     },
+     "labs": [
+      "NBS/NIST",
+      "ATF"
+     ],
+     "labsInBand": [
+      "NBS/NIST"
+     ],
+     "labsInBandWeighted": [
+      "NBS/NIST"
+     ],
+     "final": "indicative",
+     "fromOneLab": false
+    }
+   }
+  }
+ },
+ "statsRule": {
+  "byDataset": {
+   "nistnrc": {
+    "headTemperature": {
+     "0.2": {
+      "n": 59,
+      "dropped": 0,
+      "delta": 0.799,
+      "sigmaM": 0.186,
+      "meanRatio": 0.787,
+      "tier": "indicative",
+      "weighted": {
+       "delta": 0.71,
+       "sigmaM": 0.266,
+       "sigmaEUsed": 0.07,
+       "tier": "indicative",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 10,
+      "runs": 10,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "atf": {
+    "headTemperature": {
+     "0.2": {
+      "n": 30,
+      "dropped": 0,
+      "delta": 1.118,
+      "sigmaM": 0.609,
+      "meanRatio": 0.931,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 1.284,
+       "sigmaM": 0.593,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "ATF",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "wtc": {
+    "headTemperature": {
+     "0.2": {
+      "n": 24,
+      "dropped": 0,
+      "delta": 0.858,
+      "sigmaM": 0.104,
+      "meanRatio": 0.855,
+      "tier": "within the calibrated band",
+      "weighted": {
+       "delta": 0.911,
+       "sigmaM": 0.162,
+       "sigmaEUsed": 0.07,
+       "tier": "within the calibrated band",
+       "inBand": true
+      },
+      "lab": "NBS/NIST",
+      "tests": 6,
+      "runs": 6,
+      "stopped": 0,
+      "inBand": true
+     }
+    }
+   },
+   "nbs": {
+    "headTemperature": {
+     "0.2": {
+      "n": 25,
+      "dropped": 0,
+      "delta": 0.635,
+      "sigmaM": 0.65,
+      "meanRatio": 0.516,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 0.765,
+       "sigmaM": 0.568,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 3,
+      "runs": 3,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   },
+   "steckler": {
+    "headTemperature": {
+     "0.2": {
+      "n": 260,
+      "dropped": 0,
+      "delta": 1.467,
+      "sigmaM": 0.221,
+      "meanRatio": 1.436,
+      "tier": "indicative",
+      "weighted": {
+       "delta": 1.443,
+       "sigmaM": 0.212,
+       "sigmaEUsed": 0.07,
+       "tier": "indicative",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 52,
+      "runs": 52,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   }
+  },
+  "byQuantity": {
+   "headTemperature": {
+    "0.2": {
+     "pooled": {
+      "n": 398,
+      "dropped": 0,
+      "delta": 1.269,
+      "sigmaM": 0.439,
+      "meanRatio": 1.155,
+      "tier": "indicative"
+     },
+     "datasets": [
+      "nistnrc",
+      "atf",
+      "wtc",
+      "nbs",
+      "steckler"
+     ],
+     "datasetsInBand": [
+      "wtc"
+     ],
+     "datasetsIndicativeOrBetter": [
+      "nistnrc",
+      "wtc",
+      "steckler"
+     ],
+     "verdict": "indicative",
+     "claim": "indicative",
+     "weighted": {
+      "pooled": {
+       "n": 398,
+       "delta": 1.013,
+       "sigmaM": 0.437,
+       "sigmaEUsed": 0.07,
+       "weighted": true,
+       "tier": "indicative"
+      },
+      "datasetsInBand": [
+       "wtc"
+      ],
+      "verdict": "indicative",
+      "claim": "indicative"
+     },
+     "labs": [
+      "NBS/NIST",
+      "ATF"
+     ],
+     "labsInBand": [
+      "NBS/NIST"
+     ],
+     "labsInBandWeighted": [
+      "NBS/NIST"
+     ],
+     "final": "indicative",
+     "fromOneLab": false
+    }
+   }
+  }
+ },
+ "notRepresented": [
+  "steckler/10@0.2",
+  "steckler/114@0.2",
+  "steckler/514@0.2"
+ ]
+}

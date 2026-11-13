@@ -175,15 +175,21 @@ export function storeysOf(graph, levels = []) {
   return storeyOf;
 }
 
-export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], exitDoors = [], sprinklered = false, useWalls = true } = {}) {
-  const L = EGRESS_B;
+/**
+ * Where each storey's exits are entered: exit doors on the storeys that have
+ * them (the levels of exit discharge), the doors into the stairs on the
+ * others, each stair's connected nodes one exit. Shared with the egress map
+ * (egressMap.js), which closes exits in turn.
+ *
+ * @returns {{storeyOf: Int32Array, floors: number[], entrances: Array<Map<number, string>>,
+ *            discharge: Set<number>, stairPiece: Int32Array, indptr, neighbours, edgeIds, blocked}}
+ *          entrances: per storey, node -> exit id ("door v" or "stair k")
+ */
+export function exitEntrances(graph, { exits = [], levels = [], useWalls = true } = {}) {
   const n = graph.nodes.length / 3;
-  const up = upIndex(graph.upAxis || "y");
   const kinds = graph.kinds || new Uint8Array(n);
   const blocked = useWalls ? graph.blocked : null;
   const { indptr, neighbours, edgeIds } = csr(graph);
-  const lengths = edgeLengths(graph);
-  const limit = sprinklered ? L.travel.sprinklered : L.travel.unsprinklered;
   const floors = sortedFloors(levels);
   const storeyOf = storeysOf(graph, levels);
 
@@ -221,6 +227,17 @@ export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], ex
       if (kinds[w] === KIND_STAIR && !(blocked && blocked[edgeIds[k]])) entrances[s].set(v, `stair ${stairPiece[w]}`);
     }
   }
+  return { storeyOf, floors, entrances, discharge, stairPiece, indptr, neighbours, edgeIds, blocked };
+}
+
+export function codeCheck(graph, { exits = [], levels = [], storeyNames = [], exitDoors = [], sprinklered = false, useWalls = true } = {}) {
+  const L = EGRESS_B;
+  const n = graph.nodes.length / 3;
+  const up = upIndex(graph.upAxis || "y");
+  const kinds = graph.kinds || new Uint8Array(n);
+  const lengths = edgeLengths(graph);
+  const limit = sprinklered ? L.travel.sprinklered : L.travel.unsprinklered;
+  const { storeyOf, floors, entrances, discharge, stairPiece, indptr, neighbours, edgeIds, blocked } = exitEntrances(graph, { exits, levels, useWalls });
 
   // Walking distance on each storey to its nearest exit entrance (Dijkstra from all of them).
   const travel = new Float64Array(n).fill(Infinity);

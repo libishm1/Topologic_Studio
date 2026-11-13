@@ -1,0 +1,6 @@
+benchmark/results/2026-11-12-sprinkler-o2.json
+  vettori_flat_1998        tests  9  delta 1.165  sigmaM 0.118  within the calibrated band
+  vettori_sloped_2003      tests  8  delta 0.939  sigmaM 0.228  within the calibrated band
+  bittern_2004             tests  8  delta 1.01  sigmaM 0.051  within the calibrated band
+  ul_nfprf_1998_series_I   tests  4  delta 0.977  sigmaM 0.046  within the calibrated band
+  pooled                   tests 29  delta 1.033  sigmaM 0.163  within the calibrated band

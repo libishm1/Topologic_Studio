@@ -1,0 +1,10 @@
+{
+ "harvested": 2312,
+ "duplicates": 5,
+ "records": 2307,
+ "excludedByGate": 545,
+ "target": 600,
+ "threshold": 15,
+ "kept": 638,
+ "belowThreshold": 1669
+}

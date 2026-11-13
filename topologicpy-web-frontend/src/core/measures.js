@@ -107,5 +107,18 @@ export function measureView(settings, hasExtras) {
       levels: (frame, ti) => ti,
     };
   }
-  return { kind: "heat", key: "heat", legend: null };
+  // Heat on the fixed 20 to 600 °C ramp, or fitted to the run (fittedHeatPeak).
+  const fit = settings.flamescapesHeatScale === "run";
+  return { kind: "heat", key: fit ? "heat:fit" : "heat", legend: null, fit };
+}
+
+/**
+ * The top of the heat ramp fitted to a run (settings.flamescapesHeatScale
+ * "run"): its hottest gas at head height so far, rounded up to 10 °C and at
+ * least 10 °C above the 20 °C ambient, so a small fire still shades the graph.
+ * Drawing only: the run, its card and its limits are the same either way.
+ */
+export function fittedHeatPeak(hottest, ambient = 20) {
+  const top = Number.isFinite(hottest) ? hottest : ambient;
+  return Math.max(ambient + 10, Math.ceil(top / 10) * 10);
 }
