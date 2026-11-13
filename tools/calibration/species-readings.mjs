@@ -33,6 +33,8 @@ const STATED = {
   wtc: { o2: { rel: 0.05 }, co2: { rel: 0.02 } },
   fse: { o2: { rel: 0.12 }, co2: { rel: 0.12 } },
   fsri: { o2: { rel: 0.12 } },
+  // The same laboratory's analysers (plan 15.4, added 2026-11-13; FSRI_CHAIRS_OPEN item 7 in validation-data.mjs).
+  "fsri-chairs": { o2: { rel: 0.12 } },
 };
 const noFigure = new Set();
 const own = (p) => {

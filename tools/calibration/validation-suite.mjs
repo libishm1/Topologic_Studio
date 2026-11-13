@@ -123,6 +123,9 @@ export const PLAN = Object.freeze({
   ulnist: { horizon: (t) => t.horizon },
   // Added 2026-11-12 (plan 13.2 item 8): to the end of the guide's first window (validation-data.mjs fse).
   fse: { horizon: (t) => t.horizon },
+  // Added 2026-11-13 (plan 15.4; prepared, held out, not yet run): fsri's run with Suppression in Burner Off's
+  // place (validation-data.mjs fsriChairs); its data file lists the choices to record in the plan before a run.
+  "fsri-chairs": { horizon: (t) => t.horizon },
 });
 
 /** The independent test series and what makes each independent (plan section 12). */
@@ -135,6 +138,7 @@ export const SERIES = Object.freeze({
   fsri: "UL FSRI 2018, Willi et al.; gas burners in a 3.66 m room with one door (a laboratory other than NIST and ATF; a box scene, no FDS input)",
   ulnist: "NIST at UL 2012, Opert; gas fires in a 6.1 x 4.3 m room with a door and ceiling vents, first interval (NIST's fire fighting group; UL's building)",
   fse: "NIST 2008, Lock et al.; an ISO 9705 room, the tests with doors of 0.4 m or more, first window",
+  "fsri-chairs": "UL FSRI 2018, Willi et al.; one upholstered chair or sofa in fsri's room, door open, its measured heat release prescribed (fsri's laboratory and room: a series, no new laboratory; plan 15.4)",
 });
 
 /**
@@ -142,7 +146,7 @@ export const SERIES = Object.freeze({
  * one. The verdict counts series (12.6); the laboratories of the in-band
  * series are reported beside it.
  */
-export const LAB = Object.freeze({ steckler: "NBS/NIST", nbs: "NBS/NIST", nistnrc: "NBS/NIST", wtc: "NBS/NIST", atf: "ATF", fsri: "UL FSRI", ulnist: "NBS/NIST", delco: "NBS/NIST", fse: "NBS/NIST" });
+export const LAB = Object.freeze({ steckler: "NBS/NIST", nbs: "NBS/NIST", nistnrc: "NBS/NIST", wtc: "NBS/NIST", atf: "ATF", fsri: "UL FSRI", ulnist: "NBS/NIST", delco: "NBS/NIST", fse: "NBS/NIST", "fsri-chairs": "UL FSRI" });
 
 /** Which sigma_E (lib/stats.mjs SIGMA_E) each quantity takes. */
 // doorMassFlow takes the velocity's 0.08: the guide gives none for a mass flow (this project's assumption, 2026-11-12).
@@ -572,7 +576,7 @@ async function runCase(c) {
     burner: { baseMoved: base.moved, cells: spec.layers.reduce((a, l) => a + l.length, 0), columns: spec.layers[0]?.length ?? 0, layers: spec.layers.length, radiantFraction: spec.radiantFraction, radiantMJ: +((sim.burner?.radiant ?? 0) / 1e6).toFixed(3), released: +(sim.stats.released / 1e6).toFixed(3), expectedMJ: +(burnerIntegral(T.burner.hrrW, health.ok ? horizon : health.time) / 1e6).toFixed(3) },
     trees: trees.map((tr) => ({ id: tr.id, modelCeiling: tr.modelH != null ? +tr.modelH.toFixed(3) : null, nominal: tr.H, cells: tr.cells ? tr.cells.length : null, droppedCells: tr.dropped ?? null })),
     points: points.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null, ...(p.pathCells ? { pathCells: p.pathCells.length } : {}) })),
-    fuel: { heatOfCombustion: fuel.heatOfCombustion, yields: fuel.yields, rule: c.fuelRule !== "app" && T.fuel ? "the test fuel's" : "class A, CO2 per joule matched" },
+    fuel: { heatOfCombustion: fuel.heatOfCombustion, yields: fuel.yields, rule: c.fuelRule !== "app" && T.fuel ? "the test fuel's" : T.co2PerJ ? "class A, CO2 per joule matched" : "class A as the app has it" },
     solverOptions: { ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...c.solver },
     door: door && door.z ? { cells: door.z.length, width: +door.width.toFixed(3), sill: door.sill != null ? +door.sill.toFixed(3) : null, soffit: door.soffit != null ? +door.soffit.toFixed(3) : null, measured: { width: T.opening?.[0]?.width ?? null, sill: T.door.sill, soffit: T.door.soffit } } : null,
     region,
@@ -897,6 +901,8 @@ async function main() {
     const plan = PLAN[d];
     if (!plan) throw new Error(`unknown dataset ${d} (known: ${Object.keys(PLAN).join(", ")})`);
     const data = JSON.parse(readFileSync(path.join(HERE, "data", `${d}.json`), "utf8"));
+    // A series prepared with choices still to be recorded in the plan (fsri-chairs, 15.4) says so before it runs.
+    if (data.openChoices?.length) console.log(`${d}: its data file lists ${data.openChoices.length} choices to record in the plan before this run counts:\n  ${data.openChoices.join("\n  ")}`);
     for (const h of cellsArg) {
       if ((plan.skipCells || []).some((x) => Math.abs(x - h) < 1e-9) && !args.includes("--all-cells")) {
         skipped.push({ dataset: d, cell: h, why: "too slow on this cell for the suite's time budget (plan section 12); --all-cells runs it" });
