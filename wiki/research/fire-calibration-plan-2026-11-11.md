@@ -1823,6 +1823,291 @@ The build is on branch `flamescapes/door-attempt2` (2948f2d the vent on the CPU,
 
 **Where 13.17 was unclear, and what was taken:** (d)'s "each way" (every reading fails); (g)'s 0.01 Pa (read as worded, fails); the leak's derivative, floored at 0.01 Pa as the vent's is; a run's first step has no vent speed for the step's length, so its transfers are capped. None of these changes a verdict.
 
+### 13.21 Item 9: the voxeliser snaps to the nearest plane (2026-11-13, before any run of it)
+
+Drafted blind to every validation result, as 13.12 sets. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of commit 191b1d3, which the working tree's `voxelize.js` (unchanged since 696683a), `flamescapes.js`, `flamescapesRun.js` and `tools/calibration/lib/fds.mjs` equal. The numbers called "present rule" below come from the present voxeliser run on synthetic boxes for this draft. None is a fire result.
+
+#### What the voxeliser does now
+
+Volume fractions (`voxelize.js` 122 to 195).
+- Rays run along the up axis only, S × S of them per column of cells. S is `raysFor`, max(2, ⌈h / 0.05 m⌉) (257 to 259): 4, 6 and 7 on 0.20, 0.27 and 0.34 m cells. Sub-ray s sits at (s + 0.5)/S + 0.0137/S of the cell (129).
+- A mesh's crossings with a ray are sorted, merged within 10⁻⁶ m (170) and paired: inside between the 1st and 2nd, the 3rd and 4th, and so on. An odd last crossing is dropped (175).
+- A cell's fraction is the length inside over S² h (183). It is exact along the up axis and sampled in steps of 1/S across it. A total above 1 is scaled to 1 (189 to 193).
+
+The solid mask (`occupancy`, 221 to 254). With v the cell's total fraction:
+- v ≥ `SOLID_FRACTION` = 0.5 (40): solid (232).
+- `THIN_FRACTION` = 0.08 (205) ≤ v < 0.5: solid if, along some axis, v is at least each of its two neighbours (233 to 238).
+- 0 < v < 0.08: solid if, along some axis, the cell and its larger neighbour hold 0.08 between them, that neighbour holds less than 0.08, and the cell holds more than it, the lower of an equal pair (239 to 248).
+- A cell with v = 0 is never solid.
+
+The harness (`fds.mjs`).
+- `solidBoxes` (283 to 331): the domain is the meshes' box grown by one cell (286). Everything in it outside the meshes is solid. An OPEN vent on a mesh side cuts that solid out to the domain's edge; the floor stays closed. Each obstruction less its holes is a set of boxes (`subtract`, 249 to 260).
+- `gridFor` (339 to 356) puts the grid's origin at the domain's lower corner (342), so the meshes' floor lies on a cell plane. It calls `volumeFractions` with `raysFor` and `occupancy` (344 to 345), "as in the app" (335 to 337).
+- `treeCells` (377 to 394) and `deviceCell` (396 to 401, 429 to 449) read the mask. `deviceCell`'s comment already allows for "a ceiling snapped down past" a device.
+
+Why every face goes into the room. The test at 235 to 237 uses ≥. A slab's partial face layer has equal neighbours along the slab's own plane. So each of its cells is a "peak" along both in-plane axes once v ≥ 0.08. The rule written for thin elements fires on the face of every slab and wall wider than a cell. Across the up axis, a face seals the cell it enters by 0.08 of a cell or more. Across a horizontal axis, one sub-ray in the material is enough in a wall at least a cell thick (1/S ≥ 0.08): the face then seals a cell it enters by 0.5137/S from one side or 0.4863/S from the other (12.8 %, 8.6 % and 7.3 % of a cell on the three sizes).
+
+The consequences, derived from the code and checked on swept synthetic boxes (200 positions across a cell, each size):
+- A face across the up axis (a ceiling, a soffit, a sill, a floor's top) lies on the grid at the plane on the room's side of the cell it enters, unless it enters by less than 0.08. Its error runs from −0.92 to +0.08 cells (negative into the room), mean −(0.92² − 0.08²)/2 = −0.42 cells. Measured: −0.4175, −0.4225 and −0.4225 on 0.20, 0.27 and 0.34 m.
+- A face across a horizontal axis (a wall's face, a jamb) of a wall at least a cell thick: mean −0.38, −0.42 and −0.43 cells (measured −0.3775, −0.4175, −0.4325).
+- An opening in such a wall loses on average 1 − 1/S cells of width: 0.75, 0.83 and 0.86 cells (measured the same for widths of 1, 2 and 2.74 cells). In a 0.10 m wall it loses 0.75, 0.5 and 0.57 cells, since a jamb's cell then holds only the wall's share. An opening 0.6 of a cell wide is closed at every position.
+- A slab thinner than a cell is one or two cells. A 0.25 m slab on 0.27 m cells is two cells at 76 of 100 positions; a 0.20 m slab on 0.34 m cells at 43. A plate thinner than 0.08 of a cell seals nothing: a 2 cm plate on 0.27 and 0.34 m cells left every column open at all 100 positions. This is a hole in the present rule's watertightness (glazing, sheet metal).
+- Pockets. In a room whose walls lie on cell planes and whose ceiling enters its top row by 0.3 of a cell, that row is solid except its four corner cells, on all three sizes. A corner cell has a fuller neighbour along both horizontal axes, so it is a peak along none.
+
+The examples, checked by running the present voxeliser through `fds.mjs` `gridFor` on a copy of Steckler_010's geometry (mesh x 0 to 3.6, y −1.4 to 1.4, z 0 to 2.13 m; wall x 2.80 to 2.90 m; doors as its HOLE lines; z 0 is a cell plane):
+
+| Present rule | 0.20 m | 0.27 m | 0.34 m |
+|---|---|---|---|
+| Room, 2.13 m tall | 2.00 | 1.89 | 2.04 |
+| 6/6 door, 0.74 m wide | 0.40 | 0.54 | 0.68 |
+| 6/6 door's top, 1.83 m | 1.80 | 1.89, the ceiling | 1.70 |
+| 8/6 door, 1.00 m wide | 0.80 | 0.81 | 0.68 |
+| 2/6 door, 0.25 m wide | closed | closed | closed |
+
+The examples hold. Corrections and additions: the "0.24 m" door is 0.25 m in FDS's input (y −0.10 to 0.15 m) and is closed on all three sizes. The 1.0 m door that is 0.68 m on 0.34 m cells is Steckler's 8/6 door. On 0.27 m cells the 6/6 door has no lintel: its top is the snapped ceiling, because the lintel's cell holds 0.074 of wall, under 0.08.
+
+The solver.
+- A solid cell's heat capacity is its fraction times each material's ρ c V (`flamescapes.js` 357 to 371). A solid cell with no fraction has none.
+- Its regions are face-connected. `topology` (2774 onward) links each open cell to its six neighbours (`DIRS`, 592 to 599). The sealed regions and pressure zones are the connected parts that reach no open side.
+- `RUN_CACHE_VERSION` (`runCache.js` 54) keys cached runs on the physics.
+
+#### The reference: how FDS snaps (FDS 6.11.1, commit ff928db)
+
+`Source/read.f90`, `READ_OBST`:
+- 10998 to 11005: "Determine the indices of the obstruction according to cell edges, not centers." Then `OB%I1 = NINT( GINV(XB1-XS,1,NM)*RDXI )`, and so for each of the six faces. On a mesh without stretching `GINV` returns its argument (`func.f90` 6505 to 6507). Each face goes to the nearest cell plane. Cell p, counted from 0, is in the obstruction when NINT(a) ≤ p < NINT(b), that is when a < p + ½ ≤ b: when its centre lies in it (NINT rounds a half away from zero).
+- 11007 to 11016, with `THICKEN`: `IF (OB%I1==OB%I2) THEN`, `OB%I1 = INT(GINV(.5_EB*(XB1+XB2)-XS,1,NM)*RDXI)`, `OB%I2 = MIN(OB%I1+1,IBAR)`. An obstruction whose two faces round to one plane becomes the one cell that holds its midpoint. A midpoint on a plane goes to the cell above it.
+- 11017 to 11025, without `THICKEN`: such an obstruction stays a sheet of no thickness on that plane; one thinner than a quarter cell that straddles a plane goes to the nearer plane.
+- 11061 to 11067, "Throw out obstructions that are too small": rejected when two of its dimensions round to no cell.
+- `THICKEN_OBSTRUCTIONS` defaults to false (1806), and each obstruction's `THICKEN` takes it (10733).
+
+`READ_HOLE`: 11716 to 11721 snap a hole's faces with NINT too, and 11736 to 11762 cut the snapped hole from each obstruction. A hole whose snapped width is zero across the obstruction is "merely sliced" (11750 to 11756) and cuts nothing. In FDS a door narrower than a cell is one cell or closed, by whether a cell centre lies in it.
+
+User Guide (`Manuals/FDS_User_Guide/FDS_User_Guide.tex`):
+- 1258: "An obstruction that is relatively thin compared to the gas phase numerical grid spacing is approximated as an infinitely thin sheet."
+- 1260: "To prevent FDS from allowing thin sheet obstructions, set THICKEN_OBSTRUCTIONS=T on the MISC line, or THICKEN=T on each OBST line for which the thin sheet assumption is not allowed."
+- 1268: "FDS then 'snaps' the geometry to fill (or void) the volume of the nearest cell. Obstructions that are too small relative to the underlying numerical mesh are rejected. That is, if at least two of the three obstruction dimensions are less than half of the corresponding cell dimensions, the obstruction is ignored." The code's test is the rounding at 11063, which depends on where the obstruction lies as well as its size.
+- 1321, on HOLE: "Any solid mesh cells within the volume [...] are removed."
+- 2172: an obstruction may "snap to the local grid but still have the heat transfer solution reflect the actual thickness".
+
+What carries over. This solver blocks whole cells only; it has no sheet on a cell face. So the reference is FDS's rule with `THICKEN`: every face to the nearest plane, and an element whose faces round to one plane in the cell that holds its midpoint. FDS's rejection of an obstruction with two dimensions of no cell carries over unchanged.
+
+#### The method
+
+Chosen: a rule on lines through the cells' sample points, cast through the meshes along all three axes as `volumeFractions` casts its rays. For boxes it is FDS's rule above, with one addition (step 4).
+
+Considered and set aside:
+- A rule on the total volume fraction alone. For one plane face, v ≥ 0.5 already is the nearest plane: a plane through a cube's centre halves it, so the side holding the centre holds at least half. But a thin wall's cells hold its thickness share τ, and its jamb's cell holds τ times the jamb's share. On Steckler's 0.10 m wall on 0.27 m cells (τ = 1/3 by the sub-rays), a cell 60 % covered by a jamb and a cell fully crossed by a 0.06 m wall both hold 0.2. No threshold on the total can put a thin wall's jamb at the nearest plane. A rule on each mesh's own fractions could, but it needs each element's thickness, which a sloped or tapered element does not have.
+- The present rule with a strict test (> for ≥ at 235 to 237). It ends the plateau, but it loses a thin slab split equally between two cells and keeps the jamb's bias in thin walls.
+- FDS's rule with no step 4. Every gap holding a cell centre would open a slot one cell high or wide. An IFC wall stopping 1 cm under its slab would open a slot along its whole length, on 0.27 m cells at 4 % of placements. The present rule seals such gaps, and the app runs on IFC models drawn for no grid.
+
+Frames. In the grid's local axes (`voxelize.js` 6 to 9: the two horizontal axes and the up axis), u_d = (x_d − origin_d) / h is the position in cells along axis d. Cell p spans [p, p + 1) and its sample coordinate is s_p = p + ½ − η, with η = 10⁻³. A cell's sample point is its centre moved η h toward the origin along every axis.
+
+1. Lines. For each axis d and each pair (q, r) of cell indices on the other two axes, the line L_d(q, r) runs along d through their sample coordinates. There are n_b n_c + n_a n_c + n_a n_b lines.
+2. Crossings. Each mesh's crossings with L are found as `volumeFractions` finds a vertical ray's: the barycentric test in the plane of the other two axes (144 to 158, axes permuted), a triangle with |det| ≤ 10⁻¹² in that plane skipped (145). They are sorted, merged within 10⁻⁶ m (as 170) and paired, an odd last crossing dropped (as 175). Each pair is an interval [a, b] in u_d, clipped to [0, n_d]. Lines with an odd count are counted by axis.
+3. Union. All meshes' intervals on L are sorted and merged where they overlap or touch (within 10⁻⁶ m). An element and another it runs into become one interval.
+4. Gaps. Two consecutive intervals on L whose gap a₂ − b₁ is less than g = ½ cell are joined into [a₁, b₂], until no gap on L is shorter. A gap open to an end of L is never closed.
+5. Snap. For each interval [a, b] after step 4, every cell p with a < s_p ≤ b is solid: its sample point is in material. If no sample lies in (a, b], the interval is thin (then b − a < 1), and the one cell p = ⌊(a + b)/2 + η⌋ is solid: the cell holding the midpoint, as `THICKEN` (11012), a midpoint on a plane going to the cell above it.
+6. Thin elements' own lines. For each thin interval of step 5, on L_d(q, r) with midpoint m, cast a line along each of the two other axes d′ through u_d = m and the sample coordinate of L's index on the third axis. On each, do steps 2 and 3. Each gap on it shorter than ½ cell, and not open to its end, seals the cells p′ along d′ with b₁ < s_p′ ≤ a₂ in the layer ⌊m + η⌋ along d. Nothing else from these lines is used.
+7. The mask is the union of the cells set in steps 5 and 6 on every line.
+8. Material. A solid cell whose total fraction is 0 holds an element thinner than the sub-rays' spacing that fell between them. It takes a fraction ℓ / h of the material of the mesh with the longest length inside it on the line that sealed it, ℓ that length; with several lines, the largest ℓ. No other fraction changes. These cells are counted (`filled`).
+9. It returns the mask and the counts: cells solid by their sample, by the thin rule, by step 4, by step 6, `filled`, odd lines by axis, and the time taken.
+
+Thin elements. An element thinner than a cell is one layer: on each line that crosses it, the cell that holds its midpoint. Where it straddles a plane, that is the cell holding more of it; split equally, the cell above. A line that crosses it at a sample point seals that cell, which also holds the midpoint. A 52 mm ceiling is one cell in every column. An element thinner than a cell in one direction is never lost. One thinner than a cell in two directions (a post, a bar, a pipe) is kept where it holds a sample point in either of them, and lost where it holds none in both. That is FDS's rejection at 11063.
+
+Corners and junctions.
+- Two elements that overlap or touch share one interval on every line through the touch (step 3). Their cells meet there, since one plane snaps both.
+- Two elements less than half a cell apart are joined, on lines through sample points (step 4) and on lines through a thin element's midplane (step 6). A wall stopping 1 cm under its slab, a door leaf with 3 mm gaps and a 10 mm undercut, a partition ending 5 cm from the wall it meets: all seal.
+- A thin element is sealed on every line along the axis nearest its normal. On those lines the sealed cell holds the midpoint, which moves by at most one cell between neighbouring lines when the element's slope against that axis is at most 1. The axis nearest the normal always gives that. If neighbouring lines seal cells p and p′ with |p − p′| ≤ 1, no open cell on one side shares a face with an open cell on the other; that would need p′ < p − 1. Such a layer meets itself only along edges at its steps, and an edge is no path: the solver's flow, regions and pressure zones pass through faces only (`topology`, six neighbours; the face velocities).
+- Not proven: where a curved thin shell's nearest axis changes, two line families seal it and must overlap. Check (b) tests round walls and domes, and junctions of oblique walls.
+- Outside the item: the advection's interpolation can read gas across a wall one cell thick (`tools/wall-leak-check.mjs`, its "solver" check). That is no gap in the mask, and the item changes nothing about it.
+
+Oblique and curved geometry. The lines need only triangles, as `volumeFractions`' rays do. A face of any slope lies at the nearest plane along every line that crosses it. The three lines through a sample point agree on whether it is inside an element, so an element at least a cell thick everywhere is exactly the set of cells whose sample points it holds, of any shape. That set's volume is unbiased over positions. A turned or tilted element is treated as a box is, with no further choice.
+
+Openings. A door, window or hole is a gap between material intervals, and each side snaps like a face, to the nearest plane. An opening less than half a cell wide is closed (step 4 or 6). One at least a cell wide is open, since it holds a sample. One between half a cell and a cell is open when a sample point lies in it. A closed door (an IfcDoor leaf, when the run closes doors, `flamescapesRun.js` 136) is a thin element and seals its opening.
+
+Steckler under the item, by hand from steps 1 to 5 on the grid `fds.mjs` builds (positions in cells):
+- The room. On 0.27 m cells the ceiling's shell is [8.889, 9.889]. Sample 9.499 lies in it and 8.499 does not, so the ceiling is plane 9 and the room 8 cells, 2.16 m. On 0.20 m: [11.65, 12.65], 2.20 m. On 0.34 m: [7.265, 8.265], 2.04 m.
+- The 6/6 door. On 0.27 m its jambs are at 4.815 and 7.556; samples 5.499, 6.499 and 7.499 lie between: 0.81 m. On 0.20 m, 6.15 to 9.85, four samples: 0.80 m. On 0.34 m, 4.029 to 6.206, two: 0.68 m. Its top is 1.80, 1.89 and 1.70 m on 0.20, 0.27 and 0.34 m, under a lintel one cell deep on each (on 0.27 m, the cell the present rule leaves open).
+- The 2/6 door (0.25 m) is one cell on each size: 0.20, 0.27 and 0.34 m wide (the gaps 7.50 to 8.75, 5.815 to 6.741 and 4.824 to 5.559 each hold one sample). The 8/6 door is 1.00, 1.08 and 1.02 m.
+Check (d) must reproduce these exactly.
+
+Pockets. The item fills none. Under it a flat ceiling's row is open or solid along its whole length, corners included. A pocket remains only where the true geometry has a recess whose plan, in that row, holds one sample point and is at least half a cell wide both ways (a narrower one is closed by step 4): a vent or shaft one cell wide through a ceiling, the apex of a pitched or domed ceiling, a narrow coffer. 13.22 deals with what a tree reads there.
+
+Mass. The item changes no fraction but those of step 8. A partial cell it leaves open keeps its fraction, and the solver gives an open cell's material no heat capacity (`flamescapes.js` 368 to 371), as it does now for any open cell. A wall about a cell thick that straddles two cells, 0.6 and 0.4, keeps only the larger part's mass; the present rule keeps both. The change in Σ `inertC` is reported in every scene (check (i)).
+
+The constants.
+- Faces to the nearest plane; the midpoint's cell for an element whose faces round to one plane, the cell above for a midpoint on a plane; rejection of an element with two dimensions of no cell: FDS 6.11.1 `read.f90` 11000 to 11016 and 11063, `READ_HOLE` 11716 to 11721.
+- g = ½ cell, the gap closed in steps 4 and 6: a modelling constant fixed here from no data. Below it, closing a gap biases no opening at least half a cell wide (its mean modelled width stays its width, check (c)), and it seals modelling gaps between IFC elements. A larger g would close real openings narrower than it.
+- η = 10⁻³ cell: a numerical constant fixed here. It keeps sample points off the faces of FDS geometry drawn on a 0.1 m grid (on 0.20 m cells the centres lie at 0.1, 0.3, ... m), and it puts a face that lies on a sample point on the side NINT puts it. It biases every face by η, 10⁻³ cell.
+- 10⁻⁶ m and 10⁻¹²: the voxeliser's own (`voxelize.js` 145, 170).
+
+Where it lives.
+- `voxelize.js`: `snapNearest(grid, meshes, fraction)` returns `{ solid, stats }` and writes step 8's fractions. `occupancy(grid, fraction, { snap, meshes })` calls it when `snap` is `"nearest"` and meshes are given, and otherwise runs lines 221 to 254 unchanged.
+- `flamescapesRun.js` `buildScene` (107 onward) takes `snap` and passes the meshes it already holds (158 to 159). The worker's run settings carry it.
+- `fds.mjs` `gridFor(geo, h, Vx, { snap })` passes the boxes' meshes (344 to 345). `validation-suite.mjs` takes `--snap nearest`.
+- `createSolver`'s fallback (`flamescapes.js` 351) has no meshes and keeps the present rule. Every scene built with the item on carries its mask. The tools that call `occupancy` themselves (heat-closure, transport-checks, energy-budget, steckler-checks, flamescapes-gpu-check, sprinkler-validation) keep the present rule unless passed `snap`.
+- The GPU takes the CPU's mask and needs no change.
+
+#### The switch
+
+`snap: "seal" | "nearest"`, default `"seal"`, the present rule. With `"seal"` no new code runs, and the mask, the fractions and every output are bit-identical to the build before; the cost is one comparison. When the default changes, `RUN_CACHE_VERSION` rises, so no cached run made under the other rule is reused.
+
+#### Checks (fixed now, before any run)
+
+All but (e) and the step costs in (f) run in a new tool, `tools/snap-check.mjs`. No measured data enters any check.
+
+(a) Off is off. With `"seal"`, the mask and fraction arrays are byte-equal to the build before on: the eight series' scenes (steckler, nbs, nistnrc, wtc, atf, fsri, ulnist, fse; each test's geometry as the validation suite builds it) on 0.20, 0.27 and 0.34 m cells; every scene the unit suite builds through `occupancy`; Duplex, Office, Clinic and Vienna at the standard grid (`STANDARD_CELLS` 30 000, `lib/hardware.js` 15) and whole on 0.27 m cells. The unit suite and the GPU parity phases are bit-identical. A failure means the off path was touched.
+
+(b) Watertightness. The item on, a 6-connected flood through open cells.
+1. Closed rooms: `wall-leak-check.mjs`'s 5 × 4 × 2.7 m room, its walls, floor and roof t thick, t ∈ {0.01, 0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30 m} up to h, and t = h; turned about the vertical by {0, 5, 15, 30, 45, 60, 75, 85}°; tilted about a horizontal axis by {0, 10, 30, 45}°, so every face is oblique; 10 translations within a cell per case, from a fixed seed; on 0.20, 0.27 and 0.34 m. The flood starts in the room's centre cell. Passes if it reaches no cell whose sample point lies outside the room's outer faces, in every case.
+2. Junctions: the room split by a partition of the same thickness meeting the outer wall in a T, square and at 30 and 60°. Each half is sealed from the other and from the outside.
+3. Gaps: a wall ending g under the roof, g ∈ {0.005, 0.01, 0.02, 0.05 m, 0.49 h}; a partition ending g from the wall it meets; a door leaf 0.04 m thick in a 0.9 × 2.0 m opening, 3 mm from its jambs and head, 10 mm undercut. All sealed. Reported, not judged: g = 0.51 h, open only where a sample lies in the gap.
+4. Curved: a round room of radius 2 m (96 sides), and the same under a hemispherical shell, walls and shell 0.01 m to h thick. Sealed.
+5. The buildings: Duplex, Office and Clinic (`public/examples`, read by `tools/ifc-extract.mjs` `extract`), whole, on 0.20, 0.27 and 0.34 m, doors closed and doors open. The sealed regions (`topology(sim).sealed`) are counted with the item off and on. Passes if on ≥ off in every case, or if each pair of off-regions that the item joins is joined only through cells within one cell of the bounding box of an IfcDoor (doors open), an IfcWindow or an IfcOpeningElement of the model (the tool reads these from the IFC). Any other join fails and is listed with its cells and the elements beside them. A region the item adds is listed, not judged.
+Every line in 1 to 4 has an even crossing count (their meshes are closed). The same families with the item off are reported beside. Reason: watertightness must never be lost, so one leak in one case fails the item. A failure means an element vanished or leaks, a junction was not joined, or a line's parity failed.
+
+(c) Unbiased. 1000 positions across a cell, in steps of 0.001 cell, on 0.20, 0.27 and 0.34 m.
+1. Faces: a slab 3 cells thick, its underside and its top; a wall 3 cells thick, both faces, along each horizontal axis. The error e is the modelled plane less the true face, in cells. By the rule e lies in (−½ + η, ½ + η], and its mean over this sweep is η + 1/2000 = 0.0015. Passes if every e lies in (−½ + η − 10⁻⁶, ½ + η + 10⁻⁶] and |mean e| ≤ 0.005. Reason: 0.005 is three times the rule's own bias. The present rule's −0.42 fails it, and so does any rounding at a sub-ray, which is off by at least 1/(2S) = 0.07.
+2. Oblique faces: the slab tilted 10, 30 and 45°, the wall turned 10, 30 and 45°, 50 positions each. On every line crossing the face, e within the bounds of 1; |mean e| ≤ 0.01. Reason: over 10⁴ lines or more, the standard error of a mean of errors spread over a cell is about 0.003.
+3. Openings: width w ∈ {0.3, 0.49, 0.5, 0.6, 0.75, 0.9, 1.0, 1.5, 2.0, 2.74} cells, in a wall 1.5 cells thick, a 0.10 m wall and a 0.02 m wall, swept in position. The modelled width W is the count of open cells across it at mid-height. By the rule, W's mean over a cell's positions is exactly w for w ≥ ½: each sample lies inside for a span w of positions. The sweep's 1000 positions move the mean by at most 2/1000. Passes if |mean W − w| ≤ 0.005 for w ≥ ½, W = 0 at every position for w < ½, |W − w| < 1 always, and W ≥ 1 for w ≥ 1. The present rule's loss (1 − 1/S in the thick wall; closed at 0.6) is reported beside.
+4. Thin slabs: t ∈ {0.01 m, 0.05 m, 0.2, 0.5, 0.8, 0.99 cell}: exactly one solid cell on every vertical line at every position, the cell ⌊m + η⌋. t ∈ {1.0, 1.4, 2.6 cells}: the mean count of solid cells on a line within 0.005 of t.
+A failure means the snapping is not to the nearest plane.
+
+(d) The named geometries. For each test of the eight series, on 0.20, 0.27 and 0.34 m, item off and on, a table of true against modelled: each room's ceiling over its floor, at each tree's column and the room's centre; each opening's width, height, sill and soffit (every HOLE, every OPEN vent on a mesh side, and FSRI's door from its box scene). True values from the FDS input (`readGeometry`); modelled ones from the mask, along the lines through the opening's centre in its wall's cell layer. Pass rule, derived from steps 1 to 5:
+- every face of an element at least a cell thick, and every side of an opening, within (½ + η) h of its true place;
+- every opening dimension within h of its true size;
+- every opening at least h wide both ways open; every opening narrower than h/2 in a direction closed; one between h/2 and h open exactly when a sample point lies in it, the table giving the sample coordinates;
+- Steckler's values above, exactly; with the item off, 12.4's values (1.89 and 2.04 m; 0.54 and 0.68 m) and the first table here, exactly, which checks the measuring itself.
+"No opening wider than half a cell closed" cannot hold under nearest-plane snapping. An opening narrower than a cell that holds no cell centre closes in FDS too (11716 to 11721, 11750). The table lists each such opening. A failure means the item does not snap as drafted.
+
+(e) The unit suite. `npm test` with the default set to `"nearest"` for the run, a one-line change not committed. Every test passes unchanged. Expected to depend on exact geometry: `flamescapes.test.mjs` 133 to 147 (a slab thinner than a cell seals), 148 to 167 (a 52 mm ceiling is one cell in each column; under the item the split case takes the upper cell, still one), 179 onward (the suspended ceiling within h of 2.6 m), 169 to 178 (the contents' floor area 16 to 24 m²) and 324 (duct terminals on open cells); `suppressionSystems.test.mjs` 138 to 160 (a room's open cells inside its walls, detectors under its ceiling); `flamescapes.burner.test.mjs` (open cells for a burner); `lod1.test.mjs` 354 (converted geometry voxelises). By the derivations above each still holds. `flamescapes.wall.test.mjs` 167 builds its mask by hand and does not call the voxeliser. A test that fails is not edited, and its failure is reported. Only a test whose reference is the present rule's own geometry may be rewritten, as 13.12 rule 1 allows, disclosed as written after a failure. Any other failure is the item's.
+
+(f) Speed. Building a scene's mask (`volumeFractions` and the mask) with `"nearest"` takes at most 1.25 times as long as with `"seal"`, median of 5 builds, on Duplex, Office, Clinic and Vienna at the standard grid and whole on 0.27 m cells, and on each series' scene on 0.20 m cells. Reason: the lines number about 3 a column plus 2 for each thin crossing, against S² = 16 to 49 sub-rays a column, near a fifth of the rays already cast; 1.25 allows for the sorting and the union. Reported, not judged: ms a step on the three buildings, CPU and GPU (`tools/backend-bench.mjs`), with the count of open cells off and on. More open cells cost more a step; that cost follows from the geometry. A failure means the line pass is too slow for the app's set-up.
+
+(g) FDS's own rule. 2000 random scenes per cell size, each of one to six boxes (sides 0.05 to 3 cells, positions uniform) and zero to three holes through them. The reference is an independent function in the tool, in integer arithmetic on the boxes: NINT on each face; `THICKEN`'s midpoint cell where a dimension's faces round to one plane; rejection where two do; holes cut by their NINT ranges, none where a hole rounds to no cell. Passes if the item's mask equals the reference in every scene where no two boxes are less than half a cell apart along an axis and no face lies within 2η of a sample point; and, in the other scenes, equals the reference plus the gaps step 4 closes, exactly. Reason: this is FDS's rule, computed without ray casting. A failure means the item departs from FDS where it claims to follow it.
+
+(h) Invariance. The same mask with the meshes in 5 orders. Translated by 1, 2 and 3 whole cells along each axis, the mask translates exactly, in scenes with no face within 10⁻⁴ cell of a sample point. A failure means an order or origin fault.
+
+(i) Material. With the item on, every solid cell's total fraction is above 0 in every scene of (a) to (d). Plates 0.01, 0.02 and 0.04 m thick, axis-aligned: their cells' fraction within 2 % of t / h. Reported, not judged, per scene: `filled`, Σ `inertC` off and on, odd lines by axis.
+
+#### What the item does not claim
+
+- It is a geometry item. It changes which cells are solid, and the fractions of step 8, and nothing in the solver.
+- It does not model flow through a door narrower than a cell. Two attempts at that failed, and that line is closed.
+- Steckler's 0.24 m door (0.25 m in the input) is one cell on each size under the item: 0.20, 0.27 and 0.34 m wide, so its area is 0.80, 1.08 and 1.36 times true. Under any snapping rule a door narrower than a cell is one cell or closed. Under this one it is one cell when it is at least half a cell wide and a sample point lies in it, and closed otherwise. That is FDS's own NINT, and over positions it is unbiased for every opening at least half a cell wide. Always closing would lose doors FDS keeps; always opening would overstate every narrow door by up to a cell.
+- It changes every room's volume and every opening's area. The validation is run again in full on 0.20, 0.27 and 0.34 m cells and reported beside the existing run. No series' data is consulted to choose any constant: g and η are fixed here from no data, and the rest is FDS's rule.
+- It does not keep a wall's mass in a partial cell it opens (reported in (i)).
+- It does not touch the advection's reading across walls one cell thick.
+- It does not make FDS's sheets of no thickness; this solver has none.
+- It fills no pocket.
+
+#### Default
+
+Off (`"seal"`) until (a) to (i) pass. Then `"nearest"`, with `RUN_CACHE_VERSION` raised and 12.4's second point rewritten with the new numbers, dated. Made after 13.B began, it gets its own full rerun on 0.20, 0.27 and 0.34 m, reported beside 13.B (13.12, rule 5).
+
+#### What ends this line
+
+If the item fails any of (a) to (i) in any case, it is not made. The present rule stays, and 12.4 stands.
+- A failure of (b) on oblique or curved shells or at junctions says the union of three line families does not seal everywhere. A second attempt would add a closing pass on the mask, for example sealing an open cell that lies between two cells one element's thin rule sealed, and it needs its own draft.
+- A failure of (b) on the buildings through gaps at least half a cell wide between elements meant to meet says the models' own gaps exceed g. A larger g closes real openings, and that needs the user's word.
+- A failure of (c), (d), (g) or (h) is a fault of the code against this method. Corrected code, run again in full, is the same attempt, reported with both commits.
+- A failure of (f) alone may be met by faster code whose mask is bit-identical to the slower code's on every scene of (a).
+No second attempt is drafted. It needs the user's word and a new method committed here first.
+
+#### Sources (read, or run for this draft)
+
+- FDS 6.11.1, tag FDS-6.11.1, commit ff928dbf68a2623ced3a007be75391c6dc6c9f90, fetched from GitHub raw. Read: `Source/read.f90` (`READ_OBST` 10585 to 11569, of it 10860 to 11067; 1806, 10733; `READ_HOLE` 11574 to 11931, of it 11703 to 11800); `Source/func.f90` (`GINV` 6496 to 6524); `Manuals/FDS_User_Guide/FDS_User_Guide.tex` (666, 1255 to 1270, 1314 to 1333, 2172). `Validation/Steckler_Compartment/FDS_Input_Files/Steckler_010.fds`: its MESH, OBST, HOLE and VENT lines only, for the examples' coordinates.
+- This repository at 191b1d3: `voxelize.js`; `fds.mjs`; `flamescapes.js` 336 to 372, 592 to 599, 2774 onward; `flamescapesRun.js` 107 to 160 and 320 to 345; `runCache.js` 54; `lib/hardware.js` 15; `tools/ifc-extract.mjs`; `tools/backend-bench.mjs` 65; `tools/wall-leak-check.mjs` 1 to 80; the unit tests named in (e); `validation-suite.mjs` 129 to 138 and 270 to 300.
+- Run: the present voxeliser, imported read only, on synthetic boxes: the Steckler copy through `fds.mjs` `gridFor`; faces and openings swept over 200 positions; thin slabs over 100; the corner room. No validation run, no fire simulation, no result file.
+
+### 13.22 The harness: a measurement tree drops a pocket cell (2026-11-13, before any run of it)
+
+Drafted blind with 13.21. It changes only which cells a thermocouple tree is compared through in the validation harness. The solver and the app are not touched.
+
+#### What the harness does now
+
+`treeCells` (`fds.mjs` 377 to 394) takes every open cell of the column over the tree's plan point, from its floor up to the test's nominal ceiling, skipping solid cells: a bracket sealed into whole cells interrupts the tree but does not end it. `validation-suite.mjs` 283 builds each tree with it, and after the first second the suite keeps only cells of the fire's connected gas (278 to 280). A pocket is an open cell whose four horizontal neighbours are solid. It joins the room through the cell below it, so it passes both. Under the present rule pockets form at the corners of a snapped ceiling's row (13.21, What the voxeliser does now).
+
+#### The rule
+
+- A tree cell (i, j, k) is a pocket when none of (i ± 1, j, k) and (i, j, k ± 1) is open (`G.solid` 0). A neighbour outside the grid is not open.
+- `treeCells` walks the column bottom up as now. At the first pocket it stops: that cell and every cell above it are dropped. The tree's profile ends at the last cell below the pocket.
+- It returns `dropped` beside `cells`: each dropped cell's height and index, and which one was the pocket. A pocket with open cells of the room above it, not at the tree's top, is flagged `midTree`.
+- Every reading and comparison made from the tree uses `cells` only. A measured thermocouple with no kept cell at its height is compared with nothing, and it is listed.
+- Each run lists, per tree and cell size, the dropped cells and the height where the tree now ends, beside the tree's snapped ceiling (`column().top`), as 12.4 has each run record its trees' ceilings.
+- It applies with 13.21 off and on. Point devices (`deviceCell`) are not changed.
+
+#### Why this is a measurement rule
+
+The solver is not changed, and neither is any cell's gas. Only the cells a tree is compared through change. A thermocouple at that height hangs in the room's gas. On the grid the room has no gas at that height: the snapped ceiling is solid there everywhere but in the pocket. The pocket's gas meets the room through one face, under four walls and a ceiling, so its temperature is a recess's. Comparing the measurement with it would compare a room's gas with a recess. With no cell on the grid that stands for the room at that height, the tree has no reading there.
+
+#### Checks (fixed now, before any run)
+
+(a) No pocket, no change. On every tree of the eight series, on 0.20, 0.27 and 0.34 m, with 13.21 off and on: `cells` equals the old function's list up to its first pocket, cell for cell. The first pocket is found independently by the check tool, counting open horizontal neighbours on `G.solid`. Where the old list holds no pocket, the two are identical. A failure means the rule changed a tree beyond its pocket.
+
+(b) Constructed cases, on the three sizes, with 13.21 off:
+- a box room 3 × 3 × 2.4 m, walls on cell planes, the ceiling entering its top row by 0.3 of a cell: a tree in a corner column ends below the corner cell, which it lists as dropped; a tree at the room's centre loses nothing;
+- a flat ceiling with a recess one cell square and one cell deep: a tree under it drops the recess cell; under a recess two cells by one, nothing is dropped;
+- a doorway one cell wide: a tree in it loses nothing;
+- a bracket two cells tall in a room: a tree through it skips the bracket's cells and loses nothing.
+Each exactly. A failure means the pocket test is wrong.
+
+(c) Under 13.21. The room of (b) has no pocket with the item on: its ceiling row is open to the corners. Pockets can remain only where the true geometry has a recess holding one sample point in its row and at least half a cell wide both ways: a vent or shaft one cell wide through a ceiling (an OPEN vent cut through the harness's ceiling shell), the apex of a pitched or domed ceiling, a narrow coffer. The run lists every pocket on every tree, 13.21 off and on. Reported, not judged.
+
+#### What ends this line
+
+If (a) or (b) fails, the rule is not used, and trees read as they do now. The rule catches pockets one cell wide only: a recess two cells wide, such as a wider vent, is kept, because its cells have an open neighbour. That limit is stated here, not addressed.
+
+#### The coordinator's decisions on 13.21 and 13.22 (2026-11-13, 08:47, before any run of either)
+
+The two drafts above are the physics agent's, written blind (13.12, rule 2). It opened no result file and no plan section beyond 12.4, 13.12 and the method part of 13.19. **Both items were conceived after results were read, and that is declared here.** The coordinator asked for them after reading 13.B's sealed file on 0.27 m (13.16), where three Steckler rooms whose door the grid closes read a collapsed layer through a pocket cell at the top of the tree. The coordinator has read 13.A and 13.B, so the decisions below add no constant and move no tolerance. Each takes the draft's own choice, or the stricter reading.
+
+**The user's word, and what attempt 3 at the doors is.** 13.20 closed the door line until the user's word and a new method. On 2026-11-13 at 06:11 the user wrote: "yes do a third run try something different this time so theres a higher sucess rate". Attempt 3 is item 9 as drafted above. It differs in kind from attempt 1 (13.13) and attempt 2 (13.17). Those changed the flow the solver gives a door that the grid holds wrongly, and both failed their checks. This one changes the door the grid holds and leaves the solver's flow alone. The draft was written before the user's word, so its sentence "that line is closed" was true when written and stays as written. What the item claims for doors is geometry only: an opening at least half a cell wide has its true width on average over positions, and one at least a cell wide is never a cell or more from it, where the present rule, in a wall at least a cell thick, loses 0.75 to 0.86 of a cell on average. It claims nothing for flow through a door narrower than a cell, which is one cell or closed. The coordinator adds no flow check, because one written now would not be blind. Door flow, door velocity and the neutral plane are judged only by the held-out series in the item's own rerun, under 12.6's bands as they stand.
+
+**Checked by the coordinator,** apart from the agent: FDS 6.11.1's sources fetched again at ff928db; in `read.f90`, NINT on an obstruction's six faces (10998 to 11005), the thickening to the midpoint's cell (11010 to 11016), the rejection (11061 to 11067), NINT on a hole's faces (11716 to 11721), the sliced hole (11750 to 11756) and the default of `THICKEN_OBSTRUCTIONS` (1806, 10733); `GINV` in `func.f90` (6496 to 6507); the User Guide's lines 1258, 1260 and 1268. The present rule's Steckler table was reproduced by running the agent's script again on this branch. Not checked: the sweeps' means, the hand values under the new rule (check (d) reproduces them or fails) and the unit tests' line numbers.
+
+1. **The method stands as drafted,** steps 1 to 9, with step 4 (gaps), step 6 (a thin element's own lines) and step 8 (a fraction for a solid cell that holds none).
+2. **g = ½ cell and η = 10⁻³ cell stand,** fixed from no data. g departs from FDS, which opens a hole 0.3 of a cell wide where it straddles a cell centre. It is there for the gaps IFC models leave between elements meant to meet.
+3. **No material is moved between cells.** A partial cell the item opens loses its heat capacity, as any open cell does now. (i) reports the change in every scene.
+4. **An element thinner than a cell in two directions is lost where it holds no sample point,** as FDS rejects it.
+5. **The switch and the names are the draft's.** A cached run's key carries `snap`, so a run made under one rule is never reused under the other.
+6. **(f) is judged as drafted.** The cost of a step with more cells open is reported, not judged, and goes to the user: the user's rule for a feature is the same or better speed with it on.
+7. **The default: stricter than the draft.** Passing (a) to (i) makes `"nearest"` available to the harness and to the app's settings. It does not change the app's default. The default changes only after all of these: the item's full rerun on three cells, reported beside 13.B; the app's verdict text rewritten from that rerun; the sprinkler validation and the tools that build masks themselves passing `snap`, so that they voxelise as the app does; and the user's agreement, given with the step cost before them. `RUN_CACHE_VERSION` rises with the default, not before.
+8. **(b)5 gains a case.** The three buildings are also flooded at the standard grid, clipped as the app clips them (`clipMesh`), under the same pass rule. The agent named the risk in its notes: a line inside a wall whose end lies outside the clip box sees an odd count. The case comes from that note and from no result, and it can only fail the item. The tool reads IfcOpeningElement itself; `ifc-extract.mjs` is not changed for it.
+9. **(e) is the draft's.** A test that fails is not edited. Only a test whose reference is the present rule's own geometry may be rewritten, disclosed as written after a failure.
+10. **13.22 ends a tree at its first pocket,** mid-tree included and flagged. Point devices are not changed.
+11. **13.22 reaches 13.B by a rerun, not by scoring again.** 13.B's files hold each run's reduced values and no tree profile. The runs with a pocket on a tree are found from the masks alone, by 13.22's check tool, before any run. They run again on 13.B's solver (550fce5) and flags, in each leak reading of 13.16 where the two differ, and are merged over 13.B's files as 13.16 merged its reruns. The control is 13.16's: on each cell the first three runs of the suite's order that hold no pocket run again and must give pairs identical to 13.B's. If the control fails, nothing is merged.
+12. **The order, and what is reported (13.12, rule 5).** First 13.22 alone over 13.B. Then 13.21 with 13.22 on: the eight series, and the chair series beside them as 15.9 read it, on 0.20, 0.27 and 0.34 m, on the harness as 13.16 corrected it (no leak where none is stated). Each is reported beside 13.B, verdict by verdict, before anything is combined. 13.B's words stay the app's until the user has seen both.
+13. **The base** is `next/calibration-ui` at the commit the item's branch starts from. The solver's physics is 13.B's (550fce5); the item touches the voxeliser, the scene's set-up and the harness only.
+14. **What ends this line stands as drafted.** If attempt 3 fails its checks, 13.20's sentence returns: doors stay as the voxeliser makes them now, and a fourth attempt needs the user's word and a new method here first. If the item passes its checks and the doors' words do not improve in its rerun, that is reported as it is. Nothing is fitted and no band moves.
+
+### 13.23 Item 8, check (b): the result (2026-11-13, 08:47)
+
+**The permission.** Check (b) of 13.19 waited for the user's permission to run the RadCal build: the session's permission check had refused to run it, and that was not worked around. On 2026-11-13 at 06:11 the user wrote: "Yes you get the permission". RadCal was run at 08:36. Its source, the compiler and the built program stay outside the repository.
+
+**The build against RadCal's own example.** RadCal was built from `firemodels/radcal` at abe2a8f with gfortran. Its shipped example input gives, on this build, a total emissivity of 0.1129, a received flux of 1017.0 W/m²/sr and a total transmissivity of 0.8871. The user's guide prints, for the same input under revision 51 of June 2014, 0.1215, 1008.6 and 0.8787. So the build is not verified to the digit against a published output of its own revision, and that is a limit of this check. The build's figures agree among themselves: the flux is the wall's radiance times the transmissivity plus the gas's emission, to 0.02 %. RadCal's source changed after 2014 (its tables in 2016, its soot model in 2020, further commits to 2025), and the example holds soot and a fuel gas, which the cases of (b) do not. The difference was not traced further.
+
+**The result: (b) fails.** 72 cases as 13.19 fixed them, over 50 to 10 000 cm⁻¹ at 1 atm. The solver's values were written by the item's check tool at 05:28, before RadCal ran. 38 of the 72 lie outside 25 % or 0.01.
+
+| Quantity, gas temperature | Cases | Outside | Solver over RadCal |
+|---|---|---|---|
+| Emissivity, 400 K | 12 | 12 | 1.26 to 1.50 |
+| Emissivity, 600 K | 12 | 10 | 1.16 to 1.38 |
+| Emissivity, 900 K | 12 | 0 | 0.96 to 1.21 |
+| Emissivity, 1200 K | 12 | 0 | 0.90 to 1.11 |
+| Absorptivity of 1173 K radiation, gas at 400 K | 12 | 10 | 0.98 to 1.64 |
+| Absorptivity of 1173 K radiation, gas at 600 K | 12 | 6 | 0.94 to 1.48 |
+
+Every case, with RadCal's radiance beside it, is in `benchmark/results/2026-11-13-gas-radiation-13.19b-radcal.json`. The coordinator's own transcription of FDS's functions, written apart from the agent's code, fails the same 38 cases. So the code carries FDS's weighted sum of gray gases as written, and the fit departs from RadCal at a layer's temperatures. This is the case 13.19 named: "A failure of (b) alone says that the fit, not the code, departs from RadCal."
+
+Part of the absorptivity's failure is in the model's form. Its absorptivity for radiation from a source takes its weights at the source's temperature, whatever the gas's own temperature. At X_c + X_w = 0.15, M_r = 1.25 and 3 m it gives 0.359 for a gas at 400 K and at 600 K alike, where RadCal gives 0.219 and 0.242.
+
+**Item 8 is not made.** By 13.19's "What ends this line", a failure of any check in any case ends the attempt. The flag stays off, the branch `flamescapes/gas-radiation` is kept and not merged, and no validation run is made with the item on. The gas stays transparent but for its soot. No tolerance moves: 25 % was fixed from how closely two accepted spectral models agree, and the fit is outside it by up to 64 %.
+
+**What the failure says, and what it does not.** At 400 to 600 K, the temperatures of a room's hot layer, this fit radiates a sixth to a half more than RadCal. With the item on, a layer would have lost that much more heat than the reference allows. 13.B's burner rooms read hot, so the item would have moved them toward the band partly for a wrong reason. The check was fixed before any run to stop that, and it did. Not concluded: which of the two is nearer a measurement at 400 to 600 K. RadCal is this plan's reference, not a measurement, and the fit was made for combustion temperatures.
+
+**A second attempt needs the user's word,** and a new method committed here first (13.19). None is drafted. Two candidates, for the user's decision: a weighted sum of gray gases whose fit reaches ambient temperature, judged by this same check against these same 72 values, with nothing moved; or FDS's default gray gas from RadCal's own coefficients, which 13.19 notes would need another independent reference. Until then the hot reading of the burner rooms and the cold reading of the chair rooms (15.9) stand as 13.B reports them.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
