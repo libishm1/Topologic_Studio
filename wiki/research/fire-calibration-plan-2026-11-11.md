@@ -1789,6 +1789,40 @@ The draft above is the physics agent's, written blind (13.12, rule 2). The coord
 11. **The reruns.** Each item made after 13.B began gets its own full rerun on 13.B's base, reported beside 13.B, before any two are combined (13.12, rule 5), so each one's effect is read alone. Their order is set when the builds have reported their checks.
 12. **What ends this line stands as drafted.**
 
+### 13.20 Items 4 and 3, attempt 2: the result (2026-11-13, 04:59)
+
+**Attempt 2 fails. Items 4 and 3 are not made, and doors stay as the voxeliser makes them** (13.17, "What ends this line"). Door and vent velocity, door mass flow and the neutral plane stay as 13.A and 13.B find them. No third attempt is drafted; a further attempt needs the user's word and a new method committed here first.
+
+The build is on branch `flamescapes/door-attempt2` (2948f2d the vent on the CPU, off by default; bc1cf65 and 290da56 the check, `tools/calibration/door-vent.mjs`). It is not merged. Steps 1 to 12 of 13.17 were built; the GPU port (step 13), the parity phase and the speed bench were not, because the CPU failed first. The coordinator ran the committed check again at 290da56 and got the agent's figures to the last digit. Checks (h) and (i) are the agent's and were not repeated, since nothing is merged.
+
+**(a) to (d), two sealed boxes on 0.2 m cells.** (d)'s figure is each box's heat error as a share of the heat the larger direction carried above ambient.
+
+| Door | Hot box | (a) outflow, 10 % | (b) neutral plane, 10 % | (c) mass, 1 % | (d) heat, hot and cold box, 1 % |
+|---|---|---|---|---|---|
+| 0.4 m | 400 K | +3.8 % | −3.2 % | 0.00 % | +39.8, −29.8 %: fails |
+| 0.5 m | 400 K | +3.8 % | −3.3 % | 0.00 % | +40.9, −32.1 %: fails |
+| 0.6 m | 400 K | +3.9 % | −3.5 % | 0.00 % | +41.9, −34.2 %: fails |
+| 0.4 m | 600 K | +15.2 %: fails | −7.0 % | 0.00 % | +52.0, −27.5 %: fails |
+| 0.5 m | 600 K | +16.3 %: fails | −7.1 % | 0.00 % | +51.5, −30.7 %: fails |
+| 0.6 m | 600 K | +17.6 %: fails | −7.0 % | 0.00 % | +50.6, −33.6 %: fails |
+
+- **(a)** passes at 400 K and fails at 600 K in every case. **(b)** passes in all six. **(c)** passes in all six, exactly, as the method builds it.
+- **(d)** fails in every case, under every reading of "each way" (against the larger direction, the smaller, or their sum).
+- **(e)**, a zone against open cells, 0.5 m door: (a) +3.9 % at 400 K, +15.6 % at 600 K. Fails at 600 K.
+- **(f)**, the six cases on 0.27 m and 0.34 m cells: (a) +2.5 to +3.2 % and −0.5 to +1.0 % at 400 K; +14.0 to +16.8 % and +11.7 to +13.8 % at 600 K. (b) within −2.7 to −6.2 %. (d) +37 to +52 % and −18 to −29 %. Fails on (a) at 600 K and on (d) everywhere.
+- **(g)**, three boxes: each box's mass closes on its vents' transfers within 0.0002 % (passes); Newton agrees with bisection within 3.9e-7 Pa (passes). The zones' pressure against their mass, 0.01 Pa: up to 217 Pa on the first step, whose transfers were capped, and up to 1.8 Pa (0.2 m) and 2.6 Pa (0.34 m) on later steps. Fails as worded. The solve itself converged at every step (largest last change 0.0098 Pa); 13.17's wording is not bent to that reading.
+- **(h)**, off is off: the agent reports identical state fingerprints against the base in the six grid runs, a unit room for 30 s and a leaky sealed box with a burner, 536 of 536 unit tests, and identical GPU parity output. **(i)**: 536 of 536 with the vent on by default, but the check could not fail: no unit scene lists an opening, so no vent is made in any of them.
+
+**What the agent found about the cause** (its reading, reported and not acted on):
+- Measured: Emmons' integral on the vent's own band rows, with the sill pressure from a volume balance, is within 2.1 % of the reference; at the vent's own solved sill pressure it is +3.8 to +17.6 %. So the band profiles hold and the joint solve's sill pressure is what fails (a). In the sealed pair the gas's total heat over 2 to 6 s rises 19.8 kJ (400 K) and 150.9 kJ (600 K) with the vent, against 3.0 and 7.8 kJ with the door on the grid, and both zones drift to about +1.7 kPa at 600 K.
+- Inferred, not proven: the gas a vent moves enters a zone twice, once through the ledger's compression and once through the expansion sources (13.17, steps 9 and 11 ask for both), and the transport then takes the duplicate out at fixed temperature, which would explain the heat gained; and step 8 counts transferred gas at the zone's mean density, which would bias the sill pressure towards the hot side.
+
+**Two things any further attempt must face,** found by this one and outside its checks:
+- On the app's own models almost no door becomes a vent. Taking each IFC door's bounds as an opening: the Duplex gets 1 vent of 14 doors at 30 000 cells and none at 120 000; the Office none of 102; the Clinic none of 254. Most doors sit at the grid's edge or outside it, or their wall is more than one cell thick, so a row of face cells is solid. The method assumes a wall one cell thick.
+- The app does not yet pass a door's or window's bounds to the solver (`scene.openings` comes only from the tools), and no unit scene has one.
+
+**Where 13.17 was unclear, and what was taken:** (d)'s "each way" (every reading fails); (g)'s 0.01 Pa (read as worded, fails); the leak's derivative, floored at 0.01 Pa as the vent's is; a run's first step has no vent speed for the step's length, so its transfers are capped. None of these changes a verdict.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
