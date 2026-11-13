@@ -31,9 +31,36 @@ the heat.*
 > calibrated temperature, so its results do not replace a fire engineer's
 > egress assessment.
 
+## What's new (2026-11-13)
+
+- **The fire solver is compared with 178 measured room fires, on three cell
+  sizes.** Flamescapes was run against eight held-out test series
+  (Steckler, NBS multi-room, NIST/NRC, WTC, the ATF corridors, UL FSRI's
+  compartments, UL/NIST's vents and NIST FSE), each with its own walls
+  conducted in layers, on cells of 0.20, 0.27 and 0.34 m. Each word is the
+  strictest of the ways the comparison was read. The smoke layer's depth is
+  calibrated on 0.20 m (bias 1.00, scatter 0.14, in band in six of seven
+  series) and 0.34 m (1.11, 0.14, five of seven) and indicative on 0.27 m;
+  the neutral plane in a door is calibrated on 0.20 m (0.90, 0.12, three of
+  four series) and indicative on 0.27 m. The temperatures read warm: the
+  layer's and the gas under the ceiling are indicative on 0.20 m only, from
+  one laboratory's tests, and the gas at head height, which a run draws, is
+  not calibrated on any cell. Carbon dioxide is indicative on 0.20 and
+  0.27 m, from one laboratory's tests; oxygen, the flow through a door and
+  smoke visibility are not calibrated. The first sprinkler's opening is
+  cross-validated on four series from three laboratories: 0.98 to 1.03 of
+  the measured time on the laboratory left out. The tests' walls were their
+  own; the app's are stone, and a run predicts its own heat release, which
+  is not calibrated. Each run's card says what holds on its cells. The
+  results:
+  [wiki/research/fire-calibration-plan-2026-11-11.md](wiki/research/fire-calibration-plan-2026-11-11.md),
+  sections 13.27 and 14.9.
+
 ## What's new (2026-11-12)
 
 - **The fire solver conserves heat, and is checked against measured fires.**
+  (The verdicts in this entry are 2026-11-12's, on five series; the entry
+  above replaces them.)
   Flamescapes made heat as its gas mixed (a sealed box of hot and cold gas
   gained half its heat again in a minute). Its gas now moves through the
   cells conserving mass and heat, and heated gas expands, on the CPU and the

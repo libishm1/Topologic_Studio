@@ -14,6 +14,7 @@ import "katex/dist/katex.min.css";
 
 import { Badge, Button, Icon, KeyValue } from "./primitives.jsx";
 import { PROOFS, leanUrl } from "./proofs.js";
+import { validationBefore, validationSummary } from "../core/calibrationStatus.js";
 
 /**
  * A display equation. The TeX is the app's own (proofs.js), never user
@@ -460,14 +461,17 @@ export function MethodsDialog({ open, onClose, studio }) {
                   one duct volume at an assumed 100 L/s a terminal, without reading which system a terminal belongs to
                   or the ducts themselves; and contents are a statistical fire load. It shows how heat and smoke may move through
                   the building. Its transport keeps the gas&apos;s mass and heat, and heated gas expands (the low-Mach
-                  form). Checked against held-out measured room fires (Steckler, NBS multi-room, NIST/NRC, WTC and the
-                  ATF corridors; 2026-11-12), the smoke layer&apos;s depth is calibrated on 0.27 m cells (bias 1.08, scatter
-                  0.15, in band in all five series) and indicative on 0.20 and 0.34 m; the layer&apos;s temperature and the
-                  gas under the ceiling are indicative on 0.34 m and not calibrated on 0.27 m, where the corridor tests
-                  scatter; gases, door flows and smoke visibility are not calibrated. &ldquo;Calibrated&rdquo; is this
+                  form). {validationSummary()} The series are Steckler, NBS multi-room, NIST/NRC, WTC, the ATF corridors, UL
+                  FSRI&apos;s compartments, UL/NIST&apos;s vents and NIST FSE. Each word is the strictest of the ways the
+                  comparison was read. The smoke layer&apos;s depth is within 0 to 11 % of measured, pooled, with a scatter of
+                  0.14 on the cells where it is calibrated; on 0.27 m it was in band in all seven series as first run (bias
+                  1.05, scatter 0.12) and is indicative once three tests whose 0.24 m door the grid closes are sealed as the plan
+                  asked. The temperatures read warm: the layer&apos;s pooled bias is 1.35 to 1.48, in band in NIST&apos;s two
+                  series and 1.4 to 2.2 times the measured rise in UL&apos;s small lined rooms. {validationBefore()}{" "}
+                  &ldquo;Calibrated&rdquo; is this
                   project&apos;s name for passing its pre-registered bands; the standards (ASTM E1355, NUREG-1824) would
-                  call it validated for that quantity on those cells. Those tests had
-                  insulating-board walls; the app&apos;s walls are stone. Its fire class values marked provisional are still being
+                  call it validated for that quantity on those cells. Those tests had their own
+                  walls, conducted in layers; the app&apos;s walls are stone. Its fire class values marked provisional are still being
                   checked. Indoors at these cells embers seldom land hot enough to light anything: in a 120 s fire in
                   the Duplex they lit no spot fire. A liquid pool (a spill or a pan of oil) is a design fire too, grown
                   to its steady large-pool burning rate (Babrauskas): on this grid its own flame cannot keep its surface boiling.

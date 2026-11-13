@@ -99,7 +99,7 @@ test("people leaving is never remembered between visits: not stored, and dropped
 
 test("the calibrated grid builds cells of exactly the validated size, clipped round the fire to the budget", async () => {
   const { buildScene } = await import("./flamescapesRun.js");
-  const { CALIBRATED_CELL } = await import("./calibrationStatus.js");
+  const { TESTED_GRID_CELL } = await import("./calibrationStatus.js");
   const { MATERIAL } = await import("./voxelize.js");
   const box = (x0, y0, z0, x1, y1, z1) => ({
     positions: Float32Array.from([x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1]),
@@ -110,8 +110,8 @@ test("the calibrated grid builds cells of exactly the validated size, clipped ro
   const geometry = { walls: [box(-0.2, 0, -0.2, 40.2, 3, 0)], floors: [box(-0.2, -0.2, -0.2, 40.2, 0, 30.2)], roofs: [box(-0.2, 3, -0.2, 40.2, 3.2, 30.2)], stairs: [], obstacles: [], doors: [], windows: [] };
   const { fuelsFor } = await import("./fireClasses.js");
   const { contentsFuel, ignitionFuel } = fuelsFor("A");
-  const scene = buildScene(geometry, { fire: [20, 0.75, 15], maxCells: 30000, minCell: CALIBRATED_CELL, maxCell: CALIBRATED_CELL, contentsFuel, ignitionFuel });
-  assert.ok(Math.abs(scene.grid.h - CALIBRATED_CELL) < 1e-9, `cell ${scene.grid.h}`);
+  const scene = buildScene(geometry, { fire: [20, 0.75, 15], maxCells: 30000, minCell: TESTED_GRID_CELL, maxCell: TESTED_GRID_CELL, contentsFuel, ignitionFuel });
+  assert.ok(Math.abs(scene.grid.h - TESTED_GRID_CELL) < 1e-9, `cell ${scene.grid.h}`);
   assert.ok(scene.grid.cells <= 30000);
   assert.equal(scene.clipped, true);
 });

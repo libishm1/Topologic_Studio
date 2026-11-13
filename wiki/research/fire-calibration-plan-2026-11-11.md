@@ -2280,6 +2280,20 @@ The coordinator ran the failing case again on that commit (`node tools/calibrati
 - If attempt 5 is drafted and fails, item 6 ends.
 - Any further attempt needs a speed measurement on a quiet machine.
 
+### 13.29 The app's text states 13.B (2026-11-13, 09:41)
+
+13.27's words are now the app's: the run card, the Simulate panel, Methods, the guided run, the guide and the README. 13.5 stands (13.B's words, with 13.A's beside them), and so does 13.21's decision 12: these words stay the app's until the user has seen item 9's reruns. No result was read again for this section. What was decided in carrying the words over:
+
+1. **One table, a word for each quantity on each cell** (`calibrationStatus.js`, `VALIDATION`). A "calibrated" carries its pooled bias, its scatter and how many series are in band. An "indicative" says "from one laboratory's tests" where every series in band is one laboratory's (13.1). 13.A's word is kept beside 13.B's where the two differ, and Methods and the guide name the four places.
+2. **What a run draws is not calibrated on any tested cell.** The run card's first line speaks for the visibility and the gas temperature a run draws. The temperature's word is the weakest of three: head height, the layer and the ceiling jet. Head height is not calibrated on any cell, so the line never says "calibrated" of anything drawn. It names the calibrated quantities the run does not draw: the layer's depth on 0.20 and 0.34 m, and the neutral plane on 0.20 m.
+3. **The neutral plane's "calibrated" on 0.20 m is stated with its limit:** it is the height where a door's flow turns, and the velocities through the same doors are not calibrated on that cell.
+4. **Layer depth on 0.27 m reads "indicative",** the stricter word (13.16, 13.27). The text says it was in band in all seven series as first run and names the three sealed tests. The user may rule for the 2026-11-12 rule's word.
+5. **The tested range is unchanged:** heat release to 3.2 MW and 900 s. One test of the 178 ran longer (UL/NIST's first, 1,215 s), and one test does not move a limit. The walls are named as the tests' own, in layers; a run's walls are stone, and it predicts its own heat release, which is not calibrated.
+6. **The app's 0.27 m grid option stays as it is.** Its constant is renamed (`TESTED_GRID_CELL`) and its text now says "the middle of the three cell sizes the held-out tests ran on"; nothing says the layer was calibrated on it. The stored setting's key and value are unchanged, so a saved choice survives. Which cell that option builds is the user's decision: 13.B's best words are on 0.20 m, at about 2.5 times the cells of 0.27 m.
+7. **Sprinklers read "cross-validated on four series from three laboratories"** (14.9) in the guide and the README, never "calibrated". The app's wall coefficient is unchanged.
+
+The solver is untouched: `git diff 550fce5 HEAD` over `src/core/flamescapes*.js`, `flamescapesGpu/` and `voxelize.js` is empty, and the worker's change is the constant's name. Gates before the commit: the unit suite (537 of 537), the Pages build, and both browser suites on the built page (0 failed steps, desktop and phone).
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.

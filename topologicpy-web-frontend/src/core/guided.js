@@ -45,7 +45,7 @@ export const GUIDED_RUNS = [
     id: "smoke-doors",
     title: "Smoke behind closed doors",
     description:
-      "Flamescapes from the most likely ignition point, with every door closed, on the 0.27 m grid the smoke layer was calibrated on: the smoke over 60 s, and what the held-out tests support.",
+      "Flamescapes from the most likely ignition point, with every door closed, on the 0.27 m grid, a cell size the held-out tests ran on: the smoke over 60 s, and what those tests support.",
     time: "About 45 s on a laptop GPU",
     example: "duplex-apartment",
     // The graph shows the smoke, which the closed doors hold back, not the heat.

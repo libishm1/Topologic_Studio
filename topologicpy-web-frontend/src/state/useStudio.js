@@ -196,7 +196,7 @@ export const DEFAULT_SETTINGS = {
   // its memory allows). The results depend on the grid, so comparisons should
   // keep one. Named flamescapesGrid before 2026-11-09, defaulting to "speed".
   flamescapesGridPolicy: "standard",
-  // The grid of 0.27 m cells (core/calibrationStatus.js CALIBRATED_CELL), kept
+  // The grid of 0.27 m cells (core/calibrationStatus.js TESTED_GRID_CELL), kept
   // apart from flamescapesGridPolicy so that a version without it reads "standard".
   flamescapesCalibratedGrid: false,
   // The solver (core/solverVersions.js): "validated", or "previous" as the site

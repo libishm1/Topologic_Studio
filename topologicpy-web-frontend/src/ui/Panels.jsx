@@ -23,7 +23,7 @@ import { DOOR_MODES, doorsLabel } from "../core/doorStates.js";
 import { MEASURED_PRE, NO_RESPONSE_SOURCE, RSET_CRITERIA, RSET_PRESETS, criterionOf, measuredOf, presetOf } from "../core/rsetPresets.js";
 import { worstStatus } from "../core/perfReport.js";
 import { healthReason } from "../core/runHealth.js";
-import { COVERED, validationLine, validationVerdict } from "../core/calibrationStatus.js";
+import { COVERED, validationLine, validationSummary, validationVerdict } from "../core/calibrationStatus.js";
 import {
   DEFAULT_SERVICE_RESPONSE,
   SERVICE_HORIZON_MAX,
@@ -2361,10 +2361,9 @@ const FLAMESCAPES_LIMITS =
   "do not burn; doors and windows as set above. Heated gas expands and the transport keeps its mass and heat, " +
   "but a room sealed by closed doors does not pressurise; an opening narrower than about a cell closes; the " +
   "grid's sides are open to outside air, so a large model clipped round the fire is never fully closed. It " +
-  "shows how heat and smoke may move through this building; it is not a fire engineering model. Checked " +
-  "against held-out measured room fires (2026-11-12): the smoke layer's depth is calibrated on 0.27 m cells and " +
-  "indicative on 0.20 and 0.34 m; the layer's temperature and the gas under the ceiling are indicative; gases, " +
-  "door flows and smoke visibility are not calibrated. The tests had insulating-board walls; the app's walls are stone.";
+  "shows how heat and smoke may move through this building; it is not a fire engineering model. " +
+  validationSummary() +
+  " The tests had their own walls, conducted in layers; the app's walls are stone.";
 
 const ZONE_GROWTH = [
   { value: "slow", label: "Slow (1 MW in 600 s)" },
@@ -3662,7 +3661,7 @@ export function SimulatePanel({
               value={settings.flamescapesSolver}
               onChange={(flamescapesSolver) => setSettings({ flamescapesSolver })}
               options={Object.entries(SOLVERS).map(([value, s]) => ({ value, label: s.label }))}
-              hint="The current solver conserves the gas's mass and heat; held-out measured room fires support its smoke layer's depth on 0.27 m cells, and each run's card says what holds on its own cells. The previous one, as the site ran it until 2026-11-12, is kept to compare with: its transport made heat as gases mixed, and its runs say so."
+              hint="The current solver conserves the gas's mass and heat; held-out measured room fires support its smoke layer's depth, and each run's card says what holds on its own cells. The previous one, as the site ran it until 2026-11-12, is kept to compare with: its transport made heat as gases mixed, and its runs say so."
             />
             {/* The 0.27 m grid has its own setting, so a version without it reads "standard" (rollback safety). */}
             <SelectField
@@ -3673,7 +3672,7 @@ export function SimulatePanel({
               }
               options={[
                 { value: "standard", label: "Standard: the same on every device, so the GPU and the CPU give one fire" },
-                { value: "calibrated", label: "0.27 m cells: the cell size of the held-out validation" },
+                { value: "calibrated", label: "0.27 m cells: a cell size of the held-out validation" },
                 { value: "speed", label: "Finer on the GPU: sized from its speed over a run's first seconds" },
                 { value: "finest", label: "Finest on the GPU: all its memory allows (slower)" },
               ]}
@@ -3681,10 +3680,11 @@ export function SimulatePanel({
             <Notes summary="Why the grid matters">
               The fire depends on the grid. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device,
               so the CPU gives the GPU&apos;s fire; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and its card
-              says so. Checked against held-out measured room fires, the smoke layer&apos;s depth is calibrated on 0.27 m cells and only
-              indicative on 0.20 and 0.34 m: the 0.27 m grid builds those cells, clipped round the fire to what the device can hold (a
-              GPU holds a much larger area than a CPU). The finer grids give a different fire that no measurement has checked. Keep one grid
-              when comparing runs; the run card gives it and says what holds on it.
+              says so. The held-out measured room fires were run on cells of 0.20, 0.27 and 0.34 m, and a verdict holds only on the cells it
+              was found on. The 0.27 m grid builds the middle size, clipped round the fire to what the device can hold (a GPU holds a
+              much larger area than a CPU); on it the smoke layer&apos;s depth is indicative, and on 0.20 and 0.34 m calibrated. The
+              finer grids give a different fire that no measurement has checked. Keep one grid when comparing runs; the run card gives
+              it and says what holds on it.
             </Notes>
             <SelectField
               label="Repeat runs on the GPU"
