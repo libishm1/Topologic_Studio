@@ -2710,6 +2710,45 @@ The reading:
 
 13.22's check tool stays on `flamescapes/voxel-snap` with item 9's checks, at 8b0ae91.
 
+### 13.32 Item 10: the build's checks (2026-11-14, 00:49)
+
+Item 10 was built as 13.25 and the coordinator's decisions fixed it, on branch `flamescapes/surface-rays` from 70cf906, in three commits:
+- 14997d1: the item, off by default;
+- 3135fb8: the suite's `--surface-ray-start`, and the ledger's tallies;
+- 124ad7e: the check tool.
+
+There was one attempt and no fault of the code against the method, so no correcting commit exists. Item 11 was not started.
+
+**Item 10 passes its checks (a) to (i).** `tools/surface-rays-check.mjs` judged 199 lines at 124ad7e, and none failed. The coordinator ran it again from the commit, and every check passed again.
+- **(a) A flat wall's emission reaches the room.** The hot wall, the gas and the grid's sides take exactly 0 J. Every other wall takes its view factor within 4 standard deviations: in the 12 × 10 × 14 box the opposite wall takes 0.1947, against F₁₁ = 0.1938 ± 0.0033. Reciprocity gives 33.028 and 33.012, against 32.974. With the item off, the hot wall keeps 0.443 to 0.447 of its own emission.
+- **(b) Outside corners.** The block takes exactly 0 J, and the walls take 0.1647 to 0.1685, against 0.1667 ± 0.0059. With the item off, the block takes 0.2235.
+- **(c) Isothermal enclosure.** The nets are +0.04, −0.07, −0.52, +0.42 and −0.16 %, against bounds of 0.83 to 4.08 %. With the item off they are +2.85, −15.09, −28.52, +5.26 and −18.44 %.
+- **(d) Walls one cell thick.** A lumped partition takes 0 J, and its low side 0.4998 against 0.5 ± 0.0042. A one-dimensional partition takes 0 J, and its high side the whole emission within 5.4 × 10⁻¹³.
+- **(e) The grid's side.** `radiatedOut` is 0.4993 and the walls take 0.5007, each against 0.5 ± 0.005.
+- **(f) Energy.** The worst step's imbalance is 8.9 × 10⁻¹², against 10⁻⁹.
+- **(g) CPU against GPU.** Emission agrees within 8.3 × 10⁻⁸ and the groups within 3.2 × 10⁻⁶. (a), (b) and (c) pass on the GPU with the CPU's tolerances, and no deposit was clamped.
+- **(h) Off is off.**
+  - With `surfaceRayStart` 0 the fingerprints are the base's, d62b581d and 29793d1a; the coordinator ran them again and got the same.
+  - The unit suite passes 537 of 537, run again by the coordinator on a quiet machine. On the loaded machine the agent saw one timing test, `sprinklerObstructions`, fail on the base and the branch alike.
+  - `tools/flamescapes-gpu-check.mjs` agrees with the base bit for bit in every phase the base repeats. 47 fields differ, apart from timings, all in the GPU `runScene` results of the sprinklers, design and systems phases. The coordinator compared the files leaf by leaf: each of the 47 differs between two runs of the unchanged base as well. The branch adds no difference of its own.
+  - With the item on, the fingerprints do not differ, which (h) asks to be reported. In the fingerprint tool's two rooms no cell passes 500 K within 300 steps, so nothing radiates and the item never acts. (h) gives no verdict on that line.
+- **(i)** With the default set to 1 for the run, the unit suite passes 537 of 537.
+- **(j) Speed, reported and not judged.**
+  - The radiation stage alone, every wall at 1000 K on 0.20 m cells: 4.7 to 5.1 ms off and 5.5 to 5.6 ms on in the 12 × 10 × 14 box; 13.7 to 14.8 ms and 17.9 to 18.2 ms in the 25 × 13 × 20 box.
+  - Each surface ray crosses 11.79 and 17.98 cells on average, as the model said: 11.8 and 18.0.
+  - `tools/backend-bench.mjs`, one run a set on a shared machine, gives ms a step that do not separate the item's cost from noise.
+
+**Departures, as the agent reported them.** None changes an output with the item off.
+- With the item off, the code costs a little more than the plan's cost line names: one extra test a ray on the CPU, and a few uniform branches on the GPU.
+- `radApply` binds Y, for the gas's capacity in joules.
+- The clamp tallies are named `radClamps` and `radClampJ`.
+- (f) is judged on steps with the item on.
+- The run cache's key carries the switch only when a run sets it off 0. Existing keys and `RUN_CACHE_VERSION` (13) are unchanged.
+
+**Not verified.** The item has not acted in any fire yet. The fingerprint rooms and the bench's design fires never bring a surface past 500 K, and no validation run was made.
+
+**What follows** (decisions 14 and 15). The switch becomes available to the harness and the solver's options, and the app's default stays 0. Item 11 (13.26) may now be built. Then come the two reruns, item 10 alone and items 10 and 11 together, on 13.B's solver and flags, the eight series and the chair series, on three cells, each reported beside 13.B. A default changes only after those reruns, the app's text rewritten from them, and the user's agreement with the step cost and `radRoundoff` before them. The item reaches `next/surface-rays` as one commit, with the conflict in `validation-suite.mjs` resolved by keeping both sides: 13.21 and 13.22's flags, and `--surface-ray-start`. The branch `flamescapes/surface-rays` keeps the three commits.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.

@@ -33,7 +33,7 @@ import { KIND_DOOR, floorLevels } from "./core/lattice.js";
 import { straightenRoute, withStraight } from "./core/straighten.js";
 import { alternativeRoutes } from "./core/alternatives.js";
 import { runFire } from "./core/fire.js";
-import { RUN_CACHE_VERSION, clearRuns, fingerprint, readRun, storedRuns, writeRun } from "./core/runCache.js";
+import { RUN_CACHE_VERSION, clearRuns, fingerprint, readRun, storedRuns, switchesKey, writeRun } from "./core/runCache.js";
 import { closedDoorIds, doorsLabel } from "./core/doorStates.js";
 import { zoneNodeFrames } from "./core/zone.js";
 import { RL_MAX_STEPS } from "./core/rl.js";
@@ -1809,6 +1809,8 @@ export default function App() {
       // Only when not the defaults, so a run with them keeps its kept-run key.
       ...(settings.flamescapesCalibratedGrid ? [["grid", "calibrated"]] : []),
       ...(settings.flamescapesSolver && settings.flamescapesSolver !== "validated" ? [["solver", settings.flamescapesSolver]] : []),
+      // The solver's switches set off their defaults (core/runCache.js switchesKey).
+      ...switchesKey(payload.solverOptions),
       settings.flamescapesDoors,
       // The doors closed, so a random or as-built set is part of the run.
       [...shut].sort((a, b) => a - b).join(","),

@@ -55,6 +55,18 @@ export const RUN_CACHE_VERSION = 13;
 export const BUDGET = 256 * 2 ** 20;
 export const MAX_RUN = 96 * 2 ** 20;
 
+/**
+ * The solver's switches a run's key carries (calibration plan 13.25, the
+ * coordinator's decision 14: a run made under one setting is never played for
+ * another): each one the run's solver options set off its default of 0, as
+ * [name, value]. A run with every switch at 0 keeps the key it had, so no
+ * kept run is lost and RUN_CACHE_VERSION does not rise for them.
+ */
+export const KEYED_SWITCHES = Object.freeze(["surfaceRayStart"]);
+export function switchesKey(solverOptions) {
+  return KEYED_SWITCHES.filter((name) => solverOptions?.[name]).map((name) => [name, solverOptions[name]]);
+}
+
 const DB_NAME = "topologic-studio-runs";
 const DB_VERSION = 1;
 const META = "meta";
