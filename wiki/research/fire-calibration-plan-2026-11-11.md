@@ -2002,3 +2002,47 @@ How it is reported:
 - **It is the only series whose fire is the app's own design-fire burner** (class A fuel, no test fuel, no radiant fraction along rays). So its result says more about the app as used than a burner series does, and less about any one sub-model.
 - **A stopped run counts as 12.6 counts it.**
 - Later items (13.17 onward) run it with the other series in their own reruns.
+
+### 15.9 `fsri-chairs`: the result (2026-11-13, 05:35)
+
+**The run.** 39 runs, the 13 tests on each of the three cell sizes, on 13.B's solver (550fce5) with walls in layers and `--leakage`, as 15.8 fixed. No run stopped, and none is "not represented on this grid". Every run released the heat prescribed to it, to the last digit stored (the Overstuffed chairs 524 to 887 MJ with peaks of 1.8 to 3.2 MW, the RedAccent chairs 269 to 327 MJ with peaks of 1.1 to 1.7 MW). D*/δx is 2.9 to 7.6. The file is `benchmark/results/2026-11-13-validation-fsri-chairs.json`.
+
+**The series alone.** δ / σ̃M, unweighted, with the tier of 12.6. One series from one laboratory can carry no verdict word by itself.
+
+| Quantity | n | 0.20 m | 0.27 m | 0.34 m |
+| --- | --- | --- | --- | --- |
+| Layer depth | 52 | 0.90 / 0.10, in band | 0.95 / 0.08, in band | 1.02 / 0.12, in band |
+| Layer temperature | 52 | 0.72 / 0.23, indicative | 0.79 / 0.22, indicative | 0.78 / 0.24, indicative |
+| Gas temperature at head height | 92 | 0.68 / 0.19, indicative | 0.73 / 0.19, indicative | 0.77 / 0.24, indicative |
+| Ceiling jet | 23 | 0.76 / 0.12, indicative | 0.78 / 0.14, indicative | 0.69 / 0.17, indicative |
+| Neutral plane | 13 | 0.85 / 0.08, in band | 0.85 / 0.08, in band | 0.64 / 0.08, not calibrated |
+| Door velocity | 91 | 0.74 / 0.50, indicative | 0.90 / 0.55, not calibrated | 1.47 / 1.16, not calibrated |
+| O2 (drop), all pairs | 104 | 5.73 / 1.39, not calibrated | 5.17 / 1.34, not calibrated | 29.73 / 1.82, not calibrated |
+
+The 10-bin weighted reading gives the same tiers except two on 0.20 m, both down: head height (0.66 / 0.20, not calibrated) and door velocity (0.57 / 0.34, not calibrated).
+
+O2 under 14.7 and 14.8 (`tools/calibration/species-readings.mjs`): with the floor of 0.005, 79 pairs stay and δ / σ̃M is 1.57 / 0.73, 1.48 / 0.72 and 3.01 / 0.74 on 0.20, 0.27 and 0.34 m. With UL FSRI's own figure, 63 pairs stay: 1.40 / 0.63, 1.32 / 0.61 and 1.89 / 0.43. Not calibrated on every reading. The series has no CO2, smoke or door mass flow.
+
+**What it shows.** With the app's own design fire and its class A fuel, this room reads cold: the layer, the head height and the ceiling jet are 21 to 32 % below the measured rise on all three cells. The burner series in the same laboratory's room (`fsri`) reads hot in 13.B, 1.48 on 0.27 m and 1.63 on 0.34 m for the layer. The layer's depth is in band on every cell, as it is for the burner series. So the two kinds of fire in one room err in opposite directions in temperature and agree in depth. The cause is not examined here. The two differ in fuel, soot yield, radiant fraction, the fire's shape and its history (15.8, items 2 to 6), and the chairs' last window is the decay. No constant is changed for it.
+
+**A consequence written before item 8 has run.** Item 8 (13.19) takes heat from the gas, so it should cool every room. That is the direction the burner series need and the opposite of what this series needs. Item 8's own rerun includes this series (15.8), and its result is to be read on both, not on the pooled figure alone.
+
+**As a ninth series beside 13.B.** Read on 0.34 m and 0.27 m, on both leak readings of 13.16 (the same words came out on each, except layer depth on 0.27 m, which keeps 13.16's difference). The 0.20 m reading follows when 13.B's file for that cell is in. Eight series are 13.B as pre-registered. Nine add `fsri-chairs`. The stricter word stands (15.8).
+
+| Quantity | Cell | Eight series | Nine series | Stands |
+| --- | --- | --- | --- | --- |
+| Layer temperature | 0.34 m | not calibrated (pooled 1.48 / 0.39; weighted 1.41 / 0.54) | indicative (1.42 / 0.41; weighted 1.10 / 0.44) | not calibrated |
+| Layer temperature | 0.27 m | not calibrated (1.39 / 0.41; weighted 1.39 / 0.66) | indicative (1.34 / 0.42; weighted 1.06 / 0.42) | not calibrated |
+| Gas temperature at head height | 0.27 m | not calibrated (1.32 / 0.38; weighted 1.52 / 0.52) | indicative (1.27 / 0.40; weighted 1.01 / 0.46) | not calibrated |
+| Neutral plane | 0.27 m | indicative (0.89 / 0.17; 2 of 4 series in band) | calibrated (0.88 / 0.17; 3 of 5 in band) | indicative |
+| Neutral plane | 0.34 m | indicative (0.77 / 0.27; weighted 0.67 / 0.32) | not calibrated (0.76 / 0.26; weighted 0.66 / 0.32) | **not calibrated** |
+
+Every other word is the same with eight and with nine. The figures in the table are the sealed reading's.
+
+- **Where nine reads better than eight, nothing is claimed.** The temperature words rise only because a cold series is pooled with hot ones: the weighted pooled δ falls from 1.41 to 1.10 on 0.34 m while the number of series in band stays at three (of seven, then of eight). Two errors of opposite sign are not a calibration. The stricter word stands, as 15.8 says, and this is the case that rule was written for.
+- **The neutral plane on 0.27 m** would read calibrated with nine (`fsri`, `steckler` and `fsri-chairs` in band). The third series is the same laboratory's room and door as `fsri`. The word stays indicative.
+- **The neutral plane on 0.34 m falls to not calibrated,** and that word stands. The weighted pooled δ was at the edge of the indicative range with eight series (0.67) and is below it with nine (0.66). The chairs' own neutral plane on that cell is 0.64. So 13.B's word for the neutral plane is indicative on 0.27 m and not calibrated on 0.34 m.
+
+**What is not concluded.** Nothing about the default design fire (15.6, 15.7): that choice stays the user's. The series prescribes each test's measured heat release, so it tests the room's response to the app's burner and fuel, not the medium curve.
+
+Merged files and the two-way comparison are not committed (they are a reading of committed files): `node tools/calibration/validation-suite.mjs --solver-rev 550fce5 --merge <13.B file>,<the chairs' runs on that cell>` reproduces them.
