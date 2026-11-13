@@ -71,6 +71,11 @@ export function headPairs(run, T, steadyFrom = 200) {
         out.missing.push({ device, why: "no stored cells at head height" });
         continue;
       }
+      // A tree that ends below a pocket (plan 13.22) has no cell above its end: compared with nothing.
+      if (s.end != null && dev.z > s.end) {
+        out.missing.push({ device, why: `above the tree's end at ${s.end} m: its cell was dropped with a pocket (plan 13.22)` });
+        continue;
+      }
       let best = -1, dz = Infinity;
       s.z.forEach((z, q) => {
         if (Math.abs(z - dev.z) < dz) (dz = Math.abs(z - dev.z)), (best = q);

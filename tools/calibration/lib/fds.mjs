@@ -334,15 +334,21 @@ export function solidBoxes(geo, h, { only = null } = {}) {
  * The solver's grid over a geometry at cell h, its volume fractions and
  * solid cells by the app's own voxelisation (voxelize.js volumeFractions
  * and occupancy: a wall thinner than a cell still seals, as in the app).
+ * `snap` is occupancy's rule: "seal" (the default) or "nearest" (plan 13.21,
+ * item 9: every face to its nearest cell plane, voxelize.js snapNearest),
+ * which needs a voxeliser that has it (a --solver-rev snapshot older than
+ * the item does not).
  * Returns {grid, fraction, solid, domain, bbox, toCell, centre}.
  */
-export function gridFor(geo, h, Vx = V) {
+export function gridFor(geo, h, Vx = V, { snap = "seal" } = {}) {
   const { domain, boxes, bbox, openings } = solidBoxes(geo, h);
   const n = [Math.ceil((domain[1] - domain[0]) / h - 1e-6), Math.ceil((domain[5] - domain[4]) / h - 1e-6), Math.ceil((domain[3] - domain[2]) / h - 1e-6)];
   const origin = [domain[0], domain[4], domain[2]];
   const grid = { nx: n[0], ny: n[1], nz: n[2], h, origin, axes: [0, 1, 2], upAxis: "y", cells: n[0] * n[1] * n[2] };
-  const fraction = Vx.volumeFractions(grid, boxes.map(meshOf), { rays: Vx.raysFor(grid) });
-  const solid = Vx.occupancy(grid, fraction);
+  const meshes = boxes.map(meshOf);
+  const fraction = Vx.volumeFractions(grid, meshes, { rays: Vx.raysFor(grid) });
+  if (snap === "nearest" && !Vx.snapNearest) throw new Error('snap "nearest": this voxeliser has no snapNearest (plan 13.21); run on a solver that holds it');
+  const solid = Vx.occupancy(grid, fraction, { snap, meshes });
   const at = (i, j, k) => i + grid.nx * (j + grid.ny * k);
   /** The cell (i, j, k) holding an FDS point (x, y, z), clamped to the grid. */
   const toCell = (x, y, z) => [
@@ -380,8 +386,17 @@ export function column(G, x, y, z0 = null) {
  * whose centre lies below zTop (the test's nominal ceiling), skipping solid cells (a bracket or beam sealed into whole
  * cells interrupts the string, as an obstruction would a real tree, but does
  * not end it). [{z (cell centre), c, j}] bottom up, with i and k.
+ *
+ * A pocket ends the tree (plan 13.22, added 2026-11-13): a tree cell none of
+ * whose four horizontal neighbours is open (a neighbour off the grid is not
+ * open) is a recess's gas, not the room's. At the first one the walk stops:
+ * that cell and every tree cell above it are dropped, and `cells` ends at the
+ * last cell below it. `dropped` lists them [{z, c, j, pocket}] (pocket: the
+ * cell that was the pocket); `midTree` is true when the old list held cells
+ * above the pocket. Every reading from a tree uses `cells` only.
+ * `pockets: "keep"` gives the list as it was before 13.22 (no cell dropped).
  */
-export function treeCells(G, x, y, zTop, zBottom = null) {
+export function treeCells(G, x, y, zTop, zBottom = null, { pockets = "drop" } = {}) {
   const { grid, solid, at, toCell } = G;
   const [i, j0, k] = toCell(x, y, (zBottom ?? G.bbox[4]) + 1e-6);
   const cells = [];
@@ -390,7 +405,12 @@ export function treeCells(G, x, y, zTop, zBottom = null) {
     if (z >= zTop) break;
     if (!solid[at(i, j, k)]) cells.push({ z, c: at(i, j, k), j });
   }
-  return { i, k, cells };
+  if (pockets === "keep") return { i, k, cells, dropped: [], midTree: false };
+  const open = (ii, j, kk) => ii >= 0 && kk >= 0 && ii < grid.nx && kk < grid.nz && !solid[at(ii, j, kk)];
+  const first = cells.findIndex(({ j }) => !open(i - 1, j, k) && !open(i + 1, j, k) && !open(i, j, k - 1) && !open(i, j, k + 1));
+  if (first < 0) return { i, k, cells, dropped: [], midTree: false };
+  const dropped = cells.slice(first).map((q, n) => ({ ...q, pocket: n === 0 }));
+  return { i, k, cells: cells.slice(0, first), dropped, midTree: first < cells.length - 1 };
 }
 
 /**

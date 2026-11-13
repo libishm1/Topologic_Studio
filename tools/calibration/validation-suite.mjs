@@ -82,6 +82,18 @@
  * which the solver takes as no leak (plan 13.11; until 2026-11-13 the option
  * was left out there, and the solver's default construction leak applied:
  * plan 13.16).
+ *
+ * --snap nearest (added 2026-11-13, plan 13.21, item 9) builds each grid with
+ * the voxeliser's nearest-plane rule (voxelize.js snapNearest: every face to
+ * its nearest cell plane, as FDS snaps an obstruction); the default, seal, is
+ * the rule as before. It needs a voxeliser that has the rule: a --solver-rev
+ * older than the item stops the suite at its start. The sealed-door rule
+ * (lib/represented.mjs) builds each run's grid with the run's own rule.
+ * Trees (added 2026-11-13, plan 13.22): a tree ends below its first pocket,
+ * an open cell none of whose four horizontal neighbours is open
+ * (lib/fds.mjs treeCells); each run lists, per tree, the cells dropped, where
+ * the tree now ends and its column's snapped ceiling. --pockets keep reads
+ * the trees as before 13.22 (for 13.22's check (a) and the control runs).
  */
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { execFileSync } from "node:child_process";
@@ -196,7 +208,7 @@ async function runCase(c) {
   const t0 = performance.now();
   const { test: T, h, horizon, dataset } = c;
   const geo = { ...T.geometry, fire: [] };
-  const G = L.gridFor(geo, h, VX);
+  const G = L.gridFor(geo, h, VX, { snap: c.snap });
   const { grid, solid } = G;
   const KELVIN = 273.15;
   const Ta = T.ambientC + KELVIN;
@@ -284,7 +296,11 @@ async function runCase(c) {
   // A tree reads every open cell of its column below the test's nominal ceiling, skipping solid
   // ones (lib/fds.mjs treeCells; fixed 2026-11-12 after WTC's west tree on 0.27 m cells stopped at a
   // bracket sealed into two cells at 2.97 m, 0.8 m under the ceiling).
-  let trees = (T.trees || []).map((tr) => ({ ...tr, all: L.treeCells(G, tr.x, tr.y, (tr.z0 ?? 0) + tr.H, tr.z0 ?? null).cells }));
+  // A tree ends below its first pocket (plan 13.22; --pockets keep for the trees as before): `all` is its kept cells.
+  let trees = (T.trees || []).map((tr) => {
+    const t = L.treeCells(G, tr.x, tr.y, (tr.z0 ?? 0) + tr.H, tr.z0 ?? null, { pockets: c.pockets });
+    return { ...tr, all: t.cells, pocket: { dropped: t.dropped, midTree: t.midTree, ceiling: L.column(G, tr.x, tr.y, tr.z0 ?? null).top } };
+  });
   let points = (T.points || []).map((p) => ({ ...p, cell: null }));
   let door = T.door ? { col: L.column(G, T.door.x, T.door.y, null) } : null;
   const uAt = (i, j, k) => i + (grid.nx + 1) * (j + grid.ny * k);
@@ -324,7 +340,9 @@ async function runCase(c) {
       const kept = tr.all.filter((q) => ok(q.c));
       const floor = kept.length ? kept[0].z - h / 2 : 0;
       const top = kept.length ? kept[kept.length - 1].z + h / 2 : 0;
-      return { ...tr, dropped: tr.all.length - kept.length, modelH: top - floor, z: kept.map((q) => q.z - floor), cells: kept.map((q) => q.c) };
+      // Where the tree ends when a pocket was dropped (plan 13.22), over the model floor: a head-height device above it is compared with nothing.
+      const end = tr.pocket.dropped.length && tr.all.length ? tr.all[tr.all.length - 1].z + h / 2 - floor : null;
+      return { ...tr, dropped: tr.all.length - kept.length, modelH: top - floor, z: kept.map((q) => q.z - floor), cells: kept.map((q) => q.c), end };
     });
     points = points.map((p) => {
       const cell = L.deviceCell(G, p.x, p.y, p.z, ok);
@@ -471,7 +489,7 @@ async function runCase(c) {
     if (!tr.z) return;
     const pick = tr.z.map((z, i) => (z >= 1.5 - h && z <= 2.0 + h ? i : -1)).filter((i) => i >= 0);
     if (!pick.length) return;
-    headSeries[tr.id] = { z: pick.map((i) => +tr.z[i].toFixed(3)), T: pick.map((i) => treeT[q].map((row) => +row[i].toFixed(2))) };
+    headSeries[tr.id] = { z: pick.map((i) => +tr.z[i].toFixed(3)), T: pick.map((i) => treeT[q].map((row) => +row[i].toFixed(2))), ...(tr.end != null ? { end: +tr.end.toFixed(3) } : {}) };
   });
 
   // ------------------------------------------------ comparisons
@@ -568,13 +586,16 @@ async function runCase(c) {
     test: T.id,
     cell: h,
     horizon,
+    // The voxeliser's rule (plan 13.21) and the trees' (plan 13.22).
+    snap: c.snap ?? "seal",
+    pockets: c.pockets ?? "drop",
     grid: [grid.nx, grid.ny, grid.nz],
     cells: grid.cells,
     openCells: solid.reduce((a, s) => a + (s ? 0 : 1), 0),
     plumeIndex: +S.plumeIndex(Qpeak, h).toFixed(2),
     peakKW: Math.round(Qpeak / 1000),
     burner: { baseMoved: base.moved, cells: spec.layers.reduce((a, l) => a + l.length, 0), columns: spec.layers[0]?.length ?? 0, layers: spec.layers.length, radiantFraction: spec.radiantFraction, radiantMJ: +((sim.burner?.radiant ?? 0) / 1e6).toFixed(3), released: +(sim.stats.released / 1e6).toFixed(3), expectedMJ: +(burnerIntegral(T.burner.hrrW, health.ok ? horizon : health.time) / 1e6).toFixed(3) },
-    trees: trees.map((tr) => ({ id: tr.id, modelCeiling: tr.modelH != null ? +tr.modelH.toFixed(3) : null, nominal: tr.H, cells: tr.cells ? tr.cells.length : null, droppedCells: tr.dropped ?? null })),
+    trees: trees.map((tr) => ({ id: tr.id, modelCeiling: tr.modelH != null ? +tr.modelH.toFixed(3) : null, nominal: tr.H, cells: tr.cells ? tr.cells.length : null, droppedCells: tr.dropped ?? null, pockets: { dropped: tr.pocket.dropped.map((q) => ({ z: +q.z.toFixed(3), j: q.j, c: q.c, ...(q.pocket ? { pocket: true } : {}) })), midTree: tr.pocket.midTree, endsAt: tr.all.length ? +(tr.all[tr.all.length - 1].z + h / 2).toFixed(3) : null, snappedCeiling: tr.pocket.ceiling != null ? +tr.pocket.ceiling.toFixed(3) : null } })),
     points: points.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null, ...(p.pathCells ? { pathCells: p.pathCells.length } : {}) })),
     fuel: { heatOfCombustion: fuel.heatOfCombustion, yields: fuel.yields, rule: c.fuelRule !== "app" && T.fuel ? "the test fuel's" : T.co2PerJ ? "class A, CO2 per joule matched" : "class A as the app has it" },
     solverOptions: { ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...c.solver },
@@ -886,7 +907,16 @@ async function main() {
   const solver = Object.fromEntries((flag("--solver", "") || "").split(",").filter(Boolean).map((kv) => kv.split("=")).map(([k, v]) => [k, Number(v)]));
   const only = flag("--tests", null);
   const jsonOut = flag("--json", null);
+  // --snap nearest (plan 13.21) and --pockets keep (plan 13.22): see the header.
+  const snapRule = flag("--snap", "seal");
+  const pocketRule = flag("--pockets", "drop");
+  if (!["seal", "nearest"].includes(snapRule)) throw new Error(`--snap ${snapRule}: seal or nearest`);
+  if (!["drop", "keep"].includes(pocketRule)) throw new Error(`--pockets ${pocketRule}: drop or keep`);
   const snapshot = snapshotCore(rev);
+  if (snapRule === "nearest" && !(await import(pathToFileURL(path.join(snapshot.core, "voxelize.js")).href)).snapNearest) {
+    rmSync(snapshot.dir, { recursive: true, force: true });
+    throw new Error(`--snap nearest: the solver's voxeliser${rev ? ` at ${rev}` : ""} has no snapNearest (plan 13.21)`);
+  }
   const git = gitState();
   // The sealed-door rule's module from the snapshot, loaded now (its voxeliser is the snapshot's).
   const Rsnap = await import(pathToFileURL(path.join(path.dirname(snapshot.harness), "lib", "represented.mjs")).href);
@@ -917,7 +947,7 @@ async function main() {
         const bb = T.geometry.meshes.reduce((a, m) => [Math.min(a[0], m[0]), Math.max(a[1], m[1]), Math.min(a[2], m[2]), Math.max(a[3], m[3]), Math.min(a[4], m[4]), Math.max(a[5], m[5])], [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity]);
         const vol = (bb[1] - bb[0] + 2 * h) * (bb[3] - bb[2] + 2 * h) * (bb[5] - bb[4] + 2 * h);
         const cost = (vol / h ** 3) * horizon * Math.max(2, Math.sqrt(T.burner.peakW / 1e5));
-        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn });
+        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn, snap: snapRule, pockets: pocketRule });
       }
     }
   }
@@ -967,7 +997,7 @@ async function main() {
     wallSeconds: (performance.now() - t0) / 1000,
     git: { ...git, solverRev: snapshot.rev, snapshotDigests: snapshot.digests, snapshotLfDigests: snapshot.lfDigests, harnessDigests: snapshot.harnessDigests },
     solver: { overrides: solver, defaults: { ...F.DEFAULTS }, health: { ...F.HEALTH } },
-    settings: { datasets, cells: cellsArg, tests: only, fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
+    settings: { datasets, cells: cellsArg, tests: only, snap: snapRule === "nearest" ? "nearest: every face to its nearest cell plane (plan 13.21)" : "seal (the voxeliser's rule before plan 13.21)", pockets: pocketRule === "keep" ? "kept (the trees as before plan 13.22)" : "a tree ends below its first pocket (plan 13.22)", fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
     runs,
   };
   await bothWays(report, S, measures, Object.fromEntries(cases.map((cs) => [`${cs.dataset}/${cs.test.id}`, cs.test])), Rsnap);

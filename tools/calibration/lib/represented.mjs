@@ -13,9 +13,9 @@ import { burnerBase, gridFor } from "./fds.mjs";
 /** Tests sealed by design: the door shut, the measured leakage below a cell. */
 export const SEALED_BY_DESIGN = Object.freeze({ nistnrc: ["01", "02", "07", "08", "13"], nbs: ["100O"] });
 
-/** Does the fire's gas reach the open boundary on cell h? */
-export function reachesOpenBoundary(T, h) {
-  const G = gridFor({ ...T.geometry, fire: [] }, h);
+/** Does the fire's gas reach the open boundary on cell h, the grid built with the voxeliser's rule `snap` (plan 13.21)? */
+export function reachesOpenBoundary(T, h, snap = "seal") {
+  const G = gridFor({ ...T.geometry, fire: [] }, h, undefined, { snap });
   const { grid, solid, at } = G;
   const base = burnerBase(G, T.burner).cells;
   if (!base.length) return false;
@@ -62,8 +62,9 @@ export function representation(runs, tests) {
       out[r.id] = { represented: true, why: "test not found; kept" };
       continue;
     }
-    const mk = `${key}@${r.cell}`;
-    if (!memo.has(mk)) memo.set(mk, reachesOpenBoundary(T, r.cell));
+    // Each run's grid as it was built (the suite records `snap` from 2026-11-13; a run without it was "seal").
+    const mk = `${key}@${r.cell}@${r.snap ?? "seal"}`;
+    if (!memo.has(mk)) memo.set(mk, reachesOpenBoundary(T, r.cell, r.snap ?? "seal"));
     out[r.id] = memo.get(mk) ? { represented: true, why: "the fire's gas reaches the open boundary" } : { represented: false, why: "not represented on this grid: the grid seals the test's opening" };
   }
   return out;

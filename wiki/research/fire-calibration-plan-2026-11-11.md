@@ -2668,6 +2668,48 @@ So 13.20's sentence returns. Doors stay as the voxeliser makes them, and door an
 4. **The merge.** The reruns are merged over 13.B sealed and over 13.B default leak on 0.27 m (`--merge`), into two new files. 13.B's files stay as they ran. The tool's merge keeps an earlier run's quantity when a later run lacks it. So after the merge, each rerun's merged pairs must equal its own pairs. If a pair from the first files survives a quantity that 13.22 removed, it is listed and taken out before any statistic is read.
 5. **What is reported (decision 12).** Each quantity's word on 0.27 m in both readings, beside 13.B's, before anything is combined. The app's words change only after the user has seen it (13.5; 13.21, decision 12). If the rerun is merged, 13.22's harness reaches `next/calibration-ui` as its own commit, the harness files only, without item 9's voxeliser.
 
+### 13.31 13.22 over 13.B on 0.27 m: the result (2026-11-13, 15:21)
+
+The rerun ran as 13.30 fixed it: the harness at 8b0ae91 with `--snap seal`, the solver at 550fce5, walls in layers, leakage, on 0.27 m cells.
+
+- **Runs.** 56 runs, none stopped. Each dropped one pocket cell at the top of one tree: the room tree in each of the 55 Steckler tests, and tree 8 in NBS 100Z. None was mid-tree.
+- **The control passed.** NIST/NRC 13, 02 and 08 each gave 29 pairs, identical to 13.B's in both files. So the runs were merged.
+- **The merge check passed.** In the sealed file, each of the 56 reruns' merged pairs equal its own. In the default-leak file, each of the 53 reruns' merged pairs equal its own. Steckler 10, 114 and 514 keep their first entries in the default-leak file (13.30, decision 2).
+- **Files** in `benchmark/results/`, prefix `2026-11-13-validation-13b-027-`:
+  - `pockets-runs.json`: the 56 runs;
+  - `pockets-runs-open-doors.json`: the 53 runs without the three Steckler tests;
+  - `pockets-control.json`: the control;
+  - `sealed-pockets.json`: 13.B sealed with 13.22;
+  - `pockets.json`: 13.B default leak with 13.22.
+
+13.22 changes three quantities on 0.27 m. The table gives the pooled bias / scatter and the series in band.
+
+| Quantity | 13.B sealed | with 13.22 | 13.B default leak | with 13.22 |
+| --- | --- | --- | --- | --- |
+| Smoke layer depth | indicative (1.05 / 0.23; 6 of 7) | **calibrated (1.03 / 0.11; 7 of 7)** | calibrated (1.05 / 0.12; 7 of 7) | calibrated (1.03 / 0.12; 7 of 7) |
+| Smoke layer temperature | not calibrated (1.39 / 0.41; 3 of 7) | not calibrated (1.41 / 0.40; 3 of 7) | not calibrated (1.40 / 0.39; 3 of 7) | not calibrated (1.40 / 0.39; 3 of 7) |
+| Gas temperature at head height | not calibrated (1.32 / 0.38; 3 of 7) | not calibrated (1.35 / 0.355; 2 of 7) | not calibrated (1.33 / 0.38; 3 of 7) | not calibrated (1.36 / 0.35; 2 of 7) |
+
+Every other quantity on 0.27 m is unchanged in both readings: the ceiling jet, O2, CO2, smoke obscuration, door velocity, the neutral plane, door mass flow and soot.
+
+What moved:
+- **Steckler's layer depth.** In the sealed reading it was 1.23 / 0.66, out of the band, and is now 0.98 / 0.105, in band. In the default-leak reading it moves from 1.14 / 0.12 to 0.97 / 0.10. The pocket at the top of the room tree had read as a layer reaching the floor.
+- **Steckler's layer temperature.** It moves from 1.11 to 1.22 sealed, and from 1.15 to 1.22 with the default leak. It stays in band.
+- **Steckler's head-height temperature.** It moves from 1.14 to 1.27 sealed, and from 1.15 to 1.27 with the default leak. That leaves the band, so head height is in band in 2 series of 7 instead of 3. Its word does not change.
+- **NBS.** The series moves a little through 100Z: layer depth from 1.07 to 1.10, still in band.
+
+The reading:
+- **Layer depth on 0.27 m is calibrated in both readings,** on the same seven series from three laboratories. 13.A called it calibrated too. The stricter reading no longer differs from the 2026-11-12 rule's, so the question 13.16 left to the user, which word the app states, has the same answer either way. The app's words change only after the user has seen this (13.5; 13.21, decision 12). The change is prepared separately for the user: layer depth on 0.27 m reads calibrated, with the figures above, and the layer temperature's figures on 0.27 m are brought up to date. No other word changes.
+- **On 0.20 and 0.34 m nothing changes.** No tree holds a pocket there (13.30).
+- **13.21 with 13.22 on, decision 12's second step, does not run,** because item 9 is not made.
+
+**13.22's harness on this branch.** The changes of 8b0ae91 to `tools/calibration/lib/fds.mjs`, `lib/head.mjs`, `lib/represented.mjs` and `validation-suite.mjs` apply cleanly here and come in with this section. Item 9's voxeliser does not, so `--snap nearest` stops at the start with a message. With them:
+- the unit suite passes, 537 of 537;
+- `--summary` on the merged sealed file gives the same words as the merge;
+- `--pockets keep` reads the trees as 13.B read them.
+
+13.22's check tool stays on `flamescapes/voxel-snap` with item 9's checks, at 8b0ae91.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
