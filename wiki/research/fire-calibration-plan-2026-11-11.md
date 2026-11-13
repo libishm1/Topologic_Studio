@@ -1112,6 +1112,196 @@ The correction, fixed now:
 
 What this does not settle. The UL FSRI closed rooms leaked by an amount that was not measured, and NBS 100O's input states no leak. Neither reading is the room as tested: one has no leak, the other a typical construction's. No leak area is chosen for these tests after their results are seen. If a later item gives sealed-by-design tests a leak, its source is cited and it is pre-registered under 13.12 before it runs.
 
+### 13.17 Items 4 and 3, attempt 2: a sub-grid vent (2026-11-13, before any run of it)
+
+Drafted blind to every validation result, as 13.12 sets. Nothing below changes after a run of it; anything added later is dated, with its commit.
+
+#### What failed before
+
+Attempt 1 (13.13; prototype 97d5be9 on `flamescapes/door-attempt1`, CPU only) divided each face's pressure gradient by the face's own density and kept each partly open face's open share. Its check, as 13.13 fixed it:
+
+| Door | Hot box | (a) outflow (10 % allowed) | (b) neutral plane (10 %) | (c) mass (1 %) |
+|---|---|---|---|---|
+| 0.4 m | 400 K | −17.8 % | −4.7 % | −4.11 % |
+| 0.5 m | 400 K | −7.3 % | −8.6 % | +1.98 % |
+| 0.6 m | 400 K | −5.7 % | −13.8 % | +1.88 % |
+| 0.4 m | 600 K | −14.1 % | −8.2 % | −3.90 % |
+| 0.5 m | 600 K | −6.8 % | −9.3 % | −1.82 % |
+| 0.6 m | 600 K | −10.4 % | −10.3 % | −1.21 % |
+
+It failed all three parts: (a) at 0.4 m, and at 0.6 m and 600 K; (b) at 0.6 m; (c) in every case. It was not made.
+
+Why (c) failed. Inside the hot box the transport's fluxes through its inner faces cancel. So the box's change of mass is the flux through its door faces plus two terms that are not fluxes (and any mass the transport's floor adds, counted in `stats.massFloor`):
+- The transport's advective form (`transportGas`). Each cell takes its flux difference and gives back its starting density times its faces' divergence, ρ⁰_c (∇·u)_c V dt. Over the box this sum vanishes only where the projected flow is free of divergence in every cell. The projection stops at a tolerance (at most 30 sweeps), and ρ⁰ is layered, so the sum is not zero.
+- The zone's rescaling (`zoneTransport`). The two boxes were one sealed region, so one pressure zone. After the transport, all the zone's densities are scaled by one factor back to its mass. That moves mass between the boxes in proportion to their mass, not through the door.
+
+The face tally saw only the fluxes. The prototype's commit records the same two causes.
+
+#### The method
+
+An opening the grid holds poorly becomes a vent between the gas on its two sides, as a zone model treats a door (CFAST's vent flow): a two-way flow from the hydrostatic pressure difference across it, moved from the cells on one side to the cells on the other. The projection is unchanged. Item 4 (each face's own density) stays not made.
+
+1. Which openings are vents. Each door and window is a rectangle in a wall one cell thick: its plane, its sill and soffit heights, and its two side edges. The scene lists them: in the validation, FDS's `&HOLE` through a wall; in the app, each door's and window's own bounds. An opening is a vent when either holds:
+   - it spans fewer than four cells across its narrower side;
+   - the grid's open area through it differs from its true area by more than a tenth.
+
+   Any other opening stays on the grid as now. A vent's wall cells stay solid, so no grid face and no diffusion crosses it; the vent is its only path.
+
+   Disclosed: 13.13 named "doors under three cells wide". Four is written here, after attempt 1, so that the check's 0.6 m door (three cells) is a vent too. On the grid that door failed (b) and (c) in attempt 1, and item 4 found doors two cells wide 8 to 16 % short. The tenth covers a door that is wide but off the cell faces: UL FSRI's 1.80 m² door is held as 0.58 to 1.53 m² on the three cells (13.7, item 5).
+
+2. A vent's two sides, a and b, are the open cells against the wall on either side. Along its height it is cut at the grid's row boundaries into segments, from its true sill z_s to its true soffit z_t; a row the opening covers in part gives a segment in part. For each row r and each side:
+   - the face cells: the side's cells against the wall that the opening covers, each weighted by its share of the opening's width;
+   - the band: the side's open cells, in the same region, whose centres lie between one cell and 1.0 m from the wall's face, and within 1.0 m of the opening's edges along the wall.
+
+   ρ_a,r and ρ_b,r are each side's mean density over its band in that row; with no band cell in a row, the face cells' mean. The band leaves out the column against the wall, which holds the vent's own jets. 1.0 m is about one door's width, the reach over which a doorway's approach flow is not hydrostatic. It is a modelling constant fixed here, taken from no data.
+
+3. The pressure difference across the vent at height z, side a less side b, each against the ambient's hydrostatic pressure at that height:
+
+   Δp(z) = Δp_s − g ∫_{z_s}^{z} (ρ_a(z′) − ρ_b(z′)) dz′,
+
+   with ρ_a and ρ_b constant over each row. So Δp is linear on each segment.
+
+4. The neutral planes are the zeros of Δp(z). On each segment a zero, if any, is found exactly by linear interpolation between the segment's ends, as CFAST's vent routine finds it (`ventw` in `flowhorizontal.f90`). The segments are cut there into slabs, each of one sign. A vent may have no plane, one or two; none is assumed. On a coarse grid the plane is exact for the rows' mean profile. How far that profile is from the rooms' is what (a), (b) and (f) below measure.
+
+5. Each slab [z_1, z_2], with |Δp| going from p_1 to p_2, carries
+
+   ṁ = C_d w (z_2 − z_1) (2/3) √(2 ρ_d) (p_1 + √(p_1 p_2) + p_2) / (√p_1 + √p_2),
+
+   the exact integral of C_d w √(2 ρ_d Δp(z)) over the slab for a linear Δp (CFAST's slab form). w is the opening's true width. ρ_d is the donor's band density in that row: side a's where Δp > 0, side b's where Δp < 0. The vent's flow from a to b, ṁ_ab, is the sum over the slabs with Δp > 0, its flow back, ṁ_ba, the sum over the rest, and its net flow F = ṁ_ab − ṁ_ba.
+
+6. The discharge coefficient is C_d = 0.68, from Prahl and Emmons (1975), "Fire induced flow through an opening", Combustion and Flame 25, 369 to 385, doi:10.1016/0010-2180(75)90109-1 (checked on Crossref). It is the value 13.13 fixed for the check's reference, independent of Steckler's tests (13.12, rule 4). It is not fitted.
+
+7. The pressure difference at the sill, Δp_s = P_a(z_s) − P_b(z_s), each side's pressure against the ambient's at that height:
+   - A side in a pressure zone (item 5): P_z(z_s) = p_∞ (π_z − 1) − g ∫_{y_z}^{z_s} (ρ̄_z(y) − ρ_0) dy. Here p_∞ = 101 325 Pa; π_z is the zone's pressure as a share of ambient; y_z is the floor of the zone's lowest open row; ρ̄_z is the zone's mean density per row over all its cells; ρ_0 is ambient air's.
+   - A side in an open region: P_o(z_s) = p̄_o − g ∫_{y_o}^{z_s} (ρ_o(y) − ρ_0) dy. Here p̄_o is the mean of the projection's pressure (`sim.p`, Pa, the ambient's hydrostatics taken out) over the band's cells in the row that holds the sill, at their centre height y_o, from the step before; ρ_o is the band's density per row.
+   - A vent whose two sides are both open regions, or one region, stays on the grid in this attempt, and each such opening is reported. The regions are found with every vent closed; a vent whose sides are both open or the same is opened again on the grid, and this is repeated until none changes.
+
+8. The zones' pressures at the step's end, found together. A zone's pressure follows its mass at its present heat by item 5's relation, π_z(M) = (M / (π_z⁰^κ G_z))^{1/(1−κ)} (as `zoneLeak` takes it; G_z the mass its cells would hold at ambient pressure at their temperatures, κ = R / (M̄ c_p)). Over the step each zone's mass changes by its vents' net flows and its leaks:
+
+   M_z′ = M_z − dt [ Σ_v σ_vz F_v(Δp_s,v) + L_z(π_z′) ],
+
+   with σ_vz = +1 where z is vent v's side a and −1 where it is side b, and L_z item 7's leak taken at the step's end, as `zoneLeak` takes it. An open side's pressure is held at its value from 7. The end pressures solve these equations together, by Newton's method on the zones' pressures:
+   - The Jacobian is symmetric. A vent adds dt ∂F/∂Δp_s to its two zones' diagonal entries and subtracts it from their shared entry; each zone adds its own dM/dπ and its leaks' derivative to its diagonal. Where Δp has one sign over a whole vent, ∂F/∂Δp_s is taken at |Δp| no smaller than 0.01 Pa, in the derivative only.
+   - Each Newton step's linear system is solved by conjugate gradients with a diagonal preconditioner, and the step is halved while the residual grows.
+   - It starts from the last step's pressures and stops when no zone's pressure changes by more than 0.01 Pa, after at most 8 Newton steps. The largest change left is counted (`stats.ventResidual`).
+
+   Mass is conserved whether or not the solve converges, because the exchange in 9 is computed from the final Δp_s for both sides at once.
+
+9. The exchange, conservative by construction. With Δp_s final, each slab's flow over the step, m = ṁ dt, leaves the donor's face cells of its row and enters the receiver's, shared by their weights. The gas carries the donor cells' mass fractions, soot included, and their temperature. Each receiving cell takes it in at constant pressure, as a leak's inflow is taken in (`pressureZones`, `ventLeaks`):
+
+   Y_k ← (m_c Y_k + m Y_k,d) / (m_c + m),  T ← (m_c c_p T + m c_p,d T_d) / ((m_c + m) c_p′),
+
+   with c_p′ at the new mass fractions. A donor cell's state is not changed in place: at its pressure a cell's mass follows its temperature. Its loss is a sink in its expansion, ln(1 − m / (ρ_g V)) / dt, and the receiver's gain a source, ln(1 + m / (ρ_g V)) / dt, with ρ_g the donor cells' density, so that the volume is the moved gas's own; both are added where `expansionEnd` adds the vent leaks'. The projection then carries the gas away from the vent on one side and towards it on the other.
+
+   Each zone's mass (its ledger, `Z.mass`) changes by exactly its vents' net transfers, so `zoneTransport` and `pressureZones` hold its cells to it after every step, whatever the bulk transport does inside it. What leaves one side enters the other: the mass, each species, and the sensible enthalpy m c_p,d T_d are conserved across the vent by construction. In an open region nothing holds the cells to a ledger: there the transfer acts as a vent leak's does, and the region's closure is the transport's.
+
+10. The step's length. `substepsFor` takes each vent's largest orifice speed, √(2 |Δp| / ρ_d), with the grid's, so that a step moves at most one face cell's gas through a vent row. A transfer that would take more is capped there and counted (`stats.ventClamped`).
+
+11. The coupling, and what is not counted twice:
+    - The grid: an opening's cells are solid, so only the vent crosses it.
+    - Item 5: a region reached only through vents is a pressure zone. When the run has vents, the joint solve in 8 replaces `zoneLeak`'s bisection zone by zone, and a zone's leaks are terms in it, so each is counted once. Without vents the solver runs `zoneLeak` as now.
+    - Item 7, the construction's leaks: a zone's faces against the solid cells that close an opening are not counted as leaky wall over the opening's area. The opening is open, and NISTIR 4770's figures are for walls with their doors' cracks.
+    - Item 7, leaks from an FDS input: a zone leak with no cell goes today to every zone (`leakTerms`). A vent can split one region of a test into several zones. Its area is then shared among them by their areas of faces against solids, so that the zones' areas add up to the input's.
+    - Vent leaks (`ventXb`) and ducts are unchanged.
+    - The expansion: each sealed region's mean expansion is taken off as now. The vent's sources are part of that mean, which matches the ledger.
+
+12. On the CPU (`flamescapes.js`):
+    - `createSolver`: the vent test of 1 on `scene.openings`; each vent's cells closed; the loop of 7; each vent's segments, face cells and weights, band cells and sides' regions; each zone's vents. `P.subgridVents`: 0 voxelises openings as now, bit-identical.
+    - `pressureZones(sim, leakDt)` at the step's end (the stage `density2`): the band means; the joint solve of 8; the transfers of 9 and their sources; then each zone's π from its ledger, as now. Tallies: `stats.ventMass` and `stats.ventEnthalpy` each way, and each vent's own for the check.
+    - `expansionEnd` adds the vent sources; `substepsFor` the vent speeds.
+
+13. On the GPU (`flamescapesGpu.js`, `kernels.js`):
+    - Buffers: the vents' segments, face cells and weights, band cells (offsets and lists), and each zone's vents.
+    - `ventProfile`, one thread a vent row and side: the band's mean density, and for an open side the band's mean pressure in the sill's row.
+    - `ventSolve`, in place of `zoneCommitLeak` when the run has vents: one workgroup of 256 threads, one thread a zone, holding the zones' pressures in workgroup memory, with a barrier between iterations. More than 256 zones take one dispatch an iteration. The CPU follows the same order of operations, so that the two agree.
+    - `ventApply`, one thread a vent row: the slabs' transfers, written to a list for each giving and receiving cell. `ventGather`, one thread a cell, mixes in what the cell receives and writes its sources. No two threads write one cell.
+    - The zones' sums stay float32 trees, the pressure held as π − 1, as now.
+
+#### Why it cannot fail (c) as attempt 1 did, and where it still could
+
+In the six cases each box is its own pressure zone, and the vent is its only path. The hot box's mass after each step is its ledger. The ledger changes only by the vent's net transfer, since the boxes have no source and no leak, and that transfer is the tally (c) compares with. The transport's give-back and the zone's rescaling now act inside one box and cannot move mass across the vent. So the two numbers in (c) differ by rounding only: float32 cells, about 10⁻⁶ of the box's mass, against 1 % of the mass exchanged (0.013 kg in attempt 1's smallest case).
+
+Where (c) could still fail:
+- if an opening's cells are left in part open, so that a grid path bypasses the vent's tally;
+- if the hot box is not one zone, or has a source or a leak the tally does not hold;
+- if the box's mass is read between the transfer and the zone's update (the tool reads after the step).
+
+In an open region (the app's, and the open side of (e) below) nothing holds the cells to a ledger. There the closure is the transport's, as attempt 1's was. (e) takes (c) on its zone side, so it does not test this either.
+
+Where (a) and (b) can fail: the band's rows lie between one cell and 1.0 m from the wall and within 1.0 m of the door, where the reference's lie at least 0.4 m from it across the whole box; and the joint solve's Δp_s may sit away from the reference's volume balance.
+
+Disclosed: the vent's flow law is the reference's own law, with the same C_d. So in this check (a) and (b) test the profiles the vent reads and the pressure difference it finds, not Emmons' law. The law itself is tested only by the held-out door data, in the rerun.
+
+#### What the check reads
+
+A change of the tool, not of its criteria, written before the run. Attempt 1's tool reads the outflow from the transport's tally of the hot box's door faces, and the neutral plane from those faces' velocities. A vent has no faces. The tool reads instead the vent's own transfer from the hot side over 2 to 6 s, and at each read the lowest zero of the vent's Δp(z). Its reference, its reads (every 0.05 s from 2 to 6 s), the hot box's mass and its criteria stay as 13.13 fixed them.
+
+#### What is fixed in advance, and from where
+
+- C_d = 0.68 (Prahl and Emmons 1975).
+- The vent test: four cells; a tenth of the area. Both come from attempt 1, items 3 and 4 and 13.7, none of which uses measured data.
+- The band: from one cell to 1.0 m from the wall, 1.0 m beyond the opening's edges.
+- The solve: 0.01 Pa; at most 8 Newton steps; the derivative's floor of 0.01 Pa.
+
+Nothing is fitted, and no series that 12 or 13 holds out is opened (14.1; 13.12, rule 4).
+
+#### Acceptance, copied unchanged from 13.13 ("Items 4 and 3, attempt 1: check")
+
+- Six cases: two sealed boxes 3.0 × 2.4 × 3.0 m on 0.2 m cells; a door 2.0 m high and 0.4, 0.5 or 0.6 m wide; the hot box at 400 K or 600 K. Radiation, wall exchange and deposition off; no leakage; read every 0.05 s from 2 to 6 s.
+- The reference at each read is Emmons' vent integral on each box's own layered density profile (the slab form CFAST uses), measured at least 0.4 m from the dividing wall:
+  - Δp(z) = Δp₀ − g ∫ (ρ_hot − ρ_cold) dz′, with Δp₀ from volume balance;
+  - ṁ_out = C_d w ∫_{Δp>0} √(2 ρ_hot Δp) dz, with C_d = 0.68 from Prahl and Emmons (1975, Combustion and Flame 25:369), independent of Steckler;
+  - the neutral plane is Δp's lowest zero.
+- Passes in all six cases if:
+  - (a) the mean outflow is within 10 %;
+  - (b) the mean neutral plane is within 10 %;
+  - (c) the hot box's change of mass over 2 to 6 s equals the net flow through the door within 1 % of the mass exchanged.
+- Plus the closures, and parity once on the GPU.
+
+#### Added, because the method makes them necessary (fixed now, before any run)
+
+- (d) Energy. In each of the six cases mass and energy close within 1 %, as item 7's did with its leak: each box's change of gas heat above ambient, Σ ρ V c_p (T − T_a), over 2 to 6 s equals the vent's net heat into it, Σ m c_p,d (T_d − T_a), within 1 % of the heat carried through the vent each way.
+- (e) A zone against an open region. The hot box alone, its door 0.5 m wide and 2.0 m high opening onto open cells that reach the domain's side; the hot box at 400 K and at 600 K; 0.2 m cells. (a), (b) and (c) as above, the reference taking the outside at ambient density and Δp₀ from volume balance. This is the room-to-outside case of the held-out door tests, where the open side's pressure comes from the projection.
+- (f) The coarser cells. The six cases on 0.27 m and 0.34 m cells, each box the whole cells nearest 3.0 × 2.4 × 3.0 m, the door at its true height of 2.0 m; (a) to (d) with the same tolerances. The reference then integrates over the door's true height, its top row in part. That extends 13.13's reference to a door that is not a whole number of rows, and is disclosed as such.
+- (g) The joint solve. Three sealed boxes in a row, on 0.2 m and 0.34 m cells, joined by two doors 0.5 m wide, the first box at 600 K, for 6 s. Each box's change of mass equals its vents' net transfers within 1 % of the mass exchanged. At every step every zone's pressure agrees with its mass within 0.01 Pa, that is, the solve converged. In the one-vent cases of (a) to (e), Newton's Δp_s equals a bisection's within 0.01 Pa.
+- (h) Off is off. With `subgridVents` 0 the unit suite and the GPU parity phases are bit-identical to the build before.
+- (i) The unit suite passes unbent with the vent on by default. Its scenes' doors of under four cells become vents.
+- Reported, not judged: attempt 1's uniform-room formulas, as its tool reports them; the vents and zones each of Duplex, Office and Clinic gets, and each opening kept on the grid by 7; `stats.ventResidual` and `stats.ventClamped` in every case.
+
+#### GPU parity
+
+- The item: `tools/flamescapes-gpu-check.mjs` gets a phase `vents`. It runs 200 deterministic steps of the 0.5 m, 600 K case and of (e)'s 600 K case, and compares |CPU − GPU| for each zone's pressure and mass, gas T, O2, ρ and each vent's flow each way against the one-ulp twin's, as items 5 and 7 reported. Then (a) to (e) on the GPU's path: each outflow and neutral plane within 0.95 to 1.05 of the CPU's (14.2's ratio, applied to this check), and (c) passing.
+- The rerun's verdicts on the GPU follow 14.2 as written.
+
+#### Speed (14.6)
+
+Milliseconds a step and run time on Duplex, Office and Clinic, CPU and GPU (`tools/backend-bench.mjs`), with the vent on and off, against the build before. If on costs more than 10 % a step on the GPU, it goes behind a switch, and the app states the verdicts found without it when it is off, which means a second full run.
+
+#### Default
+
+Off (`subgridVents` 0) until (a) to (i) pass and the unit suite passes unbent with it on. Then on, unless 14.6 puts it behind a switch. Made after 13.B began, it gets its own full rerun, reported beside 13.B (13.12, rule 5).
+
+#### What ends this line
+
+If attempt 2 fails any of (a) to (i) in any case, items 4 and 3 are not made, and doors stay as the voxeliser makes them. No third attempt at door flow is drafted. Door and vent velocity, door mass flow and the neutral plane stay as 13.A and 13.B find them, and the app states those verdicts. A further attempt needs the user's word and a new method committed here first.
+
+#### The coordinator's decisions on this draft (2026-11-13, 04:40, before any run of it)
+
+The draft above is the physics agent's, written blind (13.12, rule 2). The coordinator has read 13.A and 13.B's first two files, so the decisions below add no constant and move no tolerance. Each takes the draft's own proposal or the stricter reading.
+
+1. **The vent test and the coupling stand as drafted.** 13.13's one line named "a sub-grid vent for doors under three cells wide, coupled into the projection". The draft's "fewer than four cells", its rule of a tenth of the area, and its coupling by volume sources in place of a link in the pressure equation are changes of method made after attempt 1 failed, and are disclosed as such.
+2. **The band's 1.0 m and its one cell from the wall are fixed modelling constants with no source.** They are not changed after any run, whatever the check finds. Room-wide means were set aside because the check's reference reads nearly the same cells, and 13.13 refuses a check that cannot fail.
+3. **13.13's layered check governs items 4 and 3.** The uniform-room formulas of 13.4 and 13.8 are reported and not judged.
+4. **(f)'s cases on 0.27 m and 0.34 m cells are acceptance cases,** as (a) to (e) are. The app runs on those cells.
+5. **A leak that an FDS input gives to a region is shared among the zones a vent makes of that region,** by their areas of faces against solids, so that the areas add up to the input's.
+6. **C_d = 0.68.** The citation and its DOI were checked on Crossref. The value is taken as fire texts report it from that paper; the paper itself was not read. If a reading of the paper gives another value, that is reported and this item's check is run again with it, whatever the first run found.
+7. **How the validation reads a door that is a vent** (a vent has no faces), fixed now:
+   - the neutral plane is the lowest zero of the vent's Δp(z), averaged over the window as the face reading is;
+   - the mass flow each way is the vent's own transfer each way;
+   - the velocity at a probe at height z is the ideal speed sign(Δp(z)) √(2 |Δp(z)| / ρ_d), with ρ_d the donor's band density in that row. C_d times that speed is reported beside it. An orifice's coefficient is mostly the jet's contraction, which argues for the ideal speed on the door's centreline, but a probe in the door's plane may read less. So both are judged, and the stricter word stands (12.6).
+8. **Not tested by (a) to (i), and stated with any result:** no momentum crosses a vent, so a spill plume's direction is lost; an open side's reference pressure comes from the projection's pressure, which is not the physical pressure in hot gas; and a door between two open regions stays on the grid.
+9. **Made, the item changes the app widely:** most rooms behind open doors become pressure zones. 14.6's speed rule decides whether it sits behind a switch.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
