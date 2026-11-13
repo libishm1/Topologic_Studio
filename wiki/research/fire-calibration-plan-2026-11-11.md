@@ -1529,6 +1529,266 @@ The draft above is the physics agent's, written blind (13.12, rule 2). The coord
 9. **Test 2 runs as it stands.** The user is away and has not answered the draft's proposal, so its second branch applies: the test runs with the default leaks and must pass unbent. Its released share is reported four ways, as the draft lists. If it fails, item 6 is not made, extinction stays off, and the draft's proposal (a stated `leakage: []`, and a second test with a bound derived for a room that leaks) goes to the user with that result beside it. An acceptance then would be dated and disclosed as given after a result.
 10. **What ends this line stands as drafted,** attempt 5's condition included.
 
+### 13.19 Item 8: radiation from the gas, CO2 and H2O (2026-11-13, before any run of it)
+
+Drafted blind to every validation result, as 13.12 sets. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of commit 550fce5, which the working tree's `src/core` equals.
+
+#### What the solver does now
+
+The claim to check: hot gas emits and absorbs only through its soot; nothing casts rays below `emitAbove`; so a soot-free hot layer reaches the walls only by convection and by the burner's radiant fraction. The code bears it out, with three qualifications after the list.
+
+- Gas emission (`flamescapes.js` 845 to 853). A gas cell emits only if T > `emitAbove` (500 K, line 218) and its soot mass fraction Y_s > 0. It emits 4 κ_s Y_s σ (T⁴ − T_a⁴) V dt, with κ_s = `sootAbsorption` = 500 (line 162, "the paper's residual absorption coefficient"). So the soot's absorption coefficient is 500 Y_s m⁻¹. The emission is capped at half the cell's heat above ambient (851). CO2 and H2O appear nowhere in `radiation` or `march`.
+- Surface emission (829 to 844; one-dimensional walls in `wallEmit`, 2114 to 2150). A solid or porous cell above `emitAbove` emits ε σ (T_s⁴ − T_a⁴) over its faces open to gas (ε 0.9 for the inert materials, 103 to 107), capped as the gas is. A face below 500 K emits nothing (2119, 2135).
+- Rays (855 to 890). Each emitting cell casts `rays` = 8 rays (219) of equal energy from its centre. Their directions come from the cell's own stream of the step (`cellStream`, salt 2, line 860). From a surface, a uniform direction plus the face's normal gives Lambert's law.
+- Absorption (`march`, 919 to 973). A ray loses the fraction 1 − exp(−500 Y_s ℓ) in each gas cell it crosses (938 to 943), except the cell that cast it (936). The first solid or porous cell it meets takes all that is left (951 to 963), whatever its emissivity. A ray that leaves the grid returns (949), and what it carries is counted nowhere. After `rayReach` = 40 crossings (220), what is left goes into the cell where the ray stopped (966 to 972).
+- Bookkeeping. Each cell emits from its temperature at the stage's start; the deposits are added after the last cell has emitted (891 to 900). `stats.radiated` counts the cells' emission (855).
+- The burner (`createBurner` 3113 to 3227, `burnerStep` 3339 to 3381). Of the heat burnt, (1 − χ_r) goes into the flame cells' gas (`burnInCell`, 3323). The rest leaves the axis cell along 16 fixed directions, turned each step (3361 to 3376), absorbed by soot on the way and by the first solid. χ_r defaults to 0.2 (3134); the validation passes the FDS input's value (`validation-suite.mjs` 249 to 253). With no rays the radiant part leaves the domain (3099). It is tallied in `b.radiant` (3379), not in `stats.radiated`. The burner runs in the `pilot` stage, before `radiation` (3402 to 3406). Methane carries no soot (3075).
+- Convection. An inert solid's face exchanges with its gas at `wallConvection` = 10 W/m²K (132, 1872); one-dimensional walls use the same coefficient (2170, 2288).
+- The GPU (`flamescapesGpu/kernels.js`) mirrors this: the same gas rule (1341 to 1349), absorption by soot alone (1271 to 1277), a ray leaving the grid returns (1281). Deposits are fixed-point kelvin, 16 384 steps a kelvin (357, 1190 to 1193), each clamped to ±20 000 K. A scene with a validation burner (one with rays) is sent to the CPU solver (`flamescapesGpu.js` 978 to 981). The GPU runs only the design-fire burner, whose χ_r is 0.
+- The heat ledger (13.15) records `radiated` from `stats.radiated` (`validation-suite.mjs` 420). It has no term for radiation that leaves the grid.
+
+Qualifications to the claim:
+1. The burner's radiant part is cast whatever the temperature. The floor does not apply to it.
+2. A surface above 500 K radiates to other surfaces. In a soot-free room the walls rarely pass 500 K away from the flame, so the layer itself reaches the walls only by convection, as claimed.
+3. In a validation burner whose fuel has soot, the flame cells above 500 K emit soot radiation of their own (845), on top of the χ_r already cast. The radiant fraction is then counted twice in those cells. Methane burners are not affected.
+
+#### The method
+
+Chosen: the weighted sum of gray gases (WSGG) of Bordbar, Węcel and Hyppänen (2014), as FDS 6.11.1 codes it for its `WSGG_MODEL` option: four gray gases and one transparent window, each carried along the solver's rays as its own share of the energy.
+
+Considered and set aside:
+- FDS's default gray gas: one coefficient per species from RadCal, the smaller of the Planck mean and the effective coefficient over a 0.1 m path (Technical Reference Guide, appendix "Gas Phase Absorption Coefficients"; `radi.f90` 3134). It is FDS's default. But one gray coefficient set at 0.1 m overstates the emissivity of a layer a metre or more deep, and it would put RadCal's narrow-band tables inside the solver. RadCal serves instead as the independent reference of check (b).
+- Planck-mean coefficients of CO2 and H2O: right only for optically thin paths. At room scale the band centres are saturated, so a Planck mean overstates emission and absorption alike.
+- Smith, Shen and Friedman (1982): fitted for 600 to 2400 K. A compartment's layer is mostly 320 to 700 K.
+- Bordbar et al. (2014): its constants are in FDS's own source (public domain, read); its weights are polynomials in T used by FDS down to ambient; its coefficients do not depend on a path length. On the solver's rays each gray gas is carried exactly as the soot is now, with no path length to choose. FDS's User Guide calls the option experimental, with very limited verification and validation. Check (b) therefore compares it with RadCal before it is made.
+
+1. The gas's composition, in each gas cell at the radiation stage's start.
+   - Mole fractions as the equation of state takes them (`gasDensity`, 290 to 300): n_k = Y_k / M_k with `MOLAR` (line 85), nitrogen the rest at 0.028 kg/mol; X_k = n_k / Σ n. X_c = X_CO2, X_w = X_H2O.
+   - The molar ratio M_r = X_w / (X_c + 4.44 × 10⁻¹⁵), the second term FDS's TWENTY_EPSILON_EB (`prec.f90` 40).
+   - The absorbing gases' pressure in atmospheres: p_a = p (X_w + X_c) / P_STP, with P_STP = 101 325 Pa (`cons.f90` 370) and p = 101 325 Pa. The solver's equation of state takes every cell at P_AMBIENT (line 299), and the radiation does the same. FDS takes the zone's background pressure (`radi.f90` 3991 to 3992); the difference is the zone's π − 1.
+   - If X_c and X_w are both below 4.44 × 10⁻¹⁵, the gray gases' coefficients are 0 (FDS, `KAPPA_WSGG`).
+
+2. The gray gases' absorption coefficients, m⁻¹, for j = 1 to 4 (FDS 6.11.1 `radi.f90` 5010 to 5049):
+
+   κ_g,j = k_j(M_r) p_a,
+
+   with k_j in atm⁻¹ m⁻¹:
+   - M_r < 0.01 (CO2 alone): k_j = KP1_j;
+   - M_r > 4 (H2O alone): k_j = KP2_j;
+   - otherwise: k_j = Σ_{n=0..4} d_jn M_r^n.
+
+   The window, j = 5, has κ_g,5 = 0 (FDS's KP1_5 = KP2_5 = 0).
+
+   | j | KP1_j (M_r < 0.01) | KP2_j (M_r > 4) |
+   |---|---|---|
+   | 1 | 3.388079E-2 | 7.703541E-2 |
+   | 2 | 4.544269E-1 | 8.242941E-1 |
+   | 3 | 4.680226 | 6.854761 |
+   | 4 | 1.038439E2 | 6.593653E1 |
+
+   | j | d_j0 | d_j1 | d_j2 | d_j3 | d_j4 |
+   |---|---|---|---|---|---|
+   | 1 | 0.0340429 | 0.0652305 | -0.0463685 | 0.0138684 | -0.0014450 |
+   | 2 | 0.3509457 | 0.7465138 | -0.5293090 | 0.1594423 | -0.0166326 |
+   | 3 | 4.5707400 | 2.1680670 | -1.4989010 | 0.4917165 | -0.0542999 |
+   | 4 | 109.81690 | -50.923590 | 23.432360 | -5.1638920 | 0.4393889 |
+
+3. The weights, with t = T / 1200 K, for j = 1 to 4 (`radi.f90` 5054 to 5105):
+   - M_r < 0.01: a_j = Σ_{m=0..4} b1_jm t^m;
+   - M_r > 4: a_j = Σ_{m=0..4} b2_jm t^m;
+   - otherwise: a_j = Σ_{m=0..4} (Σ_{n=0..4} c_jmn M_r^n) t^m;
+   - the window: a_5 = 1 − (a_1 + a_2 + a_3 + a_4).
+
+   No temperature is clamped, as in FDS.
+
+   | j | b1_j0 | b1_j1 | b1_j2 | b1_j3 | b1_j4 |
+   |---|---|---|---|---|---|
+   | 1 | 8.425766E-1 | -1.442229E+0 | 1.286974E+0 | -5.202712E-1 | 7.581559E-2 |
+   | 2 | -3.023864E-2 | 5.264245E-1 | -6.209696E-1 | 2.704755E-1 | -4.090690E-2 |
+   | 3 | 1.070243E-1 | -1.989596E-1 | 3.101602E-1 | -1.737230E-1 | 3.081180E-2 |
+   | 4 | 3.108972E-2 | 1.981489E-1 | -2.543676E-1 | 1.061331E-1 | -1.498231E-2 |
+
+   | j | b2_j0 | b2_j1 | b2_j2 | b2_j3 | b2_j4 |
+   |---|---|---|---|---|---|
+   | 1 | 7.129509E-1 | -1.378353E+0 | 1.555028E+0 | -6.636291E-1 | 9.773674E-2 |
+   | 2 | 1.589917E-1 | 5.635578E-2 | 2.666874E-1 | -2.040335E-1 | 3.742408E-2 |
+   | 3 | -1.196373E-1 | 1.349665E+0 | -1.544797E+0 | 6.397595E-1 | -9.153650E-2 |
+   | 4 | 3.078250E-1 | -6.003555E-1 | 4.441261E-1 | -1.468813E-1 | 1.824702E-2 |
+
+   | j | m | c_jm0 | c_jm1 | c_jm2 | c_jm3 | c_jm4 |
+   |---|---|---|---|---|---|---|
+   | 1 | 0 | 0.7412956 | -0.5244441 | 0.5822860 | -0.2096994 | 0.0242031 |
+   | 1 | 1 | -0.9412652 | 0.2799577 | -0.7672319 | 0.3204027 | -0.0391017 |
+   | 1 | 2 | 0.8531866 | 0.0823075 | 0.5289430 | -0.2468463 | 0.0310940 |
+   | 1 | 3 | -0.3342806 | 0.1474987 | -0.4160689 | 0.1697627 | -0.0204066 |
+   | 1 | 4 | 0.0431436 | -0.0688622 | 0.1109773 | -0.0420861 | 0.0049188 |
+   | 2 | 0 | 0.1552073 | -0.4862117 | 0.3668088 | -0.1055508 | 0.0105857 |
+   | 2 | 1 | 0.6755648 | 1.4092710 | -1.3834490 | 0.4575210 | -0.0501976 |
+   | 2 | 2 | -1.1253940 | -0.5913199 | 0.9085441 | -0.3334201 | 0.0384236 |
+   | 2 | 3 | 0.6040543 | -0.0553385 | -0.1733014 | 0.0791608 | -0.0098934 |
+   | 2 | 4 | -0.1105453 | 0.0464663 | -0.0016129 | -0.0035398 | 0.0006121 |
+   | 3 | 0 | 0.2550242 | 0.3805403 | -0.4249709 | 0.1429446 | -0.0157408 |
+   | 3 | 1 | -0.6065428 | 0.3494024 | 0.1853509 | -0.1013694 | 0.0130244 |
+   | 3 | 2 | 0.8123855 | -1.1020090 | 0.4046178 | -0.0811822 | 0.0062981 |
+   | 3 | 3 | -0.4532290 | 0.6784475 | -0.3432603 | 0.0883088 | -0.0084152 |
+   | 3 | 4 | 0.0869309 | -0.1306996 | 0.0741446 | -0.0202929 | 0.0020110 |
+   | 4 | 0 | -0.0345199 | 0.2656726 | -0.1225365 | 0.0300151 | -0.0028205 |
+   | 4 | 1 | 0.4112046 | -0.5728350 | 0.2924490 | -0.0798076 | 0.0079966 |
+   | 4 | 2 | -0.5055995 | 0.4579559 | -0.2616436 | 0.0764841 | -0.0079084 |
+   | 4 | 3 | 0.2317509 | -0.1656759 | 0.1052608 | -0.0321935 | 0.0033870 |
+   | 4 | 4 | -0.0375491 | 0.0229520 | -0.0160047 | 0.0050463 | -0.0005364 |
+
+   These are the 170 numbers of FDS 6.11.1's `MAKE_WSGG_ARRAYS` (`radi.f90` 3223 to 3270; tag FDS-6.11.1, commit ff928db), which cites Bordbar et al. (2014). They are identical at FDS master 5f8f194, the commit 13.11 used. They were parsed from that file's text for this draft, not retyped. c_jmn is FDS's `WSGG_C_ARRAY(j, m, n)`: m the power of t, n the power of M_r.
+
+4. Soot. Each band's coefficient is κ_j = κ_g,j + 500 Y_s, and the window's is 500 Y_s. The soot is added to every band, as FDS adds its soot to every WSGG band (`radi.f90` 3996 to 3997). The soot's coefficient stays the solver's, 500 Y_s; this item changes nothing about soot. (FDS's WSGG option uses another soot coefficient, `KAPPA_SOOT`, 5108 to 5114; it is not taken.) With no CO2 and no H2O the five bands share one coefficient and the weights sum to 1, so emission and absorption reduce to the solver's present soot terms.
+
+5. Emission. A gas cell emits in band j, over the step,
+
+   E_j = 4 κ_j σ [a_j(T, M_r) T⁴ − a_j(T_a, M_r) T_a⁴] V dt,
+
+   FDS's band source a_j κ_j 4σT⁴ (`radi.f90` 3999) less what the same gas would emit at ambient temperature. The solver writes all its emission net of the ambient's (T⁴ − T_a⁴), and the item keeps that form. Taking a_j at T_a with the cell's own M_r keeps every band at zero in a domain at ambient temperature, whatever its composition. FDS instead gives its open boundaries the ambient air's weights (`radi.f90` 3849 to 3858). With a uniform M_r the two agree.
+   - A band whose E_j comes out negative emits nothing, and the omission is counted (`stats.radNegative`). Hand calculation: no band is negative for T_a < T ≤ 2600 K at any M_r from 0 to 10⁶; bands 2 and 4 turn negative above about 2650 K.
+   - The cell loses Σ E_j, capped as now at half its heat above ambient (851), every band scaled alike; the cap is counted (`stats.radCapped`).
+   - The floor. With the item on, a gas cell emits when T > T_a + 10 K (`gasEmitRise` = 10). This is a numerical cut fixed here, from no source, so that cells at ambient cast no rays. The emission it omits, Σ E_j of the cells below it, is computed without casting rays and counted (`stats.radFloor`). It applies to sooty gas too, which now emits nothing below 500 K. Surfaces keep `emitAbove` (500 K) unchanged.
+
+6. Where a gas cell's rays start. Each of its `rays` (8) rays carries E_j / 8 in every band j. A ray starts at a point drawn uniformly in the cell (three more draws from the cell's stream, after the two for its direction). It is attenuated from there through its own cell like any other, and its own cell takes what it absorbs. Now a ray starts at the centre and skips its own cell (936).
+   - Why. k_4 is 63 to 104 atm⁻¹ m⁻¹, so at X_c + X_w = 0.15 one cell of 0.2 to 0.4 m has κ_4 h = 2 to 4. Hand calculation for a semi-infinite isothermal gas: rays from cell centres that cross their own half cell give 0.64 of the exact wall flux at κh = 2, and rays that skip their own cell about 4.6 times it. A uniform start is the cell's exact volume emission; on a gray cube with κh from 0.05 to 2 it was unbiased within its noise (hand calculation).
+
+7. Absorption along a ray. A ray carries five energies e_1 to e_5. In each gas cell it crosses for a length ℓ, each loses e_j (1 − exp(−κ_j ℓ)) with that cell's κ_j, and the cell takes the sum. A burner's flame cell (item 9 below) is transparent. The first solid or porous cell takes Σ e_j, as now.
+   - A ray marches until it meets a solid or leaves the grid (at most n_x + n_y + n_z crossings); `rayReach` does not stop it. Now a ray that has crossed 40 cells drops what is left into the gas there (966 to 972). In a soot-free room the window band would then heat gas that cannot absorb it.
+   - The march stops when Σ |e_j| falls below 10⁻⁹ of its value at the start.
+
+8. Surfaces. A solid or porous cell's emission is as now: ε σ (T_s⁴ − T_a⁴) per open face, above 500 K. It is shared among the bands by
+
+   w_j = [a_j(T_s, M_r) T_s⁴ − a_j(T_a, M_r) T_a⁴] / (T_s⁴ − T_a⁴),
+
+   with M_r of the gas across the face the ray leaves by (a porous cell's own gas; beyond the grid's side, M_r = 0). FDS weights a wall's emission by a_j at the wall's temperature and the adjacent cell's M_r (`radi.f90` 4155 to 4163). The w_j sum to 1, so a surface emits what it does now. A negative w_j is set to 0, the rest are scaled to keep the sum, and it is counted. A surface still takes all of each ray that reaches it, whatever its emissivity.
+
+9. The burner, and the radiant fraction counted once. FDS puts all of a reaction's heat into the gas. In the cells where χ_r q̇''' > 1 kW/m³ it scales the emission so that the flaming region's net emission is χ_r times its heat release (Technical Reference Guide, the corrected emission source term, its factor bounded by 0.1 and 100; `radi.f90` 4083). Here the burner casts χ_r of the heat burnt itself (3361 to 3376). So, with the item on:
+   - a cell where a burner with χ_r > 0 burnt fuel this step (`burnInCell` returned more than 0) neither emits nor absorbs in that step's radiation stage. The flaming region's net radiation is then exactly the χ_r cast, which is what FDS's correction aims at. The emission those cells would have had is counted (`stats.flameSilenced`). This also ends the double count of qualification 3, for sooty burners;
+   - the burner's rays carry its radiant part in five bands, shared by the heat-weighted mean of a_j(T_c, M_r,c) over the cells that burnt, each taken after its burning. FDS shares χ_r q̇''' among its bands by each flaming cell's a_j (`radi.f90` 4002). The rays start at the axis cell's centre as now;
+   - a burner with χ_r = 0 (the design-fire item, the app's) is not affected. Its flame cells emit by their own gas and soot.
+
+10. Energy. All that a cell or a burner emits ends in a cell, a wall's end, or beyond the grid's sides. New tallies, in J:
+    - `stats.radiatedOut`: what rays carry out through the grid's sides, the burner's included;
+    - `stats.radFloor`, `stats.flameSilenced`, `stats.radNegative` and `stats.radCapped`, as above.
+
+    The ledger (13.15) gains `radiatedOut` and keeps `radiated`. Without it, the radiation that leaves the grid sits in the ledger's unexplained remainder. It is a diagnostic: it is compared with nothing and decides nothing, as 13.15 says.
+
+11. On the CPU (`flamescapes.js`):
+    - `DEFAULTS`: `gasRadiation` (0 off, 1 on) and `gasEmitRise` (10 K). With 0 every path is as now, bit-identical.
+    - The 170 constants and the functions a_j(T, M_r) and k_j(M_r), written from `radi.f90`'s text.
+    - `radiation`: when on, a first pass over the gas cells (X, M_r, p_a and κ_g,1..4 into work arrays); then the five-band emission with the floor, the cap and the flame cells; the random starts; a surface's emission shared by w_j; the tallies.
+    - `marchBands`, beside `march`: five energies, the own cell absorbing, no reach limit, the outflow counted. `march` itself is unchanged and serves the item off.
+    - `burnerStep`: stamps the cells that burnt with the step's number, and when on shares its radiant part by band and casts it through `marchBands`.
+
+12. On the GPU (`flamescapesGpu.js`, `kernels.js`):
+    - Parameters: the flag and the floor; the 170 constants as WGSL constants.
+    - `radKappa`, one thread a cell, before `radEmit`: X, M_r, p_a and κ_g,1..4 into a vec4 buffer, M_r into an f32 buffer (20 bytes a cell).
+    - `radiateCell` and `march`: as the CPU's, five energies (a vec4 and a scalar), the same draws in the same order from the same stream.
+    - Deposits in joules, not kelvin, when on: 4096 steps a joule, so 0.24 mJ is the smallest step and 524 kJ the most a cell can take in a step. A single deposit above 4096 J is clamped and counted. `radApply` divides by each cell's heat capacity (the gas's ρ c_p V, `solidCap`, a wall's end as `wallEnd` takes it). Why: in kelvin, a ray's 0.4 J reaching a stone cell of 0.027 m³ (58 kJ/K) is 7 × 10⁻⁶ K, under half a step of 1/16 384 K, and would round to nothing every step (hand calculation). Off, the deposits stay in kelvin.
+    - `radEmit`'s reduction carries the outflow beside the emission (its vec4's second slot), read back with `radiated`.
+    - A validation burner stays on the CPU (`supported`, unchanged), so item 9 is CPU only.
+
+#### Where it can fail
+
+- (b) can fail on the model rather than the code. Bordbar et al. fitted their model for oxy-fired combustion (its title). FDS applies it to products diluted in nitrogen, and so does this item; whether the fit holds there was not verified for this draft, since the paper was not read. RadCal's water vapour data are Ludwig et al.'s (1973), and TN 1402 shows RadCal and Hottel's charts for water vapour 12 to 25 % apart over most of 400 to 1500 K, and up to about a third at the smallest pressure path lengths. So (b) asks for agreement within the spread of accepted spectral models, and no closer.
+- (c) to (e) and (h) can fail on the transport: the noise of eight rays a cell, the start points, the layer's edge on coarse cells, a surface's band shares.
+- In use, the gas floor and the unlimited reach change cost and accuracy beyond what the checks hold. Both are counted in every run.
+
+#### What the checks read
+
+A new tool, `tools/gas-radiation-check.mjs`. It builds each scene, sets the gas and the walls to their temperatures and compositions, and calls the radiation stage alone (exported for the tool) for 200 steps of 0.05 s with `seed` fixed, setting every temperature back after each step. Each step it reads, in J: the emission by band and by source (gas, surfaces, burner); what the gas absorbs; what each group of solid cells absorbs (floor, ceiling, each side wall, from the deposits before they are applied); and `radiatedOut`. All walls in (c) to (e) and (h) have ε = 1 and are lumped unless stated. No measured data enters any check.
+
+#### What is fixed in advance, and from where
+
+- The 170 constants, t = T / 1200 K, the bounds 0.01 and 4 on M_r, p_a in atmospheres of 101 325 Pa, and the zero below 4.44 × 10⁻¹⁵: FDS 6.11.1 `radi.f90`, citing Bordbar et al. (2014).
+- The soot's coefficient: unchanged, 500 Y_s m⁻¹ (line 162).
+- The emission net of the ambient's, with a_j at T_a and the cell's M_r; a surface's weights at its temperature and the adjacent gas's M_r; the burner's band shares: points 5, 8 and 9, after FDS's practice where FDS has one.
+- The gas floor T_a + 10 K, 8 rays a gas cell (as now), no reach limit, uniform start points: numerical choices fixed here.
+- The GPU's 4096 steps a joule.
+- The references: RadCal at github.com/firemodels/radcal commit abe2a8f (its `rcal.f90` is FDS's RadCal), built from its source with any Fortran 2008 compiler and run from its own input file; and FDS's `RADTMP`, 1173.15 K (`read.f90` 10092 and 10118), as the flame's temperature in (b)'s absorptivities.
+
+Nothing is fitted, and no series that 12 or 13 holds out is opened (14.1; 13.12, rule 4).
+
+#### Acceptance (fixed now, before any run)
+
+(a) Constants and functions. The solver's 170 constants equal those the tool parses from FDS 6.11.1's `radi.f90` (3231 to 3269), digit for digit. The solver's a_j and k_j equal the tool's own transcription of `A_WSGG` and `KAPPA_WSGG` within 10⁻¹² relative on the CPU and 10⁻⁵ on the GPU, at T from 293.15 K to 2493.15 K in 50 K steps and M_r ∈ {0, 0.005, 0.01, 0.5, 1, 1.25, 1.9, 3.99, 4, 4.01, 10}. Reason: this catches transcription; float32 carries about seven digits.
+
+(b) Emissivity and absorptivity against RadCal. A homogeneous, isothermal column at 1 atm: X_c + X_w ∈ {0.03, 0.15}; M_r ∈ {1.25, 1.90}, the ratios in the solver's products of its class A fuel and of methane (from `stoichiometry`); O2 and N2 the rest, in air's ratio; no soot; length L ∈ {0.3, 1, 3} m.
+   - Emissivity at T ∈ {400, 600, 900, 1200} K, 48 cases: the solver's Σ_j a_j(T, M_r)(1 − e^{−κ_j L}) against RadCal's π I / (σ T⁴), I the radiance leaving the column with `TWALL` at 0 K (or the lowest RadCal takes), over 50 to 10 000 cm⁻¹.
+   - Absorptivity at T ∈ {400, 600} K for black radiation from 1173.15 K, 24 cases: the solver's Σ_j a_j(1173.15 K, M_r)(1 − e^{−κ_j L}) against 1 − [I(`TWALL` 1173.15 K) − I(`TWALL` 0 K)] / (σ · 1173.15⁴ / π) from RadCal.
+   - Passes if every case is within 25 % of RadCal's value or 0.01, whichever is larger. Reason: 25 % is about the largest gap TN 1402 shows between RadCal and Hottel's charts for water vapour over most of 400 to 1500 K (its Figs. 3 and 4), that is, how closely two accepted spectral models agree there; where those figures differ by more (the smallest pressure path lengths), the absolute 0.01 applies. 0.01 of emissivity is 1 % of black-body exchange, below anything the validation resolves.
+
+(c) Gray transport in a cube. Soot only (X_c = X_w = 0), uniform, at 1000 K, in a cube of gas 3.0 m a side inside black walls at ambient, on 0.2 m and 0.3 m cells, Y_s set so that κL = 0.1, 0.5, 1, 2 and 5. The power into the walls, the mean over 200 steps, against 4κσ(T⁴ − T_a⁴) V P(κL). P is the exact escape fraction of a uniform cube, which the tool computes by reciprocity: P(τ) = (6 / 4τ) ⟨1 − e^{−τℓ}⟩ over one face with cosine-weighted directions, ℓ the chord in the unit cube, by quadrature fine enough that halving its steps moves P by less than 0.05 %. Passes within 2 % in every case. Reason: a hand calculation of this method (uniform starts) on this cube is unbiased within its noise, and 200 steps of 8 rays from 1000 to 3375 cells hold the noise under 0.5 %.
+
+(d) Band transport in a cube. As (c), with X_c = 0.05 and X_w = 0.10 (M_r 2), no soot, at 600 K and 1000 K, in cubes of 1.2 m and 3.0 m. The reference: Σ_j 4 κ_j σ [a_j(T) T⁴ − a_j(T_a) T_a⁴] V P(κ_j L). Within 2 % in every case. Reason as (c). Band 4's κh of 2 to 4 is where the start points matter.
+
+(e) A soot-free layer heats a surface it does not touch. A box of 3.0 × 2.4 × 3.0 m (13.17's) on 0.2, 0.27 and 0.34 m cells, each box the whole cells nearest those sizes. Its upper 1.2 m (the whole rows nearest) holds gas at 600 K with X_c = 0.05 and X_w = 0.10; below it, air at ambient; black walls at ambient.
+   - Read: the power into the floor and into the ceiling.
+   - Reference: Σ_j σ [a_j(T) T⁴ − a_j(T_a) T_a⁴] ∫_A ∫ (1 − e^{−κ_j ℓ}) (cos θ / π) dΩ dA over the floor (or the ceiling), ℓ the chord through the layer as the grid holds it, by quadrature as in (c).
+   - Passes if both are within 3 % in every case, on lumped walls and on one-dimensional walls (13.4, item 1: a 16 mm gypsum board), whose power is read from their ends' deposits. Reason: (c)'s 2 %, and 1 % for the layer's edge.
+   - With the item off the floor takes nothing. Hand calculation on the exact box: the floor 9.5 kW (1.06 kW/m²), the ceiling 20.8 kW, against the ceiling's convection at 10 W/m²K, 27.6 kW.
+
+(f) Energy. In (c) to (e), and in two burner runs: a 100 kW burner, 0.3 m square, at the centre of (e)'s floor, the box with a door 0.8 × 2.0 m to open cells beyond, 0.2 m cells, 120 s, the flow on; one with methane at χ_r = 0.2, one with the class A fuel (soot yield 0.015) at χ_r = 0.2. In every step, what was emitted (gas, surfaces, burner) equals what the gas, the solids and the walls' ends took plus `radiatedOut`, within 10⁻⁹ of the emission on the CPU (float64 sums) and within 1 % on the GPU (fixed point), and the GPU clamps no deposit. Reason: conservation holds by construction; 1 % is 13.4's closure, far above the GPU's rounding.
+
+(g) The radiant fraction counted once. In both burner runs, in every step: the cells that burnt emit and absorb nothing, and the burner's rays carry χ_r of the heat burnt within 10⁻¹² relative. `stats.flameSilenced` is reported; for the sooty fuel it is the double count of qualification 3.
+
+(h) An isothermal box stays isothermal. (d)'s 3.0 m cube with its gas (soot Y_s = 10⁻³ added) and its black walls all at 600 K. Over 200 steps the gas's net radiative gain is within 2 % of its emission. Reason: the bands' sources and the surfaces' weights cancel exactly in the continuous equations, and 2 % is (c)'s allowance for the discrete ones.
+
+(i) Off is off. With `gasRadiation` 0 the unit suite and the GPU parity phases are bit-identical to the build before.
+
+(j) The unit suite passes unbent with the item on.
+
+(k) The ledger. In both burner runs, at each of the ledger's times, the unexplained remainder, released + pilot − (gas + walls + shell + leak + `radiatedOut`), is no larger in magnitude with the item on than with it off, plus 1 % of the heat released. Reason: the item moves heat between terms the ledger holds; if the remainder grows, heat has gone where the ledger cannot see.
+
+Reported, not judged: the optically thin limit, the solver's Σ_j a_j k_j against RadCal's Planck mean at the same T and M_r; `radFloor`, `radNegative`, `radCapped` and the mean crossings a ray, in every case and in the bench runs; the ceiling's radiative and convective gains in (e).
+
+#### GPU parity
+
+- The item: `tools/flamescapes-gpu-check.mjs` gets a phase `gasRadiation`. (c), (d), (e) and (h) run on the GPU's radiation passes alone. Each passes as on the CPU, and each power is within 0.95 to 1.05 of the CPU's (14.2's ratio, applied to this check). From one state, a step's emitted, gas-absorbed, solid-absorbed and outgoing totals agree with the CPU's within 1 %. Then 200 deterministic steps, with the flow on, of (d)'s 3.0 m cube at 600 K and of the app's design-fire item in (e)'s box: |CPU − GPU| for gas T, ρ and O2 against the one-ulp twin's, as items 5 and 7 reported.
+- The burner runs of (f), (g) and (k) are CPU only: the GPU hands a validation burner to the CPU.
+- The rerun's verdicts on the GPU follow 14.2 as written.
+
+#### Speed (14.6)
+
+Milliseconds a step and run time on Duplex, Office and Clinic, CPU and GPU (`tools/backend-bench.mjs`), with the item on and off, against the build before. If on costs more than 10 % a step on the GPU, it goes behind a switch, and the app states the verdicts found without it when it is off, which means a second full run. The CPU's cost is reported beside it, with the number of emitting gas cells and the mean crossings a ray.
+
+#### Default
+
+Off (`gasRadiation` 0) until (a) to (k) pass and the unit suite passes unbent with it on. Then on, unless 14.6 puts it behind a switch. Made after 13.B began, it gets its own full rerun, reported beside 13.B (13.12, rule 5).
+
+#### What ends this line
+
+If the item fails any of (a) to (k) in any case, it is not made. The gas stays transparent but for its soot, and the app states the verdicts as 13.A and 13.B find them. A failure of (b) alone says that the fit, not the code, departs from RadCal. A second attempt with FDS's default gray gas (RadCal's coefficients at a path length, with FDS's correction in flame cells) would then need another independent reference, since RadCal could no longer serve as one. No second attempt is drafted. It needs the user's word and a new method committed here first.
+
+#### Sources (read, or metadata only)
+
+- FDS 6.11.1, tag FDS-6.11.1, commit ff928dbf68a2623ced3a007be75391c6dc6c9f90, fetched from GitHub raw. Read: `Source/radi.f90` (WSGG constants 3223 to 3270, `KAPPA_WSGG` 5010 to 5049, `A_WSGG` 5054 to 5105, `KAPPA_SOOT` 5108 to 5114, WSGG emission 3973 to 4004, surfaces 4155 to 4163, ambient 3849 to 3858, gray path length 3134, correction 4083); `Source/read.f90` (`RADI` defaults, 10070 to 10118); `Source/cons.f90` (370, 486 to 491); `Source/prec.f90` (40); the Technical Reference Guide's `Radiation_Chapter.tex` and `Appendices.tex` (gas phase absorption coefficients); the User Guide (`FDS_User_Guide.tex` 5879 to 5920); the Verification Guide's radiation cases. The WSGG constants and functions are identical at master 5f8f194.
+- Bordbar, Węcel and Hyppänen (2014). A line by line based weighted sum of gray gases model for inhomogeneous CO2–H2O mixture in oxy-fired combustion. Combustion and Flame 161, 2435 to 2445. doi:10.1016/j.combustflame.2014.03.013. Checked on Crossref; metadata only. Its constants are taken from FDS's source, which cites it.
+- Grosshandler (1993). RADCAL: a narrow-band model for radiation calculations in a combustion environment. NIST Technical Note 1402. doi:10.6028/NIST.TN.1402. Checked on Crossref; read (sections I to III, Table 1, Figs. 1 to 4).
+- RadCal, github.com/firemodels/radcal, commit abe2a8f1e84ef0b3afda73d0c08d5c2e2964e401. Read: `Documentation/Using_RADCAL_Chapter.tex` and `Validation_Tests_Chapter.tex`. Not built or run.
+- Considered, not used, each checked on Crossref, metadata only: Smith, Shen and Friedman (1982), Journal of Heat Transfer 104, 602 to 608, doi:10.1115/1.3245174; Leckner (1972), Combustion and Flame 19, 33 to 48, doi:10.1016/S0010-2180(72)80084-1; Barlow, Karpetis, Frank and Chen (2001), Combustion and Flame 127, 2102 to 2118, doi:10.1016/S0010-2180(01)00313-3.
+
+#### The coordinator's decisions on this draft (2026-11-13, 04:42, before any run of it)
+
+The draft above is the physics agent's, written blind (13.12, rule 2). The coordinator has read 13.A and 13.B's first files, and knows that the rooms read hot, so the decisions below add no constant to the physics and move no tolerance. Each takes the draft's own choice, or the reading that needs no one's word.
+
+**Checked by the coordinator** (apart from the agent, from FDS's sources fetched again at tag FDS-6.11.1, commit ff928db): the 168 numbers of the draft's five tables against `MAKE_WSGG_ARRAYS`, with a parser of the coordinator's own (no mismatch; the two window coefficients are 0 there); `KAPPA_WSGG` and `A_WSGG` as the draft's points 2 and 3 write them, the bounds 0.01 and 4, 1200 K and the window's weight included; the molar ratio, the pressure of the absorbing gases, soot added to every band and the band's source (`radi.f90`, 3990 to 3999); a wall's weights at the adjacent cell's molar ratio (4155 to 4163); `TWENTY_EPSILON_EB` and `P_STP`. In the solver at 550fce5: the gas emits by soot alone above 500 K, a ray skips its own cell, is absorbed by soot alone, is lost uncounted at the grid's edge and is dropped after 40 crossings, and the burner casts its radiant part itself. Three hand calculations were repeated from the coordinator's own transcription and agree: the emissivities at 500 K (0.091, 0.284, 0.537), the thin-limit coefficients (13.4, 11.9, 7.8), and the slab's 2.78 kW/m² against 3.07 kW/m² of convection. Not checked by the coordinator: TN 1402's figures, from which the draft reads its 25 %.
+
+1. **The name.** Item 8 here is the eighth physics item, after 13.11's item 7. The comparison that 13.2 and 13.7 call item 8 (FSE 2008) belongs to another list.
+2. **The reference for (b) is RadCal, as drafted, and nothing replaces it.** This machine has no Fortran compiler. The coordinator tries one route that changes nothing outside a throwaway folder: gfortran from conda-forge, fetched with the micromamba already on the machine into a folder outside the repository, and RadCal at abe2a8f built from its source with it. If RadCal cannot be built that way, (b) waits for the user's word on a compiler. Until (b) has run, the item is not made, its default stays off, and no validation run is made with it on. No port of RadCal and no other reference is taken in its place.
+3. **(b)'s tolerance stands as drafted** (25 %, or 0.01), fixed here before RadCal is built or run. It is the agent's reading of TN 1402's Figs. 3 and 4, made blind.
+4. **The scope stands as drafted.** The flame cells' silence, the uniform starts with the own cell absorbing, and the unlimited reach belong to the item, on only when the item is on. `stats.flameSilenced` shows the size of the first in every run.
+5. **The numerical choices stand:** the gas floor at T_a + 10 K, 8 rays a gas cell, 4096 steps a joule on the GPU. If 14.6's cost calls for fewer rays, a higher floor or a reach limit, that is a new method under 13.12, drafted and committed before it runs.
+6. **The pressure and the ambient weights stand as drafted** (points 1 and 5): P_AMBIENT, as the solver's equation of state has it, and the weights at ambient temperature with the cell's own molar ratio. (h) tests the second.
+7. **A declared limit, kept and measured.** Surfaces keep their 500 K floor, so a wall between ambient and 500 K takes the gas's radiation and returns none. The gas's net loss to such a wall is then overstated: with the gas at 600 K and the wall at 400 K, by the factor (600⁴ − 293.15⁴) / (600⁴ − 400⁴) = 1.18. That bias cools the layer, which is the direction the rooms' reading would welcome, so it is stated here before any run and it is not left unseen: the solver counts what surfaces between T_a + 10 K and 500 K would have emitted (`stats.surfaceFloor`, in J, computed without casting rays, when the item is on), and the check tool and every validation run report it beside `radiated`. It is compared with nothing and decides nothing. A surface floor at T_a + 10 K is a candidate for its own item, drafted blind, and the rerun's reading carries this limit in words until then.
+8. **A surface takes all of each ray and emits at its ε** (0.9 for the inert materials): the solver's present rule, kept. The checks use ε = 1, as drafted.
+9. **The GPU's draws.** The draft could not settle whether the GPU's directions come from the cell's stream or from a hash of its own. Whichever the code has at the base is kept; where the draft says "the same draws in the same order from the same stream", the GPU uses its own stream's draws in that order. Parity is judged on the totals and the powers as drafted, which need no shared draws.
+10. **The base** is `next/calibration-ui` at the commit the item's branch starts from, whose solver is 13.B's (550fce5). "The build before" in (i), (k) and 14.6 is that base.
+11. **The reruns.** Each item made after 13.B began gets its own full rerun on 13.B's base, reported beside 13.B, before any two are combined (13.12, rule 5), so each one's effect is read alone. Their order is set when the builds have reported their checks.
+12. **What ends this line stands as drafted.**
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
