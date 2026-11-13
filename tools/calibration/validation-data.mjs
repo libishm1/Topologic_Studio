@@ -727,8 +727,34 @@ export const FSRI_NOTICE =
  * stratified by several kelvin before each test). Measured channels are
  * kept as 5 s means (the model's are its 1 s readings' means over the same
  * 5 s).
+ *
+ * fsriRoom is the reduction of one test in this room, shared since
+ * 2026-11-13 by `fsri` (the burners) and `fsri-chairs` (plan 15.4): only the
+ * tests, the events that end a run and the fire (`fire`, which returns the
+ * fire's footprint, its solid block, the burner and the fuel) differ.
  */
 async function fsri(sources) {
+  const names = [];
+  for (const fuel of ["100kWSB", "100kW", "250kW", "500kW"]) for (const door of ["Open", "Closed"]) for (const pos of ["Back", "Center", "Corner", "Side"]) for (const n of [1, 2, 3]) names.push(`${fuel}_${door}_${pos}_${n}`);
+  const fire = ({ fuelName, pos, W, D }) => {
+    const side = fuelName === "100kWSB" ? 0.3 : 0.6;
+    const Q = Number(fuelName.replace(/kW.*/, "")) * 1000;
+    const cx = pos === "Corner" || pos === "Side" ? side / 2 : W / 2;
+    const cy = pos === "Corner" || pos === "Back" ? D - side / 2 : D / 2;
+    const foot = [cx - side / 2, cx + side / 2, cy - side / 2, cy + side / 2];
+    return {
+      foot,
+      obst: { xb: [...foot, 0, 0.5], surf: "BURNER" },
+      burner: { centre: [r3(cx), r3(cy)], area: r4(side * side), z0: 0.5, peakW: Q, hrrW: [[0, 0], [10, Q], [1e6, Q]], ramp: `the gas flow's setting, ${Q / 1000} kW (calibrated by oxygen consumption calorimetry, Data in Brief section 2), from ignition; here a 10 s linear rise`, radiantFraction: FDS_DEFAULT_RF.METHANE, radiantSource: "FDS's default for METHANE (0.20; no FDS input)" },
+      co2PerJ: CO2_PER_J.methane,
+      fuel: testFuel("methane", 0, null, "natural gas as methane, no soot (as the NIST methane inputs)"),
+    };
+  };
+  const reduced = await fsriRoom(sources, { label: "fsri", names, stop: /burner off|door|fan/i, fire });
+  return { dataset: "fsri", ...reduced, notice: FSRI_NOTICE };
+}
+
+async function fsriRoom(sources, { label, names, stop, fire }) {
   const listing = await fetchFile("fsri", "01_Data/README.md");
   sources.push(listing.source);
   // The material properties: marinite and gypsum from NIST's WTC input, concrete from ATF's.
@@ -736,8 +762,6 @@ async function fsri(sources) {
   const atfGeo = readGeometry((await fetchFile("fds", "Validation/ATF_Corridors/FDS_Input_Files/ATF_Corridors_050_kW.fds")).text);
   const wall = surfaceMaterial({ ...wtcGeo, surfs: { ...wtcGeo.surfs, "FSRI WALL": { matl: ["MARINITE", "GYPSUM"], thickness: [0.013, 0.016] } } }, "FSRI WALL");
   const floor = surfaceMaterial(atfGeo, "CONCRETE FLOOR");
-  const names = [];
-  for (const fuel of ["100kWSB", "100kW", "250kW", "500kW"]) for (const door of ["Open", "Closed"]) for (const pos of ["Back", "Center", "Corner", "Side"]) for (const n of [1, 2, 3]) names.push(`${fuel}_${door}_${pos}_${n}`);
   const W = 3.66, D = 3.66, H = 2.44, STEP = 5;
   const below = ["25 mm", "0.3 m", "0.6 m", "0.9 m", "1.2 m", "1.5 m", "1.8 m", "2.1 m"];
   const depth = (b) => (b === "25 mm" ? 0.025 : Number(b.split(" ")[0]));
@@ -760,7 +784,7 @@ async function fsri(sources) {
     if (!ign) throw new Error(`FSRI ${name}: no ignition`);
     const table = csv(m.text);
     const t = table.rows.map((r) => r[table.col("Time")]);
-    const stops = events.filter((e) => e !== ign && /burner off|door|fan/i.test(e.e)).map((e) => e.t - ign.t);
+    const stops = events.filter((e) => e !== ign && stop.test(e.e)).map((e) => e.t - ign.t);
     const horizon = Math.floor(Math.min(900, Math.max(...t), ...stops));
     if (horizon < 120) {
       left.push(`${name}: run ${horizon} s (${events.map((e) => e.e).join(", ")})`);
@@ -790,11 +814,12 @@ async function fsri(sources) {
       if (i >= 0) table.rows.forEach((r, k) => t[k] >= -60 && t[k] <= 0 && valid(r[i]) && pre.push(r[i]));
     }
     const ambientC = r3(pre.reduce((a, b) => a + b, 0) / pre.length);
-    const side = fuelName === "100kWSB" ? 0.3 : 0.6;
-    const Q = Number(fuelName.replace(/kW.*/, "")) * 1000;
-    const cx = pos === "Corner" || pos === "Side" ? side / 2 : W / 2;
-    const cy = pos === "Corner" || pos === "Back" ? D - side / 2 : D / 2;
-    const foot = [cx - side / 2, cx + side / 2, cy - side / 2, cy + side / 2];
+    const F = fire({ name, fuelName, pos, W, D, times, series });
+    if (F.skip) {
+      left.push(`${name}: ${F.skip}`);
+      continue;
+    }
+    const foot = F.foot;
     const out = { times, trees: {}, points: {}, head: {} };
     const treeSpecs = [], points = [];
     for (const [q, [x, y]] of Object.entries(quads)) {
@@ -847,15 +872,15 @@ async function fsri(sources) {
     tests.push({
       id: name,
       source: `01_Data/${name}.csv`,
-      geometry: { meshes: [[0, W, 0, D, 0, H]], obsts: [{ xb: [...foot, 0, 0.5], surf: "BURNER" }], holes: [], open: open ? [{ xb: [2.44, 3.34, 0, 0, 0, 2.0] }] : [], tmpa: ambientC },
+      geometry: { meshes: [[0, W, 0, D, 0, H]], obsts: [F.obst], holes: [], open: open ? [{ xb: [2.44, 3.34, 0, 0, 0, 2.0] }] : [], tmpa: ambientC },
       ventilation: open ? "door open (0.9 m x 2.0 m)" : "door shut (the room sealed here; its leakage was not measured)",
       sealedByDesign: !open,
       ambientC,
       horizon,
       events: events.map((e) => `${e.e} @ ${Math.round(e.t - ign.t)} s`),
-      burner: { centre: [r3(cx), r3(cy)], area: r4(side * side), z0: 0.5, peakW: Q, hrrW: [[0, 0], [10, Q], [1e6, Q]], ramp: `the gas flow's setting, ${Q / 1000} kW (calibrated by oxygen consumption calorimetry, Data in Brief section 2), from ignition; here a 10 s linear rise`, radiantFraction: FDS_DEFAULT_RF.METHANE, radiantSource: "FDS's default for METHANE (0.20; no FDS input)" },
-      co2PerJ: CO2_PER_J.methane,
-      fuel: testFuel("methane", 0, null, "natural gas as methane, no soot (as the NIST methane inputs)"),
+      burner: F.burner,
+      co2PerJ: F.co2PerJ,
+      fuel: F.fuel,
       // Walls and ceiling: 13 mm marinite on 16 mm type X gypsum (properties from NIST's WTC input); the floor:
       // concrete (ATF's input). Not matched: the floor's 13 mm cement board and the burner's steel frame (a solid block here).
       materials: { slots: [wall, floor], rules: [{ slot: 1, floor: true }] },
@@ -867,10 +892,10 @@ async function fsri(sources) {
       measured: out,
     });
   }
-  if (left.length) console.log(`fsri: left out: ${left.join("; ")}`);
+  if (left.length) console.log(`${label}: left out: ${left.join("; ")}`);
   const off = tests.filter((T) => T.doorBalance && !T.doorBalance.usable);
-  if (off.length) console.log(`fsri: door probes left out by the door-probe rule: ${off.map((T) => `${T.id} (${T.doorBalance.outOverIn})`).join(", ")}`);
-  return { dataset: "fsri", tests, notice: FSRI_NOTICE, leftOut: left };
+  if (off.length) console.log(`${label}: door probes left out by the door-probe rule: ${off.map((T) => `${T.id} (${T.doorBalance.outOverIn})`).join(", ")}`);
+  return { tests, leftOut: left };
 }
 
 /**
@@ -885,6 +910,87 @@ export const FSRI_CHAIR_TESTS = [
   "Overstuffed_Open_Center_1",
   ...[1, 2, 3].map((n) => `Overstuffed_Open_Corner_${n}`),
 ];
+
+/**
+ * What plan 15.4 leaves open for `fsri-chairs`: each is set below to the value recommended here (2026-11-13),
+ * and stays a recommendation until the plan records it before any run. Kept in the reduced file; the suite
+ * prints them when it loads the series.
+ */
+const FSRI_CHAIRS_OPEN = [
+  "1. The items' size and place: the chair 0.685 x 0.755 m and the sofa 2.19 x 0.94 m (read off Willi et al. 2023, Fig. 4); a solid block over each footprint up to 0.445 m (the chair's seat top, 17.0 + 14.0 + 13.5 cm; the sofa's seat height is not dimensioned and is taken as the chair's); Corner against the left and back walls, Back against the back wall at its middle (the sofa's Back tests in the corner place, as section 2.2 says), Center at the room's centre.",
+  "2. The fire's shape: the suite's itemBurner burns a disk of the footprint's area on the footprint's centre from ignition, not the rectangle and not a fire spreading from the matchbook; for the sofa the disk (radius 0.81 m) reaches past its front edge. Recommended: keep it (what the app does) and report it as a known mismatch.",
+  "3. The prescribed heat release: the record's 5 s means from ignition, negative means set to 0, a missing mean from its neighbours, no shift for the hood's delay (as 15.5 took the record). Alternative: shift it earlier by the hood's delay estimated from the 250 and 500 kW burner tests' rise after ignition.",
+  "4. The radiant fraction: 0, the app's design-fire burner (the solver's own radiation from the sooty flame cells), since 15.4 asks for what the app would use. Alternative: 12.9 amendment 8's rule for the other series, the test fuel's radiant fraction along rays (FDS's default for a fuel without an input file, 0.35).",
+  "5. The fuel: the app's class A fuel taken from the solver's own fireClasses.js at the run (the data carry no fuel), so 'as it stands' means at the run.",
+  "6. The run and the windows: fsri's (ignition to the first of Suppression, a door or fan event, the file's end and 900 s; layer depth from 120 s; the neutral plane and the door-probe rule over the run's last 180 s). The chairs peak near 320 to 375 s and decay, so the last 180 s are the decay. Alternative: the neutral plane and the door-probe rule over the 180 s centred on each test's measured peak.",
+  "7. O2 under 14.7 and 14.8: the same analysers as fsri, so UL FSRI's stated 12 % (species-readings.mjs STATED).",
+  "8. The cells: fsri's (0.20, 0.27 and 0.34 m, none skipped).",
+];
+
+/**
+ * fsri-chairs (plan 15.4; prepared 2026-11-13, not run): UL FSRI's open-door chair tests with a heat release
+ * record, held out. The room, its instruments, the ambient, the 5 s means, the compared quantities and their
+ * windows and the door-probe rule are fsri's (fsriRoom). The fire is the test's measured heat release,
+ * prescribed, at the item's place and footprint (FSRI_CHAIRS_OPEN 1 to 3). The fuel is the app's class A fuel
+ * as it stands: the tests carry no fuel and no CO2 per joule, so the suite takes fireClasses.js's class A fuel
+ * from the solver it runs, and the burner keeps the app's radiant fraction (0). Nothing is fitted.
+ *
+ * The items (Willi et al. 2023, section 2.2): the Red Accent Chair (about 20 kg) and the Overstuffed Sofa (about
+ * 49 kg), each with its back to the back wall, lit by an electric matchbook on the seat cushion.
+ */
+async function fsriChairs(sources) {
+  const ITEMS = {
+    RedAccent: { width: 0.685, depth: 0.755, seat: 0.445, label: "the Red Accent Chair" },
+    Overstuffed: { width: 2.19, depth: 0.94, seat: 0.445, label: "the Overstuffed Sofa" },
+  };
+  const fire = ({ fuelName, pos, W, D, times, series }) => {
+    const item = ITEMS[fuelName];
+    const kW = series("Heat Release Rate", 1, Number.isFinite);
+    if (!kW) return { skip: 'no heat release record (no "Heat Release Rate" column)' };
+    const byLeftWall = pos === "Corner" || (pos === "Back" && fuelName === "Overstuffed");
+    const cx = byLeftWall ? item.width / 2 : W / 2;
+    const cy = pos === "Center" ? D / 2 : D - item.depth / 2;
+    const foot = [cx - item.width / 2, cx + item.width / 2, cy - item.depth / 2, cy + item.depth / 2].map(r3);
+    // The 5 s means from ignition, kW to W; a missing mean from its neighbours (held at either end); negative to 0.
+    const from = times.indexOf(0);
+    const s = times.slice(from), q = kW.slice(from);
+    const known = q.map((v, k) => (v == null ? -1 : k)).filter((k) => k >= 0);
+    if (!known.length) return { skip: "no heat release reading after ignition" };
+    const filled = q.map((v, k) => {
+      if (v != null) return v;
+      const a = known.filter((x) => x < k).pop(), b = known.find((x) => x > k);
+      if (a == null) return q[b];
+      if (b == null) return q[a];
+      return q[a] + ((q[b] - q[a]) * (k - a)) / (b - a);
+    });
+    const hrrW = s.map((t, k) => [t, Math.round(Math.max(0, filled[k]) * 1000)]);
+    const filledCount = q.filter((v) => v == null).length;
+    return {
+      foot,
+      obst: { xb: [...foot, 0, item.seat], surf: "CHAIR" },
+      burner: {
+        centre: [r3(cx), r3(cy)],
+        area: r4(item.width * item.depth),
+        z0: item.seat,
+        peakW: Math.max(...hrrW.map((x) => x[1])),
+        hrrW,
+        ramp: `the record's heat release (oxygen consumption under the laboratory's hood) as 5 s means from ignition, negative means set to 0${filledCount ? `, ${filledCount} missing means from their neighbours` : ""}, no shift for the hood's delay; ${item.label} over its footprint`,
+        radiantFraction: null,
+        radiantSource: "none given: the app's design-fire burner (radiant fraction 0; the solver's own radiation from the sooty flame cells)",
+      },
+      co2PerJ: null,
+      fuel: null,
+    };
+  };
+  const reduced = await fsriRoom(sources, { label: "fsri-chairs", names: FSRI_CHAIR_TESTS, stop: /suppression|door|fan/i, fire });
+  return {
+    dataset: "fsri-chairs",
+    ...reduced,
+    notice: `${FSRI_NOTICE.split(" Changed here")[0]} Changed here (2026-11-13): reduced to 5 s means of the compared channels and of the heat release from 60 s before ignition to the end of the compared run, and the trees' layer by Janssens and Tran's method.`,
+    heldOut: "held out (fire-calibration-plan-2026-11-11.md, section 15.4): never run before its open choices are recorded in the plan, and never used to fit anything",
+    openChoices: FSRI_CHAIRS_OPEN,
+  };
+}
 
 /**
  * UL/NIST vents (NIST's Fire Fighting Technology Group at UL, 2012; plan 13.2
@@ -1115,6 +1221,13 @@ DATASETS.fsri = {
   reference: "Willi, J., Madrzykowski, D., McKinnon, M. and Dow, N. (2023). Experimental data from compartment fires with gas burner and upholstered furniture fuels. Data in Brief 47, 108934. doi:10.1016/j.dib.2023.108934 (data: doi:10.5281/zenodo.5703475)",
 };
 
+// Added 2026-11-13 (plan 15.4): prepared and held out; not run until FSRI_CHAIRS_OPEN is recorded in the plan.
+DATASETS["fsri-chairs"] = {
+  run: fsriChairs,
+  title: "UL FSRI 2018 compartment fires: one upholstered chair (about 20 kg) or sofa (about 49 kg) in the 3.66 x 3.66 x 2.44 m room, door open, its measured heat release prescribed (UL FSRI)",
+  reference: DATASETS.fsri.reference,
+};
+
 DATASETS.atf = {
   run: atf,
   title: "ATF corridors: two corridors joined by a stairwell, natural gas 48 to 485 kW (ATF Fire Research Laboratory, 2008)",
@@ -1148,7 +1261,8 @@ async function main() {
       ...(reduced.leftOut ? { leftOut: reduced.leftOut } : {}),
       generated: new Date().toISOString().slice(0, 10),
       tool: "tools/calibration/validation-data.mjs",
-      heldOut: "never used to fit any solver parameter (fire-calibration-plan-2026-11-11.md, section 12)",
+      heldOut: reduced.heldOut || "never used to fit any solver parameter (fire-calibration-plan-2026-11-11.md, section 12)",
+      ...(reduced.openChoices ? { openChoices: reduced.openChoices } : {}),
       sources: sources.filter((s, q) => sources.findIndex((x) => x.path === s.path && x.repo === s.repo) === q),
       tests: reduced.tests,
     };
