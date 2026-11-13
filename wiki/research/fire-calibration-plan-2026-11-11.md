@@ -2154,6 +2154,132 @@ Not checked: where the GPU path starts its rays (the two paths are held to the s
 
 **Item 8 stays not made.** Nothing here changes 13.23.
 
+### 13.27 13.B complete on the three cells, beside 13.A (2026-11-13, 09:13)
+
+13.25 and 13.26 are held for the two surface items in draft (13.24).
+
+Solver 550fce5 (pinned from git), walls in layers, `--leakage`, eight series, 178 runs on each cell size. Files, per cell (`034`, `027`, `020`):
+- 13.B default leak, as it first ran: `benchmark/results/2026-11-13-validation-13b-<cell>.json`;
+- 13.B sealed, 13.16's correction merged over it: `benchmark/results/2026-11-13-validation-13b-<cell>-sealed.json` (the reruns alone in `-sealed-runs.json`);
+- 13.A beside it: 13.14's files.
+
+Each word below is the strictest of 13.B's readings: 12.6 and the protocol's section 4, each unweighted and weighted, every run and the 2026-11-12 rule; default leak and sealed (13.16); eight series and nine (15.8, 15.9). 13.A's word is in brackets where it differs. The figures are the default leak's, eight series, every run, unweighted, unless a line says otherwise.
+
+| Quantity | 0.20 m | 0.27 m | 0.34 m |
+| --- | --- | --- | --- |
+| Smoke layer depth | calibrated: 6 of 7 series, two laboratories, pooled 1.00 / 0.14 | **indicative** by the sealed reading (6 of 7, 1.05 / 0.23); default leak calibrated, 7 of 7, three laboratories, 1.05 / 0.12 (13.A: calibrated) | calibrated: 5 of 7, two laboratories, 1.11 / 0.14 |
+| Layer temperature | indicative: 2 of 7, one laboratory, 1.35 / 0.29 | not calibrated: 3 of 7, 1.40 / 0.39, weighted 1.37 / 0.65 | not calibrated: 3 of 7, 1.48 / 0.37, weighted 1.40 / 0.53 |
+| Ceiling jet | indicative: 2 of 6, 1.37 / 0.33 | not calibrated: 2 of 6, 1.45 / 0.53 | not calibrated: 2 of 6, 1.42 / 0.48, weighted 1.21 / 0.55 |
+| Gas temperature at head height | **not calibrated**: 2 of 7, 1.37 / 0.34, weighted 1.54 / 0.42 (13.A: indicative) | not calibrated: 3 of 7, 1.33 / 0.38, weighted 1.53 / 0.51 | not calibrated: 3 of 7, 1.56 / 0.38 |
+| Neutral plane | **calibrated**: 3 of 4, two laboratories, 0.90 / 0.12 (13.A: indicative, 2 of 3) | indicative: 2 of 4, two laboratories, 0.89 / 0.17 | **not calibrated** with the ninth series (15.9); eight series indicative, 1 of 4, 0.77 / 0.27, weighted 0.67 / 0.32 (13.A: indicative) |
+| Door and vent velocity | not calibrated: 0 of 5, 0.98 / 0.59 | not calibrated: 0 of 5, 1.20 / 0.71 | not calibrated: 0 of 5, 1.76 / 1.19 |
+| CO2 | indicative, one laboratory: 1 of 3, 1.18 / 0.20 | indicative, one laboratory: 1 of 3, 1.32 / 0.28 | not calibrated: 1 of 3, 1.49 / 0.32 |
+| O2 | not calibrated | not calibrated | not calibrated |
+| Smoke obscuration, soot | not calibrated | not calibrated | not calibrated |
+| Door mass flow | one series (NIST/NRC, 1.11 / 0.08) | one series (0.98 / 0.08) | one series (0.91 / 0.08) |
+
+Four words differ from 13.A's: layer depth on 0.27 m and head height on 0.20 m fall, the neutral plane rises on 0.20 m and falls on 0.34 m. 13.5 stands: both are reported, and the app states 13.B's words with 13.A's beside them.
+
+**What the series show.**
+
+- **The walls in layers did not cool the hot rooms. Every room reads warmer.** 13.14 named the layered walls as the first candidate for the hot reading in the small lined rooms, and 13.B tests it. In every series on every cell the model's layer rise is higher in 13.B than in 13.A (median of the runs' ratios 1.01 to 1.17). The layer temperature's δ, 13.A → 13.B:
+
+  | Series | 0.20 m | 0.27 m | 0.34 m |
+  | --- | --- | --- | --- |
+  | NIST/NRC | 0.93 → 1.00 | 0.92 → 0.99 | 0.99 → 1.08 |
+  | WTC | 0.92 → 1.02 | 1.02 → 1.06 | 1.10 → 1.11 |
+  | Steckler | 1.31 → 1.38 | 1.11 → 1.15 | 1.15 → 1.18 |
+  | NBS | 0.70 → 0.81 | 1.08 → 1.16 | 0.87 → 1.03 |
+  | ATF | 1.23 → 1.35 | 1.66 → 1.65 | 0.99 → 1.07 |
+  | UL FSRI | 1.38 → 1.41 | 1.32 → 1.48 | 1.58 → 1.62 |
+  | UL/NIST | 1.91 → 1.98 | 1.80 → 1.85 | 2.07 → 2.16 |
+
+  The large NIST rooms, which read a little cold, moved to the middle of the band. The small lined rooms, which read hot, read hotter. The pooled δ rose from 1.30 to 1.35 on 0.20 m, 1.27 to 1.40 on 0.27 m and 1.43 to 1.48 on 0.34 m. A wall in layers has a surface that warms sooner than a lumped cell's mean, so it takes less heat. That is the more faithful wall, and the hot reading is not the lumped wall's doing.
+- **Head height on 0.20 m falls to not calibrated** for the same reason: the weighted pooled δ crossed 1.5 (1.48 to 1.54). Steckler's own figure went from 1.48 / 0.22 to 1.54 / 0.21. NIST/NRC came into band there (0.80 to 0.87) and WTC moved to 0.99.
+- **Layer depth holds.** Pooled δ 1.00, 1.05 and 1.11, with a scatter of 0.12 to 0.14 on the default leak. On 0.27 m the sealed reading is indicative with every run and calibrated with the 2026-11-12 rule: Steckler's tests 10, 114 and 514, whose 0.24 m door the grid closes, fill with smoke when the room truly has no leak, and Steckler's scatter with every run goes from 0.12 to 0.66 (1.15 / 0.11 over the 52 runs the rule keeps). 12.6's addendum gives the rule's word to the app. The stricter word is kept here, as 13.16's point 3 has it, because the choice came after the result. It is the one place in 13.B where every run and the rule disagree.
+- **The neutral plane is calibrated on 0.20 m,** in all four readings, with every run and with the rule. In band: Steckler 0.94 / 0.07 (52 pairs), NIST/NRC 0.84 / 0.17 (15) and UL FSRI 0.87 / 0.11 (36), three rooms and doors from two laboratories; UL/NIST 0.74 / 0.05 (2) is indicative. Pooled 0.90 / 0.12 over 105 pairs, weighted 0.89 / 0.17. Stated with it:
+  - 13.A's file for that cell holds no NIST/NRC door probes (13.14: 2 of 3 series, door mass flow not run). The word changed because a third series is read there, not because the solver changed: Steckler and UL FSRI are within 0.02 of their 13.A figures.
+  - The plane's height is calibrated where the door's velocities are not (0 of 5 series). A height at which the flow turns says nothing of how fast it flows.
+  - On 0.27 m the word is indicative (2 of 4; NIST/NRC 0.72 / 0.23), and on 0.34 m not calibrated (15.9). The plane is too low wherever it is out of band.
+- **Door and vent velocity: no series in band on any cell.** On 0.20 m Steckler reads 0.72 / 0.08, NIST/NRC 1.10 / 0.39, UL FSRI 1.10 / 0.41, WTC 0.51 / 0.67 and UL/NIST 1.65 / 0.67. Door mass flow in NIST/NRC is in band on every cell, and one series carries no word.
+- **CO2** is in band in NIST/NRC only (1.09 / 0.08 on 0.20 m); WTC reads 1.37 / 0.27, and FSE has a stopped run on 0.20 m. The three readings of 14.7 and 14.8 agree for it.
+- **O2 is not calibrated on every reading of 14.7 and 14.8** (`tools/calibration/species-readings.mjs`, the strictest of its six), on every cell and both leak readings. All pairs pooled read 3.67 / 0.93, 4.01 / 0.99 and 10.25 / 1.42 on 0.20, 0.27 and 0.34 m, which is UL FSRI's analysers reading almost no drop (13.14). With the floor of 0.005: 1.52 / 0.27, 1.48 / 0.21 and 1.92 / 0.41 on the default leak, and 1.31 / 0.41, 1.22 / 0.35 and 1.66 / 0.56 sealed. With each series' own figure: 1.38 / 0.24, 1.43 / 0.21 and 1.57 / 0.31, and 1.08 / 0.34, 1.07 / 0.32 and 1.22 / 0.43 sealed. NIST/NRC alone is in band on 0.20 m (1.19 / 0.08) and 0.27 m (1.16 / 0.08). The sealed closed rooms read nearer in the mean and wider in scatter, and neither is the room as tested (13.16).
+- **Smoke obscuration** (NIST/NRC alone) fell from 1.74 to 1.62, 1.76 to 1.63 and 1.77 to 1.64, with a scatter of 0.37 to 0.38: still not calibrated. Soot (FSE, two pairs) is unchanged.
+
+**13.16's open line: the leak departure on 0.20 m.** Of 178 runs, 11 state a leak, 118 state none and leaked nothing, and 49 state none and leaked: NBS 100O (21.75 kg), the 45 UL FSRI closed-door runs (11.46 to 23.38 kg, median 14.87) and Steckler 10, 114 and 514 (9.15 to 10.26 kg). 52 runs were run again: the 49, and the control, Steckler 11, 144 and 544. The control's pairs are identical to the first file's. None of the 49 leaked, none stopped and none failed the health guard. **On 0.20 m no word differs between the two leak readings,** and on 0.34 m none does either. Layer depth on 0.27 m is the only word 13.16 moved.
+
+**The ninth series on 0.20 m,** which 15.9 left open. With `fsri-chairs` merged over each leak reading, every word is the same as with eight but one. Head height reads indicative with nine on the default leak (pooled 1.32 / 0.37 over 1249 pairs, weighted 1.00 / 0.50) and not calibrated with nine sealed (1.33 / 0.38, weighted 1.01 / 0.50). As on the coarser cells, it rises only because a cold series is pooled with hot ones, and the series in band stay at two. Not calibrated stands. The neutral plane is calibrated with nine as with eight (4 of 5 in band, the chairs 0.85 / 0.08; pooled 0.89 / 0.11 over 118 pairs).
+
+**Stops and health.** No run stopped on 0.27 m or 0.34 m, in 13.A or 13.B. On 0.20 m FSE's ISONG3 stopped on the speed check again, at 52 s and 55 m/s (13.A: 76 s, 50.6 m/s), so FSE is out of band there for all it measures. Substeps: median 3 and at most 7 on 0.20 m, 2 and 5 on the coarser cells. On 0.34 m six UL FSRI runs have the burner's base moved by the grid, the same six as in 13.A.
+
+**Cost.** The median over the 178 matched runs of a run's seconds in 13.B over 13.A is 1.14 on 0.20 m, 1.04 on 0.27 m and 1.05 on 0.34 m. By series on 0.20 m: Steckler 0.87, NBS 1.10, NIST/NRC 1.18, WTC 1.02, ATF 1.58, UL FSRI 1.49, UL/NIST 0.70, FSE 0.85. The two campaigns ran with different numbers of jobs beside other work, so this is a rough figure and not a bench. The 13.B files took 5.9 h, 1.4 h and 0.5 h at 8 jobs.
+
+**The heat ledger, read as 13.15 named it.** The walls' share of the heat released over the compared window, the solver's against the share the McCaffrey, Quintiere and Harkleroad correlation implies, for the three series the correlation fits (one room, one open door). Medians; Steckler over the runs the grid represents.
+
+| Series | Cell | Walls' share, solver | MQH | Solver / MQH | Model rise / MQH | MQH rise / measured |
+| --- | --- | --- | --- | --- | --- | --- |
+| UL/NIST | 0.20 m | 0.37 | 0.75 | 0.52 | 1.80 | 1.08 |
+| UL/NIST | 0.27 m | 0.35 | 0.72 | 0.52 | 1.67 | 1.08 |
+| UL/NIST | 0.34 m | 0.38 | 0.78 | 0.51 | 1.95 | 1.08 |
+| UL FSRI, door open | 0.20 m | 0.47 | 0.72 | 0.70 | 1.59 | 0.97 |
+| UL FSRI, door open | 0.27 m | 0.42 | 0.66 | 0.65 | 1.54 | 0.97 |
+| UL FSRI, door open | 0.34 m | 0.56 | 0.78 | 0.69 | 1.72 | 0.97 |
+| Steckler | 0.20 m | 0.25 | 0.45 | 0.60 | 1.16 | 1.12 |
+| Steckler | 0.27 m | 0.18 | 0.26 | 0.72 | 0.99 | 1.12 |
+| Steckler | 0.34 m | 0.26 | 0.31 | 0.83 | 1.00 | 1.12 |
+
+The correlation gives the measured rise within 3 to 12 % in the median in all three. In the two rooms that read hottest, the solver's walls take half to seven tenths of the share the correlation implies, and the model's rise is 1.5 to 2 times the correlation's. In Steckler's room the walls matter less (most of the heat leaves by the door), and the model's rise is near the correlation's on the coarser cells. So where the layer reads hot, the walls take too little heat, with the walls in layers as with lumped walls. The ledger's unexplained remainder at the end of a run is 2 to 13 % of the heat released in the median by series (on 0.20 m: UL/NIST 7 %, with one run at 26 %; UL FSRI with the door open 3 %; Steckler 7 %). That is small beside the differences in the two UL rooms, and of the size of Steckler's on 0.27 m. This is the model's own account against a correlation: a diagnosis, in no statistic, and it names no cause. Two things known since bear on the walls' gain and are not judged by it: the gas radiates only by its soot (item 8 is not made, 13.23), and a surface's rays start at its cell's centre (13.24).
+
+**What is not concluded.**
+- Nothing here is fitted, and no constant changes for it.
+- Neither leak reading is the closed rooms as tested (13.16).
+- The words hold on their cells, for the fires and rooms the series cover (12.6). The neutral plane's word on 0.20 m is not a word for 0.27 m or 0.34 m.
+- Items made or attempted after 13.B began (6, 8, 9, and the surface items) are not in these figures. Each that is made gets its own full rerun, reported beside 13.B (13.12, rule 5).
+
+The comparison tables behind this section are a reading of committed files and are not committed. `node tools/calibration/validation-suite.mjs --summary` on each file prints its statistics and words, `--merge` with the chairs' file gives the nine-series reading (15.9), and `tools/calibration/species-readings.mjs` gives the O2 and CO2 readings.
+
+### 13.28 Item 6, attempt 4: the result (2026-11-13, 09:14)
+
+**Attempt 4 fails. Item 6 is not made, and extinction stays off** (13.18, "Default" and "What ends this line"). Check (f) fails: with extinction on, the class B pool releases 838.5 J in 10 s, and the test asks for more than 100 kJ. Check (h) fails because (f) does. Every other check passes, test 2 as it stands among them. The closed rooms' oxygen and the closed-door UL FSRI tests stand as 13.B reports them (13.27).
+
+The build is on branch `flamescapes/extinction-attempt4` at d05dda3, from fe93150. It is a record and is not merged. Its default is `extinction: 0`, with `freeBurnTemperature: 600`. It changes `flamescapes.js`, `flamescapesGpu.js` and `flamescapesGpu/kernels.js`, adds `flamescapes.extinction.test.mjs` and `tools/calibration/extinction-report.mjs`, and adds an `extinction` phase to `tools/flamescapes-gpu-check.mjs`.
+
+The coordinator ran the failing case again on that commit (`node tools/calibration/extinction-report.mjs --parts pool`) and got the agent's figures: 0.8 kJ with extinction on, 168.4 kJ with it off, one cell put out in 97 of the 100 steps, its vapour up to 0.667 by mass. The other checks are the agent's and were not repeated, since nothing is merged.
+
+| Check | Limit (13.18) | Measured | Verdict |
+|---|---|---|---|
+| (a) the box's oxygen at the stop against the cells' mean threshold | within 0.5 % by volume | 12.807 % against 13.039 %: −0.232 % | passes |
+| (b) each cell that burned against its own threshold | within 0.1 % by volume | 1 cell, 0.028 % | passes |
+| (c) differs from extinction off | must differ | on: stops at 465.5 s, 9.239 MJ; off: 1268.8 s, 25.369 MJ | passes |
+| (d) the criterion against FDS's closed form | lives at Y_lim (1 + 10⁻⁴), out at Y_lim (1 − 10⁻⁴); lives above T_fb | 72 cases (3 fuels, 3 compositions, 8 temperatures), all as required | passes |
+| (e) the oxygen index at 20 °C | lives at X_OI (1 + 10⁻⁴), out at X_OI (1 − 10⁻⁴) | 6 cases, all as required | passes |
+| (f) the class B pool with extinction on | every class above 100 kJ in 10 s | class B: 838.5 J | **fails** |
+| (g) off is off | bit for bit against the base | 16 of 16 state hashes equal over four scenes; the GPU check's agreement, design, zones and manyzones phases identical; unit suite 541 of 541 | passes |
+| (h) the unit suite with extinction on by default | all pass, unbent | 539 of 541: (f), and a wall-clock test | **fails** |
+| Test 2, as it stands (default leaks) | released below 0.8 of the heat asked | 0.3264 with extinction on, 0.4541 off | passes |
+| GPU parity, heat released, GPU over CPU | 0.95 to 1.05 at each read | closed room 1.0000 to 1.0139 on, 0.9994 to 1.0000 off; class B pool 0.9999 to 1.0000 | passes |
+| Speed (14.6) | on costs at most 10 % a step on the GPU | not measured cleanly | inconclusive |
+
+- **(f) fails as the method said it could.** Model 1 has no term for the fuel, but it takes the oxygen mass fraction over the whole cell's gas, so vapour dilutes it (13.18, the method's item 4: a cell of air and vapour is put out above about 35 % vapour by mass at 20 °C). The pool's own cell holds up to 67 % vapour and is put out in 97 steps of 100. Attempt 3 failed the same test by another route, the vapour counted as a heat sink. Two criteria taken from FDS as FDS writes them put out this solver's pool cell.
+- **(d) and (e) can fail.** The agent ran five mutants, each caught: Y_OI with FDS's molar masses, oxygen by volume, the vapour left out of the oxygen fraction, the free-burn cut moved by 2 K, and every fuel on the default values.
+- **(h)'s second failure is not the solver's.** "200 heads and 1000 obstructions stay well under 100 ms" (`sprinklerObstructions.test.mjs`) compares wall-clock times. Its code is the same in every copy and it imports no solver code. It failed on the untouched base too (105.0 ms), passed on the build with extinction off (76.6 ms) and failed with it on (106.1 ms), while other jobs ran on the machine. (h) fails on (f) with or without it.
+- **Test 2, four ways** (released over asked, 150 s): default leaks 0.3264 on and 0.4541 off; no leaks 0.5646 on and 0.5646 off. With no leaks the two are identical: the room's oxygen runs out only in cells above 600 °C, where model 1 does not act. So under model 1 test 2 passes as it stands, and its setup did not decide this attempt.
+- **Speed.** The bench rounds ran beside two validation jobs and another agent's unit suite, at one member and 60 s, where no cell is put out. No median showed a cost above 4.1 % a step, and the noise was larger than the limit. It is not a result.
+
+**Reported, not judged** (13.18):
+- The copied box on other cells: on 0.20 m, (a) −0.220 % and (b) 0.015 %, stopping at 478.0 s against 1305.2 s; on 0.34 m, (a) −0.209 % and (b) 0.019 %, 468.4 s against 1282.3 s.
+- The app's models over 120 s, one run each, as a direction only: extinction cuts the Duplex fire's heat from 11.0 to 8.5 MJ and leaves the Office's and the Clinic's unchanged.
+
+**Where 13.18 was unclear, and what the agent took:** the GPU phase sets `extinction: 1` itself and reads back the GPU's heat released; the class B case runs with the CPU fallback disabled; (d) ran three compositions (no vapour, 1.5 and 3 times); the boxes on other cells keep their size to the nearest whole cell; the vapour share is read at the start of the chemistry stage; attempt 3's test "off, and in fresh air, burners burn as before" is kept. None changes a verdict.
+
+**Not run:** the whole GPU check, the bench at its defaults or on Vienna, a speed measurement on a quiet machine, and the app's build.
+
+**What follows** (13.18, "What ends this line"):
+- An attempt 5 may be drafted: FDS's model 2 on the stoichiometric pair, in which a rich cell's excess vapour is not a diluent. That is the cause (f) names.
+- It is not drafted now. Its burner is attempt 3's, which failed test 2 with the default leaks, so it waits on the user's decision on test 2's setup: a stated `leakage: []`, with a second test whose bound is derived for a room that leaks (13.18, "The burner's sealed-room test"). The four shares above go to the user with that proposal.
+- If attempt 5 is drafted and fails, item 6 ends.
+- Any further attempt needs a speed measurement on a quiet machine.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
