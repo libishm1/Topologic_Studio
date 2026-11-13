@@ -75,5 +75,27 @@
     "source": "https://github.com/buildingsmart-community/Community-Sample-Test-Files",
     "licence": "CC-BY-4.0",
     "bytes": 13003205
+  },
+  {
+    "id": "kit-ac20-institute",
+    "name": "Institute building (KIT)",
+    "file": "kit-ac20-institute.ifc",
+    "description": "KIT's office test building on five levels, from the basement to the attic: 82 spaces, 77 doors and four stairs. Its graph has about 12,500 nodes.",
+    "credit": "AC20-Institute-Var-2 (\"Phantasy Office Building\", ArchiCAD 20, IFC4), KIT IFC Examples, Institute for Automation and Applied Informatics (IAI), Karlsruhe Institute of Technology (KIT), 2017.",
+    "source": "https://www.ifcwiki.org/index.php?title=KIT_IFC_Examples",
+    "licence": "Published by KIT for unrestricted use; credited as the publisher asks. Unchanged from ifcwiki.org.",
+    "bytes": 10934237,
+    "sha256": "cfb2124497b25d9a72101075e84be0feb44ff669cb1bd3251be11efebeea945c"
+  },
+  {
+    "id": "kit-smiley-west",
+    "name": "Smiley West terraced houses (KIT)",
+    "file": "kit-smiley-west.ifc",
+    "description": "A terrace of houses from KIT's Smiley West project, from cellar to roof: 140 spaces, 170 doors (30 of them to the outside) and 30 stairs. Many short ways out, house by house. Its graph has about 12,500 nodes.",
+    "credit": "AC-20-Smiley-West-10-Bldg (ArchiCAD 20, IFC4), KIT IFC Examples, Institute for Automation and Applied Informatics (IAI), Karlsruhe Institute of Technology (KIT), 2017.",
+    "source": "https://www.ifcwiki.org/index.php?title=KIT_IFC_Examples",
+    "licence": "Published by KIT for unrestricted use; credited as the publisher asks. Unchanged from ifcwiki.org.",
+    "bytes": 6109213,
+    "sha256": "26734e67bdc0fd2ab30cb560bddc279a0a4f23eb4d28861509524e4bbe201c48"
   }
 ]
