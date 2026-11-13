@@ -2621,6 +2621,53 @@ The coordinator ran the failing case again on that commit (`node tools/calibrati
 
 The solver is untouched: `git diff 550fce5 HEAD` over `src/core/flamescapes*.js`, `flamescapesGpu/` and `voxelize.js` is empty, and the worker's change is the constant's name. Gates before the commit: the unit suite (537 of 537), the Pages build, and both browser suites on the built page (0 failed steps, desktop and phone).
 
+### 13.30 Item 9 and 13.22: the checks, and 13.22's rerun fixed before it runs (2026-11-13, 14:36)
+
+Item 9 and 13.22 were built as 13.21 and 13.22 fixed them, in one commit on branch `flamescapes/voxel-snap` (8b0ae91, from cc57f70). The build agent changed nothing after its checks ran: no method, check, tolerance or constant, and no fix. The coordinator ran (a) and (d) again from that commit and got the same verdicts and the same figures.
+
+**Item 9 is not made** (13.21, What ends this line; decision 14). (b) fails under both readings of its items 2 to 4, which list no turns or tilts.
+- As written:
+  - the axis-aligned door case leaks once: on 0.27 m cells with t 0.27 m, one cell's sample lies in both the leaf's 3 mm side gap and its 10 mm undercut, no line through it has material on both sides, and the cell stays open;
+  - step 6's lines give odd crossing counts in 12,033 cases, 709 of them in item 1's closed rooms. All are at turns or tilts of 45°, where a thin element's own line passes through a corner edge. No leak follows, but 13.21 counts a failed parity as a failure of (b);
+  - 9 of the 24 building cases join sealed regions through cells more than a cell from any door, window or opening. On the Office with doors closed, rooms of 1,120 to 19,821 cells join the main region. One traced path passes beside a closed leaf 25 mm thick that has no opening element.
+- With item 1's turns and tilts applied to items 2 to 4, the stricter reading, gaps leak. Out of 7,360 cases each:
+
+  | Case | Leaks |
+  | --- | --- |
+  | Wall ending 5 mm under the roof | 4 |
+  | Wall ending 5 cm under the roof | 219 |
+  | Wall ending 0.49 h under the roof | 2,502 |
+  | Partition ending 0.49 h from the wall | 1,037 |
+  | Door leaf | 25 |
+
+  Step 4 measures a gap along axis lines. An oblique gap under half a cell can be wider than that along every axis, so the method's claim that elements less than half a cell apart are joined does not hold on oblique geometry. 13.21 names this a failure of the method, not of the code.
+- What held: closed rooms (0 of 7,360), junctions at 90°, 30° and 60° (0 of 22,080), the round room and the dome (0 of 1,840), and the four standard clipped building grids.
+
+(c), (d), (g), (i) and (f) fail too:
+- **(d)**, in two series. An opening's side is bounded by an element 0.10 m thick, placed in the cell that holds its midpoint, as FDS's THICKEN places it:
+  - UL/NIST's ceiling vent: the high side is at 4.05 m against 4.20 on 0.27 m cells; on 0.34 m the low side is at 2.04 against 1.80 and the width is 2.04 against 2.40;
+  - FSE's vent: the low side is at 2.67 and 2.76 m against 2.5 on 0.27 and 0.34 m.
+
+  13.21 counts a failure of (d) as a fault of the code. The agent traced it to the pass rule, which was derived for thick elements. No correction was tried, because (b) ends the attempt whatever (d) is. Steckler's hand values pass exactly, the item on and off.
+- **(g):** with holes, about 40 % of scenes differ from FDS's rule. FDS thickens an obstruction before it cuts the holes; the item snaps pieces already cut. Without holes, 1 or 2 exact-class scenes a cell differ.
+- **(c):** parts 2 to 4 fail. The causes are a clipped slab's sliver at the grid's sides, the check's own sweep along the normal at 45°, and exact ties decided by float32 coordinates. Part 1 passes.
+- **(i):** 12 of 81 plate cases fail: a plate that contains a sample plane reads fraction 1. With the item on, the walls' heat capacity falls 6 to 14 %.
+- **(f):** 1.27 on the Office whole on 0.27 m, and 1.39 on a scene built in 4 ms, on a machine about 39 % loaded.
+
+(a), (e) and (h) pass: off is off byte for byte (492 series scenes and 28 room and building scenes), the unit suite 536 of 536 at its base, and invariance.
+
+So 13.20's sentence returns. Doors stay as the voxeliser makes them, and door and vent velocity, door mass flow and the neutral plane stay as 13.B finds them. The app's words do not change. A fourth attempt at the doors needs the user's word and a new method committed here first. The branch is kept and is not merged.
+
+**13.22 passes its checks and is used.** (a): 3,120 tree lists, 48 of them holding a pocket. (b): all 21 constructed cases exact. With item 9 off, pockets exist only on 0.27 m, in 56 tests: all 55 of Steckler and NBS 100Z. 47 Steckler trees end at z 2.025 m and NBS 100Z's at 2.295 m; none is mid-tree. There is no pocket on 0.20 or 0.34 m, so 13.22 changes nothing there.
+
+#### The coordinator's decisions on 13.22's rerun (2026-11-13, 14:36, before any run of it)
+
+1. **What runs, and from where.** The harness at 8b0ae91, with `--snap` left at `seal` (by (a), that is the voxeliser at 550fce5 byte for byte) and `--pockets` at `drop`. The flags are `--solver-rev 550fce5 --wall-layers --leakage --cells 0.27`, with the 56 tests named by `--tests`. Nothing else changes.
+2. **The leak readings (decision 11).** For 53 of the 56 tests the two readings of 13.16 are one run: they have no sealed region, so no leak applies either way. Their rerun in the corrected harness serves both readings. The other three, Steckler 10, 114 and 514, differ between the readings. The grid seals their door on 0.27 m, so the representation rule leaves them out of every statistic in both readings. That rule reads the mask, not a result. They are rerun in the sealed reading, which is the harness as it stands. In the default-leak reading they keep their first entries, because no statistic can change through them, and no harness flag is added to bring back the old leak. This is a narrower reading of decision 11, declared here.
+3. **The control (decision 11).** These are the first three runs of the suite's order on 0.27 m that hold no pocket: NIST/NRC 13, 02 and 08, the costliest runs. None is on 13.16's list, so both readings are one run. Their pairs must be identical to those of 13.B's file on 0.27 m. If any pair differs, nothing is merged, and that is reported.
+4. **The merge.** The reruns are merged over 13.B sealed and over 13.B default leak on 0.27 m (`--merge`), into two new files. 13.B's files stay as they ran. The tool's merge keeps an earlier run's quantity when a later run lacks it. So after the merge, each rerun's merged pairs must equal its own pairs. If a pair from the first files survives a quantity that 13.22 removed, it is listed and taken out before any statistic is read.
+5. **What is reported (decision 12).** Each quantity's word on 0.27 m in both readings, beside 13.B's, before anything is combined. The app's words change only after the user has seen it (13.5; 13.21, decision 12). If the rerun is merged, 13.22's harness reaches `next/calibration-ui` as its own commit, the harness files only, without item 9's voxeliser.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
