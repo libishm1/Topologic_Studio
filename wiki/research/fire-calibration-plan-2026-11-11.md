@@ -1302,6 +1302,233 @@ The draft above is the physics agent's, written blind (13.12, rule 2). The coord
 8. **Not tested by (a) to (i), and stated with any result:** no momentum crosses a vent, so a spill plume's direction is lost; an open side's reference pressure comes from the projection's pressure, which is not the physical pressure in hot gas; and a door between two open regions stays on the grid.
 9. **Made, the item changes the app widely:** most rooms behind open doors become pressure zones. 14.6's speed rule decides whether it sits behind a switch.
 
+### 13.18 Item 6, attempt 4: FDS's extinction model 1 (2026-11-13, before any run of it)
+
+Drafted blind to every validation result, as 13.12 sets. Nothing below changes after a run of it; anything added later is dated, with its commit.
+
+#### What failed before
+
+- Attempt 1 (13.9 and 13.10; f83977c on `flamescapes/extinction-prototype`): FDS's model 2 with FDS's critical flame temperatures. The box stopped at 10.79 % O2 by volume against an analytic 10.13 %, a gap of 0.66 % where 0.5 % was allowed. It failed.
+- Attempt 2 (13.10's second check; b92dfc4): it passed, but the run was bit-identical with extinction off, so it could not fail and is not counted (13.13).
+- Attempt 3 (13.13; record 0048490 on `flamescapes/extinction-prototype`, GPU port d1f8b6c on `flamescapes/extinction-wip`): model 2 again, its reference each cell's own threshold. In the cooled sealed box it stopped at 584.8 s after 11.657 MJ:
+  - (a) the box's oxygen 0.242 % by volume below its cells' mean threshold (0.5 % allowed);
+  - (b) one cell burned in the last step that burned, 0.012 % from its own threshold (0.1 % allowed);
+  - (c) without extinction the run stopped at 1268.8 s after 25.369 MJ.
+
+  It passes, but it is not made: on by default, two unit tests fail, and they are not bent (d1f8b6c).
+  1. "every fire class burns: liquid pools give off at most their burning rate" (`flamescapes.test.mjs`). Class B, a pool lit by the pilot, releases 691 J in 10 s. The test needs more than 100 kJ.
+  2. "a burner's fuel burns only with oxygen: in a sealed room its heat stops at the room's oxygen, its gas stays below methane's flame temperature, and the unburnt heat waits" (`flamescapes.burner.test.mjs`), called test 2 below. The burner releases more than 0.8 of the heat its table asks. The test needs less than 0.8.
+
+Why test 1 fails. The pool's vapour enters the gas cell over it. Model 2 counts the fuel the cell's oxygen cannot burn as a heat sink, so the rich cell fails the criterion, the vapour builds up, and the cell never burns. Its neighbours stay cold, and the solver's gas reaction is an Arrhenius rate at the cell's temperature (or a flame particle's), so they do not light either.
+
+Why test 2 fails is not diagnosed. Since item 7, the room leaks by default (below).
+
+A first draft of this attempt took model 2 on the stoichiometric pair. Before any run, the coordinator swapped the order: model 1 is attempt 4, and that variant is the named attempt 5 (What ends this line). The reasons come from FDS's own text, not from any validation result:
+- FDS makes model 1 the default of its default mode, VLES, and writes that it "is meant to be used for simulations where the grid cells are relatively large and flames cannot be resolved", while model 2 "requires a relatively fine grid". The cells here are 0.2 to 0.4 m.
+- Model 1 takes FDS's tabulated oxygen index directly. Model 2 at this solver's constant specific heats puts the limit elsewhere: for methane in nitrogen-diluted air at 20 °C, about 11.3 % by volume against FDS's 13.9 % (a hand calculation from attempt 3's formula).
+- Model 1 has no term for the fuel in the cell, so excess vapour is not a heat sink in it. The vapour still dilutes the cell's oxygen (The method, 4).
+
+#### What was read in FDS
+
+firemodels/fds at 10c758f (master, 2026-11-12, 21:27 UTC), fetched raw from https://raw.githubusercontent.com/firemodels/fds/10c758f7439f6612b503b88e47b3b1b97fe70cda/ and the path. Its `Source/fire.f90` and `Source/data.f90` are byte for byte those at 5f8f194, which attempt 3 read. The blob URLs, for reading, are https://github.com/firemodels/fds/blob/10c758f7439f6612b503b88e47b3b1b97fe70cda/ and the path.
+
+- `Source/fire.f90` (https://github.com/firemodels/fds/blob/10c758f7439f6612b503b88e47b3b1b97fe70cda/Source/fire.f90):
+  - `EXTINCT_1`, lines 1387 to 1411: the criterion (below).
+  - `COMBUSTION_MODEL`, lines 768 to 1040. Line 796 keeps the cell's composition at the start of the step (`ZZ_0`). The reaction is integrated first (lines 866 to 987). Then, at lines 996 to 1000, under `IF (SUPPRESSION .AND. .NOT.EXTINCT)`, model 1 is called with `ZZ_0` and `TMP_IN`. If the cell is put out, lines 1003 to 1012 return its species to `ZZ_0` and set its heat release to zero.
+  - The cell loop, lines 254 to 270: `TMP_IN` is the cell's temperature, `TMP(I,J,K)` (line 264).
+  - `CHECK_AUTO_IGNITION`, lines 1347 to 1379, called at lines 868 to 881, before the integration.
+- `Source/func.f90`, `GET_MASS_FRACTION`, lines 1570 to 1579: the oxygen mass fraction is a sum over all the cell's lumped species, the fuel among them.
+- `Source/read.f90`:
+  - lines 4573 to 4593: with no `EXTINCTION_MODEL` given, VLES and SVLES take model 1, DNS and LES model 2; line 4601 turns the free-burn temperature into kelvin;
+  - line 4769: a reaction with Arrhenius parameters (`A` or `E`) sets `SUPPRESSION = .FALSE.`, which turns both models off;
+  - lines 4788 to 4789 and 4817 to 4818: each reaction's critical flame temperature and oxygen index, looked up by its fuel's name when not given, and `Y_O2_MIN = X_OI W_O2 / (X_OI W_O2 + (1 - X_OI) W_N2)`;
+  - line 5041: the default auto-ignition temperature is −273.15 °C; lines 1768 and 1906: the ambient, 20 °C by default.
+- `Source/cons.f90`: `SUPPRESSION = .TRUE.` (line 193); `FREE_BURN_TEMPERATURE = 600` °C (line 428); `SIM_MODE = 3`, which is VLES (lines 23 and 559).
+- `Source/data.f90`: `LOOKUP_CRITICAL_FLAME_TEMPERATURE`, lines 2673 to 2701, and `LOOKUP_LOWER_OXYGEN_LIMIT`, lines 2704 to 2732.
+- Technical Reference Guide, combustion chapter (https://github.com/firemodels/fds/blob/10c758f7439f6612b503b88e47b3b1b97fe70cda/Manuals/FDS_Technical_Reference_Guide/Combustion_Chapter.tex), lines 433 to 486: the critical flame temperature (lines 441 to 465; Y_OI defined at line 462) and "Extinction Based Mainly on Oxygen Concentration" (lines 467 to 483).
+  - Line 470, its footnote: the model "is written in terms of the oxygen volume fraction ... However, within the numerical algorithm, all values are converted into mass fraction".
+  - Line 483: the free-burn temperature "is needed for simulations in which the characteristic grid cell size ... is much larger than 1 cm".
+- User's Guide (https://github.com/firemodels/fds/blob/10c758f7439f6612b503b88e47b3b1b97fe70cda/Manuals/FDS_User_Guide/FDS_User_Guide.tex): "Flame Extinction", lines 4976 to 5048, with its table of X_OI and T_OI (lines 5002 to 5033); "Piloted Ignition", lines 5053 to 5062; finite-rate combustion, line 5374; the table of simulation modes, lines 8908 to 8932, where the default mode is VLES (line 8915).
+- Not read: the compiled PDF guides; FDS's verification inputs (`Extinction/extinction_1.fds`); Beyler's chapter of the SFPE Handbook, and the measurements the guide cites for its values (Morehart et al., Pitts, Bundy); `Source/wall.f90` beyond a search, whose hits on extinction concern solid surfaces (lines 1103 to 1112, 1340 to 1345, 2996 to 2998). Crossref's DOIs for the FDS guides, 10.6028/NIST.SP.1018 and 10.6028/NIST.SP.1019, resolve to the version 4 editions (2006 and 2004), so they are not cited for this text.
+
+#### FDS's model 1, as FDS codes it
+
+For a cell at the start of its reaction step, with temperature T (the cell's mean, `TMP(I,J,K)`) and oxygen mass fraction Y_O2 (over all the cell's gas, fuel included):
+
+- Y_OI = X_OI W_O2 / (X_OI W_O2 + (1 − X_OI) W_N2): the oxygen mass fraction of an oxygen and nitrogen mixture at the oxygen index X_OI by volume (`read.f90`, line 4818);
+- if T < T_fb, Y_lim = Y_OI (T_OI − T) / (T_OI − T_∞); otherwise Y_lim = 0 (`fire.f90`, lines 1403 to 1408);
+- the cell is put out if Y_O2 < Y_lim (line 1409).
+
+T_OI is the critical flame temperature, T_∞ the run's ambient (`TMPA`), T_fb the free-burn temperature, 600 °C by default. Both comparisons are strict. T_OI and Y_OI are reaction 1's, for every cell (lines 1395 to 1398 and 1408). Nothing else enters: not the fuel in the cell, its heat of combustion, or any specific heat. The fuel enters only as part of the gas over which Y_O2 is taken, so vapour lowers Y_O2.
+
+A cell put out keeps its start-of-step composition and releases no heat that step (lines 1003 to 1012). Its fuel stays in the gas, is carried by the flow, and "can re-ignite if it mixes with sufficient oxygen elsewhere in the domain" (User's Guide, line 5056).
+
+Values (`data.f90`):
+
+| Fuel | X_OI | T_OI |
+|---|---|---|
+| Methane | 0.139 | 1507 °C |
+| n-Heptane | 0.134 | 1497 °C |
+| Any fuel not listed | 0.135 | 1427 °C |
+
+The User's Guide's table (lines 5009 to 5030) gives the same three rows. It lists some fuels `data.f90` does not (isobutane, isooctane, propanol; decane where `data.f90` has n-decane); the code uses `data.f90`.
+
+Burner cells. A burner in FDS is a surface that gives fuel gas to the cell beside it, and that cell's reaction is tested as any other. I found no exemption for it in `fire.f90`: not in the cell loop (lines 254 to 270), in the test for a chemically active cell (lines 365 to 461), or in `COMBUSTION_MODEL`. With the default auto-ignition temperature (0 K) a burner's fuel burns on contact with air wherever model 1 allows. An auto-ignition exclusion zone lifts only the auto-ignition test (lines 1360 to 1371), not model 1.
+
+#### The method
+
+1. The criterion: FDS's model 1 as above, in this solver's quantities.
+   - T: the cell's gas temperature, `sim.T[c]`, when the test is made. Not the flame particle's temperature that the gas reaction's rate takes (`Teff`): FDS takes the cell's mean.
+   - Y_O2: `sim.Y[c * NS + SPECIES.O2]`, over the cell's whole gas (fuel vapour, products, soot and water; nitrogen the rest).
+   - T_∞: the run's ambient, `sim.P.ambient`.
+   - T_fb: a new parameter, `freeBurnTemperature`, 600 °C, FDS's default.
+   - T_OI: the fuel's `st.cft`, as attempt 3 has it.
+   - Y_OI: a new `st.yOI` from `stoichiometry`, by FDS's relation with the solver's own molar masses (W_O2 = 0.032, W_N2 = 0.028 kg/mol), so that the limit at T_∞ in oxygen and nitrogen is X_OI in the solver's own gas. FDS's molar masses (31.9988 and 28.0134 g/mol) would put it 0.044 % lower, relative (hand calculation).
+   - X_OI: a new `lowerOxygenLimit(fuel)`: the fuel's own `lowerOxygenLimit` (a volume fraction) if given, else FDS's for its name (a table `FDS_LOWER_OXYGEN_LIMIT` with `data.f90`'s rows), else 0.135. It mirrors attempt 3's `criticalFlameTemperature`.
+
+2. Where it sits. Attempt 3's two guards stay where they are; only what they test changes.
+   - The gas reaction (`chemistry`, its gas combustion, line 1654 at d1f8b6c): ahead of the Arrhenius rate, with the vapour's fuel, `sim.stoich[sim.fuelVapourKind?.[c] ?? 0]`. A cell put out reacts nothing this step. Its vapour and oxygen stay, the flow carries them, and they may burn in a later step or another cell, as in FDS.
+   - The burner (`burnInCell`, lines 3385 to 3398 at d1f8b6c): after the cell's oxygen is found to burn some fuel and before the burn, with the burner's fuel, `b.stoich`, on the cell's state before this step's burn in it. A cell put out takes none of the burner's fuel. Its share goes on to the burner's other cells and then to the cells its flame may reach (`burnerStep`), and what finds no cell waits (`b.pending`), as in attempt 3.
+   - Not tested, as in attempt 3: the solids' oxidation (Eq. 15), a surface reaction outside FDS's gas-phase model.
+
+3. Departures from FDS, disclosed.
+   - FDS integrates the reaction and then discards it if the cell is put out. Here the test comes first and nothing reacts. Both test the state at the start of the cell's reaction, so the outcome is the same.
+   - FDS takes reaction 1's T_OI and X_OI for every cell. Here a cell takes its vapour's fuel and a burner its own, as in attempt 3. With one fuel in a run the two agree. The fire classes carry no FDS fuel name, so they take FDS's values for an unlisted fuel (0.135, 1427 °C); the burner's methane takes methane's.
+   - FDS lets a burner's unburnt fuel into the gas. This solver's burner holds it back and finds it other cells (d3c5751, 2026-11-12). That predates item 6 and is not changed here.
+   - FDS turns extinction off in any run with an Arrhenius reaction (`read.f90`, line 4769), and its guide recommends finite-rate reactions only for DNS (line 5374). This solver's gas reaction is an Arrhenius rate. 13.9 puts the criterion on it, and attempt 3 did; it stays there, with no FDS precedent for that pairing.
+
+4. What a rich cell meets. Model 1 has no term for the fuel, so the excess vapour that locked out attempt 3's pool cell is no longer a heat sink. But the vapour dilutes the cell's oxygen mass fraction, as FDS's code takes it. At FDS's values for an unlisted fuel, a cell of air and vapour is put out above about 35 % vapour by mass at 20 °C, 40 % at 400 K and 49 % at 600 K (hand calculation, from Y_F > 1 − Y_lim / 0.232); at 600 °C and above, never while it has oxygen. FDS lights fuel on contact. This solver's gas reaction waits for its Arrhenius rate, so vapour can gather in a cold cell. Whether the class B pool lights before its cell passes that share is not known before the run; (f) below decides.
+
+5. What stays from attempt 3 and what goes.
+   - Stays: the switch `extinction` (0 is off); `FDS_CRITICAL_FLAME`, `criticalFlameTemperature` and `st.cft`; METHANE's name; the two guards and their places; the burner's handling of fuel a cell refuses; the GPU's `extinction`, `cft0` and `cft1`; the parity phase; the test file's sealed box and its attempt 3 test, with the reference changed as "What the check reads" sets.
+   - Goes: model 2's body (φ, the burnt share, the other gas's heat capacity, the heat balance) and its arguments `mF`, `Tfuel` and `fuelInGas`, on both paths; the test file's `criticalOxygen` and `diluent`, and its unit check of model 2's closed form, which (d) and (e) replace. The 13.10 second check's test is not carried: 13.13 does not count it, and its record is b92dfc4.
+   - New: `FDS_LOWER_OXYGEN_LIMIT`, `lowerOxygenLimit`, `st.yOI`, `DEFAULTS.freeBurnTemperature`.
+
+6. On the CPU (`flamescapes.js`):
+
+   ```js
+   export function flameSustained(sim, c, st) {
+     if (!(sim.P.extinction > 0)) return true;
+     const T = sim.T[c];
+     if (!(T < sim.P.freeBurnTemperature + KELVIN)) return true;
+     return !(sim.Y[c * NS + SPECIES.O2] < (st.yOI * (st.cft - T)) / (st.cft - sim.P.ambient));
+   }
+   ```
+
+   It is called as `flameSustained(sim, c, sim.stoich[sim.fuelVapourKind?.[c] ?? 0])` in the gas reaction and `flameSustained(sim, c, b.stoich)` in `burnInCell`. The strict comparisons are FDS's. `DEFAULTS.extinction` is 0 until the item is made (Default).
+
+7. On the GPU (`flamescapesGpu/kernels.js`, `flamescapesGpu.js`):
+   - `PARAMS` gains `yOI0`, `yOI1` and `freeBurn` (K) beside attempt 3's `extinction`, `cft0` and `cft1`. `flamescapesGpu.js` writes them from `sim.stoich[0].yOI`, `sim.stoich[1].yOI` and `P.freeBurnTemperature + KELVIN`.
+   - The WGSL `flameSustained(c, cft, yOI)` makes the same three tests in f32.
+   - `chemCell` calls it with `select(U.cft0, U.cft1, vk == 1u)` and `select(U.yOI0, U.yOI1, vk == 1u)`; the burner's `burnIn` with `U.cft1` and `U.yOI1`. The GPU runs only a design-fire item's burner (`flamescapesGpu.js`, line 243), whose fuel is the item's (`fuelOf(1u)`), as attempt 3's port has it.
+
+#### Where it could fail
+
+- (a): a cell that went out and then cooled has a higher threshold at the stop. Near 382 K, model 1's limit for methane in its own products rises by about 0.0095 % by volume for each kelvin of cooling (hand calculation). Attempt 3's model 2 had the same exposure and sat 0.242 % below.
+- (b): the last cell to burn may take much of the burner's fuel in its last step. One step's 2 kJ (20 kW over 0.1 s) in one 0.25 m cell at 382 K takes about 1 % of its oxygen by volume (hand calculation), ten times (b)'s tolerance. Attempt 3 had the same exposure, and its last cell was 0.012 % from its threshold.
+- (f): the pool's cell, as item 4 of the method sets out.
+- Test 2: below.
+
+#### What the check reads
+
+The tool is attempt 3's test in `flamescapes.extinction.test.mjs` (d1f8b6c), its case coded as there: a box of 10 × 9 × 10 cells on 0.25 m cells, its walls the domain's outer cells, the burner spread over every open cell, the walls at their default convection, no radiation, steps of 0.1 s. The stop is the first step whose flame rate is below 1 % of 20 kW, within 3000 s. (b)'s cells are those whose oxygen the last burning step's burner stage took, as the tool finds them (it runs that stage on a copy of the gas).
+
+One change of the tool, not of its criteria, written before the run: each cell's threshold is model 1's, Y_lim at the cell's temperature at the stop (0 at or above 600 °C), carried to volume as the tool already carries a mass fraction: the cell's oxygen by volume times Y_lim / Y_O2.
+
+#### What is fixed in advance, and from where
+
+- X_OI and T_OI by fuel: FDS's `data.f90` (above).
+- T_fb = 600 °C: FDS's default (`cons.f90`, line 428).
+- T_∞: the run's ambient, as FDS's `TMPA`.
+- Y_OI from X_OI: FDS's relation (`read.f90`, line 4818; Technical Reference Guide, line 462), with the solver's molar masses.
+- The tolerance of (d) and (e), 10⁻⁴ relative: set from float32 rounding (below), not from any run.
+
+Nothing is fitted, and no series that 12 or 13 holds out is opened (14.1; 13.12, rule 4).
+
+#### Acceptance, copied unchanged from 13.13 ("Item 6, attempt 3")
+
+- Case: the first check's own: a 20 kW methane burner in a sealed box whose walls cool it, leakage off.
+- Reference: each cell's threshold, from its own temperature and composition, at the stop.
+- Passes if (a) the gas-mass-weighted mean oxygen of the box at the stop is within 0.5 % by volume of the gas-mass-weighted mean of the cells' thresholds; (b) every cell that burned is within 0.1 % of its own threshold; and (c) the run differs from the same run with extinction off, so that it is exercised.
+
+The threshold is now model 1's (What the check reads). And, from 13.9: the unit tests and closures must still hold.
+
+#### Added, because the method makes them necessary (fixed now, before any run)
+
+- (d) The criterion against FDS's closed form. One open cell of the sealed box, its fields set directly, as FDS's own verification sets 100 sealed boxes of methane (User's Guide, lines 5035 to 5048; its input was not read).
+  - Three fuels: methane, a fuel named N-HEPTANE, and an unnamed fuel.
+  - Two compositions: air vitiated with CO2 and H2O, as attempt 3's unit check set it; and the same with fuel vapour at 1.5 and 3 times what its oxygen can burn.
+  - Temperatures: T_∞, 400, 600 and 800 K, T_fb − 1 K, T_fb + 1 K, 1200 K and T_OI + 1 K.
+  - The closed form is evaluated in double precision at the cell's stored temperature.
+  - Passes if, wherever Y_lim > 0, the flame lives with Y_O2 = Y_lim (1 + 10⁻⁴) and goes out with Y_lim (1 − 10⁻⁴), for every fuel, composition and temperature; and above T_fb it lives with Y_O2 = 10⁻⁵.
+  - The tolerance: the cell's fields are float32, about 6 × 10⁻⁸ relative, so 10⁻⁴ leaves rounding three orders of magnitude of room, and it is 0.0014 % by volume at methane's limit at 20 °C.
+  - It fails if the coded form differs: a volume fraction in place of the mass fraction, the free-burn cut on the wrong side, the fuel counted, or another fuel's values.
+- (e) The oxygen index at 20 °C. One cell of oxygen and nitrogen only, at T_∞ = 293.15 K. For each of the three fuels the flame lives at X_O2 = X_OI (1 + 10⁻⁴) by volume and goes out at X_OI (1 − 10⁻⁴), the volume fraction from the solver's molar masses. The tolerance is (d)'s. It fails if Y_OI is taken with FDS's molar masses (4.4 × 10⁻⁴ low, relative; hand calculation), or by volume, or at another ambient.
+- (f) The class B pool. "every fire class burns: liquid pools give off at most their burning rate" (`flamescapes.test.mjs`) passes unbent with extinction on: every class releases more than 100 kJ in 10 s. The limit is the test's own.
+- (g) Off is off. With `extinction` 0 the unit suite and the GPU parity phases are bit-identical to the build before item 6's code, the base the item is built on. Bit for bit, because with 0 the guard returns before it reads any field.
+- (h) The unit suite passes unbent with extinction on by default, test 2 included as the user sets it up (below).
+- Reported, not judged: the copied case on 0.20 m and 0.34 m cells; in (f)'s class B scene, the heat released by 10 s with extinction on and off, and the largest vapour share of a cell put out; test 2's released share four ways, with extinction on and off, with the default leaks and with none.
+
+#### The burner's sealed-room test (test 2)
+
+Attempt 4 changes the burner's criterion too, so whether test 2 still fails is known only when it runs. Model 1 does not act above 600 °C, and that room's gas may pass it; that is a guess, not a result. Test 2's setup is still the user's decision, taken before the run, on the argument written after attempt 3's failure.
+
+For setting `leakage: []` in its setup:
+- Its name says "in a sealed room its heat stops at the room's oxygen", and its comment derives the limit from that oxygen: 1.2 kg, about 16 MJ, against 30 MJ asked. In a room that leaks, the oxygen is not bounded by the room's own, and 0.8 has no derivation.
+- It was written at d3c5751 (2026-11-12, 06:53), before items 5 (1113a47) and 7 (e856c3a), when a room with no opening had no leak. Since item 7 it leaks by default as average construction: in this 4.5 m³ room, about 2.5 × 10⁻³ m² (hand calculation from `leakageWall` and `leakageFloor`). In the solver's own terms a sealed region is `leakage: []` (item 7).
+- At 1113a47, with pressure zones on and no leaks, the unit suite passed (522 tests), this test among them, with extinction off.
+
+Against it:
+- It is proposed after a failure, which is how a test gets bent.
+- With extinction off the test passes with the default leaks, so it guards that configuration too, and the app's closed rooms use it.
+
+The proposal:
+- The test's setup states `leakage: []`. Its limits are unchanged. This is disclosed as written after a failure.
+- A second test guards the default leaks with a bound derived for a room that leaks: the burner releases no more than the heat of the room's oxygen at the start plus that of the oxygen in the air its leaks drew in (Huggett), within 0.1 %, as the first test's oxygen bound allows. It needs a new tally of the air the leaks drew in (`stats.leakAirIn`).
+
+If the user accepts, test 2 runs as proposed and the second test must pass too. If the user does not, test 2 runs as it stands and must pass unbent. If it then fails, item 6 is not made, and no attempt is shaped to pass a limit that has no derivation for a room that leaks (What ends this line).
+
+#### GPU parity
+
+- The item: the WGSL mirror of the method's item 7. The extinction phase of `tools/flamescapes-gpu-check.mjs` (d1f8b6c) runs again as it stands: the closed room with no leakage, a fast 20 kg design-fire item, 2500 steps of 0.1 s, extinction on and off, |CPU − GPU| for each field beside the one-ulp twin's. The class B scene of (f) is added as a second case, over its 10 s. Judged: the heat released at each read within 0.95 to 1.05 of the CPU's, on and off (14.2's ratio, applied to this check).
+- (a) to (c) are CPU checks. The GPU runs only a design-fire item's burner, so the copied box, whose burner is the validation's kind, does not run on it.
+- The rerun's verdicts on the GPU follow 14.2 as written.
+
+#### Speed (14.6)
+
+Milliseconds a step and run time on Duplex, Office and Clinic, CPU and GPU (`tools/backend-bench.mjs`), with extinction on and off, against the build before. Model 1 is a few operations a tested cell, fewer than model 2's loop over the species, whose port cost nothing measurable on the GPU by the record. If on costs more than 10 % a step on the GPU, it goes behind a switch, and the app states the verdicts found without it when it is off, which means a second full run.
+
+#### Default
+
+Off (`extinction` 0) until (a) to (h) pass, test 2 included as the user sets it up. Then on by default, as FDS's suppression is (`cons.f90`, line 193), unless 14.6 puts it behind a switch. Made after 13.B began, it gets its own full rerun, reported beside 13.B (13.12, rule 5).
+
+#### What ends this line
+
+- If attempt 4 fails any check, an attempt 5 may be drafted, and only then: FDS's model 2 criterion taken on the stoichiometric pair.
+  - It is attempt 3's criterion, with the gas reaction testing the fuel its cell's oxygen can burn, m_F = min(Y_F m, Y_O2 m / s), in place of all its vapour, Y_F m (m the cell's gas mass, s the fuel's oxygen per kilogram, Huggett's). The burner is unchanged: `burnInCell` already passes the fuel the cell's oxygen can burn.
+  - A rich cell's excess vapour is then not a diluent; its products, its nitrogen and its other gas still are.
+  - It departs from FDS's model 2, which counts excess fuel as a diluent by design (Technical Reference Guide, line 493), and is disclosed as such. Its limit stays below FDS's oxygen index at the solver's specific heats (What failed before).
+  - Its full method and check are to be committed here before it runs.
+- Attempt 5's burner is attempt 3's, which failed test 2 with the default leaks, and test 2's room holds no fuel but the burner's. So without the user's change of test 2's setup, attempt 5 is not drafted.
+- If attempt 5 fails too, item 6 ends. Extinction stays off. The closed-door UL FSRI tests' overprediction (13.14) is stated as it is. A further attempt needs the user's word.
+
+#### The coordinator's decisions on this draft (2026-11-13, 04:23, before any run of it)
+
+The draft above is the physics agent's, written blind (13.12, rule 2). The coordinator has read 13.A and 13.B's first files, so the decisions below add no constant and move no tolerance. Each takes the draft's own choice, or the reading that needs no one's word.
+
+**Checked by the coordinator in FDS's sources at 10c758f** (fetched again, apart from the agent): `EXTINCT_1` as quoted (`fire.f90`, lines 1387 to 1411), with reaction 1's values and both comparisons strict; its call after the integration and the reset of a cell put out (lines 996 to 1012); `GET_MASS_FRACTION` as a sum over every tracked species (`func.f90`, lines 1570 to 1579); model 1 as VLES's default (`read.f90`, lines 4586 to 4588) and VLES as the default mode (`cons.f90`, lines 23 and 559); `SUPPRESSION` on by default and turned off by Arrhenius parameters (`cons.f90`, line 193; `read.f90`, line 4769); the free-burn temperature of 600 °C (`cons.f90`, line 428); Y_O2_MIN's relation (`read.f90`, line 4818); the three fuels' values (`data.f90`, lines 2690 to 2729); and the four sentences quoted from the two guides. Two of the hand calculations were repeated: methane's Y_OI with the solver's molar masses is 0.1558, and air with vapour falls below the unlisted fuel's limit at 20 °C above 35 % vapour by mass.
+
+1. **The order stands: model 1 is attempt 4.** The draft found that the third reason for the swap holds only in part: FDS takes the oxygen mass fraction over the whole cell's gas, so vapour still dilutes it, and a cold, rich pool cell can still be put out. That is stated in the method (item 4) and decided by (f). The order is not changed for it, because it was set from FDS's own text before any run and the first two reasons stand.
+2. **The scope is 13.9's:** the burner's fuel and the gas reaction. Model 1 on the burner alone, which is where FDS itself would apply it, is not taken; it would narrow 13.9 after three failures.
+3. **Y_OI takes the solver's molar masses,** as drafted, and (e) is judged as written.
+4. **The cell's own temperature is tested,** not a flame particle's, as drafted and as FDS does.
+5. **The fire classes' data are not changed.** Class B carries no FDS fuel name, so it takes FDS's values for a fuel not listed (0.135, 1427 °C). Naming it n-heptane would change a fire class to help a check.
+6. **The 13.10 second check's test is dropped,** as drafted. Its record is b92dfc4.
+7. **The base** is `next/calibration-ui` at the commit the item's branch starts from, whose solver is 13.B's (550fce5). Attempt 3's extinction code is brought over from d1f8b6c; that commit's door-check changes are not. "The build before" in (g) and in 14.6 is that base.
+8. **GPU parity is judged as drafted:** the extinction phase and the class B scene, heat released within 0.95 to 1.05 of the CPU's (14.2's ratio). (a) to (c) are CPU checks, because the GPU runs only a design-fire item's burner.
+9. **Test 2 runs as it stands.** The user is away and has not answered the draft's proposal, so its second branch applies: the test runs with the default leaks and must pass unbent. Its released share is reported four ways, as the draft lists. If it fails, item 6 is not made, extinction stays off, and the draft's proposal (a stated `leakage: []`, and a second test with a bound derived for a room that leaks) goes to the user with that result beside it. An acceptance then would be dated and disclosed as given after a result.
+10. **What ends this line stands as drafted,** attempt 5's condition included.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
