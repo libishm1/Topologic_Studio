@@ -32,7 +32,7 @@
  * from the one recorded in the reduced file stops the reduction.
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { leakageOf, readGeometry, surfaceMaterial } from "./lib/fds.mjs";
@@ -57,6 +57,20 @@ export const COMMITS = Object.freeze({
 });
 /** Each repository's GitHub owner and name. */
 const REPOS = Object.freeze({ exp: "firemodels/exp", fds: "firemodels/fds", fsri: "ulfsri/fsri-compartments-2018" });
+/**
+ * Sources outside GitHub (added 2026-11-13, plan 15.3): NIST's Fire Calorimetry
+ * Database. Its pages and files carry no version, so each file's digest and
+ * the date it entered the cache are recorded instead of a commit.
+ *   fcd       a test's 1 s record, at the link its page gives
+ *             (www.nist.gov/fcd-s3?path=/HRR/ASSET_FILES/...; NIST redirects it
+ *             to its own storage); `file` is the path after "path=/";
+ *   fcd-page  a test's page (its tables 1 to 4: the test, its results, its
+ *             inputs and masses, its events); `file` is the page's path.
+ */
+const WEB = Object.freeze({
+  fcd: { site: "www.nist.gov", url: (file) => `https://www.nist.gov/fcd-s3?path=/${file}`, local: (file) => file },
+  "fcd-page": { site: "www.nist.gov", url: (file) => `https://www.nist.gov/${file}`, local: (file) => `${file}.html` },
+});
 
 export const NOTICE =
   "Measurements from NIST's Fire Research Division Experimental Database (github.com/firemodels/exp) and test conditions from NIST's FDS validation inputs (github.com/firemodels/fds), both carrying NIST's notice: NIST-developed works, not subject to copyright protection within the United States; acknowledge the National Institute of Standards and Technology as the source; modified works should note the date and nature of any change. Changed here (2026-11-11): reduced to the numbers compared by tools/calibration/validation-suite.mjs (thermocouple trees reduced by Janssens and Tran's method at each measured time; point readings within the compared windows; geometry and burner read from the FDS inputs).";
@@ -66,13 +80,14 @@ export const NOTICE =
 const known = new Map(); // repo/path -> sha256 recorded in an earlier reduced file
 
 export async function fetchFile(repo, file) {
-  const local = path.join(CACHE, repo, ...file.split("/"));
+  const web = WEB[repo];
+  const local = path.join(CACHE, repo, ...(web ? web.local(file) : file).split("/"));
   let buf;
   if (existsSync(local)) buf = readFileSync(local);
   else {
     if (OFFLINE) throw new Error(`not in the cache (offline): ${repo}/${file}`);
-    const url = `https://raw.githubusercontent.com/${REPOS[repo]}/${COMMITS[repo]}/${file.split("/").map(encodeURIComponent).join("/")}`;
-    const r = await fetch(url);
+    const url = web ? web.url(file) : `https://raw.githubusercontent.com/${REPOS[repo]}/${COMMITS[repo]}/${file.split("/").map(encodeURIComponent).join("/")}`;
+    const r = await fetch(url, web ? { signal: AbortSignal.timeout(60000), headers: { "user-agent": "Mozilla/5.0 (validation-data.mjs)" } } : undefined);
     if (!r.ok) throw new Error(`${r.status} for ${url}`);
     buf = Buffer.from(await r.arrayBuffer());
     mkdirSync(path.dirname(local), { recursive: true });
@@ -81,6 +96,7 @@ export async function fetchFile(repo, file) {
   const sha256 = createHash("sha256").update(buf).digest("hex");
   const key = `${repo}/${file}`;
   if (known.has(key) && known.get(key) !== sha256) throw new Error(`digest mismatch for ${key}: ${sha256} against ${known.get(key)} recorded`);
+  if (web) return { text: buf.toString("utf8"), source: { repo: `${web.site}/${repo}`, url: web.url(file), read: statSync(local).mtime.toISOString().slice(0, 10), path: file, sha256, bytes: buf.length } };
   return { text: buf.toString("utf8"), source: { repo: `github.com/${REPOS[repo]}`, commit: COMMITS[repo], path: file, sha256, bytes: buf.length } };
 }
 
@@ -856,6 +872,19 @@ async function fsri(sources) {
   if (off.length) console.log(`fsri: door probes left out by the door-probe rule: ${off.map((T) => `${T.id} (${T.doorBalance.outOverIn})`).join(", ")}`);
   return { dataset: "fsri", tests, notice: FSRI_NOTICE, leftOut: left };
 }
+
+/**
+ * The series' open-door chair tests (its file tree at COMMITS.fsri, read 2026-11-12): the set of plan 15.3's
+ * FSRI part (heat-release-checks.mjs) and, those with a heat release record, of 15.4's `fsri-chairs`.
+ */
+export const FSRI_CHAIR_TESTS = [
+  "RedAccent_Open_Back_1",
+  ...[1, 2, 3].map((n) => `RedAccent_Open_Center_${n}`),
+  ...[1, 2, 3].map((n) => `RedAccent_Open_Corner_${n}`),
+  ...[1, 2, 3].map((n) => `Overstuffed_Open_Back_${n}`),
+  "Overstuffed_Open_Center_1",
+  ...[1, 2, 3].map((n) => `Overstuffed_Open_Corner_${n}`),
+];
 
 /**
  * UL/NIST vents (NIST's Fire Fighting Technology Group at UL, 2012; plan 13.2
