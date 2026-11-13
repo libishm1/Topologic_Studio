@@ -1090,6 +1090,28 @@ Checked before use: Steckler tests 14 and 410 on 0.34 m, on 13.A's solver (d3c57
 
 What I will read from it after 13.B, named now: for each series, the walls' share of the heat released over the steady period, against the share that the McCaffrey, Quintiere and Harkleroad correlation implies for the same room (as `tools/calibration/energy-budget.mjs` computes it for the stone room). This is a diagnosis. Whatever it shows, a change to the solver follows 13.12: stated and checked blind before it runs, and fitted on no held-out series (14.1).
 
+### 13.16 A departure from 13.11 in 13.B, and its correction (2026-11-13, 04:15, after 13.B's 0.34 m and 0.27 m files were read, before any corrected run)
+
+13.11 says that in the validation a test whose FDS input gives no leak has none. 13.B's harness did not do that. With `--leakage` on, `tools/calibration/validation-suite.mjs` passed the solver a leak list only where the input states a leak. Where it states none, the option was left out, and the solver then gave each sealed region the app's default construction leak: 0.21e-3 of the area of its upright faces and 0.52e-4 of its flat ones, with a discharge coefficient of 1. The mistake is in the harness. The solver does what its default says.
+
+It was found on 2026-11-13 at about 03:30, while the heat ledger (13.15) of the 0.34 m and 0.27 m files was read: runs with no leak in their record show mass leaked. The 0.20 m cell was running on the same harness at the time and has the same departure.
+
+Runs affected (no leak stated, a sealed region on the grid, mass leaked):
+- **0.34 m, 52 of 178:** the 45 UL FSRI closed-door runs (net 12.1 to 20.8 kg out, median 15.1), NBS 100O (22.4 kg), and Steckler 10, 11, 114, 144, 514 and 544 (8.9 to 10.0 kg). The grid seals these Steckler tests' openings, so the representation rule already leaves them out of every statistic.
+- **0.27 m, 49 of 178:** the same 45 (13.8 to 22.9 kg, median 16.1), NBS 100O (22.1 kg), and Steckler 10, 114 and 514.
+- **0.20 m:** listed by the same rule when its file lands.
+
+The 11 runs on each cell whose input states a leak (NIST/NRC) ran as 13.11 says. The other runs have no sealed region and leaked nothing.
+
+The correction, fixed now:
+1. **With `--leakage`, a test whose input states no leak is passed an empty leak list,** which the solver takes as no leak. Nothing else in the harness changes. The solver stays at 550fce5 with 13.B's flags.
+2. **The affected runs are run again on each cell and merged over the first files** (`--merge`). The merged files are 13.B as 13.11 pre-registered it, called **13.B sealed** below. The first files stay in the repository as they ran, called **13.B default leak**.
+3. **Both readings are reported** for every quantity and series. Where their words differ, the stricter word stands, because the choice between them comes after results were seen. The app states that word.
+4. **A control.** The rerun on 0.27 m includes Steckler 11, 144 and 544, which have no sealed region on that cell. Their pairs must be identical to the first file's. If they are not, the correction changed more than it says, and nothing is merged until that is understood.
+5. **A sealed run that stops, or fails the health guard, is reported as stopped,** and 12.6 counts it as it counts any stopped run. A room with no leak heats at constant volume (13.11), so high pressures are expected in the closed rooms. That is the pre-registered reading and not a fault to fit away.
+
+What this does not settle. The UL FSRI closed rooms leaked by an amount that was not measured, and NBS 100O's input states no leak. Neither reading is the room as tested: one has no leak, the other a typical construction's. No leak area is chosen for these tests after their results are seen. If a later item gives sealed-by-design tests a leak, its source is cited and it is pre-registered under 13.12 before it runs.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
