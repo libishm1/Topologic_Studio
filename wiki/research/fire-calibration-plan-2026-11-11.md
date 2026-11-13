@@ -1090,7 +1090,7 @@ Checked before use: Steckler tests 14 and 410 on 0.34 m, on 13.A's solver (d3c57
 
 What I will read from it after 13.B, named now: for each series, the walls' share of the heat released over the steady period, against the share that the McCaffrey, Quintiere and Harkleroad correlation implies for the same room (as `tools/calibration/energy-budget.mjs` computes it for the stone room). This is a diagnosis. Whatever it shows, a change to the solver follows 13.12: stated and checked blind before it runs, and fitted on no held-out series (14.1).
 
-### 13.16 A departure from 13.11 in 13.B, and its correction (2026-11-13, 04:15, after 13.B's 0.34 m and 0.27 m files were read, before any corrected run)
+### 13.16 A departure from 13.11 in 13.B, and its correction (2026-11-13, 03:55, after 13.B's 0.34 m and 0.27 m files were read, before any corrected run)
 
 13.11 says that in the validation a test whose FDS input gives no leak has none. 13.B's harness did not do that. With `--leakage` on, `tools/calibration/validation-suite.mjs` passed the solver a leak list only where the input states a leak. Where it states none, the option was left out, and the solver then gave each sealed region the app's default construction leak: 0.21e-3 of the area of its upright faces and 0.52e-4 of its flat ones, with a discharge coefficient of 1. The mistake is in the harness. The solver does what its default says.
 
@@ -1285,7 +1285,7 @@ Off (`subgridVents` 0) until (a) to (i) pass and the unit suite passes unbent wi
 
 If attempt 2 fails any of (a) to (i) in any case, items 4 and 3 are not made, and doors stay as the voxeliser makes them. No third attempt at door flow is drafted. Door and vent velocity, door mass flow and the neutral plane stay as 13.A and 13.B find them, and the app states those verdicts. A further attempt needs the user's word and a new method committed here first.
 
-#### The coordinator's decisions on this draft (2026-11-13, 04:40, before any run of it)
+#### The coordinator's decisions on this draft (2026-11-13, 03:58, before any run of it)
 
 The draft above is the physics agent's, written blind (13.12, rule 2). The coordinator has read 13.A and 13.B's first two files, so the decisions below add no constant and move no tolerance. Each takes the draft's own proposal or the stricter reading.
 
