@@ -2863,6 +2863,38 @@ There was one attempt and no fault of the code against the method, so no correct
 - (i) is weighed before any default. In lumped stone near ambient the float32 loss is of the order of the emission itself, and the app's scenes are lumped stone. The validation rooms' boards resolve it.
 - The supplement to (a), bit-identity where surfaces radiate, was not pre-registered. It is kept as a report and judges nothing.
 
+### 13.35 R10, item 10 alone, beside 13.B: the result (2026-11-14, 16:55)
+
+R10 ran as 13.33 fixes it. The solver was 42f5655 with `--surface-ray-start`, and the harness was at 0cbcede with 13.B's flags, `--pockets drop` and `--snap seal`. It ran from 07:20 to 16:37 on 2026-11-14.
+
+- **Runs.** 178 on each cell and 13 chair runs on each cell, 573 in all. One stopped: FSE ISO NG3 on 0.20 m, on the speed guard at 49 s. It stopped in 13.B too, on the same guard at 52 s, so the stopped-run count is unchanged.
+- **Files** in `benchmark/results/`, prefix `2026-11-14-validation-r10-`: `034`, `027`, `020`, `chairs-034`, `chairs-027` and `chairs-020`. Added after the run: the nine-series merges are not committed. They are made from these files by `--merge`, as 15.9's were.
+
+**The words.** On the eight series, 31 of 33 words are unchanged. Two move, both on 0.34 m:
+
+| Quantity, cell | 13.B sealed | R10 | Why |
+| --- | --- | --- | --- |
+| Ceiling jet, 0.34 m | not calibrated (1.40 / 0.49; 2 of 6) | indicative (1.43 / 0.48; 1 of 6) | The 10-bin weighted pooled tier crosses into indicative. Every unweighted word is unchanged, and WTC leaves the band (1.19 to 1.35). |
+| Neutral plane, 0.34 m | indicative (0.77 / 0.27; 1 of 4) | not calibrated (0.75 / 0.26; 1 of 4) | The 10-bin weighted pooled tier crosses out of indicative. Every unweighted word is unchanged. |
+
+With the chair series as a ninth, three words move:
+- ceiling jet on 0.34 m, not calibrated to indicative, as above;
+- neutral plane on 0.27 m, calibrated to indicative;
+- head-height temperature on 0.20 m, not calibrated to indicative.
+
+Smoke layer depth is unchanged on every cell: calibrated, at 1.11 / 0.14, 1.03 / 0.11 and 1.00 / 0.12.
+
+**The direction.** With item 10 the rooms read slightly hotter on every cell. The pooled δ rises by 0.01 to 0.03:
+- layer temperature: 1.48 to 1.50, 1.41 to 1.43, and 1.37 to 1.38;
+- ceiling jet: 1.40 to 1.43, 1.41 to 1.44, and 1.35 to 1.37;
+- head height: 1.54 to 1.56, 1.35 to 1.37, and 1.38 to 1.40.
+
+A surface's emission now reaches the room rather than staying in its own cell. So the walls warm more and take less heat from the gas. The moves in the words are at a tier's edge, and they are no better fit. **Item 10 alone gives no calibration gain.** No word in the app changes (13.26, decision 14).
+
+**Cost, with its load (13.33, point 8).** The suites took 37, 96 and 379 min against 13.B's 30, 82 and 352. The median run took 1.22, 1.08 and 1.07 times its 13.B wall time on 0.34, 0.27 and 0.20 m. Item 11's build, its checks and the video's recordings ran on the same machine at the same time, so these figures do not separate the item's cost from the load.
+
+**Not yet read:** the heat ledgers and item 10's tallies. They are read with R11's (13.33, point 7), beside 13.B.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
