@@ -60,6 +60,11 @@
  *   - A sealed region (a room behind closed doors) is a pressure zone, as in
  *     FDS: it keeps its gas's mass, and its pressure follows that mass and its
  *     heat (pressureZones; plan 13.8 item 5). Open regions stay at ambient.
+ *   - With surfaceRayStart (plan 13.25 item 10; off by default), a surface's
+ *     rays start at a uniform point on the open face they drew, in the gas
+ *     cell beyond it, as Monte Carlo ray tracing casts a diffuse surface's
+ *     rays (radiation, march). From the cell's centre, as before, a ray that
+ *     crossed a side face stayed in the wall beside it (plan 13.24).
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -218,6 +223,15 @@ export const DEFAULTS = Object.freeze({
   emitAbove: 500, // K: surfaces and gas cooler than this do not cast rays
   rays: 8, // per emitting cell and step
   rayReach: 40, // cells
+  // A surface's rays start on its emitting face (calibration plan 13.25,
+  // item 10; radiation, march): each ray of a lumped solid or a
+  // one-dimensional wall leaves a uniform point on the open face it drew,
+  // from the gas cell beyond it, and runs until it meets a surface or leaves
+  // the grid (rayReach does not stop it). 0 casts them from the cell's centre,
+  // as before, where a flat wall kept 45 % of its emission in the wall cells
+  // beside it (plan 13.24). Off until its checks pass and the user agrees
+  // (plan 13.25, the coordinator's decision 14).
+  surfaceRayStart: 0,
   // Solid fuel: the paper's Table 3 (biomass) and Table 4 (wood).
   pyrolysisA: 4.78e4, // 1 / s
   pyrolysisE: 9.22e4, // J / mol
@@ -470,7 +484,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // (suppressionSystems.js systemsSetup), set by the run; null when off.
     systems: null,
     // Soot's budget (kg): released by burning and pyrolysis, deposited on surfaces, carried out of the domain by its shell.
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0 },
+    // With surfaceRayStart: what the radiation stage's rays carried beyond the grid (J), and the surface rays and the cells they crossed.
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0, ...(P.surfaceRayStart > 0 ? { radiatedOut: 0, surfaceRays: 0, surfaceCrossings: 0 } : {}) },
   };
 }
 
@@ -795,6 +810,15 @@ function solidCapacity(sim, c) {
  * --phase spread). The rays' directions come from each cell's own stream of
  * the step (cellStream), as the GPU draws them, so both paths cast the same
  * rays and differ only by float32 round-off.
+ *
+ * With surfaceRayStart (calibration plan 13.25, item 10), each ray of a lumped
+ * solid or a one-dimensional wall starts at a uniform point on the face it
+ * drew, two more draws from the cell's own stream of salt 3, so its direction
+ * and face are those it has with the switch off; it enters the march in the
+ * gas cell beyond the face (named by index), and runs until it meets a surface
+ * or leaves the grid. A face on the grid's side sends its ray out at once.
+ * What the stage's rays carry beyond the grid is then counted
+ * (stats.radiatedOut), with the surface rays and the cells they cross.
  */
 function radiation(sim, dt) {
   const { P, grid: g } = sim;
@@ -805,11 +829,14 @@ function radiation(sim, dt) {
   // One-dimensional walls emit from, and take rays on, the face concerned
   // (wallEmit, march): their ends' deposits wait in lo and hi with the rest.
   const W = sim.wall;
+  const fromFaces = P.surfaceRayStart > 0;
   const dep = {
     T: workArray(sim, "radGas", sim.N, Float64Array).fill(0),
     Ts: workArray(sim, "radSolid", sim.N, Float64Array).fill(0),
     lo: W ? workArray(sim, "radWallLo", W.cells.length, Float64Array).fill(0) : null,
     hi: W ? workArray(sim, "radWallHi", W.cells.length, Float64Array).fill(0) : null,
+    // With surfaceRayStart, what the rays carry beyond the grid (J).
+    out: fromFaces ? workArray(sim, "radOut", 1, Float64Array).fill(0) : null,
   };
   const faceE = [0, 0, 0, 0, 0, 0];
   let stream = 0;
@@ -817,6 +844,13 @@ function radiation(sim, dt) {
     stream = pcgHash(stream);
     return (stream >>> 8) / 16777216;
   };
+  // A surface ray's start: the cell's stream of salt 3, and where the march begins.
+  let faceStream = 0;
+  const drawOnFace = () => {
+    faceStream = pcgHash(faceStream);
+    return (faceStream >>> 8) / 16777216;
+  };
+  const start = { cell: [0, 0, 0], frac: [0, 0, 0], reach: g.nx + g.ny + g.nz };
   for (let c = 0; c < sim.N; c += 1) {
     const kc = sim.kind[c];
     let emitted = 0;
@@ -858,6 +892,9 @@ function radiation(sim, dt) {
     const faces = fromSolid ? openFaces(sim, i, j, k) : null;
     // The cell's own stream of the step (salt 2), the GPU's: both paths cast the same rays.
     stream = cellStream(c, sim.steps, 2, P.seed);
+    // With surfaceRayStart, a lumped solid's or a one-dimensional wall's rays start on their face (a porous cell's stay at its centre).
+    const onFace = fromFaces && fromSolid && (w >= 0 || kc === SOLID);
+    if (onFace) faceStream = cellStream(c, sim.steps, 3, P.seed);
     for (let r = 0; r < P.rays; r += 1) {
       // A uniform direction on the sphere; from a surface, added to the
       // normal of one of its open faces, which gives Lambert's cosine law
@@ -884,6 +921,30 @@ function radiation(sim, dt) {
         for (let d = 0; d < 3; d += 1) dir[d] += n[d];
         const len = Math.hypot(dir[0], dir[1], dir[2]) || 1;
         for (let d = 0; d < 3; d += 1) dir[d] /= len;
+        if (onFace) {
+          // A direction along or behind the face (u = -n to round-off) is its normal.
+          const a = f >> 1;
+          if (dir[a] * n[a] <= 0) for (let d = 0; d < 3; d += 1) dir[d] = n[d];
+          const u1 = drawOnFace(), u2 = drawOnFace();
+          sim.stats.surfaceRays += 1;
+          const ii = i + n[0], jj = j + n[1], kk = k + n[2];
+          if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz) {
+            // A face on the grid's side: the ray leaves the grid at once.
+            dep.out[0] += share;
+            continue;
+          }
+          // A uniform point on the face, as fractions of the gas cell beyond
+          // it: its near side along the normal, u1 and u2 along the other two
+          // axes in the order i, j, k.
+          start.cell[0] = ii;
+          start.cell[1] = jj;
+          start.cell[2] = kk;
+          start.frac[a] = n[a] > 0 ? 0 : 1;
+          start.frac[a === 0 ? 1 : 0] = u1;
+          start.frac[a === 2 ? 1 : 2] = u2;
+          sim.stats.surfaceCrossings += march(sim, ii + start.frac[0], jj + start.frac[1], kk + start.frac[2], dir, share, c, fromSolid, dep, start);
+          continue;
+        }
       }
       march(sim, i + 0.5, j + 0.5, k + 0.5, dir, share, c, fromSolid, dep);
     }
@@ -898,7 +959,11 @@ function radiation(sim, dt) {
       if (dep.hi[q]) wallEnd(sim, q, W.cells[q], 1, dep.hi[q]);
     }
   }
+  if (fromFaces) sim.stats.radiatedOut += dep.out[0];
 }
+
+/** The radiation stage alone, for the checks (tools/surface-rays-check.mjs); no run calls it. */
+export const radiationStage = radiation;
 
 /** The directions (DIRS indices) in which a cell has an open neighbour or the open domain side. */
 function openFaces(sim, i, j, k) {
@@ -915,20 +980,37 @@ function openFaces(sim, i, j, k) {
 /**
  * March one ray cell by cell (Amanatides-Woo), depositing its energy: into
  * `dep` ({T, Ts}, kelvin a cell) when given, to be added later, else at once.
+ * With `start` ({cell, frac, reach}: a surface's ray, calibration plan 13.25)
+ * the ray starts in that cell at those fractions of it, not at (x, y, z), and
+ * runs for at most `reach` crossings, not rayReach; with dep.out, what it
+ * carries beyond the grid is added there. Returns the crossings it made.
  */
-function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null) {
+function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null, start = null) {
   const { P, grid: g } = sim;
   const gasT = dep ? dep.T : sim.T, solidTs = dep ? dep.Ts : sim.Ts;
   const h = g.h;
-  let i = Math.floor(x), j = Math.floor(y), k = Math.floor(z);
   const step = dir.map((d) => (d > 0 ? 1 : -1));
   const tDelta = dir.map((d) => (d !== 0 ? Math.abs(1 / d) : Infinity));
-  const pos = [x, y, z];
-  const cell0 = [i, j, k];
-  const tMax = dir.map((d, a) => (d !== 0 ? (d > 0 ? cell0[a] + 1 - pos[a] : pos[a] - cell0[a]) / Math.abs(d) : Infinity));
+  let i, j, k, tMax, reach;
+  if (start) {
+    i = start.cell[0];
+    j = start.cell[1];
+    k = start.cell[2];
+    tMax = dir.map((d, a) => (d !== 0 ? (d > 0 ? 1 - start.frac[a] : start.frac[a]) / Math.abs(d) : Infinity));
+    reach = start.reach;
+  } else {
+    i = Math.floor(x);
+    j = Math.floor(y);
+    k = Math.floor(z);
+    const pos = [x, y, z];
+    const cell0 = [i, j, k];
+    tMax = dir.map((d, a) => (d !== 0 ? (d > 0 ? cell0[a] + 1 - pos[a] : pos[a] - cell0[a]) / Math.abs(d) : Infinity));
+    reach = P.rayReach;
+  }
   let left = energy;
   let t = 0;
-  for (let n = 0; n < P.rayReach && left > 1e-9 * energy; n += 1) {
+  let n = 0;
+  for (; n < reach && left > 1e-9 * energy; n += 1) {
     const a = tMax[0] < tMax[1] ? (tMax[0] < tMax[2] ? 0 : 2) : tMax[1] < tMax[2] ? 1 : 2;
     const length = (tMax[a] - t) * h;
     t = tMax[a];
@@ -946,7 +1028,11 @@ function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null) {
     if (a === 0) i += step[0];
     else if (a === 1) j += step[1];
     else k += step[2];
-    if (i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz) return; // leaves the domain
+    if (i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz) {
+      // Leaves the domain (counted with surfaceRayStart).
+      if (dep?.out) dep.out[0] += left;
+      return n + 1;
+    }
     const next = at(g, i, j, k);
     if (sim.kind[next] !== GAS && !(skipOwn && next === from)) {
       const rise = left / Math.max(solidCapacity(sim, next), 1e-6);
@@ -957,10 +1043,10 @@ function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null) {
         const end = step[a] > 0 ? 0 : 1;
         if (dep) (end ? dep.hi : dep.lo)[w] += rise;
         else wallEnd(sim, w, next, end, rise);
-        return;
+        return n + 1;
       }
       solidTs[next] += rise;
-      return;
+      return n + 1;
     }
   }
   // Out of reach (or below the cut-off): what the ray still carries is
@@ -970,6 +1056,7 @@ function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null) {
     if (sim.kind[c] === GAS) gasT[c] += left / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
     else solidTs[c] += left / Math.max(solidCapacity(sim, c), 1e-6);
   }
+  return n;
 }
 
 // ------------------------------------------------------------- gas phase

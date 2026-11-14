@@ -42,6 +42,12 @@
  *     temperatures at the start of the pass (the CPU's later cells see
  *     earlier cells' deposits), and rays deposit temperature rises as
  *     fixed-point integers through atomicAdd (DEP_SCALE steps per kelvin).
+ *     With surfaceRayStart (a surface's rays start on its emitting face,
+ *     calibration plan 13.25 item 10) they deposit joules instead
+ *     (DEP_JOULE steps per joule, at most DEP_CLAMP J a deposit, the clamps
+ *     counted), and radApply divides by the capacity the CPU's rays divide
+ *     by: in kelvin a flat wall's equal shares each rounded to 13 steps
+ *     where they were 13.34, a bias of 2.6 % (the plan's decision 5).
  *     Ray directions come from a per-thread PCG hash, not the CPU's seeded
  *     stream.
  *   - Particles live in a fixed-capacity buffer with an atomic counter; dead
@@ -178,6 +184,11 @@ export const PARAMS = [
   // also keeps, in `red` after its kappa, the share of its gas it takes in as
   // ambient air at its next update.
   ["leakTermsAt", "u32"], ["leakVentN", "u32"], ["leakVentAt", "u32"], ["leakDivAt", "u32"],
+  // A surface's rays start on its emitting face (flamescapes.js
+  // surfaceRayStart, plan 13.25 item 10): on; where in `red` each block's
+  // share of what the rays carried beyond the grid is (radEmit); and where in
+  // `atom` the clamped deposits' count and their J beyond the clamp are.
+  ["surfaceRayStart", "u32"], ["redRadOut", "u32"], ["radClampAt", "u32"],
 ];
 /** Blocks of 64 threads that reduce each pressure zone (zonePartial), their partial sums then added by zoneCommit. */
 export const ZONE_BLOCKS = 32;
@@ -284,7 +295,8 @@ export const KERNELS = {
   spawnEmbers: { uses: [0, 1, 3, 4, 7, 9], threads: cells },
   moveParticles: { uses: [0, 1, 3, 4, 7, 9], threads: particles },
   radEmit: { uses: [0, 1, 2, 3, 6, 10, 16], threads: cells },
-  radApply: { uses: [0, 1, 3, 13, 16], threads: cells },
+  // Y for the gas's capacity when the deposits are joules (surfaceRayStart).
+  radApply: { uses: [0, 1, 2, 3, 13, 16], threads: cells },
   particleToGrid: { uses: [0, 1, 3, 6, 7, 9], threads: particles },
   emberDeposit: { uses: [0, 1, 3, 9, 13], threads: cells },
   // With the conservative transport the cells' T and Y are the transport's, not the back-trace's.
@@ -356,6 +368,14 @@ export const KERNELS = {
 /** Fixed-point steps per kelvin of a radiation deposit, and per joule of ember heat. */
 export const DEP_SCALE = 16384;
 export const EMBER_SCALE = 16;
+/**
+ * With surfaceRayStart (plan 13.25, the coordinator's decision 5): fixed-point
+ * steps per joule of a radiation deposit, the most J one deposit may carry
+ * either way, and steps per joule of what the clamp held back.
+ */
+export const DEP_JOULE = 4096;
+export const DEP_CLAMP = 4096;
+export const CLAMP_SCALE = 16;
 
 const fieldConsts = (prefix, table) => Object.entries(table).map(([k, v]) => `const ${prefix}${k[0].toUpperCase()}${k.slice(1)}: u32 = ${v}u;`).join("\n");
 
@@ -656,6 +676,9 @@ const CP_AIR: f32 = Y_O2_AIR * 918.0 + (1.0 - Y_O2_AIR) * 1040.0;
 const PI: f32 = 3.14159265358979;
 const DEP_SCALE: f32 = ${DEP_SCALE}.0;
 const EMBER_SCALE: f32 = ${EMBER_SCALE}.0;
+const DEP_JOULE: f32 = ${DEP_JOULE}.0;
+const DEP_CLAMP: f32 = ${DEP_CLAMP}.0;
+const CLAMP_SCALE: f32 = ${CLAMP_SCALE}.0;
 const NO_CELL: u32 = 0xffffffffu;
 const WALL_MAX: u32 = ${WALL_NODES_MAX}u;
 
@@ -1196,6 +1219,21 @@ fn wallDeposit(w: u32, end: u32, dT: f32) {
   let v = i32(round(clamp(dT, -20000.0, 20000.0) * DEP_SCALE));
   atomicAdd(&atom[U.wallDepAt + 2u * w + end], bitcast<u32>(v));
 }
+/**
+ * With surfaceRayStart, a ray's e J into the accumulator at index at (a cell's
+ * gas or solid field, or a wall's end), DEP_JOULE steps a joule, at most
+ * DEP_CLAMP J either way; a larger deposit is clamped and counted, with the J
+ * the clamp held back (plan 13.25, the coordinator's decision 5).
+ */
+fn depositJ(at: u32, e: f32) {
+  var v = e;
+  if (abs(e) > DEP_CLAMP) {
+    v = clamp(e, -DEP_CLAMP, DEP_CLAMP);
+    atomicAdd(&atom[U.radClampAt], 1u);
+    atomicAdd(&atom[U.radClampAt + 1u], u32(round((abs(e) - DEP_CLAMP) * CLAMP_SCALE)));
+  }
+  atomicAdd(&atom[at], bitcast<u32>(i32(round(v * DEP_JOULE))));
+}
 
 /**
  * Radiation leaving wall w (cell c at p) over its faces open to gas or the
@@ -1248,8 +1286,14 @@ fn wallEmit(w: u32, c: u32, p: vec3<i32>, faceE: ptr<function, array<f32, 6>>) -
   return all;
 }
 
-/** March one ray cell by cell (Amanatides-Woo), depositing its energy (the CPU's march). */
-fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool) {
+/**
+ * March one ray cell by cell (Amanatides-Woo), depositing its energy (the
+ * CPU's march): from cell p0 at the fractions start of it (its centre, 0.5
+ * each, as before; a surface's ray with surfaceRayStart starts on its face,
+ * plan 13.25), for at most reach crossings. Returns what it carried beyond
+ * the grid.
+ */
+fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool, start: vec3<f32>, reach: u32) -> f32 {
   var q = p0;
   let stepv = select(vec3<i32>(-1), vec3<i32>(1), dir > vec3<f32>(0.0));
   var tDelta = vec3<f32>(1e30);
@@ -1257,12 +1301,14 @@ fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool) {
   for (var a = 0u; a < 3u; a++) {
     if (dir[a] != 0.0) {
       tDelta[a] = abs(1.0 / dir[a]);
-      tMax[a] = 0.5 / abs(dir[a]);
+      tMax[a] = select(start[a], 1.0 - start[a], dir[a] > 0.0) / abs(dir[a]);
     }
   }
+  // With surfaceRayStart every deposit is in joules (depositJ; radApply divides by the capacity).
+  let joules = U.surfaceRayStart != 0u;
   var left = energy;
   var t = 0.0;
-  for (var n = 0u; n < U.rayReach && left > 1e-9 * energy; n++) {
+  for (var n = 0u; n < reach && left > 1e-9 * energy; n++) {
     var a = 2u;
     if (tMax.x < tMax.y) { if (tMax.x < tMax.z) { a = 0u; } } else if (tMax.y < tMax.z) { a = 1u; }
     let seg = (tMax[a] - t) * U.h;
@@ -1272,36 +1318,54 @@ fn march(src: u32, p0: vec3<i32>, dir: vec3<f32>, energy: f32, skipOwn: bool) {
       let tau = U.kappa * Y[c * NS + 4u] * seg;
       if (tau > 0.0) {
         let taken = left * omexp(tau);
-        deposit(aDepGas, c, taken / (cf[ix(fRho, c)] * mixtureCp(c) * U.V));
+        if (joules) { depositJ(ix(aDepGas, c), taken); }
+        else { deposit(aDepGas, c, taken / (cf[ix(fRho, c)] * mixtureCp(c) * U.V)); }
         left -= taken;
       }
     }
     tMax[a] += tDelta[a];
     q[a] += stepv[a];
-    if (!inside(q)) { return; }
+    if (!inside(q)) { return left; }
     let next = atI(q);
     if (kindOf(next) != GAS && !(skipOwn && next == src)) {
-      let rise = left / max(solidCap(next), 1e-6);
       let w = wallOf(next);
-      if (w != NO_CELL && a == (wMeta(w) & 3u)) {
-        // A one-dimensional wall reached along its normal takes the ray on the face it crossed.
+      // A one-dimensional wall reached along its normal takes the ray on the face it crossed.
+      let alongNormal = w != NO_CELL && a == (wMeta(w) & 3u);
+      if (joules) {
+        if (alongNormal) { depositJ(U.wallDepAt + 2u * w + select(1u, 0u, stepv[a] > 0), left); }
+        else { depositJ(ix(aDepSolid, next), left); }
+        return 0.0;
+      }
+      let rise = left / max(solidCap(next), 1e-6);
+      if (alongNormal) {
         wallDeposit(w, select(1u, 0u, stepv[a] > 0), rise);
-        return;
+        return 0.0;
       }
       deposit(aDepSolid, next, rise);
-      return;
+      return 0.0;
     }
   }
   // Out of reach (or below the cut-off): the rest is absorbed in the cell the
   // ray ended in, so no energy is lost (the CPU's march).
   if (left > 0.0 && inside(q)) {
     let c = atI(q);
-    if (kindOf(c) == GAS) { deposit(aDepGas, c, left / (cf[ix(fRho, c)] * mixtureCp(c) * U.V)); }
+    if (joules) {
+      if (kindOf(c) == GAS) { depositJ(ix(aDepGas, c), left); } else { depositJ(ix(aDepSolid, c), left); }
+    } else if (kindOf(c) == GAS) { deposit(aDepGas, c, left / (cf[ix(fRho, c)] * mixtureCp(c) * U.V)); }
     else { deposit(aDepSolid, c, left / max(solidCap(c), 1e-6)); }
   }
+  return 0.0;
 }
 
-fn radiateCell(c: u32) -> f32 {
+/**
+ * One cell's emission and rays (the CPU's radiation): returns what it emitted
+ * and what its rays carried beyond the grid. With surfaceRayStart (plan 13.25,
+ * item 10) a lumped solid's or a one-dimensional wall's rays start at a
+ * uniform point on the face they drew, two draws from the cell's stream of
+ * salt 3 (the CPU's), in the gas cell beyond the face, named by index; a face
+ * on the grid's side sends its ray out at once.
+ */
+fn radiateCell(c: u32) -> vec2<f32> {
   let kc = kindOf(c);
   let p = vec3<i32>(coords(c));
   let Ta = U.ambient;
@@ -1317,7 +1381,7 @@ fn radiateCell(c: u32) -> f32 {
   if (w != NO_CELL) {
     // A one-dimensional wall: each open face from its own surface (wallEmit).
     emitted = wallEmit(w, c, p, &faceE);
-    if (!(emitted > 0.0)) { return 0.0; }
+    if (!(emitted > 0.0)) { return vec2<f32>(0.0); }
     for (var d = 0u; d < 6u; d++) {
       let q = p + dirv(d);
       if (!inside(q) || kindOf(atI(q)) == GAS) { faces[nf] = d; nf++; }
@@ -1329,29 +1393,34 @@ fn radiateCell(c: u32) -> f32 {
       let q = p + dirv(d);
       if (!inside(q) || kindOf(atI(q)) == GAS) { faces[nf] = d; nf++; }
     }
-    if (nf == 0u) { return 0.0; }
+    if (nf == 0u) { return vec2<f32>(0.0); }
     let A = U.h * U.h;
     let surface = select(A * f32(nf), max(cf[ix(fArea, c)], A), kc == POROUS);
     let C = solidCap(c);
     emitted = cf[ix(fEps, c)] * SIGMA * (Ts * Ts * Ts * Ts - Ta4) * surface * U.dt;
     emitted = min(emitted, 0.5 * C * (Ts - Ta));
-    if (!(emitted > 0.0)) { return 0.0; }
+    if (!(emitted > 0.0)) { return vec2<f32>(0.0); }
     cf[ix(fTs, c)] = Ts - emitted / C;
     fromSolid = true;
   } else if (kc == GAS && T > U.emitAbove) {
     // Eq. 17: 4 kappa Y_soot sigma (T^4 - T_amb^4) per unit volume.
     let ys = Y[c * NS + 4u];
-    if (!(ys > 0.0)) { return 0.0; }
+    if (!(ys > 0.0)) { return vec2<f32>(0.0); }
     let Cg = cf[ix(fRho, c)] * mixtureCp(c) * U.V;
     emitted = 4.0 * U.kappa * ys * SIGMA * (T * T * T * T - Ta4) * U.V * U.dt;
     emitted = min(emitted, 0.5 * Cg * (T - Ta));
-    if (!(emitted > 0.0)) { return 0.0; }
+    if (!(emitted > 0.0)) { return vec2<f32>(0.0); }
     cf[ix(fT, c)] = T - emitted / Cg;
   } else {
-    return 0.0;
+    return vec2<f32>(0.0);
   }
   let share = emitted / f32(U.rays);
   var rs = seedOf(c, 2u);
+  // With surfaceRayStart, a lumped solid's or a one-dimensional wall's rays start on their face (a porous cell's stay at its centre).
+  let onFace = U.surfaceRayStart != 0u && fromSolid && (w != NO_CELL || kc == SOLID);
+  var fs = 0u;
+  if (onFace) { fs = seedOf(c, 3u); }
+  var beyond = 0.0;
   for (var r = 0u; r < U.rays; r++) {
     // Uniform on the sphere; from a surface, plus the normal of one open face (Lambert).
     let zc = 2.0 * rnd(&rs) - 1.0;
@@ -1376,28 +1445,78 @@ fn radiateCell(c: u32) -> f32 {
       dir += vec3<f32>(dirv(f));
       let len = length(dir);
       dir = dir / select(1.0, len, len > 0.0);
+      if (onFace) {
+        let n = dirv(f);
+        let a = f >> 1u;
+        // A direction along or behind the face (u = -n to round-off) is its normal.
+        if (dir[a] * f32(n[a]) <= 0.0) { dir = vec3<f32>(n); }
+        let u1 = rnd(&fs);
+        let u2 = rnd(&fs);
+        let g = p + n;
+        // A face on the grid's side: the ray leaves the grid at once.
+        if (!inside(g)) {
+          beyond += share;
+          continue;
+        }
+        // A uniform point on the face, as fractions of the gas cell beyond it:
+        // its near side along the normal, u1 and u2 along the other two axes
+        // in the order i, j, k.
+        var start = vec3<f32>(0.0);
+        start[a] = select(1.0, 0.0, n[a] > 0);
+        start[select(0u, 1u, a == 0u)] = u1;
+        start[select(2u, 1u, a == 2u)] = u2;
+        beyond += march(c, g, dir, share, fromSolid, start, U.nx + U.ny + U.nz);
+        continue;
+      }
     }
-    march(c, p, dir, share, fromSolid);
+    beyond += march(c, p, dir, share, fromSolid, vec3<f32>(0.5), U.rayReach);
   }
-  return emitted;
+  return vec2<f32>(emitted, beyond);
 }
 
 @compute @workgroup_size(64)
 fn radEmit(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>,
            @builtin(local_invocation_index) li: u32, @builtin(workgroup_id) wid: vec3<u32>) {
   let c = lin(gid, nwg);
-  var e = 0.0;
+  var e = vec2<f32>(0.0);
   if (c < U.N) { e = radiateCell(c); }
-  wsum[li] = vec4<f32>(e, 0.0, 0.0, 0.0);
+  wsum[li] = vec4<f32>(e.x, e.y, 0.0, 0.0);
   workgroupBarrier();
   for (var s = 32u; s > 0u; s >>= 1u) {
     if (li < s) { wsum[li] += wsum[li + s]; }
     workgroupBarrier();
   }
-  if (li == 0u) { red[U.redRad + wid.x + wid.y * nwg.x] = wsum[0].x; }
+  if (li == 0u) {
+    red[U.redRad + wid.x + wid.y * nwg.x] = wsum[0].x;
+    // With surfaceRayStart, the block's share of what the rays carried beyond the grid.
+    if (U.surfaceRayStart != 0u) { red[U.redRadOut + wid.x + wid.y * nwg.x] = wsum[0].y; }
+  }
+}
+
+/**
+ * radApply with the deposits in joules (surfaceRayStart): each divided by the
+ * capacity the CPU's march divides by, rho cp V for the gas and max(the
+ * solid's capacity, 1e-6) for a cell's mean and a wall's ends.
+ */
+fn radApplyJoules(c: u32) {
+  let g = bitcast<i32>(atomPlain[ix(aDepGas, c)]);
+  if (g != 0) { cf[ix(fT, c)] += (f32(g) / DEP_JOULE) / (cf[ix(fRho, c)] * mixtureCp(c) * U.V); }
+  let s = bitcast<i32>(atomPlain[ix(aDepSolid, c)]);
+  if (s != 0) { cf[ix(fTs, c)] += (f32(s) / DEP_JOULE) / max(solidCap(c), 1e-6); }
+  let w = wallOf(c);
+  if (w != NO_CELL) {
+    let lo = bitcast<i32>(atomPlain[U.wallDepAt + 2u * w]);
+    if (lo != 0) { wallEnd(w, c, 0u, (f32(lo) / DEP_JOULE) / max(solidCap(c), 1e-6)); }
+    let hi = bitcast<i32>(atomPlain[U.wallDepAt + 2u * w + 1u]);
+    if (hi != 0) { wallEnd(w, c, 1u, (f32(hi) / DEP_JOULE) / max(solidCap(c), 1e-6)); }
+  }
 }
 
 ${perCell("radApply", `
+  if (U.surfaceRayStart != 0u) {
+    radApplyJoules(c);
+    return;
+  }
   let g = bitcast<i32>(atomPlain[ix(aDepGas, c)]);
   if (g != 0) { cf[ix(fT, c)] += f32(g) / DEP_SCALE; }
   let s = bitcast<i32>(atomPlain[ix(aDepSolid, c)]);
@@ -2158,12 +2277,18 @@ fn chemistry(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgro
   }
 }
 
-/** Sum the per-workgroup partials into this step's slot: released, burnt, radiated. */
+/**
+ * Sum the per-workgroup partials into this step's slot: released, burnt,
+ * radiated; with surfaceRayStart also what the rays carried beyond the grid,
+ * into the frame's sum beside the pilot's heat.
+ */
 @compute @workgroup_size(64)
 fn reduceFinish(@builtin(local_invocation_index) li: u32) {
   var s = vec4<f32>(0.0);
   for (var w = li; w < U.nPart; w += 64u) {
-    s += vec4<f32>(red[2u * w], red[2u * w + 1u], red[U.redRad + w], 0.0);
+    var lost = 0.0;
+    if (U.surfaceRayStart != 0u) { lost = red[U.redRadOut + w]; }
+    s += vec4<f32>(red[2u * w], red[2u * w + 1u], red[U.redRad + w], lost);
   }
   wsum[li] = s;
   workgroupBarrier();
@@ -2177,6 +2302,7 @@ fn reduceFinish(@builtin(local_invocation_index) li: u32) {
     red[o + 1u] += wsum[0].y;
     red[o + 2u] += wsum[0].z;
     red[o + 3u] += 1.0;
+    if (U.surfaceRayStart != 0u) { red[U.redPilot + 1u] += wsum[0].w; }
   }
 }
 

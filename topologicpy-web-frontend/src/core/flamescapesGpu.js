@@ -19,7 +19,8 @@
  *     gas, the +x, +y, +z faces split by parity, then the -x, -y, -z gas
  *     faces) that give every solid cell the CPU's own order of exchanges; radiation's
  *     deposits in fixed point (both paths emit from the stage's starting
- *     temperatures and add the deposits after, since 2026-11-09); embers' spot-ignition test once per cell and step;
+ *     temperatures and add the deposits after, since 2026-11-09; in joules
+ *     with surfaceRayStart, calibration plan 13.25); embers' spot-ignition test once per cell and step;
  *     flame particles beyond their share refused by the same hash of cell and
  *     step as the CPU's (since 2026-11-09; before, by whichever thread came last);
  *     random numbers from a per-thread PCG hash. With radiation and particles
@@ -46,7 +47,7 @@ import {
   KELVIN, ceilingDetectors, failedHealth, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
 import {
-  AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CTR, CTR_SIZE, HEAT_UNIT, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
+  AT, AT_FIELDS, B, CF, CF_FIELDS, CI, CI_FIELDS, CLAMP_SCALE, CTR, CTR_SIZE, HEAT_UNIT, KERNELS, PARAMS, PARAM_BYTES, PARAM_SCALARS,
   PARTICLE_FLOATS, SWEEP_BYTES, WG, buildShader,
   SUP, SYS, WALL, ZONE_BLOCKS,
 } from "./flamescapesGpu/kernels.js";
@@ -216,6 +217,8 @@ class GpuSim {
     this.lastDt = P.dt;
     this.particlesOn = d.cap > 0;
     this.radiationOn = Number.isFinite(P.emitAbove) && P.emitAbove < 1e8;
+    // A surface's rays start on its emitting face (flamescapes.js surfaceRayStart, plan 13.25): the deposits are joules, the rays leaving the grid counted.
+    this.surfaceRaysOn = P.surfaceRayStart > 0;
     this.embersOn = Boolean(P.embers) && this.particlesOn;
     this.vorticityOn = P.vorticity > 0;
     // Proposal F, as the CPU's flags: the conserved transport and the expansion.
@@ -292,8 +295,12 @@ class GpuSim {
     red.zonePart = red.zoneSrc + (this.zonesOn ? N : 0);
     // Then each vent leak's expansion this step (kernels.js leakVent).
     red.leakDiv = red.zonePart + (this.zonesOn ? 3 * ZONE_BLOCKS * d.sealedN : 0);
-    red.size = red.leakDiv + d.leakVentN;
+    // Then, with surfaceRayStart, each block's share of what the rays carried beyond the grid (kernels.js radEmit).
+    red.radOut = red.leakDiv + d.leakVentN;
+    red.size = red.radOut + (this.surfaceRaysOn ? this.nPart : 0);
     this.red = red;
+    // With surfaceRayStart, the clamped deposits' count and J in `atom`, after the walls' deposits (kernels.js depositJ).
+    this.radClampAt = AT_FIELDS * N + this.gsSlots + 2 * d.wallN;
     // In `snap` after the step's start (velocities, T, Y): the transport's
     // scratch state (rho, then Y) and the step's starting T for the expansion.
     const snapAt = { gas: nuvw + 7 * N };
@@ -316,8 +323,8 @@ class GpuSim {
       ci: CI_FIELDS * N * 4,
       vel: nuvw * 4,
       snap: snapAt.size * 4,
-      // Then two ray deposits per one-dimensional wall, after the sweeps' slots.
-      atom: (AT_FIELDS * N + this.gsSlots + 2 * d.wallN) * 4,
+      // Then two ray deposits per one-dimensional wall, after the sweeps' slots, and with surfaceRayStart the clamps' two counters.
+      atom: (AT_FIELDS * N + this.gsSlots + 2 * d.wallN + (this.surfaceRaysOn ? 2 : 0)) * 4,
       parts: Math.max(1, d.cap) * PARTICLE_FLOATS * 4,
       red: red.size * 4,
       io: io.size * 4,
@@ -360,7 +367,7 @@ class GpuSim {
         entries: k.uses.map((binding) => ({ binding, resource: binding === B.sweep ? { buffer: byBinding[binding], size: SWEEP_BYTES } : { buffer: byBinding[binding] } })),
       });
     }
-    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 4 + 4 + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    this.staging = device.createBuffer({ label: "frame readback", size: Math.max(16, (6 * d.nNodes + this.nSpeed + CTR_SIZE + this.gsSlots + 4 * this.slots + 4 + 4 + (this.surfaceRaysOn ? 2 : 0) + 1 + 5 * d.snapMax) * 4), usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
 
     // ---- parameters
     this.paramBytes = new ArrayBuffer(PARAM_BYTES);
@@ -405,6 +412,7 @@ class GpuSim {
       sootThDiameter: P.sootThermophoreticDiameter, sootConductivity: P.sootConductivity, depAt: snapAt.dep,
       zonesOn: this.zonesOn ? 1 : 0, redZone: red.zone, zoneSrcAt: red.zoneSrc, zonePartAt: red.zonePart,
       leakTermsAt: io.leakTerms, leakVentN: d.leakVentN, leakVentAt: io.vents, leakDivAt: red.leakDiv,
+      surfaceRayStart: this.surfaceRaysOn ? 1 : 0, redRadOut: red.radOut, radClampAt: this.radClampAt,
     });
     this.writeParams();
     this.upload(nodeCells);
@@ -775,6 +783,12 @@ class GpuSim {
     // A design-fire item's four (kernels.js burner), straight after.
     enc.copyBufferToBuffer(buf.red, this.red.burner * 4, this.staging, o, 16);
     o += 16;
+    // With surfaceRayStart, the frame's clamped deposits (how many, and their J beyond the clamp), then they start afresh.
+    if (this.surfaceRaysOn) {
+      enc.copyBufferToBuffer(buf.atom, this.radClampAt * 4, this.staging, o, 8);
+      o += 8;
+      enc.clearBuffer(buf.atom, this.radClampAt * 4, 8);
+    }
     const snapBytes = (1 + 5 * d.snapMax) * 4;
     if (snap) enc.copyBufferToBuffer(buf.io, this.io.snap * 4, this.staging, o, snapBytes);
     // The frame's sums start afresh; the item's heat waiting for oxygen does not.
@@ -824,6 +838,8 @@ class GpuSim {
     const lastReleased = this.slot > 0 ? f[at + 4 * this.lastSlot] : 0;
     at += 4 * this.slots;
     const pilotHeat = f[at];
+    // With surfaceRayStart, what the rays carried beyond the grid over the frame (kernels.js reduceFinish, beside the pilot's heat).
+    const radiatedOut = this.surfaceRaysOn ? f[at + 1] : null;
     at += 4;
     // What the item burnt over the frame and in its last step, what waits for
     // oxygen, and its last flame cells: its record, as the CPU's burnerStep keeps it.
@@ -838,6 +854,12 @@ class GpuSim {
       b.flameRate = f[at + 1] / this.lastDt;
     }
     at += 4;
+    let radClamps = null, radClampJ = null;
+    if (this.surfaceRaysOn) {
+      radClamps = u[at];
+      radClampJ = u[at + 1] / CLAMP_SCALE;
+      at += 2;
+    }
     const maxT = new Float32Array(counters.buffer, CTR.maxT * 4, 1)[0];
     const maxSpeed = new Float32Array(counters.buffer, CTR.speed * 4, 1)[0];
     const gasHeat = counters[CTR.heat] * HEAT_UNIT;
@@ -861,6 +883,7 @@ class GpuSim {
       sweeps,
       particles: snapshot,
       smoke: cloud,
+      ...(this.surfaceRaysOn ? { radiatedOut, radClamps, radClampJ } : {}),
     };
   }
 
@@ -937,6 +960,89 @@ class GpuSim {
   /** Resolves when the queued steps have run (for timing). */
   finish() {
     return this.device.queue.onSubmittedWorkDone();
+  }
+
+  /**
+   * The radiation stage alone, for the checks (tools/surface-rays-check.mjs,
+   * calibration plan 13.25 (g)); no run calls it. From the temperatures of
+   * `state`, a CPU solver of this grid (T, Ts, its walls' nodes and means),
+   * at its step number: radEmit once, then the deposits as the accumulators
+   * hold them before radApply (joules with surfaceRayStart, else kelvin, in
+   * their fixed point: gas, solid, each wall's low and high end), the
+   * workgroups' sums of what the cells emitted and of what their rays carried
+   * beyond the grid (null without surfaceRayStart), and the clamped deposits.
+   * With `apply`, radApply follows and the fields it wrote come back too.
+   */
+  async radiationPass(state, { dt = state.P.dt, apply = false } = {}) {
+    const { device, buf, dims: d } = this;
+    const N = d.N, W = d.wallN;
+    const q = device.queue;
+    q.writeBuffer(buf.cf, CF.T * N * 4, state.T);
+    q.writeBuffer(buf.cf, CF.Ts * N * 4, state.Ts);
+    if (this.wall) {
+      q.writeBuffer(buf.wall, 2 * W * 4, state.wall.last);
+      q.writeBuffer(buf.wall, 3 * W * 4, state.wall.T);
+    }
+    this.setParams({ dt, stepNo: state.steps });
+    this.writeParams();
+    const enc = device.createCommandEncoder();
+    enc.clearBuffer(buf.atom, AT.depGas * N * 4, 2 * N * 4);
+    if (W) enc.clearBuffer(buf.atom, (AT_FIELDS * N + this.gsSlots) * 4, 2 * W * 4);
+    if (this.surfaceRaysOn) enc.clearBuffer(buf.atom, this.radClampAt * 4, 8);
+    const pass = enc.beginComputePass();
+    this.dispatch(pass, "radEmit");
+    if (apply) this.dispatch(pass, "radApply");
+    pass.end();
+    const nodes = apply && this.wall ? W * this.wall.n : 0;
+    const words = 2 * N + 2 * W + 2 + 2 * this.nPart + (apply ? 2 * N + nodes : 0);
+    const staging = device.createBuffer({ size: words * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    let o = 0;
+    const copy = (from, at, count) => {
+      if (count) enc.copyBufferToBuffer(from, at * 4, staging, o * 4, count * 4);
+      o += count;
+    };
+    copy(buf.atom, AT.depGas * N, 2 * N);
+    copy(buf.atom, AT_FIELDS * N + this.gsSlots, 2 * W);
+    copy(buf.atom, this.radClampAt, this.surfaceRaysOn ? 2 : 0);
+    o = 2 * N + 2 * W + 2;
+    copy(buf.red, this.red.rad, this.nPart);
+    copy(buf.red, this.red.radOut, this.surfaceRaysOn ? this.nPart : 0);
+    o = 2 * N + 2 * W + 2 + 2 * this.nPart;
+    if (apply) {
+      copy(buf.cf, CF.T * N, N);
+      copy(buf.cf, CF.Ts * N, N);
+      copy(buf.wall, 3 * W, nodes);
+    }
+    q.submit([enc.finish()]);
+    await staging.mapAsync(GPUMapMode.READ);
+    const bytes = staging.getMappedRange().slice(0);
+    staging.unmap();
+    staging.destroy();
+    if (this.ctx.error) throw new Error(`WebGPU: ${this.ctx.error}`);
+    const i32 = new Int32Array(bytes), u = new Uint32Array(bytes), f = new Float32Array(bytes);
+    const sum = (from) => {
+      let s = 0;
+      for (let k = 0; k < this.nPart; k += 1) s += f[from + k];
+      return s;
+    };
+    const lo = new Int32Array(W), hi = new Int32Array(W);
+    for (let w = 0; w < W; w += 1) {
+      lo[w] = i32[2 * N + 2 * w];
+      hi[w] = i32[2 * N + 2 * w + 1];
+    }
+    const at = 2 * N + 2 * W + 2 + 2 * this.nPart;
+    return {
+      joules: this.surfaceRaysOn,
+      gas: i32.slice(0, N),
+      solid: i32.slice(N, 2 * N),
+      wallLo: lo,
+      wallHi: hi,
+      clamps: this.surfaceRaysOn ? u[2 * N + 2 * W] : null,
+      clampJ: this.surfaceRaysOn ? u[2 * N + 2 * W + 1] / CLAMP_SCALE : null,
+      radiated: sum(2 * N + 2 * W + 2),
+      radiatedOut: this.surfaceRaysOn ? sum(2 * N + 2 * W + 2 + this.nPart) : null,
+      ...(apply ? { T: f.slice(at, at + N), Ts: f.slice(at + N, at + 2 * N), wallT: nodes ? f.slice(at + 2 * N, at + 2 * N + nodes) : null } : {}),
+    };
   }
 
   /**
@@ -1056,6 +1162,8 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const detectorVis = new Float32Array(rows * D);
   const hrr = new Float32Array(K);
   const stats = { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: sim.P.ambient, released: 0, radiated: 0, sweeps: 0, pilotHeat: 0 };
+  // With surfaceRayStart (plan 13.25): what the rays carried beyond the grid, and the deposits clamped.
+  if (sim.P.surfaceRayStart > 0) Object.assign(stats, { radiatedOut: 0, radClamps: 0, radClampJ: 0 });
   // What a design-fire item has released by the last frame (the GPU's tallies leave it out).
   let itemBefore = 0;
   // Proposals A and B, as the CPU's runScene: each frame's steps cut by the
@@ -1102,6 +1210,11 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       stats.released += frame.released;
       stats.burnt += frame.burnt;
       stats.radiated += frame.radiated;
+      if (frame.radiatedOut !== undefined) {
+        stats.radiatedOut += frame.radiatedOut;
+        stats.radClamps += frame.radClamps;
+        stats.radClampJ += frame.radClampJ;
+      }
       stats.hrr = frame.lastReleased / gpu.lastDt;
       stats.maxT = frame.maxT;
       stats.embersSpawned = frame.embersSpawned;

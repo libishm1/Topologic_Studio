@@ -94,6 +94,13 @@
  * (lib/fds.mjs treeCells); each run lists, per tree, the cells dropped, where
  * the tree now ends and its column's snapped ceiling. --pockets keep reads
  * the trees as before 13.22 (for 13.22's check (a) and the control runs).
+ *
+ * --surface-ray-start (added 2026-11-13, plan 13.25, physics
+ * item 10) starts a surface's rays on its emitting face (the solver's
+ * surfaceRayStart: 1, off by default), and the ledger then records, beside
+ * `radiated`, what the radiation stage's rays carry out of the grid
+ * (radiatedOut) and the surface rays and the cells they cross (surfaceRays,
+ * surfaceCrossings); null for a solver without them.
  */
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { execFileSync } from "node:child_process";
@@ -280,7 +287,9 @@ async function runCase(c) {
         ...T.leakage.zones.map((z) => ({ area_m2: z.area_m2, referencePressure_Pa: z.referencePressure_Pa, pressureExponent: z.pressureExponent, toZone: z.to, source: "ZONE LEAK_AREA" })),
         ...T.leakage.hvac.filter((v) => v.area_m2 != null).map((v) => ({ area_m2: v.area_m2, ventXb: v.ventXb, to: v.vent2, source: `HVAC ${v.type || "leak"} '${v.id}'` })),
       ];
-  const sim = F.createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...c.solver });
+  // --surface-ray-start (plan 13.25, item 10): a surface's rays start on its emitting face.
+  const surfaceRayStart = c.surfaceRayStart ? { surfaceRayStart: 1 } : {};
+  const sim = F.createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...surfaceRayStart, ...c.solver });
   // Whether the solver took the walls' materials (a solver without options.inert keeps its stone).
   let wallCheck = null;
   if (inert) {
@@ -414,8 +423,10 @@ async function runCase(c) {
   // Where the fire's heat is, about ten times a run (MJ; the model's own, no measurement, for the diagnosis
   // of plan 13.15): released by the burner, radiated, held by the gas above ambient (the health guard's
   // sum over the whole grid), held by the inert solids (their capacity by their mean rise), carried out
-  // of the grid's sides, and leaked from sealed regions (kg, and MJ at the gas's own temperature). It
-  // reads the state after a step and changes none; null where the pinned solver keeps no such count.
+  // of the grid's sides, and leaked from sealed regions (kg, and MJ at the gas's own temperature). With
+  // a surface's rays starting on its face (plan 13.25, item 10), also what the radiation stage's rays
+  // carried out of the grid (radiatedOut) and the surface rays and the cells they crossed. It reads
+  // the state after a step and changes none; null where the pinned solver keeps no such count.
   const ledger = [];
   const ledgerEvery = Math.max(1, Math.round(horizon / 10));
   const MJ = (x) => (Number.isFinite(x) ? +(x / 1e6).toFixed(4) : null);
@@ -439,7 +450,7 @@ async function runCase(c) {
         let walls = 0;
         for (let cc = 0; cc < sim.N; cc += 1) if (sim.inertC[cc] > 0) walls += sim.inertC[cc] * (sim.Ts[cc] - Ta);
         const st = sim.stats;
-        ledger.push({ t: end, released: MJ(st.released), radiated: MJ(st.radiated), gas: MJ(reading.gasHeat), walls: MJ(walls), shell: MJ(st.shellHeat), leakKg: Number.isFinite(st.leakMass) ? +st.leakMass.toFixed(4) : null, leak: MJ(st.leakEnthalpy) });
+        ledger.push({ t: end, released: MJ(st.released), radiated: MJ(st.radiated), gas: MJ(reading.gasHeat), walls: MJ(walls), shell: MJ(st.shellHeat), leakKg: Number.isFinite(st.leakMass) ? +st.leakMass.toFixed(4) : null, leak: MJ(st.leakEnthalpy), radiatedOut: MJ(st.radiatedOut), surfaceRays: Number.isFinite(st.surfaceRays) ? st.surfaceRays : null, surfaceCrossings: Number.isFinite(st.surfaceCrossings) ? st.surfaceCrossings : null });
       } catch {
         // A diagnosis only: a run is never lost to it.
       }
@@ -598,7 +609,7 @@ async function runCase(c) {
     trees: trees.map((tr) => ({ id: tr.id, modelCeiling: tr.modelH != null ? +tr.modelH.toFixed(3) : null, nominal: tr.H, cells: tr.cells ? tr.cells.length : null, droppedCells: tr.dropped ?? null, pockets: { dropped: tr.pocket.dropped.map((q) => ({ z: +q.z.toFixed(3), j: q.j, c: q.c, ...(q.pocket ? { pocket: true } : {}) })), midTree: tr.pocket.midTree, endsAt: tr.all.length ? +(tr.all[tr.all.length - 1].z + h / 2).toFixed(3) : null, snappedCeiling: tr.pocket.ceiling != null ? +tr.pocket.ceiling.toFixed(3) : null } })),
     points: points.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null, ...(p.pathCells ? { pathCells: p.pathCells.length } : {}) })),
     fuel: { heatOfCombustion: fuel.heatOfCombustion, yields: fuel.yields, rule: c.fuelRule !== "app" && T.fuel ? "the test fuel's" : T.co2PerJ ? "class A, CO2 per joule matched" : "class A as the app has it" },
-    solverOptions: { ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...c.solver },
+    solverOptions: { ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...surfaceRayStart, ...c.solver },
     door: door && door.z ? { cells: door.z.length, width: +door.width.toFixed(3), sill: door.sill != null ? +door.sill.toFixed(3) : null, soffit: door.soffit != null ? +door.soffit.toFixed(3) : null, measured: { width: T.opening?.[0]?.width ?? null, sill: T.door.sill, soffit: T.door.soffit } } : null,
     region,
     walls: inert ? { slots: T.materials.slots.map((m) => m.surface), rhoModel: inert.map((m) => +m.rho.toFixed(2)), solidCells: wallCells, check: wallCheck } : "the solver's stone",
@@ -922,6 +933,7 @@ async function main() {
   const Rsnap = await import(pathToFileURL(path.join(path.dirname(snapshot.harness), "lib", "represented.mjs")).href);
   const wallLayers = args.includes("--wall-layers");
   const leakageOn = args.includes("--leakage");
+  const surfaceRayStartOn = args.includes("--surface-ray-start");
   const F = await import(pathToFileURL(path.join(snapshot.core, "flamescapes.js")).href);
   const walls = flag("--walls", "test");
   const fuelRule = flag("--fuel", "test");
@@ -947,7 +959,7 @@ async function main() {
         const bb = T.geometry.meshes.reduce((a, m) => [Math.min(a[0], m[0]), Math.max(a[1], m[1]), Math.min(a[2], m[2]), Math.max(a[3], m[3]), Math.min(a[4], m[4]), Math.max(a[5], m[5])], [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity]);
         const vol = (bb[1] - bb[0] + 2 * h) * (bb[3] - bb[2] + 2 * h) * (bb[5] - bb[4] + 2 * h);
         const cost = (vol / h ** 3) * horizon * Math.max(2, Math.sqrt(T.burner.peakW / 1e5));
-        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn, snap: snapRule, pockets: pocketRule });
+        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn, snap: snapRule, pockets: pocketRule, surfaceRayStart: surfaceRayStartOn });
       }
     }
   }
@@ -997,7 +1009,7 @@ async function main() {
     wallSeconds: (performance.now() - t0) / 1000,
     git: { ...git, solverRev: snapshot.rev, snapshotDigests: snapshot.digests, snapshotLfDigests: snapshot.lfDigests, harnessDigests: snapshot.harnessDigests },
     solver: { overrides: solver, defaults: { ...F.DEFAULTS }, health: { ...F.HEALTH } },
-    settings: { datasets, cells: cellsArg, tests: only, snap: snapRule === "nearest" ? "nearest: every face to its nearest cell plane (plan 13.21)" : "seal (the voxeliser's rule before plan 13.21)", pockets: pocketRule === "keep" ? "kept (the trees as before plan 13.22)" : "a tree ends below its first pocket (plan 13.22)", fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
+    settings: { datasets, cells: cellsArg, tests: only, snap: snapRule === "nearest" ? "nearest: every face to its nearest cell plane (plan 13.21)" : "seal (the voxeliser's rule before plan 13.21)", pockets: pocketRule === "keep" ? "kept (the trees as before plan 13.22)" : "a tree ends below its first pocket (plan 13.22)", fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, surfaceRayStart: surfaceRayStartOn ? "on: a surface's rays start on its emitting face (--surface-ray-start; plan 13.25, item 10)" : "off", plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
     runs,
   };
   await bothWays(report, S, measures, Object.fromEntries(cases.map((cs) => [`${cs.dataset}/${cs.test.id}`, cs.test])), Rsnap);
