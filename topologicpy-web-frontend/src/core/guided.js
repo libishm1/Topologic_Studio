@@ -78,6 +78,17 @@ export const GUIDED_RUNS = [
     // The extra stages: the egress map, then the fine grid and the accessibility audit (no route).
     egress: true,
   },
+  {
+    id: "egress-institute",
+    title: "Five floors, one way out (KIT institute)",
+    description:
+      "KIT's institute building: the walk from every room on its five floors, down its stairs, to its one door out, with the common paths and dead ends against IBC 2021, then each floor measured on a fine grid for a wheelchair.",
+    time: "About 20 s",
+    example: "kit-ac20-institute",
+    fire: null,
+    // As the clinic's run: the egress map, the fine grid and the audit, on a taller building.
+    egress: true,
+  },
 ];
 
 /** The stages a guided run passes through, in order, with what each shows. */
