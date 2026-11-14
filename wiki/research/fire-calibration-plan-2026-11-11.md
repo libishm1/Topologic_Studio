@@ -2749,6 +2749,52 @@ There was one attempt and no fault of the code against the method, so no correct
 
 **What follows** (decisions 14 and 15). The switch becomes available to the harness and the solver's options, and the app's default stays 0. Item 11 (13.26) may now be built. Then come the two reruns, item 10 alone and items 10 and 11 together, on 13.B's solver and flags, the eight series and the chair series, on three cells, each reported beside 13.B. A default changes only after those reruns, the app's text rewritten from them, and the user's agreement with the step cost and `radRoundoff` before them. The item reaches `next/surface-rays` as one commit, with the conflict in `validation-suite.mjs` resolved by keeping both sides: 13.21 and 13.22's flags, and `--surface-ray-start`. The branch `flamescapes/surface-rays` keeps the three commits.
 
+### 13.33 The reruns of item 10, and of items 10 and 11: fixed before any run (2026-11-14, 07:25)
+
+Decision 15 of 13.26 fixes what runs. This section fixes how, before any run of either. Nothing below changes after a run; anything added later is dated, with its commit.
+
+1. **Two reruns.**
+   - R10 is item 10 alone (`--surface-ray-start`).
+   - R11 is items 10 and 11 together, with item 11's flag as its build names it. R11 runs only if item 11 passes 13.26's checks (a) to (g), and only from the commit that passed them.
+2. **The solver.**
+   - R10 uses `--solver-rev 42f5655`, item 10's commit. Its solver files are 13.B's (550fce5) with item 10 added, off by default.
+   - R11 uses the commit of item 11 that passed its checks.
+3. **The harness.** R10 runs from this section's commit, and R11 from item 11's.
+   - Both have 13.16's correction.
+   - Both use 13.22's pocket rule as 13.31 uses it (`--pockets drop`), with `--snap seal`.
+   - The suite copies its own code at the start of each call, so later edits do not reach a running rerun.
+4. **The flags are 13.B's:** `--wall-layers --leakage --all-cells --jobs 8`. Each rerun runs, in this order:
+   1. the eight series (Steckler, NBS, NIST/NRC, WTC, ATF, UL FSRI, NIST at UL, FSE) on 0.34 m;
+   2. the eight series on 0.27 m;
+   3. the chair series (`fsri-chairs`) on 0.34, 0.27 and 0.20 m, one cell at a time;
+   4. the eight series on 0.20 m.
+5. **One reading.** The harness as 13.16 corrected it gives the reading of 13.B sealed. The default-leak reading came from the departure that 13.16 corrected, and it is not repeated. So each rerun is read beside 13.B sealed, in these files:
+   - on 0.27 m, the file with 13.22: `2026-11-13-validation-13b-027-sealed-pockets.json`;
+   - on 0.20 and 0.34 m, `2026-11-13-validation-13b-020-sealed.json` and `-034-sealed.json`. No tree holds a pocket on those cells (13.30), so 13.22 changes nothing there.
+
+   Where 13.B's two readings gave different words, the app states the stricter one (13.16, point 3). The tables give that word beside the rerun's.
+6. **The ninth series, as 15.9 read it.** On each cell, the rerun's chair runs are merged (`--merge`) with its eight-series file. The result is read beside 13.B sealed merged with that cell's runs from `2026-11-13-validation-fsri-chairs.json`; on 0.27 m, 13.B sealed means the file with 13.22.
+7. **What is reported for each rerun and cell:**
+   - each quantity's final word, with its pooled δ, σ_M and series in band, beside 13.B's, read as 13.27 read them;
+   - the stopped runs and the health guard;
+   - the heat ledger: released, radiated, gas, walls, out of the grid's sides;
+   - item 10's tallies in the ledger;
+   - for R11, also `surfaceFloor`, `surfaceCapped` and both `radRoundoff` sums, beside `radiated` (13.26, decision 7);
+   - the step cost: each run's wall seconds against 13.B's.
+
+   R11 is also read beside R10, so that each item's effect is read alone (13.26, Default).
+8. **The cost is reported with its load.** R10 runs on the same machine while item 11 is built and checked, so its wall seconds carry that load. That is stated beside them, and no cost figure is judged.
+9. **What follows a rerun.**
+   - No word in the app changes until the user has seen the rerun (13.26, decision 14; 13.5).
+   - A run that stops or fails the health guard counts as 12.6 counts it.
+   - No run is repeated with another seed, and no tolerance or rule moves.
+10. **Files** go in `benchmark/results/`, prefixed with the day the rerun starts, then `-validation-r10-` and the cell:
+    - the eight series: `034`, `027`, `020`;
+    - the chairs: `chairs-034`, `chairs-027`, `chairs-020`;
+    - the nine-series merges: `nine-034`, `nine-027`, `nine-020`.
+
+    R11 is named the same way with `r11`. Logs are not committed.
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
