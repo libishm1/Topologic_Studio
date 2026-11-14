@@ -54,6 +54,18 @@ export const GUIDED_RUNS = [
     note: "closed-doors",
   },
   {
+    id: "atrium-fire",
+    title: "A fire in the clinic's atrium",
+    description:
+      "The NIBS Clinic: a sofa fire in the central waiting room at the foot of its atrium, growing fast under sprinklers, the smoke rising through the open floors above, and whether the way out stays clear.",
+    time: "About 60 s on a laptop GPU",
+    example: "nibs-clinic",
+    // A Flamescapes fire at a named point (no ignition search): the central waiting
+    // room under the clinic's atrium A, the point the atrium sprinkler check used.
+    fire: { model: "flamescapes", at: [8, 0.75, 9.2], fireClass: "A", growth: "fast", sprinklers: true, doors: "open", horizon: 120, show: "smoke" },
+    captions: { origin: "Placing the fire in the central waiting room, under the atrium", fire: "The smoke rises through the atrium to the floors above" },
+  },
+  {
     id: "vienna-gpu",
     title: "Vienna on the GPU",
     description:

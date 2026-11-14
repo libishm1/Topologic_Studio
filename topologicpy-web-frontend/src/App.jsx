@@ -3939,14 +3939,16 @@ export default function App() {
         } else {
           setSettings({ flamescapes: false, fireModel: f.model, reroute: true });
         }
-        if (f.model === "flamescapes" && !f.onRoute) act(() => void findIgnition("residential"), points.fire);
+        // A point the run names (the clinic's atrium), snapped to the graph as a click would be.
+        if (f.at) act(() => handlePick("fire", f.at), points.fire);
+        else if (f.model === "flamescapes" && !f.onRoute) act(() => void findIgnition("residential"), points.fire);
         else {
           // Part-way along the route.
           const v = nodeAlong(path?.node_ids, f.along ?? 0.5);
           if (v < 0) return fail("The route has no nodes to place the fire on.");
           act(() => handlePick("fire", at(v)), points.fire);
         }
-      } else if (f.model === "flamescapes" && !f.onRoute && !guided.picked && ignition.candidates) {
+      } else if (f.model === "flamescapes" && !f.onRoute && !f.at && !guided.picked && ignition.candidates) {
         // The likeliest origin near the route, on a floor that reaches an exit,
         // clear of the start and the exits (core/guided.js guidedOrigin).
         const pick = guidedOrigin(graph, {
@@ -3972,7 +3974,7 @@ export default function App() {
       } else if (
         points.fire &&
         points.fire !== before &&
-        (f.model !== "flamescapes" || f.onRoute || guided.picked) &&
+        (f.model !== "flamescapes" || f.onRoute || f.at || guided.picked) &&
         // Under sprinklers, once the heads are laid out: a run started before has none.
         (!f.sprinklers || (sprinklerPlan && !sprinklerState.busy))
       )
