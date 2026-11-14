@@ -40,7 +40,9 @@ the heat.*
   conducted in layers, on cells of 0.20, 0.27 and 0.34 m. Each word is the
   strictest of the ways the comparison was read. The smoke layer's depth is
   calibrated on 0.20 m (bias 1.00, scatter 0.14, in band in six of seven
-  series) and 0.34 m (1.11, 0.14, five of seven) and indicative on 0.27 m;
+  series), 0.27 m (1.03, 0.11, seven of seven, with each measuring tree
+  ending below a one-cell pocket at its top) and 0.34 m (1.11, 0.14, five of
+  seven);
   the neutral plane in a door is calibrated on 0.20 m (0.90, 0.12, three of
   four series) and indicative on 0.27 m. The temperatures read warm: the
   layer's and the gas under the ceiling are indicative on 0.20 m only, from
@@ -54,7 +56,7 @@ the heat.*
   is not calibrated. Each run's card says what holds on its cells. The
   results:
   [wiki/research/fire-calibration-plan-2026-11-11.md](wiki/research/fire-calibration-plan-2026-11-11.md),
-  sections 13.27 and 14.9.
+  sections 13.27, 13.31 and 14.9.
 
 ## What's new (2026-11-12)
 

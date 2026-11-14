@@ -2,7 +2,7 @@
  * What the Flamescapes solver is validated for, quantity by quantity, from
  * held-out measured fire tests (wiki/research/fire-calibration-claim-protocol-2026-11-12.md,
  * written before the comparisons; results in fire-calibration-plan-2026-11-11.md,
- * section 13.27, and benchmark/results/2026-11-13-validation-13b-*.json). One
+ * sections 13.27 and 13.31, and benchmark/results/2026-11-13-validation-13b-*.json). One
  * table, so the run card, the panel, Methods and the describer say the same thing.
  *
  * "calibrated": within this project's calibrated band (bias 0.8 to 1.25,
@@ -19,7 +19,8 @@ export const TESTED_CELLS = [0.2, 0.27, 0.34];
 /**
  * The cell size the app's tested grid builds, m: the middle of the three the
  * held-out tests ran on. Named CALIBRATED_CELL until 13.B, whose strictest
- * reading of the smoke layer's depth on it is "indicative".
+ * reading of the smoke layer's depth on it was "indicative" until each
+ * measuring tree ended below a one-cell pocket at its top (plan 13.31).
  */
 export const TESTED_GRID_CELL = 0.27;
 
@@ -30,7 +31,8 @@ export const NEAR_CELL = 0.035;
 /**
  * Per quantity: its status on each tested cell, from the held-out run 13.B
  * (solver 550fce5, each test's walls in layers and its stated leaks, 178 runs
- * a cell; plan 13.27). Each word is the strictest of 13.B's readings: plan
+ * a cell; plan 13.27; on 0.27 m, each measuring tree ends below a one-cell
+ * pocket at its top, 13.31). Each word is the strictest of 13.B's readings: plan
  * 12.6 and protocol section 4, unweighted and weighted, every run and the
  * 2026-11-12 rule, default leak and sealed (13.16), eight series and nine
  * (15.9). Held-out: Steckler (NBS 1982), NBS multi-room (1991), NIST/NRC
@@ -45,10 +47,9 @@ export const VALIDATION = [
   {
     id: "layerDepth",
     quantity: "smoke layer depth",
-    status: { 0.2: "calibrated", 0.27: "indicative", 0.34: "calibrated" },
-    figures: { 0.2: "bias 1.00, scatter 0.14, in band in six of seven series", 0.34: "bias 1.11, scatter 0.14, in band in five of seven series" },
-    before: { 0.27: "calibrated" },
-    note: "on 0.27 m cells in band in all seven series as first run (bias 1.05, scatter 0.12); indicative once the three tests whose 0.24 m door the grid closes are sealed, as the plan asked (scatter 0.23)",
+    status: { 0.2: "calibrated", 0.27: "calibrated", 0.34: "calibrated" },
+    figures: { 0.2: "bias 1.00, scatter 0.14, in band in six of seven series", 0.27: "bias 1.03, scatter 0.11, in band in seven of seven series", 0.34: "bias 1.11, scatter 0.14, in band in five of seven series" },
+    note: "on 0.27 m cells with each measuring tree ending below a one-cell pocket at its top (plan 13.31); read up to that cell, 13.B's sealed reading was indicative there (scatter 0.23)",
   },
   {
     id: "layerTemperature",
