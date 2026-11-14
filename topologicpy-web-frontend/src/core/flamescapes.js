@@ -65,6 +65,10 @@
  *     cell beyond it, as Monte Carlo ray tracing casts a diffuse surface's
  *     rays (radiation, march). From the cell's centre, as before, a ray that
  *     crossed a side face stayed in the wall beside it (plan 13.24).
+ *   - With surfaceEmitFloor as well (plan 13.26 item 11; off by default), a
+ *     lumped solid or a one-dimensional wall emits from 10 K above ambient,
+ *     not from 500 K (surfaceFloorOf), and what it omits below that floor,
+ *     what the cap holds back and the stage's float32 round-off are counted.
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -232,6 +236,23 @@ export const DEFAULTS = Object.freeze({
   // beside it (plan 13.24). Off until its checks pass and the user agrees
   // (plan 13.25, the coordinator's decision 14).
   surfaceRayStart: 0,
+  // Surfaces emit from just above ambient (calibration plan 13.26, item 11;
+  // radiation, wallEmit, surfaceFloorOf): with surfaceRayStart 1, a lumped
+  // solid cell and a one-dimensional wall emit above theta = min(emitAbove,
+  // ambient + surfaceEmitRise), rounded to float32, where emitAbove is below
+  // 1e4 K (emitAbove itself otherwise, so 1e9 still turns radiation off).
+  // Porous cells and the gas keep emitAbove. What surfaces between ambient
+  // and theta would have emitted (stats.surfaceFloor), what the cap held back
+  // (surfaceCapped) and the stage's float32 round-off (radRoundoff) are
+  // counted. It does nothing while surfaceRayStart is 0. Off until its checks
+  // pass and the user agrees (plan 13.26, the coordinator's decision 14).
+  surfaceEmitFloor: 0,
+  surfaceEmitRise: 10, // K: theta above ambient, a numerical cut fixed from no data (plan 13.26, point 2)
+  // With surfaceEmitFloor, the rays (1 to `rays`) of a surface whose emitting
+  // faces are all at or below emitAbove, each carrying its emission over that
+  // number; null casts `rays`, as before (plan 13.26, "An option that holds
+  // the cost down"; the coordinator's decision 9).
+  surfaceWarmRays: null,
   // Solid fuel: the paper's Table 3 (biomass) and Table 4 (wood).
   pyrolysisA: 4.78e4, // 1 / s
   pyrolysisE: 9.22e4, // J / mol
@@ -485,7 +506,9 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     systems: null,
     // Soot's budget (kg): released by burning and pyrolysis, deposited on surfaces, carried out of the domain by its shell.
     // With surfaceRayStart: what the radiation stage's rays carried beyond the grid (J), and the surface rays and the cells they crossed.
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0, ...(P.surfaceRayStart > 0 ? { radiatedOut: 0, surfaceRays: 0, surfaceCrossings: 0 } : {}) },
+    // With surfaceEmitFloor as well (radiation): what surfaces below their floor would have emitted, what the cap held back, and the
+    // stage's float32 round-off (J) in the emitting cells' own temperatures and in its deposits.
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0, ...(P.surfaceRayStart > 0 ? { radiatedOut: 0, surfaceRays: 0, surfaceCrossings: 0 } : {}), ...(P.surfaceRayStart > 0 && P.surfaceEmitFloor > 0 ? { surfaceFloor: 0, surfaceCapped: 0, radRoundoff: { own: 0, deposits: 0 } } : {}) },
   };
 }
 
@@ -796,6 +819,43 @@ function solidCapacity(sim, c) {
 // -------------------------------------------------------------- radiation
 
 /**
+ * The floor above which a lumped solid or a one-dimensional wall emits
+ * (calibration plan 13.26, point 1, the coordinator's decision 6): with
+ * surfaceEmitFloor and surfaceRayStart on, theta = min(emitAbove, ambient +
+ * surfaceEmitRise) where emitAbove is below 1e4 K, else emitAbove, rounded to
+ * float32 so that both paths compare a float32 temperature with one number;
+ * otherwise emitAbove, as before. It never raises the floor.
+ */
+export function surfaceFloorOf(P) {
+  if (!(P.surfaceEmitFloor > 0 && P.surfaceRayStart > 0)) return P.emitAbove;
+  return Math.fround(P.emitAbove < 1e4 ? Math.min(P.emitAbove, P.ambient + P.surfaceEmitRise) : P.emitAbove);
+}
+
+/**
+ * With item 11 on and surfaceWarmRays set, the rays (1 to `rays`) of a
+ * surface whose emitting faces are all at or below emitAbove (plan 13.26, the
+ * coordinator's decision 9); null otherwise, when every surface casts `rays`.
+ */
+export function warmRaysOf(P) {
+  if (!(P.surfaceEmitFloor > 0 && P.surfaceRayStart > 0) || P.surfaceWarmRays == null) return null;
+  return Math.min(P.rays | 0, Math.max(1, Math.floor(P.surfaceWarmRays)));
+}
+
+/** What lumped solid cell c, between ambient and its floor, would emit in a step over its open faces (item 11's stats.surfaceFloor). */
+function lumpedFloor(sim, c, dt) {
+  const { P, grid: g } = sim;
+  const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+  let open = 0;
+  for (const [a, b, d] of DIRS) {
+    const ii = i + a, jj = j + b, kk = k + d;
+    if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz || sim.kind[at(g, ii, jj, kk)] === GAS) open += 1;
+  }
+  if (!open) return 0;
+  const e = sim.eps[c] * SIGMA * (sim.Ts[c] ** 4 - P.ambient ** 4) * (g.h * g.h * open) * dt;
+  return Math.max(0, Math.min(e, 0.5 * solidCapacity(sim, c) * (sim.Ts[c] - P.ambient)));
+}
+
+/**
  * Supplement Algorithm 1 with Eqs. 16 and 17: hot solid surfaces and sooty
  * gas emit; each emitting cell casts `rays` rays carrying equal shares, which
  * lose the fraction 1 - exp(-kappa Y_soot l) in every gas cell they cross and
@@ -819,6 +879,19 @@ function solidCapacity(sim, c) {
  * or leaves the grid. A face on the grid's side sends its ray out at once.
  * What the stage's rays carry beyond the grid is then counted
  * (stats.radiatedOut), with the surface rays and the cells they cross.
+ *
+ * With surfaceEmitFloor as well (calibration plan 13.26, item 11), a lumped
+ * solid and a one-dimensional wall emit above theta (surfaceFloorOf), not
+ * emitAbove; porous cells and the gas keep emitAbove. The stage then counts,
+ * in J: what lumped solids and walls' faces between ambient and theta would
+ * have emitted, cast nothing (stats.surfaceFloor); what the cap held back
+ * from surfaces (surfaceCapped); and by how much its float32 writes differ
+ * from the float64 changes it meant, (stored - meant) x capacity, in the
+ * emitting cells' own temperatures and in its deposits (radRoundoff.own,
+ * .deposits; for a wall, its nodes' and, since the walls stage spreads its
+ * mean less `last`, the J by which their changes round apart). With
+ * surfaceWarmRays, a surface whose emitting faces are all at or below
+ * emitAbove casts that many rays, each carrying its emission over that number.
  */
 function radiation(sim, dt) {
   const { P, grid: g } = sim;
@@ -830,6 +903,10 @@ function radiation(sim, dt) {
   // (wallEmit, march): their ends' deposits wait in lo and hi with the rest.
   const W = sim.wall;
   const fromFaces = P.surfaceRayStart > 0;
+  // Item 11 (plan 13.26): the surfaces' floor (emitAbove when off), and with it on the stage's tallies and warm surfaces' rays.
+  const theta = surfaceFloorOf(P);
+  const tally = fromFaces && P.surfaceEmitFloor > 0 ? { floor: 0, capped: 0, own: 0, deposits: 0, hot: false } : null;
+  const warmRays = (tally && warmRaysOf(P)) ?? P.rays;
   const dep = {
     T: workArray(sim, "radGas", sim.N, Float64Array).fill(0),
     Ts: workArray(sim, "radSolid", sim.N, Float64Array).fill(0),
@@ -855,12 +932,15 @@ function radiation(sim, dt) {
     const kc = sim.kind[c];
     let emitted = 0;
     let fromSolid = false;
+    // The rays this cell casts: `rays`, or with item 11 a warm surface's surfaceWarmRays.
+    let rays = P.rays;
     const w = W ? W.index[c] : -1;
     if (w >= 0) {
-      emitted = wallEmit(sim, w, c, dt, faceE);
+      emitted = wallEmit(sim, w, c, dt, faceE, theta, tally);
       if (!(emitted > 0)) continue;
       fromSolid = true;
-    } else if (kc !== GAS && sim.Ts[c] > P.emitAbove) {
+      if (tally && !tally.hot) rays = warmRays;
+    } else if (kc !== GAS && sim.Ts[c] > (kc === SOLID ? theta : P.emitAbove)) {
       // Eq. 16 over the cell's faces open to gas.
       const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
       let open = 0;
@@ -872,9 +952,18 @@ function radiation(sim, dt) {
       const surface = kc === POROUS ? Math.max(sim.area[c], A) : A * open;
       emitted = sim.eps[c] * SIGMA * (sim.Ts[c] ** 4 - Ta4) * surface * dt;
       // Never emit more than half the heat above ambient in one step.
-      emitted = Math.min(emitted, 0.5 * solidCapacity(sim, c) * (sim.Ts[c] - P.ambient));
+      const cap = 0.5 * solidCapacity(sim, c) * (sim.Ts[c] - P.ambient);
+      if (tally && kc === SOLID && emitted > cap) tally.capped += emitted - Math.max(cap, 0);
+      emitted = Math.min(emitted, cap);
       if (emitted <= 0) continue;
-      sim.Ts[c] -= emitted / solidCapacity(sim, c);
+      if (tally) {
+        // Item 11: the write's float32 round-off, and a surface at or below emitAbove casts the warm surfaces' rays.
+        const Cs = solidCapacity(sim, c);
+        if (kc === SOLID && sim.Ts[c] <= P.emitAbove) rays = warmRays;
+        const meant = sim.Ts[c] - emitted / Cs;
+        sim.Ts[c] = meant;
+        tally.own += (sim.Ts[c] - meant) * Cs;
+      } else sim.Ts[c] -= emitted / solidCapacity(sim, c);
       fromSolid = true;
     } else if (kc === GAS && sim.T[c] > P.emitAbove) {
       // Eq. 17: 4 kappa Y_soot sigma (T^4 - T_amb^4) per unit volume.
@@ -884,18 +973,26 @@ function radiation(sim, dt) {
       emitted = 4 * P.sootAbsorption * ys * SIGMA * (sim.T[c] ** 4 - Ta4) * sim.V * dt;
       emitted = Math.min(emitted, 0.5 * Cg * (sim.T[c] - P.ambient));
       if (emitted <= 0) continue;
-      sim.T[c] -= emitted / Cg;
-    } else continue;
+      if (tally) {
+        const meant = sim.T[c] - emitted / Cg;
+        sim.T[c] = meant;
+        tally.own += (sim.T[c] - meant) * Cg;
+      } else sim.T[c] -= emitted / Cg;
+    } else {
+      // Item 11: what a lumped solid between ambient and theta would have emitted, cast nothing.
+      if (tally && kc === SOLID && sim.Ts[c] > P.ambient) tally.floor += lumpedFloor(sim, c, dt);
+      continue;
+    }
     sim.stats.radiated += emitted;
     const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
-    const share = emitted / P.rays;
+    const share = emitted / rays;
     const faces = fromSolid ? openFaces(sim, i, j, k) : null;
     // The cell's own stream of the step (salt 2), the GPU's: both paths cast the same rays.
     stream = cellStream(c, sim.steps, 2, P.seed);
     // With surfaceRayStart, a lumped solid's or a one-dimensional wall's rays start on their face (a porous cell's stay at its centre).
     const onFace = fromFaces && fromSolid && (w >= 0 || kc === SOLID);
     if (onFace) faceStream = cellStream(c, sim.steps, 3, P.seed);
-    for (let r = 0; r < P.rays; r += 1) {
+    for (let r = 0; r < rays; r += 1) {
       // A uniform direction on the sphere; from a surface, added to the
       // normal of one of its open faces, which gives Lambert's cosine law
       // over that face's hemisphere.
@@ -949,17 +1046,47 @@ function radiation(sim, dt) {
       march(sim, i + 0.5, j + 0.5, k + 0.5, dir, share, c, fromSolid, dep);
     }
   }
-  for (let c = 0; c < sim.N; c += 1) {
-    if (dep.T[c]) sim.T[c] += dep.T[c];
-    if (dep.Ts[c]) sim.Ts[c] += dep.Ts[c];
-  }
-  if (W) {
-    for (let q = 0; q < W.cells.length; q += 1) {
-      if (dep.lo[q]) wallEnd(sim, q, W.cells[q], 0, dep.lo[q]);
-      if (dep.hi[q]) wallEnd(sim, q, W.cells[q], 1, dep.hi[q]);
+  if (tally) {
+    // Item 11: the same deposits, each write's float32 round-off counted in J by the capacity march divided by.
+    for (let c = 0; c < sim.N; c += 1) {
+      if (dep.T[c]) {
+        const meant = sim.T[c] + dep.T[c];
+        sim.T[c] = meant;
+        tally.deposits += (sim.T[c] - meant) * (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
+      }
+      if (dep.Ts[c]) {
+        const meant = sim.Ts[c] + dep.Ts[c];
+        sim.Ts[c] = meant;
+        tally.deposits += (sim.Ts[c] - meant) * Math.max(solidCapacity(sim, c), 1e-6);
+      }
+    }
+    if (W) {
+      for (let q = 0; q < W.cells.length; q += 1) {
+        if (dep.lo[q]) tally.deposits += wallEnd(sim, q, W.cells[q], 0, dep.lo[q], true);
+        if (dep.hi[q]) tally.deposits += wallEnd(sim, q, W.cells[q], 1, dep.hi[q], true);
+      }
+    }
+  } else {
+    for (let c = 0; c < sim.N; c += 1) {
+      if (dep.T[c]) sim.T[c] += dep.T[c];
+      if (dep.Ts[c]) sim.Ts[c] += dep.Ts[c];
+    }
+    if (W) {
+      for (let q = 0; q < W.cells.length; q += 1) {
+        if (dep.lo[q]) wallEnd(sim, q, W.cells[q], 0, dep.lo[q]);
+        if (dep.hi[q]) wallEnd(sim, q, W.cells[q], 1, dep.hi[q]);
+      }
     }
   }
   if (fromFaces) sim.stats.radiatedOut += dep.out[0];
+  if (tally) {
+    const st = sim.stats;
+    st.surfaceFloor = (st.surfaceFloor || 0) + tally.floor;
+    st.surfaceCapped = (st.surfaceCapped || 0) + tally.capped;
+    // A new object each stage, so a copy of the stats never shares it.
+    const rr = st.radRoundoff || { own: 0, deposits: 0 };
+    st.radRoundoff = { own: rr.own + tally.own, deposits: rr.deposits + tally.deposits };
+  }
 }
 
 /** The radiation stage alone, for the checks (tools/surface-rays-check.mjs); no run calls it. */
@@ -2181,29 +2308,51 @@ function wallSide(sim, w) {
  * Heat into one end of wall w (in cell c), as the rise k (K) it would give
  * the whole cell: its end node takes it, and the cell's mean temperature
  * (Ts) and `last` rise by k alike, so the walls stage does not spread it again.
+ * With `counted` (item 11, plan 13.26), returns the J by which the float32
+ * writes differ from the float64 changes meant: the node's, (stored - meant)
+ * by its capacity, and the mean's and `last`'s rises rounding apart, by the
+ * wall's (the walls stage would spread that difference); else 0.
  */
-function wallEnd(sim, w, c, end, k) {
+function wallEnd(sim, w, c, end, k, counted = false) {
   const W = sim.wall, n = W.n, s = W.meta[w] >> 2;
   const q = end ? n - 1 : 0;
+  if (counted) {
+    const A = sim.grid.h * sim.grid.h, o = w * n + q;
+    const meant = W.T[o] + (k * W.heat[s]) / W.C[s * n + q];
+    W.T[o] = meant;
+    const before = sim.Ts[c] - W.last[w];
+    sim.Ts[c] += k;
+    W.last[w] += k;
+    return (W.T[o] - meant) * W.C[s * n + q] * A + (sim.Ts[c] - W.last[w] - before) * W.heat[s] * A;
+  }
   W.T[w * n + q] += (k * W.heat[s]) / W.C[s * n + q];
   sim.Ts[c] += k;
   W.last[w] += k;
+  return 0;
 }
 
 /**
  * Radiation leaving wall w (cell c) over its faces open to gas or the
  * domain's side (Eq. 16 per face): an end face at its end node's temperature,
  * a side face at the cell's mean over its edge's area (wallSide), each above
- * emitAbove, never more than half its node's (or the cell's) heat above
- * ambient. `faceE` (six, by DIRS) gets each face's energy; the energy leaves
- * the nodes it came from. Returns the total.
+ * `floor` (emitAbove; with item 11, theta: surfaceFloorOf), never more than
+ * half its node's (or the cell's) heat above ambient. `faceE` (six, by DIRS)
+ * gets each face's energy; the energy leaves the nodes it came from. Returns
+ * the total. With `tally` (item 11, plan 13.26, radiation), it also counts
+ * what faces between ambient and the floor would have emitted (floor), what
+ * the cap held back (capped) and the round-off of its writes (own), and sets
+ * `hot` when a face it emits from is above emitAbove.
  */
-function wallEmit(sim, w, c, dt, faceE) {
+function wallEmit(sim, w, c, dt, faceE, floor = sim.P.emitAbove, tally = null) {
   const { P, grid: g } = sim;
   const W = sim.wall, n = W.n;
   const o = w * n;
-  // Cool walls (most of them, most of the time) cast nothing.
-  if (!(W.T[o] > P.emitAbove || W.T[o + n - 1] > P.emitAbove || sim.Ts[c] > P.emitAbove)) return 0;
+  if (tally) tally.hot = false;
+  // Cool walls (most of them, most of the time) cast nothing. With item 11
+  // a wall above ambient goes on, to count what its faces would have emitted.
+  if (!(W.T[o] > floor || W.T[o + n - 1] > floor || sim.Ts[c] > floor)) {
+    if (!(tally && (W.T[o] > P.ambient || W.T[o + n - 1] > P.ambient || sim.Ts[c] > P.ambient))) return 0;
+  }
   const A = g.h * g.h, side = wallSide(sim, w);
   const axis = W.meta[w] & 3, s = W.meta[w] >> 2;
   const total = W.heat[s] * A;
@@ -2219,17 +2368,42 @@ function wallEmit(sim, w, c, dt, faceE) {
     // An odd direction is down the axis: the end at node 0.
     const q = d & 1 ? 0 : n - 1;
     const Tf = end ? W.T[o + q] : sim.Ts[c];
-    if (!(Tf > P.emitAbove)) continue;
+    if (!(Tf > floor)) {
+      if (tally && Tf > Ta) tally.floor += Math.min(sim.eps[c] * SIGMA * (Tf ** 4 - Ta4) * (end ? A : side) * dt, 0.5 * (end ? W.C[s * n + q] * A : total) * (Tf - Ta));
+      continue;
+    }
     const cap = end ? W.C[s * n + q] * A : total;
     let emitted = sim.eps[c] * SIGMA * (Tf ** 4 - Ta4) * (end ? A : side) * dt;
-    emitted = Math.min(emitted, 0.5 * cap * (Tf - Ta));
+    const most = 0.5 * cap * (Tf - Ta);
+    if (tally && emitted > most) tally.capped += emitted - Math.max(most, 0);
+    emitted = Math.min(emitted, most);
     if (!(emitted > 0)) continue;
+    if (tally && Tf > P.emitAbove) tally.hot = true;
     faceE[d] = emitted;
     all += emitted;
-    if (end) W.T[o + q] -= emitted / cap;
-    else sides += emitted;
+    if (!end) sides += emitted;
+    else if (tally) {
+      const meant = W.T[o + q] - emitted / cap;
+      W.T[o + q] = meant;
+      tally.own += (W.T[o + q] - meant) * cap;
+    } else W.T[o + q] -= emitted / cap;
   }
   if (!(all > 0)) return 0;
+  if (tally) {
+    if (sides > 0) {
+      for (let q = 0; q < n; q += 1) {
+        const meant = W.T[o + q] - sides / total;
+        W.T[o + q] = meant;
+        tally.own += (W.T[o + q] - meant) * W.C[s * n + q] * A;
+      }
+    }
+    // The mean and `last` fall alike; what their changes round apart, the walls stage would spread.
+    const before = sim.Ts[c] - W.last[w];
+    sim.Ts[c] -= all / total;
+    W.last[w] -= all / total;
+    tally.own += (sim.Ts[c] - W.last[w] - before) * total;
+    return all;
+  }
   if (sides > 0) for (let q = 0; q < n; q += 1) W.T[o + q] -= sides / total;
   sim.Ts[c] -= all / total;
   W.last[w] -= all / total;
