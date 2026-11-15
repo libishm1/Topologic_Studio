@@ -178,6 +178,17 @@ const MODES = [
 ];
 
 const NO_PLAN = { busy: false, result: null };
+
+/**
+ * The Flamescapes run on screen as the RL card sees it: "none" (no run for
+ * this graph), "running", "stopped" (by the health guard) or "done". Whether
+ * it was made with the inputs as they are now is checked when training.
+ */
+function rlRunState(run, graph) {
+  if (!run || run.graph !== graph || run.failed) return "none";
+  if (!run.done) return "running";
+  return run.result?.health?.ok === false ? "stopped" : "done";
+}
 const NO_LINKED = [];
 
 /**
@@ -233,6 +244,9 @@ export default function App() {
   // The forecast worker's lanes, one worker each: plan, zone, report.
   const forecastRef = useRef({});
   const rlRef = useRef(null);
+  // Counts training requests and what ends them: one that waited for a fire
+  // run, and was overtaken or had its worker's job ended meanwhile, is dropped.
+  const rlGenRef = useRef(0);
   // The Flamescapes solver's worker, and its current run: inputs, frames as
   // they arrive, and the stacked result once done (reused by the plan).
   const flamescapesRef = useRef(null);
@@ -359,6 +373,7 @@ export default function App() {
       samplerRef.current?.cancel();
       Object.values(forecastRef.current).forEach((lane) => lane.cancel());
       rlRef.current?.cancel();
+      rlGenRef.current += 1;
       flamescapesRef.current?.cancel();
     },
     [],
@@ -518,6 +533,7 @@ export default function App() {
       samplerRef.current?.cancel();
       endFireStart();
       rlRef.current?.cancel();
+      rlGenRef.current += 1;
       dropPlan();
       colours.set(null);
       studio.beginLoad({ name, size, lod1: true });
@@ -649,6 +665,7 @@ export default function App() {
       samplerRef.current?.cancel();
       endFireStart();
       rlRef.current?.cancel();
+      rlGenRef.current += 1;
       dropPlan();
       // The new model starts with no graph to colour.
       colours.set(null);
@@ -852,6 +869,7 @@ export default function App() {
     studio.setLoadState({ busy: true, stage: "extracting", detail: null });
     // A policy still training is for the graph being replaced.
     rlRef.current?.cancel();
+    rlGenRef.current += 1;
     const timer = new PhaseTimer("graph.build");
 
     try {
@@ -1148,6 +1166,7 @@ export default function App() {
       // a route for the old points when it ended (SM-3).
       if (mode !== "fire" || settings.rlUseFire) {
         rlRef.current?.cancel();
+        rlGenRef.current += 1;
         if (rl.busy || rl.result) {
           studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
           if (rl.path) viewerRef.current?.setPath(null, { dynamic: true });
@@ -2555,12 +2574,12 @@ export default function App() {
   // Training and the exact optimum it is scored against run in a worker
   // (src/workers/rl.worker.js): the optimum alone held the page for over a
   // second on a large graph with a long step limit.
-  const rlJob = useCallback((graphData, options) => {
+  const rlJob = useCallback((graphData, options, transfers = []) => {
     rlRef.current ||= workerClient(
       () => new Worker(new URL("./workers/rl.worker.js", import.meta.url), { type: "module" }),
       { failure: "RL training stopped: its worker did not load or ran out of memory. Reload the page and try again." },
     );
-    return rlRef.current.run({ graph: graphData, options });
+    return rlRef.current.run({ graph: graphData, options }, transfers);
   }, []);
 
   const trainRl = useCallback(async () => {
@@ -2571,10 +2590,68 @@ export default function App() {
       shielded && settings.rlExits === "any" && exits?.final?.length
         ? exits.final.map((v) => [graph.nodes[v * 3], graph.nodes[v * 3 + 1], graph.nodes[v * 3 + 2]])
         : null;
+    // The fire the agent avoids (core/rlForecast.js): the forecast of the
+    // Flamescapes run the page has for this graph and these inputs, when the
+    // setting asks for it, else the hop front. A run is never started here.
+    // One still computing for these inputs is waited for, as the forecast
+    // plan waits; one the health guard stopped is refused, as the plan
+    // refuses it. `unavailable` says why the hop front was used instead.
+    let run = null, unavailable = null;
+    if (settings.rlUseFire && settings.rlFireSource !== "hop" && points.fire) {
+      const current = combustionRef.current;
+      if (!isFlamescapes(fireModel)) unavailable = "model";
+      else if (!current || current.graph !== graph || current.failed) unavailable = "none";
+      else {
+        let key = null;
+        try {
+          key = combustionInputs().key;
+        } catch {
+          key = null;
+        }
+        if (key !== null && current.key === key) run = current;
+        else unavailable = "other";
+      }
+    }
+    if (run && !(settings.rlForecastMargin > 0 && settings.rlForecastMargin <= 1)) {
+      toast("The forecast margin must be above 0 and at most 1.", { title: "Check the agent's settings", variant: "warning" });
+      return;
+    }
+    if (run && !(settings.walkSpeed > 0 && settings.departAfter >= 0)) {
+      toast("Walking speed must be above 0 m/s and Leave after at least 0 s (the forecast plan's settings).", { title: "Check the agent's settings", variant: "warning" });
+      return;
+    }
+    const gen = ++rlGenRef.current;
     studio.setRl({ busy: true, path: null, reachedExit: false, result: null });
     try {
-      // In the browser (src/core/rl.js), with the review's terminal-potential
-      // and horizon corrections.
+      let frames = null;
+      if (run) {
+        let done;
+        try {
+          done = await run.promise;
+        } catch (error) {
+          // The run was stopped (Stop, or a newer run): the agent is not trained on part of it.
+          if (isCancelled(error)) {
+            if (gen === rlGenRef.current) {
+              studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
+              toast("The fire run was stopped before it finished, so the agent was not trained. Run the fire again, or choose the hop front.", { title: "RL training", variant: "info" });
+            }
+            return;
+          }
+          throw error;
+        }
+        if (gen !== rlGenRef.current) return;
+        // A run the health guard stopped is cut short: nodes it never reached
+        // would read as never untenable, so the agent does not use it.
+        if (done?.health?.ok === false) {
+          studio.setRl({ busy: false, path: null, reachedExit: false, result: null });
+          toast(`The fire run was stopped at ${Math.round(done.health.time)} s: ${healthReason(done.health)}. The agent does not train against a stopped run; run the fire again, or choose the hop front.`, { variant: "warning", ttl: 8000 });
+          return;
+        }
+        // Stacked as the forecast plan stacks them, sent as copies.
+        frames = { ...stackFrames(run.frames, done?.n ?? graph.nodes.length / 3), frameSeconds: done.frameSeconds };
+      }
+      // In the browser (src/core/rl.js, src/core/rlSafe.js, src/core/rlForecast.js),
+      // with the review's terminal-potential and horizon corrections.
       const trained = await rlJob(
         { nodes: graph.nodes, edges: graph.edges, blocked: graph.blocked },
         {
@@ -2588,9 +2665,22 @@ export default function App() {
           fireSpeed: settings.rlFireSpeed,
           useWalls: settings.useWalls,
           ...(shielded ? { method: "shielded", ...(exitPoints ? { exitPoints } : {}) } : {}),
+          // Against the run's forecast: its closing times by the plan's
+          // tenability limits, leaving and walking as the plan does.
+          ...(frames
+            ? {
+                method: shielded ? "shielded" : "qlearning",
+                frames,
+                tenability: { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility },
+                depart: settings.departAfter,
+                walkSpeed: settings.walkSpeed,
+                margin: settings.rlForecastMargin,
+              }
+            : {}),
         },
+        frames ? [frames.T.buffer, frames.vis.buffer, frames.co.buffer, ...(frames.co2 ? [frames.co2.buffer, frames.o2.buffer] : [])] : [],
       );
-      const result = straighten(trained);
+      const result = straighten({ ...trained, ...(unavailable ? { forecast_unavailable: unavailable } : {}) });
       markUsed("agent");
       if (result.certified) markFound("certified");
       studio.setRl({
@@ -2617,7 +2707,7 @@ export default function App() {
       // Cancelled when the model or the graph changed under it.
       if (!isCancelled(error)) reportError(error, "RL training failed");
     }
-  }, [graph, points, exits, reportError, settings, studio, toast, straighten, rlJob, markFound, markUsed]);
+  }, [graph, points, exits, reportError, settings, studio, toast, straighten, rlJob, markFound, markUsed, fireModel, combustionInputs]);
 
   // -------------------------------------------------------------- exit doors
 
@@ -4117,6 +4207,7 @@ export default function App() {
     samplerRef.current?.cancel();
     endFireStart();
     rlRef.current?.cancel();
+    rlGenRef.current += 1;
     dropPlan();
     stopPerfFires();
     egressRef.current?.cancel();
@@ -4430,6 +4521,7 @@ export default function App() {
         samplerRef.current?.cancel();
         endFireStart();
         rlRef.current?.cancel();
+        rlGenRef.current += 1;
         dropPlan();
         geometryRef.current = null;
         studio.beginLoad(null);
@@ -5128,6 +5220,7 @@ export default function App() {
                   onStartFire={startFire}
                   onStopFire={stopFire}
                   onTrainRl={trainRl}
+                  rlRun={isFlamescapes(fireModel) ? rlRunState(combustionRef.current, graph) : "model"}
                   onPlanForecast={planForecast}
                   deadlinesShown={graphColours === "deadlines"}
                   exits={exits}
