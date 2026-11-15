@@ -3843,6 +3843,108 @@ The two drafts above are the physics agent's, written blind (13.12, rule 2). The
 2. **The contents' vapour.** It enters the gas at the cell's temperature with no enthalpy taken. So energy appears with every kilogram the contents pyrolyse. 13.A's Lean theorems cover the transport and the burner, not the contents. Its size is measured first, by a read-only run. Then it is drafted blind as item 15, under Phase 0.
 
 
+
+### 16.13 Item 12: the build's checks (2026-11-15, 15:35)
+
+Item 12 was built as 16.10 and the coordinator's decisions in 16.12 fixed it, on branch `flamescapes/burner-rays` from 40f8ea9, in four commits:
+- 9caf297: the item, off by default;
+- 7bc785e: the suite's `--burner-flame-rays`, and the ledger's tallies;
+- c5145a2: the check tool, `tools/burner-rays-check.mjs`;
+- 1dd890a: a fault of the code corrected, and a reported line added to the tool.
+
+**One attempt, one fault of the code corrected (13.25, decision 13).** The tool ran in full at c5145a2: 116 judged lines passed, none failed, and 57 were reported. Then a fault was found by reading the code, not by a check. When no cell burns in a step, `burnt` = E − (E / H) H can still round above 0, and the rays then carry that residue (1.8 × 10⁻¹² J in the tool's case). `flameRays` drew their cell from an empty list and read a stale entry (cell 0 on a first step). 1dd890a makes such rays leave the axis cell, with the six draws a ray unchanged. No case of 16.10's checks reaches it, since each of their steps burns. Everything was then run again in full from 1dd890a: the tool, the fingerprints, the unit suite, the GPU check, the smoke run and (k)'s runs. Every judged line of the tool is the same at both commits, figure for figure, apart from timings. The method, the seed, the ray counts and the tolerances did not change.
+
+**Item 12 passes its checks (a) to (j).** At 1dd890a the tool judged 116 lines, and none failed; it reported 58 more. The references are the plan's: a Gauss-Legendre quadrature in the tool (24 points a side) gives every figure of 16.10 to its four places, 16 points differ by at most 9.2 × 10⁻¹⁵, and each box's six shares sum to 1 within 5.8 × 10⁻¹⁵. Each case is 10 000 burner steps of 16 rays, 160 000 rays, on 0.20 m and on 0.34 m cells.
+- **The two cells are one sample.** They give the same share in every line, to every printed figure. The same cells, steps and seed cast the same rays in cell units, and the shares do not depend on the cell's size.
+- **(a) Symmetry.** The six walls take 0.1657 to 0.1673, against 1/6 ± 0.0037.
+- **(b) A one-cell flame on the floor.**
+  - x-low 0.1706, against 0.1716 ± 0.0038;
+  - x-high 0.0801, against 0.0809 ± 0.0027;
+  - the floor 0.4565, against 0.4574 ± 0.0050;
+  - the ceiling 0.0944, against 0.0936 ± 0.0029;
+  - z-low 0.1345, against 0.1336 ± 0.0034;
+  - z-high 0.0638, against 0.0630 ± 0.0024;
+  - the floor cell under it 0.1657, against 1/6 ± 0.0037.
+- **(c) A flame of 2 × 2 columns and 3 layers.**
+  - the x walls 0.1358 and 0.1346, against 0.1354 ± 0.0034;
+  - the floor 0.3994, against 0.3987 ± 0.0049: under the flame 0.1243, against 0.1246 ± 0.0033, and the rest 0.2751, against 0.2741 ± 0.0045;
+  - the ceiling 0.1215, against 0.1203 ± 0.0033;
+  - the z walls 0.1040 and 0.1046, against 0.1051 ± 0.0031.
+- **(d) The reach.** The x-high wall, 40 cells away, takes 0.0035, against 0.0032 ± 0.0006. x-low takes 0.4440, against 0.4430 ± 0.0050. The floor and z-low take 0.1515 and 0.1513, against 0.1511 ± 0.0036. The ceiling and z-high take 0.1258 and 0.1240, against 0.1258 ± 0.0033. The gas takes 0 J. z-high is the farthest line of all the cases from its reference: 0.55 of its tolerance, 2.2 standard deviations.
+- **(e) An open side.** `burnerOut` is 0.0808 of the radiant output, against 0.0809 ± 0.0027. The walls take 0.1709 (x-low), 0.4572 (the floor), 0.0941 (the ceiling), 0.1330 (z-low) and 0.0639 (z-high), and the floor cell under the burner 0.1660, each within its tolerance of (b).
+- **(f) The flame is clear.** Every flame cell's gas takes 0 J from the burner's rays, over 120 000 flame-cell steps on each cell. The soot in the flame cells after a step's burn gives an optical depth of 0.0173 across a 0.20 m cell and 0.0060 across a 0.34 m cell, so a ray that was not clear would lose a measurable part. The surfaces take (c)'s figures exactly: the soot is the only difference, and it takes nothing.
+- **(g) The cell drawn by its heat.** Of 10⁶ draws, the four masses take 100 450, 200 424, 299 561 and 399 565, against 10⁵ ± 1200, 2 × 10⁵ ± 1600, 3 × 10⁵ ± 1833 and 4 × 10⁵ ± 1960.
+- **(h) Energy, and the radiant fraction unchanged.**
+  1. In every step of (a) to (f), on both cells, the radiant output equals the deposits plus `burnerOut` within 1.5 × 10⁻¹⁶ of it, against 10⁻⁹.
+  2. In (a), (b), (c) and (e), on both cells, one `burnerStep` on and one off from one state leave every gas cell's T, Y and ρ, and `b.released`, `b.convective`, `b.radiant` and `stats.released`, bit for bit the same.
+- **(i) Off is off.**
+  - `march` is byte for byte the base's, its comment included (16.12, decision 4). The burner's rays with the item on run in its copy, `burnerMarch`.
+  - With `burnerFlameRays` 0 the fingerprints are the base's, d62b581d and 29793d1a.
+  - The unit suite passes 537 of 537 at 1dd890a, as the base (40f8ea9) does, 537 of 537. No test failed on timing.
+  - `tools/flamescapes-gpu-check.mjs`, all fourteen phases, was compared leaf by leaf, with the 93 timing leaves set apart (4877 others). The base ran twice, and its two runs differ from each other in 47 leaves. The branch with the item off differs from them in 47 and 49 leaves. All of these, the base's own included, lie on the GPU side of seven `runScene` runs: design 0 and 1, sprinklers 2 to 4, and the systems phase's runs 3 and 4. Every other leaf agrees bit for bit, in all fourteen phases and on the CPU side of every phase.
+  - Two of the branch's differing leaves are not among the base pair's own 47. They are the GPU's peak and tenth-second heat release in the systems phase's run 4 (the heptane spill, foam on detection): 396.055 on the branch, against 395.921 in both base runs. Four other leaves of that run's GPU side (released, burnt, the last heat release and the eleventh second) differ between the base's own two runs. `flamescapesGpu.js` and its kernels are the base's, and the GPU never reads the switch.
+  - In the tool, the 8 × 8 × 8 box on 0.2 m cells with a validation burner (radiant fraction 0.2, 16 rays, one cell on the floor, methane, 20 kW), 300 full steps, gives every field and every one of its 18 stats entries bit for bit the base's (40f8ea9, read from git). The same holds for a sooty fuel beside it, which 16.10 did not ask for.
+  - With 1 the same scene differs in T, Ts, Y, ρ, u, v, w, p, the zone's state, the burner's `dir` and `turn` (which the item does not turn), and the stats that follow from them, as expected.
+  - `supported` (the GPU's own test, read from its source) returns false for a validation burner and true for the fingerprint tool's design fire, both with the item on. `flamescapesGpu.js` is the base's, unchanged.
+  - A design-fire run's fingerprint is the same on and off on the CPU: 29793d1a, in the tool and in the fingerprint tool with the default set to 1. The design fire has no rays and a radiant fraction of 0, so the item makes no record for it.
+  - The GPU check with the default set to 1 differs from the base's two runs in 48 and 50 leaves, and from the off run in 49. On the GPU side these lie in the same runs as above, the same two leaves of systems run 4 included. One CPU-side leaf differs: the worker phase's list of stats entries gains `burnerRadiatedOut`, `burnerRays` and `burnerCrossings`, which the solver makes whenever the switch is on. Every other CPU-side leaf, the design phase's included, is the base's bit for bit.
+- **(j)** With the default set to 1 for the run, the unit suite passes 537 of 537. No test was edited.
+- **(k) Speed, reported and not judged.** Every figure was measured on a loaded machine, with one or two GPU checks running.
+  - `burnerStep` alone over (c)'s scene: 0.0254 ms a call on and 0.0098 ms off on 0.20 m; 0.0238 and 0.0099 ms on 0.34 m. Over all the cases, 0.017 to 0.029 ms on and 0.007 to 0.011 ms off. With the item on, a burner step clears and adds two arrays over every cell, as the radiation stage does.
+  - The mean crossings of a burner ray: 6.51 to 9.59 in the tool's boxes; 7.86 in Steckler test 14 and 18.30 in NIST/NRC test 3, at 30 s on 0.27 m.
+  - NIST/NRC test 3 on 0.27 m, 30 s as the suite builds it: 57.8 s of wall time off and 58.2 s on, 520 steps, 111 and 112 ms a step.
+  - Steckler test 14 on 0.27 m: 18.6 s off and 18.3 s on for its 300 s (3370 steps), 5.5 and 5.4 ms a step.
+  - With 0, the fingerprint tool's ms a step (two runs, the pilot room then the design fire): the base 39.54 and 47.88, then 52.99 and 54.30; the branch 35.24 and 43.61, then 48.53 and 56.29. The load moves these by more than any difference between them.
+
+**Beside, with the item off: the present origin and its 16 fixed directions.** These were read from the walls' temperatures, the same on both cells.
+- In (b) the floor takes 0.4636 and the floor cell under the burner 0.1614.
+- In (c) the floor under the flame takes 0.2466, twice the 0.1246 that the flame sends there, and x-high 0.1165 against x-low's 0.1365. The axis cell is the first of the lowest layer's four, so the origin is off the flame's centre.
+- In (d) the x-high wall takes nothing, and 0.0047 of the output stays in the gas at 40 crossings.
+- In (e) 0.0765 leaves through the open side, uncounted.
+- In (f) the flame's own soot takes 0.0080 (0.20 m) and 0.0028 (0.34 m) of the output.
+
+**Beside (h), reported and not pre-registered.**
+- (c)'s flame with a partition of 12.7 mm gypsum board one cell thick at inner x = 9 (140 one-dimensional wall cells): the partition takes 0.2302 through the wall-end arrays, against 0.2317 ± 0.0042 for the 9 × 10 × 14 box the flame sees, the other walls take their shares of that box within their tolerances, and the worst step's imbalance is 0.
+- A step with no oxygen in any gas cell (at 122 071 W held, the first whole number of W from 100 kW whose step leaves a residue): no cell burnt, 1.82 × 10⁻¹² J was released by rounding, and 16 rays carried 5.46 × 10⁻¹³ J from the axis cell. The deposits match it within 3.7 × 10⁻¹⁶ of it.
+
+**The smoke run** of the suite, steckler/14 on 0.27 m with `--burner-flame-rays` and 13.B's flags (one job, at 1dd890a), finished in 18.5 s of wall time with its health guard passed. The settings record "on", and the run's solver options carry `burnerFlameRays: 1`. Every ledger entry carries the burner's tallies. At 300 s: released 18.5549 MJ, radiated 0.2816 MJ, gas 1.0859 MJ, walls 4.3471 MJ, shell 12.321 MJ, `burnerRadiatedOut` 0.0758 MJ of the burner's 3.711 MJ radiant, 53 920 burner rays and 430 612 crossings. Without the flag the suite runs as before, and with a solver that has no item 12 it stops at its start.
+
+**Departures, as built.** None changes an output with the item off.
+- The record of the cells that burn is kept by a wrapper of `burnInCell`, `burnInFlame`, which `burnerStep` chooses once a step. `burnInCell` itself is unchanged. With the item off, `burnerStep` tests one flag a step and calls `burnInCell` through a local name.
+- The stamp's mark is a count of the burner's steps with the item on, from 1, not `sim.steps`. So 0 marks no cell, and two calls in one step cannot share a mark. In a run `burnerStep` runs once a step, so the mark names the step.
+- `burnerFlameCell(sum, n, u)` takes the running sums and finds the first above u Σ by bisection. For positive masses this is the cell the linear search finds.
+- With the item on, the deposit arrays are set to 0 at the start of each step of a burner with rays, and added to the state over every cell, as `radiation` adds its own.
+- A burner without rays or radiant part makes no record and never enters the item: the app's design fire among them.
+- A porous flame cell would take a ray as the first non-gas cell it enters, since point 10 keeps an absorptivity of 1 there. No validation burner has one.
+- When no cell burnt but rounding leaves the step's radiant part above 0, the rays leave the axis cell (1dd890a). 16.10 does not say where they leave.
+- The ledger also records `burnerRays` and `burnerCrossings` beside `burnerRadiatedOut`, so that (k) reads crossings from the suite's own runs. `burnerRadiatedOut` is in MJ to four places, as `radiatedOut` is. None enters a statistic.
+- The run cache's key carries `burnerFlameRays` when a run sets it, as for items 10 and 11. `RUN_CACHE_VERSION` (13) is unchanged, and the app sets none of them.
+- The tool computes its references by quadrature and its tolerances from them, with the plan's four-figure values printed beside. They agree to the plan's four places.
+- (g)'s 10⁶ draws are the u₀ draws as `flameRays` takes them: cell 0's streams of salt 4 at steps 0 to 62 499, 16 rays a step, six draws a ray, seed 1.
+- 16.10 fixed neither (i)'s burner cell, nor its fuel, nor its heat release. They are inner cell (3, 0, 3), methane and 20 kW held, in a closed box. The comparison covers every typed array of the solver, the particles, the walls, the zones, the burner's fields and every stats entry, bit for bit.
+- `flamescapesGpu.js` does not export `supported`. The tool evaluates its source text, read from the file.
+- The shares with the item off were read from the solids' temperatures, set to 0 K for the reading so that float32 holds each deposit. No part of `burnerStep` reads a solid's temperature.
+- Steckler test 14's 30 s run could not be made through the suite: the suite stops a Steckler run that has no readings before 200 s. Its full 300 s runs were timed instead, and its crossings read from the ledger at 30 s.
+- The unit suite ran as `node --test --test-concurrency=3 "src/core/*.test.mjs"`, the command `npm test` runs, with its concurrency held to three workers because a GPU check ran beside it (four workers in all).
+- (i) and (j) with the default set to 1 ran on a copy of 1dd890a whose `DEFAULTS` set the switch, so no edited default was ever in the worktree.
+
+**Not verified.**
+- The item's effect in any validation run, beyond the smoke run and (k)'s timing runs. Those were checks of the flag, the ledger and the cost, not results.
+- The item's cost apart from load. Every timing came from a machine running one or two GPU checks.
+- That a ray's start and direction are uniform beyond the box shares. No check reads them one at a time.
+- Any scene with a porous flame cell.
+- The no-oxygen case in a validation run. Its handling is checked only on the tool's single step.
+- That a design-fire run on the GPU is bit for bit the same on and off. The GPU's design runs differ between two runs of the base itself, so on and off can be compared there only within that spread. The CPU side agrees bit for bit.
+- That the GPU's sprinklers, design and systems results with the item off are drawn from the same spread as the base's. Two leaves of systems run 4 differ from both base runs, in a run whose GPU side differs between the base's own runs. Each branch setting ran once, and the base twice.
+
+**Checked by the coordinator** (2026-11-15, 16:09), apart from the agent:
+- **The check tool,** run again from 1dd890a: every judged line passed, as the agent's did.
+- **The fingerprints:** d62b581d and 29793d1a.
+- **The GPU's systems phase**, whose run 4 peak heat release the agent could not place. It was run twice more on the base and twice on the branch. The base gave 395.921 in its first two runs, then 396.056 and 396.142; the branch gave 396.055 both times. So the value varies between runs of the unchanged base. The leaf-by-leaf comparison finds 0 differences outside the base's own spread.
+- Only `flamescapes.js` (the CPU solver) and `runCache.js` changed.
+
+**Item 12 passes its checks (a) to (j).** Its switch is off by default. R12 runs as 16.20 orders it.
+
 ### 16.14 Item 14: a flame radiates its radiant fraction once (2026-11-15, before any code or run of it)
 
 Drafted blind to every validation result, as 13.12 sets, and as 16.12's finding 1 asks. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at 40f8ea9, whose `src/core` equals main's be32e34 (`git diff be32e34 40f8ea9 -- topologicpy-web-frontend/src` is empty), so they are 16.10's. The figures called "hand calculation" below were worked for this draft from the formulas cited beside them. None is the solver's output, and none is a fire result.
@@ -4684,7 +4786,7 @@ If the line ends, sources keep losing their volume in open regions. That stays a
 - Rehm, R. G., and Baum, H. R. (1978). The equations of motion for thermally driven, buoyant flows. Journal of Research of the National Bureau of Standards 83(3), 297. doi:10.6028/jres.083.019. Checked on Crossref; metadata only.
 - Run for this draft: the closed forms of the tables above, of check (a)'s vessel and of check (b)'s flows, by hand in two scripts that import nothing from the solver. No solver, no fire simulation, no result file.
 
-### 16.20 The coordinator's decisions on 16.19, and the order of Phase 0's reruns (2026-11-16, before any code of item 16)
+### 16.20 The coordinator's decisions on 16.19, and the order of Phase 0's reruns (2026-11-15, before any code of item 16)
 
 The draft is the agent's, written blind. It saw a listing of file names in the working folder, including one for 16.15's measurement, and opened none; that is declared. Each decision takes the draft's choice or the stricter reading.
 
