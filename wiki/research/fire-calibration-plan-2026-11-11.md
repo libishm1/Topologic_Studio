@@ -6396,6 +6396,408 @@ The user gave their word for a second attempt at item 15 on 2026-11-15. The draf
    - The study's furniture heat released, and the time its furniture first adds heat, are therefore reported as indicative and claimed as no result. The study's primary output in the room is reached before any furniture adds heat. It is driven by the design fire, whose heat release is prescribed, so this limit does not bear on it there.
    - 16.25's finding, that the pilot room's heat release halves when the step halves, is the same limit. Item 16's checks judge its own arithmetic, not this.
 
+
+### 16.31 Item 19: a porous cell slows the flow at a rate per unit time, not by a factor each step (2026-11-15, before any code or run of it)
+
+Drafted blind to every validation result, as 13.12 sets and as 16.30's decision 3 asks. Nothing below changes after a run of it; anything added later is dated, with its commit. No code of item 19 exists. Line numbers are those of `next/calibration-16` at d7e86e1, whose `src` and `tools` equal main's be32e34 (`git diff be32e34 d7e86e1 -- topologicpy-web-frontend/src tools` is empty). Items 15, 16 and 17 are not in that base.
+
+Figures called "the trace" come from `tools/step-convergence-diag.mjs`, committed for this draft on `flamescapes/step-convergence` at 6b28965 (after d7e86e1), which changes no solver file. It copies `topologicpy-web-frontend/src/core` into the system's temporary folder, adds counters only (in the transport's sweep at one watched cell, and in the chemistry) and an export of the stage list, and steps the copy one stage at a time, reading the watched cell between stages. The copy gives the unchanged solver's heat release to the last bit (checked on the next-door fire, 5 s at 0.1 s, the pilot room, 20 s at 0.1 s, and the design-fire room, 20 s at 0.1 s). The figures were first made with scratch scripts of the same code; the tool gives the same figures in those three cases. Every trace run is on the CPU, at one fixed step throughout (`step(sim, Δt)`, no step cut at a frame's end), and repeats exactly. Figures called "the reference" are closed forms evaluated by hand. No validation run, study run or GPU run was made, and no result file was opened.
+
+**What the drafter read that reports results, declared as 16.19's head declares it.**
+- The plan's headings.
+- 13.12. The last parts of 13.25 (its checks (e) to (j), its default, what ends its line, its limits and sources). The coordinator's checks and decisions 1 to 18 after 13.26, 13 and 14 among them, which give model figures and hand calculations. 13.32, which reports item 10's checks: the fingerprints d62b581d and 29793d1a, the unit suite's 537 tests, and the GPU check's 47 fields that vary between runs of the base.
+- 16.7, 16.8 and 16.9, read in one view. 16.9 reports Phase 0's diagnostics: the O₂ statistic, D*/δx, the burner's rays and the materials audit.
+- 16.19 and 16.20, as the model of this draft's form.
+- 16.24 and 16.25, and the head paragraph of 16.26. They report item 16's diagnosis: the pilot room's 0.4881 and 0.0899 MJ, its 0.2507 MJ at 0.05 s, the design phase's 78.33 and 74.16 MJ, and the coordinator's check of them.
+- 16.29 and 16.30 whole. They report item 15's diagnosis: the next-door fire at three fixed steps, the two rooms, and the coordinator's check.
+- The coordinator's brief, which states 16.29's figures.
+- A search of the plan for "decision 13" and "decision 14" showed single lines of 13.22, 13.26, 13.30, 13.33, 13.35, 13.36, 16.10 to 16.14, 16.16, 16.18 and 16.19 in its output. Among them were 13.35's and 13.36's one-line verdicts (no calibration gain; the rooms read 34 to 56 % hot), 16.13's count of item 12's judged lines, and four lines of 16.14 (its switch, its unit-suite check, its default and its last rule). None of those sections was opened.
+- A search of the repository for `porousVelocity` showed, in its output, one line of each of about thirty files in `benchmark/results/` (each a run setting, `"porousVelocity": 0.5`) and line 93 of `wiki/HANDOFF.md` (a porous burner in `tools/calibration/heat-closure.mjs` closes to 0.84, and passes with `porousVelocity` 1). No file in `benchmark/results/` was opened.
+- `tools/vapour-swing-diag.mjs` at c18595e and `tools/source-expansion-diagnose.mjs` at be8f8ea. Three scratch files of 16.29's diagnosis: its shared module, its O₂ script, and that script's log at 0.1 s, whose figures 16.29 point 1.4 states.
+- A session note that states what 13.35 and 13.36 state of items 10 and 11.
+- Not opened: 16.10 to 16.18, 16.21 to 16.23, 16.26 beyond its head, 16.27, 16.28, section 17 beyond its headings, any file in `benchmark/results/`, every result file of the calibration runs, and every rerun output.
+
+The item came from the trace (part 1). Its checks are closed forms (the exact solution of a linear drag under a constant force), bit-identity, parity, and the convergence of three fires' heat release as the step falls. No measured datum enters any of them.
+
+#### 1. What the solver does now
+
+**1.1 The stages.** A step runs `STAGES` in order (`flamescapes.js` 3663 to 3692).
+- The first item's O₂ is moved by `advect` (3672; `transportGas`, 1332 to 1469), `density` (3674), `diffuse` (3677) and `chemistry` (3679).
+- The velocity is moved by `advect` (its own back-trace, 1222 to 1260), `buoyancy` (1476 to 1489), `vorticity` (1492 on), the spray's drag (1869) and, last, `project` (3106 to 3282).
+
+**1.2 The oxidation and its cap,** as 16.29 1.4 states them.
+- dOx = skin (1 − e^(−k_o Δt)) (1729 to 1731), then at most o₂/st.o₂ (1732). o₂ is the O₂ mass the gas cell holds when the stage runs (1680, 1681). A porous cell trades with its own gas (1662).
+- The kinetic part is a rate per unit time, integrated exactly over the step (`survives`, 309 to 311). The cap is the cell's whole O₂ at that moment.
+
+**1.3 A porous cell's factor, once a step.**
+- `project` gives each cell a factor (3126 to 3134): `porousVelocity`, m = 0.5 (`DEFAULTS` 222), in a porous cell, and 1 elsewhere. Each face takes w, the product of its two cells' factors; an open side of the domain counts 1 (3189 to 3210).
+- The divergence is taken of the weighted flow (3142 to 3148), and the Poisson equation is weighted alike (3217 to 3224). Then each face takes w times its projected velocity: `sim.u[f] = fw(...) * (sim.u[f] - k2 * ...)` (3257; the same at 3267 and 3277).
+- The GPU does the same: `porousOf` (`flamescapesGpu/kernels.js` 2571 to 2574), `divergence` (2617 to 2639), `gsCell` (2641 to 2679) and `projectUpdate` (2700 to 2727; the product at 2727). `porousVel` is set once, when the runner is made (`flamescapesGpu.js` 394).
+- The comment at 3126 calls it the paper's velocity bound. The paper names it the "porous solid velocity multiplier", an "upper velocity bound" in porous cells, and gives no form and no rate (`wiki/sources/papers/flamescapes-2026.md`, section 4.3 and its parameter table, range 0.10 to 0.50). Its three experiments use 0.10, 0.50 and 0.14 at fixed steps of 0.00833, 0.004 and 0.005 s (`wiki/sources/papers/flamescapes-2026-supplement.md`, Tables 4 to 6). The solver takes 0.5 and applies it at its own step, 0.1 s (`DEFAULTS` 124).
+
+**1.4 What a factor once a step does (the reference).**
+1. A factor w applied once each step Δt is the exact decay over Δt of du/dt = −β u, with β = ln(1/w)/Δt. So the drag the code applies grows as the step falls. For w = 0.5 (a porous cell beside open gas) it is 6.93, 13.9, 27.7 and 55.5 /s at 0.1, 0.05, 0.025 and 0.0125 s. For w = 0.25 (two porous cells) it is twice that.
+2. Under a forcing F per unit time, a face that keeps w of its velocity each step settles where u = w (u + F Δt):
+
+   u∞ = w F Δt / (1 − w).
+
+   The flow a steady force drives through a porous face is proportional to the step.
+3. The projection still meets the expansion D, because the weights cancel in div u = D. So what the factor damps is the circulation, not the expansion's outflow. A heated cell's own D points out of it. The air that reaches it comes with the circulation: the plume lifts the cell's gas out through its top, and the room's air replaces it through its other faces.
+4. As Δt → 0, β → ∞. Porous faces then carry only the potential flow that meets D, and a heated porous cell draws no air but by diffusion.
+
+**1.5 The trace: the next-door fire.** The free fire of the next-door test (`suppressionSystems.test.mjs` 232 to 245), built as `tools/vapour-swing-diag.mjs` builds it: two rooms, 0.35 m cells (32 × 15 × 17), class A, the fire at (7.2, 0.75, 2). Fixed steps.
+- The first item is the porous cell (23, 4, 8): 22.86 kg of fuel, 2.245 m² exposed. Porous contents lie on four sides of it and below it, and open gas above. So its top face has w = 0.5 and its five other faces w = 0.25.
+- Means over a window's steps. "O₂ at chemistry": what the cell's gas holds when the chemistry runs. "Brought by the flow": the O₂ that the stages `advect`, `density` and `diffuse` add, which are the only stages that add any. "Inflow": through the cell's faces after the projection, in cell volumes per second. "Top face": its outward velocity after the projection. "Buoyancy": that stage's increment to the top face in one step. "Sides": the mean inward velocity of the four side faces. "Released": the whole fire.
+
+0 to 5 s:
+
+| Step (s) | O₂ at chemistry, g a step | the same, g/s | Brought by the flow, g/s | Inflow, cell volumes/s | Top face, m/s | Buoyancy, m/s a step | Sides, m/s | Released, kW |
+|---|---|---|---|---|---|---|---|---|
+| 0.1 | 1.168 | 11.68 | 9.29 | 1.09 | 0.755 | 1.145 | 0.054 | 178 |
+| 0.05 | 0.389 | 7.79 | 5.40 | 0.68 | 0.521 | 0.689 | 0.029 | 127 |
+| 0.025 | 0.129 | 5.16 | 2.78 | 0.38 | 0.316 | 0.375 | 0.011 | 98 |
+| 0.0125 | 0.047 | 3.76 | 1.37 | 0.198 | 0.182 | 0.191 | 0.0013 | 85 |
+
+25 to 30 s:
+
+| Step (s) | O₂ at chemistry, g a step | the same, g/s | Brought by the flow, g/s | Inflow, cell volumes/s | Top face, m/s | Buoyancy, m/s a step | Sides, m/s | Released, kW |
+|---|---|---|---|---|---|---|---|---|
+| 0.1 | 0.583 | 5.83 | 5.83 | 1.51 | 0.793 | 1.533 | 0.090 | 585 |
+| 0.05 | 0.171 | 3.43 | 3.43 | 0.91 | 0.498 | 0.869 | 0.054 | 312 |
+| 0.025 | 0.049 | 1.94 | 1.94 | 0.54 | 0.298 | 0.467 | 0.032 | 174 |
+| 0.0125 | 0.0117 | 0.94 | 0.94 | 0.265 | 0.148 | 0.230 | 0.0155 | 84 |
+
+1. The cap binds in every step, at every step size, in both windows.
+2. The first rows reproduce 16.29 1.4: 1.168, 0.389 and 0.129 g a step.
+3. In 0 to 5 s the O₂ at chemistry includes the cell's first air, 11.9 g, which the first step takes whole: 2.39 g/s of each figure in that window. Without it the O₂ a step is 0.929, 0.270, 0.0695 and 0.0171 g. Each halving of the step divides it by 3.44, 3.89 and 4.06, which tends to 4: the O₂ a step goes as Δt². 16.29's "about Δt^1.6" is this Δt² supply mixed with the first air spread over the window's steps.
+4. So the O₂ per second that the flow brings is proportional to the step in the limit. Each halving divides it by 1.72, 1.94 and 2.03 in 0 to 5 s, and by 1.70, 1.76 and 2.08 in 25 to 30 s. The inflow per second falls the same way.
+5. Buoyancy's increment per second is about the same at every step: 11.5, 13.8, 15.0 and 15.3 m/s² in 0 to 5 s. With w = 0.5, 1.4's closed form gives the top face u∞ = F Δt: 1.145, 0.689, 0.375 and 0.191 m/s, against 0.755, 0.521, 0.316 and 0.182 m/s after the projection. At 0.0125 s the face is within 5 % of the closed form. At larger steps the face's self-advection and the pressure take a further 0.39, 0.17 and 0.06 m/s off it at 0.1, 0.05 and 0.025 s.
+6. At fixed steps, 60 s, the whole fire releases 24.880, 13.338, 7.347 and 4.037 MJ at 0.1, 0.05, 0.025 and 0.0125 s. Only 0.1 s clamps any face (466 face-steps; `courantClamped`, 1383).
+
+**1.6 What the step does not move, in the same runs.**
+- **The transport's face values.** The limited slope (1390 to 1413) gives the inflow an O₂ density at the face of 0.91 of its donor's at 0.1 s and 0.83 at 0.0125 s (face Y_O₂ 0.220 against the donor's 0.224, and 0.193 against 0.206; face ρ 0.983 against 1.062, and 0.829 against 0.932 kg/m³, in 0 to 5 s). That is 8 % over an eightfold change of step. The supply changed 6.8 times.
+- **The density reset.** After the chemistry the cell holds no O₂. So the reset after the heat sources (`density2`, 3688; `updateDensity`, 2653 to 2660) moves no O₂ there. The `density` stage after the advection (3674) only brings the stored ρ to the transported one, since `transportGas` sets T and Y but leaves `sim.rho` to it (1464 to 1468). Its O₂ is part of the flow's.
+- **Diffusion** brings 0.011 to 0.016 g/s at every step.
+- **The expansion** follows the cell's heat. Its D is 1.14, 0.90, 0.63 and 0.44 /s in 0 to 5 s.
+- **The order of the stages.** The chemistry runs after the whole transport. O₂ that enters the cell in one sweep and leaves it in a later one is not seen by it. That loss is first order in the step (1.7).
+- **16.29 1.4's subcycled runs fit this.** They halved the transport stages, and every source stage, but never `project`, which then ran once each 0.1 s. The release stayed near the 0.1 s value (8.51 and 7.20 MJ against 8.44 MJ in 30 s). Only the whole step, the projection with it, gave 5.36 MJ.
+
+**1.7 The factor removed: a diagnosis, not a method.** The same runs with `porousVelocity` 1, so that no face is weighted, 10 s. Made only to test 1.4. It is not the item, and it is set aside as a method (part 4).
+
+| Step (s) | Inflow, 0 to 5 s, cell volumes/s | O₂ in through the faces, 0 to 5 s, g/s | Of it carried out again in the same transport, g/s | Released, 0 to 5 s, kW | Released, 5 to 10 s, kW |
+|---|---|---|---|---|---|
+| 0.1 | 3.20 | 35.73 | 4.44 | 487 | 499 |
+| 0.05 | 3.25 | 37.06 | 2.21 | 537 | 540 |
+| 0.025 | 3.28 | 37.61 | 1.04 | 564 | 560 |
+| 0.0125 | 3.28 | 37.67 | 0.50 | 577 | 596 |
+
+- The inflow is the same at every step within 3 %, and the O₂ that comes in within 6 %.
+- The released heat rises by 50, 27 and 13 kW in 0 to 5 s as the step halves: first order. In 5 to 10 s it rises by 41, 20 and 36 kW; the last halving moves it by 6 %.
+- The O₂ carried out again before the chemistry halves with the step: 4.44, 2.21, 1.04 and 0.50 g/s. It is the capped oxidation's first-order error.
+- So with a flow that does not depend on the step, the capped oxidation converges in the step. The cap makes the oxidation's heat the O₂ the flow brings. The flow's dependence on the step is the factor's.
+
+**1.8 The pilot room.** `tools/flamescapes-fingerprint.mjs`'s first case: 0.20 m cells, 200 kW into the pilot cell's solid for 60 s. The pilot cell (15, 3, 13) stands on the floor with porous contents on its five other faces, so every open face has w = 0.25. From 10 to 20 s, at 0.1, 0.05 and 0.025 s:
+- inflow 0.81, 0.37 and 0.15 cell volumes per second;
+- O₂ at the chemistry stage 1.49, 0.71 and 0.29 g/s, the cap binding in every step;
+- released in 20 s, 0.270, 0.135 and 0.060 MJ.
+
+The same mechanism, steeper: w = 0.25 on every open face. 16.29 1.8's fixed-step runs give 23.13 MJ at 0.1 s and 3.13 MJ at 0.05 s in 150 s.
+
+**1.9 The design-fire room.** `tools/flamescapes-fingerprint.mjs`'s second case, the app's class A design fire (16.29 1.8), 0.20 m cells, 200 s, fixed steps. The design fire's burner releases 31.200 MJ in every run.
+
+| Step (s) | Contents, MJ | Their oxidation, MJ | Of it capped by the cell's O₂, MJ | Their gas phase, MJ | Porous fuel cells above 600 K at 200 s | First window with one | Clamped face-steps |
+|---|---|---|---|---|---|---|---|
+| 0.1 | 0.062 | 0.062 | 0 | 0.000 | 0 | none | 138 357 |
+| 0.05 | 6.215 | 5.903 | 5.226 | 0.313 | 23 | 140 to 160 s | 42 702 |
+| 0.025 | 23.074 | 17.055 | 15.833 | 6.019 | 44 | 120 to 140 s | 0 |
+
+- Here the contents release more as the step falls, as 16.29 1.8 found. They light sooner and more of them light. Once lit, 89 and 93 % of their oxidation is capped by O₂.
+- The inflow through the faces of the hot porous fuel cells is about the same at 0.05 and 0.025 s: 0.41, 0.46 and 0.70 cell volumes per second at 0.05 s in the windows 140 to 160, 160 to 180 and 180 to 200 s, and 0.41, 0.47 and 0.52 at 0.025 s.
+- So in this room the step changes when the contents light more than how much air a lit cell takes. A porous cell beside the plume whose circulation the factor damps harder at a smaller step would trade less gas with the room's cooler air and heat sooner. That is a hypothesis. It was not traced.
+- **The room is sensitive to round-off in the step.** Stepped as 16.29's tool steps it (frames of 5 s, each step min(0.05, the frame's end − t), so a frame's last step can differ from 0.05 s in its last bits), the contents release 7.266 MJ at 0.05 s, 16.29's 7.3 MJ. Stepped at exactly 0.05 s they release 6.215 MJ, 15 % less. Check (b) steps at one exact step and measures the spread over seeds for this reason.
+
+**1.10 So: part 1 of 16.29 1.10, traced.** The cap binds, as 16.29 found, and makes the oxidation's heat the O₂ that reaches the cell. That O₂ reaches the cell in proportion to the step, because `project` multiplies each porous face by w once a step (3257, 3267, 3277; GPU 2727). That is a drag of rate ln(1/w)/Δt, which grows without bound as the step falls. The circulation through porous cells, and the contents' air with it, then tends to zero. No other stage moves the supply by more than a few per cent over the steps traced (1.6, 1.7). In the design-fire room the step moves when the contents light; whether the factor is the cause there was not traced (1.9).
+
+#### 2. What FDS does
+
+Read in FDS's source at ff928db, as 16.29 cites it. Not run.
+- **No velocity multiplier.** Subgrid fuel slows the gas by a drag force in the momentum equation, per unit time. On a boundary fuel layer it is ½ C_d C_s β σ ρ |u| u over the layer's height (`velo.f90` 2389 to 2405). Its rate enters the stability check (`DRAG_UVWMAX`, 2404; `PART_CFL`, 3117 to 3119), so the drag bounds the step, not the step the drag.
+- **Porous media** (`DRAG_LAW = 'POROUS MEDIA'`, `read.f90` 6211 to 6217) need the user's permeability and drag coefficient; FDS gives no default. For screens it derives both from the free area (6199 to 6210).
+- **A solid's oxidation** is a rate per unit time, with the surface's O₂ from the film's mass transfer, h_m = h/c_p (`wall.f90` 3026 to 3034, 3111 to 3137, 3463 to 3478), as 16.29 1.9 states.
+- So in FDS both the drag and the surface reaction are rates per unit time, and neither depends on the step.
+
+#### 3. The method
+
+Chosen: **the porous factor as a drag rate, integrated exactly with the step's forcing.** The paper's multiplier m is read as the share of its velocity that the gas at a porous cell keeps over the solver's own step, Δt₀ = 0.1 s, with no force acting. That is a drag rate β = ln(1/m)/Δt₀ per porous cell: 6.93 /s for m = 0.5. Over a step, each face integrates du/dt = F − β_f u exactly, for the step's forcing F held constant over the step, as the splitting holds it now. This is exponential time differencing of the first order (Cox and Matthews 2002).
+
+1. **Scope.** With `porousRate` 1: every face of `project`, on either path, that touches a porous cell, in every run that has one (contents, a first item that is not a design fire, and `heat-closure.mjs`'s porous case). Unchanged: every other face, every stage before `project`, the Poisson sweeps and their stopping rule, the oxidation and its cap, every rate and every heat.
+
+2. **A face's drag.** For a face between cells a and b, n_f = [a porous] + [b porous]. For a face on an open side of the domain, n_f = [the cell porous]: outside counts as not porous, as 3134 counts it 1. The ground and solids carry nothing, as now. With
+
+   λ = ln(1/m) Δt/Δt₀,  x_f = n_f λ,  e_f = e^(−x_f),  φ_f = (1 − e^(−x_f))/x_f  (φ_f = 1 where x_f = 0),
+
+   e_f and φ_f take three values a step, for n_f = 0, 1 and 2. They are computed once a step in float64, φ as −expm1(−x)/x.
+
+3. **The face's predicted velocity.** With u⁰_f the face's velocity at the step's start and u*_f the velocity `project` receives,
+
+   ũ_f = e_f u⁰_f + φ_f (u*_f − u⁰_f).
+
+   - On the CPU, u⁰ is the copy that `advect` takes at its start (`sim.work.u0`, `v0`, `w0`; 1200). No stage before `advect` changes a velocity.
+   - On the GPU it is the snapshot of the velocity the advection reads (`flamescapesGpu.js` 680; `buf.snap` from 0), which no pass writes again before the projection (read, not run; checks (c)3 and (c)4 test it).
+
+4. **The projection.**
+   - The Poisson equation's link weights are φ_f, in place of the products of the cells' factors (3189 to 3210; GPU `gsCell`, 2654 to 2670).
+   - The divergence is that of ũ, in place of the weighted divergence of u* (3142 to 3148; GPU `divergence`, 2622 to 2628).
+   - Each touched face then takes u_f = ũ_f − φ_f k2 (p_b − p_a), in place of 3257, 3267 and 3277 (GPU 2727).
+   - So div u = D, as now: the same algebra with φ for w and ũ for u*.
+
+5. **Why this form.**
+   - Over a step, du/dt = F − β_f u with the step's forcing F Δt = (u* − u⁰) − k2 Δp has the exact solution u(Δt) = e^(−β_f Δt) u⁰ + (1 − e^(−β_f Δt))/β_f · F. With β_f Δt = x_f that is point 4.
+   - It is exact for two closed forms at every step. With no force, a face decays as e^(−β_f t): it keeps m^(n_f) over each Δt₀, whatever the step. Under a constant force from rest it rises as (F/β_f)(1 − e^(−β_f t)) and settles at F/β_f, the same at every step.
+   - As Δt → 0, e_f → 1 − x_f and φ_f → 1 − x_f/2. The scheme is consistent with the drag, and first order in the splitting of F, as now.
+   - Where n_f = 0, e = φ = 1, and the face is the plain projection's, number for number.
+
+6. **The reference step, Δt₀ = 0.1 s,** is the solver's default step (`DEFAULTS` 124), at which it has applied m in every run. It is a frozen constant, not `P.dt`: a run that sets its own frame step (`runScene`'s `dt`, `flamescapesRun.js` 794) must not move the drag. The item adds no number. It states the solver's own m per unit time. The paper's own steps would make β 25 to 57 times larger (part 4).
+
+7. **At the default step the item changes the flow too.** At Δt = Δt₀, e_f = m^(n_f): the present factor on the step's starting velocity. But φ_f lets 0.721 (one porous cell) or 0.541 (two) of the step's own forcing through, where the present rule lets 0.5 or 0.25 through (the reference). A constant force then settles at F/β_f, 1.44 and 2.16 times the present w F Δt₀/(1 − w). So with the item on, runs at 0.1 s change as well.
+
+8. **On the CPU.**
+   - `DEFAULTS`: `porousRate` 0.
+   - `project`: with `porousRate` 1 and the weighted branch taken (m < 1 and a porous cell, 3131 to 3133), points 2 to 4.
+   - Exports for the checks, which no run calls: `porousFace(u0, uStar, n, m, dt)`, the pure function of points 2 and 3, returning e, φ and ũ; and `projectStage(sim, dt)`, the stage alone.
+
+9. **On the GPU.**
+   - `PARAMS` gains `porousRate` (u32) and `porousE1`, `porousE2`, `porousPhi1`, `porousPhi2` (f32). The host sets them each step beside `dt` (`flamescapesGpu.js` 633), from point 2's float64 values rounded once.
+   - With `porousRate` 1: `divergence` reads u⁰ from `snap` and forms ũ for each weighted link; `gsCell` takes φ_f from the four uniforms in place of `me * porousOf(r)`; `projectUpdate` forms ũ again and writes ũ − φ_f k2 Δp. `topology` is unchanged: a link is weighted where a porous cell is, as now.
+   - The item's WGSL face function is one function, so that check (c)1 can call it.
+   - No buffer, pass or atomic is added. With 0, every kernel computes as now.
+
+10. **What stays exactly as now.** Every field the step writes before `project`. Every face with n_f = 0. The sweeps' count and stopping rule (`projection` 30, `projectionTolerance` 10⁻³ m/s; `DEFAULTS` 223, 224). The oxidation and its cap. Every scene with no porous cell. Every scene with the item off.
+
+#### 4. Considered and set aside
+
+- **The factor raised to Δt/Δt₀, after the forcing** (w = m^(n_f Δt/Δt₀) in place of m^(n_f), nothing else changed). It keeps every run at 0.1 s bit for bit, and it converges. But it still applies a step's decay to that step's own forcing, as the present rule does. A constant force then settles at (F/β_f) x/(e^x − 1): 0.69 and 0.46 of F/β_f at 0.1 s for one and two porous cells, 0.84 and 0.69 at 0.05 s (the reference). Frames of 0.1 and 0.05 s would still differ by 1.2 and 1.5 times in the porous flow, and much of 16.29 1.1's swing would stay. Point 3's form settles at F/β_f at every step.
+- **An implicit drag,** u/(1 + β Δt). Exact in its steady state, but its free decay is (1 + β Δt)^(−k), not e^(−βt), and over Δt₀ it keeps 1/(1 + ln 2) = 0.59, not m. Exponential time differencing is exact for both.
+- **The multiplier at the paper's own step** (0.5 at 0.004 s, supplement Table 5; 0.14 at 0.005 s, Table 6, the experiment the solver's defaults name). β would be 173 or 393 /s for one porous cell, 25 or 57 times the drag the solver has applied at 0.1 s. That changes what the contents do in every app run: a change of the model, not of its convergence.
+- **A physical drag:** FDS's subgrid fuel drag, or Darcy and Forchheimer's porous media. FDS's coefficients are for vegetation beds, or are the user's (part 2); room contents are neither. It would replace the paper's porous model. A candidate for its own item, not drafted.
+- **No factor** (`porousVelocity` 1). It converges (1.7), but the contents then slow the flow not at all. That drops the paper's model.
+- **The oxidation as a rate limited by the film's mass transfer** (FDS's oxidative pyrolysis, part 2). The cap is not what makes the supply depend on the step: with a step-independent flow the capped oxidation converges (1.7). A film limit would change the oxidation's physics at every step. With the solver's h of 200 W/(m² K) (`DEFAULTS` 131) and h_m = h/c_p, the next-door item's film would turn its gas over at about 17 /s, against an inflow of 3.3 cell volumes per second with the factor removed (an estimate from the trace, not run). So it would bind in part there. That is a physics item, drafted on its own if wanted.
+- **An O₂ limit as a flux** in place of the cell's content. After the transport the cell holds the step's inflow and what was left from before. A flux limit needs the transport's face fluxes in the chemistry, and as Δt → 0 it is the cap. Not needed (1.7).
+- **The substep choice alone.** Not enough (16.29 part 2; 16.30, decision 3). See part 5.
+
+#### 5. The substep choice
+
+**This item does not change it.**
+1. The item removes the step dependence the trace found. What is left between a frame at 0.1 s and one at 0.05 s is the solver's other first-order error. With the factor removed, that was 9 % in the next-door fire's first 5 s (1.7). Check (g)2 reports it with the item on, frame by frame.
+2. A band on the substeps changes runs with no contents. The validation suite cuts each 1 s frame by `substepsFor` (`tools/calibration/validation-suite.mjs` 453 to 455), so every validation verdict would need a rerun beside 13.B. This item touches no validation run (part 10).
+3. FDS's rule (16.29 1.9: the CFL number checked each step, the step cut at 1.0 and redone, grown below 0.8) is a check in every step, not a frame-ahead cut. A band on the integer cut, or a check in every step, needs its own checks and costs on both paths. It is a candidate for its own item, drafted blind if the user wants it.
+4. 16.29's warning stands: a band alone would hide the swing. With this item, a run's heat release should no longer halve when its step halves, so which step a frame takes matters only to the first-order error.
+
+`runScene` (`flamescapesRun.js` 822 to 830), the GPU's (`flamescapesGpu.js` 1180 to 1183) and `substepsFor` (`flamescapes.js` 1985 to 1989) stay as they are.
+
+#### 6. The switch
+
+`porousRate`: 0 (default), as now; 1, the method.
+- **Off by default,** for four reasons.
+  1. 13.25's decision 14: a default changes only with the user's agreement, given with the step's cost (CPU, GPU, and Vienna in the browser) before them.
+  2. The user's rule for features: off by default behind a switch, and no cost when off.
+  3. With the item on, every app run with contents changes at every step, 0.1 s included (3.7), and so does every study run with furniture (section 17), whose set ran on the base.
+  4. Item 15's second attempt is judged on this item (part 9). Its builder sets the switch in its own runs, so no default is needed for that.
+- With 0, `project` tests one flag a call, and the GPU one uniform in three kernels. Every output is bit-identical to the base (check (d)).
+- With 1 and no porous cell, the projection takes its plain branch (3133), and every output is bit-identical (check (d)). With 1 and m = 1, likewise.
+- `RUN_CACHE_VERSION` (`runCache.js` 54, now 13) rises only with a default (13.25, decision 14). A cached run's key carries the switch.
+- The validation harness need not pass it: no validation scene holds a porous cell (part 10).
+
+#### 7. The cost
+
+- **CPU, on.** Once a step, two `exp` and two `expm1`. In the weighted branch, for each face that touches a porous cell, one read of u⁰ and three operations, at the divergence and again at the update. The Poisson sweeps read φ_f where they read the product of two factors now (`beta`, 3189 to 3210): the same cost.
+- **GPU, on.** For each weighted link, one read of `snap` and three operations in `divergence` and in `projectUpdate`. `gsCell` reads one of four uniforms in place of two calls of `porousOf`. No buffer and no pass.
+- **Memory.** None. Both paths keep u⁰ already.
+- **Off.** One flag test a projection on the CPU; one uniform test in three kernels on the GPU.
+- **The checks' cost** is mostly (b). On this loaded machine the trace stepped the design-fire room at about 75 ms a step, so its runs at 0.00625 s for 200 s take about 40 minutes each.
+
+#### 8. Checks (fixed now, before any code)
+
+All but (d) to (f) run in a new tool, `tools/porous-rate-check.mjs`. Item 15 is not in the base. If item 16 or 17 is merged first, every check runs with them off, and (b) runs once more with them on, reported.
+
+(a) **Closed forms (judged).**
+1. **The face function.** `porousFace` against e, φ and ũ computed by the check in float64 from points 2 and 3.
+   - Cases: m in {0.5, 0.14, 0.1}; Δt in {0.1, 0.05, 0.025, 0.0125, 0.00625} s; n in {0, 1, 2}; u⁰ and u* in {0, ±10⁻⁶, ±0.1, ±1, ±10} m/s.
+   - Pass: each value within 10⁻¹² relative, or 10⁻¹⁸ m/s absolute where the reference is 0. With n = 0, e = φ = 1 and ũ = u*, bit for bit.
+2. **Free decay.** A sealed box of 10 × 10 × 10 cells of 0.20 m: the outer layer solid, the 8 × 8 × 8 inside porous, made as `heat-closure.mjs` makes its porous cells (contents of no mass, 166 to 167). Every open face then has n_f = 2.
+   - Settings: `gravity` 0, `vorticity` 0, the expansion's array 0, `projection` 1000 and `projectionTolerance` 0 (as 16.20's decision 3 sets for item 16's checks).
+   - The start: a circulation, the discrete curl of a stream function that is 0 on the box's walls and the same in every layer, scaled so that its largest face is 1 m/s. It is divergence-free on the grid.
+   - Each step the check sets u⁰ = u, as `advect` does at 1200, and calls `projectStage` alone. At Δt 0.1, 0.05, 0.025 and 0.0125 s, to t = 2 s.
+   - Reference: every face u(t) = e^(−β₂ t) u(0), with β₂ = 2 ln(1/m)/Δt₀. So u(1 s) = m²⁰ u(0) = 9.54 × 10⁻⁷ u(0) at every step.
+   - Pass at t = 0.5, 1 and 2 s, every face: |u − u_ref| ≤ 8 k 2⁻²⁴ max|u_ref|, k the steps taken. A step stores each face once in float32, and the projection meets the round-off divergence of the stored field; 8 a step is the margin for both.
+   - Reported with the item off: u(1 s) = 0.25^(1/Δt) u(0), the same 9.54 × 10⁻⁷ at 0.1 s and 6.8 × 10⁻⁴⁹ at 0.0125 s.
+3. **A constant force.** The same box, from rest. Before each `projectStage` the check adds F Δt to every face, F the same curl field with its largest face 10 m/s².
+   - Reference: u(t) = (F/β₂)(1 − e^(−β₂ t)). On the largest face F/β₂ = 0.7213 m/s.
+   - Pass at t = 0.5, 1 and 2 s, as in 2, with the bound taken of max|F/β₂|.
+   - Reported with the item off: the present steady state w F Δt/(1 − w) = F Δt/3 on that face, 0.333 m/s at 0.1 s and 0.0417 m/s at 0.0125 s.
+4. **A mixed state.** The pilot room at 15 s (0.1 s steps, the item on from the start): one `projectStage` call.
+   - Pass: every face with n_f = 0 is, bit for bit, u* − k2 Δp from the stage's own p. Every face with n_f ≥ 1 equals ũ_f − φ_f k2 Δp, computed by the check in float64 from the stage's own u⁰, u* and p, within one float32 step of the stored result.
+   - Reported: the largest |div u − D| over open cells, on and off.
+
+(b) **The contents' heat release converges as the step falls (judged).**
+- **The scenes,** item 19 on, `embers` false, seed 1:
+  1. the next-door fire (1.5's scene), 60 s;
+  2. the fingerprint tool's pilot room, 150 s, as 16.29 1.8's fixed-step runs;
+  3. the fingerprint tool's design-fire room, which is the app's class A design fire (16.29 1.8), 200 s.
+  The fingerprint tool's two rooms are scenes 2 and 3, and scene 3 is the app's design fire.
+- **Stepping.** One step Δt throughout, `step(sim, Δt)`, the horizon a whole number of steps. No step is cut at a frame's end (1.9).
+- **Q** is the contents' heat released over the horizon: `stats.released` in scenes 1 and 2 (the pilot's heat is `pilotHeat`, kept apart), and `stats.released` less the design fire's `burner.released` in scene 3.
+- **The steps.** Δt_k = 0.1/2^k, k = 0 to 3 (0.1 to 0.0125 s). A step is judged only if its run clamps no face over the horizon (`stats.courantClamped` 0, 1381 to 1383): the flow keeps within one cell a step. Where fewer than three of k = 0 to 3 clamp no face, k = 4, 5 and 6 (0.00625 to 0.0015625 s) are added in turn until three consecutive steps do. Q_a, Q_b and Q_c are the three finest consecutive steps that clamp no face, coarsest first. A scene with no three such steps by k = 6 fails.
+- **The seeds' spread.** At the finest judged step the scene runs again with `seed` 2 and 3. δ is the range of Q over seeds 1, 2 and 3. A change of step changes every random draw of the run (the rays' and the flame front's, keyed to the seed and the step's number), as a change of seed does, so δ is the part of a change of Q that the draws alone make.
+- **Pass, in each scene:**
+  1. |Q_b − Q_c| ≤ max(0.10 Q_c, δ);
+  2. |Q_b − Q_c| ≤ |Q_a − Q_b| + δ.
+- **Reasons.**
+  - The defect is a heat release that halves, or grows several times, each time the step halves. Pass 1 asks that the last halving move Q by no more than 10 %, the band within which the plan holds two runs of one fire to agree (the next-door test, `suppressionSystems.test.mjs` 243 to 244; 16.29 1.7), or by no more than the draws alone move it. Pass 2 asks that the change not grow as the step falls.
+  - A first-order method in its range halves each change. The change from Δt_b to Δt_c is then its error at Δt_c. Pass 1 so admits an error at 0.1 s of up to 80 % when Δt_c is 0.0125 s, and up to 160 % when it is 0.00625 s.
+  - The base would fail pass 1 in scene 1 unless its seeds' range exceeded 3.3 MJ: it falls from 7.347 to 4.037 MJ from 0.025 to 0.0125 s, by 82 % of the finer value (1.5). Its seeds were not run. In scene 2 the base halves at each halving (1.8; 16.29 1.8; 16.25 decision 7).
+  - A rate is not judged: each fire's ignitions move with the step and the seed (1.9), so successive changes of Q need not halve exactly.
+- **Reported, not judged:**
+  - Q at every step run, and at every seed run;
+  - per 5 s window, the heat release at each step;
+  - the observed order p = log₂(|Q_a − Q_b|/|Q_b − Q_c|), and, where p > 0, Richardson's value Q_c + (Q_c − Q_b)/(2^p − 1) and the grid convergence index 1.25 |Q_b − Q_c|/((2^p − 1) Q_c), as Celik et al. (2008) give it;
+  - the same table with the item off, seed 1;
+  - the clamped face-steps at every step;
+  - in scene 1, 1.5's quantities for the first item at each step; in scene 3, 1.9's.
+
+(c) **CPU against GPU.** Every judged comparison gives both paths identical inputs, or compares one path with itself from one state (16.24's rule, 16.30's decision 5).
+1. **The face term from identical inputs (judged).** As 16.24's (e)1 builds its entry point: the tool appends one compute entry point to the text `buildShader()` returns, compiles it in a pipeline of its own, and calls the item's WGSL face function with the float32 e and φ the host uploads, for (a)1's cases.
+   - Reference: `porousFace` in float64 from the same float32 inputs and the same float32 e and φ.
+   - Pass: |ũ_GPU − ũ| ≤ 2 u (|e u⁰| + 2 φ |u* − u⁰| + |ũ|), with u = 2⁻²⁴: one rounding each for the product e u⁰, the difference, its product with φ, and the sum; the factor 2 as 16.24's. And the host's float32 e and φ are point 2's float64 values rounded once, bit for bit.
+2. **The projection from identical inputs (judged).** States: the next-door fire at 10 and 30 s and the pilot room at 15 s (0.05 s steps), the design-fire room at 150 s (0.025 s), each with the item on in its history; and the GPU check's onestep app scene at steps 100 and 300. Each state, with its u⁰, u*, p, D and kinds, is given to both paths: on the GPU by an upload (`runner.createSim`) with `snap` filled from the CPU's u⁰, through a hook the build adds, which no run calls. On each path `project` alone, item on and off, at 1000 sweeps and tolerance 0, so that both solves run to their last sweep.
+   - Per face, the item's change δ_P = u_P(on) − u_P(off).
+   - Pass, at every face where the paths' item-off faces agree within 8 float32 steps of max(|u*|, |u_CPU(off)|): |δ_GPU − δ_CPU| ≤ max(10⁻³ |δ_CPU|, 8 float32 steps of max(|u*|, |u_CPU(on)|)).
+   - Reported for every state: the faces left out, how many, and δ in each; and the same at the solver's own 30 sweeps and 10⁻³ m/s, where each path may stop at another sweep.
+3. **One whole step from a shared state, each path against itself (judged),** as 16.24's (e)2. (c)2's states are cloned and stepped once on the CPU, item on and off, and uploaded and stepped once on the GPU, item on and off; the GPU's item-off step is made twice from one upload.
+   - Pass 1: on each path, every field the step writes before the projection is bit for bit the same with the item on and off: T, T_s, ρ, Y, D, the fuel, the moisture, kind, burning, the soot deposited, the wall nodes and the zones' state. u, v, w and p differ by design.
+   - Pass 2: the GPU's item-off step, made twice from one upload, gives every field bit for bit the same.
+4. **The closed forms on the GPU (judged).** (a)2 and (a)3 run on the GPU's projection passes, with the forcing added by an entry point of the tool's, and pass with (a)'s bounds.
+5. **Reported:** the GPU check's phases `agreement`, `onestep` and `design` with the item on: the largest and 99th percentile |ΔT| of the GPU against the CPU at each checkpoint, beside the item off.
+
+(d) **Off is off (judged).**
+- With `porousRate` 0:
+  - `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives d62b581d and 29793d1a;
+  - the unit suite passes with the base's count, run on the base first in the same session;
+  - `tools/flamescapes-gpu-check.mjs` by 16.29's (e)2 rule (16.30, decision 5): the whole tool once on the base and once on the branch; phases `sprinklers`, `design` and `systems` 8 times on each in all, alternating, base first, in one session on one machine and one browser build, nothing else on the GPU meanwhile. Every leaf of every other phase, and the CPU side of every phase, is bit for bit the same as in every base run. A GPU leaf of those three phases fails only if its 8 branch values all lie strictly above, or all strictly below, its 8 base values. No run is repeated, added or dropped, and a run that stops with an error fails (d).
+- With `porousRate` 1 and no porous cell: a validation burner scene (χ_r 0.2, 16 rays, one cell on the floor of an 8 × 8 × 8 box of 0.2 m cells, as 16.19's (f) builds it) stepped 300 full steps, and `heat-closure.mjs`'s `mix` and `burner` cases. Every field and every `stats` entry is bit-identical to the base, on each path that runs the scene.
+- With `porousRate` 1 and `porousVelocity` 1: the fingerprint tool's two rooms are bit-identical to the base with `porousVelocity` 1.
+- With 1 and porous cells, the fingerprints differ, which is reported.
+
+(e) **The unit suite passes unbent** with the default set to 1 for the run (a one-line change, not committed). A test that fails is not edited, and its failure is reported. Only a test whose reference is the present rule itself (a porous face's factor taken once a step) may be rewritten, disclosed as written after a failure (13.25, decision 13).
+
+(f) **Speed, reported, not judged.**
+- The ms of a step and of `project`, on and off, from the fingerprint tool's profile.
+- `tools/backend-bench.mjs` on its room, Duplex, Office, Clinic and Vienna, CPU and GPU, on and off.
+- Vienna on the GPU in the browser with the item on: whether it reaches its horizon, and its ms a step.
+- With 0, the fingerprint tool's ms a step against the base.
+
+(g) **Reported, not judged.**
+1. `tools/calibration/heat-closure.mjs`'s porous case on 0.20, 0.27 and 0.34 m, item on beside off.
+2. The next-door fire and the pilot room stepped as `runScene` steps them, item on and off, 60 and 300 s: per frame the substeps, the heat release and the fastest gas, as `tools/vapour-swing-diag.mjs`'s parts `frames` and `rooms` print them; and the next-door test's flooded over free ratio at the fixed steps of 16.29 1.3.
+3. The design-fire room stepped as `runScene` steps it, 600 s, item on and off, as 16.29 1.8 ran it.
+4. `tools/step-convergence-diag.mjs` (6b28965) run on the item's code, part `trace` on the next-door fire at the four steps and part `design` at 0.025 s: 1.5's and 1.9's tables with the item on.
+
+A failure of (a) means the drag departs from its closed form. A failure of (b) means the contents' heat release still depends on the step. A failure of (c) means the port departs from the CPU, or the item writes outside the projection. A failure of (d) or (e) means the item acts where it should not.
+
+#### 9. What ends this line
+
+- If any judged check of (a), (b), (c)1 to (c)4, (d) or (e) fails in any case, the attempt fails. It is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted. The method has no free constant: m and Δt₀ are the solver's own (`DEFAULTS` 222 and 124), and e and φ are closed forms. The checks' settings (the scenes, horizons, steps and seeds, and the 1000 sweeps of (a) and (c)) are fixed here.
+- 13.25's decision 13 applies to the checks whose references the method meets exactly or within stated float32 bounds: (a), (c)1 to (c)4 and (d). A fault of the code against the method may be corrected and the attempt run again in full, reported with both commits. A change to the method ends the attempt.
+- (b) is not a closed form. If (b) fails while (a) and (c) pass, the method does not remove the step dependence. The attempt fails, and that is not a fault of the code.
+- **A failed attempt** leaves the step dependence a declared limit of every run with contents, as 16.30's decision 7 states it. By 16.30's decisions 4 and 6, item 15's second attempt is then not built, and item 15's line ends for Phase 0. A second attempt at item 19 needs the user's word and a new method written here first (16.8).
+- **If item 19 is not made before the papers** (16.7), item 15's line ends the same way (16.30, decision 6).
+- **If it is made,** the switch is available to the solver's options. Item 15's second attempt is built and judged on a base with `porousRate` 1 (16.29 part 2, point 1). The app's default stays 0 until 13.25's decision 14 is met.
+
+#### 10. Validation runs and app runs
+
+- **Validation runs: untouched.**
+  - The suite builds every scene with no contents, no first item and no pilot (`tools/calibration/validation-suite.mjs` 288 to 289).
+  - `createSolver` makes a cell porous only for contents (`flamescapes.js` 418 to 424) or for a first item that is not a design fire (428 to 436).
+  - So no validation scene holds a porous cell. `project` takes its plain branch (3131 to 3133), and with the item on every validation run is bit for bit the base's. No rerun beside 13.B is needed. Check (d) shows it on a validation burner scene.
+  - `steckler-checks.mjs`, `energy-budget.mjs`, `transport-checks.mjs` and `door-exchange.mjs` build their scenes with no contents and no first item (by search), so they are untouched too. `heat-closure.mjs`'s porous case is touched ((g)1).
+- **App runs: touched, with the item on.** Every app fire with contents, or with a first item that is not a design fire, has porous cells on both paths (the GPU runs them; `supported`, `flamescapesGpu.js` 1089 to 1094). Each changes with the item on, at every step, 0.1 s included (3.7). With it off, nothing changes.
+- **Study runs** with furniture (section 17) are app runs with contents, and change likewise with the item on.
+- **Item 15's second attempt** runs on it (part 9).
+- **Items 16 and 17.** Item 16 adds its sources' volume to D, which the projection meets; this item changes how porous faces carry D's flow, not D. Item 17 changes the conduction. Neither shares a line with this item.
+
+#### Declared limits
+
+- **The reference step.** β = ln(1/m)/0.1 s keeps the solver's m at the solver's own step. The paper's own steps would give a drag 25 to 57 times stronger. Which is nearer a room's contents is not known, and nothing here says.
+- **The forcing is held constant over the step,** as the splitting holds it now. The item is exact for a constant force and first order otherwise.
+- **The cap stays.** The oxidation takes all the O₂ its cell holds at the chemistry stage. O₂ that enters in one sweep and leaves in a later one is lost to it: 12 % of the inflow at 0.1 s with the factor removed, halving with the step (1.7).
+- **A porous cell's drag is linear in u,** and the same in every direction, as the paper's multiplier is.
+- **The solver's other first-order errors stay:** the transport's splitting, the expansion's lag, the order of the sweeps. With the factor removed they moved the next-door fire's first 5 s by 9 % between 0.1 and 0.05 s (1.7).
+- **The substep rule is unchanged** (part 5).
+- **Float32.** On the GPU the face term is computed in float32, from e and φ rounded once on the host.
+
+#### Not verified
+
+- That the item makes (b) pass. No code exists. The diagnosis with the factor removed (1.7) converged in the next-door fire's first 10 s; the item is not that diagnosis.
+- That the factor is the cause of the design-fire room's dependence, which runs the other way (1.9).
+- That no GPU pass writes `snap`'s velocity region between the advection's copy and the projection. Read in `flamescapesGpu.js` 621 to 750 and by search of `kernels.js`, not run. (c)3 and (c)4 test it.
+- That three seeds' range covers the step's own sensitivity in scene 3, where a round-off change of the step moved the contents by 15 % (1.9).
+- The cost in the app's scenes, and Vienna in the browser ((f) reports it).
+- The film-transfer estimate of part 4 was not run.
+- FDS was read, not run; it is not installed here. The paper was read in its transcription in `wiki/sources/papers/`, not in its PDF.
+- Cox and Matthews (2002) and Celik et al. (2008): metadata only. Crossref's record for Celik et al. lists no authors; the names below are not checked.
+
+#### Sources (read, or run for this draft)
+
+- This repository at d7e86e1:
+  - `topologicpy-web-frontend/src/core/flamescapes.js` 78 to 135, 180 to 230 and 256 to 301 (parts of `DEFAULTS`), 300 to 366, 376 to 520, 640 to 830, 1192 to 1490, 1600 to 1830, 1975 to 2060, 2062 to 2130, 2618 to 2672, 3005 to 3290, 3305 to 3372 and 3648 to 3717;
+  - `topologicpy-web-frontend/src/core/flamescapesRun.js` 100 to 260 and 780 to 880;
+  - `topologicpy-web-frontend/src/core/flamescapesGpu.js` 300 to 330, 385 to 400, 615 to 760, 1089 to 1094 and 1170 to 1195, and by search (`snap`, `porousVel`, `dt`);
+  - `topologicpy-web-frontend/src/core/flamescapesGpu/kernels.js` 2560 to 2745, and by search (`porousVel`, `snap`);
+  - `topologicpy-web-frontend/src/core/fireClasses.js` 70 to 110;
+  - `topologicpy-web-frontend/src/core/suppressionSystems.test.mjs` 228 to 246;
+  - `topologicpy-web-frontend/src/core/runCache.js` 54;
+  - `tools/flamescapes-fingerprint.mjs`; `tools/calibration/validation-suite.mjs` 280 to 310 and 440 to 460 (code only); `tools/calibration/heat-closure.mjs` and the other calibration tools' scenes, by search;
+  - `wiki/sources/papers/flamescapes-2026.md` (section 4.3 and the parameter table), `flamescapes-2026-supplement.md` (Tables 4 to 6) and `flamescapes-2026-equations.json` (the multiplier's entry).
+- `tools/vapour-swing-diag.mjs` at c18595e and `tools/source-expansion-diagnose.mjs` at be8f8ea.
+- FDS source at commit ff928db (`github.com/firemodels/fds`, ff928dbf68a2623ced3a007be75391c6dc6c9f90): `Source/velo.f90` 2370 to 2410 and 3095 to 3125; `Source/read.f90` 6195 to 6230; `Source/wall.f90` 1488 to 1515, 3020 to 3040, 3105 to 3140 and 3458 to 3482; `Source/cons.f90` 335 to 340.
+- Cox, S. M., and Matthews, P. C. (2002). Exponential time differencing for stiff systems. Journal of Computational Physics 176(2), 430 to 455. doi:10.1006/jcph.2002.6995. Checked on Crossref; metadata only.
+- Celik, I. B., Ghia, U., Roache, P. J., Freitas, C. J., Coleman, H., and Raad, P. E. (2008). Procedure for estimation and reporting of uncertainty due to discretization in CFD applications. Journal of Fluids Engineering 130(7), 078001. doi:10.1115/1.2960953. Title, journal and number checked on Crossref; authors not checked.
+- Run for this draft, on the CPU, at most three at once beside other agents' runs, with `tools/step-convergence-diag.mjs` at 6b28965 or the scratch scripts it was made from: the trace on the next-door fire (fixed steps 0.1 to 0.0125 s, 30 and 60 s; and with `porousVelocity` 1, 10 s), on the pilot room (0.1 to 0.025 s, 20 s), and on the design-fire room (0.1 to 0.025 s, 200 s; and 0.05 s with frame-cut steps). No validation run, no study run, no GPU run, no result file.
+
+### 16.32 The coordinator's decisions on 16.31 (2026-11-15, before any code of item 19)
+
+The draft is the agent's, written blind, with its reading lapses declared at its head. Each decision takes the draft's choice or the stricter reading.
+
+**Checked by the coordinator,** apart from the agent:
+- **The code.** At d7e86e1, `project` multiplies each face that touches a porous cell by the product of its two cells' factors, once a step (`flamescapes.js` 3257, 3267 and 3277).
+- **The trace,** `tools/step-convergence-diag.mjs` from 6b28965, run again on the next-door fire for 10 s.
+  - With `porousVelocity` 0.5:
+    - at 0.1 s, the first 5 s release 177.5 kW, with 1.168 g of O₂ a step at the chemistry;
+    - at 0.025 s, 97.9 kW and 0.129 g a step.
+  - With the factor removed, a diagnosis only, 486.7 and 563.5 kW.
+  - The cap binds in every step in all four runs.
+  - These are the draft's figures.
+
+1. **The cause is the porous factor taken once a step, not the O₂ cap.** The cap binds, but the O₂ supply depends on the step through the factor, a drag whose rate is ln(1/w)/Δt.
+   - So 16.29's part 1.10 and 16.30's decision 3 name the wrong cause. Each takes this pointer: the step dependence's cause is set out in 16.31.
+   - 16.30's decision 7 stands as written.
+2. **The method, as drafted:** the factor read as a drag rate β = ln(1/m)/Δt₀, integrated exactly over the step with the step's forcing (exponential time differencing of the first order).
+   - **Δt₀ = 0.1 s** is the solver's own default step, at which it has applied m in every run. It is a frozen constant.
+   - **A declared limit, stated beside every result with the item on.** The source paper applied its multiplier at steps of 0.004 to 0.005 s. That would make the drag 25 to 57 times stronger. Which strength is nearer a room's contents is not known.
+   - The paper says that the contents' drag is the solver's at its default step, and is not calibrated.
+3. **The switch, as drafted.** `porousRate`, off by default.
+   - With it on, runs at 0.1 s change as well: a step's forcing passes as 0.72 and 0.54, in place of 0.5 and 0.25.
+   - A default change needs the user's word (13.25, decision 14).
+4. **The substep choice is unchanged.** A band on `runScene`'s substeps, or a check in every step as FDS makes it, is a candidate item. It is not drafted now, because it would change every validation run.
+5. **The checks and what ends this line, as drafted.**
+   - (b), the convergence of the contents' heat release, is judged in its three scenes.
+   - The GPU check's nondeterministic runs are judged by 16.30's rule, 8 against 8.
+   - 13.25's decision 13 applies to (a), (c)1 to (c)4 and (d). A failure of (b) or (e) ends the attempt.
+6. **Added, reported and not judged (stricter).** When the study runs again on Phase 0's solver (16.20, decision 6), with item 19 on if it is made:
+   - the room's 24 furniture-on runs at 2.7 m also run at half the step;
+   - so the paper can state how much the furniture's heat released still moves with the step, in the study's own scene.
+7. **The build** goes on the branch `flamescapes/step-convergence`, from 6b28965, in the worktree `TopologicStudio-stepconv`. It is item 15's second attempt's base (16.30, decision 3).
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
