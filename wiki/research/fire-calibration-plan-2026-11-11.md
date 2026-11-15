@@ -6798,6 +6798,367 @@ The draft is the agent's, written blind, with its reading lapses declared at its
    - so the paper can state how much the furniture's heat released still moves with the step, in the study's own scene.
 7. **The build** goes on the branch `flamescapes/step-convergence`, from 6b28965, in the worktree `TopologicStudio-stepconv`. It is item 15's second attempt's base (16.30, decision 3).
 
+
+### 16.33 Item 18: a porous cell's last fuel heats a solid that vanishes in the same call, and a solid that holds no heat feeds the flame front at billions of kelvin (2026-11-15, before any code or run of it)
+
+Drafted blind to every validation result, as 13.12 sets. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at e9f6371, whose `src` equals main's be32e34 (`git diff be32e34 e9f6371 -- topologicpy-web-frontend/src` is empty), so they are also 12d47f5's, which 16.26 cites.
+
+The figures called "the trace" come from the unchanged solver at e9f6371, run for this draft in Node through a scratch copy of `src/core` with passive hooks. The hooks read the state between stages and inside `chemistry`'s solid-fuel block, and change no number. Checked: 500 steps of the app's room with radiation, flame-front particles and embers on gave every field and every particle of the unchanged core bit for bit, with the hooks running a copy of the chemistry stage at every step. The GPU figures come from headless Chrome on this machine's adapter, from states the CPU made in the page. "The counterfactual stage" is the chemistry stage run a second time, from the same state, on a copy whose flame field leaves out the particles above 10⁴ K. It measures what those particles do in that one stage, and it is not the method. None of these is a validation result.
+
+**What the drafter read that reports results, declared as 13.26's coordinator note declares it.**
+- The plan's headings from 13.12 on, by search.
+- 13.12. Printed with it: 13.13, 13.14, and the start of 13.15 and 13.16. They give items 6 and 7's figures, 13.A's table of verdicts, the heat ledger's Steckler test 14 figures and 13.16's departure.
+- 13.25's sub-headings, lines of its method and checks found by search, its "Default" and "What ends this line", and the coordinator's decisions on 13.25 and 13.26. These state that the coordinator had read 13.A and 13.B, which way item 11 leans, and model figures.
+- 13.32, which reports item 10's checks. Printed with it: 13.33, fixed before its runs, and the first lines of 13.34.
+- Section 16's head and 16.1 to 16.3, printed with 16.8. 16.1 states that the rooms read 35 to 54 % hot with burners and 0.72 to 0.79 with chairs, that surface radiation is ruled out, and that the O₂ drop is 3.5 to 10.5 times the measured.
+- 16.8.
+- 16.16's "The method" only (item 15), for how this item combines with it. It reports no result.
+- 16.19, as a model of form.
+- 16.26 and 16.27, and the first lines of 16.28, printed with 16.27. 16.26's head quotes 16.18's finding 2 (a loss of 3.21 % of the heat released in the app's design fire) and the outcomes of items 13, 15 and 16 in commit titles.
+- 16.30 at d7e86e1, as the coordinator asked. It reports the next-door test's released energies at three fixed steps and its frames' heat release rates, and that the contents' heat release changes by factors of about 0.14 to 3.7 when the step halves. Printing it also showed section 17's first paragraphs, beyond its headings: the study's scope, that the chair series reads cold, and that temperatures read 35 to 54 % hot.
+- The coordinator's brief, which quotes 16.27's decision 5 and the trace's figures (base step 427, 2.93 × 10⁻⁴ kg, 5.1 kJ, 5.135 × 10⁹ K), and the coordinator's later note pointing to 16.30.
+- A session note that items 10 and 11 gave no calibration gain and that their defaults stay off.
+- Comments in the solver that quote earlier results of the port, the particles and the embers (for example `particleToGrid`'s 291 spot fires in a 30 m² room).
+- The output of the fingerprint tool at e9f6371, run for this draft: d62b581d and 29793d1a, and its ms a step.
+- The names of the files in the scratch folders and in the drafts folder, seen in a listing. Apart from item 17's scripts (`chrome.mjs`, `explore.mjs`, `mirror.mjs` and the body it writes from `models.mjs`), none was opened.
+- Not opened: 16.14, 16.15, 16.17, 16.18, 16.20 to 16.25 and 16.29 beyond their headings; section 17 beyond what is stated above; any file in `benchmark/results/`; every result file of the calibration runs and of the study; the rerun outputs.
+
+The item came from reading the code. 16.26's trace found it ("Seen while tracing", 1), and 16.27's decision 5 made it item 18. Tracing it for this draft found a second way into the same flame front (point 8 below). No result prompted either. The checks are closed forms only: the cell's energy balance, bounds, conservation, parity and bit-identity. No measured datum enters any of them.
+
+#### What the solver does now
+
+**1. The last call** (`chemistry`, `flamescapes.js` 1642 to 1826; GPU `chemCell`, `flamescapesGpu/kernels.js` 2136 to 2273). For a porous cell's solid fuel (1659 to 1792; GPU 2143 to 2251):
+- The rates are taken at the T_s the call starts with (1730, 1744), before any write. Both masses, dOx and dPy, are set by 1752 (GPU 2210); the writes start at 1753 (GPU 2211).
+- dOx = skin × (1 − exp(−k_o dt)), at most what the O₂ beside it allows (1731 to 1732). In a burning skin k_o dt is about 10³ (k_o is 1.1 × 10⁴ s⁻¹ at 1145 K in air), so exp(−k_o dt) is 0 and the whole skin oxidises. The skin is min(fuel, `skinDensity` × area) (810 to 812), so near the end it is all the fuel: below 1.08 kg for the first item, and below 0.08 kg for a contents cell on 0.20 m cells.
+- The oxidation's heat is written into the solid: T_s += heat / max(C_s′, 10⁻⁶) (1758; GPU 2219). C_s′ is `solidCapacity` after the fuel is taken (815 to 817): inert part, skin × c_f, water × 4186. With the whole fuel gone and the water evaporated earlier in the same call (1683 to 1688), C_s′ is 0 and the floor of 10⁻⁶ J/K divides.
+- Pyrolysis does the same with its endotherm, L_p = 2.5 × 10⁵ J/kg (`DEFAULTS` 259): T_s −= L_p dPy / max(C_s″, 10⁻⁶) (1766; GPU 2228).
+- The burning flag is set when the oxidation's heat reaches `burningFlux` × area × dt (1762; GPU 2224): 108 J for the first item, 8 J for a contents cell.
+- Fuel at or below 10⁻⁷ kg is zeroed, and a porous cell with no inert mass turns gas (1785 to 1791; GPU 2243 to 2246). The liquid branch does the same (1717 to 1721; GPU 2186 to 2189). T_s, the burning flag and `solidLoss` are left as they are.
+
+**2. The books.** The heat is counted as released (1760, 1825). It is held only in T_s. Once the cell is gas, no stage reads its solid: `conduct` exchanges non-gas cells only, radiation emits from non-gas cells only (943), and the heat ledger counts inert cells only (`validation-suite.mjs` 467; `heat-closure.mjs` 177). So the whole of the last call's heat leaves the books, and nothing in the gas receives it.
+
+**3. The burning flag reaches the flame front.** `chemistry` clears every flag at its start (1651; GPU 2140), but the particle stage comes first in the next step (STAGES 3666 before 3679). Every cell whose flag is set spawns six flame-front particles at its centre at max(T, T_s) (661; GPU 1079). Embers, when on, spawn from every cell with `solidLoss` > 0 at max(T_s, 900) (682; GPU 1116).
+
+**4. Flame-front particles keep their temperature.** Only embers cool (699 to 700; GPU 1133 to 1138). A flame-front particle moves at `flameSpeed`, 1 m/s (279), plus the gas, for at most 0.5 s (280). `particleToGrid` writes the hottest particle's T into its cell's flame field (745; GPU 1172). Gas combustion takes T_eff = max(T, flame) in its Arrhenius rate (1806; GPU 2261). With E = 1.26 × 10⁵ J/mol (275), exp(−E/(R T_eff)) is 0.999996 at 3.42 × 10⁹ K: the rate's ceiling, A = 8.3 × 10⁵ s⁻¹ (274), against 3.3 × 10⁻⁶ of it at 1200 K. So any vapour and O₂ in such a cell burn as fast as the stoichiometry lets them. The cell's flag is set (1818), and the cull keeps its particles (3288 to 3295; GPU 1201 to 1205).
+
+**5. The loop.** On 0.20 m cells a particle moves half a cell in a step, and on 0.27 or 0.34 m cells less. The particles that leave the centre along −x, −y and −z end on the cell's own lower faces, inside the cell, up to the gas's drift. So the burnt-out cell's own flame field holds its T_s. Whatever vapour reaches the cell burns at the ceiling rate; 10⁻¹² kg is enough to set the flag (1812, 1818). The next step spawns six more at the same T_s. No stage writes a gas cell's T_s again: radiation, `conduct`, embers (753) and the power pilot (3323) skip it. The temperature pilot is the exception (3313 to 3316): it writes its cells while it lasts. So the cell feeds the flame front for as long as vapour and O₂ reach it.
+
+**6. Embers do not carry it.** An ember's first move is made in the stage that spawns it, before `particleToGrid`. At 3.42 × 10⁹ K its radiative loss, σT⁴ = 7.8 × 10³⁰ W/m², takes it to the gas temperature at once (700). On the GPU, T⁴ overflows float32 above 4.29 × 10⁹ K to +∞, and max(T_g, −∞) is still T_g.
+
+**7. What is drawn.** The viewer colours a particle from dull red at 800 K to yellow-white at 1800 K, and holds that colour above (`ViewerManager.js` 122 to 128). So a particle at 3.42 × 10⁹ K is drawn like one at 1800 K. What the defect changes in the drawing is how many yellow-white points there are and where: the burnt-out cell keeps spawning them, and the forced combustion lights the cells round it. The design-fire item's own drawn flame (`withBurnerFlame`, `flamescapesRun.js` 521 to 595) takes its burner cells' gas temperatures and is not touched.
+
+**8. A second way into the same flame front: contents of no mass.** `buildScene` draws each contents cell's mass from a normal distribution cut at 0 (`voxelize.js` 306). In the traced room that gives 2, 1 and 0 cells of about 1000 for seeds 1, 2 and 3, the fingerprint tool's rooms included. Such a cell is porous with C_s = 0 (`createSolver` 421 to 423).
+- Radiation stops at it, as at any non-gas cell, and writes the ray into its T_s divided by max(C_s, 10⁻⁶) (1165, 1184; item 11's tally, 1060). So every joule that reaches it leaves the books, and its T_s rises by 10⁶ K a joule.
+- Nothing brings it down: `conduct` skips a body of no capacity (318 to 323), and its emission is capped at 0.5 C_s (T_s − T_a) = 0 (955).
+- Its gas burns like any porous cell's (1794 to 1822). Then its flag is set, and it spawns at max(T, T_s).
+- This is the floor of point 1 in another stage, with the same end.
+
+**The trace.** All in the GPU check's room (`tools/flamescapes-gpu-check.mjs`, `appScene`): 31 × 22 × 26 cells of 0.20 m, class A fuel of 17.5 MJ/kg, contents on the floor. With the solver's own burning, the first item is a porous cell of 5 kg over 1.08 m², held at 900 K for 30 s. With the app's default design fire (class A, medium growth, 0.0117 kW/s²), the first item is a burner. Fixed steps, unless said.
+
+| Run | Step and cell | Fuel taken | Heat (J) | T_s before → after (K) |
+|---|---|---|---|---|
+| Solver's burning, bare (radiation and particles off, as the onestep phase), 0.1 s | 427, cell 8974 (15, 3, 13), first item | 2.9344 × 10⁻⁴ kg, all by oxidation | 5135.23 | 1145.25 → 5.135233 × 10⁹ |
+| Solver's burning, particles on, radiation off, 0.1 s | 430, cell 8974 | 1.9551 × 10⁻⁴ kg, all by oxidation | 3421.38 | 1080.59 → 3.421384 × 10⁹ |
+| Solver's burning, full model (radiation and particles; embers off), 0.1 s, 150 s | 430, cell 8974 | 2.5371 × 10⁻⁴ kg | 4439.96 | 1135.80 → 4.439961 × 10⁹ |
+| the same run | 666, contents cell 9005 | 1.7635 × 10⁻⁵ kg | 308.62 | 19 788.6 → 3.086410 × 10⁸ |
+| the same run | 957, contents cell 9687 | 1.3192 × 10⁻⁵ kg | 230.86 | 12 000.7 → 2.308734 × 10⁸ |
+| the same run | 1072, contents cell 9004 | 2.6080 × 10⁻⁴ kg | 4563.93 | 2497.7 → 4.563933 × 10⁹ |
+| the same run | 1229, contents cell 9686 | 9.10 × 10⁻⁵ kg oxidised, 1.40 × 10⁻⁴ kg pyrolysed | 1592.99 and −35.08 | 2486.6 → 292.88 (the 10⁻⁹ floor at 1782) |
+| the same run | 1281, contents cell 9006 | 3.4853 × 10⁻⁵ kg | 609.94 | 4543.5 → 6.099396 × 10⁸ |
+| Solver's burning, full model, 0.05 s, 150 s | 819, cell 8974 | 8.827 × 10⁻⁵ kg | 1544.7 | 1058.8 → 1.544706 × 10⁹ |
+| the same run | 1737, contents cell 9005 | 5.468 × 10⁻⁵ kg oxidised, 4.7 × 10⁻⁷ kg pyrolysed | 956.9 and −0.12 | 2373.7 → 8.95 × 10⁵ |
+| Design fire, full model, 0.1 s, 300 s | 2890, contents cell 11019 | 4.315 × 10⁻⁵ kg | 755.2 | 5044.2 → 7.551944 × 10⁸ |
+| the same run | 2967, contents cell 6928 | 1.446 × 10⁻⁴ kg | 2530.2 | 1452.7 → 2.530202 × 10⁹ |
+
+- In every event of the table the burning flag was set and no water was left.
+- **The app's own path.** The design fire through the CPU's `runScene`, as the app's worker runs it (its substeps went up to 4 a frame), 600 s: 26 burn-outs of contents cells, 2.8 J to 1298.8 J each, the flag set in 25. 22 left T_s between 9.6 × 10⁵ and 6.1 × 10⁸ K. Four, in which the pyrolysis took the last fuel, left it between −2.9 × 10⁵ and −3.7 × 10⁷ K, through the floor at 1766.
+- **The cell's gas.** In the bare trace's call, the gas of cell 8974 was at 781.88 K after the stage, with ρ = 0.4709 kg/m³ and c_p,mix = 1297.3 J/(kg K): C_g = 4.887 J/K. Its solid's partners, had it stayed porous: its own gas at 216 W/K and six faces at 0.26 to 0.5 W/K. S = 218.76 W/K, the own gas 98.74 % of it.
+- **The books' loss is small.** In the full model at 0.1 s, the six events took 11.75 kJ out of the books, against 62.45 MJ released over the run: 0.019 %. In the app's path, 6.95 kJ against 405 MJ. The rays into contents of no mass (point 8): cell 11054 took 7.8 kJ in 150 s of the solver's burning and 17.7 kJ in 300 s of the design fire. The particles are another matter.
+
+**What the particles did.**
+- Particles on, radiation off: from step 431 to the run's end at 1200, the burnt-out cell had its flag set at every particle stage, 770 of 770. It spawned 4620 particles at 3.42 × 10⁹ K. Up to 26 were alive at once, and up to 14 cells' flame field held 3.42 × 10⁹ K.
+- Full model, 0.1 s: after the first burn-out, 1038 of the 1070 steps had a particle above 10⁴ K alive. All 5940 such spawns came from five burnt-out cells. Up to 56 were alive at once, and up to 36 cells' flame field held billions of kelvin.
+- Full model, 0.05 s: 2036 of the 2181 steps after the first burn-out; 8832 spawned; up to 102 alive; up to 42 cells.
+- Design fire, 0.1 s, 300 s: two sources. The cell of no mass, 11054, was burning at 204 particle stages from step 2361 and spawned 90 particles, its T_s rising to 1.77 × 10¹⁰ K. The two burnt-out cells were burning at 84 stages and spawned 60. (The flame particles' share of the buffer was full, so many spawns were refused.) No other cell spawned above 10⁴ K.
+- The app's path, 600 s: particles above 10⁴ K were alive in 8360 of 14 750 steps from 151 s on, 41 095 were spawned, up to 58 were alive, and the hottest was 1.65 × 10¹¹ K.
+- The ordinary particles of these runs were spawned at 5411 K at most with radiation off, and at 3343 K at most with it on. So 10⁴ K separates the two kinds cleanly.
+
+**What they did to the fire, stage by stage (the counterfactual stage).** Over the steps with such particles, the chemistry stage released:
+
+| Run | With them (MJ) | Without them (MJ) | Ratio |
+|---|---|---|---|
+| Solver's burning, full model, 0.1 s | 59.14 | 44.40 | 1.33 |
+| Solver's burning, full model, 0.05 s | 37.80 | 29.82 | 1.27 |
+| Design fire, full model, 0.1 s | 12.47 | 12.18 | 1.02 |
+
+- In the 0.05 s run the hottest gas those stages left was 2524 K, against 2193 K without them.
+- In the first steps after the burn-out (particles on, radiation off), the stage's hottest gas was 1814 K against 876 K without them (step 440).
+- These are per stage. They do not say how much a run's total changes, since vapour a stage leaves may burn later. The design fire's ratio is small because most of its hot spawns were refused.
+
+**The GPU does the same, count for count.** The CPU's state after 429 steps (particles on, radiation off) was uploaded and stepped on both paths.
+- One step: T_s of cell 8974 is 3421383680 K on both, the cell is gas on both, its flag is set on both, and the step released 36 790.61 J on both.
+- The next step: six particles at 3421383680 K on both. After 7 steps, 26 such particles on both; after 22, 25 on both. The particle totals agree count for count at every read (1504, 4261, 5656, 1688).
+- An ember injected at the cell's T_s cooled to the gas in its first move: 755.5 K on the CPU after the move, 890.3 K on the GPU after a whole step, with no non-finite flag.
+- **The drawing.** The app's default design fire through the GPU's `runScene`, 3000 particles a frame, 600 s: 68 of the 120 frames' drawn points held flame-front particles above 10⁴ K, from 180 s on, 1 to 14 a frame, up to 2.04 × 10⁹ K. Apart from 4 points in 3 frames, they were the only drawn flame points at 1800 K or above. On the CPU's `runScene`: 64 of 120 frames from 195 s, up to 13 a frame, the only yellow-white points in 57 of them. So in the app's default fire, the drawing's yellow-white comes from this defect.
+
+**The other floors.**
+- 1758 and 1766 (GPU 2219 and 2228): this item. 1766 also sends T_s far below 0 when the endotherm meets a vanishing capacity (above).
+- 1165 and 1184 (with 1060), radiation's deposits: point 8. This item takes the particles' part (point 6 of the method). The heat's part is recorded below ("Seen while tracing").
+- 1782 (GPU 2241), the fresh fuel's mixing, 10⁻⁹ J/K. It binds only below 5 × 10⁻¹³ kg of fuel, and such a cell turns gas in the same call. It lowers T_s, toward 0 rather than up, and drops at most 10⁻⁹ J/K × T_s. Seen once in the full trace (step 1229), where it left T_s at 292.88 K.
+- Evaporation (1684 to 1686) and a liquid's boiling (1700, 1712) divide by the capacity before the change and take at most the heat above 373.15 K or the boiling point. No floor, no jump.
+- Embers (753 to 755), the power pilot (3323), the spray and the foam (1875 to 1878, 1905 to 1908) test C > 0 or fuel > 0. `exchange` returns 0 for a capacity of 0 (318 to 323).
+
+#### What the method should be
+
+**The vanishing skin's balance.** The skin obeys C_s dT_s/dt = q(t) − Σ_e G_e (T_s − T_e), q being its reactions' heat rate, over its own gas and its faces (16.26). In the burn-out step C_s falls to 0, so its time constant C_s/S falls below any step. 16.26 point 6's closed form then gives the limit: T_s = T* + q/S, with T* = Σ G_e T_e / S, and the skin stores C_s (T_s − T*) → 0. Every joule the last reactions release passes to the partners within the step, the share G_e/S to partner e. The skin keeps none.
+- In the bare trace: Q = 5135.23 J over 0.1 s, so q = 51.4 kW, and S = 218.76 W/K. The skin's quasi-steady temperature is T* + 235 K, about 1012 K, not 5.135 × 10⁹ K.
+- Its own gas's share is 98.74 %. All of Q in that gas raises it by Q/C_g = 1050.7 K, from 781.9 K to about 1832.6 K. That is where the energy belongs. The gas cell is 8 litres, and in the steps before, `conduct` passed the skin's heat to it each step at a share near 1.
+
+**A solid of no capacity has no temperature to give.** By the same limit, a body with C_s = 0 sits at T* plus what it takes (reactions or rays) over S, and holds nothing. Any T_s written into it is an artefact of the floor, and no flame should start from it.
+
+**What FDS does when a solid burns away** (FDS source at ff928db, `Source/wall.f90`):
+- A surface reaction's heat goes into the solid node where it happens: q̇‴_s −= ρ̇ ΔH_r (3559), the node's source Q_S in its heat equation (2859).
+- The solid is stepped in sub-steps so that no node's temperature changes by more than `DELTA_TMP_MAX`, 25 K by default (2301 to 2322; `read.f90` 9042). Every node is clamped to [TMPMIN, TMPMAX], 3000 K by default (2907; `read.f90` 1903).
+- When a node shrinks to zero thickness, its heat source is given to its neighbouring nodes (2474 to 2494: "If any nodes go to zero, apportion Q_S to surrounding nodes"). A layer below its minimum thickness or mass is removed whole, its mass to the gas (2499 to 2526), and a layer being removed reacts all its mass in the sub-step (3526 to 3527).
+- When the whole solid has gone to zero thickness, FDS sets every node to the back gas's temperature, zeroes the fluxes and marks the surface burnt away (2677 to 2694). A burnt-away surface computes nothing more (1992 to 1999).
+
+So FDS never leaves a reaction's heat in a node that is vanishing. It gives the heat to the material that remains beside it, and a burnt-away solid takes the gas's temperature. In a porous cell, the material that remains beside the vanishing skin is the cell's own gas. Two of FDS's devices are not used here, the sub-steps and the clamp: each needs a number, and the clamp destroys heat.
+
+**Chosen: the reactions of a call that burns a porous cell out give their heat to the cell's own gas; a cell that turns gas keeps no solid temperature; and the flame front takes a solid's temperature only from a solid that holds heat.**
+
+Considered and set aside:
+- **The split by conductance** (Q to every partner by G_e/S, the limit above). It is the exact limit, and for the first item it differs from the chosen rule by 1.3 % of Q. For a contents cell, whose own gas is 16 W/K against 8 W/K a gas face, up to about half would go to neighbours. But it needs `conduct`'s partner list and conductances inside `chemistry`, and item 17 may change those exchanges. On the GPU a thread would write its neighbours' gas, and two burn-outs side by side would race, so it would need atomics in fixed point (13.25, decision 5's arithmetic). The own gas passes its share on through the transport in the next steps. Declared as a limit.
+- **At the turn to gas, give the gas what the solid holds, C_s (T_s − T_g).** When C_s′ is below 10⁻⁶ J/K, the floors at 1758 and 1766 have already destroyed Q (1 − C_s′/10⁻⁶): all of it in the trace, where C_s′ was 0. And with item 15 on, its burn-out term already carries c_f m (T_s − T_a) for the zeroed mass (16.16, point 3), so both would count it.
+- **Write the heats into T_s as now, and give the gas the call's reaction heat at the turn to gas.** When the oxidation leaves skin that the same call's pyrolysis takes (the full trace's step 1229), the oxidation's heat sits in that skin, and item 15 carries it with the vapour (16.16, point 3, pyrolysis). Both would count it.
+- **Test reaction by reaction**, giving each reaction's heat to the gas if the cell is burnt out after it. In the same case the oxidation is not the last reaction: its heat goes into the skin, and the pyrolysis takes that skin. With item 15 off the heat is lost again (1593 J at step 1229). The two reactions run over the same step, and their order in the code is not physics.
+- **FDS's sub-steps or clamp.** Each needs a number (25 K, 3000 K). The clamp destroys heat, and the sub-steps still leave the last sliver with nowhere to go.
+- **A smaller floor.** The heat still leaves at the turn to gas, and T_s gets larger.
+- **Reset T_s and guard the flame front, with no heat.** It ends the particles' leak and leaves the books short by the last call's heat at every burn-out.
+- **T_s at the quasi-steady skin temperature T* + q/S.** It needs the partner list, as the split does, and nothing should read a gas cell's T_s.
+- **Limit the jump to what a vanishing layer can hold.** Any limit is a temperature or a capacity chosen by hand: a free constant.
+- **Give a ray that reaches a cell of no capacity to its gas,** which would also keep that ray's energy (point 8). It changes the radiation stage on both paths, and its GPU deposits, which are kelvin or joules by item 10's switch (13.25, decision 5). And it is not burn-out. The guard of point 6 closes the flame front's leak from both sources in one place. The ray's energy is recorded below.
+- **Make a contents cell of no mass a gas cell.** It changes `createSolver`'s scenes, and heat-closure's `porous` case uses such cells on purpose (`heat-closure.mjs` 166 to 167).
+
+1. **Scope.** With `burnoutHeat` 1: every solid-fuel block of `chemistry` (CPU 1659 to 1792; GPU `chemCell` 2143 to 2251) in a porous cell, and the particle stage's two reads of T_s (661, 682; GPU 1079, 1116). Unchanged: the gas combustion, the burner, every other stage, and every cell that neither turns gas nor spawns from a solid of no capacity.
+2. **The test.** At 1753 (GPU 2211), after both masses are set and before either is written, the call burns the cell out if three things hold:
+   - the fuel the two reactions leave, rounded as the code stores it (f − dOx to float32, then − dPy to float32; 1754, 1765; GPU 2212, 2227), is at most 10⁻⁷ kg;
+   - the cell is porous;
+   - its inert capacity is 0, and stays 0 through the oxidation's ash (`st.ash` × dOx is 0; 1756; GPU 2215).
+
+   This is the test of 1785 to 1787, made before the writes instead of after them. The fresh fuel (1776 to 1783) moves heat, not mass. So a call that passes the test turns the cell gas at the block's end, and every call that turns it gas passes it.
+3. **The heat.** In a call that burns the cell out, neither reaction writes T_s (1758, 1766; GPU 2219, 2228). Their heat is Q_b = dOx × ΔH_c (`st.heat`) − dPy × L_p, in J: float64 on the CPU, float32 on the GPU. Everything else in the reactions stays as now: the fuel taken, `addProducts`, `addGas`, `released` (1760), the burning flag (1762) and `solidLoss` (1773).
+4. **The gas.** It takes Q_b once, after the block's last change to it (after 1791; GPU after 2246): T_g += Q_b / (ρ_g V c_p,mix(Y_g)), with ρ_g and Y_g as the block left them. That is how gas combustion puts its heat into the gas (1815; GPU 2270). A porous cell's gas is its own (`gcell` = c, 1662). On the GPU it is the thread's own cell, so no other thread writes it.
+5. **The solid's temperature at the turn to gas.** At 1786 to 1789 and at the liquid's 1717 to 1721 (GPU 2243 to 2246 and 2186 to 2189), T_s := T_a (`P.ambient`; `U.ambient`), the value every gas cell holds from `createSolver` (443). It is the block's last write to T_s, made whether Q_b is 0 or not. A burnt-out cell is then a gas cell in every field but the burning flag and `solidLoss`, which the next step's `chemistry` clears.
+6. **The flame front reads a solid's temperature only where the solid holds heat.** At the particle stage, s(c) = T_s where the cell is not gas and `solidCapacity` (GPU `solidCap`, 799) is above 0, and s(c) = T_a elsewhere. A flame-front particle spawns at max(T, s(c)) (661; GPU 1079), and an ember at max(s(c), 900) (682; GPU 1116).
+   - A gas cell that never held fuel holds T_s = T_a from `createSolver`, so for it this is the present read.
+   - A non-gas cell that holds heat reads as now.
+   - A cell of no capacity, burnt out or of no mass, gives its gas's temperature, and so does a temperature pilot's cell once it is gas.
+7. **Tallies, CPU, only with the item on:** `stats.burnoutHeat` (J), Σ Q_b; `stats.burnouts`, the cells that turned gas. The validation suite's ledger records both beside its entries when the item is on, as 16.12's decision 6 records item 12's. They enter no statistic.
+8. **On the CPU.** `DEFAULTS`: `burnoutHeat` 0. `chemistry`: points 2 to 5 when it is 1; `particleStep`: point 6. Exports for the check tool, which no run calls: `chemistryStage`, if item 15 has not exported it, `solidCapacity` and `particleStep` (exported now).
+9. **On the GPU.** `PARAMS` gains `burnoutHeat` (u32), set where `surfaceRayStart` is set (`flamescapesGpu.js` 417). `chemCell`: points 2 to 5 in float32, with `mixtureCp` (763). `spawnFlame` and `spawnEmbers`: point 6. No buffer, pass, atomic or reduction is added. The GPU keeps no tallies. The hook `chemistryPass` (the chemistry kernel alone, then `readFields`) is added, if item 15's build has not added it.
+10. **Its closed forms.**
+    - **Energy.** The gas gains exactly Q_b, the net heat of the call that burnt the cell out, and the solid ends holding nothing, as it ends now. The heat that leaves the books now stays in them.
+    - **Bounds.** Every gas cell's T_s is T_a, apart from a temperature pilot's cells. The burnt-out cell's gas changes by exactly Q_b/C_g over the block, C_g as the block left it. Every flame-front particle carries the temperature of a gas or of a solid that holds heat.
+    - **Order.** Each block and each spawn reads and writes its own cell only.
+11. **What stays exactly as now.** Every rate and every reaction; every cell that does not turn gas in the call; every particle spawned from a gas cell or from a solid that holds heat; every other stage; every scene in which no cell turns gas and no cell of no capacity burns.
+
+#### The burning flag and the particles at burn-out
+
+- **The flag stays.** The cell burned in the step: its last fuel oxidised, with heat above the floor (1762). The flame front of section 4.7 starts from every cell that burned, so the burnt-out cell spawns its six particles in the next step, as every cell that burned does.
+- **They carry the gas's temperature,** max(T_g, T_a) = T_g, the gas that took the last heat. In the bare trace's state that is about 1833 K, against 5.135 × 10⁹ K now.
+- **Clearing the flag was set aside.** The cell did burn, and its products and heat are in its gas. A flame front that skipped it would treat it unlike every other cell that burned in the step.
+- **The loop cannot run away.** Afterwards the cell burns only if vapour burns in its gas at a temperature its gas or a real flame front gives it (1806), as any gas cell does. The base's loop needs the stale T_s.
+- **Embers** from its last `solidLoss` (embers on) spawn at max(T_a, 900) = 900 K, the floor every ember has (682). Keeping the skin's last temperature for them was set aside. It would keep a stale T_s in a gas cell for every later spawn. A front at the bare trace's last skin temperature, 1145 K, would still drive a 700 K gas's rate about 4500 times above its own.
+- **The flame field and the drawn flame then hold only temperatures that some gas, or some solid that holds heat, holds.**
+
+#### The switch
+
+`burnoutHeat`: 0 (default), as now; 1, the method.
+
+**It is a physics change, not a port fix.** Both paths do the same now, count for count. The method moves heat into the gas where none went, and it changes the flame front of every run in which a cell burns out or a cell of no mass burns: on both paths, in every app run with contents. So the plan's rule applies: off by default, behind a switch.
+- With 0, the block and the particle stage each test one flag (or the stage tests it once), and the GPU tests one uniform in `chemCell`, `spawnFlame` and `spawnEmbers`. Every output is bit-identical to the base (check (d)).
+- With 1, and no cell turning gas and no cell of no capacity burning, every output is bit-identical too. The added test is the test 1785 to 1787 already makes, made earlier, and it changes nothing until it is true. The guard then reads the same value the base reads: T_s for a non-gas cell that holds heat, and T_a, which is T_s, for every gas cell.
+- `RUN_CACHE_VERSION` (`runCache.js` 54, now 13) rises only with a default (13.25, decision 14), and a cached run's key carries the switch.
+
+The coordinator may read it otherwise. It adds no constant, and what it removes (temperatures of 10⁶ to 10¹¹ K, and a flame front fed by them) is no physics. Even so, it changes the app's fires by up to about a third of the chemistry stage's heat, stage by stage, and it changes what the app draws. So it would still need the user's word before a default changed (13.25, decision 14). This draft recommends the switch.
+
+#### Cost
+
+- **With the item on, the CPU.**
+  - In each solid-fuel block, one test before the writes: two float32 roundings and three comparisons.
+  - At a burn-out, one `mixtureCp` (six species), a multiplication, a division and two stores. No array.
+  - At the particle stage, one `solidCapacity` for each burning non-gas cell.
+  - For scale: today `chemistry` takes 1.46 and 1.22 ms of 68.8 and 77.1 ms a step in the fingerprint tool's two rooms (this machine, loaded, 2026-11-15).
+- **With the item on, the GPU.** One uniform test in `chemCell`, and at a burn-out the same few operations in its own thread. One `solidCap` for each burning cell's thread in `spawnFlame`, and for each ember-spawning cell in `spawnEmbers`. No buffer, pass or atomic.
+- **With it off.** One flag test a block and a spawn on the CPU (or one a stage), and one uniform test a thread on the GPU.
+- **The app.** Burn-outs are few: 2 to 6 in 150 s of the traced room, 26 in 600 s of the app's path. So the cost is the tests. Check (f) reports the step's cost, Vienna on the web included.
+
+#### Checks (fixed now, before any run)
+
+All but (d), (e) and (f) run in a new tool, `tools/burnout-heat-check.mjs`. Cells of 0.20 and 0.34 m, fixed steps of 0.1 s, seed 1. Following 16.30's decision 7, no burn-out's timing is read as converged, and no check depends on when a burn-out happens. No measured datum enters any check. Its scenes:
+- **The isolated cell.** A grid of 3 × 3 × 3 cells, all porous. The 26 outer cells hold no fuel and no water, so the centre has no face exchange and only its own gas. The centre is a first item, fuel kind 1, class A of 17.5 MJ/kg, area 1.08 m², with no water and its gas air, unless said. `gasA` is 0 and radiation is off (`emitAbove` 10⁹ K), unless said.
+  - (i) **Oxidation.** T_s 1300 K, gas 900 K, fuel 10⁻⁸, 10⁻⁷, 10⁻⁶, 10⁻⁵, 10⁻⁴ and 2.93 × 10⁻⁴ kg. The tool's float64 transcription of 1726 to 1752 says which masses burn out in one call (k_o dt about 3500, the O₂ ample) and gives dOx and dPy.
+  - (ii) **Pyrolysis.** T_s 2000 K, nitrogen with no O₂, fuel 10⁻⁴ kg. k_p dt is 18.7, so the call leaves 7.8 × 10⁻¹³ kg and burns out by pyrolysis alone.
+  - (iii) **Both reactions.** T_s 2000 K, gas with an O₂ mass fraction of 0.01, fuel 10⁻⁴ kg. The O₂ caps the oxidation, and the pyrolysis takes the rest in the same call, as at the full trace's step 1229.
+  - (iv) **Control.** Fuel 10⁻² kg at (i)'s temperatures. It does not burn out.
+  - (v) **A liquid** (class B) at 10⁻⁸ kg, T_s above its boiling point. It turns gas through 1717.
+  - (vi) **A metal** (class D, magnesium, `ash` 1.658, `fireClasses.js` 169) at (i)'s temperatures. It never turns gas.
+  - (vii) **A cell of no capacity.** The centre holds no fuel and no water, T_s 10⁹ K, and its gas holds fuel vapour and O₂ at 1200 K, with `gasA` as the solver has it, so that it burns.
+- **The app's states.** The GPU check's room (`appScene`), stepped on the CPU with the item off, 0.1 s steps, found by stepping a copy one step ahead, as the trace found them:
+  - the bare scene's state before step 427;
+  - with radiation and particles on, the state before each of the first six burn-out steps;
+  - with the app's default design fire, the state before the first particle stage at which a cell of no capacity burns.
+- **The app's runs.** The same room with the solver's own burning (radiation and particles on), and with the app's default design fire (class A, `designFireFor("A", "class")`), each 1500 fixed steps of 0.1 s, seeds 1 and 2.
+
+(a) **The cell's balance at burn-out, on each path.** The isolated cell, (i) to (vi), one chemistry stage (`chemistryStage`; `chemistryPass`):
+1. **The gas.** T_g after the stage equals T_g,0 + Q_b / (ρ′ V c_p,mix(Y′)) within 2 float32 steps of T. Q_b = dOx ΔH_c − dPy L_p comes from the transcription, and ρ′ and Y′ are the stored values after the stage. On the GPU, within (c)1's tolerance.
+2. **The solid.** T_s = float32(T_a) exactly, the kind gas, the fuel 0, and the flag as the transcription gives it (heat ≥ `burningFlux` × area × dt).
+3. **The tally.** `stats.burnoutHeat` = Q_b within 10⁻¹² relative.
+4. **The control (iv) and the metal (vi).** Every field bit-identical, item on against item off.
+5. **The liquid (v).** T_g bit-identical on and off, and T_s = float32(T_a) with the item.
+- Reason: the transcription is the code's own float64 arithmetic on the same float32 inputs, and T is stored once after the write, so 2 float32 steps cover the store and the reading.
+- Reported beside, with the item off: T_g unchanged, T_s = T_s,0 + Q/max(C_s′, 10⁻⁶), and Q_b missing from every field.
+
+(b) **Bounds on the flame front.**
+1. **The isolated cell, one chemistry stage and the next particle stage** (`particleStep`). In (i), at the masses that set the flag, and in (vii): the centre spawns six flame-front particles, each at exactly max(T, T_a) of the centre's stored T. Reported beside, with the item off: six at the centre's T_s.
+2. **The app's runs, item on, at every particle stage of the 1500 steps.**
+   - Every gas cell's T_s equals float32(T_a), apart from a temperature pilot's cells while it lasts.
+   - Every flame-front particle spawned in the stage carries max(T, s(c)) of its cell, s(c) as point 6 defines it, and every ember max(s(c), 900).
+   - Reported beside, on and off: the particles above 10⁴ K, and the steps that hold one.
+
+(c) **CPU against GPU.** Each judges the item's own difference, Δ_item = X_on − X_off on each path, so that what the paths already differ by cancels.
+1. **One chemistry stage from identical inputs.** Every scene of the isolated cell, uploaded to both paths. For every body (each cell's T and T_s): |Δ_item,GPU − Δ_item,CPU| ≤ max(10⁻³ |Δ_item,CPU|, 8 float32 steps). The kind, the fuel and the flag are equal on both, and the burnt-out cell's T_s is float32(T_a) on both. Reason: the same closed form in float32 from the same inputs, about 10⁻⁶ relative; 10⁻³ keeps a margin of 1000, and 8 steps cover a change near 0 (16.26 (a)).
+2. **One full step from one shared state.** From each of the app's states, one step on each path, item on and off, with the same rule for every body's T and T_s. Then one more step: with the item on, the particles spawned from a burnt-out cell or a cell of no capacity carry exactly that cell's stored T on each path. The particles above 10⁴ K and the particle totals of the two paths are reported (now the totals agree count for count).
+3. **Whole runs.** `tools/flamescapes-gpu-check.mjs` phases `agreement` and `onestep`, on a copy whose `DEFAULTS` set the switch. At every checkpoint, the GPU's largest and 99th percentile of |ΔT| from the CPU, and onestep's largest |ΔT_s| over non-gas cells, are at most twice the larger of: the same with the item off; the CPU's one-ulp twin's with the item on (16.26 (e)3).
+
+(d) **Off is off.** With `burnoutHeat` 0:
+- `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's d62b581d and 29793d1a. They were run again for this draft at e9f6371 and gave both.
+- The unit suite passes with the base's count: 537, as at 12d47f5 (16.26 (f)), whose `src` equals e9f6371's.
+- `tools/flamescapes-gpu-check.mjs`, all phases, against runs of the unchanged base, leaf by leaf, by 16.30's decision 5:
+  - every leaf of the deterministic phases, and the CPU side of every phase, bit for bit;
+  - each GPU `runScene` result: 8 base runs and 8 branch runs, run alternately, none repeated. A leaf fails only if every branch value lies strictly above, or strictly below, every base value.
+
+With `burnoutHeat` 1, and no cell turning gas and no cell of no capacity burning, every field and every `stats` entry the base has are bit-identical, on each path that runs the scene:
+- the fingerprint tool's two rooms. In their 300 steps no cell burns out, and their two cells of no mass stay at T_a and never burn (traced for this draft). So with 1 they give d62b581d and 29793d1a too.
+- heat-closure's `burner` case and its `porous` case, 60 s on 0.20 m. Its contents of no mass never run a solid-fuel block, and its radiation is off (`heat-closure.mjs` 54, 173), so their T_s stays T_a.
+- Steckler test 14 on 0.34 m through the suite, its full 300 s, every recorded output.
+
+With 1 and a burn-out, or a cell of no capacity that burns, the outputs differ, which is reported.
+
+(e) **The unit suite passes unbent** with the default set to 1 (a one-line change on a copy, not committed). A test that fails is not edited, and its failure is reported. Only a test whose reference is the present burn-out itself (heat into T_s at the floor, or a gas cell's T_s kept), or the present spawn from a solid of no capacity, may be rewritten, disclosed as written after a failure (13.25, decision 13).
+
+(f) **Speed, reported, not judged.**
+- `chemistry`'s and `particles`' ms and a step's ms, on and off, from the fingerprint tool's profile.
+- `tools/backend-bench.mjs` on its room, Duplex, Office, Clinic and Vienna, CPU and GPU, on and off.
+- Vienna on the GPU in the browser with the item on: whether it reaches its horizon, and its ms a step.
+
+A failure of (a) means the heat, the test or the reset departs from points 2 to 5. A failure of (b) means a stale or unbounded temperature still reaches the flame front. A failure of (c) means the port departs from the CPU. A failure of (d) or (e) means the item acts where it should not.
+
+#### Default
+
+Off. Passing (a) to (e) makes the switch available to the solver's options and to the harness.
+- No validation scene holds a porous cell (below), so no verdict can move, and there is no rerun to report beside 13.B. (d) shows it bit for bit.
+- The item changes app runs and any study run with contents. The app's default changes only as 13.25's decision 14 sets: with the user's agreement, given with the step's cost (CPU, GPU, and Vienna in the browser) and the app runs' particles before it. `RUN_CACHE_VERSION` rises then.
+
+#### What ends this line
+
+If any check of (a) to (e) fails in any case, the attempt fails. It is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted (16.8). The method has no free constant: every number is the solver's own (the burn-out mass of 10⁻⁷ kg, ΔH_c, L_p, `P.ambient`, the mixture's c_p, the ember floor of 900 K).
+
+Checks (a), (b), (c)1 and (d) have references that the method meets exactly, bit for bit or within float32 storage. So a failure there is a fault of the code against the method, and 13.25's decision 13 applies: corrected code, run again in full, is the same attempt, reported with both commits. A change to the method ends the attempt. A failure of (c)2, (c)3 or (e) ends the attempt.
+
+If the line ends, burn-out's last heat stays outside the books, and a solid that holds no heat keeps feeding the flame front. Every app run with contents then carries a declared limit: a flame front fed at 10⁶ to 10¹¹ K from burnt-out cells and cells of no mass, up to about a third more combustion in the stages it reaches, and yellow-white drawn points that come from it. No second attempt is drafted. It would need the user's word and a new method written here first.
+
+#### Whether it touches validation runs and app runs
+
+- **No validation run.** The suite builds every scene with no contents and no first item (`validation-suite.mjs` 289), and its burner is a gas source. So there is no porous cell, no cell turns gas, and every gas cell holds T_s = T_a. Heat-closure's `porous` case draws its contents with no mass (`heat-closure.mjs` 167), and runs with radiation off, so their T_s stays T_a. No verdict of 13.A, 13.B or the reruns can move.
+- **App runs, on both paths.** Every app scene's contents are porous cells (`flamescapesRun.js` 160, 161, 224), and the traced room held 0 to 2 of no mass among about 1000 at seeds 1 to 3. Every run whose contents burn out, or whose cell of no mass is reached by radiation and burns, changes:
+  - **The heat.** The gas of each burnt-out cell gets its last heat, 3 J to 5.1 kJ in the traces, into a gas of about 5 J/K.
+  - **The flame front.** No solid that holds no heat feeds it. In the traces those particles added 2 to 33 % to the chemistry stage's heat in the steps they reached, stage by stage.
+  - **The first item** burns out only under the solver's own burning (the app's "solver" growth, or a fuel with no design fire). A design-fire item is a burner and never burns out (`flamescapesRun.js` 227; `flamescapes.js` 428). The contents burn out under any choice.
+- **What the app draws: yes.** In the app's default design fire, the drawing's yellow-white flame points came from this defect in 65 of the 68 frames that held any on the GPU, and 57 of 64 on the CPU. With the item, those points take their cell's gas colour, and the fire round them is no longer lit by them. The design-fire item's own drawn flame is unchanged.
+- **Study runs** (section 17) run on the CPU. Any with contents that burn out carry the defect now, and would change with the item.
+
+#### How it combines with items 15, 16, 17 and 19
+
+- **Item 15** (`vapourEnthalpy`, 16.16). Its block writes T_g once, at its end, from H₀ + E_in (16.16, point 4). With both on, Q_b joins that sum, T_g = T_a + (H₀ + E_in + Q_b)/(ρ′ V c_p,mix(Y′)), in one write. Its burn-out term reads T_s at the zeroing (1785 to 1786), before point 5's reset. A call that burns the cell out writes no reaction heat into T_s with this item on, so item 15's terms carry only the consumed skin's own sensible heat, and each joule is counted once.
+- **Item 16** (`sourceExpansion`, 16.19). Q_b changes the gas's T like any heat source, so `expansionEnd` asks its volume through ln(T/T₁) (2641), as for gas combustion. Nothing else meets.
+- **Item 17** (`porousExchange`, 16.26). A cell that burns out is gas when `conduct` runs, now and with this item, and a cell of no capacity takes no exchange in either. Item 17 governs the steps before burn-out, while C_s is small but not 0. No interaction.
+- **Item 19** (16.30, decision 3). How much fuel the last call takes depends on the step: 5.1 kJ, 3.4 kJ and 1.5 kJ for the first item in three of the traces. This item puts whatever that call releases into the gas, whatever its size.
+
+#### Declared limits
+
+- **The own gas only.** The split by conductance would send the face partners their share: 1.3 % for the first item, up to about half for a contents cell. That share reaches them through the transport one step later.
+- **One cell's gas, in one step.** The first item's last 5.1 kJ raise its 4.9 J/K of gas by about 1050 K. The jump's size follows the last call's mass, which depends on the step (16.30, decision 7).
+- **The rays into a cell of no capacity are still lost** (point 8). The item stops them reaching the flame front, not the books (below).
+- **The temperature pilot** writes T_s of its cells while it lasts, even after the first item has burnt out (3313 to 3316). The guard makes the flame front ignore it in a gas cell. In the traces the item burnt out after the pilot ended (43 s against 30 s).
+- **The 10⁻⁹ J/K floor at 1782** is left. It binds only below 5 × 10⁻¹³ kg of fuel, in a cell that turns gas in the same call, and drops at most 10⁻⁹ J/K × T_s.
+- **Embers from the last call** spawn at 900 K, not at the skin's last temperature.
+- **A surviving thin skin** may still hold a large T_s within a step (below). That heat is kept, and `conduct` passes it on before any particle stage reads it.
+- **The GPU keeps no tallies.** The item adds none.
+
+#### Seen while tracing, outside this item
+
+1. **Thin skins that survive the call.** In the full trace, fifteen calls that did not burn a cell out raised its T_s by more than 1000 K, the largest by 2.4 × 10⁵ K. Contents cells began calls at up to 19 789 K after radiation's deposits (in the app's path, 4.8 × 10⁵ K). The heat is held (C_s ΔT_s), and `conduct` passes it on in the same step, before the next particle stage. It is the regime of item 17's declared limit that the conductances do not scale with the skin.
+2. **Radiation into a cell of no capacity loses the ray** (1165, 1184; item 11's tally, 1060): 7.8 kJ in 150 s and 17.7 kJ in 300 s into one cell of the traced room. A candidate for its own item, drafted blind first. One way: the ray goes to that cell's gas. The GPU's deposits into such a cell were not read for this draft.
+3. **A sliver of floor** gives the first layer of contents cells stone's conductivity (16.26, 2; line 407). It is recorded as a declared limit by 16.27's decision 5, and it is not part of this item: it changes a conductance, not where heat goes at burn-out or what the flame front reads.
+
+#### Not verified
+
+- The item's effect on any run, and the size of the change to a run's course. The counterfactual stage measures one stage at a time.
+- The GPU's ember path above 4.29 × 10⁹ K, where T⁴ overflows float32 (the bare trace's 5.135 × 10⁹ K). It is argued from WGSL's `max` with −∞; the injected ember was at 3.42 × 10⁹ K.
+- Which source gave each hot particle in the GPU's and the CPU's `runScene` runs: they were attributed only in the fixed-step runs.
+- How many burn-outs and cells of no mass the app's larger scenes and Vienna hold.
+- Burn-outs of liquids and metals in a run: argued from the code.
+- Rooms other than the GPU check's.
+- Every speed figure, apart from load.
+- FDS's Technical Reference Guide was not read. FDS's rule is read from its source, as cited.
+
+#### Sources (read, or run for this draft)
+
+- This repository at e9f6371:
+  - `flamescapes.js` 120 to 330 (parts of `DEFAULTS`, `arrhenius`, `survives`, `exchange`), 398 to 445, 560 to 800, 805 to 830, 850 to 860, 940 to 970, 1040 to 1075, 1140 to 1190, 1640 to 1830, 1866 to 1912, 3288 to 3330 and 3660 to 3717;
+  - `flamescapesGpu/kernels.js` 1030 to 1235 and 2130 to 2300, and by search 763, 793 to 799 and 1223 to 1229;
+  - `flamescapesGpu.js` 189 to 230, 417, 440 to 530, 621 to 760, 758 to 966 and 1110 to 1116;
+  - `flamescapesRun.js` 106 to 260, 495 to 600 and 780 to 914;
+  - `voxelize.js` 295 to 316; `fireClasses.js` 270 to 295, and by search `heatCapacity` and `ash`;
+  - `viewer/ViewerManager.js` 100 to 130 and 2320 to 2390; `workers/flamescapes.worker.js` 120 to 215; `App.jsx` 1736 to 1800;
+  - `runCache.js` 54;
+  - `tools/flamescapes-gpu-check.mjs` 1 to 60, 124 to 260, 404 to 445 and 620 to 660; `tools/flamescapes-fingerprint.mjs`;
+  - `tools/calibration/validation-suite.mjs` 285 to 292, 304 and 467, and `tools/calibration/heat-closure.mjs` 54, 114, 160 to 177, by search.
+- FDS source at commit ff928db (`github.com/firemodels/fds`, ff928dbf68a2623ced3a007be75391c6dc6c9f90): `Source/wall.f90` 1985 to 2010, 2296 to 2325, 2400 to 2560, 2676 to 2700, 2840 to 2870, 2900 to 2913, 2984 to 3143 and 3186 to 3595; `Source/read.f90` 1898 to 1906, 9038 to 9044 and 10236 to 10241. `Source/pyro.f90` is not in the copy (a 404).
+- Run for this draft, at e9f6371, with no change to the solver:
+  - the fingerprint tool;
+  - the trace of the app's room in Node: bare; with particles; with the full model at 0.1 and 0.05 s; with the app's default design fire at fixed steps and through `runScene`; with the counterfactual stage;
+  - the hot particles' sources, the cells of no mass at seeds 1 to 3, and the fingerprint tool's two rooms traced for burn-outs and cells of no mass;
+  - in headless Chrome: the GPU from the CPU's state before the burn-out, the injected ember, and the app's default design fire through the GPU's `runScene`.
+
+  No validation run, no study run, no result file.
+
+### 16.34 The coordinator's decisions on 16.33 (2026-11-15, before any code of item 18)
+
+The draft is the agent's, written blind. Its head declares its reading slips, among them 13.A's table of verdicts. No validation scene holds a porous cell, so no verdict bears on this item.
+
+**Checked by the coordinator,** apart from the agent:
+- **The code.** At e9f6371, a solid's heat is divided by max(capacity, 10⁻⁶ J/K) in oxidation (`flamescapes.js` 1758) and in radiation's deposits (1165, 1184). Contents masses are drawn from a normal distribution cut at 0 (`voxelize.js` 306).
+- **The agent's hooked copy of the core** gives the base's fields and particles bit for bit over 50 steps.
+- **Cells of no capacity.** On it, the GPU check's room holds 2 porous cells of no capacity at seed 1 and 1 at seed 2, in each of four scenes.
+- **Hot particles.** In the design scene over 3000 steps, they come from two sources:
+  - two burnt-out cells, 60 spawned;
+  - one cell of no capacity, 90 spawned, with T_s up to 1.77 × 10¹⁰ K.
+- **Independent confirmation.** 16.26's drafter saw the burn-out's 5.135 × 10⁹ K independently.
+- These are the draft's figures.
+
+1. **The method, as drafted, with point 6.**
+   - At burn-out, the call's net heat goes to the cell's own gas, and T_s is set to T_a when the cell turns gas.
+   - The flame front and embers read T_s only from a non-gas cell whose solid holds heat.
+   - Point 6 stays in this item: both sources are one defect, a temperature with no body behind it reaching the particles.
+2. **The cause of the second source,** contents cells drawn with no mass, is recorded as a declared limit of every run with contents. It is a candidate for its own item. Point 6 guards its effect on the particles; its rays' heat still leaves the books, as the draft states.
+3. **The switch, as drafted:** `burnoutHeat`, off by default.
+   - The drawn flame of the app's default design fire takes most of its yellow-white points from this defect: 65 of 68 frames that had any on the GPU, and 57 of 64 on the CPU. That bears on the rule that a drawn fire stays physically honest.
+   - So if item 18 passes, the coordinator puts the default change to the user, with its cost, as 13.25's decision 14 requires. No default changes without the user's word.
+4. **The checks and what ends this line, as drafted.** The GPU check's nondeterministic runs are judged by 16.30's rule, 8 against 8.
+5. **The build** waits until item 17's build has reported. Both act on burning-out cells, and the GPU's 8-against-8 runs need the GPU to themselves. It then goes on a new branch, `flamescapes/burnout-heat`, from this section's commit, in `TopologicStudio-burnout`.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
