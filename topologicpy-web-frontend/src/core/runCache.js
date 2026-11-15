@@ -63,10 +63,10 @@ export const MAX_RUN = 96 * 2 ** 20;
  * kept run is lost and RUN_CACHE_VERSION does not rise for them. Item 11's
  * surfaceEmitFloor (plan 13.26) is keyed the same way, and its option
  * surfaceWarmRays whenever a run sets it (its default, null, casts `rays`).
- * Item 12's burnerFlameRays (plan 16.10) is keyed the same way; the app sets
- * none of them.
+ * Item 12's burnerFlameRays (plan 16.10) and item 14's flameRadiantOnce
+ * (plan 16.14) are keyed the same way; the app sets none of them.
  */
-export const KEYED_SWITCHES = Object.freeze(["surfaceRayStart", "surfaceEmitFloor", "surfaceWarmRays", "burnerFlameRays"]);
+export const KEYED_SWITCHES = Object.freeze(["surfaceRayStart", "surfaceEmitFloor", "surfaceWarmRays", "burnerFlameRays", "flameRadiantOnce"]);
 export function switchesKey(solverOptions) {
   return KEYED_SWITCHES.filter((name) => solverOptions?.[name]).map((name) => [name, solverOptions[name]]);
 }

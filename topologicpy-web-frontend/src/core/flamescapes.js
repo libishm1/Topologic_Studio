@@ -76,6 +76,12 @@
  *     first surface or out of the grid (burnerStep, flameRays, burnerMarch).
  *     Before, it left one point half a cell above the burner's top along 16
  *     fixed directions, half of them downward (plan 16.9, point 3).
+ *   - With flameRadiantOnce (plan 16.14 item 14; off by default), a burner
+ *     with a radiant fraction radiates it once: the cells where its fuel
+ *     burnt that step emit nothing by Eq. 17 (radiation) and its rays cross
+ *     them without loss (burnerMarch), so the flame's radiant output is
+ *     chi_r Q. Before, a sooty flame also emitted by its soot (plan 16.12,
+ *     finding 1).
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -273,6 +279,20 @@ export const DEFAULTS = Object.freeze({
   // radiant part (the app's design fire) is unchanged; CPU only. Off until
   // its checks pass and the user agrees (plan 16.10, Default; 16.12).
   burnerFlameRays: 0,
+  // A burner's flame radiates its radiant fraction once (calibration plan
+  // 16.14, item 14; 16.15): in a step, the cells where a burner with a
+  // radiant fraction burnt its fuel (stamped in burnerStep) cast nothing by
+  // Eq. 17 in the radiation stage, what they would have emitted being counted
+  // (stats.flameSilenced), and the burner's rays cross them without loss
+  // (burnerMarch), what their soot would have taken being counted
+  // (stats.flameCleared); what the burner's rays carry beyond the grid is
+  // counted (stats.burnerRadiatedOut). So the flame's radiant output is
+  // chi_r Q. Rays cast by other gas cells and by surfaces are absorbed in the
+  // flame as before. 0 leaves both as before: a sooty flame radiates chi_r Q
+  // and its soot's emission. Alone or with burnerFlameRays; a burner with
+  // radiant fraction 0 (the app's design fire) is unchanged; CPU only. Off
+  // until its checks pass and the user agrees (plan 16.14, Default; 16.15).
+  flameRadiantOnce: 0,
   // Solid fuel: the paper's Table 3 (biomass) and Table 4 (wood).
   pyrolysisA: 4.78e4, // 1 / s
   pyrolysisE: 9.22e4, // J / mol
@@ -529,7 +549,9 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // With surfaceEmitFloor as well (radiation): what surfaces below their floor would have emitted, what the cap held back, and the
     // stage's float32 round-off (J) in the emitting cells' own temperatures and in its deposits.
     // With burnerFlameRays (flameRays): what the burner's rays carried beyond the grid (J), and its rays and the cells they crossed.
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0, ...(P.surfaceRayStart > 0 ? { radiatedOut: 0, surfaceRays: 0, surfaceCrossings: 0 } : {}), ...(P.surfaceRayStart > 0 && P.surfaceEmitFloor > 0 ? { surfaceFloor: 0, surfaceCapped: 0, radRoundoff: { own: 0, deposits: 0 } } : {}), ...(P.burnerFlameRays > 0 ? { burnerRadiatedOut: 0, burnerRays: 0, burnerCrossings: 0 } : {}) },
+    // With flameRadiantOnce (J): what the flame's cells would have emitted by Eq. 17 (radiation), what their soot would have taken
+    // of the burner's rays (burnerMarch), and what the burner's rays carried beyond the grid.
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0, ...(P.surfaceRayStart > 0 ? { radiatedOut: 0, surfaceRays: 0, surfaceCrossings: 0 } : {}), ...(P.surfaceRayStart > 0 && P.surfaceEmitFloor > 0 ? { surfaceFloor: 0, surfaceCapped: 0, radRoundoff: { own: 0, deposits: 0 } } : {}), ...(P.burnerFlameRays > 0 ? { burnerRadiatedOut: 0, burnerRays: 0, burnerCrossings: 0 } : {}), ...(P.flameRadiantOnce > 0 ? { flameSilenced: 0, flameCleared: 0, burnerRadiatedOut: 0 } : {}) },
   };
 }
 
@@ -913,6 +935,13 @@ function lumpedFloor(sim, c, dt) {
  * mean less `last`, the J by which their changes round apart). With
  * surfaceWarmRays, a surface whose emitting faces are all at or below
  * emitAbove casts that many rays, each carrying its emission over that number.
+ *
+ * With flameRadiantOnce (calibration plan 16.14, item 14), a gas cell in
+ * which the burner burnt its fuel this step (flameOfStep) casts no rays and
+ * keeps its temperature: the burner has cast its radiant fraction already.
+ * What the cell would have emitted, with its cap, is added to
+ * stats.flameSilenced, not to stats.radiated. Rays from other cells are
+ * absorbed in it as before.
  */
 function radiation(sim, dt) {
   const { P, grid: g } = sim;
@@ -920,6 +949,9 @@ function radiation(sim, dt) {
   const A = h * h;
   const Ta4 = P.ambient ** 4;
   const dir = [0, 0, 0];
+  // Item 14 (plan 16.14): the step's flame, null when off (the one flag a stage).
+  const flame = P.flameRadiantOnce > 0 ? flameOfStep(sim) : null;
+  let silenced = 0;
   // One-dimensional walls emit from, and take rays on, the face concerned
   // (wallEmit, march): their ends' deposits wait in lo and hi with the rest.
   const W = sim.wall;
@@ -994,6 +1026,11 @@ function radiation(sim, dt) {
       emitted = 4 * P.sootAbsorption * ys * SIGMA * (sim.T[c] ** 4 - Ta4) * sim.V * dt;
       emitted = Math.min(emitted, 0.5 * Cg * (sim.T[c] - P.ambient));
       if (emitted <= 0) continue;
+      if (flame && flame.stamp[c] === flame.mark) {
+        // Item 14: the burner burnt here this step and has cast its radiant fraction; this cell casts nothing.
+        silenced += emitted;
+        continue;
+      }
       if (tally) {
         const meant = sim.T[c] - emitted / Cg;
         sim.T[c] = meant;
@@ -1100,6 +1137,7 @@ function radiation(sim, dt) {
     }
   }
   if (fromFaces) sim.stats.radiatedOut += dep.out[0];
+  if (flame) sim.stats.flameSilenced = (sim.stats.flameSilenced || 0) + silenced;
   if (tally) {
     const st = sim.stats;
     st.surfaceFloor = (st.surfaceFloor || 0) + tally.floor;
@@ -3623,12 +3661,22 @@ function burnInCell(sim, b, c, fuel) {
  * and a radiant part records where its fuel burns this step (flameRecord,
  * burnInFlame), and its rays leave from there (flameRays). Which cells burn,
  * how much, the heat, products and pending are as without it.
+ *
+ * With flameRadiantOnce (calibration plan 16.14, item 14) a burner with a
+ * radiant part stamps the cells where its fuel burns this step (flameOnce,
+ * burnInStamp, or item 12's record when that is on). The radiation stage
+ * then leaves them silent (flameOfStep), and the burner's rays cross them
+ * without loss: with item 12 its own rays, and without it the rays from the
+ * axis cell as before, marched by burnerMarch in place of march. Tallies:
+ * flameCleared and burnerRadiatedOut, and b.rayFate for the step.
  */
 export function burnerStep(sim, dt) {
   const b = sim.burner;
   // Item 12: the step's record of the cells that burn, null when off (the one flag a step).
   const fl = sim.P.burnerFlameRays > 0 ? flameRecord(sim, b) : null;
-  const burn = fl ? burnInFlame : burnInCell;
+  // Item 14: the step's stamp (item 12's record when it has one), null when off (one more flag a step).
+  const once = sim.P.flameRadiantOnce > 0 ? flameOnce(sim, b, fl) : null;
+  const burn = fl ? burnInFlame : once ? burnInStamp : burnInCell;
   const E = burnerHeat(b, sim.time, sim.time + dt) + b.pending;
   b.flameCells = 0;
   if (!(E > 0)) return;
@@ -3653,7 +3701,8 @@ export function burnerStep(sim, dt) {
   const rays = b.dirs.length / 3;
   const radiant = burnt - convective;
   if (rays && radiant > 0) {
-    if (fl) flameRays(sim, b, fl, radiant, rays);
+    if (fl) flameRays(sim, b, fl, radiant, rays, once ? b.rayFate : null);
+    else if (once) axisRaysClear(sim, b, once, radiant, rays);
     else {
       // The directions turn about the vertical by the golden angle each step,
       // so the radiant heat spreads over the surfaces without random numbers.
@@ -3667,6 +3716,7 @@ export function burnerStep(sim, dt) {
         march(sim, b.origin[0], b.origin[1], b.origin[2], b.dir, radiant / rays, b.axis, false);
       }
     }
+    if (once) sim.stats.flameCleared = (sim.stats.flameCleared || 0) + b.rayFate.cleared;
   }
   b.released += burnt;
   b.convective += convective;
@@ -3753,8 +3803,10 @@ export function burnerFlameCell(sum, n, u) {
  * ray runs in burnerMarch; once all are cast their float64 deposits are
  * added to the state as the radiation stage adds its own, a wall's ends
  * through wallEnd. Tallies: burnerRadiatedOut (J), burnerRays, burnerCrossings.
+ * With item 14, `fate` (b.rayFate) takes where each ray's energy went and
+ * what the flame's soot would have taken of it (burnerMarch).
  */
-function flameRays(sim, b, fl, radiant, rays) {
+function flameRays(sim, b, fl, radiant, rays, fate = null) {
   const { P, grid: g } = sim;
   const W = sim.wall;
   const dep = fl.dep;
@@ -3784,7 +3836,7 @@ function flameRays(sim, b, fl, radiant, rays) {
     frac[1] = draw();
     frac[2] = draw();
     const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
-    crossings += burnerMarch(sim, i, j, k, frac, dir, share, fl, dep, reach);
+    crossings += burnerMarch(sim, i, j, k, frac, dir, share, fl, dep, reach, -1, fate);
   }
   for (let c = 0; c < sim.N; c += 1) {
     if (dep.T[c]) sim.T[c] += dep.T[c];
@@ -3803,24 +3855,37 @@ function flameRays(sim, b, fl, radiant, rays) {
 }
 
 /**
- * march for item 12's burner rays alone (plan 16.10, points 5 to 8; the
- * coordinator's decision 4 in 16.12 keeps march itself as it was). The ray
- * starts in cell (i, j, k) at the fractions `frac` of it. In a gas cell
- * stamped with the step's mark (where the burner burnt this step) it loses
- * nothing; in every other gas cell soot absorbs it as in march. The first
- * non-gas cell it enters takes the rest whole, a one-dimensional wall reached
- * along its normal on the face it crossed. It runs for at most `reach`
- * crossings (rayReach does not stop it). Its deposits go into `dep` (float64,
- * kelvin a cell), and what it carries beyond the grid into dep.out (J).
+ * march for the burner's rays alone (plan 16.10, points 5 to 8; the
+ * coordinator's decision 4 in 16.12 keeps march itself as it was), with item
+ * 12's rays and with item 14's (plan 16.14, point 4). The ray starts in cell
+ * (i, j, k) at the fractions `frac` of it. In a gas cell stamped with the
+ * step's mark (where the burner burnt this step) it loses nothing; in every
+ * other gas cell but `from` soot absorbs it as in march. The first non-gas
+ * cell it enters takes the rest whole, a one-dimensional wall reached along
+ * its normal on the face it crossed. It runs for at most `reach` crossings.
+ * Its deposits go into `dep` (float64, kelvin a cell) and what it carries
+ * beyond the grid into dep.out (J), as item 12 has them; with `dep` null they
+ * are made at once, as march makes them (item 14 without item 12, whose rays
+ * leave the axis cell, `from`, and stop at rayReach as before).
+ *
+ * With item 14, `fate` (b.rayFate, J, float64) takes where the energy went:
+ * stamped (a ray's remainder left in a stamped cell), gas, solid (solids and
+ * walls' ends) and out (beyond the grid); and `cleared`, what the stamped
+ * cells' soot would have taken of the ray under the present rule: a shadow of
+ * the ray, absorbed in every gas cell it crosses but the one it starts in,
+ * whose loss in stamped cells is counted. The shadow changes nothing.
  * Returns the crossings it made.
  */
-function burnerMarch(sim, i, j, k, frac, dir, energy, fl, dep, reach) {
+function burnerMarch(sim, i, j, k, frac, dir, energy, fl, dep, reach, from = -1, fate = null) {
   const { P, grid: g } = sim;
   const h = g.h;
   const stamp = fl.stamp, mark = fl.mark;
   const step = dir.map((d) => (d > 0 ? 1 : -1));
   const tDelta = dir.map((d) => (d !== 0 ? Math.abs(1 / d) : Infinity));
   const tMax = dir.map((d, a) => (d !== 0 ? (d > 0 ? 1 - frac[a] : frac[a]) / Math.abs(d) : Infinity));
+  // Item 14: the shadow skips the cell the ray starts in, as march skips the cell that casts a ray.
+  const own = fate ? at(g, i, j, k) : -1;
+  let shadow = energy;
   let left = energy;
   let t = 0;
   let n = 0;
@@ -3829,13 +3894,29 @@ function burnerMarch(sim, i, j, k, frac, dir, energy, fl, dep, reach) {
     const length = (tMax[a] - t) * h;
     t = tMax[a];
     const c = at(g, i, j, k);
-    if (sim.kind[c] === GAS && stamp[c] !== mark) {
-      // Absorbed by soot along the segment (Section 4.6), outside the flame.
-      const tau = P.sootAbsorption * sim.Y[c * NS + SPECIES.SOOT] * length;
-      if (tau > 0) {
-        const taken = left * (1 - Math.exp(-tau));
-        dep.T[c] += taken / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
-        left -= taken;
+    if (sim.kind[c] === GAS) {
+      const flame = stamp[c] === mark;
+      // Absorbed by soot along the segment (Section 4.6), outside the flame (and outside `from`).
+      const absorbs = !flame && c !== from;
+      const shades = fate !== null && c !== own;
+      if (absorbs || shades) {
+        const tau = P.sootAbsorption * sim.Y[c * NS + SPECIES.SOOT] * length;
+        if (tau > 0) {
+          const lost = 1 - Math.exp(-tau);
+          if (shades) {
+            const s = shadow * lost;
+            shadow -= s;
+            if (flame) fate.cleared += s;
+          }
+          if (absorbs) {
+            const taken = left * lost;
+            const rise = taken / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
+            if (dep) dep.T[c] += rise;
+            else sim.T[c] += rise;
+            if (fate) fate.gas += taken;
+            left -= taken;
+          }
+        }
       }
     }
     tMax[a] += tDelta[a];
@@ -3844,31 +3925,116 @@ function burnerMarch(sim, i, j, k, frac, dir, energy, fl, dep, reach) {
     else k += step[2];
     if (i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz) {
       // Leaves the domain, counted.
-      dep.out[0] += left;
+      if (dep) dep.out[0] += left;
+      if (fate) fate.out += left;
       return n + 1;
     }
     const next = at(g, i, j, k);
     if (sim.kind[next] !== GAS) {
       const rise = left / Math.max(solidCapacity(sim, next), 1e-6);
       const w = sim.wall ? sim.wall.index[next] : -1;
+      if (fate) fate.solid += left;
       if (w >= 0 && a === (sim.wall.meta[w] & 3)) {
         // A one-dimensional wall reached along its normal takes the ray on the
         // face it crossed: its low end when the ray runs up the axis.
-        (step[a] > 0 ? dep.lo : dep.hi)[w] += rise;
+        const end = step[a] > 0 ? 0 : 1;
+        if (dep) (end ? dep.hi : dep.lo)[w] += rise;
+        else wallEnd(sim, w, next, end, rise);
         return n + 1;
       }
-      dep.Ts[next] += rise;
+      if (dep) dep.Ts[next] += rise;
+      else sim.Ts[next] += rise;
       return n + 1;
     }
   }
-  // Below the cut-off (or, never, out of reach): what the ray still carries
-  // is absorbed in the cell it ended in, so no energy is lost.
+  // Below the cut-off, or out of reach: what the ray still carries is
+  // absorbed in the cell it ended in, so no energy is lost.
   if (left > 0 && i >= 0 && j >= 0 && k >= 0 && i < g.nx && j < g.ny && k < g.nz) {
     const c = at(g, i, j, k);
-    if (sim.kind[c] === GAS) dep.T[c] += left / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
-    else dep.Ts[c] += left / Math.max(solidCapacity(sim, c), 1e-6);
+    if (sim.kind[c] === GAS) {
+      const rise = left / (sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V);
+      if (dep) dep.T[c] += rise;
+      else sim.T[c] += rise;
+      if (fate) {
+        if (stamp[c] === mark) {
+          fate.stamped += left;
+          fate.stampedEnds += 1;
+        } else fate.gas += left;
+      }
+    } else {
+      const rise = left / Math.max(solidCapacity(sim, c), 1e-6);
+      if (dep) dep.Ts[c] += rise;
+      else sim.Ts[c] += rise;
+      if (fate) fate.solid += left;
+    }
   }
   return n;
+}
+
+// ------------------------------------------- a flame radiates its radiant fraction once (item 14)
+
+/**
+ * Item 14's stamp for one burner step (calibration plan 16.14, points 2 and
+ * 6; 16.15), or null for a burner with radiant fraction 0, which is as
+ * before. With item 12's record (`fl`) it is that record, whose mark has
+ * moved on already; otherwise a stamp per cell (Uint32), made once a run,
+ * whose mark moves on each step (0 is no step). `step` names the step the
+ * mark was set in, so the radiation stage reads only this step's flame.
+ * The step's b.rayFate starts at 0.
+ */
+function flameOnce(sim, b, fl) {
+  if (!(b.radiantFraction > 0)) return null;
+  let rec = fl || b.flame;
+  if (!rec) rec = b.flame = { stamp: new Uint32Array(sim.N), mark: 0, n: 0, cells: null, sum: null, dep: null };
+  if (!fl) rec.mark += 1;
+  rec.step = sim.steps;
+  const fate = b.rayFate || (b.rayFate = { stamped: 0, gas: 0, solid: 0, out: 0, cleared: 0, stampedEnds: 0 });
+  fate.stamped = 0;
+  fate.gas = 0;
+  fate.solid = 0;
+  fate.out = 0;
+  fate.cleared = 0;
+  fate.stampedEnds = 0;
+  return rec;
+}
+
+/** burnInCell, and with item 14 (without item 12) the cell, if fuel burnt there, stamped with the step's mark (plan 16.14, point 2). */
+function burnInStamp(sim, b, c, fuel) {
+  const burnt = burnInCell(sim, b, c, fuel);
+  if (burnt > 0) b.flame.stamp[c] = b.flame.mark;
+  return burnt;
+}
+
+/**
+ * Item 14 without item 12 (plan 16.14, point 4): the burner's rays as
+ * before, from the axis cell's centre along its `rays` directions turned by
+ * the golden angle each step, each carrying radiant / rays, absorbed nowhere
+ * in the axis cell and stopped at rayReach, their deposits made at once; but
+ * marched by burnerMarch, so they cross the step's flame without loss. The
+ * start, as fractions of the axis cell, is exactly march's. Tallies:
+ * burnerRadiatedOut (J), and b.rayFate.
+ */
+function axisRaysClear(sim, b, rec, radiant, rays) {
+  b.turn += Math.PI * (3 - Math.sqrt(5));
+  const cos = Math.cos(b.turn), sin = Math.sin(b.turn);
+  const i = Math.floor(b.origin[0]), j = Math.floor(b.origin[1]), k = Math.floor(b.origin[2]);
+  const centre = [b.origin[0] - i, b.origin[1] - j, b.origin[2] - k];
+  const fate = b.rayFate;
+  for (let r = 0; r < rays; r += 1) {
+    const x = b.dirs[r * 3], z = b.dirs[r * 3 + 2];
+    b.dir[0] = cos * x - sin * z;
+    b.dir[1] = b.dirs[r * 3 + 1];
+    b.dir[2] = sin * x + cos * z;
+    burnerMarch(sim, i, j, k, centre, b.dir, radiant / rays, rec, null, sim.P.rayReach, b.axis, fate);
+  }
+  sim.stats.burnerRadiatedOut = (sim.stats.burnerRadiatedOut || 0) + fate.out;
+}
+
+/** Item 14: the burner's stamp if it was set in this step (plan 16.14, point 3), else null. */
+function flameOfStep(sim) {
+  const b = sim.burner;
+  const rec = b && b.radiantFraction > 0 ? b.flame : null;
+  return rec && rec.step === sim.steps ? rec : null;
 }
 
 /**

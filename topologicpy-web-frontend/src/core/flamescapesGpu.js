@@ -1089,6 +1089,8 @@ class GpuSim {
 function supported(sim) {
   // A validation burner (radiating along rays) runs on the CPU; a design-fire item's runs here.
   if (sim.burner && !sim.burner.design) return false;
+  // With flameRadiantOnce (calibration plan 16.14, item 14), a burner with a radiant fraction runs on the CPU.
+  if (sim.burner && sim.burner.radiantFraction > 0 && sim.P.flameRadiantOnce > 0) return false;
   for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] === 2 && sim.fuelMass[c] > 0) return false;
   return true;
 }
