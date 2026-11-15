@@ -7159,6 +7159,33 @@ The draft is the agent's, written blind. Its head declares its reading slips, am
 4. **The checks and what ends this line, as drafted.** The GPU check's nondeterministic runs are judged by 16.30's rule, 8 against 8.
 5. **The build** waits until item 17's build has reported. Both act on burning-out cells, and the GPU's 8-against-8 runs need the GPU to themselves. It then goes on a new branch, `flamescapes/burnout-heat`, from this section's commit, in `TopologicStudio-burnout`.
 
+
+### 16.35 Item 19: (c)2 and (c)4 corrected before any judged run (2026-11-15)
+
+The builder of item 19 built the item on the CPU and the GPU: 2be9a8d is the item, off by default, and fa88ed6 is the check tool's parts (a) and (b). It then checked 16.31's hand-counted bounds against the code before any judged run, as 16.32's brief asked. No judged check has run.
+
+**What holds:** (a)1, (a)2 to (a)4 on the CPU, (c)1 and (c)3.
+
+**What does not, and why:**
+1. **(c)2 compares the two paths' solved velocities against a floor of 8 float32 steps of the face's own speed.** The paths' solved velocities differ at the scale of the pressure's rounding, k2 ulp(|p|), carried through the Gauss-Seidel solve's slow modes.
+   - The CPU stores p in float32 after a float64 update (`flamescapes.js` 3294 to 3297); the GPU works in float32 throughout (`kernels.js` 2729 to 2731).
+   - On the base, item off, in the next-door fire at 10 s with 0.05 s steps: max |p| is 2.89 and k2 is 0.119.
+   - On 305 of 6177 x faces (4.9 %), 8 float32 steps of the face's speed are below k2 times one ulp of the pressure.
+   - The item-off mask can let such faces in by chance. So code that meets the method could fail (c)2: its reference is wrong for the case.
+2. **(c)4 takes (a)'s bound of 8 roundings a step, which was counted for the CPU's single store.**
+   - The GPU forms ũ in float32 (up to 4 roundings) and rounds 2 to 6 times more in the update.
+   - It also takes the divergence in float32, an error the projection then removes as if it were real.
+   - Its worst case counts about 14 roundings a step for (a)2 and 18 for (a)3.
+
+**Corrected, before any judged run:**
+1. **(c)2 judges the item's terms from identical inputs.**
+   - It judges ũ per face, within (c)1's bound.
+   - It judges each cell's divergence of ũ, within the sum of its six faces' bounds plus the float32 sum's and the division's errors (WGSL 15.7.4.1).
+   - The paths' solved velocities, item on against item off, are reported beside the item-off paths' own difference, and are not judged.
+2. **(c)4's bound on the GPU** is 16 k 2⁻²⁴ max|u_ref| for (a)2 and 20 k 2⁻²⁴ max|F/β₂| for (a)3, with k the steps taken. These are the builder's counts from the code, with a margin of 2. They were not measured.
+
+Every other check and bound of 16.31 stands. No bound changes after a judged run. The builder runs (a) and (b) on the CPU first, then (c), then (d) to (g). (d)'s 8-against-8 GPU runs wait until no other build holds the GPU.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
