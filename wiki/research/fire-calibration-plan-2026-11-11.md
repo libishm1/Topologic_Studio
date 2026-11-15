@@ -3205,3 +3205,110 @@ Every other word is the same with eight and with nine. The figures in the table 
 **What is not concluded.** Nothing about the default design fire (15.6, 15.7): that choice stays the user's. The series prescribes each test's measured heat release, so it tests the room's response to the app's burner and fuel, not the medium curve.
 
 Merged files and the two-way comparison are not committed (they are a reading of committed files): `node tools/calibration/validation-suite.mjs --solver-rev 550fce5 --merge <13.B file>,<the chairs' runs on that cell>` reproduces them.
+
+## 16. Calibrating the parameters (pre-registered 2026-11-15, before any run below)
+
+Sections 12 and 13 validated the solver against held-out data. Only one value has been chosen from measurements: the walls' convection coefficient for the first sprinkler head, chosen by cross-validation (14.3). This section fixes how the solver's important parameters will be calibrated, before any run of it. The user approved it on 2026-11-15, toward two papers: the results (DigitalFUTURES 2027) and the tool (eCAADe 2027).
+
+It was written after 13.A, 13.B, R10 and R11 had been read, and that is declared. Every dataset now in the repository has been seen; only Phase 3's datasets have not. What the results suggest is stated in 16.1, and nothing below rests on it except the order of the work.
+
+### 16.1 Why these parameters
+
+- **The rooms read hot with burners and cold with chairs.** With the test burners the temperatures read 35 to 54 % hot: pooled δ 1.35 to 1.54 for the layer, the ceiling jet and head height on the three cells. With the chairs and the app's own fuel the room reads cold, layer temperature 0.72 to 0.79 (15.9). The error lies in the fire as a source, not in the transport, and a single global parameter would trade one bias for the other.
+- **Surface radiation is ruled out** (13.35, 13.36).
+- **The burner's radiation leaves from one point** half a cell above it, in 16 fixed directions, 8 of them below the horizontal (13.26, decision 3). This is the first suspect.
+- **O₂ cannot be a parameter.** The predicted O₂ drop is 3.5 to 10.5 times the measured one (13.27), too large for any parameter.
+
+### 16.2 Terms
+
+- **Calibrating** chooses a parameter's value from training data. **Validating** compares with data no choice used.
+- After this section a quantity whose parameters were chosen is called **cross-validated** on a cell when every held-out laboratory of 16.5 is in the calibrated band (12.6) with none of its runs stopped, as 14.3 reads it.
+- **Calibrated** keeps its 12.6 meaning, and from now on it is read only on data no choice has used: the held-out folds and Phase 3's sealed datasets.
+- The app's words follow the strictest of these readings.
+
+### 16.3 Phase 0: defects first, with nothing fitted
+
+1. **The burner's rays.**
+   - The defect is drafted blind as item 12 under 13.12, with checks against closed-form references (view factors and conservation, as 13.25).
+   - If it is made, a rerun on 13.B's flags (R12) is reported beside 13.B, verdict by verdict, before Phase 1 begins.
+   - Phase 1 runs on whatever solver Phase 0 leaves.
+2. **O₂: a diagnosis before any species parameter.**
+   - If the cause is the harness's pairing (definition, location or time), the correction is fixed in writing before any corrected run, as 13.16's was, and both readings are reported.
+   - If the cause is in the solver, it is an item under 13.12.
+3. **D*/δx is reported for every test on every cell, as a covariate.** No test is dropped for it, now or later.
+4. **The materials audit.** For the results paper: which lining materials can heat, pyrolyse and ignite in the solver as it stands, and which can only change a contents fire's course. Physics the solver lacks, such as flame spread on a combustible lining, is an item of its own and is not assumed by any study.
+
+### 16.4 Phase 1: screening which parameters matter
+
+The candidates, each with its physical range fixed now:
+
+| Parameter | Governs | Range | Source of the range |
+| --- | --- | --- | --- |
+| Radiant fraction χ_r of a gaseous burner | Gas heat; every temperature | 0.15 to 0.45 | Measured radiant fractions of gaseous fuels (SFPE Handbook, 5th ed.) |
+| Radiant fraction χ_r of class A contents | The chairs' heat; every temperature | 0.15 to 0.45 | The same, for sooty solids |
+| Walls' convection coefficient h | Heat to the walls | 5 to 20 W/m²K | 14.3's candidates |
+| Mass-specific extinction coefficient K_m | Visibility | 7.6 to 9.8 m²/g | 8.7 ± 1.1 m²/g, Mulholland and Croarkin (2000) |
+
+**Screened and reported, never fitted:** the numerical parameters. These are vorticity confinement, substeps, the cell size, and every numerical cut, including 13.19's and 13.26's ambient + 10 K.
+
+**Not candidates:**
+- door flow, because the doors are geometry: attempts 2 and 3 failed, and a fourth needs a new method;
+- leak areas of tests that state none (13.16);
+- each test's prescribed heat release.
+
+**The design.**
+- Morris elementary effects: 10 trajectories, levels at the range's ends and two interior points.
+- On 0.34 m cells, on a subset fixed now: in each series, the first two tests in the suite's order, and both from each laboratory's chair series.
+- Outputs: ln δ for layer temperature, ceiling jet, head height, layer depth, CO₂ and visibility.
+
+**The rule.** A parameter whose μ* is below 10 % of the largest μ* for every output is held at its default and not fitted. The numerical parameters' μ* are reported beside, so that a numerical choice that outweighs the physical ones is visible, but they are not fitted.
+
+### 16.5 Phase 2: calibration, with folds by laboratory
+
+**Folds.** Three folds by laboratory decide, and eight folds by series are reported beside, as in 14.3:
+- NBS/NIST: Steckler, NBS, NIST/NRC, WTC, NIST at UL and FSE;
+- ATF;
+- UL FSRI: its burner series and its chair series.
+
+**Candidates.** Each kept parameter takes five values spread over its range:
+- χ_r: 0.15, 0.22, 0.30, 0.37 and 0.45;
+- h: 5, 7, 10, 14 and 20 W/m²K;
+- K_m: 7.6, 8.15, 8.7, 9.25 and 9.8 m²/g.
+
+The search runs on 0.34 m. The chosen set is then run in full on 0.27 m, the app's tested grid, and on 0.20 m.
+
+**Objective.** In each fold, the set with the lowest sum, over the training folds' pooled pairs, of (ln δ)² + σ̃M² for layer temperature, ceiling jet and head height. The three are weighted alike. K_m is chosen on visibility alone. **Constraint:** the set may not move layer depth out of the calibrated band on any training fold.
+
+**An emulator** (a Gaussian process over the grid) may choose which grid points to run. Every verdict comes from real runs.
+
+**Reported:**
+- each fold's chosen values;
+- each held-out laboratory's δ and σ̃M per quantity and cell;
+- the words of 16.2.
+
+**The defaults.** The app's default changes only when all three folds choose the same value. Then it changes with `RUN_CACHE_VERSION` raised and the user's agreement, given with the results before them. A χ_r is chosen per fuel class, never one value across them.
+
+### 16.6 Phase 3: the sealed final test
+
+These are the datasets the systematic review ranked highest (section 12; `prisma-fire-model-validation`):
+- OECD/NEA PRISME: species and door flows;
+- the ABS smoke series with a measured extinction coefficient: visibility;
+- the FPRF corridor tests: visibility and the ceiling jet.
+
+Each is acquired, its licence checked, and its inputs encoded from geometry and heat release before its measured channels are read. Each runs once, on Phase 2's parameters, and is reported as it comes. After that run it counts as seen. Where a dataset cannot be had, that is reported, and no other is chosen after results.
+
+### 16.7 The order, and the papers
+
+- **Phase 0:** by 2026-11-30.
+- **Phase 1:** by 2026-12-07.
+- **Phase 2:** by 2026-12-31.
+- **Phase 3:** in January 2027, as the data allow.
+- **The results paper (DigitalFUTURES 2027, submission due 2026-12-15)** states the words as they stand on the day it is written: smoke layer depth calibrated on 0.20, 0.27 and 0.34 m, the first sprinkler head cross-validated, and whatever phase has finished. No claim waits on a phase that has not finished.
+- **The tool paper (eCAADe 2027, due 2027-01-15)** describes the harness and this protocol, and claims no verdict beyond those stated in the app.
+
+### 16.8 What ends a line
+
+- No band, tolerance or rule of 12.6, 13.12 or 14.3 moves.
+- A parameter never leaves its physical range, and the ranges above do not widen after a run.
+- If Phase 2 gains nothing on the held-out folds, the defaults stay, and that is reported.
+- A second attempt at the gas's radiation (item 8) and a fourth at the doors still need the user's word and a new method written here first.
