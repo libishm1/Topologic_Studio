@@ -3842,6 +3842,228 @@ The two drafts above are the physics agent's, written blind (13.12, rule 2). The
 1. **The double count.** A sooty test fuel's flame cells radiate χ_r Q, and their soot also emits by Eq. 17 (`radiation` 968 to 980). It is present in every run of 13.A and 13.B; its size is not measured. Phase 1 screens χ_r, so it is drafted blind as item 14, under Phase 0 (16.3), before Phase 1 begins.
 2. **The contents' vapour.** It enters the gas at the cell's temperature with no enthalpy taken. So energy appears with every kilogram the contents pyrolyse. 13.A's Lean theorems cover the transport and the burner, not the contents. Its size is measured first, by a read-only run. Then it is drafted blind as item 15, under Phase 0.
 
+
+### 16.14 Item 14: a flame radiates its radiant fraction once (2026-11-15, before any code or run of it)
+
+Drafted blind to every validation result, as 13.12 sets, and as 16.12's finding 1 asks. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at 40f8ea9, whose `src/core` equals main's be32e34 (`git diff be32e34 40f8ea9 -- topologicpy-web-frontend/src` is empty), so they are 16.10's. The figures called "hand calculation" below were worked for this draft from the formulas cited beside them. None is the solver's output, and none is a fire result.
+
+**What the drafter read that reports results, declared as 13.26's coordinator note declares it.**
+- The plan's headings, 12.4 and 12.6, 13.12, 13.19 with its coordinator's decisions (they state that the rooms read hot), 13.25 and 13.26 with the coordinator's decisions (model figures, and the direction item 11 leans), and 16 to 16.12.
+  - 16.1 states that the test burners' rooms read 35 to 54 % hot and the chairs' rooms cold, that 13.35 and 13.36 rule out surface radiation, and the size of the O₂ bias.
+  - 16.9 states Phase 0's findings: its O₂ pairs, its D*/δx counts and correlations, the share of the burner's radiant output on the floor under it (16 to 36 % on 0.27 m) and that floor's temperatures, and its excess-heat estimates.
+  - 16.10 quotes Phase 0's 4 to 22 % of the radiant output dropped at 40 crossings in NIST/NRC's room.
+- The titles of the last three commits on this branch, in the git log. They report no result.
+- The coordinator's brief, which states that item 8 (13.19) was not made.
+- The suite's code only (`validation-suite.mjs` 1 to 130, 225 to 315, 436 to 475). No reduced data file in `tools/calibration/data/` was opened, so which datasets' fuels carry soot was not read.
+- No file in `benchmark/results/` was opened.
+
+The item was conceived after results were read: 13.19 named the double count (its qualification 3), 16.10 declared it as a limit, and 16.12 recorded it as finding 1. Its size has not been measured. Its checks are therefore closed forms only: equalities bit for bit, one formula in float64, energy balances within the float32 rounding the tool computes. No measured datum enters any of them.
+
+#### What the solver does now
+
+The claim to check (16.12, finding 1): a sooty test fuel's flame cells radiate χ_r Q through the burner's radiant part, and their soot also emits by Eq. 17. The code bears it out.
+
+- **The burner splits each step's heat.** `burnerStep` (`flamescapes.js` 3600 to 3642) burns its fuel in its cells (3610, 3612, 3615). Each cell's gas takes (1 − χ_r) of the heat of what burnt there, and the fuel's products (`burnInCell`, 3577 to 3586; the factor at 3584; `addProducts`, 2043 to 2053). The products carry the fuel's soot, `soot` × kg burnt (2048; `stoichiometry`, 357).
+- **The radiant part is cast at once.** χ_r of all that burnt (3622 to 3624) leaves along `rays` directions from the axis cell's centre (3625 to 3637), as 16.10 describes. Each ray is absorbed by soot in every gas cell but the axis cell (`march`, 1145 to 1153), the flame's other cells included. χ_r defaults to 0.2 (3395). The validation passes the FDS input's χ_r with 16 rays and the test fuel's soot yield (`validation-suite.mjs` 276 to 287).
+- **Then the flame cells emit by their soot.** The `pilot` stage, which steps the burner (3305 to 3306), runs before `radiation` (`STAGES`, 3665 and 3667). In `radiation`'s gas branch (968 to 980) every gas cell above `emitAbove` (500 K, 227) with soot emits 4 κ_s Y_s σ (T⁴ − T_a⁴) V dt, κ_s = `sootAbsorption` = 500 (171), capped at half its heat above ambient (974). Nothing in the branch knows whether the burner burnt in that cell this step.
+- **So a sooty flame radiates χ_r Q plus its cells' Eq. 17 emission,** less what its own soot takes of the burner's rays. Its gas keeps (1 − χ_r) Q less that emission. `stats.released` counts Q once (3641), so energy closes; the split between radiation and convection is what departs from χ_r.
+- **Who is affected.** Only a burner with χ_r > 0 and a sooty fuel. Methane carries no soot (`METHANE`, 3336). The app's design fire has χ_r 0 and no rays (`flamescapesRun.js` 281 to 282), so its flame radiates once, by Eq. 17. The contents and the first item burn by the gas combustion and have no prescribed radiant part. A validation burner runs on the CPU only (`flamescapesGpu.js` `supported`, 1091).
+- **How large it can be, by hand.** Eq. 17 per unit volume is 113 kW/m³ at 1000 K with Y_s = 10⁻³ (κ_s 0.5 m⁻¹), and 1.17 MW/m³ at 1200 K with Y_s = 5 × 10⁻³ (hand calculation). The 12 flame cells of 16.10 (c), 0.096 m³ on 0.20 m cells, would emit 10.8 kW and 112 kW, below their cap, against the 30 kW a 100 kW burner casts at χ_r 0.3. The flame's real Y_s and T on these grids are not known to this draft; the figures show only that the double count need not be small.
+
+#### What FDS does with a radiant fraction
+
+FDS 6.11.1, commit ff928db, read for this draft.
+- **χ_r belongs to the cells that burn.** "RADIATIVE_FRACTION only applies to gas cells with combustion and not to gas in a hot upper layer where the cell temperature can reliably be used in the RTE" (User Guide, `FDS_User_Guide.tex` 5787).
+- **By default the flaming region's emission is scaled, never added to.** In every gas cell where χ_r q''' exceeds `QR_CLIP` (1 kW/m³: `cons.f90` 489; User Guide 5840 and its table at 13221), the emission source, κ 4σT⁴ with soot's κ in it, is multiplied by one factor (`radi.f90` 4072 to 4086). The factor is Σ (χ_r q''' + κU) V over Σ κ 4σT⁴ V in those cells (`radi.f90` 4013 to 4050), a running mean weighted 0.9 (`main.f90` 1617 to 1642, 1634), bounded by 0.1 and 100 (`cons.f90` 490 to 491). "The adjustment ensures that the net radiative emission from the combusting region (i.e. the fire) is the specified RADIATIVE_FRACTION multiplied by the total combustion energy generated in this region. Elsewhere, hot and cold gases emit and absorb thermal radiation according to their bulk temperature and radiative properties" (User Guide 5842; Technical Reference Guide, `Radiation_Chapter.tex` 336 to 342).
+- **With the correction off, emission follows the heat released.** Each gas cell emits χ_r q''' + κU (`radi.f90` 4052 to 4066), so a cell loses exactly χ_r of its heat release, whatever its soot.
+- **Either way the soot in the flaming region is counted within χ_r.** Its emission is the radiant fraction, scaled or replaced, never added to it. What a flame cell absorbs (κU) it gives back.
+- **The energy equation takes all of q'''.** The gas loses χ_r q''' only through the radiative source κ(U − 4πI_b) (`Radiation_Chapter.tex` 325 to 334). With radiation off FDS takes −χ_r q''' directly (`radi.f90` 3696).
+
+The solver already follows the second form for the burner: it gives the gas (1 − χ_r) Q (3584) and casts χ_r Q itself (3624), which 16.10 keeps ("emission by heat released is FDS's own alternative"). What it lacks is FDS's other half: the flame cells' own emission is replaced, not added.
+
+#### The method
+
+Chosen: in each step, the cells in which the burner burnt cast nothing by Eq. 17, and the burner's rays cross them without loss. This is FDS's emission by heat released (`radi.f90` 4052 to 4066) in the flaming region only. The flame's radiation is then the χ_r Q the burner casts, once.
+
+1. **Scope.** A burner with χ_r > 0 (`radiantFraction`, 3395), with rays or without. A burner with χ_r 0 (the design fire), the contents, the first item, the gas combustion, surfaces and every other gas cell are as now.
+2. **The flame of a step.** With the item on and χ_r > 0, `burnInCell` stamps each cell in which it burnt fuel (`burnt` > 0, 3580): `flameStamp[c] = sim.steps + 1`.
+   - `flameStamp` is a Uint32Array of N cells, made only when this item or item 12 is on. It is the stamp of 16.10's point 6, one array for both items.
+   - The stage that reads it runs in the same step: `pilot` before `radiation` (3665, 3667), and `sim.steps` rises only at the step's end (3715). A substep is a step (`validation-suite.mjs` 455), so the flame is the cells that burnt in that substep.
+   - `+ 1` keeps 0 for "never": an array filled with 0 and stamped with `sim.steps` would mark every cell in the first step.
+3. **The silence.** In `radiation`'s gas branch (968 to 980), a cell whose stamp equals `sim.steps + 1` casts no rays and its T is not lowered. The emission the branch would have computed for it, with its cap (973 to 974), is added to `stats.flameSilenced` (13.19 point 9's name), not to `stats.radiated` (986).
+4. **The flame is clear to the burner's rays.** A burner ray takes nothing in a stamped cell; everywhere else soot absorbs it as now (1145 to 1153).
+   - With item 12 on, this is its point 6, unchanged. This item adds nothing there.
+   - With item 12 off, the burner's present rays (3625 to 3637) are marched by the burner's copy of `march` (16.12, decision 4), which differs from `march` only by the stamp test and the tallies of point 6. Everything else is the present path's: the origin (3459), the 16 directions and their turn (3628 to 3634), `rayReach` (1135), the axis cell skipped (`from`, 1145), immediate deposits. If item 12 is not made, this item builds that copy. `march` itself stays byte for byte as it is.
+   - Reason: without it, a sooty flame takes part of its own radiant output, and its output falls below χ_r Q. FDS gives that back (κU in the numerator, `radi.f90` 4037). With item 12 off, the axis cell is clear now, and the flame's other cells are not.
+5. **Unchanged.** χ_r and the convective part (3584). Which cells burn, and how much. Products, oxygen and `pending`. The number of rays and each ray's share. The flame cells' absorption of rays cast by other gas cells and by surfaces (1145 to 1153), declared below. Every other stage.
+6. **Tallies, in J, only with the item on.**
+   - `stats.flameSilenced`: point 3. It is the double count's emission, before any of it is reabsorbed.
+   - `stats.flameCleared`: what the stamped cells' soot would have taken of the burner's rays under the present rule. Each burner ray carries a shadow energy, from its share, multiplied by e^{−τ} in every gas cell it crosses but `from` (τ = 500 Y_s ℓ, as 1147); in a stamped cell the shadow's loss is added to the tally. The ray itself is not changed by it.
+   - `stats.burnerRadiatedOut` (16.10 point 9's name): what the burner's rays carry beyond the grid.
+   - `b.rayFate`, for the step, float64: the J the burner's rays left in stamped cells, in other gas, in solids and walls' ends, and beyond the grid. The check tool reads it.
+7. **CPU only.** `supported` (`flamescapesGpu.js` 1089 to 1094) gains one condition: with the item on, a burner with χ_r > 0 runs on the CPU. A validation burner does already (1091); a design-fire burner with χ_r > 0 is made by no caller (`flamescapesRun.js` 281). The kernels are not touched.
+8. **The harness** passes the switch as a run option, as it passes `surfaceRayStart` (`validation-suite.mjs` 300 to 304), and its ledger (436 to 475) records `flameSilenced`, `flameCleared` and `burnerRadiatedOut` beside `radiated`. The ledger compares them with nothing and decides nothing (13.15).
+
+With the item on, a flame that nothing else irradiates closes exactly. Its gas gains (1 − χ_r) Q dt (3584) and loses nothing by radiation, and χ_r Q dt lands outside it. Its total radiant output is χ_r Q.
+
+Considered and set aside:
+- **FDS's default: the flame cells' Eq. 17 emission scaled to χ_r Q, with no burner rays.** It drops the rays item 12 places, and it needs a global factor with a running mean and bounds of 0.1 and 100 that FDS itself calls "somewhat arbitrary" (`Radiation_Chapter.tex` 342). It would follow T⁴ of flame cells this grid does not resolve (D*/δx below 4 in 159 to 175 of 178 tests, 16.9). 16.10 set it aside for the same reasons.
+- **Counting the flame's soot within χ_r by casting χ_r Q less it.** The burner casts before the radiation stage (3665, 3667), so its share would wait a stage. And the soot's emission can exceed χ_r Q (hand calculation above: 112 kW against 30 kW), so the remainder would need a floor at 0, a rule with no source.
+- **Lowering χ_r for sooty fuels.** It moves an input that 16.4 screens and 16.5 calibrates.
+- **The silence alone, with item 12 off.** The flame would still take its own rays from the present origin, so its output would fall below χ_r Q.
+
+#### How it combines with item 12
+
+| Switches | Where the burner's rays leave | Flame clear to them | Flame cells' Eq. 17 | The flame's radiant output |
+|---|---|---|---|---|
+| Neither (now) | the axis cell's centre, 16 fixed directions | the axis cell only (1145) | emitted | χ_r Q, less what its soot takes of its rays, plus its Eq. 17 emission that leaves it |
+| Item 12 alone | uniform in the flame cells, by their heat | yes (16.10 point 6) | emitted | χ_r Q plus its Eq. 17 emission that leaves it |
+| Item 14 alone | as now | yes (point 4) | silent | χ_r Q |
+| Both | as item 12 | yes (16.10 point 6) | silent | χ_r Q |
+
+- **Shared.** One stamp array, one copy of `march` for the burner, and one `burnerRadiatedOut`. With both on, item 12's rays, deferred float64 deposits (its point 8) and full reach (its point 7) apply; this item adds the silence and its tallies.
+- **Item 12 alone keeps the double count.** Its declared limit says so (16.10, "A possible double count").
+- **Item 14 alone keeps item 12's geometry.** Half the output still leaves downward from h/2 above the burner (13.26 decision 3; 16.9 point 3).
+- **Phase 1** (16.4) screens a gaseous burner's χ_r from 0.15 to 0.45. Without this item, a sooty burner radiates more than its input χ_r, so the screen would read the input, not the flame's radiant fraction.
+
+#### The switch
+
+`flameRadiantOnce`: 0 (default), as now; 1, the method above. With 0, `burnerStep` and `radiation` each test the flag once, the gas branch tests one null reference for each sooty gas cell above `emitAbove`, and every output is bit-identical to the base (check (g)). `RUN_CACHE_VERSION` (`runCache.js` 54, now 13) rises only with a default (13.25, decision 14), and a cached run's key carries the switch.
+
+#### Cost
+
+- **With the item on.** One 32-bit write for each cell the burner burns in, a step. One compare for each sooty gas cell above `emitAbove`. Each silenced cell casts no rays: 8 fewer rays (`DEFAULTS` 228) for each flame cell above 500 K with soot, against the burner's 16. The burner's march gains one compare and, in stamped cells, one exponential for the shadow, for each cell a burner ray crosses. Memory: 4 bytes a cell, shared with item 12. The stage should cost less on than off; check (i) reports it.
+- **With it off.** Two flag tests a step and one null test for each sooty gas cell above 500 K.
+- **The app.** Its design fire has χ_r 0, so nothing is stamped and no app run changes on the CPU or the GPU. Vienna on the web is untouched.
+
+#### Checks (fixed now, before any run)
+
+All but (g) to (i) run in a new tool, `tools/flame-radiant-check.mjs`. It builds each scene by hand, as `tools/surface-rays-check.mjs` does and item 12's `tools/burner-rays-check.mjs` will.
+- **The box.** 13.25's 12 × 10 × 14 inner cells, y up, walls two cells thick of stone (`INERT[0]`, lumped). Cells of 0.20 m and 0.34 m. dt 0.1 s, seed 1.
+- **The flame.** 16.10 (c)'s 12 cells, i ∈ {5, 6}, j ∈ {0, 1, 2}, k ∈ {6, 7}, built by `createBurner` from `layers` with no `diameter`, so each takes an equal share (`burnerCells`, 3534). χ_r 0.3, 16 rays, the table held at 100 kW: 10 kJ a step, of which 3.0 kJ is radiant.
+- **The fuels.** F1: `METHANE` with a soot yield of 0.1 kg/kg (16.10 (f)'s). F2: class A's fuel (`fireClasses.js` 79: 18.0 MJ/kg, soot 0.015). F1₀ and F2₀: the same with soot yield 0.
+- **The state before each step,** set by the tool and restored after it. Every gas cell at T_a = 293.15 K, air, no soot, at rest. The 12 flame cells at T_f ∈ {800, 1200} K with Y_s ∈ {10⁻³, 10⁻²} (κ_s 0.5 and 5 m⁻¹), O₂ at 0.232 (1 − Y_s), nitrogen the rest, ρ by `gasDensity`. Every solid at T_a, so no surface emits (below 500 K). Oxygen is to spare: a 0.20 m flame cell at 1200 K holds the oxygen for 6.9 kJ, against 0.83 kJ a step (hand calculation, Huggett's 13.03 MJ/kg, 88).
+- **A step.** `burnerStep`, then `radiationStage` (1093), then the readings, then the restore; `sim.steps` rises by 1. 200 steps a case. That is 2 fuels × 2 temperatures × 2 soot levels × 2 cell sizes, 16 cases, each with the item on, with it off (reported), and with item 12 on as well if item 12 is made.
+- **What it reads,** in float64 from the stored state. H_f = Σ ρ V c_p (T − T_a) over the flame cells, in `burnInCell`'s order of operations (3582), before `burnerStep`, after it, and after `radiationStage`. H_g, the same over the other gas cells. H_s = Σ C_s (T_s − T_a) over the solids. `b.released`, `b.radiant`, `b.rayFate`, `stats.radiated`, `stats.flameSilenced`, `stats.flameCleared` and `stats.burnerRadiatedOut`.
+
+u(T) below is the float32 spacing at T: 3.05 × 10⁻⁵ K from 256 to 512 K, 1.22 × 10⁻⁴ K from 1024 to 2048 K.
+
+(a) **The silence, exactly.** With the item on, in every step of every case:
+1. The stamped cells are the 12 flame cells and no other. An equality.
+2. `radiationStage` leaves every flame cell's T, Y and ρ bit-identical to their values after `burnerStep`, every solid's T_s unchanged, and `stats.radiated` unchanged. An equality: nothing else in the scene is above 500 K.
+3. `stats.flameSilenced` rises by Σ over the flame cells above 500 K of min(4 κ_s Y_s σ (T⁴ − T_a⁴) V dt, ½ ρ c_p V (T − T_a)), from their state after `burnerStep`, within 10⁻¹² of it. From the same state with the item off, `stats.radiated` rises by the same sum within 10⁻¹². Reason: one formula in float64.
+
+(b) **The flame's radiant output is χ_r Q.** In every step, the output is burnt − (H_f after `radiationStage` − H_f before `burnerStep`), burnt being the rise of `b.released`. The reference is χ_r × burnt, 3.0 kJ.
+- **Pass** when |output − χ_r burnt| ≤ Σ over the flame cells of ½ u(T) ρ c_p V, plus 10⁻¹² burnt. The bound is the float32 rounding of `burnInCell`'s one write of each flame cell's T (3584), the only departure from an exact balance. The tool computes it from the stored state. By hand it is below 10⁻² J on both cell sizes, 3 × 10⁻⁶ of the reference.
+- **And** `b.rayFate` holds 0 J in stamped cells, exactly, and its other three parts sum to χ_r × burnt within 10⁻⁹ of it. Reason: float64 sums of 16 deposits err by about 10⁻¹⁵.
+- **Reported beside, with the item off:** output − χ_r burnt, and the parts the tallies give it (the flame's Eq. 17 emission, and what its soot took of the burner's rays). That is the double count in a scene fixed here. It decides nothing.
+
+(c) **The flame is clear, bit for bit.** Each case of F1 and F2 with the item on gives every solid's T_s after `burnerStep` bit-identical to the same case with the item off, fuel F1₀ or F2₀, and Y_s 0 in the flame cells. With item 12 on, the same with item 12 on in both. Reason: with the flame clear and the rest of the gas free of soot, every ray reaches the same surface with the same energy. F1 and F1₀ share a heat of combustion and Huggett's oxygen (354), so each cell burns the same mass and `radiant` is the same to the bit; so do F2 and F2₀.
+
+(d) **Energy closes.**
+1. In every step of every case, on and off: burnt = ΔH_f + ΔH_g + ΔH_s + `burnerRadiatedOut`'s rise, within Σ k ½ u(T) C over the cells written in the step. k counts the writes a cell can take: 3 for a gas cell (`burnInCell`, its own emission, the stage's deposits) and 17 for a solid (one a burner ray, one for the stage's deposits). Item 12's deferred float64 deposits count as one write. By hand, ½ u C is 1.3 J a write for a 0.34 m stone cell near 293 K.
+2. An open side: the box with its x-high side the grid's side and no wall there (16.10 (e)'s), F1, T_f 1200 K, Y_s 10⁻², both cell sizes, item on. `burnerRadiatedOut` is above 0 and 1 holds.
+
+(e) **A soot-free burner and the design fire are unchanged.** 300 full steps, flow on, item on and off:
+1. The burner of (b) with plain `METHANE`, at the floor's centre of 13.19 (f)'s box (3.0 × 2.4 × 3.0 m, a door 0.8 × 2.0 m to open cells beyond), 0.20 m cells. Every field and every `stats` entry is bit-identical, but the new tallies: `flameSilenced` and `flameCleared` read 0. Reason: with no soot anywhere, Eq. 17 emits nothing (971) and no ray is absorbed (1148).
+2. The app's design fire (χ_r 0): `tools/flamescapes-fingerprint.mjs` gives the same fingerprints on and off, CPU and GPU.
+
+(f) **A sooty burner with the flow.** (e)1's scene with fuel F2, 120 s, item on. In every step: no stamped cell casts a ray or changes its T in `radiation`; `b.rayFate` holds 0 in stamped cells unless a ray ended its 40 crossings in one (counted, and reported); its parts sum to χ_r × burnt within 10⁻⁹. Reported, not judged: `flameSilenced` and `flameCleared` as shares of χ_r Q over the run, and 13.15's ledger on and off.
+
+(g) **Off is off.** With `flameRadiantOnce` 0:
+- `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's fingerprints;
+- the unit suite passes with the same count;
+- `tools/flamescapes-gpu-check.mjs`'s phases give the base's state comparisons bit for bit, timings aside;
+- 16.10 (i)'s validation-burner scene (χ_r 0.2, 16 rays, one cell on the floor of an 8 × 8 × 8 box on 0.20 m cells), with fuel F2, stepped 300 full steps, gives every field and every `stats` entry bit-identical to the base;
+- with item 12 on and this item off, the same scene is bit-identical to item 12 alone;
+- `supported` returns what it returns now.
+
+(h) **The unit suite passes unbent** with the default set to 1 for the run (a one-line change, not committed). A test that fails is not edited, and its failure is reported. Only a test whose reference is the present double count itself may be rewritten, disclosed as written after a failure (13.25, decision 13).
+
+(i) **Speed, reported, not judged.** `radiation`'s and `burnerStep`'s ms on and off over (f)'s run. The ms a step on and off over a 30 s run of Steckler test 14 and of NIST/NRC test 3 on 0.27 m, as the suite builds them, of which only times are read. With 0, the fingerprint tool's ms a step against the base.
+
+A failure of (a) means the flame still emits, or the wrong cells are silent. A failure of (b) or (c) means the flame takes its own rays, or the item has touched χ_r or the convective part. A failure of (d) means heat is lost or made. A failure of (e) or (g) means the item acts where it should not.
+
+#### Default
+
+Off. Passing (a) to (h) makes the switch available to the harness and to the solver's options. The app's default has no burner with χ_r > 0, so it does not change. Made after 13.B began, it gets its own full rerun on 13.B's flags, reported beside 13.B verdict by verdict (13.12, rule 5; 13.19, decision 11). If item 12 is made as well, the rerun with both is reported beside R12. The harness's own default follows 13.25's decision 14: it changes only with the user's agreement, given with the reruns before them.
+
+#### What ends this line
+
+If any check of (a) to (h) fails in any case, the attempt fails, and it is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted. The method has no free constant: χ_r is the test's, and the flame is the cells that burnt.
+
+Every check has a reference that the method meets exactly: bit for bit, by one formula in float64, or within the float32 rounding the tool computes. So a failure is a fault of the code against the method, and 13.25's decision 13 applies: corrected code, run again in full, is the same attempt, reported with both commits. A change to the method ends the attempt.
+
+If the line ends, the double count stays a declared limit of every verdict with a sooty test fuel (16.12, finding 1), and Phase 1 reads a gaseous burner's χ_r as the part the burner casts, with its flame's soot emission on top. No second attempt is drafted. It would need the user's word and a new method written here first.
+
+#### Declared limits
+
+- **The flame keeps what it absorbs from others.** Rays cast by other gas cells and by surfaces are absorbed by the flame's soot as now, and the flame's gas keeps that heat. FDS gives it back (κU, `radi.f90` 4037, 4063). In a hot room the flame's net radiative loss is then χ_r Q less what it absorbs.
+- **The flame is the cells that burnt in the step.** Soot carried out of them radiates by Eq. 17 in the plume and the layer, as FDS's gas outside its flaming region does (User Guide 5842). So the room's gas radiates more than χ_r Q in all. That is the smoke's own radiation, not a double count.
+- **Every cell that burnt is silent,** however little it burnt. FDS's threshold, χ_r q''' > 1 kW/m³, is not taken, so that one stamp serves both items. At χ_r 0.3 it would spare a 0.20 m cell burning below 27 W (hand calculation).
+- **One step's flame.** A cell that burnt in the last step and not in this one emits as gas.
+- **With item 12 off,** the present geometry stays: one origin h/2 above the burner, half of the output downward. A ray that ends its 40 crossings inside a stamped cell leaves its remainder there, as now; that needs a flame more than 40 cells long, and it is counted (`b.rayFate`).
+- **χ_r is the input.** The item moves no radiant fraction. It makes the input the flame's.
+- **Gray, soot only.** CO₂ and H₂O do not radiate (item 8, 13.19, was not made).
+- **CPU only,** as the validation burner is now.
+
+#### Not verified
+
+- The size of the double count in any validation run. `flameSilenced` and `flameCleared` report it in the rerun.
+- The cost on the suite's rooms (check (i) reports it).
+- Which datasets' fuels carry soot. The reduced data files were not opened; the suite passes each test fuel's soot yield (`validation-suite.mjs` 276 to 277).
+- FDS's Verification Guide cases for the radiative fraction were not read.
+
+#### Sources (read, or run for this draft)
+
+- This repository at 40f8ea9:
+  - `flamescapes.js` 60 to 116, 123 to 301, 325 to 376, 400 to 516, 896 to 1187, 2001 to 2062, 3300 to 3718, and by search 1651, 1762 and 1818 (`sim.burning`, set by the chemistry, not by the burner);
+  - `flamescapesGpu.js` 1088 to 1094, and by search its burner's references;
+  - `flamescapesGpu/kernels.js` 155 and 957, by search;
+  - `flamescapesRun.js` 236 to 287;
+  - `fireClasses.js` 70 to 92;
+  - `tools/calibration/validation-suite.mjs` 1 to 130, 225 to 315 and 436 to 475 (code only);
+  - `runCache.js` 54.
+- FDS 6.11.1, tag FDS-6.11.1, commit ff928dbf68a2623ced3a007be75391c6dc6c9f90 (`github.com/firemodels/fds`), fetched for this draft:
+  - `Source/radi.f90` 3688 to 3700 and 3940 to 4095;
+  - `Source/main.f90` 963 and 1612 to 1642;
+  - `Source/cons.f90` 242 and 486 to 491;
+  - `Manuals/FDS_User_Guide/FDS_User_Guide.tex` 5780 to 5852 and 13210 to 13221;
+  - `Manuals/FDS_Technical_Reference_Guide/Radiation_Chapter.tex` 320 to 346.
+- No DOI is cited for FDS 6.11.1's guides. On Crossref, doi:10.6028/NIST.SP.1019 and doi:10.6028/NIST.SP.1018 resolve to the User Guide and Technical Reference Guide of FDS version 4 (2004 and 2006), not to the text read here.
+- Run for this draft: hand calculations of Eq. 17 per unit volume and per flame, of the cap, of the flame cells' oxygen, and of float32 spacings. No solver, no fire simulation, no result file.
+
+### 16.15 The coordinator's decisions on 16.14, two corrections, and finding 2's size (2026-11-15, before any code of item 14)
+
+**Item 14.** The draft is the agent's, written blind before it measured finding 2. Each decision takes the draft's choice or the stricter reading.
+1. **Its own switch,** `flameRadiantOnce`, 0 by default and bit-identical when off. CPU only, with the draft's guard in `supported`.
+2. **One stamp for every cell that burnt,** shared with item 12, as drafted. No QR_CLIP threshold, so the two items read the same cells.
+3. **No κU term.** A flame cell does not give back what it absorbs from other rays, because item 12 makes the flame clear to its own rays. That is a declared limit.
+4. **The `flameCleared` tally is kept.** It is reported and enters no statistic.
+5. **Reruns** (13.12, rule 5):
+   - R12 (item 12 alone) and R12+14 (both) on all three cells;
+   - item 14 alone on 0.27 m only, the app's tested grid, so its effect is read alone at a third of the cost;
+   - each reported beside 13.B.
+6. **Order of the builds:** item 14 is built after item 12 passes, on item 12's branch.
+
+**Two corrections to the plan's text, neither changing any method.**
+- **16.10** names FDS's `QR_CLIP` as 1 W/m³. FDS's value is 1 kW/m³ (FDS User Guide; `cons.f90` 489). Item 12's method does not use it, because it stamps every cell that burnt.
+- **12.4's bullet on the burner's fuel** is out of date. It stays as it was, and this note supersedes it.
+
+Item 12's stamp must not confuse an unset cell with step 0. That is an implementation detail, passed to item 12's build.
+
+**Finding 2's size** (16.12; measured read-only, after item 14's draft was written). The energy that appears is 2051 × dPy × (T_cell − T_a) J. The code adds the species' own c_p; the cell's mixture c_p would give 0.76 to 0.88 of it.
+
+| Run | Energy that appears | As a share of the heat released |
+| --- | --- | --- |
+| The app's design fire, fingerprint room, 600 s | 37.1 MJ | 5.8 % (13.2 % of the contents' own heat); per 5 s frame, median 5.5 %, at most 13.9 % |
+| The 200 kW pilot case, 600 s | 8.7 MJ | 62 % (33 % counting the pilot's heat) |
+| Chair test RedAccent_Open_Back_1, 0.27 m, 900 s | 0 | 0 |
+
+The validation suite gives every run empty contents (`validation-suite.mjs` 289), so **finding 2 touches no validation verdict.** It touches every app run and study run where contents burn. Steam from moisture and the products of surface oxidation enter the gas the same way; with them, the design fire's total is 7.2 %.
+
+Item 15, a fix for finding 2, is drafted blind by an agent that has not seen these figures.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
@@ -3912,3 +4134,13 @@ Softwood is thermal only unless item 13 passes its checks (16.11, 16.12). If it 
 - **The building's fire:** in the space named "Atrium hall", at its plan centre, under the void.
 - **The lining table** is the one checked at 8442efd: brick, glass's specific heat, softwood and mineral wool were changed to sourced values.
 - **Instability:** if a thin layer (steel at 3 mm) makes a run fail the health guard, the run is reported as stopped, as 12.6 counts one. The thickness does not change.
+
+### 17.8 The study and finding 2 (2026-11-15, while the study ran, before any of its results was read)
+
+The study started at 8442efd. During its run, finding 2's size was measured (16.15). Where contents burn, energy appears: 5.8 % of the heat released in the app's design fire. The study's furniture-on runs burn contents, so they carry it, and the furniture-off runs do not.
+
+Fixed now, before any study result is read:
+- The furniture-on results are reported with this stated beside them.
+- No furniture-on result is used to say that furniture shortens the time for smoke to reach 1.8 m by less than the share finding 2 could explain. That bound is taken from each run's own heat released.
+- If item 15 is made and passes its checks, every furniture-on run runs again with it on. Both sets are reported, and the paper uses the set with item 15.
+- The furniture-off runs and the lining comparisons within them stand as they are.
