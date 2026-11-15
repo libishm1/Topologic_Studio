@@ -3312,3 +3312,43 @@ Each is acquired, its licence checked, and its inputs encoded from geometry and 
 - A parameter never leaves its physical range, and the ranges above do not widen after a run.
 - If Phase 2 gains nothing on the held-out folds, the defaults stay, and that is reported.
 - A second attempt at the gas's radiation (item 8) and a fourth at the doors still need the user's word and a new method written here first.
+
+### 16.9 Phase 0: the diagnostics, and what they fix (2026-11-15)
+
+These diagnostics were read-only, made on main's solver (be32e34; 16's commit adds only text). No code changed. The coordinator checked the two findings that move the most. All the linings were tagged stone in `flamescapesRun.js` 126 to 136. And 172 of UL FSRI's 691 O₂ pairs on 0.27 m have a measured drop below 0.001, their mean 0.0003; that series' geometric-mean ratio is 2.09 with them and 1.14 without.
+
+**1. O₂: the pooled bias comes mostly from the statistic.**
+- **The main cause.** UL FSRI's door-open analysers, 0.64 m above the floor, saw almost no drop. The model gives 0.0026 to 0.0100 there, wrong by 0.2 to 1 % O₂. A ratio of two near-zero drops turns that into δ 12.8, 15.1 and 47.9 on 0.20, 0.27 and 0.34 m. Without those 172 pairs, the pooled δ reads 1.52, 1.48 and 1.92.
+- **0.34 m's 10.5.** On that grid the door is held at 0.58 of its 1.80 m², and every door-open reading moves with it. That is a door matter, outside this phase.
+- **Wet and dry.** The model's O₂ is a wet fraction, and FSE's analysers are dry. That inflates the drops by 1.05 to 1.22. Whether UL FSRI's analysers are dry is not verified.
+- **What remains.** With both corrections, UL FSRI's upper O₂ reads 1.44 to 1.68 high, close to that series' layer temperature, 1.51 to 1.52, in the same runs. This is reported, and nothing is concluded from it.
+
+**The correction, fixed now, before any corrected run.** It was chosen after the result was read, which is declared, so both readings are reported and the stricter word stands, as in 13.16.
+1. **Low signal.** A pair whose measured drop is below 0.002 by volume is reported apart and left out of the pooled statistics in the corrected reading. 0.002 is twice an analyser accuracy of ±0.1 % O₂ by volume. Where a dataset documents its analysers' accuracy, twice that accuracy is used instead.
+2. **Dry basis.** Where a dataset documents dry analysers, the model's drop is converted to a dry basis with the model's own H₂O fraction at that point. Where a dataset does not say, both bases are reported.
+3. No other change. The 0.34 m door stays as it is.
+
+**2. Fire resolution, D*/δx, for every test.**
+- **How coarse.** The ratio is below 1 in 0, 3 and 51 of 178 tests on 0.20, 0.27 and 0.34 m, all Steckler apart from one ATF test. It is below 4 in 159, 169 and 175. None exceeds 7.6. (NUREG-1934 asks for 5 to 10.)
+- **Against the hot bias.** Spearman ρ of layer temperature's bias against D*/δx (eight series, n 175) is 0.23, 0.36 and 0.41; for head height, 0.00, 0.37 and 0.47. With the chair series it is 0.00 to 0.16, and inside NIST/NRC and the chairs the sign reverses.
+- Nothing is concluded. The table is a covariate for Phases 1 and 2 (16.3, point 3).
+
+**3. The burner's rays (13.26, decision 3) are confirmed.**
+- **Where.** One fixed point half a cell above the burner's top (`flamescapes.js` 3459). 16 Fibonacci directions, 8 of them below the horizontal (3443 to 3447), turned only about the vertical (3628 to 3635).
+- **Where the radiation lands.** On 0.27 m, 16 to 36 % of the radiant output lands on the floor directly under the burner. That floor reaches 728 K (Steckler 14), 966 K (UL FSRI, 500 kW) and 1351 K (NIST/NRC 03).
+- **Against the hot bias.** That floor's share is 0.80 of the hot bias's excess heat in Steckler and 0.28 in UL FSRI. Only 0.21 and 0.012 of that excess returns to the gas. So the defect is real, but it explains little of the hot bias by itself.
+- It is still drafted blind as item 12 (16.3, point 1).
+
+**4. The materials audit.**
+- **Linings cannot burn.** In the app, every IFC element becomes stone, nothing assigns `WOOD`, and `WOOD` adds no heat capacity. Only the room's contents and the first item burn.
+- **No lining properties in the app.** The harness takes up to three inert materials per test (k, ρ, c, ε and layers).
+- **Contents cannot be set per room.** One fire load is spread over the interior.
+- **An app run reports no smoke layer height.** The harness reads it on its measuring trees.
+
+**What follows for the results paper (16.7).** The materials and furniture study needs four things that do not exist. Each comes with its own tests, and with every default unchanged, so that every existing output stays bit-identical:
+- **(a) A material per element:** an IFC element's material (`IfcMaterial` or `IfcMaterialLayerSet`) mapped to an inert material with k, ρ, c and ε, through the solver's existing inert list.
+- **(b) Contents where the furniture is:** the voxels of the elements identified as furniture, filled as contents at a fuel load per element class, with "no furniture" as one option.
+- **(c) A smoke layer height in a study run:** the harness's measuring trees and its layer reduction, at points the study names.
+- **(d) Item 13, a timber lining that heats, pyrolyses, ignites and adds its fuel.** It is physics, so it is drafted blind under 13.12 before any code, with checks against closed-form references. The user approved it on 2026-11-15 as a small simulation, to see how far it gets.
+
+If (d) is not made and checked when the paper is written, the paper says only that a timber lining's thermal properties change the course of a contents fire.
