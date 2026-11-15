@@ -111,6 +111,15 @@
  * cap held back (surfaceCapped) and the radiation stage's float32 round-off
  * in the emitting cells' own temperatures and in its deposits (radRoundoff:
  * own, deposits), in MJ to six significant figures (plan 13.26, decision 7).
+ *
+ * --burner-flame-rays (added 2026-11-15, plan 16.10, physics item 12) lets the
+ * burner's radiant part leave from its flame (the solver's burnerFlameRays: 1,
+ * off by default): each ray from a cell where its fuel burnt that step, in a
+ * uniform direction, to the first surface or out of the grid. The suite stops
+ * at its start if the solver at --solver-rev has no item 12. The ledger then
+ * records, beside its entries, what the burner's rays carried out of the grid
+ * (burnerRadiatedOut, MJ; plan 16.12, decision 6) and the burner's rays and
+ * the cells they crossed (burnerRays, burnerCrossings). It enters no statistic.
  */
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { execFileSync } from "node:child_process";
@@ -301,7 +310,9 @@ async function runCase(c) {
   const surfaceRayStart = c.surfaceRayStart ? { surfaceRayStart: 1 } : {};
   // --surface-emit-floor (plan 13.26, item 11): with item 10, surfaces emit from just above ambient.
   const surfaceEmitFloor = c.surfaceEmitFloor ? { surfaceEmitFloor: 1 } : {};
-  const sim = F.createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...surfaceRayStart, ...surfaceEmitFloor, ...c.solver });
+  // --burner-flame-rays (plan 16.10, item 12): the burner's radiant part leaves from its flame.
+  const burnerFlameRays = c.burnerFlameRays ? { burnerFlameRays: 1 } : {};
+  const sim = F.createSolver(scene, { contentsFuel: INERT_FUEL, ignitionFuel: INERT_FUEL, seed: 1, ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...surfaceRayStart, ...surfaceEmitFloor, ...burnerFlameRays, ...c.solver });
   // Whether the solver took the walls' materials (a solver without options.inert keeps its stone).
   let wallCheck = null;
   if (inert) {
@@ -440,8 +451,9 @@ async function runCase(c) {
   // carried out of the grid (radiatedOut) and the surface rays and the cells they crossed. With
   // surfaces emitting from just above ambient (plan 13.26, item 11), also beside `radiated` what
   // surfaces below their floor would have emitted, what the cap held back, and the stage's float32
-  // round-off (MJ to six significant figures). It reads the state after a step and changes none;
-  // null where the pinned solver keeps no such count.
+  // round-off (MJ to six significant figures). With the burner's rays from its flame (plan 16.10, item 12),
+  // also what they carried out of the grid (burnerRadiatedOut) and the burner's rays and the cells they
+  // crossed. It reads the state after a step and changes none; null where the pinned solver keeps no such count.
   const ledger = [];
   const ledgerEvery = Math.max(1, Math.round(horizon / 10));
   const MJ = (x) => (Number.isFinite(x) ? +(x / 1e6).toFixed(4) : null);
@@ -467,7 +479,8 @@ async function runCase(c) {
         for (let cc = 0; cc < sim.N; cc += 1) if (sim.inertC[cc] > 0) walls += sim.inertC[cc] * (sim.Ts[cc] - Ta);
         const st = sim.stats;
         const floorTallies = c.surfaceEmitFloor ? { surfaceFloor: MJs(st.surfaceFloor), surfaceCapped: MJs(st.surfaceCapped), radRoundoff: st.radRoundoff ? { own: MJs(st.radRoundoff.own), deposits: MJs(st.radRoundoff.deposits) } : null } : {};
-        ledger.push({ t: end, released: MJ(st.released), radiated: MJ(st.radiated), ...floorTallies, gas: MJ(reading.gasHeat), walls: MJ(walls), shell: MJ(st.shellHeat), leakKg: Number.isFinite(st.leakMass) ? +st.leakMass.toFixed(4) : null, leak: MJ(st.leakEnthalpy), radiatedOut: MJ(st.radiatedOut), surfaceRays: Number.isFinite(st.surfaceRays) ? st.surfaceRays : null, surfaceCrossings: Number.isFinite(st.surfaceCrossings) ? st.surfaceCrossings : null });
+        const burnerTallies = c.burnerFlameRays ? { burnerRadiatedOut: MJ(st.burnerRadiatedOut), burnerRays: Number.isFinite(st.burnerRays) ? st.burnerRays : null, burnerCrossings: Number.isFinite(st.burnerCrossings) ? st.burnerCrossings : null } : {};
+        ledger.push({ t: end, released: MJ(st.released), radiated: MJ(st.radiated), ...floorTallies, gas: MJ(reading.gasHeat), walls: MJ(walls), shell: MJ(st.shellHeat), leakKg: Number.isFinite(st.leakMass) ? +st.leakMass.toFixed(4) : null, leak: MJ(st.leakEnthalpy), radiatedOut: MJ(st.radiatedOut), surfaceRays: Number.isFinite(st.surfaceRays) ? st.surfaceRays : null, surfaceCrossings: Number.isFinite(st.surfaceCrossings) ? st.surfaceCrossings : null, ...burnerTallies });
       } catch {
         // A diagnosis only: a run is never lost to it.
       }
@@ -626,7 +639,7 @@ async function runCase(c) {
     trees: trees.map((tr) => ({ id: tr.id, modelCeiling: tr.modelH != null ? +tr.modelH.toFixed(3) : null, nominal: tr.H, cells: tr.cells ? tr.cells.length : null, droppedCells: tr.dropped ?? null, pockets: { dropped: tr.pocket.dropped.map((q) => ({ z: +q.z.toFixed(3), j: q.j, c: q.c, ...(q.pocket ? { pocket: true } : {}) })), midTree: tr.pocket.midTree, endsAt: tr.all.length ? +(tr.all[tr.all.length - 1].z + h / 2).toFixed(3) : null, snappedCeiling: tr.pocket.ceiling != null ? +tr.pocket.ceiling.toFixed(3) : null } })),
     points: points.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null, ...(p.pathCells ? { pathCells: p.pathCells.length } : {}) })),
     fuel: { heatOfCombustion: fuel.heatOfCombustion, yields: fuel.yields, rule: c.fuelRule !== "app" && T.fuel ? "the test fuel's" : T.co2PerJ ? "class A, CO2 per joule matched" : "class A as the app has it" },
-    solverOptions: { ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...surfaceRayStart, ...surfaceEmitFloor, ...c.solver },
+    solverOptions: { ambient: Ta, ...(inert ? { inert } : {}), ...(leakage ? { leakage } : {}), ...surfaceRayStart, ...surfaceEmitFloor, ...burnerFlameRays, ...c.solver },
     door: door && door.z ? { cells: door.z.length, width: +door.width.toFixed(3), sill: door.sill != null ? +door.sill.toFixed(3) : null, soffit: door.soffit != null ? +door.soffit.toFixed(3) : null, measured: { width: T.opening?.[0]?.width ?? null, sill: T.door.sill, soffit: T.door.soffit } } : null,
     region,
     walls: inert ? { slots: T.materials.slots.map((m) => m.surface), rhoModel: inert.map((m) => +m.rho.toFixed(2)), solidCells: wallCells, check: wallCheck } : "the solver's stone",
@@ -954,7 +967,13 @@ async function main() {
   const wallLayers = args.includes("--wall-layers");
   const leakageOn = args.includes("--leakage");
   const surfaceRayStartOn = args.includes("--surface-ray-start");
+  // --burner-flame-rays (plan 16.10, item 12).
+  const burnerFlameRaysOn = args.includes("--burner-flame-rays");
   const F = await import(pathToFileURL(path.join(snapshot.core, "flamescapes.js")).href);
+  if (burnerFlameRaysOn && typeof F.burnerFlameCell !== "function") {
+    rmSync(snapshot.dir, { recursive: true, force: true });
+    throw new Error(`--burner-flame-rays: the solver${rev ? ` at ${rev}` : ""} has no item 12 (plan 16.10)`);
+  }
   if (surfaceEmitFloorOn && typeof F.surfaceFloorOf !== "function") {
     rmSync(snapshot.dir, { recursive: true, force: true });
     throw new Error(`--surface-emit-floor: the solver${rev ? ` at ${rev}` : ""} has no item 11 (plan 13.26)`);
@@ -983,7 +1002,7 @@ async function main() {
         const bb = T.geometry.meshes.reduce((a, m) => [Math.min(a[0], m[0]), Math.max(a[1], m[1]), Math.min(a[2], m[2]), Math.max(a[3], m[3]), Math.min(a[4], m[4]), Math.max(a[5], m[5])], [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity]);
         const vol = (bb[1] - bb[0] + 2 * h) * (bb[3] - bb[2] + 2 * h) * (bb[5] - bb[4] + 2 * h);
         const cost = (vol / h ** 3) * horizon * Math.max(2, Math.sqrt(T.burner.peakW / 1e5));
-        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn, snap: snapRule, pockets: pocketRule, surfaceRayStart: surfaceRayStartOn, surfaceEmitFloor: surfaceEmitFloorOn });
+        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn, snap: snapRule, pockets: pocketRule, surfaceRayStart: surfaceRayStartOn, surfaceEmitFloor: surfaceEmitFloorOn, burnerFlameRays: burnerFlameRaysOn });
       }
     }
   }
@@ -1033,7 +1052,7 @@ async function main() {
     wallSeconds: (performance.now() - t0) / 1000,
     git: { ...git, solverRev: snapshot.rev, snapshotDigests: snapshot.digests, snapshotLfDigests: snapshot.lfDigests, harnessDigests: snapshot.harnessDigests },
     solver: { overrides: solver, defaults: { ...F.DEFAULTS }, health: { ...F.HEALTH } },
-    settings: { datasets, cells: cellsArg, tests: only, snap: snapRule === "nearest" ? "nearest: every face to its nearest cell plane (plan 13.21)" : "seal (the voxeliser's rule before plan 13.21)", pockets: pocketRule === "keep" ? "kept (the trees as before plan 13.22)" : "a tree ends below its first pocket (plan 13.22)", fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, surfaceRayStart: surfaceRayStartOn ? "on: a surface's rays start on its emitting face (--surface-ray-start; plan 13.25, item 10)" : "off", surfaceEmitFloor: surfaceEmitFloorOn ? "on: a surface emits from just above ambient (--surface-emit-floor; plan 13.26, item 11)" : "off", plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
+    settings: { datasets, cells: cellsArg, tests: only, snap: snapRule === "nearest" ? "nearest: every face to its nearest cell plane (plan 13.21)" : "seal (the voxeliser's rule before plan 13.21)", pockets: pocketRule === "keep" ? "kept (the trees as before plan 13.22)" : "a tree ends below its first pocket (plan 13.22)", fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, surfaceRayStart: surfaceRayStartOn ? "on: a surface's rays start on its emitting face (--surface-ray-start; plan 13.25, item 10)" : "off", surfaceEmitFloor: surfaceEmitFloorOn ? "on: a surface emits from just above ambient (--surface-emit-floor; plan 13.26, item 11)" : "off", burnerFlameRays: burnerFlameRaysOn ? "on: the burner's radiant part leaves from its flame (--burner-flame-rays; plan 16.10, item 12)" : "off", plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
     runs,
   };
   await bothWays(report, S, measures, Object.fromEntries(cases.map((cs) => [`${cs.dataset}/${cs.test.id}`, cs.test])), Rsnap);
