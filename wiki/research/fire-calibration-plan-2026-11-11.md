@@ -2895,6 +2895,63 @@ A surface's emission now reaches the room rather than staying in its own cell. S
 
 **Not yet read:** the heat ledgers and item 10's tallies. They are read with R11's (13.33, point 7), beside 13.B.
 
+### 13.36 R11, items 10 and 11, beside 13.B and R10: the result (2026-11-15, 06:40)
+
+R11 ran as 13.33 fixes it. The solver was c6c1e2b with `--surface-ray-start --surface-emit-floor`, and the harness was at 996f27f with 13.B's flags, `--pockets drop` and `--snap seal`. It ran from 16:38 on 2026-11-14 to 06:23 on 2026-11-15.
+
+- **Runs.** 573, as in R10. One stopped: FSE ISO NG3 on 0.20 m, on the speed guard at 48 s, as in 13.B (52 s) and R10 (49 s).
+- **Files** in `benchmark/results/`, prefix `2026-11-14-validation-r11-`: `034`, `027`, `020`, `chairs-034`, `chairs-027` and `chairs-020`. The nine-series merges are not committed, as in 13.35.
+
+**The words are R10's.** On the eight series, 31 of 33 words are unchanged beside 13.B. The two that move are the same as in R10, both on 0.34 m, and for the same reason: the 10-bin weighted pooled tier crosses a boundary while every unweighted word stays.
+- Ceiling jet goes from not calibrated to indicative (1.40 / 0.49 to 1.43 / 0.49; 2 to 1 of 6 series in band).
+- Neutral plane goes from indicative to not calibrated (0.77 / 0.27 to 0.74 / 0.26).
+
+With the ninth series, the same three words move as in R10. Smoke layer depth is unchanged: calibrated on all three cells, at 1.11 / 0.14, 1.03 / 0.11 and 0.99 / 0.12.
+
+**The direction.** Item 11 takes back most of what item 10 added. The pooled δ for 13.B, R10 and R11:
+
+| Cell | Layer temperature | Ceiling jet | Head height |
+| --- | --- | --- | --- |
+| 0.34 m | 1.48, 1.50, 1.49 | 1.40, 1.43, 1.43 | 1.54, 1.56, 1.54 |
+| 0.27 m | 1.41, 1.43, 1.41 | 1.41, 1.44, 1.43 | 1.35, 1.37, 1.34 |
+| 0.20 m | 1.37, 1.38, 1.37 | 1.35, 1.37, 1.36 | 1.38, 1.40, 1.36 |
+
+The rooms read 34 to 56 % hot in all three. **Neither item, alone or together, gives a calibration gain.** The surfaces' radiation is not what makes the rooms read hot. No word in the app changes, and both defaults stay 0 (13.26, decision 14).
+
+**The heat ledgers** (13.33, point 7). These are medians over the eight series' runs of each run's last entry, as shares of the heat released. The figures are given for 13.B, R10 and R11.
+- **Radiated gross:**
+  - 0.34 m: 0.086, 0.081 and 0.288;
+  - 0.27 m: 0.115, 0.102 and 0.309;
+  - 0.20 m: 0.117, 0.092 and 0.255.
+
+  With item 11, walls between ambient + 10 K and 500 K radiate, so the gross emission roughly triples.
+- **The walls' net intake:**
+  - 0.34 m: 0.597, 0.595 and 0.596;
+  - 0.27 m: 0.472, 0.468 and 0.468;
+  - 0.20 m: 0.526, 0.525 and 0.527.
+- **The gas's share:**
+  - 0.34 m: 0.068, 0.070 and 0.069;
+  - 0.27 m: 0.059 in all three;
+  - 0.20 m: 0.072 in all three.
+
+  So the added emission is exchanged between surfaces almost entirely, and the gas's heat hardly moves.
+- **Out of the grid's sides,** in R10 and R11: 0.001 or less.
+- **The chair series.** Radiated gross rises from 1.59 to 1.75 of the heat released in 13.B to 1.73 to 2.26 in R11, across the cells. The walls' share falls by 0.02 to 0.03.
+- **Item 11's tallies:**
+  - `surfaceFloor`, the emission left out between ambient and ambient + 10 K, has a median of 0.016 to 0.020 of the radiated, and a 90th percentile of 0.036 to 0.048.
+  - `surfaceCapped` is 0 wherever it was read.
+  - Both `radRoundoff` sums together have a median of 2 × 10⁻⁶ to 1.4 × 10⁻⁵ of the radiated, with a maximum of 4.7 × 10⁻⁴. The validation rooms' one-dimensional boards resolve the float32 loss that 13.34 (i) found in lumped stone. That finding still stands for the app's lumped scenes.
+
+**Cost.** The suites took 58, 154 and 561 min. R10 took 37, 96 and 379, and 13.B 30, 82 and 352, on 0.34, 0.27 and 0.20 m. R11 ran with nothing else heavy on the machine. Against 13.B, both items together cost about 1.9, 1.9 and 1.6 times the wall time, reported and not judged.
+
+**What follows.**
+- Items 10 and 11 stay in the solver behind their switches, off by default.
+- No default changes. Making one would need the user's agreement with the cost above and with 13.34 (i), and no rerun gives a reason to ask for it.
+- The rooms' hot reading needs another explanation. The candidates already named are these, and each needs the user's word and a blind draft before any code (13.12):
+  - the gas's radiation (item 8, a second attempt; 13.23);
+  - the burner's rays (13.26, decision 3);
+  - the doors (a fourth attempt; 13.30).
+
 ## 14. The user's decisions on the roadmap (2026-11-12, 22:30, before any run they govern)
 
 The user answered "yes to all" to the five proposals of [fire-calibration-roadmap-2026-11-12.md](fire-calibration-roadmap-2026-11-12.md), section 6, and asked for the most accurate calibration that keeps the app fast. The rules below are written before any run they govern. Sections 12.6, 13.3 and 13.12 stand.
