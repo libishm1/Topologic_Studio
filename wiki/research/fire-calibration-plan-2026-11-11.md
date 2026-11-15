@@ -4440,6 +4440,251 @@ If the line ends, the contents keep the present rule. Finding 2 stays a declared
 7. **Order.** Item 15 is built now, on its own branch from this section's commit. It does not wait for item 12.
 
 
+
+### 16.18 Item 15: the build's checks (2026-11-15, 21:10)
+
+Item 15 was built as 16.16 and the coordinator's decisions 16.17 fixed it: enthalpy only, no GPU tallies, and (b) reported. It is on branch `flamescapes/vapour-enthalpy` from 27d52fe, in eight commits:
+- 2ef5bd9: the item, off by default (CPU, GPU, the run cache's key);
+- 99fcd04: the suite's `--vapour-enthalpy` with the ledger's four tallies, and heat-closure's `contents` case;
+- 7b0245e: the check tool, `tools/vapour-enthalpy-check.mjs`, as it first ran (a), (c) and (f);
+- f306a16: the tool's R in (a), corrected after its failure (below);
+- fc79277: the tool's parts made selectable, the Steckler run at its full 300 s, and the GPU check's timing leaves;
+- f4143a9: more of the GPU check's timing leaves, seen in two runs of the base;
+- ffb4cc9: part dx, reported, added after (d)2 failed (below);
+- a7706de: the tool reads the unit suite's summary as Node's default reporter prints it. Its first run of the unit suites read no counts and printed NaN; they were run again.
+
+The solver files are 2ef5bd9's in every later commit. Where each part ran:
+- the CPU parts (a), (b), (c), (e) without its GPU line or unit suite, (f), (h) and (n): fc79277;
+- the GPU parts: f4143a9;
+- part dx, the third base run's comparison and the bench's report: ffb4cc9;
+- the unit suites: a7706de.
+
+No later commit changes a line an earlier part ran. Every figure was measured while the materials study ran with 8 workers; this build kept to 4.
+
+**Item 15 fails three checks as written.** 158 judged lines passed and 6 failed:
+- **(d)2.** The onestep phase fails at four of its six checkpoints. From each failing state, one step with the item off parts the two paths by exactly as much as one with it on (dx).
+- **(e), the GPU check with the item off.** One leaf differs from every base run: the GPU flame's 90th percentile in design run 0. That run's GPU result differs from run to run in the base itself.
+- **(g).** With the default set to 1, 536 of 537 tests pass. The failing test is clean agent's "a fire next door burns as it would". With the item on, the fire next to the flooded room released 1.20 times the free fire's heat, against a band of 0.9 to 1.1. With the item off it released 0.993 times.
+
+None traces to a fault of the item's arithmetic: (a), (c), (f) and (d)1 pass. Under 16.16's "What ends this line", a failure of (d), (e) or (g) ends the attempt. Whether 13.12 rule 1 applies to (d)2's or (e)'s reference is the coordinator's reading. (g)'s test is not one whose reference is the present rule, so it is not rewritten.
+
+**The fault of the code corrected (13.25, decision 13).** The solver was not changed.
+- The tool's first run failed (a)4 on 0.34 m (magnesium, at both steps).
+- From the fourth call on, each pyrolysis step (6.6e-10 kg) rounded away in every float32 store, so no stored value changed. The tool summed R over the cells whose stored values differ, so R was 0, while the float64 tallies moved E by 1.6e-4 J a call.
+- 16.16's R is over "the cells the call changed", for the reason that each store moves E by at most 2^-24 of the heat it holds. A store that rounds back to its value is such a store.
+- R now counts the fuel cell whose block ran and its gas cell (f306a16). (a) was run again in full, and it passed.
+
+- **(a) A sealed, adiabatic box conserves its enthalpy: PASS.** 76 judged lines: scenes 1 to 5 on 0.20 and 0.34 m, at dt 0.1 s for 2000 calls and at 0.05 s for 4000.
+  - The worst call's |dE| / R by scene: 0.218 (1), 0.208 (2), 0.070 (3), 0.142 (4), 0.180 (5), against at most 1.
+  - The sum of dE over a run is at most 52.3 J in scenes 1 to 4 (the heptane pool, 4 kg, 0.34 m, 0.05 s, beside 56.8 kJ of latent heat). In scene 5 it reaches 8.26 kJ beside E_in 46.3 kJ (0.34 m, air, 0.05 s). A stone cell holds C_s T_s of about 5.5e7 J, so each float32 store of its T_s moves E by up to 3.3 J. Each call stays within R.
+  - 16.16's sizes, scene 1 on 0.20 m (fuel 0.04 kg, N2 at 900 K):
+    - the first call's E_in is 4411.7 J (16.16: 4411 J), and R is 0.0392 J (0.039 J);
+    - the water's latent heat takes T_s from 650 K to 556.61 K in that call;
+    - so the second call's E_in is 0.225 J, its endotherm 0.106 J, and the present rule's imbalance 0.305 J;
+    - 16.16's 5.3, 1.9 and 4.0 J were evaluated at 650 K.
+  - Reported, item off. The explicit heats are read from the on twin, whose solid was the same as the off twin's at every call in all 76 runs. The present rule's imbalance in one call ranges:
+    - from -20.9 kJ to +0.66 kJ in scene 1;
+    - from -25.2 kJ to +1.40 kJ in scene 2;
+    - from +0.27 kJ to +1.69 kJ in scene 3;
+    - from -216.9 kJ to -0.22 kJ in scene 4;
+    - from -33.1 kJ to -1.32 kJ in scene 5.
+
+    Over a run it sums to between -228 kJ and +42 kJ.
+  - Reported, the box stepped whole: (a)1 on 0.20 m, 0.04 kg, N2 at 900 K, pressure zones on, sealed, adiabatic, 200 steps of 0.1 s.
+    - Its internal energy moves -2715.6 J with the item on and -2668.5 J with it off.
+    - Counted with the gas's c_p: -2934.7 J and -2887.1 J.
+    - The solid gives its gas 4436 J above ambient.
+    - A zone's compression conserves internal energy to first order only (16.16).
+- **(b) Energy closure in the solver's ledger: reported, not judged** (16.17, decision 6). Heat-closure's `contents` case, class A contents of 2 kg a cell:
+
+  | Cell | At | Closure, item on | Its endotherm and latent heats | Burner case | Item off, without the two sinks | Soot budget on, off |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | 0.20 m | 30 s | 0.901 | 0.296 | 0.973 | 0.610 | 0.755, 0.756 |
+  | 0.20 m | 60 s | 0.809 | 0.091 | 0.961 | 0.722 | 0.431, 0.417 |
+  | 0.27 m | 30 s | 0.878 | 0.232 | 0.960 | 0.664 | 0.789, 0.790 |
+  | 0.27 m | 60 s | 0.804 | 0.060 | 0.937 | 0.743 | 0.473, 0.479 |
+  | 0.34 m | 30 s | 0.871 | 0.183 | 0.954 | 0.706 | 0.807, 0.811 |
+  | 0.34 m | 60 s | 0.822 | 0.054 | 0.933 | 0.763 | 0.578, 0.593 |
+
+  - By 60 s the contents had released 6.9, 11.1 and 6.2 MJ of 13.7, 17.9 and 13.0 MJ in all, and E_in was 1.12, 1.55 and 0.84 MJ.
+  - With the item on, the closure lies 0.80 to 0.90. At 60 s it is below the band on every cell.
+  - The vapour's volume is not in this item. In the open room the gas the vapour displaces is removed with its heat at the density stage (16.16, "The volume"; item 16).
+- **(c) Constant-pressure mixing: PASS**, 8 lines.
+  1. `vapourMix` agrees with the mixing of two streams in float64 within 0 to 1.4e-16 relative, against 1e-12.
+     - It reproduces 16.16's table: T' is 898.6427, 400.8353, 400.1904 and 800.0069 K; with E_in 0, 896.0798, 399.6921, 399.7206 and 799.7782 K.
+     - Case i in absolute enthalpies (the vapour at 689.88 K) gives the same T'.
+  2. Through the stage, skin full, no water: T_g lies 1.2e-5 to 2.6e-5 K from Ta + (H0 + E_in) / (rho' V cp(Y')), within one float32 step (3.05e-5 and 6.10e-5 K).
+     - It ran on 0.20 and 0.34 m, in N2 at 400 and 900 K.
+     - E_in equals the stage's tally.
+- **(d) CPU against GPU.**
+  1. **One chemistry pass: PASS**, 8 lines (scenes (a)1 to (a)4, 0.20 m). The item's dT agrees on every open cell, at worst within 0.0068 of its tolerance. The worst relative difference is 6.8e-6 (magnesium). Five of the eight agree bit for bit.
+  2. **Whole steps: FAIL.** 26 lines judged; 22 pass and 4 fail.
+     - Phase agreement: all 20 lines pass. At step 200 the GPU's largest |dT| from the CPU is 5.877 K, against twice 4.821 K (the twin's, item on; with the item off it is 3.439 K). Its 99th percentile is 0.0977 K, against twice 0.158 K.
+     - Phase onestep, from the item-on run's own states: steps 100 and 300 pass (0.0219 K against twice 0.0221 K; 0.0734 K against twice 0.0833 K).
+     - Steps 450, 500, 550 and 590 fail: 0.1826, 0.1828, 0.1857 and 0.1884 K, against twice 0.0183, 0.0334, 0.0442 and 0.0511 K, which are the item-off run's at its own steps. The twin's is 6.1e-5 K.
+     - The phase records the max only, so onestep is judged on the max.
+  3. **Phase design, reported.**
+     - Item on: the CPU released 80.78 MJ and the GPU 80.82 MJ, with no head open (flame p50 638 and 641 K). With wetting: 15.37 and 15.43 MJ, the head at 52.7 and 53.9 s.
+     - Item off: 78.33 and 78.48 MJ. With wetting: 15.43 and 15.07 MJ, the head at 52.7 and 52.8 s.
+     - The first item's own fire released 52.76 MJ, and 14.71 MJ with wetting, in every run.
+  - **Part dx, reported and not pre-registered** (ffb4cc9, after the failure). From each onestep state of the item-on run, one step with the item on and one with it off, on the CPU, its one-ulp twin and the GPU:
+    - item on and item off part the paths alike: 0.0219 and 0.0218 K at step 100; 0.0734 and 0.0735 K at step 300; and 0.1826, 0.1828, 0.1857 and 0.1884 K, identical on and off, at steps 450 to 590;
+    - from step 300 on, the largest difference lies in one porous cell (8974). By step 450 that cell holds 1.3e-5 kg of fuel. After a full step its T_s is 384.8 K on the CPU and 338.6 K on the GPU (from 385.1 K), with the item on or off;
+    - the chemistry pass alone, from the same state, gives that cell's T_s and T bit for bit alike on both paths (385.1382 K and 337.0844 K at step 450, item on).
+
+    So the item's arithmetic does not part the paths. By step 450 the item-on run has a nearly burnt-out porous cell, and the item-off run had none at its own checkpoints. In that cell another stage parts the paths, with the item on or off. Which stage it is was not traced.
+- **(e) Off is off.**
+  - Fingerprints d62b581d and 29793d1a: PASS.
+  - Lint passes at a7706de.
+  - The unit suite with the item off passes 537 of 537, as the base at 27d52fe does: PASS.
+  - The item on and no fuel in any cell: PASS.
+    - Heat-closure's burner room, 60 s, on 0.20, 0.27 and 0.34 m (1590, 1090 and 890 steps), against the base solver at 27d52fe each second and at the end. All 62 fields and stats entries are bit-identical on each cell.
+    - Steckler 14 on 0.34 m through the suite, `--vapour-enthalpy` against `--solver-rev 27d52fe`. All 1157 recorded outputs of the base are bit-identical, wall times aside, and both runs are healthy. The ledger records the four tallies at 0.
+  - **The GPU check with the item off: FAIL**, with every one of the branch's differences inside runs whose GPU results vary in the base.
+    - Leaves compared: 4877, timings apart.
+    - Two runs of the base differ from each other in 46 leaves. The branch's run differs from them in 49, and 3 of those lie outside the base's own: design run 0's GPU flame p90, and systems run 4's GPU peak heat release and its frame-10 heat release.
+    - With a third base run, the base's own differences are 48 leaves. One leaf remains outside them: design run 0's GPU flame p90, 834 K in all three base runs and 868 K in the branch's.
+    - In that same run the base's own GPU flame p10 (521 to 534 K), p50 (637 to 649 K) and released energy (77.72 to 78.62 MJ) differ from run to run.
+    - Every differing leaf is on the GPU side of a `runScene` run: sprinklers 2 to 4, design 0 and 1, and systems runs 3 and 4. Every leaf of the deterministic phases, and the CPU side of every phase, agree bit for bit.
+  - Reported: with the item on and fuel, the pilot room's fingerprint is 6ef471dc (E_in 2.858 MJ over 300 steps). The design-fire room's stays 29793d1a. In its first 300 steps the contents give their gas 1.5e-5 kg at ambient, so E_in is 0 and T_g is rewritten to its own value.
+- **(f) The item changes only T: PASS**, 38 lines (scenes (a)1 to (a)5, 0.20 and 0.34 m).
+  - No field and none of the 17 base stats entries differ between on and off.
+  - T differs only in the cell that took mass: the porous cell, or scene 5's gas cell above the stone.
+  - No expansion array is made, on or off.
+- **(g) The unit suite with the default set to 1: FAIL.** 536 of 537 pass. The failing test, not edited:
+  - clean agent, "the agent stays in its room; a fire next door burns as it would": the fire in the second room, room 1 flooded from 0 s, 60 s;
+  - with the item on, the flooded run released 26.47 MJ against the free fire's 22.03 MJ, a ratio of 1.20 against a band of 0.9 to 1.1;
+  - with the item off: 21.62 MJ against 21.77 MJ, 0.993;
+  - with the item on, the two runs part at 45 s (274 and 556 kW in that frame). The free fire's heat release then swings from 683 to 274 kW frame by frame, and the flooded run's rises to 834 kW.
+- **(h) Speed: reported, not judged.**
+  - The fingerprint tool's rooms, 17 732 cells, 300 steps, two runs each:
+    - in the 200 kW pilot room the chemistry stage took 4.0 and 4.5 ms a step off, and 5.1 and 4.3 ms on; the step took 104 and 122 ms off, and 123 and 110 ms on;
+    - in the design-fire room it took 4.3 and 3.7 ms off, and 4.0 and 3.5 ms on; the step took 160 and 118 ms off, and 121 and 99 ms on.
+
+    Under this load the item's cost does not separate from the noise.
+  - `tools/backend-bench.mjs`, one run a set, 180 s, the CPU on the app's grid and the GPU app set pinned at 120 000 cells, in ms a step, off then on:
+
+    | Case | CPU | GPU |
+    | --- | --- | --- |
+    | The room (the app's design fire) | 170.81, 170.83 | 11.35, 11.96 |
+    | Duplex | 76.66, 78.48 | 31.82, 32.20 |
+    | Office | 118.36, 119.17 | 32.17, 31.68 |
+    | Clinic | 131.32, 158.19 | 39.97, 42.57 |
+    | Vienna | 134.24, 152.82 | 34.81, 38.23 |
+
+  - **Vienna on the GPU in the browser with the item on reaches its horizon:** 180 s of 180 s, at 38.23 ms a step, 2.62 times real time, on 101 304 cells. With the item off it ran at 34.81 ms a step, 2.87 times real time.
+  - Where the item acted. The CPU's runs repeat exactly, so their changes are the item's:
+    - Vienna released 41.12 MJ against 37.60, peaked at 800 kW against 710 kW, and left 161 untenable nodes against 184;
+    - the room released 33.32 MJ against 32.22;
+    - Duplex released 14.34 MJ against 14.44;
+    - Office left 18 untenable nodes against 21;
+    - the Clinic's results are equal.
+
+    The GPU's results changed too (the room 39.65 MJ against 32.55; Vienna 62.05 MJ against 56.24, peak 1257 kW against 1135 kW). GPU runs differ from run to run, so those differences are not the item's alone.
+
+**What the present rule makes and destroys in the app's design fire** (part n; reported, not pre-registered; asked for by the coordinator, since 16.17 left the net unmeasured). The run: the fingerprint room, class A, 600 s, stepped as `runScene` steps it, with the item off.
+- **The method.** Before each chemistry stage, a copy of the state ran the stage with the item on and gasA 0. Its solids did what the run's did: in 17 700 stages no cell's T_s, fuel, water or inertC differed.
+- Released: 640.08 MJ, of which the contents' own was 280.08 MJ.
+- The gas's gain under the present rule: 46.06 MJ, 7.20 % of the heat released and 16.45 % of the contents' own. The pyrolysate's alone is 37.06 MJ (5.79 %). 16.15 measured 37.1 MJ (5.8 %), and 7.2 % with steam and the oxidation products.
+- The heat the solids gave up with that mass, which the present rule destroys (E_in): 66.58 MJ (10.40 %).
+- **The net: -20.52 MJ.** The present rule loses 3.21 % of the heat released on balance (7.32 % of the contents' own).
+  - Per 5 s frame the median is -2.72 %, ranging from -11.57 % (at 540 s) to +0.15 % (at 425 s, the one frame with a gain).
+  - Over the first 300 s: -8.05 MJ of 188.7 MJ released.
+- The mass: 63.5 kg. The endotherm: 11.41 MJ. The latent heats: 23.47 MJ.
+- Not counted: the gas the vapour displaces in the open room, removed with its heat at the density stage (item 16's).
+- The same fire with the item on released 653.18 MJ in 600 s. The four tallies: vapourEnthalpy 72.42 MJ, vapourMass 67.81 kg, pyrolysisEndotherm 12.58 MJ, evaporationHeat 24.28 MJ.
+
+So in the app's design fire the present code loses energy on balance. 17.8's rule, conservative for a gain, does not cover it, as 16.17 foresaw.
+
+**The study runner** (branch `study/materials`, not edited).
+- Its variants already take `solver: {}`. So `"solver": {"vapourEnthalpy": 1}` in `defaults` runs the item with no code change, once the runner's solver files carry item 15.
+- For a flag, one line in `main()`, after the list of variants is built: `if (args.includes("--vapour-enthalpy")) for (const v of list) v.solver = { ...(v.solver || {}), vapourEnthalpy: 1 };`.
+- Its ledger records the four tallies only if it is given them.
+
+**Departures, as built.** None changes an output with the item off.
+- 16.17, decision 2: no volume term. `vapourMix(m, Y, T, dm, E_in, Ta)` returns T' only. (c)1's ln column, (c)2's expansion increment and (d)1's expansion agreement were not run. (f) checks that no expansion array is made.
+- The on path is a copy of the solid-fuel block: `vapourBlock` on the CPU, `chemSolidVapour` on the GPU.
+  - This leaves the off path as the old code with one test a solid-fuel cell (CPU) or a porous fuel cell (GPU), as "The switch" says.
+  - The copy is line for line, with the item's lines added; (f) guards it.
+  - The CPU stage also tests the flag once at its start.
+- T_g is rewritten only when the block moved mass or E_in is not 0. A block that did nothing leaves T_g bit-identical.
+- `stats.vapourMass` counts dw + dv + dOx + dPy as passed to the gas (float64). For oxidation that is the gas's net gain, dOx.
+- The GPU hook is `chemistryPass`: one chemistry pass, then `readFields`.
+- 16.16 did not place (a)'s scenes. As built:
+  - a 3 x 3 x 3 stone box round one porous cell;
+  - scene 5: a 3 x 4 x 3 box, the fuel in stone cell (1, 1, 1), with area 2 h^2, water 0.1 of the skin, and the gas cell above;
+  - scenes 1, 2 and 5: fuel 0.5 and 4 skins, gas at 400 and 900 K;
+  - scene 3: a pool of 1 m^2 (class B's item), 0.5 and 4 kg;
+  - scene 4: 2 kg on 0.2 m^2 (class D's item), gas at 400 K;
+  - the whole box: (a)1 on 0.20 m, 0.04 kg, N2 at 900 K, 200 steps.
+- (a)'s item-off imbalance uses the on twin's explicit heats, checked call by call.
+- (c)2 ran on 0.20 and 0.34 m.
+- (d)1's 8 float32 steps are taken at the larger of the CPU's T with the item on and off.
+- (e)'s Steckler test ran its full 300 s.
+  - At 30 s (`--horizon-cap 30`) the suite stops a Steckler run with "no readings after 200 s", on the base and the branch alike, and keeps none of its outputs.
+  - A test run of the tool compared those two errors and called them equal. The line now requires both runs healthy.
+  - The comparison covers the suite's recorded outputs (every 1 s reading, the ledger, the pairs), not every field. The burner room's comparison covers every field.
+- (e)'s GPU comparison sets apart as timings:
+  - the leaves named compileMs, ms, cpuMs, gpuMs, encodeMsPerStep and gpuGridOnlyMs;
+  - everything under phase full's `ms`;
+  - the walls, soot and zones phases' `timing` lists;
+  - and the timing phase.
+
+  It was judged first against two base runs and then against three.
+- (g) and the GPU check with the item on ran on copies of the working tree whose DEFAULTS set the switch, so no edited default was ever in the worktree.
+- (h)'s chemistry ms come from the tool's own runs of the fingerprint rooms, not from the fingerprint tool's six-stage print.
+- The unit suite ran as `node --test --test-concurrency=4 "src/core/*.test.mjs"`.
+- `RUN_CACHE_VERSION` stays 13. A run's key carries `vapourEnthalpy` when the run sets it.
+
+**Not verified.**
+- The item's effect in any study run, or in any validation run with fuel. No validation scene holds fuel.
+- Which stage parts the paths in the nearly burnt-out porous cell of (d)2's onestep states. The chemistry pass alone agrees there.
+- Whether design run 0's GPU flame p90 varies in the base. It was the same in three base runs.
+- Why the next-door fire of (g)'s test swings with the item on. It was not traced beyond its frames.
+- The GPU's energy books. The GPU keeps no tallies (16.17, decision 4), so its closure rests on (d)'s parity.
+- How (b)'s shortfall below the band divides between the vapour's volume (item 16), the change of the mixture's c_p at fixed T in gas-phase combustion, and the transport.
+- Whether the float32 drift of a stone cell's T_s in (a)5 (up to 8.3 kJ over 4000 calls) matters in a run. No app scene holds fuel in a solid cell.
+- Every speed figure, apart from load.
+
+**Commands.**
+- `node tools/vapour-enthalpy-check.mjs --only a,b,c,e,f,h,n --json out.json`
+- `node tools/vapour-enthalpy-check.mjs --only d,d2,eg --gpu-on on-agreement.json,on-onestep.json,on-design.json --gpu-off branch.json --gpu-base base1.json,base2.json,base3.json --gpu-branch branch.json`. Its inputs are `tools/flamescapes-gpu-check.mjs --json` runs of the unchanged base, of the branch, and, on a copy whose DEFAULTS set `vapourEnthalpy: 1`, with `--phase agreement`, `onestep` and `design`.
+- `node tools/vapour-enthalpy-check.mjs --only eu,g`
+- `node tools/vapour-enthalpy-check.mjs --only dx`
+- `node tools/backend-bench.mjs --cases room,duplex,office,clinic,vienna --members 1 --sets cpu,gpu-app --app-cells 120000 --horizon 180`, again with `--solver vapourEnthalpy=1`. The tool reads the two files with `--only h --bench-off off.json --bench-on on.json`.
+
+**What follows.** The default stays 0. The attempt fails as the checks read: (d)2's onestep lines, (e)'s GPU leaf and (g)'s test. 16.16 drafts no second attempt.
+- Rerunning study runs with item 15 on (16.17, decision 5) waits on the coordinator's reading.
+- Under 13.12 rule 1, a check may be rewritten only where it computes its reference wrongly for the case it runs. Two such questions are the coordinator's:
+  - (d)2's reference is a step from another state, the item-off run's at its own checkpoints;
+  - (e)'s reference is two or three base runs, which do not sample one nondeterministic percentile.
+- (g)'s failure is a change in a fire's course, read by a test whose reference is not the present rule. It stands.
+
+**Checked by the coordinator** (2026-11-15), apart from the agent:
+- **The GPU judgement,** run again with the check tool from a7706de on the agent's saved runs. (d)2 fails at steps 450, 500, 550 and 590. (e) finds one leaf outside the base's own spread, design run 0's GPU flame p90. Both as the agent reports.
+- **(g)'s test,** run again on a copy whose `DEFAULTS` set the switch. It fails, 26.47 MJ against 22.03 MJ. With the switch off, as committed, it passes.
+- **The commits** carry no Claude line.
+
+**Item 15's first attempt fails** (16.16, "What ends this line").
+- **Why.**
+  - (d) and (g) are not among the checks whose failure 16.16 treats as a fault of the code.
+  - (g) alone ends the attempt. Its test reads a change in a fire's course, and its reference is not the present rule.
+  - So the coordinator does not rule on the two questions the agent raises about (d)2's and (e)'s references. Neither could save the attempt, and no tolerance moves.
+- **What follows.**
+  - The contents keep the present rule. Finding 2 stays a declared limit of every app run and of every study run with contents.
+  - **Finding 2's net size is now measured** by part n of the check tool: the present code, the app's design fire, 600 s.
+    - The gas gains 46.06 MJ, 7.20 % of the 640.08 MJ released. The pyrolysate's share is 37.06 MJ, as 16.15 found.
+    - The solids lose 66.58 MJ.
+    - The net is a loss of 20.52 MJ, 3.21 % of the heat released.
+  - **17.8's rule covers a gain only.** So every study result with furniture on states this net loss beside it, as measured in this one fire.
+  - The furniture-on runs do not run again for item 15. 16.20's decision 6 stands for the items that are made.
+  - R0 (16.20) holds items 12 and 14, and item 16 if its second attempt passes.
+  - A second attempt needs the user's word and a new method written here first. It must first explain the swing (g) shows: with the item on, the free fire's heat release swings frame by frame, between 683 and 274 kW.
+- **A finding outside the item.**
+  - In (d)2's states, one nearly burnt-out porous cell steps its T_s 46 K lower on the GPU than on the CPU in a full step, with the item on or off. It has 1.3 × 10⁻⁵ kg of fuel left. The chemistry pass alone agrees bit for bit there.
+  - So the GPU port differs in some other stage, not traced. It may touch any GPU run in which contents burn out.
+  - It is a candidate for its own item, drafted blind first. Until then, GPU runs whose contents burn out carry it as a declared limit. The study runs on the CPU and does not.
+
 ### 16.19 Item 16: gas a source adds pushes out the gas it displaces (2026-11-15, before any code or run of it)
 
 Drafted blind to every validation result and to finding 2's size, as 13.12 sets and as 16.17's decision 2 asks. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at 27d52fe, whose `src/core` equals main's be32e34 (`git diff be32e34 27d52fe -- topologicpy-web-frontend/src` is empty). The figures called "the reference" below are closed forms evaluated by hand for this draft, in float64, from the solver's own constants, in scripts that import nothing from the solver. They are not the solver's output, and none is a fire result.
