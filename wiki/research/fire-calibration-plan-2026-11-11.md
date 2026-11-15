@@ -5472,6 +5472,293 @@ Each judged case ran on 0.20 and 0.34 m cells at dt 0.1 and 0.05 s, four setting
    - Wherever contents and timber burn together, the timber's heat is overstated by up to 18 / 13.88, or 30 %.
    - The study states this beside every result it takes with item 13 on. A vapour kind carried with the gas is a candidate for its own item, drafted blind first.
 
+
+### 16.24 Item 16, second attempt: the diagnosis and the method (2026-11-15, before any code of it)
+
+The user agreed to a second attempt at item 16 on 2026-11-15. 16.22 sets two conditions: a new method written here first, and first an explanation of the finding the first attempt left open. This section is both. It is the physics agent's draft. Nothing below changes after a run of the second attempt; anything added later is dated, with its commit. Line numbers are those of `flamescapes/source-expansion` at d108f79, whose solver files equal c1700d4's (`git diff c1700d4 d108f79 -- topologicpy-web-frontend/src` is empty). FDS is read at commit ff928db, as 16.10 and 16.19 cite it. No solver file and no default was changed for this draft.
+
+**What the drafter read that reports results, declared as 16.19's head declares it.**
+- The plan's headings, 13.12, 13.25 with the coordinator's decisions (model figures, the direction item 11 leans, and that the rooms read hot), 16.8, 16.19, 16.20 and 16.22. 16.22 reports item 16's first attempt: its checks, its speeds, and its smoke run on steckler/14 (the heat released, the door's centreline velocity, its neutral plane and the layer's rise, with the item on and off).
+- The coordinator's brief. It states the pilot room's 0.488 and 0.090 MJ and the design phase's 78.33 and 74.16 MJ.
+- A message from the coordinator. Item 15's first attempt failed its (d)2 and (g) (16.18, 12d47f5). Item 15's builder found a GPU port difference outside item 15: from step 450 of the onestep states, one nearly burnt-out porous cell (cell 8974, about 1.3 × 10⁻⁵ kg of fuel left) steps its T_s 46 K lower on the GPU than on the CPU in a full step, with item 16 on or off, while the chemistry pass alone agrees bit for bit.
+- The one-line titles of `next/calibration-16`'s last three commits. One (12d47f5) gives finding 2's net as a loss of 3.21 %.
+- A session note that states what 16.1 states of items 10 and 11: no calibration gain.
+- The names of the files in the working folder of item 16's first build, seen in a listing. None was opened.
+- Not opened: 16.14 to 16.18, 16.21, 16.23, section 17 beyond its headings, any file in `benchmark/results/`, and every result file of the calibration runs, the reruns and the study.
+
+The diagnosis rests on runs of two test scenes, the fingerprint tool's pilot room and the GPU check's design phase (its CPU side), item off and on, made for this draft. They are model runs, not validation results. No measured datum enters them.
+
+#### The tool
+
+`tools/source-expansion-diagnose.mjs`, committed for this draft on `flamescapes/source-expansion` (be8f8ea, after d108f79). It copies `topologicpy-web-frontend/src/core` into a temporary folder and patches the copy's `flamescapes.js` with counters only: the heat of the solids' oxidation and of the gas phase by cell, the pyrolysate vapour and the water evaporated, the oxidation's kinetic rate and its O₂ cap in one watched cell, and an export of the stage list, so that a stage can be measured alone. It steps the branch's own solver beside the copy and prints whether their heat released is the same. It was the same, to the last bit, in every run below but the linear variant. With `--form linear` the copy's item asks Δn/n in place of ln(1 + Δn/n), a variant for the diagnosis and not a method, and that run is not compared. The tool changes no solver file and judges nothing.
+
+#### 1. The diagnosis
+
+**The pilot room.** `tools/flamescapes-fingerprint.mjs`'s first case: the GPU check's room on 0.20 m cells (31 × 22 × 26), class A contents, the first item a porous cell at (15, 3, 13) holding 20.94 kg with 2.08 m² of exposed fuel, and a pilot of 200 kW into that cell's solid for 60 s; 300 steps of 0.1 s.
+
+1. **Where the heat went.**
+
+| | Item off | Item on |
+|---|---|---|
+| Released, MJ | 0.4881 | 0.0899 |
+| The pilot cell's own oxidation (Eq. 15), MJ | 0.4624 | 0.0453 |
+| The other cells' oxidation, MJ | 0.0045 | 0.0316 |
+| The gas phase, MJ | 0.0213 | 0.0130 |
+
+   - Of the drop of 398 kJ, the pilot cell's surface oxidation loses 417 kJ. Its five porous neighbours gain 27 kJ. The gas phase loses 8 kJ.
+   - With the item off, 95 % of the heat released is the surface oxidation of one cell.
+
+2. **That oxidation is limited by O₂, on and off.**
+   - A porous cell's solid trades with its own gas (`chemistry`, `gcell = c`, 1687).
+   - Its oxidation is the smaller of the kinetic rate and the O₂ its gas holds over the fuel's O₂ demand, `o2 / st.o2` (1755 to 1757).
+   - From 14 s on, at a T_s of 796 to 812 K, the kinetic rate asks about 2 kg of fuel a step, and the O₂ allows about 0.11 g. The cap binds in every step from 10 s, on and off, and in 80 % of the steps from 5 to 10 s.
+   - So the oxidation's heat is the O₂ that reaches the cell, at 13.03 MJ a kg of O₂ (`HEAT_PER_O2`, 97).
+
+3. **The O₂ that reaches it.** The transport brings it (`advect`), measured at the cell, as means a step:
+
+| Window | Item | O₂ brought, g | Faces carrying gas in | In, cell volumes | Out, cell volumes | D dt |
+|---|---|---|---|---|---|---|
+| 10 to 20 s | off | 0.132 | 4 | 0.080 | 0.180 | 0.101 |
+| 10 to 20 s | on | 0.001 | 0.16 | 0.001 | 1.221 | 1.235 |
+| 20 to 30 s | off | 0.135 | 4 | 0.089 | 0.192 | 0.103 |
+| 20 to 30 s | on | 0.000 | 0 | 0.000 | 1.645 | 1.645 |
+
+   - With the item off, the cell asks only its heat's volume, D dt about 0.10. Air enters through four of its five open faces (its floor is solid) and the plume leaves through the fifth.
+   - With the item on, the moles of its own sources ask D dt of 0.67 at 12 s, rising to 1.65 by 18 s. The projection meets it: the faces' outflow, in cell volumes a step, equals D dt (1.645 against 1.646). From 12 s every open face carries gas out, and none brings air in.
+   - The cell's oxidation from 10 to 30 s is 1.4 kJ with the item on, against 395.5 kJ off.
+
+4. **The moles.**
+   - The pilot puts its 200 kW into the cell's solid (`pilot`, 3430 to 3433).
+   - From 2 to 4 s it boils off the cell's water, 0.176 kg. With the item on, the steam asks D dt of 1.06 a step.
+   - Then it pyrolyses the item, at about 110 g a second from 16 s. In 30 s that is 1.70 kg of vapour and 0.19 kg of soot with the item off, 1.75 and 0.19 kg on.
+   - The cell's gas at 800 K is about 3.0 g. From 18 s a step's vapour, soot and steam hold 4.19 times the cell's moles, so ln(1 + Δn/n) is 1.646.
+   - The cell's 2.08 m² of exposed fuel lies behind 0.20 m² of open faces.
+
+5. **What the base did with them (hypothesis b).**
+   - With the item off, the density reset after the heat sources (`density2`; `updateDensity`, 2763) kept each cell's moles at the gas law's and deleted the rest, with its heat.
+   - Over the run the reset took 1648 g from the domain's vapour, against the 1699 g the chemistry added, and 400 g of the 428 g of water vapour. It asked the flow for no volume for either. At 30 s, 81 g of vapour is in the gas, and the gas phase has burnt about 1 g.
+   - So the pilot cell drew air through four faces while its own sources added 4.2 times its gas a step. That air fed 462 of the 488 kJ.
+   - Hypothesis (b) holds. The base's deletion of the displaced gas kept this scene's fire burning.
+
+6. **Hypothesis (a).** The gas the item pushes out of the source cell starves that cell of O₂, and nothing else does.
+   - The room is not starved. A box of 7 × 7 × 7 cells about the pilot cell holds 643 g of O₂ off and 609 g on at 30 s.
+   - The pilot is not cooled. Its T_s at 30 s is 807 K on and 812 K off.
+   - Its ignition (`ignitedAt`) is 4.8 s off and 5.2 s on. The steam flushes the cell's air from 3.5 to 4.5 s (its O₂ is 0 on, 0.06 to 0.10 g off), and that is the delay.
+   - The vapour is blown out of the cell: 701 g of it is in the gas at 30 s on, 81 g off. It does not burn there either way. The gas phase releases 21 kJ off and 13 kJ on.
+
+7. **Hypothesis (c): no defect of the item against its method was found.**
+   - The term in the pilot cell is ln(1 + Δn/n) of its changes, as 16.19's points 2 and 3 state and as (c) checked.
+   - The projection meets the divergence asked there (point 3).
+   - The pilot heats the solid only and asks no volume. The room is open, and no zone acts. The ignition rule is untouched.
+   - Face clamps (`courantClamped`, 1406 to 1408): 1418 with the item on and none off, mostly at 4 to 8 s and from 18 s, where the fingerprint tool's fixed step of 0.1 s lets a face carry more than a cell a step. They are not the cause. With a step of 0.05 s there are none, and the heat released falls further (point 9).
+   - **One error was found, in a declared limit's size, not in the code.** The item asks the flow for ln(1 + x) of a cell's volume for moles that take x of it, x being Δn/n over the step. 16.19 declares the shortfall as about x/2, the small-x form. Its share is exactly 1 − ln(1 + x)/x: 5.0 × 10⁻⁴ at x = 10⁻³, 5.0 × 10⁻³ at 10⁻², 0.31 at 1, and 0.61 at the pilot cell's 4.19.
+   - Over the pilot room's run the item asks 2.672 m³ of the moles' own 6.120 m³ (0.437). The reset still deletes the rest. In the design phase it asks 18.833 of 19.047 m³ (0.989), the largest x a step 0.10.
+
+8. **The logarithm does not cause the drop.** With the linear form (`--form linear`) the push is larger, and the pilot room releases 0.0529 MJ.
+
+9. **The step.** With a step of 0.05 s (600 steps), the pilot room releases 0.2507 MJ off and 0.0083 MJ on. The pilot cell's oxidation is 232.3 kJ off and 7.9 kJ on, by the same mechanism: off, its O₂ cap binds and air enters through four faces; on, from 10 s its faces carry gas out (0.04 faces in on average from 10 to 20 s, none after).
+   - Neither run is converged in its step in this scene. The base's 0.488 MJ halves when the step halves.
+   - The direction holds, and the drop grows as the step shrinks. That is as expected: the largest x a step falls from 4.19 to 2.10, so the logarithm asks a larger share of the moles' volume, 0.583 against 0.437.
+
+10. **What FDS does: the drop is physical.** Read in FDS's source at ff928db. FDS is not installed on this machine, and nothing was run in FDS.
+    - A solid's pyrolysate leaves its surface with the normal velocity ṁ''/ρ_f (`wall.f90` 1402, 1428, 1448). The face's mass fractions balance that blowing against diffusion from the gas cell beside it (1431 to 1434), so a blowing face sees less of the gas's O₂.
+    - A thin obstruction's gas, and a gas-phase reaction's moles, enter the divergence of the cell they enter (`wall.f90` 1411 to 1414; `fire.f90` 501). Their volume leaves that cell.
+    - A solid's oxidation reaction reads the O₂ of the gas cell beside its surface (`wall.f90` 2998 to 3000, 3471 to 3476).
+    - So in FDS the pilot's pyrolysate and steam would leave the surface's cells, and a surface reaction would see only the O₂ that the flow and diffusion bring against that outflow. FDS would not draw air into a cell whose own sources add several times its gas a step. The base did. The item does not.
+    - **Where FDS would differ from both runs.** FDS's default gas-phase combustion is mixing-controlled: fast chemistry where no A and E are given (`read.f90` 4859), no ignition temperature (`AUTO_IGNITION_TEMPERATURE` defaults to −273.15 °C, 5032 and 4781), and extinction model 2 outside VLES (4576 to 4583). It would burn the pyrolysate where it meets air. Flamescapes's gas phase is Arrhenius (`gasA`, `gasE`; 1831 to 1835), and here it releases 21 kJ from 1.70 kg of vapour. Both runs' fires are far smaller than FDS's would be. That is the gas phase's matter, not item 16's.
+    - The scene is a test of the solver, not a fire: 200 kW held in the solid of one cell of 8 litres.
+
+**The design phase.** `tools/flamescapes-gpu-check.mjs`'s design phase without a sprinkler, its CPU side, stepped as `runScene` steps it, 150 s: 78.3319 MJ off and 74.1648 MJ on, 16.22's 78.33 and 74.16 MJ. The GPU's 77.99 and 73.69 MJ fall the same way.
+
+11. **Its drop has another cause.**
+    - The burner releases 52.7637 MJ in both. The drop, 4.167 MJ, is all in the contents: their oxidation falls from 15.724 to 13.349 MJ, and their gas phase from 9.844 to 8.052 MJ.
+    - The contents' chemistry used 1962 g of O₂ off and 1642 g on. The 320 g, at 13.03 MJ a kg, is 4.17 MJ. The drop is O₂ the contents did not get.
+    - When. The two runs agree within 0.02 MJ to 100 s. From 100 to 130 s the item's run releases 0.85 MJ more. From 130 to 150 s it releases 5.04 MJ less (14.65 against 19.69 MJ). The lowest O₂ fraction in the domain has been below 10⁻⁴ since 100 s.
+    - Not at the fuel cells. No hot porous fuel cell (T_s above 600 K) has every face outward, on or off.
+    - At the room's opening. From 130 to 150 s it lets in 28.77 kg of air with the item on and 34.67 kg off (17 % less; O₂ 6.65 against 8.01 kg), and lets out 50.4 against 48.9 m³. The item asked 12.1 m³ in those 20 s (`sourceVolume`, 6.747 to 18.833 m³).
+    - So here the volume of the sources' moles (the burner's products, the contents' vapour and steam) leaves through the opening of a room whose fire is limited by its ventilation, and less air comes in. The base deleted that volume. At 150 s the room holds 2.22 kg of O₂ and 1.89 kg of vapour with the item on, 2.88 and 0.89 kg off.
+    - FDS counts the same volumes (`divg.f90` 671, as 16.19 cites it; `fire.f90` 501; `wall.f90` 1414), so the direction is FDS's. Its size was not compared with FDS.
+    - x a step stays at 0.10 or below, and the linear form gives 74.2457 MJ. The logarithm plays no part here.
+
+12. **Verdict.** Both drops are physical: the item does what FDS does, and the base instead deleted the displaced gas. The pilot room's drop is local (a source cell's own outflow shuts its faces to air). The design phase's is the room's (the sources' volume crowds the opening's inflow). No defect of the item was found. One declared limit, the logarithm's shortfall, was stated too small for strong sources, and point 15 corrects it.
+
+#### 2. The method
+
+13. **16.19's points 1 to 6 and 8 to 10 stand unchanged,** with 16.20's decisions 1 to 3. The diagnosis found no fault for the method to fix. What failed in the first attempt was check (e)'s reference, not the item (section 3).
+
+14. **Point 7 gains one tally,** CPU only, with the item on: `stats.sourceShortfall` (m³).
+    - It is the sum, over the cells and steps `sourceVolume` sums, of V (e^A − 1 − A): the volume of the sources' moles that the logarithm leaves to the reset.
+    - `sourceExpansionEnd` (2731) adds it from the A it already reads, with `Math.expm1`. The suite's ledger records it beside the other two.
+    - It enters no statistic, changes no field and no D, and does nothing with the item off.
+    - Reason: the pilot room shows the shortfall can be most of a source's volume. Every run with the item on should say how much.
+
+15. **The declared limit "The logarithm" is replaced by:**
+    - The flow is asked for V ln(1 + x), x = Δn/n of a cell's changes over a step. The moles take V x at constant pressure. The share not asked, which the reset still deletes, is 1 − ln(1 + x)/x: 5.0 × 10⁻⁴ at x = 10⁻³, 5.0 × 10⁻³ at 10⁻², 0.31 at 1 and 0.61 at 4.19.
+    - A source whose moles in a step exceed the cell's gas is still mostly deleted. In the fingerprint tool's pilot room the flow is asked 0.437 of the sources' volume; in the GPU check's design phase, 0.989. `sourceShortfall` reports it for every run.
+    - The heat's term has the same shortfall, with T₁/T₀ − 1 in place of x. That is outside this item.
+
+16. **The logarithm stays** (16.20, decision 2). The linear form pushes harder (point 8) and would be a new method with its own checks. The diagnosis gives no reason to adopt it.
+
+17. **Check (i) is dropped.** Item 15's first attempt failed (16.18), and its branch stays unmerged, so there is no item 15 to separate from. 16.22's (i), run on a merge for the first attempt only, stays reported as it was. If item 15 is made later, (i) as 16.19 writes it runs before the two are combined.
+
+18. **Check (e) is redesigned** (section 3). Checks (a) to (d) and (f) to (h) run as 16.19 fixes them (section 4).
+
+#### 3. Check (e), redesigned
+
+**Why 13.12's rule 1 allows it.** Both parts of the first design computed their reference wrongly for the case they ran.
+- (e)1 compared the GPU's change of D with the CPU's, each made from its own path's source masses. Where the base's two paths make different source masses, the CPU's figure is not the reference for the GPU's. In the 10 cells of scene (i) the base's GPU deposits soot by thermophoresis (its gas one float32 step above the wall) and the base's CPU does not. The floor, eight float32 steps of D(off), is 8 × 2⁻¹⁴⁹ where D(off) is 0: the scale of D(off), not of the term.
+- (e)2 compared an item-on run with an item-off run, each with its own 450-step history. The item-off row is not the reference for the item-on state. From each item-on state, one step with the item off gives the same largest |ΔT| to every printed figure (16.22).
+
+The redesign is disclosed as written after a failure. The first attempt's (e) stays as 16.22 reports it. It is run again on the second attempt's code, and reported, not judged.
+
+**The rule of the redesign.** Every judged comparison either gives both paths identical inputs, or compares one path with itself from one state. None compares a state the GPU stepped with a state the CPU stepped.
+- So a difference the base has between the paths, such as 16.18's porous cell whose T_s the GPU steps 46 K lower than the CPU, cancels by construction. It is in the GPU's item-on step and in its item-off step alike, and it never meets the CPU's.
+- Each tolerance is a closed form from float32 arithmetic and WGSL's stated accuracy (the WGSL specification, 15.7.4.1: for f32, x + y, x − y and x × y correctly rounded; x / y within 2.5 ULP; log(x) within 2⁻²¹ absolute for x in [0.5, 2] and 3 ULP outside). None comes from the first attempt's numbers. u is 2⁻²⁴ below.
+
+**(e)1 The term from identical inputs (judged).** An exact port test.
+- **How.** The tool appends one compute entry point to the text `buildShader()` returns (kernels.js 640) and compiles it in a pipeline of its own, with buffers of its own. The entry point reads a case (a cell, its ρ, its six Y and a change d) and calls the solver's own `changeGas` (kernels.js 837 to 870), once or as many times as the case lists. Nothing of the solver's text is edited. The entry point records the cell's D, ρ and Y after each call, and the tool reads them back. `sourceExpansion` is 1, `zonesOn` 0, and V the float32 V the solver uploads.
+- **The reference.** `moleChange` (flamescapes.js 2045) and `Math.log1p` in float64, from the same float32 inputs, at the state the GPU's previous call left (read back).
+- **The cases,** on 0.20 and 0.34 m cells:
+  1. (c)1's seven cases;
+  2. y = Δn/n of ±10⁻ᵏ for k = 1 to 12, and y = 1, 4.19 and 10: CO into nitrogen, and soot out of a cell with Y_soot 0.01;
+  3. y one float32 step either side of 10⁻², where `lnOnePlus` changes branch (kernels.js 1800);
+  4. the clamp, (c)1's case vii;
+  5. a change that would empty the cell: O₂ and CO₂ at Y 0.5 each, a mass that is a power of two, every species taken out, so that n + Δn is exactly 0 on both paths;
+  6. Δn = 0;
+  7. two and six successive calls on one cell, as `chemCell` makes them;
+  8. calls on two cells in one dispatch;
+  9. every case again with `sourceExpansion` 0.
+- **Pass:**
+  1. for each call, |t_GPU − t| ≤ 2 E_t, with t = ln(1 + y) the reference and t_GPU the change the call made to the cell's D;
+  2. in cases 5 and 6, and with `sourceExpansion` 0, D is unchanged, bit for bit;
+  3. ρ and Y after each call are bit for bit the same with `sourceExpansion` 1 and 0;
+  4. in case 8, each call changes only its own cell's D.
+- **E_t,** counted from the code (kernels.js 837 to 865 and 1799 to 1802), first order:
+  - E_n = 15 u (n + m/M_N₂), the error of n (each term a product, a quotient within 2.5 ULP and a molar constant's rounding; seven terms summed; the nitrogen from six subtractions);
+  - E_Δn = 12 u Σ_q |d'_q|/M_q;
+  - E_y = (E_Δn + |y| E_n)/n + 5 u |y|;
+  - E_t = E_y/(1 + y) + E_ln + u |t|, where E_ln is 8 u |y| + |y|⁵/5 for |y| < 10⁻² (the series: its roundings and its truncation), 2⁻²¹ + 2 u (1 + |t|) for 1 + y in [0.5, 2], and 3 ulp(t) + 2 u (1 + |t|) otherwise. The last u |t| is the sum into D.
+  - The factor 2 covers the products of errors that a first-order count leaves out. It is fixed now.
+- **Its size** (the reference, for air at 1000 K on 0.20 m): 2 E_t is 6.7 × 10⁻⁶ of t for |y| from 10⁻¹² to 10⁻², 7.4 × 10⁻⁵ at y near 0.018 (the burner's case of (c)3, where `log` is used), and 3.7 × 10⁻⁶ at y = 4.19. A molar mass wrong in its last printed digit (0.044 for 0.045, say) moves a species' moles by 2 %.
+
+**(e)2 One step from a shared state, each path against itself (judged).**
+- **The states.** One CPU state is cloned as the first attempt's `withItem` clones it (the item's array made, or set to null, and its tallies cleared). It is stepped once on the CPU with the item on and off, and uploaded to the GPU (`runner.createSim`) and stepped there with the item on and off. The GPU's item-off upload is stepped a second time from the same state.
+- **The scenes,** on 0.20 m cells, radiation and particles off, as 16.19's (e)1 and the onestep phase take a state:
+  1. 16.19's (i) to (iv), as 16.22 built them;
+  2. (v), new: the GPU check's room with its door shut (its `closedMeshes`: a sealed room, a pressure zone) and the app's class A design fire 10 s into its ramp, so that the zones' path runs (`expandBefore` in the zones' pass, kernels.js 1680 to 1684);
+  3. (vi) the GPU check's app scene at steps 100, 300, 450, 500, 550 and 590, as its onestep phase takes them, with the item on in the history;
+  4. (vii), new: the fingerprint tool's pilot room at 4, 15 and 25 s, where the term is largest (the steam, and pyrolysis at x near 4).
+- **Pass:**
+  1. On each path, every field the step writes before the projection is bit for bit the same with the item on and off: T, T_s, ρ, Y, the fuel, the moisture, kind, burning, the soot deposited, the wall nodes and the zones' state. D, u, v, w and p differ by design, and so does what the projection derives from them.
+  2. The GPU's item-off step, made twice from the same upload, gives every field bit for bit the same.
+- **Reason.** Within a step the item writes only D, and only the projection reads it (16.19 point 10; `project`, 3216). 16.22 found T bit for bit the same on and off at six onestep states, on both paths. Pass 2 shows that a GPU step from one state is repeatable, which (e)3 needs.
+
+**(e)3 The term's path into D, the GPU against its own calls (judged).**
+- **How.** In (e)2's steps the tool steps each state a third time on the GPU with the item on, on a copy of the GPU's files that it serves itself, as the GPU check serves the frontend. In the copy, the item's line in `changeGas` (kernels.js 864) also adds the same term to a probe of the cell, with its magnitude and a count of the calls. No pass of the step reads the probe.
+  - The tool prints the copy's differences from the branch's text. They must be the probe's declarations and its added statements, and nothing else.
+  - The copy's step must give every field, D included, bit for bit as the branch's step (judged): the probe changes nothing.
+- **Pass,** in every open cell off the domain's shell:
+  - |dt (D_on − D_off) − P_c| ≤ R_c, with P_c the probe's sum in call order, k_c its count, h₁ and h₂ the heat's two terms (dt D_off = h₁ + h₂), and R_c = 2 u [(2 k_c + 2)(Σ_i |t_i| + |h₁| + |h₂|) + 5 (|dt D_on| + |dt D_off|)];
+  - where k_c is 0, D_on equals D_off bit for bit;
+  - in the shell, D is 0 on and off (kernels.js 1688; flamescapes.js 2741).
+- **Reason for R_c.** The GPU forms dt D_on in float32 as the burner's terms, plus h₁ (`expandBefore`, kernels.js 1683), plus the later sources' terms, plus h₂, then divides by dt (`expandEnd`, 1689); dt D_off as h₁ + h₂, then divided. The bound counts one rounding a sum, the division's 2.5 ULP, and the probe's own sum. The factor 2 is (e)1's.
+- **What it catches,** each at the size of a term or more: D not cleared at the step's start (flamescapesGpu.js 649: the last step's asked divergence stays, up to 16 /s in the pilot cell); `expandBefore` overwriting the burner's terms; the flag not set (flamescapesGpu.js 427); a term in the wrong cell; a call missed or counted twice; a fault in the zones' path.
+
+**Together.** (e)1 tests the GPU's term against the CPU's from the same inputs, at every magnitude and on both branches of `lnOnePlus`. (e)3 tests that the GPU's D carries exactly the terms its own calls make. (e)2 tests that the item touches nothing else, on either path. A fault in the GPU port of the item fails one of them. They do not test that the CPU and the GPU make the same source masses from one state. That is the base's parity, which 13.32's and 16.13's rule judges with the item off, and the item adds no code to it.
+
+**Reported, not judged, beside them:**
+- the first attempt's (e)1 and (e)2 as 16.19 fixes them, run again on the second attempt's code;
+- from (e)2's states, per cell, the GPU's change of D against the CPU's (the first attempt's (e)1 comparison), with the cells where the base's two paths make different source masses listed, as 16.22's diagnosis lists them;
+- the GPU check's `design` phase with the item on (16.20, decision 4);
+- 16.18's porous cell in (vi)'s states from step 450: its T_s on each path, item on and off.
+
+**What a failure means.** (e)1: the GPU's term departs from the closed form. (e)2: the item writes outside D on a path, or a GPU step from one state does not repeat. (e)3: the GPU's D does not carry the terms its calls make. Each has a reference the method meets exactly, within the stated float32 bounds, so 13.25's decision 13 applies to it.
+
+#### 4. Checks (a) to (d) and (f) to (h)
+
+19. **(a), (b), (c), (d), (f) and (g), judged, and (h), reported, run as 16.19 fixes them,** with 16.20's decisions, on the second attempt's code. The method's physics did not change, so neither do they. Two readings follow from point 14:
+    - (d)4 reports `sourceShortfall` beside `sourceMoles` and `sourceVolume`;
+    - (f): with `sourceExpansion` 0 the stats carry no `sourceShortfall`, and with 1 and no source it is 0.
+20. **(i) is dropped** (point 17).
+21. **(j), added, reported and not judged:** the diagnosis tool's four runs (the pilot room and the design phase, item off and on) on the second attempt's code, beside point 1's figures.
+
+#### 5. Default
+
+As 16.19's "Default" and 16.20 set it. Off. R16 runs only if this attempt passes, in the order 16.20 fixes.
+
+#### 6. What ends this line
+
+22. If any judged check, (a) to (g), fails in any case, the second attempt fails. It is reported with its numbers and commit (13.12, rule 3). No tolerance moves, and nothing is fitted. (e)'s tolerances are fixed above, before any code of the redesign.
+23. 13.25's decision 13 applies to every check whose reference the method meets exactly: (a) to (d), (f), and now (e)1 to (e)3. A failure there is a fault of the code against the method. Corrected code, run again in full, is the same attempt, reported with both commits. A change to the method ends the attempt.
+24. **A failure that stands ends item 16 for Phase 0.** No third attempt is drafted before the papers. Sources keep losing their volume in open regions, a declared limit of every verdict and every app run, as 16.22 states.
+
+#### 7. The paper
+
+25. The paper discloses that check (e) was redesigned after the first attempt failed on it: the first design, its two failures and their diagnoses (16.22), the second design and why 13.12's rule 1 allowed it, and both results. It also discloses the pilot room's drop and its diagnosis, and that the logarithm's shortfall was first declared at its small-x size.
+
+#### Declared limits, added
+
+- The pilot room's heat release is not converged in its step, with the item on or off (point 9).
+- The design phase's door effect was not compared with FDS or with a measurement.
+- The gas phase's Arrhenius kinetics burn little of a strong pyrolysate at these temperatures, with the item on or off (point 10). That is outside this item.
+
+#### Not verified
+
+- FDS was not run; it is not installed here. Its behaviour is argued from its source.
+- Whether the machine's GPU meets WGSL's stated accuracy. (e)1 tests it.
+- Whether a GPU step from one state repeats bit for bit in scenes (i) to (v) and (vii). 16.22 found it in T at six onestep states. (e)2's pass 2 tests it.
+- Whether a probe can be added to the copy without touching more than its declarations and statements; the copy's diff shows it.
+- Scenes (v) and (vii) have not been run on the GPU; scene (vii), the pilot room, not at all on the GPU.
+- The design phase's door flows are read from the transport's start-of-step velocities with upwind densities, not from the transport's limited fluxes. They compare on with off; they are not a mass balance.
+
+#### Sources (read, or run for this draft)
+
+- This repository at d108f79: `flamescapes.js` 132 to 325, 396 to 540, 1217 to 1500 (`advect`, `transportGas`), 1653 to 1860 (`chemistry`), 2045 to 2100 (`moleChange`, `changeGas`), 2687 to 2760, 3216 to 3400 (`project`), 3415 to 3445 (`pilot`), 3484 to 3760 (the burner) and 3758 to 3827 (the stages, `step`); `flamescapesGpu/kernels.js` 640 to 700, 837 to 900, 1672 to 1700 and 1795 to 1802; `flamescapesGpu.js` 599 to 700 and 923 to 975; `flamescapesRun.js` 107 to 240 and 794 to 895; `tools/flamescapes-fingerprint.mjs`; `tools/flamescapes-gpu-check.mjs` 40 to 330, 400 to 445 and 615 to 655; `tools/source-expansion-check.mjs` 670 to 960.
+- FDS source at ff928db: `Source/wall.f90` 1395 to 1450, 2994 to 3010 and 3466 to 3478; `Source/fire.f90` 495 to 503; `Source/read.f90` 4570 to 4590, 4752 to 4762, 4776 to 4783, 4859 and 5025 to 5045. The commit's `Source` listing has no `pyro.f90`; the solid phase is in `wall.f90`.
+- W3C, WebGPU Shading Language (WGSL), 15.7.4.1, "Accuracy of Concrete Floating Point Expressions", read on 2026-11-15 at w3.org/TR/WGSL.
+- Run for this draft, at be8f8ea (some runs on the tool before its last edits, which changed only what it prints and whether the linear variant is compared): `tools/source-expansion-diagnose.mjs` on the pilot room and the design phase, item off and on; the pilot room with `--form linear` and with `--dt 0.05`; the design phase with `--form linear`. Each on the CPU, at most four at once, beside a materials study on the same machine. Earlier scratch scripts on the same kind of instrumented copy gave the same figures, and the few the tool does not print: point 2's kinetic rate, point 6's O₂ from 3.5 to 4.5 s, point 7's timing of the face clamps, and the stage tallies in the note below.
+
+### 16.25 The coordinator's decisions on 16.24 (2026-11-15, before any code of item 16's second attempt)
+
+The user gave their word for a second attempt at item 16 on 2026-11-15. The draft is the agent's. Each decision takes the draft's choice or the stricter reading.
+
+**Checked by the coordinator,** apart from the agent:
+- `tools/source-expansion-diagnose.mjs` was run again from be8f8ea on the pilot room, item off and on.
+- It gives 0.4881 and 0.0899 MJ, each equal to the branch's own solver.
+- The pilot cell's oxidation is 462.4 and 45.3 kJ.
+- From 10 to 30 s, with the item on, no face of the pilot cell brings gas in. D dt is 1.235 and 1.645. Off, it is 0.101 and 0.103, with air entering through four faces.
+- These are the draft's figures.
+
+1. **The drop is the item doing what FDS does.** It is not a defect, and the method's physics stands (points 13 and 16).
+   - The base's deletion of the displaced gas fed the pilot cell with air its own sources should have pushed back.
+   - The item stays off by default.
+2. **The second attempt rewrites check (e), and keeps the method.** 13.12's rule 1 allows a check to be rewritten where it computes its reference wrongly for the case it runs. 16.22's two diagnoses show that for both parts of (e):
+   - (e)1 took the CPU's term from the CPU's own source masses as the reference for the GPU's term from different ones;
+   - (e)2 took a state with another history as the reference for each item-on state.
+   - The rewrite is disclosed as written after a failure (point 25). The first design is run again and reported.
+   - No tolerance of any other check moves. Every tolerance of the new (e) is a closed form fixed here, before any code.
+3. **The tally `sourceShortfall`** (point 14) is taken. The corrected declared limit (point 15) replaces 16.19's.
+4. **Check (i) is dropped** (point 17). Item 15's first attempt failed (16.18).
+5. **What ends this line** (points 22 to 24) is taken as drafted.
+   - 13.25's decision 13 applies to the new (e)1 to (e)3, whose references are exact within their fixed float32 bounds, as it applies to (a) to (d) and (f). A corrected fault of the item's code is the same attempt, run again in full and reported with both commits.
+   - A fault of the check tool found after a judged run is disclosed beside both results, as 16.22 disclosed one.
+   - Two things end the attempt, and no tolerance moves for either:
+     - a failure of (e)2's second pass, the GPU's repeatability from one upload, since it is a property of the base, not a fault of the item;
+     - any failure that stands.
+6. **(e)1's error count was made by hand.** The builder checks it against the code before any judged run.
+   - If it finds an operation the count leaves out, it reports it to the coordinator before running.
+   - The coordinator then fixes the corrected bound here, dated, before the run.
+   - No bound is changed after a judged run.
+7. **Findings outside the item, recorded here and not acted on now.**
+   - **The gas phase burns little of a strong pyrolysate** at these temperatures, with the item on or off (point 10). FDS's default mixing-controlled combustion would burn it where it meets air.
+     - With item 16 on, a contents fire therefore loses the air its surface oxidation drew in, and gains little from its vapour.
+     - So no default change of item 16 is proposed before the gas phase's treatment of the pyrolysate is examined. That is a candidate for its own item, drafted blind first.
+   - **The pilot room's heat release halves when the step halves** (0.4881 to 0.2507 MJ, item off; point 9). The base's O₂-capped surface oxidation, fed by the inflow of each step, depends on the step.
+     - The fingerprint tool's pilot room is a test of the solver, not a fire.
+     - The study's furniture heat released is read as indicative, as 17's scope already reads a contents fire's growth.
+   - **Carrying the sources' whole volume** (the linear form, Δn/n, which the drafter sketched as exact in the solver's discrete scheme) is a candidate for a later item. It is not part of this attempt (16.20, decision 2).
+8. **The build** is on a new branch, `flamescapes/source-expansion-2`, from be8f8ea, in the worktree of the first attempt. R16 runs only if every judged check passes, in the order 16.20 fixes.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
