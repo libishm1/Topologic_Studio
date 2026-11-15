@@ -4808,6 +4808,108 @@ The draft is the agent's, written blind. It saw a listing of file names in the w
 
 Item 15 alone touches no validation run, because the suite gives every run empty contents. It is judged by its checks and by the study.
 
+
+### 16.21 Item 14: the build's checks (2026-11-15, 18:15)
+
+Item 14 was built as 16.14 and the coordinator's decisions in 16.15 fixed it, on branch `flamescapes/burner-rays` from item 12's 1dd890a, in three commits:
+- 3d5d3ac: the item, off by default;
+- 65ce26d: the suite's `--flame-radiant-once`, and the ledger's tallies;
+- 385dbec: the check tool, `tools/flame-radiant-once-check.mjs`.
+
+**One attempt, no fault of the code found.** The tool ran in full once, at 385dbec. Nothing was corrected, and nothing was run again for a correction. The method, the seed, the steps and the tolerances are 16.14's.
+
+**Item 14 passes its checks (a) to (g), and (h) with both defaults at 1.** With item 14's default alone at 1, one wall-clock test of the sprinklers failed in each of three runs of the unit suite under load. The switch cannot reach that test; the failure is reported under (h), and the coordinator judges it. The tool judged 282 lines and none failed; it reported 44 more. Each of (a) to (f) ran twice: with item 14 alone, its reference off being nothing set, and with items 12 and 14 together, its reference off being item 12 alone. The box has 16 cases: two fuels, two temperatures, two soot levels and two cells, 200 steps each.
+
+- **(a) The silence.**
+  1. In every step of every case, in both settings, the stamped cells are the 12 flame cells and no other: 200 of 200 steps, 12 stamped each time.
+  2. Through `radiationStage` no flame cell's T, Y or ρ moved, no solid's T_s moved, and `stats.radiated` did not move, in any step.
+  3. `flameSilenced` rises by the flame's Eq. 17 sum within 1.94 × 10⁻¹⁴ of it at worst, against 10⁻¹². From the same state with the item off, `stats.radiated` rises by the same sum within 1.68 × 10⁻¹³ at worst. The sum runs from 1043 J a step (0.20 m, F2, 800 K, Y_s 10⁻³) to 65 797 J a step (0.34 m, 1200 K, Y_s 10⁻²).
+- **(b) The flame's radiant output is χ_r Q.**
+  - The output less χ_r burnt (3000 J a step) is at worst 6.87 × 10⁻³ J, and at worst 0.942 of its bound. The bound, the flame's ½ u(T) ρ c_p V plus 10⁻¹² burnt, is 1.30 × 10⁻³ to 1.79 × 10⁻³ J on 0.20 m and 6.31 × 10⁻³ to 8.57 × 10⁻³ J on 0.34 m.
+  - The 12 flame cells start each step in one state and take one share, so they round alike. That is why the deviation comes near its bound.
+  - `b.rayFate` holds 0 J in stamped cells in every step, exactly. Its other three parts sum to χ_r burnt with no difference at all, against 10⁻⁹.
+- **Beside (b), reported: the double count in the box, with the item off.** The flame's output exceeds χ_r burnt by 0.28 to 13.2 times χ_r burnt with neither item, and by 0.33 to 13.5 times with item 12 alone.
+  - With neither item, on 0.20 m, F1, 800 K, Y_s 10⁻³, a step's output exceeds 3000 J by 1070 J. That is the flame's Eq. 17 emission, 1349 J, less what its soot took of the burner's rays, 186 J, less what its own soot took back of its emission, 93 J.
+  - With the item on, the same case gives `flameSilenced` 1325 J and `flameCleared` 186 J a step.
+  - With item 12 alone the flame's soot takes 0 J of the burner's rays, as item 12's point 6 says.
+  - The largest, 13.5 times, is 0.34 m, 1200 K, Y_s 10⁻² with item 12 alone: Eq. 17 gives 65 797 J a step, against 3000 J cast.
+- **(c) The flame is clear, bit for bit.** In every step of every case, in both settings, every solid's T_s after `burnerStep` with the item on and F1 or F2 is that of the same case with the item off, F1₀ or F2₀ and Y_s 0. No value differs.
+- **(d) Energy closes.**
+  1. In every step of every case, on and off, in both settings, the imbalance is within its bound: at worst 0.060 of it on with item 14 alone, 0.052 on with both, and 0.025 and 0.038 off. The bound is dominated by the solids: 17 writes of ½ u(T) C for each solid a ray reached, about 0.26 J a write on 0.20 m stone near 293 K.
+  2. The open side, F1, 1200 K, Y_s 10⁻², item on: `burnerRadiatedOut` is 0.1184 of the radiant output with item 14 alone and 0.1356 with both, on both cells, above 0. The worst step's imbalance is 0.062 of its bound.
+- **(e) A soot-free burner and the design fire are unchanged.**
+  1. 13.19 (f)'s room with the flame and plain methane, 300 full steps, 7600 cells: on and off agree in every field and every stats entry, bit for bit, the new tallies aside, in both settings. `flameSilenced` and `flameCleared` read 0. `burnerRadiatedOut` reads 15 000 J of 900 000 J radiant with item 14 alone (no such tally off), and 19 312.5 J on and off with item 12.
+  2. The fingerprint tool's design-fire room, 300 steps on the CPU: 29793d1a on and off, in both settings. Its burner has a radiant fraction of 0, and the item makes no record for it. `supported` returns true on and off.
+- **(f) A sooty burner with the flow.** The same room, class A's fuel, 120 s, 1200 steps, every one with 12 stamped cells.
+  - In none of the 14 400 stamped-cell steps was a stamped cell's T lowered in the radiation stage. In each, T after the stage is T before plus the stage's deposit there, bit for bit in float32. 8996 of them with item 14 alone, and 8825 with both, took a deposit from other cells' rays, as the declared limit says.
+  - `flameSilenced` rises by the stamped cells' would-be Eq. 17 emission within 1.20 × 10⁻¹³ (alone) and 1.31 × 10⁻¹³ (both) of it, against 10⁻¹².
+  - `b.rayFate` holds 0 J in stamped cells in every step. No ray ended its crossings in a stamped cell.
+  - Its parts sum to the radiant output within 6.25 × 10⁻¹⁴ of it, against 10⁻⁹.
+  - Reported: over the run `flameSilenced` is 0.0250 of χ_r Q and `flameCleared` 0.0182 with item 14 alone, and 0.0239 and 0.0224 with both. χ_r Q is 3600 kJ.
+  - Reported, 13.15's ledger at 120 s (MJ), on then off: released 12 in all four runs. With item 14 alone, `radiated` 0.0396 and 0.1247, gas 1.2875 and 1.2635, walls 6.2164 and 6.2040, shell 2.8656 and 2.9177. With both, `radiated` 0.0375 and 0.1252, gas 1.2823 and 1.2787, walls 6.1597 and 6.2281, shell 2.9351 and 2.8597.
+- **(g) Off is off.**
+  - With `flameRadiantOnce` 0 the fingerprints are the base's, d62b581d and 29793d1a.
+  - The unit suite at 385dbec, item 14 off, passes 537 of 537 with one worker, as the base does (537 of 537 at 1dd890a, 16.13). An earlier run with two workers beside the check tool and a GPU check passed 536: the failure was "200 heads and 1000 obstructions", a 100 ms wall-clock limit (the obstructions added 109.9 ms). That test imports `sprinklers.js`, `spaceFloors.js`, `codeCheck.js` and `route.js`, none of which item 14 changed.
+  - `tools/flamescapes-gpu-check.mjs`, all fourteen phases, 3920 s, item 14 off, compared leaf by leaf with item 12's runs of its base (two) and of its branch with item 12 off (one), with the 93 timing leaves set apart (4877 others). The GPU code at 1dd890a is that base's, and the CPU side at 1dd890a with its switches off is bit for bit that base's. This run differs from the two base runs in 47 and 48 leaves, which differ from each other in 47. Every one of these lies on the GPU side, in the same seven runs as in 16.13: design 0 and 1, sprinklers 2 to 4, and the systems phase's runs 3 and 4. Every CPU-side leaf agrees bit for bit.
+  - The two leaves outside the base pair's own differences are 16.13's: the GPU's peak and tenth-second heat release of systems run 4, 396.0553. That is the value of item 12's branch run, and it lies among the unchanged base's own values, 395.921, 396.0556 and 396.1415 (16.13, "Checked by the coordinator").
+  - 16.10 (i)'s validation burner with class A's fuel, 300 full steps: every field and every one of its 18 stats entries is bit for bit the base's (1dd890a, read from git). With item 12 on and this item off, every field and every one of its 21 stats entries is bit for bit item 12 alone at 1dd890a.
+  - `supported`, read from its source at 385dbec and at 1dd890a, returns what the base's returns with the switch at 0: false for a validation burner, true for the design fire, and true for a design-fire burner given a radiant fraction of 0.2. With the switch at 1 it returns false, true and false.
+  - Item 12's check tool at 385dbec, item 14 off: 116 judged lines pass and none fails; 58 are reported. Every judged line is the same as at 1dd890a, figure for figure. The one reported line that changed says that `flamescapesGpu.js` differs from its base, by the guard of point 7.
+  - Lint passes.
+- **(h) The unit suite with the default set to 1,** on copies of 385dbec. No test was edited.
+  - With both defaults at 1, items 12 and 14: 537 of 537, with one worker.
+  - With item 14's default alone at 1: 536 of 537 in each of three runs, two with one worker and one with four. The one failure each time is "200 heads and 1000 obstructions", its 100 ms wall-clock limit (the obstructions added 129.3, 175.2 and 105.5 ms). It is the test that failed with the switch off in (g) under the same load, and the first run with both defaults at 1 failed it too (150.2 ms). It imports none of the files item 14 changed, and each test file runs in a process of its own, so the switch cannot reach it. Its file alone, on that copy, passed 9 of 9 in three runs of four.
+  - Every other test passed in every run.
+- **(i) Speed, reported and not judged.** Every figure was measured on a loaded machine: a study ran 8 workers, and a GPU check and the smoke runs ran beside these.
+  - (f)'s run, 1200 steps, item 14 alone: the radiation stage 0.535 ms a step on and 0.719 off; `burnerStep` 0.097 ms on and 0.089 off; the whole step 26.28 ms on and 26.44 off.
+  - The same with both items, against item 12 alone: the radiation stage 0.603 and 0.923 ms; `burnerStep` 0.193 and 0.273 ms; the whole step 30.36 and 34.51 ms.
+  - Steckler test 14 on 0.27 m, its full 300 s, as the suite builds it: 19.9 s of wall time off, 19.2 s with item 14 alone, 19.8 s with both.
+  - NIST/NRC test 3 on 0.27 m, 30 s: 69.0 s off, 77.1 s with item 14 alone, 73.6 s with both.
+  - With 0, the fingerprint tool's ms a step, the pilot room then the design fire, two runs each: the base 90.06 and 77.62, then 86.26 and 78.52; the branch 87.62 and 79.00, then 90.08 and 77.60.
+
+**The smoke runs** of the suite: NIST/NRC test 3 on 0.34 m with 13.B's flags, one job each, at 385dbec. Its fuel is heptane with a soot yield of 0.0149, and its burner's radiant fraction is 0.44. Each finished its 600 s with its health guard passed. The settings record the switches, and each run's solver options carry them. The ledger at 600 s, in MJ:
+- Item 14 alone, 1102 s of wall time: released 544.425, radiated 162.1247, `flameSilenced` 3.86989, `flameCleared` 6.17936, `burnerRadiatedOut` 0.2739, gas 64.6716, walls 381.7959, shell 85.5944. The burner's radiant output is 239.547 MJ. So the flame's cells would have emitted 1.6 % of it by Eq. 17, and their soot would have taken 2.6 % of the burner's rays.
+- Items 12 and 14, 1104.5 s of wall time: released 544.425, radiated 92.4956, `flameSilenced` 3.80656, `flameCleared` 8.90391, `burnerRadiatedOut` 0.2833, gas 65.6786, walls 380.7549, shell 86.1133; 186 880 burner rays and 3 089 650 crossings. Of the same 239.547 MJ, the flame's cells would have emitted 1.6 % by Eq. 17, and their soot would have taken 3.7 % of item 12's rays.
+
+**Departures, as built.** None changes an output with the item off.
+- The stamp is item 12's array, on `sim.burner.flame`. Its mark counts the burner's steps from 1, as item 12's does, not `sim.steps + 1`. With item 12 on, item 14 uses item 12's record and mark. Without it, item 14 makes the same record with no list of cells and moves the mark on itself. The record also keeps the step its mark was set in, and the radiation stage reads the stamp only when that step is `sim.steps`, so a stale mark is never read.
+- Without item 12, the burner's rays are cast by `axisRaysClear`, a copy of the present loop, and marched by `burnerMarch`. They start in the axis cell at the fractions (0.5, 0.5, 0.5), which gives `march`'s start bit for bit. They stop at `rayReach`, skip the axis cell (`from`) and deposit at once. The present loop in `burnerStep` is unchanged and runs when the item is off.
+- `burnerMarch` now serves both items. It gains `from` (none with item 12) and `fate`, and with no deferred arrays it deposits at once, as `march` does. With item 14 off, item 12's path gives what it gave at 1dd890a: (g), and item 12's tool.
+- The shadow behind `flameCleared` skips the cell the ray starts in: the axis cell without item 12, which is its `from`, and the drawn flame cell with item 12. 16.14 says "every gas cell it crosses but `from`"; item 12's rays have no `from`, and `march` skips the cell that casts a ray.
+- `b.rayFate` also keeps `cleared`, and `stampedEnds`, the rays whose remainder ended in a stamped cell.
+- The tallies are stats entries only with the switch on, as item 12's are. The ledger gives `flameSilenced` and `flameCleared` in MJ to six significant figures, as item 11's tallies, and `burnerRadiatedOut` to four places, as item 12's.
+- The tool is `tools/flame-radiant-once-check.mjs`, by the coordinator's brief, not 16.14's `tools/flame-radiant-check.mjs`.
+- (f)'s "changes its T in radiation" is read as point 3's "its T is not lowered". A stamped cell takes other cells' rays as before (point 5 and the declared limit). The tool checks that T after the stage is T before plus the stage's own deposit there, bit for bit, and that `flameSilenced` takes the would-be emission.
+- (f) is read between the stages through `sim.profile`, an object read after each stage. No solver code was added for it. Its timings come from separate runs without that hook.
+- (a)3's reading with the item off is made on a second solver with the switch off, given the first's state after `burnerStep`.
+- (d)1's k is 16.14's: 3 for every gas cell written and 17 for every solid written. With neither item on, a sooty flame cell can take up to 16 more writes, from the burner's rays at once. The bound keeps k at 3; the solids' term dominates it by two orders. The cells written are those whose stored T, T_s or ρ changed in the step, and every flame cell.
+- 16.14 fixed neither (e)'s door's place nor its open cells. The room is 15 × 12 × 15 inner cells, with walls and floor two cells thick of stone. The door is 4 cells wide and 10 high at inner k 5 to 8. Beyond it are 6 open columns reaching the grid's x-high, z and top sides. The room's 15 cells have no middle pair, so the flame stands on columns 6 and 7, its centre half a cell from the room's. (e) and (f) take full steps of 0.1 s with no substeps, as item 12's (i) does.
+- (g)'s scene is item 12's (i): inner cell (3, 0, 3), 20 kW held, a closed box, here with class A's fuel.
+- (i)'s suite runs record no step count, so their cost is given as wall time. Steckler test 14 ran its full 300 s, as in 16.13: the suite stops a Steckler run with no readings before 200 s.
+- The unit suite ran as `node --test "src/core/*.test.mjs"`, the command `npm test` runs, with its concurrency held below the brief's four (two, then one) while a GPU check, the check tool and the smoke runs ran beside it, beside the study's 8 workers. The last run of (h) used four.
+- The GPU check ran once, with item 14 off, and was compared with item 12's three runs of 16.13 rather than with new runs of the base. Its GPU code is theirs; only `supported` changed, and with the switch at 0 it returns what theirs returns ((g)).
+- (h) ran on copies of 385dbec whose `DEFAULTS` set the switches, so no edited default was ever in the worktree.
+- The two smoke runs ran at the same time, not one after the other.
+
+**Not verified.**
+- The item's effect in any validation run, beyond the smoke runs and (i)'s timing runs. Those were checks of the flag, the ledger and the cost, not results.
+- The item's cost apart from load.
+- That a design-fire run on the GPU is bit for bit the same on and off. `supported` returns true on and off, and the GPU reads the switch nowhere else, but the GPU's runs differ between runs of the same code.
+- A burner with no rays and a radiant fraction above 0. No caller makes one, and no check builds one.
+- A ray ending its crossings in a stamped cell. No case of (f) had one.
+- The size of the double count in the rerun. `flameSilenced` and `flameCleared` report it there.
+- The GPU check with the switch at 1. It ran with the switch at 0 only.
+- That the GPU's sprinklers, design and systems results with the item off are drawn from the base's spread beyond the runs compared: one run of this branch against two of the base, and the base's later values of systems run 4 from 16.13.
+
+**Checked by the coordinator** (2026-11-15), apart from the agent:
+- **The check tool,** run again from 385dbec: 282 PASS, 0 FAIL and 44 reported, as in the agent's run.
+- **Check (h) with item 14's default alone at 1.** One unit test failed in each run: "200 heads and 1000 obstructions", a wall-clock limit of 100 ms.
+  - That test imports only `sprinklers.js`, which imports only `codeCheck.js` and `spaceFloors.js`. No path reaches the solver, so item 14's switch cannot change it.
+  - It failed in 5 of 7 full runs under this machine's load, the item off included, and in 1 of 11 runs of its file alone.
+  - So (h) is read as passed: every test the switch can reach passes. No test was edited (13.21, decision 9). The test should be run again on a quiet machine before any default changes.
+
+**Item 14 passes its checks (a) to (h).** Its switch is off by default. R14 and R12+14 run as 16.20 orders them.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
