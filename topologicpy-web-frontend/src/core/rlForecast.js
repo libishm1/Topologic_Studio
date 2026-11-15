@@ -24,8 +24,8 @@
  *     closes when the sooner of the link's two ends closes. The drawn route
  *     keeps the real nodes only. On the RL study's nine buildings, with a
  *     Flamescapes fire, this found as many escapes as splitting at the median
- *     link at the page's 200 moves, and more at 400, with about 2% more nodes
- *     instead of 140% to 230%; the longest-link clock found 31% fewer
+ *     link, at 200 moves and at 400, with about 2% more nodes instead of
+ *     about 145%; the longest-link clock found 31% fewer
  *     (tools/rl-flamescapes.mjs --clock).
  *   "longest": L the longest open link, no splitting.
  * tau is raised by a relative 1e-9 (STEP_SLACK) so that rounding in the
