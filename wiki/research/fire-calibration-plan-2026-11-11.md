@@ -3900,3 +3900,15 @@ The analysis is descriptive. For each factor it reports the median change in the
 ### 17.6 Timber
 
 Softwood is thermal only unless item 13 passes its checks (16.11, 16.12). If it does, softwood's rows run again with item 13 on and are reported apart. The paper then says that a timber lining ignites and adds fuel by a method checked against closed forms, and that flame spread is not validated.
+
+### 17.7 The linings' build-ups (2026-11-15, after the table was checked at 8442efd, before any study run)
+
+17.2 names each lining but not its thickness or backing. Both are fixed here, before any study run. Each is a lining's common thickness, and none comes from a result.
+- **Walls, ceilings and roofs:** the lining on each exposed face over concrete, to 0.25 m in all: [lining t, concrete 0.25 − 2t, lining t].
+  - t is 12.5 mm for gypsum board, 102.5 mm for brick, 10 mm for glass, 3 mm for steel and 18 mm for softwood.
+  - Concrete is one homogeneous layer of 0.25 m.
+- **Floors:** concrete, 0.25 m, in every run.
+- **Stairs, obstacles and doors:** stone, as the app has them. A closed door is solid and an open one is left out (17.2).
+- **The building's fire:** in the space named "Atrium hall", at its plan centre, under the void.
+- **The lining table** is the one checked at 8442efd: brick, glass's specific heat, softwood and mineral wool were changed to sourced values.
+- **Instability:** if a thin layer (steel at 3 mm) makes a run fail the health guard, the run is reported as stopped, as 12.6 counts one. The thickness does not change.
