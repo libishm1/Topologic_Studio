@@ -5759,6 +5759,353 @@ The user gave their word for a second attempt at item 16 on 2026-11-15. The draf
    - **Carrying the sources' whole volume** (the linear form, Δn/n, which the drafter sketched as exact in the solver's discrete scheme) is a candidate for a later item. It is not part of this attempt (16.20, decision 2).
 8. **The build** is on a new branch, `flamescapes/source-expansion-2`, from be8f8ea, in the worktree of the first attempt. R16 runs only if every judged check passes, in the order 16.20 fixes.
 
+
+### 16.26 Item 17: conduction leaves a nearly burnt-out porous cell at the temperature of the last body it meets, and the GPU meets them in another order (2026-11-15, before any code or run of it)
+
+Drafted blind to every validation result, as 13.12 sets. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at 12d47f5, whose `src` equals main's be32e34 (`git diff be32e34 12d47f5 -- topologicpy-web-frontend/src` is empty). The figures called "the trace" come from the unchanged solver at 12d47f5, run for this draft on the GPU check's onestep scene (`tools/flamescapes-gpu-check.mjs`, its `appScene` with `bare` options: radiation and particles off) in Node and in headless Chrome, its stages called one by one from a scratch copy of `src/core` that only adds exports (the stage list, `conduct` and `solidCapacity`). The figures called "the model" come from float64 models of the conduction stage written for this draft, which import the solver's `exchange`, `mixtureCp` and `solidCapacity` and change nothing. None is a fire result or a validation result.
+
+**What the drafter read that reports results, declared as 13.26's coordinator note declares it.**
+- The plan's headings, sections 1 to 17.
+- 13.12; 13.25 with the coordinator's decisions on 13.25 and 13.26, which state that the coordinator had read 13.A and 13.B and which way item 11 leans; 13.32, which reports item 10's checks; 16.8.
+- 16.16 and 16.18. 16.18 reports item 15's checks, the closure figures of heat-closure's `contents` case, the bench's ms a step and released energies, and finding 2's net size in the app's design fire, a loss of 3.21 % of the heat released.
+- 16.19, as a model of form.
+- The coordinator's brief, which quotes 16.18's finding.
+- The output of item 15's check tool, part dx (its saved run at a7706de).
+- The one-line titles of the branch's last three commits. They report that item 13 passes its checks, that item 16's first attempt fails check (e), and that item 15 fails (d)2 and (g), with finding 2's net loss of 3.21 %.
+- A session note that states items 10 and 11 gave no calibration gain and that their defaults stay off.
+- Comments in the solver and the tools that quote earlier results of the port, the transport and the sprinklers. One of them (`flamescapesGpu/kernels.js` 35 to 38) describes this defect's mechanism: "the last face wins".
+- Not opened: 16.14, 16.15, 16.17, 16.20 to 16.23 beyond their headings, section 17 beyond its headings, any file in `benchmark/results/`, every result file of the calibration runs, the rerun outputs, and the other files of item 15's output folder.
+
+The item was conceived after a result was read: 16.18's part dx found the defect. So its checks are closed forms only: a body's heat balance in closed form, conservation, bounds, symmetry, parity and bit-identity. No measured datum enters any of them.
+
+#### What the solver does now
+
+**The stage.** `conduct` runs after `chemistry` in every step (`flamescapes.js` STAGES, 3679 and 3683). It is a set of two-body exchanges. Each is solved exactly by `exchange` (318 to 323): over dt the two bodies relax towards their capacity-weighted mean by the factor 1 − exp(−G dt/μ), with μ = C_a C_b/(C_a + C_b).
+- **A porous cell's solid with its own gas** (2077 to 2084). G = convection × max(area, h²). `convection` is 200 W/(m² K) (DEFAULTS 131). A contents cell's area is 2h² (`contentsArea`, 270). The first item's is 1 m² (`itemArea`, 271), plus 2h² where its cell also holds contents. On the trace's 0.20 m cells: 16 W/K for a contents cell, 216 W/K for the first item.
+- **A solid's face to a gas cell** (2085 to 2098). G = convection × h² for a porous cell, `wallConvection` × h² for a lumped solid (10 W/(m² K), 141).
+- **A pair of non-gas cells** (2099 to 2105). G = k̄ h, with k̄ = ½ (max(k_c, 0.1) + max(k_n, 0.1)).
+- One-dimensional walls take no part (2074, 2092).
+
+**The capacity that vanishes.** A porous cell holds no inert mass (`createSolver`, 406). Its solid's capacity is its surface layer's fuel and water (`solidCapacity`, 815 to 817): C_s = min(fuel, skinDensity × area) c_f + water × 4186. So C_s falls with the fuel, to about 2 × 10⁻⁴ J/K at the last 10⁻⁷ kg (wood's c_f, 2000 J/(kg K)). The cell turns gas only below that (`chemistry`, 1785 to 1790). Its conductances do not fall. Once C_s is below S dt, S the sum of its conductances, each exchange settles it close to the other body's temperature. On 0.20 m cells that is below 0.011 kg of fuel for the first item, and below about 1 to 3 g for a contents cell.
+
+**The CPU's order** (2069 to 2110). It visits cells in index order, i fastest. Each cell meets its own gas, then its +x, +y and +z faces (gas, or a non-gas cell of higher index), then its −x, −y and −z faces where they are gas (DIRS, 630 to 637; 2088). A pair is solved in the turn of its lower cell. So a porous cell c meets, in this order:
+1. its −z, −y and −x non-gas neighbours, in those cells' turns;
+2. its own gas;
+3. its +x, +y and +z faces;
+4. its −x, −y and −z gas faces.
+
+**The GPU's order** (`flamescapesGpu.js` 62 and 712; `kernels.js` 2330 to 2385, passes made at 484 to 502). Ten passes: every porous cell's own gas (`conductPorous`); then on each axis the +axis faces of cells of even coordinate, then of odd (`conduct_x0` to `conduct_z1`); then the −x, −y and −z gas faces (`conduct_bx` to `conduct_bz`). So a porous cell meets its own gas first. On each axis it meets −a then +a where its coordinate is odd, +a then −a where it is even.
+
+**The port's stated order is not the CPU's.** `kernels.js` 28 to 38 says each cell meets "its own gas (porous cells), then its +x, +y and +z faces". That misses step 1 of the CPU's order: a cell's pairs with its lower neighbours come before its own gas. And on an axis where the cell's coordinate is even, the GPU reverses the CPU's −a, +a.
+
+**No fixed set of passes can follow the CPU's order.** A pair (c, c + e_a) follows c's own gas and precedes c + e_a's. Along a run of non-gas cells each pair waits for the one before it. A run of n cells needs of the order of n passes.
+
+**Where the paths part, traced.** 16.18's state was reproduced from item 15's commit a7706de (read only, in a scratch copy): the item-on run of the onestep scene, the state after 450 steps. The cell is 8974, (15, 3, 13) on a grid of 31 × 22 × 26 cells of 0.20 m: the first item, area 1.08 m², with 1.296 × 10⁻⁵ kg of fuel and no water, so C_s = 0.0259 J/K. After chemistry its solid is at 385.138 K and its gas at 336.880 K (8.51 J/K). Chemistry alone gives the two paths bit for bit alike, as 16.18 found. Its partners:
+- its own gas, 216 W/K;
+- the stone floor below (8943), 0.5 W/K, 17 280 J/K at 293.85 K;
+- four contents cells beside it (±x, ±z), 0.5 W/K each, 193.5 J/K at 329.0 to 331.4 K;
+- the contents cell above (9005), 0.26 W/K, 160.7 J/K at 911.94 K;
+- no gas face.
+
+Each pair of 0.5 W/K moves the cell's solid 85 % of the way to the other body (G dt/C_s = 1.93); the pair above moves it 63 %. The trace, exchange by exchange:
+- CPU: −z 337.84; −y (floor) 300.24; −x 325.04; own gas 336.84; +x 330.16; +y (911.9 K) 698.54; +z 384.78 K.
+- GPU: own gas 337.03; −x 330.41; +x 329.20; −y (floor) 298.99; +y (911.9 K) 685.36; −z 381.49; +z 338.62 K.
+
+These are 16.18's 384.8 K and 338.6 K to the last digit. On the CPU the hot cell above comes second to last, so the cell keeps about 385 K step after step: a fixed point of the order, not of the cell's balance. On the GPU two cells near 330 K come last.
+
+**The same in the base, item 15 absent.** The first item burns out in the 427th step. In its last steps, one full step from the same state on each path gives the item's solid:
+
+| From the state after | Fuel (kg) | C_s (J/K) | CPU (K) | GPU (K) | Difference (K) |
+|---|---|---|---|---|---|
+| 418 steps | 8.72 × 10⁻³ | 17.4 | 1144.75 | 1143.68 | 1.07 |
+| 420 | 5.41 × 10⁻³ | 10.8 | 1193.37 | 1191.08 | 2.29 |
+| 422 | 2.65 × 10⁻³ | 5.31 | 1260.48 | 1254.03 | 6.45 |
+| 424 | 7.54 × 10⁻⁴ | 1.51 | 1300.04 | 1269.62 | 30.4 |
+| 425 | 2.93 × 10⁻⁴ | 0.587 | 1145.25 | 978.07 | 167.2 |
+
+- Its gas differs by 5.9 to 74.3 K between the paths.
+- Every other cell's gas differs by at most 0.041 K. The item's pair partners' solids (8292, 8973) differ by up to 0.71 K, by the same mechanism.
+- The chemistry pass alone, from the same states, gives the item's T_s and T alike within two float32 steps.
+- The conduction stage alone, from the state before it, gives the whole step's difference.
+- The GPU's ten passes, emulated in float64 in their order, give the GPU's result within 1.2 × 10⁻⁴ K at every traced state.
+
+So the paths part in `conduct`, at 2069 to 2110 against `kernels.js` 2330 to 2385, and only by the order of the exchanges. The floors and guards play no part here: no capacity is floored in `conduct`.
+
+#### Which path is right
+
+**The method is the cell's heat balance over the step:** C_s dT_s/dt = Σ_e G_e (T_e − T_s), over its own gas and its faces. The solver approximates it by exact two-body exchanges in sequence. That is exact for one pair, and first order in the step when a body has several. When C_s is below S dt it is no longer close: the result lies near the temperatures of the last bodies met.
+
+**The closed form.** With the partners held over the step: T_s(dt) = T* + (T_s,0 − T*) exp(−S dt/C_s), with S = Σ G_e and T* = Σ G_e T_e/S. In the found state S = 218.76 W/K and τ = C_s/S = 1.18 × 10⁻⁴ s, so exp(−S dt/C_s) = exp(−844) = 0 and T_s(dt) = T* = 337.40 K. The partners do move a little within the step. So two fuller references were computed:
+- **the star**: the cell with its seven partners at their full capacities, each coupled to the cell only, solved exactly by eigendecomposition: 338.82 K;
+- **the stage**: the whole conduction stage, every exchange as the CPU takes it, in 8000 sub-steps of dt/8000: 338.85 K. With 2000 it is 338.98 K; the star and the stage agree within 0.03 K.
+
+**In the found state the CPU departs and the GPU does not.** The CPU lands 45.9 K above the method; the GPU 0.2 K below. That is luck of the GPU's order, not the method. Across the traced states, the solid's T_s against the stage integrated exactly (the gas's in brackets):
+
+| State | Stage, exactly | CPU | GPU |
+|---|---|---|---|
+| Base, after 418 steps | 1146.05 (1138.34) | 1144.75 (1139.25) | 1143.68 (1145.20) |
+| Base, 422 | 1274.11 (1279.68) | 1260.48 (1279.21) | 1254.03 (1299.99) |
+| Base, 424 | 1395.68 (1406.02) | 1300.04 (1374.23) | 1269.62 (1448.55) |
+| Base, 425 | 1268.97 (1278.78) | 1145.25 (1312.33) | 978.07 (1337.12) |
+| Item 15 on, 450 | 338.85 (338.31) | 384.78 (336.84) | 338.62 (337.03) |
+| Item 15 on, 500 | 331.91 (331.31) | 383.32 (329.70) | 336.85 (329.88) |
+| Item 15 on, 590 | 326.62 (325.98) | 381.80 (324.30) | 334.72 (324.49) |
+| Base, 800, contents cell 9005 | 345.02 (349.74) | 351.10 (350.62) | 351.11 (350.64) |
+
+The last row is a contents cell lingering at 1.89 × 10⁻⁴ kg from about step 750 of the base. There both paths agree with each other and both depart by 6.1 K: they meet the same gas face last.
+
+So neither path is right in such a cell. Each lands near the temperature of the bodies it meets last, and the two orders differ. The GPU's port is wrong against the CPU's code. But the CPU's own order departs from the method by up to 124 K (base, 425) and 55 K (item 15's run, 590). So making the GPU follow the CPU would copy the CPU's departure into the GPU.
+
+#### The method
+
+Chosen: **every exchange that touches a porous cell is solved together, from the temperatures at the stage's start. Each body takes part in each of its exchanges with the share of its capacity that the exchange's conductance is of all its conductances, and each exchange is solved exactly between the two shares.** It is the exact solution of each body's own heat balance with its partners held, for any capacity (point 5). It follows no order of cells.
+
+Considered and set aside:
+- **A port fix: the GPU keeps the CPU's order.** No fixed set of passes can (above). And the CPU's order is the one that departs in the found state.
+- **The CPU takes the GPU's ten passes.** The paths would agree to round-off at no cost on the GPU, but the departure stays, with the GPU's winner: 291 K from the stage at base step 425.
+- **An order chosen by the physics: the own gas last, or first.** Still one body wins. In the model, own gas first departs by 291 K at base step 425 and 47 K at item 15's step 590; own gas last by 87 K at base step 424.
+- **A symmetric split: the own gas over half the step, the faces as chosen here, the own gas over the other half.** It is order-free and more accurate where the own gas dominates (table below), and second order in the step in ordinary cells. But in the limit it leaves the solid at its own gas's temperature, whatever its faces are. In contents cell 9005 at step 800 its T_s is 4.0 K from the stage, where the chosen rule's is 0.04 K. A contents cell between its own gas at 400 K (16 W/K) and one gas face at 900 K (8 W/K) would be held 167 K from T* (by hand). That is the present kind of departure with a fixed winner. It also needs two more passes. Left to the coordinator (note 1).
+- **The stage solved exactly** (sub-steps, a matrix exponential, an implicit solve). Each needs a count, a tolerance or an iteration. Each is a free constant and costs more.
+- **A cell whose time constant is below the step treated as holding no heat** (eliminated, its partners joined by G_i G_j/S). Exact in the limit, but it needs a threshold, a free constant.
+- **The rule for every exchange of the stage, walls included.** Every validation run would then change, by a little, and need a rerun. Kept to porous cells, every scene whose porous cells hold no heat stays bit for bit as now (check (f)).
+
+1. **Scope.** With `porousExchange` 1, "the porous exchanges" are those of `conduct` that touch a porous cell whose solid holds heat (C_s > 0, 815 to 817), and no one-dimensional wall:
+   - its solid with its own gas, G = convection × max(area, h²) (2080 to 2083);
+   - its solid with a gas neighbour, G = convection × h² (2086, 2094 to 2098);
+   - its solid with a porous or lumped solid neighbour of capacity > 0, G = k̄ h (2099 to 2105).
+
+   Every other exchange (a lumped solid's face to gas, a lumped solid with a lumped solid) is unchanged in form and in each path's order.
+2. **Bodies and shares.** A body is a cell's solid (T_s) or a cell's gas (T). Its capacity is the one the stage uses now: `solidCapacity` for a solid, ρ c_p,mix V for a gas (2080, 2095). For each body b, S_b = Σ G_e over the porous exchanges it takes part in. In exchange e between bodies a and b, a takes the share C_a (G_e/S_a), b the share C_b (G_e/S_b).
+3. **The exchanges, together.** From the temperatures at the stage's start, each porous exchange moves q_e = `exchange`(T_a, T_b, C_a G_e/S_a, C_b G_e/S_b, G_e, dt) from a to b. Then every body takes the sum of its exchanges over its whole capacity: T_a' = T_a − Σ q_e/C_a, T_b' = T_b + Σ q_e/C_b. No exchange reads a temperature another has written.
+4. **Then the rest.** The present loop (2069 to 2110) runs as now with every porous exchange skipped. On the GPU the nine face passes run as now with every porous exchange skipped.
+5. **Why it is the body's own balance.** If a body's partners were held, its balance C dT/dt = Σ_e G_e (T_e − T) has the closed form T* + (T − T*) exp(−S dt/C). Point 3 gives exactly this for any C. Each share C G_e/S relaxes towards its partner at the rate G_e/(C G_e/S) = S/C, the same for every share, and the shares sum back to the closed form. The partners are not held: each takes its own share of the same exchange, solved exactly. What a partner does within the step is first order in the step, as now.
+6. **Its closed forms.**
+   - **One exchange.** A body with one porous exchange takes all of its capacity into it (G/S = 1 exactly in floating point). An isolated pair is the present arithmetic, bit for bit.
+   - **Conservation.** `exchange` is odd in its two bodies, bit for bit, so what leaves one body enters the other.
+   - **Bounds.** T' = (1 − Σ λ_e) T + Σ λ_e T_e with 0 ≤ λ_e ≤ G_e/S. A body's new temperature lies between its own and its partners' at the stage's start.
+   - **The limit.** |T' − T*| ≤ Σ_e (G_e/S) |T − T_e| [a_e/(a_e + b_e) + exp(−S dt/C)], a_e and b_e the two shares of exchange e. As C → 0 this goes to 0, and T' → T*.
+   - **Order.** No body's result depends on the order of cells or passes.
+7. **On the CPU.**
+   - `DEFAULTS`: `porousExchange` 0.
+   - `conduct`: with 1, points 2 and 3 before the present loop, and the loop skips the porous exchanges.
+   - Arrays: the bodies' changes, two Float64Arrays of N, made only with the item on.
+   - Exports for the check tool, which no run calls: `conductionStage`, and the stage list (`STAGES`), read only.
+8. **On the GPU.**
+   - `PARAMS` gains `porousExchange` (u32), set where `surfaceRayStart` is set (`flamescapesGpu.js` 417).
+   - With 1 the host dispatches, in place of `conductPorous`: a copy of T and T_s (CF.T, CF.Ts) into a scratch; `conductShares`, in which each cell writes S for its solid and for its gas; `conductTogether`, in which each cell computes, from the copy and the S, every porous exchange it takes part in, in a fixed order of faces, and writes its own T_s and T.
+   - Both sides of an exchange compute the same q bit for bit (point 6), so no atomic is needed.
+   - The nine face passes (2377 to 2385) skip the porous exchanges when the uniform is 1.
+   - Scratch: 4N floats. The build names the buffer it uses.
+   - A validation burner stays on the CPU (`supported`, 1089 to 1094).
+9. **The hook.** `conductionPass` on the GPU's sim: the stage's passes alone, then `readFields`, as `chemistryPass` (16.18) and `radEmit` (13.25 (g)).
+10. **What stays exactly as now.** The two-body closed form (318 to 323); every conductance and capacity; one-dimensional walls; every other stage; the order of every exchange that touches no porous cell; every scene whose porous cells hold no heat.
+
+**The model's figures, against the stage integrated exactly.** The largest departure of any body, in K. "Item" is the chosen rule; "split" the symmetric split.
+
+| State | CPU | GPU | Item | Split |
+|---|---|---|---|---|
+| Base, after 100 steps | 0.042 | 0.036 | 0.052 | 0.003 |
+| Base, 300 | 0.170 | 0.172 | 0.106 | 0.006 |
+| Base, 418 | 1.30 | 6.87 | 5.37 | 0.69 |
+| Base, 422 | 13.6 | 20.3 | 16.4 | 4.87 |
+| Base, 424 | 95.6 | 126 | 35.5 | 16.0 |
+| Base, 425 | 124 | 291 | 58.7 | 18.3 |
+| Item 15 on, 450 | 45.9 | 1.29 | 1.31 | 1.70 |
+| Item 15 on, 590 | 55.2 | 8.10 | 1.51 | 1.98 |
+| Base, 800 (cell 9005) | 6.08 | 6.09 | 1.58 | 3.97 |
+
+- The item's solid T_s: 337.54 K in the found state, against the stage's 338.85 K and its own balance's T*, 337.40 K. At base step 425: 1325.4 K against 1269.0 K, its largest departure, in the first item's gas (point 5: the partners move).
+- The item's CPU order and GPU order of the remaining exchanges differ by at most 7 × 10⁻⁸ K; the present orders by up to 167 K.
+- Mirrored in x, y or z, the item gives the mirrored result within 1.6 × 10⁻⁷ K. The present CPU differs from its mirror by up to 58 K (the found state, mirrored in y); the present GPU by up to 0.06 K.
+- Every model's books (Σ C T over the bodies) close within 1.5 × 10⁻⁴ J of 1.23 × 10¹⁰ J.
+
+#### The switch
+
+`porousExchange`: 0 (default), as now; 1, the method.
+
+**It is not a pure port fix.**
+- No GPU change can make the GPU follow the CPU's order.
+- The CPU's order is itself the one that departs in the found state.
+- The method changes the CPU's arithmetic wherever a porous cell holds heat: every app scene with contents, on both paths. In ordinary cells it changes them at first order in the step, as any other order would.
+
+So the plan's rule for a physics change applies: off by default, behind a switch. With 0, `conduct` tests one flag a stage and the host dispatches the ten passes as now. The nine face passes test one uniform a thread, unless the build gives them pipelines of their own; the build reports which. Every output is bit-identical to the base (check (f)). With 1 and no porous cell holding heat, every output is bit-identical too. `RUN_CACHE_VERSION` (`runCache.js` 54, now 13) rises only with a default (13.25, decision 14), and a cached run's key carries the switch.
+
+The coordinator may read it otherwise: no constant enters, and its purpose is that the two paths compute one thing. That reading would still need the user's word before a default changed (13.25, decision 14). This draft recommends the switch.
+
+#### Cost
+
+- **With the item on, the CPU.** As many `exchange` calls as now. Per body, one sum of at most seven conductances. Per exchange, two multiplications and two divisions for the shares. Two Float64Arrays of N: 0.28 MB on the fingerprint rooms' 17 732 cells, 1.6 MB on Vienna's 101 304. Today `conduct` takes 1.65 and 2.10 ms of 66.5 and 75.9 ms a step in the fingerprint tool's two rooms (this machine, loaded).
+- **With the item on, the GPU.** One copy of 2N floats and two passes in place of `conductPorous`; the nine face passes as now. Scratch of 4N floats: 1.6 MB on Vienna's cells.
+- **With it off.** One flag test a stage on the CPU; one uniform a thread in nine passes on the GPU, or none.
+- **The app.** Every app scene with contents is affected on both paths. Check (h) reports the step's cost, Vienna on the web included.
+
+#### Checks (fixed now, before any run)
+
+All but (e)3, (f) and (g) run in a new tool, `tools/porous-exchange-check.mjs`. Cells of 0.20 and 0.34 m, dt 0.1 s, seed 1. No measured datum enters any check. Its scenes:
+- **The burnt-out scene.** A box of 7 × 6 × 7 cells whose outer layer is lumped stone (`INERT[0]`, no layers), inner cells i 1 to 5, j 1 to 4, k 1 to 5.
+  - Cell B = (3, 1, 3), on the floor, is the first item: porous, fuel kind 1, area `itemArea` + `contentsArea` h², fuel 1.296 × 10⁻⁵ kg of class A, no water.
+  - The cells at (2, 1, 3), (4, 1, 3), (3, 1, 2) and the cell above B, (3, 2, 3), are contents cells: fuel kind 0, area `contentsArea` h², 1 kg. Cell (3, 1, 4) is gas. Every other inner cell is gas.
+  - The porous cells of the floor layer take k = 2.5 W/(m K), as the app's first layer has it; the cell above B takes 0.
+  - At the start: stone at 293.85 K; the contents' solids at 330 K and their gas at 325 K; the cell above B, solid 912 K and gas 900 K; B's solid 385.14 K and gas 336.88 K; gas cell (3, 1, 4) at 400 K; every other gas cell at 325 K. Air at the gas law's density.
+- **The sweep.** The burnt-out scene with B's fuel at 1, 10⁻¹, 10⁻², 3 × 10⁻³, 10⁻³, 3 × 10⁻⁴, 10⁻⁴, 3 × 10⁻⁵, 10⁻⁵, 10⁻⁶ and 10⁻⁷ kg, and at 0 (porous, no fuel, no water). Then again with B a contents cell (fuel kind 0, area `contentsArea` h²).
+- **The isolated cell.** A grid of 3 × 3 × 3 porous cells. The centre holds 1.296 × 10⁻⁵ kg, then 1 kg, of class A fuel, area 1.08 m², its solid at 385.14 K and its gas at 336.88 K. The other 26 hold no fuel and no water, so the centre has no face exchange.
+- **The app's burn-out states.** The GPU check's onestep scene, stepped on the CPU with the item off, after 418, 420, 422, 424 and 425 steps. For a stage: the state that the stages before `conduct` leave.
+
+(a) **The stage against the method, on each path.** In every scene, from one state, one conduction stage with the item on (`conductionStage`; `conductionPass`).
+- The reference: the tool's own float64 transcription of points 2 to 4 (the closed form of 318 to 323 with the shares), the remaining exchanges in each path's order.
+- Pass, CPU: every body within 8 float32 steps of its temperature.
+- Pass, GPU: every body's change within max(10⁻³ |ΔT_ref|, 8 float32 steps) of the reference's change.
+- Reason. On the CPU the method stores each body once, and the remaining exchanges store it at most six more times. Each store rounds by half a step, and the exact exchanges after it do not amplify rounding (point 6, bounds). 8 covers 7. On the GPU the same closed forms run in float32 from the same inputs, about 10⁻⁶ relative. 10⁻³ keeps a margin of 1000, and the 8 steps cover a change near 0.
+
+(b) **Closed forms the method meets exactly** (CPU judged; the GPU with (a)'s GPU tolerance).
+1. **The isolated cell.** With the item on, every field bit-identical to the item off (point 6, one exchange). The centre's T_s and T equal the two-body closed form within 2 float32 steps.
+2. **The limit.** In the sweep, at every fuel mass, B's |T_s' − T*| is at most point 6's bound plus 4 float32 steps, T* and the bound from the stage's starting state. Reported beside, with the item off: B's |T_s' − T*| (the model: in item 15's state at step 450 with 10⁻⁷ kg, 331.4 K against T* 337.4 K).
+3. **No heat.** At fuel 0, B's T_s and T are bit-identical before and after the stage, on and off.
+4. **Bounds.** In the burnt-out scene and the sweep, B's T_s and T after the stage lie between the least and the greatest of B's own and its partners' temperatures at the stage's start, within 2 float32 steps. Reported beside, with the item off.
+
+(c) **Conservation.** In every scene, |Σ C T after − Σ C T before| ≤ R over the bodies, in float64 from the stored values. R = 10 × 2⁻²⁴ × Σ C T over the bodies the stage changed.
+- Reason: each exchange conserves bit for bit (point 6). Each store of a body moves the sum by at most 2⁻²⁴ of the heat it holds, and a body is stored at most 7 times: once by point 3, six times by the remaining exchanges. 10 covers 7, as 16.16 (a) set it.
+- Reported beside: the item off, and the GPU.
+
+(d) **Order.** The burnt-out scene, the sweep and the app's burn-out states, each mirrored in x, in y and in z (every field re-indexed): one stage on the mirrored state equals the mirror of one stage on the state, body by body. Pass: CPU within 8 float32 steps; GPU within (a)'s GPU tolerance. Reported beside, with the item off (the model: up to 58 K on the CPU).
+
+(e) **CPU against GPU.**
+1. **One stage.** In every scene, from one state, per body: |ΔT_GPU − ΔT_CPU| ≤ max(10⁻³ |ΔT_CPU|, 8 float32 steps). Reason: (a)'s.
+2. **One full step**, from the app's burn-out states, item on. B's |T_s,GPU − T_s,CPU| and |T_GPU − T_CPU| are each at most the larger of 8 float32 steps and twice the largest difference of any other cell after the same step (|T| over the open cells, |T_s| over the non-gas cells).
+   - Reason: with the item, B's new temperatures are convex combinations of their partners' (point 6), so a difference that other stages leave in the inputs does not grow through them. Twice is the margin.
+   - Reported beside, with the item off: 1.07 to 167.2 K for T_s (above).
+3. **Whole runs.** `tools/flamescapes-gpu-check.mjs` phases `agreement` and `onestep`, on a copy whose `DEFAULTS` set the switch. At every checkpoint the GPU's largest and 99th percentile of |ΔT| from the CPU, and onestep's largest |ΔT_s|, are at most twice the larger of: the same with the item off; the CPU's one-ulp twin's with the item on. Reason: 16.16's (d)2.
+
+(f) **Off is off.** With `porousExchange` 0:
+- `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's d62b581d and 29793d1a. They were run again for this draft at 12d47f5 and gave both.
+- The unit suite passes with the base's count, 537 at 27d52fe (16.18).
+- `tools/flamescapes-gpu-check.mjs`, all phases, against runs of the unchanged base, leaf by leaf by 13.32's rule:
+  - every leaf of the deterministic phases, and the CPU side of every phase, bit for bit;
+  - four base runs, made before the branch's (note 2);
+  - a GPU `runScene` result (one run of one phase) is nondeterministic if any of its leaves differs between two base runs. Its leaves are then reported with the base's range, not judged. Every other leaf is judged bit for bit;
+  - reason: in 16.18 a leaf held one value in three base runs inside a run whose other leaves varied (design run 0's flame p90). Nondeterminism belongs to a GPU run, through its atomics, not to a leaf.
+
+With `porousExchange` 1 and no porous cell holding heat, every field and every `stats` entry the base has are bit-identical, on each path that runs the scene:
+- heat-closure's `burner` case and its `porous` case (contents of no mass), 60 s on 0.20 m;
+- Steckler test 14 on 0.34 m through the suite, its full 300 s, every recorded output.
+
+With 1 and contents, the fingerprints differ, which is reported. The CPU is not bit-identical with the item on, since the method changes the CPU's arithmetic; the lines above take that place.
+
+(g) **The unit suite passes unbent** with the default set to 1 (a one-line change on a copy, not committed). A test that fails is not edited, and its failure is reported. Only a test whose reference is the present order itself may be rewritten, disclosed as written after a failure (13.25, decision 13).
+
+(h) **Speed, reported, not judged.**
+- `conduct`'s ms and a step's ms, on and off, from the fingerprint tool's profile.
+- `tools/backend-bench.mjs` on its room, Duplex, Office, Clinic and Vienna, CPU and GPU, on and off.
+- Vienna on the GPU in the browser with the item on: whether it reaches its horizon, and its ms a step.
+
+A failure of (a), (b) or (c) means the shares, the exchanges or their sum depart from points 2 and 3. A failure of (d) means an order remains. A failure of (e) means the port departs from the CPU. A failure of (f) or (g) means the item acts where it should not.
+
+#### Default
+
+Off. Passing (a) to (g) makes the switch available to the solver's options and to the harness.
+- No validation scene holds a porous cell with heat (below), so no verdict can move, and there is no rerun to report beside 13.B. (f) shows it bit for bit.
+- The item changes app runs and any study run with contents. The app's default changes only as 13.25's decision 14 sets: with the user's agreement, given with the step's cost (CPU, GPU, and Vienna in the browser) before it. `RUN_CACHE_VERSION` rises then.
+
+#### What ends this line
+
+If any check of (a) to (g) fails in any case, the attempt fails. It is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted (16.8). The method has no free constant: every number is the solver's own (`convection`, `wallConvection`, the conductivities, the capacities, dt).
+
+Checks (a), (b), (c), (d), (e)1 and (f) have references that the method meets exactly, bit for bit or within float32 storage. So a failure there is a fault of the code against the method, and 13.25's decision 13 applies: corrected code, run again in full, is the same attempt, reported with both commits. A change to the method ends the attempt. A failure of (e)2, (e)3 or (g) ends the attempt.
+
+If the line ends, conduction keeps its order. GPU runs whose contents burn out carry the defect as a declared limit (16.18). Every run with contents, on either path, carries the order's departure from the cell's balance, at the sizes above. No second attempt is drafted. It would need the user's word and a new method written here first.
+
+#### Whether the defect touches validation runs
+
+- **No validation run.** The suite builds every scene with no contents and no first item (`validation-suite.mjs` 289). The defect needs a porous cell whose solid holds little heat. Heat-closure's `porous` case draws its contents with no mass (`heat-closure.mjs` 167), so their C_s is 0 and they take no exchange, now or with the item. A validation burner runs on the CPU (`flamescapesGpu.js` `supported`, 1089 to 1094).
+- **App runs, on both paths.** Every app scene's contents are porous cells (`flamescapesRun.js` 160, 161, 224); with no design fire, so is the first item (`flamescapesRun.js` 227; `flamescapes.js` 428). Two effects follow:
+  - **GPU runs part from CPU runs** in every cell whose fuel falls below S dt/c_f: the first item's last steps, and any contents cell that burns down. In the base's onestep scene that was the first item from about step 418 and contents cell 9005, lingering from about step 750.
+  - **Both paths depart from the cell's balance** in those cells, by the sizes above. The study runs (section 17) run on the CPU, so they carry the CPU's departure and not the parting.
+- The energy at stake is small: a skin of C_s = 0.026 to 0.59 J/K in the traced states, and its gas of 3.6 to 8.5 J/K. A T_s held 50 K too warm can keep the last grams reacting. Neither effect's size in an app run was measured.
+
+#### Declared limits
+
+- **Partners at their start temperatures.** A body whose time constant C/S is below the step passes on at most its own capacity's worth of heat between its partners in a step. The stage integrated exactly passes on more. With the item, the first item's gas in its last steps ends up to 59 K from the stage (base step 425), against 124 K (CPU) and 291 K (GPU) now. Contents cell 9005 passes 1.6 K less to the gas above it.
+- **First order in the step, as now.** In the base's ordinary states the item departs from the stage by 0.05 and 0.11 K (steps 100 and 300), against 0.04 and 0.17 K now.
+- **The conductances do not scale with the skin.** A porous cell keeps its own gas's and its faces' full conductances to its last 10⁻⁷ kg. The item does not change that.
+- **The other exchanges keep each path's order.** Their bodies hold kilojoules a kelvin; the model's paths differ there by 7 × 10⁻⁸ K.
+- **One-dimensional walls** are unchanged.
+- **The GPU keeps no tallies.** The item adds none.
+
+#### Seen while tracing, outside this item
+
+1. **Burn-out's last heat.** In the base's 427th step the first item's last 2.93 × 10⁻⁴ kg oxidised in one chemistry call. Its heat, 5.1 kJ, went into a capacity floored at 10⁻⁶ J/K (1758; GPU `kernels.js` 2219), which set T_s to 5.135 × 10⁹ K. The cell then turned gas (1785 to 1790; GPU 2243 to 2246), and that heat left the books (`released` counts it). The 5.135 × 10⁹ K stays in the gas cell's T_s. A burning cell spawns flame-front particles and embers at max(T, T_s) in the next step's particle stage (661, 682). Particles were off in the trace, so that was not followed. Both paths do the same.
+2. **A sliver of floor gives a porous cell stone's conductivity.** The first layer of contents cells holds a stone fraction of 1.49 × 10⁻⁸. Line 407 averages the conductivity over the material present only, so those cells take 2.5 W/(m K). Their pairs conduct 0.5 W/K on 0.20 m cells; a layer up, 0.02 W/K. Not traced further.
+
+Each is a candidate for its own item, drafted blind first. Neither is in item 17.
+
+#### Not verified
+
+- The item's effect on any app or study run. None was made.
+- The figures for the item and the split are the model's, not the solver's. The build reports the solver's.
+- The GPU's float32 shares at the smallest masses (a share of about 5 × 10⁻⁷ J/K at 10⁻⁷ kg). Argued, not run.
+- Whether the CPU's 385 K in item 15's run changed that fire's course. Nothing reacts measurably at 338 or 385 K in a 13 mg skin.
+- How many cells of an app run reach the regime, beyond the two cells of the base's onestep scene.
+- FDS's coupling of a thin solid to its gas was not read.
+- Every speed figure, apart from load.
+
+#### Sources (read, or run for this draft)
+
+- This repository at 12d47f5:
+  - `flamescapes.js` 120 to 300 (parts of `DEFAULTS`), 300 to 330, 376 to 520, 628 to 790, 805 to 830, 1642 to 1800, 2062 to 2112, 3288 to 3330 and 3663 to 3717;
+  - `flamescapesGpu/kernels.js` 1 to 60, 416 to 502, 720 to 800, 1000 to 1037, 2136 to 2250 (by search) and 2310 to 2480;
+  - `flamescapesGpu.js` 1 to 130, 172 to 200, 388 to 440, 588 to 760, 905 to 960 and 1085 to 1095;
+  - `flamescapesRun.js` 110 to 250;
+  - `runCache.js` 54;
+  - `tools/flamescapes-gpu-check.mjs` 1 to 60, 100 to 260 and 405 to 445;
+  - `tools/flamescapes-fingerprint.mjs` 1 to 40;
+  - `tools/calibration/validation-suite.mjs` 273 to 304 and `tools/calibration/heat-closure.mjs` 112 and 167, by search;
+  - the unit tests' names, and by search their uses of `conduct` and `exchange`.
+- Branch `flamescapes/vapour-enthalpy` at a7706de, read only: `tools/vapour-enthalpy-check.mjs` 1 to 80 and 560 to 820 (part dx), and its `src/core`, run in a scratch copy for the found state.
+- Run for this draft:
+  - the fingerprint tool at 12d47f5;
+  - the trace of the onestep scene, at 12d47f5 and at a7706de, in Node and in headless Chrome, its stages one by one;
+  - the float64 models of the stage: both paths' orders, the stage in 2000 and 8000 sub-steps, the star by eigendecomposition, the chosen rule, the symmetric split and the two one-sided orders, and their mirrors.
+
+  No validation run, no study run, no result file.
+
+### 16.27 The coordinator's decisions on 16.26 (2026-11-15, before any code of item 17)
+
+The draft is the agent's, written blind. It was drafted under the number 16.27 and is placed as 16.26 in the order of insertion. Each decision takes the draft's choice or the stricter reading.
+
+**Checked by the coordinator,** apart from the agent:
+- **The code.** At 12d47f5, `conduct` (`flamescapes.js` 2069 to 2110) visits each cell in z, y, x order.
+  - It exchanges the cell's solid with its own gas first, then with its forward neighbours and its gas faces.
+  - So a cell's exchanges with the solids below it come earlier, in those cells' turns.
+  - The GPU's comment (`kernels.js` 28 to 38) states that its ten passes keep the CPU's order, and that the last face wins. The passes run the cell's own gas first, and each axis whole. The two orders differ, as the draft says.
+- **The model** (the agent's `models.mjs`, run again on the found state, item 15's core at a7706de, step 450, cell 8974):
+  - the CPU's order gives 384.78 K, the GPU's 338.62 K, and the stage solved exactly 338.85 K;
+  - the chosen rule gives 337.54 K;
+  - the books close within 6.5 × 10⁻⁵ J.
+  - These are the draft's figures.
+
+1. **The method, as drafted.** Every exchange touching a porous cell that holds heat is solved together, each body's capacity shared by conductance. The symmetric split stays set aside, as the draft sets it aside: in the limit it leaves the solid at its own gas's temperature, a fixed winner.
+2. **The switch, as drafted.** `porousExchange`, off by default. The CPU's order is the one that departs in the found state, so this is a physics change on both paths, not a port fix. A default change needs the user's word (13.25, decision 14).
+3. **What ends this line, as drafted.**
+   - 13.25's decision 13 applies to (a) to (d), (e)1 and (f).
+   - A failure of (e)2, (e)3 or (g) ends the attempt.
+4. **Check (f)'s GPU `runScene` runs, as drafted.**
+   - Four base runs are made before the branch's.
+   - A run of one phase whose leaves differ between any two base runs is nondeterministic. Its leaves are reported beside the base's range and not judged.
+   - Every leaf of the deterministic phases, and the CPU side of every phase, are judged bit for bit.
+   - The switch's off path is exercised by those deterministic phases, whose scenes hold burning contents. So no fault of the off path can hide in a nondeterministic run.
+   - This rule is fixed here for item 17. It does not reopen 16.18.
+5. **Findings outside the item, recorded and not acted on in this item.**
+   - **Burn-out's last heat** (the draft's "Seen while tracing", 1).
+     - When a porous cell's last fuel oxidises in one call, its heat goes into a capacity floored at 10⁻⁶ J/K (`flamescapes.js` 1758; GPU `kernels.js` 2219).
+     - In the trace that set T_s to 5.135 × 10⁹ K. The cell then turned gas, keeping that T_s and its burning flag.
+     - The next step's particle stage spawns flame-front particles and embers from a burning cell at max(T, T_s) (661, 682).
+     - The coordinator read the lines and confirms the path. Whether such particles reach the drawn flame was not followed.
+     - It is the next candidate item, item 18, drafted blind. It touches the chemistry and the particles, not `conduct`, so it is drafted while item 17 is built, and read alone.
+   - **A sliver of floor gives a porous cell stone's conductivity** (the same list, 2; line 407). Recorded as a declared limit of every run with contents on a floor. It sharpens this item's order effect in the first layer.
+6. **The build.**
+   - It goes on a new branch, `flamescapes/porous-exchange`, from this section's commit, in the worktree `TopologicStudio-gpuburn`.
+   - The draft's figures for the rule come from float64 models. The build's checks judge the solver's own code.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
