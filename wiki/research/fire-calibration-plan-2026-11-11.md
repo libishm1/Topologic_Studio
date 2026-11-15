@@ -5083,6 +5083,150 @@ Item 16 was built as 16.19 and the coordinator's decisions in 16.20 fixed it, on
 - **A second attempt** needs the user's word and a new method written here first.
 - **A finding for any second attempt.** In the fingerprint tool's pilot room, the heat released falls from 0.488 to 0.090 MJ with the item on. It was not investigated. A second attempt must explain it first: whether the pushed-out gas starves the fire of oxygen near the burner, or whether the present deletion of displaced gas had kept fires burning that should not.
 
+
+### 16.23 Item 13: the build's checks (2026-11-15, 19:19)
+
+Item 13 was built as 16.11 and the coordinator's decisions in 16.12 fixed it, on branch `flamescapes/timber-linings` from `study/materials` at 8442efd, which holds 16.9's feature (a). Three commits:
+- 66ae0fe: the item in the solver, off by default;
+- 05b3c8d: the check tool, `tools/timber-lining-check.mjs`, and a `timber` case in `tools/calibration/heat-closure.mjs`;
+- 6dfdca1: the study runner's `timber` key.
+
+**One attempt, no fault of the code.** The tool ran in full once, at 6dfdca1: 44 judged lines passed, none failed, 29 were reported, and one line states a departure. Before the commits, the tool's parts ran on one setting (0.20 m, 0.1 s) while it was written. Those runs found two faults of the tool, not of the solver: (e)2's reading from one state took steps in which no front moved, and its float64 bound left out the round-off of the running tallies. Both were corrected in the tool before the commits. No solver line changed after a run.
+
+**Item 13 passes its checks (a) to (h),** with one departure the brief set: no GPU file changes, so 16.11's point 13, the GPU's refusal of a timber scene, is not built.
+
+**The reference timber,** as the tool prints it: k 0.1895 W/(m K), ρ 508 kg/m³, c 1901.20 J/(kg K), α 1.96 × 10⁻⁷ m²/s, kρc 183 000, T_p 593.15 K, Y_c 0.24, 13.88 MJ/kg, grading 1.5. The tool's closed forms give 16.11's figures to their printed places:
+- no loss, t_ig 65.06, 32.34, 20.70 and 14.37 s;
+- linear loss, τ 2.0464, 0.5915 and 0.1656, t_ig 382.25, 110.49 and 30.94 s.
+
+Each judged case ran on 0.20 and 0.34 m cells at dt 0.1 and 0.05 s, four settings, unless stated. In every case every wall of the box gave the same figure.
+
+- **(a) The face's rise against erfc.** T_p set to 10⁴ K, so no face reached onset.
+  - 18 mm: worst 1.29 % of the face's exact rise over 368 readings; the face alone 1.20 %.
+  - 64 mm: worst 1.68 % over 576 readings; the face alone 1.64 %.
+  - Against 2 %. The face alone matches the model's 1.20 % and 1.64 %. First intervals 0.096 and 0.340 mm.
+- **(b)1 No loss.** t_ig against (π/4) kρc ΔT²/q″², within 5 % plus one step.
+  - 18 mm: 66.55 to 66.60 s against 65.06 s; 33.15 to 33.20 against 32.34; 21.25 to 21.30 against 20.70; 14.75 to 14.80 against 14.37. Worst 2.97 %, 2.43 % beyond one step.
+  - 64 mm: 66.95 to 67.00 s; 33.40; 21.45 to 21.50; 14.95 to 15.00. Worst 4.36 % at 30 kW/m², 3.67 % beyond one step. The model's worst beyond one step: 2.4 % and 3.7 %.
+- **(b)2 Linear loss,** h_ig 31.3 W/(m² K). q″_cr is 9390.00 W/m² absorbed, 10 670.45 W/m² incident at 0.88 (Tran and White's 10.68).
+  - 64 mm: 390.80 s against 382.25 s at 1.5 q″_cr (2.24 %); 113.25 to 113.30 against 110.49 at 2 (2.55 %); 31.90 against 30.94 at 3 (3.10 %).
+  - 18 mm at 3 q″_cr: 31.70 against 30.94 s (2.45 %).
+  - Beyond one step: 2.93 % (64 mm) and 2.29 % (18 mm), against the model's 2.9 % and 2.3 %.
+  - Reported beside: Janssens's correlation at the solver's t_ig gives 1.487, 1.960 and 2.919 (64 mm) and 2.926 (18 mm), against 1.5, 2 and 3. At the exact t_ig, 1.493, 1.973 and 2.952.
+- **(b)3 The critical flux with the solver's own surface.** Its losses at T_p are 3000.00 + 5808.13 = 8808.13 W/m².
+  - At 0.95 of that, absorbed, the face stayed below T_p for 3600 s on all four settings. The hottest face reached 577.69 to 577.70 K.
+  - Reported: at 1.05, onset at 3173.40 s (dt 0.1) and 3178.90 s (dt 0.05); at 1.5, at 359.20 and 359.50 s. The two cells gave the same times.
+  - Beside, with `surfaceRayStart` 1: the hottest face 560.00 to 560.02 K at 0.95; at 1.05 below T_p for 3600 s (577.35 to 577.36 K); at 1.5 onset at 398.30 to 398.35 s. With the default, a ray cast from a wall cell's centre that crosses a side face lands in the wall cell beside it (13.24), so part of the face's emission stays in the timber wall.
+- **(c) The char front.** No loss, `pyrolysisHeat` 0. δ against δ_exact, within 6 % or 0.1 mm.
+  - 18 mm at 14.1 kW/m²: no reading. 4√(αt) < L and δ_exact > 0 hold at none of 60, 120, 300 and 600 s.
+  - 18 mm at 25 kW/m², 60 s: 1.831 against 1.887 mm (−2.96 %).
+  - 18 mm at 37.6 kW/m², 60 s: 3.057 to 3.058 against 3.146 mm (−2.82 %).
+  - 64 mm at 14.1 kW/m²: 1.507 against 1.590 mm (120 s), 5.761 against 5.857 (300 s), 11.225 against 11.494 (600 s). Worst −5.21 % (−0.083 mm) at 120 s, as the model's 5.2 % (1.51 against 1.59 mm).
+  - 64 mm at 25 kW/m²: 1.827 against 1.887, 4.101 against 4.192, 9.469 to 9.470 against 9.512, 16.013 against 16.278 mm. Worst −3.18 %.
+  - 64 mm at 37.6 kW/m²: 3.092 to 3.093 against 3.146, 5.815 against 5.826, 11.759 to 11.760 against 11.851, 19.719 against 19.374 mm. Worst +1.78 % (0.346 mm).
+  - In every step (115 200 steps), each face's released mass equals ρ (1 − Y_c) h² δ within 6.30 × 10⁻¹⁵ of it.
+- **(d)1 Burn-out over the gypsum board.** 18 mm timber, 30 kW/m², no loss. δ reached 18 mm at 782.10 s (dt 0.1) and 782.15 s (dt 0.05) and stopped there. Each face's total released is ρ (1 − Y_c) h² × 0.018 m within 5.25 × 10⁻¹⁵ of it. Nothing was released in the 600 s after.
+- **(d)2 A single 18 mm layer, both faces at 30 kW/m².** Two scenes: the box's wall with the grid's side behind it, and a partition with gas on both sides.
+  - In both, the two depths summed to at most 18 mm in every step (excess 0) and to 18 mm at 167.20 s. The totals equal (d)1's within 1.20 × 10⁻¹⁵ and 9.98 × 10⁻¹⁶. Nothing was released after.
+  - One wall's depths at the end: 7.158 + 10.842 mm (dt 0.1) and 7.160 + 10.840 mm (dt 0.05). The fronts met in one step across the layer's middle interval, 3.677 mm at grading 1.5 (from 7.162 to 10.838 mm), and the face scanned first took it (departures).
+  - With the grid's side behind the wall, the back faces sent 2.68 kg (0.20 m) and 7.74 kg (0.34 m) out of the grid (`stats.timberOut`).
+- **(e) Mass and energy closure.**
+  1. In every step of (a), (b)1, (b)2, (c) and (d), 112 runs and 478 404 steps: the vapour given to the gas plus `timberOut`, and the faces' released masses, equal Σ Δm within 1.55 × 10⁻¹³ of it. Each face's unburnt + char + released equals ρ L h² within 4.83 × 10⁻¹⁵.
+  2. `stats.timberEndotherm` equals `pyrolysisHeat` × Σ Δm within 1.32 × 10⁻¹³ of it in every step.
+     - From one state, 111 states of (b)1 and (d)1 (0.20 m, 0.1 s): each wall's nodes' heat after `walls` with the item on, less that with it off, equals minus its endotherm within the float32 rounding of its node writes. The worst is 0.997 of that bound.
+     - The rounding, (stored − meant) × capacity, ran from −5.01 × 10⁻² to 5.19 × 10⁻² J a step, against endotherms of 0.283 to 545 J. It closes the difference within 0.106 of four float64 steps of the node's heat. The solver's own tally of it agrees within 3.48 × 10⁻¹⁵ J.
+  3. With the gas at 600 K, each receiving cell's ρ V c_p (T − T_a) is the same before and after the vapour within 0.250 of two float32 steps of its T, over 5 653 536 readings in 64 no-loss runs.
+  4. A cell at 1200 K with oxygen and timber vapour, one chemistry stage: on 0.20 m it burnt 4.64 × 10⁻⁵ kg and released 644 J; on 0.34 m, 2.28 × 10⁻⁴ kg and 3.16 kJ. Each release is 13.88 MJ/kg × the vapour burnt, with no difference. `stats.timberReleased` holds it exactly. Each species' change is within 0.060 of four float32 steps of its Y and ρ of the timber fuel's stoichiometry: O₂ 1.0651, CO₂ 1.5573, CO 0.01, soot 0.015, H₂O 0.4828 kg/kg.
+  - The whole solver, (b)3's scene with air, 1.5 × 8808.13 W/m² into the face before each step (dt 0.1): onset at 325.70 s (0.20 m) and 329.50 s (0.34 m). Mass closes with no difference, and the endotherm's tally within 4.04 × 10⁻¹⁵ and 2.95 × 10⁻¹⁵. 0.0843 kg and 0.250 kg were pyrolysed; 0.0778 kg and 0.238 kg of fuel vapour were in the gas at the end. None burnt: the gas stayed near ambient.
+- **(f) Before onset, nothing changes.** (b)3's scene at 1.5 × 8808.13 W/m², the same material with the item on and off.
+  - The tool's (b)3 procedure: every field and every stats entry of the base bit for bit the same in all 3591 steps before the onset step (dt 0.1, onset at 359.20 s) and all 7189 (dt 0.05, 359.50 s), on both cells.
+  - The whole solver (`step`, air): the same in all 3256, 6172, 3294 and 6239 steps before onset (0.20 m at dt 0.1 and 0.05, 0.34 m at dt 0.1 and 0.05; onset at 325.70, 308.65, 329.50 and 312.00 s). In the onset step they differ in T, Ts, Y, ρ, u, v, w, p, `ignitedAt`, the zones, `fuelVapourKind`, the walls and the stats that follow.
+- **(g) Off is off.**
+  - The fingerprints with `timberLinings` 0 are d62b581d and 29793d1a, the base's. With the default set to 1 in a copy (not committed, no timber layer in either case), the same.
+  - A box with a one-dimensional gypsum wall, the gas at 900 K, 300 full steps on 0.20 m: every field and every stats entry bit for bit the base's (8442efd), with 0 and with 1.
+  - The unit suite passes 549 of 549, and the base at 8442efd passes 549 of 549 (run from a copy). No test file differs from the base's. The brief's 548 is c0329da's count: 8442efd's `studyTools.test.mjs` holds 12 tests where c0329da's held 11.
+  - Lint (`npm run lint`) passes.
+  - `tools/flamescapes-gpu-check.mjs`, all fourteen phases, the item off, once (68.7 minutes under load). It was compared leaf by leaf with item 12's two base runs at 40f8ea9, whose `src/core` differs from 8442efd's only in `flamescapesRun.js`, feature (a), the same with its options unset. 93 timing leaves were set apart of 4970.
+    - Every CPU-side leaf of every phase is the base's bit for bit.
+    - 47 leaves differ, all on the GPU side of sprinklers 2 to 4, design 0 and 1, and systems runs 3 and 4. The base's two runs differ from each other in 47 leaves in the same runs.
+    - Two leaves lie outside the base pair's own: systems run 4's GPU peak and tenth-second heat release, 396.0553 against 395.9211 in both base runs. 16.13 records unchanged bases giving 395.921, 396.056 and 396.142 there, so the value lies within the base's own spread.
+  - `flamescapesGpu.js` and `flamescapesGpu/` are the base's, unchanged. So `supported` returns true for a timber scene with the item on (departures).
+- **(h)** With the default set to 1 for the run, in a copy of 6dfdca1, the unit suite passes 549 of 549. No test was edited.
+- **(i) Reported, not judged: a cone-like comparison.** The 64 mm layer, its face under 15, 22, 34 and 51 kW/m² incident, absorbed whole, with (b)3's losses, on 0.20 m at dt 0.1, with the default `pyrolysisHeat`. Tran and White's Table 2 and Table 4 beside.
+
+  | Incident | Onset | Table 2 | δ 36 mm at | Mass loss, g/(m² s) | Charring, mm/min |
+  |---|---|---|---|---|---|
+  | 15 kW/m² | 206.70 s | 909 and 570 s | 5724.10 s | 2.52 | 0.392 |
+  | 22 kW/m² | 56.10 s | 85 and 85 s | 3747.50 s | 3.77 | 0.585 |
+  | 34 kW/m² | 17.50 s | 35 and 26 s | 2464.20 s | 5.68 | 0.883 |
+  | 51 kW/m² | 6.80 s | 5 and 5 s | 1717.40 s | 8.13 | 1.263 |
+
+  Table 4 gives 3.80 to 8.99 g/(m² s) and 0.377 to 0.851 mm/min. With `surfaceRayStart` 1 the onsets are 217.70, 56.70, 17.50 and 6.80 s; δ reached 26.892 mm in 4 h at 15 kW/m², and the mass loss at the other three is 1.20, 1.89 and 2.46 g/(m² s) (0.187, 0.294 and 0.383 mm/min).
+  - `heat-closure.mjs` on 0.27 m, 300 s: the layered case closes at 0.955 (gas 0.113, walls 0.468, left 0.374; 42.75 MJ released). With its ceiling 18 mm of the reference timber and the item on, 0.955 (gas 0.112, walls 0.473, left 0.370). The ceiling has 8 timber faces on this grid, and none reached onset: radiation is off in this case, and the hottest gas read 689 K at 300 s.
+- **(j) Speed, reported, not judged.** Every figure was measured on a loaded machine: a study of 8 workers, several GPU checks and other builds ran beside.
+  - (b)3's scene, the whole solver, 5000 steps of 0.1 s with 16 faces past onset: the walls stage 0.0447 ms a step on and 0.0378 off (0.20 m), 0.0454 and 0.0483 (0.34 m); a step 1.2057 and 1.2362 ms (0.20 m), 1.1979 and 1.4366 ms (0.34 m). The load moves these by more than any difference between on and off.
+  - The fingerprint tool's ms a step, the pilot room then the design fire: the base 85.30 and 78.16 before the build; 89.37 and 85.04 with 0; 88.52 and 86.15 with the default 1.
+  - The heat-closure timber case took 97.6 s of wall time, the layered case 106.7 s.
+
+**The smoke run.** The study's room (`room-h27.ifc`), walls, ceilings and roofs [softwood 18 mm, concrete 214 mm, softwood 18 mm] and floors of concrete (17.7), class A at medium growth, furniture off, doors open, sprinklers in activation mode, 300 s on 0.27 m (the study's `softwood-furnoff-medium-doorsopen`). One job each.
+- **Off.** The branch with the item off gives a result identical to 8442efd's in every key, the solver's revision and the timing set apart. Released 105.3007 MJ, all of it the design fire's; peak 1049.5 kW at 300 s.
+- **On** (`"timber": true`). The softwood layers become the reference timber in slot 3; 650 timber faces.
+  - The lining ignited. The first face reached onset at 290.15 s, and 35 faces by 300 s.
+  - 0.6293 kg pyrolysed, endotherm 0.1573 MJ, none sent out of the grid.
+  - Released 109.548 MJ against 105.3007 MJ off: 4.247 MJ more, all of it gas combustion.
+  - The heat release left the design fire's curve at 291 s and read 1942.62 kW at 300 s, against 1049.5 kW.
+  - `stats.timberReleased` holds 0.6063 MJ of the 4.247 MJ. The rest, 3.641 MJ, burnt in cells whose `fuelVapourKind` is not 2. A cell's vapour kind does not move with the gas, so timber vapour carried into a cell of kind 0 burns as the contents' fuel (class A, 18.0 MJ/kg and its yields). 16.11 declares one vapour kind a cell; this is that limit, and its size here.
+  - The layer fell below 1.8 m at 24 s in both runs.
+- **The properties alone,** beside: the same run with the reference timber and the switch off. Its heat release is the design fire's, 105.3007 MJ. It and the run with the item on are the same until 290 s: their ledgers at 270 s agree to every printed figure, and the heat release differs from 291 s. Against the softwood run it differs before any onset: the first sprinkler at 77.27 s against 77.44 s, the layer's 10 K time 37 s against 42 s, and the head-height gas at 290 s 363.59 K against 379.97 K. Southern pine (ρ 508, c 1901, k 0.1895, ε 0.88) is not the table's softwood (400, 1630, 0.12, 0.9).
+- Wall time a run, one job beside the check tool: 221.19 s (8442efd), 219.56 s (off), 212.67 s (on), 204.55 s (properties alone).
+
+**Departures, as built.** None changes an output with the item off.
+- **No GPU file changes** (the brief). So 16.11's point 13 is not built: `supported` returns true for a scene with timber faces and the item on, and a GPU run would treat a timber lining as inert. The app does not offer the switch (16.12, decision 7). The study runner and the tool run the CPU's `runScene` and stages.
+- **The front of a layer two faces share.** For one face, d* is the largest depth in its layer at which the nodes' temperatures, linear between nodes, are at least T_p, as 16.11 states it. For a single layer with a timber face at each end, that reading would take the other face's heated zone as this face's front. So there d* is read along the run of nodes at or above T_p from the face. The two coincide wherever the temperature falls from the face. A single-layer wall in the tool's box has two such faces (its back is the grid's side), so (a) to (c) run this reading; (d)1, timber over gypsum, runs the other.
+- **Two fronts that meet in one step.** The face scanned first, the wall's node-0 end, takes what is left, as "a front stops where the other has charred" reads in order. (d)2 shows it: 7.158 + 10.842 mm.
+- **The endotherm's node.** The deepest node at or above T_p no deeper than the new front. They differ only when a shared layer's cap stops the front short of the scan.
+- **Where the state lives.** `sim.wall.timber` holds each face's depth, onset time (`charAt`) and released mass. `charAt` is the end of the step of onset, as (b) defines t_ig; `sim.ignitedAt` takes the step's start, as the chemistry stage sets it.
+- **A layer's last node** is read at the layer's own thickness, so a burnt-out front stops at L exactly. The other depths are the stack's.
+- **One timber vapour a run.** Every timber layer must carry the same heat; a run with two throws.
+- **With the switch on and no timber face,** nothing is made: no `wall.timber`, no timber stats, two fuels. So such a run is the base's bit for bit.
+- **The walls stage** tests its timber reference once a stage and, for each wall, a local reference and a count.
+- **The harness gets no flag.** No dataset has a combustible lining, and `validation-suite.mjs` passes only a layer's thickness, ρ, c and k.
+- **Exports.** `chemistryStage`, `TIMBER_SOUTHERN_PINE`, `TIMBER_MAX_THICKNESS` and `timberLayer`. The solver imports `FIRE_CLASSES` for class A's yields.
+- **The study runner.** With `"timber": true`, every softwood layer becomes the reference timber, all of its constants (16.12, decision 1), not the table's softwood. So on and off differ in the lining's thermal properties as well as the item; the properties-alone run separates them. A material holding a timber layer takes slot 3, the others 0, 1, 2 and 4, and an unused slot below the highest holds stone that no element takes. Softwood with no layers stays lumped and thermal only, and the run's notes say so. A timber layer over 100 mm is listed by the solver (`wall.timberRefused`) and in the run's result.
+- **The tool's readings 16.11 leaves open.**
+  - In the no-loss scenes the gas starts at 600 K, so (e)3's enthalpy is not 0 before and after.
+  - (d)2's "at most 18 mm" is read within 10⁻¹² of L.
+  - (e)2 from one state is read wall by wall, against half a float32 step of each node written; (e)3 against two float32 steps of T; (e)4's products against four float32 steps of Y and ρ.
+  - (b)3's runs stop at onset and are not in (e)1's count; the whole-solver part of (e) covers (b)3's scene past onset.
+  - (f) is also run through `step`, with air.
+- **The unit suite** ran with two workers, `node --test --test-concurrency=2 "src/core/*.test.mjs"`, the command `npm test` runs, and (h) with one, held down for the load.
+
+**Not verified.**
+- The GPU check with the item on, and a base GPU run at 8442efd itself. The GPU check ran once, with the item off, against item 12's base runs.
+- The item in any validation run. No dataset has a combustible lining.
+- Flame spread over a lining, which 16.11 does not claim.
+- The study's other softwood variants with the item on. One smoke run was made.
+- The cost in an app scene, and on the GPU.
+- How much of a timber room's vapour burns at the contents' heat in general. The smoke run gives one figure, 3.641 of 4.247 MJ.
+- That (i)'s figures mean anything for the item's accuracy. They are partly circular, as 16.11 says, and they move with `surfaceRayStart`.
+- IFC timber layer sets through `"linings": "ifc"`. The smoke run gave its layers by name.
+
+**Checked by the coordinator** (2026-11-15), apart from the agent:
+- **The check tool,** run again from 6dfdca1: 44 PASS, 0 FAIL and 29 reported, as in the agent's run.
+- **The fingerprints:** d62b581d and 29793d1a.
+- **The commits** carry no Claude line.
+- Only `flamescapes.js` and `runCache.js` changed in the solver.
+
+**Item 13 passes its checks (a) to (h).** Its switch is off by default, CPU only, and not offered in the app (16.12, decision 7).
+
+**Two things follow, before any use beyond the study.**
+1. **The GPU path.** `supported()` still accepts a timber scene, and a GPU run would treat the timber as inert. Before the switch is ever offered in the app, the GPU must refuse a timber scene, or carry the item.
+2. **One vapour kind a cell, a declared limit, decides most of the timber's heat.** In the smoke run (softwood room, 300 s), the lining ignited at 290.15 s.
+   - Of the 4.247 MJ the item added, only 0.606 MJ burnt as timber at 13.88 MJ/kg.
+   - The other 3.641 MJ burnt at the contents' 18 MJ/kg, because a cell's vapour kind does not move with the gas.
+   - Wherever contents and timber burn together, the timber's heat is overstated by up to 18 / 13.88, or 30 %.
+   - The study states this beside every result it takes with item 13 on. A vapour kind carried with the gas is a candidate for its own item, drafted blind first.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
