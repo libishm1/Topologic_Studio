@@ -7345,6 +7345,152 @@ be8f8ea is the diagnosis tool of 16.24. The solver's files at 61bd1f9 differ fro
 2. R0 holds the items made of those that touch validation runs: 12, 14 and 16. Items 13, 17, 18 and 19 touch no validation scene; items 13 and 17 to 19 are switched in the study rerun if made.
 3. The paper discloses check (e)'s redesign (16.24, point 25).
 
+
+### 16.37 Item 17: the build's checks (2026-11-16, 01:35)
+
+Item 17 was built as 16.26 and the coordinator's decisions 16.27 fixed it, on branch `flamescapes/porous-exchange` from 0333e0e, in three commits:
+- daf836e: the item, off by default, on the CPU and the GPU;
+- 834139d: the check tool, `tools/porous-exchange-check.mjs`;
+- 0ae1454: the tool's GPU runs named by phase for (f), before any comparison of runs (below, "Departures").
+
+The solver files are daf836e's in every later commit. Where each part ran:
+- (a) to (e)2: 0ae1454 (and first on the working tree that became 834139d, with the same figures);
+- (e)3's and (f)'s GPU comparisons: 0ae1454;
+- (f)'s other lines, (g) and (h): 834139d. No later commit changes a line they ran.
+
+**One attempt, and no fault of the code against the method was found. Item 17 passes every judged check, (a) to (g).** The tool judged 838 lines and none failed; it reported 359 more. No correcting commit of the solver exists. One fault of the tool was corrected before the part it governs ran (0ae1454, below).
+- (a) to (e)2: 799 lines at 0ae1454, in 59 scenes on each path.
+- (e)3: 32 lines; (f): 6 lines; (g): 1 line.
+- The paths now agree where they parted. From the app's state after 425 steps the first item's T_s was 1145.25 K on the CPU and 978.07 K on the GPU; with the item on it is 1325.4149 K on both, within one float32 step, as 16.26's model gave.
+
+Every figure below was measured while the R12 rerun, the study's timber rows, item 16's builder (its GPU check in headless Chrome among them) and two other agents ran. This build kept to four workers.
+
+**(a) The stage against the method, on each path: PASS.** 118 judged lines. In 59 scenes (the burnt-out scene, the sweep of B's fuel in both of B's kinds and the isolated cell on 0.20 and 0.34 m, and the app's five burn-out states), one conduction stage from one state, item on, against the tool's own float64 transcription of 16.26's points 2 to 4.
+- CPU: every body within 8 float32 steps. The worst body uses 0.17 of them (the gas of cell 2228 in the app's state after 418 steps).
+- GPU: every body's change within max(10⁻³ |ΔT_ref|, 8 float32 steps) of the reference's change. The worst uses 0.17 of it (the same body).
+- Bodies judged: 299 in the burnt-out scene (298 at fuel 0), 28 in the isolated cell, 18 738 in the app's states.
+
+**(b) Closed forms: PASS.** 204 judged lines.
+1. **The isolated cell** (1.296 × 10⁻⁵ kg and 1 kg, 0.20 and 0.34 m). Item on against item off: every T and T_s bit-identical on the CPU, and on the GPU too (0.000 of (a)'s tolerance). The centre against the two-body closed form: at 1.296 × 10⁻⁵ kg on 0.20 m, T_s and T 337.027710 K against 337.027713 K, within 3.3 × 10⁻⁶ K, against 2 float32 steps (6.1 × 10⁻⁵ K); at 1 kg, T_s 384.952698 K and T 381.256104 K against 384.952686 and 381.256108 K. The GPU's values equal the CPU's.
+2. **The limit,** at every fuel mass of the sweep and in the burnt-out scene. B's |T_s' − T*| stays within point 6's bound plus 4 float32 steps on both paths. The worst uses 0.9986 of it. The bound is sharp: as C_s falls it tends to the departure itself. On 0.20 m, B the first item:
+
+| B's fuel (kg) | C_s (J/K) | T_s', item on (K) | T* (K) | T_s' less T* (K) | Bound (K) | T_s', item off: CPU, GPU (K) |
+|---|---|---|---|---|---|---|
+| 1 | 2000 | 384.959 | 339.632 | 45.3 | 94.3 | 384.959, 384.959 |
+| 10⁻² | 20 | 371.730 | 339.632 | 32.1 | 47.4 | 372.495, 372.426 |
+| 10⁻³ | 2.0 | 348.123 | 339.632 | 8.49 | 8.51 | 367.121, 366.018 |
+| 10⁻⁴ | 0.20 | 340.650 | 339.632 | 1.02 | 1.02 | 400.253, 398.647 |
+| 1.296 × 10⁻⁵ (the burnt-out scene) | 0.026 | 339.767 | 339.632 | 0.135 | 0.135 | 401.086, 399.339 |
+| 10⁻⁶ | 0.002 | 339.642 | 339.632 | 0.0104 | 0.0104 | 400.144, 399.385 |
+| 10⁻⁷ | 0.0002 | 339.633 | 339.632 | 0.00104 | 0.00104 | 400.014, 399.403 |
+
+   - With B a contents cell, T* is 360.591 K and the item's T_s' falls from 384.778 K at 1 kg to 360.592 K at 10⁻⁷ kg; the item off ends near 400 K, the gas face's temperature, on both paths.
+   - In the hand-made scene both orders meet the gas face at 400 K last, so the item off parts the paths by only 1 to 2 K there. The app's states show the parting (below).
+3. **No heat** (B porous with no fuel and no water, both kinds, both cells): B's T_s and T bit-identical before and after the stage, item on and off, on both paths.
+4. **Bounds:** B's T_s' and T' lie between the least and the greatest of its own and its partners' temperatures at the stage's start (293.85 to 912 K), on both paths, at every mass.
+
+**(c) Conservation: PASS.** 59 judged lines. Σ C T over the bodies moves at most 0.088 of R on the CPU: −40.8 J against R = 478 J of 1.23 × 10¹⁰ J in the app's state after 425 steps; −24.1 J against 391 J in the burnt-out scene on 0.20 m. The GPU moves the same amounts. With the item off the CPU moves −39.1 to −40.2 J in the app's states: the rounding of the remaining exchanges' float32 stores, which the item leaves as they were.
+
+**(d) Order: PASS.** 354 judged lines: every scene mirrored in x, y and z, on each path. The worst body uses 0.125 of its tolerance on either path (one float32 step of rounding in the app's states); in the hand-made scenes the mirrored results are the mirrors, bit for bit. Reported, with the item off on the CPU: the mirror departs by up to 4.4 K (the burnt-out scene, 0.20 m, mirrored in y), 7.8 K in the sweep, and 51.6 K in the app's state after 425 steps, mirrored in y.
+
+**(e) CPU against GPU.**
+1. **One stage: PASS.** 59 judged lines. The GPU's change equals the CPU's within 1.2 × 10⁻³ of the tolerance at worst, and bit for bit in 52 of the 59 scenes.
+2. **One full step from the app's burn-out states: PASS.** 5 judged lines. B is the first item, cell 8974.
+
+| From the state after | B's fuel (kg) | Item on: B's T_s and T, GPU from CPU (K) | Item on: the other cells' largest, T and T_s (K) | Item off: B's T_s and T, GPU from CPU (K) | Item off: the other cells' largest, T and T_s (K) |
+|---|---|---|---|---|---|
+| 418 steps | 9.97 × 10⁻³ | 1.2 × 10⁻⁴, 1.2 × 10⁻⁴ | 1.2 × 10⁻⁴, 6.1 × 10⁻⁵ | 1.07, 5.95 | 0.032, 0.049 |
+| 420 | 6.48 × 10⁻³ | 0, 1.2 × 10⁻⁴ | 1.5 × 10⁻⁴, 3.1 × 10⁻⁵ | 2.29, 9.89 | 0.034, 0.085 |
+| 422 | 3.49 × 10⁻³ | 2.4 × 10⁻⁴, 0 | 1.2 × 10⁻⁴, 3.1 × 10⁻⁵ | 6.45, 20.8 | 0.038, 0.187 |
+| 424 | 1.29 × 10⁻³ | 6.1 × 10⁻⁴, 2.4 × 10⁻⁴ | 1.5 × 10⁻⁴, 3.1 × 10⁻⁵ | 30.4, 74.3 | 0.041, 0.711 |
+| 425 | 7.54 × 10⁻⁴ | 1.2 × 10⁻⁴, 0 | 2.4 × 10⁻⁴, 6.1 × 10⁻⁵ | 167.2, 24.8 | 0.039, 0.086 |
+
+   - Each figure is the absolute difference, GPU from CPU, after the step. The tolerance is the larger of 8 float32 steps and twice the other cells' largest. At 424 steps B's T_s difference of 6.1 × 10⁻⁴ K uses 0.62 of 8 float32 steps at 1428 K.
+   - With the item on, the whole field parts by one or two float32 steps. With it off every other cell parts by up to 0.041 K in T and 0.71 K in T_s, the item's neighbours by the same mechanism.
+   - The item's values at B equal the model's of 16.26: 1325.4149 K and 1337.5164 K after 425 steps.
+3. **The GPU check's agreement and onestep phases, item on: PASS.** 32 judged lines. The item-on runs were made on a copy of 834139d whose `DEFAULTS` set `porousExchange: 1`; the item-off figures are the branch's own run with the item off (f).
+   - agreement, both settings, steps 1 to 200: every line passes. At step 100 the largest |ΔT| is 0.044 K on and 0.211 K off. At step 200: on, 3.29 K largest and 0.102 K at the 99th percentile; off, 3.44 and 0.094 K; the twin on, 2.68 and 0.117 K. The worst line uses 0.5 of its bound: the 99th percentile at steps 10, 50 and 100, where on and off are the same one or two float32 steps (6.1 × 10⁻⁵ and 1.2 × 10⁻⁴ K).
+   - onestep, steps 100 to 590: the GPU's largest |ΔT| from the CPU is 1.2 × 10⁻⁴ to 1.8 × 10⁻⁴ K with the item on, against 0.018 to 0.083 K off. Its largest |ΔT_s| is 3.1 × 10⁻⁵ to 1.2 × 10⁻⁴ K on, against 1.3 × 10⁻³ to 0.046 K off. The twin parts by 3.1 × 10⁻⁵ to 6.1 × 10⁻⁵ K.
+   - So with the item on, one step on the GPU parts from the CPU by one to three float32 steps everywhere in the onestep scene. The base's onestep differences of 0.02 to 0.08 K came from the porous exchanges' order.
+
+**(f) Off is off: PASS.**
+- With `porousExchange` 0 the fingerprints are the base's, d62b581d and 29793d1a.
+- The unit suite passes 537 of 537, as the base at 0333e0e does (537 of 537), both run by the tool from 834139d with two workers. Lint passes on the four solver files changed.
+- `tools/flamescapes-gpu-check.mjs`, all fourteen phases, by 16.27's decision 4: **PASS**.
+  - Four runs of the base (a copy of 0333e0e from git), then the branch's run with the item off, after all four (2222 s).
+  - 4970 leaves; 93 timing leaves set apart (16.18's set).
+  - Seven GPU runs vary between the four base runs: sprinklers runs 2 to 4, design runs 0 and 1, and systems runs 3 and 4, 181 leaves in all. They are the runs 16.18 found varying. Their leaves are reported, not judged.
+  - The other 4696 leaves, every leaf of the deterministic phases and the CPU side of every phase, are bit-identical in the branch's run and in all four base runs. None of them varies between base runs.
+  - Reported, the branch's leaves outside the four base runs' range in the varying runs: sprinklers run 2 in 2 of 11 (released 36.87 MJ against 33.97 to 35.26 MJ), run 3 in 1 (late 42.46 s against 42.30), run 4 in 3 (peak 727 kW against 482 to 646 kW); design run 0 in 6 of 49 (released 77.65 MJ against 78.87 to 79.77 MJ; 16.18 saw 77.72 to 78.62 MJ in its base runs); design run 1 in none; systems run 3 in 11 of 31 (its frames of heat release; peak 1865 kW against 1146 to 1652 kW); systems run 4 in 4 of 19 (released 12.3470 MJ against 12.3466 to 12.3469 MJ).
+- With `porousExchange` 1 and no porous cell holding heat, against the base solver read from git at 0333e0e:
+  - heat-closure's burner room, 60 s on 0.20 m (1590 steps): all 62 fields and stats entries bit-identical each second and at the end;
+  - its porous room (48 porous cells of no mass), 60 s (1520 steps): the same;
+  - Steckler test 14 on 0.34 m through the suite, its full 300 s, `--solver porousExchange=1` against `--solver-rev 0333e0e`: all 1157 recorded outputs bit-identical, wall times aside, both runs healthy.
+  - These scenes run on the CPU only: the GPU refuses a burner that is not a design fire (`supported`).
+- With 1 and contents the fingerprints differ: 8462032b (the pilot room) and 11660794 (the design-fire room).
+
+**(g) The unit suite with the default set to 1: PASS.** 537 of 537 pass on a copy whose `DEFAULTS` set `porousExchange: 1` (two workers, 685 s). No test was edited.
+
+**(h) Speed, reported and not judged.**
+- The fingerprint tool's rooms, 17 732 cells, 300 steps, run twice, each time two runs off and two on, alternating. `conduct`'s ms a step:
+  - the 200 kW pilot room: 1.69, 1.96, 1.57 and 1.40 off; 3.53, 3.19, 2.70 and 2.54 on;
+  - the design-fire room: 1.97, 1.74, 1.52 and 1.38 off; 3.26, 3.17, 2.50 and 2.43 on.
+  - With the item on, `conduct` takes about 1 to 1.5 ms a step more, 2 % of a step. The step's ms (55.7 to 77.4) do not separate it from the load.
+- `tools/backend-bench.mjs`, one run a set, 180 s, the CPU on the app's CPU grid and the GPU on the app's grid pinned at 120 000 cells (`--app-cells`), ms a step, off then on:
+
+| Case | CPU off | CPU on | GPU off | GPU on |
+|---|---|---|---|---|
+| The room (the app's design fire) | 263.76 | 214.95 | 16.11 | 14.31 |
+| Duplex | 117.43 | 108.13 | 40.74 | 41.51 |
+| Office | 170.44 | 158.84 | 43.45 | 36.98 |
+| Clinic | 213.92 | 178.84 | 52.70 | 58.53 |
+| Vienna | 192.99 | 163.31 | 44.71 | 47.00 |
+
+  - The on runs followed the off runs under a changing load. Every on run of the CPU was faster than its off run; the load moves these figures by more than the item could.
+  - **Vienna on the GPU in headless Chrome with the item on reaches its horizon:** 180 s of 180 s, at 47.00 ms a step, 2.13 times real time, on 101 304 cells. With the item off: 44.71 ms a step, 2.24 times real time.
+  - Where the item acted. The CPU's runs repeat exactly, so their changes are the item's:
+    - the room released 32.536 MJ against 32.221, and peaked at 617 kW against 812 kW;
+    - Vienna released 38.654 MJ against 37.597, peaked at 748 kW against 710 kW, and left 155 untenable nodes against 184;
+    - Duplex released 14.387 MJ against 14.442 (peak 313 against 322 kW); Office released 22.768 MJ against 22.769 and left 20 untenable nodes against 21; the Clinic released 22.748 MJ on and off and left 15 against 19.
+    - The GPU's results changed too (the room 31.165 MJ against 33.263, peak 753 against 860 kW; Vienna 57.989 MJ against 56.235). GPU runs differ from run to run, so those differences are not the item's alone.
+
+**Departures, as built.** None changes an output with the item off.
+- **The GPU's scratch.** `conductShares` keeps each cell's starting T and T_s and its two sums in the `cf` buffer's vorticity fields (wx, wy, wz, mag). `vortCurl` rewrites all four for every cell before any read, so they are free from the chemistry pass to the next step's `vortCurl`. No buffer was added.
+- **The exports.** `STAGES` was made an export, read only; `conductionStage` is a new export. No run calls either.
+- **The run cache.** `KEYED_SWITCHES` gains `porousExchange`, so a run's key carries it when the run sets it. `RUN_CACHE_VERSION` stays 13.
+- **The nine face passes test the uniform** in every thread, on and off; they were not given pipelines of their own.
+- **(e)3's T_s line.** The onestep phase records the twin's T and not its T_s. Its T_s line takes the larger of the item off's T_s and the twin's T.
+- **(b)1's isolated cell** holds no water, as B does; 16.26 does not state its water. Its other 26 cells' gas is at 325 K.
+- **The burnt-out scene's contents cells** keep the water `createSolver` gives them (16.26 states it for B only).
+- **(f)'s GPU check rule, as built (0ae1454).** A GPU run is named by phase: each sprinklers, design and systems run's `gpu` side, embers' and the worker's `gpu`, the ensemble's GPU members together, and phase full's GPU run, which holds every leaf of that phase that is not the CPU's or the scene's size (its `gpu` figures, the GPU's means, and the CPU against GPU comparisons made from them). A run whose leaves differ between two base runs is set apart, its leaves reported beside the base's range. Every other leaf, timings apart (16.18's set of 93), is judged bit for bit: every leaf of the deterministic phases and the CPU side of every phase.
+  - At 834139d the tool took a run to be the path to a leaf's first `gpu` key. That would have set apart leaves of deterministic phases had they varied, and split phase full's run into one run a figure, leaving its comparisons judged. It was corrected after base run 1's file was read for its leaf names, before any comparison of runs was made.
+- **The unit suites** ran with two workers, not four, so that the four-worker limit held beside this build's GPU runs.
+
+**Not verified.**
+- The item's effect on any app run or study run, beyond the fingerprint rooms' 300 steps.
+- Why the seven GPU runScene runs vary from run to run, and whether the branch's values outside their four base runs' range would fall inside a larger sample.
+- Every speed figure, apart from load.
+
+**Commands.**
+- `node tools/porous-exchange-check.mjs --only s,e2,f,h --json out.json`
+- `node tools/porous-exchange-check.mjs --only fu,g`
+- `node tools/porous-exchange-check.mjs --only e3,fg --gpu-on on-agreement.json,on-onestep.json --gpu-off branch.json --gpu-base base1.json,base2.json,base3.json,base4.json --gpu-branch branch.json`. Its inputs are `tools/flamescapes-gpu-check.mjs --json` runs: four of the base (0333e0e), then one of the branch, item off; and, on a copy whose `DEFAULTS` set `porousExchange: 1`, `--phase agreement` and `--phase onestep`.
+- `node tools/backend-bench.mjs --cases room,duplex,office,clinic,vienna --members 1 --sets cpu,gpu-app --app-cells 120000 --horizon 180`, again with `--solver porousExchange=1`. The tool reads the two files with `--only h --bench-off off.json --bench-on on.json`.
+
+**Checked by the coordinator** (2026-11-16), apart from the agent:
+- **The check tool's parts s, e2 and e3** were run again from 0ae1454: 799 PASS, 0 FAIL and 339 reported. That covers (a) to (d) and (e)1 on both paths, and (e)2. (e)3 was not judged in this rerun, because it reads the GPU check's saved runs.
+- **The solver** changed only in `flamescapes.js`, `flamescapesGpu.js`, `kernels.js` and `runCache.js`.
+- **The commits** carry no Claude line.
+- **The tool's fix 0ae1454** was made before any GPU comparison ran, after reading one base file for its leaf names only. It is disclosed above.
+
+**Item 17 passes its checks (a) to (g).** Its switch `porousExchange` is off by default. A default change needs the user's word (13.25, decision 14).
+
+**What follows.**
+1. It touches no validation scene: they hold no porous cell. So it needs no rerun beside 13.B.
+2. It changes every app run with contents on both paths. In the CPU design-fire room the peak is 617 kW against 812 kW (h).
+3. **It explains the base's onestep difference between the paths.** With the item on, that difference falls from 0.018 to 0.083 K to 1.2 to 1.8 × 10⁻⁴ K (e)3. That is the difference on which item 15's first (d)2 and item 16's first (e)2 failed.
+4. It goes into the study's rerun on Phase 0's solver with the other made items (16.20, decision 6; 16.32, decision 6).
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
