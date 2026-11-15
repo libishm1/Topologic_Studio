@@ -982,6 +982,10 @@ if (await trainBtn.isEnabled()) {
     // The shield's guarantee: when an escape exists, the agent reaches an exit.
     const escapes = /^yes/.test(r["Escape possible"] || "");
     record(!escapes || r["Reached exit"] === "yes", "the shielded agent escapes whenever an escape exists", `${r["Escape possible"]}; reached ${r["Reached exit"]}; certified ${r["Certified earliest"]}`);
+    // What it is certified against (core/rlForecast.js, 2026-11-15): with no
+    // Flamescapes run, the hop front, and the card says it is not the simulated fire.
+    const against = (await page.getByTestId("rl-against").innerText().catch(() => "")).trim();
+    record(/against the hop-front fire \(0\.25 links per move\), not the simulated fire\./.test(against), "the card says the agent's fire is the hop front, not the simulated fire", against || "no line");
   }
   await shot(page, "rl-trained");
   // And the Q-learning it replaces, still offered for comparison.
@@ -1407,6 +1411,50 @@ if (await fireModelSelect.isVisible().catch(() => false)) {
   );
   // The same run, from memory: let it end before the steps below.
   await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => /^Stop fire$/.test(b.textContent)), null, { timeout: 180000 }).catch(() => {});
+  // The agent against the run's forecast (core/rlForecast.js, 2026-11-15):
+  // with a finished Flamescapes run for these inputs, the RL card trains
+  // against its closing times by default, says so, draws its route and walks
+  // it in seconds; with the hop front chosen, it says it is not the simulated fire.
+  {
+    const trainFs = page.getByRole("button", { name: /^Train policy$/ });
+    const againstFs = async () => (await page.getByTestId("rl-against").innerText().catch(() => "")).trim();
+    const fireSource = page.getByRole("group", { name: "Fire the agent avoids" });
+    if (!(await fireSource.isVisible().catch(() => false))) await page.getByRole("button", { name: /Train an agent against this fire/ }).click().catch(() => {});
+    await fireSource.scrollIntoViewIfNeeded().catch(() => {});
+    await fireSource.getByRole("button", { name: "Simulated fire" }).click().catch(() => {});
+    await page.evaluate(() => window.__viewer?.setPath?.(null, { dynamic: true }));
+    const tRlFs = Date.now();
+    await trainFs.click().catch(() => {});
+    const forecastLabel = await page
+      .waitForFunction(() => /against the Flamescapes forecast of this run \(horizon \d+ s, leaving at [\d.]+ s/.test(document.querySelector('[data-testid="rl-against"]')?.innerText || ""), null, { timeout: 180000 })
+      .then(() => true)
+      .catch(() => false);
+    const labelFs = await againstFs();
+    record(forecastLabel, "the agent trains against the finished Flamescapes run's forecast, and the card says so", labelFs || "no line");
+    if (forecastLabel) timing("Train RL against the Flamescapes forecast (click to stats)", Date.now() - tRlFs);
+    const fsStats = await page.evaluate(() => {
+      const out = {};
+      document.querySelectorAll(".stat").forEach((el) => {
+        const k = el.querySelector(".stat__label")?.textContent?.trim();
+        const v = el.querySelector(".stat__value")?.textContent?.trim();
+        if (k) out[k] = v;
+      });
+      return out;
+    });
+    const reachedFs = fsStats["Reached exit"] === "yes";
+    const drawnFs = await page.evaluate(() => window.__viewer?.overlays?.has("dynamicPath") ?? false);
+    record(!reachedFs || drawnFs, "  and draws its route", `${reachedFs ? "reached the exit" : `did not reach the exit (escape possible: ${fsStats["Escape possible"]})`}; ${drawnFs ? "route drawn" : "no route drawn"}`);
+    record(!reachedFs || fsStats["Late anywhere, walked in seconds"] === "no", "  and its route, walked in seconds, is never late", `late: ${fsStats["Late anywhere, walked in seconds"]}, out at ${fsStats["Out at (walked)"]}, tightest margin ${fsStats["Tightest margin to the fire"]}`);
+    await shot(page, "rl-forecast");
+    await fireSource.getByRole("button", { name: "Hop front" }).click().catch(() => {});
+    await trainFs.click().catch(() => {});
+    const hopLabel = await page
+      .waitForFunction(() => /against the hop-front fire \([^)]*per move\), not the simulated fire\./.test(document.querySelector('[data-testid="rl-against"]')?.innerText || ""), null, { timeout: 120000 })
+      .then(() => true)
+      .catch(() => false);
+    record(hopLabel, "with the hop front chosen, the card says the agent's fire is not the simulated fire", await againstFs());
+    await fireSource.getByRole("button", { name: "Simulated fire" }).click().catch(() => {});
+  }
   // Kept runs (core/runCache.js, 2026-11-07): after another run, this one
   // asked for again plays from the browser's store, not from memory.
   const startFs = async () => {
