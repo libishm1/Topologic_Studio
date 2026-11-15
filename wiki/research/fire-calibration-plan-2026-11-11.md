@@ -4910,6 +4910,179 @@ Item 14 was built as 16.14 and the coordinator's decisions in 16.15 fixed it, on
 
 **Item 14 passes its checks (a) to (h).** Its switch is off by default. R14 and R12+14 run as 16.20 orders them.
 
+
+### 16.22 Item 16: the build's checks (2026-11-15, 18:32)
+
+Item 16 was built as 16.19 and the coordinator's decisions in 16.20 fixed it, on branch `flamescapes/source-expansion` from 22c163f, in three commits:
+- c1700d4: the item, off by default, on the CPU and the GPU;
+- bfda13a: the suite's `--source-expansion`, the ledger's tallies, and the same tallies in `heat-closure.mjs`;
+- d108f79: the check tool, `tools/source-expansion-check.mjs`.
+
+**One attempt, and no fault of the code against the method was found.** No correcting commit exists. One fault of the tool was corrected before it was committed: its first draft took (c)1's reference n from the gas law, pV/(RT), where 16.19 asks for point 2's closed form from the mass the cell holds. The stored density is float32, so the two differ by its rounding, 4.9 × 10⁻⁹ to 4.3 × 10⁻⁸. All 14 of (c)1's lines failed on that draft. With the reference as 16.19 states it they pass, and the gas law's n is reported beside.
+
+**Item 16 fails its check (e) as 16.19 fixes it. Every other judged check passes.** At d108f79 the tool judged 79 lines: 77 passed and 2 failed, both in (e). It reported 81 more. (i) was judged on item 15's branch merged in: 54 lines, none failed.
+- The two failures are (e)1's scene (i) and (e)2's onestep phase. Both are set out below with their numbers and a diagnosis. Neither diagnosis is a verdict.
+- 16.19's "What ends this line" applies to (e): a check of (a) to (g) that fails ends the attempt. (e) is not among the checks whose failure is a fault of the code by construction.
+
+**(a) A closed box: the pressure is set by the added mass.** 252 open cells, 1000 injections of 5 × 10⁻⁵ M₀, on 0.20 and 0.34 m, the item on and off.
+- γ is 1.399627, as 16.19 states.
+- 1. `Z.mass` keeps M₀ + kδ within 6.25 × 10⁻¹⁴ of M₀ (M₀ 2.3466 kg and 11.529 kg), against 10⁻¹².
+- 2. π and every cell's T keep the rigid vessel's. The worst step is 77, with a relative error of 2.06 × 10⁻⁶ against R₇₇ = 1.84 × 10⁻⁵. At step 1000, π is 1.070676 against 1.070674 (7161 Pa above ambient), and T is 298.922 K against 298.922 K. On and off, on both cells, alike.
+- 3. What the projection is asked sums to 0 over the region within 3.5 × 10⁻¹⁵ of Σ|D| with the item on, and exactly 0 off, against 10⁻¹².
+- 4. π on and π off differ by at most 2.9 × 10⁻¹⁵, relative, against R_k.
+- Reported, with `pressureZones` 0: the region's gas mass stays the gas law's at ambient pressure (a ratio of 1.000000051 throughout, on and off). The 0.117 kg injected on 0.20 m (0.576 kg on 0.34 m) vanished. Point 3 holds within 2.4 × 10⁻¹⁵.
+
+**(b) An open box: the outflow through its opening equals the source's volume flow.** 400 steps at 1000 sweeps and tolerance 0 (16.20, decision 3), judged at steps 301 to 400.
+- 1. Every room cell's D dt equals ln(1 + x_c), or 0 off the sources, with a worst error of 0 in all four cases, against 2⁻²³.
+- 2. The flow out through the opening's six faces equals the room's Σ D V within 4.2 × 10⁻⁸ to 6.2 × 10⁻⁸, against 10⁻⁴.
+- 3. Against V̇, the error is 4.998 × 10⁻⁴ at x = 10⁻³ (tolerance 7 × 10⁻⁴) and 4.967 × 10⁻³ at x = 10⁻² (tolerance 5.2 × 10⁻³), on both cells. That is the logarithm's deficit, ln(1 + x)/x, and no more.
+
+| Cells | x | Flow out, m³/s | V̇, m³/s | Mean speed in the opening, m/s |
+|---|---|---|---|---|
+| 0.20 m | 10⁻³ | 6.3968 × 10⁻⁴ | 6.4000 × 10⁻⁴ | 0.0027 |
+| 0.20 m | 10⁻² | 6.3682 × 10⁻³ | 6.4000 × 10⁻³ | 0.0265 |
+| 0.34 m | 10⁻³ | 3.1427 × 10⁻³ | 3.1443 × 10⁻³ | 0.0045 |
+| 0.34 m | 10⁻² | 3.1287 × 10⁻² | 3.1443 × 10⁻² | 0.0451 |
+
+- Reported, the solver's own projection (30 sweeps, 10⁻³ m/s): it stops after 4 sweeps. The flow falls short of Σ D V by 9.1 % at x = 10⁻³ and by 4.1 % (0.20 m) and 4.2 % (0.34 m) at x = 10⁻². D dt is still exact.
+- Reported, the item off: no flow leaves (0 m³/s), and the reset deletes the injected mass each step (7.4496 × 10⁻⁵ kg a step on 0.20 m at x = 10⁻³).
+
+**(c) The moles of each source.**
+- 1. `moleChange` and `changeGas`'s term against point 2's closed forms, the seven cases on 0.20 and 0.34 m: the worst relative error of n, Δn and ln(1 + Δn/n) is 2.3 × 10⁻¹⁶, against 10⁻¹². On 0.20 m every figure equals 16.19's table to its printed places. Case vii's O₂ is clamped.
+- 2. Gas-phase combustion through the chemistry stage:
+  - class A: dF 4.6409 × 10⁻⁵ kg on 0.20 m, ν 4.8906 mol/kg, A 2.78977 × 10⁻³, D dt 0.257743;
+  - class B: ν 14.8508 mol/kg, A 8.44744 × 10⁻³, D dt 0.541228;
+  - A, D dt against ln(V'/V), and `stats.sourceMoles` agree within 5.3 × 10⁻¹⁵, against 10⁻¹², on both cells.
+- 3. The burner: it burns 0.1000 g of METHANE, with ν 59.521 mol/kg and n₀ 0.33257 mol, so A is 0.017739, as 16.19 states. D dt is 1.014699 against ln(V'/V), within 1.5 × 10⁻¹⁶. On 0.34 m, n₀ is 1.63391 mol and A 0.003636.
+
+**(d) Mass and energy closure,** in (b)'s box.
+- 1. The mass carried out equals Σ n₀ M_CO ln(1 + x_c) within 4.2 × 10⁻⁸ to 6.2 × 10⁻⁸, against 10⁻⁴. The room's gas mass stays at its step-300 value exactly (a change of 0), against 10⁻⁶.
+- 2. At 600 K, the sensible heat carried out is 116.09, 1155.76, 570.37 and 5678.23 W, against the same figures (16.19: 116.1, 1155.8, 570.4 and 5678 W), within 4.2 × 10⁻⁸ to 6.2 × 10⁻⁸. The room's sensible heat stays at its step-300 value exactly.
+- 3. Reported, the item off: no flow leaves. Each step the reset deletes the injected mass and its heat: 11.615 J a step on 0.20 m at x = 10⁻³, equal to the injected mass's sensible heat, and 570.66 J on 0.34 m at x = 10⁻².
+- 4. Reported, `heat-closure.mjs`'s burner, porous and soot cases at 60 s, the item on beside off. The closure is higher with the item on in every case:
+
+| Case | Cells | Closure on / off | Soot closure on / off | sourceMoles, mol | sourceVolume, m³ |
+|---|---|---|---|---|---|
+| burner | 0.20 | 0.968 / 0.961 | 0.973 / 0.966 | 14.334 | 0.540 |
+| burner | 0.27 | 0.951 / 0.937 | 0.959 / 0.945 | 14.334 | 0.614 |
+| burner | 0.34 | 0.947 / 0.933 | 0.955 / 0.941 | 14.334 | 0.616 |
+| porous | 0.20 | 0.916 / 0.854 | 0.964 / 0.896 | 14.334 | 1.668 |
+| porous | 0.27 | 0.897 / 0.821 | 0.953 / 0.869 | 14.334 | 1.896 |
+| porous | 0.34 | 0.885 / 0.840 | 0.922 / 0.875 | 14.334 | 1.379 |
+| soot | 0.20 | 0.978 / 0.968 | 0.982 / 0.971 | 14.319 | 0.537 |
+| soot | 0.27 | 0.966 / 0.951 | 0.971 / 0.956 | 14.316 | 0.605 |
+| soot | 0.34 | 0.958 / 0.950 | 0.963 / 0.954 | 14.316 | 0.599 |
+
+  - The soot cases pass the tool's band of 0.9 to 1.0 on and off.
+  - The porous case's own verdict fails on and off on every cell, as it does on the base. Its hottest gas is 2628 to 2948 K.
+  - As 16.19 says, the band is not a closed form for this item.
+
+**(e) CPU against GPU.** Measured in headless Chrome on the machine's integrated GPU (intel gen-12lp).
+- **(e)1, one step from one state, 0.20 m, radiation and particles off, as the onestep phase takes a state.** Per cell, the item's change of D on the GPU against the CPU's, within max(10⁻³ |ΔD_CPU|, 8 float32 steps of D(off) on the GPU):
+  - (ii) class A contents at 700 K under gas at 900 K (1008 porous cells): 1008 cells change on both paths, the largest |ΔD| 40.4 /s. The worst cell uses 1.98 × 10⁻⁴ of its tolerance. PASS.
+  - (iii) one sprinkler column of 13 cells through gas at 600 K: 13 cells on both, the largest |ΔD| 1.33 /s; 2.99 × 10⁻⁴ of the tolerance. PASS.
+  - (iv) a layer at 600 K with Y_soot 0.01 beside walls at ambient: 1012 cells change on the CPU and 922 on the GPU, the largest |ΔD| 2.01 × 10⁻³ /s; 7.64 × 10⁻³ of the tolerance. PASS.
+  - (i) the room with the app's design fire 10 s into its ramp: 962 cells change on the CPU and 972 on the GPU, the largest |ΔD| 1.72 × 10⁻⁴ /s. **FAIL**: in 10 cells the GPU's change is up to 2.75 × 10⁻¹⁹ /s where the CPU's is 0. D(off) is 0 on both paths there, so the tolerance's floor is 8 float32 steps of 0, and the worst cell's ratio is 2.4 × 10²⁵.
+  - A diagnosis of (i), reported and not judged. In all 10 cells the gas is at ambient with Y_soot 10⁻¹¹ or less. After the step the GPU's gas is 293.15005 K, one float32 step (6.1 × 10⁻⁵ K) above its wall's 293.14999 K, and the CPU's equals the wall's. So the GPU deposits soot there by thermophoresis and the CPU does not, and the item reports the moles of that deposition. Every other cell of (i) is within its tolerance.
+- **(e)2, the GPU check's agreement and onestep phases, the item on beside off.** The tool runs both phases in its own page with the GPU check's scenes and settings. Its item-off rows equal the GPU check's base rows at every checkpoint, to every printed figure.
+  - agreement, both settings: PASS. The worst checkpoint uses 0.5 of the bound: at step 10 the largest |ΔT| is 1.22 × 10⁻⁴ K on and off. At step 200, on: 4.38 K largest and 0.32 K at the 99th percentile; off: 3.44 and 0.094 K; the twin on: 5.34 and 0.38 K.
+  - onestep: **FAIL**. With the item on the GPU's largest |ΔT| is 0.089 to 0.096 K from step 300 on, against 0.018 to 0.083 K off. It exceeds twice the larger of the item-off figure and the twin's at steps 450, 500 and 550. At step 450 it is 9.55 × 10⁻² K against 2 × 1.83 × 10⁻² K: 2.60 of the bound. The 99th percentiles pass (at most 1.22 × 10⁻⁴ K).
+  - A diagnosis of onestep, reported and not judged. The item-on and item-off rows come from different states, each phase's own history. From each item-on state, one step with the item off gives the same largest |ΔT| to every printed figure (9.552 × 10⁻² K at step 450). A step's T is bit for bit the same with the item on and off, on the CPU and on the GPU, at all six checkpoints. Within a step the item changes only D.
+- **The GPU check itself, run with the item on** (on a copy whose default set the switch, 4404 s). Its agreement and onestep rows equal the tool's item-on rows to every printed figure.
+- **The GPU check's `design` phase with the item on,** reported (16.20, decision 4), CPU against GPU, with the item off beside:
+  - no sprinkler: released 74.16 against 73.69 MJ, the item's 52.76 MJ on both, peak 1786 against 1826 kW. Off: 78.33 against 77.99 MJ, peak 2078 against 2025 kW.
+  - a head in wetting mode: released 17.20 against 17.21 MJ, the item's 17.11 MJ on both, the head's estimate 57.6 against 56.6 s, peak 168 kW on both. Off: 15.43 against 15.07 MJ, the item's 14.71 MJ, the head 52.7 and 52.8 s.
+  - The worker phase's CPU stats list gains `sourceMoles` and `sourceVolume` with the item on.
+
+**(f) Off is off.**
+- With `sourceExpansion` 0 the fingerprints are the base's, d62b581d and 29793d1a.
+- The unit suite passes 537 of 537 at bfda13a. Lint passes.
+- `tools/flamescapes-gpu-check.mjs`, all fourteen phases, was compared leaf by leaf with 13.32's method, the 93 timing leaves set apart (4877 others).
+  - The base ran three times: two runs from 16.13 (40f8ea9, whose frontend and tools equal 22c163f's) and one at 22c163f during this build. Their pairs differ in 47, 47 and 49 leaves. Together these 49 leaves are the base's spread, all on the GPU side of sprinklers runs 2 to 4, design runs 0 and 1, and the systems phase's runs.
+  - The two systems run 4 leaves that 16.13 found outside its two base runs, the GPU's peak and tenth-second heat release, are among the third base run's own differences.
+  - The branch with the item off differs from the three base runs in 49, 47 and 48 leaves. All of them lie within the base's spread; none lies outside it. Every other leaf agrees bit for bit, the CPU side of every phase included.
+  - So the `design` phase with the item off passes by the rule of 13.32 and 16.13 (16.20, decision 4).
+- The validation burner box (8 × 8 × 8 cells of 0.20 m, closed, one burner cell on its floor, 20 kW held, radiant fraction 0.2, 16 rays), 300 steps against the base read from git at 22c163f: every field and every one of its 18 stats entries is bit for bit the same. This holds for methane and for class A's sooty fuel.
+- With `sourceExpansion` 1 and `expansion` 0, the same two boxes against the base with `expansion` 0: bit for bit the same, and the item makes no array.
+- With `sourceExpansion` 1 and no source, heat-closure's mix box, 300 steps on 0.20 and 0.34 m:
+  - on the CPU, every field and stats entry the base has is bit for bit the base's; `sourceMoles` and `sourceVolume` are 0, and every A is 0;
+  - on the GPU, every field read back is bit for bit the same as with the item off, and the same as the base's (whose two runs agree bit for bit).
+- With 1 and a source the fingerprints differ: 553d3e16 and 4b7a0736.
+
+**(g)** With the default set to 1 for the run, the unit suite passes 537 of 537. No test was edited.
+
+**(h) Speed, reported and not judged.** Every figure was measured on a loaded machine. A materials study ran with 8 workers, beside up to four jobs of this build.
+- The fingerprint tool's rooms, 300 steps, ms a step off and on:
+  - the pilot room: 136.8 and 114.9 ms in all; `chemistry` 4.93 and 4.34; `deposition` 1.95 and 2.21; `expansionEnd` 0.72 and 0.75; `pilot` 0.041 and 0.042; `spray` 0.005 and 0.008;
+  - the design fire: 98.7 and 98.5 ms in all; `chemistry` 2.79 and 3.14; `deposition` 1.33 and 1.50; `expansionEnd` 0.55 and 0.65; `pilot` 0.16 and 0.14.
+  - The load moves these by more than any difference between them.
+- With 0, the fingerprint tool's ms a step (two runs each, alternating, the pilot room then the design fire): the base 100.4 and 94.2, then 104.3 and 95.2; the branch 109.2 and 99.3, then 108.7 and 129.3. Every run gives d62b581d and 29793d1a. The load moves these by more than any difference between them.
+- `tools/backend-bench.mjs`, one member a case, 180 s, the CPU on the app's CPU grid (30 000 cells) and the GPU on the app's grid pinned at 120 000 cells (`--app-cells`). ms a step, off and on; the on runs followed the off runs, under the same study:
+
+| Case | CPU off | CPU on | GPU off | GPU on |
+|---|---|---|---|---|
+| the room | 240.3 | 297.6 | 21.0 | 24.6 |
+| Duplex | 103.0 | 123.6 | 64.5 | 60.5 |
+| Office | 160.6 | 181.2 | 62.7 | 58.7 |
+| Clinic | 175.3 | 219.4 | 99.1 | 82.0 |
+| Vienna | 176.4 | 205.5 | 76.1 | 63.3 |
+
+  - With the item on, the CPU runs are 13 to 25 % slower. The GPU runs are 6 to 17 % faster in four cases and 17 % slower in the room. The load moves both by as much, so none of these separates the item's cost.
+  - Vienna on the GPU in headless Chrome with the item on reaches its 180 s horizon, in 114.0 s of wall time (137.0 s off).
+
+**(i) With item 15.** Item 15's branch at fc79277 was merged onto d108f79, for this check only. In its scenes (a)1 to (a)4 on 0.20 and 0.34 m, one chemistry stage in each of the four settings of the two switches:
+- item 16's A is bit for bit the same with item 15 on and off, in 18 cases (A from −0.195 to 1.63 in the fuel's gas cell);
+- every T, Y, ρ and T_s is bit for bit the same with item 16 on and off, with item 15 on and off, in 36 lines.
+
+**The smoke run** of the suite, steckler/14 on 0.27 m with `--source-expansion` and 13.B's flags, one job at bfda13a:
+- It finished in 20.9 s of wall time with its health guard passed.
+- The settings record "on", the run's solver options carry `sourceExpansion: 1`, and every ledger entry carries the two tallies.
+- At 300 s: released 18.5549 MJ, `sourceMoles` 21.80 mol, `sourceVolume` 0.816 m³, radiated 1.0924 MJ, gas 1.0997 MJ, walls 4.3574 MJ, shell 12.3688 MJ.
+- The same run without the flag (19.4 s): released 18.5549 MJ, radiated 1.0684, gas 1.0880, walls 4.3543, shell 12.2497 MJ.
+- The suite keeps no door mass flow for Steckler's tests. The door's centreline peak outflow is 1.573 m/s on and 1.588 m/s off; its neutral plane 0.975 m on and 0.909 m off. The upper layer's rise is 116.6 K on and 114.3 K off. These are reported only and are no verdict.
+
+**Departures, as built.** None changes an output with the item off.
+- `changeGas` computes the item's term before its writes, from `moleChange`. It leaves out a change that would empty the cell (n + Δn = 0), which `changeGas` itself does not make. The GPU tests the same after its own guard on the total.
+- With the item on, `expansionEnd` runs a copy of its loop, `sourceExpansionEnd`, chosen once a step; with it off the loop is line for line as before. A is cleared on every cell, the shell and solids included.
+- The four stages are exported as one object, `expansionStages`. `chemistryStage` is exported here too, as item 15 exports it; a merge keeps one.
+- `sourceVolume` is summed over open cells outside sealed regions and the shell, as point 7 states. So the closed boxes of (a) and (f) show 0.
+- (e)1's scenes were not fixed by 16.19 beyond their words. As built:
+  - (i) is `buildScene` on the GPU check's room with the app's class A design fire (`designFireFor("A", "class")`), stepped 100 steps;
+  - (ii) is the GPU check's room, its pilot removed, every open cell at 900 K and its porous cells' T_s at 700 K;
+  - (iii) is the room emptied, gas at 600 K, one column at its centre from the floor to the ceiling, 85 L/min, spray mode;
+  - (iv) is the room emptied, with the cells above 1.35 m at 600 K, Y_soot 0.01 and Y_O₂ 0.22.
+- "8 float32 steps of D(off)" is read as eight times float32's spacing at |D(off)| on the GPU, and 2⁻¹⁴⁹ where D(off) is 0.
+- (e)2 compares the item-on run's checkpoints with the item-off run's, each with its own history, as the GPU check with the switch on would be compared with the base. The tool runs both phases itself, so that onestep has its 99th percentile, which the GPU check does not record.
+- (f)'s burner box: 16.19 and 16.10 fix neither its cell, its fuel nor its heat. It is inner cell (3, 0, 3), 20 kW held, closed, as 16.13 built it, with methane and with class A's fuel. The comparison covers every typed array, number and stats entry of the solver, its zones, burner, particles and working arrays. The options object is set apart, since the branch's carries the new key.
+- (f)'s mix box ran 300 steps of 0.1 s, not heat-closure's 60 s.
+- (a)'s reference T_k starts from the stored ambient, 293.149994 K, the gas's own temperature.
+- (b)'s and (d)'s source is a share x of each source cell's moles read from its stored state each step, so x_c is x to rounding. The opening's six faces are those between the room and the opening's cells.
+- The smoke line gives the door's velocity and neutral plane, not a mass flow (above).
+- The unit suite ran at concurrency 2 (off) and 1 (on), and lint in the frontend, so that the build kept to four workers beside the GPU runs.
+- (g) and the GPU check with the item on ran on a copy of bfda13a whose `DEFAULTS` set the switch. No edited default was ever in the worktree.
+- (i) ran on a merge of d108f79 with item 15's branch at fc79277, in a temporary worktree. Both items were kept where they conflicted. The merge was not committed.
+- `RUN_CACHE_VERSION` (13) is unchanged. The run cache's key carries `sourceExpansion` when a run sets it.
+
+**Not verified.**
+- Whether (e)'s two failures have any cause beyond the diagnoses given. Each was diagnosed in its own scene only.
+- The item's effect in any validation run beyond the smoke run, which is a check of the flag and the ledger, not a result.
+- The cost apart from load.
+- The GPU check's `design` phase with the item on judged against anything: it is reported only (16.20, decision 4).
+- Item 15's checks on the merged tree: only (i) ran there.
+
+**Checked by the coordinator** (2026-11-15), apart from the agent:
+- **The check tool,** run again from d108f79, fails the same two lines: (e)1 in scene (i), and (e)2 at step 450.
+- **The commits** carry no Claude line.
+
+**Item 16's first attempt fails** (16.19, "What ends this line").
+- **Why.** Check (e) compares the CPU with the GPU, and it is not among the checks whose failure 16.19 treats as a fault of the code. So the attempt ends, and no tolerance moves.
+- **What follows.**
+  - Sources keep losing their volume in open regions. That stays a declared limit of every verdict and every app run.
+  - R16 is not run.
+  - R0 (16.20) holds the items that pass: 12, 14 and, if it passes, 15.
+- **A second attempt** needs the user's word and a new method written here first.
+- **A finding for any second attempt.** In the fingerprint tool's pilot room, the heat released falls from 0.488 to 0.090 MJ with the item on. It was not investigated. A second attempt must explain it first: whether the pushed-out gas starves the fire of oxygen near the burner, or whether the present deletion of displaced gas had kept fires burning that should not.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
