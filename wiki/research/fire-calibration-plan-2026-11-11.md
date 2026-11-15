@@ -4064,6 +4064,279 @@ The validation suite gives every run empty contents (`validation-suite.mjs` 289)
 
 Item 15, a fix for finding 2, is drafted blind by an agent that has not seen these figures.
 
+
+### 16.16 Item 15: the solid's vapour enters the gas with the heat the solid gives up (2026-11-15, before any code or run of it)
+
+Drafted blind to every validation result and to finding 2's size, as 13.12 sets and as 16.12's finding 2 asks. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at a2eefe4, whose `src/core` equals main's be32e34 (`git diff be32e34 a2eefe4 -- topologicpy-web-frontend/src` is empty). The figures called "the reference" below are closed forms evaluated by hand for this draft, in float64, from the solver's own constants. They are not the solver's output, and none is a fire result.
+
+**What the drafter read that reports results, declared as 13.26's coordinator note declares it.**
+- The plan's headings; 12.4 and 12.6 (12.6's addendum reports how many Steckler runs the grid does not represent); 13.12; 13.25 and 13.26 with the coordinator's decisions (model figures, and the direction item 11 leans); section 16 from its head to 16.12. 16.1 states the hot and cold readings of 13.B and the chairs. 16.9 states Phase 0's findings. 16.12 states findings 1 and 2, with no size.
+- The coordinator's brief, which quotes finding 2.
+- The one-line titles of the branch's last five commits. One of them (a2eefe4) names "finding 2's size" and 17.8, and gives no figure.
+- Comments in the solver and in `tools/calibration/heat-closure.mjs` that quote earlier results of the transport, the walls and the sprinklers (for example, the porous burner's closure of 1.27 before 2026-11-12). None concerns the contents' vapour.
+- Not opened: 16.14, 16.15, 13.15, section 17 beyond its headings, any file in `benchmark/results/`, and every result file of the calibration runs.
+
+The item was conceived after results were read: 16.12's finding 2 came from the coordinator's reading of the code. So its checks are closed forms only: conservation, a mixing formula, parity and bit-identity. No measured datum enters any of them.
+
+#### What the solver does now
+
+The contents (porous cells), a first item that is not a design fire, and fuel in a solid cell react in `chemistry` (`flamescapes.js` 1642 to 1827). A solid cell trades with its first open neighbour, upward first; a porous cell with its own gas (1659 to 1676). Four paths move mass from the solid to that gas cell, g:
+- **Evaporation** of the surface layer's water (1683 to 1688): `addGas(H2O, dw)`.
+- **A liquid's evaporation** (1697 to 1725): `addGas(FUEL, dv)`.
+- **Oxidation** (1753 to 1763): `addProducts` (1759). O₂ leaves the gas; CO₂, CO, soot and water enter it; dOx kg net (2043 to 2053).
+- **Pyrolysis** (1764 to 1772): fuel vapour and soot, 0.9 and 0.1 of dPy (`pyrolysisFuel`, `DEFAULTS` 262), through `addGas` (1767, 1768).
+
+**The gas.** `addGas` calls `changeGas` (2030 to 2035; 2007 to 2025). It adds the mass, renormalises Y and sets ρ = total / V. T does not change. So the mass enters at the cell's temperature T_g, and the cell's sensible heat above ambient, m c_p,mix (T_g − T_a), rises by Σ_k Δm_k c_p,k (T_g − T_a), taken from nowhere. This confirms 16.12's finding 2. Every other stage that adds heat does so through T, at constant pressure: gas combustion (1815); the burner, which keeps the cell's excess enthalpy as its fuel enters (3582 to 3584); the spray (1862); the vent leaks' inflow (2885 to 2887).
+
+**The solid.** Its heat is held as C_s (T_s − T_a), with C_s from `solidCapacity` (815 to 817): the inert part, the surface layer's fuel at c_f (`fuelCp`, 805 to 807; wood's 2000 J/(kg K), `DEFAULTS` 265) and its water at 4186 J/(kg K). The fresh fuel that replaces what reacted is mixed in at T_a (1774 to 1783). So each kilogram that leaves takes c_f (T_s − T_a) out of the solid's heat (4186 (T_s − T_a) for water), through the change of C_s at the T_s of that moment. That heat goes to nothing. The explicit heats are separate: the latent heats (1686, 1712), the endotherm `pyrolysisHeat` (1766; 0.25 MJ/kg, `DEFAULTS` 259) and the oxidation's heat (1758).
+
+**The volume.** After the heat sources, `updateDensity` sets every open cell's ρ to the gas law's at its T and Y (stage `density2`, 3688; 2653 to 2657). The next transport does the same (1350). The expansion asks the flow only for the change of T (2622 to 2627, 2633 to 2642). The vent leaks' inflow is the one mass source that adds its volume (2888, 2645). So in an open region the moles the solid adds take the place of the cell's own, and those vanish with their heat at the density stage. Of the vapour's addition, the cell keeps by the end of the step only the change of the mixture's molar heat capacity, (p V / (R T)) (T − T_a) Δ(M̄ c_p,mix).
+
+**A sealed region.** `changeGas` adds the mass to the zone's source (2022 to 2024). `pressureZones` keeps it (2965) and compresses the zone adiabatically (2908 to 2921, 2980 to 2990). There the mass is kept, and it enters as gas at the cell's temperature.
+
+So the present rule makes heat in the gas and destroys heat in the solid with every kilogram, and in an open region it also destroys the gas that the vapour displaces. The net depends on T_g against T_s and on the region. This draft does not estimate it.
+
+**The GPU** (`flamescapesGpu/kernels.js`).
+- `chemCell` (2136 to 2278) follows the CPU in the same order: evaporation (2155 to 2160), a liquid (2161 to 2191), oxidation (2211 to 2225), pyrolysis (2226 to 2232), fresh fuel (2235 to 2242), burn-out (2243 to 2246).
+- Its `addGas` and `changeGas` (869 to 874; 831 to 850) leave T unchanged, and add a sealed cell's mass to its zone (849).
+- It runs only porous cells. A scene with fuel in a solid cell runs on the CPU (`flamescapesGpu.js` `supported`, 1089 to 1094).
+- The chemistry pass runs after `expandBefore` and before `expandEnd` (`flamescapesGpu.js` 675, 684, 707, 724). `densityBoundaries` resets ρ by the gas law (2552 to 2563). The expansion reads only T (1660 to 1667).
+
+**The app and the validation.**
+- The app's first item is a design-fire burner (`flamescapesRun.js` 206 to 211, 246), whose rule already keeps the cell's excess enthalpy on both paths (CPU 3582 to 3584; GPU 951 to 958). The room's contents are porous cells (`flamescapesRun.js` 161, 212 to 224) and take the paths above, on the CPU and on the GPU.
+- No validation scene holds fuel in a cell: the suite builds every scene with no contents and no first item (`validation-suite.mjs` 289), and the chair series prescribes its measured heat release (170). So no validation run reaches these paths.
+
+#### What FDS does with a pyrolysate's enthalpy
+
+Read for this draft in FDS's source at commit ff928db, as 16.10 cites it:
+- **The solid.** The heat of reaction is taken at the surface temperature: `H_R = ML%H_R(J,ITMP)`, ITMP the nearest kelvin of T_s (`wall.f90` 3553 to 3555). It enters the solid's source as q_s''' = −Σ r H_R (3559).
+- **The heat of reaction follows the enthalpies.** With `ADJUST_H` true, the default (`read.f90` 7467), FDS sets H_R(T) so that its change with T equals the products' enthalpy less the reactant's (7795 to 7820). This is Kirchhoff's law. With it, the solid, the gas and the reaction's heat together conserve energy at any T_s.
+- **Through a burning wall.** The pyrolysate enters through the face, with the face's density at the surface temperature (`wall.f90` 1443) and a normal velocity ṁ''/ρ_F (1428, 1447 to 1448). The volume it takes at the surface temperature enters with it.
+- **From a thin obstruction or a particle.** The mass is a source in the adjacent gas cell. It adds its moles to the divergence, ṁ''' (R_α/R̄)/ρ_g (1414, 1521). The energy to bring the pyrolysate from T_s to the gas's temperature, Σ ν r (h_α(T_g) − h_α(T_s)) (`Q_DOT_G_PPP`, 3170, 3566 to 3574), is taken from the gas through the divergence (1422, 1539).
+
+So in FDS the pyrolysate leaves the solid at T_s; the gas receives it with its enthalpy at T_s and with its volume; and the heat of reaction carries the difference of specific heats.
+
+#### The method
+
+Chosen: **the gas keeps its own sensible heat and receives exactly the sensible heat the solid gives up with the mass that leaves it, and the mass's volume is asked of the flow.** It is the burner's rule (3582 to 3584) with one source term, and FDS's divergence for a mass source (`wall.f90` 1414).
+
+Considered and set aside:
+- **The burner's rule alone** (the vapour at T_a, the cell's sensible heat kept). The solid's update already gives up c_f (T_s − T_a) a kilogram, so that heat would vanish. It would destroy energy where the present rule makes it.
+- **The vapour at a reference temperature, its enthalpy taken from the solid.** The solid's update already takes it, by the change of C_s. Taking it again would count it twice.
+- **FDS's arrangement**: the vapour at T_s exactly with the gas's specific heats, and the difference (c_s − c_p,g)(T_s − T_a) a kilogram counted as Kirchhoff's change of the reaction's heat. It puts steam at its surface's temperature, where the chosen method puts it about 100 K above (declared limits). It needs one more tally, and for the pyrolysate it gives the gas 51 J/(kg K) × (T_s − T_a) a kilogram more than the solid gave, from that tally. Left to the coordinator (note 1).
+- **A temperature-dependent endotherm or latent heat in the solid.** Not minimal. The solid's update stays as it is, line for line.
+- **The mixing without the volume.** In an open region the density stage would then remove the displaced gas and its heat, as now (above).
+
+1. **Scope.** With `vapourEnthalpy` 1, every solid-fuel block of `chemistry` (CPU 1659 to 1792; GPU `chemCell` 2143 to 2251): porous contents, a first item that is not a design fire, a liquid pool, a metal, and fuel in a solid cell (CPU only). Unchanged: the gas combustion (1795 to 1822; GPU 2252 to 2276), the burner, the spray, the leaks, deposition and every other stage.
+
+2. **The gas's heat before.** At the start of a block, before its first change to g, read H₀ = ρ V c_p,mix(Y) (T_g − T_a) and the cell's moles n₀ = ρ V (Σ_k Y_k/M_k + Y_N₂/M_N₂), as `gasDensity` sums them (325 to 335). Float64 on the CPU, float32 on the GPU.
+
+3. **What the solid gives up, E_in.** E_in is the sensible heat above T_a that the solid's own update removes from C_s (T_s − T_a) by changing C_s, each change at the T_s of that moment. In the code's order (CPU lines; the GPU's in brackets), E_in gains:
+   - **water** (1685 to 1686 [2157 to 2158]): 4186 × (water before − water after) × (T_s − T_a), T_s after its latent heat is taken;
+   - **a liquid** (1711 to 1712 [2181 to 2182]): c_f × (skin before − skin after) × (T_s − T_a), T_s after its latent heat, with skin = min(fuel, `skinDensity` × area) (810 to 812 [792]); it is 0 while the pool holds more than its skin;
+   - **oxidation** (1754 to 1756 [2212 to 2217]): c_f × (skin before − skin after) × (T_s − T_a), less a metal's ash, (inertC after − inertC before) × (T_s − T_a), T_s before the oxidation's heat is added (1758 [2219]);
+   - **pyrolysis** (1765 [2227]): c_f × (skin before − skin after) × (T_s − T_a), T_s before the endotherm (1766 [2228]);
+   - **fresh fuel** (1776 to 1782 [2235 to 2241]): c_f × fresh × (T_s − T_a), T_s before the mixing; the fresh water enters at T_a and changes nothing;
+   - **burn-out** (1717 to 1718 and 1785 to 1786 [2186 to 2187 and 2243 to 2244]): c_f × (skin before − skin after) × (T_s − T_a) for the last 10⁻⁷ kg or less, which is zeroed; its heat goes to the gas and its mass is dropped, as now.
+
+   The masses are the stored values (float32), so each term is the exact change of the solid's books. These are all the changes of C_s in a block; the explicit heats change T_s, not C_s. So, in exact arithmetic, with 0 and 1 the block's start and end,
+
+   E_in = C_s,0 (T_s,0 − T_a) − C_s,1 (T_s,1 − T_a) + Q_ox − L_p dPy − L_w dw − L_liq dv.
+
+   Check (a) tests this.
+
+4. **The gas's heat after.** After the block's last change to g (after the fresh fuel and burn-out), T_g = T_a + (H₀ + E_in) / (ρ' V c_p,mix(Y')), with ρ' and Y' as `changeGas` left them. This is mixing at constant pressure. The gas's own sensible heat is kept through the change of composition, as the burner keeps it (3582 to 3584), and the mass brings E_in. Because c_p,mix is linear in Y (338 to 346), it is the same as adding the mass at an entry temperature T_in with Σ_k Δm_k c_p,k (T_in − T_a) = E_in. The O₂ that oxidation takes leaves its heat in the gas, carried by the products.
+
+5. **The volume.** If `expansion` is on (`DEFAULTS` 193), the gas cell's expansion gains ln(1 + Δn/n₀), where Δn = Σ_k Δm_k / M_k are the moles the block added (O₂ taken counts negative), with the solver's molar masses (`MOLAR`, 94).
+   - The CPU adds it to `work.expand[g]` (2624); the GPU to its own cell's `fD` (`CF.D`, 216), by `lnOnePlus` (1777).
+   - `expansionEnd` (2633 to 2642 [1663 to 1667]) then adds the T change that point 4 made, ln(T/T₁), divides by dt and holds the shell at 0.
+   - The sum is ln(V'/V), the volume the cell's gas takes at constant pressure (an ideal gas, V ∝ n T). It is FDS's ṁ''' (R_α/R̄)/ρ_g (`wall.f90` 1414) over a step, and the vent leaks already add theirs this way (2888).
+   - In a sealed region the projection takes the region's mean off (3161 to 3178) and the zone keeps the mass (2965), as for heat.
+   - The low-Mach form, in which the flow's divergence carries the volume that heat and mass sources make at the background pressure, is Rehm and Baum's (1978).
+
+6. **The solid is unchanged.** Every line of the solid's update stays: the rates, latent heats, endotherm, oxidation heat, fresh fuel and burn-out. Its surface balance in the stage is d[C_s (T_s − T_a)] = Q_ox − L_p dPy − L_w dw − L_liq dv − E_in, and the gas receives exactly E_in. So nothing is made or destroyed. L_p, L_w and L_liq become the vapour's chemical and latent enthalpy, as now, and are counted (point 8).
+
+7. **Order on the CPU.** A solid cell's gas cell is its neighbour. Blocks run in cell order, each reading H₀ at its start and writing T_g at its end, so a gas cell shared by two solid cells takes both. A porous cell's own gas combustion (1795 to 1822) then reads the new T, as it reads T now.
+
+8. **Tallies, CPU, only with the item on.**
+   - `stats.vapourEnthalpy` (J): Σ E_in.
+   - `stats.vapourMass` (kg): the net mass the solids gave the gas.
+   - `stats.pyrolysisEndotherm` (J): Σ L_p dPy.
+   - `stats.evaporationHeat` (J): Σ L_w dw + Σ L_liq dv.
+
+   The validation suite's ledger records them beside its entries when the item is on, as 16.12's decision 6 records item 12's. They enter no statistic.
+
+9. **Exports for the checks** (no run calls them): `chemistryStage`; `solidCapacity`; and `vapourMix(m, Y, T, Δm, E_in, T_a)`, the pure function that points 4 and 5 use, which returns T' and ln(1 + Δn/n₀).
+
+10. **The GPU.**
+    - `PARAMS` gains `vapourEnthalpy` (u32), set from `P.vapourEnthalpy` where `surfaceRayStart` is set (`flamescapesGpu.js` 417).
+    - In `chemCell`, with it 1: points 2 to 5 in float32 for the porous cell's own gas, with `mixtureCp` (763), `molarInv` (859) and `capOf`'s terms (793 to 795).
+    - No buffer, pass or reduction is added. The GPU keeps no tallies (note 4).
+    - A scene with fuel in a solid cell stays on the CPU, as now.
+
+11. **What stays exactly as now.** The solid's update and every rate; the gas combustion; the validation burner and the design fire's burner; the spray; the leaks; deposition; the transport and the projection. Every scene with no fuel in any cell.
+
+#### How it relates to item 13 and to the burner
+
+One rule covers all three: **the gas keeps its sensible heat above T_a, and a source adds only what a ledger entry supplies.**
+- **The burner** (3582 to 3584): the source is (1 − χ_r) of the heat burnt. The fuel brings no heat of its own.
+- **Item 13's timber** (16.11, point 7): the vapour brings no heat of its own. Its wall keeps its nodes' capacities as the char front passes (16.11, point 11), so the solid gives up no sensible heat with the vapour, and its E_in is 0. **Item 13's rule already agrees.** The 0.66 MJ/kg its vapour would carry stays in the wall, as 16.11 declares.
+- **The contents** (this item): the skin's capacity falls as mass leaves (815 to 817, 1774 to 1783), so E_in is what it gives up.
+
+Item 13's vapour enters through `addGas` as the contents' does (16.11, point 7), so it shares the open region's lost volume. Point 5 applies to its release as it stands. Whether item 13 takes point 5 is left to the coordinator (note 3).
+
+#### The switch
+
+`vapourEnthalpy`: 0 (default), as now; 1, the method.
+- With 0, `chemistry` tests one flag a stage and one a solid-fuel cell, keeps no new array and adds no `stats` key. The GPU tests one uniform per porous fuel cell. Every output is bit-identical to the base (check (e)).
+- With 1 and no fuel in any cell, every output is bit-identical too.
+- `RUN_CACHE_VERSION` (`runCache.js` 54, now 13) rises only with a default (13.25, decision 14), and a cached run's key carries the switch.
+
+#### Cost
+
+- **With the item on.** Per reacting fuel cell and step: two sums of c_p,mix and one of moles over six species, about thirty operations, one division and one log1p. The CPU adds four scalar tallies and no array. The GPU does the same in the chemistry thread, with no buffer and no pass. The chemistry stage already evaluates two Arrhenius rates for each such cell.
+- **With it off.** One test of a flag per solid-fuel cell and step.
+- **The flow.** With the item on, burning contents ask the projection for the vapour's volume. The projection's sweeps are fixed (`projection` 30, `DEFAULTS` 223), so its cost does not change.
+- **The app.** Every app scene with contents is affected on both paths. Check (h) reports the step's cost, Vienna on the web included.
+
+#### Checks (fixed now, before any run)
+
+All but (b), (d)2, (e), (g) and (h) run in a new tool, `tools/vapour-enthalpy-check.mjs`. It builds each scene as a grid of cells by hand, as `flamescapes.wall.test.mjs` builds its mask, and calls the chemistry stage alone (`chemistryStage`), adding 1 to `sim.steps` after each call. No other stage runs: no transport, density, zones, conduction, radiation or walls. Cells of 0.20 and 0.34 m. No measured datum enters any check.
+
+(a) **A sealed, adiabatic box conserves its enthalpy.**
+- **Why enthalpy.** With the stage alone, no gas moves (sealed) and nothing exchanges heat (adiabatic). Every change in the stage is at constant pressure, the solver's convention for its heat sources (`pressureZones` comment, 2910 to 2911). The invariant of a closed, adiabatic system at constant pressure is its enthalpy (the first law).
+- **The total.** E = Σ_open cells ρ V c_p,mix (T − T_a) + Σ_fuel cells C_s (T_s − T_a) + `stats.pyrolysisEndotherm` + `stats.evaporationHeat` − `stats.released`, in float64 from the stored fields, C_s from `solidCapacity`.
+- **The scenes.** Each at dt 0.1 s for 2000 calls and at dt 0.05 s for 4000.
+  1. Inert gas (N₂: every Y 0). One porous cell of class A contents (`fireClasses.js` 79) with its water as `createSolver` sets it (440), its fuel at 0.5 and at 4 times `skinDensity` × area (so the skin is not full, then full), T_s 650 K, the gas at 400 K and at 900 K.
+  2. Air, with `gasA` 0 so that no gas burns (the rate at 1809 is 0, so dF is 0 and 1812 does nothing): the same cells, with oxidation, pyrolysis and evaporation together.
+  3. A heptane pool, class B's first item (`fireClasses.js` 105), T_s 400 K, in N₂ at 400 K, its fuel above and below its skin.
+  4. A magnesium first item, class D (ash 1.658 kg/kg, 1023 J/(kg K); `fireClasses.js` 169 to 170), in air with `gasA` 0, T_s 500 K.
+  5. CPU only: a solid cell of stone holding class A fuel, its one open neighbour above it (the path at 1663 to 1676), in N₂ and in air with `gasA` 0. The check sets its fuel, area and water by hand, since no scene feeds this path (16.11).
+- **Pass.** At every call, |E_after − E_before| ≤ R, with R = 10 × 2⁻²⁴ × Σ (C_s T_s + ρ V c_p,mix T) over the cells the call changed, from their values before it.
+- **Reason for R.** Point 4 computes T_g from the stored ρ' and Y', so the gas's books carry one rounding, the store of T_g. The solid's books carry at most four stores of T_s and the water stored with fresh fuel. Each store moves E by at most 2⁻²⁴ times the absolute heat stored, C_s T_s or ρ V c_p,mix T. 10 covers them with a margin of 2. Float64 sums err by about 10⁻¹⁵.
+- **Its size.** In scene 1 on 0.20 m cells (fuel 0.04 kg, water 0.004 kg, C_s 96.7 J/K, T_s 650 K, N₂ at 900 K), R is 0.039 J a call. The first call takes the water (E_in 4411 J). Then each call's E_in is about 5.3 J and its endotherm 1.9 J. With E_in left out (the burner's rule) a call would be 5.3 J out; with the present rule, 4.0 J. (Hand evaluations of the closed forms.)
+- **Reported beside, with the item off:** each call's imbalance and their sum.
+
+Also reported, not judged: the same box stepped whole with pressure zones on, its internal energy against its start, on and off. A zone's adiabatic compression conserves internal energy only to first order in its pressure step (2908 to 2921), which is outside this item.
+
+(b) **Energy closure in the solver's ledger.** A new case `contents` in `tools/calibration/heat-closure.mjs`.
+- **The scene.** The tool's burner room (`burner`, 5 × 4 × 2.7 m with a door), its burner's cells porous and holding class A contents of 2 kg a cell, the burner's 150 kW ramp as in its burner case, walls adiabatic and radiation off (`ADIABATIC`), the item on; 60 s on 0.20, 0.27 and 0.34 m.
+- **The closure.** [H_gas(t) − H_gas(0) + Σ_porous C_s (T_s − T_a) + `stats.shellHeat` + `stats.pyrolysisEndotherm` + `stats.evaporationHeat`] / [`stats.released` + `stats.pilotHeat`], with H_gas the tool's inventory (mixture c_p, open cells off the shell). The contents start at T_a.
+- **Pass.** Within 0.9 to 1.0 at 30 s and at 60 s on each cell: the band the tool sets for its burner cases (`heat-closure.mjs` 226 to 247).
+- **Reported beside:** the burner case on the same cell; the same case with the item off, read without the two sinks, which the item off does not tally; and the soot budget (released, in the gas, deposited, gone) on and off.
+
+(c) **Constant-pressure mixing against a closed form.**
+1. **The pure function.** `vapourMix` against the reference T' = T_a + (H₀ + E_in) / (m' c_p,mix(Y')), the mixing of two ideal-gas streams with constant specific heats at constant pressure, and ln(1 + Δn/n₀), each computed by the check in float64 from the closed forms. Pass within 10⁻¹² relative. The cases, on a 0.20 m cell at ambient pressure, the gas's mass by the gas law (rounded here for print):
+
+   | Case | Gas before | Added | E_in (J) | T' (K) | T', E_in 0 (K) | ln(1 + Δn/n₀) |
+   |---|---|---|---|---|---|---|
+   | i | N₂, 900 K, 3.0331 g | 10 mg of pyrolysate, from T_s 700 K | 8.1370 | 898.643 | 896.080 | 0.0035325 |
+   | ii | N₂, 400 K, 6.8245 g | the same | 8.1370 | 400.835 | 399.692 | 0.0015715 |
+   | iii | air, 400 K, 7.0283 g | 10 mg of steam, from water at 373.15 K | 3.3488 | 400.190 | 399.721 | 0.0022768 |
+   | iv | air, 800 K, 3.5142 g | 1 mg of class A oxidised, at T_s 700 K | 0.81370 | 800.0069 | 799.7782 | 0.00031361 |
+
+   E_in is c_f (T_s − T_a) a kilogram of fuel and 4186 (T_s − T_a) of water. The present rule leaves T' at 900, 400, 400 and 800 K and asks no volume. As a cross-check, case i in absolute enthalpies, with the vapour at T_in = T_a + E_in / (Δm 2051 J/(kg K)) = 689.88 K, gives the same T'.
+2. **Through the stage.** Scene (a)1 with the skin full and no water, N₂ at 400 and at 900 K, one call, the check having zeroed `work.expand`.
+   - Then fresh fuel replaces what pyrolysed and the skin's capacity does not change, so E_in = c_f dPy (T_s,c − T_a), with dPy = `stats.vapourMass` and T_s,c = fround(T_s,0 − dPy L_p / C_s,0).
+   - Pass: T_g within one float32 step of T_a + (H₀ + E_in) / (ρ' V c_p,mix(Y')), from the stored state before and after.
+   - Pass: the expansion's increment within 10⁻¹² relative of ln(1 + dPy (0.9/0.030 + 0.1/0.012) / n₀).
+   - Reason: one float32 store of T_g; the rest is float64.
+
+(d) **CPU against GPU.**
+1. **One stage.** Scenes (a)1 to (a)4 on 0.20 m cells (the GPU refuses (a)5). From one state, one chemistry pass on each path, item on and item off, through a hook the build adds (as 13.25 (g) did for `radEmit`).
+   - Per cell, the item's change ΔT = T(on) − T(off) on each path agrees within max(10⁻³ |ΔT_CPU|, 8 float32 steps of T).
+   - The expansion's increment agrees within 10⁻³ relative.
+   - Reason: the GPU evaluates the same closed forms in float32 from the same inputs. Its H₀, E_in and moles differ from float64 by about 10⁻⁶ relative, and its float32 Arrhenius rates by about 10⁻⁵ or less. 10⁻³ keeps a margin of 100. The 8 steps cover a ΔT near 0, where the two terms of the mix nearly cancel.
+2. **Whole steps.** `tools/flamescapes-gpu-check.mjs` phases `agreement` (200 steps of its room, contents on its floor) and `onestep`, with the item on. At every checkpoint the GPU's maximum and 99th percentile of |ΔT| from the CPU are at most twice the larger of: the same with the item off; the CPU's one-ulp twin's with the item on. Reason: the item is deterministic arithmetic of the kind the port already matches, so it should not make the paths part faster than round-off does. Twice is the margin.
+3. **Reported, not judged:** phase `design` (the app's design fire through `runScene` on both paths) with the item on.
+
+(e) **Off is off.** With `vapourEnthalpy` 0:
+- `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's fingerprints;
+- the unit suite passes with the same count;
+- `tools/flamescapes-gpu-check.mjs`'s phases give the base's state comparisons bit for bit, timings aside.
+
+With `vapourEnthalpy` 1 and no fuel in any cell (heat-closure's burner case, and one Steckler test of the suite for 30 s), every field and every `stats` entry the base has are bit-identical to the base, on each path that runs the scene. With 1 and fuel, the fingerprints differ, which is reported.
+
+(f) **The item changes only T and the expansion.** In scenes (a)1 to (a)5, from one state, one call with the item on and one with it off leave every Y, ρ, T_s, fuel mass, water, inertC, kind and every `stats` entry of the base bit-identical. T differs only in the cells that took mass from a solid, and the expansion array only there. In these scenes no gas burns, so no rate reads the changed T.
+
+(g) **The unit suite passes unbent** with the default set to 1 for the run (a one-line change, not committed). A test that fails is not edited, and its failure is reported. Only a test whose reference is the present rule itself (the vapour at the cell's temperature, no volume) may be rewritten, disclosed as written after a failure (13.25, decision 13).
+
+(h) **Speed, reported, not judged.** The chemistry stage's ms and a step's ms, on and off, from the fingerprint tool's profile. `tools/backend-bench.mjs` on its room, Duplex, Office, Clinic and Vienna, CPU and GPU, on and off. Vienna on the GPU in the browser with the item on: whether it reaches its horizon, and its ms a step.
+
+A failure of (a) means E_in is not what the solid gives up, or the gas does not keep H₀ + E_in. A failure of (c) means the mixing or the volume departs from its formula. A failure of (b) means the volume or the mixing does not close in the whole solver. A failure of (d) means the port departs from the CPU. A failure of (e) or (f) means the item acts where it should not.
+
+#### Default
+
+Off. Passing (a) to (g) makes the switch available to the solver's options and to the harness.
+- No validation scene holds fuel in a cell (`validation-suite.mjs` 289), so no validation verdict can move, and there is no rerun to report beside 13.B. Check (e) shows it bit for bit.
+- The item changes app runs and any study run with contents (16.9, feature (b)). The app's default changes only as 13.25's decision 14 sets: with the user's agreement, given with the step's cost (CPU, GPU, and Vienna in the browser) and the four tallies of an app scene before them. `RUN_CACHE_VERSION` rises then.
+
+#### What ends this line
+
+If any check of (a) to (g) fails in any case, the attempt fails, and it is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted. The method has no free constant: every number is the solver's own (c_f, 4186, `CP`, `MOLAR`, L_p, L_w).
+
+Checks (a), (c), (e) and (f) have references that the method meets exactly or within float32 storage. So a failure there is a fault of the code against the method, and 13.25's decision 13 applies: corrected code, run again in full, is the same attempt, reported with both commits. A change to the method ends the attempt.
+
+If the line ends, the contents keep the present rule. Finding 2 stays a declared limit of every app run and of any study run with contents, at the size 16.15 gives it. No second attempt is drafted. It would need the user's word and a new method written here first.
+
+#### Declared limits
+
+- **The entry temperature.** The vapour carries the solid's specific heat, so it enters the gas as if at T_a + (c_s / c_p,g)(T_s − T_a). For the pyrolysate that is 0.975 of the rise (2000 against 0.9 × 2200 + 0.1 × 710 = 2051 J/(kg K), `CP`, 97). For class A's oxidation products, with the gas and the solid at one temperature, about 1.16 (O₂ at 918 J/(kg K) kept in the gas, the products at 2825 J/K a kilogram of fuel, from the stoichiometry at 352 to 366). For steam, 2.25 (4186 against 1864): steam from water at 373.15 K enters as if at 472.8 K. The energy is exact; the split between sensible heat and the reaction's heat is the solver's.
+- **Water's latent heat is the one at 100 °C** (40.7 kJ/mol, 2.2586 MJ/kg, `DEFAULTS` 263). Referred to T_a, steam's latent heat is (4186 − 1864) × 80 K = 186 kJ/kg more. Under this item those 186 kJ/kg reach the gas as the steam's sensible heat. FDS's arrangement (note 1) would count them in the latent heat.
+- **The endotherm and the latent heats are constants** (0.25 MJ/kg, `DEFAULTS` 259; 2.2586 MJ/kg; heptane's 0.317 MJ/kg and the oil's 0.25 MJ/kg, `fireClasses.js` 105 and 202). Their energy leaves the thermal books, as now: the vapour burns at its fuel's heat of combustion (1814), which does not return L_p. Counted, not changed.
+- **The skin model is unchanged.** One T_s for the surface layer; fresh fuel at T_a.
+- **Soot is a gas in the expansion.** The equation of state counts soot at 0.012 kg/mol (`MOLAR`, 94; 325 to 335), so the item asks volume for its moles as the gas law holds them. Real soot takes none. Soot is 0.1 of the pyrolysate's mass (262) and 22 % of its moles (8.33 of 38.3 mol/kg).
+- **Other mass sources make no expansion, as now:** the burner's fuel (3583) and the gas combustion's change of moles (1813). They are outside this item.
+- **The reverse direction.** Soot deposition takes soot out of the gas at T, with its heat, to no surface (2566 to 2571). Outside this item.
+- **Burn-out.** A porous cell that turns gas (1787 to 1790) with water left keeps that water out of both books, as now. Fuel of 10⁻⁷ kg or less, zeroed, gives its heat to the gas without its mass.
+- **Metals.** The O₂ that oxidation takes leaves its heat in the gas; the ash appears in the solid at T_s (1756). E_in can then be negative. Exact, but the split is the model's.
+- **Sealed regions.** A zone's adiabatic compression conserves internal energy to first order in its pressure step (2908 to 2921), unchanged.
+- **Embers** (off by default, `DEFAULTS` 290) lose mass (701) that no gas cell receives. Outside this item.
+- **The GPU keeps no tallies.** Its closure rests on parity with the CPU (check (d)).
+- **Float32 storage.** Its rounding is bounded in (a), not corrected.
+
+#### Not verified
+
+- The size of the change in any run, and finding 2's own size (16.15, not read).
+- How much the vapour's volume changes the flow near burning contents.
+- Whether check (b)'s band separates the item from the present rule. Check (a) is the sharp test.
+- FDS's Technical Reference Guide was not read. FDS's rule is read from its source, as cited.
+- Rehm and Baum (1978): metadata only.
+
+#### Sources (read, or run for this draft)
+
+- This repository at a2eefe4:
+  - `flamescapes.js` 78 to 101, 123 to 301 (parts of `DEFAULTS`), 304 to 366, 376 to 513, 796 to 817, 1316 to 1469, 1636 to 1889, 1914 to 1989, 2001 to 2053, 2544 to 2573, 2608 to 2660, 2670 to 2745, 2852 to 3002, 3058 to 3178, 3540 to 3660 and 3663 to 3717;
+  - `flamescapesGpu/kernels.js` 118 to 135, 200 to 240, 760 to 885, 920 to 970, 1618 to 1667, 1775 to 1782, 2040 to 2320 and 2546 to 2563;
+  - `flamescapesGpu.js` 410 to 420, 640 to 749 and 1084 to 1094;
+  - `flamescapesRun.js` (by search: 116 to 231, 246);
+  - `fireClasses.js` 40 to 105, and by search its heat capacities, ash and liquids;
+  - `runCache.js` 54 (by search);
+  - `tools/calibration/validation-suite.mjs` 430 to 474, and by search 157, 170, 289 and 304;
+  - `tools/calibration/heat-closure.mjs` 1 to 225;
+  - `tools/flamescapes-gpu-check.mjs` 1 to 60 and 180 to 445;
+  - `formal/fireegress/FireEgress/Suppression.lean`, by search (`evaporate_energy`).
+- FDS source at commit ff928db (`github.com/firemodels/fds`, ff928dbf68a2623ced3a007be75391c6dc6c9f90): `Source/wall.f90` 1380 to 1461, 1469 to 1545, 3164 to 3172 and 3530 to 3595; `Source/read.f90` 7225 to 7240, 7464 to 7469, 7625 to 7660 and 7790 to 7830.
+- Rehm, R. G., and Baum, H. R. (1978). The equations of motion for thermally driven, buoyant flows. Journal of Research of the National Bureau of Standards 83(3), 297. doi:10.6028/jres.083.019. Checked on Crossref; metadata only.
+- Run for this draft: the closed forms of check (c)'s table and of check (a)'s bound and transfers, by hand in a script that imports nothing from the solver. No solver, no fire simulation, no result file.
+
+### 16.17 The coordinator's decisions on 16.16, and a correction to 16.15 (2026-11-15, before any code of item 15)
+
+**A correction to 16.15's finding 2.** The drafter of 16.16 read the code and found the defect is not one-signed. The coordinator checked it.
+- As 16.15 measured, the gas gains Σ Δm c_p (T_g − T_a) from nowhere.
+- At the same time, the solid gives up the departing mass's heat. Fresh fuel at ambient replaces what reacted, and the layer's temperature is mixed down with it (`flamescapes.js` 1774 to 1783).
+- So the energy created is the difference of the two. 16.15 measured only the gas's side, and the net is not measured.
+- Where the solid is above ambient, 16.15's figures are an upper bound on any net gain, so 17.8's rule remains conservative for a gain. A net loss is possible, and 17.8 does not cover it. That is stated here.
+
+**Item 15.** Each decision takes the draft's choice or the stricter reading.
+1. **The draft's method.** The gas cell keeps its own heat above ambient, and receives exactly the heat above ambient that the solid's own update gives up with the mass. The solid's update stays line for line. It covers pyrolysis, steam and oxidation products, on the CPU and the GPU. FDS's variant (vapour at exactly the surface temperature, with one more tally) is not taken, because the draft's closes by construction.
+2. **The volume term is split out.** The moles the vapour adds, as ln(1 + Δn/n₀) in the expansion, are a separate effect: the displaced gas is pushed out, not deleted. They join the two other gaps the drafter found (the burner's fuel, and the mole changes of gas-phase combustion) in **item 16**. Item 16 is drafted blind, so each effect is read alone (13.12, rule 5). Item 15 is enthalpy only.
+3. **Item 13's vapour** already agrees with item 15's enthalpy rule: its wall keeps its heat, so its vapour brings none. Its volume term goes with item 16.
+4. **No GPU tallies.** The CPU's tallies serve, and the GPU is judged by parity.
+5. **The study.** As 17.8 fixes, every furniture-on run runs again with item 15 on if it passes its checks.
+6. **Tolerances stand as drafted.** Check (b)'s existing band of 0.9 to 1.0 is reported, not judged. The draft says it may not separate the item from the present code, and it is not tightened after a run.
+7. **Order.** Item 15 is built now, on its own branch from this section's commit. It does not wait for item 12.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
