@@ -271,6 +271,24 @@ an axiom print (967 in the modules of the first six batches, 317 in AxiomCheck.l
 or none (`axioms-all-2026-11-05.txt`, regenerated from this build's log and AxiomCheck.lean's
 output, with every earlier line kept in order), no `sorry`, no warnings.
 
+
+### The clock lemma: the RL card against a forecast (2026-11-15)
+
+SafeClock.lean (12 results) covers `rlForecast.js`, which trains both learners against the
+closing times `c v` of a Flamescapes forecast in seconds. The code hands the learners
+`ig v = (c v - d) / τ - 1` for an evacuee leaving at `d` with a step of `τ` seconds, and
+`rlSafe.js` reads it as `opn v = min H (max 0 ⌈ig v⌉)`. `move_safe_iff` and `opn_iff`: both
+learners' tests say `d + (t + 1) τ < c v`. `clock_safe` (and `clock_safe_steps` for `rl.js`): if every
+move takes at most `τ` seconds, every node of a safe escape on that clock is reached in seconds
+before `c` closes it; `Walk` is the route of `SafeEscape.Esc` (`walk_esc`, `esc_walk`,
+`clock_safe_esc`). `clock_safe_of_le` and `margin_le`: the route stays safe for any fire that
+closes no node sooner than `c`, so with a margin `s ≤ 1` for the forecast itself.
+`split_link_time`: a link split into `⌈len / L⌉` moves takes no longer than those moves. Not
+covered: floating point (the code adds a relative `10⁻⁹` to `τ`, and walks every returned route
+again in seconds), and any fire that departs from the forecast. Built on 2026-11-15 with
+`lean.exe` against SafeEscape and Mathlib's built files: no `sorry`, no warnings, standard
+axioms only.
+
 ## Ninth batch: sprinklers and the performance check (2026-11-07)
 
 Sprinklers.lean (28 theorems) backs the sprinkler research (layout, the link's step and its exact

@@ -324,6 +324,20 @@ import FireEgress
 #print axioms FireEgress.SafeEscape.arrival_mask_traps
 #print axioms FireEgress.SafeEscape.legacy_reward_prefers_staying
 
+-- The clock lemma for the RL card against a forecast, rlForecast.js (2026-11-15).
+#print axioms FireEgress.SafeClock.move_safe_iff
+#print axioms FireEgress.SafeClock.opn_iff
+#print axioms FireEgress.SafeClock.walk_esc
+#print axioms FireEgress.SafeClock.esc_walk
+#print axioms FireEgress.SafeClock.walk_opn
+#print axioms FireEgress.SafeClock.arrival_le
+#print axioms FireEgress.SafeClock.clock_safe_steps
+#print axioms FireEgress.SafeClock.clock_safe
+#print axioms FireEgress.SafeClock.clock_safe_esc
+#print axioms FireEgress.SafeClock.clock_safe_of_le
+#print axioms FireEgress.SafeClock.margin_le
+#print axioms FireEgress.SafeClock.split_link_time
+
 -- The queue at each door and pre-movement, performanceCheck.js and rsetPresets.js (2026-11-07): one line per theorem.
 #print axioms FireEgress.DoorQueue.queue_zero
 #print axioms FireEgress.DoorQueue.queue_succ
