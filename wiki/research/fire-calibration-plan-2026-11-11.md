@@ -6144,6 +6144,258 @@ None of it concerns a source's volume. It is declared in the result.
 
 No other tolerance moves. No bound changes after a judged run.
 
+
+### 16.29 Item 15, second attempt: the diagnosis and the method (2026-11-15, before any code of it)
+
+Drafted at the user's word for a second attempt (2026-11-15), as 13.12 sets, after the first attempt failed (16.18). 16.18's coordinator reading asks that a second attempt first explain the swing (g) shows. Part 1 does that. Parts 2 to 8 are the method and the checks. Nothing below changes after a run of the second attempt; anything added later is dated, with its commit. No code of the second attempt exists.
+
+Line numbers are those of `flamescapes/vapour-enthalpy` at a7706de, whose solver files equal 2ef5bd9's (`git diff 2ef5bd9 a7706de -- topologicpy-web-frontend/src` is empty). Figures called "measured" come from `tools/vapour-swing-diag.mjs`, committed for this draft on the same branch at c18595e, which changes no solver file. It imports the solver read only, or, for the stage tallies, a copy of `src/core` in the system's temporary folder with counters added to its `chemistry` and no line of its arithmetic changed. Every run is on the CPU and repeats exactly. No validation run, study run or GPU run was made, and no result file was opened.
+
+**What the drafter read that reports results, declared as 16.19 declares it.**
+- The plan's headings.
+- 13.12; 13.25 with the coordinator's decisions (13 and 14 among them); 16.8.
+- 16.16, 16.17 and 16.18 whole. 16.18 reports the first attempt's checks, its saved figures and the coordinator's reading.
+- 16.19, 16.20 and 16.22, for context. 16.22 reports item 16's checks, its own (e) failures, and a finding in the fingerprint tool's pilot room.
+- Searches of the plan for the GPU's run-to-run differences showed lines of 13.32, 13.34, 16.13, 16.21, 16.23 and 17.6 in their output. Those sections were not opened.
+- The first attempt's saved outputs (the check tool's JSON files and logs), the branch's eight commits, and `tools/vapour-enthalpy-check.mjs`.
+- Not opened: 16.14, 16.15, section 17 beyond its headings, any file in `benchmark/results/`, every result file of the calibration runs, and every rerun output.
+
+FDS is not installed on this machine. Its source was read, not run.
+
+#### 1. The diagnosis: what makes the swing
+
+**1.1 The swing follows the frame's step.** The test's free fire (`suppressionSystems.test.mjs` 232 to 245: the fire in the second room, 0.35 m cells, class A, 60 s), stepped as `runScene` steps it. The script gives the test's figures exactly: 22.027 MJ with the item on and 21.771 MJ off.
+
+| Frame (5 s) | Item on: steps a frame's dt is cut into | Step (s) | Heat release (kW) | Fastest gas at the frame's end (m/s) | Item off: cut into | Item off: heat release (kW) | Item off: fastest gas (m/s) |
+|---|---|---|---|---|---|---|---|
+| 5 | 2 | 0.05 | 325.2 | 3.45 | 1 | 501.0 | 4.13 |
+| 6 | 1 | 0.1 | 683.2 | 3.87 | 2 | 308.4 | 3.61 |
+| 7 | 2 | 0.05 | 308.6 | 2.83 | 2 | 288.9 | 3.03 |
+| 8 | 1 | 0.1 | 559.4 | 3.68 | 1 | 522.5 | 3.40 |
+| 9 | 2 | 0.05 | 273.5 | 2.70 | 1 | 471.4 | 3.42 |
+| 10 | 1 | 0.1 | 523.2 | 3.55 | 1 | 478.5 | 3.19 |
+| 11 | 2 | 0.05 | 312.0 | 2.74 | 1 | 497.5 | 3.36 |
+| 12 | 1 | 0.1 | 678.6 | 3.55 | 1 | 635.6 | 3.04 |
+
+Every frame at 0.1 s releases 523 to 683 kW. Every frame at 0.05 s releases 274 to 325 kW. The item off shows the same: 501 and 523 kW at 0.1 s around 308 and 289 kW at 0.05 s.
+
+**1.2 How a frame's step is chosen.** `runScene` sets a frame's substeps once, before the frame, from the fastest gas at the end of the frame before (`flamescapesRun.js` 822 to 831). `substepsFor` (`flamescapes.js` 2214 to 2218) gives ceil(u_max dt / (cfl h)), with cfl 1 (`DEFAULTS` 192), dt 0.1 s (133) and at most 8 (194). On the test's 0.35 m cells a frame takes steps of 0.05 s when the frame before ended with gas faster than 3.5 m/s, and steps of 0.1 s otherwise.
+- There is one threshold and no band.
+- The decision lags by a frame.
+- The GPU's frames use the same function (its comment, 2205 to 2212).
+
+**1.3 The heat release depends on the step.** The same two runs with one step size throughout: `runScene`'s own dt, or `maxSubsteps` 1 for 0.1 s. At 0.05 and 0.025 s every frame took one substep. Heat released in 60 s, MJ:
+
+| Step | Item off: free | Item off: flooded | Flooded over free | Item on: free | Item on: flooded | Flooded over free | Item on over off (free) |
+|---|---|---|---|---|---|---|---|
+| 0.1 s | 24.880 | 24.803 | 0.997 | 30.778 | 30.411 | 0.988 | 1.237 |
+| 0.05 s | 13.338 | 13.265 | 0.995 | 14.033 | 13.968 | 0.995 | 1.052 |
+| 0.025 s | 7.341 | 7.358 | 1.002 | 7.626 | 7.631 | 1.001 | 1.039 |
+| By frame, as the test runs | 21.771 | 21.622 | 0.993 | 22.027 | 26.471 | 1.202 | 1.012 |
+
+Halving the step roughly halves the heat released, with the item on or off. The item's own effect also shrinks with the step: 24 %, 5 % and 4 %.
+
+**1.4 Where: the solids' oxidation, which takes all the oxygen its gas cell holds in each step.** Tallies of the first 30 s, item off, at three fixed steps:
+
+| Step | 0 to 5 s: released, kW | its oxidation, kW | of it, limited by the cell's oxygen | 25 to 30 s: released, kW | its oxidation, kW | of it, limited by the cell's oxygen |
+|---|---|---|---|---|---|---|
+| 0.1 s | 178 | 152 | 152 (one cell a step) | 585 | 506 | 506 (five cells a step) |
+| 0.05 s | 127 | 102 | 101 | 312 | 279 | 279 |
+| 0.025 s | 98 | 67 | 67 | 174 | 151 | 151 |
+
+- Oxidation is 65 to 92 % of the heat released in each of the 18 frames. In 15 of them the oxygen cap binds for 92 to 100 % of the oxidation; in the frame from 15 to 20 s, for 52 to 79 %.
+- The rule (`flamescapes.js` 1760 to 1762; the item's copy, 1958 to 1960): dOx = skin (1 − e^(−k_o dt)), then at most o2 / st.o2, with o2 the oxygen mass the gas cell holds (1711, 1901). k_o = 1.8 × 10⁸ exp(−92 200 / (R T_s)) × Y_O2 / 0.232 (`DEFAULTS` 280, 281): about 800 /s at 900 K in air. The first item's skin is 2 kg (class A's item, 2 m² at 1 kg/m²; `fireClasses.js` 81, `DEFAULTS` 289; `skinMass`, 832 to 834), and its gas cell holds 16 to 25 g of gas. So skin (1 − e^(−k_o dt)) exceeds o2 / st.o2 by far, and the cap binds: the solid takes all the oxygen its gas cell holds, in every step, whatever the step.
+- The oxygen the first item's gas held at the chemistry stage, 0 to 5 s: 1.168 g a step (Y_O2 0.053) at 0.1 s, 0.389 g (0.021) at 0.05 s, 0.129 g (0.0079) at 0.025 s. That is 11.7, 7.8 and 5.2 g/s. The oxygen that reaches the cell in a step falls faster than the step, so the oxidation's heat release falls with it.
+- Which part of the step's flow sets that oxygen was not traced. Halving the step of the chemistry alone gives 7.20 MJ in 30 s. Halving every source stage together (pilot, particles, radiation, chemistry, spray, conduction, walls, deposition) gives 7.20 MJ. Halving the transport stages (advection, buoyancy, vorticity, diffusion) gives 8.51 MJ. The whole step at 0.1 s gives 8.44 MJ and at 0.05 s 5.36 MJ. So the dependence lies in the cap's coupling with the step's whole flow, not in one stage's integration.
+- The gas combustion is smaller and also falls with the step: 79, 33 and 23 kW at 25 to 30 s.
+
+**1.5 Why the item starts the cycle in this fire.**
+- At 0.1 s the item raises the fire by 24 % (1.3). Its fastest gas at the end of a 0.1 s frame is 3.55 to 3.87 m/s, against 3.04 to 3.42 m/s with the item off (frames 8 to 12). After frames 7, 9 and 11, at 0.05 s, it is 2.70 to 2.83 m/s.
+- So with the item on, each frame at 0.1 s ends above 3.5 m/s and each frame at 0.05 s below it. The step alternates, with a period of two frames, 10 s.
+- With the item off, the fire takes two frames at 0.05 s (frames 6 and 7) and then stays below the threshold.
+- What the item adds in this scene, at 0.1 s, in the first 30 s: E_in of 576 to 946 kW a frame, against 140 to 675 kW released. Most of it is the pilot's heat. The scene's pilot holds the first item's surface at 900 K for 30 s (`buildScene`'s default, `flamescapesRun.js` 119; `pilot`, `flamescapes.js` 3540 to 3546), putting in 702 to 1372 kW a frame. Fresh fuel enters that skin at ambient in each step and is held at 900 K. Under the item, the heat above ambient that the skin gives up as fresh fuel replaces what reacted leaves with the pyrolysate into the gas, as 16.16's point 3 sets. That fresh-fuel term is 466 to 783 kW of E_in a frame. Under the present rule that heat was destroyed.
+
+**1.6 Not a step-to-step instability, and not the item's arithmetic.**
+- At a fixed step of 0.1 s, from 30 to 60 s, the step's heat release has a lag-1 autocorrelation of 0.926 with the item on and 0.922 off. Its mean change from one step to the next is 2.8 % and 2.5 % of its mean. A threshold that flipped each step, or a stiff coupling of T_s and T, would show as a negative lag-1 autocorrelation and a large step-to-step change.
+- The item's mixing (16.16 point 4) is a convex combination. T' − T_a = (H₀ + E_in) / (C₀ + ΔC), with C₀ = ρ V c_p,mix, ΔC = Σ_k Δm_k c_p,k and E_in = ΔC (T_in − T_a), T_in the vapour's entry temperature (16.16, Declared limits). For E_in ≥ 0 and ΔC > 0, T' lies between T_g and T_in. It cannot overshoot. A metal's E_in can be negative (16.16); no metal is in these scenes.
+- The heat the item moves is read at the T_s of the moment, as point 3 sets. The largest term, the fresh fuel's, was read on average 1.6 K below to 5.4 K above the block's starting T_s (mass-weighted, per frame, at 0.1 s).
+- The exchange of T_s and T is the solver's exact one (`exchange`, `flamescapes.js` 338 to 342; `conduct`, 2306 to 2313). The item does not change it.
+- 16.18's (a), (c), (f) and (d)1 pass: the item meets its closed forms.
+
+**1.7 The test's band is right.** At every fixed step the flooded run releases 0.988 to 1.001 times the free fire's heat with the item on, and 0.995 to 1.002 with it off (1.3). The test fails because its two runs take different steps in two frames, measured with the item on:
+- at the end of frame 8 (40 s) the free fire's fastest gas was 3.68 m/s and the flooded run's 3.37 m/s;
+- so the free fire took steps of 0.05 s in frames 9 and 11, and the flooded run steps of 0.1 s in every frame from 8 to 12, its fastest gas staying at 3.14 to 3.47 m/s;
+- in frames 9 to 12 the flooded run released 556, 580, 728 and 834 kW, and the free fire 274, 523, 312 and 679 kW.
+
+So the ratio of 1.20 is the swing's, not the agent's. The test reads the defect correctly, and it stands as written.
+
+**1.8 The swing in the other scenes.**
+- **The fingerprint tool's pilot room** (`tools/flamescapes-fingerprint.mjs` 41 to 44: the 200 kW pilot for 60 s; 0.20 m cells, so the threshold is 2.0 m/s), stepped as `runScene` steps it, 300 s.
+  - **With the item off** the step changes 20 times between 35 and 165 s. The heat release follows it: from 30 to 145 s, 45 to 59 kW in the frames at 0.1 s and 25 to 30 kW in the frames at 0.05 s.
+  - With the item on: 20 changes between 40 and 150 s; from 30 to 135 s, 54 to 68 kW against 27 to 30 kW.
+  - At one fixed step, item off, 150 s: 23.13 MJ at 0.1 s, where the contents take off from 115 s (139, 409 and 618 kW in the next frames); 3.13 MJ at 0.05 s, where they do not (24 kW from 40 s on).
+- **The app's design fire** (the fingerprint tool's design-fire room: class A's medium t² design fire as a burner, the room's contents round it, 0.20 m cells; as part n ran it).
+  - Item off, one step throughout, 200 s: 31.26 MJ released at 0.1 s, 38.47 MJ at 0.05 s and 58.27 MJ at 0.025 s, against the design fire's own 31.20 MJ (α t³/3, α 0.0117 kW/s², `fireClasses.js` 80). So the contents released about 0.06, 7.3 and 27.1 MJ. Here they burn more as the step falls: the dependence is not one-signed. Whether the oxygen cap is its cause in this room was not tallied.
+  - Its fastest gas reaches 4 to 7 m/s, so steps of 0.1 and 0.05 s exceed one cell a step (cfl 1) from about 45 and 95 s. Only 0.025 s stays within it to 200 s. So these fixed-step runs mix the step's effect with the flow's Courant number. They are reported, not read as a convergence test.
+  - Stepped as `runScene` steps it, 600 s, it reproduces 16.18's part n: 640.08 MJ released with the item off and 653.18 MJ on. **No swing like the next-door fire's appears.** The design fire's prescribed burner carries most of the heat, and the step is mostly 3 or 4 substeps.
+    - With the item on the step changes 22 times (33 off). From frame 21 on, a frame's heat release moves on average by −2.9 % when its step falls and +6.6 % when it rises, against +2.8 % (standard deviation 8.4 %) between frames whose step is unchanged.
+    - With the item off: −2.3 % and +11.5 %, against +2.4 % (10.5 %).
+    - The tendency (more heat at the larger step) has the sign of the next-door fire's, and lies within about one standard deviation of the frames' own change.
+
+**1.9 What FDS does in the same situation.** Read in FDS's source at commit ff928db (`github.com/firemodels/fds`, ff928dbf68a2623ced3a007be75391c6dc6c9f90). Not run.
+- **The vapour's enthalpy.** As 16.16 states: the pyrolysate leaves at the surface temperature, and the energy to bring it to the gas's temperature is taken from the gas (`wall.f90` 3566 to 3574, 1414, 1422). Item 15's rule agrees with it.
+- **The step.** FDS checks the CFL number in every step, after the velocity predictor (`velo.f90` 1594 and 1679, `CHECK_STABILITY` 3191 to 3206). If it is at or above `CFL_MAX`, 1.0 (`cons.f90` 337), the step is cut to 0.9 CFL_MAX / u_max and redone (`main.f90` 760 to 797). It grows only by a factor of 1.1, and only when the CFL number is at or below `CFL_MIN`, 0.8 (`cons.f90` 338; `velo.f90` 3193 to 3196; `main.f90` 616). So FDS's step follows the flow step by step, with a band, and is never set a frame ahead.
+- **The gas-phase reaction.** Each cell's reaction is integrated over the step in its own sub-steps (`fire.f90` 830 to 955), at a mixing time built from the cell's size, diffusivity, subgrid kinetic energy and gravity (809 to 823). The step does not enter it.
+- **A solid's oxidation.** A rate, A ρ_s^n exp(−E/(R T_s)) X_O2^n (`wall.f90` 3463 to 3478). With an oxygen-dependent reaction FDS turns on its oxidative pyrolysis model (`read.f90` 6429): the surface's oxygen is solved from the film's mass transfer, h_m (Y_O2,g − Y_O2,f) with h_m = h / c_p (`wall.f90` 3026 to 3034, 3111 to 3137). The solid sub-cycles its own step when its temperature would change by more than `DELTA_TMP_MAX`, 25 K (`wall.f90` 2301 to 2322; `read.f90` 9042). No reaction takes all the oxygen a cell holds in a step.
+- So FDS has neither part of the defect that 1.10 names. Its rates are per unit time, and its step is checked in every step. Whether its heat release converges in the step in this scene was not run.
+
+**1.10 So.** The swing is not physical: its period is two frames, locked to the substep count, and in this fire the heat release halves when the step halves. It is not a fault of the item's code against 16.16. It is a defect of the present code, in two parts, that the item exposes:
+1. **The solids' oxidation takes, in each step, all the oxygen its gas cell holds** (`flamescapes.js` 1762, 1960). So the contents' heat release is a function of the step.
+2. **`runScene` sets a frame's step once, from the frame before's fastest gas, at one threshold with no band** (`flamescapesRun.js` 824; `flamescapes.js` 2214 to 2218). So a fire whose fastest gas sits at the threshold alternates between two steps whose heat releases differ, in the next-door fire and the pilot room, by about two.
+
+Neither part alone makes the swing. Part 1 alone makes a fire's course depend on its step. Part 2 alone would not matter if the heat release did not depend on the step. With the item off the same alternation appears in the pilot room for 130 s, and in the next-door fire for two frames.
+
+A GPU frame takes its step by the same rule. So a GPU `runScene` run whose fastest gas sits near the threshold could take a different step in a frame from one run to the next, and its heat release would then move by up to that factor. That may explain part of the GPU runs' run-to-run spread (16.18 (e)). It was not tested.
+
+#### 2. Does the method of 16.16 change?
+
+**No.** Points 1 to 11 stand, read with 16.17: enthalpy only, no volume term, no GPU tallies.
+- The item meets its closed forms (16.18: (a), (c), (f), (d)1).
+- Its mixing is bounded (1.6). No stiffness was found at the step (1.6). So no implicit or limited coupling is added: it would correct nothing that is wrong.
+- The swing needs only the two parts of 1.10, and neither lies in the item. Any change to the item that removed the swing from the next-door fire would be fitted to one test. It would also leave the swing in the pilot room, where it appears with the item off.
+- So the method adds no constant and no numerical treatment. Every number stays the solver's own (16.16, What ends this line).
+
+**What does change in the second attempt.**
+1. **The base.** The second attempt is built and judged only on a base from which part 1 of 1.10 is removed, by its own item, drafted blind first under 13.12 and made by its own checks. That item is not drafted here. Its draft must show that the contents' heat release converges as the step falls, item off: the next-door fire at the three fixed steps of 1.3 and a fourth at 0.0125 s, and the fingerprint tool's two rooms at steps that keep within one cell a step. Its form is for that draft. FDS's oxidation rate with the film's mass transfer (1.9) is one candidate, not checked here. Whether part 2 changes too is for that draft. A fix of part 2 alone would hide the swing in the test and leave every app fire's heat release a function of its step, so it is not enough for this item.
+2. **Until that item is made, no code of the second attempt is written.** If it is not made before the papers, item 15's line ends for Phase 0 (part 7).
+3. **Checks (d) and (e) are redesigned** (parts 3 and 4). Their first references were computed wrongly for the cases they ran (13.12, rule 1): (d)2 compared a step of the item-on run with a step of the item-off run from another state, and (e) judged a nondeterministic leaf against three runs.
+4. **Every check runs again in full on the new base,** with the item's code of 2ef5bd9 rebased onto it. A conflict in the rebase is resolved by keeping both changes line for line. If a line of `vapourBlock` or `chemSolidVapour` must change to follow the new base, the change is stated in the build's report, and checks (a), (c), (d)1 and (f) judge it.
+
+#### 3. Check (d) redesigned: CPU against GPU
+
+**(d)1, one chemistry pass: as 16.16 fixes it.** Scenes (a)1 to (a)4 on 0.20 m cells. From one state, one chemistry pass on each path, item on and item off, through the `chemistryPass` hook. Per cell, the item's change ΔT = T(on) − T(off) on each path agrees within max(10⁻³ |ΔT_CPU|, 8 float32 steps of T), the steps taken at the larger of the CPU's T on and off (16.18, Departures).
+
+**(d)2, the item's own change over whole steps, from shared states: judged.**
+- **The states.** The CPU's item-on runs of the GPU check's phases `agreement` (its room with contents and the 30 kW pilot; radiation and particles off, then flame-front particles on) at steps 1, 10, 50, 100 and 200, and `onestep` (its app scene, bare) at steps 100, 300, 450, 500, 550 and 590: the first attempt's checkpoints. That is 16 states: 5 in each of `agreement`'s two settings, and 6 of `onestep`.
+- **The steps.** From each state S, four steps of 0.1 s: the CPU with the item on and off, from clones of S; the GPU with the item on and off, each from S uploaded as the phase uploads it (`runner.createSim`). Beside them, on each path, the same step stopped after its chemistry pass, item on and off: a hook the build adds on both paths, which no run calls (on the CPU, the step's stages up to `chemistry`; on the GPU, the step's passes up to `chemistry`, then `readFields`).
+- **The item's own change.** On each path P, per open cell, δ_P = T_P(on) − T_P(off) after the chemistry pass, and Δ_P = T_P(on) − T_P(off) after the whole step. On one path the stages before `chemistry` do not read the switch (16.16 point 11; 16.18 (f)), so δ_P is the item's alone, and a port difference in another stage enters both of the path's steps alike.
+- **Pass, (i), inside the step.** Per open cell, |δ_GPU − δ_CPU| ≤ max(10⁻³ |δ_CPU|, 8 float32 steps of T_CPU(on)). This is (d)1 on developed fires, inside the GPU's own step.
+- **Pass, (ii), after the whole step.** Per open cell in which the paths' item-off steps agree within 8 float32 steps of T, |Δ_GPU − Δ_CPU| ≤ max(10⁻³ |Δ_CPU|, 8 float32 steps of T_CPU(on)).
+- **Reported, not judged,** for every state: the cells (ii) leaves out, how many, which, and the item's change in each (δ_CPU and Δ_CPU); and the first attempt's (d)2 as it ran (16.16), the largest and 99th percentile |ΔT| of the GPU against the CPU, item on, beside the item-off run and the one-ulp twin.
+- **(d)3, reported:** phase `design` with the item on, as 16.16.
+
+**Reasons.**
+- (i) has (d)1's reference and (d)1's tolerance. The GPU evaluates the same closed forms in float32 from inputs that agree with the CPU's to the port's precision. Before `chemistry` the GPU's step agrees with the CPU's to round-off: after 10 whole steps of phase `agreement` the paths differ by at most 1.22 × 10⁻⁴ K (16.22 (e)2). Through the item's closed form that moves δ by less than 10⁻³ of itself: ∂δ/∂T_g = −ΔC / C′, at most 1 in size, and the Arrhenius rates' relative change is E/(R T_s) × δT_s/T_s, about 2 × 10⁻⁴ for δT_s/T_s = 10⁻⁵ at 600 K.
+- (ii) catches a change the item makes inside the step that the GPU's later passes lose, double or move. Its cancellation is exact to first order only. After `chemistry`, T changes in a step only by exact exchanges with solids (`conduct`, `walls`) and by mixing at a vent leak. Each is a weighted mean of two temperatures, whose weight depends on the two bodies' capacities. If the paths' capacities or weights differ in a cell, as in the nearly burnt-out cell of 16.18 (dx), the item's change there is weighted differently on each path, and the two paths' changes no longer cancel. No closed form bounds that term by less than the item's change itself (the exchange's weight on the gas, μ (1 − e^(−G dt/μ)) / C_g, can be anywhere from 0 to 1 − e^(−G dt/C_g)). So (ii) is judged where the base agrees with itself, and (i) judges the item's arithmetic everywhere.
+- The mask's bound, 8 float32 steps of T, is (d)1's floor: a few float32 stores. It is not sized from the first attempt's 0.18 K. It depends only on the item-off path, which is the base's code: the item's on-path code cannot move a cell into or out of it.
+- No tolerance is wider than (d)1's.
+
+#### 4. Check (e) redesigned: off is off
+
+**(e)1, as 16.16 fixes it:**
+- `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's fingerprints;
+- the unit suite passes with the same count;
+- with the item on and no fuel in any cell (heat-closure's burner room on three cells, and Steckler 14 through the suite), every field and every `stats` entry of the base is bit-identical, on each path that runs the scene;
+- with the item on and fuel, the fingerprints differ, which is reported.
+
+**(e)2, the GPU check with the item off.** The runs, fixed now:
+- The whole of `tools/flamescapes-gpu-check.mjs` (all fourteen phases) once on the base and once on the branch.
+- Phases `sprinklers`, `design` and `systems`, whose GPU side runs `runScene` and differs from run to run in the base itself (16.18 (e)), 8 times on the base and 8 times on the branch in all, the whole checks' runs among them. They run alternately, base first, in one session on one machine and one browser build, and nothing else runs on the GPU meanwhile.
+- No run is repeated, added or dropped. If a run stops with an error, the run is reported and (e)2 fails.
+
+The judgement, timings set apart as 16.18 lists them:
+1. **Deterministic leaves.** Every leaf of every other phase, and the CPU side of every phase, is bit for bit the same on the branch as in every base run.
+2. **A GPU leaf of `sprinklers`, `design` or `systems`.** It fails only if its 8 branch values all lie strictly above its 8 base values, or all strictly below them. A leaf with one value in all 16 runs passes.
+
+Reason.
+- If the item off changes nothing on the GPU, a leaf's 16 runs are exchangeable. The chance that one set of 8 lies wholly above or below the other is then 2 / C(16, 8) = 2 / 12 870 = 1.55 × 10⁻⁴, and less where values tie (break the ties at random: a strict separation stays one). The first attempt found 46 to 49 leaves that vary. Over 50 leaves the chance that a correct item fails anywhere is at most 50 × 1.55 × 10⁻⁴ = 0.8 %, by the union bound, whatever the leaves' correlation. The counts and the rule are fixed here, before any run.
+- A real change of the GPU's off path shifts a leaf in every run, and this rule finds it once the shift exceeds the leaf's run-to-run spread. A smaller change cannot be told from the spread in these runs at all. The deterministic phases judge the same off path bit for bit (judgement 1), so a change smaller than the spread is still caught wherever the port is deterministic.
+- Why the first reference was wrong (13.12, rule 1). It passed a leaf that varied among the base runs, whatever the branch's value, and failed a leaf the base runs happened to share. With three base runs, a nondeterministic leaf that takes few values (a percentile of flame points, rounded to a kelvin) can share one value in all three by chance: design run 0's GPU flame p90 was 834 K in three base runs and 868 K on the branch, in a run whose p10, p50 and released energy vary from run to run.
+- This rule replaces 13.32's for item 15's (e) only. Whether other items take it is the coordinator's.
+
+**(e)3, reported:** the cost of (e)2's runs, and each varying leaf's 16 values.
+
+#### 5. Check (g), unchanged
+
+The unit suite passes unbent with the default set to 1 for the run (a one-line change, not committed). A test that fails is not edited, and its failure is reported. Only a test whose reference is the present rule itself (the vapour at the cell's temperature, no volume) may be rewritten, disclosed as written after a failure (13.25, decision 13).
+
+The next-door test is not such a test. Its band of 0.9 to 1.1 is right: at every fixed step its two runs agree within 1.2 % with the item on and 0.7 % off (1.3, 1.7). It failed on the swing, and the swing is the defect of 1.10. That defect lies in the present code, and the item exposed it. The test stays as written.
+
+#### 6. Checks (a), (b), (c), (f) and (h)
+
+The method does not change, so they run again as 16.16 fixes them, read with 16.17 and with 16.18's departures (no volume term: (c)1's last column, (c)2's expansion increment and (d)1's expansion agreement are not run; (f) checks that no expansion array is made). (b) is reported, not judged (16.17, decision 6). (h) is reported. All run on the new base of part 2.
+
+Added, reported and not judged, beside (b): the next-door fire's 60 s release at fixed steps of 0.1, 0.05 and 0.025 s, free and flooded, item on and off, as in 1.3. It shows whether the item's own effect converges once the base's does.
+
+#### 7. What ends this line
+
+- If any judged check of (a), (c), (d)1, (d)2, (e)1, (e)2, (f) or (g) fails in any case, the second attempt fails, and it is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted.
+- 13.25's decision 13 applies as 16.16 states it, to the checks whose references the method meets exactly or within float32 storage: (a), (c), (d)1, (d)2 (i), (e)1 and (f). A fault of the code against the method may be corrected and the attempt run again in full, reported with both commits. A change to the method ends the attempt.
+- **A failed second attempt ends item 15 for Phase 0.** No third attempt is drafted before the papers (16.7). The contents keep the present rule, and finding 2 stays a declared limit at the net 16.18 measured (a loss of 20.52 MJ, 3.21 % of the heat released in the app's design fire).
+- **If part 2's base item is not made before the papers,** item 15 is not attempted again, and its line ends for Phase 0 the same way.
+
+#### 8. For the paper
+
+- **The paper discloses that checks (d) and (e) were redesigned after the first attempt failed them.** It states their first form (16.16), what failed (16.18), why the references were wrong for the cases they ran (part 2, point 3), and their second form (parts 3 and 4).
+- It states that the first attempt failed (g) on a defect of the present code that the item exposed (1.10), and that the test was not changed.
+- Until part 1 of 1.10 is removed, every app run and every study run with contents carries it as a declared limit: in the scenes measured here, halving the step changed the contents' heat release by factors from about 0.14 to 3.7, in either direction (1.3, 1.8).
+
+#### Not verified
+
+- Which part of the step's flow sets the oxygen that reaches an oxidising cell (1.4). The cap is measured to bind; the path of the oxygen was not traced.
+- That removing part 1 of 1.10 removes the swing and makes (g) pass. Not run: there is no such base.
+- That FDS's heat release converges in the step in these scenes. FDS was read, not run.
+- That the GPU frames' substeps differ between runs, or that this explains any of the GPU runs' spread (1.10).
+- (d)2's redesigned form on the first attempt's states. It was not run for this draft, and the number of cells its mask would leave out is not known.
+- The cost of (e)2's 16 runs of three phases.
+- The design-fire room's figures beyond those stated in 1.8, and the cause of its step dependence.
+
+#### Sources (read, or run for this draft)
+
+- This repository at a7706de:
+  - `topologicpy-web-frontend/src/core/flamescapes.js` 97, 132 to 309 (parts of `DEFAULTS`), 320 to 342, 662 to 801, 1607 to 1640, 1664 to 1870, 1892 to 2051, 2205 to 2218, 2291 to 2340, 2655 to 2720 (by search), 3534 to 3556 and 3892 to 3945;
+  - `topologicpy-web-frontend/src/core/flamescapesRun.js` 107 to 260, 691 to 706 and 794 to 878;
+  - `topologicpy-web-frontend/src/core/suppressionSystems.test.mjs` 110 to 257;
+  - `topologicpy-web-frontend/src/core/fireClasses.js` 265 to 294;
+  - `tools/flamescapes-fingerprint.mjs` 1 to 52;
+  - `tools/flamescapes-gpu-check.mjs` 157 to 280, 405 to 446 and 620 to 662;
+  - `tools/vapour-enthalpy-check.mjs` 732 to 818 and 1131 to 1199;
+  - the diff of 2ef5bd9 in `flamescapes.js`.
+- FDS source at commit ff928db (`github.com/firemodels/fds`, ff928dbf68a2623ced3a007be75391c6dc6c9f90): `Source/velo.f90` 1579 to 1684 and 3033 to 3214; `Source/cons.f90` 337 to 353; `Source/main.f90` 605 to 620 and 740 to 800 (fetched at that commit for this draft); `Source/fire.f90` 768 to 960; `Source/wall.f90` 2296 to 2336, 2996 to 3150 and 3460 to 3520; `Source/read.f90` 6429 and 9042 to 9148 (by search).
+- Run for this draft, on the CPU: `tools/vapour-swing-diag.mjs` at c18595e, parts `frames`, `flood`, `fixed`, `steps` and `tallies` (`node tools/vapour-swing-diag.mjs`), and `rooms` (`--part rooms`), whose runs were made by the same code in scratch scripts before the tool was committed. No validation run, no study run, no GPU run, no result file.
+
+### 16.30 The coordinator's decisions on 16.29 (2026-11-15, before any code of item 15's second attempt)
+
+The user gave their word for a second attempt at item 15 on 2026-11-15. The draft is the agent's. It was drafted under the number 16.26 and is placed as 16.29 in the order of insertion. Each decision takes the draft's choice or the stricter reading.
+
+**Checked by the coordinator,** apart from the agent:
+- `tools/vapour-swing-diag.mjs` was run again from c18595e, its parts `frames` and `fixed`.
+- The next-door test's free fire releases 22.027 MJ with the item on.
+- Its frames alternate between one and two substeps from frame 5 on. The frames of one substep release 523 to 683 kW, and those of two 274 to 325 kW.
+- At fixed steps of 0.1, 0.05 and 0.025 s, the free fire releases 24.880, 13.338 and 7.341 MJ over 60 s with the item off, and 30.778, 14.033 and 7.626 MJ with it on.
+- At every fixed step, flooded over free is 0.988 to 1.002.
+- These are the draft's figures.
+
+1. **The swing is a defect of the present code that the item exposes.** The contents' heat release depends on the step, and `runScene`'s substeps flip between frames. The item's method has no fault against 16.16. The next-door test's band is right and stays unbent.
+2. **The second attempt keeps 16.16's method.** It changes two things:
+   - the base, through a separate item;
+   - the references of (d)2 and (e)2. 13.12's rule 1 allows this, because each was computed wrongly for the case it ran.
+   - The rewrite is disclosed as written after a failure (part 8).
+3. **The base item is item 19:** the contents' heat release converges as the step falls. It is drafted blind, as the draft's part 2 frames it.
+   - It must show convergence, item off: the next-door fire at fixed steps down to 0.0125 s, and the fingerprint tool's two rooms within one cell a step.
+   - Whether it also changes `runScene`'s choice of substeps is for its draft. A change of the substeps alone is not enough (part 2).
+4. **No code of item 15's second attempt is written before item 19 is made.** If item 19 is not made before the papers, item 15's line ends for Phase 0 (part 7).
+5. **Checks (d) and (e), as redesigned, are fixed now.**
+   - (d)2's mask is the item-off path's own agreement, within (d)1's floor, and it is not sized from any failure.
+   - (e)2's rule is 8 base runs against 8 branch runs, alternating, none repeated. A GPU leaf fails only if every branch value lies strictly above, or strictly below, every base value.
+   - (e)2's rule is stricter than 16.27's, which reports such leaves without judging them. Item 17 keeps 16.27's rule, since its build has begun. Every item drafted from here on judges the GPU check's nondeterministic runs by (e)2's rule, unless its own draft states a stricter one.
+6. **What ends this line,** as part 7 states it. A failed second attempt, or no item 19 before the papers, ends item 15 for Phase 0, with no third attempt.
+7. **A declared limit of every run with contents, from now on.**
+   - The contents' heat release depends on the step: by factors of about 0.14 to 3.7 for a halving of the step, in either direction, in the scenes measured (part 1).
+   - Every app run with contents carries it, and so does every study run with furniture (section 17).
+   - The study's furniture heat released, and the time its furniture first adds heat, are therefore reported as indicative and claimed as no result. The study's primary output in the room is reached before any furniture adds heat. It is driven by the design fire, whose heat release is prescribed, so this limit does not bear on it there.
+   - 16.25's finding, that the pilot room's heat release halves when the step halves, is the same limit. Item 16's checks judge its own arithmetic, not this.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
