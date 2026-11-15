@@ -3352,3 +3352,492 @@ These diagnostics were read-only, made on main's solver (be32e34; 16's commit ad
 - **(d) Item 13, a timber lining that heats, pyrolyses, ignites and adds its fuel.** It is physics, so it is drafted blind under 13.12 before any code, with checks against closed-form references. The user approved it on 2026-11-15 as a small simulation, to see how far it gets.
 
 If (d) is not made and checked when the paper is written, the paper says only that a timber lining's thermal properties change the course of a contents fire.
+
+### 16.10 Item 12: the burner's radiant part leaves from its flame (2026-11-15, before any code or run of it)
+
+Drafted blind to every validation result, as 13.12 sets, and as 16.3 point 1 asks. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at 3d4c245, whose `src/core` equals main's be32e34 (`git diff be32e34 3d4c245 -- topologicpy-web-frontend/src` is empty). The figures called "the reference" below come from a quadrature written for this draft (view factors of a uniform, isotropic volume source in a box with transparent gas), cross-checked by an independent Monte Carlo. They are not the solver's output, and none is a fire result.
+
+**What the drafter read that reports results, declared as 13.26's coordinator note declares it.**
+- The plan's headings, 12.4 and 12.6, 13.12, 13.15 (which quotes one ledger of Steckler test 14 at 300 s), 13.25 and 13.26 with the coordinator's decisions (model figures, and the direction item 11 leans), and section 16. 16.1 states that the test burners' rooms read 35 to 54 % hot and the chairs' rooms cold. 16.9 states Phase 0's findings.
+- Phase 0's report of 2026-11-15, in full: its O₂ pairs, its D*/δx correlations, the burner rays' shares by surface and the floor temperatures under three burners (16 to 36 % of the radiant output on the floor under the burner on 0.27 m), and its excess-heat estimates.
+- The titles of the commits for 13.35 and 13.36 ("no calibration gain"), seen in the git log.
+- No file in `benchmark/results/` was opened.
+
+The item was conceived after results were read: 13.25's draft found the geometry, 13.26's decision 3 recorded it, and Phase 0 measured its size (16.9, point 3). Its checks are therefore closed forms only: view factors, symmetry, conservation and bit-identity. No measured datum enters any of them.
+
+#### What the solver does now
+
+The validation burner (`createBurner`, `flamescapes.js` 3374 to 3488; `burnerStep`, 3600 to 3642) releases a prescribed heat each step and splits it.
+- **The convective part.** Each cell where the burner's fuel burns takes (1 − χ_r) of the heat of what burnt there (`burnInCell`, 3577 to 3586; the factor at 3584). The cells are the flame's layers up to Heskestad's height (`burnerCells`, 3532 to 3536), then the burner's other cells, then the cells round them in breadth-first order where oxygen ran short (3610 to 3616).
+- **The radiant part.** It is χ_r of all that burnt (3622 to 3624). It leaves one fixed point, `origin`, the centre of the axis cell (3459): the lowest layer's cell nearest the burner cells' centroid (3397 to 3414). That point is h/2 above the burner's snapped top.
+- **Its directions.** 16 by default (`spec.rays ?? 16`, 3443; the validation sets 16 with the test's χ_r, `validation-suite.mjs` 283 to 287). They are a Fibonacci set with y = 1 − 2(r + ½)/16 (3446 to 3452), so 8 point below the horizontal. Each step the set turns about the vertical by the golden angle (3628 to 3634), and every ray keeps its polar angle.
+- **Its march.** `march(sim, origin, dir, radiant / rays, b.axis, false)` (3635), with no `dep`. Each ray loses its share to soot in every gas cell but the axis cell (1145 to 1153) and leaves the rest whole in the first non-gas cell (1163 to 1177), at once, into float32 temperatures. A ray that crosses `rayReach` = 40 cells (`DEFAULTS` 229, `march` 1135) puts what it carries into the gas cell where it stopped (1179 to 1185). A ray that leaves the grid returns uncounted (1158 to 1162: `dep?.out` is absent here).
+- **The GPU.** It refuses a burner that is not a design fire (`flamescapesGpu.js` `supported`, 1089 to 1091), so this burner always runs on the CPU. The GPU's design-fire burner gives its cells (1 − χ_r) of the heat (`kernels.js` 957) and casts no rays. The app's design fire has χ_r 0 and no rays (`flamescapesRun.js` `itemBurner`, 281 to 282), so no app run carries the defect.
+
+So the radiant part does not leave from where the heat is released. It leaves from one point near the floor, half of it downward, in fixed cones. Phase 0 measured the consequence (16.9, point 3), and this draft takes that as given.
+
+#### What a flame's radiant fraction is, and where it leaves
+
+- **χ_r is a share of the heat released.** It is the part of a flame's heat release that leaves the flame as radiation. So it leaves from the flame's volume, where the fuel burns, not from a point below it.
+- **FDS ties it to the cells that release heat** (FDS 6.11.1, commit ff928db, read for this draft).
+  - By default, in every cell where χ_r q''' exceeds `QR_CLIP` (1 W/m³, `cons.f90` 489), the emission term is scaled by one factor (`radi.f90` 4013 to 4050 and 4072 to 4086). The factor makes the flame cells' emission, less what they absorb, sum to χ_r times their heat release (`main.f90` 1617 to 1642). It is a running mean weighted 0.9 and bounded by 0.1 and 100 (`cons.f90` 490 to 491).
+  - With `RTE_SOURCE_CORRECTION` off, each cell emits χ_r q''' plus what it absorbs (`radi.f90` 4052 to 4066). So each cell loses exactly χ_r of its own heat release.
+  - Either way, the flame region loses χ_r of the heat it releases. What one flame cell absorbs of another's emission is given back.
+- **How a Monte Carlo method emits from a volume.** An isothermal volume element emits from points drawn uniformly in it, in directions drawn uniformly over the sphere: the cosine of the polar angle uniform on [−1, 1] and the azimuth uniform on [0, 2π) (Howell, Mengüç, Daun and Siegel 2020; Modest 2013; quoted, not re-read). The solver already draws a gas cell's directions this way (`radiation`, 999 to 1004).
+
+#### The method
+
+1. **Scope.** Only the radiant part of a burner with rays: `rays` > 0 and χ_r > 0 (the condition at 3625). The design-fire burner, the convective part, the products, the oxygen rule, `pending` and every other stage are as now.
+2. **Where the heat was released.** With the item on, `burnerStep` records each cell q in which `burnInCell` burnt fuel this step, with the kg burnt there, m_q (3610, 3612, 3615). The list holds at most the burner's cells and its reach, which is capped at 4096 cells (3425). Each cell's share is m_q / Σ m_q, which is its share of the heat (one fuel, one heat of combustion).
+3. **How much each ray carries, as now.** `radiant` (3624) over `rays` (3623): the burner's own count, 16 in the validation. Neither the radiant fraction nor the number of rays changes.
+4. **The draws.** One stream a step, `cellStream(b.axis, sim.steps, 4, seed)` (`flamescapes.js` 581 to 583). Salt 4 is drawn by no path now: the CPU uses 2, 3 and 5 (991, 994, 659) and the GPU 1, 2, 3 and 5 (`kernels.js` 1104, 1439, 1441, 1075). Per ray, in order, six draws:
+   - u₀ picks the cell: the first q whose running sum of m_q exceeds u₀ Σ m_q;
+   - u₁ and u₂ give the direction: μ = 2u₁ − 1, φ = 2πu₂, d = (√(1 − μ²) cos φ, μ, √(1 − μ²) sin φ), y up as in `radiation` (999 to 1004);
+   - u₃, u₄ and u₅ give the start: fractions (u₃, u₄, u₅) of the cell along i, j and k.
+5. **The start.** The ray starts in cell q at those fractions. It enters `march` through its `start` argument (1122 to 1127), with the cell named by index, as item 10's rays do. The point is uniform in the cell and the direction uniform on the sphere, so the cell emits as an isotropic volume element.
+6. **The flame is clear to its own rays.** A burner ray loses nothing in any cell in which the burner burnt fuel this step: its own cell and the others of point 2. In every other gas cell, soot absorbs it as now (1145 to 1153). Reason: FDS's rule above. The flame region loses χ_r of its heat, and what one flame cell would take of another's emission it gives back. Without this, a sooty flame would send out less than χ_r, and the item would change the radiant fraction, which 16.5 keeps for Phase 2.
+   - The cells are marked by a stamp array of N cells (Uint32, made only with the item on), set to the step's number in `burnInCell` when it burns.
+   - `march` tests the stamp only when a start carries it. Alternatively a copy of `march` is used by the burner alone; the builder chooses, and check (k) measures the cost of either with the item off.
+7. **The reach.** A burner ray marches until it enters a non-gas cell, leaves the grid, or carries less than 10⁻⁹ of its energy (1140): at most n_x + n_y + n_z crossings, as item 10's rays (13.25, point 8). `rayReach` does not stop it. Phase 0 found 4 to 22 % of the radiant output dropped into single gas cells at 40 crossings in NIST/NRC's room (16.9). That is an artefact of the reach, not of the flame.
+8. **Deferred float64 deposits, as the radiation stage keeps them.** The rays deposit into float64 work arrays: `burnerGas`, `burnerSolid`, `burnerWallLo`, `burnerWallHi` (kelvin, as `radiation` 910 to 917), and `burnerOut`, in J, what leaves the grid. Once every ray of the step is cast they are added to the state as `radiation` adds its own (1069 to 1080), a wall's ends through `wallEnd`. The arrays keep the step's values until the next step, so a check can read them.
+9. **Tallies, in J, only with the item on.**
+   - `stats.burnerRadiatedOut`: what the burner's rays carried beyond the grid.
+   - `stats.burnerRays` and `stats.burnerCrossings`: the rays cast and the cells they crossed.
+10. **What stays exactly as now.** χ_r and the convective part. Which cells burn, and how much. The heat, products, oxygen and `pending`. The number of rays and each ray's share. Absorption by soot outside the flame. Absorptivity 1 at the first non-gas cell, and a one-dimensional wall's end taken along its normal. Every other stage. The design fire on the CPU and the GPU.
+
+Considered and set aside:
+- **A point at the flame's centre.** It removes the floor bias of a source at h/2, but every ray then leaves one point. Near walls and the ceiling a point overstates the nearest surfaces as the present origin does near the floor.
+- **Randomising only the directions, at the present origin.** Half the output would still go down from h/2 above the burner, into the burner and the floor round it.
+- **Emission by each flame cell's temperature and soot, scaled to χ_r Q (FDS's default).** It needs a temperature and absorption model of the flame cells that this coarse grid does not resolve (D*/δx is below 4 in 159 to 175 of 178 tests, 16.9). Emission by heat released is FDS's own alternative (`radi.f90` 4052 to 4066), and it needs no new constant.
+- **Absorbing the burner's rays in the flame cells but the emitting one** (the rule for gas rays, 1145). For a sooty test fuel it would send out less than χ_r, so it would change the radiant fraction (point 6).
+
+#### The switch
+
+`burnerFlameRays`: 0 (default), the present origin and directions; 1, the method above. With 0, `burnerStep` tests one flag a step, and every output is bit-identical to the base (check (i)). `RUN_CACHE_VERSION` (`runCache.js` 54, now 13) rises only with a default (13.25, decision 14). The validation harness passes the switch as a run option, as it passes `surfaceRayStart`.
+
+#### Cost
+
+- **With the item on.** The same 16 rays a step. Each takes six hash draws and a search among the cells that burnt, at most 4096 of them, in place of a rotation. The marches are longer, because nothing stops at 40 cells, but each is at most n_x + n_y + n_z crossings. Add a list of the cells that burnt, a stamp array of N 32-bit integers and the deferred arrays, which already exist for `radiation`. The burner is one object a run, so this is small beside a step's radiation stage, in which every hot sooty cell casts 8 rays (`DEFAULTS` 228). Check (k) reports it.
+- **With it off.** One flag a step, and, if `march` itself takes the stamp test, one test of a null reference for each gas cell any ray crosses. Check (k) reports both.
+- **The app.** Its design fire has no rays, so no app run on the CPU or the GPU changes, on or off. Vienna on the web is untouched.
+
+#### Checks (fixed now, before any run)
+
+All but (i) to (k) run in a new tool, `tools/burner-rays-check.mjs`. It builds each scene as a grid of cells by hand, as `tools/surface-rays-check.mjs` does. Every gas cell starts at T_a with no soot, so the gas is transparent. The boxes are given by their inner size in cells, n_x × n_y × n_z (y up), with walls two cells thick of stone (`INERT[0]`), and cells are named by their inner coordinates.
+
+The burner is built by `createBurner` from `layers` with no `diameter`, so every cell of it takes an equal share of the fuel (`burnerCells` 3534). Its fuel is `METHANE` (3336; no soot), with χ_r 0.3 and 16 rays. Its table is held at 100 kW, so each step releases 10 kJ at dt 0.1 s. That leaves every cell oxygen to spare: a 0.20 m cell's oxygen burns 29 kJ of methane. Seed 1.
+
+The tool calls `burnerStep` alone, 10 000 times, adding 1 to `sim.steps` after each call. After each call it reads the step's deposits from the float64 arrays of point 8, turned into J by the capacities they were divided by. Then it sets every gas cell's T, Y and ρ, every solid's T_s and every wall node back. Cells of 0.20 m and 0.34 m. That is 160 000 rays a case.
+
+Tolerances. Every ray carries the same share, so a share F read from N rays has standard deviation √(F(1 − F)/N), F being the reference. A case passes within 4 of them. Reason: these are the ray-count statistics of a method whose expectation is the reference exactly. A correct code exceeds 4 standard deviations in one case in 16 000, so in under 0.6 % of the 80 or so cases below together. The ray counts are fixed here, and the tolerances follow from them.
+
+References. A surface's share is the mean, over the source cells, of the mean over each cell's volume of Ω/(4π), Ω being the solid angle the surface subtends. For an axis-aligned rectangle [x₁, x₂] × [y₁, y₂] in a plane at distance d, with coordinates measured from the foot of the perpendicular,
+
+Ω = F(x₂, y₂) − F(x₁, y₂) − F(x₂, y₁) + F(x₁, y₁), with F(x, y) = atan(xy / (d √(x² + y² + d²))).
+
+The volume mean was taken by Gauss and Legendre quadrature, 16 and 24 points a side. The two agree within 10⁻¹⁴ in every share below, and each box's six shares sum to 1 within 10⁻⁹. An independent Monte Carlo of 4 × 10⁶ samples (uniform points, isotropic directions, exact intersection with the box's planes) agrees with every share within 3 of its standard errors, each 2 × 10⁻⁴ or less. The references, ± 4 standard deviations of 160 000 rays:
+
+(a) **Symmetry.** A 9 × 9 × 9 box, the source its centre cell (4, 4, 4). Each wall takes 1/6, exactly by symmetry: 0.1667 ± 0.0037. This also checks the up and down balance and the azimuth.
+
+(b) **A one-cell flame on the floor.** The 12 × 10 × 14 box of 13.25, the source the cell (3, 0, 4), whose bottom face is the floor.
+
+| x-low | x-high | floor | ceiling | z-low | z-high | the floor cell under it |
+|---|---|---|---|---|---|---|
+| 0.1716 ± 0.0038 | 0.0809 ± 0.0027 | 0.4574 ± 0.0050 | 0.0936 ± 0.0029 | 0.1336 ± 0.0034 | 0.0630 ± 0.0024 | 0.1667 ± 0.0037 |
+
+The floor cell under the source takes exactly 1/6: a uniform, isotropic cube sends 1/6 through each of its faces, by symmetry.
+
+(c) **A flame of 2 × 2 columns and 3 layers on the floor.** The same box, the source the 12 cells i ∈ {5, 6}, j ∈ {0, 1, 2}, k ∈ {6, 7}, equal shares.
+
+| each x wall | floor | of it, under the flame | of it, the rest | ceiling | each z wall |
+|---|---|---|---|---|---|
+| 0.1354 ± 0.0034 | 0.3987 ± 0.0049 | 0.1246 ± 0.0033 | 0.2741 ± 0.0045 | 0.1203 ± 0.0033 | 0.1051 ± 0.0031 |
+
+(d) **The reach.** A 40 × 8 × 8 box, the source the cell (0, 3, 3) beside the x-low wall. The x-high wall, 40 cells away, takes 0.0032 ± 0.0006; x-low 0.4430 ± 0.0050; the floor and z-low 0.1511 ± 0.0036 each; the ceiling and z-high 0.1258 ± 0.0033 each. The gas takes exactly 0, an equality, not a tolerance: a ray in transparent gas can deposit only in a surface or leave.
+
+(e) **An open side.** (b)'s box with its x-high side the grid's side and no wall there. `burnerOut` is 0.0809 ± 0.0027 of the radiant output, and every wall takes its share of (b).
+
+(f) **The flame is clear.** (c)'s scene with the burner's fuel given a soot yield of 0.1 kg/kg, so its products put soot only into the flame cells. Every flame cell's gas takes exactly 0 J from the burner's rays. Each surface takes its share of (c), within (c)'s tolerances.
+
+(g) **The cell drawn by its heat.** The cell choice of point 4 is exported as a pure function. Given masses in the ratio 1 : 2 : 3 : 4 and 10⁶ draws from the salt-4 stream, the counts lie within 4 standard deviations of 10⁵, 2 × 10⁵, 3 × 10⁵ and 4 × 10⁵: ± 1200, 1600, 1833 and 1960.
+
+(h) **Energy, and the radiant fraction unchanged.**
+1. In every step of (a) to (f), the radiant output, `radiant` (3624), equals the J in the gas, solid and wall-end arrays plus `burnerOut` within 10⁻⁹ of it. Reason: conservation holds by construction, and float64 sums of 16 deposits err by about 10⁻¹⁵.
+2. In (a), (b), (c) and (e), from one state, one `burnerStep` with the item on and one with it off leave every gas cell's T, Y and ρ bit-identical, and `b.released`, `b.convective`, `b.radiant` and `stats.released` bit-identical. In these boxes no ray crosses 40 cells, so neither path deposits anything in their transparent gas, and this checks that the item touches only where the radiant part goes. (d) is left out: with the item off, its long rays stop in the gas.
+
+(i) **Off is off.** With `burnerFlameRays` 0:
+- `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's fingerprints;
+- the unit suite passes with the same count;
+- `tools/flamescapes-gpu-check.mjs`'s phases give the base's state comparisons bit for bit, timings aside;
+- in the new tool, a scene with a validation burner (χ_r 0.2, 16 rays, one cell on the floor of an 8 × 8 × 8 box on 0.2 m cells) stepped 300 full steps gives every field and every `stats` entry bit-identical to the base.
+
+With 1, the last differs, which is reported. `supported` still returns false for a validation burner and true for a design fire. A design-fire run's fingerprints are bit-identical on and off, on both paths.
+
+(j) **The unit suite passes unbent** with the default set to 1 for the run (a one-line change, not committed). A test that fails is not edited, and its failure is reported. Only a test whose reference is the present ray geometry itself may be rewritten, disclosed as written after a failure (13.25, decision 13).
+
+(k) **Speed, reported, not judged.** `burnerStep`'s ms on and off over (c)'s scene. The ms a step on and off over a 30 s run of Steckler test 14 and of NIST/NRC test 3 on 0.27 m, as the suite builds them, of which only times and `stats.burnerCrossings` are read. The mean crossings of a burner ray. With 0, the fingerprint tool's ms a step against the base.
+
+Reported beside, with the item off: the shares of (a) to (e) from the present origin and its 16 fixed directions.
+
+A failure of (a) to (e) means the start, the direction or the march departs from the method. A failure of (f) means the flame is not clear to its rays. A failure of (h)2 means the item has touched the convective part or χ_r.
+
+#### Default
+
+Off. Passing (a) to (j) makes the switch available to the harness and to the solver's options. It does not change the app's default, which has no rays to change. As 16.3 point 1 sets, if the item is made, a rerun on 13.B's flags (R12) is reported beside 13.B verdict by verdict before Phase 1 begins, and Phase 1 runs on whatever solver Phase 0 leaves. The harness's own default follows 13.25's decision 14: it changes only with the user's agreement, given with R12 before them.
+
+#### What ends this line
+
+If any check of (a) to (j) fails in any case, the attempt fails, and it is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted. The method has no free constant: the ray count is the burner's own, and χ_r is the test's.
+
+Every check has a reference that the method meets exactly, in expectation or bit for bit. So a failure is a fault of the code against the method, and 13.25's decision 13 applies: corrected code, run again in full, is the same attempt, reported with both commits. A change to the method ends the attempt.
+
+If the line ends, the burner keeps its present rays. The geometry stays a declared limit of every verdict (13.26, decision 3; 16.9, point 3), and Phase 1 runs on the solver as it stands. No second attempt is drafted. It would need the user's word and a new method written here first.
+
+#### Declared limits
+
+- **Where in the flame.** The emission is uniform within each flame cell and shared among the cells by the heat each released. Where the heat goes is the burner's own rule: equal shares over Heskestad's layers rounded up to whole cells, then the cells beyond. A real flame emits most where its soot is hottest, which this does not follow.
+- **χ_r is the input.** The item moves where the radiant part leaves, not how much leaves.
+- **The flame cells are clear only to the burner's rays.** Surface and gas rays crossing them are absorbed by their soot as now.
+- **A possible double count, present before this item and unchanged by it.** A sooty test fuel puts soot into the flame cells. Those cells, above `emitAbove`, also emit by Eq. 17 (`radiation` 968 to 980), so the flame radiates χ_r Q plus its soot's emission. It is a candidate for its own item.
+- **Gray and isotropic.** No spectral model.
+- **Noise.** 16 random rays a step are noisier, step by step, than 16 fixed ones turned each step. Over 3000 steps a wall taking a tenth of the output reads its share within about 1.4 % (one standard deviation).
+- **CPU only,** as the validation burner is now. The app's design fire radiates only through its hot, sooty cells (χ_r 0).
+- **What leaves through an opening** is counted with the item on and leaves the grid, as before.
+
+#### Not verified
+
+- The size of the change in any validation run.
+- The cost on the suite's rooms (check (k) reports it).
+- FDS's Technical Reference Guide was not read. Its rule is read from the source at ff928db as cited.
+- The Monte Carlo sources' chapters were not re-read for this draft; the rule is quoted from them, as in 13.25.
+
+#### Sources (read, or run for this draft)
+
+- This repository at 3d4c245:
+  - `flamescapes.js` 78 to 105, 123 to 300 (parts of `DEFAULTS`), 376 to 513, 573 to 592, 896 to 1187, 1642 to 1827, 2007 to 2053, 3305 to 3327, 3329 to 3642 and 3663 to 3717;
+  - `flamescapesGpu/kernels.js` 931, 940 to 960, 1075, 1104 and 1439 to 1441;
+  - `flamescapesGpu.js` 1089 to 1094;
+  - `flamescapesRun.js` 236 to 297;
+  - `tools/calibration/validation-suite.mjs` 232 to 300 (the burner's set-up, code only);
+  - `runCache.js` 54.
+- FDS 6.11.1, commit ff928db (`github.com/firemodels/fds`): `Source/radi.f90` 3690 to 3698 and 3950 to 4090, `Source/main.f90` 1615 to 1642, `Source/cons.f90` 242 and 489 to 491.
+- Howell, Mengüç, Daun and Siegel (2020). Thermal Radiation Heat Transfer, 7th edition. CRC Press. doi:10.1201/9780429327308. Checked on Crossref; metadata only.
+- Modest (2013). Radiative Heat Transfer, 3rd edition. Academic Press (Elsevier). doi:10.1016/C2010-0-65874-3. Checked on Crossref, which gives its title, publisher and year but no author; metadata only.
+- Run for this draft: the quadrature and Monte Carlo of the references in the checks. No solver, no fire simulation, no result file.
+
+### 16.11 Item 13: a timber lining that heats, pyrolyses, ignites and adds its fuel (2026-11-15, before any code or run of it)
+
+Drafted blind to every validation result, as 13.12 sets. The user approved it on 2026-11-15 as "a small simulation, let's see how far we get" (16.9, point 4 (d)). Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at 3d4c245, whose `src/core` equals main's be32e34.
+
+The figures called "the model" below were computed for this draft with the solver's own `wallStack` and `wallStep` (`flamescapes.js` 2131 to 2209), imported read only, against closed forms. They describe the present conduction code on a timber layer, which the item does not change. They are not the solver's output in a scene, and none is a fire result.
+
+**What the drafter read that reports results, declared as 13.26's coordinator note declares it.**
+- The plan's headings, 12.4 and 12.6, 13.12, 13.15 (which quotes one ledger of Steckler test 14 at 300 s), 13.25 and 13.26 with the coordinator's decisions, and section 16. 16.1 states the hot and cold readings of 13.B and the chairs. 16.9 states Phase 0's findings.
+- Phase 0's report of 2026-11-15, in full. Its section 4, the materials audit, is the reason for this item; its other sections report O₂ pairs, D*/δx correlations and the burner's ray shares.
+- The titles of the commits for 13.35 and 13.36, seen in the git log.
+- No file in `benchmark/results/` was opened. The item has no held-out data of its own: no dataset in the suite has a combustible lining.
+
+#### What the solver does now
+
+- **Every element is stone.** `buildScene` tags walls, floors, roofs, ceilings, stairs, obstacles and closed doors `MATERIAL.STONE` (`flamescapesRun.js` 126 to 136). `MATERIAL.WOOD` exists (`voxelize.js` 36), but nothing assigns it. `createSolver` reads only the first `inert.length` fractions, three by default (`flamescapes.js` 392 to 410, `INERT` 112 to 116). So a WOOD fraction adds no heat capacity.
+- **Fuel lives only in open cells.** Contents go only to cells that are not solid (420 to 424), and so does the first item (428 to 436). The chemistry has a path for fuel in a solid cell, exchanging with its first open neighbour (1659 to 1676), but no scene feeds it.
+- **The GPU refuses that path.** It does not run a scene with fuel in a solid cell (`flamescapesGpu.js` `supported`, 1089 to 1094).
+- **One-dimensional walls conduct through layers.** A solid cell one cell thick whose largest material lists `layers` conducts normal to its faces through `wallNodes` = 20 nodes, graded by `wallStretch` = 1.2 from each layer's faces (`DEFAULTS` 152 to 154; `wallStack` 2131 to 2160; `wallSetup` 2230 to 2299). Each step it:
+  - takes rays on its end nodes (`wallEnd`, 2316 to 2332);
+  - emits from them above `emitAbove` (`wallEmit`, 2346 to 2411);
+  - exchanges with the gas beyond each end at `wallConvection` = 10 W/(m² K) (`walls`, 2426 to 2483; `DEFAULTS` 141);
+  - steps by backward Euler (`wallStep`, 2178 to 2209).
+
+  The harness passes such layers (`validation-suite.mjs` 259 to 263). The app's materials list none (`DEFAULTS` comment, 142 to 151).
+
+#### The contents' kinetics cannot be reused for a lining
+
+The contents burn by the paper's single-step Arrhenius rates on a surface layer of 1 kg/m² (`skinDensity`, `DEFAULTS` 269). The rates are oxidation A = 1.8 × 10⁸ s⁻¹ (260) and pyrolysis A = 4.78 × 10⁴ s⁻¹ (257), both with E = 92.2 kJ/mol. Pyrolysis is scaled by 0.25 in air (`chemistry` 1743 to 1744). Evaluated by hand on that layer, in air, with class A's 18.0 MJ/kg (`fireClasses.js` 79):
+- **Oxidation releases heat far too early.** It gives 0.87 kW/m² at 110 °C (the code's own comment puts 1 kW/m² near 110 °C, `DEFAULTS` 282 to 288), 13.5 kW/m² at 150 °C and 215 kW/m² at 200 °C, before the oxygen limit (1732).
+  - 13.5 kW/m² already exceeds the 10.0 to 12.4 kW/m² critical fluxes derived from ignition tests of four woods (Tran and White 1992, Table 3).
+  - So a lining with these kinetics would run away near 150 °C. Piloted ignition of wood occurs at 300 to 365 °C (Babrauskas 2002, abstract).
+- **Pyrolysis releases far too little.** At 320 °C it gives 0.09 g/(m² s). Southern pine burning under 17 to 56 kW/m² lost 3.8 to 9.0 g/(m² s) (Tran and White 1992, Table 4).
+
+These rates were set for the paper's statistical interior fuel, and their effect on a lining has no check. So the item does not reuse them. It does not give a lining cell `fuelMass` either, which would send it down that path (1659).
+
+#### The method
+
+Chosen: a thermal ignition criterion and a char front, on the existing one-dimensional wall.
+- **Ignition.** A surface ignites when it reaches a material's ignition temperature. This "is acceptable for engineering purposes" (Janssens 1991, Fire Safety Science 3, 169), and the published wood ignition data are reduced this way: T_ig, the critical flux q''_cr and an apparent thermal inertia kρc (Janssens 1991; Tran and White 1992).
+- **Burning.** The pyrolysate comes from a char front at a fixed isotherm, which advances by conduction. Tran and White took the 300 °C isotherm as the char front's arrival and note that it has been correlated with 280 to 350 °C (1992, 201 to 202). Their equation 13 relates charring rate to mass loss rate through the wood's density.
+- **No fitted constant.** Every constant is a published property of one species.
+
+Considered and set aside:
+- **A lumped cell.** A 0.27 m cell of this timber under 25 kW/m² on one face, with no losses, rises 300 K in about 3100 s. The closed form for the surface gives 21 s. Ignition is set by the first millimetres (√(αt) is 2.0 to 8.7 mm at t_ig of 20 to 380 s, α below), which a lumped cell cannot hold.
+- **The contents' Arrhenius rates.** See above.
+- **A heat of gasification, m'' = q''_net/L.** It suits non-charring solids. For wood the burning rate falls as the char thickens, and no single L holds.
+- **A full charring pyrolysis model** (temperature-dependent k and c, char properties, moisture). It is not minimal, and its constants would outnumber its checks.
+
+1. **Scope.** With `timberLinings` 1, an end face of a one-dimensional wall (`wallSetup` 2252 to 2274) is a timber face when the layer at that end carries a `timber` record. A single-layer timber wall open on both ends has two timber faces. Unchanged: side faces, lumped solids (a timber cell more than one cell thick), porous contents, the first item and every other stage.
+
+2. **Marking.** A layer of a material in the inert list carries `timber`: `{ thickness, rho, c, k, stretch, timber: { ignition, charYield, heat } }`.
+   - The harness passes it in `options.inert`, as it passes layers now (`validation-suite.mjs` 259 to 263), so the checks do not wait for feature (a).
+   - In the app, feature (a) of 16.9 maps an IFC element's `IfcMaterialLayerSet` to such a material and must put the timber layer first, facing the room (`wallSetup` 2269 to 2270).
+   - The item exports one reference material, `TIMBER_SOUTHERN_PINE`, with the values of point 3.
+
+3. **Properties of the reference timber, southern pine, held constant.**
+   - **Density** ρ = 508 kg/m³ (oven-dry; Tran and White 1992, Table 1).
+   - **Ignition temperature** T_p = 593.15 K (320 °C; their Table 3, the mean surface thermocouple reading just before ignition). It lies within Babrauskas's 300 to 365 °C and Janssens's 573 to 637 K for six other woods (1991, Table 4).
+   - **Apparent thermal inertia** kρc = 0.183 (kJ)²/(m⁴ K² s) (Tran and White 1992, Table 3, from their ignition times by Janssens's procedure).
+   - **Conductivity** k = (0.0237 + 2 × 10⁻⁴ ρ) × T_a/293 = 0.1895 W/(m K), with T_a = (293 + T_p)/2 = 443 K. These are Janssens's equations 15 and 16 (after Maku, and MacLean), and his finding that the apparent kρc is evaluated about halfway between ambient and T_ig (θ_a ≈ 0.5; 1991, Table 2).
+   - **Specific heat** c = kρc/(kρ) = 1901 J/(kg K). As a cross-check, Janssens's equation 17 (after Koch, c ∝ T, 1200 J/(kg K) at 293 K) gives 1815 J/(kg K) at 443 K, within 5 %. So α = k/(ρc) = 1.96 × 10⁻⁷ m²/s.
+   - **Emissivity** 0.88 (Janssens 1991, 174; used by Tran and White 1992, 200).
+   - **Char yield** Y_c = 0.24 (the mean of their Table 5 for southern pine, 0.20 to 0.30).
+   - **Heat of combustion of the volatiles** 13.88 MJ/kg of dry mass lost (the mean of their Table 4's dry-basis effective heats for southern pine, 10.14 to 16.26).
+   - **Grading** 1.5 (point 10).
+
+   The thermal inertia is apparent: it folds the samples' moisture (8 to 9 %, Tran and White 1992, 199) and the rise of k and c with temperature into one constant, chosen so that a constant-property solid ignites when the wood did.
+
+4. **Before ignition, nothing new.** The face's end node heats by the rays it takes, exchanges with its gas and emits, as any wall's end does (2316 to 2332, 2346 to 2411, 2426 to 2464).
+
+5. **Onset.** A timber face starts to pyrolyse when its end node first reaches T_p. Its time is kept per face (`W.charAt`), and `sim.ignitedAt` of the wall's cell is set. The critical flux is not a separate criterion: below it, the face cannot reach T_p.
+
+6. **The char front.** After each wall's `wallStep` (2457) and before its mean is written (2460 to 2463), each timber face is scanned.
+   - d* is the largest depth within that face's timber layer at which the nodes' temperatures, interpolated linearly between neighbouring nodes, are at least T_p. It is 0 if no node of the layer is; it is the layer's thickness if its last node is.
+   - The face's char depth becomes δ' = max(δ, d*), so it never falls.
+   - T_p serves both as the onset and as the front, so the front starts at depth 0 at onset and the release starts with it.
+
+7. **The pyrolysate.** Δm = ρ (1 − Y_c) h² (δ' − δ), h² being an end face's area (as `wallEmit` takes it, 2356). It enters the open cell beyond the face (`openNeighbour` along the axis, as `walls` 2456 finds it) as fuel vapour (`SPECIES.FUEL`, through `addGas` 2030 to 2035).
+   - **Its enthalpy.** The cell's gas keeps its enthalpy above ambient, m c_p (T − T_a), as the burner's fuel does (`burnInCell` 3582 to 3584). The vapour brings no heat of its own.
+   - **Its fuel kind.** The cell's `fuelVapourKind` becomes the timber's kind, 2.
+   - **A face on the grid's side** sends Δm out of the grid: `stats.timberOut`.
+   - Releases are summed per gas cell in float64 over the stage and added after every wall has stepped, as `walls` gathers its heat (2465 to 2482).
+
+8. **The endotherm.** `pyrolysisHeat` × Δm (`DEFAULTS` 259, 0.25 MJ/kg, the paper's, which the contents use at 1766) is taken from the deepest node of the layer at or above T_p, as a change of its temperature by its capacity per unit area. It is tallied in `stats.timberEndotherm`.
+
+9. **The flame.** The vapour burns by the existing gas combustion, Eqs. 9, 10 and 12 (`chemistry` 1795 to 1821), as contents' vapour does.
+   - Its fuel is `sim.fuels[2]`, made only with the item on: heat of combustion 13.88 MJ/kg (point 3), class A's CO and soot yields (0.01, 0.015) and its carbon fraction for CO₂ (`fireClasses.js` 73 to 90). Its oxygen is Huggett's, and water closes the balance (`stoichiometry` 352 to 366).
+   - Whether and where the vapour ignites is the gas model's decision. It is piloted by the gas's own temperature or by flame-front particles (1806), as for any vapour.
+   - The heat released by burning timber vapour is tallied in `stats.timberReleased`.
+
+10. **The grading of a timber layer.** `wallStack` takes a layer's own `stretch` in place of `P.wallStretch` where the layer gives one (2149, 2151). No present layer gives one, so every present stack is unchanged. The reference timber gives 1.5. The node count stays `wallNodes` for every wall, as the GPU's layout needs (2240 to 2241).
+    - **Why 1.5.** With 1.2, the 20 nodes put 1.37 mm in a 64 mm timber layer's first interval, and the model's ignition times run 11 % late with no surface loss (table below). Of 1.2, 1.5, 1.6 and 1.7, the model's errors are least at 1.5 for 64 and 100 mm.
+    - It is a numerical choice, as 13.4's 20 nodes at 1.2 were, fixed here before any code. It belongs to the material, not to the switch, so the item on and off differ only after a face reaches T_p.
+
+11. **Burn-out.** δ cannot pass the timber layer's thickness L. A face whose front has reached its layer's back releases nothing more. For a single timber layer with two timber faces, the two fronts together cannot pass L: a front stops where the other has charred. The cell stays solid. Its nodes keep the virgin properties, and a charred lining stays in place: it neither falls off nor recedes.
+
+12. **Tallies, only with the item on.** `stats.timberPyrolysed` (kg), `timberOut` (kg), `timberEndotherm` (J), `timberReleased` (J) and `timberFaces` (faces past onset). Per face: δ, its onset time, and the mass it has released.
+
+13. **CPU only.** With the item on and any timber face present, `supported` (`flamescapesGpu.js` 1089 to 1094) returns false, and the run falls back to the CPU as a scene with fuel in a solid does now.
+
+14. **What stays as now.** Every non-timber wall and solid. The conduction code. The walls' emission and convection. The radiation. The gas combustion's rates. The contents. The first item. The burner. Everything with the item off.
+
+**The model's errors against the closed forms**, on 20 nodes, with no surface loss unless stated, at dt 0.1 and 0.05 s. Fluxes 14.1, 20, 25 and 30 kW/m² absorbed; readings at 30, 60, 120 and 300 s while 4√(αt) is below the layer's thickness, the worst of all. Ignition times are given beyond one step.
+
+| Timber layer | Grading | First interval | Surface, % of the rise | t_ig, no loss | t_ig, linear loss |
+|---|---|---|---|---|---|
+| 18 mm | 1.2 | 0.385 mm | 0.67 | 1.6 % | 1.0 % |
+| 18 mm | 1.5 | 0.096 mm | 1.20 | 2.4 % | 2.3 % |
+| 64 mm | 1.2 | 1.369 mm | 2.97 | 10.6 % | 3.4 % |
+| 64 mm | 1.5 | 0.340 mm | 1.64 | 3.7 % | 2.9 % |
+| 100 mm | 1.2 | 2.139 mm | 6.22 | 24.2 % | 6.5 % |
+| 100 mm | 1.5 | 0.531 mm | 2.03 | 5.1 % | 3.4 % |
+| 200 mm | 1.2 | 4.277 mm | 23.9 | 84 % | 30 % |
+| 200 mm | 1.5 | 1.063 mm | 3.40 | 9.9 % | 5.4 % |
+
+So 20 nodes resolve a timber lining up to about 100 mm. A thicker member, a CLT panel of 200 mm say, ignites late by up to 10 % at these fluxes. That is a declared limit.
+
+#### The switch
+
+`timberLinings`: 0 (default), every layer inert, as now; 1, timber faces as above.
+- With 0, `wallSetup` builds no timber arrays, `walls` tests one reference once a stage, and every output is bit-identical to the base (check (g)).
+- With 1 and no timber layer in any material, every output is bit-identical too.
+- `RUN_CACHE_VERSION` rises only with a default (13.25, decision 14), and a cached run's key carries the switch.
+
+#### Cost
+
+- **With the item on.** Each timber face, each step, takes a scan of at most 24 nodes and one interpolation, and adds vapour to at most one gas cell. The walls stage already solves a tridiagonal system of 20 nodes for every wall, so the scan adds a fraction of that stage for timber walls only. Check (j) reports it.
+- **The GPU.** The real cost is the GPU: a scene with a timber face runs on the CPU. The app's worker then rebuilds the scene on the CPU's cell budget (`flamescapesGpu.js` 1100 to 1110), so a large timber-lined building runs coarser and slower. Vienna with timber linings would run on the CPU. Without timber nothing changes.
+- **With it off,** one test a stage.
+
+#### Checks (fixed now, before any run)
+
+All but (g) to (j) run in a new tool, `tools/timber-lining-check.mjs`.
+- **Its scene.** A box of 4 × 4 × 4 inner cells with one wall one cell thick at its x-low side, built by hand as `flamescapes.wall.test.mjs` builds its walls. The wall's material is the reference timber, as a layer of the thickness stated, backed where stated by 13.4's 12.7 mm gypsum board (k 0.48, ρ 1440, c 840; `flamescapes.wall.test.mjs` 19).
+- **The flux.** Each step it is added to the face's end node as a ray adds it (`T[0] += q dt / C[0]`, as `flamescapes.wall.test.mjs` 51 does), before `walls` runs.
+- **Losses.** "No loss" means `wallConvection` 0 and `emitAbove` 10⁹ K. "Linear loss" means `wallConvection` = h_ig = 31.3 W/(m² K), Tran and White's coefficient at ignition for southern pine (Table 3), with `emitAbove` 10⁹ K, the gas beyond the face reset to T_a = 293.15 K each step.
+- **Settings.** dt 0.1 and 0.05 s, cells of 0.20 and 0.34 m.
+
+The tolerances and their reasons:
+- 2 % of the face's rise is 13.4's, unchanged (`flamescapes.wall.test.mjs` 59).
+- For t_ig: the rise goes as √t, so 2 % on it is about 4 % on time, which 5 % holds. One step is added for the step at which onset is seen.
+- For the front: 6 %, or 0.1 mm where the depth is under 1.7 mm. The model's worst is 5.2 % (below).
+
+None was moved after a run: there has been none. The model's figures are given beside each, so a margin can be read.
+
+(a) **Surface temperature against erfc, before onset.** For a semi-infinite solid under a constant absorbed flux q'' with no loss (Carslaw and Jaeger 1959, as `flamescapes.wall.test.mjs` takes its references),
+
+T(x, t) − T_a = (2q''/k) √(αt/π) exp(−x²/(4αt)) − (q'' x/k) erfc(x/(2√(αt))),
+
+and at the face T_s − T_a = 2q''√(t/(π kρc)).
+- **The cases.** Layers of 18 and 64 mm; q'' of 14.1, 20, 25 and 30 kW/m²; readings at 30, 60, 120 and 300 s while 4√(αt) < L, at every node down to where the exact rise falls below 1 % of the face's. T_p is set to 10⁴ K for this check, so no face reaches onset.
+- **Pass:** every reading within 2 % of the face's exact rise. The model's worst: 1.20 % (18 mm) and 1.64 % (64 mm).
+
+(b) **Time to ignition against the thermally thick relation.**
+1. **No loss.** t_ig = (π/4) kρc (T_p − T_a)²/q''², exactly (from the face's rise in (a); Janssens 1991, 170 to 171). For the reference timber that is 65.06, 32.34, 20.70 and 14.37 s at 14.1, 20, 25 and 30 kW/m². Layers of 18 mm, where 4√(αt_ig) < 18 mm, and 64 mm. Pass: |t_ig − t_exact| ≤ 0.05 t_exact + dt, t_ig being the end of the step in which the face's node first reached T_p. The model's worst beyond one step: 2.4 % (18 mm), 3.7 % (64 mm).
+2. **Linear loss.** The face's rise is (q''/h)[1 − exp(τ) erfc(√τ)] with τ = h² t/(kρc) (Carslaw and Jaeger 1959, quoted by Janssens 1991 as his equation 12). q''_cr = h (T_p − T_a) = 9.39 kW/m² absorbed. That equals Tran and White's 10.68 kW/m² incident at ε 0.88 (their equation 3), which checks the constants against each other.
+   - At q'' = 1.5, 2 and 3 q''_cr, t_ig solves 1 − exp(τ) erfc(√τ) = q''_cr/q'': τ = 2.0464, 0.5915 and 0.1656, so t_ig = 382.25, 110.49 and 30.94 s.
+   - The 64 mm layer, and the 18 mm layer at 3 q''_cr only.
+   - Pass as in 1. The model's worst beyond one step: 2.3 % (18 mm), 2.9 % (64 mm).
+   - Reported beside, not judged: the published correlation q''/q''_cr = 1 + 0.73 (kρc/(h_ig² t_ig))^0.547 (Janssens 1991, equation 18; Tran and White 1992, equation 1) at the solver's t_ig. At the exact t_ig it gives 1.493, 1.973 and 2.952 for 1.5, 2 and 3: Janssens's fit, within 1 % over 0 < τ < 20 by his account (1991, 171).
+3. **The critical flux with the solver's own surface.** A 64 mm layer, its back insulated, its face exchanging with gas held at T_a at `wallConvection` 10 W/(m² K) and emitting at ε 0.88 above `emitAbove` 500 K (the radiation stage, `radiationStage`, run each step with the other surfaces at T_a). At the face's T_p its losses are 10 × 300 + 0.88 σ (593.15⁴ − 293.15⁴) = 3000 + 5808 = 8808 W/m².
+   - Pass: under 0.95 × 8808 W/m² absorbed, the face stays below T_p for 3600 s. Reason: with its back insulated, the face's temperature rises toward the steady value at which its losses equal the flux, and that value lies below T_p. It is an equality of the energy balance, not a tolerance.
+   - At 1.05 and 1.5 × 8808 W/m², the time to onset is reported.
+
+(c) **The char front against the closed form.** No loss, `pyrolysisHeat` 0 for this check, layers of 18 and 64 mm, q'' of 14.1, 25 and 37.6 kW/m².
+- **The reference depth.** δ_exact(t) solves T(δ, t) = T_p in (a)'s formula. Readings at 60, 120, 300 and 600 s while 4√(αt) < L and δ_exact > 0.
+- **Pass:** |δ − δ_exact| ≤ max(0.06 δ_exact, 0.1 mm). The model's worst: 3.0 % (18 mm) and 5.2 % (64 mm, 1.51 against 1.59 mm at 14.1 kW/m² and 120 s). The other 64 mm readings are within 3.2 %.
+- **And,** in every step, the mass the face has released equals ρ (1 − Y_c) h² δ within 10⁻¹² of it (float64).
+
+(d) **Burn-out.**
+1. An 18 mm timber layer backed by the gypsum board, q'' 30 kW/m², no loss, until 600 s after δ reaches 18 mm (at most 3600 s). δ reaches 18 mm and stops. The total released is ρ (1 − Y_c) h² × 0.018 m within 10⁻¹² of it, and nothing is released after the step in which δ reached 18 mm.
+2. A single 18 mm timber layer open on both ends, both faces under 30 kW/m². The two depths sum to at most 18 mm in every step, and to 18 mm at the end. The total released is the same as in 1.
+
+(e) **Mass and energy closure,** in every step of (a) to (d), and of a step of the whole solver in (b)3's scene with oxygen in the gas.
+1. **Mass.** The vapour added to gas cells plus `timberOut` equals Σ Δm within 10⁻¹² (float64). For each face, unburnt + char + released = ρ L h², where unburnt = ρ (L − δ) h² and char = ρ Y_c δ h², within 10⁻¹².
+2. **The endotherm.** `stats.timberEndotherm` equals `pyrolysisHeat` × Σ Δm within 10⁻¹². From one state, the wall nodes' heat after `walls` with the item on, less that with it off, equals minus the endotherm within the float32 rounding of the node writes. That rounding is computed as `radRoundoff` computes it, (stored − meant) × capacity, and reported.
+3. **The gas.** Each receiving cell's ρ V c_p (T − T_a) is the same before and after the vapour is added, within two float32 steps of its T.
+4. **The heat of the flame.** A gas cell held at 1200 K with oxygen and timber vapour: the heat `chemistry` releases from it equals 13.88 MJ/kg × the vapour burnt within 10⁻⁹, `stats.timberReleased` holds it, and the products are the timber fuel's stoichiometry within the float32 of Y.
+
+(f) **Before onset, the item changes nothing.** In (b)3's scene at 1.5 × 8808 W/m², from the same material (grading included), the item on and off give every field and every `stats` entry bit-identical until the step in which a face first reaches T_p.
+
+(g) **Off is off.** With `timberLinings` 0:
+- `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's fingerprints;
+- the unit suite passes with the same count;
+- `tools/flamescapes-gpu-check.mjs`'s phases give the base's state comparisons bit for bit, timings aside.
+
+The same with `timberLinings` 1 and no timber layer in any material. `supported` returns false with the item on and a timber face present, and as now otherwise.
+
+(h) **The unit suite passes unbent** with the default set to 1 for the run (a one-line change, not committed). A test that fails is not edited, and its failure is reported.
+
+(i) **Reported, not judged:** a cone-like comparison with Tran and White's southern pine.
+- **The scene.** The 64 mm layer, its face under 15, 22, 34 and 51 kW/m² incident (absorbed whole, as the solver absorbs rays), with the solver's own losses ((b)3's).
+- **What is compared.**
+  - The time to onset, against their Table 2: 909 and 570 s; 85 and 85 s; 35 and 26 s; 5 and 5 s.
+  - The mean mass loss rate and charring rate from onset until δ reaches 36 mm, as their Table 4 averages them (3.80 to 8.99 g/(m² s); 0.377 to 0.851 mm/min).
+- **This is partly circular.** T_p and kρc come from the same tests. The solver's flame gives the face none of the cone flame's own heat (point 9), and the solver absorbs what the wood would reflect.
+- Also reported: `tools/calibration/heat-closure.mjs`'s layered case with its ceiling board replaced by 18 mm of the reference timber, item on, 300 s on 0.27 m: its closure beside the layered case's, and whether any timber face reached onset.
+
+(j) **Speed, reported, not judged.** The walls stage's ms and a step's ms, on and off, in (b)3's scene and in the heat-closure case of (i). With 0, the fingerprint tool's ms a step against the base.
+
+A failure of (a) means the timber's properties do not reach the conduction. A failure of (b) or (c) means the onset or the front departs from the method. A failure of (d) or (e) means mass or energy is lost or made. A failure of (f) or (g) means the item acts where it should not.
+
+#### Default
+
+Off. Passing (a) to (h) makes the switch available to the solver's options, to the harness and to the materials study of 16.9. It does not change the app's default.
+
+No dataset in the suite has a combustible lining, so there is no rerun to report beside 13.B. The app may offer the switch only with words that say what it is: a timber lining's ignition and burning follow a simple model checked against closed forms, not validated against fire tests.
+
+If the item is not made and checked when the results paper is written, the paper says only what 16.9 allows: that a timber lining's thermal properties change the course of a contents fire.
+
+#### What ends this line
+
+If any check of (a) to (h) fails in any case, the attempt fails, and it is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted. The constants are one species' published properties, and the grading of 1.5 is fixed here.
+
+Checks (a) to (f) have references that a correct code meets within the stated discretisation, or exactly. So a failure there is a fault of the code against the method, and 13.25's decision 13 applies: corrected code, run again in full, is the same attempt, reported with both commits. A change to the method, its constants or its grading ends the attempt.
+
+If the line ends, linings stay inert, and 16.9's fallback sentence is the paper's word. No second attempt is drafted. It would need the user's word and a new method written here first.
+
+#### What this item does not claim
+
+- **Flame spread is not validated.** Spread over a lining here is whatever the gas model makes of the vapour. Its flame heats the lining beside it only by `wallConvection` (10 W/(m² K)) and by its soot's radiation, on cells of 0.20 to 0.34 m. A wall flame's heat flux to the surface beside it is not resolved on such cells.
+- **Data that could judge it later**, none of it read for this draft beyond its abstract:
+  - **Room-corner tests to ISO 9705 with wood-based linings.** Östman and Tsantaridis (1994) relate the cone calorimeter to the time to flashover for 28 linings on walls and ceiling. Whether their per-test records are public was not checked.
+  - **Compartments lined with cross-laminated timber.**
+    - Hadden et al. (2017) report heat release rates and temperatures for three configurations of exposed CLT. Bartlett et al. (2017) analyse auto-extinction in the same series.
+    - Gorska, Hidalgo and Torero (2021) study fire dynamics in mass timber compartments.
+    - Kotsovinos et al. (2023) report CodeRed #01, a large open-plan compartment with an exposed timber ceiling and columns.
+  - **A building.** Zelinka et al. (2018): five tests of a two-storey mass timber apartment structure in ATF's burn room, with gypsum protection from 100 % to none. Their data, video and photographs are archived (Zelinka et al., USDA Forest Service Research Data Archive, doi:10.2737/RDS-2025-0004): thermocouples, bidirectional probes, optical density, heat flux, gas analysers and a fire products collector.
+  - Each would be acquired, its licence checked and its inputs encoded before its measured channels are read, as 16.6 sets.
+- **Not claimed either:** char fall-off, which Hadden et al. (2017) find decides auto-extinction; char oxidation and glowing ignition below the critical flux (Babrauskas 2002: about 250 °C at the minimum flux); moisture; or timber thicker than one cell.
+
+#### Declared limits
+
+- **Constant properties.** The char layer conducts and stores heat as virgin wood does. Real char is lighter and conducts differently, and its effect on the front's speed is not modelled.
+- **One species.** The reference is southern pine. Other species need their own T_p, kρc, ρ, Y_c and heat. Janssens (1991, Tables 3 and 4) gives T_ig, q''_cr, kρc and density for six; Tran and White (1992) give all five for four.
+- **Moisture** is folded into the apparent kρc for ignition. Its water is not released, and it does not delay the front after onset.
+- **Absorptivity 1.** The solver's surfaces take all of each ray (13.25 and 13.26, declared limits), where wood takes about 0.88 of it (Janssens 1991, 174). So a timber face heats about 1/0.88 times as fast under the same irradiance.
+- **Losses below 500 K.** The face emits only above 500 K unless item 11 is on (13.26).
+- **The flux at onset.** With the front at T_p, the release starts at a finite rate. Under a constant flux with no loss it is (1 − Y_c) 2q''/(π c (T_p − T_a)): 21 g/(m² s) at 25 kW/m². It then falls as the front deepens. Tran and White's means at that flux are about 5 to 6 g/(m² s) (Table 4).
+- **Vapour enthalpy.** The vapour enters with no heat of its own (point 7). It would carry about c_p,F (T_p − T_a) = 2200 × 300 J/kg = 0.66 MJ/kg (`CP` of fuel vapour, `flamescapes.js` 97), which stays in the solid.
+- **One vapour kind a cell.** A cell's `fuelVapourKind` is the last writer's, as for contents now (1770 to 1771).
+- **The grid.** Side faces of a one-dimensional wall do not pyrolyse. Timber more than one cell thick stays inert. A layer over about 100 mm is resolved less well (table above).
+- **CPU only.**
+
+#### Not verified
+
+- The size of any effect in a room, and the cost in an app scene.
+- That feature (a) can map IFC timber layers to point 2's form, timber first.
+- That the per-test records of Östman and Tsantaridis (1994) are public.
+- Spearpoint and Quintiere's integral model for charring wood (2000; 2001) was not read beyond its bibliographic record. It may give a better front than a fixed isotherm.
+- Carslaw and Jaeger (1959) were not re-read. The two closed forms are quoted as Janssens (1991, 170) and `flamescapes.wall.test.mjs` take them, and were re-derived for this draft.
+
+#### Sources (read, or run for this draft)
+
+- This repository at 3d4c245:
+  - `flamescapes.js` 90 to 116, 123 to 300 (parts of `DEFAULTS`), 352 to 513, 795 to 817, 1642 to 1827, 2007 to 2053, 2062 to 2111, 2113 to 2483, 2598 to 2606, 3577 to 3586 and 3663 to 3692;
+  - `flamescapesGpu.js` 1089 to 1112;
+  - `flamescapesRun.js` 107 to 140;
+  - `voxelize.js` 25 to 40;
+  - `fireClasses.js` 1 to 100 and 295 to 330;
+  - `flamescapes.wall.test.mjs` 1 to 92;
+  - `tools/calibration/validation-suite.mjs` 232 to 300 (code only);
+  - `tools/calibration/heat-closure.mjs` 1 to 40.
+- Janssens, M. (1991). A thermal model for piloted ignition of wood including variable thermophysical properties. Fire Safety Science 3, 167 to 176. doi:10.3801/IAFSS.FSS.3-167. Checked on Crossref; read in full (the IAFSS copy).
+- Tran, H. C., and White, R. H. (1992). Burning rate of solid wood measured in a heat release rate calorimeter. Fire and Materials 16(4), 197 to 206. doi:10.1002/fam.810160406. Checked on Crossref; read in full (the Forest Products Laboratory's copy), Tables 1 to 5 included.
+- Babrauskas, V. (2002). Ignition of wood: a review of the state of the art. Journal of Fire Protection Engineering 12(3), 163 to 189. doi:10.1177/10423910260620482. Checked on Crossref; abstract read (OpenAlex).
+- Carslaw, H. S., and Jaeger, J. C. (1959). Conduction of Heat in Solids, 2nd edition. Oxford University Press. No DOI; not re-read.
+- Spearpoint, M. J., and Quintiere, J. G. (2000). Predicting the burning of wood using an integral model. Combustion and Flame 123(3), 308 to 325. doi:10.1016/S0010-2180(00)00162-0. (2001). Predicting the piloted ignition of wood in the cone calorimeter using an integral model: effect of species, grain orientation and heat flux. Fire Safety Journal 36(4), 391 to 415. doi:10.1016/S0379-7112(00)00055-2. Both checked on Crossref; metadata only.
+- For later validation, each checked on Crossref, abstract or metadata only:
+  - Östman, B. A.-L., and Tsantaridis, L. D. (1994). Fire and Materials 18(4), 205 to 209. doi:10.1002/fam.810180403.
+  - Hadden, R. M., et al. (2017). Fire Safety Journal 91, 480 to 489. doi:10.1016/j.firesaf.2017.03.074.
+  - Bartlett, A. I., et al. (2017). Fire Safety Journal 91, 407 to 413. doi:10.1016/j.firesaf.2017.03.050.
+  - Gorska, C., Hidalgo, J. P., and Torero, J. L. (2021). Fire Safety Journal 120, 103098. doi:10.1016/j.firesaf.2020.103098.
+  - Kotsovinos, P., et al. (2023; online 2022). Fire and Materials 47(4), 542 to 568. doi:10.1002/fam.3049.
+  - Zelinka, S. L., et al. (2018). Compartment fire testing of a two-story mass timber building. USDA FPL-GTR-247. doi:10.2737/FPL-GTR-247. Their data: doi:10.2737/RDS-2025-0004.
+- Run for this draft: the model named at the head (the solver's `wallStack` and `wallStep` on the reference timber against (a)'s, (b)'s and (c)'s closed forms), and hand evaluations of the contents' rates. No fire simulation, no result file.
+
+### 16.12 The coordinator's decisions on 16.10 and 16.11 (2026-11-15, before any code of either)
+
+The two drafts above are the physics agent's, written blind (13.12, rule 2). They declare what the agent read that reports results. The coordinator read both and each draft's notes. Each decision below takes the draft's own choice or the stricter reading. No decision adds a constant from a result, or moves a tolerance.
+
+**Checked by the coordinator,** apart from the agent, at be32e34:
+- The validation burner runs on the CPU only (`flamescapesGpu.js` 1090).
+- The burner's step keeps the vapour's excess enthalpy, so it closes (`flamescapes.js` 3582 to 3584).
+- The contents add their pyrolysate to the gas cell at that cell's temperature, with no enthalpy taken from anywhere (1764 to 1768). See finding 2.
+- The double count of 16.10's declared limits. See finding 1.
+
+**Item 12, the burner's radiation.**
+1. **Rays.** 16 a step, so the cost stays as now. The checks reach their ray counts with more steps, and no tolerance moves.
+2. **The flame is clear to its own rays,** FDS's rule, as drafted.
+3. **The burner's rays have full reach,** with no 40-cell cut, as drafted.
+4. **A copy of `march` for the burner.** The existing `march` stays byte for byte as it is: the stricter reading of off-is-off, at the cost of duplicated code.
+5. **The deposits are deferred in float64,** as drafted.
+6. **The ledger** records `stats.burnerRadiatedOut` beside its entries when the item is on. It enters no statistic.
+7. **CPU only,** as the validation burner is now.
+
+**Item 13, timber linings.**
+1. **One source.** Southern pine, after Tran and White (1992), supplies every constant.
+2. **The heat of the volatiles** is 13.88 MJ/kg.
+3. **The vapour carries no heat of its own** (the burner's rule), so energy closes.
+4. **The endotherm** is the solver's 0.25 MJ/kg. It is declared as unsourced for wood, and it is not tuned.
+5. **The grading of 1.5** is a declared numerical choice, fixed now and not tuned.
+6. **One temperature,** 320 °C, for both the onset and the front.
+7. **CPU only.** The switch is not offered in the app until the user has agreed to what it costs: a timber scene leaves the GPU.
+8. **Timber thicker than 100 mm is refused,** the stricter option. Such a layer stays inert, and the run says so.
+9. **Timber reaches the solver through `MATERIAL.WOOD`** (slot 3), as a fourth inert entry set by 16.9's feature (a). With the item off and no timber mapped, every scene is bit-identical.
+10. **The tolerances stand as drafted,** (c) included: 6 % or 0.1 mm over its whole range, not only where δ_exact ≥ 2 mm. A case outside them fails like any other.
+
+**Both items.**
+- **Faults.** 13.12's rules and 13.25's decision 13 govern faults of the code against the method: corrected code, run again in full, is the same attempt. A change to the method ends the attempt.
+- **What ends each line** stands as drafted.
+- **Order.** Item 12 comes first. R12, a rerun on 13.B's flags reported beside 13.B, runs before Phase 1. Item 13 is built after 16.9's feature (a) is in. Its checks judge it. No validation of flame spread is claimed.
+
+**Two findings, recorded here and not yet items.**
+1. **The double count.** A sooty test fuel's flame cells radiate χ_r Q, and their soot also emits by Eq. 17 (`radiation` 968 to 980). It is present in every run of 13.A and 13.B; its size is not measured. Phase 1 screens χ_r, so it is drafted blind as item 14, under Phase 0 (16.3), before Phase 1 begins.
+2. **The contents' vapour.** It enters the gas at the cell's temperature with no enthalpy taken. So energy appears with every kilogram the contents pyrolyse. 13.A's Lean theorems cover the transport and the burner, not the contents. Its size is measured first, by a read-only run. Then it is drafted blind as item 15, under Phase 0.
