@@ -7491,6 +7491,32 @@ Every figure below was measured while the R12 rerun, the study's timber rows, it
 3. **It explains the base's onestep difference between the paths.** With the item on, that difference falls from 0.018 to 0.083 K to 1.2 to 1.8 × 10⁻⁴ K (e)3. That is the difference on which item 15's first (d)2 and item 16's first (e)2 failed.
 4. It goes into the study's rerun on Phase 0's solver with the other made items (16.20, decision 6; 16.32, decision 6).
 
+
+### 16.38 Item 18: (c)2 and case (a)(iii) corrected before any run (2026-11-16)
+
+16.34's brief asked the builder of item 18 to check 16.33's hand-counted bounds and case constructions against the code before any judged run. The builder did. It used float64 models of `conduct` in each path's order, taken from item 17's, and transcriptions of the solver's own rate functions. No code was built, no GPU ran and no judged result was seen. It stopped and reported one bound and one case.
+
+**What does not hold, and why:**
+1. **(c)2 judges every body's item difference over one full step by (c)1's rule.**
+   - Over a full step the item's heat passes through `conduct`, whose exchanges the two paths make in different orders: 16.26's defect, which item 17 removes behind its own switch. So each neighbouring skin's share of the item's heat depends on where its exchange falls.
+   - In the app's burn-out state before step 427, five neighbouring bodies differ between the paths by up to 0.63 K, against tolerances of 0.004 K or less. With particles on, before step 430, the difference is 0.56 K.
+   - The burnt-out cell's own gas and T_s, and the particles, do not depend on the order, and they meet the rule.
+   - So the reference is wrong for the neighbours: code that meets the method would fail there.
+2. **Case (a)(iii), both reactions, is not one on 0.34 m cells.** At an O₂ mass fraction of 0.01, the O₂ cap there is 1.11 × 10⁻⁴ kg, more than the case's 10⁻⁴ kg of fuel. So nothing pyrolyses.
+
+**Corrected, before any judged run:**
+1. **(c)2 judges, by (c)1's rule:**
+   - the burnt-out cell's T and T_s;
+   - (c)2's particle part, as written.
+   - The neighbouring bodies' item differences are reported beside the two orders' difference, and are not judged. That difference is item 17's subject, and item 17 is made behind its own switch (16.37).
+2. **Case (a)(iii) uses 10⁻³ kg of fuel, on both cells.** The solver's rate functions give:
+   - on 0.20 m: 2.26 × 10⁻⁵ kg oxidised and 9.77 × 10⁻⁴ kg pyrolysed, burning out, Q_b = 151.4 J;
+   - on 0.34 m: 1.11 × 10⁻⁴ kg oxidised and 8.89 × 10⁻⁴ kg pyrolysed, burning out, Q_b = 1722.1 J.
+
+**A declaration.** In reading 16.34, the builder saw section 17's text in full, including 17.8's figure for finding 2. None of it concerns burn-out.
+
+Every other bound and case of 16.33 stands. No bound changes after a judged run. The build goes on `flamescapes/burnout-heat` from this section's commit, whose `src` equals e9f6371's.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
