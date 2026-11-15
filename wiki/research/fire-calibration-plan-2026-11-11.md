@@ -4337,6 +4337,375 @@ If the line ends, the contents keep the present rule. Finding 2 stays a declared
 6. **Tolerances stand as drafted.** Check (b)'s existing band of 0.9 to 1.0 is reported, not judged. The draft says it may not separate the item from the present code, and it is not tightened after a run.
 7. **Order.** Item 15 is built now, on its own branch from this section's commit. It does not wait for item 12.
 
+
+### 16.19 Item 16: gas a source adds pushes out the gas it displaces (2026-11-15, before any code or run of it)
+
+Drafted blind to every validation result and to finding 2's size, as 13.12 sets and as 16.17's decision 2 asks. Nothing below changes after a run of it; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at 27d52fe, whose `src/core` equals main's be32e34 (`git diff be32e34 27d52fe -- topologicpy-web-frontend/src` is empty). The figures called "the reference" below are closed forms evaluated by hand for this draft, in float64, from the solver's own constants, in scripts that import nothing from the solver. They are not the solver's output, and none is a fire result.
+
+**What the drafter read that reports results, declared as 13.26's coordinator note declares it.**
+- The plan's headings.
+- 12.4 and 12.6. 12.6's addendum reports how many Steckler runs the grid does not represent.
+- 13.12.
+- 13.25 and 13.26 with the coordinator's decisions: model figures, and the direction item 11 leans.
+- Section 16 from its head to 16.12. 16.1 states the hot and cold readings of 13.B and the chairs. 16.9 states Phase 0's findings. 16.12 states findings 1 and 2, with no size.
+- 16.16 and 16.17. 16.17 states that finding 2 is not one-signed, with no figure.
+- The coordinator's brief, which names the four gaps of 16.17 and the lines to confirm.
+- The one-line titles of the branch's last eight commits. One (a2eefe4) names "finding 2's size" and gives no figure.
+- A session note that states what 16.1 states of items 10 and 11: no calibration gain.
+- Comments in the solver and in `tools/calibration/heat-closure.mjs` that quote earlier results of the transport, the walls, the zones and the sprinklers. For example, a sealed box drew in 31 % more gas before pressure zones (`DEFAULTS` 194 to 198). None concerns a source's volume.
+- The names of the files in the coordinator's working folder, seen in a listing. None was opened.
+- Not opened: 16.14, 16.15, 13.15, section 17 beyond its headings, any file in `benchmark/results/`, and every result file of the calibration runs and of the study.
+
+The item came from reading the code. 16.16 found the gap (its paragraph "The volume"), and 16.17's decision 2 moved it here. No result prompted it. Its checks are closed forms only: the ideal gas law, a rigid vessel's first law, the divergence theorem, conservation, parity and bit-identity. No measured datum enters any of them.
+
+#### What the solver does now
+
+Every source that adds gas to a cell, or takes it away, calls `changeGas` (`flamescapes.js` 2007 to 2025), directly or through `addGas` (2030 to 2035) and `addProducts` (2043 to 2053). It adds each species' mass, renormalises Y and sets ρ = total / V. T does not change. In a sealed region it adds the net mass to the zone's source (2024). The callers:
+- **The burner.** `burnInCell` (3583), called by `burnerStep` in the `pilot` stage, before the advection. It adds the products of the fuel it burns, the fuel's own mass with them, less the O₂. Its T keeps the cell's sensible heat above ambient (3584). The validation burner and the app's design fire both run here.
+- **The contents, and a first item that is not a design fire** (`chemistry`). Water (1687), a liquid's vapour (1713), oxidation products (1759), and pyrolysate as fuel vapour and soot (1767, 1768).
+- **Gas-phase combustion** (1813). Vapour and O₂ leave, products enter. The mass is unchanged (`addProducts` with `vapour`), and the moles change. Its heat goes into T at constant pressure (1815).
+- **The spray** (1863). Steam, after T is lowered by the heat that evaporated it (1862).
+- **Soot deposition** (2569). Soot leaves.
+- **Item 13's timber vapour,** when it is built, through `addGas` (16.11, point 7).
+
+The GPU has the same functions (`flamescapesGpu/kernels.js`: `changeGas` 831 to 850, `addGas` 869 to 874, `addProducts` 876 to 885) and the same callers: the design fire's `burner` (956), `chemCell` (2159, 2183, 2220, 2229, 2230, 2268), `spray` (2071) and `deposition` (2533). A sealed cell's net mass goes to its zone's source (849).
+
+**The density is reset by the gas law, and the expansion reads only T.** Confirmed at these lines:
+- After the heat sources, `updateDensity` sets every open cell's ρ to the gas law's at its T and Y, at ambient pressure (stage `density2`, 3688; 2653 to 2657). `pressureZones` then re-solves the zones.
+- The transport starts from the gas law's ρ at each cell's T, Y and zone pressure, not from the stored ρ (1350). It ends with T from the transported ρ (1467).
+- The expansion asks the flow for ln(T/T₀) of the heat sources before the advection (2626) and ln(T/T₁) of those after it (2641). The vent leaks add their own volume (2645, from 2888). Nothing else enters it.
+- The GPU does the same: `rhoStart` (kernels.js 1628 to 1639), `density` (1620 to 1622), `transportEnd` (1649 to 1652), `densityBoundaries` (2552 to 2563), `expandBefore` and `expandEnd` (1660 to 1667).
+
+So in an open region a source's moles are not asked of the flow. The cell holds n + Δn moles at T until the next reset. The reset keeps n' = pV/(RT) and deletes the rest: a share Δn/(n + Δn) of every species in the cell, the source's own included, with its sensible heat. What the gas would have pushed out of the cell at constant pressure is deleted instead. A negative source is the mirror: soot that deposits leaves room, and the reset fills it from nowhere.
+
+**A sealed region keeps the mass and counts the moles.** `changeGas` adds the net mass to the zone's source (2024). `pressureZones` adds it to the zone's mass (2965). It sums G, the mass the zone's cells would hold at ambient pressure at their present T and Y (2951 to 2961), and finds the pressure at which they hold the zone's mass (2979 to 2984). G uses each cell's molar mass, so a change of moles at a fixed mass, as in gas-phase combustion, moves the pressure too. The projection takes each sealed region's mean expansion off (3161 to 3178). So nothing is lost in a sealed region now.
+
+**The size of each source, from the solver's constants (the reference).** The volume is the moles times RT/p, 0.049234 m³/mol at 600 K (R, 78; p, 80).
+
+| Source | Moles a kilogram | Volume at 600 K, m³/kg | From |
+|---|---|---|---|
+| Pyrolysate, 0.9 vapour and 0.1 soot | +38.33 | +1.887 | `pyrolysisFuel` (262), `MOLAR` (94) |
+| Steam | +55.56 | +2.735 | `MOLAR` |
+| Class A oxidised at a surface: its products less its O₂ | +38.22 | +1.882 | `stoichiometry` (352 to 366), `fireClasses.js` 79 |
+| Class A vapour burnt in the gas | +4.891 | +0.2408 | the same |
+| Class B vapour burnt in the gas | +14.85 | +0.7312 | `fireClasses.js` 105 |
+| The solver's METHANE, burnt by the burner | +59.52 | +2.931 | `METHANE` (3336) |
+| Soot deposited | −83.33 | −4.103 | `MOLAR` |
+
+- **Beside the burner's heat.** The burner's moles ask (Δn/Q) M̄ c_p T/(1 − χ_r) of the volume its heat asks. Here Δn/Q is 1.190 mol/MJ for METHANE, and M̄ = 0.028836 kg/mol and c_p = 1011.7 J/(kg K) are the solver's air (Y_O₂ 0.232, 100; `CP`, 97). That is 3.47 × 10⁻⁵ T/(1 − χ_r), T in K: 1.0 % at 293 K and 3.5 % at 1000 K with χ_r 0, and 5.0 % at 1000 K with χ_r 0.3.
+- **Beside the spray's cooling.** A kilogram evaporated takes e = 4186 × 80 + 2.2586 × 10⁶ = 2.593 MJ from the gas (`spray` 1847; `latentHeat`, 263), which contracts the solver's air by e R/(p M̄ c_p) = 7.29 m³. The steam's own moles take 1.82 m³ at 400 K, about a quarter of it.
+
+#### What FDS does with a source's moles
+
+Read for this draft in FDS's source at commit ff928db, as 16.10 cites it:
+- **The divergence carries every source's moles.** `DIVERGENCE_PART_1` adds `D_SOURCE` to each cell's divergence (`divg.f90` 671).
+- **A gas-phase reaction.** Each tracked species' change ΔZ_n adds (R_n/R̄ − h_s,n/(c_p T)) ΔZ_n/dt (`fire.f90` 501). The first part, summed over the species, is the change of the gas's moles per mole, Σ_n (W̄/W_n) ΔZ_n, over the step. The second is the sensible enthalpy of the change at constant T, which the solver carries in T.
+- **A thin obstruction's gas, put into the adjacent cell.** ṁ'''_α (R_α/R̄)/ρ_g for each species (`wall.f90` 1411, 1414), with R_α/R̄ = W̄/W_α. The enthalpy term beside it (1422) is item 15's matter.
+- **A solid wall's gas** enters through the face with a normal velocity ṁ''/ρ_f (1402, 1428, 1447 to 1448). Its volume enters as a flow through the boundary.
+- **A particle's evaporation.** ṁ_α (R_α/R̄)/m_g (`wall.f90` 1521).
+- **Deposition.** −(R_α/R̄) Y_dep/(ρ_g dt) (`wall.f90` 1732). FDS takes the deposited species' moles out of the divergence.
+- **Condensation on a wall,** in the same form (`fire.f90` 2215).
+- **Pressure zones.** A zone's pressure rises by the zone's integral of the divergence, `D_SOURCE` included, less the flow across its boundary (`divg.f90` 739, 1524). Each cell's divergence then loses its share of that rise (1545).
+
+So FDS asks volume for every source's moles. In an open region the gas is pushed out; in a zone the pressure rises. Deposition is a sink. The low-Mach form, in which the divergence carries the volume that heat and mass sources make at the background pressure, is Rehm and Baum's (1978).
+
+#### The method
+
+Chosen: **every change of a gas cell's moles by a source asks its volume of the flow, through the expansion the solver already has.** It is FDS's mass-source term over a step, in the form the solver uses for heat.
+
+Considered and set aside:
+- **A source per stage** (the burner, the chemistry, the spray, deposition, each with its own code). Every source already passes through `changeGas`, on both paths. One hook there covers them all, item 13's vapour included, and a new source cannot miss it.
+- **Keeping the mass in the cell** (no reset of ρ for a source). The transport starts from the gas law's ρ (1350), and the whole scheme of proposal F rests on it. Changing that is not minimal.
+- **The linear form, Δn/n a step.** It balances the reset's deletion exactly, but it does not add to the heat's ln(T₁/T₀), which the expansion uses now. The logarithm is chosen so that the moles and the heat sum to the logarithm of the volume ratio. Its deficit is declared below.
+- **Only the four gaps 16.17 names.** The spray's steam and deposition's soot are the same defect at the same function. Leaving them out would need a flag at two call sites. FDS counts both (`wall.f90` 1521, 1732).
+
+1. **Scope.** With `sourceExpansion` 1 and `expansion` 1 (`DEFAULTS` 193), every call of `changeGas` on either path: the burner (the validation burner and the design fire), the contents and first items, gas-phase combustion, the spray, deposition, and item 13's vapour when it is built. Unchanged: the transport, diffusion, ducts, the vent and zone leaks, the zones' books, the projection's code, every rate and every heat.
+
+2. **The moles a change adds.** Inside `changeGas`, before its writes, it has m_q = Y_q ρ V for each species and the nitrogen m_N₂ = ρ V − Σ m_q, as now (2009 to 2016). The change of species q is δ'_q = δ_q, or −m_q where m_q + δ_q < 0: the clamp it applies now (2015). Then
+
+   n = Σ_q m_q/M_q + max(0, m_N₂)/M_N₂,  Δn = Σ_q δ'_q/M_q,
+
+   with the solver's molar masses (`MOLAR`, 94; `MOLAR_N2`, 95). Nitrogen does not change. Δn is summed from the changes, not taken as a difference of totals, so it keeps its precision when Δn ≪ n.
+
+3. **The volume.** At constant pressure and temperature the cell's gas takes the volume ratio (n + Δn)/n (an ideal gas, V ∝ nT). If Δn ≠ 0, ln(1 + Δn/n) is added to the cell's accumulator A. Successive changes in a step add: their logarithms sum to that of the product of their ratios. This is FDS's Σ_α ṁ'''_α (R_α/R̄)/ρ over a step (`wall.f90` 1414; `fire.f90` 501), in the form the solver uses for heat (2626, 2641) and for the vent leaks' inflow (2888).
+
+4. **The expansion.** In `expansionEnd` (2633 to 2646), each open cell outside the domain's shell whose A is not 0 takes D = (D + ln(T/T₁) + A)/dt in place of line 2641. A cell whose A is 0 takes line 2641 unchanged. The shell's cells are held at 0, as now (2640). Then A is cleared. So every change counts once, in the step whose `expansionEnd` follows it; the burner's, made before the advection, in its own step. The sum is ln(V'/V) of the cell's gas over the step's sources, the moles and the heat together. The advection's own changes stay out, as now.
+
+5. **The projection, as now.** It asks the flow for D, less each sealed region's mean (3161 to 3178). In an open region the moles' volume leaves through the region's openings in the next step's transport, as heat's does. The transport carries the displaced gas, with its heat and its species, into the cells beyond. Its advective form gives each cell back its own density times its faces' divergence (the transport's rule, 1315 to 1331). So the mass the reset takes from a source cell is, to first order in Δn/n, the mass the flow carries out of it. Check (d) tests this.
+
+6. **Sealed regions: nothing new.** See "What the zones need".
+
+7. **Tallies, CPU, only with the item on.**
+   - `stats.sourceMoles` (mol): Σ Δn over every change.
+   - `stats.sourceVolume` (m³): Σ, over steps and over the open cells outside sealed regions and the shell, of V A. That is the volume the flow is asked to carry out of open regions.
+
+   The validation suite's ledger records both beside its entries when the item is on, as 16.12's decision 6 records item 12's. They enter no statistic.
+
+8. **On the CPU.**
+   - `DEFAULTS`: `sourceExpansion` 0.
+   - `createSolver`: `sourceExpand`, a Float64Array of N, made only with `sourceExpansion` 1 and `expansion` 1, and null otherwise.
+   - `changeGas`: points 2 and 3 when `sim.sourceExpand` is not null.
+   - `expansionEnd`: point 4 and the tallies when it is not null.
+   - Exports for the checks, which no run calls: `moleChange(mass, Y, offset, delta)`, the pure function of point 2, returning n and Δn; the expansion's four stages; and `chemistryStage`, if item 15 has not exported it.
+
+9. **On the GPU.**
+   - `PARAMS` gains `sourceExpansion` (u32): 1 only with the item and the expansion on. It is set where `surfaceRayStart` is set (`flamescapesGpu.js` 417).
+   - With it 1, the step clears the D field (`CF.D`, kernels.js 216) at its start, before the `burner` pass (`flamescapesGpu.js` 640 to 643).
+   - `changeGas` (kernels.js 831 to 850): with it 1, points 2 and 3 in float32, the logarithm by `lnOnePlus` (1777), added to its own cell's `fD`.
+   - `expandBefore` (1660 to 1662): with it 1, an open cell's `fD` gains ln(T/T₀) instead of taking it. `expandEnd` (1663 to 1667) already adds to `fD` and divides by dt, so it is unchanged.
+   - No atomic is needed. Each call writes the cell its thread owns. The `burner` runs in one thread (975 to 976). `chemistry` runs `chemCell` on its own cell (2281 to 2285), and the GPU runs porous cells only (`supported`, 1089 to 1094). The `spray` runs one thread a column, and no two columns share a cell (2048, 2055). `deposition` runs one thread a cell (2514).
+   - No buffer, pass or reduction is added. The GPU keeps no tallies (16.17, decision 4).
+   - The validation burner stays on the CPU (`supported`, 1090).
+
+10. **What stays exactly as now.** Every species' mass and every T the sources write. The zones' books. The leaks. The transport's and the projection's code. Every scene with the item off.
+
+#### What the zones need
+
+Nothing new, for three reasons.
+- `changeGas` already adds each change's net mass to its zone's source (2024; GPU 849). `pressureZones` adds it to the zone's mass (2965).
+- The zone's pressure is the one at which its cells hold that mass at their present T and Y (2951 to 2984). The gas law there uses each cell's molar mass. So a mass source raises the pressure by its moles, and a change of moles at a fixed mass moves it too. FDS's zones do the same with the same terms (`divg.f90` 671, 739, 1524).
+- The projection takes each sealed region's mean off D (3161 to 3178; GPU `sealedMean`, 1676). So the item's volume in a zone moves gas only within the zone, from the source cells to the rest. The zone's pressure stays the zone's.
+
+Two rules follow, and the build keeps them.
+- The item adds nothing to `Z.source`, `Z.mass` or G. The mass and the moles are there already, and a second entry would count the source twice.
+- A new mass source goes through `changeGas`, or adds to both `Z.source` and A, so that the zones and the flow see the same changes. Item 13's vapour does (16.11, point 7).
+
+With `pressureZones` 0, a sealed region holds its cells at ambient pressure and keeps no mass of its own. Its sources' moles vanish then, as now. The item cannot change that, because the region's mean is taken off. Check (a) shows both.
+
+#### How it combines with item 15, and with items 12 and 13
+
+Item 15 (16.16, read with 16.17's decision 2) sets a receiving cell's T by enthalpy. This item asks the flow for the volume of the moles. They touch different things.
+- **Item 16 alone.** Every source's moles ask their volume. T follows the present rule: a solid's vapour enters at the gas cell's T (finding 2), and the burner's products at ambient (3584). The flow carries out the volume of whatever state the source leaves.
+- **Item 15 alone.** The cell's T is its enthalpy's. In an open region the moles still vanish at the reset, with the heat they hold.
+- **Together.** A solid-fuel block asks ln(n'T'/(nT)): item 15's T' and item 16's n'. That is what 16.16's point 5 drafted before 16.17 split it out.
+  - Item 16 reads only the masses `changeGas` is given and writes only A. Item 15 writes only T. Within a stage neither changes the other's quantity, and their effects add.
+  - Where a rate reads item 15's T later in the same stage (a porous cell's own gas combustion, 16.16 point 7), the mass burnt differs, and item 16 asks the volume of that mass.
+  - Check (i) shows the separation.
+- **Their reruns.** No validation scene holds fuel in a cell (16.16, "Default"). So item 15 is inert there, and item 16's validation rerun is the same with item 15 on or off. App and study runs with contents change under each. Each is read alone first (13.12, rule 5), then together.
+- **Item 13.** Its timber vapour enters through `addGas` (16.11, point 7). This item covers it when it is built, with nothing added (16.17, decision 3).
+- **Item 12.** It moves where the burner's radiant part goes, not what the burner burns (16.10, point 10; its check (h)2). So from one state, the burner's products, and this item's term for them, are the same with item 12 on or off.
+
+#### The burner, and the validation runs
+
+- **This item touches the validation burner.** The burner's products are a mass source with a change of moles (`burnInCell`, 3583): 59.52 mol a kilogram of the solver's METHANE, and for each test fuel the moles its yields give. Deposition is also a source here, wherever the test fuel yields soot (`sootDeposition` 1, `DEFAULTS` 166).
+- **So with the item on, every validation run changes, and every verdict would need a rerun beside 13.B.** That rerun, R16, runs on 13.B's flags and is reported beside 13.B, verdict by verdict, before any verdict is stated with the item on (13.12, rule 5; 16.3, point 1).
+- **This item changes no constant.** It adds no number. The molar masses, the stoichiometry and the expansion's form are the solver's own. χ_r, the heat release, the yields and every rate are unchanged.
+- **The app.** Its design fire's products, its contents, its spray and deposition are sources on both paths. So every app fire run changes with the item on.
+
+#### The switch
+
+`sourceExpansion`: 0 (default), as now; 1, the method. It acts only with `expansion` 1.
+- With 0, `changeGas` tests one null reference a call, `expansionEnd` tests it once, and the GPU tests one uniform in `changeGas` and in `expandBefore`. Every output is bit-identical to the base (check (f)).
+- With 1 and no source in the scene, every output is bit-identical too. A is then 0 everywhere, and on the GPU 0 + y = y for every y that `log` returns.
+- `RUN_CACHE_VERSION` (`runCache.js` 54, now 13) rises only with a default (13.25, decision 14), and a cached run's key carries the switch.
+- The validation harness passes it as a run option, as it passes `surfaceRayStart`.
+
+#### Cost
+
+- **With the item on, a call of `changeGas`** adds two sums over the six species and nitrogen (n, and Δn from the changes), one division and one log1p: about twenty operations. The calls are the burner's cells, the reacting fuel cells (up to six calls a cell), each spray column's cells, and each open cell beside a solid that holds soot. Deposition's calls are the most numerous, and it already evaluates a thermophoretic velocity for each solid face of such a cell (`deposition`, 2544 to 2573).
+- **Memory.** On the CPU, one Float64Array of N cells with the item on. On the GPU, no buffer. The D field is cleared once a step (4N bytes) and used as the accumulator.
+- **`expansionEnd`** adds one test a cell, and on the CPU the tallies' sums.
+- **The projection's sweeps are fixed** (`projection` 30, `DEFAULTS` 223), so its cost does not rise. Its tolerance (224) may stop it later where more divergence is asked.
+- **With it off.** On the CPU, one null test a call of `changeGas` and one a step in `expansionEnd`. On the GPU, one uniform test a call and one a cell in `expandBefore`.
+- **The app.** Every fire run is affected on both paths. Check (h) reports the step's cost, Vienna on the web included.
+
+#### Checks (fixed now, before any run)
+
+All but (e) to (h) run in a new tool, `tools/source-expansion-check.mjs`. It builds each scene as a grid of cells by hand, as `flamescapes.wall.test.mjs` builds its mask.
+
+Common settings, unless a check states otherwise:
+- Cells of 0.20 and 0.34 m; dt 0.1 s; seed 1.
+- `gravity` 0, so that no buoyancy moves the gas; `vorticity` 0.
+- Radiation off (`emitAbove` 10⁹ K). `wallConvection` 0, `conductivity` 0 and `diffusivity` 0, so that no heat or species crosses between cells but by the flow.
+- Stone walls (`INERT[0]`), lumped.
+- The gas is nitrogen (every Y 0), and the source is CO. The solver gives both the molar mass 0.028 kg/mol (`MOLAR`, 94; `MOLAR_N2`, 95) and c_p 1040 J/(kg K) (`CP`, 97; `CP_N2`, 98), and CO takes part in no reaction. So the gas is one ideal gas whatever its CO fraction. Its density at a given T does not depend on the mix, and the references below are exact for it.
+- A steady source is put in by the tool between steps: `changeGas(sim, c, δ)` with δ_CO = ṁ dt, at the cell's temperature.
+
+No measured datum enters any check.
+
+(a) **A closed box: the pressure is set by the added mass.**
+- **The scene.** A grid of 8 × 8 × 8 cells, solid at i = 0 and 7, at k = 0 and 7, and at j = 7. The 252 open cells (i 1 to 6, j 0 to 6, k 1 to 6) form one sealed region; the ground closes j = 0. `pressureZones` 1 and `leakage` [], so the zone has no leak. Nitrogen at T_a = 293.15 K (`DEFAULTS` 125). The source is the cell (3, 3, 3), δ = 5 × 10⁻⁵ M₀ a step for 1000 steps, M₀ being the zone's mass when it is made: 2.3466 kg on 0.20 m cells and 11.529 kg on 0.34 m (the gas law, 1.16399 kg/m³). The zone's mass rises by 5 %.
+- **The reference.** A rigid, adiabatic vessel of one ideal gas, filled with the same gas at the gas's own temperature (the source enters at the cell's T). By the first law, d(m c_v T) = c_p T dm, so T ∝ m^(γ−1) and p ∝ m^γ, with γ = c_p/(c_p − R/M) = 1040/(1040 − 296.95) = 1.399627 (R, 78; M, 94 and 95; c_p, 97 and 98). After k injections, M_k = M₀ + kδ, π_k = (M_k/M₀)^γ and T_k = T_a (M_k/M₀)^(γ−1). At the end π = 1.070674 (7161 Pa above ambient) and T = 298.922 K.
+- **Why the zone meets it exactly.** Each zone update mixes the source in at constant pressure and compresses the zone adiabatically by (1 + δ/M)^γ (2979 to 2990). The product over the steps is (M_k/M₀)^γ.
+- **Pass,** with the item on and with it off, at every step:
+  1. `Z.mass` = M₀ + kδ within 10⁻¹² of M₀. It is a float64 ledger.
+  2. π and every open cell's T within R_k = 4k × 2⁻²⁴ (2.4 × 10⁻⁴ at k = 1000), relative, of the reference.
+  3. Σ over the region of what the projection is asked (`expandUsed`) is 0 within 10⁻¹² of Σ |D|. The item's volume does not leave the zone.
+  4. π with the item on and π with it off within R_k of each other.
+- **Reason for R_k.** The zone's pressure is the one at which its cells hold its mass at their stored T (2979 to 2984), so π follows the stored T. Each float32 store of T moves it by at most 2⁻²⁴, relative. A step stores a zone cell's T at most four times: the two zone updates, the transport's end, and one more as a margin.
+- **Its size.** A double count would move π by its whole rise, 7 %, against R of 0.024 %.
+- **Reported, not judged:** the same with `pressureZones` 0. The region's gas mass stays the gas law's at ambient pressure, and the source's mass vanishes, on and off; point 3 holds.
+
+(b) **An open box: the outflow through its opening equals the source's volume flow.**
+- **The scene.** A grid of 12 × 8 × 10 cells. A room of 6 × 5 × 6 open cells (i 2 to 7, j 0 to 4, k 2 to 7) inside walls one cell thick (i = 1 and 8, k = 1 and 8, j = 5). One opening in its x-high wall: the cells i = 8, j 0 to 2, k 4 and 5 are left open, 2 cells wide and 3 high. Every cell outside the room is open, so the room's region reaches the grid's sides and is not sealed. Nitrogen at T_a in every cell.
+- **The source.** The 8 cells i 4 and 5, j 1 and 2, k 4 and 5. Each is given a share x of its moles a step, δ = x n₀ M_CO with n₀ = pV/(R T_a) read from its state, at x = 10⁻³ and at x = 10⁻². 400 steps.
+- **The projection** runs 1000 sweeps a step with `projectionTolerance` 0, so that it converges and the check separates the item from the projection's tolerance. Red-black Gauss-Seidel on a grid of this size reduces its slowest error by many orders in that many sweeps. The solver's own settings (30 sweeps, 10⁻³ m/s) are run beside and reported.
+- **The reference.** The source's volume flow at the cell's temperature and ambient pressure, V̇ = ṁ R T/(p M_CO), for the 8 cells. The method asks the flow for V ln(1 + x)/dt a cell (point 3), so V̇ ln(1 + x)/x for the 8. ln(1 + x)/x is 0.99950 at x = 10⁻³ and 0.99503 at 10⁻². The room's other faces are solid, so by the divergence theorem the flow out through the opening is the room's integral of the divergence the projection meets.
+
+| Cells | x | ṁ a source cell, kg/s | V̇ of the 8, m³/s | Asked of the flow, m³/s | Mean speed in the opening, m/s |
+|---|---|---|---|---|---|
+| 0.20 m | 10⁻³ | 9.312 × 10⁻⁵ | 6.400 × 10⁻⁴ | 6.397 × 10⁻⁴ | 0.0027 |
+| 0.20 m | 10⁻² | 9.312 × 10⁻⁴ | 6.400 × 10⁻³ | 6.368 × 10⁻³ | 0.0265 |
+| 0.34 m | 10⁻³ | 4.575 × 10⁻⁴ | 3.144 × 10⁻³ | 3.143 × 10⁻³ | 0.0045 |
+| 0.34 m | 10⁻² | 4.575 × 10⁻³ | 3.144 × 10⁻² | 3.129 × 10⁻² | 0.0451 |
+
+- **Pass,** at every step from 301 to 400:
+  1. Every room cell's D dt within 2⁻²³ of its reference: ln(1 + x_c) in a source cell, x_c from the state its injection found, and 0 in the others. 2⁻²³ covers one float32 rounding of T and of T₁ in a cell; the term itself is float64.
+  2. The volume flow out through the opening's 6 faces, Σ u h², equals Σ over the room of D V within 10⁻⁴, relative.
+  3. Hence it equals V̇ within x/2 + 2 × 10⁻⁴: the method's declared deficit, and no more.
+- **Reason for 10⁻⁴.** The converged projection leaves a residual below float32's resolution of the velocities, about 10⁻⁷ relative, and the opening's flow sums six such values. 10⁻⁴ is a margin of about 100.
+- **Reported, with the item off:** no flow, and the source's mass vanishing at each reset.
+
+(c) **A combustion step at constant pressure, and the moles of each source.**
+1. **The pure function.** `moleChange` against n and Δn computed by the check in float64 from point 2's closed forms. Pass: n, Δn and ln(1 + Δn/n) within 10⁻¹², relative. The cases, on a 0.20 m cell at ambient pressure, the gas's mass by the gas law (the reference, rounded here for print):
+
+| Case | Gas before | The change | n, mol | Δn, mol | ln(1 + Δn/n) |
+|---|---|---|---|---|---|
+| i | air, 1000 K | the burner's products of 10 mg of METHANE | 0.097493 | 5.9521 × 10⁻⁴ | 6.0866 × 10⁻³ |
+| ii | Y_F 0.02, Y_O₂ 0.20, 1200 K | 1 mg of class A vapour burnt | 0.081244 | 4.8906 × 10⁻⁶ | 6.0195 × 10⁻⁵ |
+| iii | the same | 1 mg of class B vapour burnt | 0.081244 | 1.4851 × 10⁻⁵ | 1.8278 × 10⁻⁴ |
+| iv | N₂, 600 K | 10 mg of pyrolysate: 9 mg of vapour, 1 mg of soot | 0.16249 | 3.8333 × 10⁻⁴ | 2.3564 × 10⁻³ |
+| v | air, 400 K | 10 mg of steam | 0.24373 | 5.5556 × 10⁻⁴ | 2.2768 × 10⁻³ |
+| vi | Y_soot 0.01, Y_O₂ 0.22, 500 K | 1 mg of soot deposited | 0.19499 | −8.3333 × 10⁻⁵ | −4.2747 × 10⁻⁴ |
+| vii | Y_O₂ 10⁻⁴, 800 K | class A's products of 1 mg oxidised; its 1.381 mg of O₂ exceeds the cell's 0.341 mg, so O₂ is clamped | 0.12187 | 7.0726 × 10⁻⁵ | 5.8019 × 10⁻⁴ |
+
+2. **Gas-phase combustion through the stage.**
+   - **The scene.** A grid of 3 × 3 × 3 open cells. The middle cell at 1200 K with Y_F 0.02 and Y_O₂ 0.20, the rest nitrogen; every other cell air at T_a. The vapour is kind 0, with contents of class A, then of class B (`fireClasses.js` 79, 105). The default `gasA`.
+   - **The calls.** `expansionStart`, `expansionBeforeAdvect`, `expansionAfterAdvect`, `chemistryStage` and `expansionEnd`, once.
+   - **The reference.** Δn = ν dF, dF being the vapour burnt (the rise of `stats.burnt`) and ν the stoichiometry's moles a kilogram: −1/M_F − o₂/M_O₂ + co₂/M_CO₂ + co/M_CO + soot/M_soot + h₂o/M_H₂O. That is 4.8906 mol/kg for class A and 14.851 for class B (`stoichiometry`, 352 to 366; `MOLAR`). The products hold 6.39 % and 10.68 % more moles than the vapour and O₂ they replace.
+   - **Pass.** The middle cell's A before `expansionEnd` equals ln(1 + ν dF/n₀) within 10⁻¹², relative, n₀ from the stored state before the stage. D dt equals ln(V'/V) within 10⁻¹², relative, with V = n₀ R T/p and V' = (n₀ + ν dF) R T'/p, T and T' the stored temperatures: the ideal gas's change of volume at constant pressure. `stats.sourceMoles` equals ν dF within 10⁻¹².
+3. **The burner.**
+   - **The scene.** The same grid, air at T_a. A burner of the middle cell alone (`createBurner`, METHANE, χ_r 0, no rays), its table held at 50 kW. One `burnerStep` between `expansionStart` and `expansionBeforeAdvect`, then the rest as in 2.
+   - **The reference.** It burns 10⁻⁴ kg (5 kJ at 50 MJ/kg), needing 3.84 × 10⁻⁴ kg of the cell's 2.22 × 10⁻³ kg of O₂ on 0.20 m cells. Δn = 59.521 mol/kg × 10⁻⁴ kg = 5.952 × 10⁻³ mol on n₀ = 0.33257 mol, so ln(1 + Δn/n₀) = 0.017739.
+   - **Pass** as in 2, with V' from the burner's own T' (3584).
+
+(d) **Mass and energy closure.**
+1. **Mass.** In (b)'s box, at every step from 301 to 400:
+   - the gas mass carried out through the opening, ρ Σ u h² dt, equals Σ_c n₀ M_CO ln(1 + x_c), which is ṁ dt ln(1 + x)/x, within 10⁻⁴, relative. The room's ρ is uniform, so each face carries it.
+   - the room's gas mass, Σ ρ V, stays at its value at step 300 within 10⁻⁶, relative.
+2. **Energy.** (b)'s box with every gas cell and every solid at 600 K, the same x a step, so ṁ is 293.15/600 of (b)'s. The source enters at the cell's 600 K.
+   - The sensible heat carried out through the opening, ρ c_p (600 − T_a) Σ u h² dt, equals ṁ dt c_p (600 − T_a) ln(1 + x)/x within 10⁻⁴, relative. With x = 10⁻³ that is 116.1 W on 0.20 m cells and 570.4 W on 0.34 m; with 10⁻², 1155.8 W and 5678 W (the reference; ρ = 0.56871 kg/m³ by the gas law).
+   - The room's sensible heat, Σ ρ V c_p (T − T_a), stays at its value at step 300 within 10⁻⁶, relative.
+3. **Reported beside, with the item off:** in 1 and 2 no flow leaves, and each step the reset deletes the source's mass and the heat it holds.
+4. **Reported, not judged:** `tools/calibration/heat-closure.mjs`'s burner, porous and soot cases on 0.20, 0.27 and 0.34 m, with the item on beside off. The closure, the soot budget, `stats.sourceMoles` and `stats.sourceVolume`. As 16.17's decision 6 read item 15's tool, its band of 0.9 to 1.0 is not a closed form for this item.
+
+(e) **CPU against GPU.**
+1. **One step.** From one state, as phase `onestep` of `tools/flamescapes-gpu-check.mjs` takes it, with the item on and off, on 0.20 m cells. The scenes:
+   - (i) the tool's room with the app's design fire burning, 10 s into its ramp;
+   - (ii) the same room with class A contents on its floor, their surface at 700 K under gas at 900 K, so that evaporation, oxidation, pyrolysis and gas-phase combustion all act;
+   - (iii) one open sprinkler's column through gas at 600 K;
+   - (iv) a layer of gas at 600 K with Y_soot 0.01 beside walls at T_a, deposition on.
+
+   Per cell, the item's change of the expansion, ΔD = D(on) − D(off), read on the GPU from the D field after the step, agrees with the CPU's within max(10⁻³ |ΔD_CPU|, 8 float32 steps of D(off) on the GPU).
+   - Reason: within a step the item changes nothing but D on either path, so ΔD is the item's term alone. The GPU evaluates the same closed form in float32, from masses its float32 rates give within about 10⁻⁵ of the CPU's (16.16, check (d)1). 10⁻³ keeps a margin of 100. The 8 steps cover the subtraction of D(off) where the item's term is small beside the heat's.
+2. **Whole steps.** Phases `agreement`, `onestep` and `design` with the item on. At every checkpoint the GPU's largest and 99th percentile |ΔT| from the CPU are at most twice the larger of: the same with the item off; the CPU's one-ulp twin's with the item on.
+   - Reason, as 16.16's (d)2: the item is deterministic arithmetic of the kind the port already matches. Twice is the margin.
+   - `design` is judged here, because the design fire's products are one of the item's sources.
+
+(f) **Off is off.**
+- With `sourceExpansion` 0:
+  - `tools/flamescapes-fingerprint.mjs` (300 steps, both cases) gives the base's fingerprints;
+  - the unit suite passes with the same count;
+  - `tools/flamescapes-gpu-check.mjs`'s phases give the base's state comparisons bit for bit, timings aside;
+  - a validation burner scene (χ_r 0.2, 16 rays, one cell on the floor of an 8 × 8 × 8 box on 0.2 m cells, as 16.10's check (i) builds it) stepped 300 full steps gives every field and every `stats` entry bit-identical to the base.
+- With `sourceExpansion` 1 and `expansion` 0: every output bit-identical to the base with `expansion` 0.
+- With `sourceExpansion` 1 and no source in the scene (heat-closure's `mix` case: a sealed box, no fire, no soot): every field and every `stats` entry the base has, bit-identical, on both paths.
+- With 1 and a source, the fingerprints differ, which is reported.
+
+(g) **The unit suite passes unbent** with the default set to 1 for the run (a one-line change, not committed). A test that fails is not edited, and its failure is reported. Only a test whose reference is the present rule itself (a source's moles not asked of the flow) may be rewritten, disclosed as written after a failure (13.25, decision 13).
+
+(h) **Speed, reported, not judged.**
+- The ms of a step, of the stages that call `changeGas` (`pilot`, `chemistry`, `spray`, `deposition`) and of `expansionEnd`, on and off, from the fingerprint tool's profile.
+- `tools/backend-bench.mjs` on its room, Duplex, Office, Clinic and Vienna, CPU and GPU, on and off.
+- Vienna on the GPU in the browser with the item on: whether it reaches its horizon, and its ms a step.
+- With 0, the fingerprint tool's ms a step against the base.
+
+(i) **With item 15,** only if item 15 is built when these checks run. In item 15's scenes (a)1 to (a)4 (16.16; gas combustion off), from one state, one chemistry stage in each of the four settings of the two switches:
+- item 16's A is bit-identical with item 15 on and off;
+- every T, Y, ρ and T_s is bit-identical with item 16 on and off.
+
+Reason: item 16 reads only the masses `changeGas` is given and writes only A. Item 15 writes only T, and no rate reads that T in these scenes.
+
+A failure of (a) means the item has entered a zone's books. A failure of (b) or (d) means the volume is not asked, not carried, or not what the moles give. A failure of (c) means the moles depart from the stoichiometry or the equation of state. A failure of (e) means the port departs from the CPU. A failure of (f), (g) or (i) means the item acts where it should not.
+
+#### Default
+
+Off. Passing (a) to (g), and (i) where it runs, makes the switch available to the solver's options and to the harness.
+- The item changes every validation run. So no verdict is stated with it on until R16 is reported beside 13.B, verdict by verdict: the eight series with the chair series beside them, as 13.25's decision 15 sets, on 0.20, 0.27 and 0.34 m, on 13.B's flags.
+- The app's default and the harness's change only as 13.25's decision 14 sets: with the user's agreement, given with R16, the step's cost (CPU, GPU, and Vienna in the browser) and the tallies of an app scene before them. `RUN_CACHE_VERSION` rises then.
+
+#### What ends this line
+
+If any check of (a) to (g), or (i) where it runs, fails in any case, the attempt fails, and it is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted. The method has no free constant: every number is the solver's own (`MOLAR`, `MOLAR_N2`, the stoichiometry, the expansion's form). The checks' settings (the 1000 sweeps of (b) and (d), the steps, the values of x and δ) are fixed here.
+
+Checks (a) to (d), (f) and (i) have references that the method meets exactly, within float32 storage, or within the converged projection's residual. So a failure there is a fault of the code against the method, and 13.25's decision 13 applies: corrected code, run again in full, is the same attempt, reported with both commits. A change to the method ends the attempt.
+
+If the line ends, sources keep losing their volume in open regions. That stays a declared limit of every verdict and every app run. No second attempt is drafted. It would need the user's word and a new method written here first.
+
+#### Declared limits
+
+- **The logarithm.** The flow is asked for V ln(1 + Δn/n), as heat asks V ln(T₁/T₀). The reset deletes V Δn/n. So each step the push falls short by about half of Δn/n of the source's own volume: 5.0 × 10⁻⁴ of it at Δn/n = 10⁻³, and 5.0 × 10⁻³ at 10⁻² (the reference). The heat term has the same form now.
+- **One step late,** as heat. What a step's sources ask is carried by the next step's transport.
+- **The vapour's molar mass is 0.030 kg/mol for every fuel** (`MOLAR`, 94). The item asks the volume the solver's equation of state gives. A heptane vapour's own molar mass is 0.100 kg/mol.
+- **Soot counts as a gas** (0.012 kg/mol). It is 22 % of the pyrolysate's moles (8.33 of 38.33 mol/kg). Deposition's sink contracts the cell, as FDS's does (`wall.f90` 1732).
+- **Diffusion and ducts** change a cell's moles at a fixed mass when species of unequal molar mass move, and they ask no volume, as now. FDS's divergence carries diffusion's term (`divg.f90` 651). Outside this item.
+- **The vent leaks' inflow** asks log1p(dm/m) (2888), a ratio of masses, not of moles. Unchanged.
+- **Sealed regions with `pressureZones` 0** lose their sources' moles, as now.
+- **The shell.** A source in the domain's outer layer asks nothing, as heat there asks nothing (2640).
+- **The projection** meets the asked divergence to its tolerance and its 30 sweeps (`DEFAULTS` 223 to 224), as for heat.
+- **The source's enthalpy** is the present rule, or item 15's. This item asks the volume of the state a source leaves.
+- **Float32.** On the GPU the term is computed in float32. On the CPU it is float64, from a float32 state.
+- **The GPU keeps no tallies.** Its term is judged by parity (check (e)).
+
+#### Not verified
+
+- The size and sign of the change in any validation or app run.
+- How the pushed gas changes a room's layer or its door flow.
+- Whether the spray's steam volume moves the sprinkler verdicts.
+- The cost in the app's scenes, Vienna in the browser included (check (h) reports it).
+- That 1000 sweeps converge (b)'s projection to the stated residual. It is argued from the grid's size, not computed.
+- FDS's Technical Reference Guide was not read. FDS's rule is read from its source, as cited.
+- Rehm and Baum (1978): metadata only.
+- 16.14 (item 14) was not read, so how item 14 combines with this item is not stated.
+
+#### Sources (read, or run for this draft)
+
+- This repository at 27d52fe:
+  - `flamescapes.js` 78 to 366 (`DEFAULTS` among them), 376 to 513, 1192 to 1290, 1300 to 1475, 1545 to 1640, 1636 to 1842, 1842 to 1915, 1995 to 2060, 2062 to 2090 (by search), 2540 to 2670, 2670 to 3010, 3010 to 3200, 3305 to 3330, 3336, 3540 to 3655 and 3655 to 3717;
+  - `flamescapesGpu/kernels.js` 216 to 217, 416 to 422, 698, 820 to 1000, 1610 to 1672, 1770 to 1785, 1862 to 1876, 2040 to 2080, 2252 to 2290 and 2500 to 2565, and by search every use of the D field;
+  - `flamescapesGpu.js` 400 to 425, 630 to 760 and 1080 to 1115;
+  - `flamescapesRun.js`, by search (120, 206 to 226, 246, 281 to 285);
+  - `fireClasses.js` 46 to 48 and 60 to 110;
+  - `runCache.js` 54;
+  - `tools/calibration/validation-suite.mjs` 232 to 300 (code only);
+  - `tools/calibration/heat-closure.mjs` 1 to 45;
+  - `flamescapes.test.mjs`, by search (`changeGas`, 106 to 115).
+- FDS source at commit ff928db (`github.com/firemodels/fds`, ff928dbf68a2623ced3a007be75391c6dc6c9f90): `Source/divg.f90` 595 to 780 and 1514 to 1550; `Source/fire.f90` 470 to 503 and 2195 to 2220; `Source/wall.f90` 1385 to 1450, 1500 to 1545 and 1700 to 1740.
+- Rehm, R. G., and Baum, H. R. (1978). The equations of motion for thermally driven, buoyant flows. Journal of Research of the National Bureau of Standards 83(3), 297. doi:10.6028/jres.083.019. Checked on Crossref; metadata only.
+- Run for this draft: the closed forms of the tables above, of check (a)'s vessel and of check (b)'s flows, by hand in two scripts that import nothing from the solver. No solver, no fire simulation, no result file.
+
+### 16.20 The coordinator's decisions on 16.19, and the order of Phase 0's reruns (2026-11-16, before any code of item 16)
+
+The draft is the agent's, written blind. It saw a listing of file names in the working folder, including one for 16.15's measurement, and opened none; that is declared. Each decision takes the draft's choice or the stricter reading.
+
+**Item 16.**
+1. **Every source through `changeGas`, as FDS counts them:** the burner, the contents, gas-phase combustion, the spray, deposition, and item 13's timber vapour. The spray and deposition stay in.
+2. **The logarithm, ln(1 + Δn/n), as drafted.** It pushes out about x/2 less per step than the reset deletes, and that is a declared limit.
+3. **Checks (b) and (d)** run the projection at 1000 sweeps with tolerance 0, in the check scenes only. The app's and the harness's settings do not change.
+4. **The GPU's `design` phase.**
+   - With the item off, it is judged by the rule of 13.32 and 16.13: every difference from the base must lie among the base's own run-to-run differences.
+   - With the item on, it is reported, and parity is judged by (e).
+5. **(i), the separation from item 15, is judged:** item 16 changes only the expansion, never a cell's enthalpy.
+6. **The study.** When Phase 0's items are made, the whole study (17) runs again on Phase 0's solver with every made item on, and is reported beside the first set. The paper uses the Phase 0 set and says so.
+
+**The order of Phase 0's reruns**, each on 13.B's flags, reported beside 13.B, verdict by verdict:
+1. R12 (item 12 alone) on 0.34, 0.27 and 0.20 m, with the chair series;
+2. R14 (item 14 alone) on 0.27 m only, and R12+14 on all three cells;
+3. R16 (item 16 alone) on all three cells;
+4. R0, every made item of Phase 0 together (12, 14, 15 and 16), on all three cells. R0 is the base for Phase 1 (16.4).
+
+Item 15 alone touches no validation run, because the suite gives every run empty contents. It is judged by its checks and by the study.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
