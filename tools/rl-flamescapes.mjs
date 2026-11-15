@@ -6,7 +6,8 @@
  *
  *   node tools/rl-flamescapes.mjs [--labels corpus-1,duplex-apartment] [--starts 2]
  *        [--horizon 120] [--departs 0,30,60] [--growths ultra-fast] [--bins 0,3-5]
- *        [--pair class] [--pair-bins 0] [--pair-starts 1]
+ *        [--pair class] [--pair-bins 0] [--pair-starts 1] [--step-metres 0.7072]
+ *        [--clock median|longest|split] [--split-metres 0.5|median] [--steps 200]
  *        [--cache DIR] [--fires DIR] [--samples DIR] [--out FILE]
  *   node tools/rl-flamescapes.mjs --summary FILE [FILE ...]
  *
@@ -39,6 +40,19 @@
  * than the median (diagonals, stairs) take longer than a step in fact, so
  * every learned route is also walked in seconds at 1.2 m/s against c(v)
  * (forecast.js walkRoute), as the page checks its planned routes.
+ *
+ * --clock picks the clock. "median" (the default) is the one above, with
+ * --step-metres for a longer step. "longest" and "split" are the RL card's
+ * own clocks (rlForecast.js stepClock): a move lasts at most tau seconds,
+ * with tau the longest open link over the speed ("longest"), or the
+ * --split-metres length over the speed (default the card's: the longest link
+ * up to sqrt 2 times the median; "median" for the median link), longer
+ * links walked as several moves through virtual nodes ("split"). Their
+ * conversion is rlForecast.js forecastIgnition, and every route is mapped
+ * back to real nodes before it is walked in seconds; on these clocks no route
+ * can be late in seconds (SafeClock.clock_safe), so a late one is a bug. Each
+ * row also runs the page's own request (rlForecast.js trainForecastRl, any
+ * exit) and records whether its route is late.
  *
  * Methods, on the same scenario, fire and departure, with the step limit 200:
  *   exact      rlSafe.earliestSafeEscape, to the scenario's exit and to any exit.
@@ -74,6 +88,7 @@ const { qLearningPath } = await import(CORE + "rl.js");
 const safe = await import(CORE + "rlSafe.js");
 const { forecastFromFrames } = await import(CORE + "forecast.js");
 const { escapeDeadlines } = await import(CORE + "deadline.js");
+const card = await import(CORE + "rlForecast.js");
 
 const argv = process.argv.slice(2);
 const flag = (name) => argv.includes(name);
@@ -94,8 +109,18 @@ const PAIR = option("--pair", "class") || null;
 const PAIR_BINS = option("--pair-bins", "0").split(",");
 const PAIR_STARTS = Number(option("--pair-starts", 1));
 const FIRE_BINS = option("--bins", "0,3-5").split(",");
+// The length of one step on the clock (m): by default the median link (rl.js's unit); a
+// longer one (0.7072, the diagonal of the 0.5 m lattice) makes the clock conservative for
+// every link up to that length.
+const STEP_METRES = option("--step-metres", null);
+// The clock: "median" (above), or the RL card's "longest" or "split" (rlForecast.js).
+const CLOCK = option("--clock", "median");
+const SPLIT_METRES = option("--split-metres", null);
+// The split length for a graph: a number (m), "median" for its median open link, or the card's default.
+const splitFor = (graph) => (SPLIT_METRES === "median" ? card.linkStats(graph, graph.blocked).median : SPLIT_METRES ? Number(SPLIT_METRES) : null);
+if (!["median", "longest", "split"].includes(CLOCK)) throw new Error(`--clock must be median, longest or split, not ${CLOCK}`);
 const SCALES = [0.9, 0.75, 0.5];
-const H = 200; // the page's step limit (useStudio rlMaxSteps)
+const H = Number(option("--steps", 200)); // the page's step limit (useStudio rlMaxSteps), by default
 const EPISODES = 400; // the page's episodes (useStudio rlEpisodes)
 const ANY_TRIALS = 20000; // trainSafeRl's default
 const WALK = 1.2; // m/s, the planner's walking speed (useStudio walkSpeed)
@@ -346,11 +371,24 @@ function walkUnsafe(graph, path, closes, depart) {
 
 const scaled = (closes, s) => closes.map((c) => c * s);
 
-function runCase(graph, exits, sc, fireRun, depart, seed, stepSeconds, extra) {
-  const blocked = graph.blocked;
+/**
+ * The clock's ignition steps for closing times `c` (s) and a departure: the
+ * report's conversion on the "median" clock, rlForecast.js's on the card's.
+ */
+function clockIgnition(clk, c, depart) {
+  return clk.legacy ? hopIgnition(c, depart, clk.tau) : card.forecastIgnition(card.clockClosings(clk, c), { depart, tau: clk.tau });
+}
+
+function runCase(baseGraph, exits, sc, fireRun, depart, seed, clk, extra) {
+  // The learners walk the clock's graph (real nodes first, virtual ones after);
+  // every route is mapped back to real nodes before it is walked in seconds.
+  const graph = clk.graph;
+  const blocked = clk.blocked;
+  const stepSeconds = clk.tau;
+  const real = (p) => card.realPath(clk, p);
   const closes = fireRun.closes;
   const horizon = fireRun.forecastHorizon;
-  const ig = hopIgnition(closes, depart, stepSeconds);
+  const ig = clockIgnition(clk, closes, depart);
   const row = { start: sc.start, startIndex: sc.startIndex, exit: sc.exit, fire: sc.fire, bin: sc.bin, delta: sc.delta, routeHops: sc.routeHops, growth: fireRun.growth, depart, seed };
   row.startUntenable = !(depart < closes[sc.start]);
   // Route nodes the fire grid covers: outside it the run reads clean air.
@@ -362,43 +400,49 @@ function runCase(graph, exits, sc, fireRun, depart, seed, stepSeconds, extra) {
   row.deadlineMs = round(dMs, 2);
   row.deadlineStart = D[sc.start];
   // The page's own hard deadline at the start, in seconds (deadline.js escapeDeadlines on the same closing times).
-  row.metricDeadline = round(escapeDeadlines(graph, { exits, untenable: closes, speed: WALK, blocked })[sc.start], 2);
+  row.metricDeadline = round(escapeDeadlines(baseGraph, { exits, untenable: closes, speed: WALK, blocked: baseGraph.blocked })[sc.start], 2);
   row.hopDeadlineSeconds = D[sc.start] >= 0 ? round(depart + D[sc.start] * stepSeconds, 2) : null;
 
   const e1 = row.startUntenable ? null : safe.earliestSafeEscape(graph, sc.start, { exits: [sc.exit], ignite: ig, horizon: H, blocked });
   const eAny = row.startUntenable ? null : safe.earliestSafeEscape(graph, sc.start, { exits, ignite: ig, horizon: H, blocked });
   row.escape = e1 ? e1.moves : null;
   row.escapeAny = eAny ? eAny.moves : null;
-  row.exactWalkUnsafe = e1 ? walkUnsafe(graph, e1.path, closes, depart) >= 0 : null;
-  row.exactAnyWalkUnsafe = eAny ? walkUnsafe(graph, eAny.path, closes, depart) >= 0 : null;
+  row.exactWalkUnsafe = e1 ? walkUnsafe(baseGraph, real(e1.path), closes, depart) >= 0 : null;
+  row.exactAnyWalkUnsafe = eAny ? walkUnsafe(baseGraph, real(eAny.path), closes, depart) >= 0 : null;
 
   // The shipped Q-learning, on this deadline map, to the scenario's exit.
   const [q, qMs] = timeIt(() => qLearningPath(graph, sc.start, sc.exit, { ignite: asMap(ig), episodes: EPISODES, maxSteps: H, seed, blocked }));
-  row.shipped = { reached: q.reachedExit, burned: q.burned, moves: q.reachedExit ? q.path.length - 1 : null, ms: round(qMs, 1), hopUnsafe: q.reachedExit ? hopUnsafe(q.path, ig) >= 0 : null, walkUnsafe: q.reachedExit ? walkUnsafe(graph, q.path, closes, depart) >= 0 : null, escapeCheck: q.escapeSteps };
+  row.shipped = { reached: q.reachedExit, burned: q.burned, moves: q.reachedExit ? q.path.length - 1 : null, ms: round(qMs, 1), hopUnsafe: q.reachedExit ? hopUnsafe(q.path, ig) >= 0 : null, walkUnsafe: q.reachedExit ? walkUnsafe(baseGraph, real(q.path), closes, depart) >= 0 : null, escapeCheck: q.escapeSteps };
 
   // The shielded learner, to the scenario's exit (400 trials) and to any exit
   // (20,000). Both times include the deadline map, as rl-bench.mjs's do.
   const [s1, s1Ms] = timeIt(() => safe.learnSafeEscape(graph, sc.start, { exits: [sc.exit], ignite: ig, horizon: H, blocked, trials: EPISODES }));
-  row.safe1 = { reached: s1.reachedExit, burned: s1.burned, moves: s1.moves, trials: s1.trials, certified: s1.certified, ms: round(s1Ms, 2), hopUnsafe: s1.reachedExit ? hopUnsafe(s1.path, ig) >= 0 : null, walkUnsafe: s1.reachedExit ? walkUnsafe(graph, s1.path, closes, depart) >= 0 : null };
+  row.safe1 = { reached: s1.reachedExit, burned: s1.burned, moves: s1.moves, trials: s1.trials, certified: s1.certified, ms: round(s1Ms, 2), hopUnsafe: s1.reachedExit ? hopUnsafe(s1.path, ig) >= 0 : null, walkUnsafe: s1.reachedExit ? walkUnsafe(baseGraph, real(s1.path), closes, depart) >= 0 : null };
   const [sA, sAMs] = timeIt(() => safe.learnSafeEscape(graph, sc.start, { exits, ignite: ig, horizon: H, blocked, trials: ANY_TRIALS, deadline: D }));
-  row.safeAny = { reached: sA.reachedExit, burned: sA.burned, moves: sA.moves, trials: sA.trials, certified: sA.certified, ms: round(sAMs + dMs, 2), hopUnsafe: sA.reachedExit ? hopUnsafe(sA.path, ig) >= 0 : null, walkUnsafe: sA.reachedExit ? walkUnsafe(graph, sA.path, closes, depart) >= 0 : null };
+  row.safeAny = { reached: sA.reachedExit, burned: sA.burned, moves: sA.moves, trials: sA.trials, certified: sA.certified, ms: round(sAMs + dMs, 2), hopUnsafe: sA.reachedExit ? hopUnsafe(sA.path, ig) >= 0 : null, walkUnsafe: sA.reachedExit ? walkUnsafe(baseGraph, real(sA.path), closes, depart) >= 0 : null };
+  if (!clk.legacy) {
+    // The page's own request (any exit, its defaults), on the same fire and clock.
+    const fc = { closes, horizon, n: closes.length, K: 1, frameSeconds: horizon, rate: new Float32Array(closes.length) };
+    const [app, appMs] = timeIt(() => card.trainForecastRl(baseGraph, { forecast: fc, depart, walkSpeed: WALK, clock: CLOCK, stepMetres: splitFor(baseGraph), startPoint: point(baseGraph, sc.start), exitPoints: exits.map((x) => point(baseGraph, x)), firePoint: point(baseGraph, sc.fire), trials: ANY_TRIALS, maxSteps: H }));
+    row.app = { reached: app.reached_exit, certified: app.certified, moves: app.moves, escape: app.escape_steps, late: Boolean(app.seconds?.late), slack: app.seconds ? round(app.seconds.slack, 2) : null, arrival: app.seconds ? round(app.seconds.arrival, 2) : null, stepLimit: app.forecast.stepLimit, startUntenable: app.start_untenable, ms: round(appMs, 1) };
+  }
 
   // The fire departs from the forecast: the same shielded route through a fire that closes every node sooner.
   row.scaled = {};
   for (const s of SCALES) {
     const c2 = scaled(closes, s);
-    const ig2 = hopIgnition(c2, depart, stepSeconds);
+    const ig2 = clockIgnition(clk, c2, depart);
     const exists = !(depart < c2[sc.start]) ? false : Boolean(safe.earliestSafeEscape(graph, sc.start, { exits, ignite: ig2, horizon: H, blocked }));
-    row.scaled[s] = { escapeExists: exists, hopUnsafe: sA.reachedExit ? hopUnsafe(sA.path, ig2) >= 0 : null, walkUnsafe: sA.reachedExit ? walkUnsafe(graph, sA.path, c2, depart) >= 0 : null };
+    row.scaled[s] = { escapeExists: exists, hopUnsafe: sA.reachedExit ? hopUnsafe(sA.path, ig2) >= 0 : null, walkUnsafe: sA.reachedExit ? walkUnsafe(baseGraph, real(sA.path), c2, depart) >= 0 : null };
   }
   if (extra?.other) {
     // The route learned on this forecast, walked through the other growth's fire from the same origin.
     const c2 = extra.other.closes;
-    const ig2 = hopIgnition(c2, depart, stepSeconds);
+    const ig2 = clockIgnition(clk, c2, depart);
     const exists = !(depart < c2[sc.start]) ? false : Boolean(safe.earliestSafeEscape(graph, sc.start, { exits, ignite: ig2, horizon: H, blocked }));
-    row.otherGrowth = { growth: extra.other.growth, escapeExists: exists, hopUnsafe: sA.reachedExit ? hopUnsafe(sA.path, ig2) >= 0 : null, walkUnsafe: sA.reachedExit ? walkUnsafe(graph, sA.path, c2, depart) >= 0 : null };
+    row.otherGrowth = { growth: extra.other.growth, escapeExists: exists, hopUnsafe: sA.reachedExit ? hopUnsafe(sA.path, ig2) >= 0 : null, walkUnsafe: sA.reachedExit ? walkUnsafe(baseGraph, real(sA.path), c2, depart) >= 0 : null };
   }
-  if (extra?.hop) {
+  if (extra?.hop && clk.legacy) {
     // The page as shipped: the hop front at fire speed 1, whatever fire the page ran.
     const igH = extra.hop;
     const hExact = safe.earliestSafeEscape(graph, sc.start, { exits, ignite: igH, horizon: H, blocked });
@@ -517,6 +561,11 @@ function summarize(files) {
   }));
   {
     const bad = rows.filter((r) => (r.escape != null && !r.safe1.reached) || (r.escapeAny != null && !r.safeAny.reached) || r.safe1.hopUnsafe || r.safeAny.hopUnsafe || (r.safe1.reached && r.safe1.certified && r.safe1.moves !== r.escape) || (r.safeAny.reached && r.safeAny.certified && r.safeAny.moves !== r.escapeAny));
+    const apps = rows.filter((r) => r.app);
+    if (apps.length) {
+      const reached = apps.filter((r) => r.app.reached);
+      lines.push("", `The page's request (trainForecastRl, any exit, ${apps.length} rows): reaches an exit in ${reached.length}, certified in ${reached.filter((r) => r.app.certified).length}, late in seconds in ${reached.filter((r) => r.app.late).length}; agrees with the exact earliest escape on whether one exists in ${apps.filter((r) => (r.app.escape != null) === (r.escapeAny != null)).length}; median tightest margin ${round(median(reached.map((r) => r.app.slack)), 2)} s, least ${round(Math.min(...reached.map((r) => r.app.slack)), 2)} s; median time ${round(median(apps.map((r) => r.app.ms)), 1)} ms.`);
+    }
     lines.push("", `Checks: shielded runs that miss an existing escape, enter a closed node on the hop clock, or are certified but not earliest: ${bad.length} of ${rows.length}.${bad.length ? " " + JSON.stringify(bad.slice(0, 5).map((r) => ({ model: r.model, start: r.start, fire: r.fire, growth: r.growth, depart: r.depart }))) : ""} Shipped escape count matches rlSafe's (rl.js earliestEscape on the same map): ${rows.filter((r) => !r.startUntenable && r.shipped.escapeCheck === r.escape).length} of ${rows.filter((r) => !r.startUntenable).length}.`);
   }
   return lines.join("\n");
@@ -530,7 +579,7 @@ async function main() {
     console.log(summarize(argv.slice(i + 1).filter((a) => !a.startsWith("--"))));
     return;
   }
-  const results = { date: new Date().toISOString().slice(0, 10), machine: { cpu: os.cpus()[0]?.model?.trim(), logicalCores: os.cpus().length, node: process.version }, settings: { horizon: HORIZON, departs: DEPARTS, growths: GROWTHS, pair: PAIR, pairBins: PAIR_BINS, pairStarts: PAIR_STARTS, bins: FIRE_BINS, starts: STARTS, stepLimit: H, episodes: EPISODES, anyTrials: ANY_TRIALS, walk: WALK, hopSpeed: HOP_SPEED, scales: SCALES, untenableC: 60, visibilityM: 10, grid: "standard, 30000 cells, CPU", fireClass: "A" }, models: [] };
+  const results = { date: new Date().toISOString().slice(0, 10), machine: { cpu: os.cpus()[0]?.model?.trim(), logicalCores: os.cpus().length, node: process.version }, settings: { horizon: HORIZON, departs: DEPARTS, growths: GROWTHS, pair: PAIR, pairBins: PAIR_BINS, pairStarts: PAIR_STARTS, bins: FIRE_BINS, stepMetres: STEP_METRES ? Number(STEP_METRES) : "median link", clock: CLOCK, splitMetres: SPLIT_METRES === "median" ? "median link" : SPLIT_METRES ? Number(SPLIT_METRES) : CLOCK === "split" ? "longest link up to sqrt 2 x the median" : null, starts: STARTS, stepLimit: H, episodes: EPISODES, anyTrials: ANY_TRIALS, walk: WALK, hopSpeed: HOP_SPEED, scales: SCALES, untenableC: 60, visibilityM: 10, grid: "standard, 30000 cells, CPU", fireClass: "A" }, models: [] };
   const out = option("--out", path.join(ROOT, "benchmark", "results", `${results.date}-rl-flamescapes.json`));
   for (const model of modelList()) {
     const t0 = performance.now();
@@ -538,8 +587,11 @@ async function main() {
     const n = graph.nodes.length / 3;
     const lengths = Array.from(edgeLengths(graph)).sort((a, b) => a - b);
     const unit = lengths[Math.floor(lengths.length / 2)] || 1;
-    const stepSeconds = unit / WALK;
-    const entry = { label: model.label, nodes: n, exits: exits.length, unit: round(unit, 4), stepSeconds: round(stepSeconds, 4), fires: [], rows: [] };
+    const stepSeconds = (STEP_METRES ? Number(STEP_METRES) : unit) / WALK;
+    const clk = CLOCK === "median"
+      ? { legacy: true, graph, blocked: graph.blocked, tau: stepSeconds, n, virtual: 0, split: 0, ends: new Int32Array(0) }
+      : card.stepClock(graph, { speed: WALK, blocked: graph.blocked, clock: CLOCK, stepMetres: splitFor(graph) });
+    const entry = { label: model.label, nodes: n, exits: exits.length, unit: round(unit, 4), stepSeconds: round(clk.tau, 4), clock: { clock: CLOCK, stepMetres: round(clk.stepMetres ?? (STEP_METRES ? Number(STEP_METRES) : unit), 4), split: clk.split, virtual: clk.virtual, longest: round(clk.longest ?? null, 4) }, fires: [], rows: [] };
     results.models.push(entry);
     const list = scenarios(graph, exits, model.sha256, STARTS).filter((sc) => FIRE_BINS.includes(sc.bin));
     const geoRef = {};
@@ -560,7 +612,7 @@ async function main() {
         const other = growths.find((g) => g !== growth && byGrowth[g]);
         for (const depart of DEPARTS) {
           seed += 1;
-          entry.rows.push(runCase(graph, exits, sc, run, depart, seed, stepSeconds, { other: other ? byGrowth[other] : null, hop: growth === GROWTHS[0] ? igHop : null }));
+          entry.rows.push(runCase(graph, exits, sc, run, depart, seed, clk, { other: other ? byGrowth[other] : null, hop: growth === GROWTHS[0] ? igHop : null }));
         }
       }
       writeFileSync(out, JSON.stringify(results));
