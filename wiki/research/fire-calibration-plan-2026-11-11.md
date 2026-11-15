@@ -3841,3 +3841,62 @@ The two drafts above are the physics agent's, written blind (13.12, rule 2). The
 **Two findings, recorded here and not yet items.**
 1. **The double count.** A sooty test fuel's flame cells radiate χ_r Q, and their soot also emits by Eq. 17 (`radiation` 968 to 980). It is present in every run of 13.A and 13.B; its size is not measured. Phase 1 screens χ_r, so it is drafted blind as item 14, under Phase 0 (16.3), before Phase 1 begins.
 2. **The contents' vapour.** It enters the gas at the cell's temperature with no enthalpy taken. So energy appears with every kilogram the contents pyrolyse. 13.A's Lean theorems cover the transport and the burner, not the contents. Its size is measured first, by a read-only run. Then it is drafted blind as item 15, under Phase 0.
+
+## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
+
+This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
+
+**The model's scope, stated beside every result.**
+- Smoke layer depth is calibrated on 0.20, 0.27 and 0.34 m in tests whose heat release was prescribed (12.6, 13.31).
+- A contents fire's growth is not validated: the chair series reads cold (15.9).
+- Temperatures read 35 to 54 % hot.
+
+So the study compares designs by the smoke layer's descent and reports every temperature-based figure as indicative only.
+
+### 17.1 The models
+
+From `parametric_family.py` at 2bea556, exported to IFC4:
+- **The room:** `room`, 5.0 by 4.0 m with one door, at clear heights of 2.7 and 4.0 m.
+- **The building:** `atrium`, with the generator's defaults: two storeys round an atrium void, rooms off it, nine doors and a stair.
+
+Each model is made with its furniture on, and run with furniture on and off.
+
+### 17.2 The variants: a full factorial
+
+| Factor | Levels |
+| --- | --- |
+| Lining of walls and ceilings | gypsum board, concrete, brick, glass, steel, softwood (thermal only) |
+| Furniture | `off` (no contents); `on` (the IFC's furniture as contents, at `lib/furniture.mjs`'s loads) |
+| Fire growth, class A | `medium`, `fast` (`fireClasses.js`) |
+| Doors | `open`, `closed` |
+| Clear height (room only) | 2.7 m, 4.0 m |
+
+That is 96 runs on the room and 48 on the building, 144 in all.
+
+- **Fixed for every run:** cells of 0.27 m, a horizon of 300 s, the runner's fixed seeds, and sprinklers in activation mode only (their heads are laid out and their activation recorded, with no suppression).
+- **The fire:** in the room, at the plan centre offset by (−1.2, 0) m; in the building, at the atrium's ground-floor plan centre.
+- **One run each.** The solver is deterministic on the CPU, and nothing is run again with another seed or setting after its result is read.
+
+### 17.3 The outputs
+
+**Primary.** At each room's centre, the time when the smoke layer's interface (Janssens and Tran, the harness's own reduction) falls below 1.8 m.
+- A layer counts only where the upper layer's mean rise above ambient exceeds 5 K.
+- 5 K is a declared choice, fixed now and not derived from any data. The times at 1, 2 and 10 K are reported beside it.
+
+**Secondary.**
+- The first sprinkler activation time.
+- The heat released and its peak.
+- As indicative only: the head-height temperature and the untenable cells.
+
+### 17.4 The analysis
+
+The analysis is descriptive. For each factor it reports the median change in the primary output over the other factors' levels, and for the lining and the furniture their interaction. No statistical test is claimed, because each design is one deterministic run.
+
+### 17.5 Before any study run
+
+- **The lining table.** Each value in `tools/studies/lib/linings.mjs` (ρ, c, k and ε) is checked against its cited source. A value that cannot be checked is replaced by one that can, and the table's commit is then fixed.
+- **The furniture table.** `lib/furniture.mjs`'s loads keep their cited sources. The table's own load is an assumption, and is reported as one.
+
+### 17.6 Timber
+
+Softwood is thermal only unless item 13 passes its checks (16.11, 16.12). If it does, softwood's rows run again with item 13 on and are reported apart. The paper then says that a timber lining ignites and adds fuel by a method checked against closed forms, and that flame spread is not validated.
