@@ -496,6 +496,31 @@ function wallEnds() {
   report.checks.wallEnds = out;
 }
 
+/**
+ * Beside (h)1, not pre-registered and judging nothing: a step in which no
+ * cell burns, yet E - (E / H) H rounds above 0, so the rays carry that
+ * residue (the correction of 2026-11-15: they leave the axis cell). (b)'s
+ * scene on 0.20 m with no oxygen in any gas cell, its table held at the
+ * first whole number of W from 100 kW up whose step leaves such a residue.
+ */
+function noOxygen() {
+  const H = F.METHANE.heatOfCombustion;
+  let q = Q;
+  while (!(q * DT - ((q * DT) / H) * H > 0) && q < Q + 1e5) q += 1;
+  const cs = CASES.b;
+  const g = box(cs.n);
+  const sim = buildSim(F, g, 0.2, { layers: cs.layers, q, options: ON });
+  for (let c = 0; c < sim.N; c += 1) if (sim.kind[c] === F.GAS) sim.Y[c * F.NS + F.SPECIES.O2] = 0;
+  const caps = new Float64Array(sim.N);
+  for (let c = 0; c < sim.N; c += 1) caps[c] = Math.max(solidCap(sim, c), 1e-6);
+  F.burnerStep(sim, DT);
+  const b = sim.burner, w = sim.work;
+  let taken = 0;
+  for (let c = 0; c < sim.N; c += 1) taken += w.burnerGas[c] * gasCap(sim, c) + w.burnerSolid[c] * caps[c];
+  const e = b.radiant;
+  reported("h", `no oxygen, ${q} W held on 0.2 m: ${b.flame.n} cells burnt, released ${ex(b.released)} J by rounding, ${sim.stats.burnerRays} rays from the axis cell carrying ${ex(e)} J; deposits plus burnerOut ${ex(taken + w.burnerOut[0])} J (|difference| / radiant ${ex(e > 0 ? Math.abs(e - taken - w.burnerOut[0]) / e : 0)})`);
+}
+
 // ------------------------------------------------------------ (g)
 
 function checkG() {
@@ -694,6 +719,7 @@ if (ONLY.has("g")) checkG();
 if (ONLY.has("h")) {
   checkH2();
   wallEnds();
+  noOxygen();
 }
 if (ONLY.has("i")) await checkI();
 report.verdicts = verdicts;

@@ -3768,9 +3768,12 @@ function flameRays(sim, b, fl, radiant, rays) {
   };
   // At most n_x + n_y + n_z crossings: enough to leave the grid from any cell.
   const reach = g.nx + g.ny + g.nz;
+  // No cell burnt, yet rounding left `burnt` above 0 (E - (E / H) H): the rays carry that residue from the axis cell.
+  const none = fl.n === 0;
   let crossings = 0;
   for (let r = 0; r < rays; r += 1) {
-    const c = fl.cells[burnerFlameCell(fl.sum, fl.n, draw())];
+    const u0 = draw();
+    const c = none ? b.axis : fl.cells[burnerFlameCell(fl.sum, fl.n, u0)];
     const mu = 2 * draw() - 1;
     const phi = 2 * Math.PI * draw();
     const s = Math.sqrt(1 - mu * mu);
