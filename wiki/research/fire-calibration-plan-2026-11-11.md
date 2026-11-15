@@ -6106,6 +6106,44 @@ The draft is the agent's, written blind. It was drafted under the number 16.27 a
    - It goes on a new branch, `flamescapes/porous-exchange`, from this section's commit, in the worktree `TopologicStudio-gpuburn`.
    - The draft's figures for the rule come from float64 models. The build's checks judge the solver's own code.
 
+
+### 16.28 Item 16, second attempt: (e)1's bound corrected before any run (2026-11-15, before any code of the second attempt)
+
+16.25's decision 6 asked the builder to check (e)1's hand count against the code before any judged run. The builder did, against `kernels.js` `changeGas` (837 to 870) and `lnOnePlus` (1799 to 1802) at be8f8ea and WGSL's 15.7.4.1 and 15.7.5. It also checked it with a float32 emulation on the CPU, every operation correctly rounded. No GPU ran, no branch was made and no judged result was seen. It stopped and reported four corrections and two case constructions.
+
+**Checked by the coordinator.** The emulation was run again. It reproduces the report:
+- With every operation correctly rounded, no case exceeds 16.24's bound.
+- But in 7 of 801 cases swept across the branch of `lnOnePlus`, the float32 y takes the log branch where the float64 reference takes the series.
+- There 16.24's count allows 6.7 × 10⁻⁸. WGSL allows the log branch to err by 5.4 × 10⁻⁷.
+- So code that meets WGSL's stated accuracy could fail case 3. The count was wrong for the case it was written for, and it is corrected here, before any run, as decision 6 provides.
+
+**The corrected bound,** replacing 16.24's E_Δn, E_ln and the last term of E_t. Everything else stands, the factor 2 included.
+1. **E_Δn = 15 u Σ_q |d'_q|/M_q** (was 12 u).
+   - A clamped term carries m's two roundings, the molar constant's and the division's 2.5 ULP, and the five additions add 5 u.
+   - Where the float32 clamp test and the float64 test choose differently, the chosen values differ by up to 4 u m before the division.
+2. **E_ln near the branch.** Where ||y| − θ| ≤ E_y, with θ the float32 value of 10⁻², E_ln is the larger of the two branches' bounds. The GPU chooses the branch by its own y.
+3. **The series' truncation** is |y|⁵/(5(1 − |y|)), which covers y < 0, where every omitted term has the same sign.
+4. **The sum into D** is rounded at u |D_after|, not u |t|, since in cases 7 and 8 D is not 0 before a call.
+
+So E_t = E_y/(1 + y) + E_ln + u |D_after|. At the switch the bound is 1.26 × 10⁻⁶. (e)3's R_c stands: its true bound, (2 k_c + 1) u S + 5 u (|dt D_on| + |dt D_off|), lies inside the stated one under any order of the sums.
+
+**Two cases, as they can be built:**
+- **Case 2.** Soot taken out of a cell with Y_soot 0.01 reaches only y of about −0.024 on 0.20 m air at 1000 K, because the clamp acts.
+  - So the negative values of y, for every k, are made by taking CO out of a cell with Y_CO 0.5.
+  - Soot out of a cell with Y_soot 0.01 covers k = 2 to 12.
+- **Case 5.** The solver's V is not a power of two in float32.
+  - So ρ = 1 kg/m³: the mass is V on both paths, and with Y 0.5 every product and the nitrogen are exact on both.
+  - n + Δn is then exactly 0 on both paths. The GPU returns at its guard on the total before the item's block, and the CPU's `moleChange` guard skips the change.
+
+**A declaration.** In reading 16.25, the builder saw section 17's text and not only its headings:
+- 13.B's temperatures read 35 to 54 % hot;
+- finding 2 was 5.8 % of the design fire's heat;
+- the study's design.
+
+None of it concerns a source's volume. It is declared in the result.
+
+No other tolerance moves. No bound changes after a judged run.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
