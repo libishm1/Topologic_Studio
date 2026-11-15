@@ -226,6 +226,60 @@ test("learned values never exceed the exact ones, and a certified result is an e
   assert.ok(trapped >= 5, `only ${trapped} first trials trapped under the arrival mask`);
 });
 
+test("a certified result returns the certified walk, which changes no value and is the greedy walk after training", () => {
+  // The route returned is the trial the certificate is about. That trial
+  // changes no value (the table stays consistent, so the telescoping sum of
+  // 1 + V(next) - V(here) along it is moves - V(start, 0) <= 0 with every
+  // term >= 0), so walking greedily on the table it leaves repeats it: here a
+  // second request on that table makes one trial, and it must be the same
+  // walk, certified, with the table unchanged. Grids from `cases`, and graphs
+  // with arbitrary closing steps (sealed exits, fires that skip nodes).
+  const rand = lcg(97);
+  const arbitrary = function* (count) {
+    for (let c = 0; c < count; c += 1) {
+      const w = 3 + Math.floor(rand() * 5), h = 2 + Math.floor(rand() * 4);
+      const g = grid(w, h);
+      for (let e = 0; e < g.blocked.length; e += 1) if (rand() < 0.15) g.blocked[e] = 1;
+      const n = w * h, H = 3 + Math.floor(rand() * 16);
+      const ig = new Float64Array(n);
+      for (let v = 0; v < n; v += 1) ig[v] = rand() < 0.4 ? Infinity : Math.floor(rand() * (H + 2)) - 0.5 * (rand() < 0.5);
+      const exits = [Math.floor(rand() * n)];
+      if (rand() < 0.6) exits.push(Math.floor(rand() * n));
+      for (const x of exits) if (rand() < 0.5) ig[x] = 1 + Math.floor(rand() * 4);
+      yield { c: `a${c}`, g, n, exits, start: Math.floor(rand() * n), H, ig };
+    }
+  };
+  const snapshot = (V) => JSON.stringify([...V.entries()].sort((a, b) => a[0] - b[0] || a[1] - b[1]));
+  let certified = 0, afterSeveral = 0;
+  for (const k of [...cases(300, 71), ...arbitrary(600)]) {
+    const { c, g, exits, start, H, ig } = k;
+    // Standing on an exit is certified with no trial.
+    if (exits.includes(start)) continue;
+    const exact = earliestSafeEscape(g, start, { exits, ignite: ig, horizon: H, blocked: g.blocked });
+    const open = openUntil(ig, H);
+    for (const opts of [{ trials: 200 }, { trials: 2 }, { trials: 200, monotone: false }, { trials: 200, backward: false }]) {
+      const r = learnSafeEscape(g, start, { exits, ignite: ig, horizon: H, blocked: g.blocked, ...opts });
+      if (!r.certified) continue;
+      certified += 1;
+      if (r.trials > 1) afterSeveral += 1;
+      // The returned walk is a safe escape on the step clock, as early as any.
+      assert.ok(r.reachedExit && !r.burned, `case ${c}`);
+      assert.equal(r.moves, r.path.length - 1, `case ${c}`);
+      assert.equal(r.moves, exact ? exact.moves : -1, `case ${c}`);
+      assert.ok(exits.includes(r.path[r.path.length - 1]), `case ${c}`);
+      for (let i = 1; i < r.path.length; i += 1) assert.ok(i <= open[r.path[i]], `case ${c}: move ${i} enters a closed node`);
+      // The greedy walk after training repeats the walk returned (the certified
+      // trial, or that greedy walk itself when the budget ended first).
+      const before = snapshot(r.values);
+      const again = learnSafeEscape(g, start, { exits, ignite: ig, horizon: H, blocked: g.blocked, ...opts, values: r.values, trials: 1 });
+      assert.deepEqual(again.path, r.path, `case ${c}: the greedy walk after training is not the certified walk`);
+      assert.ok(again.certified, `case ${c}`);
+      assert.equal(snapshot(r.values), before, `case ${c}: the certified walk changed a value`);
+    }
+  }
+  assert.ok(certified > 1000 && afterSeveral > 20, `${certified} certified, ${afterSeveral} after several trials`);
+});
+
 test("one value table serves every start: learning from several starts stays admissible", () => {
   for (const { c, g, n, exits, H, ig } of cases(40, 61)) {
     const { rows } = escapeValues(g, { exits, ignite: ig, horizon: H, blocked: g.blocked, prune: false, rows: true });
