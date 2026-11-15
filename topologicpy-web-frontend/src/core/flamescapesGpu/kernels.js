@@ -48,6 +48,9 @@
  *     counted), and radApply divides by the capacity the CPU's rays divide
  *     by: in kelvin a flat wall's equal shares each rounded to 13 steps
  *     where they were 13.34, a bias of 2.6 % (the plan's decision 5).
+ *     With surfaceEmitFloor as well (plan 13.26 item 11) a lumped solid and
+ *     a one-dimensional wall emit above U.surfaceFloor (theta), not
+ *     emitAbove; the host sets it to emitAbove with the item off.
  *     Ray directions come from a per-thread PCG hash, not the CPU's seeded
  *     stream.
  *   - Particles live in a fixed-capacity buffer with an atomic counter; dead
@@ -189,6 +192,13 @@ export const PARAMS = [
   // share of what the rays carried beyond the grid is (radEmit); and where in
   // `atom` the clamped deposits' count and their J beyond the clamp are.
   ["surfaceRayStart", "u32"], ["redRadOut", "u32"], ["radClampAt", "u32"],
+  // Surfaces emit from just above ambient (flamescapes.js surfaceEmitFloor,
+  // surfaceFloorOf, plan 13.26 item 11): the floor above which a lumped solid
+  // and a one-dimensional wall emit (theta, float32, with the item on; else
+  // emitAbove, so every comparison is as before), and the rays of a surface
+  // whose emitting faces are all at or below emitAbove (surfaceWarmRays; else
+  // `rays`).
+  ["surfaceFloor", "f32"], ["surfaceWarmRays", "u32"],
 ];
 /** Blocks of 64 threads that reduce each pressure zone (zonePartial), their partial sums then added by zoneCommit. */
 export const ZONE_BLOCKS = 32;
@@ -1238,14 +1248,16 @@ fn depositJ(at: u32, e: f32) {
 /**
  * Radiation leaving wall w (cell c at p) over its faces open to gas or the
  * domain's side (the CPU's wallEmit): an end face at its end node, a side
- * face at the cell's mean over its edge's area, each above emitAbove and at
- * most half its node's (or the cell's) heat above ambient; faceE gets each
- * face's energy, which leaves the nodes it came from. Returns the total.
+ * face at the cell's mean over its edge's area, each above the surfaces'
+ * floor (emitAbove; with item 11, theta) and at most half its node's (or the
+ * cell's) heat above ambient; faceE gets each face's energy, which leaves the
+ * nodes it came from; hot is set when a face it emits from is above
+ * emitAbove (item 11's warm surfaces). Returns the total.
  */
-fn wallEmit(w: u32, c: u32, p: vec3<i32>, faceE: ptr<function, array<f32, 6>>) -> f32 {
+fn wallEmit(w: u32, c: u32, p: vec3<i32>, faceE: ptr<function, array<f32, 6>>, hot: ptr<function, bool>) -> f32 {
   let n = U.wallNodes;
   // Cool walls cast nothing.
-  if (!(wall[wNode(w, 0u)] > U.emitAbove || wall[wNode(w, n - 1u)] > U.emitAbove || cf[ix(fTs, c)] > U.emitAbove)) { return 0.0; }
+  if (!(wall[wNode(w, 0u)] > U.surfaceFloor || wall[wNode(w, n - 1u)] > U.surfaceFloor || cf[ix(fTs, c)] > U.surfaceFloor)) { return 0.0; }
   let A = U.h * U.h;
   let side = wSide(w);
   let wm = wMeta(w);
@@ -1269,10 +1281,11 @@ fn wallEmit(w: u32, c: u32, p: vec3<i32>, faceE: ptr<function, array<f32, 6>>) -
       Tf = wall[wNode(w, q)];
       cap = wall[wC(s, q)] * A;
     }
-    if (!(Tf > U.emitAbove)) { continue; }
+    if (!(Tf > U.surfaceFloor)) { continue; }
     var e = cf[ix(fEps, c)] * SIGMA * (Tf * Tf * Tf * Tf - Ta4) * select(side, A, end) * U.dt;
     e = min(e, 0.5 * cap * (Tf - Ta));
     if (!(e > 0.0)) { continue; }
+    if (Tf > U.emitAbove) { *hot = true; }
     (*faceE)[d] = e;
     all += e;
     if (end) { wall[wNode(w, q)] -= e / cap; } else { sides += e; }
@@ -1378,16 +1391,20 @@ fn radiateCell(c: u32) -> vec2<f32> {
   let T = cf[ix(fT, c)];
   let w = wallOf(c);
   var faceE = array<f32, 6>(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  // A surface that emits from above emitAbove (item 11: else it may cast surfaceWarmRays).
+  var hot = false;
   if (w != NO_CELL) {
     // A one-dimensional wall: each open face from its own surface (wallEmit).
-    emitted = wallEmit(w, c, p, &faceE);
+    emitted = wallEmit(w, c, p, &faceE, &hot);
     if (!(emitted > 0.0)) { return vec2<f32>(0.0); }
     for (var d = 0u; d < 6u; d++) {
       let q = p + dirv(d);
       if (!inside(q) || kindOf(atI(q)) == GAS) { faces[nf] = d; nf++; }
     }
     fromSolid = true;
-  } else if (kc != GAS && Ts > U.emitAbove) {
+  } else if (kc != GAS && Ts > select(U.emitAbove, U.surfaceFloor, kc == SOLID)) {
+    // A lumped solid above the surfaces' floor (item 11), a porous cell above emitAbove.
+    hot = Ts > U.emitAbove;
     // Eq. 16 over the cell's faces open to gas.
     for (var d = 0u; d < 6u; d++) {
       let q = p + dirv(d);
@@ -1414,14 +1431,16 @@ fn radiateCell(c: u32) -> vec2<f32> {
   } else {
     return vec2<f32>(0.0);
   }
-  let share = emitted / f32(U.rays);
-  var rs = seedOf(c, 2u);
   // With surfaceRayStart, a lumped solid's or a one-dimensional wall's rays start on their face (a porous cell's stay at its centre).
   let onFace = U.surfaceRayStart != 0u && fromSolid && (w != NO_CELL || kc == SOLID);
+  // With item 11, a surface whose emitting faces are all at or below emitAbove casts surfaceWarmRays (the host sets it to rays when off).
+  let nr = select(U.rays, U.surfaceWarmRays, onFace && !hot);
+  let share = emitted / f32(nr);
+  var rs = seedOf(c, 2u);
   var fs = 0u;
   if (onFace) { fs = seedOf(c, 3u); }
   var beyond = 0.0;
-  for (var r = 0u; r < U.rays; r++) {
+  for (var r = 0u; r < nr; r++) {
     // Uniform on the sphere; from a surface, plus the normal of one open face (Lambert).
     let zc = 2.0 * rnd(&rs) - 1.0;
     let phi = 2.0 * PI * rnd(&rs);

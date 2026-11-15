@@ -60,9 +60,11 @@ export const MAX_RUN = 96 * 2 ** 20;
  * coordinator's decision 14: a run made under one setting is never played for
  * another): each one the run's solver options set off its default of 0, as
  * [name, value]. A run with every switch at 0 keeps the key it had, so no
- * kept run is lost and RUN_CACHE_VERSION does not rise for them.
+ * kept run is lost and RUN_CACHE_VERSION does not rise for them. Item 11's
+ * surfaceEmitFloor (plan 13.26) is keyed the same way, and its option
+ * surfaceWarmRays whenever a run sets it (its default, null, casts `rays`).
  */
-export const KEYED_SWITCHES = Object.freeze(["surfaceRayStart"]);
+export const KEYED_SWITCHES = Object.freeze(["surfaceRayStart", "surfaceEmitFloor", "surfaceWarmRays"]);
 export function switchesKey(solverOptions) {
   return KEYED_SWITCHES.filter((name) => solverOptions?.[name]).map((name) => [name, solverOptions[name]]);
 }

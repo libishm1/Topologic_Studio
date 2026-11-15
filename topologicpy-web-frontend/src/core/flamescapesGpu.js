@@ -20,7 +20,9 @@
  *     faces) that give every solid cell the CPU's own order of exchanges; radiation's
  *     deposits in fixed point (both paths emit from the stage's starting
  *     temperatures and add the deposits after, since 2026-11-09; in joules
- *     with surfaceRayStart, calibration plan 13.25); embers' spot-ignition test once per cell and step;
+ *     with surfaceRayStart, calibration plan 13.25; with surfaceEmitFloor as
+ *     well a surface emits from just above ambient, plan 13.26, its tallies
+ *     kept on the CPU only); embers' spot-ignition test once per cell and step;
  *     flame particles beyond their share refused by the same hash of cell and
  *     step as the CPU's (since 2026-11-09; before, by whichever thread came last);
  *     random numbers from a per-thread PCG hash. With radiation and particles
@@ -42,7 +44,7 @@
  *     runs on the CPU solver instead.
  */
 
-import { DEFAULTS, NS, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor, topology, ventLeakList, zoneState } from "./flamescapes.js";
+import { DEFAULTS, NS, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor, surfaceFloorOf, topology, ventLeakList, warmRaysOf, zoneState } from "./flamescapes.js";
 import {
   KELVIN, ceilingDetectors, failedHealth, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
@@ -413,6 +415,9 @@ class GpuSim {
       zonesOn: this.zonesOn ? 1 : 0, redZone: red.zone, zoneSrcAt: red.zoneSrc, zonePartAt: red.zonePart,
       leakTermsAt: io.leakTerms, leakVentN: d.leakVentN, leakVentAt: io.vents, leakDivAt: red.leakDiv,
       surfaceRayStart: this.surfaceRaysOn ? 1 : 0, redRadOut: red.radOut, radClampAt: this.radClampAt,
+      // Surfaces emit from just above ambient (flamescapes.js surfaceFloorOf, plan 13.26 item 11): theta with the item on, else
+      // emitAbove (every comparison as before); and a warm surface's rays, `rays` unless surfaceWarmRays acts.
+      surfaceFloor: Math.min(surfaceFloorOf(P), 3e38), surfaceWarmRays: warmRaysOf(P) ?? Math.max(0, P.rays | 0),
     });
     this.writeParams();
     this.upload(nodeCells);
