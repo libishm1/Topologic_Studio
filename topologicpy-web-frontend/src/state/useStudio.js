@@ -88,6 +88,14 @@ export const DEFAULT_SETTINGS = {
   rlMaxSteps: 200,
   rlUseFire: true,
   rlFireSpeed: 1,
+  // The fire the agent avoids (core/rlForecast.js): "forecast", the finished
+  // Flamescapes run's forecast when the page has one for these inputs (else
+  // the hop front), or "hop", the graph's hop front from the fire origin at
+  // rlFireSpeed links per move. With the forecast, the agent leaves at
+  // departAfter and walks at walkSpeed (the forecast plan's settings), and
+  // every closing time is scaled by rlForecastMargin in (0, 1].
+  rlFireSource: "forecast",
+  rlForecastMargin: 1,
 
   // Planning with the fire forecast (src/core/forecast.js). The fire models
   // count steps, so a step's length in seconds is the user's modelling choice.

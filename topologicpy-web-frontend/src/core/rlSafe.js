@@ -434,10 +434,10 @@ export class StepTable {
  *   (default true; see StepTable); explore: probability of a random allowed move during
  *   training (default 0: optimism explores); seed: for `explore`; backward:
  *   repeat the update from each trial's end back to its start (default true).
- * @returns the drawn path (the greedy walk after training), whether it
- *   reached an exit or burned, its steps, the trials run, whether the last
- *   trial carries the optimality certificate, the steps of each trial
- *   (`curve`), and the value table.
+ * @returns the drawn path (the certified trial, or else the greedy walk
+ *   after training), whether it reached an exit or burned, its steps, the
+ *   trials run, whether the returned walk carries the optimality
+ *   certificate, the steps of each trial (`curve`), and the value table.
  */
 export function learnSafeEscape(graph, start, {
   exits,
@@ -548,7 +548,7 @@ export function learnSafeEscape(graph, start, {
   };
 
   const curve = [];
-  let certified = false, used = 0, masked = 0;
+  let certified = false, used = 0, masked = 0, proved = null;
   for (let k = 0; k < Math.max(1, trials); k += 1) {
     const before = get(start, 0);
     const trial = walk(true, explore);
@@ -559,14 +559,23 @@ export function learnSafeEscape(graph, start, {
     // earliest escape (SafeEscape.certificate_optimal).
     if (trial.reached && explore === 0 && trial.moves <= before) {
       certified = true;
+      proved = trial;
       break;
     }
     if (backward) backup(trial.path);
   }
-  const final = walk(false, 0);
-  // The greedy walk after training: with no update since the last trial it
-  // is that trial again; it is certified when no longer than V(start, 0).
-  if (final.reached && final.moves <= get(start, 0)) certified = true;
+  // The route returned is the walk the certificate is about. A certified
+  // trial is returned as it is. It also changes no value: the table stays
+  // consistent (V(v, t) <= 1 + V(w, t + 1) over allowed moves, from the
+  // hop-distance start, and every update and every bound shared with a later
+  // step keeps that), so along the trial each 1 + V(next) - V(here) is at
+  // least 0 and they sum to moves - V(start, 0) <= 0; every update is then a
+  // no-op, and the greedy walk after training repeats the trial
+  // (rlSafe.test.mjs checks that it does). Without a certified trial, the
+  // greedy walk after training is returned, certified when no longer than
+  // V(start, 0).
+  const final = proved || walk(false, 0);
+  if (!proved && final.reached && final.moves <= get(start, 0)) certified = true;
   return {
     path: final.path,
     moves: final.moves,

@@ -2888,6 +2888,51 @@ const RETURN_SHORTFALL_WARN = 0.05;
 function returnShortfall(r) {
   return Math.max(0, r.optimal_return - r.policy_return) / Math.max(Math.abs(r.optimal_return), 1e-9);
 }
+/** The RL card's fire choice, and what it will train against now (App.jsx trainRl). */
+function rlFireHint(settings, run) {
+  if (settings.rlFireSource === "hop") return `The graph's own fire: it spreads along the links from the fire origin at the fire speed below, not the fire model chosen above.`;
+  const how = `leaving at ${settings.departAfter} s and walking at ${settings.walkSpeed} m/s (Leave after and Walking speed, under the forecast plan's settings)`;
+  if (run === "model") return `Choose a Flamescapes model above and run the fire to train against its forecast; until then the agent avoids the hop front.`;
+  if (run === "none") return `No Flamescapes run yet: until one has run for these inputs the agent avoids the hop front. Training never starts a run.`;
+  if (run === "running") return `Training waits for the Flamescapes run to finish, then avoids its forecast, ${how}.`;
+  if (run === "stopped") return `The health guard stopped the last run: the agent does not train against it. Run the fire again, or choose the hop front.`;
+  return `The forecast of the Flamescapes run on screen, if made with the inputs as they are now (else the hop front), ${how}.`;
+}
+
+const UNAVAILABLE = {
+  model: "the fire model is not Flamescapes",
+  none: "no Flamescapes run had been made for this graph",
+  other: "the Flamescapes run on screen was made with other inputs",
+};
+
+/** What an RL result was trained, and certified, against. */
+function rlAgainst(r) {
+  const certified = r.method === "shielded" && r.certified;
+  if (r.fire_source === "forecast") {
+    const f = r.forecast;
+    const of = `the Flamescapes forecast of this run (horizon ${Math.round(f.horizon)} s, leaving at ${f.depart} s${f.margin < 1 ? `, closing times scaled by ${f.margin}` : ""})`;
+    const safe =
+      f.margin < 1
+        ? `safe if the real fire closes no place sooner than ${f.margin} of its forecast time`
+        : "safe if the real fire is no faster than the forecast";
+    const limit = f.limitBinds
+      ? ` The step limit (${f.stepLimit} moves) ends the search at ${f.stepLimitSeconds.toFixed(0)} s, before the forecast's horizon.`
+      : "";
+    if (certified) return `Certified against ${of}; ${safe}.${limit}`;
+    if (r.reached_exit && r.seconds && !r.seconds.late) {
+      const earliest = r.method === "shielded" ? ", though not certified as the earliest escape" : "";
+      return `Trained against ${of}. Its route reaches every place before the forecast closes it${earliest}: ${safe}.${limit}`;
+    }
+    return `Trained against ${of}.${limit}`;
+  }
+  if (r.fire_source === "hop") {
+    const speed = r.fire_speed === 1 ? "one link" : `${r.fire_speed} links`;
+    const why = r.forecast_unavailable ? ` The forecast was not used: ${UNAVAILABLE[r.forecast_unavailable] || "no finished run"}.` : "";
+    return `${certified ? "Certified against" : "Trained against"} the hop-front fire (${speed} per move), not the simulated fire.${why}`;
+  }
+  return "Trained without fire.";
+}
+
 function returnVsBest(r) {
   const gap = returnShortfall(r);
   const pct = gap * 100;
@@ -3324,6 +3369,7 @@ export function SimulatePanel({
   onStartFire,
   onStopFire,
   onTrainRl,
+  rlRun = "model",
   onPlanForecast,
   deadlinesShown,
   onGoTo,
@@ -4039,8 +4085,8 @@ export function SimulatePanel({
             {shielded
               ? "Learns the escape on (node, time) behind a shield that never lets it step where the fire will seal it in, and stops when it can prove its route is the earliest escape. Both properties are proved in Lean."
               : "Tabular Q-learning over the same graph, with the spreading fire as a penalty (after Jabi et al. 2019). It is drawn by a walk that never revisits a node, and on the study's corpus it missed 15% of the escapes that existed."}{" "}
-            Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart. The agent&apos;s fire is
-            its own, not the fire model chosen above: it spreads along the links from the fire origin at the fire speed below.
+            Studio first checks whether any escape exists, so a failed agent and an impossible escape are told apart. The fire it avoids is
+            set below: the forecast of a finished Flamescapes run, or its own hop front from the fire origin.
           </p>
         </div>
         {shielded && (
@@ -4093,6 +4139,34 @@ export function SimulatePanel({
                   : "Stepping into a burning node costs 10 and ends the episode."
           }
         />
+        {settings.rlUseFire && (
+          <div className="field">
+            <div className="field__label">
+              <span>Fire the agent avoids</span>
+            </div>
+            <Segmented
+              label="Fire the agent avoids"
+              value={settings.rlFireSource}
+              onChange={(rlFireSource) => setSettings({ rlFireSource })}
+              options={[
+                { value: "forecast", label: "Simulated fire" },
+                { value: "hop", label: "Hop front" },
+              ]}
+            />
+            <p className="field__hint">{rlFireHint(settings, rlRun)}</p>
+          </div>
+        )}
+        {settings.rlUseFire && settings.rlFireSource !== "hop" && (
+          <NumberField
+            label="Forecast margin"
+            value={settings.rlForecastMargin}
+            min={0.05}
+            max={1}
+            step={0.05}
+            onChange={(rlForecastMargin) => setSettings({ rlForecastMargin: rlForecastMargin ?? 1 })}
+            hint="Every closing time is multiplied by this before training: 1 trusts the forecast, 0.8 trains for a fire that closes each place in 80% of the forecast time."
+          />
+        )}
         <NumberField
           label="Fire speed (links per move)"
           value={settings.rlFireSpeed}
@@ -4101,7 +4175,7 @@ export function SimulatePanel({
           step={0.05}
           disabled={!settings.rlUseFire}
           onChange={(rlFireSpeed) => setSettings({ rlFireSpeed: rlFireSpeed ?? 1 })}
-          hint="1 = the fire advances one link per move, as the evacuee does. With the fire on or beside the route at that speed, the study's runs had no escape in 70 of 72; the result says when."
+          hint="The hop front's speed. 1 = the fire advances one link per move, as the evacuee does. With the fire on or beside the route at that speed, the study's runs had no escape in 70 of 72; the result says when."
         />
         <Button block busy={rl.busy} disabled={!ready || !points.start || !points.exit} onClick={onTrainRl}>
           Train policy
@@ -4145,12 +4219,28 @@ export function SimulatePanel({
                 warn={rl.result.escape_steps == null}
               />
             )}
+            {rl.result?.seconds && (
+              <>
+                <Stat label="Out at (walked)" value={`${rl.result.seconds.arrival.toFixed(1)} s`} />
+                <Stat
+                  label="Tightest margin to the fire"
+                  value={`${rl.result.seconds.slack.toFixed(1)} s`}
+                  warn={!(rl.result.seconds.slack > 0)}
+                />
+                <Stat label="Late anywhere, walked in seconds" value={rl.result.seconds.late ? "yes" : "no"} warn={rl.result.seconds.late} />
+              </>
+            )}
           </div>
         )}
+        {rl.result && <p className="field__hint" data-testid="rl-against">{rlAgainst(rl.result)}</p>}
         {rl.path && rl.result?.method === "shielded" && (
           <p className="field__hint">
             Certified earliest: the learner proved, from its own bounds, that no route leaves sooner. Moves vs earliest
             escape: its route against the earliest escape found by search; they match whenever it is certified.
+            {rl.result.fire_source === "forecast" &&
+              ` Moves are on a clock of ${rl.result.forecast.step.toFixed(2)} s, the longest a move takes at ${rl.result.forecast.speed} m/s${
+                rl.result.forecast.split ? ` (${rl.result.forecast.split} longer links are walked as several moves)` : ""
+              }, so a route safe on it reaches every place before the forecast closes it; the route is also walked again in seconds along its real links.`}
           </p>
         )}
         {rl.path && rl.result?.method !== "shielded" && (

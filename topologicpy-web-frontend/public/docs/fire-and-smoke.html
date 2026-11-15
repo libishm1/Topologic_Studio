@@ -222,7 +222,8 @@
       <li><span class="label">Safe learner (proved)</span>, the default: learns on (node, time) behind a shield that never lets it step where the fire will seal it in. It stops when it can prove its route is the earliest escape, by any exit door or the chosen one. Both properties are proved in Lean (<code>SafeEscape.lean</code>).</li>
       <li><span class="label">Q-learning:</span> the earlier tabular Q-learning (after Jabi et al. 2019), kept for comparison. Its route is drawn by a walk that never revisits a node.</li>
     </ul>
-    <p>The agent's fire is its own, not the fire model chosen above: it starts at the fire origin and spreads along the links, as <span class="label">Spread along links</span> does, at a speed you set, held back by walls when <span class="label">Walls block routes</span> is on. Time is counted in moves, one link each.</p>
+    <p>The fire the agent avoids is set by <span class="label">Fire the agent avoids</span>. <span class="label">Simulated fire</span>, the default, is the forecast of a Flamescapes run: when the page has a run for this graph and these inputs, the agent avoids the closing time of every place in it, the times <span class="label">Plan with the forecast</span> uses (60 °C at head height, visibility under 10 m, or a toxic dose of 0.3; at the end of the run every place counts as closed). The agent leaves at <span class="label">Leave after</span> and walks at <span class="label">Walking speed</span>, the plan's settings. Training never starts a run: it waits for one still computing for these inputs, and does not use a run the health guard stopped. With no such run, or with <span class="label">Hop front</span> chosen, the agent's fire is its own: it starts at the fire origin and spreads along the links, as <span class="label">Spread along links</span> does, at a speed you set, held back by walls when <span class="label">Walls block routes</span> is on.</p>
+    <p>The agent counts time in moves along links. Against the simulated fire every move is priced at the longest it can take: the walk along a diagonal of the graph's lattice (0.59 s at 1.2 m/s), with longer links, such as stairs, walked as several moves. A route that reaches every place in time on that clock reaches it in time in seconds too (<code>SafeClock.lean</code>), and the route is walked again in seconds after training to check. Under the result, one line says what the result is certified against: the Flamescapes forecast of this run, with its length and the departure, safe if the real fire is no faster than the forecast; or the hop-front fire, not the simulated fire, with the reason the forecast was not used.</p>
     <dl>
       <dt class="label">Escape by</dt>
       <dd><p>The safe learner only: any exit out of the building (the default), or the chosen exit.</p></dd>
@@ -232,8 +233,12 @@
       <dd><p>200 moves by default, 10 to 1,000: the step limit. An escape must reach an exit within it.</p></dd>
       <dt class="label">Train with the fire</dt>
       <dd><p>On by default: the agent trains against its own fire. It needs a fire origin; without one the agent trains without fire. Off, it learns its way out as if there were no fire. What the fire does to the agent depends on the method: Q-learning loses 10 for stepping into a burning node, which ends the episode; the safe learner's shield never lets it step where the fire will seal it in, so for it the switch only turns the fire on or off.</p></dd>
+      <dt class="label">Fire the agent avoids</dt>
+      <dd><p><span class="label">Simulated fire</span> (the default): the forecast of the Flamescapes run, when there is one for these inputs, else the hop front. <span class="label">Hop front</span>: always the agent's own fire along the links.</p></dd>
+      <dt class="label">Forecast margin</dt>
+      <dd><p>1 by default, above 0 and at most 1: every closing time of the forecast is multiplied by it before training. At 0.8 the agent trains for a fire that closes each place in 80% of the forecast time, so its route stays safe if the real fire is up to that much faster.</p></dd>
       <dt class="label">Fire speed (links per move)</dt>
-      <dd><p>1 by default, 0.05 to 10: how many links the fire advances each time the evacuee moves one. At 1, with the fire on or beside the route, the study's runs had no escape in 70 of 72; the result says when.</p></dd>
+      <dd><p>The hop front's speed: 1 by default, 0.05 to 10, how many links the fire advances each time the evacuee moves one. At 1, with the fire on or beside the route, the study's runs had no escape in 70 of 72; the result says when.</p></dd>
     </dl>
     <p>The result:</p>
     <dl>
@@ -255,6 +260,12 @@
       <dd><p>Q-learning: the learned policy's discounted return against the most any policy can collect within the step limit, worked out by backward induction, with how far short it falls; more than 5 % short is flagged. The rewards are +10 at the exit, -10 in the fire and -0.1 for each median link's length walked, discounted by 0.99 a move.</p></dd>
       <dt class="label">Escape possible</dt>
       <dd><p>With the fire on: whether any route escapes it within the step limit, and in how many moves, by an exact search.</p></dd>
+      <dt class="label">Out at (walked)</dt>
+      <dd><p>Against the simulated fire: when the route reaches the exit, walked in seconds along its links from the departure.</p></dd>
+      <dt class="label">Tightest margin to the fire</dt>
+      <dd><p>Against the simulated fire: the least time between reaching a place on the route and the forecast closing it.</p></dd>
+      <dt class="label">Late anywhere, walked in seconds</dt>
+      <dd><p>Against the simulated fire: whether the walked route reaches any place after the forecast closes it. It should always say no; yes would be a fault, and the result is then not certified.</p></dd>
     </dl>
     <p>In a study of 848 runs on nine buildings (<a href="https://github.com/libishm1/Topologic_Studio/blob/main/wiki/research/rl-egress-study-2026-11-05.md">the reinforcement learning study</a>, <code>tools/rl-bench.mjs</code>), most "failures" near the fire had no escape at all. Where one existed, the Q-learning's drawn path missed it in 15% of runs, mostly from the way its path was drawn. The shielded learner escaped in all of them, by the earliest route, certified, in a median 1.8 ms.</p>
     <figure>
