@@ -8501,6 +8501,104 @@ Every figure below was measured beside other long jobs on the same machine. This
 3. **The finding on float32 wall temperatures** is a candidate for its own item: with the item on, 1.1 to 1.4 % of the heat released in (k)'s room is dropped in deposits too small to store. It cools the room, and it is counted.
 4. No default is proposed. The app's scenes leave the GPU with the switch on.
 
+
+### 16.48 Item 18, second attempt: the build's checks (2026-11-16, 16:30)
+
+Item 18's second attempt was built as 16.41 fixes it, on branch `flamescapes/burnout-heat`, in one commit after a5da56e:
+- 089296e: the check tool's two lines of (c) rewritten as 16.41 sets them. The first attempt's two lines run beside them and are reported, not judged. No other line, bound or tolerance changed.
+
+**The method and the solver are 16.40's.** `git diff a5da56e 089296e -- topologicpy-web-frontend/src` is empty, so the solver's code is d4cbaeb's. No fault of the code was found or corrected in this attempt. Every part of the check tool ran in full from 089296e: (a), (b)1, (b)2 on seeds 1 and 2, (c)1, (c)2 and (c)3.
+
+**Item 18 passes every judged check of its second attempt.** At 089296e the tool judged 199 lines, and all 199 passed. It reported 131 more.
+- The two rewritten lines pass: (c)1's clause in all 34 scenes, and (c)2's T_s line in all seven burn-out states.
+- The first attempt's two lines, run beside them and not judged, give what they gave in 16.40: (c)1's clause would fail in scene (iv) on both cells, and (c)2's T_s line before step 1229.
+- (d) and (e) pass. (d)'s GPU check carries over from 16.40, as 16.41 sets.
+
+**(a) The cell's balance at burn-out, on each path.** The isolated cell, one chemistry stage, on 0.20 and 0.34 m: 96 lines, all PASS (64 on the CPU, 32 on the GPU).
+- Every line and figure is 16.40's. On the CPU the log is 16.40's line for line. On the GPU the 32 lines are the first attempt's, line for line: the gas within (c)1's tolerance, the worst 7.1 × 10⁻⁵ K; T_s, kind, fuel and flag exactly.
+
+**(b) Bounds on the flame front.**
+- 1. The isolated cell, a chemistry stage and then `particleStep`, (i) at the three masses that set the flag and (vii), on each cell: 8 lines, PASS.
+- 2. The app's runs, 1500 fixed steps of 0.1 s, seeds 1 and 2: 8 lines, PASS.
+- The logs of (b)1 and (b)2 are 16.40's line for line. Among them: the solver's burning released 62.448 MJ off and 4.215 MJ on (seed 1), and 59.625 and 3.472 MJ (seed 2).
+
+**(c) CPU against GPU,** in headless Chrome on the machine's integrated GPU (intel gen-12lp).
+- **(c)1, one chemistry stage from identical inputs.** 34 lines, PASS.
+  - Every body's item difference lies within the rule in every scene, as in 16.40; the worst uses 2.3 × 10⁻⁴ of its tolerance. The burnt-out centre's T_s is float32(T_a) on both paths.
+  - The kind and the flag are equal on both paths in all 34 scenes.
+  - The centre burns out in 18 scenes ((i), (ii), (iii) and (v) on each cell). There its fuel is 0 on both paths.
+  - The centre's fuel item difference is 0 on both paths in every scene, bit for bit: one chemistry stage leaves the same fuel on and off on each path.
+  - Reported: the paths' own fuel differs only in scene (iv), on both cells: the GPU's is 1.397 × 10⁻⁹ kg (3 float32 steps) below the CPU's, item on and off alike. In every other scene it is the same.
+  - The first attempt's clause, reported and not judged: it would fail in scene (iv) on both cells, as in 16.40, and pass in the other 32.
+- **(c)2, one full step from one shared state, then one more.** 21 lines, PASS.
+  - The burnt-out cells' T, in all seven burn-out states, by (c)1's rule: the figures are 16.40's, the worst using 0.41 of the rule (before step 1072, cell 9004: the item adds 866.97 K on the CPU and 867.32 K on the GPU).
+  - Their T_s with the item on is float32(T_a), 293.1499938964844 K, on both paths, exactly, in all seven states.
+  - Reported, their T_s item difference: in six states it is −2.31 × 10⁸ to −5.14 × 10⁹ K on each path, because the off paths keep the defect's T_s. The two paths' figures are equal in five of them and one float32 step apart (32 K) in the sixth, before step 666. Before step 1229 it is 0.268 K on the CPU and 3.507 × 10⁷ K on the GPU, because the off paths' T_s are 292.88 K on the CPU and −3.507 × 10⁷ K on the GPU, as 16.40 diagnosed.
+  - The first attempt's T_s line, reported and not judged: it would pass in six states and fail before step 1229 (3.507 × 10⁷ K against 2.7 × 10⁻⁴ K), as in 16.40.
+  - The particles and the design fire's state: as in 16.40, PASS in each state. The GPU's particle counts after the steps differ from 16.40's by up to 7 in three states (before step 957: 11 394 and 11 369, against 11 395 and 11 376). The CPU's are the same. No particle carries a value no source gives on either path.
+  - Reported, the other bodies beside the float64 model of `conduct`'s two orders, and the particles above 10⁴ K: line for line 16.40's.
+- **(c)3, the GPU check's agreement and onestep phases, on against off.** 32 lines, PASS, line for line 16.40's. The worst checkpoint uses 0.76 of its bound (step 450, T: 0.0280 K against 2 × 0.0183 K).
+
+**(d) Off is off.**
+- With `burnoutHeat` 0 the fingerprints are the base's, d62b581d and 29793d1a, at 089296e.
+- The unit suite passes 537 of 537.
+- (d)'s GPU check by 16.30's rule was not run again, as 16.41 sets. The solver's files, the base and `tools/flamescapes-gpu-check.mjs` are those 16.40's run used, so its PASS carries over.
+- The item-on parts of (d) were not run again either: the fingerprint rooms with the switch set, heat-closure and Steckler test 14. 16.41 does not list them, and the solver's files are those they ran on.
+
+**(e)** With the default set to 1 on a copy, the unit suite passes 537 of 537. No test was edited.
+
+**(f) Speed, reported and not judged.** `tools/backend-bench.mjs` on its six cases, 180 s, one run a set, off and then on, under the GPU lock (12:13 to 13:19Z). The machine's other jobs ran beside it: the school study, a validation rerun and a coordinator run.
+- **The grids.** The CPU's budget here is 30 000 cells: 17 732 to 28 512 a case, clipped in all but the room. The off run chose the app's GPU grid from the GPU's measured speed: 101 304 to 185 760 cells, and the room's 17 732. The on run was pinned to the same grids.
+- **The GPU, ms a step, off and on.**
+  - On the CPU's grid: the room 11.3 and 11.1, the solver's room 6.4 and 6.4, Duplex 6.2 and 6.3, Office 7.9 and 8.0, Clinic 8.7 and 8.8, Vienna 8.2 and 8.5.
+  - On the app's grid: the room 10.5 and 12.3, the solver's room 6.5 and 6.0, Duplex 26.8 and 29.6, Office 35.0 and 37.6, Clinic 51.4 and 51.6, Vienna 31.3 and 29.7.
+- **The CPU, ms a step:** 74 to 166 off and 50 to 102 on. The on runs were faster in every case. That is the machine's load, not the item: in Duplex, Office and Clinic, whose outputs are bit for bit the same on and off, the on runs were 1.3 to 1.6 times faster. So no CPU cost can be read from them. 16.40's profile of the fingerprint rooms stands: `chemistry` 1.04 ms a step off and 1.07 to 1.12 on, in about 48.
+- **Vienna on the GPU in the browser,** on the app's grid (101 304 cells, 67 × 24 × 63 at 0.40 m), four runs each, the room 0 to 3 mK warmer:
+  - every run reached its 180 s horizon (36 frames);
+  - ms a step: 31.3 to 35.2 off, 27.2 to 32.2 on;
+  - multiple of real time: 2.8 to 3.2 off, 3.1 to 3.7 on.
+- **What the item changed in these runs, reported.**
+  - Duplex, Office and Clinic, on every set, and Vienna on the CPU's grid: every output bit for bit the same on and off (the energy, the heat release curve, the forecast, the node temperatures).
+  - Vienna on the app's GPU grid: 39.2 to 40.8 MJ released on, against 56.2 to 60.1 MJ off; peak 572 to 623 kW against 979 to 1247 kW. Untenable nodes 130 to 148 on and 100 to 154 off, the first at 30 s in all eight runs.
+  - The room with the design fire: 30.7 to 31.0 MJ on, against 32.2 to 33.5 MJ off, on each set.
+  - The room burnt by the solver: on the CPU 9.17 MJ on against 16.16 MJ off (peak 152 against 595 kW); on the GPU 11.20 against 11.26 MJ.
+
+**Departures, as built.**
+- (c)1's fuel item difference is taken at the centre, as 16.41 words it: fuel on minus fuel off on each path, each a float32 value read back and subtracted in float64. "Bit for bit" is `Object.is` of the two differences. The kind and the flag are compared on all 27 cells, as the first clause compared them. "Where the centre burns out" is read from the CPU's kind, as the first attempt read it; the kind is judged equal on both paths in the same line.
+- (c)2's rewritten T_s line is judged for the burnt-out cells of the seven burn-out states, as the first line was. The design fire's state holds a cell of no capacity burning and no burnt-out cell, so neither T_s line applies there.
+- The unit suites ran with 2 workers, against 1 in 16.40, because of the machine's load.
+- The bench ran one run a set, not its default four, to keep the GPU lock short. Its off run chose the app's GPU grids, and its on runs were pinned to them with `--app-cells` (120 000 for the room, the solver's room, Duplex and Vienna; 220 000 for Office; 160 000 for Clinic). Vienna's app grid then ran four times on and off, pinned at 120 000. The item was set with `--solver burnoutHeat=1`. Its files were written to scratch with `--out`, not to `benchmark/results/`.
+- Everything else is as 16.40 records it.
+
+**Not verified.**
+- Embers' spawn temperature with the item on, and the GPU's guard for a porous cell of no capacity in a run, as 16.40 states.
+- Whether the GPU's particle counts in (c)2 vary from run to run for a cause beyond the GPU's order of spawning; only two runs were seen.
+- The item's effect in any app scene beyond the GPU check's room and the bench's six cases, and which cells change Vienna's and the room's fires in the bench (burn-outs, or cells of no capacity burning). No run traced them.
+- The item's cost on the CPU apart from the machine's load. The bench's CPU figures moved by up to 1.6 times between off and on runs with the same outputs.
+- The bench's figures beyond one run a set; Vienna's app grid ran four times each.
+
+**Checked by the coordinator** (2026-11-16), apart from the agent:
+- **The commit's diff** was read: it changes only the check tool, in the two lines 16.41 names, and the first attempt's lines are kept as reported lines. The solver's files are a5da56e's (`git diff` over `topologicpy-web-frontend/src` is empty).
+- **(c)1 and (c)2 were run again on the GPU** from 089296e, under the shared lock: 55 judged lines, none failed.
+- **The CPU parts** are 16.40's code and results; the coordinator ran (a), (b)1, (b)2 on seed 1 and the fingerprints again there.
+- **The commit** carries no Claude line.
+- **Not run again by the coordinator:** (c)3, the unit suites, the bench and Vienna in the browser.
+
+**Item 18's second attempt passes its judged checks. Item 18 is made,** behind `burnoutHeat`, off by default. (d)'s GPU check carries over from 16.40, as 16.41 sets.
+
+**What follows.**
+1. **The default is put to the user** (16.34, decision 3), with its cost and its effect:
+   - no cost in speed that could be measured, on the CPU or the GPU, and Vienna reaches its horizon in the browser on and off;
+   - Vienna on the app's GPU grid releases 39 to 41 MJ on against 56 to 60 MJ off, with a peak of 572 to 623 kW against 979 to 1247 kW (four runs each);
+   - the design-fire room releases 5 to 8 % less, and Duplex, Office and Clinic are unchanged;
+   - the drawn fire loses the yellow-white points that came from the defect (16.33).
+   `RUN_CACHE_VERSION` rises only with the default, on the user's word.
+2. **The study's furniture-on runs run again with the item on,** and both sets are reported (16.40, point 3).
+3. **Item 19's figures are read with the item on** (16.46).
+4. Which cells change Vienna's fire was not traced, and the embers' spawn temperature with the item on is still not verified.
+
+**Added to 16.46, the same day.** The coordinator ran item 19's (c) again on the GPU from its branch, under the shared lock: no judged line failed.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
