@@ -7553,6 +7553,126 @@ Every other pooled δ moves by 0.03 or less, but two on 0.34 m whose words are n
 - R0 runs with item 12 on, as 16.20 orders. Whether the harness's default follows R0 is put to the user with R0's result.
 - R12+14 and R14 run now, then R16, then R0.
 
+
+### 16.40 Item 18: the build's checks (2026-11-16, 09:10)
+
+Item 18 was built as 16.33, with the coordinator's decisions in 16.34 and the corrections in 16.38, on branch `flamescapes/burnout-heat` from 97ba377, in three commits:
+- d4cbaeb: the item, off by default, on the CPU and the GPU; the suite's `--burnout-heat` and the ledger's tallies; the run cache's key;
+- d23646f: the check tool, `tools/burnout-heat-check.mjs`, and `STAGES` exported read only for its report;
+- a5da56e: three faults of the tool corrected (below).
+
+**One attempt.** No fault of the code against the method was found, and the solver's code was not changed after d4cbaeb. Three faults of the tool were corrected in a5da56e, and every check was then run in full from a5da56e (13.25, decision 13); the item-off fingerprints ran at d23646f, whose `src` is the same:
+- The page's file server wrote a 404 after its 200 header, which ended the first GPU run before any line.
+- (b)2 read the spawn temperatures from the state the last step left. The particle stage reads the state after the pilot stage, whose temperature pilot holds the first item at 900 K. Its first run at d23646f failed its spawn line on that, on both seeds, and was stopped. The tool now steps stage by stage through `STAGES` and reads the state the particle stage reads. Over 150 steps this stepping gives every field of `step`'s bit for bit.
+- (c)2's particle sources: with a burner (the design fire) the pilot stage changes its cells' T before the particle stage, and the GPU's are not readable from the host. There the judged part became that no particle carries the cells' T_s, and the sources' test is reported. This was settled from the code before any (c)2 line had been seen.
+
+**Item 18 fails (c)1 and (c)2 as 16.33 fixes them. Every other judged check passes.** At a5da56e the tool judged 199 lines: 196 passed and 3 failed. It reported 49 more.
+- (c)1 fails in scene (iv) on both cells, and (c)2 at the state before step 1229, in the burnt-out cell's T_s. Each is set out below with its numbers and a diagnosis. Neither diagnosis is a verdict.
+- 16.33's "What ends this line": a failure of (c)2 ends the attempt. A failure of (c)1 is to be read as a fault of the code against the method; no fault of the code was found (below).
+
+**(a) The cell's balance at burn-out, on each path.** The isolated cell, one chemistry stage, on 0.20 and 0.34 m: 96 lines, all PASS.
+- 1. The gas. In the eight burn-out scenes of (i), (ii) and (iii) on each cell, T_g equals T_g0 + Q_b/(ρ′ V c_p,mix(Y′)) within 1.2 × 10⁻⁷ to 5.9 × 10⁻⁵ K, against 2 float32 steps (1.2 × 10⁻⁴ to 4.9 × 10⁻⁴ K). Q_b runs from −25.0 J (ii) to 5127.5 J ((i), 2.93 × 10⁻⁴ kg); on 0.20 m the 2.93 × 10⁻⁴ kg call takes the gas from 900 to 2288.43 K.
+- 2. T_s is float32(T_a), 293.1499938964844 K, exactly; the kind gas, the fuel 0, and the flag as transcribed, in every one.
+- 3. `stats.burnoutHeat` equals Q_b exactly (a relative difference of 0) and `stats.burnouts` is 1.
+- 4. The control (iv) and the metal (vi, six masses): every field bit for bit on and off; both stay porous (magnesium keeps its ash).
+- 5. The liquid (v): T bit for bit on and off; with the item T_s is float32(T_a), off 371.6 K, and the cell is gas on both.
+- On the GPU (chemistryPass), the same scenes: the gas within (c)1's tolerance (the worst 7.1 × 10⁻⁵ K), T_s, kind, fuel and flag exactly; (iv), (v) and (vi) as on the CPU.
+- Reported, the item off: T_g unchanged and Q_b in no field; T_s from 1.76 × 10⁵ K (10⁻⁸ kg) to 5.13 × 10⁹ K (2.93 × 10⁻⁴ kg) after oxidation, and −2.50 × 10⁷ K (ii) and −2.2 × 10⁸ to −2.4 × 10⁸ K (iii) after the endotherm.
+
+**(b) Bounds on the flame front.**
+- 1. The isolated cell, a chemistry stage and then `particleStep`: in (i) at the three masses that set the flag and in (vii), on each cell, six flame-front particles, each at exactly the centre's stored T (911.26 to 2288.43 K; 1537.09 K in (vii)): 8 lines, PASS. Off, the six carry the centre's T_s: 1.75 × 10⁸ to 5.13 × 10⁹ K, and 10⁹ K in (vii).
+- 2. The app's runs, 1500 fixed steps of 0.1 s, seeds 1 and 2: 8 lines, PASS.
+  - Every gas cell's T_s is float32(T_a) at every particle stage.
+  - Every flame-front particle spawned carries max(T, s(c)) of a burning cell at its stage: 238 487 (seed 1) and 196 110 (seed 2) in the solver's burning.
+  - The design fire in 1500 steps spawns no flame-front particle and burns no cell out, on or off, so its lines hold vacuously. Its cell of no capacity is first read burning at step 2171 (seed 1), beyond the horizon. (c)2 and (b)1 (vii) test that source.
+  - Reported, the solver's burning: off, a particle above 10⁴ K was alive in 1038 steps (seed 1) and 1043 (seed 2), up to 4.56 × 10⁹ and 1.18 × 10¹⁰ K; on, in none.
+
+**(c) CPU against GPU,** in headless Chrome on the machine's integrated GPU (intel gen-12lp).
+- **(c)1, one chemistry stage from identical inputs.** 34 lines: 32 PASS, 2 FAIL.
+  - In every scene on both cells, every body's item difference lies within max(10⁻³ |Δ_item,CPU|, 8 float32 steps); the worst uses 2.3 × 10⁻⁴ of its tolerance ((i), 10⁻⁴ kg, the centre's T: 523.63 K on both, 1.2 × 10⁻⁴ K apart). The burnt-out centre's T_s is float32(T_a) on both paths.
+  - **FAIL**: scene (iv) on 0.20 and 0.34 m, the clause "the kind, the fuel and the flag are equal on both". The kind and the flag are equal; the fuel is not.
+  - A diagnosis, reported and not judged. The cell does not burn out, so the item does nothing there: every field is bit for bit the same on and off, on each path ((a)4). The fuel the reactions leave is 7.472067606 × 10⁻³ kg on the CPU and 7.472066209 × 10⁻³ kg on the GPU on 0.20 m (5.804253742 and 5.804252345 × 10⁻³ kg on 0.34 m), item on and off alike: the CPU computes the reactions in float64 and the GPU in float32, three float32 steps apart. The clause holds wherever the cell burns out (the fuel 0 on both).
+- **(c)2, one full step from one shared state, then one more.** 21 lines: 20 PASS, 1 FAIL.
+  - The burnt-out cells' T, in all seven burn-out states: within the rule, the worst using 0.41 of it (before step 1072, cell 9004: the item adds 866.97 K on the CPU and 867.32 K on the GPU).
+  - Their T_s: within the rule in six states.
+  - **FAIL**: the state before step 1229, cell 9686, T_s: Δ_item 0.268 K on the CPU and 3.507 × 10⁷ K on the GPU, against 2.7 × 10⁻⁴ K.
+  - A diagnosis, reported and not judged. With the item on, T_s is float32(T_a) on both paths, as point 5 sets it. The difference is the item-off paths' own: this is the full trace's call in which the oxidation leaves skin that the pyrolysis takes. On the GPU, `omexp(k_p dt)` at k_p dt near 18 rounds to 1 in float32, so the pyrolysis takes all the skin, no fresh fuel mixes in, and T_s keeps the floored endotherm, −3.507 × 10⁷ K. On the CPU, exp(−18) leaves about 2 × 10⁻¹² kg; the fresh fuel's mixing then runs with its 10⁻⁹ J/K floor and leaves 292.88 K. The item replaces that value with a constant, so Δ_item carries the off paths' difference in full and it does not cancel.
+  - The particles, in the six states with radiation and particles on, item on: after each of the two steps every flame-front particle on each path carries a value a source gives (0 outside, of 1040 to 11 979 particles). After the second step, 6 particles carry the burnt-out cell's stored T on each path in the first three states, and 0 in the last three, where none of its particles was alive after the step. Off, 6 carry its T_s on each path in the same three states, and 0 in the last three.
+  - The design fire's state, before step 2171, cell 11054 of no capacity burning with T_s 2.68 × 10⁹ K and T 320 K: no particle carries its T_s on either path after either step, item on. But off none does either, and none carries its T: no particle of this cell was alive after either step, on or off, on either path (11 727 and 12 857 particles were). So this line holds without testing the source. The sources' test is reported: 235 and 162 particles carry burner-cell values the test cannot read, on each path alike.
+  - Reported, the other bodies beside the float64 model of `conduct`'s two orders (16.38): 3 to 5 bodies a state lie beyond (c)1's rule. In every case the GPU's item difference is the model's GPU order and the CPU's the model's CPU order, to 4 or 5 figures (before step 427: 8292's T_s 3.6965 K on the GPU and 4.3916 K on the CPU; the model 3.6965 and 4.3916 K).
+- **(c)3, the GPU check's agreement and onestep phases, on against off.** 32 lines, PASS. Agreement is the same on and off at every checkpoint: no cell of its room burns out in 200 steps (at step 200: 3.44 K largest and 0.094 K at the 99th percentile; the twin 3.62 and 0.13 K). Onestep with the item on: the largest |ΔT| 0.022 to 0.083 K, against 0.018 to 0.083 K off; |ΔT_s| 0.0013 to 0.046 K on and off. The worst checkpoint uses 0.76 of its bound (step 450, T: 0.0280 K against 2 × 0.0183 K).
+
+**(d) Off is off.**
+- With `burnoutHeat` 0 the fingerprints are the base's, d62b581d and 29793d1a.
+- The unit suite passes 537 of 537 (concurrency 1).
+- With `burnoutHeat` 1 and no cell turning gas or of no capacity burning:
+  - the fingerprint tool's rooms give d62b581d and 29793d1a (on a copy whose `DEFAULTS` set the switch);
+  - heat-closure's `burner` and `porous` cases, 60 s on 0.20 m, against the base read from git at 97ba377: all 15 fields of each solver, its particles and its 18 stats entries bit for bit;
+  - Steckler test 14 on 0.34 m through the suite, 300 s, against `--solver-rev 97ba377`: all 1160 recorded leaves of its run and 197 of its statistics bit for bit, the wall seconds set apart. The run adds its option and the ledger's two tallies, 0 throughout.
+- `tools/flamescapes-gpu-check.mjs` by 16.30's decision 5, against the base read from git at 97ba377, under the shared GPU lock (02:19 to 09:05): PASS.
+  - The seven deterministic phases (agreement, onestep, radiation, walls, soot, zones, manyzones), once on each side: all 3380 leaves bit for bit, the timings set apart.
+  - The six phases with GPU `runScene` results (full, ensemble, worker, sprinklers, design, systems): 8 base runs and 8 branch runs, run alternately, none repeated, 96 runs, all complete. The CPU side of every phase is bit for bit across all 16 runs. Of 1070 GPU leaves, 41 vary among the base runs (sprinklers 11, design 14, systems 16); no leaf has every branch value strictly above, or strictly below, every base value.
+  - In one branch run (the fourth) the systems phase's heptane spill with no system gave 16 frames on the GPU, not 24, and released 24.98 MJ, against 25.28 to 42.66 MJ in the base runs. The branch runs the base's code with the item off. Its 8 absent leaves, judged on the other 7 branch runs, lie within the base's range.
+
+**(e)** With the default set to 1 on a copy, the unit suite passes 537 of 537. No test was edited.
+
+**(f) Speed, reported and not judged.** Measured beside two other jobs of this build, the Steckler runs, as the GPU series began.
+- The fingerprint tool's rooms, 300 steps, two rounds alternating off and on, ms a step: the pilot room 53.0 and 48.1 off, 47.8 and 48.2 on; the design fire 47.6 and 48.3 off, 49.5 and 48.3 on. `chemistry` 1.04 off and 1.07 to 1.12 on (pilot), 0.69 to 0.72 off and 0.71 to 0.74 on (design); `particles` 0.15 to 0.17 off and 0.15 on, 0.08 to 0.09 both.
+- `tools/backend-bench.mjs` and Vienna on the GPU in the browser were not run. When this build's GPU series ended, item 19's builder held the GPU lock, and the bench's runner uses the GPU even for its CPU set.
+
+**A finding, reported and not judged.** In the GPU check's room with the solver's own burning, the fire released 62.45 MJ in 150 s off and 4.22 MJ on (seed 1; 59.63 and 3.47 MJ, seed 2). The two runs are bit for bit the same up to step 429 and part at step 430, the first item's burn-out. By step 700 the hottest gas is 623 K on and 1962 K off, with 49 burning cells on against 337 off. So in this room the fire's growth after the first item burns out came from the burnt-out cell's flame front at 4.4 × 10⁹ K. These are fixed steps of 0.1 s, and 16.30's decision 7 holds: no heat release of contents is read as converged.
+
+**Departures, as built.** None changes an output with the item off.
+- The burn-out test is made before the writes on the CPU with `Math.fround` on each subtraction, and on the GPU in float32, as point 2 states; the GPU compares with its own literal 1e-7, as its own turn to gas does.
+- `stats.burnouts` counts every cell that turns gas with the item on, the liquid branch's included.
+- `STAGES` is exported read only besides the three exports 16.33 names, for (b)2's stepping and (c)2's report. No run calls it.
+- The suite's settings record `burnoutHeat` only when the flag is given, so an item-off file keeps its shape.
+- (b)2 steps the solver stage by stage (checked bit for bit against `step` over 150 steps) and reads the particles just after the particle stage. Embers are off in its runs, as in the app's default, so its ember clause holds vacuously; (b)1 does not test embers either.
+- (c)2's states were found on the CPU in the page, and the model's on the CPU in Node from the same scenes; Node's CPU found the same steps.
+- (c)2's particle part judges "a value a source gives" (a cell's stored T, a non-gas cell's T_s where it holds heat, T_a, or a temperature a particle already had), exact where no pilot or burner acts before the particle stage. In the design fire's state the judged part is that no particle carries the cell's T_s.
+- (c)3 runs the GPU check itself, on and on a copy with the switch set; the twin keeps no T_s, so onestep's T_s is held to twice the off figure only.
+- (d)'s heat-closure comparison ran on copies of the base and the branch with a passive hook that keeps each solver for a hash of its state at exit.
+- `RUN_CACHE_VERSION` (13) is unchanged. The run cache's key carries `burnoutHeat` when a run sets it.
+
+**Not verified.**
+- Embers' spawn temperature with the item on: no run with embers spawned one from a cell of no capacity or a burnt-out cell.
+- The GPU's guard for a porous cell of no capacity in a run: (c)2's design-fire state spawned no particle from that cell on either path. The guard is exercised for burnt-out cells in (c)2 and for a cell of no capacity on the CPU in (b)1 (vii).
+- Whether the two failures have any cause beyond the diagnoses given.
+- The item's effect in any app scene beyond the GPU check's room.
+- The cost apart from load, and the bench's figures and Vienna in the browser, which were not run.
+
+**Checked by the coordinator** (2026-11-16), apart from the agent:
+- **The check tool's parts (a) and (b)1** were run again from a5da56e on the CPU: 74 PASS, 0 FAIL.
+- **Part (b)2, seed 1,** was run again. Its log is the builder's line for line, the 62.448 and 4.215 MJ among them.
+- **The item-off fingerprints** were run again on the branch: d62b581d and 29793d1a.
+- **The solver's diff** from 97ba377 was read against 16.33's points 2 to 6: the burn-out test made before the writes, Q_b written once into the cell's own gas, T_s set to T_a when the cell turns gas, and a particle's solid temperature read only from a cell that is not gas and whose solid holds heat.
+- **(c)2's diagnosis, its arithmetic.** exp(−18) is 1.52 × 10⁻⁸, below half a float32 step under 1 (2⁻²⁵, 2.98 × 10⁻⁸). So 1 − exp(−18) rounds to 1 in float32.
+- **The commits** carry no Claude line.
+- **Not run again by the coordinator:** the GPU parts, (c)1 to (c)3 and (d)'s GPU check. Item 19's build holds the GPU lock. They run when it is free, and any difference is recorded here, dated.
+
+**Item 18's first attempt fails.** (c)2 fails at the state before step 1229, and 16.33's "What ends this line" ends the attempt on a failure of (c)2. Item 18 is not made, and `burnoutHeat` stays 0.
+
+**The coordinator's reading of the two failures** (13.12, rule 1), recorded before any rewritten check exists or has run:
+- (c)1's clause "the kind, the fuel and the flag are equal on both" compares the paths' own fuel. In scene (iv) the cell does not burn out and the item does nothing. The CPU's float64 reactions and the GPU's float32 ones leave fuel 3 float32 steps apart there, item on and off alike. So there the clause tests the base, not the item, and code that meets the method fails it.
+- (c)2's T_s line takes Δ_item = T_a − T_s,off on each path. Where the item writes a constant, the difference between the item-off paths stays whole and does not cancel, as (c)'s head intends. Code that meets the method fails it wherever the off paths part, as they do before step 1229.
+- So both compute their reference wrongly for the case they ran. As for item 16 (16.22 to 16.25), a second attempt that keeps the method and rewrites these two lines needs the user's word, and its lines are written here first.
+- Two candidates, not adopted: (c)1's clause judged on the fuel's item difference, equal on both paths; and (c)2's burnt-out T_s judged as T_s with the item on equal to float32(T_a) on both paths, exactly. Neither moves a tolerance. The first attempt's lines would run again on the second attempt's code and be reported, not judged.
+
+**The finding, verified on the CPU for seed 1.** In the GPU check's room with the solver's own burning, one cell burns out in 150 s. With it, the fire released 62.4 MJ off against 4.2 MJ on.
+- So in a run with the solver's own burning, the growth after a burn-out can come from the defect alone: here it is about 15 times the heat released without it.
+- In the same room with the app's default design fire, no cell burns out in 150 s. 16.33's trace found the defect's flame front from 180 s in 600 s runs of that fire.
+
+**Beside item 19,** reported by the coordinator and not judged. The two branches' `flamescapes.js` merge without conflict; their GPU files conflict and were not merged. On that CPU merge, in a scratch worktree and not committed, item 19's next-door run (`tools/porous-rate-check.mjs --part b-run`, 0.1 s, seed 1):
+- released 87.93 MJ in 60 s with item 18 off, the item 19 branch's own figure, and 82.68 MJ with item 18 on;
+- with item 19 off, 24.88 MJ either way.
+- So item 19's rise in the first minute is not item 18's defect.
+
+**What follows.**
+1. The defect stays a declared limit of every run with contents, on both paths. A burnt-out cell or a cell of no capacity can feed the flame front at 10⁸ to 10¹⁰ K, and the drawn fire's yellow-white points come from it (16.33).
+2. 16.34's decision 3, putting the default to the user, waits on an attempt that passes.
+3. **The study (17.8),** declared after the study's results were read. Its furniture-on runs burn contents beside the design fire for 300 s, so where a contents cell burns out they carry this defect beside finding 2. Their results are reported with it stated. If an attempt at item 18 passes, every furniture-on run runs again with it on, and both sets are reported, as 17.8 sets for item 15.
+4. The bench, Vienna on the GPU in the browser, and the GPU parts above run when the GPU lock is free.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
