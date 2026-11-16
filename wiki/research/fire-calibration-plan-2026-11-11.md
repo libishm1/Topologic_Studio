@@ -7751,6 +7751,297 @@ The user asked on 2026-11-16 for a plan that takes every word to indicative at l
 
 **The papers.** For the DigitalFUTURES abstract of 2026-12-15, the result aimed at is the temperatures after steps 1 to 4. Visibility and the doors are aimed at eCAADe, 2027-01-15. Either paper reports the words as they stand on its date.
 
+
+### 16.43 Item 8, second attempt: the diagnosis and the method (2026-11-16, before any code of it)
+
+The user gave their word for a second attempt at item 8 on 2026-11-16 (16.42). 13.23 sets two conditions: a new method written here first, and its check (h) on item 10's geometry (13.26, decision 17). This section is both the diagnosis of the first attempt and the new method. It is the physics agent's draft. Nothing below changes after a run of the second attempt; anything added later is dated, with its commit. Line numbers are those of `next/calibration-16` at 42c1867 unless a branch is named. FDS is read at tag FDS-6.11.1, commit ff928db, as 13.19 cites it. No solver file and no default was changed for this draft, and no validation suite was run.
+
+**What the drafter read that reports results, declared as 16.24's head declares it.**
+- The plan's headings. 13.12. 13.19 with the coordinator's decisions (they state that the rooms read hot, and give three hand figures). 13.23 in full: the first attempt's check (b), its six ratio ranges, and one printed case with RadCal's two values. 13.24 in full: the attempt's other checks, the figures of (h) and (k), and the ledger's remainders. 13.25 and 13.26: the methods, the declared limits and the coordinator's decisions (model figures, and the direction item 11 leans). 13.32: item 10's checks and the two fingerprints. 16.14 as far as its switch (its hand figures, and what its head quotes of 16.1, 16.9 and 16.10). The first twelve lines of 16.21: item 14 passed its checks, with its branch and commits. 16.24 (its head and its sections 2 to 7) and 16.25: figures of item 16's diagnosis. 16.42: the rooms read 35 to 55 % hot, items 10, 11 and 12 are ruled out as the cause, and three attempts at the doors failed.
+- Five single lines that a search of the plan for "item 8" returned from sections not otherwise opened: one of 13.27 (a correlation's rise against the measured one, and the walls' share in the two hottest rooms), one of 15.9 (item 8 should cool every room, which the chair series does not need), and one each of 13.36, 16.8 and 16.14 that state only that item 8 was not made.
+- The coordinator's brief: the two candidates, the fingerprints d62b581d and 29793d1a, and that items 10 and 11 are off by default.
+- A session note that states what 16.42 states of items 10 and 11: no calibration gain.
+- The one-line titles of the last three commits of `next/calibration-16`. One gives item 18's count of judged lines.
+- The names of the files in the drafts folder, seen in a listing. None was opened.
+- Not opened: any file under `benchmark/results/`, the file of the 72 reference values among them; 13.A and 13.B; 13.27 to 13.31 and 13.33 to 13.36 beyond the lines above; 16.39; every result file of the reruns and of the study.
+
+The diagnosis rests on calculations made for this draft outside the repository. They are model calculations of gas columns and of one test room. No measured datum enters them, and RadCal was not built, run or read.
+
+#### The tools
+
+All of it is scratch work outside the repository. Nothing of it is committed.
+- **The first attempt's fit.** A transcription of FDS's `KAPPA_WSGG` and `A_WSGG`, whose 168 constants are parsed from 13.19's own tables in this plan. It gives 0.3594 for the case 13.23 prints as 0.359.
+- **A line-by-line calculation,** as a reference apart from RadCal and apart from every fit.
+  - Lines of H2O (isotopologues 161, 181, 171, 162) and of CO2 (626, 636, 628, 627) from 50 to 10 000 cm⁻¹, fetched on 2026-11-16 from HITRAN's line service at hitran.org, in the edition the site served that day (HITRAN2020, Gordon et al. 2022): 209 026 and 433 484 lines. Partition sums from the same site.
+  - Each line is a Lorentz profile at 1 atm. Its half-width is (296/T)^n [γ_air (1 − x) + γ_self x], with x the species' mole fraction, so nitrogen and the absorber itself broaden it as HITRAN lists. Its intensity is scaled to T by the partition sum, the lower state's energy and the stimulated emission factor. The pressure shift is applied.
+  - The grid is 0.01 cm⁻¹. A wing is cut 25 cm⁻¹ from its centre (5 cm⁻¹ for a line whose peak optical depth over 3 m is under 0.01). A line whose peak optical depth over 3 m is under 10⁻⁷ is dropped; a cut at 10⁻⁹ changes no printed digit.
+  - Emissivity is π ∫ B_ν(T) (1 − e^{−κ_ν L}) dν / (σ T⁴) over 50 to 10 000 cm⁻¹. Absorptivity for black radiation from 1173.15 K is the same integral with B_ν(1173.15 K) and σ · 1173.15⁴. These are 13.19 (b)'s two definitions.
+  - Its limits: no Doppler width (at 1 atm it is under a tenth of the Lorentz width), no continuum, and HITRAN's lines only, so it is not carried above 600 K, where hot lines are missing.
+- **The published tables of the method below** (point 11), read from the two text files named there, with a transcription of the method's functions.
+- **A run of 13.19 (k)'s burner room on the base solver,** with nothing of item 8 in it (point 9).
+
+#### 1. The diagnosis
+
+1. **The code carried the fit as FDS writes it.** 13.23 records that the coordinator's own transcription fails the same 38 cases. The scratch transcription agrees (0.3594 against 0.359).
+
+2. **The fit's temperature range is not the cause.**
+   - Bordbar, Fraga and Hostikka (2020) extend the 2014 model to every molar ratio. They build their two new sets "following the same methodology used in" the 2014 paper, from 43 temperatures between 300 K and 2400 K. For 0.01 ≤ M_r ≤ 4 they keep the 2014 model unchanged.
+   - Check (b)'s molar ratios are 1.25 and 1.90. So the newer fit of this family, which reaches 300 K, gives the same 72 numbers as the first attempt.
+   - The 2014 paper itself was not read (it is not open). Its range is inferred from the 2020 paper.
+
+3. **First cause: the fit was made for mixtures without nitrogen.**
+   - The fit's emissivity data are for CO2 and H2O filling the whole atmosphere. The 2020 paper builds its pure-gas data "with pt = 1 atm and Y = 1", by the 2014 paper's method, and the 2014 paper's title names oxy-fired combustion. FDS takes κ_j = k_j p_a, with p_a the absorbers' partial pressure, and so does 13.19. That scaling keeps the pressure path length and loses the broadening.
+   - A water line broadened by water is about five times as wide as one broadened by air: over the main isotopologue's lines, HITRAN's intensity-weighted mean half-widths are 0.423 and 0.080 cm⁻¹ atm⁻¹ (ratio 5.3; for CO2, 0.098 and 0.074). A wider line absorbs more over the same pressure path length. In a room's products, nine tenths nitrogen, the lines are narrow and the gas emits less.
+   - The line-by-line calculation shows both halves. With no nitrogen, at the same pressure path lengths as (b), the first attempt's fit is 0.92 to 1.07 of line by line (24 cases, 400 K and 600 K). So the fit is sound on its own basis. With nitrogen, at (b)'s own 24 conditions at 400 K and 600 K, it is 1.14 to 1.33 of line by line.
+   - 13.19 named this risk under "Where it can fail": the fit is for oxy-fired combustion, and whether it holds for products diluted in nitrogen was not verified.
+
+4. **Second cause: the form.** 13.23 names it. A sum of gray gases with fixed coefficients takes a ray's weights at its source's temperature. Its absorptivity for black radiation from 1173.15 K is then its emissivity at 1173.15 K, whatever the gas's own temperature.
+   - Line by line, for X_c + X_w = 0.15, M_r = 1.25 and 3 m, the gas at 400 K absorbs 0.260 of that radiation and at 600 K 0.270. A column at 1173.15 K emits 0.315 (the tables of point 11). 13.23 prints RadCal's 0.219 and 0.242.
+   - So a fit of this form with an exact emissivity would still read 0.315 / 0.219 = 1.44 in that case. No fit of this form can pass (b)'s absorptivities, however far down its temperatures reach.
+   - Over (b)'s 24 absorptivity cases the first attempt's fit is 0.85 to 1.38 of line by line.
+
+5. **So neither candidate of 13.23 can pass as worded.**
+   - **A fit that reaches ambient, of the same form.** It fails by point 4. The one this family offers is the same fit (point 2).
+   - **FDS's default gray gas.** It would put RadCal's tables in the solver, which the user has ruled out, and it would leave (b) with no reference. It also cannot hold over (b)'s path lengths, whatever the reference. At 600 K, X_c + X_w = 0.15 and M_r = 1.25, the tables of point 11 give 0.155, 0.253 and 0.365 at 0.3, 1 and 3 m. One gray coefficient matched at 1 m (0.292 m⁻¹) gives 0.084 and 0.584 at 0.3 and 3 m: 0.54 and 1.60 of them.
+
+6. **What can pass: the same family, with data that hold nitrogen and weights that know two temperatures.** The spectral line weighted sum of gray gases (Denison and Webb 1993) is a weighted sum of gray gases whose weights come from a tabulated distribution of the absorption cross-section, F(C, T_g, T_b): the share of black radiation at T_b that falls where the gas at T_g has a cross-section below C. Pearson, Webb, Solovjov and Ma (2014) tabulate F from 300 K to 3000 K for H2O (with its own mole fraction as a variable, which is the self-broadening) and for CO2. So it is 13.23's first candidate in kind: a weighted sum of gray gases whose data reach ambient. It differs from the first attempt in the two things points 3 and 4 found.
+   - Emissivity from these tables is 0.94 to 0.98 of line by line at (b)'s 24 conditions at 400 K and 600 K. Absorptivity is 0.99 to 1.03 of line by line at (b)'s 24 cases. The two rest on different line lists (HITEMP 2010 and HITRAN2020) and different codes.
+   - Against RadCal it was not compared: the 72 values were not opened. The one case 13.23 prints can be read: the method gives 0.267 and 0.277 where RadCal gives 0.219 and 0.242, ratios 1.22 and 1.14. Both are inside 25 %, the first narrowly. That is declared. Nothing in the method was chosen by it (point 12 says what the gray gases' number was chosen by).
+
+7. **The transport of the first attempt was not what failed (b),** and 13.24 reports its (c), (d) and (e) inside their tolerances at 20 of the 200 steps. One part of it is still changed (point 15), for a reason found in this draft: the strongest gray gas has κ h of 60 to 150 on these cells, so a cell re-absorbs nearly all of what it emits in that gas, and rays from points in the cell's volume would carry that as noise.
+
+8. **(h) failed on the surfaces, not on the gas** (13.24). Item 10 has since been made behind `surfaceRayStart` (13.32). The second attempt acts only with it on (point 21).
+
+9. **(k), the ledger: its reference moves by itself.** 13.24 left (k)'s cause not found. 13.19 (k) asked that the ledger's remainder with the item on be no larger than with it off, plus 1 % of the heat released. That takes the off run's remainder as what the on run's should be.
+   - (k)'s room was run on the base solver, with nothing of item 8 in it, changing only the walls' convection coefficient (`wallConvection` 5, 10, 20 and 40 W/m²K) or turning the radiation stage off (`emitAbove` 10⁹). The scene and the ledger are copied from the first attempt's tool. The base reproduces 13.24's off figure: 1.2253 MJ for the class A fuel at 120 s (13.24: 1.225).
+   - Class A, 12.0 MJ released at 120 s: the remainder is 1.287, 1.225, 1.253 and 1.279 MJ at the four coefficients, and 1.259 MJ with no radiation stage. Its spread is 0.062 MJ, 0.5 % of the heat released. At 60 s it is 0.695, 0.647, 0.658 and 0.646 MJ of 6.0 MJ: a spread of 0.8 %.
+   - Methane at 120 s: 1.099, 1.080, 1.065 and 1.091 MJ: a spread of 0.3 %. With no soot its radiation stage casts nothing, and the run with the stage off is the same to the last digit.
+   - The remainder does not follow the coefficient in order. It is 9 to 11 % of the heat released in every run, and it is the base's (13.15).
+   - So the off run's remainder is not a fixed reference. A change of the temperature field alone moves it by 0.3 to 0.8 % of the heat released, either way, where (k) allowed 1 %. The first attempt moved it by 1.0 % at 120 s for the class A fuel (1.345 against 1.225 MJ), and at other times by up to 0.016 MJ more than the allowance (13.24).
+   - This does not show that the first attempt hid no heat. It shows that (k) as written cannot tell. (f) is the check that can: the stage's own books, which the first attempt closed to 6 × 10⁻¹³.
+   - (k) is therefore rewritten under 13.12's rule 1, disclosed as written after a failure (check (k) below). The first design is run again and reported.
+
+#### 2. The method
+
+Chosen: the rank correlated spectral line weighted sum of gray gases (Solovjov, André, Lemonnier and Webb 2017), from the tables of Pearson et al. (2014) at 1 atm, with eight gray gases and one clear gas, carried along the solver's rays. On the CPU only.
+
+Considered and set aside:
+- **Another fit of the first attempt's form** (Bordbar et al. 2020; Cassol et al. 2014; Smith, Shen and Friedman 1982). Point 4. Smith et al. do give weights for absorptivity that depend on both temperatures, but from 600 K only.
+- **FDS's default gray gas.** Point 5.
+- **Hottel's rule for absorptivity on top of a fit** (the emissivity at the source's temperature, at a path scaled by T_s/T_g, times a power of T_g/T_s; Hottel and Sarofim 1967). It is a rule for one uniform column. On a ray that crosses cells of different temperatures it has no stated form, and it leaves point 3 as it is.
+- **The same method from Denison and Webb's correlations in place of the tables.** The correlations are a few hundred constants and no file. They start at 400 K, and a correlation of a table is one more error under a tolerance that point 6 shows is not wide.
+- **Line by line or narrow bands in the solver.** Thousands of spectral points on every ray.
+
+10. **The composition,** in each gas cell: as 13.19's point 1 takes it. n_k = Y_k / M_k with `MOLAR` (94), nitrogen the rest at 0.028 kg/mol (`gasDensity`, 325 to 335); x_c = X_CO2, x_w = X_H2O. The molar density is N = `P_AMBIENT` / (`R_GAS` T), in mol/m³: the solver's equation of state holds every cell at 101 325 Pa (334). A cell with x_c + x_w < 10⁻⁶ is clear: it has no gray gas. 10⁻⁶ is a numerical cut fixed here from no source. Ambient air in the solver holds neither gas (445).
+
+11. **The tables.**
+    - F_c(C, T_g, T_b) for CO2 and F_w(C, T_g, T_b, Y) for H2O, at 1 atm: T_g and T_b at 300 K to 3000 K in steps of 100 K (28 each); C at 71 values, C_k = 10⁻⁴ × 10^{k/10} m²/mol, k = 0 to 70; Y at 0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8 and 1. That is 55 664 and 500 976 numbers.
+    - Their source: Pearson et al. (2014), as the RadLib library ships them (Stephens, Jensen, Wheeler and Lignell 2022; MIT licence; github.com/BYUignite/radlib at commit 583e0fe): `data/rcslw_data/co2_p1_0.txt` and `h2o_p1_0.txt`, with SHA-256 5bd9c9ec…2a17508b and b3dd6c86…a2972e53 (in full under Sources). The order is [T_g][T_b][C] and [Y][T_g][T_b][C], the last index fastest. They enter the repository as one file of float32 values, 2.2 MB, converted by a script that is committed with it.
+    - Between its points a table is linear in T_g, T_b, Y and C, as RadLib reads it. Outside them it is held at its edge: T below 300 K at 300 K, C/x below 10⁻⁴ at 10⁻⁴, above 10³ at 10³.
+    - The mixture, by the multiplication rule (Solovjov and Webb 2000), with C per mole of mixture: F(C; T_g, T_b, x) = F_c(C/x_c, T_g, T_b) · F_w(C/x_w, T_g, T_b, x_w). A gas that is absent gives the factor 1.
+    - CO is in the tables and is left out. The solver's CO is small beside CO2, and it is a declared limit.
+
+12. **The gray gases.** Eight, and one clear gas (j = 0).
+    - Their levels are fixed once, at a reference state: T_ref = 600 K, x_c = 0.095 and x_w = 0.19 (methane's products in air). Nine cross-sections spaced evenly in ln C from 3 × 10⁻⁴ to 60 m²/mol give the levels F̃_k = F(C̃_k; T_ref, T_ref, reference), k = 0 to 8, with F̃_8 set to 1. Their eight geometric means give F_j, j = 1 to 8. Spacing in ln C is the spectral line model's own (Denison and Webb 1993).
+      - F̃: 0.174284, 0.331192, 0.485571, 0.662434, 0.827895, 0.929980, 0.981241, 0.996933, 1.
+      - F_j: 0.249345, 0.410365, 0.567447, 0.751544, 0.888712, 0.959218, 0.992104, 0.998888.
+      - These 17 numbers are the scratch transcription's. The solver computes them from the tables when they load.
+    - In a cell at T with composition x, by rank (Solovjov et al. 2017): C_j is the cross-section at which F(C; T, T_ref, x) = F_j, and κ_j = N C_j. C̃_k likewise from F̃_k. F is inverted by bisection in ln C between 10⁻⁷ and 10³ m²/mol, to 10⁻⁶. Where F at 10⁻⁷ is already at or above the level, the cross-section is 0, and that gray gas is clear in that cell.
+    - The weights, for black radiation at T_b falling on, or leaving, gas at T: a_j(T, T_b) = F(C̃_j; T, T_b, x) − F(C̃_{j−1}; T, T_b, x) for j = 1 to 8, and a_0 = F(C̃_0; T, T_b, x). They sum to 1.
+    - A gray gas keeps its index from cell to cell. That is the rank correlation: the same share of the spectrum is gas j everywhere, with each cell's own κ_j.
+    - **Why eight.** The sum over J gray gases was compared with the tables' own limit (4000 cross-sections) at (b)'s 72 conditions, for J of 4, 5, 6 and 8, in the scratch transcription. J = 8 at the choice above is within 0.983 to 1.036 of the limit; J = 6 within 0.990 to 1.078; J = 5 within 0.98 to 1.14; J = 4 within 0.96 to 1.19. Eight is the smallest of those within 5 %, a fifth of (b)'s tolerance.
+      - The comparison is with the model's own limit, not with RadCal. The criterion and the figures were set in the same sitting, and that is declared.
+      - Fifteen other choices were tried at J = 8 (reference temperatures of 600 K and 1000 K, two reference mixtures, four ranges of C). They lay within 0.87 to 1.07 of the limit. Levels at Gauss points in F, as RadLib sets them, were tried too: 0.979 to 1.014 at (b)'s conditions, and worse on thin columns outside them. The choice above was taken for its reference state, a layer's temperature and methane's products, and for the model's own spacing. It is not the best of those tried at (b)'s conditions.
+    - For scale, at 600 K with x_c = 0.05 and x_w = 0.10 the eight κ_j run from 0.006 to 308 m⁻¹, a_0 is 0.17, and Σ_j a_j κ_j is 3.1 m⁻¹ (hand calculation from the tables).
+
+13. **Soot.** Every gray gas, and the clear gas, has κ_j + κ_s with κ_s = `sootAbsorption` · Y_s (171; 1147), as 13.19's point 4. With no CO2 and no H2O every band has κ_s alone and the weights sum to 1, so the stage is gray, as now.
+
+14. **What a gas cell emits.** A gas cell emits when T > T_a + `gasEmitRise` (10 K, 13.19's point 5 and decision 5) and it is not clear or holds soot. In band j its black part is
+
+    B_j = a_j(T, T) T⁴ − a_j(T, T_a) T_a⁴,
+
+    net of the ambient's, as the solver writes all its emission (973). The second term takes the weights the same gas gives to black radiation at T_a. So every band is zero in a cell at ambient temperature, whatever its composition. With exact tables B_j cannot be negative, since black radiation at T exceeds that at T_a at every wavenumber. A B_j that the interpolation makes negative is set to 0 and counted (`stats.radNegative`).
+
+15. **A gas cell radiates from its faces.** This replaces 13.19's point 6.
+    - The radiance that leaves a uniform volume through a point of its surface, in band j, is (σ B_j / π) (1 − e^{−(κ_j + κ_s) ℓ}), with ℓ the chord back through the volume (Howell et al. 2020; Modest 2013). A cell is a uniform cube. So each of the cell's `gasRays` rays (8) starts at a uniform point on one of its six faces, drawn uniformly, in a direction drawn by the cosine law about that face's outward normal, and carries in band j
+
+      e_j = (6 h² σ B_j dt / `gasRays`) (1 − e^{−(κ_j + κ_s) ℓ}),
+
+      with ℓ the chord of the cell from the start point along the reversed direction. This is the cell's exact emission with its own absorption already taken, in expectation.
+    - The cell loses the sum of what its rays carry. If that exceeds half its heat above ambient (the present cap, 974), every ray is scaled alike and the rest is counted (`stats.radCapped`).
+    - The ray enters the march in the neighbour beyond the face, named by index, with the start's fractions, exactly as item 10 enters a surface's ray (13.25, points 6 and 7; 1036 to 1042). A neighbour beyond the grid takes it to `radiatedOut`. A solid neighbour takes it whole.
+    - The draws: per ray, in order, one for the face, two for the point, two for the direction, from the cell's stream of the step with salt 4 (`cellStream`, 581; salts 1, 2, 3 and 5 are in use).
+    - Why not the first attempt's start in the volume. At κ h = 100 a ray from a uniform point leaves its cell with e^{−κ s}, which is near 0 for all but one or two rays in a hundred. The mean is right and the noise is large. From the faces every ray carries a weight of order 1 in a thick band and of order κ ℓ in a thin one. The cap also then limits what the cell loses, not what it emits and takes back.
+
+16. **Rays from surfaces and from the burner are black until they meet the gas.**
+    - A surface's ray (item 10's, and a porous cell's) carries its energy e and its black temperature T_b: the cell's T_s, or a one-dimensional wall's face temperature (`wallEmit`, 2346). The burner's ray carries T_b = 1173.15 K, FDS's `RADTMP` (`read.f90` 10092 and 10118), the temperature 13.19 fixed for (b)'s absorptivities.
+    - In clear cells soot takes 1 − e^{−κ_s ℓ} of e, as now.
+    - In the first gas cell that is not clear, at T with composition x, the ray is split among the nine bands. For the burner's ray a stamped flame cell does not count: item 14 keeps it clear to that ray. A surface's ray: w_j = [a_j(T, T_b) T_b⁴ − a_j(T, T_a) T_a⁴] / (T_b⁴ − T_a⁴), since a surface's emission is net of the ambient's (953). The burner's ray: w_j = a_j(T, 1173.15 K). A negative w_j is set to 0, the rest are scaled to keep the sum, and it is counted (`stats.radShareNegative`).
+    - Why at the first such cell and not at the surface, as FDS and 13.19's point 8 do. The split says which part of the black spectrum the gas can absorb. A surface that faces clean air has no gas to say it; 13.19 had to take a ratio of 0 for it. The first gas the ray meets says it for that gas, and in a uniform room it is the same split.
+    - The surfaces' emission, their floors, their caps and their rays' geometry stay as items 10 and 11 make them. A surface still takes all of each ray that reaches it.
+
+17. **Absorption along a ray.** A band ray carries nine energies. In each gas cell it crosses for a length ℓ, band j loses e_j (1 − e^{−(κ_j + κ_s) ℓ}) with that cell's κ_j, and the cell takes the sum. No ray skips a cell: a gas cell's ray starts beyond its own cell (point 15).
+    - With the item on, no ray of the radiation stage is stopped by `rayReach` (1135). It marches until it enters a solid or porous cell, leaves the grid, or carries less than 10⁻⁹ of its start (at most n_x + n_y + n_z crossings), as item 10's rays do (13.25, point 8). What is left at the cut goes into the last cell.
+    - Deposits wait until every cell has emitted, as now (1049 to 1080).
+
+18. **The burner, and the radiant fraction counted once.** Item 14 (16.14; made behind `flameRadiantOnce`, 16.21) silences a flame's cells and clears them to the burner's rays. The second attempt takes it and does not repeat 13.19's point 9.
+    - With `gasRadiation` 1 and a burner whose χ_r > 0, `flameRadiantOnce` must be 1. The solver refuses to start otherwise, and says why.
+    - A stamped cell then emits in no band, and what it would have emitted in all nine goes to `stats.flameSilenced`.
+    - The burner's rays are black rays (point 16), from where the base casts them (item 12's flame cells with `burnerFlameRays`, the axis cell without).
+    - A burner with χ_r = 0 (the app's design fire) is not touched: its flame cells emit by their own gas and soot, under the cap.
+
+19. **Energy.** All that a cell, a surface or the burner emits ends in a cell, a wall's end or beyond the grid. Tallies, in J, only with the item on: `stats.radiatedOut` (item 10's, shared); `stats.radFloor`, what gas cells between T_a and T_a + 10 K would have emitted, computed as 4 Σ_j (κ_j + κ_s) σ B_j V dt without rays; `stats.radCapped`, `stats.radNegative` and `stats.radShareNegative`, as above; `stats.gasRays` and `stats.gasCrossings`. `stats.radiated` counts what leaves each cell, which for a gas cell is now net of its own absorption.
+
+20. **On the CPU only.**
+    - `DEFAULTS`: `gasRadiation` 0, `gasEmitRise` 10, `gasRays` 8.
+    - The tables are passed to `createSolver` as an option. The run layer fetches the file only when the switch is on. With it off, no byte of the tables is loaded.
+    - `radiation` (896): with the switch on, the gas branch (968 to 980) and the ray loop (995 to 1047) follow points 14 to 16. A cell's κ_j and C̃_k are computed when the stage first needs them in a step and kept for that step.
+    - `marchBands`, beside `march` (1115): nine energies, or one black energy with its T_b, the split, no reach limit, the outflow counted. `march` itself stays byte for byte and serves the item off.
+    - `burnerStep` (3600), on the base that holds items 12 and 14: its rays go through `marchBands` as black rays.
+    - `supported` (`flamescapesGpu.js` 1089) gains one condition: with `gasRadiation` 1 the scene runs on the CPU. Item 14 set the precedent (16.14, point 7). The kernels are not touched. A port to the GPU is another item, drafted after this one has passed.
+
+#### 3. The switch
+
+21. `gasRadiation`: 0 (default), every path as now, bit for bit; 1, the method above. It acts only with `surfaceRayStart` 1 (13.24: the surfaces come before the gas), and with a radiating burner only with `flameRadiantOnce` 1 (point 18). The solver refuses any other combination. With 0, `radiation` and `burnerStep` each test the flag once a call, `supported` tests it once, and the tables are neither fetched nor allocated. `RUN_CACHE_VERSION` (now 13) rises only with a default (13.26, decision 14), and a cached run's key carries the switch.
+
+22. `surfaceEmitFloor` (item 11) is not required. 13.19's decision 7 still holds without it: a wall between ambient and 500 K takes the gas's radiation and returns none, and the layer's loss to it is overstated (by 1.18 for gas at 600 K and a wall at 400 K). The checks run (h) both ways (below). Which switches a rerun carries is the coordinator's decision.
+
+#### 4. The checks
+
+The tool is `tools/gas-radiation-check.mjs`, rewritten on the second attempt's branch from the first attempt's. It builds each scene, sets temperatures and compositions, and calls the radiation stage alone (`radiationStage`, 1093) for 200 steps of 0.05 s with `seed` 1, setting every temperature back after each step, as 13.19 fixed. All walls are black and lumped unless stated. `surfaceRayStart` is 1 throughout. No measured datum enters any check.
+
+The letters are 13.19's. A check that is unchanged says so. No tolerance of 13.19 moves.
+
+**(a) Tables and functions.** Rewritten, because the first attempt's (a) compared constants this method does not have.
+1. The repository's table file equals the two source files of point 11, value for value after rounding to float32, in the stated order, and the source files have the stated SHA-256.
+2. The solver's F, its inversion, κ_j and a_j equal the tool's own transcription, written apart from the solver's code, within 10⁻⁵ relative (or 10⁻¹² absolute), at T ∈ {293.15, 300, 345, 400, 600, 900, 1200, 1800, 2400} K, T_b ∈ {T, 293.15, 1173.15} K, and x ∈ {(0, 0), (0.0004, 0.012), (0.0133, 0.0167), (0.0103, 0.0197), (0.0667, 0.0833), (0.0517, 0.0983), (0.05, 0.10), (0.12, 0), (0, 0.2), (0.095, 0.19)}. Reason: it catches a transcription fault; two bisections to 10⁻⁶ in ln C can differ by that.
+3. At each of those states: Σ_j a_j = 1 within 10⁻¹²; every a_j ≥ −10⁻¹²; κ_j ≥ 0 and does not fall as j rises; with x = (0, 0) every κ_j is 0 and a_0 is 1.
+4. The 17 levels equal point 12's within 5 × 10⁻⁷.
+5. A table lookup at each of 1000 table points drawn with a fixed seed returns the stored value exactly.
+
+**(b) Emissivity and absorptivity against RadCal.** Unchanged in its 72 cases, its 72 reference values (13.23's file, as it stands) and its tolerance: every case within 25 % of RadCal's value or 0.01, whichever is larger. Only the solver's side is the new method's: Σ_j a_j(T, T_b) (1 − e^{−κ_j L}) from the solver's own functions, with T_b = T for the 48 emissivities and T_b = 1173.15 K for the 24 absorptivities. The tool writes the solver's 72 values to a file before it opens the reference file, as the first attempt did.
+
+**(c) Gray transport in a cube.** Unchanged: 13.19 (c), soot only, 2 %. With the item on and no CO2 or H2O the stage must give the exact gray cube. It now tests point 15's faces.
+
+**(d) Band transport in a cube.** 13.19 (d)'s scenes and its 2 %: x_c = 0.05, x_w = 0.10, no soot, 600 K and 1000 K, cubes of 1.2 m and 3.0 m, 0.2 m and 0.3 m cells. The reference is the same closed form with this method's bands: Σ_j 4 κ_j σ B_j V P(κ_j L), P the cube's escape fraction as 13.19 (c) computes it.
+
+**(e) A soot-free layer heats a surface it does not touch.** 13.19 (e)'s box, layer, three cell sizes, lumped and one-dimensional walls, and its 3 %. The reference is Σ_j σ B_j ∫_A ∫ (1 − e^{−κ_j ℓ}) (cos θ / π) dΩ dA with this method's bands. With the item off the floor takes nothing.
+
+**(f) Energy.** As 13.19 (f), on the CPU: in (c), (d), (e), (h) and (l), and in the two burner runs (the 100 kW burner of 13.19 (f), methane and the class A fuel at χ_r = 0.2, 120 s, the flow on, `flameRadiantOnce` 1), in every step what was emitted (gas, surfaces, burner) equals what the gas, the solids and the walls' ends took plus `radiatedOut`, within 10⁻⁹ of the emission.
+
+**(g) The radiant fraction counted once.** In both burner runs, in every step: a stamped cell emits in no band and takes nothing of the burner's rays, and the burner's rays carry χ_r of the heat burnt within 10⁻¹² relative. `stats.flameSilenced` is reported.
+
+**(h) An isothermal box stays isothermal,** on item 10's geometry (13.26, decision 17). 13.19 (h)'s 3.0 m cube, its gas with soot Y_s = 10⁻³, and its 2 %.
+1. Gas and black walls at 600 K: over 200 steps the gas's net radiative gain is within 2 % of its emission, on 0.2 m and 0.3 m cells.
+2. The same at 400 K with `surfaceEmitFloor` 1, since a wall at 400 K emits only with item 11. Added because item 11 now exists; its tolerance is (h)'s.
+3. Reported, not judged: 2 with `surfaceEmitFloor` 0, where the walls return nothing. It measures 13.19's decision 7.
+
+**(i) Off is off.** With `gasRadiation` 0: the fingerprints are d62b581d and 29793d1a; the unit suite passes as on the base; `tools/flamescapes-gpu-check.mjs` agrees with the base bit for bit in every phase the base repeats (13.32's rule for fields that differ between two runs of the base); and the tables' loader is never called (the tool counts its calls over a run with the switch off).
+
+**(j) The unit suite passes unbent with the item on** (the defaults of `gasRadiation`, `surfaceRayStart` and `flameRadiantOnce` set to 1 for the run). A test that fails is not edited. Only a test whose reference is the gas's present emission rule itself may be rewritten, disclosed as written after a failure (13.21's decision 9).
+
+**(k) The ledger, redesigned.**
+
+**Why 13.12's rule 1 allows it.** The first design took an off run, with its own history, as the reference for the on run's remainder. Point 9 shows that reference moving by 0.3 to 0.8 % of the heat released under a change of the walls' convection alone, against an allowance of 1 %. The redesign is disclosed as written after a failure. Its tolerances come from float64 sums and from the round-off the stage counts, not from the first attempt's numbers.
+
+1. **The stage through the ledger's own terms (judged).** In both burner runs, over every call of the radiation stage and every cast of the burner's rays, the tool reads the stored fields before and after: the gas's heat, Σ ρ c_p V T at each cell's own c_p; the solids' heat, at the capacity the march divides by; the one-dimensional walls' nodes; and `radiatedOut` with the burner's outflow. Their sum changes by no more than 10⁻⁹ of the emission beyond the float32 round-off of the writes. With the item on the stage counts that round-off for every write it makes, the burner's deposits included, as item 11 counts it (`stats.radRoundoff`, 13.26, point 5). Reason: this is what (k) meant to catch, heat that has gone where the ledger cannot see, tested where the item acts and with no second run for a reference.
+2. **The ledger carries the new term (judged).** The suite's ledger records `radiatedOut` and the item's tallies beside `radiated`, and with `gasRadiation` 0 it records what the base records, field for field.
+3. **Reported, not judged:** the first design as 13.19 fixed it, both burner runs on and off at the ledger's times, beside point 9's figures for the base.
+
+**(l) A black ray is split by the gas it meets.** New, because point 16 is new. (e)'s box on 0.2 m and 0.27 m cells. The layer holds x_c = 0.05 and x_w = 0.10 at ambient temperature, so it emits nothing. The floor is black at 900 K, and in a second case at 1173.15 K; the other walls are at ambient. Read: what the layer's gas takes. Reference: Σ_j σ [a_j(T_a, T_s) T_s⁴ − a_j(T_a, T_a) T_a⁴] ∫_A ∫ (1 − e^{−κ_j ℓ}) (cos θ / π) dΩ dA over the floor, ℓ the chord through the layer as the grid holds it, by (e)'s quadrature. Passes within 3 %. Reason: (e)'s, the same geometry read the other way. With the first attempt's form this would read the floor's own weights; here the cold gas's.
+
+**(m) The number of rays changes no mean.** (d)'s 3.0 m cube at 600 K with `gasRays` 2, 8 and 32: the power into the walls agrees between them within 4 standard deviations of the ray counts, computed by the tool from the rays' own spread. It is outside what ends the line, as 13.26's (k) was: if it fails, `gasRays` is held at 8 and that is reported.
+
+**Reported, not judged.**
+- The 48 values of (b) at 400 K and 600 K beside this draft's line-by-line values (the coordinator has them with this draft).
+- The sum over eight gray gases beside the tables' own limit at (b)'s 72 conditions (point 12: 0.983 to 1.036 in the scratch transcription).
+- The thin limit, Σ_j a_j κ_j, beside the line-by-line Planck mean at 400 K and 600 K.
+- `radFloor`, `radCapped`, `radNegative`, `radShareNegative`, `surfaceFloor`, and the mean crossings a ray, in every case.
+
+**Speed (14.6), reported.** The radiation stage alone in (d) and (e), ms a step, on and off. `tools/backend-bench.mjs` on Duplex, Office and Clinic with the switch off against the base (the GPU path must not change), and on the CPU with it on. The largest example in the browser with the switch off: the same path as the base, and no table fetched ((i)). With the switch on the app's scenes run on the CPU; that cost is reported, with the number of emitting gas cells.
+
+#### 5. Default
+
+Off. Passing its checks makes the switch available to the harness and to the solver's options, and changes no default of the app (13.26, decision 14). Made after 13.B, it gets its own full rerun on the base the coordinator names, reported beside that base (13.12, rule 5). A default changes only after that rerun, the app's text rewritten from it, a port to the GPU, and the user's agreement with the step costs before them.
+
+#### 6. What ends this line
+
+23. If any judged check, (a) to (l), fails in any case, the second attempt fails. It is reported with its numbers and commit (13.12, rule 3). No tolerance moves and nothing is fitted. (m) is outside this, as stated.
+24. 13.25's decision 13 applies to the checks whose reference the method meets exactly, in expectation or within the stated bound: (a), (c), (d), (e), (f), (g), (h), (i) and (l). A failure there is a fault of the code against the method. Corrected code, run again in full, is the same attempt, reported with both commits. A change to the method ends the attempt.
+25. (b) is not of that kind. Its reference is RadCal, and the method's side is fixed by the tables and by point 12. A failure of (b) alone says that the published tables, carried by eight gray gases, depart from this build of RadCal by more than a quarter somewhere in the 72. The number of gray gases, the reference state and the tables are not changed after (b) has been read.
+26. A failure that stands ends item 8 before the papers. The gas stays transparent but for its soot, a declared limit of every verdict, as 13.23 leaves it. No third attempt is drafted.
+
+#### 7. The paper
+
+27. The paper discloses both attempts: the first method and its failure on (b), (h) and (k); this diagnosis, with the two causes and the line-by-line figures that separate them; the second method; and both results. It states that FDS's `WSGG_MODEL` carries a fit made for mixtures without nitrogen, with the size found here (1.14 to 1.33 at 400 K to 600 K), as a finding about the fit's use, not about FDS's default. It states that (b)'s reference is one build of RadCal that did not reproduce its guide's printed example to the digit (13.23), and gives the line-by-line values beside it. It states that the method runs on the CPU only.
+
+#### Declared limits
+
+- **One atmosphere.** The tables are taken at 1 atm. A sealed room's pressure rise is ignored, as 13.19's point 1 ignored it.
+- **CO2 and H2O only.** CO, fuel vapour and the pyrolysate do not radiate.
+- **Below 300 K the tables are held at 300 K.** Ambient is 293.15 K by default.
+- **Eight gray gases.** Away from (b)'s conditions the sum over eight departs further from the tables' limit. In the scratch transcription, over 360 wider cases (300 K to 2000 K, 0.1 m to 10 m, pure and mixed gases, hotter and colder sources), it is within about 20 % for pure CO2 and within 25 % for the worst case, a column of products at 2000 K and 10 m, where the clear gas of this choice is not clear.
+- **The split at the first gas** (point 16) is this draft's reading of the rank correlated method for a surface that faces clean air. In a uniform room it is the method's own. Where a ray crosses a thin plume and then a layer of another composition, the plume sets the split.
+- **The burner's rays are black at 1173.15 K.** A methane flame radiates in the gas's own bands, which cold gas absorbs more strongly than black radiation.
+- **No reflection, absorptivity 1, the 500 K floor of porous cells and of surfaces without item 11:** as 13.25 and 13.26 declare them.
+- **The CPU only.** With the switch on, the app's scenes leave the GPU.
+- **Noise.** Eight rays a gas cell and step, each cell and step drawn anew.
+
+#### Not verified
+
+- The 2014 paper and the papers of the method (Denison and Webb 1993; Solovjov et al. 2017; Pearson et al. 2014) were not read. The method is taken from RadLib's source, which implements it and cites them, and from the 2020 paper's account of the 2014 fit.
+- Stated from memory, not from a source opened for this draft: that the tables rest on HITEMP 2010; that Denison and Webb's correlations start at 400 K; that Smith et al. give absorptivity weights in both temperatures from 600 K; Hottel's rule; and the radiance that leaves a uniform volume (point 15), which is also what 13.19 (c)'s reciprocity formula uses.
+- Whether the tables may be redistributed in this repository. RadLib ships them under its MIT licence and says they were "taken from" the authors' site. The coordinator decides, and may ask the authors.
+- The line-by-line calculation was checked only against the tables (above) and by its own cut-off test. It was not compared with a published benchmark.
+- The method's 72 values were not compared with RadCal's.
+- The cost of the stage with the item on. Nothing was run.
+- Whether item 14's stamp and item 12's rays combine with `marchBands` as point 18 writes it; the burner branch was read only for its switches.
+- Why the base's remainder is 9 to 11 % of the heat released in (k)'s room, and why it moves as point 9 shows. Point 9 measures it and does not explain it.
+- Whether the first attempt's excess in (k) was only the base's response. Its branch was not run.
+
+#### Sources (read, or run for this draft)
+
+- This repository at 42c1867: `flamescapes.js` 78 to 100, 171, 227 to 255, 325 to 336, 445, 505 to 512, 574 to 592, 824 to 1190 (`radiation`, `march`), 3600 to 3642 (`burnerStep`), 3663 to 3691 (the stages); `flamescapesGpu.js` 1089 to 1094; `runCache.js` 54. The branch `flamescapes/gas-radiation` at 29ef017: `tools/gas-radiation-check.mjs` 91 to 144, 366 to 396 and 811 to 903. The branch `flamescapes/burner-rays` at 385dbec: the lines of `flamescapes.js` that name `burnerFlameRays` and `flameRadiantOnce`.
+- Bordbar, Fraga and Hostikka (2020). An extended weighted-sum-of-gray-gases model to account for all CO2-H2O molar fraction ratios in thermal radiation. International Communications in Heat and Mass Transfer 110, 104400. doi:10.1016/j.icheatmasstransfer.2019.104400. Resolves on Crossref. Read: the accepted manuscript in Aalto University's repository (sections 1 and 2, Tables 1 to 3).
+- Bordbar, Węcel and Hyppänen (2014). doi:10.1016/j.combustflame.2014.03.013. Resolves on Crossref. Not read.
+- Pearson, Webb, Solovjov and Ma (2014). Efficient representation of the absorption line blackbody distribution function for H2O, CO2, and CO at variable temperature, mole fraction, and pressure. Journal of Quantitative Spectroscopy and Radiative Transfer 138, 82 to 96. doi:10.1016/j.jqsrt.2014.01.019. Resolves on Crossref. Metadata only; its tables read as RadLib ships them.
+- Solovjov, André, Lemonnier and Webb (2017). The rank correlated SLW model of gas radiation in non-uniform media. Journal of Quantitative Spectroscopy and Radiative Transfer 197, 26 to 44. doi:10.1016/j.jqsrt.2017.01.034. Resolves on Crossref. Metadata only.
+- Solovjov and Webb (2000). SLW modeling of radiative transfer in multicomponent gas mixtures. Journal of Quantitative Spectroscopy and Radiative Transfer 65, 655 to 672. doi:10.1016/S0022-4073(99)00133-8. Resolves on Crossref. Metadata only.
+- Denison and Webb (1993). A spectral line-based weighted-sum-of-gray-gases model for arbitrary RTE solvers. Journal of Heat Transfer 115, 1004 to 1012. doi:10.1115/1.2911354. Resolves on Crossref. Metadata only.
+- Stephens, Jensen, Wheeler and Lignell (2022). RadLib: a radiative property model library for CFD. Computer Physics Communications 272, 108227. doi:10.1016/j.cpc.2021.108227. Resolves on Crossref. Read: github.com/BYUignite/radlib at commit 583e0fe63ee60dbf750ee0fca868728f50bcbaf6, `src/c++/rad_rcslw.cc`, `data/rcslw_data/README.md`, `LICENSE`, and the two table files, SHA-256 5bd9c9ecdd3449f5c145a9e6bf07a181486752cec22920ef1928e9422a17508b (`co2_p1_0.txt`) and b3dd6c860866d36c443719c3cadb2c1c1e2b83c3198040ee9d3b0847a2972e53 (`h2o_p1_0.txt`).
+- Gordon et al. (2022). The HITRAN2020 molecular spectroscopic database. Journal of Quantitative Spectroscopy and Radiative Transfer 277, 107949. doi:10.1016/j.jqsrt.2021.107949. Resolves on Crossref. Its lines and partition sums fetched from hitran.org on 2026-11-16.
+- Cassol, Brittes, França and Ezekoye (2014). Application of the weighted-sum-of-gray-gases model for media composed of arbitrary concentrations of H2O, CO2 and soot. International Journal of Heat and Mass Transfer 79, 796 to 806. doi:10.1016/j.ijheatmasstransfer.2014.08.032. Resolves on Crossref. Metadata only; considered, not used.
+- Smith, Shen and Friedman (1982). doi:10.1115/1.3245174. Resolves on Crossref. Metadata only; considered, not used.
+- Grosshandler (1993). NIST Technical Note 1402. doi:10.6028/NIST.TN.1402. Resolves on Crossref. Not read for this draft; RadCal was not built or run.
+- Howell, Mengüç, Daun and Siegel (2020). Thermal Radiation Heat Transfer, 7th edition. doi:10.1201/9780429327308. Modest (2013). Radiative Heat Transfer, 3rd edition. doi:10.1016/C2010-0-65874-3. Both resolve on Crossref. Cited from memory for the radiance leaving a uniform volume; not opened.
+- Hottel and Sarofim (1967). Radiative Transfer. McGraw-Hill. No DOI. Cited from memory; considered, not used.
+- FDS 6.11.1, commit ff928db: as 13.19 read it. Not fetched again.
+- Run for this draft, outside the repository: the line-by-line calculation at (b)'s 24 conditions at 400 K and 600 K, and at 24 conditions without nitrogen; the tables' sums at (b)'s 72 conditions and at 360 wider ones; 13.19 (k)'s room on the base solver at 42c1867, methane and class A, six variants each, 120 s, on the CPU beside other work on the same machine.
+
+
+### 16.44 The coordinator's decisions on 16.43 (2026-11-16, before any code of item 8's second attempt)
+
+The user gave their word for a second attempt at item 8 on 2026-11-16 (16.42). The draft is the agent's. Each decision takes the draft's choice or the stricter reading.
+
+**Checked by the coordinator,** apart from the agent:
+- **Point 9's figures.** The drafter's script was run again on the base solver at 42c1867. Class A at 120 s: the remainder is 1.287, 1.225, 1.253 and 1.279 MJ at the four convection coefficients, and 1.259 MJ with no radiation stage. Methane at 120 s: 1.099, 1.080, 1.065 and 1.091 MJ. These are the draft's.
+- **The base.** `flamescapes/burner-rays` at 385dbec holds main's be32e34, and with it items 10, 11, 12 and 14 behind their switches.
+- **Not checked:** the line-by-line calculation, the tables' sums and the draft's 72 values. The coordinator has not set the draft's 72 values beside RadCal's, and does not before the build's tool does.
+
+1. **The method, as drafted:** the rank correlated spectral line weighted sum of gray gases, eight gray gases and a clear one, from the published tables, on the CPU only.
+2. **(b) stays as 13.19 fixed it:** the same 72 cases, the same 72 RadCal values, 25 % or 0.01. The draft says a failure at 400 K in a thin column cannot be excluded, because this build of RadCal may sit below line by line. That risk is taken. If (b) fails, the attempt fails and is reported with the line-by-line values beside it. No reference is added or changed after (b) is read.
+3. **(k), as the draft rewrites it** (13.12, rule 1). Point 9 stands on the coordinator's rerun: with nothing of item 8 in the solver, the first design's reference moves by 0.3 to 0.8 % of the heat released, against its allowance of 1 %. The first design runs again and is reported. Added: before any judged run, the builder traces the base's remainder by stage in (k)'s room and reports it.
+4. **(a) rewritten, the faces' start (point 15) and the split at the first gas (point 16), as drafted.** (a)'s old content was another model's constants. (c), (d) and (l) judge the other two.
+5. **The base** is `flamescapes/burner-rays` at 385dbec. The branch is `flamescapes/gas-radiation-2`.
+6. **CPU only, as drafted.** With the switch on the app's scenes leave the GPU, and that is a declared limit. No default is proposed before a port to the GPU and the user's word.
+7. **The tables are not committed.** RadLib ships them under its MIT licence and says they were taken from the authors' site, so whether they may be redistributed here is not settled. The conversion script is committed. It reads the two files from a folder outside the repository and checks their SHA-256 against 16.43's. The built file stays outside the repository until the user decides, after asking the authors if need be. Without the file the switch refuses to start, and says why.
+8. **The burner's rays are black at 1173.15 K, as drafted,** a declared limit.
+9. **Eight gray gases and eight rays, as drafted.** The cost is reported. Fewer gray gases would be a change of method.
+10. **Item 11 in the rerun** is fixed in the rerun's own section, before any run of it (as 13.33). (h) runs both ways, as drafted.
+11. **Stated from memory in the draft:** the claims its "Not verified" lists are checked against their sources before any paper states them. The papers of the method were not read; the user is asked for them.
+12. **What ends this line, as drafted.** No third attempt is drafted.
+13. **The build** follows this section's commit. Its GPU parts, (i)'s GPU check among them, wait for the shared GPU lock.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
