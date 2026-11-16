@@ -77,8 +77,14 @@
  *     (tools/flamescapes-fingerprint.mjs, run here) are d62b581d and
  *     29793d1a; the tables' reader is never called over runs with the switch
  *     off; and with --base DIR (a src/core folder of the base), runs with
- *     the switch off give the base's state bit for bit. The unit suite and
- *     the GPU check are run apart.
+ *     the switch off give the base's state bit for bit. The unit suite is
+ *     run apart. The GPU check (--only ig, with --gpu-base a.json,b.json,...
+ *     and --gpu-branch c.json, each a tools/flamescapes-gpu-check.mjs --json
+ *     report: two or more of the base, one of this branch with the switch
+ *     off): every leaf of the branch's report equals every base run's bit
+ *     for bit, but the timings (set apart) and the leaves of a GPU run that
+ *     differs between two runs of the base (plan 13.32's rule, by run as
+ *     16.37 records it), which are reported beside the base's range.
  * (k) The ledger.
  *   1. In both burner runs, over every call of the radiation stage and every
  *      cast of the burner's rays, the stored fields before and after: the
@@ -1255,6 +1261,91 @@ async function checkI() {
   report.checks.i = { ...out, pass: verdicts.i };
 }
 
+// ------------------------------------------------------------- (i): the GPU check's reports
+
+/** Leaves of a JSON value: path -> value. */
+function leaves(x, p = "", out = new Map()) {
+  if (x && typeof x === "object") {
+    if (Array.isArray(x)) x.forEach((v, q) => leaves(v, `${p}[${q}]`, out));
+    else for (const [k, v] of Object.entries(x)) leaves(v, p ? `${p}.${k}` : k, out);
+  } else out.set(p, x);
+  return out;
+}
+/** A timing leaf of the GPU check (plan 16.18's set): wall times, anything under an `ms` object, and every leaf of a `timing` list. */
+const TIMING = /(^|\.)(compileMs|ms|cpuMs|gpuMs|encodeMsPerStep|gpuGridOnlyMs)$|(^|\.)ms\.|(^|\.)timing(\[|\.|$)/;
+/**
+ * The GPU runScene result a leaf belongs to (plan 16.27, decision 4, as
+ * 16.37 records the rule built: a run of one phase), or null for a leaf of
+ * no GPU run: the CPU side of every phase, and every leaf of the
+ * deterministic phases, which are judged bit for bit. The runScene phases'
+ * GPU runs: each sprinklers and design run's `gpu`, each systems run's,
+ * embers' and the worker's `gpu`, the ensemble's GPU members together, and
+ * phase full's GPU run, which holds every leaf of that phase that is not the
+ * CPU's or the scene's size.
+ */
+function gpuRunOf(k) {
+  const m = k.match(/^((?:sprinklers|design)\[\d+\]|systems\.runs\[\d+\]|embers|worker|ensemble\.runs)\.gpu(?:\.|\[|$)/);
+  if (m) return `${m[1]}.gpu`;
+  if (/^full\./.test(k) && !/(^|\.)cpu(\.|\[|$)|Cpu$/.test(k) && !/^full\.(cells|nodes|frames|horizon|detectors\.count)$/.test(k)) return "full.gpu";
+  return null;
+}
+
+/**
+ * (i), the GPU check's reports, leaf by leaf, by the rule item 17's tool
+ * built (plan 16.37, "Departures"; tools/porous-exchange-check.mjs on its
+ * branch): a GPU run any of whose leaves differ between two runs of the base
+ * is set apart, its leaves reported beside the base's range; every other
+ * leaf, timings apart, is judged bit for bit against every base run.
+ */
+function checkIGpu() {
+  console.log("\n(i) off is off: tools/flamescapes-gpu-check.mjs, this branch with the switch off against the base");
+  const baseFiles = (flag("--gpu-base", "") || "").split(",").filter(Boolean), branchFile = flag("--gpu-branch", null);
+  if (baseFiles.length < 2 || !branchFile) {
+    console.log("  not run: --gpu-base a.json,b.json (two or more runs of the base) and --gpu-branch c.json are needed");
+    return;
+  }
+  const bases = baseFiles.map((f) => leaves(JSON.parse(readFileSync(f, "utf8"))));
+  const branch = leaves(JSON.parse(readFileSync(branchFile, "utf8")));
+  const timing = (k) => TIMING.test(k);
+  const keys = new Set([...bases.flatMap((b) => [...b.keys()]), ...branch.keys()]);
+  // The GPU runs that vary: a run any of whose leaves differ between two base runs.
+  const nondet = new Set();
+  let timings = 0;
+  for (const k of keys) {
+    if (timing(k)) {
+      timings += 1;
+      continue;
+    }
+    const run = gpuRunOf(k);
+    if (!run) continue;
+    const vals = bases.map((b) => b.get(k));
+    if (vals.some((v) => !Object.is(v, vals[0]))) nondet.add(run);
+  }
+  const judged = [], differ = [], baseOwnElse = [], reportedRuns = new Map();
+  for (const k of keys) {
+    if (timing(k)) continue;
+    const run = gpuRunOf(k);
+    const vals = bases.map((b) => b.get(k));
+    const v = branch.get(k);
+    if (run && nondet.has(run)) {
+      const nums = vals.filter((x) => typeof x === "number");
+      const r = reportedRuns.get(run) || { leaves: 0, outside: [] };
+      r.leaves += 1;
+      if (typeof v === "number" && nums.length === vals.length && (v < Math.min(...nums) || v > Math.max(...nums))) r.outside.push(`${k}: ${v} against ${Math.min(...nums)} to ${Math.max(...nums)}`);
+      else if (typeof v !== "number" && !vals.some((x) => Object.is(x, v))) r.outside.push(`${k}: ${JSON.stringify(v)} against ${JSON.stringify([...new Set(vals)])}`);
+      reportedRuns.set(run, r);
+      continue;
+    }
+    judged.push(k);
+    if (vals.some((x) => !Object.is(x, vals[0]))) baseOwnElse.push(k);
+    if (!vals.every((x) => Object.is(x, v))) differ.push(`${k}: branch ${JSON.stringify(v)}, base ${JSON.stringify(vals)}`);
+  }
+  verdict("i", differ.length === 0 && judged.length > 0, `tools/flamescapes-gpu-check.mjs, gasRadiation 0: of ${keys.size} leaves, ${timings} timings set apart; ${judged.length} judged bit for bit against the base's ${bases.length} runs (every leaf of the deterministic phases and the CPU side of every phase), ${differ.length} differ${differ.length ? `: ${differ.slice(0, 8).join("; ")}` : ""}`);
+  if (baseOwnElse.length) reported(`${baseOwnElse.length} judged leaves differ between the base's own runs: ${baseOwnElse.slice(0, 8).join(", ")}`);
+  for (const [run, r] of reportedRuns) reported(`the GPU run ${run} varies between the ${bases.length} base runs: its ${r.leaves} leaves reported, not judged; the branch's outside the base's range in ${r.outside.length}${r.outside.length ? `: ${r.outside.slice(0, 4).join("; ")}` : ""}`);
+  report.checks.iGpu = { base: baseFiles, branch: branchFile, leaves: keys.size, timings, judged: judged.length, differ, nondet: [...nondet], baseOwnElse, reported: Object.fromEntries(reportedRuns) };
+}
+
 // ------------------------------------------------------------- (k) 2: the suite's ledger
 
 function checkK2() {
@@ -1325,6 +1416,7 @@ if (ONLY.has("l")) checkL();
 if (ONLY.has("m")) checkM();
 if (ONLY.has("burners")) checkBurners();
 if (ONLY.has("i")) await checkI();
+if (ONLY.has("ig")) checkIGpu();
 if (ONLY.has("k2")) checkK2();
 if (ONLY.has("speed")) checkSpeed();
 if (STEPS !== 200) console.log(`\nnote: ${STEPS} steps, not the plan's 200`);
