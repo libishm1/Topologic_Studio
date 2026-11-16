@@ -8042,6 +8042,8 @@ The user gave their word for a second attempt at item 8 on 2026-11-16 (16.42). T
 12. **What ends this line, as drafted.** No third attempt is drafted.
 13. **The build** follows this section's commit. Its GPU parts, (i)'s GPU check among them, wait for the shared GPU lock.
 
+**Added 2026-11-16, after this section's commit (186448c), before any judged run: the user's decision on decision 7.** The user decided that the tables are kept in the repository and credited. So the built table file is committed with the conversion script, beside a notice that holds: the tables' source, Pearson, Webb, Solovjov and Ma (2014), doi:10.1016/j.jqsrt.2014.01.019; RadLib (Stephens, Jensen, Wheeler and Lignell 2022, doi:10.1016/j.cpc.2021.108227) at commit 583e0fe, with its MIT licence text and copyright line in full; and the two files' SHA-256. The app and the paper credit both. The file is still fetched only with the switch on.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
