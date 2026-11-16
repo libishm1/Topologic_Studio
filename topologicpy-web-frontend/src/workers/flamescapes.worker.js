@@ -32,6 +32,7 @@
  */
 import { DEFAULTS } from "../core/flamescapes.js";
 import { buildScene, runScene } from "../core/flamescapesRun.js";
+import { fetchGasTables } from "../core/gasRadiation.js";
 import { runSummary } from "../core/forecast.js";
 import { chooseBackend, standardCells } from "../lib/hardware.js";
 import { TESTED_GRID_CELL } from "../core/calibrationStatus.js";
@@ -189,7 +190,9 @@ self.onmessage = async (event) => {
       particles: payload.particles ?? 2500,
       smoke: payload.smoke ?? true,
       // The solver asked for (core/solverVersions.js): none for the validated one.
-      solverOptions: payload.solverOptions || {},
+      // With gasRadiation (calibration plan 16.43, item 8; 16.44, decision 7) the gas radiation tables are
+      // fetched here, from payload.gasTablesUrl, and only then; the app ships none, and the run then says so.
+      solverOptions: payload.solverOptions?.gasRadiation > 0 ? { ...payload.solverOptions, gasTables: await fetchGasTables(payload.gasTablesUrl) } : payload.solverOptions || {},
       // Sprinklers (src/core/suppression.js): heads, mode and reading; none when off.
       sprinklers: payload.sprinklers ?? null,
       // Rooms flooded with clean agent or blanketed with foam (src/core/suppressionSystems.js); none when off.

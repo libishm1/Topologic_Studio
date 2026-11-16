@@ -82,11 +82,19 @@
  *     them without loss (burnerMarch), so the flame's radiant output is
  *     chi_r Q. Before, a sooty flame also emitted by its soot (plan 16.12,
  *     finding 1).
+ *   - With gasRadiation (plan 16.43 item 8, second attempt; off by default;
+ *     CPU only), the gas's CO2 and H2O emit and absorb beside its soot, by
+ *     the rank correlated spectral line weighted sum of gray gases from
+ *     published tables (gasRadiation.js): eight gray gases and a clear one
+ *     along every ray (radiationBands, marchBands, burnerBands). It needs
+ *     surfaceRayStart, with a radiating burner flameRadiantOnce, and the
+ *     tables, which are not in this repository (createSolver's gasTables).
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
 import { T_BOIL, TERMINAL_SPEED, VAPOUR_CP, WATER_CP, WATER_TEMPERATURE, evansFactor } from "./suppression.js";
 import { STATE } from "./suppressionSystems.js";
+import { GAS_BANDS, gasCellBands, gasWeights } from "./gasRadiation.js";
 
 export const R_GAS = 8.314462618; // J / (mol K)
 export const SIGMA = 5.670374419e-8; // W / (m^2 K^4)
@@ -293,6 +301,26 @@ export const DEFAULTS = Object.freeze({
   // radiant fraction 0 (the app's design fire) is unchanged; CPU only. Off
   // until its checks pass and the user agrees (plan 16.14, Default; 16.15).
   flameRadiantOnce: 0,
+  // The gas's CO2 and H2O radiate (calibration plan 16.43, item 8, second
+  // attempt; 16.44; radiationBands, marchBands, burnerBands; gasRadiation.js):
+  // the rank correlated spectral line weighted sum of gray gases from the
+  // tables of Pearson et al. (2014) at 1 atm, eight gray gases and a clear
+  // one, soot added to each. A gas cell warmer than ambient + gasEmitRise
+  // that holds CO2, H2O or soot casts gasRays rays from uniform points of its
+  // faces by the cosine law, each carrying in every band the cell's emission
+  // through that point net of the cell's own absorption; a surface's or the
+  // burner's ray is black at its source's temperature (the burner's at
+  // 1173.15 K) until the first gas cell that holds CO2 or H2O shares it among
+  // the bands; every ray runs until it meets a surface or leaves the grid.
+  // It acts only with surfaceRayStart 1, with a radiating burner only with
+  // flameRadiantOnce 1, and with the tables passed to createSolver as
+  // gasTables (gasRadiation.js gasTablesFrom): the solver refuses to start
+  // otherwise. 0 leaves every path as before, and no table is read. CPU
+  // only: with 1 a scene leaves the GPU (flamescapesGpu.js supported). Off
+  // until its checks pass and the user agrees (plan 16.43, Default).
+  gasRadiation: 0,
+  gasEmitRise: 10, // K above ambient: cooler gas casts no rays, a numerical cut fixed from no data (plan 13.19, point 5)
+  gasRays: 8, // per emitting gas cell and step, with gasRadiation
   // Solid fuel: the paper's Table 3 (biomass) and Table 4 (wood).
   pyrolysisA: 4.78e4, // 1 / s
   pyrolysisE: 9.22e4, // J / mol
@@ -413,8 +441,10 @@ export function stoichiometry(fuel) {
  * fuels: the contents' fuel and the ignition item's (fireClasses.js shape:
  *        heatOfCombustion, yields {co2, co, soot}, embers, ignitionTemperature)
  */
-export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel, ...options } = {}) {
+export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel, gasTables = null, ...options } = {}) {
   const P = { ...DEFAULTS, ...options };
+  // Item 8 (plan 16.43, points 18 and 21; 16.44, decision 7): the one test of the flag here.
+  if (P.gasRadiation > 0) gasRadiationNeeds(P, scene, gasTables);
   const { grid, fraction } = scene;
   const { nx, ny, nz, h } = grid;
   const N = nx * ny * nz;
@@ -538,6 +568,8 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // A prescribed heat release (createBurner); null in every app run.
     burner: scene.burner ? createBurner(scene.burner, kind, grid) : null,
     ducts: scene.ducts?.cells?.length ? scene.ducts : null,
+    // The gas radiation tables with their levels (gasRadiation.js gasTablesFrom); null with gasRadiation 0.
+    gasModel: P.gasRadiation > 0 ? gasTables : null,
     // Open sprinklers (suppression.js createSuppression), set by the run;
     // declared here so every solver has one shape for the engine.
     suppression: null,
@@ -551,8 +583,37 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
     // With burnerFlameRays (flameRays): what the burner's rays carried beyond the grid (J), and its rays and the cells they crossed.
     // With flameRadiantOnce (J): what the flame's cells would have emitted by Eq. 17 (radiation), what their soot would have taken
     // of the burner's rays (burnerMarch), and what the burner's rays carried beyond the grid.
-    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0, ...(P.surfaceRayStart > 0 ? { radiatedOut: 0, surfaceRays: 0, surfaceCrossings: 0 } : {}), ...(P.surfaceRayStart > 0 && P.surfaceEmitFloor > 0 ? { surfaceFloor: 0, surfaceCapped: 0, radRoundoff: { own: 0, deposits: 0 } } : {}), ...(P.burnerFlameRays > 0 ? { burnerRadiatedOut: 0, burnerRays: 0, burnerCrossings: 0 } : {}), ...(P.flameRadiantOnce > 0 ? { flameSilenced: 0, flameCleared: 0, burnerRadiatedOut: 0 } : {}) },
+    stats: { hrr: 0, burnt: 0, embersSpawned: 0, spotIgnitions: 0, maxT: P.ambient, released: 0, radiated: 0, pilotHeat: 0, shellHeat: 0, massFloor: 0, courantClamped: 0, sootReleased: 0, sootDeposited: 0, sootLeft: 0, leakMass: 0, leakEnthalpy: 0, leaksIgnored: Array.isArray(P.leakage) ? P.leakage.filter((e) => !e.ventXb && !(e.toZone === undefined || e.toZone === 0 || e.toZone === "AMBIENT")).length : 0, ...(P.surfaceRayStart > 0 ? { radiatedOut: 0, surfaceRays: 0, surfaceCrossings: 0 } : {}), ...(P.surfaceRayStart > 0 && P.surfaceEmitFloor > 0 ? { surfaceFloor: 0, surfaceCapped: 0, radRoundoff: { own: 0, deposits: 0 } } : {}), ...(P.burnerFlameRays > 0 ? { burnerRadiatedOut: 0, burnerRays: 0, burnerCrossings: 0 } : {}), ...(P.flameRadiantOnce > 0 ? { flameSilenced: 0, flameCleared: 0, burnerRadiatedOut: 0 } : {}), ...(P.gasRadiation > 0 ? gasRadiationStats() : {}) },
   };
+}
+
+/**
+ * What gasRadiation 1 needs to start (calibration plan 16.43, points 18 and
+ * 21; 16.44, decision 7): surfaceRayStart, with a burner that has a radiant
+ * fraction flameRadiantOnce, and the tables. Throws, saying which is missing.
+ */
+function gasRadiationNeeds(P, scene, gasTables) {
+  if (!(P.surfaceRayStart > 0)) throw new Error("gasRadiation acts only with surfaceRayStart 1: the surfaces' rays come before the gas's (calibration plan 16.43, point 21).");
+  if (scene.burner && (scene.burner.radiantFraction ?? 0.2) > 0 && !(P.flameRadiantOnce > 0)) throw new Error("gasRadiation with a burner that has a radiant fraction needs flameRadiantOnce 1, so that the flame radiates it once (calibration plan 16.43, point 18).");
+  if (!(gasTables && gasTables.co2 && gasTables.h2o && gasTables.levels && gasTables.bandLevels)) throw new Error("gasRadiation needs the gas radiation tables, which are not in this repository (calibration plan 16.44, decision 7): build the file with tools/gas-radiation-tables.mjs, read it with gasRadiation.js gasTablesFrom, and pass the result to createSolver as gasTables.");
+}
+
+/**
+ * The tallies of gasRadiation 1 (calibration plan 16.43, point 19), in J but
+ * the counts: what gas cells between ambient and ambient + gasEmitRise would
+ * have emitted, as 4 (kappa_j + kappa_s) sigma B_j V dt over the bands
+ * (radFloor); what the cap held back from gas cells (radCapped); bands whose
+ * source the tables' interpolation made negative, in the same form
+ * (radNegative); the part of a black ray that fell to bands of negative
+ * share (radShareNegative); the gas cells' rays, the cells they crossed and
+ * the gas cells that cast them (gasRays, gasCrossings, gasEmitters). With
+ * them the surfaces' tallies of item 11, whatever surfaceEmitFloor is
+ * (surfaceFloor, surfaceCapped), item 14's (flameSilenced, burnerRadiatedOut)
+ * and the float32 round-off of the writes: the emitting surfaces' own, the
+ * radiation stage's deposits and the burner's deposits (radRoundoff).
+ */
+function gasRadiationStats() {
+  return { radFloor: 0, radCapped: 0, radNegative: 0, radShareNegative: 0, gasRays: 0, gasCrossings: 0, gasEmitters: 0, surfaceFloor: 0, surfaceCapped: 0, flameSilenced: 0, burnerRadiatedOut: 0, radRoundoff: { own: 0, deposits: 0, burner: 0 } };
 }
 
 // ---------------------------------------------------------------- indexing
@@ -855,7 +916,7 @@ export function skinMass(sim, c) {
 }
 
 /** Heat capacity of a cell's solid: inert part, the fuel's surface layer and its water (J / K). */
-function solidCapacity(sim, c) {
+export function solidCapacity(sim, c) {
   return sim.inertC[c] + skinMass(sim, c) * fuelCp(sim, c) + sim.moisture[c] * 4186;
 }
 
@@ -944,6 +1005,8 @@ function lumpedFloor(sim, c, dt) {
  * absorbed in it as before.
  */
 function radiation(sim, dt) {
+  // Item 8 (plan 16.43): with gasRadiation the stage is radiationBands; the one flag a call.
+  if (sim.P.gasRadiation > 0) return radiationBands(sim, dt);
   const { P, grid: g } = sim;
   const h = g.h;
   const A = h * h;
@@ -1243,6 +1306,679 @@ function march(sim, x, y, z, dir, energy, from, skipOwn, dep = null, start = nul
     else solidTs[c] += left / Math.max(solidCapacity(sim, c), 1e-6);
   }
   return n;
+}
+
+// ------------------------------------------- the gas's radiation in bands (item 8, second attempt)
+
+/** FDS's RADTMP (read.f90), K: the black temperature of the burner's rays (calibration plan 16.43, point 16). */
+export const BURNER_BLACK_TEMPERATURE = 1173.15;
+/** Below this sum of the mole fractions of CO2 and H2O a cell is clear: it has no gray gas (plan 16.43, point 10). */
+export const GAS_CLEAR_BELOW = 1e-6;
+const N_BANDS = GAS_BANDS + 1;
+
+/**
+ * Item 8's working state on the solver, made once: each gas cell's gray
+ * gases, kept for one call of the radiation stage or one cast of the
+ * burner's rays (`epoch`): its mole fractions of CO2 and H2O, whether it is
+ * clear, kappa_j (1/m) for j = 1 to 8 and the levels' cross-sections Ct_k
+ * (m2/mol) for k = 0 to 7.
+ */
+function bandWork(sim) {
+  let B = sim.bands;
+  if (!B) {
+    const N = sim.N;
+    const rays = Math.max(1, Math.round(sim.P.gasRays));
+    B = sim.bands = {
+      model: sim.gasModel,
+      epoch: 0,
+      stamp: new Int32Array(N),
+      clear: new Uint8Array(N),
+      xc: new Float64Array(N),
+      xw: new Float64Array(N),
+      kappa: new Float64Array(N * GAS_BANDS),
+      Ct: new Float64Array(N * GAS_BANDS),
+      C: new Float64Array(GAS_BANDS),
+      a: new Float64Array(N_BANDS),
+      a0: new Float64Array(N_BANDS),
+      src: new Float64Array(N_BANDS),
+      e: new Float64Array(N_BANDS),
+      rays,
+      rayE: new Float64Array(rays * N_BANDS),
+      rayDir: new Float64Array(rays * 3),
+      rayU: new Float64Array(rays * 2),
+      rayFace: new Uint8Array(rays),
+      cell: [0, 0, 0],
+      frac: [0, 0, 0],
+      dir: [0, 0, 0],
+      // Added to by a march that shared a black ray among bands of negative share (J).
+      shareNegative: 0,
+    };
+  }
+  return B;
+}
+
+/**
+ * Cell c's gray gases for this call (calibration plan 16.43, points 10 and
+ * 12), worked the first time the call needs them: the mole fractions as the
+ * equation of state takes them (gasDensity), the molar density N = P_AMBIENT
+ * / (R_GAS T), and kappa_j = N C_j. A cell with x_CO2 + x_H2O below 1e-6 is
+ * clear: every kappa_j is 0.
+ */
+function bandCell(sim, B, c) {
+  if (B.stamp[c] === B.epoch) return;
+  B.stamp[c] = B.epoch;
+  const Y = sim.Y, o = c * NS;
+  let inv = 0, rest = 1;
+  for (let s = 0; s < NS; s += 1) {
+    const y = Y[o + s];
+    inv += y / MOLAR[s];
+    rest -= y;
+  }
+  inv += Math.max(0, rest) / MOLAR_N2;
+  const xc = Y[o + SPECIES.CO2] / MOLAR[SPECIES.CO2] / inv, xw = Y[o + SPECIES.H2O] / MOLAR[SPECIES.H2O] / inv;
+  B.xc[c] = xc;
+  B.xw[c] = xw;
+  const q = c * GAS_BANDS;
+  if (xc + xw < GAS_CLEAR_BELOW) {
+    B.clear[c] = 1;
+    for (let j = 0; j < GAS_BANDS; j += 1) {
+      B.kappa[q + j] = 0;
+      B.Ct[q + j] = 0;
+    }
+    return;
+  }
+  B.clear[c] = 0;
+  const T = sim.T[c];
+  gasCellBands(B.model, T, xc, xw, B.C, 0, B.Ct, q);
+  const molar = P_AMBIENT / (R_GAS * T);
+  for (let j = 0; j < GAS_BANDS; j += 1) B.kappa[q + j] = molar * B.C[j];
+}
+
+/**
+ * Into B.src, for gas cell c at T (its gray gases worked, bandCell): sigma
+ * B_j, W/m2, with B_j = a_j(T, T) T^4 - a_j(T, T_a) T_a^4 (calibration plan
+ * 16.43, point 14), for the clear gas j = 0 and the gray gases 1 to 8. A
+ * clear cell has the clear gas alone, with weight 1. A B_j the tables'
+ * interpolation makes negative is set to 0. Returns 4 sum_j (kappa_j +
+ * kappa_s) sigma |B_j| over the bands set to 0, W/m3.
+ */
+function bandSource(sim, B, c, T, ks) {
+  const Ta = sim.P.ambient, T4 = T ** 4, Ta4 = Ta ** 4;
+  const src = B.src;
+  if (B.clear[c]) {
+    src.fill(0);
+    src[0] = SIGMA * (T4 - Ta4);
+    return 0;
+  }
+  const q = c * GAS_BANDS, xc = B.xc[c], xw = B.xw[c];
+  gasWeights(B.model, B.Ct, q, T, T, xc, xw, B.a);
+  gasWeights(B.model, B.Ct, q, T, Ta, xc, xw, B.a0);
+  let negative = 0;
+  for (let j = 0; j < N_BANDS; j += 1) {
+    const b = SIGMA * (B.a[j] * T4 - B.a0[j] * Ta4);
+    if (b < 0) {
+      negative += 4 * ((j ? B.kappa[q + j - 1] : 0) + ks) * -b;
+      src[j] = 0;
+    } else src[j] = b;
+  }
+  return negative;
+}
+
+/** Item 8's deposits of one call, J, float64, zeroed: the gas, the solids, the one-dimensional walls' ends, and beyond the grid. */
+function bandDeposits(sim, name) {
+  const W = sim.wall;
+  return {
+    gas: workArray(sim, `${name}Gas`, sim.N, Float64Array).fill(0),
+    solid: workArray(sim, `${name}Solid`, sim.N, Float64Array).fill(0),
+    lo: W ? workArray(sim, `${name}WallLo`, W.cells.length, Float64Array).fill(0) : null,
+    hi: W ? workArray(sim, `${name}WallHi`, W.cells.length, Float64Array).fill(0) : null,
+    out: workArray(sim, `${name}Out`, 1, Float64Array).fill(0),
+  };
+}
+
+/** A solid or porous cell `next`, entered along axis a in the sense `sign`, takes J whole: a one-dimensional wall reached along its normal on the face crossed (march's rule). */
+function bandTake(sim, dep, next, a, sign, J) {
+  const w = sim.wall ? sim.wall.index[next] : -1;
+  if (w >= 0 && a === (sim.wall.meta[w] & 3)) (sign > 0 ? dep.lo : dep.hi)[w] += J;
+  else dep.solid[next] += J;
+}
+
+/**
+ * Adds one call's deposits to the state (calibration plan 16.43, point 17:
+ * once every ray is cast), the gas cells' own loss `own` (J a cell, or null)
+ * taken in the same write. Returns the float32 round-off of its writes, J,
+ * as item 11 counts it (plan 13.26, point 5): (stored - meant) times the
+ * capacity divided by, worked here as (stored - before) x capacity - J, the
+ * same quantity without the cancellation in `meant` (the difference of two
+ * float32 temperatures is exact in float64); a wall's ends as wallEnd counts
+ * them.
+ */
+function bandApply(sim, dep, own) {
+  const W = sim.wall;
+  let round = 0;
+  for (let c = 0; c < sim.N; c += 1) {
+    const net = dep.gas[c] - (own ? own[c] : 0);
+    if (net) {
+      const Cg = sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V;
+      const before = sim.T[c];
+      sim.T[c] = before + net / Cg;
+      round += (sim.T[c] - before) * Cg - net;
+    }
+    if (dep.solid[c]) {
+      const Cs = Math.max(solidCapacity(sim, c), 1e-6);
+      const before = sim.Ts[c];
+      sim.Ts[c] = before + dep.solid[c] / Cs;
+      round += (sim.Ts[c] - before) * Cs - dep.solid[c];
+    }
+  }
+  if (W) {
+    for (let q = 0; q < W.cells.length; q += 1) {
+      const c = W.cells[q];
+      if (dep.lo[q]) round += wallEnd(sim, q, c, 0, dep.lo[q] / Math.max(solidCapacity(sim, c), 1e-6), true);
+      if (dep.hi[q]) round += wallEnd(sim, q, c, 1, dep.hi[q] / Math.max(solidCapacity(sim, c), 1e-6), true);
+    }
+  }
+  return round;
+}
+
+/**
+ * The radiation stage with gasRadiation 1 (calibration plan 16.43, points 13
+ * to 19). Surfaces emit as radiation has them with surfaceRayStart (and with
+ * surfaceEmitFloor when it is on), their rays black at the surface's
+ * temperature: a lumped or porous cell's T_s, a one-dimensional wall's face
+ * temperature, each read before the emission is taken from it.
+ *
+ * A gas cell emits when T > ambient + gasEmitRise and it holds CO2, H2O or
+ * soot. Each of its gasRays rays starts at a uniform point of one of its six
+ * faces, drawn uniformly, in a direction drawn by the cosine law about the
+ * face's outward normal, and carries in band j
+ *   e_j = (6 h^2 sigma B_j dt / gasRays) (1 - exp(-(kappa_j + kappa_s) l)),
+ * l the chord of the cell from the point back along the ray. The draws, per
+ * ray and in order: the face, the point's two fractions (along the face's two
+ * axes in the order i, j, k), then the direction's two, from the cell's
+ * stream of the step with salt 4. The cell loses what its rays carry, never
+ * more than half its heat above ambient (every ray scaled alike, the rest
+ * counted). A ray enters the march in the neighbour beyond its face, as a
+ * surface's does; beyond the grid it is counted as leaving, and a solid or
+ * porous neighbour takes it whole. A cell in which the burner burnt this
+ * step (item 14's stamp) casts nothing: what its rays would have carried is
+ * counted (stats.flameSilenced).
+ *
+ * No temperature of the gas changes until every ray is cast: each gas cell's
+ * loss and deposits are then taken in one write. The step's tallies stay in
+ * the solver's work arrays for the checks, J: bandEmit (the gas's and the
+ * surfaces' emission), bandCellEmit (each gas cell's loss), bandGas,
+ * bandSolid, bandWallLo, bandWallHi and bandOut (the deposits). With
+ * sim.probe set (the checks), it is called before the stage and after it.
+ */
+function radiationBands(sim, dt) {
+  const { P, grid: g } = sim;
+  const h = g.h;
+  const A = h * h;
+  const Ta = P.ambient, Ta4 = Ta ** 4;
+  if (sim.probe) sim.probe("radiation", 0);
+  const B = bandWork(sim);
+  B.epoch += 1;
+  B.shareNegative = 0;
+  const flame = P.flameRadiantOnce > 0 ? flameOfStep(sim) : null;
+  const W = sim.wall;
+  const n1 = W ? W.n : 0;
+  const theta = surfaceFloorOf(P);
+  const tally = { floor: 0, capped: 0, own: 0, deposits: 0, hot: false };
+  const warmRays = warmRaysOf(P) ?? P.rays;
+  const dep = bandDeposits(sim, "band");
+  const cellEmit = workArray(sim, "bandCellEmit", sim.N, Float64Array).fill(0);
+  const totals = workArray(sim, "bandEmit", 2, Float64Array).fill(0);
+  const faceE = [0, 0, 0, 0, 0, 0];
+  const dir = B.dir, cell = B.cell, frac = B.frac;
+  const reach = g.nx + g.ny + g.nz;
+  let stream = 0;
+  const draw = () => {
+    stream = pcgHash(stream);
+    return (stream >>> 8) / 16777216;
+  };
+  let faceStream = 0;
+  const drawOnFace = () => {
+    faceStream = pcgHash(faceStream);
+    return (faceStream >>> 8) / 16777216;
+  };
+  const gasRays = B.rays;
+  const riseFloor = Ta + P.gasEmitRise;
+  let silenced = 0, floorJ = 0, cappedJ = 0, negativeJ = 0, rayCount = 0, crossings = 0, emitters = 0;
+  for (let c = 0; c < sim.N; c += 1) {
+    const kc = sim.kind[c];
+    const w = W ? W.index[c] : -1;
+    if (kc === GAS && w < 0) {
+      // ---- a gas cell (points 14 and 15)
+      const T = sim.T[c];
+      if (!(T > Ta)) continue;
+      const ks = P.sootAbsorption * sim.Y[c * NS + SPECIES.SOOT];
+      bandCell(sim, B, c);
+      if (B.clear[c] && !(ks > 0)) continue;
+      const negative = bandSource(sim, B, c, T, ks);
+      const src = B.src;
+      const q = c * GAS_BANDS;
+      if (!(T > riseFloor)) {
+        // Below the floor: what it would have emitted, cast nothing.
+        let e = 0;
+        for (let j = 0; j < N_BANDS; j += 1) e += ((j ? B.kappa[q + j - 1] : 0) + ks) * src[j];
+        floorJ += 4 * e * sim.V * dt;
+        continue;
+      }
+      negativeJ += negative * sim.V * dt;
+      stream = cellStream(c, sim.steps, 4, P.seed);
+      const each = (6 * A * dt) / gasRays;
+      let loss = 0;
+      for (let r = 0; r < gasRays; r += 1) {
+        const f = Math.min(Math.floor(draw() * 6), 5);
+        const u1 = draw(), u2 = draw();
+        const v1 = draw(), v2 = draw();
+        const n = DIRS[f];
+        const a = f >> 1, t1 = a === 0 ? 1 : 0, t2 = a === 2 ? 1 : 2;
+        // The cosine law about the outward normal.
+        const s = Math.sqrt(v1), phi = 2 * Math.PI * v2;
+        const dn = Math.sqrt(1 - v1), d1 = s * Math.cos(phi), d2 = s * Math.sin(phi);
+        // The chord of the cell from the point back along the ray, in cells.
+        let l = 1 / dn;
+        if (d1 > 0) l = Math.min(l, u1 / d1);
+        else if (d1 < 0) l = Math.min(l, (1 - u1) / -d1);
+        if (d2 > 0) l = Math.min(l, u2 / d2);
+        else if (d2 < 0) l = Math.min(l, (1 - u2) / -d2);
+        l *= h;
+        for (let j = 0; j < N_BANDS; j += 1) {
+          const k = (j ? B.kappa[q + j - 1] : 0) + ks;
+          const e = k > 0 && src[j] > 0 ? each * src[j] * -Math.expm1(-k * l) : 0;
+          B.rayE[r * N_BANDS + j] = e;
+          loss += e;
+        }
+        B.rayFace[r] = f;
+        B.rayU[r * 2] = u1;
+        B.rayU[r * 2 + 1] = u2;
+        B.rayDir[r * 3 + a] = n[a] * dn;
+        B.rayDir[r * 3 + t1] = d1;
+        B.rayDir[r * 3 + t2] = d2;
+      }
+      if (!(loss > 0)) continue;
+      // Never lose more than half the heat above ambient in one step.
+      const Cg = sim.rho[c] * mixtureCp(sim.Y, c * NS) * sim.V;
+      const cap = 0.5 * Cg * (T - Ta);
+      const stamped = flame !== null && flame.stamp[c] === flame.mark;
+      let scale = 1;
+      if (loss > cap) {
+        scale = cap / loss;
+        if (!stamped) cappedJ += loss - cap;
+        loss = cap;
+      }
+      if (stamped) {
+        // Item 14: the burner burnt here this step and has cast its radiant fraction; this cell casts nothing.
+        silenced += loss;
+        continue;
+      }
+      emitters += 1;
+      const i = c % g.nx, j0 = Math.floor(c / g.nx) % g.ny, k0 = Math.floor(c / (g.nx * g.ny));
+      let lost = 0;
+      for (let r = 0; r < gasRays; r += 1) {
+        let total = 0;
+        for (let j = 0; j < N_BANDS; j += 1) {
+          const e = B.rayE[r * N_BANDS + j] * scale;
+          B.e[j] = e;
+          total += e;
+        }
+        if (!(total > 0)) continue;
+        lost += total;
+        rayCount += 1;
+        const f = B.rayFace[r], n = DIRS[f], a = f >> 1;
+        const ii = i + n[0], jj = j0 + n[1], kk = k0 + n[2];
+        if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz) {
+          // A face on the grid's side: the ray leaves the grid at once.
+          dep.out[0] += total;
+          continue;
+        }
+        const next = at(g, ii, jj, kk);
+        if (sim.kind[next] !== GAS) {
+          bandTake(sim, dep, next, a, n[a], total);
+          continue;
+        }
+        cell[0] = ii;
+        cell[1] = jj;
+        cell[2] = kk;
+        frac[a] = n[a] > 0 ? 0 : 1;
+        frac[a === 0 ? 1 : 0] = B.rayU[r * 2];
+        frac[a === 2 ? 1 : 2] = B.rayU[r * 2 + 1];
+        dir[0] = B.rayDir[r * 3];
+        dir[1] = B.rayDir[r * 3 + 1];
+        dir[2] = B.rayDir[r * 3 + 2];
+        crossings += marchBands(sim, B, cell, frac, dir, B.e, 0, 0, 0, dep, -1, null, reach);
+      }
+      cellEmit[c] = lost;
+      totals[0] += lost;
+      sim.stats.radiated += lost;
+      continue;
+    }
+    // ---- a surface, as radiation has it with surfaceRayStart; its rays black
+    let emitted = 0;
+    let rays = P.rays;
+    let Tlo = 0, Thi = 0;
+    const Tcell = sim.Ts[c];
+    if (w >= 0) {
+      Tlo = W.T[w * n1];
+      Thi = W.T[w * n1 + n1 - 1];
+      emitted = wallEmit(sim, w, c, dt, faceE, theta, tally);
+      if (!(emitted > 0)) continue;
+      if (!tally.hot) rays = warmRays;
+    } else if (kc !== GAS && sim.Ts[c] > (kc === SOLID ? theta : P.emitAbove)) {
+      // Eq. 16 over the cell's faces open to gas.
+      const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+      let open = 0;
+      for (const [a, b, d] of DIRS) {
+        const ii = i + a, jj = j + b, kk = k + d;
+        if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz || sim.kind[at(g, ii, jj, kk)] === GAS) open += 1;
+      }
+      if (!open) continue;
+      const surface = kc === POROUS ? Math.max(sim.area[c], A) : A * open;
+      emitted = sim.eps[c] * SIGMA * (sim.Ts[c] ** 4 - Ta4) * surface * dt;
+      // Never emit more than half the heat above ambient in one step.
+      const Cs = solidCapacity(sim, c);
+      const cap = 0.5 * Cs * (sim.Ts[c] - Ta);
+      if (kc === SOLID && emitted > cap) tally.capped += emitted - Math.max(cap, 0);
+      emitted = Math.min(emitted, cap);
+      if (emitted <= 0) continue;
+      if (kc === SOLID && sim.Ts[c] <= P.emitAbove) rays = warmRays;
+      // The write's round-off, as bandApply works it.
+      sim.Ts[c] = Tcell - emitted / Cs;
+      tally.own += (sim.Ts[c] - Tcell) * Cs + emitted;
+    } else {
+      // What a lumped solid between ambient and its floor would have emitted, cast nothing.
+      if (kc === SOLID && sim.Ts[c] > Ta) tally.floor += lumpedFloor(sim, c, dt);
+      continue;
+    }
+    sim.stats.radiated += emitted;
+    totals[1] += emitted;
+    const i = c % g.nx, j = Math.floor(c / g.nx) % g.ny, k = Math.floor(c / (g.nx * g.ny));
+    const share = emitted / rays;
+    const faces = openFaces(sim, i, j, k);
+    stream = cellStream(c, sim.steps, 2, P.seed);
+    const onFace = w >= 0 || kc === SOLID;
+    if (onFace) faceStream = cellStream(c, sim.steps, 3, P.seed);
+    for (let r = 0; r < rays; r += 1) {
+      const zc = 2 * draw() - 1;
+      const phi = 2 * Math.PI * draw();
+      const s = Math.sqrt(1 - zc * zc);
+      dir[0] = s * Math.cos(phi);
+      dir[1] = zc;
+      dir[2] = s * Math.sin(phi);
+      let f = 0;
+      if (w >= 0) {
+        // A one-dimensional wall's face drawn by its share of the emission (its faces differ in temperature).
+        let u = draw() * emitted;
+        for (const d of faces) {
+          if (!(faceE[d] > 0)) continue;
+          f = d;
+          u -= faceE[d];
+          if (u < 0) break;
+        }
+      } else f = faces[Math.min(Math.floor(draw() * faces.length), faces.length - 1)];
+      const n = DIRS[f];
+      for (let d = 0; d < 3; d += 1) dir[d] += n[d];
+      const len = Math.hypot(dir[0], dir[1], dir[2]) || 1;
+      for (let d = 0; d < 3; d += 1) dir[d] /= len;
+      // The ray's black temperature: the face's, before the emission was taken.
+      let Tb = Tcell;
+      if (w >= 0 && f >> 1 === (W.meta[w] & 3)) Tb = f & 1 ? Tlo : Thi;
+      if (!onFace) {
+        // A porous cell's ray, from its centre.
+        cell[0] = i;
+        cell[1] = j;
+        cell[2] = k;
+        frac[0] = 0.5;
+        frac[1] = 0.5;
+        frac[2] = 0.5;
+        marchBands(sim, B, cell, frac, dir, null, share, Tb, 1, dep, -1, null, reach);
+        continue;
+      }
+      // A direction along or behind the face (u = -n to round-off) is its normal.
+      const a = f >> 1;
+      if (dir[a] * n[a] <= 0) for (let d = 0; d < 3; d += 1) dir[d] = n[d];
+      const u1 = drawOnFace(), u2 = drawOnFace();
+      sim.stats.surfaceRays += 1;
+      const ii = i + n[0], jj = j + n[1], kk = k + n[2];
+      if (ii < 0 || jj < 0 || kk < 0 || ii >= g.nx || jj >= g.ny || kk >= g.nz) {
+        // A face on the grid's side: the ray leaves the grid at once.
+        dep.out[0] += share;
+        continue;
+      }
+      cell[0] = ii;
+      cell[1] = jj;
+      cell[2] = kk;
+      frac[a] = n[a] > 0 ? 0 : 1;
+      frac[a === 0 ? 1 : 0] = u1;
+      frac[a === 2 ? 1 : 2] = u2;
+      sim.stats.surfaceCrossings += marchBands(sim, B, cell, frac, dir, null, share, Tb, 1, dep, -1, null, reach);
+    }
+  }
+  tally.deposits += bandApply(sim, dep, cellEmit);
+  const st = sim.stats;
+  st.radiatedOut += dep.out[0];
+  st.flameSilenced += silenced;
+  st.surfaceFloor += tally.floor;
+  st.surfaceCapped += tally.capped;
+  st.radFloor += floorJ;
+  st.radCapped += cappedJ;
+  st.radNegative += negativeJ;
+  st.radShareNegative += B.shareNegative;
+  st.gasRays += rayCount;
+  st.gasCrossings += crossings;
+  st.gasEmitters += emitters;
+  // A new object each stage, so a copy of the stats never shares it.
+  const rr = st.radRoundoff;
+  st.radRoundoff = { own: rr.own + tally.own, deposits: rr.deposits + tally.deposits, burner: rr.burner };
+  if (sim.probe) sim.probe("radiation", 1);
+}
+
+/**
+ * March one ray of item 8 cell by cell (calibration plan 16.43, points 16
+ * and 17), from cell `cell` at the fractions `frac` of it, depositing J into
+ * `dep`. With `e` (nine energies, J) it is a band ray: in each gas cell it
+ * crosses for a length l, band j loses e_j (1 - exp(-(kappa_j + kappa_s) l))
+ * with that cell's kappa_j, and the cell takes the sum. With `e` null it is a
+ * black ray of `black` J at the temperature Tb: in clear cells soot takes 1 -
+ * exp(-kappa_s l) of it, and the first gas cell that is not clear shares it
+ * among the nine bands, by the weights that cell's gas gives to black
+ * radiation at Tb: for a surface's ray (`source` 1), net of the ambient's,
+ *   w_j = [a_j(T, Tb) Tb^4 - a_j(T, Ta) Ta^4] / (Tb^4 - Ta^4);
+ * for the burner's (`source` 2), w_j = a_j(T, Tb). A negative w_j is set to
+ * 0 and the rest scaled to keep the sum; the energy moved is added to
+ * B.shareNegative. From there it is a band ray.
+ *
+ * `from` (a cell or -1) absorbs nothing, and neither does a gas cell stamped
+ * with `rec`'s mark (the burner's flame of the step, clear to the burner's
+ * rays: item 14); such a cell does not share a black ray either. The ray
+ * runs until it enters a solid or porous cell, which takes it whole (a
+ * one-dimensional wall reached along its normal on the face crossed), leaves
+ * the grid (dep.out), or carries less than 1e-9 of its start, when the rest
+ * goes into the cell it has reached; at most `reach` crossings. Returns the
+ * crossings it made.
+ */
+function marchBands(sim, B, cell, frac, dir, e, black, Tb, source, dep, from, rec, reach) {
+  const { P, grid: g } = sim;
+  const h = g.h;
+  const sx = dir[0] > 0 ? 1 : -1, sy = dir[1] > 0 ? 1 : -1, sz = dir[2] > 0 ? 1 : -1;
+  const dx = dir[0] !== 0 ? Math.abs(1 / dir[0]) : Infinity, dy = dir[1] !== 0 ? Math.abs(1 / dir[1]) : Infinity, dz = dir[2] !== 0 ? Math.abs(1 / dir[2]) : Infinity;
+  let tx = dir[0] !== 0 ? (dir[0] > 0 ? 1 - frac[0] : frac[0]) * dx : Infinity;
+  let ty = dir[1] !== 0 ? (dir[1] > 0 ? 1 - frac[1] : frac[1]) * dy : Infinity;
+  let tz = dir[2] !== 0 ? (dir[2] > 0 ? 1 - frac[2] : frac[2]) * dz : Infinity;
+  let i = cell[0], j = cell[1], k = cell[2];
+  let banded = e !== null;
+  let left = black;
+  if (banded) {
+    left = 0;
+    for (let q = 0; q < N_BANDS; q += 1) left += e[q];
+  } else e = B.e;
+  const first = left;
+  let t = 0;
+  let n = 0;
+  for (; n < reach && left > 1e-9 * first; n += 1) {
+    const a = tx < ty ? (tx < tz ? 0 : 2) : ty < tz ? 1 : 2;
+    const tNext = a === 0 ? tx : a === 1 ? ty : tz;
+    const length = (tNext - t) * h;
+    t = tNext;
+    const c = at(g, i, j, k);
+    if (sim.kind[c] === GAS && c !== from && !(rec && rec.stamp[c] === rec.mark)) {
+      const ks = P.sootAbsorption * sim.Y[c * NS + SPECIES.SOOT];
+      bandCell(sim, B, c);
+      if (!banded) {
+        if (B.clear[c]) {
+          // A clear cell: soot alone takes of the black ray.
+          if (ks > 0) {
+            const taken = left * -Math.expm1(-ks * length);
+            dep.gas[c] += taken;
+            left -= taken;
+          }
+        } else {
+          // The first gas the ray meets shares it among the bands (point 16).
+          const T = sim.T[c], qc = c * GAS_BANDS;
+          gasWeights(B.model, B.Ct, qc, T, Tb, B.xc[c], B.xw[c], B.a);
+          let positive = 0, negative = 0;
+          if (source === 1) {
+            const Ta = P.ambient, Tb4 = Tb ** 4, Ta4 = Ta ** 4;
+            gasWeights(B.model, B.Ct, qc, T, Ta, B.xc[c], B.xw[c], B.a0);
+            for (let q = 0; q < N_BANDS; q += 1) B.a[q] = (B.a[q] * Tb4 - B.a0[q] * Ta4) / (Tb4 - Ta4);
+          }
+          for (let q = 0; q < N_BANDS; q += 1) {
+            if (B.a[q] < 0) negative -= B.a[q];
+            else positive += B.a[q];
+          }
+          if (positive > 0) {
+            for (let q = 0; q < N_BANDS; q += 1) e[q] = B.a[q] > 0 ? (left * B.a[q]) / positive : 0;
+          } else {
+            e.fill(0);
+            e[0] = left;
+          }
+          if (negative > 0) B.shareNegative += left * negative;
+          banded = true;
+        }
+      }
+      if (banded) {
+        const qc = c * GAS_BANDS;
+        let rest = 0;
+        for (let q = 0; q < N_BANDS; q += 1) {
+          const kq = (q ? B.kappa[qc + q - 1] : 0) + ks;
+          if (kq > 0 && e[q] > 0) e[q] *= Math.exp(-kq * length);
+          rest += e[q];
+        }
+        // The cell takes what the bands lost: the ray's energy before less their sum now, so none is parted by rounding.
+        dep.gas[c] += left - rest;
+        left = rest;
+      }
+    }
+    if (a === 0) {
+      tx += dx;
+      i += sx;
+    } else if (a === 1) {
+      ty += dy;
+      j += sy;
+    } else {
+      tz += dz;
+      k += sz;
+    }
+    if (i < 0 || j < 0 || k < 0 || i >= g.nx || j >= g.ny || k >= g.nz) {
+      dep.out[0] += left;
+      return n + 1;
+    }
+    const next = at(g, i, j, k);
+    if (sim.kind[next] !== GAS) {
+      bandTake(sim, dep, next, a, a === 0 ? sx : a === 1 ? sy : sz, left);
+      return n + 1;
+    }
+  }
+  // Below the cut-off (or out of reach): what the ray still carries goes into the cell it has reached.
+  if (left > 0) dep.gas[at(g, i, j, k)] += left;
+  return n;
+}
+
+/**
+ * The burner's radiant part with gasRadiation 1 (calibration plan 16.43,
+ * points 16 and 18): its `rays` rays, each of radiant / rays, black at
+ * BURNER_BLACK_TEMPERATURE, through marchBands. They leave from where the
+ * base casts them: with item 12's record `fl`, from uniform points of the
+ * cells that burnt, by flameRays' draws; without it, from the axis cell's
+ * centre along the fixed directions turned each step, absorbed nowhere in the
+ * axis cell. The step's flame (`once`, item 14's stamp) is clear to them, and
+ * rayReach does not stop them. Their deposits wait until all are cast
+ * (burnerBandGas, burnerBandSolid, burnerBandWallLo, burnerBandWallHi and
+ * burnerBandOut in the work arrays, J; burnerBandEmit their sum), and the
+ * round-off of the writes is counted (radRoundoff.burner). With sim.probe
+ * set (the checks), it is called before the cast and after the deposits.
+ * Item 14's flameCleared is not worked with gasRadiation: no shadow ray is cast.
+ */
+function burnerBands(sim, b, fl, once, radiant, rays) {
+  const { P, grid: g } = sim;
+  if (sim.probe) sim.probe("burnerRays", 0);
+  const B = bandWork(sim);
+  B.epoch += 1;
+  B.shareNegative = 0;
+  const dep = bandDeposits(sim, "burnerBand");
+  const share = radiant / rays;
+  const reach = g.nx + g.ny + g.nz;
+  const rec = fl || once;
+  const dir = B.dir, cell = B.cell, frac = B.frac;
+  let crossings = 0, cast = 0;
+  if (fl) {
+    let stream = cellStream(b.axis, sim.steps, 4, P.seed);
+    const draw = () => {
+      stream = pcgHash(stream);
+      return (stream >>> 8) / 16777216;
+    };
+    const none = fl.n === 0;
+    for (let r = 0; r < rays; r += 1) {
+      const u0 = draw();
+      const c = none ? b.axis : fl.cells[burnerFlameCell(fl.sum, fl.n, u0)];
+      const mu = 2 * draw() - 1;
+      const phi = 2 * Math.PI * draw();
+      const s = Math.sqrt(1 - mu * mu);
+      dir[0] = s * Math.cos(phi);
+      dir[1] = mu;
+      dir[2] = s * Math.sin(phi);
+      frac[0] = draw();
+      frac[1] = draw();
+      frac[2] = draw();
+      cell[0] = c % g.nx;
+      cell[1] = Math.floor(c / g.nx) % g.ny;
+      cell[2] = Math.floor(c / (g.nx * g.ny));
+      crossings += marchBands(sim, B, cell, frac, dir, null, share, BURNER_BLACK_TEMPERATURE, 2, dep, -1, rec, reach);
+      cast += share;
+    }
+  } else {
+    b.turn += Math.PI * (3 - Math.sqrt(5));
+    const cos = Math.cos(b.turn), sin = Math.sin(b.turn);
+    const i = Math.floor(b.origin[0]), j = Math.floor(b.origin[1]), k = Math.floor(b.origin[2]);
+    for (let r = 0; r < rays; r += 1) {
+      const x = b.dirs[r * 3], z = b.dirs[r * 3 + 2];
+      dir[0] = cos * x - sin * z;
+      dir[1] = b.dirs[r * 3 + 1];
+      dir[2] = sin * x + cos * z;
+      cell[0] = i;
+      cell[1] = j;
+      cell[2] = k;
+      frac[0] = b.origin[0] - i;
+      frac[1] = b.origin[1] - j;
+      frac[2] = b.origin[2] - k;
+      crossings += marchBands(sim, B, cell, frac, dir, null, share, BURNER_BLACK_TEMPERATURE, 2, dep, b.axis, rec, reach);
+      cast += share;
+    }
+  }
+  workArray(sim, "burnerBandEmit", 1, Float64Array)[0] = cast;
+  const round = bandApply(sim, dep, null);
+  const st = sim.stats;
+  st.burnerRadiatedOut += dep.out[0];
+  st.radShareNegative += B.shareNegative;
+  if (fl) {
+    st.burnerRays = (st.burnerRays || 0) + rays;
+    st.burnerCrossings = (st.burnerCrossings || 0) + crossings;
+  }
+  const rr = st.radRoundoff;
+  st.radRoundoff = { own: rr.own, deposits: rr.deposits, burner: rr.burner + round };
+  if (sim.probe) sim.probe("burnerRays", 1);
 }
 
 // ------------------------------------------------------------- gas phase
@@ -3701,7 +4437,9 @@ export function burnerStep(sim, dt) {
   const rays = b.dirs.length / 3;
   const radiant = burnt - convective;
   if (rays && radiant > 0) {
-    if (fl) flameRays(sim, b, fl, radiant, rays, once ? b.rayFate : null);
+    // Item 8 (plan 16.43, point 18): with gasRadiation the burner's rays are black rays through marchBands; the one flag a call.
+    if (sim.P.gasRadiation > 0) burnerBands(sim, b, fl, once, radiant, rays);
+    else if (fl) flameRays(sim, b, fl, radiant, rays, once ? b.rayFate : null);
     else if (once) axisRaysClear(sim, b, once, radiant, rays);
     else {
       // The directions turn about the vertical by the golden angle each step,
