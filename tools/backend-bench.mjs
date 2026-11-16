@@ -26,8 +26,8 @@
  *        [--members 4] [--horizon 180] [--sets cpu,gpu-same,gpu-app] [--app-cells 120000] [--seed 1] [--out file] [--headed]
  *
  * With --solver gasRadiation=1 (calibration plan 16.43, item 8; add
- * surfaceRayStart=1) the runs need the gas radiation tables' file, which is
- * not in this repository (plan 16.44, decision 7): --gas-tables FILE, or the
+ * surfaceRayStart=1) the runs read the gas radiation tables' file: the
+ * repository's own (public/gas-radiation), or --gas-tables FILE, or the
  * environment variable FLAMESCAPES_GAS_TABLES. The page fetches it from this
  * tool's server, and only then. Such a scene runs on the CPU, so name the
  * cpu set alone.
@@ -67,12 +67,8 @@ const SEED = Number(flag("--seed", 1));
 // Solver options for every run, e.g. the transport before proposal F:
 // --solver conservative=0,expansion=0,vorticity=10,cfl=0,vorticityStep=0
 const SOLVER = Object.fromEntries((flag("--solver", "") || "").split(",").filter(Boolean).map((kv) => kv.split("=")).map(([k, v]) => [k, Number(v)]));
-// The gas radiation tables, read only with gasRadiation on (plan 16.44, decision 7).
-const GAS_TABLES = SOLVER.gasRadiation > 0 ? flag("--gas-tables", process.env.FLAMESCAPES_GAS_TABLES || "") : null;
-if (GAS_TABLES === "") {
-  console.error("--solver gasRadiation=1 needs the gas radiation tables' file: --gas-tables FILE or FLAMESCAPES_GAS_TABLES (tools/gas-radiation-tables.mjs builds it).");
-  process.exit(2);
-}
+// The gas radiation tables, read only with gasRadiation on (plan 16.43, point 20).
+const GAS_TABLES = SOLVER.gasRadiation > 0 ? flag("--gas-tables", process.env.FLAMESCAPES_GAS_TABLES || path.join(FRONTEND, "public/gas-radiation/gas-radiation-tables.f32")) : null;
 const today = new Date().toISOString().slice(0, 10);
 const OUT = flag("--out", path.join(ROOT, `benchmark/results/${today}-backends.json`));
 const EXAMPLES = { duplex: "duplex-apartment.ifc", office: "nibs-office.ifc", clinic: "nibs-clinic.ifc", vienna: "vienna-escape-route-model.ifc" };

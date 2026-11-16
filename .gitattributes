@@ -6,3 +6,6 @@
 topologicpy-web-frontend/public/examples/vienna-escape-route-model.ifc -text
 topologicpy-web-frontend/public/examples/nibs-office.ifc -text
 topologicpy-web-frontend/public/examples/nibs-clinic.ifc -text
+
+# The gas radiation tables: float32 values, kept byte for byte (see the NOTICE.md beside the file).
+topologicpy-web-frontend/public/gas-radiation/gas-radiation-tables.f32 binary

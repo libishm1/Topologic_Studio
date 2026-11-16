@@ -2,9 +2,9 @@
 /**
  * Builds the gas radiation tables' file for physics item 8, second attempt
  * (wiki/research/fire-calibration-plan-2026-11-11.md, 16.43, point 11; 16.44,
- * decision 7; src/core/gasRadiation.js reads it).
+ * decision 7 as the user changed it; src/core/gasRadiation.js reads it).
  *
- *   node tools/gas-radiation-tables.mjs --source DIR --out FILE
+ *   node tools/gas-radiation-tables.mjs --source DIR [--out FILE] [--verify]
  *
  * --source (or the environment variable FLAMESCAPES_RADLIB_DATA) is a folder
  * outside this repository that holds the two text files of the absorption
@@ -18,10 +18,13 @@
  * plan lists; the script stops otherwise.
  *
  * --out (or FLAMESCAPES_GAS_TABLES) is the file to write: the 556 640 values
- * as float32, little-endian, CO2's then H2O's, 2 226 560 bytes. It must lie
- * outside this repository: neither the tables nor the built file are
- * committed, since whether they may be redistributed here is not settled
- * (plan 16.44, decision 7). The script refuses a path inside the repository.
+ * as float32, little-endian, CO2's then H2O's, 2 226 560 bytes. By default
+ * it is the repository's own file,
+ * topologicpy-web-frontend/public/gas-radiation/gas-radiation-tables.f32,
+ * which is committed beside its NOTICE.md (the source, RadLib's MIT licence
+ * and the source files' SHA-256: plan 16.44, the user's decision on decision
+ * 7). The two text files are not committed, and --source must lie outside
+ * the repository.
  *
  * With --verify the file at --out is not written: it is read and compared
  * with the two text files, value for value after rounding to float32.
@@ -69,22 +72,18 @@ if (isMain) {
     return i >= 0 && i + 1 < args.length ? args[i + 1] : fallback;
   };
   const source = flag("--source", process.env.FLAMESCAPES_RADLIB_DATA);
-  const out = flag("--out", process.env.FLAMESCAPES_GAS_TABLES);
-  if (!source || !out) {
-    console.error("usage: node tools/gas-radiation-tables.mjs --source DIR --out FILE [--verify]\n  (or FLAMESCAPES_RADLIB_DATA and FLAMESCAPES_GAS_TABLES)");
+  const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const out = flag("--out", process.env.FLAMESCAPES_GAS_TABLES || path.join(repository, "topologicpy-web-frontend/public/gas-radiation/gas-radiation-tables.f32"));
+  if (!source) {
+    console.error("usage: node tools/gas-radiation-tables.mjs --source DIR [--out FILE] [--verify]\n  (or FLAMESCAPES_RADLIB_DATA and FLAMESCAPES_GAS_TABLES)");
     process.exit(2);
   }
-  const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const inside = (p) => {
     const rel = path.relative(repository, path.resolve(p));
     return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
   };
-  if (inside(out)) {
-    console.error("--out lies inside this repository: the tables are not committed (plan 16.44, decision 7). Give a path outside it.");
-    process.exit(2);
-  }
   if (inside(source)) {
-    console.error("--source lies inside this repository: the tables are not committed (plan 16.44, decision 7). Keep them outside it.");
+    console.error("--source lies inside this repository: RadLib's text files are not committed (plan 16.44, decision 7). Keep them outside it.");
     process.exit(2);
   }
   const tables = SOURCES.map((s) => readSource(source, s));

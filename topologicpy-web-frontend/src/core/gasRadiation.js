@@ -13,11 +13,15 @@
  * (28 each). C: 71 values, 1e-4 x 10^(k/10) m2/mol. Y, the mole fraction of
  * H2O: 0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.
  *
- * They are not in this repository (plan 16.44, decision 7). One file of
- * float32 values, little-endian, holds them: CO2's 55 664 in the order
- * [T_g][T_b][C], then H2O's 500 976 in the order [Y][T_g][T_b][C], the last
- * index fastest. tools/gas-radiation-tables.mjs builds it from the two text
- * files of the RadLib library.
+ * They are kept in this repository and credited (plan 16.44, decision 7 as
+ * the user changed it): public/gas-radiation/gas-radiation-tables.f32, beside
+ * a NOTICE.md that names their source, RadLib (Stephens, Jensen, Wheeler and
+ * Lignell 2022, doi:10.1016/j.cpc.2021.108227; MIT licence), which ships
+ * them, and the source files' SHA-256. One file of float32 values,
+ * little-endian, holds them: CO2's 55 664 in the order [T_g][T_b][C], then
+ * H2O's 500 976 in the order [Y][T_g][T_b][C], the last index fastest.
+ * tools/gas-radiation-tables.mjs builds it from RadLib's two text files. It
+ * is read only with gasRadiation on.
  *
  * Between its points a table is linear in T_g, T_b, Y and C. Outside them it
  * is held at its edge. The mixture is the product of the two species'
@@ -50,6 +54,8 @@ export const GAS_REFERENCE = Object.freeze({ T: 600, xc: 0.095, xw: 0.19, Clow: 
 const LN_LOW = Math.log(1e-7), LN_HIGH = Math.log(1e3), LN_TOLERANCE = 1e-6;
 const PER_LN10 = 10 / Math.LN10;
 
+/** The tables' file, relative to the app's base URL (and to public/ in the repository). */
+export const GAS_TABLES_PATH = "gas-radiation/gas-radiation-tables.f32";
 /** How often the tables' reader has run: the checks count it (plan 16.43, check (i)). */
 export const gasTableLoads = { count: 0 };
 
@@ -85,13 +91,13 @@ export function gasTablesFrom(bytes) {
 
 /**
  * The tables from a URL (the run layer's reader, used only with gasRadiation
- * on). The file is not shipped with the app (plan 16.44, decision 7): without
- * a URL, or if the fetch fails, it throws and says why.
+ * on): the app's own file, GAS_TABLES_PATH under its base URL. Without a URL,
+ * or if the fetch fails, it throws and says why.
  */
 export async function fetchGasTables(url) {
-  if (!url) throw new Error("gasRadiation needs the gas radiation tables, which are not shipped with the app (calibration plan 16.44, decision 7): build the file with tools/gas-radiation-tables.mjs and give its URL.");
+  if (!url) throw new Error("gasRadiation needs the gas radiation tables' URL (the app's file is GAS_TABLES_PATH under its base URL).");
   const response = await fetch(url);
-  if (!response.ok) throw new Error(`gasRadiation: the gas radiation tables could not be fetched (${response.status}).`);
+  if (!response.ok) throw new Error(`gasRadiation: the gas radiation tables could not be fetched from ${url} (${response.status}).`);
   return gasTablesFrom(await response.arrayBuffer());
 }
 

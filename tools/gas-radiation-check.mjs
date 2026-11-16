@@ -16,8 +16,9 @@
  *        [--suite-cells 0.34] [--suite-out DIR]
  *
  * --tables (or the environment variable FLAMESCAPES_GAS_TABLES) is the
- * tables' file that tools/gas-radiation-tables.mjs builds; it is not in this
- * repository (plan 16.44, decision 7). --source (or FLAMESCAPES_RADLIB_DATA)
+ * tables' file that tools/gas-radiation-tables.mjs builds; by default the
+ * repository's own, public/gas-radiation/gas-radiation-tables.f32 (plan
+ * 16.44, the user's decision on decision 7). --source (or FLAMESCAPES_RADLIB_DATA)
  * is the folder of RadLib's two text files, outside this repository, which
  * (a) needs.
  *
@@ -156,7 +157,7 @@ const MOLAR = F.MOLAR;
 const MOLAR_N2 = 0.028;
 const NB = G.GAS_BANDS;
 const RADTMP = 1173.15;
-const TABLES_FILE = flag("--tables", process.env.FLAMESCAPES_GAS_TABLES || null);
+const TABLES_FILE = flag("--tables", process.env.FLAMESCAPES_GAS_TABLES || path.resolve(HERE, "../topologicpy-web-frontend/public/gas-radiation/gas-radiation-tables.f32"));
 const SOURCE_DIR = flag("--source", process.env.FLAMESCAPES_RADLIB_DATA || null);
 const SOURCES = [
   { file: "co2_p1_0.txt", values: 28 * 28 * 71, sha256: "5bd9c9ecdd3449f5c145a9e6bf07a181486752cec22920ef1928e9422a17508b" },

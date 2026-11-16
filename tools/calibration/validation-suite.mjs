@@ -135,8 +135,9 @@
  * --gas-radiation (added 2026-11-16, plan 16.43, physics item 8, second
  * attempt) lets the gas's CO2 and H2O radiate (the solver's gasRadiation: 1,
  * off by default; CPU only). It needs --surface-ray-start and
- * --flame-radiant-once, and the gas radiation tables' file, which is not in
- * this repository (plan 16.44, decision 7): --gas-tables FILE, or the
+ * --flame-radiant-once, and the gas radiation tables' file: the
+ * repository's own (public/gas-radiation/gas-radiation-tables.f32; plan
+ * 16.44, decision 7 as the user changed it), or --gas-tables FILE, or the
  * environment variable FLAMESCAPES_GAS_TABLES (tools/gas-radiation-tables.mjs
  * builds it). The suite stops at its start if any is missing or the solver
  * at --solver-rev has no such item. The ledger then records, beside
@@ -1012,7 +1013,7 @@ async function main() {
   const flameRadiantOnceOn = args.includes("--flame-radiant-once");
   // --gas-radiation (plan 16.43, item 8, second attempt), and the tables' file (plan 16.44, decision 7).
   const gasRadiationOn = args.includes("--gas-radiation");
-  const gasTablesFile = gasRadiationOn ? flag("--gas-tables", process.env.FLAMESCAPES_GAS_TABLES || null) : null;
+  const gasTablesFile = gasRadiationOn ? flag("--gas-tables", process.env.FLAMESCAPES_GAS_TABLES || path.join(ROOT, "topologicpy-web-frontend/public/gas-radiation/gas-radiation-tables.f32")) : null;
   const F = await import(pathToFileURL(path.join(snapshot.core, "flamescapes.js")).href);
   if (gasRadiationOn) {
     const stop = (why) => {
@@ -1021,7 +1022,7 @@ async function main() {
     };
     if (!("gasRadiation" in F.DEFAULTS)) stop(`the solver${rev ? ` at ${rev}` : ""} has no item 8 (plan 16.43)`);
     if (!surfaceRayStartOn || !flameRadiantOnceOn) stop("it needs --surface-ray-start and --flame-radiant-once (plan 16.43, points 18 and 21)");
-    if (!gasTablesFile || !existsSync(gasTablesFile)) stop("it needs the gas radiation tables' file, which is not in this repository: --gas-tables FILE or FLAMESCAPES_GAS_TABLES (tools/gas-radiation-tables.mjs builds it; plan 16.44, decision 7)");
+    if (!gasTablesFile || !existsSync(gasTablesFile)) stop(`the gas radiation tables' file is missing: ${gasTablesFile} (--gas-tables FILE or FLAMESCAPES_GAS_TABLES; tools/gas-radiation-tables.mjs builds it)`);
   }
   if (burnerFlameRaysOn && typeof F.burnerFlameCell !== "function") {
     rmSync(snapshot.dir, { recursive: true, force: true });

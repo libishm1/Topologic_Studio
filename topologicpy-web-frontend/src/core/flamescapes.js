@@ -88,7 +88,8 @@
  *     published tables (gasRadiation.js): eight gray gases and a clear one
  *     along every ray (radiationBands, marchBands, burnerBands). It needs
  *     surfaceRayStart, with a radiating burner flameRadiantOnce, and the
- *     tables, which are not in this repository (createSolver's gasTables).
+ *     tables (public/gas-radiation, with their notice), read only then and
+ *     passed to createSolver as gasTables.
  */
 
 import { MATERIALS, occupancy, rng } from "./voxelize.js";
@@ -443,7 +444,7 @@ export function stoichiometry(fuel) {
  */
 export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel, gasTables = null, ...options } = {}) {
   const P = { ...DEFAULTS, ...options };
-  // Item 8 (plan 16.43, points 18 and 21; 16.44, decision 7): the one test of the flag here.
+  // Item 8 (plan 16.43, points 18, 20 and 21): the one test of the flag here.
   if (P.gasRadiation > 0) gasRadiationNeeds(P, scene, gasTables);
   const { grid, fraction } = scene;
   const { nx, ny, nz, h } = grid;
@@ -588,14 +589,14 @@ export function createSolver(scene, { contentsFuel, ignitionFuel = contentsFuel,
 }
 
 /**
- * What gasRadiation 1 needs to start (calibration plan 16.43, points 18 and
- * 21; 16.44, decision 7): surfaceRayStart, with a burner that has a radiant
+ * What gasRadiation 1 needs to start (calibration plan 16.43, points 18, 20
+ * and 21): surfaceRayStart, with a burner that has a radiant
  * fraction flameRadiantOnce, and the tables. Throws, saying which is missing.
  */
 function gasRadiationNeeds(P, scene, gasTables) {
   if (!(P.surfaceRayStart > 0)) throw new Error("gasRadiation acts only with surfaceRayStart 1: the surfaces' rays come before the gas's (calibration plan 16.43, point 21).");
   if (scene.burner && (scene.burner.radiantFraction ?? 0.2) > 0 && !(P.flameRadiantOnce > 0)) throw new Error("gasRadiation with a burner that has a radiant fraction needs flameRadiantOnce 1, so that the flame radiates it once (calibration plan 16.43, point 18).");
-  if (!(gasTables && gasTables.co2 && gasTables.h2o && gasTables.levels && gasTables.bandLevels)) throw new Error("gasRadiation needs the gas radiation tables, which are not in this repository (calibration plan 16.44, decision 7): build the file with tools/gas-radiation-tables.mjs, read it with gasRadiation.js gasTablesFrom, and pass the result to createSolver as gasTables.");
+  if (!(gasTables && gasTables.co2 && gasTables.h2o && gasTables.levels && gasTables.bandLevels)) throw new Error("gasRadiation needs the gas radiation tables (public/gas-radiation/gas-radiation-tables.f32; calibration plan 16.43, point 20): read the file with gasRadiation.js gasTablesFrom and pass the result to createSolver as gasTables.");
 }
 
 /**
