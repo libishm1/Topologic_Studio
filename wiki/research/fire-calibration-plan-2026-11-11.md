@@ -8068,6 +8068,217 @@ R14 on 0.27 m gives 1.41, 1.42, 1.35 and 1.03. In both reruns the ceiling jet is
 
 **What follows.** Both items stay behind their switches, off by default. R16 runs now, then R0. Item 8's second attempt (16.43) is built on this solver.
 
+
+### 16.46 Item 19: the build's checks (2026-11-16, 00:55; (d)'s GPU runs and (f)'s GPU set added 12:30)
+
+Item 19 was built as 16.31 fixes it, with 16.32's decisions and 16.35's corrections to (c)2 and (c)4. It is on `flamescapes/step-convergence` from 6b28965, in the worktree `TopologicStudio-stepconv`. The bounds were checked against the code before any judged run (16.35). Then the checks ran in the order 16.35 sets: (a) and (b) on the CPU, then (c), then (d) to (g). **Every judged check passes: (a), (b), (c)1 to (c)4, (d) and (e).** (d)'s 8-against-8 GPU runs waited until item 18's builder freed the GPU lock (`gpu-exclusive.lock`). They then ran under the lock, from 2026-11-16T06:06:00Z, with nothing else on the GPU and nothing interleaved, and (f)'s GPU set ran after them; the lock was deleted at 12:12:06Z. (f) and (g) are reported. The machine was shared throughout with the R12 rerun, the study's timber rows and the item 16, 17 and 18 builders. At most three of this build's processes ran at once, but for about a minute (departure 8).
+
+#### Commits
+
+- 2be9a8d: the item, off by default, on the CPU and the GPU.
+- fa88ed6: `tools/porous-rate-check.mjs`, parts (a) and (b).
+- 53e4ab4: (b)'s runs side by side (`--part b-run`, `--part b-judge`), following 16.31's step sequence exactly.
+- 167f875: part (c).
+- c7f748b: `tools/step-convergence-diag.mjs` takes further solver options (`--opts`), for (g)4.
+
+None carries a Claude line or a co-author line. Nothing was pushed. The solver files changed only in 2be9a8d. Every judged run was made on the tool as it stands at 167f875 or earlier, and the part each run used did not change after it ran.
+
+#### (a) Closed forms: pass, 27 judged lines
+
+`tools/porous-rate-check.mjs --part a`, at fa88ed6.
+1. **(a)1** `porousFace`: 3645 cases, none outside 10⁻¹² relative. The largest difference is 0, as the count before the run expected.
+2. **(a)2** free decay in the sealed porous box, at 0.1, 0.05, 0.025 and 0.0125 s, judged at t = 0.5, 1 and 2 s: 12 lines.
+   - The largest |u − u_ref| is 5.8 × 10⁻¹¹ m/s at 0.5 s (0.0125 s), against max|u_ref| = 9.77 × 10⁻⁴ m/s and bounds of 2.3 × 10⁻⁹ to 1.9 × 10⁻⁸ m/s.
+   - At 1 s every step keeps 9.5367 × 10⁻⁷ of the circulation, m²⁰, as the reference does.
+3. **(a)3** constant force from rest: 12 lines.
+   - The largest face reaches 0.72064 m/s at 0.5 s and 0.72135 m/s at 1 and 2 s at every step. F/β₂ is 0.7213 m/s.
+   - The largest |u − u_ref| is 2.3 × 10⁻⁸ to 1.4 × 10⁻⁷ m/s, against bounds of 1.7 × 10⁻⁶ to 5.5 × 10⁻⁵ m/s.
+4. **(a)4** the pilot room at 15 s, one `projectStage` call:
+   - all 40 185 faces beside no porous cell are, bit for bit, u* − k2 Δp;
+   - all 2940 faces beside a porous cell lie within one float32 step of e u0 + φ (u* − u0) − φ k2 Δp, the largest at 0.500 steps.
+   - Reported: the largest |div u − D| is 2.29 × 10⁻² /s after 16 sweeps with the item on, and 2.56 × 10⁻² /s after 23 sweeps with it off.
+5. Reported with the item off: free decay keeps m²⁰ at 1 s only at 0.1 s; at 0.05 s it keeps 9.1 × 10⁻¹³, and at 0.0125 s it falls to 0 in float32. The present rule's steady state under the constant force is 0.333, 0.167, 0.0833 and 0.0417 m/s at 0.1 to 0.0125 s, F Δt/3.
+
+#### (b) The contents' heat release converges as the step falls: pass in all three scenes
+
+`--part b-run` for each run, then `--part b-judge`, at 53e4ab4. Q is in MJ: the contents' heat over the horizon. In brackets, the face-steps that carried more than a cell a step. Item on.
+
+| Scene | 0.1 s | 0.05 s | 0.025 s | 0.0125 s | 0.00625 s | 0.003125 s |
+|---|---|---|---|---|---|---|
+| Next-door fire, 60 s | 87.926 (2379) | 79.099 (1) | 65.333 | 68.814 | 66.690 | |
+| Pilot room, 150 s | 55.727 (56 842) | 68.976 (20 849) | 71.431 (66) | 81.187 | 79.651 | 81.689 |
+| Design-fire room, 200 s | 0.0297 (143 877) | 0.0351 (47 706) | 0.0383 | 0.0412 | 0.0430 | |
+
+- **The steps judged.** In every scene the 0.05 s run, or the 0.1 s run, clamps a face. So 16.31's sequence added 0.00625 s in the next-door fire and the design-fire room, and 0.00625 and 0.003125 s in the pilot room. The judged steps are 0.025, 0.0125 and 0.00625 s; 0.0125, 0.00625 and 0.003125 s; and 0.025, 0.0125 and 0.00625 s.
+- **The seeds at the finest judged step:**
+  - next-door, seeds 1, 2 and 3: 66.690, 66.239 and 67.747 MJ, so δ = 1.508 MJ;
+  - pilot: 81.689, 83.461 and 78.326 MJ, so δ = 5.135 MJ;
+  - design: 0.0430, 0.0428 and 0.0432 MJ, so δ = 0.0004 MJ.
+- **Pass 1, |Q_b − Q_c| ≤ max(0.10 Q_c, δ):**
+  - next-door 2.124 against max(6.669, 1.508) MJ;
+  - pilot 2.038 against max(8.169, 5.135) MJ;
+  - design 0.0018 against max(0.0043, 0.0004) MJ.
+- **Pass 2, |Q_b − Q_c| ≤ |Q_a − Q_b| + δ:**
+  - next-door 2.124 against 4.989 MJ;
+  - pilot 2.038 against 6.672 MJ;
+  - design 0.0018 against 0.0033 MJ.
+- **Reported:**
+  - observed order 0.713, Richardson's value 63.37 MJ and grid convergence index 6.2 % in the next-door fire;
+  - observed order −0.407 in the pilot room, whose last two changes lie within the seeds' spread, so no Richardson value applies;
+  - observed order 0.709, Richardson's value 0.0458 MJ and grid convergence index 8.2 % in the design-fire room.
+- **The same table with the item off,** seed 1 (reported; the base's defect):
+
+| Scene | 0.1 s | 0.05 s | 0.025 s | 0.0125 s | 0.00625 s | 0.003125 s |
+|---|---|---|---|---|---|---|
+| Next-door fire | 24.880 (466) | 13.338 | 7.347 | 4.037 | 2.469 | |
+| Pilot room | 24.684 (25 246) | 3.119 | 1.181 | 0.279 | 0.118 | 0.059 |
+| Design-fire room | 0.062 (138 357) | 6.216 (42 702) | 23.074 | 12.106 | 8.305 | |
+
+  With the item off, the next-door fire's and the pilot room's heat keeps falling at each halving; the design-fire room's moves both ways.
+- **What the item does to these fires (reported, not judged).** With the item on, porous cells keep their air at small steps.
+  - The next-door fire and the pilot room become much larger fires: 66.7 and 81.7 MJ at the finest steps, against 2.5 and 0.059 MJ with the item off.
+  - In the design-fire room the contents hardly burn: 43 kJ in 200 s, and no porous fuel cell passes 600 K ((g)4). With the item off they burn 6 to 23 MJ at the clamp-free steps, lit from about 120 to 160 s (16.31, point 1.9).
+  - So the item changes what the contents do, as well as making their heat release converge.
+
+#### (c) CPU against GPU: pass, 56 judged lines
+
+`--part c`, at 167f875, in headless Chrome 156 on the Intel UHD 770 (gen-12lp).
+1. **(c)1** the face term from identical inputs:
+   - 3645 cases within 2u(|e u0| + 2φ|u* − u0| + |ũ|); the largest uses 0.312 of the bound;
+   - the host's float32 e and φ after steps of 0.1 to 0.00625 s at m 0.5, 0.14 and 0.1: 60 values, all porousRateTable's float64 values rounded once.
+2. **(c)2** the item's terms from identical inputs, at six states, item on in their history, radiation and particles off as 16.24's (e)2 sets its scenes. The states: the next-door fire at 10 and 30 s and the pilot room at 15 s (0.05 s steps), the design-fire room at 150 s (0.025 s), and the GPU check's onestep app scene at steps 100 and 300.
+   - **ũ per face:** every open face within (c)1's bound; the largest uses 0.24 to 0.37 of it. Every face beside no porous cell is, bit for bit, u*: 18 011 of 19 487 faces in the next-door fire, and 40 185 or 40 427 of 43 125 in the rooms. Every closed face is 0.
+   - **The divergence of ũ per cell:** every open cell (6693 and 14 772) within its six faces' bounds over h, plus 5u Σ|ũ|/h and 2.5 ulp; the largest uses 0.10 to 0.14 of the bound.
+   - **Reported, the solved velocities at 1000 sweeps and tolerance 0:**
+     - the item's own change of a face's velocity is up to 0.029 to 0.20 m/s;
+     - |δ_GPU − δ_CPU| is at most 1.2 × 10⁻⁷ to 4.8 × 10⁻⁷ m/s, with its 99th percentile 3.0 × 10⁻⁸ to 6.1 × 10⁻⁸ m/s;
+     - the paths' item-off difference is at most 1.2 × 10⁻⁷ to 1.4 × 10⁻⁶ m/s.
+3. **(c)3**, at the same six states:
+   - pass 1, on each path: every field written before the projection (T, T_s, ρ, Y, D, the fuel, the moisture, kind, burning, the soot deposited, the wall nodes, the zones' pressure and mass) is bit for bit the same with the item on and off;
+   - pass 2: the GPU's item-off step, made twice from one state, gives every field bit for bit the same, u, v, w and p included.
+   - That is 18 lines.
+4. **(c)4** (a)2 and (a)3 on the GPU's projection passes: 24 lines.
+   - Free decay: the largest |u − u_ref| is 4.1 × 10⁻¹⁰ m/s at 0.5 s, against bounds from 4.7 × 10⁻⁹ m/s (16k 2⁻²⁴ max|u_ref|).
+   - Constant force: at most 2.3 × 10⁻⁷ m/s, against bounds from 4.3 × 10⁻⁶ m/s (20k).
+   - On the GPU the errors are a few times the CPU's, far inside 16.35's bounds.
+5. **(c)5, reported:** `tools/flamescapes-gpu-check.mjs`'s phases `agreement`, `onestep` and `design`, item off and on. The item on ran through an untracked copy of the tool that serves the solver with its default set to 1.
+   - **agreement**, after 200 steps: the GPU against the CPU, largest |ΔT| 3.44 K off and 6.46 K on, against the one-ulp twin's 3.62 and 8.28 K; 99th percentile 0.094 K off and 0.395 K on.
+   - **onestep**, at steps 100 to 590: largest |ΔT| 1.8 × 10⁻² to 8.3 × 10⁻² K off and 1.5 × 10⁻² to 5.6 × 10⁻² K on; the twin 6.1 × 10⁻⁵ K in both. The heat released in the step is the same on both paths to the joule.
+   - **design:** the item releases 52.76 MJ on both paths, on and off. With wetting, the head opens at 52.7 and 52.8 s off, and at 53.8 and 52.2 s on.
+   - The `design` phase with the item on ran after item 18's builder took the GPU lock. The coordinator's rule allows short checks such as (c) without it.
+
+#### (d) Off is off: pass
+
+1. **The fingerprints** with `porousRate` 0 (`tools/flamescapes-fingerprint.mjs` at 167f875): d62b581d and 29793d1a, the base's.
+2. **The unit suite:** 537 of 537 on the base (d7e86e1, a worktree of its own), then 537 of 537 on the branch, in one session with `--test-concurrency=1`.
+3. **With `porousRate` 1 and no porous cell,** every field and every `stats` entry bit for bit the base's:
+   - a validation burner scene: χ_r 0.2, 16 rays, one cell on the floor of an 8 × 8 × 8 box of 0.20 m cells (the floor solid, the sides open), 300 steps of 0.1 s; fingerprint 1694ba72 on both;
+   - `heat-closure.mjs`'s `mix` and `burner` cases on 0.20, 0.27 and 0.34 m: six runs, their fields and stats fingerprinted in an untracked copy of the tool, on the base and on the branch.
+4. **With `porousRate` 1 and `porousVelocity` 1:** the fingerprint tool's two rooms give b75f851e and 5399b732, the base's with `porousVelocity` 1.
+5. **With 1 and porous cells, reported:** the fingerprints become d9175351 and d1c01618. The pilot room releases 0.9806 MJ in 30 s, against 0.4881 MJ.
+6. **The GPU check, 8 against 8 (16.30, decision 5): pass.** `tools/flamescapes-gpu-check.mjs` on the base (d7e86e1, the worktree `TopologicStudio-stepconv-base`) and on the branch at 167f875 with `porousRate` 0, the default, under the GPU lock. They ran in headless Chrome on the Intel UHD 770; its `chrome.exe` is 157.0.8103.51 and was not changed on disk during the build, so all 44 runs used one browser build.
+   - **The runs:** the whole tool, all fourteen phases, once on each, base first; then phases `sprinklers`, `design` and `systems` seven more times on each, alternately, base first. That is 44 runs, from 06:06 to 12:03 UTC, none repeated, added or dropped. Every run ended with exit 0, and no log holds an error.
+   - **Judgement 1, the deterministic leaves:** 4384 leaves of the branch's whole run, the timings and the three phases' GPU leaves set apart. Every leaf of the eleven other phases is the base's whole run's, bit for bit. The CPU side of the three phases is the same in all 16 runs of each phase.
+   - **Judgement 2, the GPU leaves of the three phases:** 493 leaves; 49 vary, and none has its 8 branch values all strictly above, or all strictly below, its 8 base values.
+     - The nearest to a separation is `design.0.gpu.hrr.25`, with the branch higher in 11 of the 64 base and branch pairs (0 or 64 would separate). Next are `sprinklers.3.gpu.late`, and run 3 of `systems`' GPU end heat release with its last frame entry, at 12.
+   - **Reported, as 13.32 does:** each of the 49 varies among the 8 base runs themselves; none varies on the branch alone. All are GPU `runScene` results:
+     - `sprinklers` runs 2 to 4 (evans, spray, wetting), 11 leaves: the heat released, the mass burnt and the peak in each, and the late opening time in runs 2 and 3;
+     - `design` run 0 (none), 12 leaves: the heat released, the item's own heat released (52.7636712 to 52.7636742 MJ over the 16 runs), the flame points' 10th, 50th and 90th percentiles, and the frame heat release entries 23 to 29; run 1 (wetting), 2 leaves: the flame points' 10th and 90th percentiles;
+     - `systems` run 3 (the heptane spill, no system), 18 leaves: the heat released, the mass burnt, the peak, the end heat release and the frame heat release entries 10 to 23; run 4 (the spill, foam on detection), 6 leaves: the same first four and entries 10 and 11.
+     - The base's own spread is wide in places: run 3 of `systems` releases 24.62 to 46.48 MJ on the GPU across the 8 base runs (25.28 to 40.65 MJ on the branch), and its peak is 496 to 1944 kW. Run 4's peak is 395.921 kW, or 396.055 to 396.056 kW, in both sets; 16.13 records 395.921, 396.056 and 396.142 kW for unchanged bases.
+     - 13.32 found 47 such fields between two base runs, and 16.29 records 46 to 49 for item 15's first attempt; eight runs show 49.
+
+#### (e) The unit suite unbent with the default set to 1: pass
+
+537 of 537, with `DEFAULTS.porousRate` set to 1 in the working tree for the run (a one-line change, not committed, and reverted at once). No test was edited.
+
+#### (f) Speed, reported
+
+- **The fingerprint tool's ms a step,** back to back on the loaded machine: base 43.66 and 42.35; branch off 43.28 and 42.72; branch on 48.20 and 47.23. `project` takes 13.00 and 12.25 ms on the base, 12.72 and 12.46 off, and 17.87 and 17.42 on.
+  - Off costs nothing measurable.
+  - On, the projection costs about 5 ms a step more on 17 732 cells. It forms ũ of each face in each of its cells' divergences and again at the update, by closures.
+- `tools/backend-bench.mjs` (room, Duplex, Office, Clinic, Vienna; one run each; 180 s), CPU set, wall seconds item off and on, with the heat released:
+  - the room: 250.8 and 191.9 s (32.2 and 22.8 MJ);
+  - Duplex: 103.4 and 112.0 s (14.4 and 14.6 MJ);
+  - Office: 159.5 and 168.9 s (22.8 MJ both);
+  - Clinic: 181.2 and 189.8 s (22.7 MJ both);
+  - Vienna: 172.9 and 180.9 s (37.6 and 58.1 MJ, peak 710 and 1587 kW).
+  - Each is one run on the loaded machine. Duplex, Office, Clinic and Vienna run 4 to 9 % slower with the item on. The room runs faster with it on, because its fire is smaller.
+- **The GPU set (`gpu-app`),** the same five cases and 180 s, in headless Chrome on the Intel UHD 770, the app's grid pinned at 120 000 cells (`--app-cells 120000`), one run each, item off and then on, under the GPU lock after (d)'s runs. Wall seconds, multiple of real time, ms a step, and the heat released, off and on:
+  - the room: 20.7 and 20.1 s; 8.69 and 8.97 times real time; 11.51 and 11.15 ms; 33.4 and 22.8 MJ (peak 912 and 369 kW);
+  - Duplex: 53.1 and 47.0 s; 3.39 and 3.83; 29.51 and 26.13 ms; 15.2 and 14.7 MJ;
+  - Office: 54.1 and 45.4 s; 3.33 and 3.97; 30.04 and 25.21 ms; 24.6 and 22.9 MJ (peak 498 and 371 kW);
+  - Clinic: 71.5 and 62.4 s; 2.52 and 2.88; 39.71 and 34.68 ms; 22.8 MJ both;
+  - **Vienna,** 101 304 cells of 0.400 m (the grid clipped to the budget): 61.1 and 54.7 s; 2.95 and 3.29 times real time; 33.94 and 30.40 ms a step; 56.2 and 86.1 MJ, peak 1135 and 1931 kW; 124 and 154 untenable nodes, the first at 30 s in both. **With the item on, Vienna runs its 180 s on the GPU in the browser, at 3.3 times real time.**
+  - Every case ran 3 to 16 % faster with the item on. The bench's own measure of the GPU's rate was 0.3 to 19 % higher in the on runs (Vienna 4471 against 5321 cells a ms), so the GPU was quicker then; one run each does not separate the item's cost from that.
+
+#### (g) Reported
+
+1. **`heat-closure.mjs`'s porous case,** at 60 s on 0.20, 0.27 and 0.34 m:
+   - closure 0.854, 0.821 and 0.840, with the hottest gas 2900, 2655 and 2628 K, item off;
+   - 0.928, 0.896 and 0.875, with 1181, 1290 and 1324 K, item on.
+   - The porous burner of `wiki/HANDOFF.md`'s open problem closes better with the item.
+2. **The next-door fire stepped as `runScene` steps it,** 60 s (`tools/vapour-swing-diag.mjs` at c18595e, its switch read as `porousRate`):
+   - free fire: 21.771 MJ off, as 16.29's figure, and 86.545 MJ on;
+   - flooded: 21.622 MJ off and 82.600 MJ on;
+   - flooded over free: 0.993 off and 0.954 on.
+   - With the item on, the frames still alternate between one and two substeps, and the fire passes 1 MW from frame 10.
+   - At the fixed steps of 16.29 1.3, flooded over free is 0.997, 0.995 and 1.002 off at 0.1, 0.05 and 0.025 s, and 0.880, 0.681 and 1.049 on. With the item on, these fires grow to several megawatts in 60 s, and the free and flooded runs part by more than the next-door test's band at fixed steps.
+3. **The pilot room stepped as `runScene` steps it,** 300 s: 8.435 MJ off, with 20 changes of the step (16.29's 20), and 347.96 MJ on, with 26 changes. **The design-fire room, 600 s:** 640.08 MJ off, with 33 changes of the step (16.29's part n), and 756.79 MJ on, with 29 changes. Over 600 s the contents do light with the item on, later and more strongly than off.
+4. **The trace of part 1 with the item on** (`tools/step-convergence-diag.mjs --opts '{"porousRate":1}'`, next-door fire, at 0.1, 0.05, 0.025 and 0.0125 s):
+   - **0 to 5 s:** the first item's O₂ at the chemistry is 15.80, 17.29, 18.10 and 18.45 g/s, and its inflow 1.49, 1.62, 1.68 and 1.70 cell volumes a second. Off, 16.31's table has 11.68 to 3.76 g/s and 1.09 to 0.198 cell volumes a second. The release is 241, 262, 278 and 283 kW.
+   - **25 to 30 s:** 8.74, 9.26, 9.74 and 9.84 g/s, with an inflow of 1.99 to 2.10 cell volumes a second.
+   - The supply now converges at first order, and the cap still binds in every step.
+   - The design-fire room at 0.025 s: the contents release 0.0383 MJ, all by oxidation, none capped, and no porous fuel cell passes 600 K.
+
+#### Departures, as built
+
+None changes an output with the item off; (d) shows it on the CPU and the GPU.
+1. `divergence` and `projectUpdate` bind `snap` in their layouts. `PARAMS` grows from 126 to 131 scalars, so the fuel table moves 16 bytes.
+2. At Δt₀, e for one porous cell is exp(−ln 2) = 0.5000000000000001 in float64, not 0.5. So with the item on, a run at 0.1 s keeps m^(n_f) of a face's starting velocity only to the last bit.
+3. `projectStage` throws if `porousRate` is 1 and the advection's copy of the velocity is missing.
+4. The CPU forms ũ by closures, twice for each face. It adds no memory, but costs about 5 ms a step on 17 732 cells ((f)).
+5. (c)'s states take u* as the state's last projected velocity and u0 as the advection's copy at that step's start; 16.31's (c)2 names the state's u0 and u* without fixing which. (c)'s scenes run with radiation and particles off, as 16.24's (e)2 sets them.
+6. (d)'s validation burner scene was built as stated above. 16.10's own construction was not read.
+7. (b)'s runs ran side by side, at most three at once. The 0.00625 s design run, and the pilot room's 0.003125 s runs and seeds, started before the coarser steps had shown them to be needed. Each was then needed by 16.31's sequence.
+8. The (d) fingerprint ran before (c), while (b)'s last runs were still going. It checks the item off and does not depend on the order. For about a minute that made four processes.
+9. `node_modules` junctions link this worktree and the base worktree to `TopologicStudio-Next`'s, as the other worktrees have. Untracked copies of the GPU check, of `heat-closure.mjs` and of the fingerprint tool were kept in `item19-tmp/`, on the branch and on the base, for (c)5, (d) and (f). They are not committed.
+10. (d)'s GPU runs and (f)'s GPU set ran from one script in the session scratch folder, which waited for the lock, took it with `noclobber` and deleted it when the last run ended. The comparison (`item19/d-compare.mjs`) gained its lines reporting the base's varying leaves before the last runs ended; its judging lines did not change. A leaf counts as a GPU leaf when it lies in `sprinklers`, `design` or `systems` and a segment of its path contains "gpu". The comparison ran on the CPU while the bench's GPU set ran.
+
+#### Not verified
+
+- The item's cost on the GPU. (f)'s GPU set ran once each way, and the GPU was faster during the on runs by the bench's own rate, so the set does not measure it.
+- Why the design-fire room's contents stay unlit with the item on. That the more ventilated porous cells stay cooler is a reading, not traced.
+- The pilot room's last three steps do not change monotonically (81.19, 79.65 and 81.69 MJ). Within the seeds' spread of 5.1 MJ, no order of convergence is measured there.
+
+**Checked by the coordinator** (2026-11-16), apart from the agent:
+- **(a)** was run again from the branch, and **(b)** was judged again from the builder's run files. Two of (b)'s runs were made again: the next-door fire at 0.00625 s (66.69 MJ) and the design-fire room at 0.025 s.
+- **(d)'s comparison** was run again from the 44 saved runs: 4384 deterministic leaves bit for bit; 493 GPU leaves, 49 varying, none with its 8 branch values wholly above or below its 8 base values.
+- **The commits** carry no Claude line.
+- **A correction to (c)'s line.** It names headless Chrome 156, copied from a comment in the GPU check tool. The installed Chrome was 157.0.8103.51 throughout, so (c), (d) and (f) ran on 157.
+- **Not run again by the coordinator:** (c) on the GPU. Item 18's second attempt holds the GPU lock. It runs when the lock is free, and any difference is recorded here, dated.
+
+**Item 19 passes its judged checks (a) to (e).** Its switch `porousRate` is off by default.
+
+**The item changes the fires, and no default is proposed.** These are reported figures, not checks.
+- With the item on, the next-door fire releases 66.7 MJ in its first 60 s at the finest step, and 86.5 to 87.9 MJ stepped as the app steps it. Off, it releases 21.8 to 24.9 MJ.
+- For scale, an ultra-fast t² fire (0.1876 kW/s²) releases 13.5 MJ in 60 s.
+- Vienna on the GPU releases 86.1 MJ with a peak of 1931 kW with the item on, against 56.2 MJ and 1135 kW off.
+- So the item makes the flow through burning contents converge with the step, and the converged fire is several times faster than the present one, which is itself faster than a design fire's first minute. Whether it is right is a question for measured items, not for these checks.
+- **The drag rate is therefore a calibration target.** β = ln(1/m) / 0.1 s takes its 0.1 s from the present step, not from a measurement. Before any default is proposed, β is calibrated against furniture calorimetry (the NIST and UL FSRI item tests), by a method written here first, with folds as 16.5 sets.
+
+**Beside item 18,** reported by the coordinator on a CPU merge of the two branches' `flamescapes.js` (16.40), not committed. With item 19 on, item 18 off and then on:
+- the free next-door fire, 60 s: 86.5 and 82.7 MJ;
+- the pilot room, 300 s: 348.0 and 192.2 MJ. Off, item 19 off, it is 8.4 MJ either way.
+- The design-fire room, 600 s: 756.8 and 742.5 MJ; with item 19 off, 640.1 and 594.1 MJ.
+- So over minutes, a large part of what item 19 adds comes through item 18's defect. Any figure made with item 19 on is read with item 18 on.
+
+**What follows.**
+1. Item 19 touches no validation scene: they hold no porous cell.
+2. Item 15's second attempt (16.29, 16.30) can now be built on it.
+3. It goes into the study's rerun with the other made items, off by default (16.20, decision 6; 16.32, decision 6).
+4. No change to the app's default is put to the user before β's calibration and item 18.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
