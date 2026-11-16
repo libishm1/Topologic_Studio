@@ -25,6 +25,13 @@
  *   node tools/backend-bench.mjs [--cases room,room-solver,duplex,office,clinic,vienna]
  *        [--members 4] [--horizon 180] [--sets cpu,gpu-same,gpu-app] [--app-cells 120000] [--seed 1] [--out file] [--headed]
  *
+ * With --solver gasRadiation=1 (calibration plan 16.43, item 8; add
+ * surfaceRayStart=1) the runs need the gas radiation tables' file, which is
+ * not in this repository (plan 16.44, decision 7): --gas-tables FILE, or the
+ * environment variable FLAMESCAPES_GAS_TABLES. The page fetches it from this
+ * tool's server, and only then. Such a scene runs on the CPU, so name the
+ * cpu set alone.
+ *
  * Uses playwright-core with the installed Chrome (WebGPU in headless Chrome
  * on this machine) and serves topologicpy-web-frontend/ itself.
  */
@@ -60,6 +67,12 @@ const SEED = Number(flag("--seed", 1));
 // Solver options for every run, e.g. the transport before proposal F:
 // --solver conservative=0,expansion=0,vorticity=10,cfl=0,vorticityStep=0
 const SOLVER = Object.fromEntries((flag("--solver", "") || "").split(",").filter(Boolean).map((kv) => kv.split("=")).map(([k, v]) => [k, Number(v)]));
+// The gas radiation tables, read only with gasRadiation on (plan 16.44, decision 7).
+const GAS_TABLES = SOLVER.gasRadiation > 0 ? flag("--gas-tables", process.env.FLAMESCAPES_GAS_TABLES || "") : null;
+if (GAS_TABLES === "") {
+  console.error("--solver gasRadiation=1 needs the gas radiation tables' file: --gas-tables FILE or FLAMESCAPES_GAS_TABLES (tools/gas-radiation-tables.mjs builds it).");
+  process.exit(2);
+}
 const today = new Date().toISOString().slice(0, 10);
 const OUT = flag("--out", path.join(ROOT, `benchmark/results/${today}-backends.json`));
 const EXAMPLES = { duplex: "duplex-apartment.ifc", office: "nibs-office.ifc", clinic: "nibs-clinic.ifc", vienna: "vienna-escape-route-model.ifc" };
@@ -135,6 +148,10 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { "content-type": "text/html" }).end("<!doctype html><meta charset=utf-8><title>Flamescapes backends</title>");
     return;
   }
+  if (GAS_TABLES && url.pathname === "/gas-radiation-tables") {
+    res.writeHead(200, { "content-type": "application/octet-stream" }).end(await readFile(GAS_TABLES));
+    return;
+  }
   if (caseFiles.has(url.pathname)) {
     res.writeHead(200, { "content-type": url.pathname.endsWith(".json") ? "application/json" : "application/octet-stream" }).end(caseFiles.get(url.pathname));
     return;
@@ -161,8 +178,11 @@ page.on("pageerror", (error) => console.log(`  [pageerror] ${error.message}`));
 await page.goto(`${origin}/bench.html`);
 
 /** One case in the page: the grids, then each set of runs. */
-async function benchCase({ base, info, members, horizon, sets, solver = {}, pinnedCells = null, seed = 1 }) {
+async function benchCase({ base, info, members, horizon, sets, solver = {}, pinnedCells = null, seed = 1, gasTablesUrl = null }) {
   const R = await import(base + "core/flamescapesRun.js");
+  // With gasRadiation, the tables from this tool's server (kept across cases).
+  if (gasTablesUrl && !window.__gasTables) window.__gasTables = await (await import(base + "core/gasRadiation.js")).fetchGasTables(gasTablesUrl);
+  const gasTables = gasTablesUrl ? { gasTables: window.__gasTables } : {};
   const F = await import(base + "core/flamescapes.js");
   const G = await import(base + "core/flamescapesGpu.js");
   const FC = await import(base + "core/fireClasses.js");
@@ -237,7 +257,7 @@ async function benchCase({ base, info, members, horizon, sets, solver = {}, pinn
     const g = scene.grid;
     const set = { grid: [g.nx, g.ny, g.nz], cells: g.cells, cell: g.h, clipped: Boolean(scene.clipped), runs: [] };
     for (let k = 0; k < members; k += 1) {
-      const opts = { nodes, upAxis: "y", horizon, frameSeconds: 5, particles: 3000, solverOptions: { ...solver, ambient: 293.15 + k * 1e-3 } };
+      const opts = { nodes, upAxis: "y", horizon, frameSeconds: 5, particles: 3000, solverOptions: { ...solver, ...gasTables, ambient: 293.15 + k * 1e-3 } };
       const t1 = performance.now();
       const frames = backend === "cpu" ? R.runScene(scene, opts) : await runner.runScene(scene, opts);
       const wall = performance.now() - t1;
@@ -269,7 +289,7 @@ const report = { generated: new Date().toISOString(), tool: "tools/backend-bench
 const t0 = Date.now();
 for (const info of cases) {
   console.log(`\n== ${info.name}`);
-  const res = await page.evaluate(benchCase, { base: `${origin}/src/`, info, members: MEMBERS, horizon: HORIZON, sets: SETS, solver: SOLVER, pinnedCells: APP_CELLS, seed: SEED });
+  const res = await page.evaluate(benchCase, { base: `${origin}/src/`, info, members: MEMBERS, horizon: HORIZON, sets: SETS, solver: SOLVER, pinnedCells: APP_CELLS, seed: SEED, gasTablesUrl: GAS_TABLES ? "/gas-radiation-tables" : null });
   if (res.error) console.log(`  ${res.error}`);
   report.cases.push(res);
   report.adapter ??= res.adapter;
