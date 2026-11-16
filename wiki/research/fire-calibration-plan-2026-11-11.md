@@ -8279,6 +8279,228 @@ None changes an output with the item off; (d) shows it on the CPU and the GPU.
 3. It goes into the study's rerun with the other made items, off by default (16.20, decision 6; 16.32, decision 6).
 4. No change to the app's default is put to the user before β's calibration and item 18.
 
+
+### 16.47 Item 8, second attempt: the build's checks (2026-11-16)
+
+Item 8's second attempt was built as 16.43 and the coordinator's decisions 16.44 fixed it, on branch `flamescapes/gas-radiation-2` from 385dbec (`flamescapes/burner-rays`), in five commits:
+- ef9f07d: the item, off by default, on the CPU only (`gasRadiation.js`, `flamescapes.js`, one line of `supported`, the run cache's key, the worker's fetch), and the conversion script `tools/gas-radiation-tables.mjs`;
+- 3db6919: the validation suite's `--gas-radiation` and the item's tallies in its ledger; `tools/backend-bench.mjs` passes the tables;
+- 23c5052: the check tool, `tools/gas-radiation-check.mjs`, rewritten from the first attempt's;
+- d5c86f4: the tool's comparison of the GPU check's reports (part `ig`), added before any GPU run of this build;
+- 98ca598: the tables kept in the repository and credited, after the user's decision on 16.44's decision 7 (below, "Departures").
+
+Where each part ran:
+- (a) to (e), (h), (l), (m) and their (f) lines: first at 23c5052, on a table file kept outside the repository;
+- the burner runs' (f), (g), (k) 1 and 3, and (i)'s parts in the tool: first at d5c86f4;
+- every part of the tool again, in full, at 98ca598, on the repository's own table file: the same verdicts and the same figures (every judged line of the rerun reads as in the first runs, digit for digit, timings apart);
+- the unit suites of (i) and (j): at 98ca598.
+No line of the method differs between ef9f07d and 98ca598: 98ca598 changes comments, one message and the file's path in the two solver files.
+
+**One attempt, and no fault of the code against the method was found in a judged run. Item 8's second attempt passes every judged check that has been run: (a) to (h), (j), (k), (l), and (i) but for its GPU part. (i)'s comparison with `tools/flamescapes-gpu-check.mjs` has not been run: the shared GPU lock was held by other builds from before this build began until it reported.** (m), outside what ends the line, passes too. The tool judged 742 lines and none failed: 739 in one run of every part at 98ca598 and 3 in (k) 2; 736 without (m). No correcting commit of the solver exists. One fault of the code was found and corrected in a development run before the first commit (below, "Departures": the round-off's arithmetic).
+
+Every figure below was measured beside other long jobs on the same machine. This build ran one heavy job at a time, the unit suites with two workers.
+
+**Before any judged run: the base's ledger remainder by stage** (16.44, decision 3). (k)'s room on the base solver at 385dbec, every switch off, 120 s, the ledger's terms read from the stored fields before and after each stage of each step (a scratch script; the solver file with its stage list exported, nothing else changed). The remainder is released + pilot − (gas + walls + shell + leak). It reproduces 16.43's point 9: 1.2253 MJ for class A and 1.0796 MJ for methane at 120 s.
+
+| Stage | Methane, MJ | % of released | With each cell's own c_p, MJ | Class A, MJ | % of released | With each cell's own c_p, MJ |
+|---|---|---|---|---|---|---|
+| pilot (the burner) | 0.5013 | 4.18 | 0.0625 | 0.4388 | 3.66 | 0.0645 |
+| radiation | 0 | 0 | 0 | 0.0220 | 0.18 | 0.0303 |
+| advect | −0.1549 | −1.29 | 0.1702 | −0.0926 | −0.77 | 0.1684 |
+| density (after advect) | 1.7303 | 14.42 | 1.7609 | 1.7589 | 14.66 | 1.7873 |
+| conduct | 0.0158 | 0.13 | 0.0658 | 0.0284 | 0.24 | 0.0724 |
+| density2 (the step's end) | −0.9820 | −8.18 | −0.9974 | −0.9010 | −7.51 | −0.9139 |
+| boundaries | −0.0308 | −0.26 | 0.0001 | −0.0293 | −0.24 | 0.0001 |
+| diffuse, deposition | −0.0002 | 0.00 | 0.0003 | −0.0001 | 0.00 | 0.0003 |
+| Sum: the remainder | 1.0796 | 9.00 | 1.0625 | 1.2253 | 10.21 | 1.2095 |
+
+- The remainder is made where the density is set from the equation of state: `density` adds 14.4 to 14.7 % of the heat released and `density2` takes back 7.5 to 8.2 %. The gas's temperature does not change in either; its mass does, and no term of the ledger carries the heat of the mass removed or added. Net, 6.2 to 7.2 % of the heat released.
+- The burner's stage adds 3.7 to 4.2 % at the ledger's c_p of 1005 J/kg K, and 0.5 % at each cell's own c_p. The 0.5 % (0.063 MJ of the 2.4 MJ cast) is what the base's burner rays carry out of the grid uncounted.
+- At 60 s the picture is the same (methane 9.61 %, class A 10.79 % of the heat released; `density` 15.4 %, `density2` −7.6 and −6.7 %).
+- Why the two density stages do not cancel was not examined. This trace measures where the remainder arises, not why.
+
+**(a) Tables and functions: PASS.** 563 judged lines.
+1. 5 lines. The two source files have the SHA-256 that 16.43 lists. The table file (2 226 560 bytes) equals them value for value after rounding to float32, in the stated order: 0 of 55 664 and 0 of 500 976 differ.
+2. 270 lines, one a state (9 temperatures, 3 black temperatures, 10 compositions): the solver's F at 16 cross-sections, its inversion at the sixteen levels, κ_j and a_j against the tool's own transcription. The worst uses 9.5 × 10⁻⁸ of the tolerance (T and T_b 2400 K, x = (0, 0.2)).
+3. 270 lines, the same states: |Σ a_j − 1| at most 1.1 × 10⁻¹⁶; the least a_j is 0; every κ_j is non-negative and none falls as j rises; with x = (0, 0) every κ_j is 0 and a_0 is 1.
+4. 17 lines: the solver's levels equal 16.43's within 5 × 10⁻⁷ (the first, 0.1742836 against 0.174284).
+5. 1 line: 1000 of 1000 lookups at table points (106 of CO2, 894 of H2O, seed 20261116) return the stored value exactly.
+- For scale, at 600 K with x_c = 0.05 and x_w = 0.10 the solver's eight κ_j run from 0.00602 to 307.5 m⁻¹, a_0 is 0.174 and Σ a_j κ_j is 3.12 m⁻¹, as 16.43's point 12 gives them.
+
+**(b) Emissivity and absorptivity against RadCal: PASS.** 72 judged lines, read once. The solver's 72 values were written to a file before the reference file was opened. No reference was added or changed.
+- Every case is within 25 % of RadCal's value. The worst uses 0.961 of the tolerance: the absorptivity at 400 K, X = 0.03, M_r = 1.9, 3 m, 0.15220 against RadCal's 0.12271 (ratio 1.240). The next are 0.938 (the same at M_r 1.25: 0.14796 against 0.11986), 0.904 and 0.894 (X = 0.15, 1 m).
+- The solver over RadCal, by group:
+
+| | 400 K | 600 K | 900 K | 1200 K |
+|---|---|---|---|---|
+| Emissivity | 1.018 to 1.120 | 1.016 to 1.073 | 0.903 to 1.008 | 0.865 to 0.962 |
+| Absorptivity (black radiation from 1173.15 K) | 1.134 to 1.240 | 1.010 to 1.144 | | |
+
+- The case 13.23 prints (X = 0.15, M_r = 1.25, 3 m): 0.26712 and 0.27680 against RadCal's 0.21852 and 0.24232, ratios 1.222 and 1.142, as 16.43's point 6 drafted them.
+- Reported, not judged:
+  - the sum over eight gray gases over the tables' own limit (4000 cross-sections, the tool's transcription) at the 72 conditions: 0.983 to 1.036, the draft's figures;
+  - the solver over the draft's own eight-gas values, where the draft has them: 0.99998 to 1.00000;
+  - the solver over the draft's line-by-line values at 400 K and 600 K: emissivity 0.937 to 1.007, absorptivity 1.000 to 1.026. In the worst case against RadCal, line by line gives 0.15016;
+  - the thin limit, Σ a_j κ_j, over the draft's line-by-line Planck mean: 1.039 to 1.069 at 400 K (4.453 against 4.164 m⁻¹ at X = 0.15, M_r = 1.25) and 1.013 to 1.017 at 600 K (3.468 against 3.419 m⁻¹).
+
+**(c) Gray transport in a cube: PASS.** 10 judged lines. Soot only, 1000 K, the 3.0 m cube. The walls' power over the closed form: 1.0002 to 1.0011 on 0.2 m cells and 1.0003 to 1.0016 on 0.3 m, rising with κL from 0.1 to 5 (2560.1 kW exact at κL = 5; 2563.0 and 2564.3 kW). The quadrature's last doubling moved P by 0.007 %.
+
+**(d) Band transport in a cube: PASS.** 8 judged lines.
+
+| Cube | T | Reference, kW | 0.2 m cells | 0.3 m cells |
+|---|---|---|---|---|
+| 1.2 m | 600 K | 13.211 | 1.0010 | 1.0017 |
+| 1.2 m | 1000 K | 92.589 | 1.0010 | 1.0018 |
+| 3.0 m | 600 K | 113.915 | 1.0013 | 1.0012 |
+| 3.0 m | 1000 K | 835.858 | 1.0012 | 1.0012 |
+
+- At 1000 K the κ_j run from 0.0222 to 132.7 m⁻¹, so κ_8 h is 27 to 40 here, and 61 to 92 at 600 K.
+- Every ratio of (c) and (d) lies 0.02 to 0.18 % above 1. It is inside the 2 % by a factor of ten or more; whether it is the quadrature or the code was not examined.
+
+**(e) A soot-free layer heats a surface it does not touch: PASS.** 12 judged lines.
+
+| Cells | Reference: floor, ceiling (kW) | Floor, lumped and gypsum | Ceiling, lumped and gypsum |
+|---|---|---|---|
+| 0.20 m | 7.762, 16.941 | 1.0020 | 1.0000 |
+| 0.27 m | 6.758, 16.252 | 1.0007 | 1.0035 |
+| 0.34 m | 9.345, 18.074 | 0.9981 | 1.0028 |
+
+- Lumped walls and one-dimensional gypsum walls give the same figures to the digits printed: the same rays, the deposits read in joules.
+- With the item off (and `surfaceRayStart` 1) the floor and the ceiling take 0.0 W.
+- Reported: the ceiling's radiative gain of 16.9 kW beside its convective 27.6 kW at 10 W/m²K (0.20 m).
+
+**(f) Energy: PASS.** 36 judged lines: 32 in (c), (d), (e), (h) and (l), and 4 in the two burner runs (the stage and the burner's rays in each). In every step what was emitted equals what the gas, the solids and the walls' ends took plus what left the grid: the worst step is 3.8 × 10⁻¹⁴ of its emission in the stage checks, 6.1 × 10⁻¹⁵ in the burner runs' radiation stage and 8.0 × 10⁻¹⁶ in the burner's rays, against 10⁻⁹.
+
+**(g) The radiant fraction counted once: PASS.** 4 judged lines. Over 19 141 burning cell-steps (methane) and 18 361 (class A), no stamped cell emitted in a band and none took anything of the burner's rays. The burner's rays carry χ_r of the heat burnt within 1.0 × 10⁻¹⁵. `flameSilenced`: 0.323 MJ (methane) and 0.516 MJ (class A) of 12.0 MJ released.
+
+**(h) An isothermal box stays isothermal: PASS.** 4 judged lines.
+
+| | Cells | The gas emits, kW | It absorbs, kW | Net, of its emission |
+|---|---|---|---|---|
+| 1: 600 K | 0.2 m | 872.819 | 872.740 | −0.009 % |
+| 1: 600 K | 0.3 m | 753.396 | 752.859 | −0.071 % |
+| 2: 400 K, `surfaceEmitFloor` 1 | 0.2 m | 133.511 | 133.498 | −0.009 % |
+| 2: 400 K, `surfaceEmitFloor` 1 | 0.3 m | 114.528 | 114.449 | −0.069 % |
+| 3, reported: 400 K, `surfaceEmitFloor` 0 | 0.2 m | 133.511 | 95.888 | −28.2 % |
+| 3, reported: 400 K, `surfaceEmitFloor` 0 | 0.3 m | 114.528 | 76.895 | −32.9 % |
+
+- The gas's emission here is what leaves its cells, net of each cell's own absorption (16.43, point 19).
+- 3 measures 13.19's decision 7: with walls at 400 K that return nothing, the gas loses 28 to 33 % of its emission each step where it should lose none. `surfaceFloor` counts what the walls would have returned: 6.4 and 6.8 kJ a step.
+
+**(i) Off is off: PASS in every part run; the GPU part not run.**
+- The fingerprints with `gasRadiation` 0 are d62b581d and 29793d1a (the fingerprint tool, run by the check tool). 2 lines.
+- Against the base's solver files read from git at 385dbec: the three burner rooms of (f) (methane and class A on stone, class A on gypsum boards), each with every switch off, with `surfaceRayStart` 1, and with items 10, 11, 12 and 14 on, 600 steps; and the app's design fire, 400 steps. State and stats are bit for bit the base's in all ten. 10 lines.
+- Over those runs and a `runScene` of the app's design fire, the tables' reader was called 0 times. 1 line.
+- With `gasRadiation` 1 the solver refuses to start without the tables, without `surfaceRayStart`, and with a radiating burner and `flameRadiantOnce` 0. 3 lines.
+- The unit suite passes 537 of 537 on the branch with the switch off, as the base does (537 of 537; a copy of 385dbec), two workers each (277 s and 278 s).
+- **Not run:** `tools/flamescapes-gpu-check.mjs` on the branch against the base. The tool's part `ig` is ready and was tried on item 12's saved reports (4970 leaves, 93 timings, 4696 judged, as 16.37 counts them). By inspection only: `kernels.js` is untouched, `flamescapesGpu.js` gains one line in `supported` that reads `sim.P.gasRadiation`, and no code lists the solver's parameters.
+
+**(j) The unit suite with the three defaults set to 1: PASS.** 537 of 537 pass on a copy of 98ca598 whose `DEFAULTS` set `gasRadiation`, `surfaceRayStart` and `flameRadiantOnce` to 1 and whose `createSolver` takes the tables when a test passes none (two workers, 1089 s against 277 s). No test was edited or rewritten.
+
+**(k) The ledger: PASS.** 7 judged lines.
+1. 4 lines. Over 3190 calls of the radiation stage and 3190 casts of the burner's rays (methane), and 3060 of each (class A), the stored fields and the outflow change by at most 6.4 × 10⁻¹⁴ of the emission beyond the counted round-off, and over a cast they rise by what was cast within 6.1 × 10⁻¹⁴ of it, against 10⁻⁹.
+2. 3 lines, through the suite on Steckler's test 14, 0.34 m, its full 300 s. With `--gas-radiation` each of the ledger's 10 rows records `radiatedOut` and the item's tallies beside `radiated`. Without it the ledger equals the base suite's (the file at 385dbec) field for field, with `--surface-ray-start --flame-radiant-once` and with no switch at all.
+3. Reported, not judged: the first design, 13.19 (k). Remainders in MJ at the ledger's times; "off" keeps `surfaceRayStart` and `flameRadiantOnce` at 1, "base" is every switch off.
+
+| t, s | Methane: on | off | base | Class A: on | off | base |
+|---|---|---|---|---|---|---|
+| 12 | 0.1256 | 0.1157 | 0.1223 | 0.1521 | 0.1406 | 0.1372 |
+| 36 | 0.3942 | 0.3423 | 0.3623 | 0.4466 | 0.4068 | 0.4104 |
+| 60 | 0.6223 | 0.5436 | 0.5767 | 0.6953 | 0.6427 | 0.6473 |
+| 84 | 0.8380 | 0.7386 | 0.7851 | 0.9363 | 0.8548 | 0.8827 |
+| 120 | 1.1706 | 1.0135 | 1.0796 | 1.2970 | 1.1924 | 1.2253 |
+
+   - As 13.19 worded it (|on| − |off| − 1 % of the heat released, at most 0), the first design would fail for methane at 9 of the 10 times against "off" (by up to 0.037 MJ at 120 s) and pass at all 10 against the base; for class A it would fail at 2 of 10 against "off" and at 3 of 10 against the base (by up to 0.012 MJ).
+   - At 120 s the remainder with the item on exceeds "off" by 0.157 MJ (methane) and 0.105 MJ (class A). The round-off the stage counted over the run is −0.169 MJ and −0.134 MJ (next finding).
+
+**A finding in the solver as it stands, reported and not judged: the walls' float32 temperatures drop part of the gas's radiation.** With the item on, many gas cells each send a little energy to many wall cells. A deposit that raises a stone cell by less than half a float32 step of its temperature (1.5 × 10⁻⁵ K near ambient) is not stored. The stage counts it (`radRoundoff`, as item 11 counts it), and (k) 1 shows the count is exact.
+- In (k)'s room over 120 s: −168.9 kJ (methane) and −133.8 kJ (class A) in the stage's deposits, and −0.33 and −0.12 kJ in the burner's. That is 11.7 % and 7.0 % of `radiated` (1.448 and 1.914 MJ), and 1.4 % and 1.1 % of the heat released.
+- In the Duplex over 60 s: −4.3 kJ of 24.3 kJ radiated.
+- In Steckler's test 14 with its own wall materials, over 300 s: −13 J of 2.69 MJ radiated.
+- It is the base's storage, not the item's: the base and item 10 write deposits the same way. It removes heat from the gas that the walls do not gain, so it leans the room cooler. A rerun's reading should carry `radRoundoff` beside `radiated`.
+
+**(l) A black ray is split by the gas it meets: PASS.** 4 judged lines. What the layer's gas takes over the reference: 0.9997 on 0.20 m cells and 0.9987 on 0.27 m, with the floor at 900 K (35.645 against 35.655 kW; 31.139 against 31.180 kW) and at 1173.15 K (92.630 against 92.659 kW; 80.793 against 80.900 kW). The cold gas's shares for the floor at 900 K are 0.224 for the clear gas and 0.134, 0.156, 0.175, 0.159, 0.088, 0.045, 0.016 and 0.003.
+
+**(m) The number of rays changes no mean: PASS** (outside what ends the line). 6 judged lines. (d)'s 3.0 m cube at 600 K: 114.15, 114.07 and 113.98 kW with 2, 8 and 32 rays on 0.2 m cells (standard errors 0.13, 0.06 and 0.03 kW), and 114.05, 114.06 and 113.99 kW on 0.3 m. The pairs lie 0.03 to 1.30 standard deviations apart, against 4.
+
+**Reported, not judged, in every case.** `radCapped`, `radNegative` and `radShareNegative` are 0 in every stage check and in both burner runs. `radFloor` is 0 in the stage checks and 0.0062 and 0.0085 MJ in the burner runs. `surfaceFloor` is 0.0080 and 0.0081 MJ there. A ray crosses 2.1 to 9.6 cells in the stage checks and 9.35 in the burner runs.
+
+**Speed (14.6), reported and not judged.**
+- The radiation stage alone, ms a step, on and off (off: `surfaceRayStart` 1, where this gas casts nothing):
+
+| Scene | Emitting gas cells | On | Off |
+|---|---|---|---|
+| (d) 1.2 m cube, 0.2 m and 0.3 m cells | 216, 64 | 10.1, 2.9 | under 0.1 |
+| (d) 3.0 m cube, 0.2 m and 0.3 m cells | 3375, 1000 | 188 to 199, 50 to 51 | under 0.1 |
+| (e) 0.20, 0.27 and 0.34 m cells | 1350, 484, 324 | 72.1, 24.3, 16.7 | 0.07, 0.02, 0.01 |
+
+  - About 50 to 60 µs an emitting gas cell and step: sixteen inversions by bisection, and eight rays of nine bands.
+  - With 2, 8 and 32 rays the 3.0 m cube on 0.2 m cells takes 146, 192 and 368 ms a step.
+- (k)'s room, 5236 cells, 120 s: 155 to 165 ms a step with the item on (1906 to 1926 emitting gas cells a step, 15 300 gas rays), against 10 to 12 ms off.
+- Steckler's test 14 on 0.34 m through the suite: 77 s with the item on against 6.6 s without.
+- The app's examples on the CPU, 60 s of the class A design fire on the 30 000-cell grid, in Node (a scratch script that builds the scenes as `tools/backend-bench.mjs` does; not the browser):
+
+| Case | Cells | Off, ms a 0.1 s step | `surfaceRayStart` 1 | `gasRadiation` 1 | Its radiation stage | Emitting gas cells a step | Crossings a ray |
+|---|---|---|---|---|---|---|---|
+| Duplex | 26 208 | 47.6 | 46.0 | 55.1 | 2.4 | 34 | 2.2 |
+| Office | 27 744 | 51.3 | 47.1 | 80.5 | 35.3 | 62 | 6.0 |
+| Clinic | 28 512 | 64.4 | 64.3 | 211.5 | 148.0 | 35 | 19.9 |
+
+  - These fires are small in their first 60 s (0.85 MJ released). The cost follows the cells the rays cross, each of which needs its gray gases once a call, more than the cells that emit.
+- **Not run:** `tools/backend-bench.mjs` with the switch off against the base, and the largest example in the browser. Both need the GPU.
+
+**Departures, as built.** None changes an output with the item off.
+- **The tables are in the repository** (98ca598). The build first kept them outside it, as 16.44's decision 7 stood: ef9f07d's conversion script refused a path inside the repository, and the solver, the worker, the suite and the bench said the file was not shipped. After the user's decision (the dated addition under 16.44), 98ca598 commits `topologicpy-web-frontend/public/gas-radiation/gas-radiation-tables.f32` (SHA-256 451d2caf…66e254e6) with a `NOTICE.md` beside it: the source, RadLib at commit 583e0fe with its MIT licence text and copyright line in full, and the two source files' SHA-256. The two text files stay outside the repository. The worker fetches the app's file only with the switch on. The addition says "before any judged run"; the judged runs of (a) to (m) had been made on the outside file by then, and all were made again at 98ca598.
+- **The round-off's arithmetic.** In a 6 s development run before the first commit, (k) 1's line for the radiation stage read 2.8 × 10⁻⁹ (class A) with the round-off worked as item 11 writes it, (stored − meant) × capacity. The item's own writes now work the same quantity as (stored − before) × capacity − J, which has no cancellation, and the line reads 10⁻¹⁴. `wallEmit` and `wallEnd`, which item 11 shares, are as they were.
+- **A cell's gray gases are kept for one call,** of the radiation stage or of the burner's cast, not for a step (point 20): the burner's stage changes temperatures between the two.
+- **No gas temperature changes until every ray is cast.** A gas cell's loss and its deposits are taken in one write, so κ_j does not depend on the cells' order. The deposits are kept in joules.
+- **The burner's rays without item 12** leave the axis cell through `marchBands` with their deposits made after all are cast and with no `rayReach`, as point 20 reads. Item 14's `flameCleared` is not worked with the item on (no shadow ray), and stays 0.
+- **Salt 4.** Point 15 gives the gas cells' stream salt 4 as unused. Item 12's rays draw from the axis cell's stream of salt 4. With both on, the axis cell's own gas rays would share draws with the burner's rays; that cell is stamped and silent whenever the burner burns in it.
+- **`radNegative`** is counted in the form of `radFloor`, 4 (κ_j + κ_s) σ |B_j| V dt. It was 0 everywhere.
+- **With the item on the surfaces' tallies of item 11 are kept whatever `surfaceEmitFloor` is** (`surfaceFloor`, `surfaceCapped`, `radRoundoff`, the last with a third entry, `burner`).
+- **`emitAbove` does not silence the gas with the item on.** A test or a run that sets `emitAbove` to 10⁹ for "no radiation" still has the gas radiating above ambient + 10 K. No unit test failed by it.
+- **Exports and hooks.** `solidCapacity` is exported. `sim.probe`, when a check sets it, is called before and after the stage and the burner's cast. No run sets it.
+- **(a) 2** compares F at 15 cross-sections from 10⁻⁷ to 10³ m²/mol and at 0, and the inversion at the sixteen levels the method inverts (not the ninth, which is set to 1).
+- **(h)'s emission** is the stage's own count of what leaves the gas cells.
+- **(k) 1 over a cast of the burner's rays:** the stored fields and the outflow rise by what was cast; that is the form the check takes where energy enters.
+- **(k) 2** ran on one test of the suite. The base's suite file was copied beside the branch's for the run and removed after.
+- **(m)'s standard deviations** come from the spread of the 200 steps' own wall powers.
+- **(j)'s copy** reads the tables from a file named by an environment variable when a test passes none.
+- **Development runs before the judged ones,** on the working tree that became 23c5052: (a) in full; (c) at 10 steps; (d), (e), (h), (l), (m) at 5 steps, where two lines of (e) and two of (l) lay outside 3 % (the noise of 5 steps: the same lines read 0.998 to 1.004 at 200); (d) and (l) at 200 steps; the burner runs for 6 s, twice; (i); (k) 2. (b) was not run with its reference before the judged run. No check was rewritten after a result.
+- **Faults of the tool corrected before the part they govern was read:** the suite's test in (k) 2 needs its full horizon (a 20 s cap gave no reading); part `ig` first set leaves apart one by one, and was rebuilt on item 17's rule by run before any report of this build existed.
+
+**Not verified.**
+- (i)'s GPU part, the bench against the base and the browser run with the switch off.
+- The item's effect on any validation result. Steckler's test 14 ran once through the suite for (k) 2; its ledger was read and its comparison with the measurement was not.
+- Why (c) and (d) read 0.02 to 0.18 % high.
+- Why the base's two density stages leave 6 to 7 % of the heat released outside the ledger.
+- Every speed figure, apart from load.
+- The papers of the method, and whether the notice's wording meets what the tables' authors ask: the notice holds what 16.44's addition lists.
+
+**Commands.**
+- `node tools/gas-radiation-tables.mjs --source DIR --verify` (DIR holds RadLib's two text files, outside the repository).
+- `node tools/gas-radiation-check.mjs --source DIR --only a,b,c,d,e,h,l,m,burners,i --with-flame-rays --radcal benchmark/results/2026-11-13-gas-radiation-13.19b-radcal.json --b-json out-b.json --drafted drafted-values.json --planck lbl-out.json --base BASE_CORE --json out.json` (BASE_CORE: `src/core` from `git archive 385dbec`).
+- `node tools/gas-radiation-check.mjs --only k2 --suite-base tools/calibration/validation-suite.base.mjs` (the file from `git show 385dbec:tools/calibration/validation-suite.mjs`, removed after).
+- `node --test --test-concurrency=2 "src/core/*.test.mjs"` in `topologicpy-web-frontend`: on a copy of 385dbec, on the branch, and on a copy of 98ca598 with the three defaults set to 1.
+- When the GPU is free: `node tools/flamescapes-gpu-check.mjs --json base.json` on a copy of 385dbec (one such run exists from item 14's build), the same on the branch, then `node tools/gas-radiation-check.mjs --only ig --gpu-base b1.json,b2.json --gpu-branch branch.json`; and `node tools/backend-bench.mjs --cases duplex,office,clinic --members 1 --sets cpu,gpu-app --app-cells 120000`, on the base and on the branch, then `--sets cpu --solver gasRadiation=1,surfaceRayStart=1`.
+
+**Item 8's second attempt passes its judged checks as far as they have been run.** Its switch `gasRadiation` is off by default. (i) is complete only when the GPU check has been compared.
+
+**Checked by the coordinator** (2026-11-16), apart from the agent:
+- **The check tool's parts a, b, c, d, e, h, l, m and the burner runs** were run again from 98ca598: 725 judged lines, none failed, each the builder's line for line. (b) is among them: 72 of 72.
+- **(i)'s CPU part** was run again against the base's files: 16 lines, none failed, the fingerprints d62b581d and 29793d1a.
+- **The round-off's arithmetic** (the departure above) was read in the code. `radRoundoff` is a tally in the statistics. No stored temperature is computed from it. So the change before the first commit altered how the dropped heat is counted, not what the stage stores.
+- **The commits** carry no Claude line.
+- **Not run again by the coordinator:** (k)2 through the suite, and the unit suites. **Not run by anyone yet:** (i)'s comparison with the GPU check, the bench against the base, and the browser run. They wait for the shared GPU lock.
+
+**The ruling, provisional until (i)'s GPU part has run.** Item 8's second attempt passes every judged check that has been run, (b) among them. The development run's 2.8 × 10⁻⁹ in (k)1 is disclosed above. The coordinator reads it as a fault of the tally's arithmetic, found before any commit and before any judged run, and not as a judged failure of (k). The paper discloses it with the two attempts. If (i)'s GPU part passes, the item is made behind `gasRadiation`, off by default, on the CPU only.
+
+**What follows.**
+1. **(b) passed at 0.961 of its tolerance in its worst case,** an absorptivity at 400 K. The line-by-line values stand beside it, as reported.
+2. **The cost decides how the rerun is made.** A validation run takes about ten times as long with the item on (Steckler test 14: 77 s against 6.6 s). The rerun's cells, switches and ray count are fixed in its own section before any run of it (16.44, decision 10).
+3. **The finding on float32 wall temperatures** is a candidate for its own item: with the item on, 1.1 to 1.4 % of the heat released in (k)'s room is dropped in deposits too small to store. It cools the room, and it is counted.
+4. No default is proposed. The app's scenes leave the GPU with the switch on.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
