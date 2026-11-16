@@ -7719,6 +7719,38 @@ The user gave their word for a second attempt at item 18 on 2026-11-16, after 16
 
 **The build.** The first attempt's builder makes it in `TopologicStudio-burnout`, after this section's commit. Its GPU parts wait for the shared GPU lock.
 
+
+### 16.42 The route to the critical words (2026-11-16, with the user's word)
+
+The user asked on 2026-11-16 for a plan that takes every word to indicative at least, and the critical ones to calibrated. This section orders the work toward that. It was written by the coordinator after 13.B, R10, R11 and R12 were read, and that is declared.
+
+**What does not change.** A word moves only as 12.6 sets it, on held-out series. No band and no tolerance moves. Every item keeps 13.12's rules, and every calibration keeps 16.5's folds by laboratory and 16.6's sealed final test. The aims below are aims, not results, and a word that does not move is reported as it stands.
+
+**The critical words,** those an egress reading rests on:
+- smoke layer depth: calibrated on every cell now, and it must stay so in every rerun;
+- smoke layer temperature;
+- smoke visibility;
+- the neutral plane in a door.
+
+**Where the words that are not calibrated come from** (13.B, with the ninth series where it bears):
+1. **The rooms read 35 to 55 % hot.** That is seven words: layer, ceiling and head temperature. Items 10, 11 and 12 have ruled out the surfaces' radiation and the burner's rays (13.35, 13.36, 16.39).
+2. **Smoke visibility has one held-out series.** 12.6 asks three for calibrated, so no method can move it past its present word alone.
+3. **A door is a few cells wide.** Three attempts at the doors have failed (13.20, 13.30).
+4. **O₂ and CO₂** follow in part from 1 and 3. On 0.34 m, the O₂ figure is one series' small measured change (14.7).
+
+**The order.**
+1. **Phase 0's reruns finish:** R12 with 14, R14, R16 and R0 (16.20). Nothing below reads a temperature word before R0.
+2. **Item 8, second attempt: the gas's radiation.** The user gave their word on 2026-11-16. 13.23 sets its conditions: a new method written here first, by a drafter, and its check (h) on item 10's geometry. It is drafted now and built after the coordinator's decisions.
+3. **Phase 1, screening** (16.4), on the solver R0 leaves, with item 8 if it is made.
+4. **Phase 2, calibration of the temperatures** (16.5), with folds by laboratory. Aim: indicative on every cell, and calibrated for the layer temperature on 0.20 and 0.27 m.
+5. **Smoke visibility: two more held-out series at least.** The user gave their word on 2026-11-16 to prepare them. The review's candidates are the ABS smoke series with a measured extinction coefficient, the FPRF corridor tests, and room-corner tests with obscuration. Each series' choices are fixed here before any run of it, as 15.8 did for the chairs. The soot yield and the extinction coefficient are then Phase 2 parameters. Aim: indicative, and calibrated if three series allow.
+6. **O₂ and CO₂** are read again after 2 to 4. No item is drafted for them before that.
+7. **The doors, last.** A fourth attempt needs the user's word and a new method written here first (13.30). The aim is indicative for door velocity on 0.20 m. On coarser cells it may stay not calibrated, stated as a limit, with the neutral plane as the door quantity the app reports.
+8. **Contents.** Items 18, 19 and 15 go on as 16.41, 16.32 and 16.30 set. They touch no validation scene, so they move no word here. They decide what the app and the study may say of burning contents (16.40).
+9. **Phase 3, the sealed final test** (16.6), once.
+
+**The papers.** For the DigitalFUTURES abstract of 2026-12-15, the result aimed at is the temperatures after steps 1 to 4. Visibility and the doors are aimed at eCAADe, 2027-01-15. Either paper reports the words as they stand on its date.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
