@@ -7673,6 +7673,52 @@ Item 18 was built as 16.33, with the coordinator's decisions in 16.34 and the co
 3. **The study (17.8),** declared after the study's results were read. Its furniture-on runs burn contents beside the design fire for 300 s, so where a contents cell burns out they carry this defect beside finding 2. Their results are reported with it stated. If an attempt at item 18 passes, every furniture-on run runs again with it on, and both sets are reported, as 17.8 sets for item 15.
 4. The bench, Vienna on the GPU in the browser, and the GPU parts above run when the GPU lock is free.
 
+
+### 16.41 Item 18, second attempt: two check lines rewritten (2026-11-16, before any run of them)
+
+The user gave their word for a second attempt at item 18 on 2026-11-16, after 16.40. The coordinator wrote this section after reading the first attempt's results, and that is disclosed (13.12, rule 1), as 16.24 and 16.25 were for item 16.
+- **The method does not change.** It is 16.33's, with 16.34's decisions and 16.38's corrections.
+- **No solver file changes.** The code is d4cbaeb's.
+- **What changes** is two lines of check (c), and nothing else of the checks.
+
+**Why 13.12's rule 1 allows it.** (c)'s head judges the item's own difference on each path, "so that what the paths already differ by cancels". In the cases they ran, two lines do not cancel it (16.40):
+1. **(c)1's clause** "the kind, the fuel and the flag are equal on both" compares the paths' own fuel. In scene (iv) the centre does not burn out, and the item does nothing on either path. There the CPU's float64 reactions and the GPU's float32 ones leave fuel 3 float32 steps apart, item on and off alike. The clause tests the base there, and code that meets the method fails it.
+2. **(c)2's line for the burnt-out cells' T_s** (16.38) takes Δ_item = T_a − T_s,off on each path. The item writes a constant, so the difference between the item-off paths stays whole. Before step 1229 the off paths part by 3.5 × 10⁷ K, because the GPU's 1 − exp(−18) rounds to 1 in float32. Code that meets the method fails it there.
+
+**The second attempt's lines.**
+1. **(c)1's clause** becomes: "The kind and the flag are equal on both paths. Where the centre burns out, its fuel is equal on both. In every scene, the centre's fuel item difference (fuel on minus fuel off) is equal on both paths, bit for bit."
+   - Reported, not judged: the paths' fuel difference in each scene, item on and off.
+   - The rest of (c)1 stands: every body's T and T_s by its rule, and the burnt-out centre's T_s equal to float32(T_a) on both paths.
+2. **(c)2's line for the burnt-out cells' T_s** becomes: "With the item on, each burnt-out cell's T_s equals float32(T_a) on both paths, exactly, in every state."
+   - Their T stays judged by (c)1's rule.
+   - Reported, not judged: their T_s item difference on each path, and the item-off paths' T_s.
+   - The rest of (c)2 stands as 16.33 and 16.38 fix it, its particle part among them.
+- **Neither moves a tolerance.** Each replaces a comparison that holds the base's own difference with an exact one.
+- **The first attempt's two lines run again** on the second attempt's code beside them, and are reported, not judged.
+
+**What runs.**
+- **The check tool,** with these two lines changed and nothing else, in one commit on `flamescapes/burnout-heat` after a5da56e. Every part runs in full from that commit: (a), (b)1, (b)2 on seeds 1 and 2, (c)1, (c)2 and (c)3.
+- **(d) and (e).** That the solver's files are unchanged is checked: `git diff a5da56e` to the new commit, over `topologicpy-web-frontend/src`, is empty. Then these run again:
+  - the item-off fingerprints;
+  - the unit suite, with the default 0, and on a copy with 1.
+- **(d)'s GPU check by 16.30's rule** (96 runs, 6.8 hours of the GPU) does not run again. The solver's files, the base and `tools/flamescapes-gpu-check.mjs` are those 16.40's run used, so its result carries over.
+- **(f), reported:** the bench, and Vienna on the GPU in the browser, which 16.40 did not run.
+
+**What ends this line.** As 16.33 sets, with these two lines in place of the first ones.
+- A failure of (c)2, (c)3 or (e) ends the attempt. So does a failure of either rewritten line.
+- (a), (b), (c)1 and (d) have references that the method meets exactly. A failure there is a fault of the code, and 13.25's decision 13 applies.
+- No tolerance moves, nothing is fitted, and no line is rewritten again.
+
+**If the second attempt passes,** the coordinator puts the default change to the user, with its cost on the CPU, on the GPU and for Vienna in the browser (16.34, decision 3). The study's furniture-on runs then run again with it on (16.40, point 3).
+
+**The paper discloses:**
+- that two lines of (c) were rewritten after the first attempt failed on them;
+- the first lines, their failures and their diagnoses (16.40);
+- the rewritten lines, and why rule 1 allowed them;
+- both results.
+
+**The build.** The first attempt's builder makes it in `TopologicStudio-burnout`, after this section's commit. Its GPU parts wait for the shared GPU lock.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
