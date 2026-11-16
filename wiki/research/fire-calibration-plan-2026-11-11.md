@@ -7517,6 +7517,42 @@ Every figure below was measured while the R12 rerun, the study's timber rows, it
 
 Every other bound and case of 16.33 stands. No bound changes after a judged run. The build goes on `flamescapes/burnout-heat` from this section's commit, whose `src` equals e9f6371's.
 
+
+### 16.39 R12, item 12 beside 13.B: the result (2026-11-16, 06:00)
+
+R12 ran as 16.20 orders it. The solver and the harness were item 12's 1dd890a, with `--burner-flame-rays` on 13.B's flags, `--pockets drop` and `--snap seal`. It ran from 21:22 on 2026-11-15 to 05:33 on 2026-11-16.
+
+- **Runs.** 573, as in R10 and R11: 178 on each cell and 13 chair runs on each. One stopped: FSE ISO NG3 on 0.20 m, on the speed guard at 52 s, as in 13.B (52 s), R10 (49 s) and R11 (48 s).
+- **Files** in `benchmark/results/`, prefix `2026-11-15-validation-r12-`: `034`, `027`, `020`, `chairs-034`, `chairs-027` and `chairs-020`. The nine-series merges are not committed, as in 13.35.
+
+**No word moves.** All 33 words on the eight series, and all 33 with the ninth, are 13.B's. Smoke layer depth stays calibrated on all three cells, at 1.10 / 0.15, 1.01 / 0.13 and 0.97 / 0.14 with the ninth series.
+
+**The direction.** The pooled δ on the eight series, for 13.B and R12:
+
+| Cell | Layer temperature | Ceiling jet | Head height | Layer depth |
+| --- | --- | --- | --- | --- |
+| 0.34 m | 1.48, 1.49 | 1.40, 1.41 | 1.54, 1.55 | 1.11, 1.10 |
+| 0.27 m | 1.41, 1.42 | 1.41, 1.42 | 1.35, 1.36 | 1.03, 1.02 |
+| 0.20 m | 1.37, 1.37 | 1.35, 1.34 | 1.38, 1.38 | 0.99, 0.98 |
+
+Every other pooled δ moves by 0.03 or less, but two on 0.34 m whose words are not calibrated in both: O₂ (10.46 to 10.66) and soot mass fraction (2.21 to 1.67, two points). The rooms read 34 to 55 % hot, as before. **Item 12 gives no calibration gain.** The burner's rays, one of the three candidates 13.36 names for the hot reading, are not its cause.
+
+**The heat ledgers,** as 13.36 gives them: medians over the eight series' runs of each run's last entry, as shares of the heat released, for 13.B and R12.
+- **Radiated gross:** 0.086 and 0.056 (0.34 m), 0.115 and 0.068 (0.27 m), 0.117 and 0.056 (0.20 m). Item 12 lowers the gross emission by 35 to 52 %.
+- **The walls' net intake:** 0.597 and 0.600, 0.472 and 0.475, 0.526 and 0.527.
+- **The gas's share:** 0.068 and 0.069, 0.059 in both, 0.072 in both.
+- **The burner's rays leaving the grid's sides:** a median of 0.001 or less, a 90th percentile of 0.002 to 0.003, and at most 0.100, 0.019 and 0.014 of a run's heat on 0.34, 0.27 and 0.20 m.
+- So the emission falls, and no share of where the heat goes moves by more than 0.003.
+
+**The chair series** is 13.B's, run for run: every ledger figure, series and head value of its 39 runs agrees to the last digit. Its burner has a radiant fraction of 0, so item 12 has nothing to act on. 13.B's chair file was made at a367283, before `--snap` and `--pockets` were recorded in a run; the figures agree all the same.
+
+**Cost.** The eight series took 50, 125 and 272 min on 0.34, 0.27 and 0.20 m, against 13.B's 30, 82 and 352. R12 ran beside the builders of items 16 to 19 and the study's timber rows, so its times are reported and not compared.
+
+**What follows.**
+- Item 12 stays behind its switch, off by default. R12 moves no word, so it gives no reason to ask for a change to the harness's default (16.13).
+- R0 runs with item 12 on, as 16.20 orders. Whether the harness's default follows R0 is put to the user with R0's result.
+- R12+14 and R14 run now, then R16, then R0.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
