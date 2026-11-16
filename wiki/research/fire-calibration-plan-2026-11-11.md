@@ -8044,6 +8044,30 @@ The user gave their word for a second attempt at item 8 on 2026-11-16 (16.42). T
 
 **Added 2026-11-16, after this section's commit (186448c), before any judged run: the user's decision on decision 7.** The user decided that the tables are kept in the repository and credited. So the built table file is committed with the conversion script, beside a notice that holds: the tables' source, Pearson, Webb, Solovjov and Ma (2014), doi:10.1016/j.jqsrt.2014.01.019; RadLib (Stephens, Jensen, Wheeler and Lignell 2022, doi:10.1016/j.cpc.2021.108227) at commit 583e0fe, with its MIT licence text and copyright line in full; and the two files' SHA-256. The app and the paper credit both. The file is still fetched only with the switch on.
 
+
+### 16.45 R12 with 14, and R14, beside 13.B: the result (2026-11-16, 14:45)
+
+Both ran as 16.20 orders them, on item 14's 385dbec, with 13.B's flags, `--pockets drop` and `--snap seal`.
+- **R12 with 14** (`--burner-flame-rays --flame-radiant-once`): 573 runs on the three cells, from 05:34 to 12:57. One stopped, on 0.20 m, as in 13.B and R10 to R12.
+- **R14** (`--flame-radiant-once`): 191 runs on 0.27 m, from 12:57 to 14:28. None stopped.
+- **Files** in `benchmark/results/`, prefix `2026-11-16-validation-`: `r12x14-034`, `r12x14-027`, `r12x14-020`, their three `r12x14-chairs-` files, `r14-027` and `r14-chairs-027`. The nine-series merges are not committed, as in 13.35.
+
+**No word moves in either.** All 33 words of R12 with 14, and all 11 of R14, are 13.B's, on the eight series and with the ninth. Smoke layer depth stays calibrated on all three cells.
+
+**The direction.** The pooled δ on the eight series, for 13.B and R12 with 14:
+
+| Cell | Layer temperature | Ceiling jet | Head height | Layer depth |
+| --- | --- | --- | --- | --- |
+| 0.34 m | 1.48, 1.50 | 1.40, 1.42 | 1.54, 1.55 | 1.11, 1.10 |
+| 0.27 m | 1.41, 1.42 | 1.41, 1.42 | 1.35, 1.36 | 1.03, 1.02 |
+| 0.20 m | 1.37, 1.37 | 1.35, 1.35 | 1.38, 1.38 | 0.99, 0.98 |
+
+R14 on 0.27 m gives 1.41, 1.42, 1.35 and 1.03. In both reruns the ceiling jet is in band in one series fewer on 0.27 m (1 of 6, from 2), and in R12 with 14 on 0.34 m too; its word does not move. In R12 with 14, CO₂'s pooled δ falls by 0.02 to 0.05.
+
+**Items 12 and 14 give no calibration gain, alone or together.** The burner's rays and the flame's double count of its radiant fraction, two of the candidates for the hot reading, are not its cause. The heat ledgers of these reruns were not reduced for this section.
+
+**What follows.** Both items stay behind their switches, off by default. R16 runs now, then R0. Item 8's second attempt (16.43) is built on this solver.
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
