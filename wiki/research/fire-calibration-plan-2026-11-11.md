@@ -8660,6 +8660,15 @@ Every temperature reads 0.01 to 0.02 hotter with the item on, on every cell. COâ
 2. **R0 needs one solver that holds items 12, 14 and 16.** No branch holds all three: 385dbec holds 12 and 14, and 61bd1f9 holds 16. A merge of the two is made on a local branch. Before R0 runs, the merge is shown to change nothing: the two fingerprints with every switch off, and three validation runs, fixed before any result is read, that give each parent's values bit for bit under that parent's flags. The result is recorded here, dated, before R0 starts.
 3. R0 then runs on all three cells with the chair series, with the three items on (16.20).
 
+**Added 2026-11-21, after this section's commit (88597a8), before any run of R0: R0's solver, and its check.**
+- **The solver** is ebbfa43, on the local branch `flamescapes/phase0-r0`: a merge of 61bd1f9 into 385dbec, made by a builder. Three files conflicted (`validation-suite.mjs`, `flamescapes.js`, `runCache.js`), and each was resolved by keeping both sides. No line of physics is new. `RUN_CACHE_VERSION` rises from 13 to 14.
+- **The fingerprints** with every switch off are d62b581d and 29793d1a, run by the builder and again by the coordinator from ebbfa43.
+- **Three validation runs on 0.34 m,** named before any result: Steckler's test 14, NBS 100A and FSE ISONG3. The coordinator ran them from ebbfa43 through `--solver-rev`, the rerun's own path. With every item off, the merge gives 385dbec's and 61bd1f9's values. With items 12 and 14 on, it gives 385dbec's. With item 16 on, it gives 61bd1f9's. Each comparison holds 15 951 to 16 107 values, timings apart, and none differs. The builder's runs, made on the tree before its commit, gave the same.
+- **The unit suite,** by the builder: 537 of 537 on the merge, as on 385dbec.
+- **A finding in two check tools, reported.** On the merge, item 12's check (i) and item 14's check (g) fail three lines that compare every field of the solver's state with a base. The one field named is `sourceExpand`, which item 16 adds to the state and leaves null when it is off. Those tools' bases have no such field, and the tools count an absent field against a null one. With 61bd1f9 as the base, item 12's line passes. No stored value of the gas, the solids or the walls differs. The coordinator reads this as the field's presence and not as a change of state, and R0's condition above, set before the merge, is met. The tools are not changed.
+- **Not shown by anything:** that the three items act rightly together. No parent holds all three, so R0 itself is the first such run. One run with all three on ended with its health guard passed and all three items' tallies in its ledger. The GPU's path of the merge was not run; the suite runs on the CPU.
+- **R0 starts** from ebbfa43 with `--burner-flame-rays --flame-radiant-once --source-expansion` and 13.B's flags, as 16.20 orders it.
+
 
 ### 16.50 R8, the rerun of item 8: fixed before any run (2026-11-21)
 
