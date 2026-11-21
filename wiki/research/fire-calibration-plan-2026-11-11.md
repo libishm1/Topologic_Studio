@@ -8501,6 +8501,34 @@ Every figure below was measured beside other long jobs on the same machine. This
 3. **The finding on float32 wall temperatures** is a candidate for its own item: with the item on, 1.1 to 1.4 % of the heat released in (k)'s room is dropped in deposits too small to store. It cools the room, and it is counted.
 4. No default is proposed. The app's scenes leave the GPU with the switch on.
 
+**Added 2026-11-21, after this section's commit (d2615c1): (i)'s GPU part, and the ruling made final.**
+
+The builder ran (i)'s GPU part on 2026-11-16 from 98ca598, with nothing changed and nothing committed. The runs ended at 19:06 UTC.
+- **The GPU check.** `tools/flamescapes-gpu-check.mjs`, all phases: three runs of the base (item 14's saved run and two new runs of a copy of 385dbec) against one run of the branch with the switch off. The rule is 16.37's, by run, as part `ig` was committed (d5c86f4) before any GPU run. Of 4970 leaves, 93 timings are set apart and 4696 are judged bit for bit against all three base runs. None differs.
+- **The bench,** 180 s, one run a set. With the switch off, every recorded outcome of the branch is the base's bit for bit in all eight runs (Duplex, Office, Clinic and Vienna, on the CPU and on the GPU). Vienna reaches 180 s on the GPU with the switch off (101 304 cells, 56.235 MJ, as the base).
+- **The tables' file** is not requested with the switch off, and is requested once a run with it on.
+- **The cost with the switch on,** CPU, ms a step, the base beside it: Duplex 61.4 (54.7), Office 250.5 (88.1), Clinic 386.1 (99.7). Vienna was not run with the switch on.
+
+**Checked by the coordinator** (2026-11-21), apart from the agent:
+- **Part `ig`** was run again from 98ca598 on the same four reports. Its output is the builder's, line for line.
+- **The bench's equality** was run again from the builder's files by its comparison script: all eight sets equal.
+- **The request logs** were read: no request of the tables with the switch off.
+- **The diff** was read. `flamescapesGpu.js` gains two lines, in `supported`, which return false when `gasRadiation` is above 0. `kernels.js` is untouched. So with the switch off the GPU runs the base's code.
+- **Not run again by the coordinator:** any GPU run, and the bench.
+
+**Reported, not judged: the GPU runs that vary.**
+- Seven GPU runs differ between the base's three runs (181 leaves): sprinklers runs 2 to 4, design runs 0 and 1, systems runs 3 and 4. The branch lies outside the three base runs' range in 26 of the 181.
+- The largest is systems run 3: 25.45 MJ released with a peak of 496 kW, against 34.15 to 40.78 MJ and 1133 to 1525 kW in the three base runs.
+- The coordinator set this beside every saved report of this GPU check from the earlier builds, with every item off. Those are reports of other bases too, so this is a report and not a judgement. Systems run 3 lies between 24.62 and 44.92 MJ in them, with peaks from 496 to 1701 kW, and three of them lie within 0.9 MJ of the branch's value. Three base runs gave a narrow range.
+- Sprinklers run 3 released 34.14 MJ on the branch. The same reports give 34.89 to 39.58 MJ, so the branch lies 0.75 MJ below the lowest of them.
+- With the GPU's code unchanged, the coordinator reads these as the GPU's own run-to-run variation. That reading is not a check.
+
+**A fault of the builder's, disclosed.** The GPU sequence ran twice, because a stopped first launch was still waiting for the lock. The lock was held about 2 h 40 min longer than needed. The second cycle's files overwrote the first's, and the two cycles were not compared. Every figure above is the second cycle's.
+
+**Not verified by anyone:** the built app through its own worker, and any scene of the app with the switch on beyond the three of the bench.
+
+**The ruling, final.** Item 8's second attempt passes its judged checks (a) to (l). Item 8 is made, behind `gasRadiation`, off by default, on the CPU only. The development run's 2.8 × 10⁻⁹ in (k)1 stays disclosed as above. No default is proposed. The rerun's design is fixed in its own section before any run of it.
+
 
 ### 16.48 Item 18, second attempt: the build's checks (2026-11-16, 16:30)
 
@@ -8598,6 +8626,40 @@ Item 18's second attempt was built as 16.41 fixes it, on branch `flamescapes/bur
 4. Which cells change Vienna's fire was not traced, and the embers' spawn temperature with the item on is still not verified.
 
 **Added to 16.46, the same day.** The coordinator ran item 19's (c) again on the GPU from its branch, under the shared lock: no judged line failed.
+
+
+### 16.49 R16, item 16 beside 13.B: the result (2026-11-21)
+
+R16 ran as 16.20 orders it, on item 16's 61bd1f9, with 13.B's flags, `--pockets drop`, `--snap seal` and `--source-expansion`.
+- **The runs:** 573 on the three cells, with the chair series, from 14:29 to 21:50 on 2026-11-16. One stopped, on 0.20 m: the FSE series' ISONG3, on the speed limit at 47 s, as in 13.B and in every rerun since R10.
+- **Files** in `benchmark/results/`, prefix `2026-11-16-validation-`: `r16-034`, `r16-027`, `r16-020` and their three `r16-chairs-` files. The nine-series merges are not committed, as in 13.35.
+- **The solver.** 61bd1f9 holds main's be32e34 and item 16. It holds neither item 12 nor item 14, so R16 is item 16 alone.
+
+**One word moves, down.** On the eight series, the neutral plane on 0.34 m goes from indicative to not calibrated.
+- Its pooled δ goes from 0.77 to 0.74, and the weighted pooled δ from 0.67 to 0.66, which takes the weighted word from indicative to not calibrated. The series in band stay 1 of 4.
+- By series: Steckler 0.93 to 0.89, NIST/NRC 0.77 to 0.70, the UL/NIST series 0.44 to 0.65 on its two runs, FSRI unchanged at 0.58.
+- With the ninth series the word was not calibrated in 13.B and stays so.
+- On 0.27 and 0.20 m the neutral plane's words do not move.
+
+**The other 32 words are 13.B's on the eight series, and all 33 are 13.B's with the ninth.** Smoke layer depth stays calibrated on all three cells.
+
+**The direction.** The pooled δ on the eight series, for 13.B and R16:
+
+| Cell | Layer temperature | Ceiling jet | Head height | Layer depth | O₂ |
+| --- | --- | --- | --- | --- | --- |
+| 0.34 m | 1.48, 1.50 | 1.40, 1.42 | 1.54, 1.56 | 1.11, 1.11 | 10.46, 10.88 |
+| 0.27 m | 1.41, 1.42 | 1.41, 1.43 | 1.35, 1.37 | 1.03, 1.03 | 3.81, 3.84 |
+| 0.20 m | 1.37, 1.38 | 1.35, 1.37 | 1.38, 1.40 | 0.99, 1.00 | 3.53, 3.58 |
+
+Every temperature reads 0.01 to 0.02 hotter with the item on, on every cell. CO₂ rises by 0.02 to 0.03 on 0.34 and 0.27 m. The door velocity and the door mass flow move by 0.03 at most.
+
+**Item 16 gives no calibration gain.** Keeping the gas that the sources add makes the rooms read slightly hotter, not cooler, and costs one word on the coarsest cell. The heat ledgers of this rerun were not reduced for this section.
+
+**What follows.**
+1. Item 16 stays behind `sourceExpansion`, off by default.
+2. **R0 needs one solver that holds items 12, 14 and 16.** No branch holds all three: 385dbec holds 12 and 14, and 61bd1f9 holds 16. A merge of the two is made on a local branch. Before R0 runs, the merge is shown to change nothing: the two fingerprints with every switch off, and three validation runs, fixed before any result is read, that give each parent's values bit for bit under that parent's flags. The result is recorded here, dated, before R0 starts.
+3. R0 then runs on all three cells with the chair series, with the three items on (16.20).
+
 
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
