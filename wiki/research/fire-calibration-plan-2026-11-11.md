@@ -8661,6 +8661,45 @@ Every temperature reads 0.01 to 0.02 hotter with the item on, on every cell. CO�
 3. R0 then runs on all three cells with the chair series, with the three items on (16.20).
 
 
+### 16.50 R8, the rerun of item 8: fixed before any run (2026-11-21)
+
+16.44's decision 10 and 16.47 leave the rerun's cells, switches and ray count to this section. It is written by the coordinator, who has read 13.B, R10 to R16 and item 8's checks, and that is declared. No validation run with `gasRadiation` on has been compared with a measurement: Steckler's test 14 ran once for (k)2, and only its ledger was read. Nothing below changes after a run; anything added later is dated, with its commit.
+
+1. **The solver** is 98ca598, the commit that passed item 8's checks (`--solver-rev 98ca598`). It holds main's be32e34 and items 10, 11, 12 and 14 behind their switches. It does not hold item 16.
+2. **Two arms, so that item 8 is read alone.** Item 8 acts only with item 10, and with a radiating burner only with item 14 (16.43, points 18 and 21). No earlier rerun carries those two together, so the base is run too.
+   - **R8b, the base:** `--surface-ray-start --surface-emit-floor --flame-radiant-once`.
+   - **R8:** the same with `--gas-radiation`.
+3. **Item 11 is on in both arms.** Without it a wall between ambient and 500 K takes the gas's radiation and returns none, and the layer's loss is overstated (16.43, point 22). That would cool the rooms for a wrong reason, toward the measurements. With item 11 on the walls return what they should. This is the stricter reading for a gain, and it is chosen for that.
+4. **Item 12 is off in both arms.** The burner's rays start from the axis cell, as in R14. R12 and R12 with 14 moved no word (16.39, 16.45). It is one switch fewer between the arms and 13.B.
+5. **The ray count** is the default, `gasRays` 8 (16.44, decision 9). The tables are the repository's file, the one whose SHA-256 the notice holds. Every run has `seed` 1, as the suite sets it.
+6. **The other flags are 13.B's,** as 13.33 fixed them: `--wall-layers --leakage --all-cells --jobs 8`, with `--pockets drop` and `--snap seal`. The harness is 98ca598's own.
+7. **The cells and the order.** The cost fixes them, not any result.
+   1. R8b on 0.27 m: the eight series, then the chair series.
+   2. R8 on 0.27 m: the same.
+   3. R8b, then R8, on 0.34 m.
+   4. R8b on 0.20 m. Then R8 on 0.20 m only if its projected time is 72 h or less. The projection is R8's wall time for the eight series on 0.27 m, times R8b's ratio of 0.20 m to 0.27 m. If it is more, R8 does not run on 0.20 m, the words there stay as they are, and that is stated as a limit of the rerun.
+8. **The cost expected,** from one run only: Steckler's test 14 took 77 s with the item on against 6.6 s. At that ratio the eight series take about 14 h on 0.27 m, 5 h on 0.34 m and 50 h on 0.20 m. This is an estimate, and no cost figure is judged. Other work runs on the machine, and that load is stated beside the wall seconds.
+9. **What is read.**
+   - R8 beside R8b, word by word and series by series: that is item 8's effect.
+   - R8 and R8b each beside 13.B sealed, in the files 13.33's point 5 names, with the ninth series as its point 6 reads it.
+   - The words are read as 13.27 read them. No band, tolerance or rule moves.
+10. **What is reported** for each arm and cell:
+    - each quantity's final word, with its pooled δ, σ_M and series in band;
+    - the stopped runs and the health guard, counted as 12.6 counts them;
+    - the heat ledger: released, radiated, gas, walls, out of the grid's sides;
+    - item 8's tallies: `radiatedOut`, `radFloor`, `radCapped`, `radNegative`, `radShareNegative`, `gasRays`, `gasCrossings`;
+    - both `radRoundoff` sums beside the heat released, which measure 16.47's finding on float32 wall temperatures in real rooms;
+    - each run's wall seconds beside R8b's.
+11. **What would count.** The rooms read 35 to 55 % hot in 13.B (16.42). Item 8 is a gain if a temperature word moves up on a cell with no word moving down, read between R8 and R8b. A fall in the pooled δ without a word moving is reported as a direction and claimed as nothing more. If layer depth leaves calibrated on any cell, that is reported first.
+12. **What follows the rerun.**
+    - No word in the app changes until the user has seen the rerun (13.5).
+    - No default is proposed: with the switch on the app's scenes leave the GPU (16.44, decision 6).
+    - No run is repeated with another seed or another ray count. A wish for either after the result is a new section, disclosed.
+    - Whether Phase 1 (16.4) screens with item 8 on is decided after R8 and R0 are both read.
+13. **Order with R0.** R0 runs first (16.20). R8b and R8 follow it, one suite at a time, so that no more than 8 jobs run.
+14. **Files** go in `benchmark/results/`, prefixed with the day each arm starts, then `-validation-r8b-` or `-validation-r8-` and the cell, named as 13.33's point 10 names them. Logs are not committed.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
