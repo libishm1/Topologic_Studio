@@ -8709,6 +8709,37 @@ Every temperature reads 0.01 to 0.02 hotter with the item on, on every cell. CO�
 14. **Files** go in `benchmark/results/`, prefixed with the day each arm starts, then `-validation-r8b-` or `-validation-r8-` and the cell, named as 13.33's point 10 names them. Logs are not committed.
 
 
+### 16.51 R0, items 12, 14 and 16 together beside 13.B: the result (2026-11-21)
+
+R0 ran as 16.20 orders it, on the merge ebbfa43 (16.49's dated note), with 13.B's flags, `--pockets drop`, `--snap seal`, and `--burner-flame-rays --flame-radiant-once --source-expansion`.
+- **The runs:** 573 on the three cells, with the chair series, from 12:32 to 19:10 on 2026-11-21. One stopped, on 0.20 m: the FSE series' ISONG3, on the speed limit, here at 57 s. It is the run that stops in 13.B and in every rerun since R10.
+- **Wall time** of the eight series: 34 min on 0.34 m, 82 min on 0.27 m, 247 min on 0.20 m, at 8 jobs, with other work on the machine. No cost figure is judged.
+- **Files** in `benchmark/results/`, prefix `2026-11-21-validation-`: `r0-034`, `r0-027`, `r0-020` and their three `r0-chairs-` files. The nine-series merges are not committed, as in 13.35.
+
+**No word moves.** All 33 words are 13.B's on the eight series, and all 33 are 13.B's with the ninth. Smoke layer depth stays calibrated on all three cells, and the neutral plane stays calibrated on 0.20 m.
+
+**The neutral plane on 0.34 m keeps its word.** Item 16 alone took it from indicative to not calibrated (16.49). With items 12 and 14 beside it the pooled δ is 0.77, as in 13.B, and the word is indicative.
+
+**One series leaves its band, on every cell.** The ceiling jet of the WTC series goes from in band to indicative: 1.19 to 1.33 on 0.34 m, 1.21 to 1.31 on 0.27 m, 1.17 to 1.25 on 0.20 m. The series in band go from 2 of 6 to 1 of 6. The quantity's word does not change on any cell.
+
+**The direction.** The pooled δ on the eight series, for 13.B and R0:
+
+| Cell | Layer temperature | Ceiling jet | Head height | Layer depth | O₂ |
+| --- | --- | --- | --- | --- | --- |
+| 0.34 m | 1.48, 1.52 | 1.40, 1.44 | 1.54, 1.57 | 1.11, 1.11 | 10.46, 10.83 |
+| 0.27 m | 1.41, 1.43 | 1.41, 1.43 | 1.35, 1.37 | 1.03, 1.02 | 3.81, 3.82 |
+| 0.20 m | 1.37, 1.39 | 1.35, 1.36 | 1.38, 1.40 | 0.99, 0.98 | 3.53, 3.57 |
+
+Every temperature reads 0.01 to 0.04 hotter with the three items on, on every cell. The door velocity, the neutral plane and the door mass flow move by 0.02 at most. The soot mass fraction, one series, reads 2.55 on both 0.34 m (from 2.21) and 0.20 m (from 3.02), and 1.21 on 0.27 m as before. That is reported and not explained.
+
+**The three items together give no calibration gain.** They cost no word and gain none, and the rooms read slightly hotter. The heat ledgers of this rerun were not reduced for this section.
+
+**What follows.**
+1. Items 12, 14 and 16 stay behind their switches, off by default. The merge ebbfa43 stays a local branch; nothing of it is proposed for main.
+2. The hot reading of the rooms, 35 to 55 % in 13.B (16.42), is not touched by any of items 10 to 16. Item 8 is the next candidate, and R8b and R8 run next as 16.50 fixes them.
+3. Whether Phase 1 (16.4) screens with item 8 on is decided after R8 is read (16.50, point 12).
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
