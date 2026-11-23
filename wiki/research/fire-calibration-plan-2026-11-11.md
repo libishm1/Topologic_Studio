@@ -8740,6 +8740,50 @@ Every temperature reads 0.01 to 0.04 hotter with the three items on, on every ce
 3. Whether Phase 1 (16.4) screens with item 8 on is decided after R8 is read (16.50, point 12).
 
 
+### 16.52 R8b and R8 on 0.27 and 0.34 m: the words and the direction (2026-11-23)
+
+Steps 1 to 3 of 16.50's point 7 ran as fixed, from 98ca598: R8b, then R8, on 0.27 m, then both on 0.34 m, each with the chair series. They ran from 19:12 on 2026-11-21 to 03:55 on 2026-11-23, one suite at a time, at 8 jobs.
+- **Files** in `benchmark/results/`, prefix `2026-11-21-validation-`: `r8b-027`, `r8b-034`, `r8-027`, `r8-034` and their four `-chairs-` files. All carry the day the rerun started, though R8b on 0.34 m started on 2026-11-22; that departs from 16.50's point 14 and is stated. The nine-series merges are not committed.
+- **Step 4, the 0.20 m cell, has not run.** It is not started on the day this is written, because the machine is in use, and for no reason of any result. Until it runs, nothing here is a word on 0.20 m.
+- **This section reads the words, the pooled δ, the stopped runs and the wall time.** The heat ledgers, item 8's tallies and the `radRoundoff` sums, which 16.50's point 10 orders, are not yet reduced. They follow in a dated note, and no claim rests on them here.
+
+**Item 8 moves temperature words up on 0.34 m, and none down.** R8 beside R8b, as 16.50's point 9 reads it:
+
+| Cell, series | Layer temperature | Ceiling jet | Head height |
+| --- | --- | --- | --- |
+| 0.34 m, eight | not calibrated to indicative | indicative, same | not calibrated to indicative |
+| 0.34 m, nine | indicative, same | not calibrated to indicative | not calibrated to indicative |
+| 0.27 m, eight | not calibrated, same | not calibrated, same | not calibrated, same |
+| 0.27 m, nine | indicative, same | not calibrated, same | indicative, same |
+
+Every other word is the same in both arms, on both cells, with eight series and with nine. Layer depth stays calibrated. By 16.50's point 11, fixed before any run, **item 8 is a gain on 0.34 m.** On 0.27 m it is a direction and is claimed as nothing more.
+
+**The direction.** The pooled δ on the eight series, for 13.B, R8b and R8:
+
+| Cell | Layer temperature | Ceiling jet | Head height | Layer depth | O₂ | CO₂ |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.34 m | 1.48, 1.49, 1.16 | 1.40, 1.44, 1.12 | 1.54, 1.54, 1.21 | 1.11, 1.11, 1.11 | 10.46, 10.48, 11.28 | 1.49, 1.44, 1.43 |
+| 0.27 m | 1.41, 1.41, 1.14 | 1.41, 1.44, 1.17 | 1.35, 1.34, 1.10 | 1.03, 1.03, 1.03 | 3.81, 3.78, 3.97 | 1.32, 1.37, 1.27 |
+
+The rooms read 34 to 54 % hot in R8b and 10 to 21 % hot in R8. The σ_M of the temperatures stays between 0.32 and 0.58, and it is the scatter, not the bias, that now holds the words on 0.27 m. O₂ reads further off with the item on. The door velocity, the neutral plane and the door mass flow move by 0.04 at most between the arms.
+
+**The base arm beside 13.B, reported.** R8b is items 10, 11 and 14 together, which no earlier rerun carried. On the eight series, beside 13.B: the ceiling jet on 0.34 m goes from not calibrated to indicative, the neutral plane on 0.34 m from indicative to not calibrated, and CO₂ on 0.27 m from indicative (one laboratory) to not calibrated. R8 beside 13.B carries those last two words down as well. They are the base's, not item 8's, and they are counted against any proposal that turns the four switches on together.
+
+**Stopped runs.** One run, the FSE series' ISOHept26, stops on the temperature limit:
+- on 0.27 m in both arms (R8b at 423 s, R8 at 345 s);
+- on 0.34 m in R8 only (at 515 s).
+13.B and R0 have no stopped run on these two cells. So the base stops it on 0.27 m, and item 8 adds one stop on 0.34 m. The cause is not known. The soot mass fraction has no σ_M in exactly the arms where that run stops (0.64 on 0.27 m, 0.73 on 0.34 m in R8) and reads 3.71 in R8b on 0.34 m. None of this is explained, and no soot figure of this rerun is used.
+
+**The cost.** Wall minutes of the eight series, other work on the machine: 123 for R8b and 1271 for R8 on 0.27 m, a ratio of 10.3; 49 and 427 on 0.34 m, a ratio of 8.7. 16.50's estimate was 14 h and 5 h; the runs took 21 h and 7 h. No cost figure is judged.
+
+**What follows.**
+1. **No word in the app changes** until the user has seen this (13.5), and no default is proposed (16.50, point 12). `gasRadiation` stays off, on the CPU only.
+2. **Step 4:** R8b on 0.20 m, then R8 there only if 1271 min times R8b's ratio of 0.20 m to 0.27 m is 72 h or less (16.50, point 7).
+3. **The dated note** with the ledgers, the tallies and both `radRoundoff` sums.
+4. **The stop of ISOHept26** is looked at before any claim on the FSE series with these switches on.
+5. No run is repeated with another seed or ray count (16.50, point 12).
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
