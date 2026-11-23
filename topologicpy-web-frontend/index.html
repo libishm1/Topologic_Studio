@@ -7,9 +7,32 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta
       name="description"
-      content="Topologic Studio - IFC viewer, egress graph and fire simulation."
+      content="Topologic Studio is a free research tool that runs in the browser: open an IFC building model, build its walkable graph with TopologicPy, find the escape routes, and simulate fire, smoke, sprinklers and evacuation."
     />
-    <title>Topologic Studio</title>
+    <title>Topologic Studio: fire, smoke and escape simulation on IFC building models</title>
+    <link rel="canonical" href="https://libishm1.github.io/Topologic_Studio/" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Topologic Studio" />
+    <meta property="og:title" content="Topologic Studio: fire, smoke and escape simulation on IFC building models" />
+    <meta property="og:description" content="Topologic Studio is a free research tool that runs in the browser: open an IFC building model, build its walkable graph with TopologicPy, find the escape routes, and simulate fire, smoke, sprinklers and evacuation." />
+    <meta property="og:url" content="https://libishm1.github.io/Topologic_Studio/" />
+    <meta property="og:image" content="https://libishm1.github.io/Topologic_Studio/docs/media/duplex-fire.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Topologic Studio",
+        "url": "https://libishm1.github.io/Topologic_Studio/",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any, in a web browser",
+        "description": "Topologic Studio is a free research tool that runs in the browser: open an IFC building model, build its walkable graph with TopologicPy, find the escape routes, and simulate fire, smoke, sprinklers and evacuation.",
+        "image": "https://libishm1.github.io/Topologic_Studio/docs/media/duplex-fire.jpg",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
     <script>
       // Apply the stored theme before first paint so the app never flashes the
       // wrong background while React boots.
@@ -26,7 +49,26 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Shown until the app starts, and read by search engines. React replaces it. -->
+      <main style="max-width: 40rem; margin: 15vh auto; padding: 0 16px; font: 16px/1.5 system-ui, sans-serif">
+        <h1>Topologic Studio</h1>
+        <p>
+          Fire, smoke and escape simulation on IFC building models, in the browser. Open a model, build its
+          walkable graph with TopologicPy, find the routes to the exits, and run the fire with sprinklers and
+          people leaving.
+        </p>
+        <p>
+          <a href="docs/index.html">Guide</a> ·
+          <a href="docs/getting-started.html">Getting started</a> ·
+          <a href="docs/fire-and-smoke.html">Fire and smoke</a> ·
+          <a href="docs/suppression.html">Fire suppression</a> ·
+          <a href="docs/people-and-slime.html">People leaving</a> ·
+          <a href="docs/checks.html">Code and performance checks</a> ·
+          <a href="docs/methods-and-proofs.html">Methods, proofs and sources</a>
+        </p>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
