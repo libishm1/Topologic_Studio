@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Questions and key ideas: Topologic Studio guide</title>
+<meta name="description" content="Short answers on Topologic Studio: what an IFC file and a walkable graph are, what cells and time steps mean in the fire, heat release rate, the smoke layer, tenability, sprinklers, ASET and RSET, and how far the results can be trusted.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="../favicon.svg" alt="" width="26" height="26">Topologic Studio <span class="brand__tag">Guide</span></a>
+  <nav class="site-links" aria-label="Elsewhere">
+    <a href="../">Open the app</a>
+    <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Guide">
+    <p class="toc__label">Guide</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="fire-and-smoke.html">Fire and smoke</a></li>
+      <li><a href="suppression.html">Fire suppression</a></li>
+      <li><a href="checks.html">Code and performance checks</a></li>
+      <li><a href="people-and-slime.html">People leaving and the slime mould</a></li>
+      <li><a href="methods-and-proofs.html">Methods, proofs and sources</a></li>
+      <li><a href="faq.html" aria-current="page">Questions and key ideas</a>
+        <ul>
+          <li><a href="#the-tool">The tool</a></li>
+          <li><a href="#the-building">The building</a></li>
+          <li><a href="#the-fire">The fire</a></li>
+          <li><a href="#the-people">The people</a></li>
+          <li><a href="#trust">How far to trust it</a></li>
+        </ul>
+      </li>
+    </ol>
+    <p class="toc__out"><a href="../">Open the app</a></p>
+  </nav>
+
+  <main id="main">
+    <h1>Questions and key ideas</h1>
+    <p class="lead">Short answers to what people ask first, and the few ideas that make the rest of the guide easier to read. Each answer links to the page with the detail.</p>
+
+    <h2 id="the-tool">The tool</h2>
+
+    <h3>What is Topologic Studio?</h3>
+    <p>A research tool that opens a building model in the browser and works out how people get out of it. It finds the routes to the exits, runs a fire with its smoke, and shows what sprinklers and closed doors change. The <a href="index.html">overview</a> lists what it does.</p>
+
+    <h3>Do I need to install anything, and is my model uploaded?</h3>
+    <p>No. Everything a first visit needs runs in your browser, on your own device. Your IFC file is sent to the server only if you ask for the TopologicPy cross-check. See <a href="index.html#where-it-runs">Where it runs</a>.</p>
+
+    <h3>Can I use it to sign off a building?</h3>
+    <p>No. Its results do not replace a fire engineer's egress assessment. It is meant for research, teaching and early design, where seeing the effect of a door, a stair or a sprinkler quickly is useful.</p>
+
+    <h3>Where does machine learning come in?</h3>
+    <p>In two places today: a forecast of when each place becomes untenable, and an escape learned by reinforcement learning. Both are described under <a href="fire-and-smoke.html">Fire and smoke</a>. The tool also produces many simulated fires quickly from one building model, which is the kind of data such methods learn from.</p>
+
+    <h2 id="the-building">The building</h2>
+
+    <h3>What is an IFC file?</h3>
+    <p>IFC is the open file format for building models. It stores walls, doors, stairs and rooms as named objects, not only as shapes, so Studio can find the doors and the exits from the file's own data. Most design software can export it. See <a href="getting-started.html">Getting started</a>.</p>
+
+    <h3>What is the walkable graph?</h3>
+    <p>A grid of points 0.5 m apart over every floor, joined wherever a person could walk, through doors and along stairs. Once the floor is a graph, the way out is a shortest-path question that a computer answers at once. The graph can be exported to <a href="https://github.com/wassimj/topologicpy">TopologicPy</a>.</p>
+
+    <h3>Why are there alternative routes?</h3>
+    <p>The shortest route may run through the fire. Studio shows other ways out and changes the route as heat and smoke spread, so you can see when a second exit matters.</p>
+
+    <h2 id="the-fire">The fire</h2>
+
+    <h3>What is a cell?</h3>
+    <p>The Flamescapes solver cuts the air of the building into small cubes, called cells, and keeps a temperature, a smoke density and the gases for each one. In the browser a cell is 0.2 to 0.45 m across. Smaller cells show more detail and take much longer to compute.</p>
+
+    <h3>What is a time step?</h3>
+    <p>The fire is advanced in small jumps of time, and every cell is recomputed at each jump. In Flamescapes a step is 0.1 s. Where the gas moves fast, a step is cut into up to eight smaller ones, because the calculation goes wrong if gas crosses more than about one cell in one jump. This is also why small cells are slow: they need more cells and shorter steps together.</p>
+    <p>The simpler fire models, which spread over the walkable graph, count time in steps that are not seconds. The forecast converts them with a factor you set (<span class="label">Seconds per fire step</span>).</p>
+
+    <h3>What is the heat release rate?</h3>
+    <p>The power of the fire at a given moment, in kilowatts or megawatts. It is the most important single number of a fire. A burning waste bin gives tens of kilowatts, and a room fully on fire gives megawatts. Each Flamescapes run reports it on its card.</p>
+
+    <h3>What is the smoke layer?</h3>
+    <p>Hot smoke rises, collects under the ceiling and deepens downward. How deep and how hot that layer is decides when a room can no longer be crossed.</p>
+
+    <h3>What does tenable mean?</h3>
+    <p>A place is tenable while a person can survive there. Studio judges it from the gas temperature, how far one can see through the smoke, and the gases. See <a href="fire-and-smoke.html">Fire and smoke</a>.</p>
+
+    <h3>Why do only a few sprinklers open?</h3>
+    <p>Each sprinkler head opens by itself when its sensing element has been heated enough by the hot gas flowing past it under the ceiling. So only the heads near the fire open. See <a href="suppression.html">Fire suppression</a>.</p>
+
+    <h2 id="the-people">The people</h2>
+
+    <h3>What are ASET and RSET?</h3>
+    <p>ASET is the available safe egress time: how long until the way out becomes untenable. RSET is the required safe egress time: how long people need to notice the fire, start moving and walk out. A design works when ASET is longer than RSET with a margin. The <a href="checks.html">performance check</a> computes both with the fire.</p>
+
+    <h3>What is pre-movement time?</h3>
+    <p>The delay between the alarm and the moment people start to walk. It is often longer than the walk.</p>
+
+    <h3>What is the slime mould for?</h3>
+    <p>It grows a trail over the floor that settles on the paths many routes share, which shows desire lines, bottlenecks and dead ends. See <a href="people-and-slime.html">People leaving and the slime mould</a>.</p>
+
+    <h2 id="trust">How far to trust it</h2>
+
+    <h3>Has the fire been compared with real fires?</h3>
+    <p>Yes. The Flamescapes solver was compared with 178 measured room fire tests it was never fitted to, by rules written before the comparisons. The depth of the smoke layer passes on all three cell sizes tested. The temperatures read warm and do not pass. The full account, quantity by quantity, is under <a href="fire-and-smoke.html#limits">Limits</a>.</p>
+
+    <h3>What do calibrated, indicative and not calibrated mean?</h3>
+    <p>They are this project's three words for one quantity on one cell size. Calibrated means the quantity stayed within bands fixed in advance, for its average error and its scatter, against measurements the solver was not fitted to. Indicative means it did so only in part. Each Flamescapes run's card says which words hold on its own cells.</p>
+
+    <h3>What is proved in Lean?</h3>
+    <p>Some properties of the methods are proved with the Lean 4 proof checker, which accepts a proof only if every step follows. A proof shows that a formula has a property; it does not show that the formula matches a real fire. The list is under <a href="methods-and-proofs.html#lean">What is proved in Lean</a>.</p>
+
+    <h3>Whose work does it build on?</h3>
+    <p>The fire solver follows the Flamescapes method, the graph work follows TopologicPy, and the viewer is That Open Engine. All sources are under <a href="methods-and-proofs.html#sources">Sources</a> and <a href="methods-and-proofs.html#credits">Credits and licences</a>.</p>
+
+    <nav class="pager" aria-label="Previous page">
+      <a href="methods-and-proofs.html">Previous: Methods, proofs and sources</a>
+      <a href="index.html">Back to the overview</a>
+    </nav>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div>
+    <p>Topologic Studio is a research tool; its results do not replace a fire engineer's egress assessment. This guide describes the version of 2026-11-12.</p>
+    <p><a href="../">Open the app</a> · <a href="https://github.com/libishm1/Topologic_Studio">README on GitHub</a> · <a href="methods-and-proofs.html#credits">Credits and licences</a></p>
+  </div>
+</footer>
+</body>
+</html>
