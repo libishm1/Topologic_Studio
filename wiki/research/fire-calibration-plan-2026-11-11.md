@@ -8952,6 +8952,68 @@ Parts A, B and D of 16.54, on the saved results. An agent wrote the tool and ran
 **What this says, plainly.** The solver's error at head height is not one of level alone. It is hot near the fire and late or cold far from it, most of all along corridors. A single factor on temperature would not fix the time at which a distant place closes, and item 8, which cools everything, improves the near field and worsens the misses far away. The next item for the egress is therefore the far field: how heat and smoke travel along a corridor on these cells (the ATF and NBS series), not the layer's temperature in the fire room.
 
 
+### 16.57 CO, visibility, the asphyxiant dose and O₂ for the solver on the site, 0.34 and 0.27 m: not calibrated (2026-11-25)
+
+16.55's comparisons on the four storing runs of 13.B (eight series and the chairs, on 0.34 and 0.27 m; 178 and 13 runs each, none stopped). An agent ran the pairs check and the reductions; its reducers, their check on made-up series (37 tests) and the choices were committed (af8da94, branch `flamescapes/head-height-species`) before any stored series was read, and the results are commit 33d1e77 there (`benchmark/results/2026-11-24-species-results.md` and its tables; `2026-11-24-o2-by-height.*`). The figures are the agent's. The coordinator checked the order of the commits and recomputed one result from the per-device rows (the time to a visibility of 10 m: 0.69 and 0.64, as reported); the rest was not recomputed. R8 on 0.34 m was still running and is not here; nothing on 0.20 m was stored.
+
+**The word is "not calibrated" for every quantity on both cells.** By 16.55 none could have been more than indicative.
+
+**The pairs check, and a correction to 16.55.** Each stored file's pairs agree with the saved file to every digit: 0.34 m with the sealed merge (3893 pairs), both chairs runs with the chairs' file (427). On 0.27 m the stored file differs from the sealed merge in 167 of 3838 pairs, all in Steckler's runs and one NBS run, and agrees to every digit with `2026-11-13-validation-13b-027-sealed-pockets.json`. That is the file 13.31 names for 13.B on 0.27 m (it carries 13.22's rule for trees below a pocket); **16.55's "the sealed merges" was the coordinator's slip for that cell.** The agent reduced 0.27 m on that agreement; the coordinator confirms it against 13.31. None of the differing runs has a gas analyser or a smoke meter.
+
+**CO, peak volume fraction, under the ceiling** (NIST/NRC at 3.22 m, FSE at 2.08 m; 9 pairs, 8 and 6 with the floors). Pooled bias δ / scatter σ_M, wet:
+
+| Reading | 0.34 m | 0.27 m |
+| --- | --- | --- |
+| Every positive pair | 2.16 / 1.87 | 1.89 / 1.83 |
+| Measured at or above 0.0001 | 1.56 / 1.83 | 1.39 / 1.80 |
+| Measured at or above 0.0002 | 1.24 / 1.94 | 1.04 / 1.88 |
+
+- **The scatter is the result** (1.7 to 1.9 against 0.35). Two regimes are pooled: NIST/NRC's model peak is 0.6 to 2.9 times the measured on 0.34 m; FSE's heptane tests read 0.01 to 0.7 times (ISOHept26: 0.020 and 0.044 measured, 0.0005 in the model). That is a fixed yield in an under-ventilated fire, which 16.55 said this would not test and which it shows nonetheless.
+- The floors move the bias and leave the scatter. Dry reads 3 to 16 % above wet and changes no word. 7 of 16 devices give no ratio (five NIST/NRC tests measured zero; FSE's methane test has no CO in the model).
+
+**Time to a visibility of 10 m, under the ceiling** (NIST/NRC's laser at 3.62 m):
+
+| Cell | Pairs | Early | Misses | δ / σ_M |
+| --- | --- | --- | --- | --- |
+| 0.34 m | 8 | 2 | 0 | 0.69 / 0.10 |
+| 0.27 m | 8 | 2 | 0 | 0.64 / 0.12 |
+
+- **The model reaches 10 m about a third too soon, with little scatter**: 116 to 228 s measured, 81 to 141 s in the model. It errs to the safe side; δ is under 0.8, so the rule fails. One laboratory, one fuel, one yield (0.0149 ± 0.0033).
+- FSE's soot probes give no time (their measured soot starts at 455 and 475 s).
+
+**The asphyxiant dose, under the ceiling** (NIST/NRC's upper point; FSE front and rear in two tests).
+- The ratio at the end of the run, pooled, is 48 to 537 with a scatter over 2. **Those figures are FSE's and come from oxygen, not CO**: the model has almost no oxygen at the probes where 10 to 14 % was measured, so the app's low-oxygen term dominates (FSE's points read 3.6 to 1470). NIST/NRC's five points read 1.0 to 3.0 on 0.34 m and 0.9 to 2.1 on 0.27 m.
+- The time to 0.3 has 2 or 3 pairs on each cell (δ 0.46 to 0.62, the model early): too few for a statistic.
+
+**O₂ by height** (UL FSRI's rooms; the model's drop over the measured drop; from the saved files, so R8 is here). δ / σ_M:
+
+| Solver, cell | 1.84 m, every pair | 0.64 m, measured drop at or above 0.005 |
+| --- | --- | --- |
+| 13.B, 0.20 m | 1.48 / 0.40 | 0.94 / 0.28 |
+| 13.B, 0.27 m | 1.32 / 0.36 | 0.96 / 0.24 |
+| 13.B, 0.34 m | 2.00 / 0.60 | 0.99 / 0.24 |
+| R8, 0.27 m | 1.26 / 0.32 | 0.97 / 0.24 |
+| R8, 0.34 m | 1.81 / 0.54 | in the result file |
+
+- **At head height the model uses up a quarter to a half too much oxygen on the two finer cells and twice as much on the coarsest.** Low down it matches where the measured drop can be read. That fits a layer that is too deep or too mixed at head height, as the temperature there reads high. The chairs at 1.84 m: 1.74 / 0.39 (0.34 m), 1.45 / 0.37 (0.27 m). One laboratory, so not calibrated by the suite's rule whatever the figures.
+
+**What closes a place first in the model** (no measurement beside it; 541 cells at 1.8 m in eight series, 52 in the chairs).
+- **Temperature, almost everywhere**: 506 of 541 cells, and all of UL FSRI and Steckler. Six of the eight series burn a fuel given no soot, so visibility cannot close anything there.
+- **Visibility is first, or level with temperature, where the fuel is sooty**: every chair cell (median about 155 to 160 s), all of WTC, 4 of 12 cells in NBS.
+- **The asphyxiant dose is never first.** The heat dose is first only together with temperature.
+
+**Where 16.55 met the code.**
+- The saved file for 0.27 m (above).
+- FSE's soot probes were set aside because the reducer asks for a temperature at the probe's own point and the thermocouple is 2 cm away; 16.55's late-start rule would have set them aside too. Not changed after the result.
+- **The suite's dead-channel rule (a reading under 0.01 is dead) drops a reading that is probably real**: ISOHept26's O₂ is under 1 % in 54 of 120 samples. The rule was adopted before the result and stands; the point is left out of the dose.
+- A model value of zero has no ratio, as a measured zero has none.
+
+**What this says, plainly.**
+1. Nothing the egress reads besides the smoke layer's depth is calibrated. Under the ceiling the model's smoke arrives early (safe side), its CO is right to within a factor of three where the fire is well ventilated and far too low where it is not, and at head height it uses up too much oxygen (safe side).
+2. **The unsafe direction is CO in under-ventilated fires.** With a fixed yield the model gave a fortieth of the measured CO in FSE's heptane test. In the app the asphyxiant dose is never the first closure, so today the temperature and the smoke close a place long before; but a claim about toxicity cannot rest on this solver. A CO yield that rises with the equivalence ratio would be a new item, to be proposed and fixed before any run.
+3. Head height stays untested for smoke and CO: 16.55's last paragraph holds.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
