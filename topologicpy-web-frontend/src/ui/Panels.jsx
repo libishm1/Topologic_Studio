@@ -3038,7 +3038,7 @@ function CombustionStatus({ combustion, running }) {
               {sprinklerLine(combustion.sprinklers, combustion.sprinklerSummary)}
               <span className="field__hint">
                 {" "}
-                Against measured tests the estimate opens the first head at 0.8 to 1.3 of the measured time, about a quarter late in a small
+                Against measured tests the estimate opens the first head at a median 0.96 to 1.10 of the measured time, about a tenth late in a small
                 closed room. With the first item as a design fire, heads in rooms of ordinary height open at tens to a few hundred kW. The
                 late bound is not a time to quote.
               </span>
