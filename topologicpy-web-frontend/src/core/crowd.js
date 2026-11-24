@@ -465,7 +465,8 @@ function random(seed) {
  * node is its own cross-section at the stair's capacity, holds one person
  * abreast for each STAIR_ABREAST_M of width, and counts as its width times
  * its length of walk in the density; in place of the one person a `stairGap`
- * the stair fills to QUEUE_DENSITY, the density of SFPE's greatest flow; the floor node at each end stands for
+ * the stair fills to QUEUE_DENSITY, the density of SFPE's greatest flow, counted
+ * over the stair ahead of the walker; the floor node at each end stands for
  * the stair's mouth and holds as many. A stair node without a width is as
  * before.
  *
@@ -1122,27 +1123,32 @@ export function simulateCrowd(graph, opts = {}) {
     nearStair.set(u, found);
     return found;
   };
-  // Whether a person at v may step on to u: no one holds it, and on a stair no one else stands close by.
-  // How many may stand within the gap of a stair node: one (the gap), but on a stair with a
-  // width (passageFlow) as many as bring it to QUEUE_DENSITY over its nodes there, the density
-  // of SFPE's greatest flow, so that the stair can carry its capacity and fills no further.
-  const gapHolds = abreast ? new Int32Array(n) : null;
-  const holdsOf = (u) => {
-    if (!gapHolds || section[u] < 0) return 1;
-    if (!gapHolds[u]) {
-      let area = passages.area[u];
-      for (const w of stairNear(u)) area += passages.area[w] > 0 ? passages.area[w] : cell;
-      gapHolds[u] = Math.max(1, Math.floor(QUEUE_DENSITY * area + 1e-9));
-    }
-    return gapHolds[u];
-  };
-  const free = (u, v) => {
+  // A stair that carries a width (passageFlow) keeps its gap ahead only, and by density.
+  const wide = (u) => abreast !== null && section[u] >= 0;
+  // Whether a person at v may step on to u: no one holds it, and on a stair no one else stands
+  // close by. D is the person's metres to their exit a node.
+  const free = (u, v, D) => {
     if (load[u] >= (abreast ? abreast[u] : 1)) return false;
     if (stairGap > 0 && kinds[u] === KIND_STAIR) {
-      // The others within the gap, the one stepping from v left out.
       let close = load[u];
+      if (wide(u)) {
+        // On a stair with a width: those on u and on the stair nodes within the gap of it that
+        // are ahead of the walker (nearer the exit than v), fewer than bring that stretch to
+        // QUEUE_DENSITY, the density of SFPE's greatest flow, so the stair can carry its capacity
+        // and fills no further. Those behind or beside the walker are not counted: they cannot
+        // clear before the walker moves. Counted, as at first, they held the foremost back for
+        // good once the stair had filled while its foot was held up, and no one left it again.
+        let area = passages.area[u];
+        for (const w of stairNear(u)) {
+          if (w === v || !(D[w] < D[v])) continue;
+          close += load[w];
+          area += passages.area[w] > 0 ? passages.area[w] : cell;
+        }
+        return close < Math.max(1, Math.floor(QUEUE_DENSITY * area + 1e-9));
+      }
+      // The others within the gap, the one stepping from v left out.
       for (const w of stairNear(u)) close += w === v ? load[w] - 1 : load[w];
-      if (close >= holdsOf(u)) return false;
+      if (close >= 1) return false;
     }
     return true;
   };
@@ -1223,7 +1229,7 @@ export function simulateCrowd(graph, opts = {}) {
       if (blocked?.[edgeIds[k]]) continue;
       const w = neighbours[k];
       if (kinds[w] === KIND_LIFT || (closedAt(w, t) && !inFire) || !(D[w] < Infinity)) continue;
-      if (!isExit[w] && !free(w, v)) continue;
+      if (!isExit[w] && !free(w, v, D)) continue;
       options.push(w);
       logw.push((-kS * (D[w] - D[v])) / spacing);
     }
@@ -1268,13 +1274,13 @@ export function simulateCrowd(graph, opts = {}) {
           continue;
         }
       } else if (u >= 0 && closedAt(u, t) && !inFire) u = -1;
-      if (kS === null && (u < 0 || (!isExit[u] && !free(u, v)))) {
+      if (kS === null && (u < 0 || (!isExit[u] && !free(u, v, D)))) {
         const limit = u >= 0 ? D[u] + 1.0 : Infinity;
         let best = -1;
         for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
           if (blocked?.[edgeIds[k]]) continue;
           const w = neighbours[k];
-          if (!free(w, v) || (closedAt(w, t) && !inFire) || !(D[w] < D[v]) || D[w] > limit || kinds[w] === KIND_LIFT) continue;
+          if (!free(w, v, D) || (closedAt(w, t) && !inFire) || !(D[w] < D[v]) || D[w] > limit || kinds[w] === KIND_LIFT) continue;
           if (best < 0 || D[w] < D[best]) best = w;
         }
         u = best;
@@ -1299,7 +1305,7 @@ export function simulateCrowd(graph, opts = {}) {
       // A node that holds several abreast is not waited for: its capacity spaces the steps on to it.
       const single = !abreast || abreast[u] === 1;
       let gapClear = -Infinity;
-      if (single && stairGap > 0 && kinds[u] === KIND_STAIR && holdsOf(u) === 1) for (const w of stairNear(u)) if (w !== v) gapClear = Math.max(gapClear, leftAt[w]);
+      if (single && stairGap > 0 && kinds[u] === KIND_STAIR && !wide(u)) for (const w of stairNear(u)) if (w !== v) gapClear = Math.max(gapClear, leftAt[w]);
       const t0 = Math.max(clock[i], single ? leftAt[u] : -Infinity, tried[i], gapClear, opens);
       longestWait = Math.max(longestWait, t0 - clock[i]);
       tried[i] = -Infinity;
@@ -1314,7 +1320,8 @@ export function simulateCrowd(graph, opts = {}) {
       // the queue before a door at most as by its greatest flow's density.
       const around = densityAt(u, v);
       const crowd = toDoor[u] <= DOOR_QUEUE_M ? Math.min(around, QUEUE_DENSITY) : around;
-      const vel = Math.max(reading.floor, crowd < FREE_DENSITY ? own : Math.min(own, k0 * (1 - SFPE.a * crowd)));
+      // The least speed of a step never lifts a walker above their own (someone slow, in smoke).
+      const vel = Math.max(Math.min(reading.floor, own), crowd < FREE_DENSITY ? own : Math.min(own, k0 * (1 - SFPE.a * crowd)));
       const arrive = t0 + len / vel;
       segs[i].push(t0, arrive, v, u);
       if (door) doorFree[u] = Math.max(doorFree[u], t0) + 1 / capOf(u);

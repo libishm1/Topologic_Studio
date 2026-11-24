@@ -447,9 +447,9 @@ function smokeSpeed() {
     const L = segs.reduce((sum, x) => sum + dist3(graph, x.a, x.b), 0);
     return { L, T: r.outAt[0] - segs[0].t0 };
   };
-  // The relation as FDS+Evac gives it, and as this model applies it: its loop steps at 0.15 m/s at least.
+  // The relation as FDS+Evac gives it, which the model applies as it stands (its loop's least step speed of 0.15 m/s no longer lifts a slower walker).
   const pure = (v0, K) => v0 * Math.max(floor, 1 + (beta / alpha) * K);
-  const model = (v0, K) => Math.max(0.15, pure(v0, K));
+  const model = (v0, K) => pure(v0, K);
   const clear = run(1.25, 0), smoky = run(1.25, 1.0);
   const expected = smoky.L / model(1.25, 1.0);
   record({
@@ -475,11 +475,10 @@ function smokeSpeed() {
     id: "NIST-Verif.2.5-range",
     source: "NIST TN 1822 Verif.2.5, user actions (the speeds and coefficients of the two data sets)",
     name: "the same corridor at 1.25, 1.0, 0.75, 0.5 and 0.25 m/s and extinction coefficients of 0.5, 1.0, 3.0, 7.5 and 10 /m",
-    criterion: "each speed within 1 % of the model's relation as it applies it: max(0.15 m/s, v0 max(0.1, 1 + beta K / alpha))",
+    criterion: "each speed within 1 % of FDS+Evac's relation: v0 max(0.1, 1 + beta K / alpha)",
     measured: rows,
     pass: rows.every((r) => Math.abs(r.rel_diff) <= 0.01),
-    summary: `${rows.filter((r) => Math.abs(r.rel_diff) <= 0.01).length} of ${rows.length} at the model's relation; ${floored} of them held at the loop's least step speed of 0.15 m/s, above FDS+Evac's 0.1 v0 (${rows.filter((r) => r.governed_by.startsWith("the loop")).map((r) => `${r.unimpeded_mps} m/s at ${r.K_per_m} /m`).join(", ")})`,
-    deviation: "where the relation gives less than 0.15 m/s the model walks at 0.15 m/s, the least speed of any step in its loop; FDS+Evac's relation alone would give less there",
+    summary: `${rows.filter((r) => Math.abs(r.rel_diff) <= 0.01).length} of ${rows.length} at FDS+Evac's relation, the slowest walkers in the thickest smoke included`,
   });
 }
 
