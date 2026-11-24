@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-24T15:59:38.438Z",
+ "generated": "2026-11-24T16:00:08.885Z",
  "tool": "tools/calibration/item8-loose-ends.mjs",
  "plan": "wiki/research/fire-calibration-plan-2026-11-11.md, sections 16.50 (point 10), 16.52 and 16.54 (part D)",
  "results": {
@@ -565,37 +565,65 @@
        "nistnrc": {
         "n": 1043,
         "delta": 1.38,
-        "sigmaM": 0.347
+        "sigmaM": 0.347,
+        "weighted": {
+         "delta": 1.561,
+         "sigmaM": 0.529
+        }
        },
        "atf": {
         "n": 1072,
         "delta": 1.329,
-        "sigmaM": 0.272
+        "sigmaM": 0.272,
+        "weighted": {
+         "delta": 1.483,
+         "sigmaM": 0.318
+        }
        },
        "wtc": {
         "n": 1078,
         "delta": 1.357,
-        "sigmaM": 0.357
+        "sigmaM": 0.357,
+        "weighted": {
+         "delta": 1.727,
+         "sigmaM": 0.532
+        }
        },
        "ulnist": {
         "n": 1086,
         "delta": 1.339,
-        "sigmaM": 0.351
+        "sigmaM": 0.351,
+        "weighted": {
+         "delta": 1.451,
+         "sigmaM": 0.679
+        }
        },
        "nbs": {
         "n": 1077,
         "delta": 1.352,
-        "sigmaM": 0.345
+        "sigmaM": 0.345,
+        "weighted": {
+         "delta": 1.542,
+         "sigmaM": 0.527
+        }
        },
        "fsri": {
         "n": 374,
         "delta": 1.285,
-        "sigmaM": 0.48
+        "sigmaM": 0.48,
+        "weighted": {
+         "delta": 1.426,
+         "sigmaM": 0.558
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.373,
-        "sigmaM": 0.393
+        "sigmaM": 0.393,
+        "weighted": {
+         "delta": 1.534,
+         "sigmaM": 0.535
+        }
        }
       },
       "scatter": {
@@ -745,37 +773,65 @@
        "nistnrc": {
         "n": 1031,
         "delta": 1.378,
-        "sigmaM": 0.348
+        "sigmaM": 0.348,
+        "weighted": {
+         "delta": 1.559,
+         "sigmaM": 0.529
+        }
        },
        "atf": {
         "n": 1060,
         "delta": 1.326,
-        "sigmaM": 0.272
+        "sigmaM": 0.272,
+        "weighted": {
+         "delta": 1.481,
+         "sigmaM": 0.318
+        }
        },
        "wtc": {
         "n": 1066,
         "delta": 1.354,
-        "sigmaM": 0.358
+        "sigmaM": 0.358,
+        "weighted": {
+         "delta": 1.725,
+         "sigmaM": 0.532
+        }
        },
        "ulnist": {
         "n": 1074,
         "delta": 1.336,
-        "sigmaM": 0.352
+        "sigmaM": 0.352,
+        "weighted": {
+         "delta": 1.449,
+         "sigmaM": 0.679
+        }
        },
        "nbs": {
         "n": 1065,
         "delta": 1.349,
-        "sigmaM": 0.346
+        "sigmaM": 0.346,
+        "weighted": {
+         "delta": 1.54,
+         "sigmaM": 0.527
+        }
        },
        "fsri": {
         "n": 362,
         "delta": 1.274,
-        "sigmaM": 0.484
+        "sigmaM": 0.484,
+        "weighted": {
+         "delta": 1.421,
+         "sigmaM": 0.559
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.373,
-        "sigmaM": 0.393
+        "sigmaM": 0.393,
+        "weighted": {
+         "delta": 1.534,
+         "sigmaM": 0.535
+        }
        }
       },
       "scatter": {
@@ -1682,37 +1738,65 @@
        "nistnrc": {
         "n": 1043,
         "delta": 1.369,
-        "sigmaM": 0.368
+        "sigmaM": 0.368,
+        "weighted": {
+         "delta": 1.622,
+         "sigmaM": 0.566
+        }
        },
        "atf": {
         "n": 1072,
         "delta": 1.321,
-        "sigmaM": 0.271
+        "sigmaM": 0.271,
+        "weighted": {
+         "delta": 1.528,
+         "sigmaM": 0.311
+        }
        },
        "wtc": {
         "n": 1078,
         "delta": 1.345,
-        "sigmaM": 0.371
+        "sigmaM": 0.371,
+        "weighted": {
+         "delta": 1.759,
+         "sigmaM": 0.57
+        }
        },
        "ulnist": {
         "n": 1086,
         "delta": 1.332,
-        "sigmaM": 0.364
+        "sigmaM": 0.364,
+        "weighted": {
+         "delta": 1.549,
+         "sigmaM": 0.735
+        }
        },
        "nbs": {
         "n": 1077,
         "delta": 1.344,
-        "sigmaM": 0.358
+        "sigmaM": 0.358,
+        "weighted": {
+         "delta": 1.604,
+         "sigmaM": 0.561
+        }
        },
        "fsri": {
         "n": 374,
         "delta": 1.287,
-        "sigmaM": 0.501
+        "sigmaM": 0.501,
+        "weighted": {
+         "delta": 1.522,
+         "sigmaM": 0.587
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.381,
-        "sigmaM": 0.406
+        "sigmaM": 0.406,
+        "weighted": {
+         "delta": 1.603,
+         "sigmaM": 0.567
+        }
        }
       },
       "scatter": {
@@ -1861,37 +1945,65 @@
        "nistnrc": {
         "n": 1031,
         "delta": 1.366,
-        "sigmaM": 0.369
+        "sigmaM": 0.369,
+        "weighted": {
+         "delta": 1.619,
+         "sigmaM": 0.566
+        }
        },
        "atf": {
         "n": 1060,
         "delta": 1.317,
-        "sigmaM": 0.271
+        "sigmaM": 0.271,
+        "weighted": {
+         "delta": 1.526,
+         "sigmaM": 0.312
+        }
        },
        "wtc": {
         "n": 1066,
         "delta": 1.341,
-        "sigmaM": 0.372
+        "sigmaM": 0.372,
+        "weighted": {
+         "delta": 1.756,
+         "sigmaM": 0.571
+        }
        },
        "ulnist": {
         "n": 1074,
         "delta": 1.329,
-        "sigmaM": 0.365
+        "sigmaM": 0.365,
+        "weighted": {
+         "delta": 1.547,
+         "sigmaM": 0.734
+        }
        },
        "nbs": {
         "n": 1065,
         "delta": 1.341,
-        "sigmaM": 0.359
+        "sigmaM": 0.359,
+        "weighted": {
+         "delta": 1.602,
+         "sigmaM": 0.561
+        }
        },
        "fsri": {
         "n": 362,
         "delta": 1.274,
-        "sigmaM": 0.505
+        "sigmaM": 0.505,
+        "weighted": {
+         "delta": 1.516,
+         "sigmaM": 0.588
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.381,
-        "sigmaM": 0.406
+        "sigmaM": 0.406,
+        "weighted": {
+         "delta": 1.603,
+         "sigmaM": 0.567
+        }
        }
       },
       "scatter": {
@@ -2714,37 +2826,65 @@
        "nistnrc": {
         "n": 1043,
         "delta": 1.122,
-        "sigmaM": 0.335
+        "sigmaM": 0.335,
+        "weighted": {
+         "delta": 1.171,
+         "sigmaM": 0.55
+        }
        },
        "atf": {
         "n": 1072,
         "delta": 1.081,
-        "sigmaM": 0.206
+        "sigmaM": 0.206,
+        "weighted": {
+         "delta": 1.105,
+         "sigmaM": 0.247
+        }
        },
        "wtc": {
         "n": 1078,
         "delta": 1.096,
-        "sigmaM": 0.339
+        "sigmaM": 0.339,
+        "weighted": {
+         "delta": 1.158,
+         "sigmaM": 0.519
+        }
        },
        "ulnist": {
         "n": 1086,
         "delta": 1.096,
-        "sigmaM": 0.337
+        "sigmaM": 0.337,
+        "weighted": {
+         "delta": 1.289,
+         "sigmaM": 0.743
+        }
        },
        "nbs": {
         "n": 1077,
         "delta": 1.099,
-        "sigmaM": 0.324
+        "sigmaM": 0.324,
+        "weighted": {
+         "delta": 1.153,
+         "sigmaM": 0.54
+        }
        },
        "fsri": {
         "n": 374,
         "delta": 1.184,
-        "sigmaM": 0.544
+        "sigmaM": 0.544,
+        "weighted": {
+         "delta": 1.194,
+         "sigmaM": 0.583
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.084,
-        "sigmaM": 0.37
+        "sigmaM": 0.37,
+        "weighted": {
+         "delta": 1.139,
+         "sigmaM": 0.545
+        }
        }
       },
       "scatter": {
@@ -2893,37 +3033,65 @@
        "nistnrc": {
         "n": 1031,
         "delta": 1.118,
-        "sigmaM": 0.336
+        "sigmaM": 0.336,
+        "weighted": {
+         "delta": 1.169,
+         "sigmaM": 0.549
+        }
        },
        "atf": {
         "n": 1060,
         "delta": 1.077,
-        "sigmaM": 0.204
+        "sigmaM": 0.204,
+        "weighted": {
+         "delta": 1.103,
+         "sigmaM": 0.247
+        }
        },
        "wtc": {
         "n": 1066,
         "delta": 1.092,
-        "sigmaM": 0.339
+        "sigmaM": 0.339,
+        "weighted": {
+         "delta": 1.156,
+         "sigmaM": 0.519
+        }
        },
        "ulnist": {
         "n": 1074,
         "delta": 1.092,
-        "sigmaM": 0.337
+        "sigmaM": 0.337,
+        "weighted": {
+         "delta": 1.286,
+         "sigmaM": 0.743
+        }
        },
        "nbs": {
         "n": 1065,
         "delta": 1.095,
-        "sigmaM": 0.324
+        "sigmaM": 0.324,
+        "weighted": {
+         "delta": 1.151,
+         "sigmaM": 0.54
+        }
        },
        "fsri": {
         "n": 362,
         "delta": 1.175,
-        "sigmaM": 0.549
+        "sigmaM": 0.549,
+        "weighted": {
+         "delta": 1.189,
+         "sigmaM": 0.583
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.084,
-        "sigmaM": 0.37
+        "sigmaM": 0.37,
+        "weighted": {
+         "delta": 1.139,
+         "sigmaM": 0.545
+        }
        }
       },
       "scatter": {
@@ -3697,37 +3865,65 @@
        "nistnrc": {
         "n": 1098,
         "delta": 1.567,
-        "sigmaM": 0.397
+        "sigmaM": 0.397,
+        "weighted": {
+         "delta": 1.788,
+         "sigmaM": 0.509
+        }
        },
        "atf": {
         "n": 1127,
         "delta": 1.542,
-        "sigmaM": 0.364
+        "sigmaM": 0.364,
+        "weighted": {
+         "delta": 1.783,
+         "sigmaM": 0.408
+        }
        },
        "wtc": {
         "n": 1133,
         "delta": 1.547,
-        "sigmaM": 0.4
+        "sigmaM": 0.4,
+        "weighted": {
+         "delta": 1.982,
+         "sigmaM": 0.501
+        }
        },
        "ulnist": {
         "n": 1141,
         "delta": 1.527,
-        "sigmaM": 0.395
+        "sigmaM": 0.395,
+        "weighted": {
+         "delta": 1.533,
+         "sigmaM": 0.566
+        }
        },
        "nbs": {
         "n": 1132,
         "delta": 1.548,
-        "sigmaM": 0.384
+        "sigmaM": 0.384,
+        "weighted": {
+         "delta": 1.781,
+         "sigmaM": 0.495
+        }
        },
        "fsri": {
         "n": 429,
         "delta": 1.172,
-        "sigmaM": 0.367
+        "sigmaM": 0.367,
+        "weighted": {
+         "delta": 1.477,
+         "sigmaM": 0.504
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.675,
-        "sigmaM": 0.418
+        "sigmaM": 0.418,
+        "weighted": {
+         "delta": 1.818,
+         "sigmaM": 0.51
+        }
        }
       },
       "scatter": {
@@ -3877,37 +4073,65 @@
        "nistnrc": {
         "n": 1068,
         "delta": 1.569,
-        "sigmaM": 0.402
+        "sigmaM": 0.402,
+        "weighted": {
+         "delta": 1.786,
+         "sigmaM": 0.511
+        }
        },
        "atf": {
         "n": 1097,
         "delta": 1.543,
-        "sigmaM": 0.368
+        "sigmaM": 0.368,
+        "weighted": {
+         "delta": 1.781,
+         "sigmaM": 0.41
+        }
        },
        "wtc": {
         "n": 1103,
         "delta": 1.548,
-        "sigmaM": 0.404
+        "sigmaM": 0.404,
+        "weighted": {
+         "delta": 1.981,
+         "sigmaM": 0.503
+        }
        },
        "ulnist": {
         "n": 1111,
         "delta": 1.528,
-        "sigmaM": 0.4
+        "sigmaM": 0.4,
+        "weighted": {
+         "delta": 1.531,
+         "sigmaM": 0.567
+        }
        },
        "nbs": {
         "n": 1102,
         "delta": 1.549,
-        "sigmaM": 0.388
+        "sigmaM": 0.388,
+        "weighted": {
+         "delta": 1.78,
+         "sigmaM": 0.496
+        }
        },
        "fsri": {
         "n": 399,
         "delta": 1.147,
-        "sigmaM": 0.368
+        "sigmaM": 0.368,
+        "weighted": {
+         "delta": 1.471,
+         "sigmaM": 0.506
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.675,
-        "sigmaM": 0.418
+        "sigmaM": 0.418,
+        "weighted": {
+         "delta": 1.818,
+         "sigmaM": 0.51
+        }
        }
       },
       "scatter": {
@@ -4804,37 +5028,65 @@
        "nistnrc": {
         "n": 1098,
         "delta": 1.565,
-        "sigmaM": 0.4
+        "sigmaM": 0.4,
+        "weighted": {
+         "delta": 1.846,
+         "sigmaM": 0.51
+        }
        },
        "atf": {
         "n": 1127,
         "delta": 1.543,
-        "sigmaM": 0.358
+        "sigmaM": 0.358,
+        "weighted": {
+         "delta": 1.835,
+         "sigmaM": 0.379
+        }
        },
        "wtc": {
         "n": 1133,
         "delta": 1.544,
-        "sigmaM": 0.4
+        "sigmaM": 0.4,
+        "weighted": {
+         "delta": 2.012,
+         "sigmaM": 0.514
+        }
        },
        "ulnist": {
         "n": 1141,
         "delta": 1.529,
-        "sigmaM": 0.394
+        "sigmaM": 0.394,
+        "weighted": {
+         "delta": 1.62,
+         "sigmaM": 0.578
+        }
        },
        "nbs": {
         "n": 1132,
         "delta": 1.549,
-        "sigmaM": 0.387
+        "sigmaM": 0.387,
+        "weighted": {
+         "delta": 1.841,
+         "sigmaM": 0.499
+        }
        },
        "fsri": {
         "n": 429,
         "delta": 1.202,
-        "sigmaM": 0.377
+        "sigmaM": 0.377,
+        "weighted": {
+         "delta": 1.586,
+         "sigmaM": 0.507
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.682,
-        "sigmaM": 0.413
+        "sigmaM": 0.413,
+        "weighted": {
+         "delta": 1.881,
+         "sigmaM": 0.505
+        }
        }
       },
       "scatter": {
@@ -4983,37 +5235,65 @@
        "nistnrc": {
         "n": 1068,
         "delta": 1.567,
-        "sigmaM": 0.405
+        "sigmaM": 0.405,
+        "weighted": {
+         "delta": 1.844,
+         "sigmaM": 0.511
+        }
        },
        "atf": {
         "n": 1097,
         "delta": 1.544,
-        "sigmaM": 0.362
+        "sigmaM": 0.362,
+        "weighted": {
+         "delta": 1.833,
+         "sigmaM": 0.382
+        }
        },
        "wtc": {
         "n": 1103,
         "delta": 1.545,
-        "sigmaM": 0.404
+        "sigmaM": 0.404,
+        "weighted": {
+         "delta": 2.01,
+         "sigmaM": 0.515
+        }
        },
        "ulnist": {
         "n": 1111,
         "delta": 1.53,
-        "sigmaM": 0.398
+        "sigmaM": 0.398,
+        "weighted": {
+         "delta": 1.618,
+         "sigmaM": 0.578
+        }
        },
        "nbs": {
         "n": 1102,
         "delta": 1.55,
-        "sigmaM": 0.391
+        "sigmaM": 0.391,
+        "weighted": {
+         "delta": 1.839,
+         "sigmaM": 0.5
+        }
        },
        "fsri": {
         "n": 399,
         "delta": 1.178,
-        "sigmaM": 0.38
+        "sigmaM": 0.38,
+        "weighted": {
+         "delta": 1.58,
+         "sigmaM": 0.509
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.682,
-        "sigmaM": 0.413
+        "sigmaM": 0.413,
+        "weighted": {
+         "delta": 1.881,
+         "sigmaM": 0.505
+        }
        }
       },
       "scatter": {
@@ -5920,37 +6200,65 @@
        "nistnrc": {
         "n": 1098,
         "delta": 1.221,
-        "sigmaM": 0.326
+        "sigmaM": 0.326,
+        "weighted": {
+         "delta": 1.246,
+         "sigmaM": 0.409
+        }
        },
        "atf": {
         "n": 1127,
         "delta": 1.21,
-        "sigmaM": 0.276
+        "sigmaM": 0.276,
+        "weighted": {
+         "delta": 1.258,
+         "sigmaM": 0.273
+        }
        },
        "wtc": {
         "n": 1133,
         "delta": 1.202,
-        "sigmaM": 0.324
+        "sigmaM": 0.324,
+        "weighted": {
+         "delta": 1.241,
+         "sigmaM": 0.388
+        }
        },
        "ulnist": {
         "n": 1141,
         "delta": 1.203,
-        "sigmaM": 0.323
+        "sigmaM": 0.323,
+        "weighted": {
+         "delta": 1.267,
+         "sigmaM": 0.509
+        }
        },
        "nbs": {
         "n": 1132,
         "delta": 1.21,
-        "sigmaM": 0.309
+        "sigmaM": 0.309,
+        "weighted": {
+         "delta": 1.241,
+         "sigmaM": 0.394
+        }
        },
        "fsri": {
         "n": 429,
         "delta": 1.094,
-        "sigmaM": 0.366
+        "sigmaM": 0.366,
+        "weighted": {
+         "delta": 1.194,
+         "sigmaM": 0.407
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.253,
-        "sigmaM": 0.357
+        "sigmaM": 0.357,
+        "weighted": {
+         "delta": 1.259,
+         "sigmaM": 0.419
+        }
        }
       },
       "scatter": {
@@ -6099,37 +6407,65 @@
        "nistnrc": {
         "n": 1068,
         "delta": 1.218,
-        "sigmaM": 0.329
+        "sigmaM": 0.329,
+        "weighted": {
+         "delta": 1.243,
+         "sigmaM": 0.41
+        }
        },
        "atf": {
         "n": 1097,
         "delta": 1.207,
-        "sigmaM": 0.277
+        "sigmaM": 0.277,
+        "weighted": {
+         "delta": 1.256,
+         "sigmaM": 0.274
+        }
        },
        "wtc": {
         "n": 1103,
         "delta": 1.198,
-        "sigmaM": 0.326
+        "sigmaM": 0.326,
+        "weighted": {
+         "delta": 1.239,
+         "sigmaM": 0.389
+        }
        },
        "ulnist": {
         "n": 1111,
         "delta": 1.2,
-        "sigmaM": 0.326
+        "sigmaM": 0.326,
+        "weighted": {
+         "delta": 1.264,
+         "sigmaM": 0.509
+        }
        },
        "nbs": {
         "n": 1102,
         "delta": 1.206,
-        "sigmaM": 0.312
+        "sigmaM": 0.312,
+        "weighted": {
+         "delta": 1.239,
+         "sigmaM": 0.395
+        }
        },
        "fsri": {
         "n": 399,
         "delta": 1.075,
-        "sigmaM": 0.37
+        "sigmaM": 0.37,
+        "weighted": {
+         "delta": 1.189,
+         "sigmaM": 0.408
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.253,
-        "sigmaM": 0.357
+        "sigmaM": 0.357,
+        "weighted": {
+         "delta": 1.259,
+         "sigmaM": 0.419
+        }
        }
       },
       "scatter": {
@@ -6944,37 +7280,65 @@
        "nistnrc": {
         "n": 1046,
         "delta": 1.394,
-        "sigmaM": 0.339
+        "sigmaM": 0.339,
+        "weighted": {
+         "delta": 1.565,
+         "sigmaM": 0.525
+        }
        },
        "atf": {
         "n": 1075,
         "delta": 1.342,
-        "sigmaM": 0.263
+        "sigmaM": 0.263,
+        "weighted": {
+         "delta": 1.487,
+         "sigmaM": 0.309
+        }
        },
        "wtc": {
         "n": 1081,
         "delta": 1.37,
-        "sigmaM": 0.35
+        "sigmaM": 0.35,
+        "weighted": {
+         "delta": 1.73,
+         "sigmaM": 0.526
+        }
        },
        "ulnist": {
         "n": 1089,
         "delta": 1.352,
-        "sigmaM": 0.345
+        "sigmaM": 0.345,
+        "weighted": {
+         "delta": 1.452,
+         "sigmaM": 0.674
+        }
        },
        "nbs": {
         "n": 1080,
         "delta": 1.366,
-        "sigmaM": 0.337
+        "sigmaM": 0.337,
+        "weighted": {
+         "delta": 1.546,
+         "sigmaM": 0.522
+        }
        },
        "fsri": {
         "n": 377,
         "delta": 1.285,
-        "sigmaM": 0.485
+        "sigmaM": 0.485,
+        "weighted": {
+         "delta": 1.426,
+         "sigmaM": 0.561
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.389,
-        "sigmaM": 0.383
+        "sigmaM": 0.383,
+        "weighted": {
+         "delta": 1.54,
+         "sigmaM": 0.529
+        }
        }
       },
       "scatter": {
@@ -7124,37 +7488,65 @@
        "nistnrc": {
         "n": 1031,
         "delta": 1.391,
-        "sigmaM": 0.338
+        "sigmaM": 0.338,
+        "weighted": {
+         "delta": 1.563,
+         "sigmaM": 0.524
+        }
        },
        "atf": {
         "n": 1060,
         "delta": 1.339,
-        "sigmaM": 0.26
+        "sigmaM": 0.26,
+        "weighted": {
+         "delta": 1.485,
+         "sigmaM": 0.308
+        }
        },
        "wtc": {
         "n": 1066,
         "delta": 1.367,
-        "sigmaM": 0.349
+        "sigmaM": 0.349,
+        "weighted": {
+         "delta": 1.728,
+         "sigmaM": 0.525
+        }
        },
        "ulnist": {
         "n": 1074,
         "delta": 1.35,
-        "sigmaM": 0.343
+        "sigmaM": 0.343,
+        "weighted": {
+         "delta": 1.45,
+         "sigmaM": 0.674
+        }
        },
        "nbs": {
         "n": 1065,
         "delta": 1.363,
-        "sigmaM": 0.336
+        "sigmaM": 0.336,
+        "weighted": {
+         "delta": 1.544,
+         "sigmaM": 0.522
+        }
        },
        "fsri": {
         "n": 362,
         "delta": 1.273,
-        "sigmaM": 0.485
+        "sigmaM": 0.485,
+        "weighted": {
+         "delta": 1.422,
+         "sigmaM": 0.56
+        }
        },
        "steckler": {
         "n": 882,
         "delta": 1.389,
-        "sigmaM": 0.383
+        "sigmaM": 0.383,
+        "weighted": {
+         "delta": 1.54,
+         "sigmaM": 0.529
+        }
        }
       },
       "scatter": {
@@ -8130,42 +8522,74 @@
        "nistnrc": {
         "n": 1135,
         "delta": 1.325,
-        "sigmaM": 0.375
+        "sigmaM": 0.375,
+        "weighted": {
+         "delta": 1.089,
+         "sigmaM": 0.421
+        }
        },
        "atf": {
         "n": 1164,
         "delta": 1.283,
-        "sigmaM": 0.289
+        "sigmaM": 0.289,
+        "weighted": {
+         "delta": 1.073,
+         "sigmaM": 0.375
+        }
        },
        "wtc": {
         "n": 1170,
         "delta": 1.304,
-        "sigmaM": 0.376
+        "sigmaM": 0.376,
+        "weighted": {
+         "delta": 1.074,
+         "sigmaM": 0.419
+        }
        },
        "ulnist": {
         "n": 1178,
         "delta": 1.293,
-        "sigmaM": 0.369
+        "sigmaM": 0.369,
+        "weighted": {
+         "delta": 1.026,
+         "sigmaM": 0.395
+        }
        },
        "nbs": {
         "n": 1169,
         "delta": 1.304,
-        "sigmaM": 0.365
+        "sigmaM": 0.365,
+        "weighted": {
+         "delta": 1.082,
+         "sigmaM": 0.416
+        }
        },
        "fsri": {
         "n": 466,
         "delta": 1.191,
-        "sigmaM": 0.472
+        "sigmaM": 0.472,
+        "weighted": {
+         "delta": 1.022,
+         "sigmaM": 0.422
+        }
        },
        "steckler": {
         "n": 974,
         "delta": 1.327,
-        "sigmaM": 0.409
+        "sigmaM": 0.409,
+        "weighted": {
+         "delta": 1.082,
+         "sigmaM": 0.431
+        }
        },
        "fsri-chairs": {
         "n": 1102,
         "delta": 1.344,
-        "sigmaM": 0.368
+        "sigmaM": 0.368,
+        "weighted": {
+         "delta": 1.596,
+         "sigmaM": 0.537
+        }
        }
       },
       "scatter": {
@@ -8330,42 +8754,74 @@
        "nistnrc": {
         "n": 1123,
         "delta": 1.321,
-        "sigmaM": 0.376
+        "sigmaM": 0.376,
+        "weighted": {
+         "delta": 1.088,
+         "sigmaM": 0.42
+        }
        },
        "atf": {
         "n": 1152,
         "delta": 1.279,
-        "sigmaM": 0.289
+        "sigmaM": 0.289,
+        "weighted": {
+         "delta": 1.071,
+         "sigmaM": 0.375
+        }
        },
        "wtc": {
         "n": 1158,
         "delta": 1.3,
-        "sigmaM": 0.377
+        "sigmaM": 0.377,
+        "weighted": {
+         "delta": 1.073,
+         "sigmaM": 0.418
+        }
        },
        "ulnist": {
         "n": 1166,
         "delta": 1.289,
-        "sigmaM": 0.37
+        "sigmaM": 0.37,
+        "weighted": {
+         "delta": 1.025,
+         "sigmaM": 0.394
+        }
        },
        "nbs": {
         "n": 1157,
         "delta": 1.3,
-        "sigmaM": 0.365
+        "sigmaM": 0.365,
+        "weighted": {
+         "delta": 1.08,
+         "sigmaM": 0.415
+        }
        },
        "fsri": {
         "n": 454,
         "delta": 1.179,
-        "sigmaM": 0.473
+        "sigmaM": 0.473,
+        "weighted": {
+         "delta": 1.02,
+         "sigmaM": 0.421
+        }
        },
        "steckler": {
         "n": 974,
         "delta": 1.327,
-        "sigmaM": 0.409
+        "sigmaM": 0.409,
+        "weighted": {
+         "delta": 1.082,
+         "sigmaM": 0.431
+        }
        },
        "fsri-chairs": {
         "n": 1090,
         "delta": 1.341,
-        "sigmaM": 0.368
+        "sigmaM": 0.368,
+        "weighted": {
+         "delta": 1.594,
+         "sigmaM": 0.538
+        }
        }
       },
       "scatter": {
@@ -9258,42 +9714,74 @@
        "nistnrc": {
         "n": 1135,
         "delta": 1.101,
-        "sigmaM": 0.33
+        "sigmaM": 0.33,
+        "weighted": {
+         "delta": 0.949,
+         "sigmaM": 0.308
+        }
        },
        "atf": {
         "n": 1164,
         "delta": 1.064,
-        "sigmaM": 0.21
+        "sigmaM": 0.21,
+        "weighted": {
+         "delta": 0.934,
+         "sigmaM": 0.23
+        }
        },
        "wtc": {
         "n": 1170,
         "delta": 1.077,
-        "sigmaM": 0.332
+        "sigmaM": 0.332,
+        "weighted": {
+         "delta": 0.93,
+         "sigmaM": 0.297
+        }
        },
        "ulnist": {
         "n": 1178,
         "delta": 1.077,
-        "sigmaM": 0.33
+        "sigmaM": 0.33,
+        "weighted": {
+         "delta": 0.933,
+         "sigmaM": 0.303
+        }
        },
        "nbs": {
         "n": 1169,
         "delta": 1.08,
-        "sigmaM": 0.318
+        "sigmaM": 0.318,
+        "weighted": {
+         "delta": 0.942,
+         "sigmaM": 0.301
+        }
        },
        "fsri": {
         "n": 466,
         "delta": 1.116,
-        "sigmaM": 0.497
+        "sigmaM": 0.497,
+        "weighted": {
+         "delta": 0.957,
+         "sigmaM": 0.383
+        }
        },
        "steckler": {
         "n": 974,
         "delta": 1.063,
-        "sigmaM": 0.358
+        "sigmaM": 0.358,
+        "weighted": {
+         "delta": 0.936,
+         "sigmaM": 0.324
+        }
        },
        "fsri-chairs": {
         "n": 1102,
         "delta": 1.101,
-        "sigmaM": 0.338
+        "sigmaM": 0.338,
+        "weighted": {
+         "delta": 1.149,
+         "sigmaM": 0.515
+        }
        }
       },
       "scatter": {
@@ -9458,42 +9946,74 @@
        "nistnrc": {
         "n": 1123,
         "delta": 1.097,
-        "sigmaM": 0.33
+        "sigmaM": 0.33,
+        "weighted": {
+         "delta": 0.948,
+         "sigmaM": 0.308
+        }
        },
        "atf": {
         "n": 1152,
         "delta": 1.06,
-        "sigmaM": 0.208
+        "sigmaM": 0.208,
+        "weighted": {
+         "delta": 0.933,
+         "sigmaM": 0.229
+        }
        },
        "wtc": {
         "n": 1158,
         "delta": 1.073,
-        "sigmaM": 0.332
+        "sigmaM": 0.332,
+        "weighted": {
+         "delta": 0.93,
+         "sigmaM": 0.296
+        }
        },
        "ulnist": {
         "n": 1166,
         "delta": 1.074,
-        "sigmaM": 0.33
+        "sigmaM": 0.33,
+        "weighted": {
+         "delta": 0.933,
+         "sigmaM": 0.303
+        }
        },
        "nbs": {
         "n": 1157,
         "delta": 1.077,
-        "sigmaM": 0.318
+        "sigmaM": 0.318,
+        "weighted": {
+         "delta": 0.941,
+         "sigmaM": 0.3
+        }
        },
        "fsri": {
         "n": 454,
         "delta": 1.108,
-        "sigmaM": 0.5
+        "sigmaM": 0.5,
+        "weighted": {
+         "delta": 0.956,
+         "sigmaM": 0.382
+        }
        },
        "steckler": {
         "n": 974,
         "delta": 1.063,
-        "sigmaM": 0.358
+        "sigmaM": 0.358,
+        "weighted": {
+         "delta": 0.936,
+         "sigmaM": 0.324
+        }
        },
        "fsri-chairs": {
         "n": 1090,
         "delta": 1.098,
-        "sigmaM": 0.338
+        "sigmaM": 0.338,
+        "weighted": {
+         "delta": 1.146,
+         "sigmaM": 0.515
+        }
        }
       },
       "scatter": {

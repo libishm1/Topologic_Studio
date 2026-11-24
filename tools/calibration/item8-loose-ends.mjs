@@ -110,7 +110,8 @@ for (const job of jobs) {
       // The pooled statistic with one series left out in turn: which series carry the scatter (a diagnosis, no word).
       res.head[name][cell].without = Object.fromEntries(Object.keys(by).map((d) => {
         const st = S.statistics(ps.filter((p) => p.dataset !== d).map((p) => [p.model, p.measured]), S.SIGMA_E.headTemperature);
-        return [d, { n: st.n, delta: st.delta, sigmaM: st.sigmaM }];
+        const sw = S.weightedStatistics(ps.filter((p) => p.dataset !== d).map((p) => [p.model, p.measured]), S.SIGMA_E.headTemperature);
+        return [d, { n: st.n, delta: st.delta, sigmaM: st.sigmaM, weighted: { delta: sw.delta, sigmaM: sw.sigmaM } }];
       }));
       res.head[name][cell].scatter = { pairs: logs.length, sdLog: r4(Math.sqrt(total / (logs.length - 1))), withinShare: r4(within / total), betweenShare: r4(between / total), seriesMeanLog: means, sigmaMSeriesCentred: centred.sigmaM };
     }
@@ -169,8 +170,8 @@ for (const name of ["every", "rule"]) {
     const s = v.series[d];
     return s ? `${s.n}: ${f(s.delta, 2)} / ${f(s.sigmaM, 2)}${s.inBand ? " **in**" : ""}; w ${f(s.weighted.delta, 2)} / ${f(s.weighted.sigmaM, 2)}${s.weighted.inBand ? " **in**" : ""}` : "";
   }).join(" | ")} | ${f(v.scatter.sdLog)} | ${f(v.scatter.betweenShare, 2)} | ${f(v.scatter.sigmaMSeriesCentred, 2)} |\n`;
-  md += `\nThe pooled delta / sigma_M with one series left out in turn:\n\n| Result | Cell | ${D.map((d) => `without ${d}`).join(" | ")} |\n| --- | --- | ${D.map(() => "---").join(" | ")} |\n`;
-  for (const [label, cell, v] of rows) md += `| ${label} | ${cell} | ${D.map((d) => (v.without[d] ? `${f(v.without[d].delta, 2)} / ${f(v.without[d].sigmaM, 2)} (${v.without[d].n})` : "")).join(" | ")} |\n`;
+  md += `\nThe pooled delta / sigma_M with one series left out in turn, then the 10-bin weighted:\n\n| Result | Cell | ${D.map((d) => `without ${d}`).join(" | ")} |\n| --- | --- | ${D.map(() => "---").join(" | ")} |\n`;
+  for (const [label, cell, v] of rows) md += `| ${label} | ${cell} | ${D.map((d) => (v.without[d] ? `${f(v.without[d].delta, 2)} / ${f(v.without[d].sigmaM, 2)} (${v.without[d].n}); w ${f(v.without[d].weighted.delta, 2)} / ${f(v.without[d].weighted.sigmaM, 2)}` : "")).join(" | ")} |\n`;
 }
 const write = (name, text) => {
   if (!name) return;
