@@ -628,3 +628,29 @@ test("a door with more floor beyond it than behind it still sends people away fr
   assert.equal(out.inside, 0);
   assert.equal(gatheredOverFloor(porch, out).over, 0);
 });
+
+test("floor that reaches no exit is reported as the people it would hold", () => {
+  // A second room of 6 x 6 places with no door to the first: 36 places, 9 m² at 0.25 m² a place.
+  const { graph, exits } = room(8, 8);
+  const nodes = Array.from(graph.nodes), kinds = Array.from(graph.kinds);
+  for (let i = 0; i < 6; i += 1) for (let k = 0; k < 6; k += 1) { nodes.push(30 + i * 0.5, 0.75, k * 0.5); kinds.push(KIND_FLOOR); }
+  const cut = { ...graph, nodes: Float32Array.from(nodes), kinds: Uint8Array.from(kinds) };
+  const out = simulateCrowd(cut, { exits, occupantArea: 1 });
+  assert.equal(out.unreached, 36);
+  assert.equal(out.trapped, 9);
+  assert.equal(simulateCrowd(graph, { exits, occupantArea: 1 }).trapped, 0);
+});
+
+test("people who leave by an upper exit stand at its level, and the exit says how high it is", () => {
+  const { graph, exits } = room(10, 10, { exits: ["left", "right"] });
+  const nodes = Float32Array.from(graph.nodes);
+  nodes[exits[1] * 3 + 1] += 2.4; // the right-hand door is 2.4 m up
+  const out = simulateCrowd({ ...graph, nodes }, { exits, occupantArea: 1 });
+  const upper = out.exits.find((e) => e.node === exits[1]), lower = out.exits.find((e) => e.node === exits[0]);
+  assert.ok(Math.abs(upper.above - 2.4) < 1e-5 && Math.abs(lower.above) < 1e-6);
+  const n = nodes.length / 3;
+  let high = 0;
+  for (let p = n; p < out.points.length / 3; p += 1) if (Math.abs(out.points[p * 3 + 1] - 2.4) < 1e-5) high += 1;
+  assert.ok(upper.people > 0 && high >= Math.min(upper.people, 1));
+  assert.equal(high, upper.people);
+});

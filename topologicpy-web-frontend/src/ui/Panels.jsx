@@ -1447,6 +1447,9 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
   const result = crowd?.result;
   // How many turned to another exit on the way (the quickest choice).
   const turned = result?.switches ? result.switches.reduce((sum, s) => sum + (s > 0 ? 1 : 0), 0) : 0;
+  // People who left by an exit well above the lowest one: the model has no way down from it.
+  const UPPER_EXIT = 1.5;
+  const upperOut = result?.exits ? result.exits.reduce((sum, e) => sum + (e.above > UPPER_EXIT ? e.people : 0), 0) : 0;
   const swatch = (key, label) => (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 10 }}>
       <span className="picker__dot" style={{ background: `#${CROWD_COLOURS[key].toString(16).padStart(6, "0")}` }} />
@@ -1639,7 +1642,10 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                 {Math.round(result.longestWait)} s.
                 {turned > 0 ? ` ${turned.toLocaleString()} turned to another exit on the way.` : ""}
                 {result.tooLarge ? " The graph is too large to weigh every exit for everyone, so each took the nearest." : ""}
-                {result.unreached > 0 ? ` ${result.unreached.toLocaleString()} walkable places reach no exit and hold no one.` : ""}
+                {result.unreached > 0
+                  ? ` Not counted above: about ${result.trapped.toLocaleString()} more people, on ${result.unreached.toLocaleString()} walkable places that reach no exit on this graph. They could not leave; often a door or a stair is missing from the model.`
+                  : ""}
+                {upperOut > 0 ? ` ${upperOut.toLocaleString()} left by an exit more than ${UPPER_EXIT} m above the lowest: the model shows no way down from it, so they stand at its level.` : ""}
                 {Number.isFinite(result.shelter) ? ` Each gathering place holds ${result.shelter}; ${Array.from(result.goneAt).filter(Number.isFinite).length} leave a full one.` : ""}
                 {result.cutOff > 0 ? ` ${result.cutOff} cut off by the fire stay where they are.` : ""}
               </Notice>
