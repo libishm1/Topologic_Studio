@@ -146,6 +146,29 @@ export const FIRE_PENALTY = 1000;
 const GATHER_REACH = [3.5, 5, 7, 10, 14, 20];
 /** The radius about a gathering place's centre that must be clear of the building (m). */
 const GATHER_CLEAR = 1.5;
+/**
+ * Populations for a group's `speed`: unimpeded walking speeds on the level, m/s.
+ * - weidmann: the normal distribution RiMEA's analyses start from (Weidmann 1993:
+ *   mean 1.34 m/s, standard deviation 0.26), cut off at 0.6 and 2.0 m/s here.
+ * - imoMales30to50: IMO MSC.1/Circ.1533's males of 30 to 50 years on flat terrain,
+ *   uniform between 0.97 and 1.62 m/s (its Test 7).
+ */
+export const POPULATIONS = {
+  weidmann: { mean: 1.34, sd: 0.26, min: 0.6, max: 2.0 },
+  imoMales30to50: [0.97, 1.62],
+};
+
+/** One speed from a population: [least, most], uniform, or {mean, sd, min, max}, a normal cut off at its ends. */
+function drawSpeed(population, rand) {
+  if (Array.isArray(population)) return population[0] + (population[1] - population[0]) * rand();
+  const { mean, sd, min = mean - 3 * sd, max = mean + 3 * sd } = population;
+  for (let tries = 0; tries < 200; tries += 1) {
+    const x = mean + sd * Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
+    if (x >= min && x <= max) return x;
+  }
+  return Math.min(max, Math.max(min, mean));
+}
+
 /** m^2 a person standing at a gathering place: the sunflower's spacing, pi 0.45^2. */
 export const GATHER_AREA = Math.PI * 0.45 ** 2;
 
@@ -226,12 +249,22 @@ function random(seed) {
  *   choice        "quickest" (default) or "nearest" (EXIT_CHOICES)
  *   fluctuate     each person's speed wobbles in time (WALK_FLUCTUATION; default off)
  *   kS            the floor field's step choice (STEP_RANDOMNESS; null, the default: as before)
+ *   groups        null (the default: people over all the floor, as above), or a list of
+ *                 {nodes, count, exit?, speed?, start?}: `count` people on places drawn from
+ *                 `nodes` (a start area), each heading for `exit` if one is given (an exit
+ *                 node of `exits`; they keep it whatever the queue, and with a fire too),
+ *                 walking at `speed` (a population: [least, most] m/s, uniform, or
+ *                 {mean, sd, min, max}, a normal cut off at min and max; POPULATIONS) and
+ *                 setting off within `start` ([earliest, latest] s). What a group leaves
+ *                 out is as the options above give it. `occupantArea` and `maxPeople`
+ *                 are then not used.
  * @returns {{
  *   people: number, points: Float32Array, segments: Float32Array, first: Int32Array, count: Int32Array,
  *   exitOf: Int32Array, outAt: Float32Array, exits: Array<{node: number, people: number, last: number}>,
  *   unreached: number, trapped: number (the people the unreached places would hold), inside: number, lastOut: number, longestWait: number, capped: boolean,
  *   goneAt: Float32Array, shelter: number, cutOff: number, choice: string, tooLarge: boolean,
- *   switches: Int32Array
+ *   switches: Int32Array, groupOf: Int32Array|null (each person's group), short: number
+ *   (people the groups asked for that their places could not hold)
  * }}
  *   choice: the one taken, "nearest" when the quickest was asked with a
  *   single exit or on a graph too large for it (tooLarge, QUICKEST_CELLS);
@@ -262,6 +295,7 @@ export function simulateCrowd(graph, opts = {}) {
     choice = "quickest",
     fluctuate = false,
     kS = null,
+    groups = null,
   } = opts;
   const n = graph.nodes.length / 3;
   const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
@@ -315,19 +349,50 @@ export function simulateCrowd(graph, opts = {}) {
     if (Number.isFinite(dist[v])) places.push(v);
     else unreached += 1;
   }
-  const wanted = Math.ceil((places.length * cell) / Math.max(0.1, occupantArea));
-  const people = Math.min(wanted, maxPeople, places.length);
-  // A partial Fisher-Yates shuffle picks them.
-  for (let i = 0; i < people; i += 1) {
-    const j = i + Math.floor(rand() * (places.length - i));
-    [places[i], places[j]] = [places[j], places[i]];
+  // With groups: each group's people on places drawn from its own start area.
+  let grouped = null;
+  let short = 0;
+  if (groups) {
+    const usable = new Uint8Array(n);
+    for (const v of places) usable[v] = 1;
+    const taken = new Uint8Array(n);
+    grouped = { at: [], group: [] };
+    groups.forEach((g, k) => {
+      const own = [...new Set(g.nodes)].filter((v) => v >= 0 && v < n && usable[v] && !taken[v]);
+      const count = Math.min(g.count ?? own.length, own.length);
+      short += Math.max(0, (g.count ?? own.length) - count);
+      for (let i = 0; i < count; i += 1) {
+        const j = i + Math.floor(rand() * (own.length - i));
+        [own[i], own[j]] = [own[j], own[i]];
+        taken[own[i]] = 1;
+        grouped.at.push(own[i]);
+        grouped.group.push(k);
+      }
+    });
   }
-  const at = Int32Array.from(places.slice(0, people));
+  const wanted = Math.ceil((places.length * cell) / Math.max(0.1, occupantArea));
+  const people = grouped ? grouped.at.length : Math.min(wanted, maxPeople, places.length);
+  // A partial Fisher-Yates shuffle picks them.
+  if (!grouped)
+    for (let i = 0; i < people; i += 1) {
+      const j = i + Math.floor(rand() * (places.length - i));
+      [places[i], places[j]] = [places[j], places[i]];
+    }
+  const at = Int32Array.from(grouped ? grouped.at : places.slice(0, people));
+  const groupOf = grouped ? Int32Array.from(grouped.group) : null;
+  // The exit node each person was given (-1: they choose).
+  const assigned = new Int32Array(people).fill(-1);
   const vmax = new Float64Array(people);
   const ready = new Float64Array(people);
   for (let i = 0; i < people; i += 1) {
-    vmax[i] = speed * (1 + spread * (2 * rand() - 1));
-    ready[i] = start[0] + (start[1] - start[0]) * rand();
+    const g = groupOf ? groups[groupOf[i]] : null;
+    vmax[i] = g?.speed ? drawSpeed(g.speed, rand) : speed * (1 + spread * (2 * rand() - 1));
+    const [early, late] = g?.start ?? start;
+    ready[i] = early + (late - early) * rand();
+    if (g && g.exit !== undefined && g.exit !== null) {
+      if (!isExit[g.exit]) throw new Error("simulateCrowd: a group's exit is not one of the exits");
+      assigned[i] = g.exit;
+    }
   }
   const holder = new Int32Array(n).fill(-1);
   for (let i = 0; i < people; i += 1) holder[at[i]] = i;
@@ -503,11 +568,11 @@ export function simulateCrowd(graph, opts = {}) {
   // heads for (goal, an index into them; -1: the way out worked out with the
   // fire, as everyone's with the nearest choice).
   const exitList = [...new Set(exits.filter((e) => e >= 0))];
-  const trees =
-    choice === "quickest" && exitList.length > 1 && exitList.length * n <= QUICKEST_CELLS
-      ? exitList.map((e) => walkTree(graph, [e], { speed: 1, blocked }))
-      : null;
+  // Whether people weigh the exits; an exit given to someone needs the walk trees too.
+  const weighing = choice === "quickest" && exitList.length > 1 && exitList.length * n <= QUICKEST_CELLS;
+  const trees = weighing || assigned.some((e) => e >= 0) ? exitList.map((e) => walkTree(graph, [e], { speed: 1, blocked })) : null;
   const goal = new Int32Array(people).fill(-1);
+  for (let i = 0; i < people; i += 1) if (assigned[i] >= 0) goal[i] = exitList.indexOf(assigned[i]);
   // How many times each turned to another exit after the start.
   const switches = new Int32Array(people);
   // Each person's metres to their exit, and the next node on the way.
@@ -568,6 +633,8 @@ export function simulateCrowd(graph, opts = {}) {
     for (const i of order) if (goal[i] >= 0) tally(goal[i], trees[goal[i]].time[at[i]], 1);
     for (const i of order) {
       const v = at[i], own = goal[i];
+      // Someone given an exit keeps it; without the quickest choice no one weighs.
+      if (assigned[i] >= 0 || !weighing) continue;
       if (own < 0 && t > 0) continue;
       let keep = Infinity;
       if (own >= 0) {
@@ -826,8 +893,10 @@ export function simulateCrowd(graph, opts = {}) {
     goneAt,
     shelter,
     cutOff,
-    choice: trees ? "quickest" : "nearest",
-    tooLarge: choice === "quickest" && exitList.length > 1 && !trees,
+    choice: weighing ? "quickest" : "nearest",
+    tooLarge: choice === "quickest" && exitList.length > 1 && !weighing,
+    groupOf,
+    short,
     switches,
   };
 }
