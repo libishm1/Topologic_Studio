@@ -16,5 +16,5 @@ test("the RiMEA and NIST verification cases: the same passes, and only the two k
   assert.ok(line, "the harness ends with its summary");
   const summary = JSON.parse(line.slice(8));
   assert.deepEqual(summary.failed.sort(), ["RiMEA-12b", "RiMEA-16"]);
-  assert.ok(summary.pass >= 22, `${summary.pass} pass`);
+  assert.ok(summary.pass >= 25, `${summary.pass} pass`);
 });
