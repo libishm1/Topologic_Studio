@@ -1164,3 +1164,54 @@ test("densityReading 'calibrated': a dense single file walks slower than by defa
   const lone = simulateCrowd(graph, { exits, groups: [{ nodes: [at(0, 0)], count: 1, speed: [1.4, 1.4] }], start: [0, 0], densityReading: "calibrated" });
   for (const s of speedsOf(graph, lone)) assert.ok(Math.abs(s.v - 1.4) < 1e-3, `alone at ${s.v.toFixed(3)} m/s`);
 });
+
+/**
+ * A room 6 m x 6 m and, from the middle of its right wall, a stair down to a door: `treads` nodes
+ * 0.28 m apart along the slope, `width` m wide, as one file of nodes, or (`split`) as two files
+ * side by side joined rung by rung and across, the way a stair whose treads are modelled in two
+ * halves comes out of the graph.
+ */
+function roomAndTreads(width, treads, split = false) {
+  const { graph, at } = plan(block(0, 11, 0, 11));
+  const nodes = Array.from(graph.nodes), kinds = Array.from(graph.kinds), edges = Array.from(graph.edges);
+  const theta = Math.atan(7 / 11), step = 0.28;
+  const add = (c, z, kind) => {
+    nodes.push(5.5 + c * step * Math.cos(theta), 0.75 - c * step * Math.sin(theta), z);
+    kinds.push(kind);
+    return kinds.length - 1;
+  };
+  let prev = [at(11, 5)];
+  for (let c = 1; c <= treads; c += 1) {
+    const row = split ? [add(c, 2.25, KIND_STAIR), add(c, 2.75, KIND_STAIR)] : [add(c, 2.5, KIND_STAIR)];
+    for (const a of prev) for (const b of row) edges.push(a, b);
+    if (row.length > 1) edges.push(row[0], row[1]);
+    prev = row;
+  }
+  const exit = add(treads + 1, 2.5, KIND_DOOR);
+  for (const a of prev) edges.push(a, exit);
+  const widths = Float32Array.from(kinds, (k) => (k === KIND_STAIR ? width : 0));
+  return {
+    graph: { ...graph, nodes: Float32Array.from(nodes), kinds: Uint8Array.from(kinds), edges: Int32Array.from(edges), widths },
+    exits: [exit],
+    room: block(0, 11, 0, 11).map(([i, j]) => at(i, j)),
+  };
+}
+
+test("with passageFlow a stair that fills while its foot is held up empties again: no one is left on it", () => {
+  // The door at the stair's foot (0.9 m: 0.79 persons/s) takes less than the stair brings (1.2 m:
+  // 0.91), so the stair fills. Counting the people behind a walker in the gap kept before them, as
+  // the option first did, the foremost then never stepped on and 22 of these 40 stood for good
+  // (so did 94 of 196 in the Vienna example). The gap is kept ahead of the walker only.
+  for (const [width, treads, split, count] of [[1.2, 10, false, 40], [2.4, 16, false, 100], [1.0, 10, true, 40], [2.4, 10, true, 100]]) {
+    const { graph, exits, room } = roomAndTreads(width, treads, split);
+    const opts = { exits, groups: [{ nodes: room, count }], start: [0, 0], seed: 1, horizon: 900 };
+    const off = simulateCrowd(graph, opts);
+    const on = simulateCrowd(graph, { ...opts, passageFlow: true });
+    const name = `${width} m, ${treads} treads${split ? " in two files" : ""}`;
+    assert.equal(off.inside, 0, name);
+    assert.equal(on.people, count, name);
+    assert.equal(on.inside, 0, `${name}: ${on.inside} of ${count} left inside with passageFlow`);
+    // The door at the foot governs either way: out no later than without the option, to a few seconds.
+    assert.ok(on.lastOut < off.lastOut + 5, `${name}: last out at ${on.lastOut.toFixed(0)} s, ${off.lastOut.toFixed(0)} s without`);
+  }
+});
