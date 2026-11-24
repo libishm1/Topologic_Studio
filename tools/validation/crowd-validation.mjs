@@ -4,13 +4,16 @@
 // doi:10.6028/NIST.TN.1822) and open experimental data (RiMEA Test 16's
 // percentiles of single-file fundamental diagrams; bottleneck flows).
 //
-//   node tools/validation/crowd-validation.mjs [--quick]
+//   node tools/validation/crowd-validation.mjs [--quick] [--out FILE.json] [--date YYYY-MM-DD] [--no-write]
+//
+// --no-write records nothing and ends with a line "SUMMARY {json}"; the test
+// suite runs it so (src/core/crowdValidation.test.mjs).
 //
 // Each test builds its geometry as a lattice graph (0.5 m nodes, eight
 // neighbours, no corner cutting), runs simulateCrowd as the app does, and
 // reads the walks back from the segments. A fail is a finding about the
 // model, recorded as measured; nothing is tuned to pass.
-// Writes benchmark/results/2026-11-11-crowd-validation.json.
+// Writes benchmark/results/<--out> (default 2026-11-11-crowd-validation.json).
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -819,7 +822,7 @@ routeChoice();
 
 const code = readFileSync(path.join(root, "topologicpy-web-frontend", "src", "core", "crowd.js"));
 const report = {
-  date: "2026-11-11",
+  date: process.argv.includes("--date") ? process.argv[process.argv.indexOf("--date") + 1] : "2026-11-11",
   model: { file: "topologicpy-web-frontend/src/core/crowd.js", sha256: createHash("sha256").update(code).digest("hex"), lattice_spacing_m: S, dt_s: 0.1 },
   quick: QUICK,
   seconds: Math.round((Date.now() - t0) / 1000),
@@ -834,5 +837,7 @@ const report = {
 };
 const outArg = process.argv.indexOf("--out");
 const outFile = path.join(root, "benchmark", "results", outArg > 0 ? process.argv[outArg + 1] : "2026-11-11-crowd-validation.json");
-writeFileSync(outFile, JSON.stringify(report, null, 1));
-console.log(`\n${report.summary.pass} pass, ${report.summary.fail} fail, ${report.summary.documentation} documentation; ${report.seconds} s; ${path.relative(root, outFile)}`);
+const NO_WRITE = process.argv.includes("--no-write");
+if (!NO_WRITE) writeFileSync(outFile, JSON.stringify(report, null, 1));
+if (NO_WRITE) console.log("SUMMARY " + JSON.stringify({ ...report.summary, failed: results.filter((r) => r.pass === false).map((r) => r.id) }));
+else console.log(`\n${report.summary.pass} pass, ${report.summary.fail} fail, ${report.summary.documentation} documentation; ${report.seconds} s; ${path.relative(root, outFile)}`);
