@@ -55,6 +55,13 @@ Limits of the option, as measured:
 - People abreast on a stair node are drawn at the same point in the view.
 - RiMEA 16 gains two points with the option only because a single file of nodes is capped as a 1 m corridor. The density reading is not changed by it.
 
+## Update, later the same day: the density reading, calibrated and not adopted
+
+The rules, the runs and the results are in `crowd-calibration-2026-11-24.md`. In short:
+- Of 36 ways of reading the density, chosen in advance, the one that fits RiMEA 16's single-file data best counts the others within 2 m of the node ahead over the floor they could stand on. RiMEA 16 then has 14 of 14 points in the band (8 before).
+- On the data held back it failed two of its three rules. RiMEA 4 at 2.27 persons/m²: 0.702 m/s, 26 % above the SFPE relation (the rule allowed 15 %; before, 56 % above at 2.44 persons/m²). And the queue before a corridor or a stair crawls again: a 1 m stair passes 0.534 persons/s with `passageFlow` (0.707 with the default reading) and a stair without a capacity 0.153.
+- So the default reading is unchanged, and RiMEA 16 still fails by default. The fitted reading is in the code as `densityReading: "calibrated"`, for analysis only. It is calibrated on single-file data and not validated.
+
 ## The two failures, and their one cause
 
 | Test | Result |
@@ -138,7 +145,7 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 
 1. Done on 2026-11-24: start areas, exits assigned to people, and populations with their own speeds; NIST Verif.4.1 and RiMEA 11 run as written. The populations built in are IMO MSC.1/Circ.1533's twelve groups by age and sex (Table 3.4, uniform) with its passengers' composition (Table 3.1), RiMEA's persons with impaired mobility, and Weidmann's normal distribution. IMO's stair speeds by group (Table 3.5) are not used: stairs take the SFPE values for everyone.
 2. Done on 2026-11-24 as an option, off by default: a flow limit for corridors and stairs, with the stair's real width (RiMEA 12b, NIST Verif.5.1). Before it becomes the default: check the stair widths the graph carries on real models, and decide what a corridor's width counted in nodes is worth.
-3. The density reading, calibrated on the single-file data with other data held back (RiMEA 16, RiMEA 4).
+3. Tried on 2026-11-24 and not adopted: the density reading, calibrated on the single-file data with other data held back (RiMEA 16, RiMEA 4). It fits the single file and fails the held-out rules. Next: a cap on the queue's density before every passage, and two-dimensional data to calibrate on (`crowd-calibration-2026-11-24.md`, section 7.4).
 4. Pre-movement times on each person and a speed in smoke (NIST Verif.1.1, 2.5).
 
 ## Sources

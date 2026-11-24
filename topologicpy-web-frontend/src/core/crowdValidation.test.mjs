@@ -33,3 +33,14 @@ test("the RiMEA and NIST verification cases with passageFlow: only the single-fi
   assert.deepEqual(summary.failed.sort(), ["RiMEA-16"]);
   assert.ok(summary.pass >= 25, `${summary.pass} pass`);
 });
+
+test("the calibrated density reading: the single-file diagram passes, and what it costs is on record", () => {
+  // densityReading "calibrated" (off by default) was chosen on RiMEA 16's single-file data alone
+  // (wiki/research/crowd-calibration-2026-11-24.md). RiMEA 16 then passes; but on the data held back
+  // it failed its rules: without a capacity the queue before a corridor or a stair crawls, and with
+  // passageFlow the 1 m stair passes a quarter less than the SFPE flow, so the SFPE flows fail.
+  const plain = run("--reading", "calibrated");
+  assert.deepEqual(plain.failed.sort(), ["NIST-Verif.5.1", "SFPE-flows"]);
+  const capped = run("--reading", "calibrated", "--passage-flow");
+  assert.deepEqual(capped.failed.sort(), ["SFPE-flows"]);
+});

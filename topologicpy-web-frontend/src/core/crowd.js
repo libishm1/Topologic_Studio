@@ -133,6 +133,35 @@ export const FREE_DENSITY = 0.54;
 export const DENSITY_RADIUS = 1.0;
 
 /**
+ * How the density that slows a step is read (`densityReading`). The default,
+ * as before: the others within DENSITY_RADIUS of the node ahead over all the
+ * cells there, and a least speed of 0.15 m/s. That reads low in a moving
+ * crowd (the free node ahead and the walker's own cell count as floor but
+ * hold no one, and people step into gaps), so dense flow is too fast.
+ * The parameters, and the rules they are calibrated by, are in
+ * wiki/research/crowd-calibration-2026-11-24.md:
+ *   centre  "ahead" (the node stepped on to) or "own" (the walker's node)
+ *   radius  m, the disc the others are counted in
+ *   area    "all" (every cell in the disc) or "standing" (less the walker's
+ *           cell and the target's: the floor the others could stand on)
+ *   floor   m/s, the least speed of a step
+ */
+export const DENSITY_READING_DEFAULT = { centre: "ahead", radius: DENSITY_RADIUS, area: "all", floor: 0.15 };
+/**
+ * The reading chosen on RiMEA Test 16's single-file data alone, of 36 combinations
+ * (tools/validation/crowd-calibrate.mjs, 2026-11-24): the others within 2 m of the
+ * node ahead over the floor they could stand on. All 14 points then lie inside the
+ * experiments' 10 to 90 % band (8 before). That is a fit to single-file data, not
+ * a validation, and on the data held back it failed the rules set for it
+ * (wiki/research/crowd-calibration-2026-11-24.md, section 7): in a 10 m corridor
+ * at 2.3 persons/m^2 the speed is still 26 % above the SFPE relation (56 % before),
+ * and the queue before a corridor or a stair crawls again, so a 1 m stair passes
+ * 0.53 persons/s with passageFlow (0.71 by the default reading) and 0.15 without.
+ * It is therefore not the default and the app does not offer it.
+ */
+export const DENSITY_READING_CALIBRATED = { centre: "ahead", radius: 2.0, area: "standing", floor: 0.15 };
+
+/**
  * Within this walk (m) of a door or an exit, the density slowing a step is
  * taken at most at QUEUE_DENSITY, the density of SFPE's greatest specific
  * flow, so that the queue feeds the door and the door's capacity (its
@@ -476,6 +505,8 @@ export function passageSections(graph, { exits = [], blocked = null, passageWidt
  *   doorWidths    m a node, each door node's own clear width (0: doorWidth); null: doorWidth for all
  *   passageFlow   corridors and stairs pass at most the SFPE flow for their width (passageSections;
  *                 default off: only doors carry a capacity, as before)
+ *   densityReading how the density that slows a step is read: null (the default: DENSITY_READING_DEFAULT,
+ *                 as before), "calibrated" (DENSITY_READING_CALIBRATED), or {centre, radius, area, floor}
  *   passageWidths m a node, the real width of the passage a floor or stair node stands in (0: the
  *                 graph's: the floor's nodes across, a stair's `graph.widths`); null: the graph's for all
  *   dt            s, the step
@@ -529,6 +560,7 @@ export function simulateCrowd(graph, opts = {}) {
     doorWidths = null,
     passageFlow = false,
     passageWidths = null,
+    densityReading = null,
     dt = 0.1,
     horizon = 900,
     seed = 1,
@@ -800,8 +832,10 @@ export function simulateCrowd(graph, opts = {}) {
   }
   // The nodes within DENSITY_RADIUS of each (in space, so a storey above is not
   // near), as lists; kept on the graph, as route.js keeps its csr, for the next run.
-  const near = graph._crowdNear?.radius === DENSITY_RADIUS && graph._crowdNear.n === n ? graph._crowdNear : (graph._crowdNear = (() => {
-    const R = DENSITY_RADIUS, P = graph.nodes;
+  const reading = { ...DENSITY_READING_DEFAULT, ...(densityReading === "calibrated" ? DENSITY_READING_CALIBRATED : densityReading || {}) };
+  const readOwn = reading.centre === "own", readStanding = reading.area === "standing";
+  const near = graph._crowdNear?.radius === reading.radius && graph._crowdNear.n === n ? graph._crowdNear : (graph._crowdNear = (() => {
+    const R = reading.radius, P = graph.nodes;
     const cellOf = (v) => [0, 1, 2].map((c) => Math.floor(P[v * 3 + c] / R));
     const buckets = new Map();
     for (let v = 0; v < n; v += 1) {
@@ -991,20 +1025,29 @@ export function simulateCrowd(graph, opts = {}) {
   // one stepping from v), over the walkable area there.
   // The walkable area within DENSITY_RADIUS of each node, where some nodes stand for more than their cell (a stair's width).
   const areaNear = abreast ? new Float64Array(n).fill(-1) : null;
+  const cellOf = (w) => (areaNear && passages.area[w] > 0 ? passages.area[w] : cell);
   const densityAt = (u, v) => {
+    // The disc's centre: the node ahead, or the walker's own (densityReading).
+    const c = readOwn ? v : u;
     let held = 0;
     const { start, list } = near;
-    for (let k = start[u]; k < start[u + 1]; k += 1) {
+    for (let k = start[c]; k < start[c + 1]; k += 1) {
       const w = list[k];
       held += w === v ? load[w] - 1 : load[w];
     }
-    if (!areaNear) return held / ((start[u + 1] - start[u]) * cell);
-    if (areaNear[u] < 0) {
-      let sum = 0;
-      for (let k = start[u]; k < start[u + 1]; k += 1) sum += passages.area[list[k]] > 0 ? passages.area[list[k]] : cell;
-      areaNear[u] = sum;
+    let area = (start[c + 1] - start[c]) * cell;
+    if (areaNear) {
+      if (areaNear[c] < 0) {
+        let sum = 0;
+        for (let k = start[c]; k < start[c + 1]; k += 1) sum += cellOf(list[k]);
+        areaNear[c] = sum;
+      }
+      area = areaNear[c];
     }
-    return held / areaNear[u];
+    if (!readStanding) return held / area;
+    // The floor the others could stand on: not the walker's cell, nor the free one ahead.
+    area -= cellOf(u) + cellOf(v);
+    return area > 1e-9 ? held / area : 0;
   };
 
   // Randomness in how people move (wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md,
@@ -1131,7 +1174,7 @@ export function simulateCrowd(graph, opts = {}) {
       // the queue before a door at most as by its greatest flow's density.
       const around = densityAt(u, v);
       const crowd = toDoor[u] <= DOOR_QUEUE_M ? Math.min(around, QUEUE_DENSITY) : around;
-      const vel = Math.max(0.15, crowd < FREE_DENSITY ? own : Math.min(own, k0 * (1 - SFPE.a * crowd)));
+      const vel = Math.max(reading.floor, crowd < FREE_DENSITY ? own : Math.min(own, k0 * (1 - SFPE.a * crowd)));
       const arrive = t0 + len / vel;
       segs[i].push(t0, arrive, v, u);
       if (door) doorFree[u] = Math.max(doorFree[u], t0) + 1 / capOf(u);

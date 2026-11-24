@@ -4,10 +4,14 @@
 // doi:10.6028/NIST.TN.1822) and open experimental data (RiMEA Test 16's
 // percentiles of single-file fundamental diagrams; bottleneck flows).
 //
-//   node tools/validation/crowd-validation.mjs [--quick] [--passage-flow] [--out FILE.json] [--date YYYY-MM-DD] [--no-write]
+//   node tools/validation/crowd-validation.mjs [--quick] [--passage-flow] [--reading JSON|calibrated] [--only fn,fn] [--print ID]
+//                                              [--out FILE.json] [--date YYYY-MM-DD] [--no-write]
 //
 // --passage-flow runs every case with the corridors' and stairs' flow capacity
-// (crowd.js `passageFlow`, off by default as in the app).
+// (crowd.js `passageFlow`, off by default as in the app). --reading sets how
+// the density is read (crowd.js `densityReading`); --only runs some cases'
+// functions and --print ends with a line "RESULT {json}" of one case, which
+// the calibration uses (tools/validation/crowd-calibrate.mjs).
 // --no-write records nothing and ends with a line "SUMMARY {json}"; the test
 // suite runs it so (src/core/crowdValidation.test.mjs).
 //
@@ -34,7 +38,13 @@ const root = path.resolve(here, "..", "..");
 const QUICK = process.argv.includes("--quick");
 /** With --passage-flow every run has the corridors' and stairs' flow capacity (crowd.js passageFlow; off by default, as in the app). */
 const PASSAGE = process.argv.includes("--passage-flow");
-const BASE = PASSAGE ? { passageFlow: true } : {};
+/** --reading JSON|calibrated: how the density is read (crowd.js densityReading; by default as the app). */
+const argOf = (flag) => (process.argv.includes(flag) ? process.argv[process.argv.indexOf(flag) + 1] : null);
+const READING = argOf("--reading") ? (argOf("--reading") === "calibrated" ? "calibrated" : JSON.parse(argOf("--reading"))) : null;
+const BASE = { ...(PASSAGE ? { passageFlow: true } : {}), ...(READING ? { densityReading: READING } : {}) };
+/** --only a,b: run only these cases' functions (for the calibration: tools/validation/crowd-calibrate.mjs). */
+const ONLY = argOf("--only") ? argOf("--only").split(",") : null;
+const want = (fn) => !ONLY || ONLY.includes(fn.name);
 const S = 0.5;
 const H = 0.75;
 
@@ -1156,25 +1166,9 @@ try {
 }
 
 const t0 = Date.now();
-corridorSpeed();
-stairSpeed();
-corner();
-premovement();
-speedDistribution();
-populations();
-maxFlow();
-dynamicExit();
-exitAllocation();
-bottlenecks();
-secondBottleneck();
-passageFlows();
-congestion();
-if (percentiles) fundamental1D(percentiles);
-fundamental2D();
-largeRoom();
-routeChoice();
-routeChoiceAsWritten();
-dynamicExitAsWritten();
+for (const fn of [corridorSpeed, stairSpeed, corner, premovement, speedDistribution, populations, maxFlow, dynamicExit, exitAllocation, bottlenecks, secondBottleneck, passageFlows, congestion]) if (want(fn)) fn();
+if (percentiles && want(fundamental1D)) fundamental1D(percentiles);
+for (const fn of [fundamental2D, largeRoom, routeChoice, routeChoiceAsWritten, dynamicExitAsWritten]) if (want(fn)) fn();
 
 const code = readFileSync(path.join(root, "topologicpy-web-frontend", "src", "core", "crowd.js"));
 const report = {
@@ -1195,5 +1189,6 @@ const outArg = process.argv.indexOf("--out");
 const outFile = path.join(root, "benchmark", "results", outArg > 0 ? process.argv[outArg + 1] : "2026-11-11-crowd-validation.json");
 const NO_WRITE = process.argv.includes("--no-write");
 if (!NO_WRITE) writeFileSync(outFile, JSON.stringify(report, null, 1));
+if (argOf("--print")) console.log("RESULT " + JSON.stringify(results.find((r) => r.id === argOf("--print")) ?? null));
 if (NO_WRITE) console.log("SUMMARY " + JSON.stringify({ ...report.summary, failed: results.filter((r) => r.pass === false).map((r) => r.id) }));
 else console.log(`\n${report.summary.pass} pass, ${report.summary.fail} fail, ${report.summary.documentation} documentation; ${report.seconds} s; ${path.relative(root, outFile)}`);

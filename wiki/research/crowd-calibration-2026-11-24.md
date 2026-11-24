@@ -70,6 +70,82 @@ What may be said afterwards:
 
 A new reading changes the model's default results, so it goes behind an option that is off by default. Section 7 says what the default should be.
 
-## 7. Results
+## 7. Results (added after the runs)
 
-Not yet run.
+Run: `node tools/validation/crowd-calibrate.mjs`, then the harness with `--reading calibrated`, by default and with `--passage-flow`. Files: `benchmark/results/2026-11-24-crowd-density-calibration.json` (all 36 combinations, point by point) and `2026-11-24-crowd-density-calibrated-default.json`, `2026-11-24-crowd-density-calibrated-passage-flow.json`.
+
+One thing was not by the book: before the sweep, one combination (the area corrected, the rest as now) was run once to check that the option reached the model. Its result was seen. The choice below was then made by the rule of section 5 over all 36, by the script, with no hand in it.
+
+### 7.1 The choice
+
+Fourteen of the 36 combinations put all 14 points in the band. Among them one has the smallest J, with no tie inside 5 %:
+
+| | Centre | Radius | Area | Floor | Points in band | J |
+| --- | --- | --- | --- | --- | --- | --- |
+| Current | node ahead | 1.0 m | all cells | 0.15 m/s | 8 of 14 | 1.348 |
+| Chosen | node ahead | 2.0 m | cells the others could stand on | 0.15 m/s | 14 of 14 | 0.165 |
+
+What the candidates showed:
+- Leaving the walker's and the target's cells out of the area was enough at 1.0 m (14 of 14, J 0.297). A wider disc lowered J further.
+- Centring on the walker's own node was worse in most combinations.
+- A lower floor never helped. With the area corrected it hurt: at 0.05 m/s the dense file all but stops (2 of 14 at 1.0 m).
+
+Single-file speeds, 1.0 m/s for all (the other population is within 0.02 m/s of it from 0.44 persons/m up):
+
+| Density, persons/m | Before, m/s | After, m/s | Experiments' 10, 50, 90 % (at the density measured after) |
+| --- | --- | --- | --- |
+| 0.26 | 0.999 | 0.997 | 0.864, 1.165, 1.475 |
+| 0.44 | 0.999 | 0.961 | 0.746, 1.111, 1.413 |
+| 0.67 | 0.988 | 0.872 | 0.616, 0.994, 1.319 |
+| 0.96 | 0.892 | 0.554 | 0.408, 0.680, 1.023 |
+| 1.28 | 0.750 (outside) | 0.321 | 0.197, 0.402, 0.626 |
+| 1.53 | 0.513 (outside) | 0.178 | 0.105, 0.260, 0.467 |
+| 1.74 | 0.506 (outside) | 0.150 | 0.066, 0.190, 0.368 |
+
+The chosen reading is in the code as `DENSITY_READING_CALIBRATED`, taken with `densityReading: "calibrated"`. It is calibrated on single-file data. Every speed after sits below the experiments' median, and the last is the floor itself.
+
+### 7.2 The held-out data
+
+**Rule 1, RiMEA 4: fails.**
+
+| Measured density, persons/m² | Speed, m/s | SFPE | Difference | Weidmann | Difference |
+| --- | --- | --- | --- | --- | --- |
+| 0.65 | 1.149 | 1.159 | -1 % | 1.241 | -7 % |
+| 1.16 | 1.023 | 0.969 | +6 % | 0.975 | +5 % |
+| 2.27 | 0.702 | 0.556 | **+26 %** | 0.519 | **+35 %** |
+| 3.28 (reported only) | 0.303 | 0.178 | | 0.274 | +11 % |
+| 4.20 (reported only) | 0.126 | none | | 0.129 | -2 % |
+
+At 2.27 persons/m² the speed is 26 % above the SFPE relation, outside the 15 % of the rule, and 35 % above Weidmann's, outside its 25 % mark. It is better than before (0.767 m/s at 2.44 persons/m², 56 % above SFPE and 64 % above Weidmann), but it does not pass. The reading that fits a single file still reads low in a wide crowd, where people step sideways into gaps.
+
+**Rule 2, RiMEA 12d: passes.** 0.659, 0.922 and 1.186 persons/s at 0.8, 1.0 and 1.2 m, against door capacities of 0.658, 0.921 and 1.184; rising with the width. The ratios to the measured flows are 0.43, 0.49 and 0.52, as before.
+
+**Rule 3, the rest of the harness: fails.**
+
+| | Default reading | Calibrated reading |
+| --- | --- | --- |
+| By default: pass, fail | 22, 4 (RiMEA 12b, RiMEA 16, NIST Verif.5.1, SFPE flows) | 24, 2 (NIST Verif.5.1, SFPE flows) |
+| With `passageFlow`: pass, fail | 25, 1 (RiMEA 16) | 25, 1 (SFPE flows) |
+
+With `passageFlow` the SFPE flows passed before and fail after: the 1 m stair passes 0.534 persons/s where SFPE gives 0.71 (0.707 with the default reading). The 1.2 m and 2.4 m stairs, the corridor and the door keep their values.
+
+By default no case that passed now fails, but two results that already failed get much worse, and they are the ones a user would meet:
+- A stair drawn as one file of nodes passes 0.153 persons/s (0.542 before).
+- A corridor 1 m wide passes 0.537 persons/s (1.188 before; SFPE 0.79). RiMEA 12b passes for that reason, not for a good one.
+- NIST Verif.5.1: the last person is out at 502 s (214 s before; 80 s with `passageFlow` and the default reading).
+
+The cause is the one found on 2026-11-11 as finding 3. A truer, higher reading brings back the crawl into a queue wherever the density there is not capped. Before a door it is capped; before a corridor or a stair it is capped only with `passageFlow`; and on a 1 m stair itself the cap of 1.9 persons/m² now holds the speed at its lowest, 0.53 m/s.
+
+### 7.3 Verdict
+
+- The reading is calibrated on single-file data: RiMEA 16 goes from 8 to 14 of 14.
+- It is not validated. It failed two of the three rules set for the held-out data, and by those rules the parameters are not chosen again.
+- **The default stays as it was.** `densityReading` is left out by default, and a run without it is exactly as before. The app does not offer the calibrated reading.
+- The calibrated reading stays in the code as an option for analysis, with these results stated beside it.
+
+### 7.4 What a next round would need
+
+These are proposals, not results. Each needs its own rules written first.
+- A cap on the queue's density before every passage, on by default, so that a truer reading cannot bring the crawl back. Until then no higher reading can be the default.
+- Two-dimensional calibration data. A single file cannot tell the model how people step sideways into gaps. The corridor experiments of Zhang et al. (2011) would do, with RiMEA 4's curves and the bottleneck experiments kept back.
+- For stairs, a reading along the stair (a headway) in place of the disc.

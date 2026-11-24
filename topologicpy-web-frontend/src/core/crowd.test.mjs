@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { CORRIDOR_FLOW, FREE_SPEED, GATHER_AREA, IMO_PASSENGERS, POPULATIONS, SFPE, STAIR_FLOW, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, passageCapacity, passageSections, populationMix, simulateCrowd } from "./crowd.js";
+import { CORRIDOR_FLOW, DENSITY_READING_CALIBRATED, DENSITY_READING_DEFAULT, FREE_SPEED, GATHER_AREA, IMO_PASSENGERS, POPULATIONS, SFPE, STAIR_FLOW, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, passageCapacity, passageSections, populationMix, simulateCrowd } from "./crowd.js";
 import { doorCapacity } from "./performanceCheck.js";
 import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "./lattice.js";
 
@@ -922,4 +922,49 @@ test("with passageFlow a stair drawn as one file of nodes passes what its real w
   const outUp = simulateCrowd(up.graph, { ...opts, exits: up.exits, passageFlow: true });
   const fu = flowOnTo(up.graph, outUp, [up.first]);
   assert.ok(fu.flow <= STAIR_UP * passageCapacity(1.2, true) + 1e-6 && fu.flow > 0.85 * STAIR_UP * passageCapacity(1.2, true), `up ${fu.flow.toFixed(3)}`);
+});
+
+/** A single file of `count` nodes 0.5 m apart with an exit at its far end. */
+function singleFile(count) {
+  const { graph, at } = plan([...block(0, count - 1, 0, 0), [count, 0, KIND_DOOR]]);
+  return { graph, at, exits: [at(count, 0)] };
+}
+
+test("densityReading: left out, a run is exactly as with the default reading spelt out", () => {
+  const { graph, exits } = room(16, 8);
+  const opts = { exits, occupantArea: 0.4, start: [0, 0], seed: 2 };
+  const plain = simulateCrowd(graph, opts);
+  const spelt = simulateCrowd(graph, { ...opts, densityReading: { ...DENSITY_READING_DEFAULT } });
+  assert.deepEqual(spelt.segments, plain.segments);
+  assert.deepEqual(DENSITY_READING_DEFAULT, { centre: "ahead", radius: 1.0, area: "all", floor: 0.15 });
+  // The reading chosen on the single-file data: a wider disc, over the floor the others could stand on.
+  assert.deepEqual(DENSITY_READING_CALIBRATED, { centre: "ahead", radius: 2.0, area: "standing", floor: 0.15 });
+});
+
+test("densityReading 'calibrated': a dense single file walks slower than by default, and a lone walker still at their own speed", () => {
+  // Every other node taken at the start: 1 person a metre, 2 persons/m2 on the lattice.
+  const { graph, at, exits } = singleFile(200);
+  const nodes = Array.from({ length: 80 }, (_, k) => at(2 * k, 0));
+  const opts = { exits, groups: [{ nodes, count: 80, speed: [1, 1] }], doorWidth: 5, start: [0, 0], seed: 1, choice: "nearest", horizon: 40 };
+  const meanSpeed = (out) => {
+    // Metres walked between 10 and 30 s, by those still inside at 30 s.
+    const n = graph.nodes.length / 3;
+    let sum = 0, people = 0;
+    walks(out).forEach((list, i) => {
+      if (out.outAt[i] < 30) return;
+      let d = 0;
+      for (const s of list) if (s.b < n && s.t0 >= 10 && s.t1 <= 30) d += 0.5;
+      sum += d / 20;
+      people += 1;
+    });
+    return sum / people;
+  };
+  const before = meanSpeed(simulateCrowd(graph, opts));
+  const after = meanSpeed(simulateCrowd(graph, { ...opts, densityReading: "calibrated" }));
+  // SFPE's relation at 2 persons/m2 gives 0.66 m/s; the default reading lets them walk faster than that.
+  assert.ok(after < before - 0.1, `calibrated ${after.toFixed(3)} m/s, default ${before.toFixed(3)}`);
+  assert.ok(before > SFPE.k * (1 - SFPE.a * 2), `default ${before.toFixed(3)}`);
+  // Alone, the walker counts no one and walks at their own speed, as by default.
+  const lone = simulateCrowd(graph, { exits, groups: [{ nodes: [at(0, 0)], count: 1, speed: [1.4, 1.4] }], start: [0, 0], densityReading: "calibrated" });
+  for (const s of speedsOf(graph, lone)) assert.ok(Math.abs(s.v - 1.4) < 1e-3, `alone at ${s.v.toFixed(3)} m/s`);
 });
