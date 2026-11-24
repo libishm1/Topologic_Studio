@@ -1,0 +1,4201 @@
+{
+ "generated": "2026-11-24T16:04:09.919Z",
+ "tool": "tools/calibration/validation-suite.mjs",
+ "plan": "wiki/research/fire-calibration-plan-2026-11-11.md, section 12 (pre-registered before the baseline)",
+ "node": "v24.21.0",
+ "cpu": "Intel(R) Core(TM) i7-14700",
+ "jobs": 1,
+ "wallSeconds": 13.8649416,
+ "git": {
+  "head": "98ca59880815f195f094f16473bb781fd00831e4",
+  "branch": "flamescapes/head-height-species",
+  "status": [
+   "M tools/calibration/validation-suite.mjs",
+   "?? benchmark/results/2026-11-24-species-check-13b-off.json",
+   "?? benchmark/results/2026-11-24-species-check-r8b-head.json",
+   "?? benchmark/results/2026-11-24-species-check-r8b-off.json",
+   "?? benchmark/results/2026-11-24-species-check-r8b-on.json",
+   "?? tools/calibration/lib/species.mjs",
+   "?? tools/calibration/lib/species.test.mjs"
+  ],
+  "solverDiff": [],
+  "solverDigests": {
+   "flamescapes.js": "19bed84dd7c2917c",
+   "flamescapesRun.js": "d5a9d5012afd25b1",
+   "flamescapesGpu.js": "f5665376c466cc05",
+   "voxelize.js": "1cbb116d52fa56ff",
+   "fireClasses.js": "e6b1b13f5a5110a9"
+  },
+  "solverRev": null,
+  "snapshotDigests": {
+   "accessAudit.js": "03ce2c6401e85f24",
+   "alternatives.js": "9e70506229fe7ea7",
+   "calibrationStatus.js": "48d2665401f40087",
+   "centroid.js": "2d26075120cdefd0",
+   "codeCheck.js": "a2c46d185f99b38a",
+   "cores.js": "172c605cced88ab4",
+   "crowd.js": "23f02e90ffa42fae",
+   "deadline.js": "2b55bd3d0f812030",
+   "describeFacts.js": "d13e625400e5f9c5",
+   "doorStates.js": "d6e30367f81f577a",
+   "drawingToLod1.js": "7d61a1e4b2477004",
+   "egressCompare.js": "9e4d80c16c1e7815",
+   "egressMap.js": "de1a168f86f70c06",
+   "egressRun.js": "972697abda8e623c",
+   "extinguishers.js": "854d569476ba94a8",
+   "federation.js": "828f5b91264d9f18",
+   "fieldNotes.js": "d8511b9d94b89175",
+   "fire.js": "5bc1fea6589a6378",
+   "fireClasses.js": "e6b1b13f5a5110a9",
+   "fireService.js": "8e150247ae0bfdf3",
+   "flamescapes.js": "19bed84dd7c2917c",
+   "flamescapesGpu.js": "f5665376c466cc05",
+   "flamescapesRun.js": "d5a9d5012afd25b1",
+   "floorRaster.js": "19c1b25a6e3b400a",
+   "forecast.js": "2c4fbbff73b774e6",
+   "gasRadiation.js": "3948a77930a70e2c",
+   "graph.js": "9cb4892174d0090c",
+   "guided.js": "b01e3dc290ec52b7",
+   "hintText.js": "f094d54d77b91f13",
+   "identify.js": "d4f34b7953aad308",
+   "identifyGeometry.js": "3babd2cb84e10dfd",
+   "ifcSemantics.js": "a0d3df1b9b826a39",
+   "ignition.js": "e462288b77f13952",
+   "ignitionCatalog.js": "5757d5cd89ab668b",
+   "ignitionClasses.js": "781ee4d1b29922cb",
+   "ignitionContexts.js": "0c322c05e506b286",
+   "importSettings.js": "a449de8d7febb77e",
+   "lattice.js": "115408ce59e0b35c",
+   "lod1.js": "7ff1c03cef187f60",
+   "measures.js": "6ed85e653b23b0a5",
+   "memoryNotice.js": "53b7a1ea2c3b943f",
+   "outdoorSpaces.js": "7418d84291962cc8",
+   "performanceCheck.js": "d748a14234672d2a",
+   "perfReport.js": "c6191c033df6c169",
+   "physarum.js": "0e48f96243c3fb08",
+   "rl.js": "dae22f1d5de84752",
+   "rlSafe.js": "bc7913c32dfbb63c",
+   "rooms.js": "8ebec9371f9889e8",
+   "route.js": "930301fba43b1557",
+   "rsetPresets.js": "c83efeb44e713549",
+   "runCache.js": "1041182d3c45ae3d",
+   "runHealth.js": "09a27b574b2f4174",
+   "runTable.js": "fabbd7cce071892a",
+   "session.js": "506dbce6b3b621c6",
+   "settingsMigration.js": "ad46d33c20ed1ae0",
+   "skeleton.js": "59065f929bbfd324",
+   "slimeEgress.js": "d7d80d7b0127c0c5",
+   "solverVersions.js": "38dd6f9e41289607",
+   "spaceFloors.js": "bc5ce1de1bee195d",
+   "sprinklers.js": "46f70b762473f975",
+   "stairs.js": "232a0f220bd7d6d2",
+   "straighten.js": "334580c043084882",
+   "suppression.js": "1295cc7cd58914b3",
+   "suppressionSystems.js": "558dd9c1d40646b0",
+   "suppressionView.js": "2092f6515663564a",
+   "surrogate.js": "2628c7452d8b15c2",
+   "tenability.js": "fc328b4250d2cce8",
+   "topologicExport.js": "41094bc2c87b00f3",
+   "voxelize.js": "1cbb116d52fa56ff",
+   "zone.js": "fb21e41b346be840"
+  },
+  "snapshotLfDigests": {
+   "accessAudit.js": "40ed9d4947ca5e7f",
+   "alternatives.js": "3409d985e0eba9e2",
+   "calibrationStatus.js": "fb2bed1a74f6e38f",
+   "centroid.js": "c5e939216a8bf9c7",
+   "codeCheck.js": "64961a928cd5fdac",
+   "cores.js": "89f35b3c1ad824a2",
+   "crowd.js": "e95a3384f91ce6e9",
+   "deadline.js": "fa8d80f6b6a3f48c",
+   "describeFacts.js": "55b61c2b39a4846a",
+   "doorStates.js": "e5141e1ed1f1e92c",
+   "drawingToLod1.js": "45c7ebd65f1acf3c",
+   "egressCompare.js": "500f03f0bbae3254",
+   "egressMap.js": "b0cef306123eec0a",
+   "egressRun.js": "313fdb2a7a4ffbd8",
+   "extinguishers.js": "6a657f7b7fde7f18",
+   "federation.js": "16b132e8ecbdd9b7",
+   "fieldNotes.js": "d72c96498cc2d427",
+   "fire.js": "8791e424b274404c",
+   "fireClasses.js": "5647c3c7ce2b367f",
+   "fireService.js": "31b4229279556e6e",
+   "flamescapes.js": "e76090a89433718c",
+   "flamescapesGpu.js": "fc5795a80f38ca27",
+   "flamescapesRun.js": "11b2aad96bc3d5fc",
+   "floorRaster.js": "2d2a71261acc69c3",
+   "forecast.js": "b50c5934df538da4",
+   "gasRadiation.js": "e40cf2d8d8b85fad",
+   "graph.js": "5dfbecb6c2556534",
+   "guided.js": "1a39625cc3cab4f0",
+   "hintText.js": "7d84b82b129c374e",
+   "identify.js": "a991c119206a84a1",
+   "identifyGeometry.js": "47d3de466a9cb5db",
+   "ifcSemantics.js": "f2233dc2be27ac74",
+   "ignition.js": "18490ba93451527c",
+   "ignitionCatalog.js": "ead38de976f3365b",
+   "ignitionClasses.js": "6e0d37e41424c3d4",
+   "ignitionContexts.js": "cff76a5f9f4d5def",
+   "importSettings.js": "bb13549913f4cd28",
+   "lattice.js": "3548bed0e529aecd",
+   "lod1.js": "04bb348701446745",
+   "measures.js": "1bf64af44b6b8bf5",
+   "memoryNotice.js": "d6f14ba0b26a65a4",
+   "outdoorSpaces.js": "3844cea5c7ee5a5b",
+   "performanceCheck.js": "e6e313a5bc8ae84c",
+   "perfReport.js": "fc75485a0c68807e",
+   "physarum.js": "5c43aadf1c1f5fc2",
+   "rl.js": "050fa5163fd7f1a4",
+   "rlSafe.js": "cc8e3d8268fc6ea9",
+   "rooms.js": "9e93eb148739006c",
+   "route.js": "599d73ac8ee42834",
+   "rsetPresets.js": "0238cf14b64789d4",
+   "runCache.js": "5fcdfe490f243af0",
+   "runHealth.js": "0916a0f8e8cbc8db",
+   "runTable.js": "cb5dae22a4f6b9ed",
+   "session.js": "a16e42a9efab70a8",
+   "settingsMigration.js": "52c05ab5fd61314e",
+   "skeleton.js": "bedf0d2e671897b5",
+   "slimeEgress.js": "b61ca1ee452942ed",
+   "solverVersions.js": "ca547fe7a5d2e4fa",
+   "spaceFloors.js": "2b36f82524ad4e1f",
+   "sprinklers.js": "f67aba98f2d349dd",
+   "stairs.js": "2f248561b86e57f2",
+   "straighten.js": "b5dd3d74cf349ae4",
+   "suppression.js": "bbc1b42d7f8f25f7",
+   "suppressionSystems.js": "03ef194b43bc4d91",
+   "suppressionView.js": "4f8b9a807e4fc42c",
+   "surrogate.js": "8698ff3359280127",
+   "tenability.js": "b1f1a28c50d71068",
+   "topologicExport.js": "c6b88f208c09fbde",
+   "voxelize.js": "8289af718e9eaa6a",
+   "zone.js": "4d8a8cf00234ea2c"
+  },
+  "harnessDigests": {
+   "validation-suite.mjs": "48fd8d4da220af19",
+   "lib/fds.mjs": "0be440dfe90ee7d1",
+   "lib/head.mjs": "2c6fe9cc6ffb315d",
+   "lib/probes.mjs": "fa5488969d66aba3",
+   "lib/represented.mjs": "72940ea827fb3918",
+   "lib/species.mjs": "95447e5d2aa5136d",
+   "lib/species.test.mjs": "9310d7b5bc2f7891",
+   "lib/stats.mjs": "c80aafd6e57faea3",
+   "data/atf.json": "540d2bc7ea19e20b",
+   "data/fse.json": "1f366e498ff83a05",
+   "data/fsri-chairs.json": "a529276f55db739e",
+   "data/fsri.json": "d95fa6a387295880",
+   "data/nbs.json": "45a1058fcbf79bfa",
+   "data/nistnrc.json": "e5d0488e8cbac54c",
+   "data/steckler.json": "7297c561010eab87",
+   "data/ulnist.json": "6356cb025300fd81",
+   "data/wtc.json": "2c56e04a5009516a"
+  }
+ },
+ "solver": {
+  "overrides": {},
+  "defaults": {
+   "dt": 0.1,
+   "ambient": 293.15,
+   "gravity": 9.81,
+   "convection": 200,
+   "wallConvection": 10,
+   "wallLayers": 1,
+   "wallNodes": 20,
+   "wallStretch": 1.2,
+   "sootDeposition": 1,
+   "sootDensity": 1800,
+   "sootDiameter": 0.000001,
+   "sootThermophoreticDiameter": 3e-8,
+   "sootConductivity": 0.26,
+   "sootAbsorption": 500,
+   "vorticity": 3,
+   "cfl": 1,
+   "vorticityStep": 0.5,
+   "maxSubsteps": 8,
+   "conservative": 1,
+   "expansion": 1,
+   "pressureZones": 1,
+   "leakage": null,
+   "leakageDischarge": 1,
+   "leakageWall": 0.00021,
+   "leakageFloor": 0.000052,
+   "porousVelocity": 0.5,
+   "projection": 30,
+   "projectionTolerance": 0.001,
+   "diffusivity": 0.00002,
+   "conductivity": 0.026,
+   "emitAbove": 500,
+   "rays": 8,
+   "rayReach": 40,
+   "surfaceRayStart": 0,
+   "surfaceEmitFloor": 0,
+   "surfaceEmitRise": 10,
+   "surfaceWarmRays": null,
+   "burnerFlameRays": 0,
+   "flameRadiantOnce": 0,
+   "gasRadiation": 0,
+   "gasEmitRise": 10,
+   "gasRays": 8,
+   "pyrolysisA": 47800,
+   "pyrolysisE": 92200,
+   "pyrolysisHeat": 250000,
+   "oxidationA": 180000000,
+   "oxidationE": 92200,
+   "pyrolysisFuel": 0.9,
+   "latentHeat": 2258601.5538290786,
+   "moisture": 0.1,
+   "fuelHeatCapacity": 2000,
+   "skinDensity": 1,
+   "contentsArea": 2,
+   "itemArea": 1,
+   "gasA": 830000,
+   "gasE": 126000,
+   "gasFuelExponent": -0.3,
+   "gasOxygenExponent": 1.3,
+   "flameSpeed": 1,
+   "flameLifetime": 0.5,
+   "flameShare": 0.75,
+   "burningFlux": 1000,
+   "embers": false,
+   "emberRate": 20,
+   "emberPatch": 0.001,
+   "emberMass": [
+    0.00002,
+    0.0002
+   ],
+   "emberLifetime": 10,
+   "emberMassLoss": 0.05,
+   "emberDrag": 0.5,
+   "emberEmissivity": 0.95,
+   "emberHeatCapacity": 2000,
+   "maxParticles": 20000,
+   "seed": 1
+  },
+  "health": {
+   "maxT": 3000,
+   "maxSpeed": 50,
+   "energyFactor": 1.5,
+   "energySlack": 1000000,
+   "cp": 1005
+  }
+ },
+ "settings": {
+  "datasets": [
+   "nistnrc"
+  ],
+  "cells": [
+   0.34
+  ],
+  "tests": "nistnrc/03$",
+  "snap": "seal (the voxeliser's rule before plan 13.21)",
+  "pockets": "a tree ends below its first pocket (plan 13.22)",
+  "fuel": "each test's own fuel: heat of combustion and yields (plan 12.9)",
+  "walls": "each test's own surfaces from its FDS input, areal heat capacity matched over one cell; and their layers passed to the solver (--wall-layers)",
+  "surfaceRayStart": "on: a surface's rays start on its emitting face (--surface-ray-start; plan 13.25, item 10)",
+  "surfaceEmitFloor": "on: a surface emits from just above ambient (--surface-emit-floor; plan 13.26, item 11)",
+  "burnerFlameRays": "off",
+  "flameRadiantOnce": "on: the burner's flame radiates its radiant fraction once (--flame-radiant-once; plan 16.14, item 14)",
+  "storeSpecies": "on: each run keeps series.species, the model's temperature, soot density, CO, CO2 and O2 each second at the head-height cells and at the analysers' and smoke meters' cells (--store-species; plan 16.54; lib/species.mjs); nothing stored is compared",
+  "plan": {
+   "steckler": {
+    "horizon": "() => 300",
+    "steadyFrom": 200,
+    "skipCells": []
+   },
+   "nbs": {
+    "horizon": "() => 900",
+    "steadyFrom": null,
+    "skipCells": []
+   },
+   "nistnrc": {
+    "horizon": "() => 600",
+    "steadyFrom": null,
+    "skipCells": [
+     0.2
+    ]
+   },
+   "wtc": {
+    "horizon": "(t) => Math.min(600, Math.ceil(lastBurning(t.burner.hrrW)) + 30)",
+    "steadyFrom": null,
+    "skipCells": [
+     0.2
+    ]
+   },
+   "atf": {
+    "horizon": "() => 600",
+    "steadyFrom": null,
+    "skipCells": [
+     0.2
+    ]
+   },
+   "fsri": {
+    "horizon": "(t) => t.horizon",
+    "steadyFrom": null,
+    "skipCells": []
+   },
+   "ulnist": {
+    "horizon": "(t) => t.horizon",
+    "steadyFrom": null,
+    "skipCells": []
+   },
+   "fse": {
+    "horizon": "(t) => t.horizon",
+    "steadyFrom": null,
+    "skipCells": []
+   },
+   "fsri-chairs": {
+    "horizon": "(t) => t.horizon",
+    "steadyFrom": null,
+    "skipCells": []
+   }
+  },
+  "skipped": [],
+  "series": {
+   "steckler": "NBS 1980 to 1981, Steckler, Quintiere, Rinkinen; small room doorway flows",
+   "nbs": "NBS 1985, Peacock, Davis, Babrauskas; three-room suite with a corridor",
+   "nistnrc": "NIST 2003, Hamins et al. for the US NRC; large compartment (shares NIST's large fire laboratory and lead with wtc)",
+   "wtc": "NIST 2004, Hamins et al. for the WTC investigation; spray-burner compartment (shares the laboratory and lead with nistnrc)",
+   "atf": "ATF Fire Research Laboratory 2008, Sheppard; two corridors joined by a stairwell (a federal laboratory other than NIST)",
+   "fsri": "UL FSRI 2018, Willi et al.; gas burners in a 3.66 m room with one door (a laboratory other than NIST and ATF; a box scene, no FDS input)",
+   "ulnist": "NIST at UL 2012, Opert; gas fires in a 6.1 x 4.3 m room with a door and ceiling vents, first interval (NIST's fire fighting group; UL's building)",
+   "fse": "NIST 2008, Lock et al.; an ISO 9705 room, the tests with doors of 0.4 m or more, first window",
+   "fsri-chairs": "UL FSRI 2018, Willi et al.; one upholstered chair or sofa in fsri's room, door open, its measured heat release prescribed (fsri's laboratory and room: a series, no new laboratory; plan 15.4)"
+  },
+  "verdictRule": "calibrated on a cell: at least three independent datasets each within this project's calibrated band (2026-11-08 plan, section 8, on the FDS Validation Guide's statistics: 0.8 <= delta <= 1.25, sigmaM <= 0.35) with none of their runs stopped, and the pooled pairs within that band too; indicative: pooled within 0.67 <= delta <= 1.5, sigmaM <= 0.5; otherwise not calibrated",
+  "claimRule": "claim protocol 2026-11-12, section 4: calibrated if in the calibrated band in >= 3 datasets and outside the indicative band in none; indicative if in the indicative band (or better) in >= 2; else not calibrated; a dataset with a stopped run counts as outside",
+  "sigmaE": {
+   "hglTemperature": 0.07,
+   "hglDepth": 0.05,
+   "ceilingJet": 0.07,
+   "plume": 0.07,
+   "o2": 0.08,
+   "co2": 0.08,
+   "smoke": 0.12,
+   "velocity": 0.08,
+   "neutralPlane": 0.05,
+   "headTemperature": 0.07
+  },
+  "measures": {
+   "nistnrc": [
+    "hglTemperature",
+    "hglDepth",
+    "headTemperature",
+    "doorVelocity",
+    "neutralPlane",
+    "doorMassFlow",
+    "ceilingJet",
+    "o2",
+    "co2",
+    "smoke"
+   ]
+  },
+  "rule": "claim protocol addendum 2026-11-12 00:28: a run whose fire's gas cannot reach the open boundary, though its test had an opening, is left out and reported as not represented on this grid (lib/represented.mjs; sealed by design: {\"nistnrc\":[\"01\",\"02\",\"07\",\"08\",\"13\"],\"nbs\":[\"100O\"]})"
+ },
+ "runs": [
+  {
+   "id": "nistnrc/03@0.34",
+   "dataset": "nistnrc",
+   "test": "03",
+   "cell": 0.34,
+   "horizon": 30,
+   "snap": "seal",
+   "pockets": "drop",
+   "grid": [
+    66,
+    14,
+    23
+   ],
+   "cells": 21252,
+   "openCells": 13896,
+   "plumeIndex": 2.89,
+   "peakKW": 1068,
+   "burner": {
+    "baseMoved": 0,
+    "cells": 99,
+    "columns": 9,
+    "layers": 11,
+    "radiantFraction": 0.44,
+    "radiantMJ": 1.174,
+    "released": 2.669,
+    "expectedMJ": 2.669
+   },
+   "trees": [
+    {
+     "id": "1",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0,
+     "pockets": {
+      "dropped": [],
+      "midTree": false,
+      "endsAt": 3.74,
+      "snappedCeiling": 3.74
+     }
+    },
+    {
+     "id": "2",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0,
+     "pockets": {
+      "dropped": [],
+      "midTree": false,
+      "endsAt": 3.74,
+      "snappedCeiling": 3.74
+     }
+    },
+    {
+     "id": "3",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0,
+     "pockets": {
+      "dropped": [],
+      "midTree": false,
+      "endsAt": 3.74,
+      "snappedCeiling": 3.74
+     }
+    },
+    {
+     "id": "5",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0,
+     "pockets": {
+      "dropped": [],
+      "midTree": false,
+      "endsAt": 3.74,
+      "snappedCeiling": 3.74
+     }
+    },
+    {
+     "id": "6",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0,
+     "pockets": {
+      "dropped": [],
+      "midTree": false,
+      "endsAt": 3.74,
+      "snappedCeiling": 3.74
+     }
+    },
+    {
+     "id": "7",
+     "modelCeiling": 3.74,
+     "nominal": 3.82,
+     "cells": 11,
+     "droppedCells": 0,
+     "pockets": {
+      "dropped": [],
+      "midTree": false,
+      "endsAt": 3.74,
+      "snappedCeiling": 3.74
+     }
+    }
+   ],
+   "points": [
+    {
+     "id": "Tree 1-10",
+     "moved": 0.099
+    },
+    {
+     "id": "Tree 2-10",
+     "moved": 0.217
+    },
+    {
+     "id": "Tree 3-10",
+     "moved": 0.157
+    },
+    {
+     "id": "Tree 4-10",
+     "moved": 0.224
+    },
+    {
+     "id": "Tree 5-10",
+     "moved": 0.162
+    },
+    {
+     "id": "Tree 6-10",
+     "moved": 0.139
+    },
+    {
+     "id": "Tree 7-10",
+     "moved": 0.148
+    },
+    {
+     "id": "O2-1",
+     "moved": 0.15
+    },
+    {
+     "id": "CO2-4",
+     "moved": 0.15
+    },
+    {
+     "id": "smoke",
+     "moved": 0.081,
+     "pathCells": 3
+    }
+   ],
+   "fuel": {
+    "heatOfCombustion": 44600000,
+    "yields": {
+     "co2": 3.0072,
+     "co": 0.008,
+     "soot": 0.0149
+    },
+    "rule": "the test fuel's"
+   },
+   "solverOptions": {
+    "ambient": 303.15,
+    "inert": [
+     {
+      "rho": 50.05294117647059,
+      "c": 777.9999999999999,
+      "k": 0.111,
+      "eps": 0.74,
+      "layers": [
+       {
+        "thickness": 0.0254,
+        "rho": 670,
+        "c": 778,
+        "k": 0.111
+       }
+      ]
+     },
+     {
+      "rho": 69.82029411764705,
+      "c": 1963.3929963056414,
+      "k": 0.26,
+      "eps": 0.9,
+      "layers": [
+       {
+        "thickness": 0.0127,
+        "rho": 947,
+        "c": 1100,
+        "k": 0.26
+       },
+       {
+        "thickness": 0.0183,
+        "rho": 640,
+        "c": 2850,
+        "k": 0.14
+       }
+      ]
+     },
+     {
+      "rho": 50.05294117647059,
+      "c": 777.9999999999999,
+      "k": 0.111,
+      "eps": 0.74,
+      "layers": [
+       {
+        "thickness": 0.0254,
+        "rho": 670,
+        "c": 778,
+        "k": 0.111
+       }
+      ]
+     }
+    ],
+    "leakage": [],
+    "surfaceRayStart": 1,
+    "surfaceEmitFloor": 1,
+    "flameRadiantOnce": 1
+   },
+   "door": null,
+   "region": {
+    "source": "solver regions",
+    "openCells": 13895
+   },
+   "walls": {
+    "slots": [
+     "MARINITE",
+     "GYPSUM BOARD"
+    ],
+    "rhoModel": [
+     50.05,
+     69.82,
+     50.05
+    ],
+    "solidCells": [
+     5838,
+     1518,
+     0
+    ],
+    "check": {
+     "honoured": true,
+     "cellHeatCapacity": 5388,
+     "expected": 5388
+    }
+   },
+   "health": {
+    "ok": true,
+    "maxSpeed": 3.69,
+    "substeps": 2
+   },
+   "ledger": [
+    {
+     "t": 3,
+     "released": 0.0267,
+     "radiated": 0,
+     "flameSilenced": 0,
+     "flameCleared": 0.00000999951,
+     "burnerRadiatedOut": 0,
+     "surfaceFloor": 0.0000599116,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": 1.0592e-9,
+      "deposits": 1.26558e-7
+     },
+     "gas": 0.015,
+     "walls": 0.0114,
+     "shell": 0,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 56,
+     "surfaceCrossings": 1285
+    },
+    {
+     "t": 6,
+     "released": 0.1067,
+     "radiated": 0.0001,
+     "flameSilenced": 0,
+     "flameCleared": 0.0000706981,
+     "burnerRadiatedOut": 0,
+     "surfaceFloor": 0.000338003,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": 7.41648e-9,
+      "deposits": 5.79936e-7
+     },
+     "gas": 0.0601,
+     "walls": 0.0458,
+     "shell": 0,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 552,
+     "surfaceCrossings": 12611
+    },
+    {
+     "t": 9,
+     "released": 0.2402,
+     "radiated": 0.0006,
+     "flameSilenced": 0,
+     "flameCleared": 0.000270434,
+     "burnerRadiatedOut": 0.0001,
+     "surfaceFloor": 0.000849789,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": 1.39468e-8,
+      "deposits": 9.65909e-7
+     },
+     "gas": 0.1351,
+     "walls": 0.1028,
+     "shell": 0,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 2120,
+     "surfaceCrossings": 47987
+    },
+    {
+     "t": 12,
+     "released": 0.427,
+     "radiated": 0.0016,
+     "flameSilenced": 0,
+     "flameCleared": 0.000582599,
+     "burnerRadiatedOut": 0.0003,
+     "surfaceFloor": 0.00163265,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": -3.30541e-8,
+      "deposits": 0.0000040462
+     },
+     "gas": 0.2388,
+     "walls": 0.1835,
+     "shell": 0,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 6024,
+     "surfaceCrossings": 136729
+    },
+    {
+     "t": 15,
+     "released": 0.6672,
+     "radiated": 0.0035,
+     "flameSilenced": 0.0000370813,
+     "flameCleared": 0.00116939,
+     "burnerRadiatedOut": 0.0004,
+     "surfaceFloor": 0.00278925,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": -3.99561e-11,
+      "deposits": 0.00000212771
+     },
+     "gas": 0.3726,
+     "walls": 0.2878,
+     "shell": 0,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 9880,
+     "surfaceCrossings": 223134
+    },
+    {
+     "t": 18,
+     "released": 0.9607,
+     "radiated": 0.0067,
+     "flameSilenced": 0.0000370813,
+     "flameCleared": 0.00191912,
+     "burnerRadiatedOut": 0.0005,
+     "surfaceFloor": 0.00435609,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": -1.4594e-8,
+      "deposits": -0.00000194729
+     },
+     "gas": 0.537,
+     "walls": 0.4144,
+     "shell": 0,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 14336,
+     "surfaceCrossings": 322412
+    },
+    {
+     "t": 21,
+     "released": 1.3077,
+     "radiated": 0.012,
+     "flameSilenced": 0.0000370813,
+     "flameCleared": 0.00297501,
+     "burnerRadiatedOut": 0.0009,
+     "surfaceFloor": 0.00621685,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": -2.66124e-8,
+      "deposits": -0.0000047399
+     },
+     "gas": 0.7253,
+     "walls": 0.5666,
+     "shell": 0,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 20352,
+     "surfaceCrossings": 453926
+    },
+    {
+     "t": 24,
+     "released": 1.708,
+     "radiated": 0.0199,
+     "flameSilenced": 0.0000370813,
+     "flameCleared": 0.00425553,
+     "burnerRadiatedOut": 0.0009,
+     "surfaceFloor": 0.00842686,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": -1.45945e-8,
+      "deposits": -0.00000490243
+     },
+     "gas": 0.9455,
+     "walls": 0.7415,
+     "shell": 0,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 28576,
+     "surfaceCrossings": 635034
+    },
+    {
+     "t": 27,
+     "released": 2.1617,
+     "radiated": 0.0313,
+     "flameSilenced": 0.0000370813,
+     "flameCleared": 0.00559406,
+     "burnerRadiatedOut": 0.0013,
+     "surfaceFloor": 0.010918,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": -4.72434e-9,
+      "deposits": -0.0000113795
+     },
+     "gas": 1.1911,
+     "walls": 0.9433,
+     "shell": 0.0001,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 40064,
+     "surfaceCrossings": 889689
+    },
+    {
+     "t": 30,
+     "released": 2.6688,
+     "radiated": 0.0464,
+     "flameSilenced": 0.0000370813,
+     "flameCleared": 0.00722398,
+     "burnerRadiatedOut": 0.0013,
+     "surfaceFloor": 0.013833,
+     "surfaceCapped": 0,
+     "radRoundoff": {
+      "own": -4.02595e-8,
+      "deposits": -0.0000181363
+     },
+     "gas": 1.4658,
+     "walls": 1.1701,
+     "shell": 0.0001,
+     "leakKg": 0,
+     "leak": 0,
+     "radiatedOut": 0,
+     "surfaceRays": 59104,
+     "surfaceCrossings": 1309838
+    }
+   ],
+   "series": {
+    "from": 1,
+    "step": 1,
+    "head": {
+     "1": {
+      "z": [
+       1.19,
+       1.53,
+       1.87,
+       2.21
+      ],
+      "T": [
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.18,
+        303.17,
+        303.16,
+        303.16,
+        303.17,
+        303.23,
+        303.25,
+        303.26,
+        303.25,
+        303.28,
+        303.33,
+        303.32
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.18,
+        303.28,
+        303.27,
+        303.28,
+        303.24,
+        303.25,
+        303.27,
+        303.33
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.2,
+        303.29,
+        303.26,
+        303.28,
+        303.27,
+        303.26,
+        303.27,
+        303.36
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.17,
+        303.24,
+        303.26,
+        303.25,
+        303.27,
+        303.28,
+        303.31,
+        303.26
+       ]
+      ]
+     },
+     "2": {
+      "z": [
+       1.19,
+       1.53,
+       1.87,
+       2.21
+      ],
+      "T": [
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.17,
+        303.17,
+        303.17,
+        303.17,
+        303.18,
+        303.21,
+        303.22,
+        303.23,
+        303.25,
+        303.32,
+        303.4,
+        303.66,
+        304.58,
+        304.35,
+        304.21,
+        305.01,
+        306.56,
+        307.59,
+        307.54,
+        306.25
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.17,
+        303.17,
+        303.16,
+        303.17,
+        303.18,
+        303.2,
+        303.23,
+        303.28,
+        303.39,
+        303.57,
+        304.44,
+        305.26,
+        305.83,
+        305.2,
+        306.02,
+        306.63,
+        307.27,
+        308.2,
+        307.56
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.17,
+        303.17,
+        303.17,
+        303.17,
+        303.17,
+        303.17,
+        303.18,
+        303.18,
+        303.2,
+        303.22,
+        303.26,
+        303.4,
+        303.57,
+        303.81,
+        304.84,
+        305.74,
+        306.72,
+        306.73,
+        306.71,
+        307.06,
+        307.76,
+        308.51,
+        308.47
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.17,
+        303.17,
+        303.17,
+        303.18,
+        303.17,
+        303.16,
+        303.16,
+        303.18,
+        303.18,
+        303.19,
+        303.23,
+        303.31,
+        303.4,
+        303.86,
+        304.93,
+        305.4,
+        306.66,
+        307.48,
+        307.21,
+        307.42,
+        308.22,
+        308.32,
+        308.7,
+        308.72
+       ]
+      ]
+     },
+     "3": {
+      "z": [
+       1.19,
+       1.53,
+       1.87,
+       2.21
+      ],
+      "T": [
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.18,
+        303.72,
+        303.74,
+        303.84,
+        303.96,
+        303.49,
+        304.15,
+        306.42,
+        304.57,
+        305.64,
+        305.43,
+        304.28,
+        303.55,
+        304.17,
+        304.51,
+        303.53,
+        303.69,
+        304.19,
+        306.26,
+        313.69,
+        310.14,
+        306.98,
+        307.45,
+        304.84,
+        304.63
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.19,
+        303.32,
+        303.22,
+        303.54,
+        303.89,
+        304.39,
+        304.45,
+        303.8,
+        305.11,
+        305.55,
+        304.69,
+        304.98,
+        306.14,
+        306.01,
+        304.08,
+        304.16,
+        305.65,
+        307.62,
+        309.87,
+        316.13,
+        307.99,
+        306.61,
+        305.38,
+        305.2
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        305.56,
+        305.85,
+        303.51,
+        303.41,
+        303.71,
+        303.57,
+        303.78,
+        304.71,
+        303.99,
+        306.13,
+        309.29,
+        308.47,
+        307.23,
+        306.14,
+        306.88,
+        307.2,
+        307.49,
+        308.56,
+        316.59,
+        312.85,
+        306.94,
+        306.97,
+        306.15
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.21,
+        304.91,
+        304.54,
+        303.5,
+        303.33,
+        303.23,
+        303.65,
+        303.98,
+        303.81,
+        305.56,
+        309.98,
+        310.23,
+        308.22,
+        307.79,
+        311.33,
+        310.69,
+        306.97,
+        306.76,
+        307.62,
+        319.1,
+        309.57,
+        308.87,
+        307.12
+       ]
+      ]
+     },
+     "5": {
+      "z": [
+       1.19,
+       1.53,
+       1.87,
+       2.21
+      ],
+      "T": [
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.17,
+        303.19,
+        303.21,
+        303.24,
+        303.3,
+        303.3,
+        303.31,
+        303.37,
+        303.43,
+        303.74,
+        304.02,
+        304.17,
+        304.54,
+        304.43,
+        304.27,
+        304.41,
+        304.42,
+        304.8,
+        305.38
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.18,
+        303.19,
+        303.2,
+        303.25,
+        303.25,
+        303.27,
+        303.31,
+        303.36,
+        303.47,
+        304.04,
+        303.92,
+        304.01,
+        304.12,
+        304.25,
+        304.51,
+        305,
+        305.5,
+        306.92,
+        307.49
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.18,
+        303.22,
+        303.27,
+        303.37,
+        303.38,
+        303.47,
+        303.81,
+        304.13,
+        304.13,
+        304.63,
+        304.42,
+        304.51,
+        305.04,
+        305.66,
+        306.72,
+        307.87,
+        308.83
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.17,
+        303.18,
+        303.2,
+        303.34,
+        303.41,
+        303.42,
+        303.62,
+        304.15,
+        304.54,
+        304.56,
+        304.83,
+        304.57,
+        304.89,
+        305.59,
+        306.55,
+        307.47,
+        308.18,
+        311.26
+       ]
+      ]
+     },
+     "6": {
+      "z": [
+       1.19,
+       1.53,
+       1.87,
+       2.21
+      ],
+      "T": [
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.18,
+        303.77,
+        303.84,
+        303.92,
+        303.63,
+        303.59,
+        304.49,
+        304.3,
+        303.45,
+        303.3,
+        303.28,
+        303.47,
+        305.53,
+        304.94,
+        303.97,
+        304.07,
+        309.63,
+        306.96,
+        305.72,
+        304.66,
+        304.66,
+        304.8,
+        305.54,
+        306.69,
+        306.95
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.18,
+        303.29,
+        303.21,
+        303.48,
+        304.06,
+        304.59,
+        304.19,
+        303.78,
+        303.87,
+        303.84,
+        304.05,
+        304.52,
+        304.2,
+        303.51,
+        307.1,
+        311.6,
+        310.15,
+        307.5,
+        306.06,
+        304.78,
+        304.9,
+        306.95,
+        307.47,
+        307.94
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        305.42,
+        304.75,
+        303.22,
+        303.6,
+        303.96,
+        303.93,
+        304.08,
+        304.83,
+        305.57,
+        306.39,
+        306.27,
+        308.49,
+        305.45,
+        310.99,
+        308.57,
+        307.55,
+        309.33,
+        307.51,
+        305.96,
+        305.56,
+        308.24,
+        307.63,
+        308.32
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.21,
+        305.25,
+        304.91,
+        303.68,
+        303.84,
+        304.4,
+        304.99,
+        307.84,
+        310.82,
+        311.59,
+        310.1,
+        317.05,
+        309.05,
+        314.84,
+        307.35,
+        306.68,
+        308.6,
+        309.09,
+        308.56,
+        307.14,
+        311.71,
+        312.6,
+        310.76
+       ]
+      ]
+     },
+     "7": {
+      "z": [
+       1.19,
+       1.53,
+       1.87,
+       2.21
+      ],
+      "T": [
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.17,
+        303.19
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.17,
+        303.18
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.16,
+        303.17,
+        303.18
+       ],
+       [
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.15,
+        303.16,
+        303.16,
+        303.16,
+        303.17,
+        303.16,
+        303.16,
+        303.17,
+        303.18,
+        303.18
+       ]
+      ]
+     }
+    },
+    "probes": {
+     "BP Door-1": [
+      0,
+      0,
+      0,
+      0,
+      -0.001,
+      -0.001,
+      -0.003,
+      -0.005,
+      0.003,
+      0.009,
+      0.005,
+      -0.005,
+      -0.012,
+      -0.01,
+      -0.038,
+      -0.094,
+      -0.089,
+      -0.065,
+      -0.06,
+      -0.055,
+      -0.023,
+      -0.012,
+      -0.011,
+      0.008,
+      0.01,
+      -0.018,
+      -0.033,
+      -0.002,
+      0.024,
+      -0.01
+     ],
+     "BP Door-2": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      -0.001,
+      -0.009,
+      -0.04,
+      -0.053,
+      -0.056,
+      -0.027,
+      -0.03,
+      -0.044,
+      -0.053,
+      -0.134,
+      -0.235,
+      -0.202,
+      -0.187,
+      -0.214,
+      -0.143,
+      -0.035,
+      0.104,
+      0.096,
+      0.039,
+      -0.012,
+      -0.027,
+      -0.07,
+      -0.12,
+      -0.07,
+      -0.109
+     ],
+     "BP Door-3": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0.003,
+      0.025,
+      0.057,
+      0.056,
+      0.036,
+      -0.047,
+      -0.087,
+      -0.023,
+      -0.111,
+      -0.204,
+      -0.138,
+      -0.118,
+      -0.089,
+      0.095,
+      0.227,
+      0.078,
+      -0.005,
+      -0.006,
+      0.053,
+      0.087,
+      0.041,
+      0.021,
+      0.144,
+      0.041,
+      0.01
+     ],
+     "BP Door-4": [
+      0,
+      0,
+      0,
+      0,
+      -0.001,
+      -0.001,
+      0.004,
+      0.007,
+      -0.025,
+      -0.131,
+      -0.177,
+      -0.099,
+      -0.061,
+      -0.109,
+      -0.082,
+      -0.015,
+      -0.069,
+      -0.022,
+      0.053,
+      0.019,
+      0.024,
+      0.076,
+      0,
+      -0.068,
+      -0.138,
+      -0.169,
+      -0.069,
+      0.053,
+      0.009,
+      -0.139
+     ],
+     "BP Door-5": [
+      0,
+      0,
+      0,
+      -0.003,
+      -0.006,
+      0,
+      0.01,
+      0.03,
+      -0.007,
+      -0.058,
+      -0.03,
+      0.002,
+      0.04,
+      0.022,
+      0.044,
+      0.011,
+      0.008,
+      0.085,
+      0.134,
+      0.163,
+      0.16,
+      0.05,
+      -0.036,
+      -0.067,
+      -0.097,
+      -0.154,
+      -0.039,
+      -0.129,
+      -0.04,
+      0.232
+     ],
+     "BP Door-6": [
+      0,
+      0,
+      0,
+      -0.001,
+      -0.002,
+      -0.004,
+      -0.006,
+      -0.012,
+      -0.011,
+      0,
+      -0.016,
+      -0.106,
+      -0.155,
+      -0.169,
+      -0.194,
+      -0.205,
+      -0.177,
+      -0.108,
+      -0.036,
+      -0.047,
+      -0.161,
+      -0.228,
+      -0.212,
+      -0.055,
+      0.042,
+      -0.055,
+      -0.113,
+      -0.057,
+      -0.094,
+      -0.166
+     ],
+     "BP Door-7": [
+      0,
+      0,
+      0,
+      -0.001,
+      -0.002,
+      -0.004,
+      -0.005,
+      -0.022,
+      -0.077,
+      -0.043,
+      0.045,
+      -0.037,
+      -0.149,
+      -0.219,
+      -0.153,
+      -0.115,
+      -0.042,
+      0.019,
+      0.043,
+      0.049,
+      -0.02,
+      -0.102,
+      -0.07,
+      0.121,
+      0.182,
+      0.058,
+      -0.01,
+      0.039,
+      -0.011,
+      -0.168
+     ],
+     "BP Door-8": [
+      0,
+      0,
+      0,
+      -0.001,
+      -0.002,
+      -0.004,
+      -0.011,
+      -0.007,
+      0.02,
+      0.054,
+      0.03,
+      -0.144,
+      -0.174,
+      -0.203,
+      -0.187,
+      -0.159,
+      -0.027,
+      0.124,
+      0.29,
+      0.215,
+      0.112,
+      0.1,
+      0.135,
+      0.119,
+      0.138,
+      0.019,
+      -0.044,
+      0.033,
+      0.047,
+      -0.093
+     ],
+     "BP Door-9": [
+      0,
+      0,
+      0,
+      -0.001,
+      -0.002,
+      -0.005,
+      -0.006,
+      -0.008,
+      -0.036,
+      -0.099,
+      -0.126,
+      -0.115,
+      -0.129,
+      0.015,
+      0.239,
+      0.013,
+      -0.025,
+      0.155,
+      0.174,
+      0.232,
+      0.186,
+      0.023,
+      -0.035,
+      0.193,
+      0.253,
+      0.122,
+      -0.014,
+      0.102,
+      0.166,
+      0.093
+     ],
+     "BP Door-10": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      -0.001,
+      0,
+      -0.005,
+      -0.041,
+      -0.087,
+      0.026,
+      0.063,
+      0.047,
+      0.029,
+      -0.051,
+      -0.09,
+      0.026,
+      0.026,
+      -0.006,
+      0.038,
+      0.018,
+      -0.01,
+      -0.026,
+      -0.008,
+      -0.025,
+      0.028,
+      -0.013,
+      0.104,
+      0.183,
+      0.191
+     ],
+     "BP Door-11": [
+      0,
+      0,
+      0,
+      -0.001,
+      -0.002,
+      -0.004,
+      -0.003,
+      -0.003,
+      -0.01,
+      -0.014,
+      0.011,
+      -0.038,
+      -0.066,
+      -0.079,
+      -0.081,
+      -0.084,
+      -0.101,
+      -0.154,
+      -0.079,
+      -0.04,
+      -0.161,
+      -0.259,
+      -0.175,
+      0.04,
+      0.162,
+      0.015,
+      -0.096,
+      -0.088,
+      -0.108,
+      -0.139
+     ],
+     "BP Door-13": [
+      0,
+      0,
+      0,
+      -0.001,
+      -0.002,
+      -0.003,
+      0.002,
+      0.028,
+      0.091,
+      0.122,
+      -0.001,
+      -0.167,
+      -0.325,
+      -0.392,
+      -0.307,
+      -0.138,
+      -0.046,
+      0.165,
+      0.448,
+      0.412,
+      0.371,
+      0.309,
+      0.272,
+      0.336,
+      0.244,
+      0.057,
+      -0.105,
+      0.024,
+      0.383,
+      0.267
+     ],
+     "BP Door-14": [
+      0,
+      0,
+      0,
+      -0.001,
+      -0.003,
+      -0.007,
+      -0.019,
+      -0.018,
+      -0.019,
+      -0.046,
+      0.009,
+      -0.084,
+      -0.243,
+      -0.188,
+      -0.161,
+      -0.182,
+      -0.202,
+      -0.009,
+      0.251,
+      0.297,
+      0.19,
+      0.026,
+      -0.043,
+      -0.113,
+      0.029,
+      -0.213,
+      -0.431,
+      -0.452,
+      -0.445,
+      -0.422
+     ],
+     "BP Door-15": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      -0.002,
+      -0.002,
+      -0.002,
+      0.029,
+      -0.015,
+      -0.031,
+      -0.038,
+      -0.125,
+      -0.183,
+      -0.122,
+      -0.06,
+      -0.014,
+      0.005,
+      0.002,
+      0.043,
+      0.065,
+      -0.116,
+      -0.253,
+      -0.186,
+      -0.151,
+      -0.144,
+      -0.174,
+      -0.167,
+      -0.313
+     ]
+    },
+    "doorFlow": {
+     "in": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0.0005,
+      0.0026,
+      0.0048,
+      0.0047,
+      0,
+      0,
+      0,
+      0.0151,
+      0.0434,
+      0.0759,
+      0.163,
+      0.4696,
+      0.5278,
+      0.342,
+      0.1791,
+      0.1658,
+      0.3796,
+      0.4851,
+      0.1182,
+      0,
+      0.0868,
+      0.1004,
+      0.0187
+     ],
+     "out": [
+      0,
+      0,
+      0.0008,
+      0.0035,
+      0.0094,
+      0.0188,
+      0.0307,
+      0.0368,
+      0.074,
+      0.1197,
+      0.1169,
+      0.3543,
+      0.5594,
+      0.7742,
+      0.7247,
+      0.5568,
+      0.4314,
+      0.2479,
+      0.0831,
+      0.0772,
+      0.2059,
+      0.3025,
+      0.2378,
+      0.0434,
+      0.0297,
+      0.2034,
+      0.4675,
+      0.244,
+      0.21,
+      0.4341
+     ]
+    },
+    "species": {
+     "units": {
+      "T": "K, gas temperature (sim.T)",
+      "soot": "kg/m3, soot density (sim.rho x the soot mass fraction)",
+      "co": "kg/kg, CO mass fraction (sim.Y)",
+      "co2": "kg/kg, CO2 mass fraction (sim.Y)",
+      "o2": "kg/kg, O2 mass fraction (sim.Y)",
+      "mol": "mol/kg, the gas's moles per kg (sum of Y / M, the rest as N2 at 0.028014 kg/mol); a wet volume fraction is Y / M / mol"
+     },
+     "format": "each series is a string of comma-separated numbers, one a second (lib/species.mjs decode); T to 0.01 K, the others to five significant figures",
+     "cells": [
+      10443,
+      10509,
+      10575,
+      10641,
+      18776,
+      18842,
+      18908,
+      18974,
+      6764,
+      6830,
+      6896,
+      6962,
+      2144,
+      2210,
+      2276,
+      2342,
+      10464,
+      10530,
+      10596,
+      10662,
+      10478,
+      10544,
+      10610,
+      10676,
+      10845,
+      1712,
+      2637,
+      3561
+     ],
+     "sites": {
+      "trees": {
+       "1": {
+        "z": [
+         1.19,
+         1.53,
+         1.87,
+         2.21
+        ],
+        "at": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "app": {
+         "height": 1.8,
+         "z": 1.87,
+         "at": 2,
+         "moved": 0
+        }
+       },
+       "2": {
+        "z": [
+         1.19,
+         1.53,
+         1.87,
+         2.21
+        ],
+        "at": [
+         4,
+         5,
+         6,
+         7
+        ],
+        "app": {
+         "height": 1.8,
+         "z": 1.87,
+         "at": 6,
+         "moved": 0
+        }
+       },
+       "3": {
+        "z": [
+         1.19,
+         1.53,
+         1.87,
+         2.21
+        ],
+        "at": [
+         8,
+         9,
+         10,
+         11
+        ],
+        "app": {
+         "height": 1.8,
+         "z": 1.87,
+         "at": 10,
+         "moved": 0
+        }
+       },
+       "5": {
+        "z": [
+         1.19,
+         1.53,
+         1.87,
+         2.21
+        ],
+        "at": [
+         12,
+         13,
+         14,
+         15
+        ],
+        "app": {
+         "height": 1.8,
+         "z": 1.87,
+         "at": 14,
+         "moved": 0
+        }
+       },
+       "6": {
+        "z": [
+         1.19,
+         1.53,
+         1.87,
+         2.21
+        ],
+        "at": [
+         16,
+         17,
+         18,
+         19
+        ],
+        "app": {
+         "height": 1.8,
+         "z": 1.87,
+         "at": 18,
+         "moved": 0
+        }
+       },
+       "7": {
+        "z": [
+         1.19,
+         1.53,
+         1.87,
+         2.21
+        ],
+        "at": [
+         20,
+         21,
+         22,
+         23
+        ],
+        "app": {
+         "height": 1.8,
+         "z": 1.87,
+         "at": 22,
+         "moved": 0
+        }
+       }
+      },
+      "points": {
+       "O2-1": {
+        "quantity": "o2",
+        "x": 6.85,
+        "y": 3.48,
+        "z": 3.22,
+        "moved": 0.15,
+        "at": [
+         24
+        ]
+       },
+       "CO2-4": {
+        "quantity": "co2",
+        "x": 6.85,
+        "y": 3.48,
+        "z": 3.22,
+        "moved": 0.15,
+        "at": [
+         24
+        ]
+       },
+       "smoke": {
+        "quantity": "smoke",
+        "x": 21.2,
+        "y": 0.47,
+        "z": 3.62,
+        "path": [
+         [
+          20.9,
+          0.2,
+          3.62
+         ],
+         [
+          21.5,
+          0.74,
+          3.62
+         ]
+        ],
+        "moved": 0.081,
+        "at": [
+         25,
+         26,
+         27
+        ]
+       }
+      }
+     },
+     "T": [
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.18,303.17,303.16,303.16,303.17,303.23,303.25,303.26,303.25,303.28,303.33,303.32",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.16,303.18,303.28,303.27,303.28,303.24,303.25,303.27,303.33",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.2,303.29,303.26,303.28,303.27,303.26,303.27,303.36",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.17,303.24,303.26,303.25,303.27,303.28,303.31,303.26",
+      "303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.16,303.16,303.16,303.17,303.17,303.17,303.17,303.18,303.21,303.22,303.23,303.25,303.32,303.4,303.66,304.58,304.35,304.21,305.01,306.56,307.59,307.54,306.25",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.17,303.17,303.16,303.17,303.18,303.2,303.23,303.28,303.39,303.57,304.44,305.26,305.83,305.2,306.02,306.63,307.27,308.2,307.56",
+      "303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.17,303.17,303.17,303.17,303.17,303.17,303.18,303.18,303.2,303.22,303.26,303.4,303.57,303.81,304.84,305.74,306.72,306.73,306.71,307.06,307.76,308.51,308.47",
+      "303.15,303.15,303.15,303.15,303.16,303.16,303.17,303.17,303.17,303.18,303.17,303.16,303.16,303.18,303.18,303.19,303.23,303.31,303.4,303.86,304.93,305.4,306.66,307.48,307.21,307.42,308.22,308.32,308.7,308.72",
+      "303.15,303.15,303.15,303.15,303.15,303.18,303.72,303.74,303.84,303.96,303.49,304.15,306.42,304.57,305.64,305.43,304.28,303.55,304.17,304.51,303.53,303.69,304.19,306.26,313.69,310.14,306.98,307.45,304.84,304.63",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.19,303.32,303.22,303.54,303.89,304.39,304.45,303.8,305.11,305.55,304.69,304.98,306.14,306.01,304.08,304.16,305.65,307.62,309.87,316.13,307.99,306.61,305.38,305.2",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.16,305.56,305.85,303.51,303.41,303.71,303.57,303.78,304.71,303.99,306.13,309.29,308.47,307.23,306.14,306.88,307.2,307.49,308.56,316.59,312.85,306.94,306.97,306.15",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.21,304.91,304.54,303.5,303.33,303.23,303.65,303.98,303.81,305.56,309.98,310.23,308.22,307.79,311.33,310.69,306.97,306.76,307.62,319.1,309.57,308.87,307.12",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.17,303.19,303.21,303.24,303.3,303.3,303.31,303.37,303.43,303.74,304.02,304.17,304.54,304.43,304.27,304.41,304.42,304.8,305.38",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.18,303.19,303.2,303.25,303.25,303.27,303.31,303.36,303.47,304.04,303.92,304.01,304.12,304.25,304.51,305,305.5,306.92,307.49",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.18,303.22,303.27,303.37,303.38,303.47,303.81,304.13,304.13,304.63,304.42,304.51,305.04,305.66,306.72,307.87,308.83",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.17,303.18,303.2,303.34,303.41,303.42,303.62,304.15,304.54,304.56,304.83,304.57,304.89,305.59,306.55,307.47,308.18,311.26",
+      "303.15,303.15,303.15,303.15,303.15,303.18,303.77,303.84,303.92,303.63,303.59,304.49,304.3,303.45,303.3,303.28,303.47,305.53,304.94,303.97,304.07,309.63,306.96,305.72,304.66,304.66,304.8,305.54,306.69,306.95",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.18,303.29,303.21,303.48,304.06,304.59,304.19,303.78,303.87,303.84,304.05,304.52,304.2,303.51,307.1,311.6,310.15,307.5,306.06,304.78,304.9,306.95,307.47,307.94",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,305.42,304.75,303.22,303.6,303.96,303.93,304.08,304.83,305.57,306.39,306.27,308.49,305.45,310.99,308.57,307.55,309.33,307.51,305.96,305.56,308.24,307.63,308.32",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.21,305.25,304.91,303.68,303.84,304.4,304.99,307.84,310.82,311.59,310.1,317.05,309.05,314.84,307.35,306.68,308.6,309.09,308.56,307.14,311.71,312.6,310.76",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.16,303.17,303.19",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.16,303.16,303.16,303.16,303.16,303.16,303.16,303.17,303.18",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.16,303.16,303.16,303.16,303.16,303.16,303.16,303.17,303.18",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.17,303.16,303.16,303.17,303.18,303.18",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.17,303.33,303.74,305.24,304.25,303.89,303.9,304.07,304.25,304.89,305.37,307.45,305.38,305.23,304.93,306.24",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.17,303.18,303.19,303.19,303.19,303.18,303.19,303.21,303.22,303.23",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.16,303.16,303.17,303.17,303.18,303.19,303.19,303.18,303.18,303.19,303.2,303.21,303.23,303.25,303.26",
+      "303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.15,303.16,303.16,303.17,303.17,303.17,303.17,303.18,303.19,303.19,303.19,303.19,303.21,303.21,303.21,303.21,303.24,303.26"
+     ],
+     "soot": [
+      "0,0,0,0,0,0,0,0,0,0,5.6412e-41,1.5966e-30,2.7263e-24,7.7999e-19,1.7953e-16,1.5078e-14,5.7053e-12,1.0517e-9,1.9919e-8,1.673e-8,4.495e-9,6.697e-9,1.2428e-8,5.468e-8,7.4667e-8,7.71e-8,6.9265e-8,9.5607e-8,1.2589e-7,1.2206e-7",
+      "0,0,0,0,0,0,0,0,0,0,1.8575e-41,1.6875e-29,1.9301e-24,1.7032e-19,1.9965e-15,4.5707e-14,2.4533e-11,2.232e-10,5.2377e-9,3.3139e-9,4.6443e-9,3.5834e-9,2.4065e-8,9.3025e-8,8.9458e-8,9.247e-8,6.7401e-8,6.9226e-8,8.7783e-8,1.2532e-7",
+      "0,0,0,0,0,0,0,0,0,0,3.0933e-40,1.4041e-28,7.0646e-23,4.6879e-18,8.9671e-14,4.2053e-12,2.4698e-11,1.2078e-10,2.4805e-9,3.0994e-9,6.6249e-9,3.0609e-9,3.5068e-8,9.7545e-8,7.9956e-8,9.0698e-8,8.7206e-8,7.5072e-8,8.2093e-8,1.5067e-7",
+      "0,0,0,0,0,0,0,0,0,0,1.3798e-37,2.598e-28,6.576e-25,7.2667e-18,1.2072e-12,5.9532e-11,2.8039e-11,8.2646e-11,1.2546e-10,1.564e-9,2.2885e-9,1.8599e-9,8.8988e-9,6.5268e-8,7.8943e-8,7.0495e-8,8.4857e-8,9.0369e-8,1.1655e-7,7.2325e-8",
+      "0,0,5.5392e-43,2.124e-38,7.6747e-34,1.3354e-29,2.5903e-24,5.2234e-21,1.7324e-18,7.0075e-16,5.7331e-14,1.2306e-11,1.5173e-10,3.9087e-10,6.5605e-9,1.2216e-8,1.1574e-8,1.3303e-8,1.918e-8,6.3862e-8,1.1434e-7,3.1427e-7,0.0000010343,8.1786e-7,6.7101e-7,0.0000013046,0.0000024543,0.0000032239,0.000003217,0.0000022494",
+      "0,0,0,1.4652e-42,2.5907e-38,1.3977e-33,9.9611e-27,1.2115e-20,7.2887e-20,4.0583e-16,6.8961e-15,1.1475e-11,4.1593e-10,8.888e-10,4.2346e-9,1.1425e-8,1.2648e-8,2.0613e-8,5.2947e-8,1.2301e-7,2.7407e-7,9.575e-7,0.000001601,0.0000020634,0.0000015402,0.0000021689,0.0000026258,0.00000308,0.0000038009,0.0000032749",
+      "0,0,0,0,4.0187e-42,1.3883e-37,2.406e-31,4.6969e-25,5.0192e-21,2.6985e-17,2.2421e-14,3.735e-10,2.1106e-9,1.6295e-9,4.244e-9,1.0531e-8,1.6005e-8,4.2813e-8,1.4659e-7,2.709e-7,4.5127e-7,0.0000012871,0.0000019748,0.0000026978,0.0000027058,0.0000026794,0.0000029465,0.0000034045,0.0000039851,0.0000039397",
+      "0,0,0,0,0,1.8227e-41,4.7833e-34,4.2109e-27,1.354e-22,2.4977e-18,2.3909e-12,1.1546e-9,3.8589e-9,3.4295e-9,2.3145e-9,7.0485e-9,2.4803e-8,7.4572e-8,1.3918e-7,4.8926e-7,0.0000013428,0.000001723,0.000002641,0.0000032696,0.000003166,0.0000032548,0.0000037613,0.0000038283,0.0000041176,0.0000041452",
+      "6.8944e-30,1.9293e-23,3.9632e-18,3.2254e-15,2.1325e-11,1.9512e-8,3.9859e-7,4.1281e-7,4.8618e-7,5.7783e-7,2.3919e-7,7.0174e-7,0.0000023191,0.0000010041,0.0000017476,0.0000015977,7.9994e-7,2.7319e-7,7.0575e-7,9.4354e-7,2.39e-7,3.4805e-7,7.1393e-7,0.0000021628,0.0000070821,0.0000047322,0.0000025936,0.0000029106,0.0000011233,9.6607e-7",
+      "6.2054e-35,2.4944e-28,1.2425e-22,3.1426e-19,1.1301e-14,1.0696e-11,2.9241e-8,1.1717e-7,4.7136e-8,2.8098e-7,5.2777e-7,8.7901e-7,9.2592e-7,4.6213e-7,0.0000013758,0.0000016825,0.00000109,0.0000012607,0.0000020765,0.0000019757,6.3813e-7,7.0159e-7,0.0000017595,0.0000031305,0.0000046109,0.0000087216,0.0000032751,0.0000023535,0.0000014931,0.0000013733",
+      "3.8246e-40,1.5504e-33,1.5028e-27,2.5377e-23,7.3325e-18,7.7318e-14,3.4951e-9,0.0000016947,0.0000018999,2.5633e-7,1.8265e-7,4.0272e-7,2.9615e-7,4.4414e-7,0.0000010979,5.93e-7,0.0000020967,0.0000042288,0.0000036678,0.0000028155,0.0000020867,0.0000026168,0.0000028377,0.0000030393,0.0000037667,0.0000090165,0.000006558,0.0000025853,0.0000025836,0.0000020347",
+      "1.6244e-45,8.0827e-39,1.222e-32,3.6592e-28,5.7412e-22,1.1333e-17,5.2889e-12,4.4201e-8,0.0000012366,9.7958e-7,2.4638e-7,1.2377e-7,5.7095e-8,3.5854e-7,5.8636e-7,4.6674e-7,0.0000016925,0.0000046753,0.0000048397,0.0000034791,0.0000031878,0.0000056418,0.0000052121,0.0000026862,0.0000025401,0.0000031129,0.000010616,0.0000043793,0.0000038719,0.0000027021",
+      "0,0,5.6367e-43,2.1742e-38,4.8625e-34,9.7197e-30,1.0992e-24,1.6581e-20,8.4935e-17,8.3661e-14,1.385e-10,1.3927e-9,4.8766e-9,3.8497e-9,1.3536e-8,3.9025e-8,3.6561e-8,5.0273e-8,6.6068e-8,9.9632e-8,3.4779e-7,5.3013e-7,6.2589e-7,8.6266e-7,6.7976e-7,4.5784e-7,6.5035e-7,6.248e-7,8.9066e-7,0.0000013182",
+      "0,0,0,1.4798e-42,1.8994e-38,4.4027e-34,1.2471e-27,6.6439e-23,6.6618e-19,1.0121e-13,1.0214e-12,2.8924e-10,1.1637e-9,7.0165e-9,4.6628e-8,3.6566e-8,5.6661e-8,8.7448e-8,1.177e-7,2.0679e-7,5.8992e-7,4.3785e-7,4.6777e-7,5.3428e-7,5.6527e-7,8.1576e-7,0.0000012618,0.0000016358,0.0000027201,0.0000031384",
+      "0,0,0,0,6.1386e-42,3.4252e-37,1.6641e-31,1.4256e-26,9.332e-23,8.0923e-16,2.195e-15,1.1537e-11,3.8679e-10,3.8172e-9,2.3929e-8,3.7058e-8,1.1967e-7,1.2429e-7,1.8862e-7,4.4262e-7,6.3836e-7,5.726e-7,8.742e-7,5.9152e-7,7.2313e-7,0.0000013084,0.0000017826,0.0000025678,0.0000034263,0.0000041558",
+      "0,0,0,0,0,1.7479e-41,1.3719e-35,6.5545e-28,4.0241e-22,1.5287e-17,5.2853e-14,2.0285e-12,4.5492e-10,2.5008e-9,9.0002e-9,1.044e-7,1.4689e-7,1.3977e-7,2.9826e-7,7.1139e-7,9.759e-7,9.863e-7,0.0000011792,9.8292e-7,0.0000012363,0.0000017621,0.0000024568,0.0000031352,0.0000036578,0.0000058877",
+      "6.7422e-30,2.3869e-23,5.8945e-18,3.4375e-15,2.3837e-11,2.0012e-8,4.3293e-7,4.8482e-7,5.4343e-7,3.4602e-7,3.1279e-7,9.5178e-7,8.1934e-7,2.1651e-7,1.0252e-7,8.9079e-8,2.2182e-7,0.0000016329,0.0000012451,5.6246e-7,6.3469e-7,0.0000044868,0.0000026503,0.0000017871,0.0000010537,0.0000010679,0.0000011581,0.0000016428,0.0000024277,0.0000026402",
+      "6.3078e-35,2.6478e-28,1.4426e-22,2.4218e-19,8.2074e-15,1.788e-11,2.2241e-8,1.0034e-7,4.0632e-8,2.3307e-7,6.451e-7,0.0000010187,7.3465e-7,4.4287e-7,5.1154e-7,4.8898e-7,6.4301e-7,9.8437e-7,7.3885e-7,2.4933e-7,0.0000027469,0.0000058265,0.0000048229,0.0000030191,0.0000020392,0.0000011386,0.0000012111,0.000002613,0.0000029773,0.0000033379",
+      "3.7383e-40,1.6082e-33,1.3747e-27,3.1131e-23,6.1664e-18,1.0416e-13,3.2226e-9,0.000001597,0.0000011305,5.0057e-8,3.2e-7,5.721e-7,5.5417e-7,6.57e-7,0.000001187,0.0000017159,0.0000022857,0.0000022232,0.000003705,0.0000016205,0.0000054386,0.0000037834,0.0000030615,0.0000042551,0.000003071,0.0000019957,0.0000016784,0.0000035225,0.0000031169,0.0000036092",
+      "1.6244e-45,8.4138e-39,1.3136e-32,2.5722e-28,4.2088e-22,4.4307e-18,2.0029e-12,4.4308e-8,0.0000014723,0.000001245,3.7567e-7,4.8363e-7,8.7966e-7,0.0000013035,0.0000032918,0.0000053226,0.0000058342,0.0000048594,0.0000093245,0.0000041242,0.0000080341,0.0000029472,0.0000024692,0.000003763,0.0000041313,0.0000038371,0.0000028068,0.0000058761,0.0000064798,0.0000052295",
+      "0,0,0,0,0,0,0,0,0,0,0,4.5114e-34,6.8874e-27,4.9745e-23,5.6071e-21,2.629e-16,4.4507e-13,4.9155e-12,3.7e-10,2.0027e-9,1.8369e-9,1.2542e-9,1.1547e-9,7.9895e-10,9.5989e-10,1.5156e-9,1.6228e-9,2.606e-9,7.0595e-9,8.3182e-9",
+      "0,0,0,0,0,0,0,0,0,0,6.8712e-43,5.256e-33,3.1515e-25,1.1912e-22,1.331e-20,2.1962e-15,6.7472e-14,9.5083e-12,2.2177e-10,1.1589e-9,1.4924e-9,1.446e-9,1.2804e-9,7.0653e-10,3.8518e-10,6.9983e-10,9.7523e-10,2.4544e-9,7.2312e-9,1.356e-8",
+      "0,0,0,0,0,0,0,0,0,0,8.2427e-41,1.3033e-30,7.0397e-24,3.8667e-23,6.5644e-18,5.4747e-15,7.2121e-14,1.5671e-11,3.1418e-11,2.3496e-10,7.7489e-10,8.5714e-10,7.3134e-10,5.7224e-10,4.9638e-10,6.4493e-10,8.2599e-10,1.5134e-9,7.0889e-9,1.3295e-8",
+      "0,0,0,0,0,0,0,0,0,0,1.1858e-42,4.5513e-32,2.5328e-25,5.8234e-22,3.0912e-16,1.3618e-14,5.3816e-14,6.9067e-12,1.0106e-11,1.3387e-11,6.19e-11,5.5854e-10,7.8774e-10,4.0244e-10,3.5501e-10,5.7486e-10,8.2561e-10,1.9664e-9,1.1945e-8,1.5748e-8",
+      "0,0,0,0,0,0,0,4.3534e-43,2.2594e-33,3.2794e-23,2.5214e-18,1.6916e-13,3.8624e-11,6.2571e-10,1.4531e-8,1.3002e-7,4.4386e-7,0.0000015565,8.1159e-7,5.4709e-7,5.6136e-7,6.9771e-7,8.4605e-7,0.0000013624,0.0000017225,0.0000032438,0.0000017666,0.0000016234,0.0000013864,0.0000024473",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,6.4976e-45,3.4405e-42,5.5033e-38,5.3326e-36,1.495e-29,3.3243e-26,1.0031e-24,2.9717e-23,6.9501e-22,4.2851e-21,8.3708e-21,3.4833e-19,2.2734e-18,2.0905e-17,6.0719e-17,1.2744e-16",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3.5202e-40,3.3054e-36,2.4531e-33,9.3595e-30,6.8565e-25,1.3105e-22,5.7519e-22,1.2457e-21,1.0565e-20,5.5188e-19,4.8561e-18,1.4195e-17,1.0899e-16,2.5901e-16,1.4316e-15",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,3.2487e-44,1.3024e-38,2.9125e-35,1.1991e-32,8.7243e-30,2.7425e-24,3.3291e-22,6.6079e-22,9.7903e-21,6.9502e-20,4.9618e-18,9.4254e-18,2.1163e-17,1.5927e-17,2.6323e-16,2.1815e-15"
+     ],
+     "co": [
+      "0,0,0,0,0,0,0,0,0,0,2.615e-41,7.3977e-31,1.2636e-24,3.6151e-19,8.3213e-17,6.9889e-15,2.6466e-12,4.8783e-10,9.2391e-9,7.7599e-9,2.0849e-9,3.1064e-9,5.7649e-9,2.5369e-8,3.4646e-8,3.5775e-8,3.214e-8,4.4367e-8,5.843e-8,5.6649e-8",
+      "0,0,0,0,0,0,0,0,0,0,8.6068e-42,7.8225e-30,8.9469e-25,7.8955e-20,9.2552e-16,2.1185e-14,1.1381e-11,1.0353e-10,2.4293e-9,1.537e-9,2.1542e-9,1.6621e-9,1.1164e-8,4.3167e-8,4.1512e-8,4.291e-8,3.1273e-8,3.2121e-8,4.0735e-8,5.8167e-8",
+      "0,0,0,0,0,0,0,0,0,0,1.4337e-40,6.5085e-29,3.275e-23,2.1732e-18,4.157e-14,1.9495e-12,1.1454e-11,5.6015e-11,1.1505e-9,1.4375e-9,3.0729e-9,1.4198e-9,1.6269e-8,4.5266e-8,3.71e-8,4.2087e-8,4.0467e-8,3.4834e-8,3.8094e-8,6.9941e-8",
+      "0,0,0,0,0,0,0,0,0,0,6.3955e-38,1.2042e-28,3.0485e-25,3.3687e-18,5.5965e-13,2.7597e-11,1.3001e-11,3.8328e-11,5.8191e-11,7.254e-10,1.0616e-9,8.6272e-10,4.1279e-9,3.0284e-8,3.6631e-8,3.2709e-8,3.9376e-8,4.1935e-8,5.4093e-8,3.3561e-8",
+      "0,0,2.5784e-43,9.8405e-39,3.556e-34,6.189e-30,1.2007e-24,2.4213e-21,8.0304e-19,3.248e-16,2.6571e-14,5.7034e-12,7.0326e-11,1.8117e-10,3.0417e-9,5.6648e-9,5.3673e-9,6.1701e-9,8.8985e-9,2.9638e-8,5.3077e-8,1.4602e-7,4.8203e-7,3.8082e-7,3.1224e-7,6.0879e-7,0.0000011512,0.0000015172,0.0000015138,0.0000010539",
+      "0,0,0,6.7963e-43,1.2003e-38,6.4783e-34,4.6193e-27,5.6159e-21,3.3786e-20,1.8812e-16,3.196e-15,5.3186e-12,1.9278e-10,4.1197e-10,1.9631e-9,5.2975e-9,5.8657e-9,9.5637e-9,2.4569e-8,5.7095e-8,1.2729e-7,4.4609e-7,7.479e-7,9.6572e-7,7.1929e-7,0.0000010158,0.0000012322,0.0000014482,0.0000017927,0.0000015412",
+      "0,0,0,0,1.8637e-42,6.4336e-38,1.1157e-31,2.1773e-25,2.3265e-21,1.2508e-17,1.0391e-14,1.7311e-10,9.7832e-10,7.5533e-10,1.9681e-9,4.8841e-9,7.4246e-9,1.9868e-8,6.8049e-8,1.2582e-7,2.0978e-7,6.0052e-7,9.2398e-7,0.0000012662,0.00000127,0.0000012576,0.0000013846,0.0000016032,0.0000018813,0.0000018596",
+      "0,0,0,0,0,8.4498e-42,2.2172e-34,1.9518e-27,6.2756e-23,1.1577e-18,1.1081e-12,5.3516e-10,1.7888e-9,1.5898e-9,1.0731e-9,3.269e-9,1.1507e-8,3.461e-8,6.4612e-8,2.2747e-7,6.2664e-7,8.0534e-7,0.0000012393,0.0000015385,0.0000014888,0.0000015313,0.0000017739,0.0000018061,0.000001945,0.0000019582",
+      "3.1933e-30,8.9367e-24,1.8361e-18,1.4943e-15,9.8822e-12,9.0451e-9,1.851e-7,1.9171e-7,2.2585e-7,2.6853e-7,1.1099e-7,3.2641e-7,0.0000010868,4.6773e-7,8.1699e-7,7.4635e-7,3.7225e-7,1.2682e-7,3.2816e-7,4.3918e-7,1.1091e-7,1.6164e-7,3.321e-7,0.0000010128,0.0000033953,0.000002243,0.0000012169,0.0000013676,5.2343e-7,4.4988e-7",
+      "2.8742e-35,1.1554e-28,5.7562e-23,1.4559e-19,5.2375e-15,4.9582e-12,1.3555e-8,5.4337e-8,2.1852e-8,1.304e-7,2.4524e-7,4.0919e-7,4.311e-7,2.1471e-7,6.4199e-7,7.862e-7,5.0789e-7,5.8778e-7,9.7165e-7,9.2407e-7,2.9667e-7,3.2632e-7,8.2236e-7,0.0000014725,0.0000021842,0.0000042139,0.0000015416,0.0000011031,6.9704e-7,6.4071e-7",
+      "1.7715e-40,7.1814e-34,6.9622e-28,1.1755e-23,3.3974e-18,3.5839e-14,1.62e-9,7.9172e-7,8.8845e-7,1.1895e-7,8.4737e-8,1.8704e-7,1.3749e-7,2.0633e-7,5.1164e-7,2.757e-7,9.815e-7,0.0000019993,0.0000017293,0.0000013221,9.7662e-7,0.0000012279,0.0000013329,0.000001429,0.0000017771,0.0000043628,0.0000031356,0.000001213,0.0000012123,9.5218e-7",
+      "0,3.7437e-39,5.661e-33,1.6949e-28,2.6599e-22,5.2529e-18,2.4514e-12,2.049e-8,5.7651e-7,4.5612e-7,1.1433e-7,5.7403e-8,2.6478e-8,1.6653e-7,2.726e-7,2.1688e-7,7.9079e-7,0.0000022149,0.0000022947,0.0000016389,0.0000014996,0.0000026854,0.0000024758,0.0000012609,0.0000011915,0.0000014641,0.0000051773,0.0000020721,0.0000018279,0.0000012685",
+      "0,0,2.6204e-43,1.0073e-38,2.2529e-34,4.5045e-30,5.0951e-25,7.6858e-21,3.937e-17,3.8779e-14,6.4197e-11,6.4551e-10,2.2604e-9,1.7847e-9,6.2768e-9,1.8101e-8,1.696e-8,2.3326e-8,3.0664e-8,4.6257e-8,1.6157e-7,2.4653e-7,2.912e-7,4.0183e-7,3.1653e-7,2.1313e-7,3.0287e-7,2.9096e-7,4.1529e-7,6.1582e-7",
+      "0,0,0,6.8383e-43,8.8003e-39,2.0404e-34,5.781e-28,3.0796e-23,3.0881e-19,4.6913e-14,4.7343e-13,1.3407e-10,5.3941e-10,3.2531e-9,2.1623e-8,1.6957e-8,2.629e-8,4.0582e-8,5.4631e-8,9.6024e-8,2.7438e-7,2.0359e-7,2.1755e-7,2.4855e-7,2.6308e-7,3.8002e-7,5.8868e-7,7.6444e-7,0.0000012772,0.0000014766",
+      "0,0,0,0,2.8474e-42,1.5872e-37,7.7134e-32,6.6074e-27,4.3255e-23,3.7509e-16,1.0173e-15,5.3469e-12,1.7929e-10,1.7698e-9,1.1097e-8,1.7191e-8,5.5554e-8,5.7699e-8,8.7604e-8,2.0579e-7,2.9706e-7,2.6648e-7,4.0742e-7,2.7554e-7,3.3692e-7,6.1057e-7,8.3351e-7,0.0000012049,0.000001614,0.0000019642",
+      "0,0,0,0,0,8.0995e-42,6.359e-36,3.0379e-28,1.8651e-22,7.0848e-18,2.4493e-14,9.3993e-13,2.1086e-10,1.1596e-9,4.1744e-9,4.8462e-8,6.82e-8,6.4904e-8,1.386e-7,3.3109e-7,4.5463e-7,4.5955e-7,5.4993e-7,4.5804e-7,5.7666e-7,8.238e-7,0.0000011522,0.0000014749,0.0000017248,0.0000028046",
+      "3.1228e-30,1.1056e-23,2.7309e-18,1.5926e-15,1.1046e-11,9.2767e-9,2.0107e-7,2.2521e-7,2.5251e-7,1.6063e-7,1.4519e-7,4.4318e-7,3.8127e-7,1.0047e-7,4.7548e-8,4.1316e-8,1.0296e-7,7.627e-7,5.8046e-7,2.6137e-7,2.9507e-7,0.0000021241,0.0000012438,8.3528e-7,4.9088e-7,4.9767e-7,5.3989e-7,7.6747e-7,0.0000011384,0.0000012393",
+      "2.9216e-35,1.2265e-28,6.6834e-23,1.122e-19,3.8039e-15,8.2882e-12,1.031e-8,4.653e-8,1.8836e-8,1.0814e-7,2.9991e-7,4.7447e-7,3.4173e-7,2.0574e-7,2.3773e-7,2.2724e-7,2.9905e-7,4.5856e-7,3.4368e-7,1.1574e-7,0.0000012899,0.0000027761,0.000002287,0.0000014193,9.5432e-7,5.3076e-7,5.6466e-7,0.0000012263,0.0000013998,0.0000015718",
+      "1.7315e-40,7.4487e-34,6.3685e-28,1.442e-23,2.8569e-18,4.8278e-14,1.4937e-9,7.4576e-7,5.2676e-7,2.3206e-8,1.4854e-7,2.659e-7,2.5756e-7,3.0554e-7,5.5342e-7,8.02e-7,0.0000010711,0.0000010415,0.0000017474,7.5692e-7,0.0000025864,0.0000017853,0.0000014397,0.0000020123,0.0000014442,9.3409e-7,7.843e-7,0.0000016602,0.0000014664,0.0000017018",
+      "0,3.8969e-39,6.0856e-33,1.1915e-28,1.9499e-22,2.0536e-18,9.2836e-13,2.054e-8,6.8714e-7,5.8044e-7,1.7444e-7,2.2472e-7,4.0952e-7,6.0811e-7,0.00000155,0.0000025304,0.0000027801,0.0000023046,0.0000045195,0.000001949,0.0000038684,0.0000013853,0.000001158,0.0000017753,0.0000019525,0.000001811,0.0000013184,0.0000028006,0.0000030973,0.0000024848",
+      "0,0,0,0,0,0,0,0,0,0,0,2.0909e-34,3.1923e-27,2.3057e-23,2.5988e-21,1.2184e-16,2.0626e-13,2.2785e-12,1.7157e-10,9.2868e-10,8.5184e-10,5.8169e-10,5.3552e-10,3.7055e-10,4.4526e-10,7.0309e-10,7.5284e-10,1.209e-9,3.2754e-9,3.8597e-9",
+      "0,0,0,0,0,0,0,0,0,0,3.1669e-43,2.4347e-33,1.4609e-25,5.5221e-23,6.1688e-21,1.018e-15,3.1268e-14,4.4077e-12,1.0283e-10,5.3742e-10,6.9208e-10,6.7062e-10,5.9383e-10,3.2767e-10,1.7864e-10,3.2463e-10,4.5242e-10,1.1387e-9,3.3552e-9,6.2917e-9",
+      "0,0,0,0,0,0,0,0,0,0,3.8177e-41,6.0389e-31,3.2634e-24,1.7925e-23,3.0431e-18,2.5378e-15,3.3419e-14,7.2638e-12,1.4568e-11,1.0895e-10,3.5933e-10,3.9751e-10,3.3917e-10,2.6539e-10,2.3022e-10,2.9913e-10,3.8318e-10,7.0217e-10,3.2894e-9,6.1689e-9",
+      "0,0,0,0,0,0,0,0,0,0,5.4791e-43,2.1083e-32,1.1741e-25,2.6983e-22,1.433e-16,6.3128e-15,2.4936e-14,3.2011e-12,4.6848e-12,6.2072e-12,2.8703e-11,2.5902e-10,3.6532e-10,1.8663e-10,1.6465e-10,2.6663e-10,3.8302e-10,9.1247e-10,5.5427e-9,7.307e-9",
+      "0,0,0,0,0,0,0,2.0039e-43,1.0472e-33,1.5199e-23,1.1688e-18,7.8419e-14,1.7905e-11,2.902e-10,6.7408e-9,6.0362e-8,2.0637e-7,7.2722e-7,3.779e-7,2.5444e-7,2.6109e-7,3.247e-7,3.9399e-7,6.3589e-7,8.0532e-7,0.0000015268,8.2612e-7,7.5867e-7,6.4728e-7,0.0000011476",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,2.8026e-45,1.5933e-42,2.5502e-38,2.4722e-36,6.9304e-30,1.541e-26,4.65e-25,1.3777e-23,3.2216e-22,1.9861e-21,3.8798e-21,1.6149e-19,1.054e-18,9.6942e-18,2.816e-17,5.9105e-17",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.6312e-40,1.5318e-36,1.1372e-33,4.339e-30,3.1786e-25,6.0756e-23,2.6664e-22,5.7741e-22,4.8968e-21,2.5586e-19,2.2515e-18,6.5825e-18,5.0549e-17,1.2013e-16,6.6406e-16",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.5414e-44,6.0349e-39,1.3498e-35,5.5589e-33,4.0446e-30,1.2714e-24,1.5434e-22,3.0634e-22,4.5379e-21,3.2217e-20,2.3006e-18,4.3703e-18,9.8135e-18,7.3858e-18,1.2209e-16,1.0119e-15"
+     ],
+     "co2": [
+      "0,0,0,0,0,0,0,0,0,0,9.8282e-39,2.7808e-28,4.7498e-22,1.3589e-16,3.128e-14,2.6271e-12,9.9486e-10,1.8337e-7,0.000003473,0.0000029169,7.837e-7,0.0000011677,0.000002167,0.0000095362,0.000013023,0.000013448,0.000012082,0.000016678,0.000021964,0.000021294",
+      "0,0,0,0,0,0,0,0,0,0,3.2366e-39,2.9405e-27,3.3631e-22,2.9679e-17,3.479e-13,7.9636e-12,4.278e-9,3.8919e-8,9.1316e-7,5.7774e-7,8.0975e-7,6.2478e-7,0.0000041964,0.000016226,0.000015604,0.00001613,0.000011756,0.000012074,0.000015312,0.000021865",
+      "0,0,0,0,0,0,0,0,0,7.9874e-44,5.3892e-38,2.4465e-26,1.2311e-20,8.1691e-16,1.5626e-11,7.3282e-10,4.3057e-9,2.1056e-8,4.3246e-7,5.4034e-7,0.0000011551,5.3369e-7,0.0000061154,0.000017015,0.000013946,0.000015821,0.000015211,0.000013094,0.00001432,0.000026291",
+      "0,0,0,0,0,0,0,0,0,4.2039e-45,2.4041e-35,4.5267e-26,1.1459e-22,1.2663e-15,2.1037e-10,1.0374e-8,4.8872e-9,1.4408e-8,2.1874e-8,2.7268e-7,3.9904e-7,3.2429e-7,0.0000015517,0.000011384,0.00001377,0.000012295,0.000014801,0.000015763,0.000020334,0.000012616",
+      "0,0,9.6999e-41,3.699e-36,1.3367e-31,2.3265e-27,4.5134e-22,9.1017e-19,3.0186e-16,1.2209e-13,9.9882e-12,2.1439e-9,2.6436e-8,6.8102e-8,0.0000011434,0.0000021294,0.0000020176,0.0000023193,0.0000033449,0.000011141,0.000019952,0.000054888,0.00018119,0.00014315,0.00011737,0.00022884,0.00043272,0.00057032,0.00056902,0.00039618",
+      "0,0,1.4013e-45,2.5589e-40,4.512e-36,2.4352e-31,1.7364e-24,2.111e-18,1.27e-17,7.0714e-14,1.2014e-12,1.9993e-9,7.2467e-8,1.5486e-7,7.3794e-7,0.0000019913,0.0000022049,0.000003595,0.0000092356,0.000021462,0.000047849,0.00016768,0.00028113,0.00036301,0.00027038,0.00038184,0.00046318,0.00054438,0.00067389,0.00057934",
+      "0,0,0,8.4078e-45,6.9962e-40,2.4184e-35,4.1939e-29,8.1843e-23,8.7452e-19,4.7017e-15,3.9061e-12,6.5074e-8,3.6775e-7,2.8393e-7,7.3982e-7,0.0000018359,0.0000027909,0.0000074684,0.00002558,0.000047297,0.000078856,0.00022574,0.00034733,0.00047597,0.00047741,0.00047272,0.00052047,0.00060265,0.00070718,0.00069901",
+      "0,0,0,0,2.5223e-44,3.1751e-39,8.3346e-32,7.337e-25,2.359e-20,4.3518e-16,4.1654e-10,2.0117e-7,6.724e-7,5.976e-7,4.0338e-7,0.0000012288,0.0000043255,0.00001301,0.000024288,0.000085506,0.00023555,0.00030273,0.00046584,0.00057832,0.00055964,0.00057562,0.00066682,0.00067892,0.00073113,0.00073609",
+      "1.2004e-27,3.3593e-21,6.9019e-16,5.6173e-13,3.7147e-9,0.0000034,0.000069579,0.000072064,0.000084897,0.00010094,0.000041722,0.0001227,0.00040852,0.00017582,0.00030711,0.00028055,0.00013993,0.000047672,0.00012335,0.00016509,0.000041693,0.000060759,0.00012484,0.0003807,0.0012763,0.00084314,0.00045742,0.00051409,0.00019676,0.00016911",
+      "1.0804e-32,4.3433e-26,2.1638e-20,5.4729e-17,1.9688e-12,1.8638e-9,0.0000050953,0.000020425,0.0000082142,0.000049017,0.000092186,0.00015381,0.00016205,0.000080708,0.00024132,0.00029553,0.00019092,0.00022095,0.00036524,0.00034736,0.00011152,0.00012267,0.00030913,0.00055353,0.00082104,0.001584,0.0005795,0.00041464,0.00026202,0.00024084",
+      "6.659e-38,2.6995e-31,2.6171e-25,4.4185e-21,1.2771e-15,1.3472e-11,6.0895e-7,0.00029761,0.00033397,0.000044712,0.000031853,0.00007031,0.000051681,0.000077561,0.00019233,0.00010363,0.00036894,0.00075152,0.00065005,0.00049698,0.00036711,0.00046156,0.00050104,0.00053716,0.00066802,0.00164,0.0011787,0.00045598,0.0004557,0.00035793",
+      "2.4102e-43,1.4073e-36,2.128e-30,6.3712e-26,9.9985e-20,1.9746e-15,9.215e-10,0.0000077023,0.00021671,0.00017145,0.000042976,0.000021578,0.000009953,0.000062598,0.00010247,0.000081526,0.00029726,0.00083257,0.00086258,0.00061605,0.00056371,0.0010094,0.00093066,0.00047398,0.0004479,0.00055037,0.0019462,0.0007789,0.00068711,0.00047682",
+      "0,0,9.8525e-41,3.7864e-36,8.4686e-32,1.6932e-27,1.9152e-22,2.8891e-18,1.4799e-14,1.4577e-11,2.4131e-8,2.4265e-7,8.4969e-7,6.7086e-7,0.0000023594,0.000006804,0.0000063751,0.0000087682,0.000011527,0.000017388,0.000060736,0.000092672,0.00010946,0.00015105,0.00011898,0.000080115,0.00011385,0.00010937,0.00015611,0.00023149",
+      "0,0,1.4013e-45,2.5836e-40,3.308e-36,7.6697e-32,2.1731e-25,1.1576e-20,1.1608e-16,1.7635e-11,1.7796e-10,5.0396e-8,2.0276e-7,0.0000012228,0.0000081282,0.0000063742,0.0000098824,0.000015255,0.000020536,0.000036095,0.00010314,0.000076531,0.000081777,0.00009343,0.000098891,0.00014285,0.00022129,0.00028735,0.00048011,0.00055505",
+      "0,0,0,8.4078e-45,1.0694e-39,5.9663e-35,2.8995e-29,2.4837e-24,1.6259e-20,1.41e-13,3.824e-13,2.0099e-9,6.7396e-8,6.6528e-7,0.0000041712,0.0000064622,0.000020883,0.000021689,0.00003293,0.000077356,0.00011167,0.00010017,0.00015315,0.00010358,0.00012665,0.00022951,0.00031332,0.00045292,0.00060669,0.00073835",
+      "0,0,0,0,3.0829e-44,3.0444e-39,2.3904e-33,1.142e-25,7.0107e-20,2.6632e-15,9.207e-12,3.5332e-10,7.9261e-8,4.3588e-7,0.0000015692,0.000018217,0.000025636,0.000024397,0.000052099,0.00012446,0.0001709,0.00017275,0.00020672,0.00017218,0.00021677,0.00030966,0.00043311,0.00055442,0.00064836,0.0010543",
+      "1.1739e-27,4.1561e-21,1.0266e-15,5.9867e-13,4.1523e-9,0.0000034871,0.000075581,0.000084658,0.000094918,0.000060382,0.000054579,0.00016659,0.00014332,0.000037765,0.000017873,0.000015531,0.000038701,0.0002867,0.00021819,0.000098249,0.00011092,0.00079846,0.00046754,0.00031398,0.00018452,0.00018707,0.00020294,0.00028849,0.00042791,0.00046584",
+      "1.0982e-32,4.6103e-26,2.5123e-20,4.2177e-17,1.4299e-12,3.1155e-9,0.0000038755,0.000017491,0.0000070804,0.00004065,0.00011274,0.00017835,0.00012846,0.000077337,0.000089364,0.000085421,0.00011241,0.00017237,0.00012919,0.000043507,0.00048487,0.0010435,0.00085969,0.00053352,0.00035873,0.00019951,0.00021226,0.00046095,0.00052617,0.00059085",
+      "6.5087e-38,2.8e-31,2.3939e-25,5.4204e-21,1.0739e-15,1.8148e-11,5.6148e-7,0.00028033,0.00019801,0.0000087233,0.000055837,0.00009995,0.000096818,0.00011485,0.00020803,0.00030147,0.00040262,0.0003915,0.00065685,0.00028452,0.00097222,0.0006711,0.0005412,0.00075641,0.00054287,0.00035112,0.00029482,0.00062407,0.00055122,0.00063972",
+      "2.5083e-43,1.4648e-36,2.2876e-30,4.4788e-26,7.3296e-20,7.7197e-16,3.4897e-10,0.000007721,0.0002583,0.00021819,0.000065572,0.000084471,0.00015394,0.00022859,0.00058263,0.00095117,0.001045,0.00086628,0.0016989,0.00073264,0.0014541,0.00052072,0.00043528,0.00066735,0.00073395,0.00068077,0.0004956,0.0010527,0.0011643,0.00093403",
+      "0,0,0,0,0,0,0,0,0,0,7.0065e-45,7.8598e-32,1.2e-24,8.6672e-21,9.769e-19,4.5801e-14,7.7534e-11,8.5649e-10,6.4492e-8,3.4909e-7,3.2021e-7,2.1866e-7,2.013e-7,1.3929e-7,1.6737e-7,2.6429e-7,2.8299e-7,4.5448e-7,0.0000012312,0.0000014508",
+      "0,0,0,0,0,0,0,0,0,0,1.1973e-40,9.1521e-31,5.4917e-23,2.0758e-20,2.3188e-18,3.8266e-13,1.1754e-11,1.6568e-9,3.8654e-8,2.0202e-7,2.6015e-7,2.5208e-7,2.2322e-7,1.2317e-7,6.7151e-8,1.2203e-7,1.7006e-7,4.2805e-7,0.0000012612,0.000002365",
+      "0,0,0,0,0,0,0,0,0,0,1.435e-38,2.27e-28,1.2267e-21,6.738e-21,1.1439e-15,9.5396e-13,1.2562e-11,2.7304e-9,5.476e-9,4.0956e-8,1.3507e-7,1.4942e-7,1.2749e-7,9.9761e-8,8.654e-8,1.1244e-7,1.4404e-7,2.6394e-7,0.0000012365,0.0000023189",
+      "0,0,0,0,0,0,0,0,0,0,2.0679e-40,7.9249e-30,4.4134e-23,1.0143e-19,5.3866e-14,2.373e-12,9.3733e-12,1.2033e-9,1.761e-9,2.3333e-9,1.079e-8,9.7364e-8,1.3732e-7,7.0155e-8,6.1893e-8,1.0023e-7,1.4398e-7,3.43e-7,0.0000020835,0.0000027467",
+      "0,0,0,0,0,0,0,7.5828e-41,3.9366e-31,5.7132e-21,4.3936e-16,2.9478e-11,6.7305e-9,1.0908e-7,0.0000025339,0.00002269,0.000077575,0.00027336,0.00014205,0.000095642,0.000098145,0.00012206,0.0001481,0.00023903,0.00030272,0.00057394,0.00031054,0.00028518,0.00024331,0.00043137",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.2738e-42,5.9988e-40,9.5863e-36,9.2932e-34,2.6051e-27,5.7927e-24,1.7479e-22,5.1787e-21,1.211e-19,7.4659e-19,1.4584e-18,6.0704e-17,3.9621e-16,3.6441e-15,1.0585e-14,2.2218e-14",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.3733e-43,6.1315e-38,5.758e-34,4.2747e-31,1.631e-27,1.1948e-22,2.2838e-20,1.0023e-19,2.1705e-19,1.8407e-18,9.6177e-17,8.4634e-16,2.4744e-15,1.9001e-14,4.5158e-14,2.4962e-13",
+      "0,0,0,0,0,0,0,0,0,0,0,0,0,0,5.8756e-42,2.2685e-36,5.0738e-33,2.0896e-30,1.5204e-27,4.7793e-22,5.8015e-20,1.1515e-19,1.7058e-18,1.211e-17,8.6479e-16,1.6428e-15,3.6889e-15,2.7763e-15,4.5893e-14,3.8036e-13"
+     ],
+     "o2": [
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23198,0.23198,0.23199,0.23198,0.23197,0.23197",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23198,0.23198,0.23198,0.23199,0.23199,0.23198,0.23197",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23198,0.23198,0.23198,0.23198,0.23198,0.23198,0.23197",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23198,0.23199,0.23198,0.23198,0.23198,0.23198",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23198,0.23193,0.23178,0.23183,0.23186,0.23172,0.23147,0.23131,0.23131,0.23152",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23197,0.23194,0.2318,0.23166,0.23156,0.23167,0.23154,0.23144,0.23134,0.23118,0.2313",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23197,0.23194,0.2319,0.23173,0.23158,0.23142,0.23142,0.23143,0.23137,0.23127,0.23114,0.23115",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23198,0.23197,0.2319,0.23171,0.23163,0.23143,0.2313,0.23132,0.2313,0.23119,0.23118,0.23111,0.23111",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.23192,0.23191,0.2319,0.23188,0.23195,0.23185,0.2315,0.23179,0.23163,0.23166,0.23183,0.23194,0.23185,0.2318,0.23195,0.23193,0.23185,0.23154,0.23045,0.23098,0.23144,0.23138,0.23176,0.23179",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23198,0.23199,0.23194,0.23189,0.23181,0.2318,0.2319,0.23171,0.23164,0.23177,0.23173,0.23156,0.23158,0.23186,0.23185,0.23162,0.23133,0.231,0.23008,0.2313,0.2315,0.23168,0.23171",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23164,0.23159,0.23195,0.23196,0.23191,0.23194,0.23191,0.23177,0.23187,0.23155,0.23109,0.23121,0.2314,0.23155,0.23144,0.23139,0.23135,0.23119,0.23001,0.23057,0.23145,0.23145,0.23157",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23174,0.23179,0.23195,0.23197,0.23199,0.23192,0.23188,0.2319,0.23164,0.23099,0.23095,0.23125,0.23131,0.23077,0.23087,0.23142,0.23146,0.23133,0.22963,0.23105,0.23116,0.23142",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23199,0.23199,0.23199,0.23198,0.23193,0.23189,0.23187,0.23182,0.23186,0.2319,0.23186,0.23187,0.23181,0.23172",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23199,0.23199,0.23198,0.23198,0.23196,0.23187,0.23191,0.2319,0.23189,0.23188,0.23183,0.23173,0.23165,0.23142,0.23133",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23199,0.23197,0.23197,0.23196,0.23191,0.23186,0.23188,0.23181,0.23187,0.23185,0.23172,0.23162,0.23145,0.23126,0.2311",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23198,0.23197,0.23197,0.23194,0.23185,0.23179,0.23179,0.23175,0.23179,0.23174,0.23162,0.23147,0.23133,0.23121,0.23072",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.23191,0.2319,0.23188,0.23193,0.23193,0.2318,0.23183,0.23195,0.23198,0.23198,0.23195,0.23165,0.23173,0.23188,0.23187,0.23103,0.23143,0.23162,0.23178,0.23177,0.23175,0.23165,0.23148,0.23143",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23198,0.23199,0.23195,0.23186,0.23178,0.23184,0.23191,0.23189,0.2319,0.23186,0.23179,0.23184,0.23195,0.23141,0.23073,0.23096,0.23135,0.23156,0.23176,0.23174,0.23144,0.23136,0.23128",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23166,0.23176,0.23199,0.23193,0.23188,0.23188,0.23186,0.23175,0.23163,0.23151,0.23152,0.2312,0.23165,0.23082,0.23118,0.23134,0.23108,0.23134,0.23157,0.23164,0.23124,0.23133,0.23122",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23199,0.23169,0.23173,0.23192,0.2319,0.23181,0.23172,0.23129,0.23084,0.23073,0.23095,0.22994,0.23111,0.23023,0.23137,0.23147,0.23119,0.23111,0.23117,0.2314,0.23072,0.23059,0.23086",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.23197,0.23191,0.23167,0.23183,0.23188,0.23188,0.23185,0.23182,0.23171,0.23163,0.2313,0.23162,0.23165,0.2317,0.23148",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232",
+      "0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232,0.232"
+     ],
+     "mol": [
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.665,34.666,34.666,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.666,34.666,34.666,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.666,34.666,34.666,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.667,34.666,34.666,34.666,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.665,34.665,34.665,34.666,34.666,34.668,34.666,34.666,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.666,34.666,34.666,34.666,34.666,34.666,34.666,34.668,34.667,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.666,34.666,34.667,34.667,34.666,34.666,34.666,34.668,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.666,34.667",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.665,34.665,34.665,34.665,34.665,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.667,34.666,34.666,34.666,34.665,34.665,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.666,34.666,34.665,34.667,34.666,34.666,34.666,34.666,34.666,34.665,34.666,34.666,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.667,34.667,34.666,34.668,34.666,34.668,34.666,34.666,34.666,34.666,34.666,34.666,34.667,34.667,34.667",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.666,34.665,34.665,34.665,34.666",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665",
+      "34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665,34.665"
+     ]
+    }
+   },
+   "head": {
+    "excluded": [],
+    "missing": []
+   },
+   "probes": {
+    "cells": [
+     {
+      "id": "BP Door-1",
+      "moved": 0.177
+     },
+     {
+      "id": "BP Door-2",
+      "moved": 0.196
+     },
+     {
+      "id": "BP Door-3",
+      "moved": 0.23
+     },
+     {
+      "id": "BP Door-4",
+      "moved": 0.218
+     },
+     {
+      "id": "BP Door-5",
+      "moved": 0.188
+     },
+     {
+      "id": "BP Door-6",
+      "moved": 0.097
+     },
+     {
+      "id": "BP Door-7",
+      "moved": 0.129
+     },
+     {
+      "id": "BP Door-8",
+      "moved": 0.176
+     },
+     {
+      "id": "BP Door-9",
+      "moved": 0.159
+     },
+     {
+      "id": "BP Door-10",
+      "moved": 0.116
+     },
+     {
+      "id": "BP Door-11",
+      "moved": 0.097
+     },
+     {
+      "id": "BP Door-13",
+      "moved": 0.176
+     },
+     {
+      "id": "BP Door-14",
+      "moved": 0.159
+     },
+     {
+      "id": "BP Door-15",
+      "moved": 0.116
+     }
+    ],
+    "notes": [
+     "door y 2.71: a probe without readings in the window",
+     "door y 3.51: a probe without readings in the window",
+     "door y 4.31: a probe without readings in the window"
+    ]
+   },
+   "doorFlow": {
+    "faces": 25,
+    "area": 2.89,
+    "plane": 0,
+    "measuredArea": 4
+   },
+   "wallSeconds": 13.7,
+   "buildSeconds": 0.1,
+   "pairs": [
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "1",
+     "model": 0.0845,
+     "measured": -0.582
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "1",
+     "model": null,
+     "measured": null
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "2",
+     "model": 6.0204,
+     "measured": 8.431
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "2",
+     "model": null,
+     "measured": null
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "3",
+     "model": 14.6026,
+     "measured": 5.298
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "3",
+     "model": null,
+     "measured": null
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "5",
+     "model": 5.8406,
+     "measured": 5.737
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "5",
+     "model": null,
+     "measured": null
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "6",
+     "model": 12.9629,
+     "measured": 8.8
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "6",
+     "model": null,
+     "measured": null
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglTemperature",
+     "device": "7",
+     "model": 0.0181,
+     "measured": 0.7
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "hglDepth",
+     "device": "7",
+     "model": null,
+     "measured": null
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "Tree 1-10",
+     "model": 0.0866,
+     "measured": 1.8,
+     "moved": 0.099
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "Tree 2-10",
+     "model": 8.8037,
+     "measured": 13.1,
+     "moved": 0.217
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "Tree 3-10",
+     "model": 22.7668,
+     "measured": 8.3,
+     "moved": 0.157
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "Tree 4-10",
+     "model": 9.9341,
+     "measured": 14.3,
+     "moved": 0.224
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "Tree 5-10",
+     "model": 7.8432,
+     "measured": 13.4,
+     "moved": 0.162
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "Tree 6-10",
+     "model": 20.0758,
+     "measured": 8.8,
+     "moved": 0.139
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "ceilingJet",
+     "device": "Tree 7-10",
+     "model": 0.0178,
+     "measured": 0.7,
+     "moved": 0.148
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "o2",
+     "device": "O2-1",
+     "model": 0.0004,
+     "measured": 0,
+     "moved": 0.15
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "co2",
+     "device": "CO2-4",
+     "model": 0.0002,
+     "measured": 0.0004,
+     "moved": 0.15
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "smoke",
+     "device": "smoke",
+     "model": 0,
+     "measured": 0.11,
+     "moved": 0.081
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "headTemperature",
+     "device": "1/Tree 1-5",
+     "model": 0.138,
+     "measured": -1.7,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "headTemperature",
+     "device": "2/Tree 2-5",
+     "model": 4.552,
+     "measured": -0.1,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "headTemperature",
+     "device": "3/Tree 3-5",
+     "model": 6.75,
+     "measured": 4.9,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "headTemperature",
+     "device": "5/Tree 5-5",
+     "model": 3.674,
+     "measured": -0.3,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "headTemperature",
+     "device": "6/Tree 6-5",
+     "model": 4.462,
+     "measured": 9.4,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "headTemperature",
+     "device": "7/Tree 7-5",
+     "model": 0.016,
+     "measured": -3.4,
+     "moved": 0
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-1",
+     "model": 0.0391,
+     "measured": 0.1923
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-2",
+     "model": 0.0792,
+     "measured": 0.1749
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-3",
+     "model": 0.0514,
+     "measured": 0.4259
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-4",
+     "model": 0.0674,
+     "measured": 0.4622
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-5",
+     "model": 0.0411,
+     "measured": 0.5035
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-6",
+     "model": 0.1187,
+     "measured": 0.4233
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-7",
+     "model": 0.0664,
+     "measured": 0.1439
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-8",
+     "model": 0.1047,
+     "measured": 0.3009
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-9",
+     "model": 0.1169,
+     "measured": 0.3336
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-10",
+     "model": 0.0986,
+     "measured": 0.3545
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-11",
+     "model": 0.0851,
+     "measured": 0.4027
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-13",
+     "model": 0.2373,
+     "measured": 0.4669
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-14",
+     "model": 0.3926,
+     "measured": 0.2427
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorVelocity",
+     "device": "BP Door-15",
+     "model": 0.1898,
+     "measured": 0.321
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorMassFlow",
+     "device": "door in",
+     "model": 0.2831,
+     "measured": 0.379
+    },
+    {
+     "dataset": "nistnrc",
+     "test": "03",
+     "cell": 0.34,
+     "quantity": "doorMassFlow",
+     "device": "door out",
+     "model": 0.3118,
+     "measured": 1.25
+    }
+   ],
+   "representation": {
+    "represented": true,
+    "why": "the fire's gas reaches the open boundary"
+   }
+  }
+ ],
+ "stats": {
+  "byDataset": {
+   "nistnrc": {
+    "hglTemperature": {
+     "0.34": {
+      "n": 5,
+      "dropped": 1,
+      "delta": 3.147,
+      "sigmaM": 1.824,
+      "meanRatio": 0.598,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 2.413,
+       "sigmaM": 1.96,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "hglDepth": {
+     "0.34": {
+      "n": 0,
+      "dropped": 6,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points",
+      "weighted": {
+       "delta": null,
+       "sigmaM": null,
+       "tier": "too few points",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "ceilingJet": {
+     "0.34": {
+      "n": 7,
+      "dropped": 0,
+      "delta": 2.098,
+      "sigmaM": 1.803,
+      "meanRatio": 0.414,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 2.423,
+       "sigmaM": 1.974,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "o2": {
+     "0.34": {
+      "n": 0,
+      "dropped": 1,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points",
+      "weighted": {
+       "delta": null,
+       "sigmaM": null,
+       "tier": "too few points",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "co2": {
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.5,
+      "sigmaM": null,
+      "meanRatio": 0.5,
+      "tier": "too few points",
+      "weighted": {
+       "delta": 0.5,
+       "sigmaM": null,
+       "tier": "too few points",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "smoke": {
+     "0.34": {
+      "n": 0,
+      "dropped": 1,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points",
+      "weighted": {
+       "delta": null,
+       "sigmaM": null,
+       "tier": "too few points",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "headTemperature": {
+     "0.34": {
+      "n": 2,
+      "dropped": 4,
+      "delta": 1.069,
+      "sigmaM": 0.75,
+      "meanRatio": 0.809,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 0.972,
+       "sigmaM": 0.611,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "doorVelocity": {
+     "0.34": {
+      "n": 14,
+      "dropped": 0,
+      "delta": 0.401,
+      "sigmaM": 0.745,
+      "meanRatio": 0.305,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 0.477,
+       "sigmaM": 0.748,
+       "sigmaEUsed": 0.08,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "doorMassFlow": {
+     "0.34": {
+      "n": 2,
+      "dropped": 0,
+      "delta": 0.579,
+      "sigmaM": 0.771,
+      "meanRatio": 0.432,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 0.524,
+       "sigmaM": 0.628,
+       "sigmaEUsed": 0.08,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   }
+  },
+  "byQuantity": {
+   "hglTemperature": {
+    "0.34": {
+     "pooled": {
+      "n": 5,
+      "dropped": 1,
+      "delta": 3.147,
+      "sigmaM": 1.824,
+      "meanRatio": 0.598,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 5,
+       "delta": 2.413,
+       "sigmaM": 1.96,
+       "sigmaEUsed": 0.07,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "hglDepth": {
+    "0.34": {
+     "pooled": {
+      "n": 0,
+      "dropped": 6,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 0,
+       "delta": null,
+       "sigmaM": null,
+       "weighted": true,
+       "tier": "too few points"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "ceilingJet": {
+    "0.34": {
+     "pooled": {
+      "n": 7,
+      "dropped": 0,
+      "delta": 2.098,
+      "sigmaM": 1.803,
+      "meanRatio": 0.414,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 7,
+       "delta": 2.423,
+       "sigmaM": 1.974,
+       "sigmaEUsed": 0.07,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "o2": {
+    "0.34": {
+     "pooled": {
+      "n": 0,
+      "dropped": 1,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 0,
+       "delta": null,
+       "sigmaM": null,
+       "weighted": true,
+       "tier": "too few points"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "co2": {
+    "0.34": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.5,
+      "sigmaM": null,
+      "meanRatio": 0.5,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 1,
+       "delta": 0.5,
+       "sigmaM": null,
+       "weighted": true,
+       "tier": "too few points"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "smoke": {
+    "0.34": {
+     "pooled": {
+      "n": 0,
+      "dropped": 1,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 0,
+       "delta": null,
+       "sigmaM": null,
+       "weighted": true,
+       "tier": "too few points"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "headTemperature": {
+    "0.34": {
+     "pooled": {
+      "n": 2,
+      "dropped": 4,
+      "delta": 1.069,
+      "sigmaM": 0.75,
+      "meanRatio": 0.809,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 2,
+       "delta": 0.972,
+       "sigmaM": 0.611,
+       "sigmaEUsed": 0.07,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "doorVelocity": {
+    "0.34": {
+     "pooled": {
+      "n": 14,
+      "dropped": 0,
+      "delta": 0.401,
+      "sigmaM": 0.745,
+      "meanRatio": 0.305,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 14,
+       "delta": 0.477,
+       "sigmaM": 0.748,
+       "sigmaEUsed": 0.08,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "doorMassFlow": {
+    "0.34": {
+     "pooled": {
+      "n": 2,
+      "dropped": 0,
+      "delta": 0.579,
+      "sigmaM": 0.771,
+      "meanRatio": 0.432,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 2,
+       "delta": 0.524,
+       "sigmaM": 0.628,
+       "sigmaEUsed": 0.08,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   }
+  }
+ },
+ "statsRule": {
+  "byDataset": {
+   "nistnrc": {
+    "hglTemperature": {
+     "0.34": {
+      "n": 5,
+      "dropped": 1,
+      "delta": 3.147,
+      "sigmaM": 1.824,
+      "meanRatio": 0.598,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 2.413,
+       "sigmaM": 1.96,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "hglDepth": {
+     "0.34": {
+      "n": 0,
+      "dropped": 6,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points",
+      "weighted": {
+       "delta": null,
+       "sigmaM": null,
+       "tier": "too few points",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "ceilingJet": {
+     "0.34": {
+      "n": 7,
+      "dropped": 0,
+      "delta": 2.098,
+      "sigmaM": 1.803,
+      "meanRatio": 0.414,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 2.423,
+       "sigmaM": 1.974,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "o2": {
+     "0.34": {
+      "n": 0,
+      "dropped": 1,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points",
+      "weighted": {
+       "delta": null,
+       "sigmaM": null,
+       "tier": "too few points",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "co2": {
+     "0.34": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.5,
+      "sigmaM": null,
+      "meanRatio": 0.5,
+      "tier": "too few points",
+      "weighted": {
+       "delta": 0.5,
+       "sigmaM": null,
+       "tier": "too few points",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "smoke": {
+     "0.34": {
+      "n": 0,
+      "dropped": 1,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points",
+      "weighted": {
+       "delta": null,
+       "sigmaM": null,
+       "tier": "too few points",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "headTemperature": {
+     "0.34": {
+      "n": 2,
+      "dropped": 4,
+      "delta": 1.069,
+      "sigmaM": 0.75,
+      "meanRatio": 0.809,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 0.972,
+       "sigmaM": 0.611,
+       "sigmaEUsed": 0.07,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "doorVelocity": {
+     "0.34": {
+      "n": 14,
+      "dropped": 0,
+      "delta": 0.401,
+      "sigmaM": 0.745,
+      "meanRatio": 0.305,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 0.477,
+       "sigmaM": 0.748,
+       "sigmaEUsed": 0.08,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    },
+    "doorMassFlow": {
+     "0.34": {
+      "n": 2,
+      "dropped": 0,
+      "delta": 0.579,
+      "sigmaM": 0.771,
+      "meanRatio": 0.432,
+      "tier": "not calibrated",
+      "weighted": {
+       "delta": 0.524,
+       "sigmaM": 0.628,
+       "sigmaEUsed": 0.08,
+       "tier": "not calibrated",
+       "inBand": false
+      },
+      "lab": "NBS/NIST",
+      "tests": 1,
+      "runs": 1,
+      "stopped": 0,
+      "inBand": false
+     }
+    }
+   }
+  },
+  "byQuantity": {
+   "hglTemperature": {
+    "0.34": {
+     "pooled": {
+      "n": 5,
+      "dropped": 1,
+      "delta": 3.147,
+      "sigmaM": 1.824,
+      "meanRatio": 0.598,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 5,
+       "delta": 2.413,
+       "sigmaM": 1.96,
+       "sigmaEUsed": 0.07,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "hglDepth": {
+    "0.34": {
+     "pooled": {
+      "n": 0,
+      "dropped": 6,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 0,
+       "delta": null,
+       "sigmaM": null,
+       "weighted": true,
+       "tier": "too few points"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "ceilingJet": {
+    "0.34": {
+     "pooled": {
+      "n": 7,
+      "dropped": 0,
+      "delta": 2.098,
+      "sigmaM": 1.803,
+      "meanRatio": 0.414,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 7,
+       "delta": 2.423,
+       "sigmaM": 1.974,
+       "sigmaEUsed": 0.07,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "o2": {
+    "0.34": {
+     "pooled": {
+      "n": 0,
+      "dropped": 1,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 0,
+       "delta": null,
+       "sigmaM": null,
+       "weighted": true,
+       "tier": "too few points"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "co2": {
+    "0.34": {
+     "pooled": {
+      "n": 1,
+      "dropped": 0,
+      "delta": 0.5,
+      "sigmaM": null,
+      "meanRatio": 0.5,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 1,
+       "delta": 0.5,
+       "sigmaM": null,
+       "weighted": true,
+       "tier": "too few points"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "smoke": {
+    "0.34": {
+     "pooled": {
+      "n": 0,
+      "dropped": 1,
+      "delta": null,
+      "sigmaM": null,
+      "meanRatio": null,
+      "tier": "too few points"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 0,
+       "delta": null,
+       "sigmaM": null,
+       "weighted": true,
+       "tier": "too few points"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "headTemperature": {
+    "0.34": {
+     "pooled": {
+      "n": 2,
+      "dropped": 4,
+      "delta": 1.069,
+      "sigmaM": 0.75,
+      "meanRatio": 0.809,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 2,
+       "delta": 0.972,
+       "sigmaM": 0.611,
+       "sigmaEUsed": 0.07,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "doorVelocity": {
+    "0.34": {
+     "pooled": {
+      "n": 14,
+      "dropped": 0,
+      "delta": 0.401,
+      "sigmaM": 0.745,
+      "meanRatio": 0.305,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 14,
+       "delta": 0.477,
+       "sigmaM": 0.748,
+       "sigmaEUsed": 0.08,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   },
+   "doorMassFlow": {
+    "0.34": {
+     "pooled": {
+      "n": 2,
+      "dropped": 0,
+      "delta": 0.579,
+      "sigmaM": 0.771,
+      "meanRatio": 0.432,
+      "tier": "not calibrated"
+     },
+     "datasets": [
+      "nistnrc"
+     ],
+     "datasetsInBand": [],
+     "datasetsIndicativeOrBetter": [],
+     "verdict": "not calibrated",
+     "claim": "not calibrated",
+     "weighted": {
+      "pooled": {
+       "n": 2,
+       "delta": 0.524,
+       "sigmaM": 0.628,
+       "sigmaEUsed": 0.08,
+       "weighted": true,
+       "tier": "not calibrated"
+      },
+      "datasetsInBand": [],
+      "verdict": "not calibrated",
+      "claim": "not calibrated"
+     },
+     "labs": [
+      "NBS/NIST"
+     ],
+     "labsInBand": [],
+     "labsInBandWeighted": [],
+     "final": "not calibrated",
+     "fromOneLab": true
+    }
+   }
+  }
+ },
+ "notRepresented": []
+}

@@ -146,6 +146,18 @@
  * radCapped, radNegative, radShareNegative, gasRays, gasCrossings,
  * gasEmitters, surfaceFloor, surfaceCapped, flameSilenced, burnerRadiatedOut
  * and radRoundoff (own, deposits, burner). None enters a statistic.
+ *
+ * --store-species (added 2026-11-24, plan 16.54, the scope the user set that
+ * evening) keeps in each run, under series.species, the model's gas
+ * temperature (K), soot density (kg/m3), and CO, CO2, O2 and water vapour
+ * (mass fractions, with the gas's moles per kg beside them for a wet or a
+ * dry volume fraction), each
+ * second, at each tree's head-height cells (the cells series.head keeps and
+ * the cell the app reads at 1.8 m over the tree's floor) and at each gas
+ * analyser's and smoke meter's own cells (a meter's path: the cells along
+ * it), with the analysers a data file lists under `species` for storing only
+ * (lib/species.mjs). It stores and judges nothing: no pair, statistic or
+ * verdict comes of it, and without it the suite's output is as before.
  */
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { execFileSync } from "node:child_process";
@@ -376,6 +388,8 @@ async function runCase(c) {
   // The door's faces (13.2 item 5): the x faces nearest its plane whose cells' centres lie in the opening.
   let doorFlow = null;
   let region = null;
+  // The connected open cells test of connect(), kept for --store-species (plan 16.54).
+  let connected = null;
   const connect = () => {
     const home = cell0;
     const reg = sim.topo?.region;
@@ -399,6 +413,7 @@ async function runCase(c) {
       inHome = (cc) => seen[cc] === 1;
     }
     const ok = (cc) => sim.kind[cc] !== F.SOLID && inHome(cc);
+    connected = ok;
     trees = trees.map((tr) => {
       const kept = tr.all.filter((q) => ok(q.c));
       const floor = kept.length ? kept[0].z - h / 2 : 0;
@@ -468,6 +483,9 @@ async function runCase(c) {
     return y / 0.032 / (y / 0.032 + (1 - y) / MN2);
   })();
 
+  // --store-species (plan 16.54): lib/species.mjs, loaded only then; `species` stays null without the switch.
+  const SPC = c.storeSpecies ? await import("./lib/species.mjs") : null;
+  let species = null;
   // Each second's readings, from the end of the first second (when the devices are connected).
   const seconds = [];
   let treeT = [], pointV = [], probeV = [];
@@ -530,7 +548,15 @@ async function runCase(c) {
       treeT = trees.map(() => []);
       pointV = points.map(() => []);
       probeV = probes.map(() => []);
+      // --store-species (plan 16.54): the sites and their recorder, once the devices are connected. The analysers
+      // a data file lists for storing only (T.species) take their cells here, as a point takes its own.
+      if (c.storeSpecies) {
+        const extra = (T.species || []).map((p) => ({ ...p, stored: "for storing only: the suite compares nothing here", cell: L.deviceCell(G, p.x, p.y, p.z, connected) }));
+        const placed = SPC.speciesSites(trees, [...points, ...extra], h);
+        species = { ...placed, rec: SPC.recorder(sim, placed.cells, { NS, SP, MOLAR, MN2 }) };
+      }
     }
+    if (species) species.rec.read();
     seconds.push(end);
     trees.forEach((tr, q) => treeT[q].push(Float32Array.from(tr.cells, (cc) => sim.T[cc])));
     points.forEach((p, q) => {
@@ -685,7 +711,7 @@ async function runCase(c) {
     walls: inert ? { slots: T.materials.slots.map((m) => m.surface), rhoModel: inert.map((m) => +m.rho.toFixed(2)), solidCells: wallCells, check: wallCheck } : "the solver's stone",
     health,
     ledger,
-    series: { from: 1, step: 1, head: headSeries, ...(probes.length ? { probes: probeSeries } : {}), ...(flowSeries ? { doorFlow: flowSeries } : {}) },
+    series: { from: 1, step: 1, head: headSeries, ...(probes.length ? { probes: probeSeries } : {}), ...(flowSeries ? { doorFlow: flowSeries } : {}), ...(species ? { species: SPC.speciesSeries(species.rec, species.cells, species.sites) } : {}) },
     head: { excluded: head.excluded, missing: head.missing },
     ...(probes.length ? { probes: { cells: probes.map((p) => ({ id: p.id, moved: p.cell ? p.cell.moved : null })), notes: probed.notes } } : {}),
     ...(doorFlow ? { doorFlow: { faces: doorFlow.faces.length, area: +doorFlow.area.toFixed(3), plane: +doorFlow.plane.toFixed(3), measuredArea: T.doorFlow.area ?? null } } : {}),
@@ -1013,6 +1039,8 @@ async function main() {
   const flameRadiantOnceOn = args.includes("--flame-radiant-once");
   // --gas-radiation (plan 16.43, item 8, second attempt), and the tables' file (plan 16.44, decision 7).
   const gasRadiationOn = args.includes("--gas-radiation");
+  // --store-species (plan 16.54): the head-height and analyser series of soot, CO, CO2, O2 and temperature.
+  const storeSpeciesOn = args.includes("--store-species");
   const gasTablesFile = gasRadiationOn ? flag("--gas-tables", process.env.FLAMESCAPES_GAS_TABLES || path.join(ROOT, "topologicpy-web-frontend/public/gas-radiation/gas-radiation-tables.f32")) : null;
   const F = await import(pathToFileURL(path.join(snapshot.core, "flamescapes.js")).href);
   if (gasRadiationOn) {
@@ -1060,7 +1088,7 @@ async function main() {
         const bb = T.geometry.meshes.reduce((a, m) => [Math.min(a[0], m[0]), Math.max(a[1], m[1]), Math.min(a[2], m[2]), Math.max(a[3], m[3]), Math.min(a[4], m[4]), Math.max(a[5], m[5])], [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity]);
         const vol = (bb[1] - bb[0] + 2 * h) * (bb[3] - bb[2] + 2 * h) * (bb[5] - bb[4] + 2 * h);
         const cost = (vol / h ** 3) * horizon * Math.max(2, Math.sqrt(T.burner.peakW / 1e5));
-        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn, snap: snapRule, pockets: pocketRule, surfaceRayStart: surfaceRayStartOn, surfaceEmitFloor: surfaceEmitFloorOn, burnerFlameRays: burnerFlameRaysOn, flameRadiantOnce: flameRadiantOnceOn, gasRadiation: gasRadiationOn, gasTables: gasTablesFile ? path.resolve(gasTablesFile) : null });
+        cases.push({ id: `${id}@${h}`, dataset: d, test: T, h, horizon, solver, steadyFrom: plan.steadyFrom, cost, core: snapshot.core, walls, fuelRule, wallLayers, leakage: leakageOn, snap: snapRule, pockets: pocketRule, surfaceRayStart: surfaceRayStartOn, surfaceEmitFloor: surfaceEmitFloorOn, burnerFlameRays: burnerFlameRaysOn, flameRadiantOnce: flameRadiantOnceOn, gasRadiation: gasRadiationOn, gasTables: gasTablesFile ? path.resolve(gasTablesFile) : null, ...(storeSpeciesOn ? { storeSpecies: true } : {}) });
       }
     }
   }
@@ -1110,7 +1138,7 @@ async function main() {
     wallSeconds: (performance.now() - t0) / 1000,
     git: { ...git, solverRev: snapshot.rev, snapshotDigests: snapshot.digests, snapshotLfDigests: snapshot.lfDigests, harnessDigests: snapshot.harnessDigests },
     solver: { overrides: solver, defaults: { ...F.DEFAULTS }, health: { ...F.HEALTH } },
-    settings: { datasets, cells: cellsArg, tests: only, snap: snapRule === "nearest" ? "nearest: every face to its nearest cell plane (plan 13.21)" : "seal (the voxeliser's rule before plan 13.21)", pockets: pocketRule === "keep" ? "kept (the trees as before plan 13.22)" : "a tree ends below its first pocket (plan 13.22)", fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, surfaceRayStart: surfaceRayStartOn ? "on: a surface's rays start on its emitting face (--surface-ray-start; plan 13.25, item 10)" : "off", surfaceEmitFloor: surfaceEmitFloorOn ? "on: a surface emits from just above ambient (--surface-emit-floor; plan 13.26, item 11)" : "off", burnerFlameRays: burnerFlameRaysOn ? "on: the burner's radiant part leaves from its flame (--burner-flame-rays; plan 16.10, item 12)" : "off", flameRadiantOnce: flameRadiantOnceOn ? "on: the burner's flame radiates its radiant fraction once (--flame-radiant-once; plan 16.14, item 14)" : "off", ...(gasRadiationOn ? { gasRadiation: "on: the gas's CO2 and H2O radiate, on the CPU (--gas-radiation; plan 16.43, item 8, second attempt)" } : {}), plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
+    settings: { datasets, cells: cellsArg, tests: only, snap: snapRule === "nearest" ? "nearest: every face to its nearest cell plane (plan 13.21)" : "seal (the voxeliser's rule before plan 13.21)", pockets: pocketRule === "keep" ? "kept (the trees as before plan 13.22)" : "a tree ends below its first pocket (plan 13.22)", fuel: fuelRule === "app" ? "class A, CO2 per joule matched (diagnostic)" : "each test's own fuel: heat of combustion and yields (plan 12.9)", walls: walls === "stone" ? "the solver's stone (diagnostic)" : `each test's own surfaces from its FDS input, areal heat capacity matched over one cell${wallLayers ? "; and their layers passed to the solver (--wall-layers)" : " (lumped; no layers passed)"}`, surfaceRayStart: surfaceRayStartOn ? "on: a surface's rays start on its emitting face (--surface-ray-start; plan 13.25, item 10)" : "off", surfaceEmitFloor: surfaceEmitFloorOn ? "on: a surface emits from just above ambient (--surface-emit-floor; plan 13.26, item 11)" : "off", burnerFlameRays: burnerFlameRaysOn ? "on: the burner's radiant part leaves from its flame (--burner-flame-rays; plan 16.10, item 12)" : "off", flameRadiantOnce: flameRadiantOnceOn ? "on: the burner's flame radiates its radiant fraction once (--flame-radiant-once; plan 16.14, item 14)" : "off", ...(gasRadiationOn ? { gasRadiation: "on: the gas's CO2 and H2O radiate, on the CPU (--gas-radiation; plan 16.43, item 8, second attempt)" } : {}), ...(storeSpeciesOn ? { storeSpecies: "on: each run keeps series.species, the model's temperature, soot density, CO, CO2 and O2 each second at the head-height cells and at the analysers' and smoke meters' cells (--store-species; plan 16.54; lib/species.mjs); nothing stored is compared" } : {}), plan: Object.fromEntries(Object.entries(PLAN).map(([k, v]) => [k, { horizon: String(v.horizon), steadyFrom: v.steadyFrom ?? null, skipCells: v.skipCells ?? [] }])), skipped, series: SERIES, verdictRule: VERDICT, claimRule: CLAIM, sigmaE: S.SIGMA_E, measures: Object.fromEntries(Object.entries(measures).map(([d, q]) => [d, [...q]])) },
     runs,
   };
   await bothWays(report, S, measures, Object.fromEntries(cases.map((cs) => [`${cs.dataset}/${cs.test.id}`, cs.test])), Rsnap);

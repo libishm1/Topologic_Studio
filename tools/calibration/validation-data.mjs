@@ -471,6 +471,19 @@ async function nistNrc(sources, dataplotText) {
     for (const c of cj ? cj.columns : []) addPoint(c, c.replace("Tree", "Tr"), "ceilingJet");
     for (const c of o2 ? o2.columns : []) addPoint(c, c.replace("-", " "), "o2");
     if (fuel !== "toluene") for (const c of co2 ? co2.columns : []) addPoint(c, c.replace("-", " "), "co2");
+    // CO (added 2026-11-24, plan 16.54): the upper analyser's CO, beside O2-1 and CO2-4 (the guide's column
+    // "CO-3" and the FDS input's device "CO 3"; a volume fraction; 999 is the file's missing value). Kept under
+    // `species`, not `points`: the suite compares nothing with it, and --store-species stores the model there.
+    const species = [];
+    {
+      const i = table.col("CO-3");
+      const d = geo.devices.find((x) => x.id === "CO 3" && x.xyz);
+      const vals = i >= 0 ? table.rows.map((r) => (Number.isFinite(r[i]) && r[i] < 900 ? +r[i].toPrecision(4) : null)) : [];
+      if (d && vals.some((v) => v != null)) {
+        out.species = { "CO-3": vals };
+        species.push({ id: "CO-3", x: d.xyz[0], y: d.xyz[1], z: d.xyz[2], quantity: "co" });
+      }
+    }
     // Smoke: the laser path's transmission per metre (%), compared as the guide compares it, as the
     // obscuration 100 - T (%/m); the path from the FDS input's TRANSMISSION device.
     const smoke = rows.find((r) => r.quantity === "Smoke Obscuration");
@@ -527,6 +540,7 @@ async function nistNrc(sources, dataplotText) {
       windows: { hglTemperature: [0, 10000], hglDepth: [300, h1], ceilingJet: [cj?.start ?? 0, cj?.end ?? 10000], o2: [o2?.start ?? 0, o2?.end ?? 10000], co2: [co2?.start ?? 0, co2?.end ?? 10000], smoke: [0, 10000], doorVelocity: [0, 10000], neutralPlane: [300, h1], doorMassFlow: [0, 10000] },
       trees: treeSpecs,
       points,
+      ...(species.length ? { species } : {}),
       ...(probes.length ? { probes, profiles, doorFlow } : {}),
       measured: out,
     });
@@ -1159,6 +1173,18 @@ async function fse(sources, dataplotText) {
     for (const c of ["CO2Front", "CO2Rear"]) add(c, c, "co2");
     for (const c of ["TFSampPtRh", "TRSampPtRh"]) add(c, c, "ceilingJet");
     if (fuelName === "heptane") for (const c of ["YsootF", "YsootR"]) add(c, c, "soot");
+    // CO (added 2026-11-24, plan 16.54): the front and rear probes' CO, beside their O2 and CO2 (the guide's
+    // columns and the FDS input's devices COFront, CORear; volume fractions). Kept under `species`, not
+    // `points`: the suite compares nothing with it, and --store-species stores the model there.
+    const species = [];
+    for (const c of ["COFront", "CORear"]) {
+      const i = table.col(c);
+      const d = geo.devices.find((x) => x.id === c && x.xyz);
+      const vals = i >= 0 ? table.rows.map((r) => (Number.isFinite(r[i]) ? +r[i].toPrecision(4) : null)) : [];
+      if (!d || !vals.some((v) => v != null)) continue;
+      (out.species ||= {})[c] = vals;
+      species.push({ id: c, x: d.xyz[0], y: d.xyz[1], z: d.xyz[2], quantity: "co" });
+    }
     tests.push({
       id,
       fdsInput: fdsFile,
@@ -1174,6 +1200,7 @@ async function fse(sources, dataplotText) {
       windows: { ceilingJet: [w0, w1], o2: [w0, w1], co2: [w0, w1], soot: [w0, w1] },
       trees: [],
       points,
+      ...(species.length ? { species } : {}),
       measured: out,
     });
   }
