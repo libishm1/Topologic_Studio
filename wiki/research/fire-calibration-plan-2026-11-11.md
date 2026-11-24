@@ -8865,6 +8865,56 @@ The user's word (2026-11-24, evening): calibrate the fire for what the tenabilit
 - **No stored species or smoke series is reduced or compared until 16.55 fixes how.** 16.55 covers each of the five readings and the asphyxiant dose, says where a measurement exists at or near head height and where only under the ceiling, and names what each of the four smoke decisions holds up. Comparisons that need none of those decisions (CO₂, O₂, and CO where it was measured) may be fixed by the coordinator; the smoke ones wait for the user.
 
 
+### 16.56 The times to 60 °C and to a heat dose of 0.3 at head height: not calibrated on any cell (2026-11-24)
+
+Parts A, B and D of 16.54, on the saved results. An agent wrote the tool and ran it; the coordinator checked that the tool, its check on made-up series (13 tests) and its list of choices were committed (43dc492, branch `flamescapes/tenability-quantities`) before the commit that holds any result (b812f7c), and reran the tool's own tests. The figures below are the agent's; the coordinator did not recompute them. No solver ran and nothing in the solver changed. R8b on 0.20 m was not yet written and is not here. The number 16.55 is kept for the design of the smoke and species comparisons.
+
+**The word, by 16.54's rule, is "not calibrated" for both quantities, on every cell, for the solver on the site (13.B), R8b and R8.** Files: `benchmark/results/2026-11-24-tenability-times.md` (tables), `-choices.md`, `-item8-loose-ends.md`.
+
+**Time to 60 °C** (eight series; the measurement crosses at 877 devices). Pooled bias δ and scatter σ_M:
+
+| Solver, cell | Pairs | Misses | Pooled δ / σ_M | Series in band |
+| --- | --- | --- | --- | --- |
+| 13.B, 0.20 m | 269 | 9 (1.0 %) | 1.32 / 0.58 | 0 of 4 |
+| 13.B, 0.27 m | 271 | 7 (0.8 %) | 1.09 / 0.51 | 1 of 4 |
+| 13.B, 0.34 m | 269 | 9 (1.0 %) | 0.92 / 0.53 | 1 of 4 |
+| R8, 0.27 m | 268 | 10 (1.1 %) | 1.14 / 0.54 | 1 of 4 |
+| R8, 0.34 m | 265 | 13 (1.5 %) | 0.91 / 0.51 | 1 of 4 |
+
+- **The scatter fails it.** The pooled bias is in band on 0.27 and 0.34 m and the misses are far under 5 %; σ_M is 0.49 to 0.58 against 0.35.
+- **Two thirds of the devices carry no time.** At 599 of the 877 the measurement crosses within three measured intervals of the start, which 16.54 sets aside as unresolved: near the fire the gas is at 60 °C almost at once. So the quantity rests on four series (UL FSRI, NIST/NRC, ATF, NBS) and on the devices far from the fire.
+- **Far from the fire the model is late.** NBS's far corridor tree reaches 60 °C at 72 to 225 s measured and at 616 to 805 s in the model on 0.27 m. Every miss is in ATF or NBS, the corridor series.
+
+**Time to a heat dose of 0.3** (the measurement crosses at 868 devices; 50 unresolved):
+
+| Solver, cell | Pairs | Misses | Pooled δ / σ_M | Series in band | Word, pooled only |
+| --- | --- | --- | --- | --- | --- |
+| 13.B, 0.20 m | 782 | 36 (4.2 %) | 0.97 / 0.41 | 0 of 6 | not calibrated |
+| 13.B, 0.27 m | 806 | 12 (1.4 %) | 0.98 / 0.32 | 1 of 6 | indicative |
+| 13.B, 0.34 m | 804 | 14 (1.6 %) | 0.79 / 0.37 | 1 of 6 | not calibrated |
+| R8, 0.27 m | 797 | 21 (2.4 %) | 1.08 / 0.33 | 1 of 6 | indicative |
+| R8, 0.34 m | 804 | 14 (1.6 %) | 0.85 / 0.37 | 2 of 6 | not calibrated |
+
+- **The pooled "indicative" on 0.27 m is one series.** UL FSRI gives 720 of about 800 pairs. With each series weighted alike the scatter is 0.58 to 0.62, so the strictest word is not calibrated there too.
+- On 0.34 m the model closes early (δ 0.79 to 0.85). On 0.20 m the misses are just inside the limit; 26 are in seven UL FSRI 100 kW open-door tests, where the model reads cold on that cell.
+- **Item 8 on 0.27 m doubles the misses** (10 to 21) and removes four of five early closures: it cools the far field as well as the near.
+
+**B. What carries over.** The temperature's bias does not carry into the times one for one. A head-height peak rise 33 to 68 % high goes with a median time to 60 °C between 24 % early and 8 % late: the comparable times come from slow-crossing devices far from the fire, where the model is late or cold, and the hot devices near it are unresolved. It carries into the summed dose more than one for one, as T^3.4 implies: the median dose at the end of a run, model over measured, is 1.35 to 1.43 on 0.20 and 0.27 m and 3.9 on 0.34 m for 13.B; item 8 brings that to 0.89 on 0.27 m and 1.92 on 0.34 m.
+
+**D. Item 8's loose ends (16.52).**
+- **Ledgers.** Item 8 moves heat from the door to the walls in the two UL rooms (the walls' share up by 0.05 to 0.11); elsewhere by 0.03 at most. The remainder is 2 to 16 % by series in every arm, and item 8 moves it by 0.7 % of the heat released at most.
+- **Tallies.** No negative radiation; the caps are untouched but for one WTC run (0.41 MJ of 8778) and the stopped run. radRoundoff sums to at most 7.1 x 10^-5 of a run's heat released: 16.47's float32 finding is negligible in these rooms.
+- **FSE ISOHept26.** Every stop is the temperature limit (a gas cell over 3000 K), in the fire's 2 MW stage. 13.B runs to the end on both cells; R8b stops on 0.27 m at 423 s; R8 at 345 s (0.27 m) and 515 s (0.34 m). It goes with item 14's flame silencing passing about 1.5 times the heat released, but WTC runs reach as much without stopping: **a correlation, the cause not established.** A run that stores the hottest cell each second would test it; none was made.
+- **Head-height temperature on 0.27 m, series by series.** R8's pooled figure is 1.10 / 0.34. What holds its word is two series in band where three are asked, and a weighted scatter of 0.52. Only 13 to 19 % of the variance lies between series: the scatter is inside them. ATF's 30 pairs carry much of it (its near tree reads 2.7 to 3.5 times the measured rise, its farthest 0.03 to 0.6); without ATF, R8 is in band weighted and unweighted. Nothing is dropped: this is a diagnosis. Item 8 moves series both ways: UL FSRI comes into band and NIST/NRC leaves it downward (0.75).
+
+**Where 16.54 met the code, and what was done.**
+- "Each series weighted alike" is not one of the suite's readings (its second is the guide's 10-bin weighting). The agent computed both and a series-alike statistic; the strictest word is the same whichever set is taken.
+- The rule that sets aside a crossing within three intervals of the start was followed and removes 599 of 877 at 60 °C. **It was fixed before the result and is not changed after it.** A reading that resolves early crossings would need a finer measured time base, which the data do not have.
+- σ_E for a time is not given by the guide; the head-height temperature's 0.07 was used, written down before any result.
+
+**What this says, plainly.** The solver's error at head height is not one of level alone. It is hot near the fire and late or cold far from it, most of all along corridors. A single factor on temperature would not fix the time at which a distant place closes, and item 8, which cools everything, improves the near field and worsens the misses far away. The next item for the egress is therefore the far field: how heat and smoke travel along a corridor on these cells (the ATF and NBS series), not the layer's temperature in the fire room.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
