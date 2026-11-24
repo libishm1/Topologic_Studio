@@ -425,6 +425,12 @@ appended to `AxiomCheck.lean` (four of the movement results use no axioms, the o
 
 ## Building
 
+## Two modules added since (2026-11-11 and 2026-11-12)
+
+Sixteen.lean (7 results) bounds a walk on the 16-neighbour lattice against the straight walk (`floorRaster.js`, `SIXTEEN_BOUND`). Transport.lean (13 results) proves the facts the heat-conserving gas transport rests on: mixing by volume at constant pressure keeps mass and enthalpy (`flamescapes.js`, `transportGas`).
+
+With Physarum.lean these make 41 modules and 1612 theorems and lemmas, counted as above on 2026-11-24. The last full build of everything together was that of 2026-11-08 (38 modules, 1569); the three later modules were not part of it.
+
 Lake caches are gigabytes, so build outside OneDrive. Keep the working copy
 outside any synced folder (ours lives under the user's home, in `lean/fireegress`); to rebuild elsewhere:
 

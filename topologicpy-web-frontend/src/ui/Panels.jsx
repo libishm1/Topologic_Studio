@@ -2358,8 +2358,8 @@ const FLAMESCAPES_MODELS = [
 const FLAMESCAPES_LIMITS =
   "A browser version of a graphics fire solver: grid cells of 0.2 to 0.45 m, not centimetres, so flames and " +
   "thin walls are coarse; room contents are a statistical fire load, not the model's furniture; walls and slabs " +
-  "do not burn; doors and windows as set above. Heated gas expands and the transport keeps its mass and heat, " +
-  "but a room sealed by closed doors does not pressurise; an opening narrower than about a cell closes; the " +
+  "do not burn; doors and windows as set above. Heated gas expands and the transport keeps its mass and heat; " +
+  "a room sealed by closed doors pressurises and leaks; an opening narrower than about a cell closes; the " +
   "grid's sides are open to outside air, so a large model clipped round the fire is never fully closed. It " +
   "shows how heat and smoke may move through this building; it is not a fire engineering model. " +
   validationSummary() +
@@ -2382,11 +2382,11 @@ const itemGrowthOptions = (cls) => [
 /** A design-fire first item on the run card: its curve, then what water or agent did to it. */
 /** What grid a run was built on, for its card's note (flamescapes.worker.js describe). */
 function gridNote(c) {
-  if (c.policy === "speed") return " A finer grid sized to this GPU's speed: its fire differs from the standard grid's, which every device builds by default.";
-  if (c.policy === "finest") return " The finest grid this GPU's memory allows: its fire differs from the standard grid's, which every device builds by default.";
+  if (c.policy === "speed") return " A finer grid sized to this GPU's speed: its fire differs from the standard grid's, the default.";
+  if (c.policy === "finest") return " The finest grid this GPU's memory allows: its fire differs from the standard grid's, the default.";
   if (c.policy === "standard" && c.budget < STANDARD_CELLS)
     return ` This device's CPU builds a lighter grid (at most ${c.budget.toLocaleString()} cells) to keep ahead of real time: its fire can differ from the standard grid's.`;
-  return c.policy === "standard" ? " The standard grid, the same on every device." : "";
+  return c.policy === "standard" ? " The standard grid, the same on every GPU and desktop CPU." : "";
 }
 
 /** The range over a fire's repeat runs (core/forecast.js runRange), for its card. */
@@ -3671,18 +3671,18 @@ export function SimulatePanel({
                 setSettings(value === "calibrated" ? { flamescapesCalibratedGrid: true, flamescapesGridPolicy: "standard" } : { flamescapesCalibratedGrid: false, flamescapesGridPolicy: value })
               }
               options={[
-                { value: "standard", label: "Standard: the same on every device, so the GPU and the CPU give one fire" },
+                { value: "standard", label: "Standard: the same grid on every GPU and desktop CPU" },
                 { value: "calibrated", label: "0.27 m cells: a cell size of the held-out validation" },
                 { value: "speed", label: "Finer on the GPU: sized from its speed over a run's first seconds" },
                 { value: "finest", label: "Finest on the GPU: all its memory allows (slower)" },
               ]}
             />
             <Notes summary="Why the grid matters">
-              The fire depends on the grid. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every device,
-              so the CPU gives the GPU&apos;s fire; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and its card
+              The fire depends on the grid. The standard grid (at most {STANDARD_CELLS.toLocaleString()} cells) is the same on every GPU and
+              desktop CPU, and their fires agree within the scatter from run to run; a phone&apos;s or small machine&apos;s CPU builds a lighter one to keep up, and its card
               says so. The held-out measured room fires were run on cells of 0.20, 0.27 and 0.34 m, and a verdict holds only on the cells it
               was found on. The 0.27 m grid builds the middle size, clipped round the fire to what the device can hold (a GPU holds a
-              much larger area than a CPU); on it the smoke layer&apos;s depth is indicative, and on 0.20 and 0.34 m calibrated. The
+              much larger area than a CPU); the smoke layer&apos;s depth is calibrated on all three cell sizes. The
               finer grids give a different fire that no measurement has checked. Keep one grid when comparing runs; the run card gives
               it and says what holds on it.
             </Notes>
