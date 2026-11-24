@@ -79,7 +79,8 @@
  * sample, and the panel runs several.
  *
  * Out. Past an exit each person walks on to a gathering place a few metres
- * outside, at the level of the lowest exit (an upper exit's people come
+ * outside, clear of the building in plan (the graph's own places on every
+ * storey, and the cells round them), at the level of the lowest exit (an upper exit's people come
  * down to the ground), and stands there, the later arrivals round the
  * earlier ones, so each exit's crowd shows how many chose it. With a
  * `shelterArea`, a gathering place holds what that area takes at the
@@ -140,6 +141,10 @@ export const STAIR_UP = 0.75;
 /** Metres a place the fire has made untenable adds to a way out: only taken by those already in it. */
 export const FIRE_PENALTY = 1000;
 
+/** How far from its exit a gathering place is put (m): the nearest of these that is clear of the building. */
+const GATHER_REACH = [3.5, 5, 7, 10, 14, 20];
+/** The radius about a gathering place's centre that must be clear of the building (m). */
+const GATHER_CLEAR = 1.5;
 /** m^2 a person standing at a gathering place: the sunflower's spacing, pi 0.45^2. */
 export const GATHER_AREA = Math.PI * 0.45 ** 2;
 
@@ -333,6 +338,27 @@ export function simulateCrowd(graph, opts = {}) {
   // Each exit's gathering place: a few metres out, away from the nodes inside, on the ground.
   const gather = new Map();
   const ground = Math.min(...exits.filter((e) => e >= 0).map((e) => pointOf(e)[up]));
+  // The building in plan: every walkable place on every storey, and the cells round it
+  // (its walls). A gathering place and each person standing at one keep off it.
+  const [h1, h2] = [0, 1, 2].filter((c) => c !== up);
+  const step = graph.spacing || 0.5;
+  const planKey = (a, b) => `${Math.round(a / step)},${Math.round(b / step)}`;
+  const building = new Set();
+  for (let v = 0; v < n; v += 1) {
+    const a = Math.round(graph.nodes[v * 3 + h1] / step), b = Math.round(graph.nodes[v * 3 + h2] / step);
+    for (let i = -1; i <= 1; i += 1) for (let j = -1; j <= 1; j += 1) building.add(`${a + i},${b + j}`);
+  }
+  const indoors = (q) => building.has(planKey(q[h1], q[h2]));
+  // How much of the building a gathering place `reach` m from p along `dir` meets: on the
+  // way to it (past the doorway's own cells) and where its first people stand.
+  const meets = (p, dir, reach) => {
+    let hits = 0;
+    for (let r = 1.5; r < reach; r += step) if (building.has(planKey(p[h1] + dir[h1] * r, p[h2] + dir[h2] * r))) hits += 1;
+    const c1 = p[h1] + dir[h1] * reach, c2 = p[h2] + dir[h2] * reach;
+    for (let a = -GATHER_CLEAR; a <= GATHER_CLEAR + 1e-9; a += step)
+      for (let b = -GATHER_CLEAR; b <= GATHER_CLEAR + 1e-9; b += step) if (a * a + b * b <= GATHER_CLEAR * GATHER_CLEAR && building.has(planKey(c1 + a, c2 + b))) hits += 1;
+    return hits;
+  };
   const outward = (e) => {
     if (gather.has(e)) return gather.get(e);
     const p = pointOf(e);
@@ -346,13 +372,30 @@ export function simulateCrowd(graph, opts = {}) {
       d[(up + 1) % 3] = 1;
       norm = 1;
     }
-    const dir = d.map((x) => x / norm);
+    // Away from the neighbours is the first guess. Where that way leads back over the
+    // building (a porch or terrace beyond the door, a recessed entrance, an inner corner),
+    // the nearest clear place is taken: the other way, then round the compass, then further out.
+    const first = d.map((x) => x / norm);
+    const ways = [first, first.map((x) => -x || 0)];
+    for (let k = 1; k < 16; k += 1) {
+      if (k === 8) continue;
+      const a = (k * Math.PI) / 8, w = [0, 0, 0];
+      w[h1] = first[h1] * Math.cos(a) - first[h2] * Math.sin(a);
+      w[h2] = first[h1] * Math.sin(a) + first[h2] * Math.cos(a);
+      ways.push(w);
+    }
+    let dir = first, reach = GATHER_REACH[0], least = Infinity;
+    search: for (const r of GATHER_REACH)
+      for (const w of ways) {
+        const hits = meets(p, w, r);
+        if (hits < least) [dir, reach, least] = [w, r, hits];
+        if (hits === 0) break search;
+      }
     const side = [0, 0, 0];
     // The horizontal perpendicular: dir rotated a quarter turn about up.
-    const [h1, h2] = [0, 1, 2].filter((c) => c !== up);
     side[h1] = -dir[h2];
     side[h2] = dir[h1];
-    const g = { centre: p.map((x, c) => (c === up ? ground : x + dir[c] * 3.5)), dir, side, people: 0, last: 0, spots: [], here: [] };
+    const g = { centre: p.map((x, c) => (c === up ? ground : x + dir[c] * reach)), dir, side, people: 0, last: 0, spots: [], here: [], next: 0 };
     gather.set(e, g);
     return g;
   };
@@ -368,8 +411,17 @@ export function simulateCrowd(graph, opts = {}) {
     if (j >= shelter) goneAt[g.here[j - shelter]] = t;
     const k = j % shelter;
     if (g.spots[k] === undefined) {
-      const r = 0.45 * Math.sqrt(k + 0.5), a = k * 2.399963;
-      extra.push(g.centre.map((x, c) => x + r * (Math.cos(a) * g.dir[c] + Math.sin(a) * g.side[c])));
+      // The sunflower's places that fall on the building are passed over, so a large
+      // crowd spreads along the outside of the wall and not back through it.
+      let place = null;
+      for (let tries = 0; tries < 4000; tries += 1) {
+        const m = g.next;
+        g.next += 1;
+        const r = 0.45 * Math.sqrt(m + 0.5), a = m * 2.399963;
+        place = g.centre.map((x, c) => x + r * (Math.cos(a) * g.dir[c] + Math.sin(a) * g.side[c]));
+        if (!indoors(place)) break;
+      }
+      extra.push(place);
       g.spots[k] = n + extra.length - 1;
     }
     return g.spots[k];

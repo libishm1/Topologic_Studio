@@ -588,3 +588,43 @@ test("up a stair at STAIR_UP of the speed down it", () => {
   }
   assert.ok(climbed > 3, "someone climbed the stair");
 });
+
+/** The gathering places of a run (the points after the graph's own) that stand over a place of the graph in plan. */
+function gatheredOverFloor(graph, out) {
+  const n = graph.nodes.length / 3;
+  const cells = new Set();
+  for (let v = 0; v < n; v += 1) cells.add(`${Math.round(graph.nodes[v * 3] / 0.5)},${Math.round(graph.nodes[v * 3 + 2] / 0.5)}`);
+  let over = 0;
+  for (let p = n; p < out.points.length / 3; p += 1) if (cells.has(`${Math.round(out.points[p * 3] / 0.5)},${Math.round(out.points[p * 3 + 2] / 0.5)}`)) over += 1;
+  return { over, places: out.points.length / 3 - n };
+}
+
+test("a large crowd gathers outside the wall, not back through it", () => {
+  // 20 x 20 m, one door: about 300 people, whose gathering place would reach 7 m back from a point 3.5 m out.
+  const { graph, exits } = room(40, 40);
+  const out = simulateCrowd(graph, { exits, occupantArea: 1.3, horizon: 3600 });
+  assert.ok(out.people > 250 && out.inside === 0);
+  const { over, places } = gatheredOverFloor(graph, out);
+  assert.ok(places >= out.people);
+  assert.equal(over, 0);
+  const n = graph.nodes.length / 3;
+  for (let p = n; p < out.points.length / 3; p += 1) assert.ok(out.points[p * 3] < -0.5, "every place is beyond the wall the door is in");
+});
+
+test("a door with more floor beyond it than behind it still sends people away from the building", () => {
+  // A porch of nine places past the door: away from the door's neighbours now points indoors.
+  const { graph, exits } = room(12, 12);
+  const nodes = Array.from(graph.nodes), kinds = Array.from(graph.kinds), edges = Array.from(graph.edges);
+  const door = exits[0];
+  for (let i = 0; i < 3; i += 1)
+    for (let k = -1; k <= 1; k += 1) {
+      const v = nodes.length / 3;
+      nodes.push(-1 - i * 0.5, 0.75, 6 * 0.5 + k * 0.5);
+      kinds.push(KIND_FLOOR);
+      if (i === 0) edges.push(door, v);
+    }
+  const porch = { ...graph, nodes: Float32Array.from(nodes), kinds: Uint8Array.from(kinds), edges: Int32Array.from(edges) };
+  const out = simulateCrowd(porch, { exits, occupantArea: 1.3, horizon: 3600 });
+  assert.equal(out.inside, 0);
+  assert.equal(gatheredOverFloor(porch, out).over, 0);
+});
