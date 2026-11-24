@@ -468,8 +468,8 @@ export function stackFrames(list, n) {
  * are stacked, with the run's `frameSeconds`, `hrr` (kW a frame) and
  * `stats.released` (J).
  */
-export function runSummary(frames, { threshold = 60, smoke = true, visibilityLimit = 10 } = {}) {
-  const forecast = forecastFromFrames(frames, { threshold, smoke, visibilityLimit });
+export function runSummary(frames, { threshold = 60, smoke = true, visibilityLimit = 10, fedCrit = FED_CRIT } = {}) {
+  const forecast = forecastFromFrames(frames, { threshold, smoke, visibilityLimit, fedCrit });
   let untenable = 0;
   let first = Infinity;
   for (let v = 0; v < forecast.n; v += 1) {

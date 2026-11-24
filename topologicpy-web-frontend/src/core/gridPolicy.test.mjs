@@ -139,3 +139,20 @@ test("the GPU grid is sized by the solver's largest binding, cf, at its own byte
   // The smaller of the two limits counts.
   assert.equal((await detectGpu(gpuWith({ maxStorageBufferBindingSize: 2 ** 30, maxBufferSize: 8 * 2 ** 20 }))).cells, Math.max(30000, Math.floor((8 * 2 ** 20) / (CF_FIELDS * 4))));
 });
+
+test("the dose limit set in the app decides when a standing dose closes a node", () => {
+  // One node in clear, cool air with 3500 ppm of CO: 0.1 of a dose a minute, six one-minute frames.
+  const K = 6;
+  const frames = {
+    n: 1, K, frameSeconds: 60,
+    T: new Float32Array(K).fill(20), vis: new Float32Array(K).fill(100), co: new Float32Array(K).fill(3500),
+    hrr: new Float32Array(K).fill(100), stats: { released: 1e6 },
+  };
+  const strict = forecastFromFrames(frames, { threshold: 60 }).untenable[0];
+  assert.ok(Number.isFinite(strict), "closes within the run at the default limit of 0.3");
+  assert.equal(forecastFromFrames(frames, { threshold: 60, fedCrit: 0.3 }).untenable[0], strict);
+  assert.ok(forecastFromFrames(frames, { threshold: 60, fedCrit: 0.5 }).untenable[0] > strict);
+  assert.equal(forecastFromFrames(frames, { threshold: 60, fedCrit: 1 }).untenable[0], Infinity);
+  assert.equal(runSummary(frames, { threshold: 60 }).untenable, 1);
+  assert.equal(runSummary(frames, { threshold: 60, fedCrit: 1 }).untenable, 0);
+});

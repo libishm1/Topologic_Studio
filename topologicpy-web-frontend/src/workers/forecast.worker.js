@@ -93,7 +93,7 @@ self.onmessage = (event) => {
       zoneSummary = { ...forecast.zone, roomStats: rooms.stats };
     } else if (model === "flamescapes" || model === "flamescapes-embers") {
       if (!frames) throw new Error("Run the Flamescapes fire first.");
-      forecast = forecastFromFrames(frames, { threshold, smoke: frames.smoke, visibilityLimit: frames.visibilityLimit });
+      forecast = forecastFromFrames(frames, { threshold, smoke: frames.smoke, visibilityLimit: frames.visibilityLimit, fedCrit: limit });
       coverage = { clipped: Boolean(frames.clipped), inGrid: frames.inGrid ?? 1 };
       // For the performance check (core/performanceCheck.js): the ceiling
       // detectors when the run read them, else smoke at head height.

@@ -3473,7 +3473,7 @@ export function SimulatePanel({
             {settings.flamescapesShow === "tenability" && (
               <p className="field__hint">
                 The largest share of a limit each place has reached: gas temperature, visibility, and the asphyxiant (CO, with CO₂&apos;s
-                faster breathing and low O₂) and heat doses against FED 0.3, after ISO 13571. Red at 1: untenable. The Methods page gives the
+                faster breathing and low O₂) and heat doses against the dose limit (FED 0.3 unless changed), after ISO 13571. Red at 1: untenable. The Methods page gives the
                 formulas and sources.
               </p>
             )}

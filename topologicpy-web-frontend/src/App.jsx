@@ -274,7 +274,7 @@ export default function App() {
   // Whether the sprinklers and the systems' rooms are shown (their switches,
   // with a Flamescapes model): the frames of a run read it as they are drawn.
   const suppressionShownRef = useRef({ sprinklers: false, systems: false });
-  const tenabilityRef = useRef({ limitC: 60, visibilityLimit: 10, smoke: true });
+  const tenabilityRef = useRef({ limitC: 60, visibilityLimit: 10, smoke: true, fedCrit: 0.3 });
   const geometryRef = useRef(null);
   // Counts file loads, so only the latest one updates the page.
   const loadSeqRef = useRef(0);
@@ -2018,7 +2018,7 @@ export default function App() {
       const count = settings.flamescapesRepeats - 1;
       if (!(count > 0) || run.info?.backend?.kind !== "gpu" || !run.info.budget || !result?.hrr) return;
       if (combustionRef.current !== run || geometryRef.current !== geometryAtStart) return;
-      const tenability = { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility };
+      const tenability = { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility, fedCrit: settings.doseLimit };
       const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: result.frameSeconds, hrr: result.hrr, stats: result.stats };
       const members = [{ k: 0, ...runSummary(frames, tenability) }];
       let stopped = 0;
@@ -2080,7 +2080,7 @@ export default function App() {
     });
     combustionRef.current = run;
     return run;
-  }, [combustionInputs, flamescapesJob, graph, studio, toast, settings.flamescapesKeepRuns, settings.flamescapesRepeats, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, levels, systemsPlan]);
+  }, [combustionInputs, flamescapesJob, graph, studio, toast, settings.flamescapesKeepRuns, settings.flamescapesRepeats, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, settings.doseLimit, levels, systemsPlan]);
 
   // Running out of memory or storage (core/memoryNotice.js): where it is met
   // (a cache write refused, an allocation failed in the page or a worker, the
@@ -2142,7 +2142,7 @@ export default function App() {
         route: path?.node_ids?.length ? path.node_ids : null,
         frames: flamescapesRun ? flamescapesRun.frames : null,
         burning: !flamescapesRun && fire.step > 0 && burningRef.current?.size ? burningRef.current : null,
-        tenability: { untenableC: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility },
+        tenability: { untenableC: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility, fedCrit: settings.doseLimit },
         properties: {
           source_file: file?.name || null,
           exported_at: new Date().toISOString(),
@@ -2194,7 +2194,7 @@ export default function App() {
       const n = graph.nodes.length / 3;
       const { blob, extension } = await runTableBlob(
         { frames: run.frames, frameSeconds: run.result?.frameSeconds ?? runHorizon(settings) / Math.max(1, run.frames.length), n, points, kinds: graph.kinds },
-        { limitC: settings.flamescapesUntenableC, visibilityLimit: settings.flamescapesVisibility, smoke: settings.flamescapesSmoke },
+        { limitC: settings.flamescapesUntenableC, visibilityLimit: settings.flamescapesVisibility, smoke: settings.flamescapesSmoke, fedCrit: settings.doseLimit },
       );
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -2776,7 +2776,7 @@ export default function App() {
   const crowdFlames = settings.crowdWithFire && isFlamescapes(fire.model) && crowdRun?.done && !crowdRun.failed && crowdRun.graph?.nodes === graphNodes && crowdRun.result && crowdRun.result.health?.ok !== false ? crowdRun : null;
   const crowdGraphFire = settings.crowdWithFire && !isFlamescapes(fire.model) && fire.model !== "zone" && fire.step > 0 && points.fire && graph ? fire.model : null;
   const crowdFireKey = crowdFlames
-    ? ["flames", crowdFlames.key, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility]
+    ? ["flames", crowdFlames.key, settings.flamescapesUntenableC, settings.flamescapesSmoke, settings.flamescapesVisibility, settings.doseLimit]
     : crowdGraphFire
       ? ["graph", crowdGraphFire, points.fire, settings.fireMaxSteps, settings.forecastSecondsPerStep, settings.untenableAbove]
       : null;
@@ -2828,7 +2828,7 @@ export default function App() {
     closes: () => {
       if (crowdFlames) {
         const frames = { ...stackFrames(crowdFlames.frames, graph.nodes.length / 3), frameSeconds: crowdFlames.result.frameSeconds };
-        return forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility }).untenable;
+        return forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility, fedCrit: settings.doseLimit }).untenable;
       }
       if (crowdGraphFire) {
         return buildForecast(graph, {
@@ -2993,7 +2993,7 @@ export default function App() {
     if (isFlamescapes(fire.model)) {
       if (!run?.done || run.failed || run.graph?.nodes !== graph.nodes || !run.result || run.result.health?.ok === false) return null;
       const frames = { ...stackFrames(run.frames, graph.nodes.length / 3), frameSeconds: run.result.frameSeconds };
-      const closes = forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility }).untenable;
+      const closes = forecastFromFrames(frames, { threshold: settings.flamescapesUntenableC, smoke: settings.flamescapesSmoke, visibilityLimit: settings.flamescapesVisibility, fedCrit: settings.doseLimit }).untenable;
       // The run's own smoke: its visibility at head height, frame by frame.
       return { closes, smokeFrames: { K: frames.K, frameSeconds: frames.frameSeconds, vis: frames.vis } };
     }
@@ -4385,12 +4385,12 @@ export default function App() {
   useEffect(() => {
     const run = playingRunRef.current;
     showRef.current = measureView(settings, Boolean(run?.frames?.[0]?.co2));
-    tenabilityRef.current = { limitC: settings.flamescapesUntenableC, visibilityLimit: settings.flamescapesVisibility, smoke: settings.flamescapesSmoke };
+    tenabilityRef.current = { limitC: settings.flamescapesUntenableC, visibilityLimit: settings.flamescapesVisibility, smoke: settings.flamescapesSmoke, fedCrit: settings.doseLimit };
     if (!run || !isFlamescapes(fire.model) || graphColours !== "fire") return;
     paintCombustion(viewerRef.current, run, fire.step);
     // Only a change of view or limits redraws; frames redraw themselves as they play.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.flamescapesShow, settings.flamescapesHeatScale, settings.flamescapesSmokeMeasure, settings.flamescapesGasMeasure, settings.flamescapesUntenableC, settings.flamescapesVisibility, settings.flamescapesSmoke]);
+  }, [settings.flamescapesShow, settings.flamescapesHeatScale, settings.flamescapesSmokeMeasure, settings.flamescapesGasMeasure, settings.flamescapesUntenableC, settings.flamescapesVisibility, settings.flamescapesSmoke, settings.doseLimit]);
 
   // The deadline map colours the graph when a plan arrives or the toggle
   // changes, and only then. A fire that has coloured the graph since keeps
