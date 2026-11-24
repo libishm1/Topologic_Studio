@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FREE_SPEED, GATHER_AREA, POPULATIONS, SFPE, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, simulateCrowd } from "./crowd.js";
+import { FREE_SPEED, GATHER_AREA, IMO_PASSENGERS, POPULATIONS, SFPE, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, populationMix, simulateCrowd } from "./crowd.js";
 import { doorCapacity } from "./performanceCheck.js";
 import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "./lattice.js";
 
@@ -688,4 +688,45 @@ test("groups: an area too small for its people reports how many it could not pla
   assert.equal(out.people, 3);
   assert.equal(out.short, 2);
   assert.throws(() => simulateCrowd(graph, { exits, groups: [{ nodes: [0, 1, 2], count: 1, exit: 7 }] }), /not one of the exits/);
+});
+
+test("groups: people given an exit are let go of it when the fire cuts their walk there", () => {
+  // A corridor 30 nodes long, an exit at each end; eight people near the right end are given the left exit.
+  const { graph, exits } = room(30, 1, { exits: ["left", "right"] });
+  const n = graph.nodes.length / 3;
+  const area = [20, 21, 22, 23, 24, 25, 26, 27];
+  const closes = new Float64Array(n).fill(Infinity);
+  for (let v = 6; v <= 9; v += 1) closes[v] = 2;
+  for (const choice of ["quickest", "nearest"]) {
+    const groups = [{ nodes: area, count: 8, exit: exits[0] }];
+    // With no fire they all walk the length of the corridor to the exit given.
+    const calm = simulateCrowd(graph, { exits, groups, start: [0, 0], choice });
+    assert.equal(calm.released, 0);
+    assert.ok(Array.from(calm.exitOf).every((e) => e === exits[0]));
+    // With the fire across their way they are let go, and leave by the other exit; no one steps into the fire.
+    const out = simulateCrowd(graph, { exits, groups, start: [0, 0], choice, closes });
+    assert.equal(out.released, 8, choice);
+    assert.equal(out.inside, 0);
+    assert.ok(Array.from(out.exitOf).every((e) => e === exits[1]), choice);
+    for (const list of walks(out)) for (const s of list) if (s.b < n && closes[s.a] > s.t0) assert.ok(closes[s.b] > s.t0, `${choice}: into node ${s.b}`);
+  }
+});
+
+test("IMO's passengers: the mix gives whole head counts in its shares, each with its own speeds", () => {
+  const groups = populationMix([0, 1, 2], 50);
+  assert.equal(groups.reduce((s, g) => s + g.count, 0), 50);
+  const by = Object.fromEntries(groups.map((g) => [g.name, g.count]));
+  // 7, 7, 16, 10, 10 per cent of 50, for women and for men: 3.5, 3.5, 8, 5, 5 each, the halves shared out.
+  assert.equal(by.imoFemalesOver50, 8);
+  assert.equal(by.imoMalesOver50Impaired2, 5);
+  assert.equal(by.imoFemalesUnder30 + by.imoFemales30to50 + by.imoMalesUnder30 + by.imoMales30to50, 14);
+  assert.equal(Object.values(IMO_PASSENGERS).reduce((s, x) => s + x, 0), 100);
+  for (const g of groups) assert.deepEqual(g.speed, POPULATIONS[g.name]);
+  // In a run each person's speed lies in their own group's range.
+  const { graph, exits } = room(30, 30);
+  const floor = Array.from({ length: 900 }, (_, v) => v);
+  const mix = populationMix(floor, 100, IMO_PASSENGERS);
+  const out = simulateCrowd(graph, { exits, groups: mix, start: [0, 0] });
+  assert.equal(out.people, 100);
+  assert.equal(out.inside, 0);
 });

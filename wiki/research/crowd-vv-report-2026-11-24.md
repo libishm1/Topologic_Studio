@@ -7,13 +7,13 @@ What the people-leaving model (`topologicpy-web-frontend/src/core/crowd.js`) pas
 ## The run
 
 - Harness: `node tools/validation/crowd-validation.mjs --out 2026-11-24-crowd-validation.json --date 2026-11-24`.
-- Result: 20 pass, 2 fail, 3 documentation. The 16 passes and 2 failures of 2026-11-11 are unchanged; four tests were added the same day, run as written with the start areas, assigned exits and populations the model now has (`groups` in `simulateCrowd`), and all four pass. File: `benchmark/results/2026-11-24-crowd-validation.json`, which records the hash of `crowd.js`.
+- Result: 22 pass, 2 fail, 3 documentation. The 16 passes and 2 failures of 2026-11-11 are unchanged; six tests were added the same day, run as written with the start areas, assigned exits and populations the model now has (`groups` in `simulateCrowd`), and all six pass. File: `benchmark/results/2026-11-24-crowd-validation.json`, which records the hash of `crowd.js`.
 - Code: main after pull request 19 (the gathering places and the count of people who reach no exit changed since 2026-11-11; the walk did not).
 - The harness now runs with the unit tests (`src/core/crowdValidation.test.mjs`): a third failure, or the loss of a pass, fails the suite.
 
 Each test builds its geometry as a lattice of nodes 0.5 m apart and runs the model as the app does. Nothing is tuned to pass.
 
-**What the new option is not.** `groups` is for analyses and these tests. The app's panel does not offer it: there, people still stand over all the floor and choose their own exit. A person given an exit keeps it with a fire too.
+**What the new option is not.** `groups` is for analyses and these tests. The app's panel does not offer it: there, people still stand over all the floor and choose their own exit. A person given an exit keeps it until a fire cuts their walk to it; then they choose as everyone else does, and the run counts them (`released`).
 
 **The words used below.**
 - *Pass (run)*: run by the harness on 2026-11-24 and inside the test's criterion.
@@ -50,7 +50,7 @@ Both come from how density is read: round the free node ahead of a walker, so de
 | Verif.3.1 | Exit route allocation | Pass (run): 115 of 115 leave by the exit given to them. The nearest choice is deterministic too (115 of 115 to their closest exit) |
 | Verif.3.2 | Social influence | Not represented |
 | Verif.3.3 | Affiliation | Not represented |
-| Verif.4.1 | Dynamic availability of exits | Pass with a deviation: the exit closes at 10 s with 240 people, where the test closes it at 1 s with one |
+| Verif.4.1 | Dynamic availability of exits | Pass (run) as written: one occupant at 1 m/s in a 10 m x 15 m room, Exit 1 closed at 1 s; Exit 1 is not used, from a start nearer Exit 1 too. Also with 240 people and the exit closing at 10 s |
 | Verif.5.1 | Congestion | Not run |
 | Verif.5.2 | Maximum flow rates | Pass (run): 0.92 persons/s through a 1 m exit, under the 1.33 limit |
 
@@ -64,11 +64,11 @@ Both come from how density is read: round the free node ahead of a walker, so de
 | 4 | Fundamental diagram | Documented: too fast above about 1.2 persons/m²; the lattice cannot reach 5 persons/m² |
 | 5 | Reaction time | Pass (run): the stagger follows the uniform distribution set |
 | 6 | Movement round a corner | Pass (run), from the 6 m x 2 m start area |
-| 7 | Allocation of demographic parameters | Pass (run) for one normal population (mean 1.34 m/s, sd 0.26). RiMEA's table of speeds by age and sex is not built in |
+| 7 | Allocation of demographic parameters | Pass (run) for one normal population (mean 1.34 m/s, sd 0.26). RiMEA 4.1.1 gives its speeds by age as a curve only (Fig. 3, after Weidmann); no table is printed, so none is built in. Its one tabulated group, persons with impaired mobility (0.46 to 0.76 m/s, Table 2), is |
 | 8 | Parameter analysis | Not run |
 | 9 | Crowd leaving a large public room | Documented: two doors take 1.99 times as long as four |
-| 10 | Allocation of escape routes | Pass (run): 23 persons in twelve rooms, each room given its exit; all leave by it. Placing: two a room, one in room 12 |
-| 11 | Choice of escape route | Pass with a deviation: people are not packed from one side |
+| 10 | Allocation of escape routes | Pass (run): 23 persons in twelve rooms, each room given its exit; all leave by it. Two a room, one in room 3, as IMO's figure has them |
+| 11 | Choice of escape route | Pass (run) as written, narrowly: 1,000 adults packed from the left at 4 persons/m², the most the lattice holds; 50.5 % leave by the closer exit 1, with a long queue there, the rest by exit 2. "Prefer" is met by half a per cent |
 | 12a | Effect of a bottleneck's position | Documented: flat |
 | 12b | Effect of a bottleneck's length | Fails (run) |
 | 12c | Congestion at a second bottleneck | Not run |
@@ -104,7 +104,7 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 
 ## Next, in order
 
-1. Done on 2026-11-24: start areas, exits assigned to people, and populations with their own speeds. Still with a deviation: NIST Verif.4.1 (closure at 10 s, not 1 s) and RiMEA 11 (people not packed from one side); both can now be run as written.
+1. Done on 2026-11-24: start areas, exits assigned to people, and populations with their own speeds; NIST Verif.4.1 and RiMEA 11 run as written. The populations built in are IMO MSC.1/Circ.1533's twelve groups by age and sex (Table 3.4, uniform) with its passengers' composition (Table 3.1), RiMEA's persons with impaired mobility, and Weidmann's normal distribution. IMO's stair speeds by group (Table 3.5) are not used: stairs take the SFPE values for everyone.
 2. A flow limit for corridors and stairs, with the stair's real width (RiMEA 12b, NIST Verif.5.1).
 3. The density reading, calibrated on the single-file data with other data held back (RiMEA 16, RiMEA 4).
 4. Pre-movement times on each person and a speed in smoke (NIST Verif.1.1, 2.5).
