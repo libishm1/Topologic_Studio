@@ -8784,6 +8784,48 @@ The rooms read 34 to 54 % hot in R8b and 10 to 21 % hot in R8. The σ_M of the t
 5. No run is repeated with another seed or ray count (16.50, point 12).
 
 
+### 16.53 What the egress reads from the fire, and what is checked of it (2026-11-24)
+
+The user's word (2026-11-24): the calibration is to be aimed at what the egress uses. This section records what that is, from the code of main at 565dba4, and what the validation compares of it. An agent traced it; the coordinator read the closure rule, the dose formulas, the reading height, the suite's list of quantities and the head-height reduction in the code, and they are as stated. The rest is the agent's reading. **Nothing here is a design fixed for a run:** the proposals at the end wait for the user's decisions, and each gets its own section before any run.
+
+**One reading point.** With Flamescapes, every consumer on the egress side reads one cell for each node of the graph, the cell at 1.8 m above the node's floor, at the end of each frame. Five fields are read there: the gas temperature, the soot density, CO, CO₂ and O₂.
+- **Visibility** is 3 / (8700 m²/kg × soot density), capped at 100 m.
+- **A node closes** at the first frame where the temperature is at or above the limit (60 °C by default), or visibility is under its limit (10 m), or the asphyxiant dose reaches 0.3, or the heat dose reaches 0.3.
+- **The asphyxiant dose rate** a minute is CO / 35 000 ppm min, times exp(CO₂ % / 5) above 2 % CO₂, plus the low-oxygen term. **The heat dose rate** is T^3.4 / 5 × 10⁷, T in °C. No radiant heat, no irritants, no HCN.
+- **The consumers:** the escape-deadline forecast, the tenability map, the performance check's ASET, the people animation and the slime mould all take these closures and doses. The live hazard-aware route reads the temperature only. The learned escape reads none of it. The smoke detectors read the soot under the ceiling.
+
+**What the validation compares of it.**
+
+| What the egress uses | Compared with measurements? | How near |
+| --- | --- | --- |
+| Gas temperature at 1.8 m | Yes, the head-height temperature | Thermocouples at 1.5 to 2.0 m, plume devices left out. The peak rise or a steady mean is compared, never the time at which a limit is crossed. |
+| Visibility at 1.8 m | In one series | One laser path under the ceiling (NIST/NRC), as obscuration, with the test's heptane. Nothing at head height. |
+| CO at 1.8 m | No | CO is only an input yield. |
+| CO₂ and O₂ at 1.8 m | Mostly elsewhere | The analysers are under the ceiling in all but one series (O₂ at 1.84 m, FSRI). |
+| The doses, and the time to untenable | No | No dose and no crossing time is a quantity of the suite. |
+| The detectors' response time | No | |
+
+- **The yields are fixed for each fire class.** CO does not rise when a fire is short of air, which the guide states. The soot of the app's own fuels, and the tenth of the pyrolysate that enters the gas as soot, are in no validation run: the suite burns each test's own fuel in an empty room.
+- **The app's own case is not the validated one.** The suite prescribes the measured heat release and gives each test its own walls. The app predicts its own fire and gives every wall stone.
+- **Constants used and checked by nothing:** 8700 m²/kg and the factor 3 of visibility, the dose constants, and the 0.3.
+- **A fault found, reported:** the stationary dose's limit of 0.3 is fixed in the code and does not follow the app's dose-limit setting.
+
+**Where the three inputs stand.**
+1. **Temperature at head height** is nearest. In R8 (16.52) its pooled δ is 1.10 on 0.27 m and 1.21 on 0.34 m, against 1.35 and 1.54 in 13.B. On 0.27 m the bias is inside the band and the word is held by the scatter between series (σ_M 0.34, 2 of 7 series in band). Because the heat dose goes with T^3.4, a temperature 10 % high in °C raises the dose rate by about 38 %.
+2. **Visibility** reads 1.6 times the measured obscuration in its one series. The four smoke decisions put to the user (FAA cargo, the heptane soot yield, the scaling of K_m to 880 nm, NIST's smoke-alarm tests) are open, and nothing moves until they are made.
+3. **CO and the doses** have no measurement beside them at all.
+
+**Proposed, for the user's decision. None is started.**
+1. **A crossing-time quantity.** Compare, at each head-height thermocouple, the time at which the measured and the modelled gas first reach 60 °C (and a second level, to be fixed). It needs no new data: the eight series hold the time series. Its band and its reduction are fixed in a section before it is computed on any run. This is the quantity ASET rests on, and the suite does not hold it today.
+2. **Item 8 to the end.** Step 4 of R8, the ledgers, and the stop of ISOHept26 (16.52). Then the scatter between series on 0.27 m is examined series by series, since it is what holds the head-height word.
+3. **The smoke decisions,** then a visibility comparison at head height where a series measured it there. Whether any of the eight series did is not yet established.
+4. **CO.** A measured-CO comparison first, with the fixed yields as they are, on the series that recorded CO (to be listed). Only then a candidate item for CO that rises with the equivalence ratio, behind a switch, off by default.
+5. **The doses** are not calibrated apart: they are formulas of the standard on the fields above. What is reported is how the fields' bias carries into the dose and into ASET.
+6. **The stationary dose's limit** is wired to the setting, as a fix of the app, in its own change.
+
+**Order proposed:** 2, then 1, then 3 and 4 as the user decides them. Phase 1's screening (16.4) waits on 2.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
