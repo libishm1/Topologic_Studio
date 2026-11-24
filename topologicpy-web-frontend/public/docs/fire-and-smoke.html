@@ -289,7 +289,7 @@
       <li><span class="label">Temperature.</span> In the graph models the temperature is an index, scaled to read 20 to 120 degrees C, not a temperature a sensor would measure. Doses computed from it rank routes under the model; the ISO 13571 limits do not carry over.</li>
       <li><span class="label">Time in steps.</span> The graph models count fire time in steps; the forecast converts steps to seconds with a factor you set (<span class="label">Seconds per fire step</span>). Fire growth is not calibrated.</li>
       <li><span class="label">Waiting.</span> In the live simulation the evacuee waits while the fire grows, and each reroute starts from the original start. A route that has to pass through fire is drawn but reported as not safe. A route stays within one part of the graph.</li>
-      <li><span class="label">Walking.</span> Stairs are walked at level speed (reference tools use about half to nine tenths of it). The routes have no queues at doors, no slowing in smoke and no pre-movement time; the performance check adds pre-movement and queues at doors. An assumed stair has no known width, and a lift ride counts as walking its rise, with no wait for the car.</li>
+      <li><span class="label">Walking.</span> The routes, the forecast and the performance check walk stairs at level speed (reference tools use about half to nine tenths of it); only people leaving slows on stairs. The routes have no queues at doors, no slowing in smoke and no pre-movement time; the performance check adds pre-movement and queues at doors. An assumed stair has no known width, and a lift ride counts as walking its rise, with no wait for the car.</li>
     </ul>
 
     <nav class="pager" aria-label="Previous and next page">
