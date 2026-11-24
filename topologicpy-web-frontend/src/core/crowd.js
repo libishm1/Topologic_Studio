@@ -80,8 +80,9 @@
  *
  * Out. Past an exit each person walks on to a gathering place a few metres
  * outside, clear of the building in plan (the graph's own places on every
- * storey, and the cells round them), at the level of the lowest exit (an upper exit's people come
- * down to the ground), and stands there, the later arrivals round the
+ * storey, and the cells round them), at the exit's own level (the model shows
+ * no way down from an upper exit, so none is drawn; `exits[].above` gives its
+ * height over the lowest exit), and stands there, the later arrivals round the
  * earlier ones, so each exit's crowd shows how many chose it. With a
  * `shelterArea`, a gathering place holds what that area takes at the
  * spacing they stand at (GATHER_AREA a person); once full, each newcomer
@@ -228,7 +229,7 @@ function random(seed) {
  * @returns {{
  *   people: number, points: Float32Array, segments: Float32Array, first: Int32Array, count: Int32Array,
  *   exitOf: Int32Array, outAt: Float32Array, exits: Array<{node: number, people: number, last: number}>,
- *   unreached: number, inside: number, lastOut: number, longestWait: number, capped: boolean,
+ *   unreached: number, trapped: number (the people the unreached places would hold), inside: number, lastOut: number, longestWait: number, capped: boolean,
  *   goneAt: Float32Array, shelter: number, cutOff: number, choice: string, tooLarge: boolean,
  *   switches: Int32Array
  * }}
@@ -335,7 +336,7 @@ export function simulateCrowd(graph, opts = {}) {
   const lift = graph.agentHeight || 0;
   const extra = [];
   const pointOf = (v) => [graph.nodes[v * 3] - (up === 0 ? lift : 0), graph.nodes[v * 3 + 1] - (up === 1 ? lift : 0), graph.nodes[v * 3 + 2] - (up === 2 ? lift : 0)];
-  // Each exit's gathering place: a few metres out, away from the nodes inside, on the ground.
+  // Each exit's gathering place: a few metres out, away from the nodes inside, at the exit's own level.
   const gather = new Map();
   const ground = Math.min(...exits.filter((e) => e >= 0).map((e) => pointOf(e)[up]));
   // The building in plan: every walkable place on every storey, and the cells round it
@@ -395,7 +396,7 @@ export function simulateCrowd(graph, opts = {}) {
     // The horizontal perpendicular: dir rotated a quarter turn about up.
     side[h1] = -dir[h2];
     side[h2] = dir[h1];
-    const g = { centre: p.map((x, c) => (c === up ? ground : x + dir[c] * reach)), dir, side, people: 0, last: 0, spots: [], here: [], next: 0 };
+    const g = { centre: p.map((x, c) => (c === up ? x : x + dir[c] * reach)), above: p[up] - ground, dir, side, people: 0, last: 0, spots: [], here: [], next: 0 };
     gather.set(e, g);
     return g;
   };
@@ -814,8 +815,9 @@ export function simulateCrowd(graph, opts = {}) {
     count,
     exitOf,
     outAt,
-    exits: [...gather.entries()].map(([node, g]) => ({ node, people: g.people, last: g.last })).sort((a, b) => b.people - a.people),
+    exits: [...gather.entries()].map(([node, g]) => ({ node, people: g.people, last: g.last, above: g.above })).sort((a, b) => b.people - a.people),
     unreached,
+    trapped: Math.ceil((unreached * cell) / Math.max(0.1, occupantArea)),
     inside: left,
     lastOut,
     longestWait,
