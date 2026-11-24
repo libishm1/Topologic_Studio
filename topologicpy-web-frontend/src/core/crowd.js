@@ -156,7 +156,56 @@ const GATHER_CLEAR = 1.5;
 export const POPULATIONS = {
   weidmann: { mean: 1.34, sd: 0.26, min: 0.6, max: 2.0 },
   imoMales30to50: [0.97, 1.62],
+  // IMO MSC.1/Circ.1533, annex 3, appendix, Table 3.4: walking speed on flat terrain,
+  // each group uniform between its least and greatest.
+  imoFemalesUnder30: [0.93, 1.55],
+  imoFemales30to50: [0.71, 1.19],
+  imoFemalesOver50: [0.56, 0.94],
+  imoFemalesOver50Impaired1: [0.43, 0.71],
+  imoFemalesOver50Impaired2: [0.37, 0.61],
+  imoMalesUnder30: [1.11, 1.85],
+  imoMalesOver50: [0.84, 1.4],
+  imoMalesOver50Impaired1: [0.64, 1.06],
+  imoMalesOver50Impaired2: [0.55, 0.91],
+  imoCrewFemales: [0.93, 1.55],
+  imoCrewMales: [1.11, 1.85],
+  // RiMEA 4.1.1, Table 2: persons with impaired mobility, in the plane.
+  rimeaImpaired: [0.46, 0.76],
 };
+
+/**
+ * IMO MSC.1/Circ.1533, annex 3, appendix, Table 3.1: the passengers' composition by
+ * age and sex, in per cent (the keys are POPULATIONS'). RiMEA's own speeds by age are
+ * given only as a curve (its Fig. 3, after Weidmann), so none is tabulated here.
+ */
+export const IMO_PASSENGERS = {
+  imoFemalesUnder30: 7,
+  imoFemales30to50: 7,
+  imoFemalesOver50: 16,
+  imoFemalesOver50Impaired1: 10,
+  imoFemalesOver50Impaired2: 10,
+  imoMalesUnder30: 7,
+  imoMales30to50: 7,
+  imoMalesOver50: 16,
+  imoMalesOver50Impaired1: 10,
+  imoMalesOver50Impaired2: 10,
+};
+
+/**
+ * Groups for simulateCrowd that put `count` people on `nodes` in the shares of `mix`
+ * (per cent by population, as IMO_PASSENGERS), each walking at its population's speeds.
+ * The head counts are whole, by largest remainder; `extra` is added to every group
+ * (an exit, start times).
+ */
+export function populationMix(nodes, count, mix = IMO_PASSENGERS, extra = {}) {
+  const keys = Object.keys(mix);
+  const total = keys.reduce((s, k) => s + mix[k], 0);
+  const exact = keys.map((k) => (count * mix[k]) / total);
+  const heads = exact.map(Math.floor);
+  const rest = count - heads.reduce((s, x) => s + x, 0);
+  keys.map((_, i) => i).sort((a, b) => exact[b] - heads[b] - (exact[a] - heads[a]) || a - b).slice(0, rest).forEach((i) => { heads[i] += 1; });
+  return keys.map((k, i) => ({ ...extra, name: k, nodes, count: heads[i], speed: POPULATIONS[k] })).filter((g) => g.count > 0);
+}
 
 /** One speed from a population: [least, most], uniform, or {mean, sd, min, max}, a normal cut off at its ends. */
 function drawSpeed(population, rand) {
@@ -252,7 +301,8 @@ function random(seed) {
  *   groups        null (the default: people over all the floor, as above), or a list of
  *                 {nodes, count, exit?, speed?, start?}: `count` people on places drawn from
  *                 `nodes` (a start area), each heading for `exit` if one is given (an exit
- *                 node of `exits`; they keep it whatever the queue, and with a fire too),
+ *                 node of `exits`; they keep it whatever the queue, until a fire cuts their walk to it: then
+ *                 they choose as everyone else does, and `released` counts them),
  *                 walking at `speed` (a population: [least, most] m/s, uniform, or
  *                 {mean, sd, min, max}, a normal cut off at min and max; POPULATIONS) and
  *                 setting off within `start` ([earliest, latest] s). What a group leaves
@@ -264,7 +314,7 @@ function random(seed) {
  *   unreached: number, trapped: number (the people the unreached places would hold), inside: number, lastOut: number, longestWait: number, capped: boolean,
  *   goneAt: Float32Array, shelter: number, cutOff: number, choice: string, tooLarge: boolean,
  *   switches: Int32Array, groupOf: Int32Array|null (each person's group), short: number
- *   (people the groups asked for that their places could not hold)
+ *   (people the groups asked for that their places could not hold), released: number
  * }}
  *   choice: the one taken, "nearest" when the quickest was asked with a
  *   single exit or on a graph too large for it (tooLarge, QUICKEST_CELLS);
@@ -572,6 +622,8 @@ export function simulateCrowd(graph, opts = {}) {
   const weighing = choice === "quickest" && exitList.length > 1 && exitList.length * n <= QUICKEST_CELLS;
   const trees = weighing || assigned.some((e) => e >= 0) ? exitList.map((e) => walkTree(graph, [e], { speed: 1, blocked })) : null;
   const goal = new Int32Array(people).fill(-1);
+  // How many given an exit were let go of it when the fire cut their walk there.
+  let released = 0;
   for (let i = 0; i < people; i += 1) if (assigned[i] >= 0) goal[i] = exitList.indexOf(assigned[i]);
   // How many times each turned to another exit after the start.
   const switches = new Int32Array(people);
@@ -633,8 +685,18 @@ export function simulateCrowd(graph, opts = {}) {
     for (const i of order) if (goal[i] >= 0) tally(goal[i], trees[goal[i]].time[at[i]], 1);
     for (const i of order) {
       const v = at[i], own = goal[i];
-      // Someone given an exit keeps it; without the quickest choice no one weighs.
-      if (assigned[i] >= 0 || !weighing) continue;
+      // Someone given an exit keeps it until the fire cuts their walk to it; then they
+      // are let go, and choose as everyone else does. Without the quickest choice no one weighs.
+      if (assigned[i] >= 0) {
+        if (closes === null || clear(own, v, t)) continue;
+        assigned[i] = -1;
+        released += 1;
+        if (!weighing) {
+          tally(own, trees[own].time[v], -1);
+          goal[i] = -1;
+          continue;
+        }
+      } else if (!weighing) continue;
       if (own < 0 && t > 0) continue;
       let keep = Infinity;
       if (own >= 0) {
@@ -897,6 +959,7 @@ export function simulateCrowd(graph, opts = {}) {
     tooLarge: choice === "quickest" && exitList.length > 1 && !weighing,
     groupOf,
     short,
+    released,
     switches,
   };
 }

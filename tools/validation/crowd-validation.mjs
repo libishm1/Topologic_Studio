@@ -707,7 +707,7 @@ function exitAllocation() {
   let asGiven = 0, all = 0, left = 0;
   const byExit = { main: 0, secondary: 0 };
   for (const seed of seeds(5)) {
-    const groups = rooms.map((room, k) => ({ nodes: nodesOf.get(room), count: k < 11 ? 2 : 1, exit: assigned.main.has(room) ? main : secondary }));
+    const groups = rooms.map((room, k) => ({ nodes: nodesOf.get(room), count: room === "3" ? 1 : 2, exit: assigned.main.has(room) ? main : secondary }));
     const r = simulateCrowd(graph, { exits: [main, secondary], groups, start: [0, 0], seed });
     for (let i = 0; i < r.people; i += 1) {
       all += 1;
@@ -722,7 +722,7 @@ function exitAllocation() {
     source: "RiMEA 4.1.1 Test 10; NIST TN 1822 Verif.3.1 (IMO Test 10)",
     name: "23 persons in twelve rooms, each room given the main or the secondary exit",
     criterion: "everyone leaves by the exit given to them",
-    measured: { people: all, out: left, by_the_exit_given: asGiven, exits_used: byExit, placing: "two persons a room, one in room 12" },
+    measured: { people: all, out: left, by_the_exit_given: asGiven, exits_used: byExit, placing: "two persons a room, one in room 3, as IMO's figure has them" },
     pass: all === 23 * seeds(5).length && left === all && asGiven === all,
     summary: `${asGiven} of ${all} left by the exit given to them (main ${byExit.main}, secondary ${byExit.secondary})`,
   });
@@ -751,6 +751,64 @@ function walkDistance(graph, v, target) {
 }
 
 /** RiMEA Test 11: 1,000 persons, two exits; most take the nearer, with congestion there; some take the other. */
+/** NIST Verif.4.1 as written: one occupant at 1 m/s in a 10 m x 15 m room, Exit 1 unavailable after 1 s. */
+function dynamicExitAsWritten() {
+  if (!POPULATIONS) return;
+  // The room 10 m (x) by 15 m (z); the exits on the two 15 m walls, 2 m from the far end.
+  const { graph, at } = lattice([...rect(0, 20, 0, 30), [-1, 26, KIND_DOOR], [21, 26, KIND_DOOR]]);
+  const exit1 = at(-1, 26), exit2 = at(21, 26);
+  const n = graph.nodes.length / 3;
+  const closes = new Float64Array(n).fill(Infinity);
+  closes[exit1] = 1;
+  const rows = {};
+  let ok = true;
+  // The figure draws the occupant by the near wall, a little right of centre; a second place left of centre, nearer Exit 1, is the harder case.
+  for (const [name, i] of [["right of centre", 11], ["left of centre, nearer Exit 1", 8]]) {
+    const open = simulateCrowd(graph, { exits: [exit1, exit2], groups: [{ nodes: [at(i, 1)], count: 1, speed: [1, 1] }], start: [0, 0] });
+    const r = simulateCrowd(graph, { exits: [exit1, exit2], groups: [{ nodes: [at(i, 1)], count: 1, speed: [1, 1] }], start: [0, 0], closes });
+    const used = r.exitOf[0] === exit1 ? "Exit 1" : r.exitOf[0] === exit2 ? "Exit 2" : "none";
+    rows[name] = { with_both_open: open.exitOf[0] === exit1 ? "Exit 1" : "Exit 2", with_exit_1_closed_at_1s: used, out_at_s: round(r.outAt[0], 1) };
+    if (used !== "Exit 2") ok = false;
+  }
+  record({
+    id: "NIST-Verif.4.1-as-written",
+    source: "NIST TN 1822 Verif.4.1",
+    name: "one occupant at 1 m/s in a 10 m x 15 m room, Exit 1 unavailable after 1 s",
+    criterion: "Exit 1 is not used by the occupant",
+    measured: rows,
+    pass: ok,
+    summary: Object.entries(rows).map(([k, v]) => `${k}: ${v.with_exit_1_closed_at_1s} (both open: ${v.with_both_open})`).join("; "),
+  });
+}
+
+/** RiMEA Test 11 as written: 1,000 adults packed from the left side at the greatest density the lattice holds. */
+function routeChoiceAsWritten() {
+  if (!POPULATIONS) return;
+  const cells = [...rect(0, 60, 0, 40), [43, 41, KIND_DOOR], [55, 41, KIND_DOOR]];
+  const { graph, at } = lattice(cells);
+  const e1 = at(43, 41), e2 = at(55, 41);
+  // The block starts 2 m from the left and the near walls; one person a node (4 persons/m2), filled column by column from the left.
+  const block = [];
+  for (let i = 4; i <= 60 && block.length < 1000; i += 1) for (let j = 4; j <= 40 && block.length < 1000; j += 1) block.push(at(i, j));
+  const people = QUICK ? 300 : 1000;
+  const shares = [], waits = [];
+  for (const seed of seeds(2)) {
+    const r = simulateCrowd(graph, { exits: [e1, e2], groups: [{ nodes: block.slice(0, people), count: people, speed: POPULATIONS.weidmann }], doorWidth: 1.0, start: [0, 0], seed, horizon: 3000 });
+    shares.push(Array.from(r.exitOf).filter((x) => x === e1).length / r.people);
+    waits.push(r.longestWait);
+  }
+  const share = mean(shares), wait = mean(waits);
+  record({
+    id: "RiMEA-11-packed",
+    source: "RiMEA 4.1.1 Test 11",
+    name: `${people.toLocaleString("en")} adults packed from the left side, two exits 5 m apart in one wall`,
+    criterion: "the persons prefer the closer exit 1, congestion occurs there, and some use exit 2",
+    measured: { exit1_share: round(share, 3), longest_wait_s: round(wait, 1), density_per_m2: 4, speeds: "Weidmann's normal population (RiMEA gives its speeds by age as a curve only)" },
+    pass: share > 0.5 && share < 1 && wait > 0,
+    summary: `${round(share * 100, 1)} % by exit 1 (longest wait ${round(wait, 1)} s), the rest by exit 2`,
+  });
+}
+
 function routeChoice() {
   const cells = [...rect(0, 60, 0, 40), [43, 41, KIND_DOOR], [55, 41, KIND_DOOR]];
   const { graph, at } = lattice(cells);
@@ -933,6 +991,8 @@ if (percentiles) fundamental1D(percentiles);
 fundamental2D();
 largeRoom();
 routeChoice();
+routeChoiceAsWritten();
+dynamicExitAsWritten();
 
 const code = readFileSync(path.join(root, "topologicpy-web-frontend", "src", "core", "crowd.js"));
 const report = {

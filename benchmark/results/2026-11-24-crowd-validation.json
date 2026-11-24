@@ -2,12 +2,12 @@
  "date": "2026-11-24",
  "model": {
   "file": "topologicpy-web-frontend/src/core/crowd.js",
-  "sha256": "bd51941a1fb17a51450f3f48fb5d4acad229937cc601e746b3a69102dfe1b295",
+  "sha256": "9b4ffefb0e9755406b07412cfcb5b05f40ed9a7c4f85efdefaa6f7332c0b3422",
   "lattice_spacing_m": 0.5,
   "dt_s": 0.1
  },
  "quick": false,
- "seconds": 4,
+ "seconds": 6,
  "sources": {
   "rimea": "RiMEA e.V., Guideline for Microscopic Evacuation Analysis, version 4.1.1 of 11.09.2025 (German authoritative), https://rimea.de, CC BY-ND 4.0",
   "nist": "Ronchi E., Kuligowski E.D., Reneke P.A., Peacock R.D., Nilsson D. (2013) The Process of Verification and Validation of Building Fire Evacuation Models, NIST TN 1822, doi:10.6028/NIST.TN.1822",
@@ -15,7 +15,7 @@
   "percentiles": "RiMEA Test 16 percentiles, https://rimea.de/wp-content/uploads/2025/01/test_16_percentiles.xlsx (raw data: Chraibi and Subaih, SingleFileComparator, Zenodo doi:10.5281/zenodo.8378592)"
  },
  "summary": {
-  "pass": 20,
+  "pass": 22,
   "fail": 2,
   "documentation": 3
  },
@@ -332,13 +332,13 @@
     "out": 115,
     "by_the_exit_given": 115,
     "exits_used": {
-     "main": 80,
-     "secondary": 35
+     "main": 75,
+     "secondary": 40
     },
-    "placing": "two persons a room, one in room 12"
+    "placing": "two persons a room, one in room 3, as IMO's figure has them"
    },
    "pass": true,
-   "summary": "115 of 115 left by the exit given to them (main 80, secondary 35)"
+   "summary": "115 of 115 left by the exit given to them (main 75, secondary 40)"
   },
   {
    "id": "RiMEA-12a",
@@ -669,6 +669,40 @@
    "pass": true,
    "summary": "quickest: 50.2 % by exit 1 (longest wait 527.9 s); nearest: 59.3 %",
    "deviation": "persons spread over the whole room, not packed from the left side (crowd.js has no start areas), so exit 2 is the nearer for those far right"
+  },
+  {
+   "id": "RiMEA-11-packed",
+   "source": "RiMEA 4.1.1 Test 11",
+   "name": "1,000 adults packed from the left side, two exits 5 m apart in one wall",
+   "criterion": "the persons prefer the closer exit 1, congestion occurs there, and some use exit 2",
+   "measured": {
+    "exit1_share": 0.505,
+    "longest_wait_s": 529.8,
+    "density_per_m2": 4,
+    "speeds": "Weidmann's normal population (RiMEA gives its speeds by age as a curve only)"
+   },
+   "pass": true,
+   "summary": "50.5 % by exit 1 (longest wait 529.8 s), the rest by exit 2"
+  },
+  {
+   "id": "NIST-Verif.4.1-as-written",
+   "source": "NIST TN 1822 Verif.4.1",
+   "name": "one occupant at 1 m/s in a 10 m x 15 m room, Exit 1 unavailable after 1 s",
+   "criterion": "Exit 1 is not used by the occupant",
+   "measured": {
+    "right of centre": {
+     "with_both_open": "Exit 2",
+     "with_exit_1_closed_at_1s": "Exit 2",
+     "out_at_s": 14.9
+    },
+    "left of centre, nearer Exit 1": {
+     "with_both_open": "Exit 1",
+     "with_exit_1_closed_at_1s": "Exit 2",
+     "out_at_s": 16.7
+    }
+   },
+   "pass": true,
+   "summary": "right of centre: Exit 2 (both open: Exit 2); left of centre, nearer Exit 1: Exit 2 (both open: Exit 1)"
   }
  ]
 }
