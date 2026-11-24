@@ -124,8 +124,10 @@ export const DEFAULT_SETTINGS = {
   // "direct", "wandering", "disoriented"); with either on, crowdRuns seeds.
   crowdFluctuate: false,
   // Corridors and stairs pass at most the SFPE flow for their width (core/crowd.js
-  // passageFlow): off by default, as it changes the times where they are narrow.
-  crowdPassageFlow: false,
+  // passageFlow). On by default since 2026-11-24: without it a stair passed the same whatever
+  // its width and a narrow corridor more than a door. Checked on the example buildings
+  // (wiki/research/crowd-vv-report-2026-11-24.md): everyone leaves with it as without.
+  crowdPassageFlow: true,
   crowdSteps: "exact",
   crowdRuns: 5,
   // With the fire: people walk slower in smoke, by the visibility where they
