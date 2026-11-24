@@ -1504,7 +1504,7 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                     : "They keep the fire's time; they keep out of it once its run has finished computing, so play it again to see them turn back."
             }
           />
-          {settings.crowdWithFire && (
+          {settings.crowdWithFire && crowd?.smokeModel && (
             <Toggle
               label="Slower in smoke"
               checked={settings.crowdSmokeSpeed}
@@ -1638,7 +1638,9 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                 </div>
               )}
               <p className="field__hint" aria-live="off">
-                {Math.round(crowd.time)} s of {Math.ceil(result.lastOut)} s
+                {/* The playback runs on a little past the last one out, for their walk to the gathering place: the clock stops at the total, and both are rounded as the notice below is. */}
+                {Math.min(Math.round(crowd.time), Math.round(result.lastOut))} s of {Math.round(result.lastOut)} s
+                {crowd.time > result.lastOut ? " (the last is out; they walk on to where they gather)" : ""}
                 {settings.crowdWithFire ? ", on the fire's clock" : settings.crowdRate > 1 ? `, at ${settings.crowdRate} times real time` : ""}.
               </p>
               <p className="field__hint">
