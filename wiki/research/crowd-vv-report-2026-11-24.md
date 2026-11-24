@@ -7,11 +7,13 @@ What the people-leaving model (`topologicpy-web-frontend/src/core/crowd.js`) pas
 ## The run
 
 - Harness: `node tools/validation/crowd-validation.mjs --out 2026-11-24-crowd-validation.json --date 2026-11-24`.
-- Result: 16 pass, 2 fail, 3 documentation, the same as on 2026-11-11. File: `benchmark/results/2026-11-24-crowd-validation.json`, which records the hash of `crowd.js`.
+- Result: 20 pass, 2 fail, 3 documentation. The 16 passes and 2 failures of 2026-11-11 are unchanged; four tests were added the same day, run as written with the start areas, assigned exits and populations the model now has (`groups` in `simulateCrowd`), and all four pass. File: `benchmark/results/2026-11-24-crowd-validation.json`, which records the hash of `crowd.js`.
 - Code: main after pull request 19 (the gathering places and the count of people who reach no exit changed since 2026-11-11; the walk did not).
 - The harness now runs with the unit tests (`src/core/crowdValidation.test.mjs`): a third failure, or the loss of a pass, fails the suite.
 
 Each test builds its geometry as a lattice of nodes 0.5 m apart and runs the model as the app does. Nothing is tuned to pass.
+
+**What the new option is not.** `groups` is for analyses and these tests. The app's panel does not offer it: there, people still stand over all the floor and choose their own exit. A person given an exit keeps it with a fire too.
 
 **The words used below.**
 - *Pass (run)*: run by the harness on 2026-11-24 and inside the test's criterion.
@@ -37,15 +39,15 @@ Both come from how density is read: round the free node ahead of a walker, so de
 | Verif.1.1 | Pre-evacuation times follow the distribution assigned | Pass with a deviation: a uniform stagger only; no other distribution can be assigned |
 | Verif.2.1 | Speed in a corridor | Pass (run), along the lattice and at 45 degrees. Sensitivity to the node spacing not shown |
 | Verif.2.2 | Speed on a stair | Pass with a deviation: 10 m run scaled to the 100 m of the test |
-| Verif.2.3 | Movement round a corner | Pass with a deviation: people spread over the room, not in a start area |
-| Verif.2.4 | Assigned demographics | Pass with a deviation: a uniform spread of speeds only |
+| Verif.2.3 | Movement round a corner | Pass (run), from the start area |
+| Verif.2.4 | Assigned demographics | Pass (run): a normal population (Weidmann's) and a uniform one (IMO's) are each followed (KS p 0.83 and 0.36, 400 persons) |
 | Verif.2.5 | Reduced visibility against walking speed | Not represented: smoke does not slow anyone |
 | Verif.2.6 | Occupant incapacitation | Not represented in the walk; the doses are computed apart from it |
 | Verif.2.7 | Lift use | Not represented: lifts are left out |
 | Verif.2.8 | Horizontal counter-flows | Not represented: everyone heads for an exit |
 | Verif.2.9 | Group behaviours | Not represented |
 | Verif.2.10 | People with movement disabilities | Not represented: no individual speeds or body sizes |
-| Verif.3.1 | Exit route allocation | Fails as specified: exits cannot be assigned to people. The nearest choice is deterministic (115 of 115 to their closest exit) |
+| Verif.3.1 | Exit route allocation | Pass (run): 115 of 115 leave by the exit given to them. The nearest choice is deterministic too (115 of 115 to their closest exit) |
 | Verif.3.2 | Social influence | Not represented |
 | Verif.3.3 | Affiliation | Not represented |
 | Verif.4.1 | Dynamic availability of exits | Pass with a deviation: the exit closes at 10 s with 240 people, where the test closes it at 1 s with one |
@@ -61,11 +63,11 @@ Both come from how density is read: round the free node ahead of a walker, so de
 | 3 | Speed down a stair | Pass (run) |
 | 4 | Fundamental diagram | Documented: too fast above about 1.2 persons/m²; the lattice cannot reach 5 persons/m² |
 | 5 | Reaction time | Pass (run): the stagger follows the uniform distribution set |
-| 6 | Movement round a corner | Pass with a deviation: no start area |
-| 7 | Allocation of demographic parameters | Pass with a deviation: a uniform spread; RiMEA's population cannot be set |
+| 6 | Movement round a corner | Pass (run), from the 6 m x 2 m start area |
+| 7 | Allocation of demographic parameters | Pass (run) for one normal population (mean 1.34 m/s, sd 0.26). RiMEA's table of speeds by age and sex is not built in |
 | 8 | Parameter analysis | Not run |
 | 9 | Crowd leaving a large public room | Documented: two doors take 1.99 times as long as four |
-| 10 | Allocation of escape routes | Fails as specified: exits cannot be assigned |
+| 10 | Allocation of escape routes | Pass (run): 23 persons in twelve rooms, each room given its exit; all leave by it. Placing: two a room, one in room 12 |
 | 11 | Choice of escape route | Pass with a deviation: people are not packed from one side |
 | 12a | Effect of a bottleneck's position | Documented: flat |
 | 12b | Effect of a bottleneck's length | Fails (run) |
@@ -84,11 +86,11 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 | --- | --- |
 | 1 | Pass (run as NIST Verif.2.1) |
 | 2, 3 | Not run at the suite's 10 m; the stair speeds pass under RiMEA 2 and 3 |
-| 4, 5, 6 | Pass (run as NIST Verif.5.2, 1.1 and 2.3, with their deviations) |
-| 7 | Not run |
+| 4, 5, 6 | Pass (run as NIST Verif.5.2, 1.1 and 2.3; 5 with its deviation) |
+| 7 | Pass (run): 400 males of 30 to 50 years, uniform 0.97 to 1.62 m/s |
 | 8 | Not represented: no counter-flow |
 | 9 | Pass (run as RiMEA 9) |
-| 10 | Fails as specified: exits cannot be assigned |
+| 10 | Pass (run as RiMEA 10) |
 | 11 | Not run |
 | 12 | Not run under this suite |
 
@@ -102,7 +104,7 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 
 ## Next, in order
 
-1. Start areas, exits assigned to people, and populations with their own speeds. These turn the deviations of NIST Verif.2.3, 2.4, 3.1 and 4.1 and RiMEA 6, 7, 10 and 11 into tests run as written.
+1. Done on 2026-11-24: start areas, exits assigned to people, and populations with their own speeds. Still with a deviation: NIST Verif.4.1 (closure at 10 s, not 1 s) and RiMEA 11 (people not packed from one side); both can now be run as written.
 2. A flow limit for corridors and stairs, with the stair's real width (RiMEA 12b, NIST Verif.5.1).
 3. The density reading, calibrated on the single-file data with other data held back (RiMEA 16, RiMEA 4).
 4. Pre-movement times on each person and a speed in smoke (NIST Verif.1.1, 2.5).

@@ -20,6 +20,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as Crowd from "../../topologicpy-web-frontend/src/core/crowd.js";
 const { FREE_SPEED, SFPE, simulateCrowd } = Crowd;
+/** The populations a group's speeds are drawn from (crowd.js, since 2026-11-24). */
+const POPULATIONS = Crowd.POPULATIONS ?? null;
 /** The model's ascent share, where it has one (before the 2026-11-11 fixes it had none: up as down). */
 const STAIR_UP = Crowd.STAIR_UP ?? 1;
 import { doorCapacity } from "../../topologicpy-web-frontend/src/core/performanceCheck.js";
@@ -296,7 +298,35 @@ function corner() {
     measured: { people, out, points_outside_walls: bad },
     pass: bad === 0 && out === people,
     summary: `${out} of ${people} out, ${bad} points of their walks outside the walls`,
-    deviation: "persons start at random over the whole corridor, not in the 6 m x 2 m start area (crowd.js has no start areas)",
+    deviation: "persons start at random over the whole corridor, not in the 6 m x 2 m start area",
+  });
+  if (!POPULATIONS) return;
+  // As written: the twenty start in the 6 m x 2 m area at the corridor's far end.
+  const area = rect(0, 12, 0, 4).map(([i, j]) => at(i, j));
+  let bad2 = 0, out2 = 0, people2 = 0, outsideArea = 0;
+  for (const seed of seeds(5)) {
+    const r = simulateCrowd(graph, { exits, groups: [{ nodes: area, count: 20 }], speed: 1.0, spread: 0, start: [0, 0], seed });
+    people2 += r.people;
+    out2 += r.people - r.inside;
+    for (let i = 0; i < r.people; i += 1) if (!area.includes(startNode(r, i))) outsideArea += 1;
+    for (const segs of walks(r, n)) {
+      for (const sg of segs) {
+        for (const f of [0, 0.25, 0.5, 0.75, 1]) {
+          const x = graph.nodes[sg.a * 3] + f * (graph.nodes[sg.b * 3] - graph.nodes[sg.a * 3]);
+          const z = graph.nodes[sg.a * 3 + 2] + f * (graph.nodes[sg.b * 3 + 2] - graph.nodes[sg.a * 3 + 2]);
+          if (!inside(x, z)) bad2 += 1;
+        }
+      }
+    }
+  }
+  record({
+    id: "RiMEA-6-start-area",
+    source: "RiMEA 4.1.1 Test 6; NIST TN 1822 Verif.2.3 (IMO Test 6)",
+    name: "twenty persons round a corner, from the 6 m x 2 m start area",
+    criterion: "all start in the area and go round the corner without passing through walls",
+    measured: { people: people2, out: out2, started_outside_area: outsideArea, points_outside_walls: bad2 },
+    pass: bad2 === 0 && out2 === people2 && outsideArea === 0 && people2 === 20 * seeds(5).length,
+    summary: `${out2} of ${people2} out, ${outsideArea} started outside the area, ${bad2} points of their walks outside the walls`,
   });
 }
 
@@ -320,6 +350,59 @@ function premovement() {
     pass: Math.min(...first) >= 10 - 1e-9 && Math.max(...first) <= 100.2 && test.p > 0.05,
     summary: `first moves ${round(Math.min(...first), 1)} to ${round(Math.max(...first), 1)} s, KS p ${round(test.p, 3)} (crowd.js 'start' is a stagger; the performance check models pre-movement)`,
   });
+}
+
+/** The normal distribution's CDF (Abramowitz and Stegun 7.1.26 for erf). */
+function normalCdf(x, mean, sd) {
+  const z = (x - mean) / (sd * Math.SQRT2), t = 1 / (1 + 0.3275911 * Math.abs(z));
+  const erf = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
+  return 0.5 * (1 + (z >= 0 ? erf : -erf));
+}
+
+/** RiMEA Test 7, NIST Verif.2.4, IMO Test 7: the speeds of a named population are those asked for. */
+function populations() {
+  if (!POPULATIONS) return;
+  const { graph, at } = lattice([...rect(0, 60, 0, 60), [-1, 30, KIND_DOOR]]);
+  const exits = [at(-1, 30)];
+  const n = graph.nodes.length / 3;
+  const floor = rect(0, 60, 0, 60).map(([i, j]) => at(i, j));
+  const cases = [
+    {
+      id: "RiMEA-7-weidmann", key: "weidmann", name: "400 persons of the Weidmann population (normal, mean 1.34 m/s, sd 0.26, cut off at 0.6 and 2.0)",
+      cdf: (x) => {
+        const p = POPULATIONS.weidmann, lo = normalCdf(p.min, p.mean, p.sd), hi = normalCdf(p.max, p.mean, p.sd);
+        return Math.min(1, Math.max(0, (normalCdf(x, p.mean, p.sd) - lo) / (hi - lo)));
+      },
+      source: "RiMEA 4.1.1 Test 7; NIST TN 1822 Verif.2.4",
+    },
+    {
+      id: "IMO-7", key: "imoMales30to50", name: "400 males of 30 to 50 years (uniform 0.97 to 1.62 m/s)",
+      cdf: (x) => Math.min(1, Math.max(0, (x - 0.97) / (1.62 - 0.97))),
+      source: "IMO MSC.1/Circ.1533 Test 7",
+    },
+  ];
+  for (const c of cases) {
+    const moving = [];
+    // Eight runs in the quick mode too: 400 speeds, so the test of the distribution does not turn on a small sample.
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const r = simulateCrowd(graph, { exits, groups: [{ nodes: floor, count: 50, speed: POPULATIONS[c.key] }], seed, start: [0, 0] });
+      for (const segs of walks(r, n)) {
+        const first = segs.slice(0, 8);
+        if (first.length < 4) continue;
+        moving.push(quantile(first.map((sg) => dist3(graph, sg.a, sg.b) / (sg.t1 - sg.t0)), 0.5));
+      }
+    }
+    const test = ks(moving, c.cdf);
+    record({
+      id: c.id,
+      source: c.source,
+      name: c.name,
+      criterion: "unimpeded speeds consistent with the population assigned (KS p > 0.05)",
+      measured: { samples: moving.length, moving_min_median_max: [round(Math.min(...moving), 3), round(quantile(moving, 0.5), 3), round(Math.max(...moving), 3)], ks_D: round(test.D, 3), ks_p: round(test.p, 4) },
+      pass: test.p > 0.05,
+      summary: `moving ${round(Math.min(...moving), 3)} to ${round(Math.max(...moving), 3)} m/s (median ${round(quantile(moving, 0.5), 3)}); KS p ${round(test.p, 4)}`,
+    });
+  }
 }
 
 /** RiMEA Test 7, NIST Verif.2.4: the speeds assigned are those asked for. */
@@ -611,7 +694,37 @@ function exitAllocation() {
     measured: { nearest_choice_deterministic: `${deterministic} of ${total}`, rimea_assignment_matched_by_nearest: `${matchRiMEA} of ${inRooms} starting in rooms`, exits_used: tally },
     pass: deterministic === total,
     summary: `nearest: ${deterministic} of ${total} to their closest exit; ${matchRiMEA} of ${inRooms} in rooms where RiMEA assigns them; quickest used main ${tally.quickest.main}, secondary ${tally.quickest.secondary}`,
-    deviation: "persons start at random over rooms, corridor and passage; RiMEA's per-person exit assignment is not representable",
+    deviation: "persons start at random over rooms, corridor and passage, and choose their own exit",
+  });
+  if (!POPULATIONS) return;
+  // As written: 23 persons in the rooms, each room's given its exit (rooms 1 to 4 and 7 to 10 the main one, the others the secondary).
+  const nodesOf = new Map();
+  for (const [key, room] of roomOfCell) {
+    if (!nodesOf.has(room)) nodesOf.set(room, []);
+    nodesOf.get(room).push(index.get(key));
+  }
+  const rooms = [...nodesOf.keys()].sort((a, b) => Number(a) - Number(b));
+  let asGiven = 0, all = 0, left = 0;
+  const byExit = { main: 0, secondary: 0 };
+  for (const seed of seeds(5)) {
+    const groups = rooms.map((room, k) => ({ nodes: nodesOf.get(room), count: k < 11 ? 2 : 1, exit: assigned.main.has(room) ? main : secondary }));
+    const r = simulateCrowd(graph, { exits: [main, secondary], groups, start: [0, 0], seed });
+    for (let i = 0; i < r.people; i += 1) {
+      all += 1;
+      if (r.exitOf[i] >= 0) left += 1;
+      if (r.exitOf[i] === groups[r.groupOf[i]].exit) asGiven += 1;
+      if (r.exitOf[i] === main) byExit.main += 1;
+      if (r.exitOf[i] === secondary) byExit.secondary += 1;
+    }
+  }
+  record({
+    id: "RiMEA-10",
+    source: "RiMEA 4.1.1 Test 10; NIST TN 1822 Verif.3.1 (IMO Test 10)",
+    name: "23 persons in twelve rooms, each room given the main or the secondary exit",
+    criterion: "everyone leaves by the exit given to them",
+    measured: { people: all, out: left, by_the_exit_given: asGiven, exits_used: byExit, placing: "two persons a room, one in room 12" },
+    pass: all === 23 * seeds(5).length && left === all && asGiven === all,
+    summary: `${asGiven} of ${all} left by the exit given to them (main ${byExit.main}, secondary ${byExit.secondary})`,
   });
 }
 
@@ -811,6 +924,7 @@ stairSpeed();
 corner();
 premovement();
 speedDistribution();
+populations();
 maxFlow();
 dynamicExit();
 exitAllocation();

@@ -2,7 +2,7 @@
  "date": "2026-11-24",
  "model": {
   "file": "topologicpy-web-frontend/src/core/crowd.js",
-  "sha256": "93811aabc8106e473299427d78ca2362ce3588ed8fe1b20334f9ba89fb737d20",
+  "sha256": "bd51941a1fb17a51450f3f48fb5d4acad229937cc601e746b3a69102dfe1b295",
   "lattice_spacing_m": 0.5,
   "dt_s": 0.1
  },
@@ -15,7 +15,7 @@
   "percentiles": "RiMEA Test 16 percentiles, https://rimea.de/wp-content/uploads/2025/01/test_16_percentiles.xlsx (raw data: Chraibi and Subaih, SingleFileComparator, Zenodo doi:10.5281/zenodo.8378592)"
  },
  "summary": {
-  "pass": 16,
+  "pass": 20,
   "fail": 2,
   "documentation": 3
  },
@@ -181,7 +181,21 @@
    },
    "pass": true,
    "summary": "100 of 100 out, 0 points of their walks outside the walls",
-   "deviation": "persons start at random over the whole corridor, not in the 6 m x 2 m start area (crowd.js has no start areas)"
+   "deviation": "persons start at random over the whole corridor, not in the 6 m x 2 m start area"
+  },
+  {
+   "id": "RiMEA-6-start-area",
+   "source": "RiMEA 4.1.1 Test 6; NIST TN 1822 Verif.2.3 (IMO Test 6)",
+   "name": "twenty persons round a corner, from the 6 m x 2 m start area",
+   "criterion": "all start in the area and go round the corner without passing through walls",
+   "measured": {
+    "people": 100,
+    "out": 100,
+    "started_outside_area": 0,
+    "points_outside_walls": 0
+   },
+   "pass": true,
+   "summary": "100 of 100 out, 0 started outside the area, 0 points of their walks outside the walls"
   },
   {
    "id": "RiMEA-5",
@@ -221,6 +235,42 @@
    "pass": true,
    "summary": "moving 0.895 to 1.484 m/s (median 1.207) against 0.893 to 1.487; KS p 0.2841",
    "deviation": "crowd.js assigns a uniform spread about one speed; RiMEA's population (Weidmann's speeds by age) cannot be set"
+  },
+  {
+   "id": "RiMEA-7-weidmann",
+   "source": "RiMEA 4.1.1 Test 7; NIST TN 1822 Verif.2.4",
+   "name": "400 persons of the Weidmann population (normal, mean 1.34 m/s, sd 0.26, cut off at 0.6 and 2.0)",
+   "criterion": "unimpeded speeds consistent with the population assigned (KS p > 0.05)",
+   "measured": {
+    "samples": 399,
+    "moving_min_median_max": [
+     0.672,
+     1.35,
+     1.968
+    ],
+    "ks_D": 0.031,
+    "ks_p": 0.8304
+   },
+   "pass": true,
+   "summary": "moving 0.672 to 1.968 m/s (median 1.35); KS p 0.8304"
+  },
+  {
+   "id": "IMO-7",
+   "source": "IMO MSC.1/Circ.1533 Test 7",
+   "name": "400 males of 30 to 50 years (uniform 0.97 to 1.62 m/s)",
+   "criterion": "unimpeded speeds consistent with the population assigned (KS p > 0.05)",
+   "measured": {
+    "samples": 399,
+    "moving_min_median_max": [
+     0.971,
+     1.295,
+     1.619
+    ],
+    "ks_D": 0.046,
+    "ks_p": 0.3613
+   },
+   "pass": true,
+   "summary": "moving 0.971 to 1.619 m/s (median 1.295); KS p 0.3613"
   },
   {
    "id": "NIST-Verif.5.2",
@@ -270,7 +320,25 @@
    },
    "pass": true,
    "summary": "nearest: 115 of 115 to their closest exit; 79 of 91 in rooms where RiMEA assigns them; quickest used main 62, secondary 53",
-   "deviation": "persons start at random over rooms, corridor and passage; RiMEA's per-person exit assignment is not representable"
+   "deviation": "persons start at random over rooms, corridor and passage, and choose their own exit"
+  },
+  {
+   "id": "RiMEA-10",
+   "source": "RiMEA 4.1.1 Test 10; NIST TN 1822 Verif.3.1 (IMO Test 10)",
+   "name": "23 persons in twelve rooms, each room given the main or the secondary exit",
+   "criterion": "everyone leaves by the exit given to them",
+   "measured": {
+    "people": 115,
+    "out": 115,
+    "by_the_exit_given": 115,
+    "exits_used": {
+     "main": 80,
+     "secondary": 35
+    },
+    "placing": "two persons a room, one in room 12"
+   },
+   "pass": true,
+   "summary": "115 of 115 left by the exit given to them (main 80, secondary 35)"
   },
   {
    "id": "RiMEA-12a",

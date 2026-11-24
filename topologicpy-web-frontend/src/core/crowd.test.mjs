@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FREE_SPEED, GATHER_AREA, SFPE, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, simulateCrowd } from "./crowd.js";
+import { FREE_SPEED, GATHER_AREA, POPULATIONS, SFPE, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, simulateCrowd } from "./crowd.js";
 import { doorCapacity } from "./performanceCheck.js";
 import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "./lattice.js";
 
@@ -653,4 +653,39 @@ test("people who leave by an upper exit stand at its level, and the exit says ho
   for (let p = n; p < out.points.length / 3; p += 1) if (Math.abs(out.points[p * 3 + 1] - 2.4) < 1e-5) high += 1;
   assert.ok(upper.people > 0 && high >= Math.min(upper.people, 1));
   assert.equal(high, upper.people);
+});
+
+test("groups: people start in their area, keep the exit given to them and walk at their population's speeds", () => {
+  const { graph, exits } = room(20, 10, { exits: ["left", "right"] });
+  const id = (i, k) => i * 10 + k;
+  const leftEnd = [], rightEnd = [];
+  for (let i = 0; i < 4; i += 1) for (let k = 0; k < 10; k += 1) { leftEnd.push(id(i, k)); rightEnd.push(id(19 - i, k)); }
+  // Each end's people are sent to the far exit: the nearest and the quickest choice would both send them the other way.
+  const groups = [
+    { nodes: leftEnd, count: 12, exit: exits[1], speed: [1.0, 1.0] },
+    { nodes: rightEnd, count: 8, exit: exits[0], speed: POPULATIONS.imoMales30to50, start: [5, 5] },
+  ];
+  const out = simulateCrowd(graph, { exits, groups, start: [0, 0] });
+  assert.equal(out.people, 20);
+  assert.equal(out.short, 0);
+  assert.equal(out.inside, 0);
+  for (let i = 0; i < out.people; i += 1) {
+    const g = out.groupOf[i], startAt = out.segments[out.first[i] * 4 + 2];
+    assert.ok((g === 0 ? leftEnd : rightEnd).includes(startAt), "starts in the group's area");
+    assert.equal(out.exitOf[i], groups[g].exit, "leaves by the exit given");
+    if (g === 1) assert.ok(out.segments[out.first[i] * 4] >= 5 - 1e-6, "sets off at the group's time");
+  }
+  assert.equal(Array.from(out.groupOf).filter((g) => g === 0).length, 12);
+  // Without groups nothing changes: the same run as before the option existed.
+  const plain = simulateCrowd(graph, { exits, occupantArea: 1 });
+  assert.equal(plain.groupOf, null);
+  assert.equal(plain.short, 0);
+});
+
+test("groups: an area too small for its people reports how many it could not place, and a wrong exit is refused", () => {
+  const { graph, exits } = room(6, 6);
+  const out = simulateCrowd(graph, { exits, groups: [{ nodes: [0, 1, 2], count: 5 }] });
+  assert.equal(out.people, 3);
+  assert.equal(out.short, 2);
+  assert.throws(() => simulateCrowd(graph, { exits, groups: [{ nodes: [0, 1, 2], count: 1, exit: 7 }] }), /not one of the exits/);
 });
