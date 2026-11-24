@@ -123,6 +123,9 @@ export const DEFAULT_SETTINGS = {
   // each step is drawn by the floor field ("exact", or STEP_RANDOMNESS's
   // "direct", "wandering", "disoriented"); with either on, crowdRuns seeds.
   crowdFluctuate: false,
+  // Corridors and stairs pass at most the SFPE flow for their width (core/crowd.js
+  // passageFlow): off by default, as it changes the times where they are narrow.
+  crowdPassageFlow: false,
   crowdSteps: "exact",
   crowdRuns: 5,
   // With the fire: people walk slower in smoke, by the visibility where they

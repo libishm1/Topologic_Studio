@@ -57,7 +57,7 @@ const VERDICT = { pass: "pass", fail: "fail", "cannot tell": "cannot tell" };
  *   it); route {found, length, node_ids}; nearerExit {walk, route} (m);
  *   walkSpeed (m/s); fire {model, step}; combustion (the Flamescapes run
  *   card); plan {result, inputs}; rl (result); crowd {result, withFire,
- *   occupantArea, exits, fluctuate, steps, runs}; slime (slimeEgress.js's
+ *   occupantArea, exits, fluctuate, steps, passageFlow, runs}; slime (slimeEgress.js's
  *   result with the worker's readings); perf (performanceCheck.js's result);
  *   sprinklers, systems, extinguishers (their layouts, when switched on)
  * @returns {{lines: string[], text: string}}
@@ -267,6 +267,7 @@ function factLines(s, { roomNames, storeyLines }) {
           ? `each took the exit that got them out soonest, the walk or the queue ahead${turned ? `, and ${turned} turned to another exit on the way` : ""}`
           : "each took the nearest exit by the shortest walk",
       s.crowd.fluctuate ? "walking speeds varied over time as measured (Corbetta et al. 2017)" : "",
+      s.crowd.passageFlow && cr.passages ? `corridors and stairs passed at most the SFPE flow for their width (${cr.passages.corridors} narrow cross-sections of floor, ${cr.passages.stairs} stair nodes with a width)` : "",
       STEP_WORDS[s.crowd.steps] ? `each step chosen ${STEP_WORDS[s.crowd.steps]} by the floor field (Kirchner and Schadschneider 2002)` : "",
     ].filter(Boolean);
     lines.push(`How they chose: ${how.join("; ")}.`);

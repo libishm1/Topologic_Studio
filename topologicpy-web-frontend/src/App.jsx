@@ -947,6 +947,8 @@ export default function App() {
         nodes: local.points,
         edges: local.edges,
         kinds: local.kinds,
+        // Each stair node's real width (core/lattice.js), for the crowd's stair capacity (core/crowd.js passageFlow).
+        widths: local.widths,
         blocked: local.blocked,
         // For drawing routes straight against the same walls (straighten.js).
         sections: built.sections,
@@ -2793,6 +2795,7 @@ export default function App() {
           settings.crowdFluctuate,
           settings.crowdSteps,
           settings.crowdRuns,
+          settings.crowdPassageFlow,
           settings.crowdSmokeSpeed,
           // The IFC's door widths may arrive after the graph: the walk is worked out again with them.
           (studio.semantics?.doors || []).length,
@@ -2822,6 +2825,8 @@ export default function App() {
     choice: settings.crowdChoice,
     // Randomness in how people move (core/crowd.js; off by default) and how many seeds to run with it.
     motion: { fluctuate: settings.crowdFluctuate, steps: settings.crowdSteps },
+    // Corridors and stairs pass at most the SFPE flow for their width (core/crowd.js; off by default).
+    passageFlow: settings.crowdPassageFlow,
     runs: settings.crowdRuns,
     // Each door's own width (the IFC's, else measured): its capacity sets the flow through it.
     doorWidths: () => (graph ? slimeDoorWidths(graph, studio.semantics) : null),
@@ -2863,7 +2868,7 @@ export default function App() {
       setCrowdState(done.state);
       return undefined;
     }
-    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, smoke: smokeOf, choice, motion, runs, doorWidths: widthsOf } = crowdInputsRef.current;
+    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, smoke: smokeOf, choice, motion, runs, passageFlow, doorWidths: widthsOf } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
@@ -2890,6 +2895,7 @@ export default function App() {
             exits: exitNodes,
             occupantArea,
             doorWidths,
+            passageFlow: Boolean(passageFlow),
             blocked: useWalls ? graph.blocked : null,
             start: [departAfter, departAfter + 10],
             shelterArea: shelter > 0 ? shelter : Infinity,
@@ -3733,6 +3739,7 @@ export default function App() {
               exits: settings.crowdExits,
               fluctuate: settings.crowdFluctuate,
               steps: settings.crowdSteps,
+              passageFlow: settings.crowdPassageFlow,
               runs: crowdState.runs,
             }
           : null,
@@ -3763,6 +3770,7 @@ export default function App() {
       settings.crowdExits,
       settings.crowdFluctuate,
       settings.crowdSteps,
+      settings.crowdPassageFlow,
       crowdState.runs,
       slime.result,
       perf,

@@ -42,6 +42,8 @@ self.onmessage = (event) => {
       points: graph.points,
       edges: graph.edges,
       kinds: graph.kinds,
+      // Each stair node's real width, m (0 elsewhere): the crowd's stair capacity reads it.
+      widths: graph.widths,
       blocked: graph.blocked,
       angle: graph.angle,
       spacing: graph.spacing,

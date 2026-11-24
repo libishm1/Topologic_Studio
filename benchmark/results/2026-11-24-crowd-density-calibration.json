@@ -1,0 +1,5503 @@
+{
+ "date": "2026-11-24",
+ "rules": "wiki/research/crowd-calibration-2026-11-24.md",
+ "data": "RiMEA Test 16 single-file percentiles (tools/validation/rimea-test16-percentiles.json), 14 points",
+ "choice": {
+  "centre": "ahead",
+  "radius": 2,
+  "area": "standing",
+  "floor": 0.15,
+  "points_in_band": 14,
+  "J": 0.1651
+ },
+ "current": {
+  "points_in_band": 8,
+  "J": 1.3478
+ },
+ "tied": [
+  {
+   "centre": "ahead",
+   "radius": 2,
+   "area": "standing",
+   "floor": 0.15,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.1651,
+   "changed": 2
+  }
+ ],
+ "combinations": [
+  {
+   "centre": "ahead",
+   "radius": 1,
+   "area": "all",
+   "floor": 0.15,
+   "points_in_band": 8,
+   "of": 14,
+   "J": 1.3478,
+   "changed": 0,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.999,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.467,
+     "mean_speed_mps": 0.999,
+     "p10": 0.729,
+     "p50": 1.102,
+     "p90": 1.402,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.717,
+     "mean_speed_mps": 0.988,
+     "p10": 0.584,
+     "p50": 0.955,
+     "p90": 1.287,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.892,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.258,
+     "mean_speed_mps": 0.75,
+     "p10": 0.213,
+     "p50": 0.418,
+     "p90": 0.655,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.513,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.506,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 1.052,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.996,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.717,
+     "mean_speed_mps": 0.97,
+     "p10": 0.584,
+     "p50": 0.955,
+     "p90": 1.287,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.886,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.755,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.513,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.506,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1,
+   "area": "all",
+   "floor": 0.1,
+   "points_in_band": 8,
+   "of": 14,
+   "J": 1.3478,
+   "changed": 1,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.999,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.467,
+     "mean_speed_mps": 0.999,
+     "p10": 0.729,
+     "p50": 1.102,
+     "p90": 1.402,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.717,
+     "mean_speed_mps": 0.988,
+     "p10": 0.584,
+     "p50": 0.955,
+     "p90": 1.287,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.892,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.258,
+     "mean_speed_mps": 0.75,
+     "p10": 0.213,
+     "p50": 0.418,
+     "p90": 0.655,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.513,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.506,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 1.052,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.996,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.717,
+     "mean_speed_mps": 0.97,
+     "p10": 0.584,
+     "p50": 0.955,
+     "p90": 1.287,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.886,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.755,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.513,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.506,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1,
+   "area": "all",
+   "floor": 0.05,
+   "points_in_band": 8,
+   "of": 14,
+   "J": 1.3478,
+   "changed": 1,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.999,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.467,
+     "mean_speed_mps": 0.999,
+     "p10": 0.729,
+     "p50": 1.102,
+     "p90": 1.402,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.717,
+     "mean_speed_mps": 0.988,
+     "p10": 0.584,
+     "p50": 0.955,
+     "p90": 1.287,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.892,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.258,
+     "mean_speed_mps": 0.75,
+     "p10": 0.213,
+     "p50": 0.418,
+     "p90": 0.655,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.513,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.506,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 1.052,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.996,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.717,
+     "mean_speed_mps": 0.97,
+     "p10": 0.584,
+     "p50": 0.955,
+     "p90": 1.287,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.886,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.755,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.513,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.506,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1,
+   "area": "standing",
+   "floor": 0.15,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.2966,
+   "changed": 1,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.974,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.933,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.722,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.455,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.283,
+     "mean_speed_mps": 0.298,
+     "p10": 0.197,
+     "p50": 0.402,
+     "p90": 0.626,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.55,
+     "mean_speed_mps": 0.188,
+     "p10": 0.101,
+     "p50": 0.254,
+     "p90": 0.459,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.733,
+     "mean_speed_mps": 0.151,
+     "p10": 0.067,
+     "p50": 0.192,
+     "p90": 0.37,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 1.017,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.918,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.725,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.452,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.283,
+     "mean_speed_mps": 0.3,
+     "p10": 0.197,
+     "p50": 0.402,
+     "p90": 0.626,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.55,
+     "mean_speed_mps": 0.187,
+     "p10": 0.101,
+     "p50": 0.254,
+     "p90": 0.459,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.733,
+     "mean_speed_mps": 0.151,
+     "p10": 0.067,
+     "p50": 0.192,
+     "p90": 0.37,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1,
+   "area": "standing",
+   "floor": 0.1,
+   "points_in_band": 11,
+   "of": 14,
+   "J": 0.6697,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.974,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.863,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.587,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.329,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.317,
+     "mean_speed_mps": 0.211,
+     "p10": 0.181,
+     "p50": 0.382,
+     "p90": 0.597,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.144,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.107,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 1.015,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.841,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.605,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.992,
+     "mean_speed_mps": 0.322,
+     "p10": 0.386,
+     "p50": 0.642,
+     "p90": 0.98,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.317,
+     "mean_speed_mps": 0.211,
+     "p10": 0.181,
+     "p50": 0.382,
+     "p90": 0.597,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.144,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.107,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1,
+   "area": "standing",
+   "floor": 0.05,
+   "points_in_band": 2,
+   "of": 14,
+   "J": 1.4572,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.974,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.686,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.444,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.186,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.317,
+     "mean_speed_mps": 0.11,
+     "p10": 0.181,
+     "p50": 0.382,
+     "p90": 0.597,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.071,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.053,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 1.015,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.662,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.47,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 1,
+     "mean_speed_mps": 0.186,
+     "p10": 0.381,
+     "p50": 0.632,
+     "p90": 0.969,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.317,
+     "mean_speed_mps": 0.11,
+     "p10": 0.181,
+     "p50": 0.382,
+     "p90": 0.597,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.071,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.053,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1.5,
+   "area": "all",
+   "floor": 0.15,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.4528,
+   "changed": 1,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.998,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.99,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.7,
+     "mean_speed_mps": 0.978,
+     "p10": 0.597,
+     "p50": 0.974,
+     "p90": 1.304,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.992,
+     "mean_speed_mps": 0.862,
+     "p10": 0.386,
+     "p50": 0.642,
+     "p90": 0.98,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.6,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.415,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.338,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 1.046,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.985,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.7,
+     "mean_speed_mps": 0.953,
+     "p10": 0.597,
+     "p50": 0.974,
+     "p90": 1.304,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.992,
+     "mean_speed_mps": 0.846,
+     "p10": 0.386,
+     "p50": 0.642,
+     "p90": 0.98,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.609,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.414,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.338,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1.5,
+   "area": "all",
+   "floor": 0.1,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.4528,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.998,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.99,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.7,
+     "mean_speed_mps": 0.978,
+     "p10": 0.597,
+     "p50": 0.974,
+     "p90": 1.304,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.992,
+     "mean_speed_mps": 0.862,
+     "p10": 0.386,
+     "p50": 0.642,
+     "p90": 0.98,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.6,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.415,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.338,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 1.046,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.985,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.7,
+     "mean_speed_mps": 0.953,
+     "p10": 0.597,
+     "p50": 0.974,
+     "p90": 1.304,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.992,
+     "mean_speed_mps": 0.846,
+     "p10": 0.386,
+     "p50": 0.642,
+     "p90": 0.98,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.609,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.414,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.338,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1.5,
+   "area": "all",
+   "floor": 0.05,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.4528,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.998,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.99,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.7,
+     "mean_speed_mps": 0.978,
+     "p10": 0.597,
+     "p50": 0.974,
+     "p90": 1.304,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.992,
+     "mean_speed_mps": 0.862,
+     "p10": 0.386,
+     "p50": 0.642,
+     "p90": 0.98,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.6,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.415,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.338,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 1.046,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.985,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.7,
+     "mean_speed_mps": 0.953,
+     "p10": 0.597,
+     "p50": 0.974,
+     "p90": 1.304,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.992,
+     "mean_speed_mps": 0.846,
+     "p10": 0.386,
+     "p50": 0.642,
+     "p90": 0.98,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.609,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.414,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.338,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1.5,
+   "area": "standing",
+   "floor": 0.15,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.204,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.997,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.934,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.856,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.523,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.3,
+     "mean_speed_mps": 0.288,
+     "p10": 0.187,
+     "p50": 0.392,
+     "p90": 0.607,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.186,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.152,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 1.045,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.937,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.675,
+     "mean_speed_mps": 0.871,
+     "p10": 0.611,
+     "p50": 0.989,
+     "p90": 1.315,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.49,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.3,
+     "mean_speed_mps": 0.29,
+     "p10": 0.187,
+     "p50": 0.392,
+     "p90": 0.607,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.186,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.152,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1.5,
+   "area": "standing",
+   "floor": 0.1,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.3257,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.997,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.934,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.812,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.449,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.308,
+     "mean_speed_mps": 0.263,
+     "p10": 0.184,
+     "p50": 0.387,
+     "p90": 0.602,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.165,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.106,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 1.045,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.937,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.675,
+     "mean_speed_mps": 0.812,
+     "p10": 0.611,
+     "p50": 0.989,
+     "p90": 1.315,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.983,
+     "mean_speed_mps": 0.427,
+     "p10": 0.392,
+     "p50": 0.651,
+     "p90": 0.99,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.308,
+     "mean_speed_mps": 0.259,
+     "p10": 0.184,
+     "p50": 0.387,
+     "p90": 0.602,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.166,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.106,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 1.5,
+   "area": "standing",
+   "floor": 0.05,
+   "points_in_band": 6,
+   "of": 14,
+   "J": 0.792,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.997,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.934,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.724,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.983,
+     "mean_speed_mps": 0.3,
+     "p10": 0.392,
+     "p50": 0.651,
+     "p90": 0.99,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.3,
+     "mean_speed_mps": 0.148,
+     "p10": 0.187,
+     "p50": 0.392,
+     "p90": 0.607,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.096,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.059,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 1.045,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.937,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.675,
+     "mean_speed_mps": 0.686,
+     "p10": 0.611,
+     "p50": 0.989,
+     "p90": 1.315,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.992,
+     "mean_speed_mps": 0.295,
+     "p10": 0.386,
+     "p50": 0.642,
+     "p90": 0.98,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.3,
+     "mean_speed_mps": 0.145,
+     "p10": 0.187,
+     "p50": 0.392,
+     "p90": 0.607,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.096,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.059,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 2,
+   "area": "all",
+   "floor": 0.15,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.2292,
+   "changed": 1,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.991,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.978,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.956,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.791,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.275,
+     "mean_speed_mps": 0.566,
+     "p10": 0.203,
+     "p50": 0.408,
+     "p90": 0.635,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.368,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.75,
+     "mean_speed_mps": 0.258,
+     "p10": 0.065,
+     "p50": 0.188,
+     "p90": 0.365,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 1.045,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.988,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.683,
+     "mean_speed_mps": 0.946,
+     "p10": 0.606,
+     "p50": 0.984,
+     "p90": 1.312,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.798,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.275,
+     "mean_speed_mps": 0.568,
+     "p10": 0.203,
+     "p50": 0.408,
+     "p90": 0.635,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.368,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.75,
+     "mean_speed_mps": 0.258,
+     "p10": 0.065,
+     "p50": 0.188,
+     "p90": 0.365,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 2,
+   "area": "all",
+   "floor": 0.1,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.2292,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.991,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.978,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.956,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.791,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.275,
+     "mean_speed_mps": 0.566,
+     "p10": 0.203,
+     "p50": 0.408,
+     "p90": 0.635,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.368,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.75,
+     "mean_speed_mps": 0.258,
+     "p10": 0.065,
+     "p50": 0.188,
+     "p90": 0.365,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 1.045,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.988,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.683,
+     "mean_speed_mps": 0.946,
+     "p10": 0.606,
+     "p50": 0.984,
+     "p90": 1.312,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.798,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.275,
+     "mean_speed_mps": 0.568,
+     "p10": 0.203,
+     "p50": 0.408,
+     "p90": 0.635,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.368,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.75,
+     "mean_speed_mps": 0.258,
+     "p10": 0.065,
+     "p50": 0.188,
+     "p90": 0.365,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 2,
+   "area": "all",
+   "floor": 0.05,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.2292,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.991,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.978,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.956,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.791,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.275,
+     "mean_speed_mps": 0.566,
+     "p10": 0.203,
+     "p50": 0.408,
+     "p90": 0.635,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.368,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.75,
+     "mean_speed_mps": 0.258,
+     "p10": 0.065,
+     "p50": 0.188,
+     "p90": 0.365,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 1.045,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.988,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.683,
+     "mean_speed_mps": 0.946,
+     "p10": 0.606,
+     "p50": 0.984,
+     "p90": 1.312,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.798,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.275,
+     "mean_speed_mps": 0.568,
+     "p10": 0.203,
+     "p50": 0.408,
+     "p90": 0.635,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.368,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.75,
+     "mean_speed_mps": 0.258,
+     "p10": 0.065,
+     "p50": 0.188,
+     "p90": 0.365,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 2,
+   "area": "standing",
+   "floor": 0.15,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.1651,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.997,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.961,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.872,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.554,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.283,
+     "mean_speed_mps": 0.321,
+     "p10": 0.197,
+     "p50": 0.402,
+     "p90": 0.626,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.533,
+     "mean_speed_mps": 0.178,
+     "p10": 0.105,
+     "p50": 0.26,
+     "p90": 0.467,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.15,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.05,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.958,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.864,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.555,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.283,
+     "mean_speed_mps": 0.316,
+     "p10": 0.197,
+     "p50": 0.402,
+     "p90": 0.626,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.533,
+     "mean_speed_mps": 0.178,
+     "p10": 0.105,
+     "p50": 0.26,
+     "p90": 0.467,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.15,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 2,
+   "area": "standing",
+   "floor": 0.1,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.2816,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.997,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.961,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.87,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.471,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.292,
+     "mean_speed_mps": 0.275,
+     "p10": 0.192,
+     "p50": 0.397,
+     "p90": 0.616,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.533,
+     "mean_speed_mps": 0.155,
+     "p10": 0.105,
+     "p50": 0.26,
+     "p90": 0.467,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.107,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.05,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.958,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.845,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.476,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.292,
+     "mean_speed_mps": 0.272,
+     "p10": 0.192,
+     "p50": 0.397,
+     "p90": 0.616,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.533,
+     "mean_speed_mps": 0.156,
+     "p10": 0.105,
+     "p50": 0.26,
+     "p90": 0.467,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.107,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "ahead",
+   "radius": 2,
+   "area": "standing",
+   "floor": 0.05,
+   "points_in_band": 10,
+   "of": 14,
+   "J": 0.5499,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.997,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.961,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.87,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.371,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.283,
+     "mean_speed_mps": 0.192,
+     "p10": 0.197,
+     "p50": 0.402,
+     "p90": 0.626,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.107,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.067,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.05,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.958,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.845,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.382,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.283,
+     "mean_speed_mps": 0.191,
+     "p10": 0.197,
+     "p50": 0.402,
+     "p90": 0.626,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.107,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.067,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1,
+   "area": "all",
+   "floor": 0.15,
+   "points_in_band": 10,
+   "of": 14,
+   "J": 1.3178,
+   "changed": 1,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.996,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.959,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.675,
+     "mean_speed_mps": 0.934,
+     "p10": 0.611,
+     "p50": 0.989,
+     "p90": 1.315,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.781,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.225,
+     "mean_speed_mps": 0.645,
+     "p10": 0.235,
+     "p50": 0.439,
+     "p90": 0.693,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.586,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.533,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.032,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.928,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.864,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.777,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.647,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.587,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.533,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1,
+   "area": "all",
+   "floor": 0.1,
+   "points_in_band": 10,
+   "of": 14,
+   "J": 1.3178,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.996,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.959,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.675,
+     "mean_speed_mps": 0.934,
+     "p10": 0.611,
+     "p50": 0.989,
+     "p90": 1.315,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.781,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.225,
+     "mean_speed_mps": 0.645,
+     "p10": 0.235,
+     "p50": 0.439,
+     "p90": 0.693,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.586,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.533,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.032,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.928,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.864,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.777,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.647,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.587,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.533,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1,
+   "area": "all",
+   "floor": 0.05,
+   "points_in_band": 10,
+   "of": 14,
+   "J": 1.3178,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 0.996,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.959,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.675,
+     "mean_speed_mps": 0.934,
+     "p10": 0.611,
+     "p50": 0.989,
+     "p90": 1.315,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.781,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.225,
+     "mean_speed_mps": 0.645,
+     "p10": 0.235,
+     "p50": 0.439,
+     "p90": 0.693,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.586,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.533,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.032,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.928,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.864,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.777,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.647,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.587,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.533,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1,
+   "area": "standing",
+   "floor": 0.15,
+   "points_in_band": 9,
+   "of": 14,
+   "J": 0.9646,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 0.955,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.738,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.625,
+     "mean_speed_mps": 0.463,
+     "p10": 0.639,
+     "p50": 1.018,
+     "p90": 1.336,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.942,
+     "mean_speed_mps": 0.312,
+     "p10": 0.419,
+     "p50": 0.699,
+     "p90": 1.045,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.25,
+     "mean_speed_mps": 0.229,
+     "p10": 0.219,
+     "p50": 0.424,
+     "p90": 0.664,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.5,
+     "mean_speed_mps": 0.194,
+     "p10": 0.112,
+     "p50": 0.273,
+     "p90": 0.484,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.733,
+     "mean_speed_mps": 0.166,
+     "p10": 0.067,
+     "p50": 0.192,
+     "p90": 0.37,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 0.966,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.458,
+     "mean_speed_mps": 0.736,
+     "p10": 0.735,
+     "p50": 1.105,
+     "p90": 1.406,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.625,
+     "mean_speed_mps": 0.463,
+     "p10": 0.639,
+     "p50": 1.018,
+     "p90": 1.336,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.942,
+     "mean_speed_mps": 0.31,
+     "p10": 0.419,
+     "p50": 0.699,
+     "p90": 1.045,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.25,
+     "mean_speed_mps": 0.229,
+     "p10": 0.219,
+     "p50": 0.424,
+     "p90": 0.664,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.5,
+     "mean_speed_mps": 0.194,
+     "p10": 0.112,
+     "p50": 0.273,
+     "p90": 0.484,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.733,
+     "mean_speed_mps": 0.166,
+     "p10": 0.067,
+     "p50": 0.192,
+     "p90": 0.37,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1,
+   "area": "standing",
+   "floor": 0.1,
+   "points_in_band": 6,
+   "of": 14,
+   "J": 1.5543,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 0.952,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.659,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.617,
+     "mean_speed_mps": 0.338,
+     "p10": 0.643,
+     "p50": 1.023,
+     "p90": 1.34,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.95,
+     "mean_speed_mps": 0.21,
+     "p10": 0.414,
+     "p50": 0.689,
+     "p90": 1.034,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.153,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.5,
+     "mean_speed_mps": 0.129,
+     "p10": 0.112,
+     "p50": 0.273,
+     "p90": 0.484,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.733,
+     "mean_speed_mps": 0.111,
+     "p10": 0.067,
+     "p50": 0.192,
+     "p90": 0.37,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 0.961,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.665,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.617,
+     "mean_speed_mps": 0.335,
+     "p10": 0.643,
+     "p50": 1.023,
+     "p90": 1.34,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.942,
+     "mean_speed_mps": 0.209,
+     "p10": 0.419,
+     "p50": 0.699,
+     "p90": 1.045,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.154,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.5,
+     "mean_speed_mps": 0.129,
+     "p10": 0.112,
+     "p50": 0.273,
+     "p90": 0.484,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.733,
+     "mean_speed_mps": 0.111,
+     "p10": 0.067,
+     "p50": 0.192,
+     "p90": 0.37,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1,
+   "area": "standing",
+   "floor": 0.05,
+   "points_in_band": 2,
+   "of": 14,
+   "J": 2.37,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 0.93,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.581,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.617,
+     "mean_speed_mps": 0.214,
+     "p10": 0.643,
+     "p50": 1.023,
+     "p90": 1.34,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.104,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.075,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.064,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.055,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 0.93,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.591,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.617,
+     "mean_speed_mps": 0.201,
+     "p10": 0.643,
+     "p50": 1.023,
+     "p90": 1.34,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.95,
+     "mean_speed_mps": 0.104,
+     "p10": 0.414,
+     "p50": 0.689,
+     "p90": 1.034,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.075,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.064,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.055,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1.5,
+   "area": "all",
+   "floor": 0.15,
+   "points_in_band": 12,
+   "of": 14,
+   "J": 0.4678,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.988,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.96,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.683,
+     "mean_speed_mps": 0.886,
+     "p10": 0.606,
+     "p50": 0.984,
+     "p90": 1.312,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.672,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.528,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.44,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.379,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 1.042,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.955,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.872,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.677,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.531,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.44,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.379,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1.5,
+   "area": "all",
+   "floor": 0.1,
+   "points_in_band": 12,
+   "of": 14,
+   "J": 0.4678,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.988,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.96,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.683,
+     "mean_speed_mps": 0.886,
+     "p10": 0.606,
+     "p50": 0.984,
+     "p90": 1.312,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.672,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.528,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.44,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.379,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 1.042,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.955,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.872,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.677,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.531,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.44,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.379,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1.5,
+   "area": "all",
+   "floor": 0.05,
+   "points_in_band": 12,
+   "of": 14,
+   "J": 0.4678,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.988,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.45,
+     "mean_speed_mps": 0.96,
+     "p10": 0.74,
+     "p50": 1.108,
+     "p90": 1.409,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.683,
+     "mean_speed_mps": 0.886,
+     "p10": 0.606,
+     "p50": 0.984,
+     "p90": 1.312,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.672,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.528,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.44,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.379,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 1.042,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.955,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.872,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.677,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.233,
+     "mean_speed_mps": 0.531,
+     "p10": 0.229,
+     "p50": 0.434,
+     "p90": 0.684,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.44,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.379,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": false
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1.5,
+   "area": "standing",
+   "floor": 0.15,
+   "points_in_band": 9,
+   "of": 14,
+   "J": 0.7446,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.233,
+     "mean_speed_mps": 1,
+     "p10": 0.879,
+     "p50": 1.168,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.433,
+     "mean_speed_mps": 0.747,
+     "p10": 0.751,
+     "p50": 1.113,
+     "p90": 1.416,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.541,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.933,
+     "mean_speed_mps": 0.327,
+     "p10": 0.425,
+     "p50": 0.708,
+     "p90": 1.056,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.292,
+     "mean_speed_mps": 0.238,
+     "p10": 0.192,
+     "p50": 0.397,
+     "p90": 0.616,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.195,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.75,
+     "mean_speed_mps": 0.163,
+     "p10": 0.065,
+     "p50": 0.188,
+     "p90": 0.365,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.233,
+     "mean_speed_mps": 1.023,
+     "p10": 0.879,
+     "p50": 1.168,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.752,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.573,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.942,
+     "mean_speed_mps": 0.323,
+     "p10": 0.419,
+     "p50": 0.699,
+     "p90": 1.045,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.283,
+     "mean_speed_mps": 0.24,
+     "p10": 0.197,
+     "p50": 0.402,
+     "p90": 0.626,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.196,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.75,
+     "mean_speed_mps": 0.163,
+     "p10": 0.065,
+     "p50": 0.188,
+     "p90": 0.365,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1.5,
+   "area": "standing",
+   "floor": 0.1,
+   "points_in_band": 9,
+   "of": 14,
+   "J": 0.844,
+   "changed": 4,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.233,
+     "mean_speed_mps": 1,
+     "p10": 0.879,
+     "p50": 1.168,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.433,
+     "mean_speed_mps": 0.747,
+     "p10": 0.751,
+     "p50": 1.113,
+     "p90": 1.416,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.521,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.301,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.3,
+     "mean_speed_mps": 0.208,
+     "p10": 0.187,
+     "p50": 0.392,
+     "p90": 0.607,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.161,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.127,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.233,
+     "mean_speed_mps": 1.023,
+     "p10": 0.879,
+     "p50": 1.168,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.751,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.552,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.958,
+     "mean_speed_mps": 0.303,
+     "p10": 0.408,
+     "p50": 0.68,
+     "p90": 1.023,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.3,
+     "mean_speed_mps": 0.211,
+     "p10": 0.187,
+     "p50": 0.392,
+     "p90": 0.607,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.161,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.758,
+     "mean_speed_mps": 0.127,
+     "p10": 0.064,
+     "p50": 0.187,
+     "p90": 0.362,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 1.5,
+   "area": "standing",
+   "floor": 0.05,
+   "points_in_band": 4,
+   "of": 14,
+   "J": 1.4757,
+   "changed": 4,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.233,
+     "mean_speed_mps": 1,
+     "p10": 0.879,
+     "p50": 1.168,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.433,
+     "mean_speed_mps": 0.684,
+     "p10": 0.751,
+     "p50": 1.113,
+     "p90": 1.416,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.667,
+     "mean_speed_mps": 0.456,
+     "p10": 0.616,
+     "p50": 0.994,
+     "p90": 1.319,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.169,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.3,
+     "mean_speed_mps": 0.107,
+     "p10": 0.187,
+     "p50": 0.392,
+     "p90": 0.607,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.542,
+     "mean_speed_mps": 0.081,
+     "p10": 0.103,
+     "p50": 0.257,
+     "p90": 0.463,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.767,
+     "mean_speed_mps": 0.063,
+     "p10": 0.063,
+     "p50": 0.185,
+     "p90": 0.359,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.233,
+     "mean_speed_mps": 1.023,
+     "p10": 0.879,
+     "p50": 1.168,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.689,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.675,
+     "mean_speed_mps": 0.478,
+     "p10": 0.611,
+     "p50": 0.989,
+     "p90": 1.315,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.167,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.3,
+     "mean_speed_mps": 0.107,
+     "p10": 0.187,
+     "p50": 0.392,
+     "p90": 0.607,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.542,
+     "mean_speed_mps": 0.081,
+     "p10": 0.103,
+     "p50": 0.257,
+     "p90": 0.463,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.767,
+     "mean_speed_mps": 0.063,
+     "p10": 0.063,
+     "p50": 0.185,
+     "p90": 0.359,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 2,
+   "area": "all",
+   "floor": 0.15,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.1987,
+   "changed": 2,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.987,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.934,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.888,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.95,
+     "mean_speed_mps": 0.667,
+     "p10": 0.414,
+     "p50": 0.689,
+     "p90": 1.034,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.242,
+     "mean_speed_mps": 0.473,
+     "p10": 0.224,
+     "p50": 0.429,
+     "p90": 0.674,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.369,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.298,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 1.039,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.951,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.858,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.95,
+     "mean_speed_mps": 0.665,
+     "p10": 0.414,
+     "p50": 0.689,
+     "p90": 1.034,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.242,
+     "mean_speed_mps": 0.476,
+     "p10": 0.224,
+     "p50": 0.429,
+     "p90": 0.674,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.368,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.298,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 2,
+   "area": "all",
+   "floor": 0.1,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.1987,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.987,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.934,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.888,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.95,
+     "mean_speed_mps": 0.667,
+     "p10": 0.414,
+     "p50": 0.689,
+     "p90": 1.034,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.242,
+     "mean_speed_mps": 0.473,
+     "p10": 0.224,
+     "p50": 0.429,
+     "p90": 0.674,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.369,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.298,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 1.039,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.951,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.858,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.95,
+     "mean_speed_mps": 0.665,
+     "p10": 0.414,
+     "p50": 0.689,
+     "p90": 1.034,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.242,
+     "mean_speed_mps": 0.476,
+     "p10": 0.224,
+     "p50": 0.429,
+     "p90": 0.674,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.368,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.298,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 2,
+   "area": "all",
+   "floor": 0.05,
+   "points_in_band": 14,
+   "of": 14,
+   "J": 0.1987,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.267,
+     "mean_speed_mps": 0.987,
+     "p10": 0.859,
+     "p50": 1.164,
+     "p90": 1.474,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.934,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.888,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.95,
+     "mean_speed_mps": 0.667,
+     "p10": 0.414,
+     "p50": 0.689,
+     "p90": 1.034,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.242,
+     "mean_speed_mps": 0.473,
+     "p10": 0.224,
+     "p50": 0.429,
+     "p90": 0.674,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.369,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.298,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.258,
+     "mean_speed_mps": 1.039,
+     "p10": 0.864,
+     "p50": 1.165,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.442,
+     "mean_speed_mps": 0.951,
+     "p10": 0.746,
+     "p50": 1.111,
+     "p90": 1.413,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.692,
+     "mean_speed_mps": 0.858,
+     "p10": 0.602,
+     "p50": 0.979,
+     "p90": 1.308,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.95,
+     "mean_speed_mps": 0.665,
+     "p10": 0.414,
+     "p50": 0.689,
+     "p90": 1.034,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.242,
+     "mean_speed_mps": 0.476,
+     "p10": 0.224,
+     "p50": 0.429,
+     "p90": 0.674,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.492,
+     "mean_speed_mps": 0.368,
+     "p10": 0.115,
+     "p50": 0.278,
+     "p90": 0.489,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.298,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 2,
+   "area": "standing",
+   "floor": 0.15,
+   "points_in_band": 11,
+   "of": 14,
+   "J": 0.5428,
+   "changed": 3,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 0.997,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.425,
+     "mean_speed_mps": 0.808,
+     "p10": 0.757,
+     "p50": 1.116,
+     "p90": 1.42,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.65,
+     "mean_speed_mps": 0.619,
+     "p10": 0.625,
+     "p50": 1.003,
+     "p90": 1.326,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.375,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.25,
+     "mean_speed_mps": 0.263,
+     "p10": 0.219,
+     "p50": 0.424,
+     "p90": 0.664,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.203,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.155,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.041,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.425,
+     "mean_speed_mps": 0.815,
+     "p10": 0.757,
+     "p50": 1.116,
+     "p90": 1.42,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.638,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.384,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.258,
+     "mean_speed_mps": 0.262,
+     "p10": 0.213,
+     "p50": 0.418,
+     "p90": 0.655,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.525,
+     "mean_speed_mps": 0.203,
+     "p10": 0.107,
+     "p50": 0.264,
+     "p90": 0.472,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.155,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 2,
+   "area": "standing",
+   "floor": 0.1,
+   "points_in_band": 10,
+   "of": 14,
+   "J": 0.7114,
+   "changed": 4,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 0.997,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.425,
+     "mean_speed_mps": 0.792,
+     "p10": 0.757,
+     "p50": 1.116,
+     "p90": 1.42,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.65,
+     "mean_speed_mps": 0.604,
+     "p10": 0.625,
+     "p50": 1.003,
+     "p90": 1.326,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.339,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.217,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.155,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.113,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.041,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.425,
+     "mean_speed_mps": 0.807,
+     "p10": 0.757,
+     "p50": 1.116,
+     "p90": 1.42,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.618,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.348,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.267,
+     "mean_speed_mps": 0.217,
+     "p10": 0.208,
+     "p50": 0.413,
+     "p90": 0.645,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.508,
+     "mean_speed_mps": 0.156,
+     "p10": 0.11,
+     "p50": 0.27,
+     "p90": 0.48,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.725,
+     "mean_speed_mps": 0.113,
+     "p10": 0.068,
+     "p50": 0.193,
+     "p90": 0.373,
+     "inside_band": true
+    }
+   ]
+  },
+  {
+   "centre": "own",
+   "radius": 2,
+   "area": "standing",
+   "floor": 0.05,
+   "points_in_band": 5,
+   "of": 14,
+   "J": 1.068,
+   "changed": 4,
+   "points": [
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.25,
+     "mean_speed_mps": 0.997,
+     "p10": 0.869,
+     "p50": 1.166,
+     "p90": 1.475,
+     "inside_band": true
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.425,
+     "mean_speed_mps": 0.75,
+     "p10": 0.757,
+     "p50": 1.116,
+     "p90": 1.42,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.65,
+     "mean_speed_mps": 0.563,
+     "p10": 0.625,
+     "p50": 1.003,
+     "p90": 1.326,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.975,
+     "mean_speed_mps": 0.27,
+     "p10": 0.397,
+     "p50": 0.661,
+     "p90": 1.001,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.275,
+     "mean_speed_mps": 0.149,
+     "p10": 0.203,
+     "p50": 0.408,
+     "p90": 0.635,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.096,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "1.0 m/s for all",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.071,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.25,
+     "measured_density_per_m": 0.242,
+     "mean_speed_mps": 1.041,
+     "p10": 0.874,
+     "p50": 1.167,
+     "p90": 1.476,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.5,
+     "measured_density_per_m": 0.425,
+     "mean_speed_mps": 0.77,
+     "p10": 0.757,
+     "p50": 1.116,
+     "p90": 1.42,
+     "inside_band": true
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 0.75,
+     "measured_density_per_m": 0.658,
+     "mean_speed_mps": 0.576,
+     "p10": 0.62,
+     "p50": 0.998,
+     "p90": 1.322,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1,
+     "measured_density_per_m": 0.967,
+     "mean_speed_mps": 0.283,
+     "p10": 0.403,
+     "p50": 0.67,
+     "p90": 1.012,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.25,
+     "measured_density_per_m": 1.275,
+     "mean_speed_mps": 0.149,
+     "p10": 0.203,
+     "p50": 0.408,
+     "p90": 0.635,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.5,
+     "measured_density_per_m": 1.517,
+     "mean_speed_mps": 0.096,
+     "p10": 0.108,
+     "p50": 0.267,
+     "p90": 0.476,
+     "inside_band": false
+    },
+    {
+     "profile": "the default population",
+     "set_density_per_m": 1.75,
+     "measured_density_per_m": 1.742,
+     "mean_speed_mps": 0.071,
+     "p10": 0.066,
+     "p50": 0.19,
+     "p90": 0.368,
+     "inside_band": true
+    }
+   ]
+  }
+ ]
+}

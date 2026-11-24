@@ -214,6 +214,10 @@ test("a staircase links to each floor once, on its centre line", () => {
   assert.ok(heights[0] < 0.5 && heights[1] > 2.9, `one link reaches the ground floor and one the upper floor: ${heights}`);
   assert.equal(g.stats.stairEnds, 2);
   assert.equal(g.stats.stairEndsLinked, 2);
+  // Each tread's node carries the stair's real width (2 m), and no floor node carries one.
+  assert.equal(g.widths.length, g.stats.nodes);
+  for (const n of treads) assert.ok(Math.abs(g.widths[n] - 2) < 0.02, `tread width ${g.widths[n]}`);
+  for (let n = 0; n < g.stats.nodes; n += 1) if (!stair(n)) assert.equal(g.widths[n], 0);
 });
 
 test("a U-shaped stair with a separate landing joins both floors", () => {
