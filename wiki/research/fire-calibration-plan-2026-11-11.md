@@ -8859,6 +8859,11 @@ The user's word (2026-11-24, evening): calibrate the fire for what the tenabilit
 
 **What is reported in the morning.** For each quantity, cell and solver: the pairs, the four outcomes' counts, δ, σ_M, the word, and the series in and out of band. Whatever the words turn out to be.
 
+**Scope, as the user set it the same evening (2026-11-24, after the above was written and before any result).** "Tenability" here means every reading the egress takes at head height: the gas temperature, the soot and so the visibility, CO, CO₂ and O₂, and the two doses made from them. So part C is not left for later:
+- The suite is given a switch that stores, each second, the model's soot density, CO, CO₂, O₂ and temperature at each tree's head-height cells (the app's 1.8 m and the cells of the 1.5 to 2.0 m devices) and at each gas analyser's and smoke meter's own position. Storing judges nothing, so it needs no band; with the switch off the suite's output is unchanged, which is checked on one test first.
+- Runs that only store may start tonight, the solver now on the site first (0.34 m, then 0.27 m), then R8 on 0.34 m, eight jobs at most, beside the 0.20 m step.
+- **No stored species or smoke series is reduced or compared until 16.55 fixes how.** 16.55 covers each of the five readings and the asphyxiant dose, says where a measurement exists at or near head height and where only under the ceiling, and names what each of the four smoke decisions holds up. Comparisons that need none of those decisions (CO₂, O₂, and CO where it was measured) may be fixed by the coordinator; the smoke ones wait for the user.
+
 
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
