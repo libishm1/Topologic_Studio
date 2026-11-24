@@ -9014,6 +9014,37 @@ Parts A, B and D of 16.54, on the saved results. An agent wrote the tool and ran
 3. Head height stays untested for smoke and CO: 16.55's last paragraph holds.
 
 
+### 16.58 R8b on 0.20 m: no word moves; R8 on 0.20 m is not run (2026-11-25)
+
+16.52's step 4. The run started 2026-11-24 16:12 on solver 98ca598 and ended 2026-11-25 01:13: eight series (178 runs, 505 min, one stopped: FSE ISONG3, the speed limit at 48 s, as in 13.B where it stops at 52 s) and the chairs (13 runs, none stopped). Files: `benchmark/results/2026-11-24-validation-r8b-020.json`, `-chairs-020.json`, `-nine-020.json` on the solver's worktree. The comparison beside 13.B (the sealed merge on 0.20 m) was made by the rerun script; the coordinator read its tables and ran 16.54's tool on the new file. The comparison script recomputed 1956 stored values from the pairs, the largest difference 5 x 10^-4 (rounding).
+
+**No final word moves on 0.20 m.** Layer depth and neutral plane stay calibrated; layer temperature, ceiling jet and CO₂ indicative; the rest not calibrated.
+
+| Quantity, pooled δ / σ_M | 13.B | R8b |
+| --- | --- | --- |
+| Layer depth | 0.99 / 0.13 | 0.99 / 0.12 |
+| Layer temperature | 1.37 / 0.31 | 1.37 / 0.29 |
+| Ceiling jet | 1.35 / 0.33 | 1.36 / 0.32 |
+| Gas temperature at head height | 1.38 / 0.35 | 1.36 / 0.33 |
+| Neutral plane | 0.90 / 0.12 | 0.88 / 0.12 |
+| Door and vent velocity | 0.98 / 0.59 | 1.00 / 0.57 |
+
+- **Items 9 to 11 do next to nothing on the finest cell,** as on the two coarser ones (16.52). Within series there is movement both ways: WTC's layer temperature goes from 1.02 to 1.23 and its ceiling jet leaves the band (1.17 to 1.36); FSE's ceiling jet comes into it (0.61 to 0.88, four pairs); NBS's layer temperature goes from 0.83 to 0.93.
+
+**The tenability times on R8b, 0.20 m (16.54), beside 13.B's of 16.56.** Not calibrated, as before.
+
+| Quantity | 13.B: pairs, misses, δ / σ_M | R8b: pairs, misses, δ / σ_M |
+| --- | --- | --- |
+| Time to 60 °C | 269, 9, 1.32 / 0.58 | 270, 8, 1.37 / 0.60 |
+| Time to a heat dose of 0.3 | 782, 36, 0.97 / 0.41 | 782, 36, 0.97 / 0.41 |
+
+File: `benchmark/results/2026-11-25-tenability-times-r8b-020.md` on branch `flamescapes/tenability-quantities`. The tool's own check: its series give all 882 stored head-height pairs.
+
+**The gate.** From R8b's wall time the script projected R8 (with gas radiation) on 0.20 m at 87 hours against the limit of 72 fixed in 16.52, so **R8 on 0.20 m does not run.** Item 8 is therefore judged on 0.27 and 0.34 m only (16.52), and nothing with gas radiation can be offered for the 0.20 m cell without a faster gas-radiation step or the user's word to spend the 87 hours.
+
+**What this closes.** 16.52's steps are done. The standing of the solver on the site is unchanged on all three cells. What is open is what 16.56 and 16.57 named: the far field along corridors, and CO where the fire is short of air.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
