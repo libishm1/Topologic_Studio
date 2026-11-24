@@ -8865,6 +8865,43 @@ The user's word (2026-11-24, evening): calibrate the fire for what the tenabilit
 - **No stored species or smoke series is reduced or compared until 16.55 fixes how.** 16.55 covers each of the five readings and the asphyxiant dose, says where a measurement exists at or near head height and where only under the ceiling, and names what each of the four smoke decisions holds up. Comparisons that need none of those decisions (CO₂, O₂, and CO where it was measured) may be fixed by the coordinator; the smoke ones wait for the user.
 
 
+### 16.55 Smoke, CO, CO₂, O₂ and the asphyxiant dose: the comparisons, fixed before any stored series is read (2026-11-24)
+
+16.54's part C. An agent established the facts, added the storing switch and drafted this design (branch `flamescapes/head-height-species`, commits 0ca580c and b33e3d8; the full draft is `wiki/research/plan-16-55-draft-2026-11-24.md` there). The coordinator adopts it here with the decisions below. **When this was written no model species or smoke series had been stored by a full run, reduced or compared.** The agent saw the measured CO maxima while setting the floors below, and no model value.
+
+**The fact that governs everything here.** In the nine data files no smoke meter and no CO or CO₂ analyser stands between 1.5 and 2.0 m. Oxygen is measured at head height (1.84 m) in one laboratory's rooms (UL FSRI, and the chairs). Everything else is under the ceiling (NIST/NRC at 3.22 and 3.62 m of 3.82; WTC at 3.65 m; FSE at 2.08 m of 2.4). So:
+- **Soot, visibility, CO, CO₂ and the asphyxiant dose cannot be compared at head height with the data in hand.** What can be compared is under the ceiling, which tests how much the model makes and carries, not when it reaches a person's head.
+- **None of these readings can be called calibrated from these data** (two or three series, mostly one laboratory). The most any can reach is indicative.
+
+**The four smoke decisions, made by the coordinator at the user's word ("make them and compare", 2026-11-24), each on its sources and before any result of it.**
+1. **The FAA cargo series is left out.** Its hold is 1.37 m tall, so nothing in it is at 1.8 m, and its 5 kW fire is far under-resolved on these cells (D*/dx 0.34 to 0.58 against the suite's lowest 0.71 to 1.20). Rule: a series enters a tenability comparison only if its compartment holds the 1.8 m height and its D*/dx is at least the suite's lowest on that cell.
+2. **Each series keeps its own soot yield,** as the data files carry it now (heptane 0.0149 for NIST/NRC and FSE, from NIST SP 1013-1 Table 3-3: 0.0149 ± 0.0033). It is never changed after a smoke result, and the ± 0.0033 is printed beside every smoke bias. A test with no measured or stated yield enters no smoke comparison.
+3. **The mass extinction coefficient.** A series' own measured K_m where its report gives one; otherwise 8700 m²/kg scaled by 632.8 nm over the instrument's wavelength when that lies outside 553 to 713 nm. With the nine files this changes nothing: NIST/NRC's laser is at 632.8 nm. The app's constant stays 8700. **Not verified:** where the "880 nm" of 16.53 came from; no instrument checked is at 880 nm, and the scaling's exponent rests on SP 1013-1's reasoning, the primary papers not having been opened.
+4. **NIST's smoke-alarm tests are left out of every absolute comparison.** They are the only NIST series with smoke meters and CO at 1.5 m, but their heat release was fitted in FDS to a thermocouple and their soot yield assumed. Rule: an absolute comparison of soot, visibility, CO or dose needs a measured heat release and a measured or reported yield. A comparison of ratios between its stations may be prepared later under its own section.
+
+**The comparisons.** Band and statistic are the project's and 16.54's: bias 0.8 to 1.25, scatter at most 0.35, the readings 16.56 used, the strictest word; for a crossing time the four outcomes and at most 5 % misses.
+
+| Quantity | Devices | Height |
+| --- | --- | --- |
+| Smoke obscuration and soot (as before), and a new time to a visibility of 10 m (obscuration of 25.92 %/m) | NIST/NRC laser; FSE soot probes | under the ceiling |
+| CO, peak volume fraction (new) | NIST/NRC CO-3; FSE front and rear | under the ceiling |
+| CO₂ (as before) | NIST/NRC, WTC, FSE | under the ceiling |
+| O₂ (as before), now split into head height and low | UL FSRI and the chairs at 1.84 m and 0.64 m | head height, one laboratory |
+| Asphyxiant dose: its ratio at the end of the run, and the time to 0.3 (new), by the app's formula on the measured and the model series | where CO, CO₂ and O₂ share a point: NIST/NRC's upper point, FSE front and rear | under the ceiling |
+
+- **CO's floors.** Read three ways, the strictest deciding: all pairs; measured peaks at or above 0.0001; at or above 0.0002 (twice SP 1013-1's Table 8-4). NIST/NRC's CO reads zero through five tests; whether the channel was idle is not established.
+- **Wet and dry.** The NIST analysers read dry. Each new quantity is computed with the model wet and dry, the stricter deciding.
+- **CO under-ventilation is not tested by any of this.** The yield is fixed for each fuel, and heptane's 0.008 is the source's upper bound ("< 0.008").
+- **Reported, not judged:** at each tree's 1.8 m cell, the model's own time to a visibility of 10 m, to 2 % CO₂ and to a dose of 0.3, and which of the app's closures comes first. No measurement stands beside these.
+
+**The storing runs** (`--store-species`; with it off the suite's output is unchanged, shown on one test; the switch stores temperature, soot density, CO, CO₂, O₂, H₂O and the gas's moles per kg each second at each tree's head-height cells, the app's 1.8 m cell, each analyser's cell and the laser's path).
+- The solver now on the site (`--wall-layers --leakage`) on 0.34 m and then 0.27 m, eight series and the chairs; then R8 on 0.34 m. On 0.20 m later.
+- **Each storing run's pairs are first set beside the saved file of its arm and cell** (13.B: the sealed merges). Only if they agree is anything stored read.
+- The reducers for the new quantities are written and checked on made-up series, and committed, before they read a stored series.
+
+**What would be needed for head height.** A series with smoke meters and gas sampling at 1.5 to 2.0 m, a measured heat release and a known yield. None of the nine has it; finding one is a task for the literature review, not for the solver.
+
+
 ### 16.56 The times to 60 °C and to a heat dose of 0.3 at head height: not calibrated on any cell (2026-11-24)
 
 Parts A, B and D of 16.54, on the saved results. An agent wrote the tool and ran it; the coordinator checked that the tool, its check on made-up series (13 tests) and its list of choices were committed (43dc492, branch `flamescapes/tenability-quantities`) before the commit that holds any result (b812f7c), and reran the tool's own tests. The figures below are the agent's; the coordinator did not recompute them. No solver ran and nothing in the solver changed. R8b on 0.20 m was not yet written and is not here. The number 16.55 is kept for the design of the smoke and species comparisons.
