@@ -68,7 +68,7 @@
     <p>IFC is the open file format for building models. It stores walls, doors, stairs and rooms as named objects, not only as shapes, so Studio can find the doors and the exits from the file's own data. Most design software can export it. See <a href="getting-started.html">Getting started</a>.</p>
 
     <h3>What is the walkable graph?</h3>
-    <p>A grid of points 0.5 m apart over every floor, joined wherever a person could walk, through doors and along stairs. Once the floor is a graph, the way out is a shortest-path question that a computer answers at once. The graph can be exported to <a href="https://github.com/wassimj/topologicpy">TopologicPy</a>.</p>
+    <p>A grid of points over every floor, 0.5 m apart by default, joined wherever a person could walk, through doors and along stairs. Once the floor is a graph, the way out is a shortest-path question that a computer answers at once. The graph can be exported to <a href="https://github.com/wassimj/topologicpy">TopologicPy</a>.</p>
 
     <h3>Why are there alternative routes?</h3>
     <p>The shortest route may run through the fire. Studio shows other ways out and changes the route as heat and smoke spread, so you can see when a second exit matters.</p>
@@ -108,7 +108,7 @@
     <h2 id="trust">How far to trust it</h2>
 
     <h3>Has the fire been compared with real fires?</h3>
-    <p>Yes. The Flamescapes solver was compared with 178 measured room fire tests it was never fitted to, by rules written before the comparisons. The depth of the smoke layer passes on all three cell sizes tested. The temperatures read warm and do not pass. The full account, quantity by quantity, is under <a href="fire-and-smoke.html#limits">Limits</a>.</p>
+    <p>Yes. The Flamescapes solver was compared with 178 measured room fire tests it was never fitted to, by rules written before the comparisons. The depth of the smoke layer passes on all three cell sizes tested (0.20, 0.27 and 0.34 m). The temperatures read warm and do not pass. The full account, quantity by quantity, is under <a href="fire-and-smoke.html#limits">Limits</a>.</p>
 
     <h3>What do calibrated, indicative and not calibrated mean?</h3>
     <p>They are this project's three words for one quantity on one cell size. Calibrated means the quantity stayed within bands fixed in advance, for its average error and its scatter, against measurements the solver was not fitted to. Indicative means it did so only in part. Each Flamescapes run's card says which words hold on its own cells.</p>
