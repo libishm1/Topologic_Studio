@@ -125,6 +125,10 @@ export const DEFAULT_SETTINGS = {
   crowdFluctuate: false,
   crowdSteps: "exact",
   crowdRuns: 5,
+  // With the fire: people walk slower in smoke, by the visibility where they
+  // stand in a Flamescapes run's frames (core/crowd.js smokeSpeed
+  // "frantzichNilsson", FDS+Evac's relation). Off: smoke slows no one.
+  crowdSmokeSpeed: false,
   // The slime mould (core/slimeEgress.js) grows as if there were no fire
   // ("none"), held back by the fire and its smoke on the fire's clock
   // ("soft"), or walled off from every place the fire makes untenable

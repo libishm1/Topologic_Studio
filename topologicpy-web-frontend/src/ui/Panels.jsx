@@ -1504,6 +1504,14 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
                     : "They keep the fire's time; they keep out of it once its run has finished computing, so play it again to see them turn back."
             }
           />
+          {settings.crowdWithFire && (
+            <Toggle
+              label="Slower in smoke"
+              checked={settings.crowdSmokeSpeed}
+              onChange={(crowdSmokeSpeed) => setSettings({ crowdSmokeSpeed })}
+              hint="With a Flamescapes run: each walks at a share of their speed set by the smoke where they stand, falling in a straight line with its extinction coefficient to a tenth (Frantzich and Nilsson's fit as FDS+Evac applies it; measured in irritant artificial smoke at extinction coefficients of about 2 to 8 per metre, so thinner smoke is its extrapolation). Exits are still chosen as if no one were slowed."
+            />
+          )}
           <SelectField
             label="Exits"
             value={settings.crowdExits}
