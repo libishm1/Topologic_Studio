@@ -49,7 +49,9 @@ for (const job of jobs) {
     // Whether the data and the head reducer are those the file was made with (a merged file records none).
     const differ = was ? Object.keys(was).filter((k) => (k.startsWith("data/") || k === "lib/head.mjs") && was[k] !== digest(k)) : null;
     sources.push({ file: f, generated: r.generated, tool: r.tool, solverRev: r.git?.solverRev ?? r.solverRev ?? null, head: r.git?.head ?? null, jobs: r.jobs, wallSeconds: r.wallSeconds != null ? +Number(r.wallSeconds).toFixed(0) : null, runs: r.runs.length, mergedFrom: r.sources ? r.sources.map((s) => s.file) : null, harnessDiffers: differ });
-    for (const run of r.runs) byId.set(run.id, run);
+    // A joined file adds only to the cells the label's first file holds.
+    const firstCells = sources.length > 1 ? new Set([...byId.values()].map((x) => x.cell)) : null;
+    for (const run of r.runs) if (!firstCells || firstCells.has(run.cell)) byId.set(run.id, run);
   }
   const runs = [...byId.values()];
   const cells = [...new Set(runs.map((r) => r.cell))].sort((a, b) => a - b);
@@ -83,7 +85,8 @@ for (const job of jobs) {
     const stopped = mine.filter((r) => !r.health?.ok).map((r) => ({ id: r.id, reason: r.health?.reason, time: r.health?.time, value: r.health?.value }));
     const key = cells.length > 1 ? `${job.label}@${cell}` : job.label;
     out.results[key] = { label: job.label, cell, sources, runs: mine.length, datasets: [...new Set(mine.map((r) => r.dataset))], stopped, hasRepresentation: read.hasRepresentation, notRepresented: read.notRepresented, selfCheck: { same, differs, absent, examples: worst }, quantities: read.quantities, B };
-    allRows[key] = read.rows;
+    // The rows file holds a nine-series label's ninth series only: its other rows are the eight-series label's.
+    allRows[key] = job.label.endsWith("-nine") ? read.rows.filter((x) => x.dataset === "fsri-chairs") : read.rows;
     const w = (q) => read.quantities[q];
     console.log(`${key}: ${mine.length} runs, ${ok.length} devices; self-check ${same} same, ${differs} differ, ${absent} absent; ` + C.QUANTITIES.map((q) => `${q} pairs ${w(q).every.counts.pair} delta ${w(q).every.unweighted.delta} sigmaM ${w(q).every.unweighted.sigmaM} misses ${w(q).every.counts.miss}/${w(q).every.crosses} -> ${w(q).strictest}`).join("; "));
   }
