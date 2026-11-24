@@ -5115,6 +5115,8 @@ export default function App() {
                     runner: crowdResult ? crowdState.runner : null,
                     gpu: crowdResult ? viewerRef.current?.gpuName?.() : null,
                     fireActive: fire.running || fire.step > 0,
+                    // Only a Flamescapes fire has smoke of its own to slow people (crowdSmokeSpeed).
+                    smokeModel: isFlamescapes(fire.model),
                     avoiding: crowdAvoiding,
                     runnerKind: crowdRunnerKind,
                     planned: Boolean(crowdPlanRoute),
