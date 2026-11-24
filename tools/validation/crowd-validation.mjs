@@ -359,6 +359,115 @@ function normalCdf(x, mean, sd) {
   return 0.5 * (1 + (z >= 0 ? erf : -erf));
 }
 
+/**
+ * NIST Verif.1.1 as written: ten persons at random in an 8 m x 5 m room with a 1 m exit, a
+ * pre-evacuation distribution imposed, repeated for each kind the model takes; each starts
+ * at the time drawn and the times follow the distribution. The numbers are the test's own
+ * inputs, chosen here to exercise each form and its cut-offs; they describe no building.
+ */
+function premovementDistributions() {
+  if (!Crowd.drawPreMovement) return;
+  const { graph, at } = lattice([...rect(0, 16, 0, 10), [-1, 5, KIND_DOOR]]);
+  const exits = [at(-1, 5)];
+  const n = graph.nodes.length / 3;
+  const cut = (F, lo, hi) => (x) => Math.min(1, Math.max(0, (F(x) - F(lo)) / (F(hi) - F(lo))));
+  const logn = (mu, sigma) => (x) => (x > 0 ? normalCdf(Math.log(x), mu, sigma) : 0);
+  const alarm = 30;
+  const cases = [
+    { name: "uniform 10 to 100 s", spec: [10, 100], range: [10, 100], cdf: (x) => Math.min(1, Math.max(0, (x - 10) / 90)) },
+    { name: "log-normal, median 60 s, sigma 0.5", spec: { median: 60, sigma: 0.5 }, range: [0, Infinity], cdf: logn(Math.log(60), 0.5) },
+    { name: "log-normal, median 60 s, sigma 0.5, cut off at 30 and 150 s", spec: { median: 60, sigma: 0.5, min: 30, max: 150 }, range: [30, 150], cdf: cut(logn(Math.log(60), 0.5), 30, 150) },
+    { name: "normal, mean 60 s, sd 20 s, cut off at 20 and 100 s", spec: { mean: 60, sd: 20, min: 20, max: 100 }, range: [20, 100], cdf: cut((x) => normalCdf(x, 60, 20), 20, 100) },
+    { name: "Weibull, scale 60 s, shape 1.5", spec: { scale: 60, shape: 1.5 }, range: [0, Infinity], cdf: (x) => (x > 0 ? 1 - Math.exp(-((x / 60) ** 1.5)) : 0) },
+  ];
+  const rows = [];
+  for (const c of cases) {
+    const first = [];
+    let lag = 0, early = 0, held = 0;
+    // Thirty runs of ten persons in the quick mode too, so the test of the distribution does not turn on a small sample.
+    for (let seed = 1; seed <= 30; seed += 1) {
+      const r = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, 10), doorWidth: 1.0, preMovement: c.spec, alarm, seed });
+      walks(r, n).forEach((segs, i) => {
+        if (!segs.length) return;
+        first.push(segs[0].t0 - alarm);
+        const late = segs[0].t0 - r.startAt[i];
+        lag = Math.max(lag, late);
+        if (late < -1e-3) early += 1;
+        if (late > 1e-3) held += 1;
+      });
+    }
+    const test = ks(first, c.cdf);
+    const inRange = Math.min(...first) >= c.range[0] - 1e-3 && Math.max(...first) <= c.range[1] + 1e-3;
+    rows.push({ distribution: c.name, samples: first.length, earliest_s: round(Math.min(...first), 2), median_s: round(quantile(first, 0.5), 2), latest_s: round(Math.max(...first), 2), within_range: inRange, moved_before_the_time_drawn: early, held_up_behind_someone_at_the_time_drawn: held, greatest_lag_behind_the_time_drawn_s: round(lag, 3), ks_D: round(test.D, 3), ks_p: round(test.p, 3) });
+  }
+  record({
+    id: "NIST-Verif.1.1",
+    source: "NIST TN 1822 Verif.1.1 (a modified IMO Test 5)",
+    name: "pre-evacuation times of ten persons in an 8 m x 5 m room, for each distribution the model takes, the alarm at 30 s",
+    criterion: "no one moves before the time drawn for them, the first moves after the alarm lie within the distribution's range and follow it (KS p > 0.05; 30 runs of ten persons)",
+    measured: rows,
+    pass: rows.every((r) => r.samples === 300 && r.within_range && r.moved_before_the_time_drawn === 0 && r.ks_p > 0.05),
+    summary: rows.map((r) => `${r.distribution}: ${r.earliest_s} to ${r.latest_s} s (median ${r.median_s}), KS p ${r.ks_p}`).join("; ") + `; ${rows.reduce((sum, r) => sum + r.held_up_behind_someone_at_the_time_drawn, 0)} of ${rows.reduce((sum, r) => sum + r.samples, 0)} first moves held up behind someone, by ${Math.max(...rows.map((r) => r.greatest_lag_behind_the_time_drawn_s))} s at most`,
+    deviation: "a person whose way is taken at the time drawn for them moves when it clears: the first move is then later than the time drawn",
+  });
+}
+
+/**
+ * NIST Verif.2.5 as written: a corridor 2 m wide and 100 m long with a 1 m exit at its end,
+ * one occupant at 1.25 m/s, a constant extinction coefficient of 1.0 /m; the time is that
+ * of a hand calculation by the model's relation. Then the speeds and coefficients its
+ * "user actions" suggest.
+ */
+function smokeSpeed() {
+  if (!Crowd.SMOKE_SPEED) return;
+  const { graph, at } = lattice([...rect(0, 200, 0, 4), [201, 2, KIND_DOOR]]);
+  const exits = [at(201, 2)];
+  const n = graph.nodes.length / 3;
+  const { alpha, beta, floor } = Crowd.SMOKE_SPEED.frantzichNilsson;
+  const run = (v0, K) => {
+    // Visibility 3 / K in every place for the whole run (K 0: the 100 m cap, clear air).
+    const smoke = K > 0 ? { K: 1, frameSeconds: 1, vis: new Float32Array(n).fill(3 / K) } : null;
+    const r = simulateCrowd(graph, { exits, groups: [{ nodes: [at(0, 2)], count: 1, speed: [v0, v0] }], doorWidth: 1.0, start: [0, 0], smoke, smokeSpeed: smoke ? "frantzichNilsson" : null, horizon: 3000 });
+    const segs = walks(r, n)[0];
+    const L = segs.reduce((sum, x) => sum + dist3(graph, x.a, x.b), 0);
+    return { L, T: r.outAt[0] - segs[0].t0 };
+  };
+  // The relation as FDS+Evac gives it, and as this model applies it: its loop steps at 0.15 m/s at least.
+  const pure = (v0, K) => v0 * Math.max(floor, 1 + (beta / alpha) * K);
+  const model = (v0, K) => Math.max(0.15, pure(v0, K));
+  const clear = run(1.25, 0), smoky = run(1.25, 1.0);
+  const expected = smoky.L / model(1.25, 1.0);
+  record({
+    id: "NIST-Verif.2.5",
+    source: "NIST TN 1822 Verif.2.5 (after Korhonen and Hostikka 2009)",
+    name: "one occupant at 1.25 m/s along a 2 m x 100 m corridor, clear and at an extinction coefficient of 1.0 /m",
+    criterion: "the time in smoke within 1 % of the hand calculation by the model's relation, v = v0 max(0.1, 1 + beta K / alpha), alpha 0.706 m/s, beta -0.057 m2/s (FDS+Evac's, after Frantzich and Nilsson); the clear time that at 1.25 m/s",
+    measured: { walk_m: round(smoky.L, 2), clear_s: round(clear.T, 2), clear_expected_s: round(clear.L / 1.25, 2), smoke_s: round(smoky.T, 2), smoke_expected_s: round(expected, 2), speed_in_smoke_mps: round(smoky.L / smoky.T, 4), relation_mps: round(pure(1.25, 1.0), 4), time_for_100m_s: round((100 * smoky.T) / smoky.L, 2) },
+    pass: Math.abs(smoky.T - expected) <= 0.01 * expected && Math.abs(clear.T - clear.L / 1.25) <= 0.01 * (clear.L / 1.25),
+    summary: `${round(smoky.L, 1)} m in ${round(smoky.T, 2)} s in smoke (hand calculation ${round(expected, 2)} s), ${round(smoky.L / smoky.T, 4)} m/s against the relation's ${round(pure(1.25, 1.0), 4)}; clear ${round(clear.T, 2)} s`,
+    deviation: "the exit is one door node at the corridor's end, 100.5 m from the start; the smoke is given as a visibility of 3 / K in every place",
+  });
+  const rows = [];
+  for (const v0 of [1.25, 1.0, 0.75, 0.5, 0.25]) {
+    for (const K of [0.5, 1.0, 3.0, 7.5, 10]) {
+      const r = run(v0, K);
+      const v = r.L / r.T;
+      rows.push({ unimpeded_mps: v0, K_per_m: K, speed_mps: round(v, 4), model_relation_mps: round(model(v0, K), 4), fds_evac_relation_mps: round(pure(v0, K), 4), governed_by: model(v0, K) > pure(v0, K) + 1e-9 ? "the loop's least step speed, 0.15 m/s" : pure(v0, K) <= v0 * floor + 1e-12 ? "the relation's least, 0.1 v0" : "the relation", rel_diff: round(v / model(v0, K) - 1, 4) });
+    }
+  }
+  const floored = rows.filter((r) => r.governed_by.startsWith("the loop")).length;
+  record({
+    id: "NIST-Verif.2.5-range",
+    source: "NIST TN 1822 Verif.2.5, user actions (the speeds and coefficients of the two data sets)",
+    name: "the same corridor at 1.25, 1.0, 0.75, 0.5 and 0.25 m/s and extinction coefficients of 0.5, 1.0, 3.0, 7.5 and 10 /m",
+    criterion: "each speed within 1 % of the model's relation as it applies it: max(0.15 m/s, v0 max(0.1, 1 + beta K / alpha))",
+    measured: rows,
+    pass: rows.every((r) => Math.abs(r.rel_diff) <= 0.01),
+    summary: `${rows.filter((r) => Math.abs(r.rel_diff) <= 0.01).length} of ${rows.length} at the model's relation; ${floored} of them held at the loop's least step speed of 0.15 m/s, above FDS+Evac's 0.1 v0 (${rows.filter((r) => r.governed_by.startsWith("the loop")).map((r) => `${r.unimpeded_mps} m/s at ${r.K_per_m} /m`).join(", ")})`,
+    deviation: "where the relation gives less than 0.15 m/s the model walks at 0.15 m/s, the least speed of any step in its loop; FDS+Evac's relation alone would give less there",
+  });
+}
+
 /** RiMEA Test 7, NIST Verif.2.4, IMO Test 7: the speeds of a named population are those asked for. */
 function populations() {
   if (!POPULATIONS) return;
@@ -981,6 +1090,8 @@ corridorSpeed();
 stairSpeed();
 corner();
 premovement();
+premovementDistributions();
+smokeSpeed();
 speedDistribution();
 populations();
 maxFlow();
