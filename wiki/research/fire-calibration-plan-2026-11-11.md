@@ -8826,6 +8826,40 @@ The user's word (2026-11-24): the calibration is to be aimed at what the egress 
 **Order proposed:** 2, then 1, then 3 and 4 as the user decides them. Phase 1's screening (16.4) waits on 2.
 
 
+### 16.54 The tenability quantities, fixed before any is computed (2026-11-24)
+
+The user's word (2026-11-24, evening): calibrate the fire for what the tenability reads, with a plan of work for the night. This section takes up proposals 1 and 5 of 16.53 and fixes them. **Nothing below had been computed when this was written.** The coordinator had read that the saved result files hold each run's head-height temperatures second by second (`run.series.head`), and no more.
+
+**What tonight can and cannot give.** A quantity is called calibrated only if it passes the rule below; the night's work measures where each stands and may well find "not calibrated". Nothing in the solver is changed or tuned by this section.
+
+**A. Two new quantities, read from results already saved (no solver run).**
+
+1. **Time to 60 °C at head height** (`headCrossing60`). The limit is the app's default for closing a place.
+2. **Time to a heat dose of 0.3 at head height** (`headHeatDose`). The dose is the app's: each minute adds T^3.4 / (5 x 10^7), T the gas temperature in °C (tenability.js); 0.3 is the app's default limit.
+
+- **Devices.** Those of the head-height temperature (13.2 item 1, lib/head.mjs): each tree's thermocouples 1.5 to 2.0 m over its floor, out of the burner's plume by the plume rule fixed on 2026-11-12. The model is read in the cell that quantity reads.
+- **The two series.** The measured series is the device's, at the test's own times. The model's is taken at the same times, each value the mean of the model's 1 s readings within half the measured interval of that time, as the suite does for a point device. Temperatures are absolute, in °C, since the limits are absolute; the model's ambient is the test's.
+- **The crossing.** The first time the series is at or above the level, found by a straight line between the two samples that bracket it. The dose is summed by the trapezium rule over the same times, from the first sample, and its crossing is found the same way.
+- **Four outcomes for each device and level.** Both cross: the pair's value is the model's time over the measured time. The model alone crosses: an early closure (it errs to the safe side). The measurement alone crosses: a miss (it errs to the unsafe side). Neither: no information, counted and set aside.
+- **Left out by rule.** Steady tests (Steckler), which have no series. Pairs whose measured crossing comes within three measured intervals of the start, where the time is not resolved. Runs the health check stopped.
+- **The statistic and the band.** The suite's own (the FDS Validation Guide's bias δ and model scatter σ_M) on the pairs where both cross, read the three ways every quantity is read (pooled over measurements, each series weighted alike, and with or without the tests whose door the grid closes), the word being the strictest. Calibrated: δ within 0.8 to 1.25, σ_M at most 0.35, in band in most series that have pairs, **and** misses in at most 5 % of the devices where the measurement crosses. Indicative: the pooled δ and σ_M in band and the misses at most 5 %, but not the rest. Otherwise not calibrated. Early closures are reported and do not fail the rule by themselves; a δ under 0.8 does.
+- **Results read.** The solver now on the site (13.B) on 0.20, 0.27 and 0.34 m; R8b and R8 (16.52) on 0.27 and 0.34 m; R8b on 0.20 m when its run ends (16.52's step 4, started 2026-11-24 16:12). Each file is read as it stands; no run is repeated for this.
+- **A check of the tool before it reads any result.** On made-up series with known crossings (a ramp, a step, a series that never crosses, one that crosses between samples), the tool returns the known times.
+
+**B. What the dose and the escape deadline inherit.** Reported, not judged: for each cell and solver, how the temperature's bias carries into the time to 60 °C and into the heat dose, from A's own numbers. No separate band.
+
+**C. Smoke and CO: facts first, then a design, then runs.** Not fixed here.
+1. List, from the nine data files, which tests have a measured CO, a measured soot or obscuration, and a measured CO₂ and O₂, at what height, and with what fuel. The result files do not hold the model's CO or soot at head height, so any comparison needs the suite to store them and a run.
+2. A design for those comparisons is written as 16.55 and fixed before any such run. The four smoke decisions of 16.53 stay the user's; 16.55 says which comparison each one holds up.
+3. Only what 16.55 fixes is run, with the solver now on the site first (0.34 m, then 0.27 m), beside the 0.20 m step, on the cores it leaves free.
+
+**D. Item 8's loose ends (16.52), from saved files.** The heat ledgers, the tallies and the radRoundoff sums as a dated note; the stop of FSE ISOHept26 looked at; the scatter between series of the head-height temperature on 0.27 m set out series by series, since it is what holds that word.
+
+**Order for the night.** A's tool and its check; A on the saved files; B; D; C's list and the draft of 16.55. C's runs start only once 16.55 is fixed. The 0.20 m step goes on meanwhile and is read when it ends.
+
+**What is reported in the morning.** For each quantity, cell and solver: the pairs, the four outcomes' counts, δ, σ_M, the word, and the series in and out of band. Whatever the words turn out to be.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
