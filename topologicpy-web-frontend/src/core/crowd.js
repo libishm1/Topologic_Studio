@@ -1314,7 +1314,8 @@ export function simulateCrowd(graph, opts = {}) {
       // the queue before a door at most as by its greatest flow's density.
       const around = densityAt(u, v);
       const crowd = toDoor[u] <= DOOR_QUEUE_M ? Math.min(around, QUEUE_DENSITY) : around;
-      const vel = Math.max(reading.floor, crowd < FREE_DENSITY ? own : Math.min(own, k0 * (1 - SFPE.a * crowd)));
+      // The least speed of a step never lifts a walker above their own (someone slow, in smoke).
+      const vel = Math.max(Math.min(reading.floor, own), crowd < FREE_DENSITY ? own : Math.min(own, k0 * (1 - SFPE.a * crowd)));
       const arrive = t0 + len / vel;
       segs[i].push(t0, arrive, v, u);
       if (door) doorFree[u] = Math.max(doorFree[u], t0) + 1 / capOf(u);
