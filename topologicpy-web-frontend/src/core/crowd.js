@@ -79,6 +79,39 @@
  * `stairGap` of the next node on the flight (0.9 m, about a person's
  * length), so a stream down a stair keeps its gaps.
  *
+ * When each sets off. By default within `start`, a short uniform stagger.
+ * With `preMovement` (for the run, or a group's own) each person draws a
+ * pre-movement time of their own, counted from the alarm (`alarm`, seconds
+ * into the run): uniform between two times, log-normal, a normal cut off at
+ * its ends, or a Weibull (drawPreMovement). The log-normal also takes its
+ * 1st and 99th percentiles, the form of the performance check's design
+ * values (rsetPresets.js RSET_PRESETS: perfAlarm, perfPre1, perfPre99), and
+ * the Weibull the measured clusters there (MEASURED_PRE); no distribution is
+ * built in here. The draws come from a stream of their own, so the same
+ * people stand in the same places and walk at the same speeds with it or
+ * without. Until they set off people stand where they are, fire or not:
+ * no one starts early because they see smoke.
+ *
+ * In smoke (off by default). With a fire run's visibility at head height,
+ * frame by frame (`smoke`, as the slime mould's `smokeFrames`), and a
+ * relation (`smokeSpeed`), each step is at the person's own speed times a
+ * factor read from the smoke where they stand when the step begins; the
+ * extinction coefficient is K = 3 / visibility (tenability.js; none at the
+ * 100 m cap). The one relation built in, "frantzichNilsson", is FDS+Evac's:
+ * v = max(0.1 v0, v0 (alpha + beta K) / alpha), alpha 0.706 m/s, beta
+ * -0.057 m^2/s (Korhonen and Hostikka 2009, FDS+Evac Technical Reference and
+ * User's Guide, VTT Working Papers 119, Eq. 10, p. 22, after Frantzich and
+ * Nilsson 2003, Lund report 3126; the same constants in FDS 6.7.5's
+ * evac.f90). Their tunnel was filled with artificial smoke and acetic acid
+ * as an irritant, at K of about 2 to 8 /m (as Ronchi, Gwynne and Purser
+ * 2011 describe it), so thinner smoke is the fit's extrapolation, and FDS+Evac applies it as a share of anyone's speed, the
+ * means only. Jin's curves for irritant and non-irritant smoke are not
+ * built in: a curve of one's own may be given instead, as points of K or
+ * visibility against the share of the speed kept. The loop's least step
+ * speed, 0.15 m/s, still holds, so a walker slower than 1.5 m/s is not
+ * slowed all the way to a tenth. The exit choice and the ways out do not
+ * reckon with the smoke's slowing, and no one turns back from it.
+ *
  * Randomness in how people move (off by default; the plan is
  * wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md). With `fluctuate`
  * each person's speed wobbles about their own as Corbetta et al. (2017)
@@ -106,7 +139,8 @@
  */
 import { Heap, csr, edgeLengths } from "./route.js";
 import { KIND_DOOR, KIND_FLOOR, KIND_LIFT, KIND_STAIR } from "./lattice.js";
-import { doorCapacity, walkTree } from "./performanceCheck.js";
+import { doorCapacity, lognormalFromPercentiles, walkTree } from "./performanceCheck.js";
+import { MAX_VISIBILITY, SIGN_CONSTANT } from "./tenability.js";
 
 /** The SFPE Handbook's hydraulic model (5th ed., 2016, ch. 59, Gwynne and Rosenbaum; doi:10.1007/978-1-4939-2565-0_59). */
 export const SFPE = {
@@ -285,6 +319,75 @@ function drawSpeed(population, rand) {
     if (x >= min && x <= max) return x;
   }
   return Math.min(max, Math.max(min, mean));
+}
+
+/**
+ * One pre-movement time, seconds after the alarm, from a distribution:
+ * - [least, most]: uniform;
+ * - {median or mu, sigma, min?, max?}: log-normal, mu and sigma those of the
+ *   logarithm of the seconds (mu = ln median); or {p1, p99, min?, max?}, the
+ *   log-normal through its 1st and 99th percentiles (performanceCheck.js
+ *   lognormalFromPercentiles);
+ * - {mean, sd, min?, max?}: normal;
+ * - {scale, shape, min?, max?}: Weibull (rsetPresets.js MEASURED_PRE's form).
+ * `min` (0 when left out) and `max` (none) cut the distribution off: a draw
+ * outside them is drawn again, so what is left keeps its shape.
+ * `rand` is a uniform generator on [0, 1).
+ */
+export function drawPreMovement(distribution, rand) {
+  const d = distribution;
+  if (Array.isArray(d)) return d[0] + (d[1] - d[0]) * rand();
+  const gauss = () => Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
+  let draw, middle;
+  if (d.scale !== undefined && d.shape !== undefined) {
+    draw = () => d.scale * (-Math.log(1 - rand())) ** (1 / d.shape);
+    middle = d.scale * Math.LN2 ** (1 / d.shape);
+  } else if (d.sigma !== undefined || d.p1 !== undefined) {
+    const { mu, sigma } = d.p1 !== undefined ? lognormalFromPercentiles(d.p1, d.p99) : { mu: d.mu ?? Math.log(d.median), sigma: d.sigma };
+    draw = () => Math.exp(mu + sigma * gauss());
+    middle = Math.exp(mu);
+  } else if (d.mean !== undefined && d.sd !== undefined) {
+    draw = () => d.mean + d.sd * gauss();
+    middle = d.mean;
+  } else throw new Error("simulateCrowd: a pre-movement distribution is [least, most], {median or mu, sigma}, {p1, p99}, {mean, sd} or {scale, shape}");
+  const min = d.min ?? 0, max = d.max ?? Infinity;
+  if (!Number.isFinite(middle) || !(min <= max)) throw new Error("simulateCrowd: a pre-movement distribution's numbers are not usable");
+  for (let tries = 0; tries < 200; tries += 1) {
+    const x = draw();
+    if (x >= min && x <= max) return x;
+  }
+  return Math.min(max, Math.max(min, middle));
+}
+
+/**
+ * Walking speed in smoke, for `smokeSpeed`: the share of their own speed a
+ * person keeps at the extinction coefficient K (1/m) where they stand.
+ * - frantzichNilsson: max(floor, (alpha + beta K) / alpha), as FDS+Evac
+ *   applies Frantzich and Nilsson's fit (Korhonen and Hostikka 2009, VTT
+ *   Working Papers 119, Eq. 10, p. 22: alpha 0.706 m/s, beta -0.057 m^2/s,
+ *   least speed 0.1 of the person's own; the fit's standard deviations,
+ *   0.069 and 0.015, are not used there or here). The experiments were in
+ *   irritant artificial smoke at K of about 2 to 8 /m.
+ * A relation of one's own: {alpha, beta, floor}, or a curve {by: "K" or
+ * "visibility", points: [[x, share], ...]} with x rising, read by straight
+ * lines between its points and held at its ends.
+ */
+export const SMOKE_SPEED = {
+  frantzichNilsson: { alpha: 0.706, beta: -0.057, floor: 0.1 },
+};
+
+/** The share of their speed kept at extinction coefficient K (1/m) under a relation (SMOKE_SPEED's forms). */
+export function smokeSpeedFactor(relation, K) {
+  if (relation.points) {
+    const x = relation.by === "visibility" ? (K > 0 ? SIGN_CONSTANT / K : Infinity) : K;
+    const pts = relation.points;
+    if (x <= pts[0][0]) return Math.max(0, pts[0][1]);
+    for (let k = 1; k < pts.length; k += 1) {
+      if (x <= pts[k][0]) return Math.max(0, pts[k - 1][1] + ((x - pts[k - 1][0]) / (pts[k][0] - pts[k - 1][0])) * (pts[k][1] - pts[k - 1][1]));
+    }
+    return Math.max(0, pts[pts.length - 1][1]);
+  }
+  return Math.min(1, Math.max(relation.floor ?? 0, 1 + (relation.beta / relation.alpha) * K));
 }
 
 /** m^2 a person standing at a gathering place: the sunflower's spacing, pi 0.45^2. */
@@ -501,6 +604,9 @@ export function passageSections(graph, { exits = [], blocked = null, passageWidt
  *   speed         the mean unimpeded speed, m/s (FREE_SPEED)
  *   spread        each person's speed is speed x (1 +- spread), uniform
  *   start         [earliest, latest] start, s: a short stagger, not a pre-movement time
+ *   preMovement   null (the default: `start`), or the distribution each person's pre-movement
+ *                 time is drawn from (drawPreMovement), seconds after the alarm
+ *   alarm         s into the run at which the alarm is given: added to each pre-movement time (0)
  *   doorWidth     m, every door's that `doorWidths` gives none
  *   doorWidths    m a node, each door node's own clear width (0: doorWidth); null: doorWidth for all
  *   passageFlow   corridors and stairs pass at most the SFPE flow for their width (passageSections;
@@ -516,6 +622,10 @@ export function passageSections(graph, { exits = [], blocked = null, passageWidt
  *   stairGap      m kept clear round the next node on a stair (0: none)
  *   shelterArea   m^2 each gathering place holds (Infinity: everyone)
  *   closes        each node's untenable time, s (a fire's; null: none)
+ *   smoke         null, or a fire run's visibility at head height: {K frames, frameSeconds,
+ *                 vis: Float32Array of K x n metres}, on the run's clock (the last frame holds after it)
+ *   smokeSpeed    null (the default: smoke slows no one), "frantzichNilsson" (SMOKE_SPEED), or a
+ *                 relation of one's own ({alpha, beta, floor}, or a curve {by, points}); needs `smoke`
  *   replan        s between ways out worked out again with a fire, and exits weighed again
  *   choice        "quickest" (default) or "nearest" (EXIT_CHOICES)
  *   fluctuate     each person's speed wobbles in time (WALK_FLUCTUATION; default off)
@@ -527,7 +637,9 @@ export function passageSections(graph, { exits = [], blocked = null, passageWidt
  *                 they choose as everyone else does, and `released` counts them),
  *                 walking at `speed` (a population: [least, most] m/s, uniform, or
  *                 {mean, sd, min, max}, a normal cut off at min and max; POPULATIONS) and
- *                 setting off within `start` ([earliest, latest] s). What a group leaves
+ *                 setting off within `start` ([earliest, latest] s), or after a pre-movement
+ *                 time of the group's own (`preMovement`, with its own `alarm` if given; it
+ *                 takes the place of the group's `start`). What a group leaves
  *                 out is as the options above give it. `occupantArea` and `maxPeople`
  *                 are then not used.
  * @returns {{
@@ -538,7 +650,10 @@ export function passageSections(graph, { exits = [], blocked = null, passageWidt
  *   switches: Int32Array, groupOf: Int32Array|null (each person's group), short: number
  *   (people the groups asked for that their places could not hold), released: number,
  *   passages: null | {corridors: number, stairs: number} (with passageFlow: the floor cross-sections
- *   and the stair nodes that carry a capacity)
+ *   and the stair nodes that carry a capacity),
+ *   startAt: Float32Array (when each was free to set off, s: the stagger, or the alarm and
+ *   their pre-movement time), smokeSpeed: string|null (the relation applied: its name, or
+ *   "custom"), slowed: number (people who took a step slowed by smoke)
  * }}
  *   choice: the one taken, "nearest" when the quickest was asked with a
  *   single exit or on a graph too large for it (tooLarge, QUICKEST_CELLS);
@@ -573,6 +688,10 @@ export function simulateCrowd(graph, opts = {}) {
     fluctuate = false,
     kS = null,
     groups = null,
+    preMovement = null,
+    alarm = 0,
+    smoke = null,
+    smokeSpeed = null,
   } = opts;
   const n = graph.nodes.length / 3;
   const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
@@ -661,16 +780,22 @@ export function simulateCrowd(graph, opts = {}) {
   const assigned = new Int32Array(people).fill(-1);
   const vmax = new Float64Array(people);
   const ready = new Float64Array(people);
+  // Pre-movement times are drawn from a stream of their own: the places and speeds are the same with them or without.
+  const preRand = random((seed ^ 0x85ebca6b) >>> 0);
   for (let i = 0; i < people; i += 1) {
     const g = groupOf ? groups[groupOf[i]] : null;
     vmax[i] = g?.speed ? drawSpeed(g.speed, rand) : speed * (1 + spread * (2 * rand() - 1));
     const [early, late] = g?.start ?? start;
     ready[i] = early + (late - early) * rand();
+    // A pre-movement time of their own after the alarm, the group's or the run's (a group's own `start` stands before the run's distribution).
+    const pre = g?.preMovement ?? (g?.start ? null : preMovement);
+    if (pre) ready[i] = (g?.alarm ?? alarm) + drawPreMovement(pre, preRand);
     if (g && g.exit !== undefined && g.exit !== null) {
       if (!isExit[g.exit]) throw new Error("simulateCrowd: a group's exit is not one of the exits");
       assigned[i] = g.exit;
     }
   }
+  const startAt = Float32Array.from(ready);
   // How many stand on each node: one at most, but for a stair with a width (passageFlow).
   const load = new Uint16Array(n);
   for (let i = 0; i < people; i += 1) load[at[i]] += 1;
@@ -1061,7 +1186,7 @@ export function simulateCrowd(graph, opts = {}) {
   };
   const factor = new Float64Array(people).fill(1);
   const factorAt = new Float64Array(people);
-  const speedFactor = (i, t) => {
+  const wobbleFactor = (i, t) => {
     if (!fluctuate) return 1;
     let f = factor[i];
     for (let h = t - factorAt[i]; h > 1e-9; h -= WALK_FLUCTUATION.step) {
@@ -1072,6 +1197,21 @@ export function simulateCrowd(graph, opts = {}) {
     factor[i] = f;
     factorAt[i] = t;
     return f;
+  };
+  // In smoke (`smoke`, `smokeSpeed`): the share of their speed kept at the extinction
+  // coefficient where the person stands, K = 3 / visibility, in the frame the step begins in.
+  if (typeof smokeSpeed === "string" && !SMOKE_SPEED[smokeSpeed]) throw new Error(`simulateCrowd: no smoke speed relation named ${smokeSpeed}`);
+  const smokeRelation = smoke && smokeSpeed ? (typeof smokeSpeed === "string" ? SMOKE_SPEED[smokeSpeed] : smokeSpeed) : null;
+  if (smokeRelation && !(smoke.K > 0 && smoke.frameSeconds > 0 && smoke.vis?.length === smoke.K * n)) throw new Error("simulateCrowd: smoke is {K, frameSeconds, vis} with K x n visibilities");
+  const slowedBy = new Uint8Array(people);
+  const speedFactor = (i, t) => {
+    const f = wobbleFactor(i, t);
+    if (!smokeRelation) return f;
+    const frame = Math.min(smoke.K - 1, Math.max(0, Math.floor(t / smoke.frameSeconds)));
+    const seen = smoke.vis[frame * n + at[i]];
+    const share = seen < MAX_VISIBILITY ? smokeSpeedFactor(smokeRelation, SIGN_CONSTANT / Math.max(1e-6, seen)) : 1;
+    if (share < 1) slowedBy[i] = 1;
+    return f * share;
   };
   // Steps: with kS set, staying or each free open neighbour, weighed as the
   // floor field weighs a cell (Kirchner and Schadschneider 2002, Eq. 1, with
@@ -1249,6 +1389,9 @@ export function simulateCrowd(graph, opts = {}) {
     released,
     switches,
     passages: passages ? { corridors: passages.corridors, stairs: passages.stairs } : null,
+    startAt,
+    smokeSpeed: smokeRelation ? (typeof smokeSpeed === "string" ? smokeSpeed : "custom") : null,
+    slowed: slowedBy.reduce((s, x) => s + x, 0),
   };
 }
 

@@ -2796,6 +2796,7 @@ export default function App() {
           settings.crowdSteps,
           settings.crowdRuns,
           settings.crowdPassageFlow,
+          settings.crowdSmokeSpeed,
           // The IFC's door widths may arrive after the graph: the walk is worked out again with them.
           (studio.semantics?.doors || []).length,
         ])
@@ -2847,6 +2848,13 @@ export default function App() {
       }
       return null;
     },
+    // A Flamescapes run's visibility at head height, frame by frame, for the walking speed in
+    // smoke (settings.crowdSmokeSpeed, off by default; a graph fire has no smoke of its own).
+    smoke: () => {
+      if (!settings.crowdSmokeSpeed || !crowdFlames) return null;
+      const frames = stackFrames(crowdFlames.frames, graph.nodes.length / 3);
+      return frames.K > 0 ? { K: frames.K, frameSeconds: crowdFlames.result.frameSeconds, vis: frames.vis } : null;
+    },
   };
   // The key and graph of the walk last worked out, so switching off and on again does not work it out twice.
   const crowdDoneRef = useRef({ key: null, nodes: null, state: null });
@@ -2860,7 +2868,7 @@ export default function App() {
       setCrowdState(done.state);
       return undefined;
     }
-    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, choice, motion, runs, passageFlow, doorWidths: widthsOf } = crowdInputsRef.current;
+    const { exits: exitNodes, occupantArea, useWalls, departAfter, shelter, closes, smoke: smokeOf, choice, motion, runs, passageFlow, doorWidths: widthsOf } = crowdInputsRef.current;
     let live = true;
     const finish = (state) => {
       if (!live) return;
@@ -2881,6 +2889,7 @@ export default function App() {
           const kS = STEP_RANDOMNESS[motion.steps] ?? null;
           const varied = Boolean(motion.fluctuate) || kS !== null;
           const fire = closes();
+          const smoke = smokeOf();
           const doorWidths = widthsOf();
           const optsFor = (seed) => ({
             exits: exitNodes,
@@ -2891,6 +2900,8 @@ export default function App() {
             start: [departAfter, departAfter + 10],
             shelterArea: shelter > 0 ? shelter : Infinity,
             closes: fire,
+            smoke,
+            smokeSpeed: smoke ? "frantzichNilsson" : null,
             choice,
             fluctuate: Boolean(motion.fluctuate),
             kS,

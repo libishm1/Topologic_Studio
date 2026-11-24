@@ -589,6 +589,202 @@ test("up a stair at STAIR_UP of the speed down it", () => {
   assert.ok(climbed > 3, "someone climbed the stair");
 });
 
+// ---- pre-movement times of each person's own, and walking speed in smoke (tools/validation: NIST Verif.1.1 and 2.5)
+
+import { SMOKE_SPEED, drawPreMovement, smokeSpeedFactor } from "./crowd.js";
+
+/** A uniform generator for the draws below (a linear congruential one, not the model's). */
+function uniform(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (Math.imul(a, 1664525) + 1013904223) >>> 0;
+    return a / 4294967296;
+  };
+}
+
+test("without pre-movement or smoke a run is exactly as before, whatever else of them is set", () => {
+  const { graph, exits } = room(30, 6, { exits: ["left", "right"] });
+  const n = graph.nodes.length / 3;
+  const before = simulateCrowd(graph, { exits, occupantArea: 1, seed: 5 });
+  const clearAir = { K: 2, frameSeconds: 10, vis: new Float32Array(2 * n).fill(100) };
+  for (const more of [
+    { preMovement: null, alarm: 120 },
+    { smoke: { K: 1, frameSeconds: 1, vis: new Float32Array(n).fill(2) } },
+    { smokeSpeed: "frantzichNilsson" },
+    { smoke: clearAir, smokeSpeed: "frantzichNilsson" },
+  ]) {
+    const out = simulateCrowd(graph, { exits, occupantArea: 1, seed: 5, ...more });
+    assert.deepEqual(Array.from(out.segments), Array.from(before.segments), JSON.stringify(Object.keys(more)));
+    assert.equal(out.slowed, 0);
+  }
+  assert.equal(before.smokeSpeed, null);
+  // The stagger each was given is reported, within `start`.
+  assert.equal(before.startAt.length, before.people);
+  assert.ok(Array.from(before.startAt).every((t) => t >= 0 && t <= 10));
+});
+
+test("pre-movement draws follow the distribution asked for, and keep to its cut-offs", () => {
+  const draws = (d, k = 20000) => {
+    const rand = uniform(7);
+    return Array.from({ length: k }, () => drawPreMovement(d, rand)).sort((a, b) => a - b);
+  };
+  const share = (xs, t) => xs.filter((x) => x <= t).length / xs.length;
+  const median = (xs) => xs[Math.floor(xs.length / 2)];
+  // Uniform.
+  const u = draws([10, 100]);
+  assert.ok(u[0] >= 10 && u.at(-1) <= 100);
+  assert.ok(Math.abs(median(u) - 55) < 1.5);
+  // Log-normal: the median, and 84.1 % below median x e^sigma.
+  const l = draws({ median: 60, sigma: 0.5 });
+  assert.ok(Math.abs(median(l) - 60) < 1.5, `median ${median(l)}`);
+  assert.ok(Math.abs(share(l, 60 * Math.exp(0.5)) - 0.8413) < 0.01);
+  // The same by mu, and through its 1st and 99th percentiles.
+  assert.ok(Math.abs(median(draws({ mu: Math.log(60), sigma: 0.5 })) - 60) < 1.5);
+  const p = draws({ p1: 60, p99: 180 });
+  assert.ok(Math.abs(share(p, 60) - 0.01) < 0.004 && Math.abs(share(p, 180) - 0.99) < 0.004);
+  assert.ok(Math.abs(median(p) - Math.sqrt(60 * 180)) < 1.5);
+  // Cut off: nothing outside, and the shape kept between (the share below the median of the uncut one, by hand).
+  const c = draws({ median: 60, sigma: 0.5, min: 30, max: 150 });
+  assert.ok(c[0] >= 30 && c.at(-1) <= 150);
+  // P(30 < X < 60) / P(30 < X < 150), with Phi(ln(0.5) / 0.5) = 0.08283 and Phi(ln(2.5) / 0.5) = 0.96657.
+  assert.ok(Math.abs(share(c, 60) - (0.5 - 0.08283) / (0.96657 - 0.08283)) < 0.01);
+  // Normal, cut off at zero when no least time is given.
+  const g = draws({ mean: 60, sd: 20, min: 20, max: 100 });
+  assert.ok(g[0] >= 20 && g.at(-1) <= 100 && Math.abs(median(g) - 60) < 1);
+  assert.ok(draws({ mean: 5, sd: 20 })[0] >= 0);
+  // Weibull: the share below its scale is 1 - 1/e.
+  const w = draws({ scale: 60, shape: 1.5 });
+  assert.ok(Math.abs(share(w, 60) - (1 - Math.exp(-1))) < 0.01);
+  assert.throws(() => drawPreMovement({ mode: 60 }, uniform(1)), /pre-movement/);
+  assert.throws(() => drawPreMovement({ median: 60, sigma: 0.5, min: 100, max: 50 }, uniform(1)), /pre-movement/);
+});
+
+test("with pre-movement each person sets off at the alarm and a time of their own, the same people in the same places", () => {
+  const { graph, exits } = room(20, 12);
+  const n = graph.nodes.length / 3;
+  const plain = simulateCrowd(graph, { exits, occupantArea: 3, seed: 4 });
+  const spec = { median: 60, sigma: 0.5, min: 20, max: 200 };
+  const out = simulateCrowd(graph, { exits, occupantArea: 3, seed: 4, preMovement: spec, alarm: 30 });
+  assert.equal(out.people, plain.people);
+  assert.equal(out.inside, 0);
+  const first = (r) => walks(r).map((list) => list[0]);
+  const a = first(plain), b = first(out);
+  for (let i = 0; i < out.people; i += 1) {
+    // The same place.
+    assert.equal(b[i].a, a[i].a);
+    assert.ok(out.startAt[i] >= 30 + 20 - 1e-3 && out.startAt[i] <= 30 + 200 + 1e-3, `set off at ${out.startAt[i]}`);
+    // No one moves before their time.
+    assert.ok(b[i].t0 >= out.startAt[i] - 1e-3);
+  }
+  // Not all at once: the times differ from person to person, and the last out is later than without.
+  assert.ok(new Set(Array.from(out.startAt).map((t) => Math.round(t))).size > out.people / 3);
+  assert.ok(out.lastOut > plain.lastOut + 30);
+  // Most set off unhindered, exactly at their time.
+  const onTime = b.filter((s, i) => Math.abs(s.t0 - out.startAt[i]) < 1e-3).length;
+  assert.ok(onTime >= 0.9 * out.people, `${onTime} of ${out.people} on time`);
+  // The same seed, the same times; the uniform form as well.
+  const again = simulateCrowd(graph, { exits, occupantArea: 3, seed: 4, preMovement: spec, alarm: 30 });
+  assert.deepEqual(Array.from(again.startAt), Array.from(out.startAt));
+  const flat = simulateCrowd(graph, { exits, occupantArea: 3, seed: 4, preMovement: [40, 50] });
+  assert.ok(Array.from(flat.startAt).every((t) => t >= 40 && t <= 50));
+});
+
+test("groups: a group's own pre-movement and alarm stand before the run's, and its own start before the run's distribution", () => {
+  const { graph, exits } = room(20, 12);
+  const id = (i, k) => i * 12 + k;
+  const area = (i0, i1) => {
+    const list = [];
+    for (let i = i0; i <= i1; i += 1) for (let k = 0; k < 12; k += 1) list.push(id(i, k));
+    return list;
+  };
+  const groups = [
+    { nodes: area(0, 4), count: 10 },
+    { nodes: area(6, 10), count: 10, preMovement: [100, 110], alarm: 5 },
+    { nodes: area(12, 16), count: 10, start: [0, 2] },
+  ];
+  const out = simulateCrowd(graph, { exits, groups, preMovement: { mean: 60, sd: 5, min: 50, max: 70 }, alarm: 20, seed: 3 });
+  assert.equal(out.people, 30);
+  for (let i = 0; i < 30; i += 1) {
+    const t = out.startAt[i];
+    if (out.groupOf[i] === 0) assert.ok(t >= 70 - 1e-3 && t <= 90 + 1e-3, `the run's: ${t}`);
+    if (out.groupOf[i] === 1) assert.ok(t >= 105 - 1e-3 && t <= 115 + 1e-3, `the group's: ${t}`);
+    if (out.groupOf[i] === 2) assert.ok(t >= 0 && t <= 2 + 1e-3, `the group's start: ${t}`);
+  }
+});
+
+test("the smoke relation built in is FDS+Evac's: a straight fall with K to a tenth; a curve of one's own is read between its points", () => {
+  const fn = SMOKE_SPEED.frantzichNilsson;
+  assert.deepEqual(fn, { alpha: 0.706, beta: -0.057, floor: 0.1 });
+  assert.equal(smokeSpeedFactor(fn, 0), 1);
+  assert.ok(Math.abs(smokeSpeedFactor(fn, 1) - (0.706 - 0.057) / 0.706) < 1e-12);
+  assert.ok(Math.abs(smokeSpeedFactor(fn, 7.5) - (0.706 - 0.057 * 7.5) / 0.706) < 1e-12);
+  // The line reaches a tenth at K = 0.9 alpha / 0.057, about 11.1 /m, and is held there.
+  assert.ok(Math.abs(smokeSpeedFactor(fn, (0.9 * 0.706) / 0.057) - 0.1) < 1e-12);
+  assert.equal(smokeSpeedFactor(fn, 20), 0.1);
+  // A curve by K, and one by visibility (K = 3 / visibility; clear air is past its last point).
+  const byK = { by: "K", points: [[0, 1], [2, 0.5], [4, 0.25]] };
+  assert.equal(smokeSpeedFactor(byK, 1), 0.75);
+  assert.equal(smokeSpeedFactor(byK, 3), 0.375);
+  assert.equal(smokeSpeedFactor(byK, 9), 0.25);
+  const byVis = { by: "visibility", points: [[1, 0.2], [3, 1]] };
+  assert.equal(smokeSpeedFactor(byVis, 3), 0.2);
+  assert.ok(Math.abs(smokeSpeedFactor(byVis, 1.5) - 0.6) < 1e-12);
+  assert.equal(smokeSpeedFactor(byVis, 0.5), 1);
+  assert.equal(smokeSpeedFactor(byVis, 0), 1);
+});
+
+test("in smoke a walker keeps the relation's share of their speed, from the smoke where they stand and when", () => {
+  const { graph, exits } = room(80, 3);
+  const n = graph.nodes.length / 3;
+  const far = 79 * 3 + 1;
+  const one = (more) => simulateCrowd(graph, { exits, groups: [{ nodes: [far], count: 1, speed: [1.25, 1.25] }], start: [0, 0], ...more });
+  const share = (K) => (0.706 - 0.057 * K) / 0.706;
+  // The same smoke everywhere: K = 1 /m is a visibility of 3 m.
+  const even = one({ smoke: { K: 1, frameSeconds: 5, vis: new Float32Array(n).fill(3) }, smokeSpeed: "frantzichNilsson" });
+  assert.equal(even.smokeSpeed, "frantzichNilsson");
+  assert.equal(even.slowed, 1);
+  const steps = speedsOf(graph, even);
+  assert.ok(steps.length > 50);
+  for (const s of steps) assert.ok(Math.abs(s.v - 1.25 * share(1)) < 2e-3, `${s.v.toFixed(4)} m/s`);
+  const clear = one({});
+  assert.ok(Math.abs((even.outAt[0] / clear.outAt[0]) * share(1) - 1) < 1e-3);
+  // Smoke over the half nearer the exit only: full speed until they reach it.
+  const half = new Float32Array(n).fill(100);
+  for (let v = 0; v < 40 * 3; v += 1) half[v] = 3 / 5;
+  const partly = one({ smoke: { K: 1, frameSeconds: 5, vis: half }, smokeSpeed: "frantzichNilsson" });
+  for (const s of speedsOf(graph, partly)) assert.ok(Math.abs(s.v - 1.25 * (half[s.a] < 100 ? share(5) : 1)) < 2e-3, `from node ${s.a}: ${s.v.toFixed(4)} m/s`);
+  // Smoke that comes at 10 s (the second frame, which holds to the end): full speed in steps begun before, slowed after.
+  const later = new Float32Array(2 * n).fill(100);
+  later.fill(3 / 3, n);
+  const timed = one({ smoke: { K: 2, frameSeconds: 10, vis: later }, smokeSpeed: "frantzichNilsson" });
+  const timedSteps = speedsOf(graph, timed);
+  assert.ok(timedSteps.some((s) => s.t0 < 10) && timedSteps.some((s) => s.t0 > 30));
+  for (const s of timedSteps) assert.ok(Math.abs(s.v - 1.25 * (s.t0 < 10 ? 1 : share(3))) < 2e-3, `at ${s.t0.toFixed(1)} s: ${s.v.toFixed(4)} m/s`);
+  // A curve of one's own, by visibility: half speed at 3 m and under.
+  const own = one({ smoke: { K: 1, frameSeconds: 5, vis: new Float32Array(n).fill(3) }, smokeSpeed: { by: "visibility", points: [[3, 0.5], [10, 1]] } });
+  assert.equal(own.smokeSpeed, "custom");
+  for (const s of speedsOf(graph, own)) assert.ok(Math.abs(s.v - 0.625) < 2e-3);
+  // Smoke of the wrong size, or a relation with no such name, is refused.
+  assert.throws(() => one({ smoke: { K: 2, frameSeconds: 5, vis: new Float32Array(n) }, smokeSpeed: "frantzichNilsson" }), /smoke/);
+  assert.throws(() => one({ smoke: { K: 1, frameSeconds: 5, vis: new Float32Array(n) }, smokeSpeed: "jin" }), /no smoke speed relation/);
+});
+
+test("in smoke a crowd is slower out, and no faster anywhere than without it", () => {
+  const { graph, exits } = room(30, 10);
+  const n = graph.nodes.length / 3;
+  const base = { exits, occupantArea: 2, seed: 6, start: [0, 0] };
+  const clear = simulateCrowd(graph, base);
+  const smoky = simulateCrowd(graph, { ...base, smoke: { K: 1, frameSeconds: 5, vis: new Float32Array(n).fill(0.5) }, smokeSpeed: "frantzichNilsson" });
+  assert.equal(smoky.people, clear.people);
+  assert.equal(smoky.inside, 0);
+  assert.equal(smoky.slowed, smoky.people);
+  assert.ok(smoky.lastOut > clear.lastOut);
+  // K = 6 /m: no step faster than the share of the fastest walker's speed, 1.25 x 1.19 m/s.
+  const cap = FREE_SPEED * 1.25 * ((0.706 - 0.057 * 6) / 0.706);
+  for (const s of speedsOf(graph, smoky)) assert.ok(s.v <= cap + 2e-3, `${s.v.toFixed(3)} m/s`);
+  assertOneANode(graph, exits, smoky);
+});
+
 /** The gathering places of a run (the points after the graph's own) that stand over a place of the graph in plan. */
 function gatheredOverFloor(graph, out) {
   const n = graph.nodes.length / 3;

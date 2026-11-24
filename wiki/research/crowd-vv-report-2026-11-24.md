@@ -9,6 +9,8 @@ What the people-leaving model (`topologicpy-web-frontend/src/core/crowd.js`) pas
 - Harness: `node tools/validation/crowd-validation.mjs --out 2026-11-24-crowd-validation.json --date 2026-11-24`.
 - Result: 22 pass, 2 fail, 3 documentation. The 16 passes and 2 failures of 2026-11-11 are unchanged; six tests were added the same day, run as written with the start areas, assigned exits and populations the model now has (`groups` in `simulateCrowd`), and all six pass. File: `benchmark/results/2026-11-24-crowd-validation.json`, which records the hash of `crowd.js`.
 - Code: main after pull request 19 (the gathering places and the count of people who reach no exit changed since 2026-11-11; the walk did not).
+- Later the same day, on the branch `feature/crowd-premovement-smoke`: 25 pass, 2 fail, 3 documentation. Three tests were added with two new options, both off unless asked for: a pre-movement time for each person (`preMovement`, `alarm`) and a walking speed in smoke (`smoke`, `smokeSpeed`). The 22 passes and 2 failures above are unchanged, and runs without the new options are the same to the last digit. File: `benchmark/results/2026-11-24-crowd-validation-premovement-smoke.json`.
+- With both sets of changes together (main after pull requests 22 and 23): 25 pass, 4 fail, 4 documentation by default, and 28 pass, 1 fail with `passageFlow`. The four default failures are RiMEA 12b and 16 and the two cases added with the flow capacity (NIST Verif.5.1 and the SFPE flows), which pass with it on.
 - The harness now runs with the unit tests (`src/core/crowdValidation.test.mjs`): a new failure, or the loss of a pass, fails the suite. Since the update below it runs twice there, by default and with `passageFlow`.
 
 Each test builds its geometry as a lattice of nodes 0.5 m apart and runs the model as the app does. Nothing is tuned to pass.
@@ -75,12 +77,12 @@ Both come from how density is read: round the free node ahead of a walker, so de
 
 | Test | What it asks | Verdict |
 | --- | --- | --- |
-| Verif.1.1 | Pre-evacuation times follow the distribution assigned | Pass with a deviation: a uniform stagger only; no other distribution can be assigned |
+| Verif.1.1 | Pre-evacuation times follow the distribution assigned | Pass (run) as written, for each form the model takes: uniform, log-normal, log-normal cut off, normal cut off and Weibull, ten persons in the 8 m x 5 m room, 30 runs each, the alarm at 30 s. No one moves before the time drawn, all first moves lie in range, and they follow the distribution (KS p 0.85, 0.39, 0.54, 0.36, 0.85; 300 persons each). 2 of 1,500 first moves came later than drawn, by 0.37 s at most: the way was taken. The distributions' numbers are test inputs; none is built in |
 | Verif.2.1 | Speed in a corridor | Pass (run), along the lattice and at 45 degrees. Sensitivity to the node spacing not shown |
 | Verif.2.2 | Speed on a stair | Pass with a deviation: 10 m run scaled to the 100 m of the test |
 | Verif.2.3 | Movement round a corner | Pass (run), from the start area |
 | Verif.2.4 | Assigned demographics | Pass (run): a normal population (Weidmann's) and a uniform one (IMO's) are each followed (KS p 0.83 and 0.36, 400 persons) |
-| Verif.2.5 | Reduced visibility against walking speed | Not represented: smoke does not slow anyone |
+| Verif.2.5 | Reduced visibility against walking speed | Pass (run) as written for the one relation built in, FDS+Evac's use of Frantzich and Nilsson's fit: one occupant at 1.25 m/s along the 2 m x 100 m corridor at K = 1.0 /m walks at 1.1491 m/s, the relation's value (100.5 m in 87.46 s; 80.40 s clear). Over the suggested range (1.25 to 0.25 m/s, K 0.5 to 10 /m) 25 of 25 match the relation as the model applies it; in 4 of them, slow walkers in the thickest smoke, the model's least step speed of 0.15 m/s governs, above the relation's 0.1 of the person's speed. Off unless asked for. Irritancy, turning back and crawling are not represented |
 | Verif.2.6 | Occupant incapacitation | Not represented in the walk; the doses are computed apart from it |
 | Verif.2.7 | Lift use | Not represented: lifts are left out |
 | Verif.2.8 | Horizontal counter-flows | Not represented: everyone heads for an exit |
@@ -125,7 +127,7 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 | --- | --- |
 | 1 | Pass (run as NIST Verif.2.1) |
 | 2, 3 | Not run at the suite's 10 m; the stair speeds pass under RiMEA 2 and 3 |
-| 4, 5, 6 | Pass (run as NIST Verif.5.2, 1.1 and 2.3; 5 with its deviation) |
+| 4, 5, 6 | Pass (run as NIST Verif.5.2, 1.1 and 2.3; 5 as RiMEA 5 and with the uniform distribution of Verif.1.1) |
 | 7 | Pass (run): 400 males of 30 to 50 years, uniform 0.97 to 1.62 m/s |
 | 8 | Not represented: no counter-flow |
 | 9 | Pass (run as RiMEA 9) |
@@ -138,7 +140,8 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 - Validated, or calibrated, against people. No comparison with a recorded evacuation has been made.
 - "Passes RiMEA" or "passes NIST TN 1822". It passes the tests listed, several with deviations.
 - Conformity with ISO 20414, which was not read.
-- An escape time from the animation. The performance check, not the animation, gives times, and it adds detection, alarm and pre-movement.
+- An escape time from the animation. The performance check, not the animation, gives times, and it adds detection, alarm and pre-movement. In the app the animation still starts everyone within a short stagger.
+- A validated speed in smoke. The relation is FDS+Evac's straight line through Frantzich and Nilsson's tunnel data: artificial smoke with acetic acid as an irritant, extinction coefficients of about 2 to 8 /m, means only. In thinner smoke it is an extrapolation, and it says nothing of non-irritant smoke.
 - Dense crowds, or the time to clear a stair. In the app a stair is one file of nodes; its real width counts only with `passageFlow`, which is off by default.
 
 ## Next, in order
@@ -146,10 +149,12 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 1. Done on 2026-11-24: start areas, exits assigned to people, and populations with their own speeds; NIST Verif.4.1 and RiMEA 11 run as written. The populations built in are IMO MSC.1/Circ.1533's twelve groups by age and sex (Table 3.4, uniform) with its passengers' composition (Table 3.1), RiMEA's persons with impaired mobility, and Weidmann's normal distribution. IMO's stair speeds by group (Table 3.5) are not used: stairs take the SFPE values for everyone.
 2. Done on 2026-11-24 as an option, off by default: a flow limit for corridors and stairs, with the stair's real width (RiMEA 12b, NIST Verif.5.1). Before it becomes the default: check the stair widths the graph carries on real models, and decide what a corridor's width counted in nodes is worth.
 3. Tried on 2026-11-24 and not adopted: the density reading, calibrated on the single-file data with other data held back (RiMEA 16, RiMEA 4). It fits the single file and fails the held-out rules. Next: a cap on the queue's density before every passage, and two-dimensional data to calibrate on (`crowd-calibration-2026-11-24.md`, section 7.4).
-4. Pre-movement times on each person and a speed in smoke (NIST Verif.1.1, 2.5).
+4. Done on 2026-11-24 as options, off by default: pre-movement times on each person and a speed in smoke (NIST Verif.1.1, 2.5). Left open: no pre-movement distribution is built in (the performance check's design values and measured clusters can be passed in, as their sources stand there); the app's panel does not offer pre-movement; the least step speed of 0.15 m/s should not lift a walker above their own speed in smoke; exits are chosen as if smoke slowed no one; Jin's curves and the recommendations of Fridolf et al. were not read and are not built in.
 
 ## Sources
 
 - RiMEA e.V., Guideline for Microscopic Evacuation Analysis, version 4.1.1 of 11.09.2025, https://rimea.de (CC BY-ND 4.0).
 - Ronchi E., Kuligowski E.D., Reneke P.A., Peacock R.D., Nilsson D. (2013). The Process of Verification and Validation of Building Fire Evacuation Models. NIST Technical Note 1822. doi:10.6028/NIST.TN.1822.
+- Korhonen T., Hostikka S. (2009). Fire Dynamics Simulator with Evacuation: FDS+Evac, Technical Reference and User's Guide. VTT Working Papers 119. Eq. 10, p. 22: the walking speed in smoke, alpha 0.706 m/s, beta -0.057 m2/s, least speed 0.1 of the person's own (read; the same constants in `evac.f90` of FDS 6.7.5). Its source, Frantzich H., Nilsson D. (2003), Utrymning genom tät rök: beteende och förflyttning, Report 3126, Lund University, was not read.
+- Ronchi E., Gwynne S.M.V., Purser D.A. (2011). The impact of default settings on evacuation model results: a study of visibility conditions vs occupant walking speeds. Advanced Research Workshop, Evacuation and Human Behaviour in Emergency Situations, Santander (read: how the Frantzich and Nilsson experiments were made, and that FDS+Evac uses their means).
 - International Maritime Organization (2016). MSC.1/Circ.1533, Revised guidelines on evacuation analysis for new and existing passenger ships.

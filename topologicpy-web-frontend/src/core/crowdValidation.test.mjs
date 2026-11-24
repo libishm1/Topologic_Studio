@@ -25,13 +25,13 @@ test("the RiMEA and NIST verification cases by default: the same passes, and onl
   // flow steadily before the stair (NIST Verif.5.1); and the single-file diagram is too fast (RiMEA 16).
   const summary = run();
   assert.deepEqual(summary.failed.sort(), ["NIST-Verif.5.1", "RiMEA-12b", "RiMEA-16", "SFPE-flows"]);
-  assert.ok(summary.pass >= 22, `${summary.pass} pass`);
+  assert.ok(summary.pass >= 25, `${summary.pass} pass`);
 });
 
 test("the RiMEA and NIST verification cases with passageFlow: only the single-file diagram fails", () => {
   const summary = run("--passage-flow");
   assert.deepEqual(summary.failed.sort(), ["RiMEA-16"]);
-  assert.ok(summary.pass >= 25, `${summary.pass} pass`);
+  assert.ok(summary.pass >= 28, `${summary.pass} pass`);
 });
 
 test("the calibrated density reading: the single-file diagram passes, and what it costs is on record", () => {
