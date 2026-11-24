@@ -413,7 +413,7 @@ function distanceToSegment(px, py, [[x0, y0], [x1, y1]]) {
 /**
  * Build the lattice navigation graph.
  *
- * @returns {{points: Float32Array, edges: Uint32Array, kinds: Uint8Array,
+ * @returns {{points: Float32Array, edges: Uint32Array, kinds: Uint8Array, widths: Float32Array,
  *            blocked: Uint8Array, walls: object[], angle: number, spacing: number,
  *            stats: object}}
  */
@@ -547,6 +547,9 @@ export function buildLatticeGraph({
   const points = new Float32Array(capacity * 3);
   const kinds = new Uint8Array(capacity);
   const heights = new Float64Array(capacity);
+  // A stair node's real width, m (0: none): a tread's long side, an assumed stair's flight.
+  // The stair is one file of nodes whatever its width; the crowd's flow reads this (crowd.js passageFlow).
+  const widths = new Float32Array(capacity);
   const cells = new Map();
   kept.forEach((n, idx) => {
     const [x, y] = plan(samples.i[n], samples.j[n]);
@@ -658,6 +661,7 @@ export function buildLatticeGraph({
     points[n * 3 + up] = patch.h + agentHeight;
     heights[n] = patch.h;
     kinds[n] = KIND_STAIR;
+    widths[n] = patch.width || 0;
   });
   total += patches.length;
   for (const [a, b] of walk.links) {
@@ -979,9 +983,12 @@ export function buildLatticeGraph({
         report.reason ||= "node budget reached";
         break;
       }
+      // The flight's width: the core's short side, or half of it where two flights run side by side (cores.js walkingLine).
+      const across = Math.min(core.u1 - core.u0, core.v1 - core.v0);
       let prev = a;
       for (const [u, v, h] of line) {
         const n = addNode(u, v, h, KIND_STAIR);
+        widths[n] = across >= 1.2 ? across / 2 : across;
         link(prev, n);
         prev = n;
       }
@@ -1073,6 +1080,7 @@ export function buildLatticeGraph({
         points[m * 3 + 2] = points[n * 3 + 2];
         kinds[m] = kinds[n];
         heights[m] = heights[n];
+        widths[m] = widths[n];
       }
       outEdges = [];
       const keptBlocked = [];
@@ -1100,6 +1108,8 @@ export function buildLatticeGraph({
     points: points.slice(0, total * 3),
     edges: Uint32Array.from(outEdges),
     kinds: kinds.slice(0, total),
+    // Each stair node's real width, m (0 elsewhere).
+    widths: widths.slice(0, total),
     blocked: outBlocked,
     walls: wallList,
     // The wall sections the links were blocked with, keyed by 10 cm of

@@ -1539,6 +1539,12 @@ function PeopleLeaving({ crowd, settings, setSettings, onPlay, onRestart, ready,
             }
           />
           <Toggle
+            label="Corridors and stairs limit the flow"
+            checked={settings.crowdPassageFlow}
+            onChange={(crowdPassageFlow) => setSettings({ crowdPassageFlow })}
+            hint="A corridor up to 3 m wide and a stair pass at most the SFPE flow for their width: 0.79 persons a second for a 1 m corridor, 0.71 for a 1 m stair. A stair takes its real width from the model; a corridor's is counted in graph nodes, so to about half a metre. Off, only doors limit the flow."
+          />
+          <Toggle
             label="Walking speed varies over time"
             checked={settings.crowdFluctuate}
             onChange={(crowdFluctuate) => setSettings({ crowdFluctuate })}

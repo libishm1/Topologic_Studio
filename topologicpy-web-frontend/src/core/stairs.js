@@ -30,7 +30,7 @@
  *                        patch's slope; heightTol: triangles this close in
  *                        height and sharing a vertex form one patch; minArea
  *                        and minWidth drop slivers (nosings, handrail tops).
- * @returns {{patches: Array<{x: number, y: number, h: number, area: number, pts: number[][], tris: number[][]}>,
+ * @returns {{patches: Array<{x: number, y: number, h: number, area: number, width: number, pts: number[][], tris: number[][]}>,
  *            ramp: {positions: Float32Array, indices: Uint32Array}}}  patches:
  *          level surfaces (treads, landings); ramp: the sloping walkable
  *          triangles, to be sampled as floor.
@@ -130,7 +130,8 @@ export function stairPatches(meshes, { up, h0, h1, minUp = Math.cos((15 * Math.P
       for (const t of g) for (const v of t.v3) sloped.push(...v);
       continue;
     }
-    patches.push({ x, y, h: sh / area, area, pts, tris: g.map((t) => t.v) });
+    // Its long side is the stair's width there.
+    patches.push({ x, y, h: sh / area, area, width: Math.max(hi1 - lo1, hi2 - lo2), pts, tris: g.map((t) => t.v) });
   }
   const ramp = { positions: Float32Array.from(sloped), indices: Uint32Array.from(sloped.map((_, i) => i).filter((i) => i % 3 === 0), (i) => i / 3) };
   return { patches, ramp };

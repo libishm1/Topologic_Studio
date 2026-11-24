@@ -52,6 +52,18 @@
  * whichever is latest, not at the next time step, so speeds do not depend on
  * a link's direction (tools/validation/crowd-validation.mjs, RiMEA Test 1).
  *
+ * Corridors and stairs (`passageFlow`; off by default, as it changes the
+ * times where they are narrow). Without it only doors carry a capacity: two
+ * lattice rows of corridor pass about 1.19 persons/s, more than a door of that
+ * width (RiMEA Test 12b), and a stair, one file of nodes whatever its width,
+ * passes about 0.54. With it floor up to PASSAGE_MAX_M across passes at most
+ * the SFPE specific flow on its effective width (0.2 m lost a side), and a
+ * stair that carries its real width (`graph.widths`, from lattice.js) the
+ * stair's (0.15 m a side; its lower specific flow follows from kStair), holding
+ * as many abreast as its width takes: passageSections below, and the constants
+ * before it. The floor's width is counted in nodes, so to about half a metre;
+ * `passageWidths` gives real ones.
+ *
  * With a fire (`closes`, each node's untenable time by the planners' rule,
  * core/forecast.js), no one steps on to a place the fire has made
  * untenable: every `replan` seconds each way out is worked out again with a
@@ -93,7 +105,7 @@
  * which the view interpolates on the GPU from the playback time alone.
  */
 import { Heap, csr, edgeLengths } from "./route.js";
-import { KIND_DOOR, KIND_LIFT, KIND_STAIR } from "./lattice.js";
+import { KIND_DOOR, KIND_FLOOR, KIND_LIFT, KIND_STAIR } from "./lattice.js";
 import { doorCapacity, walkTree } from "./performanceCheck.js";
 
 /** The SFPE Handbook's hydraulic model (5th ed., 2016, ch. 59, Gwynne and Rosenbaum; doi:10.1007/978-1-4939-2565-0_59). */
@@ -130,6 +142,34 @@ export const DENSITY_RADIUS = 1.0;
  */
 export const DOOR_QUEUE_M = 2.0;
 export const QUEUE_DENSITY = 1.9;
+
+/**
+ * The flow a passage takes (`passageFlow`, off by default). A corridor and a
+ * stair pass at most SFPE's greatest specific flow, (1 - a D) k D at
+ * D = QUEUE_DENSITY, for each metre of effective width: the width less the
+ * Handbook's boundary layer a side, 0.2 m at a corridor's walls and 0.15 m at
+ * a stair's. With k = 1.40 m/s that is 1.32 persons/s/m on the level, the
+ * doors' value (performanceCheck.js DOOR_FLOW); with the stair's k = 1.08 m/s
+ * (7 in risers, 11 in treads) it is 1.01 persons/s/m, which is the Handbook's
+ * tabulated maximum for that stair; up a stair STAIR_UP of it, as the speed.
+ * A passage 1 m wide then passes 0.79 persons/s as a corridor and 0.71 as a
+ * stair (a door 0.92), the values Pathfinder's SFPE mode reports.
+ */
+export const CORRIDOR_BOUNDARY = 0.2;
+export const STAIR_BOUNDARY = 0.15;
+export const CORRIDOR_FLOW = (1 - SFPE.a * QUEUE_DENSITY) * SFPE.k * QUEUE_DENSITY;
+export const STAIR_FLOW = (1 - SFPE.a * QUEUE_DENSITY) * SFPE.kStair * QUEUE_DENSITY;
+/** Persons a second a corridor (or a stair, going down) `width` m wide passes, less its boundary layers (at least 0.1 m left). */
+export const passageCapacity = (width, stair = false) => (stair ? STAIR_FLOW : CORRIDOR_FLOW) * Math.max(0.1, width - 2 * (stair ? STAIR_BOUNDARY : CORRIDOR_BOUNDARY));
+/**
+ * Floor no wider than this (m) across is a passage with a capacity. Wider
+ * floor is left alone: one person a node already passes less there than the
+ * SFPE flow (about 1.15 persons/s for each metre against 1.32 for each metre
+ * of effective width, which cross near 3 m).
+ */
+export const PASSAGE_MAX_M = 3.0;
+/** A stair with a width holds one person abreast for each of these metres of it (Fruin's body ellipse is 0.61 m across the shoulders). */
+export const STAIR_ABREAST_M = 0.6;
 
 /**
  * Up a stair at this share of the speed down it: Fruin's ascending over
@@ -275,6 +315,153 @@ function random(seed) {
 }
 
 /**
+ * The passages of a graph that carry a flow capacity (`passageFlow`).
+ *
+ * Floor. Through each floor node run the lattice's two lines (its links about
+ * `spacing` long, and across them); the shorter of the two runs of floor
+ * nodes is the passage's cross-section there, when it is at most `maxWidth`
+ * across and runs from wall to wall (a run that ends at a door, an exit or a
+ * stair is a way through, not a cross-section). The nodes of one cross-section share a capacity: who steps on to it
+ * from outside it waits for the one before. Its width is its nodes times the
+ * spacing, a coarse measure (to half a metre on a 0.5 m lattice); a single
+ * file of nodes, whose floor may be anything under two nodes wide, is taken
+ * as two nodes wide. `passageWidths` gives a node's passage its real width.
+ * Passages askew to the lattice are not found.
+ *
+ * Stairs. A stair drawn as one file of nodes (lattice.js) carries its real
+ * width in `graph.widths` (m a node, 0: none), or `passageWidths`. Each such
+ * node is its own cross-section at the stair's capacity, holds one person
+ * abreast for each STAIR_ABREAST_M of width, and counts as its width times
+ * its length of walk in the density; in place of the one person a `stairGap`
+ * the stair fills to QUEUE_DENSITY, the density of SFPE's greatest flow; the floor node at each end stands for
+ * the stair's mouth and holds as many. A stair node without a width is as
+ * before.
+ *
+ * The queue. Within DOOR_QUEUE_M of a passage's mouth (its nodes next to open
+ * floor) and of a stair with a width, the density slowing a step is taken at
+ * most at QUEUE_DENSITY, as before a door, so the passage's capacity and not
+ * the crawl into the queue sets what passes.
+ *
+ * @returns {{section: Int32Array (each node's cross-section, -1: none), capacity: number[] (persons/s),
+ *   width: number[] (m), slots: Uint16Array (persons a node holds), area: Float32Array (m^2 a node, 0: its cell),
+ *   mouth: Uint8Array (a passage's nodes next to open floor, and a stair's with a width: the queue before
+ *   them is fed as a door's is), corridors: number, stairs: number}}
+ */
+export function passageSections(graph, { exits = [], blocked = null, passageWidths = null, maxWidth = PASSAGE_MAX_M } = {}) {
+  const n = graph.nodes.length / 3;
+  const up = { x: 0, y: 1, z: 2 }[graph.upAxis || "y"] ?? 1;
+  const [h1, h2] = [0, 1, 2].filter((c) => c !== up);
+  const kinds = graph.kinds || new Uint8Array(n);
+  const spacing = graph.spacing || 0.5;
+  const P = graph.nodes;
+  const { indptr, neighbours, edgeIds } = csr(graph);
+  const length = edgeLengths(graph);
+  const isExit = new Uint8Array(n);
+  for (const e of exits) if (e >= 0) isExit[e] = 1;
+  const floor = (v) => kinds[v] === KIND_FLOOR && !isExit[v];
+  const section = new Int32Array(n).fill(-1);
+  const capacity = [], width = [];
+  const slots = new Uint16Array(n).fill(1);
+  const area = new Float32Array(n);
+  const mouth = new Uint8Array(n);
+  const dir = (a, b) => {
+    const ex = P[b * 3 + h1] - P[a * 3 + h1], ey = P[b * 3 + h2] - P[a * 3 + h2], l = Math.hypot(ex, ey);
+    return l > 1e-6 ? [ex / l, ey / l] : null;
+  };
+  // A lattice line's link: floor to floor, open, and about a spacing long (not a diagonal).
+  const lineLink = (k) => !blocked?.[edgeIds[k]] && floor(neighbours[k]) && length[edgeIds[k]] <= 1.2 * spacing;
+  const along = (x, dx, dy) => {
+    for (let k = indptr[x]; k < indptr[x + 1]; k += 1) {
+      if (!lineLink(k)) continue;
+      const d = dir(x, neighbours[k]);
+      if (d && d[0] * dx + d[1] * dy > 0.95) return neighbours[k];
+    }
+    return -1;
+  };
+  // Whether the line goes on from x into a door, an exit or a stair: then it is a way through, not wall to wall.
+  const opensOn = (x, dx, dy) => {
+    for (let k = indptr[x]; k < indptr[x + 1]; k += 1) {
+      if (blocked?.[edgeIds[k]] || floor(neighbours[k])) continue;
+      const d = dir(x, neighbours[k]);
+      if (d && d[0] * dx + d[1] * dy > 0.95) return true;
+    }
+    return false;
+  };
+  const keys = new Map();
+  for (let v = 0; v < n; v += 1) {
+    if (!floor(v)) continue;
+    const own = passageWidths && passageWidths[v] > 0 ? passageWidths[v] : 0;
+    const limit = Math.max(maxWidth, 2 * own);
+    const lines = [];
+    for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
+      if (!lineLink(k)) continue;
+      const d = dir(v, neighbours[k]);
+      if (!d) continue;
+      for (const [dx, dy] of [d, [-d[1], d[0]]]) if (!lines.some(([x, y]) => Math.abs(x * dx + y * dy) > 0.95)) lines.push([dx, dy]);
+    }
+    let best = null;
+    for (const [dx, dy] of lines) {
+      const run = [v];
+      let within = true;
+      for (const s of [1, -1]) {
+        let end = v;
+        for (let x = along(v, s * dx, s * dy); x >= 0 && within; x = along(x, s * dx, s * dy)) {
+          run.push(x);
+          end = x;
+          if (run.length * spacing > limit + 1e-6) within = false;
+        }
+        if (within && opensOn(end, s * dx, s * dy)) within = false;
+      }
+      if (within && (!best || run.length < best.length)) best = run;
+    }
+    if (!best) continue;
+    const key = best.sort((a, b) => a - b).join(",");
+    let id = keys.get(key);
+    if (id === undefined) {
+      id = capacity.length;
+      keys.set(key, id);
+      width.push(Math.max(best.length, 2) * spacing);
+      capacity.push(passageCapacity(width[id]));
+    }
+    section[v] = id;
+    if (own > 0) {
+      width[id] = own;
+      capacity[id] = passageCapacity(own);
+    }
+  }
+  let stairs = 0;
+  for (let v = 0; v < n; v += 1) {
+    if (kinds[v] !== KIND_STAIR) continue;
+    const w = passageWidths && passageWidths[v] > 0 ? passageWidths[v] : graph.widths && graph.widths[v] > 0 ? graph.widths[v] : 0;
+    if (!(w > 0)) continue;
+    stairs += 1;
+    section[v] = capacity.length;
+    width.push(w);
+    capacity.push(passageCapacity(w, true));
+    slots[v] = Math.max(1, Math.floor(w / STAIR_ABREAST_M + 1e-6));
+    let sum = 0, links = 0;
+    for (let k = indptr[v]; k < indptr[v + 1]; k += 1) {
+      if (blocked?.[edgeIds[k]]) continue;
+      sum += length[edgeIds[k]];
+      links += 1;
+      const b = neighbours[k];
+      if (floor(b)) {
+        slots[b] = Math.max(slots[b], slots[v]);
+        area[b] = Math.max(area[b], w * spacing);
+      }
+    }
+    area[v] = w * (links ? sum / links : spacing);
+    mouth[v] = 1;
+  }
+  // Where open floor meets a passage: its mouth, fed as a door is (DOOR_QUEUE_M).
+  for (let v = 0; v < n; v += 1) {
+    if (!floor(v) || section[v] < 0) continue;
+    for (let k = indptr[v]; k < indptr[v + 1] && !mouth[v]; k += 1) if (!blocked?.[edgeIds[k]] && floor(neighbours[k]) && section[neighbours[k]] < 0) mouth[v] = 1;
+  }
+  return { section, capacity, width, slots, area, mouth, corridors: keys.size, stairs };
+}
+
+/**
  * The crowd's walk out.
  *
  * @param {object} graph  the walkable graph (nodes, edges, kinds, blocked, spacing, agentHeight, upAxis)
@@ -287,6 +474,10 @@ function random(seed) {
  *   start         [earliest, latest] start, s: a short stagger, not a pre-movement time
  *   doorWidth     m, every door's that `doorWidths` gives none
  *   doorWidths    m a node, each door node's own clear width (0: doorWidth); null: doorWidth for all
+ *   passageFlow   corridors and stairs pass at most the SFPE flow for their width (passageSections;
+ *                 default off: only doors carry a capacity, as before)
+ *   passageWidths m a node, the real width of the passage a floor or stair node stands in (0: the
+ *                 graph's: the floor's nodes across, a stair's `graph.widths`); null: the graph's for all
  *   dt            s, the step
  *   horizon       s, stop then; anyone still inside is reported
  *   seed          for where people are and how fast they walk
@@ -314,7 +505,9 @@ function random(seed) {
  *   unreached: number, trapped: number (the people the unreached places would hold), inside: number, lastOut: number, longestWait: number, capped: boolean,
  *   goneAt: Float32Array, shelter: number, cutOff: number, choice: string, tooLarge: boolean,
  *   switches: Int32Array, groupOf: Int32Array|null (each person's group), short: number
- *   (people the groups asked for that their places could not hold), released: number
+ *   (people the groups asked for that their places could not hold), released: number,
+ *   passages: null | {corridors: number, stairs: number} (with passageFlow: the floor cross-sections
+ *   and the stair nodes that carry a capacity)
  * }}
  *   choice: the one taken, "nearest" when the quickest was asked with a
  *   single exit or on a graph too large for it (tooLarge, QUICKEST_CELLS);
@@ -334,6 +527,8 @@ export function simulateCrowd(graph, opts = {}) {
     start = [0, 10],
     doorWidth = 0.9,
     doorWidths = null,
+    passageFlow = false,
+    passageWidths = null,
     dt = 0.1,
     horizon = 900,
     seed = 1,
@@ -444,8 +639,9 @@ export function simulateCrowd(graph, opts = {}) {
       assigned[i] = g.exit;
     }
   }
-  const holder = new Int32Array(n).fill(-1);
-  for (let i = 0; i < people; i += 1) holder[at[i]] = i;
+  // How many stand on each node: one at most, but for a stair with a width (passageFlow).
+  const load = new Uint16Array(n);
+  for (let i = 0; i < people; i += 1) load[at[i]] += 1;
 
   // Foot-level points: the nodes stand agentHeight above their floor.
   const lift = graph.agentHeight || 0;
@@ -548,6 +744,20 @@ export function simulateCrowd(graph, opts = {}) {
   const capOf = (u) => (doorWidths && doorWidths[u] > 0 ? doorCapacity(doorWidths[u]) : capacity);
   // The earliest time each door may be stepped on to next, one 1/capacity after the last.
   const doorFree = new Float64Array(n);
+  // With passageFlow: the cross-sections of narrow floor and of stairs with a width, each
+  // with its capacity and the earliest time it may be stepped on to next; kept on the graph.
+  let passages = null;
+  if (passageFlow) {
+    const kept = graph._crowdPassages;
+    const exitKey = exits.join(",");
+    passages = kept && kept.n === n && kept.blocked === blocked && kept.passageWidths === passageWidths && kept.widths === graph.widths && kept.exitKey === exitKey
+      ? kept.value
+      : (graph._crowdPassages = { n, blocked, passageWidths, widths: graph.widths, exitKey, value: passageSections(graph, { exits, blocked, passageWidths }) }).value;
+  }
+  const section = passages ? passages.section : null;
+  const sectionFree = passages ? new Float64Array(passages.capacity.length) : null;
+  // How many a node holds, where any holds more than one.
+  const abreast = passages && passages.stairs > 0 ? passages.slots : null;
   // When each node was last left (its holder's step away began), and each
   // person's own clock: when they reached the node they stand on. A step begins
   // at the later of the two (and of the door's next opening), not at the next
@@ -567,7 +777,8 @@ export function simulateCrowd(graph, opts = {}) {
   {
     const heap = new Heap();
     for (let v = 0; v < n; v += 1) {
-      if (kinds[v] === KIND_DOOR || isExit[v]) {
+      // With passageFlow a passage's mouth and a stair with a width are fed as a door is, so their capacity governs.
+      if (kinds[v] === KIND_DOOR || isExit[v] || (passages !== null && passages.mouth[v])) {
         toDoor[v] = 0;
         heap.push(0, v);
       }
@@ -753,21 +964,47 @@ export function simulateCrowd(graph, opts = {}) {
     return found;
   };
   // Whether a person at v may step on to u: no one holds it, and on a stair no one else stands close by.
+  // How many may stand within the gap of a stair node: one (the gap), but on a stair with a
+  // width (passageFlow) as many as bring it to QUEUE_DENSITY over its nodes there, the density
+  // of SFPE's greatest flow, so that the stair can carry its capacity and fills no further.
+  const gapHolds = abreast ? new Int32Array(n) : null;
+  const holdsOf = (u) => {
+    if (!gapHolds || section[u] < 0) return 1;
+    if (!gapHolds[u]) {
+      let area = passages.area[u];
+      for (const w of stairNear(u)) area += passages.area[w] > 0 ? passages.area[w] : cell;
+      gapHolds[u] = Math.max(1, Math.floor(QUEUE_DENSITY * area + 1e-9));
+    }
+    return gapHolds[u];
+  };
   const free = (u, v) => {
-    if (holder[u] >= 0) return false;
-    if (stairGap > 0 && kinds[u] === KIND_STAIR) for (const w of stairNear(u)) if (w !== v && holder[w] >= 0) return false;
+    if (load[u] >= (abreast ? abreast[u] : 1)) return false;
+    if (stairGap > 0 && kinds[u] === KIND_STAIR) {
+      // The others within the gap, the one stepping from v left out.
+      let close = load[u];
+      for (const w of stairNear(u)) close += w === v ? load[w] - 1 : load[w];
+      if (close >= holdsOf(u)) return false;
+    }
     return true;
   };
   // The density round a node: the others within DENSITY_RADIUS of it (not the
   // one stepping from v), over the walkable area there.
+  // The walkable area within DENSITY_RADIUS of each node, where some nodes stand for more than their cell (a stair's width).
+  const areaNear = abreast ? new Float64Array(n).fill(-1) : null;
   const densityAt = (u, v) => {
     let held = 0;
     const { start, list } = near;
     for (let k = start[u]; k < start[u + 1]; k += 1) {
       const w = list[k];
-      if (w !== v && holder[w] >= 0) held += 1;
+      held += w === v ? load[w] - 1 : load[w];
     }
-    return held / ((start[u + 1] - start[u]) * cell);
+    if (!areaNear) return held / ((start[u + 1] - start[u]) * cell);
+    if (areaNear[u] < 0) {
+      let sum = 0;
+      for (let k = start[u]; k < start[u + 1]; k += 1) sum += passages.area[list[k]] > 0 ? passages.area[list[k]] : cell;
+      areaNear[u] = sum;
+    }
+    return held / areaNear[u];
   };
 
   // Randomness in how people move (wiki/roadmap/crowd-motion-randomness-plan-2026-11-11.md,
@@ -859,13 +1096,16 @@ export function simulateCrowd(graph, opts = {}) {
         }
         u = best;
       }
-      const doorShut = u >= 0 && (kinds[u] === KIND_DOOR || isExit[u]) && doorFree[u] > t + 1e-9;
+      // The passage's cross-section stepped on to from outside it (passageFlow), and when it, or the door, opens.
+      const gate = section !== null && u >= 0 && section[u] >= 0 && section[u] !== section[v] ? section[u] : -1;
+      const opens = u < 0 ? -Infinity : Math.max(kinds[u] === KIND_DOOR || isExit[u] ? doorFree[u] : -Infinity, gate >= 0 ? sectionFree[gate] : -Infinity);
+      const doorShut = opens > t + 1e-9;
       if (u < 0 || doorShut) {
         if (goal[i] >= 0) held[goal[i]] = 1;
         tried[i] = t;
         // Cut off by the fire: wait for the next look at the ways out.
         const cut = u < 0 && goal[i] < 0 && dist[v] >= FIRE_PENALTY;
-        ready[i] = doorShut ? Math.max(t + dt, Math.ceil((doorFree[u] - 1e-9) / dt) * dt) : cut ? (Math.floor(step / every) + 1) * every * dt : t + dt;
+        ready[i] = doorShut ? Math.max(t + dt, Math.ceil((opens - 1e-9) / dt) * dt) : cut ? (Math.floor(step / every) + 1) * every * dt : t + dt;
         continue;
       }
       // The step begins on the person's own clock: when they reached v, the
@@ -873,9 +1113,11 @@ export function simulateCrowd(graph, opts = {}) {
       // before a look that found no way on; never later than now.
       const door = kinds[u] === KIND_DOOR || isExit[u];
       // On a stair, also not before the others near the next node had left (stairGap).
+      // A node that holds several abreast is not waited for: its capacity spaces the steps on to it.
+      const single = !abreast || abreast[u] === 1;
       let gapClear = -Infinity;
-      if (stairGap > 0 && kinds[u] === KIND_STAIR) for (const w of stairNear(u)) if (w !== v) gapClear = Math.max(gapClear, leftAt[w]);
-      const t0 = Math.max(clock[i], leftAt[u], tried[i], gapClear, door ? doorFree[u] : -Infinity);
+      if (single && stairGap > 0 && kinds[u] === KIND_STAIR && holdsOf(u) === 1) for (const w of stairNear(u)) if (w !== v) gapClear = Math.max(gapClear, leftAt[w]);
+      const t0 = Math.max(clock[i], single ? leftAt[u] : -Infinity, tried[i], gapClear, opens);
       longestWait = Math.max(longestWait, t0 - clock[i]);
       tried[i] = -Infinity;
       let len = 0;
@@ -893,8 +1135,10 @@ export function simulateCrowd(graph, opts = {}) {
       const arrive = t0 + len / vel;
       segs[i].push(t0, arrive, v, u);
       if (door) doorFree[u] = Math.max(doorFree[u], t0) + 1 / capOf(u);
+      // Up a stair the capacity is STAIR_UP of it, as the speed is.
+      if (gate >= 0) sectionFree[gate] = Math.max(sectionFree[gate], t0) + 1 / (passages.capacity[gate] * (kinds[u] === KIND_STAIR && rise > 0.02 ? STAIR_UP : 1));
       leftAt[v] = t0;
-      holder[v] = -1;
+      load[v] -= 1;
       if (isExit[u]) {
         // Out: on to the gathering place, and the exit is free at once.
         const g = outward(u);
@@ -909,7 +1153,7 @@ export function simulateCrowd(graph, opts = {}) {
         left -= 1;
         continue;
       }
-      holder[u] = i;
+      load[u] += 1;
       at[i] = u;
       ready[i] = arrive;
       clock[i] = arrive;
@@ -961,6 +1205,7 @@ export function simulateCrowd(graph, opts = {}) {
     short,
     released,
     switches,
+    passages: passages ? { corridors: passages.corridors, stairs: passages.stairs } : null,
   };
 }
 

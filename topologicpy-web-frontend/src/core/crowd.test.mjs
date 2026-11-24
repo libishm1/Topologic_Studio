@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FREE_SPEED, GATHER_AREA, IMO_PASSENGERS, POPULATIONS, SFPE, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, populationMix, simulateCrowd } from "./crowd.js";
+import { CORRIDOR_FLOW, FREE_SPEED, GATHER_AREA, IMO_PASSENGERS, POPULATIONS, SFPE, STAIR_FLOW, STAIR_UP, STEP_RANDOMNESS, WALK_FLUCTUATION, fluctuationDrift, passageCapacity, passageSections, populationMix, simulateCrowd } from "./crowd.js";
 import { doorCapacity } from "./performanceCheck.js";
 import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "./lattice.js";
 
@@ -729,4 +729,197 @@ test("IMO's passengers: the mix gives whole head counts in its shares, each with
   const out = simulateCrowd(graph, { exits, groups: mix, start: [0, 0] });
   assert.equal(out.people, 100);
   assert.equal(out.inside, 0);
+});
+
+/**
+ * A plan of cells [i, j, kind?] 0.5 m apart joined to their eight neighbours (a diagonal only
+ * where both its axis neighbours are cells), nodes 0.75 m above the floor; `at(i, j)` is a cell's node.
+ */
+function plan(cells) {
+  const s = 0.5, h = 0.75;
+  const index = new Map();
+  const nodes = [], kinds = [], edges = [];
+  for (const [i, j, kind = KIND_FLOOR] of cells) {
+    index.set(`${i},${j}`, nodes.length / 3);
+    nodes.push(i * s, h, j * s);
+    kinds.push(kind);
+  }
+  for (const [key, a] of index) {
+    const [i, j] = key.split(",").map(Number);
+    for (const [di, dj] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+      const b = index.get(`${i + di},${j + dj}`);
+      if (b === undefined || (di && dj && (!index.has(`${i + di},${j}`) || !index.has(`${i},${j + dj}`)))) continue;
+      edges.push(a, b);
+    }
+  }
+  return { graph: { nodes: Float32Array.from(nodes), edges: Int32Array.from(edges), kinds: Uint8Array.from(kinds), spacing: s, agentHeight: h, upAxis: "y" }, at: (i, j) => index.get(`${i},${j}`) };
+}
+const block = (i0, i1, j0, j1, kind = KIND_FLOOR) => {
+  const out = [];
+  for (let i = i0; i <= i1; i += 1) for (let j = j0; j <= j1; j += 1) out.push([i, j, kind]);
+  return out;
+};
+
+/** A room 8 m x 8 m (i 0..15, j 0..15), a corridor `lanes` nodes wide and 5 m long from its right wall, and a row of exits at the corridor's end. */
+function roomAndCorridor(lanes) {
+  const cells = [...block(0, 15, 0, 15), ...block(16, 25, 7, 6 + lanes), ...block(26, 26, 7, 6 + lanes, KIND_DOOR)];
+  const { graph, at } = plan(cells);
+  return { graph, at, exits: block(26, 26, 7, 6 + lanes).map(([i, j]) => at(i, j)), room: block(0, 15, 0, 15).map(([i, j]) => at(i, j)) };
+}
+
+/** A room 8 m x 8 m and, from the middle of its right wall, a stair as the app draws one: a single file of 16 nodes down to an exit, `width` m wide (0: no width). */
+function roomAndStairFile(width) {
+  const { graph, at } = plan([...block(0, 15, 0, 15), ...block(16, 31, 8, 8, KIND_STAIR), [32, 8, KIND_DOOR]]);
+  // Down a slope of 7 in 11, 0.5 m between nodes along it.
+  const theta = Math.atan(7 / 11);
+  for (let c = 1; c <= 17; c += 1) {
+    const v = at(15 + c, 8);
+    graph.nodes[v * 3] = 7.5 + c * 0.5 * Math.cos(theta);
+    graph.nodes[v * 3 + 1] = 0.75 - c * 0.5 * Math.sin(theta);
+  }
+  if (width > 0) {
+    graph.widths = new Float32Array(graph.nodes.length / 3);
+    for (let c = 1; c <= 16; c += 1) graph.widths[at(15 + c, 8)] = width;
+  }
+  return { graph, at, exits: [at(32, 8)], room: block(0, 15, 0, 15).map(([i, j]) => at(i, j)), first: at(16, 8) };
+}
+
+/** The steady flow (persons/s) of the steps on to any of `nodes` from outside them, the first and last ten left out; and the least time between two of them. */
+function flowOnTo(graph, out, nodes) {
+  const set = new Set(nodes);
+  const times = speedsOf(graph, out).filter((s) => set.has(s.b) && !set.has(s.a)).map((s) => s.t0).sort((a, b) => a - b);
+  let least = Infinity;
+  for (let j = 1; j < times.length; j += 1) least = Math.min(least, times[j] - times[j - 1]);
+  const k0 = 10, k1 = times.length - 11;
+  return { flow: (k1 - k0) / (times[k1] - times[k0]), least, count: times.length };
+}
+
+test("passage capacities: SFPE's specific flow on the effective width, 0.79 persons/s for a 1 m corridor and 0.71 for a 1 m stair", () => {
+  assert.ok(Math.abs(CORRIDOR_FLOW - 1.3157) < 1e-3);
+  // The stair's follows from its k: (1 - a D) kStair D at D = 1.9, the Handbook's 1.01 persons/s/m for 7 in risers and 11 in treads.
+  assert.ok(Math.abs(STAIR_FLOW - CORRIDOR_FLOW * (SFPE.kStair / SFPE.k)) < 1e-12);
+  assert.ok(Math.abs(STAIR_FLOW - 1.01) < 0.01);
+  assert.ok(Math.abs(passageCapacity(1.0) - 0.79) < 0.005, "corridor: 0.2 m lost a side");
+  assert.ok(Math.abs(passageCapacity(1.0, true) - 0.71) < 0.005, "stair: 0.15 m lost a side");
+  assert.ok(Math.abs(doorCapacity(1.0) - 0.92) < 0.005, "door: 0.15 m lost a side");
+  assert.ok(passageCapacity(0.3) > 0, "never nothing");
+});
+
+test("passages found on the graph: a corridor's cross-sections wall to wall, not a room, a strip between doors or a stair without a width", () => {
+  const { graph, at, exits } = roomAndCorridor(2);
+  const found = passageSections(graph, { exits });
+  // Each of the corridor's ten columns is one cross-section of two nodes, 1 m wide.
+  assert.equal(found.corridors, 10);
+  for (let i = 16; i <= 25; i += 1) {
+    assert.equal(found.section[at(i, 7)], found.section[at(i, 8)], "the two lanes share it");
+    assert.ok(found.section[at(i, 7)] >= 0);
+    assert.ok(Math.abs(found.width[found.section[at(i, 7)]] - 1.0) < 1e-9);
+    assert.ok(Math.abs(found.capacity[found.section[at(i, 7)]] - passageCapacity(1.0)) < 1e-9);
+    if (i > 16) assert.notEqual(found.section[at(i, 7)], found.section[at(i - 1, 7)], "each column its own");
+  }
+  // The room is open floor; only the corridor's first column is a mouth.
+  for (let i = 0; i <= 15; i += 1) for (let j = 0; j <= 15; j += 1) assert.equal(found.section[at(i, j)], -1);
+  assert.equal(found.mouth[at(16, 7)], 1);
+  assert.equal(found.mouth[at(17, 7)], 0);
+  // A width given for a node is its passage's.
+  const widths = new Float32Array(graph.nodes.length / 3);
+  widths[at(20, 7)] = 1.4;
+  const given = passageSections(graph, { exits, passageWidths: widths });
+  assert.ok(Math.abs(given.capacity[given.section[at(20, 8)]] - passageCapacity(1.4)) < 1e-6);
+  assert.ok(Math.abs(given.capacity[given.section[at(19, 8)]] - passageCapacity(1.0)) < 1e-9);
+  // A single file of nodes is taken as two nodes wide.
+  const file = roomAndCorridor(1);
+  const one = passageSections(file.graph, { exits: file.exits });
+  assert.ok(Math.abs(one.width[one.section[file.at(20, 7)]] - 1.0) < 1e-9);
+  // A strip one node deep between a door and the exits is a way through, not a passage: its short run ends at a door.
+  const strip = plan([...block(0, 15, 0, 15), [16, 8, KIND_DOOR], ...block(17, 17, 0, 15), ...block(18, 18, 0, 15, KIND_DOOR)]);
+  const stripExits = block(18, 18, 0, 15).map(([i, j]) => strip.at(i, j));
+  const none = passageSections(strip.graph, { exits: stripExits });
+  assert.equal(none.corridors, 0);
+  // A stair is a passage only with a width.
+  const bare = roomAndStairFile(0), wide = roomAndStairFile(2.4);
+  assert.equal(passageSections(bare.graph, { exits: bare.exits }).stairs, 0);
+  const stair = passageSections(wide.graph, { exits: wide.exits });
+  assert.equal(stair.stairs, 16);
+  assert.equal(stair.slots[wide.first], 4, "2.4 m: four abreast");
+  assert.equal(stair.slots[wide.at(15, 8)], 4, "and at its mouth on the floor");
+  assert.ok(Math.abs(stair.capacity[stair.section[wide.first]] - passageCapacity(2.4, true)) < 1e-6);
+});
+
+test("passageFlow is off by default: a graph with stair widths walks exactly as one without", () => {
+  const a = roomAndStairFile(0), b = roomAndStairFile(2.4);
+  const opts = { occupantArea: 0.5, start: [0, 0], seed: 3 };
+  const plain = simulateCrowd(a.graph, { ...opts, exits: a.exits });
+  const withWidths = simulateCrowd(b.graph, { ...opts, exits: b.exits });
+  assert.deepEqual(withWidths.segments, plain.segments);
+  assert.equal(plain.passages, null);
+  // And with passageFlow, a graph that has no narrow floor and no stair width walks as before too.
+  const on = simulateCrowd(a.graph, { ...opts, exits: a.exits, passageFlow: true });
+  assert.deepEqual(on.passages, { corridors: 0, stairs: 0 });
+  assert.deepEqual(on.segments, plain.segments);
+});
+
+test("with passageFlow a corridor passes at most the SFPE flow for its width, and less than a door of that width", () => {
+  const flows = {};
+  for (const lanes of [2, 4]) {
+    const { graph, at, exits, room } = roomAndCorridor(lanes);
+    const mouth = Array.from({ length: lanes }, (_, k) => at(16, 7 + k));
+    const opts = { exits, groups: [{ nodes: room, count: 120 }], doorWidth: 5, start: [0, 0], seed: 1, choice: "nearest" };
+    const off = flowOnTo(graph, simulateCrowd(graph, opts), mouth);
+    const out = simulateCrowd(graph, { ...opts, passageFlow: true });
+    const on = flowOnTo(graph, out, mouth);
+    const c = passageCapacity(lanes * 0.5);
+    assert.equal(out.inside, 0);
+    assert.equal(out.passages.corridors, 10);
+    assert.ok(on.least >= 1 / c - 1e-4, `${lanes} lanes: never two steps into it closer than its capacity allows`);
+    assert.ok(on.flow > 0.9 * c && on.flow <= c + 1e-6, `${lanes} lanes: ${on.flow.toFixed(3)} persons/s against ${c.toFixed(3)}`);
+    if (lanes === 2) assert.ok(off.flow > c, `without it the lattice passes more (${off.flow.toFixed(3)})`);
+    flows[lanes] = on.flow;
+  }
+  assert.ok(flows[2] < doorCapacity(1.0), "a corridor does not pass more than a door of its width");
+  assert.ok(flows[4] > flows[2]);
+});
+
+test("with passageFlow a stair drawn as one file of nodes passes what its real width takes", () => {
+  const flows = [];
+  for (const width of [1.2, 2.4]) {
+    const { graph, exits, room, first } = roomAndStairFile(width);
+    const opts = { exits, groups: [{ nodes: room, count: 120 }], doorWidth: 5, start: [0, 0], seed: 1, choice: "nearest" };
+    const out = simulateCrowd(graph, { ...opts, passageFlow: true });
+    const on = flowOnTo(graph, out, [first]);
+    const c = passageCapacity(width, true);
+    assert.equal(out.inside, 0);
+    assert.equal(out.passages.stairs, 16);
+    assert.ok(on.least >= 1 / c - 1e-4, `${width} m: at most its capacity`);
+    assert.ok(on.flow > 0.9 * c && on.flow <= c + 1e-6, `${width} m: ${on.flow.toFixed(3)} persons/s against ${c.toFixed(3)}`);
+    // No stair node ever holds more than the stair takes abreast (two at 1.2 m, four at 2.4 m).
+    const n = graph.nodes.length / 3;
+    const events = [];
+    for (const s of speedsOf(graph, out)) {
+      if (s.b < n && graph.kinds[s.b] === KIND_STAIR) events.push([s.t0, 1, s.b]);
+      if (graph.kinds[s.a] === KIND_STAIR) events.push([s.t0, -1, s.a]);
+    }
+    events.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    const standing = new Map();
+    let most = 0;
+    for (const [, d, v] of events) {
+      standing.set(v, (standing.get(v) || 0) + d);
+      most = Math.max(most, standing.get(v));
+    }
+    assert.ok(most <= Math.floor(width / 0.6 + 1e-6), `${width} m: ${most} on one node`);
+    flows.push(on.flow);
+  }
+  assert.ok(flows[1] > 2 * flows[0], `2.4 m passes more than twice 1.2 m: ${flows.map((f) => f.toFixed(3)).join(", ")}`);
+  // Without the option both pass the same, the single file's.
+  const a = roomAndStairFile(1.2), b = roomAndStairFile(2.4);
+  const opts = { groups: [{ nodes: a.room, count: 120 }], doorWidth: 5, start: [0, 0], seed: 1, choice: "nearest" };
+  const fa = flowOnTo(a.graph, simulateCrowd(a.graph, { ...opts, exits: a.exits }), [a.first]).flow;
+  const fb = flowOnTo(b.graph, simulateCrowd(b.graph, { ...opts, exits: b.exits }), [b.first]).flow;
+  assert.equal(fa, fb);
+  // Up the same stair, STAIR_UP of the capacity down it.
+  const up = roomAndStairFile(1.2);
+  up.graph.nodes = Float32Array.from(up.graph.nodes, (x, j) => (j % 3 === 1 ? 1.5 - x : x));
+  const outUp = simulateCrowd(up.graph, { ...opts, exits: up.exits, passageFlow: true });
+  const fu = flowOnTo(up.graph, outUp, [up.first]);
+  assert.ok(fu.flow <= STAIR_UP * passageCapacity(1.2, true) + 1e-6 && fu.flow > 0.85 * STAIR_UP * passageCapacity(1.2, true), `up ${fu.flow.toFixed(3)}`);
 });

@@ -4,8 +4,10 @@
 // doi:10.6028/NIST.TN.1822) and open experimental data (RiMEA Test 16's
 // percentiles of single-file fundamental diagrams; bottleneck flows).
 //
-//   node tools/validation/crowd-validation.mjs [--quick] [--out FILE.json] [--date YYYY-MM-DD] [--no-write]
+//   node tools/validation/crowd-validation.mjs [--quick] [--passage-flow] [--out FILE.json] [--date YYYY-MM-DD] [--no-write]
 //
+// --passage-flow runs every case with the corridors' and stairs' flow capacity
+// (crowd.js `passageFlow`, off by default as in the app).
 // --no-write records nothing and ends with a line "SUMMARY {json}"; the test
 // suite runs it so (src/core/crowdValidation.test.mjs).
 //
@@ -30,6 +32,9 @@ import { KIND_DOOR, KIND_FLOOR, KIND_STAIR } from "../../topologicpy-web-fronten
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const QUICK = process.argv.includes("--quick");
+/** With --passage-flow every run has the corridors' and stairs' flow capacity (crowd.js passageFlow; off by default, as in the app). */
+const PASSAGE = process.argv.includes("--passage-flow");
+const BASE = PASSAGE ? { passageFlow: true } : {};
 const S = 0.5;
 const H = 0.75;
 
@@ -173,7 +178,7 @@ function corridorSpeed() {
       const n = graph.nodes.length / 3;
       const t40 = [], realised = [], segSpeed = [];
       for (const seed of seeds(10)) {
-        const out = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, 1), speed, spread: 0, start: [0, 0], seed, choice: "nearest" });
+        const out = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, exits, 1), speed, spread: 0, start: [0, 0], seed, choice: "nearest" });
         const segs = walks(out, n)[0];
         if (!segs?.length) continue;
         const L = segs.reduce((s, x) => s + dist3(graph, x.a, x.b), 0);
@@ -215,7 +220,7 @@ function stairSpeed() {
     const n = graph.nodes.length / 3;
     const t10 = [], moving = [];
     for (const seed of seeds(10)) {
-      const out = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, 1), speed, spread: 0, start: [0, 0], seed, choice: "nearest", stairGap: 0 });
+      const out = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, exits, 1), speed, spread: 0, start: [0, 0], seed, choice: "nearest", stairGap: 0 });
       const segs = walks(out, n)[0];
       const on = segs.filter((s) => graph.kinds[s.a] === KIND_STAIR || graph.kinds[s.b] === KIND_STAIR);
       if (!on.length) continue;
@@ -277,7 +282,7 @@ function corner() {
   const inside = (x, z) => (x >= -1e-6 && x <= 12 + 1e-6 && z >= -1e-6 && z <= 2 + 1e-6) || (x >= 10 - 1e-6 && x <= 12 + 1e-6 && z >= -1e-6 && z <= 12.5 + 1e-6);
   let bad = 0, out = 0, people = 0;
   for (const seed of seeds(5)) {
-    const r = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, 20), speed: 1.0, spread: 0, start: [0, 0], seed });
+    const r = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, exits, 20), speed: 1.0, spread: 0, start: [0, 0], seed });
     people += r.people;
     out += r.people - r.inside;
     for (const segs of walks(r, n)) {
@@ -305,7 +310,7 @@ function corner() {
   const area = rect(0, 12, 0, 4).map(([i, j]) => at(i, j));
   let bad2 = 0, out2 = 0, people2 = 0, outsideArea = 0;
   for (const seed of seeds(5)) {
-    const r = simulateCrowd(graph, { exits, groups: [{ nodes: area, count: 20 }], speed: 1.0, spread: 0, start: [0, 0], seed });
+    const r = simulateCrowd(graph, { ...BASE, exits, groups: [{ nodes: area, count: 20 }], speed: 1.0, spread: 0, start: [0, 0], seed });
     people2 += r.people;
     out2 += r.people - r.inside;
     for (let i = 0; i < r.people; i += 1) if (!area.includes(startNode(r, i))) outsideArea += 1;
@@ -337,7 +342,7 @@ function premovement() {
   const n = graph.nodes.length / 3;
   const first = [];
   for (const seed of seeds(10)) {
-    const r = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, 10), start: [10, 100], seed });
+    const r = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, exits, 10), start: [10, 100], seed });
     for (const segs of walks(r, n)) if (segs.length) first.push(segs[0].t0);
   }
   const test = ks(first, (x) => Math.min(1, Math.max(0, (x - 10) / 90)));
@@ -385,7 +390,7 @@ function populations() {
     const moving = [];
     // Eight runs in the quick mode too: 400 speeds, so the test of the distribution does not turn on a small sample.
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
-      const r = simulateCrowd(graph, { exits, groups: [{ nodes: floor, count: 50, speed: POPULATIONS[c.key] }], seed, start: [0, 0] });
+      const r = simulateCrowd(graph, { ...BASE, exits, groups: [{ nodes: floor, count: 50, speed: POPULATIONS[c.key] }], seed, start: [0, 0] });
       for (const segs of walks(r, n)) {
         const first = segs.slice(0, 8);
         if (first.length < 4) continue;
@@ -414,7 +419,7 @@ function speedDistribution() {
   const lo = FREE_SPEED * (1 - spread), hi = FREE_SPEED * (1 + spread);
   const moving = [], realised = [];
   for (const seed of seeds(4)) {
-    const r = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, 50), seed, start: [0, 0] });
+    const r = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, exits, 50), seed, start: [0, 0] });
     for (const segs of walks(r, n)) {
       const first = segs.slice(0, 8);
       if (first.length < 4) continue;
@@ -452,7 +457,7 @@ function maxFlow() {
   const exits = [at(-1, 5)];
   const flows = [], peaks = [];
   for (const seed of seeds(5)) {
-    const r = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, 100), doorWidth: 1.0, start: [0, 0], seed });
+    const r = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, exits, 100), doorWidth: 1.0, start: [0, 0], seed });
     const t = exitTimes(r);
     flows.push((t.length - 1) / (t.at(-1) - t[0]));
     let peak = 0;
@@ -483,7 +488,7 @@ function largeRoom() {
   const time = (exits) =>
     mean(
       seeds(3).map((seed) => {
-        const r = simulateCrowd(graph, { exits, ...crowdOf(graph, four, QUICK ? 300 : 1000), doorWidth: 1.0, start: [0, 0], seed, horizon: 3000 });
+        const r = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, four, QUICK ? 300 : 1000), doorWidth: 1.0, start: [0, 0], seed, horizon: 3000 });
         return r.lastOut;
       }),
     );
@@ -564,7 +569,7 @@ function bottlenecks() {
     const g = bottleneckGraph({ goal: a });
     const runs = seeds(3).map((seed) => {
       const people = Math.round((150 * placesOf(g.graph, g.exits)) / g.room1.size);
-      const r = simulateCrowd(g.graph, { exits: g.exits, ...crowdOf(g.graph, g.exits, people), doorWidth: 1.0, start: [0, 0], seed, choice: "nearest", horizon: 1500 });
+      const r = simulateCrowd(g.graph, { ...BASE, exits: g.exits, ...crowdOf(g.graph, g.exits, people), doorWidth: 1.0, start: [0, 0], seed, choice: "nearest", horizon: 1500 });
       return room1Out(g, r, g.room1);
     });
     rows12a.push({ a, people: round(mean(runs.map((x) => x.people)), 0), room1_s: round(mean(runs.map((x) => x.last)), 1), flow_ps: round(mean(runs.map((x) => x.flow)), 3) });
@@ -585,7 +590,7 @@ function bottlenecks() {
   const run = (g) =>
     seeds(3).map((seed) => {
       const people = Math.round((150 * placesOf(g.graph, g.exits)) / g.room1.size);
-      const r = simulateCrowd(g.graph, { exits: g.exits, ...crowdOf(g.graph, g.exits, people), doorWidth: 1.0, start: [0, 0], seed, choice: "nearest", horizon: 1500 });
+      const r = simulateCrowd(g.graph, { ...BASE, exits: g.exits, ...crowdOf(g.graph, g.exits, people), doorWidth: 1.0, start: [0, 0], seed, choice: "nearest", horizon: 1500 });
       return room1Out(g, r, g.room1);
     });
   const short = run(bottleneckGraph({ goal: 10 }));
@@ -608,7 +613,7 @@ function bottlenecks() {
     const g = bottleneckGraph({ goal: 10 });
     const runs = seeds(3).map((seed) => {
       const people = Math.round((150 * placesOf(g.graph, g.exits)) / g.room1.size);
-      const r = simulateCrowd(g.graph, { exits: g.exits, ...crowdOf(g.graph, g.exits, people), doorWidth: w, start: [0, 0], seed, choice: "nearest", horizon: 1500 });
+      const r = simulateCrowd(g.graph, { ...BASE, exits: g.exits, ...crowdOf(g.graph, g.exits, people), doorWidth: w, start: [0, 0], seed, choice: "nearest", horizon: 1500 });
       return room1Out(g, r, g.room1);
     });
     const J = mean(runs.map((x) => x.flow));
@@ -631,6 +636,180 @@ function bottlenecks() {
     pass: rows12d.every((r, k) => k === 0 || r.flow_ps > rows12d[k - 1].flow_ps),
     summary: rows12d.map((r) => `${r.width_m} m: ${r.flow_ps} persons/s (SFPE ${r.sfpe_capacity_ps}, measured about ${r.measured_1_9w_ps})`).join("; "),
     validation: "fails as a match to the measured flows by design: the SFPE capacity is a design value, about half the laboratory flows",
+  });
+}
+
+/** A room 10 m x 10 m and, from the middle of its far wall, a stair as the app draws one: a single file of nodes `step` m apart along the slope (7 in risers, 11 in treads), `width` m wide, `long` m down (or up) to the exit. */
+function stairFileGraph({ width, long = 10, up = false, step = S }) {
+  const theta = Math.atan(7 / 11);
+  const hx = step * Math.cos(theta), dz = step * Math.sin(theta);
+  const steps = Math.round(long / step);
+  const cells = [...rect(0, 20, 0, 20)];
+  for (let c = 0; c < steps; c += 1) cells.push([21 + c, 10, KIND_STAIR, (up ? 1 : -1) * (c + 1) * dz]);
+  cells.push([21 + steps, 10, KIND_DOOR, (up ? 1 : -1) * (steps + 1) * dz]);
+  const pos = (i, j, y) => [i <= 20 ? i * S : 20 * S + (i - 20) * hx, y, j * S];
+  const { graph, at } = lattice(cells, { pos });
+  graph.widths = new Float32Array(graph.nodes.length / 3);
+  for (let c = 0; c < steps; c += 1) graph.widths[at(21 + c, 10)] = width;
+  const room1 = new Set(rect(0, 20, 0, 20).map(([i, j]) => at(i, j)));
+  return { graph, exits: [at(21 + steps, 10)], room1, door: null, at };
+}
+
+/**
+ * What a door, a corridor and a stair 1 m wide pass, beside the SFPE values (which Pathfinder's SFPE
+ * mode reports for them: 0.92, 0.79 and 0.71 persons/s), and a stair against its width.
+ */
+function passageFlows() {
+  const flowOf = (g, opts = {}) =>
+    mean(
+      seeds(3).map((seed) => {
+        const r = simulateCrowd(g.graph, { ...BASE, exits: g.exits, groups: [{ nodes: [...g.room1], count: 150 }], doorWidth: 1.0, start: [0, 0], seed, choice: "nearest", horizon: 3000, ...opts });
+        return room1Out(g, r, g.room1).flow;
+      }),
+    );
+  const door = flowOf(bottleneckGraph({ goal: 10 }));
+  const corridor = flowOf(bottleneckGraph({ goal: 10, long: 5 }));
+  const stairs = [1.0, 1.2, 2.4].map((width) => ({ width_m: width, down_ps: round(flowOf(stairFileGraph({ width }), { doorWidth: 5 }), 3), up_ps: round(flowOf(stairFileGraph({ width, up: true }), { doorWidth: 5 }), 3), sfpe_down_ps: round(Crowd.passageCapacity ? Crowd.passageCapacity(width, true) : NaN, 3) }));
+  // A node a tread, as the app draws a modelled stair (0.33 m along the slope for 0.28 m treads).
+  const treads = round(flowOf(stairFileGraph({ width: 1.0, step: 0.33 }), { doorWidth: 5 }), 3);
+  const expect = { door: 0.921, corridor: 0.789, stair: 0.71 };
+  const near = (x, y) => Math.abs(x - y) <= 0.05 * y;
+  const rising = stairs.every((r, k) => k === 0 || r.down_ps > stairs[k - 1].down_ps);
+  record({
+    id: "SFPE-flows",
+    source: "SFPE Handbook, 5th ed., ch. 59 (specific flow and boundary layers); the values Pathfinder's SFPE mode reports (Thunderhead Engineering, Verification and Validation)",
+    name: "what a door, a corridor and a stair 1 m wide pass, and a stair against its width",
+    criterion: "150 persons queueing: the flows within 5 % of 0.92 (door), 0.79 (corridor) and 0.71 persons/s (stair, down), and a wider stair passes more",
+    measured: { door_1m_ps: round(door, 3), corridor_1m_ps: round(corridor, 3), stair_1m_down_ps: stairs[0].down_ps, stair_1m_down_a_node_a_tread_ps: treads, sfpe: expect, stairs, passage_flow: PASSAGE },
+    pass: near(door, expect.door) && near(corridor, expect.corridor) && near(stairs[0].down_ps, expect.stair) && rising,
+    summary: `1 m door ${round(door, 3)}, corridor ${round(corridor, 3)}, stair ${stairs[0].down_ps} persons/s (SFPE 0.92, 0.79, 0.71); stairs down ` + stairs.map((r) => `${r.width_m} m: ${r.down_ps} (SFPE ${r.sfpe_down_ps}; up ${r.up_ps})`).join(", ") + `; 1 m stair with a node a tread: ${treads}`,
+    deviation: "the stair is a single file of nodes 0.5 m apart carrying its width (graph.widths), as the app draws a stair, with a wide exit (5 m) at its far end; with a node a tread (0.33 m) the 1 m stair is reported beside the criterion, not in it; the corridor is two lattice rows",
+  });
+}
+
+/** NIST Verif.5.1 (modified IMO Test 11): a room of 100 persons, a corridor 2 m wide and 12 m long, a stair down at its end. */
+function congestion() {
+  const theta = Math.atan(7 / 11);
+  const hx = S * Math.cos(theta), dz = S * Math.sin(theta);
+  // Room 8 m x 5 m (i 0..15, j 0..9); corridor four rows wide (j 3..6), i 16..39; the stair a single file from the corridor's end.
+  const cells = [...rect(0, 15, 0, 9), ...rect(16, 39, 3, 6)];
+  const steps = 10;
+  for (let c = 0; c < steps; c += 1) cells.push([40 + c, 5, KIND_STAIR, -(c + 1) * dz]);
+  cells.push([40 + steps, 5, KIND_DOOR, -(steps + 1) * dz]);
+  const pos = (i, j, y) => [i <= 39 ? i * S : 39 * S + (i - 39) * hx, y, j * S];
+  const { graph, at } = lattice(cells, { pos });
+  graph.widths = new Float32Array(graph.nodes.length / 3);
+  for (let c = 0; c < steps; c += 1) graph.widths[at(40 + c, 5)] = 2.0;
+  const exits = [at(40 + steps, 5)];
+  const n = graph.nodes.length / 3;
+  const room = rect(0, 15, 0, 9).map(([i, j]) => at(i, j));
+  const first = at(40, 5);
+  // Measuring areas (x from, x to, m; all 2 m wide, z 1.25 to 3.25): before the room's exit, the corridor's middle, the stair's base.
+  const zones = { room_exit: [5.75, 7.75], corridor_middle: [10.75, 16.75], stair_base: [17.75, 19.75] };
+  const rows = [];
+  for (const seed of seeds(3)) {
+    const r = simulateCrowd(graph, { ...BASE, exits, groups: [{ nodes: room, count: 100 }], doorWidth: 5, start: [0, 0], seed, horizon: 1500 });
+    const ws = walks(r, n);
+    const leftRoom = [], ontoStair = [], pastMiddle = [];
+    ws.forEach((segs) => {
+      for (const sg of segs) {
+        if (graph.nodes[sg.a * 3] <= 7.5 + 1e-6 && graph.nodes[sg.b * 3] > 7.5 + 1e-6 && graph.kinds[sg.b] === KIND_FLOOR) leftRoom.push(sg.t1);
+        if (sg.b === first) ontoStair.push(sg.t0);
+        if (graph.nodes[sg.a * 3] <= 13.5 + 1e-6 && graph.nodes[sg.b * 3] > 13.5 + 1e-6 && graph.kinds[sg.b] === KIND_FLOOR) pastMiddle.push(sg.t1);
+      }
+    });
+    for (const list of [leftRoom, ontoStair, pastMiddle]) list.sort((a, b) => a - b);
+    const emptied = leftRoom[Math.floor(leftRoom.length * 0.9) - 1] ?? NaN;
+    const density = {}, peak = {};
+    for (const [name, [x0, x1]] of Object.entries(zones)) {
+      const series = [];
+      for (let t = 5; t <= (name === "stair_base" ? ontoStair.at(-1) : emptied); t += 1) {
+        let count = 0;
+        ws.forEach((segs, i) => {
+          const q = positionAt(graph, segs, t, r.outAt[i]);
+          if (q && q[0] >= x0 && q[0] <= x1 && q[2] >= 1.25 && q[2] <= 3.25 && q[1] > H - 0.05) count += 1;
+        });
+        series.push(count / ((x1 - x0) * 2));
+      }
+      density[name] = mean(series);
+      peak[name] = Math.max(...series);
+    }
+    // The flow past the corridor's middle in 5 s bins, between the first tenth and the last tenth of those who pass.
+    const lo = pastMiddle[Math.floor(pastMiddle.length * 0.1)], hi = pastMiddle[Math.floor(pastMiddle.length * 0.9) - 1];
+    const bins = [];
+    for (let t = lo; t + 5 <= hi; t += 5) bins.push(pastMiddle.filter((x) => x >= t && x < t + 5).length / 5);
+    const flowMid = mean(bins);
+    const cv = Math.sqrt(mean(bins.map((x) => (x - flowMid) ** 2))) / flowMid;
+    const k0 = 10, k1 = ontoStair.length - 11;
+    rows.push({
+      people: r.people, out: r.people - r.inside, last_out_s: r.lastOut, room_emptied_90pc_s: emptied,
+      density_room_exit: density.room_exit, density_corridor_middle: density.corridor_middle, peak_corridor_middle: peak.corridor_middle, peak_stair_base: peak.stair_base,
+      flow_out_of_room_ps: (Math.floor(leftRoom.length * 0.9) - 11) / (emptied - leftRoom[10]), flow_corridor_middle_ps: flowMid, flow_corridor_cv: cv,
+      flow_onto_stair_ps: (k1 - k0) / (ontoStair[k1] - ontoStair[k0]),
+    });
+  }
+  const m = (key) => mean(rows.map((x) => x[key]));
+  const D = Crowd.QUEUE_DENSITY ?? 1.9;
+  const measured = Object.fromEntries(Object.keys(rows[0]).map((key) => [key, round(m(key), 3)]));
+  measured.sfpe = { corridor_2m_ps: round(Crowd.passageCapacity ? Crowd.passageCapacity(2.0) : NaN, 3), stair_2m_down_ps: round(Crowd.passageCapacity ? Crowd.passageCapacity(2.0, true) : NaN, 3) };
+  measured.passage_flow = PASSAGE;
+  const pass = m("out") === m("people") && m("density_room_exit") > D && m("peak_corridor_middle") < D && m("flow_corridor_cv") <= 0.25 && m("peak_stair_base") > D && m("flow_onto_stair_ps") < m("flow_corridor_middle_ps");
+  record({
+    id: "NIST-Verif.5.1",
+    source: "NIST TN 1822 Verif.5.1 (modified IMO Test 11: the stair leads down)",
+    name: "congestion: 100 persons in an 8 m x 5 m room, a corridor 2 m wide and 12 m long, a stair down at its end",
+    criterion: `qualitative, read here as: congestion before the room's exit (mean density above SFPE's greatest-flow density, ${D} persons/m2, while the room empties), a steady flow in the corridor (its middle never above that density; the flow past it in 5 s bins varying by at most a quarter), and congestion at the base of the stair (peak density above ${D}; the stair takes less than the corridor brings)`,
+    measured,
+    pass,
+    summary: `density before the room's exit ${measured.density_room_exit}/m2; corridor middle peak ${measured.peak_corridor_middle}/m2, flow ${measured.flow_corridor_middle_ps} persons/s (variation ${measured.flow_corridor_cv}); stair base peak ${measured.peak_stair_base}/m2, on to the stair ${measured.flow_onto_stair_ps} persons/s; last out ${measured.last_out_s} s`,
+    deviation: "the stair is taken as 2 m wide, as the corridor (the figure's stair dimension was not read), 5 m along the slope, and is a single file of nodes carrying its width, with a wide exit (5 m) at its foot; the room opens on the corridor over its full width; the default population (1.19 m/s, 25 % either way)",
+  });
+}
+
+/** RiMEA Test 12c: three rooms joined by two identical bottlenecks; the numbers in rooms 1 and 2 over time and the flows through both. */
+function secondBottleneck() {
+  const cells = [...rect(0, 20, 0, 20), [21, 10, KIND_DOOR], ...rect(22, 42, 0, 20), [43, 10, KIND_DOOR], ...rect(44, 64, 0, 20)];
+  for (let j = 0; j <= 20; j += 1) cells.push([65, j, KIND_DOOR]);
+  const { graph, at } = lattice(cells);
+  const exits = Array.from({ length: 21 }, (_, j) => at(65, j));
+  const n = graph.nodes.length / 3;
+  const room1 = rect(0, 20, 0, 20).map(([i, j]) => at(i, j));
+  const d1 = at(21, 10), d2 = at(43, 10);
+  const rows = [];
+  let series = null;
+  for (const seed of seeds(3)) {
+    const r = simulateCrowd(graph, { ...BASE, exits, groups: [{ nodes: room1, count: 150 }], doorWidth: 1.0, start: [0, 0], seed, choice: "nearest", horizon: 1500 });
+    const ws = walks(r, n);
+    const t1 = [], t2 = [], wait2 = [];
+    ws.forEach((segs) => {
+      segs.forEach((sg, k) => {
+        if (sg.b === d1) t1.push(sg.t0);
+        if (sg.b === d2) {
+          t2.push(sg.t0);
+          wait2.push(k ? sg.t0 - segs[k - 1].t1 : 0);
+        }
+      });
+    });
+    t1.sort((a, b) => a - b);
+    t2.sort((a, b) => a - b);
+    const flow = (t) => (t.length - 21) / (t[t.length - 11] - t[10]);
+    const inRoom2 = (t) => t1.filter((x) => x <= t).length - t2.filter((x) => x <= t).length;
+    let most = 0;
+    for (let t = 0; t <= t2.at(-1); t += 1) most = Math.max(most, inRoom2(t));
+    rows.push({ flow_bottleneck_1_ps: flow(t1), flow_bottleneck_2_ps: flow(t2), most_in_room_2: most, room_1_empty_s: t1.at(-1), room_2_empty_s: t2.at(-1), longest_wait_before_bottleneck_2_s: Math.max(...wait2) });
+    if (!series) series = [0, 30, 60, 90, 120, 150, 180].map((t) => ({ t_s: t, room_1: 150 - t1.filter((x) => x <= t).length, room_2: inRoom2(t) }));
+  }
+  const measured = Object.fromEntries(Object.keys(rows[0]).map((key) => [key, round(mean(rows.map((x) => x[key])), 3)]));
+  measured.numbers_over_time_seed_1 = series;
+  record({
+    id: "RiMEA-12c",
+    source: "RiMEA 4.1.1 Test 12c",
+    name: "150 persons through three rooms joined by two identical bottlenecks 1 m wide",
+    criterion: "the numbers in rooms 1 and 2 over time and the flows through bottlenecks 1 and 2 (documentation: the test gives an aim, no expected result)",
+    measured,
+    pass: null,
+    summary: `bottleneck 1 ${measured.flow_bottleneck_1_ps} persons/s, bottleneck 2 ${measured.flow_bottleneck_2_ps}; at most ${measured.most_in_room_2} in room 2 at once; longest wait before bottleneck 2 ${measured.longest_wait_before_bottleneck_2_s} s`,
+    deviation: "the rooms are taken as 10 m x 10 m, as Test 12b's (Fig. 14's dimensions were not read); the bottlenecks are short (one door node each); the default population, not RiMEA's",
   });
 }
 
@@ -666,7 +845,7 @@ function exitAllocation() {
   for (const choice of ["nearest", "quickest"]) {
     const used = { main: 0, secondary: 0 };
     for (const seed of seeds(5)) {
-      const r = simulateCrowd(graph, { exits: [main, secondary], ...crowdOf(graph, [main, secondary], 23), start: [0, 0], seed, choice });
+      const r = simulateCrowd(graph, { ...BASE, exits: [main, secondary], ...crowdOf(graph, [main, secondary], 23), start: [0, 0], seed, choice });
       for (let i = 0; i < r.people; i += 1) {
         const exit = r.exitOf[i] === main ? "main" : r.exitOf[i] === secondary ? "secondary" : "none";
         if (exit !== "none") used[exit] += 1;
@@ -708,7 +887,7 @@ function exitAllocation() {
   const byExit = { main: 0, secondary: 0 };
   for (const seed of seeds(5)) {
     const groups = rooms.map((room, k) => ({ nodes: nodesOf.get(room), count: room === "3" ? 1 : 2, exit: assigned.main.has(room) ? main : secondary }));
-    const r = simulateCrowd(graph, { exits: [main, secondary], groups, start: [0, 0], seed });
+    const r = simulateCrowd(graph, { ...BASE, exits: [main, secondary], groups, start: [0, 0], seed });
     for (let i = 0; i < r.people; i += 1) {
       all += 1;
       if (r.exitOf[i] >= 0) left += 1;
@@ -764,8 +943,8 @@ function dynamicExitAsWritten() {
   let ok = true;
   // The figure draws the occupant by the near wall, a little right of centre; a second place left of centre, nearer Exit 1, is the harder case.
   for (const [name, i] of [["right of centre", 11], ["left of centre, nearer Exit 1", 8]]) {
-    const open = simulateCrowd(graph, { exits: [exit1, exit2], groups: [{ nodes: [at(i, 1)], count: 1, speed: [1, 1] }], start: [0, 0] });
-    const r = simulateCrowd(graph, { exits: [exit1, exit2], groups: [{ nodes: [at(i, 1)], count: 1, speed: [1, 1] }], start: [0, 0], closes });
+    const open = simulateCrowd(graph, { ...BASE, exits: [exit1, exit2], groups: [{ nodes: [at(i, 1)], count: 1, speed: [1, 1] }], start: [0, 0] });
+    const r = simulateCrowd(graph, { ...BASE, exits: [exit1, exit2], groups: [{ nodes: [at(i, 1)], count: 1, speed: [1, 1] }], start: [0, 0], closes });
     const used = r.exitOf[0] === exit1 ? "Exit 1" : r.exitOf[0] === exit2 ? "Exit 2" : "none";
     rows[name] = { with_both_open: open.exitOf[0] === exit1 ? "Exit 1" : "Exit 2", with_exit_1_closed_at_1s: used, out_at_s: round(r.outAt[0], 1) };
     if (used !== "Exit 2") ok = false;
@@ -793,7 +972,7 @@ function routeChoiceAsWritten() {
   const people = QUICK ? 300 : 1000;
   const shares = [], waits = [];
   for (const seed of seeds(2)) {
-    const r = simulateCrowd(graph, { exits: [e1, e2], groups: [{ nodes: block.slice(0, people), count: people, speed: POPULATIONS.weidmann }], doorWidth: 1.0, start: [0, 0], seed, horizon: 3000 });
+    const r = simulateCrowd(graph, { ...BASE, exits: [e1, e2], groups: [{ nodes: block.slice(0, people), count: people, speed: POPULATIONS.weidmann }], doorWidth: 1.0, start: [0, 0], seed, horizon: 3000 });
     shares.push(Array.from(r.exitOf).filter((x) => x === e1).length / r.people);
     waits.push(r.longestWait);
   }
@@ -817,7 +996,7 @@ function routeChoice() {
   for (const choice of ["quickest", "nearest"]) {
     const shares = [], waits = [];
     for (const seed of seeds(2)) {
-      const r = simulateCrowd(graph, { exits: [e1, e2], ...crowdOf(graph, [e1, e2], QUICK ? 300 : 1000), doorWidth: 1.0, start: [0, 0], seed, choice, horizon: 3000 });
+      const r = simulateCrowd(graph, { ...BASE, exits: [e1, e2], ...crowdOf(graph, [e1, e2], QUICK ? 300 : 1000), doorWidth: 1.0, start: [0, 0], seed, choice, horizon: 3000 });
       const by1 = Array.from(r.exitOf).filter((x) => x === e1).length;
       shares.push(by1 / r.people);
       waits.push(r.longestWait);
@@ -848,7 +1027,7 @@ function fundamental1D(percentiles) {
       const people = Math.round(rho * 200);
       const v = [], dens = [];
       for (const seed of seeds(3)) {
-        const r = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, people), speed: profile.speed, spread: profile.spread, doorWidth: 5, start: [0, 0], seed, choice: "nearest", horizon: 60 });
+        const r = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, exits, people), speed: profile.speed, spread: profile.spread, doorWidth: 5, start: [0, 0], seed, choice: "nearest", horizon: 60 });
         const ws = walks(r, n);
         let count = 0;
         ws.forEach((segs, i) => {
@@ -903,7 +1082,7 @@ function fundamental2D() {
     const people = Math.round(rho * 1000);
     const vs = [], ds = [];
     for (const seed of seeds(2)) {
-      const r = simulateCrowd(graph, { exits, ...crowdOf(graph, exits, people), doorWidth: 5, start: [0, 0], seed, choice: "nearest", horizon: 45 });
+      const r = simulateCrowd(graph, { ...BASE, exits, ...crowdOf(graph, exits, people), doorWidth: 5, start: [0, 0], seed, choice: "nearest", horizon: 45 });
       const ws = walks(r, n);
       for (let t = 10; t <= 40; t += 2) {
         let count = 0, sum = 0;
@@ -944,7 +1123,7 @@ function dynamicExit() {
   closes[a] = 10;
   let after = 0, crossing = 0, people = 0, out = 0;
   for (const seed of seeds(3)) {
-    const r = simulateCrowd(graph, { exits: [a, b], ...crowdOf(graph, [a, b], 80), start: [0, 0], seed, closes, doorWidth: 0.9 });
+    const r = simulateCrowd(graph, { ...BASE, exits: [a, b], ...crowdOf(graph, [a, b], 80), start: [0, 0], seed, closes, doorWidth: 0.9 });
     people += r.people;
     out += r.people - r.inside;
     walks(r, n).forEach((segs, i) => {
@@ -987,6 +1166,9 @@ maxFlow();
 dynamicExit();
 exitAllocation();
 bottlenecks();
+secondBottleneck();
+passageFlows();
+congestion();
 if (percentiles) fundamental1D(percentiles);
 fundamental2D();
 largeRoom();
@@ -997,7 +1179,7 @@ dynamicExitAsWritten();
 const code = readFileSync(path.join(root, "topologicpy-web-frontend", "src", "core", "crowd.js"));
 const report = {
   date: process.argv.includes("--date") ? process.argv[process.argv.indexOf("--date") + 1] : "2026-11-11",
-  model: { file: "topologicpy-web-frontend/src/core/crowd.js", sha256: createHash("sha256").update(code).digest("hex"), lattice_spacing_m: S, dt_s: 0.1 },
+  model: { file: "topologicpy-web-frontend/src/core/crowd.js", sha256: createHash("sha256").update(code).digest("hex"), lattice_spacing_m: S, dt_s: 0.1, options: BASE },
   quick: QUICK,
   seconds: Math.round((Date.now() - t0) / 1000),
   sources: {

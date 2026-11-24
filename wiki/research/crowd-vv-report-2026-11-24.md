@@ -9,7 +9,7 @@ What the people-leaving model (`topologicpy-web-frontend/src/core/crowd.js`) pas
 - Harness: `node tools/validation/crowd-validation.mjs --out 2026-11-24-crowd-validation.json --date 2026-11-24`.
 - Result: 22 pass, 2 fail, 3 documentation. The 16 passes and 2 failures of 2026-11-11 are unchanged; six tests were added the same day, run as written with the start areas, assigned exits and populations the model now has (`groups` in `simulateCrowd`), and all six pass. File: `benchmark/results/2026-11-24-crowd-validation.json`, which records the hash of `crowd.js`.
 - Code: main after pull request 19 (the gathering places and the count of people who reach no exit changed since 2026-11-11; the walk did not).
-- The harness now runs with the unit tests (`src/core/crowdValidation.test.mjs`): a third failure, or the loss of a pass, fails the suite.
+- The harness now runs with the unit tests (`src/core/crowdValidation.test.mjs`): a new failure, or the loss of a pass, fails the suite. Since the update below it runs twice there, by default and with `passageFlow`.
 
 Each test builds its geometry as a lattice of nodes 0.5 m apart and runs the model as the app does. Nothing is tuned to pass.
 
@@ -22,6 +22,38 @@ Each test builds its geometry as a lattice of nodes 0.5 m apart and runs the mod
 - *Documented*: the test asks for a result to be reported, not a criterion.
 - *Not run*: the model could attempt it; the harness does not yet.
 - *Not represented*: the model has nothing of the kind.
+
+## Update, later the same day: a flow capacity for corridors and stairs
+
+`simulateCrowd` has a new option, `passageFlow`. It is off by default, in the function and in the app (the panel's "Corridors and stairs limit the flow"), because it changes the times wherever a corridor or a stair is narrow. With it off a run is exactly as before: the 27 earlier cases give the same output to the last digit.
+
+What the option does:
+- **Corridors.** Floor up to 3 m across passes at most the SFPE specific flow, 1.32 persons/s for each metre of effective width, the width less 0.2 m a side. The cross-section is found on the graph: the shorter run of floor nodes through a node, wall to wall. Its width is its nodes times the spacing, so it is known to about half a metre; a single file of nodes is taken as two nodes wide (1 m). `passageWidths` gives real widths. Corridors askew to the lattice are not found.
+- **Stairs.** The graph now carries each stair node's real width (`graph.widths`: a tread's long side, or an assumed stair's flight). With the option a stair passes at most 1.01 persons/s for each metre of effective width (0.15 m a side). That value is not a new constant: it is what the code's stair speed gives, (1 - 0.266 D) k D at D = 1.9 with k = 1.08 m/s, and it equals the Handbook's tabulated maximum for 7 in risers and 11 in treads. Up a stair it is 0.75 of that, as the speed is. The stair is still one file of nodes, but a node holds one person abreast for each 0.6 m of width, and the stair fills to 1.9 persons/m², not beyond.
+- **The queue.** Within 2 m of a corridor's mouth or of a stair with a width the density that slows a step is capped at 1.9 persons/m², as it already is before a door, so the passage's capacity and not the crawl into the queue sets the flow.
+
+The harness has three new cases (RiMEA 12c, NIST Verif.5.1, and the SFPE flows of a door, a corridor and a stair) and a flag, `--passage-flow`, that runs every case with the option. Results: `benchmark/results/2026-11-24-crowd-capacity-default.json` and `2026-11-24-crowd-capacity-passage-flow.json`.
+
+| | By default | With `passageFlow` |
+| --- | --- | --- |
+| Pass, fail, documentation | 22, 4, 4 | 25, 1, 4 |
+| Fails | RiMEA 12b, RiMEA 16, NIST Verif.5.1, SFPE flows | RiMEA 16 |
+| RiMEA 12b: room 1 through a short door, then a 5 m corridor, both 1 m wide | 163.3 s, 128.8 s | 163.3 s, 196.6 s |
+| 1 m door, corridor, stair (SFPE 0.92, 0.79, 0.71 persons/s) | 0.921, 1.188, 0.542 | 0.921, 0.789, 0.707 |
+| Stairs 1.2 m and 2.4 m wide, down (SFPE 0.913, 2.131) | 0.542, 0.542 | 0.913, 2.130 |
+| NIST Verif.5.1: flow past the corridor's middle; on to the stair (SFPE 2.105; 1.725) | 0.983 (unsteady); 0.483 | 1.957 (steady); 1.707 |
+| NIST Verif.5.1: last person out | 213.7 s | 79.9 s |
+| RiMEA 16: points inside the band | 8 of 14 | 10 of 14 |
+
+Every other case gives the same numbers either way, but for NIST Verif.3.1, where one person of 115 takes the other exit with the quickest choice.
+
+What the table shows without the option: a stair drawn as one file of nodes passes 0.54 persons/s whatever its width, less than the SFPE value for any stair over about 0.85 m wide, and a narrow corridor passes half as much again as SFPE allows. So times through narrow corridors are optimistic by default and times down stairs are pessimistic.
+
+Limits of the option, as measured:
+- A 1 m stair whose nodes are a tread apart (0.33 m along the slope, as a modelled stair's are) passes 0.662 persons/s, 7 % under the SFPE value; at 0.5 m between nodes it passes 0.707. Wider stairs reach their capacity at either spacing.
+- The SFPE flows are design values. Measured laboratory flows through bottlenecks are about twice as high (RiMEA 12d).
+- People abreast on a stair node are drawn at the same point in the view.
+- RiMEA 16 gains two points with the option only because a single file of nodes is capped as a 1 m corridor. The density reading is not changed by it.
 
 ## The two failures, and their one cause
 
@@ -51,7 +83,7 @@ Both come from how density is read: round the free node ahead of a walker, so de
 | Verif.3.2 | Social influence | Not represented |
 | Verif.3.3 | Affiliation | Not represented |
 | Verif.4.1 | Dynamic availability of exits | Pass (run) as written: one occupant at 1 m/s in a 10 m x 15 m room, Exit 1 closed at 1 s; Exit 1 is not used, from a start nearer Exit 1 too. Also with 240 people and the exit closing at 10 s |
-| Verif.5.1 | Congestion | Not run |
+| Verif.5.1 | Congestion | Fails by default; pass (run) with `passageFlow`: a queue before the room's exit (3.8 persons/m²), a steady 1.96 persons/s in the corridor, a queue at the stair's base (peak 2.3 persons/m²), the stair taking 1.71 persons/s. Deviations: the stair taken as 2 m wide; "congestion" read as a density above 1.9 persons/m² |
 | Verif.5.2 | Maximum flow rates | Pass (run): 0.92 persons/s through a 1 m exit, under the 1.33 limit |
 
 ## RiMEA guideline, version 4.1.1
@@ -70,13 +102,13 @@ Both come from how density is read: round the free node ahead of a walker, so de
 | 10 | Allocation of escape routes | Pass (run): 23 persons in twelve rooms, each room given its exit; all leave by it. Two a room, one in room 3, as IMO's figure has them |
 | 11 | Choice of escape route | Pass (run) as written, narrowly: 1,000 adults packed from the left at 4 persons/m², the most the lattice holds; 50.5 % leave by the closer exit 1, with a long queue there, the rest by exit 2. "Prefer" is met by half a per cent |
 | 12a | Effect of a bottleneck's position | Documented: flat |
-| 12b | Effect of a bottleneck's length | Fails (run) |
-| 12c | Congestion at a second bottleneck | Not run |
+| 12b | Effect of a bottleneck's length | Fails by default; pass (run) with `passageFlow`: 196.6 s through the corridor against 163.3 s through the door |
+| 12c | Influence of congestion (three rooms, two identical bottlenecks) | Documented: 0.921 and 0.917 persons/s through bottlenecks 1 and 2; at most 12 persons in room 2; no queue before bottleneck 2 (longest wait 0.7 s). Rooms taken as 10 m x 10 m |
 | 12d | Flow against a bottleneck's width | Pass (run) on the stated aim: flow rises with width. At the SFPE design values, about half the measured flows |
 | 13 | Stairs up against stairs down | Pass (run) on direction: 0.69 m/s up, 0.92 m/s down |
 | 14 | Route choice between floors | Not run |
 | 15 | Movement of a large crowd round a corner | Not run |
-| 16 | Single-file fundamental diagram | Fails (run) |
+| 16 | Single-file fundamental diagram | Fails (run): 8 of 14 points in the band by default, 10 of 14 with `passageFlow` |
 
 ## IMO MSC.1/Circ.1533
 
@@ -91,7 +123,7 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 | 8 | Not represented: no counter-flow |
 | 9 | Pass (run as RiMEA 9) |
 | 10 | Pass (run as RiMEA 10) |
-| 11 | Not run |
+| 11 | Run as NIST Verif.5.1, with the stair leading down as NIST has it, not up as IMO does |
 | 12 | Not run under this suite |
 
 ## What is not claimed
@@ -100,12 +132,12 @@ No test of this suite is run under its own name. The verdicts follow from the ru
 - "Passes RiMEA" or "passes NIST TN 1822". It passes the tests listed, several with deviations.
 - Conformity with ISO 20414, which was not read.
 - An escape time from the animation. The performance check, not the animation, gives times, and it adds detection, alarm and pre-movement.
-- Dense crowds, or the time to clear a stair. In the app a stair is one file of nodes whatever its width.
+- Dense crowds, or the time to clear a stair. In the app a stair is one file of nodes; its real width counts only with `passageFlow`, which is off by default.
 
 ## Next, in order
 
 1. Done on 2026-11-24: start areas, exits assigned to people, and populations with their own speeds; NIST Verif.4.1 and RiMEA 11 run as written. The populations built in are IMO MSC.1/Circ.1533's twelve groups by age and sex (Table 3.4, uniform) with its passengers' composition (Table 3.1), RiMEA's persons with impaired mobility, and Weidmann's normal distribution. IMO's stair speeds by group (Table 3.5) are not used: stairs take the SFPE values for everyone.
-2. A flow limit for corridors and stairs, with the stair's real width (RiMEA 12b, NIST Verif.5.1).
+2. Done on 2026-11-24 as an option, off by default: a flow limit for corridors and stairs, with the stair's real width (RiMEA 12b, NIST Verif.5.1). Before it becomes the default: check the stair widths the graph carries on real models, and decide what a corridor's width counted in nodes is worth.
 3. The density reading, calibrated on the single-file data with other data held back (RiMEA 16, RiMEA 4).
 4. Pre-movement times on each person and a speed in smoke (NIST Verif.1.1, 2.5).
 
