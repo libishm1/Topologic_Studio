@@ -9068,6 +9068,38 @@ The user asked that three values named in 16.55 to 16.57 as resting on no usable
 **What is corrected by this.** 16.55's sentence on 880 nm, and the lines in `wiki/issues/` that called these three values unsourced. Of the three, only the third was borrowed; the first two were sourced and misreported.
 
 
+### 16.60 Gas radiation (R8) on 0.34 m: CO, visibility, the dose and O₂ beside 13.B; nothing moves but by a test dropping out (2026-11-25)
+
+The last part of 16.55's runs. The two R8 storing runs ended on 2026-11-25 at 07:00 (eight series: 178 runs, 494 min, one stopped, FSE ISOHept26; the chairs: 13 runs, none stopped). The same agent ran the same reducers as in 16.57 (commit cd13d10 on `flamescapes/head-height-species`; section 8 of `benchmark/results/2026-11-24-species-results.md`). The figures are the agent's; the coordinator recomputed one from the per-device rows (the time to a visibility of 10 m, 0.68).
+
+**The word is "not calibrated" for every quantity, as for 13.B.**
+
+**The pairs check.** Both stored files agree with the saved ones to every digit: 3886 pairs with `2026-11-21-validation-r8-034.json`, 427 with the chairs' file.
+
+**R8 beside 13.B on 0.34 m** (pairs / δ / σ_M, wet):
+
+| Quantity | 13.B | R8 |
+| --- | --- | --- |
+| CO peak, every positive pair | 9 / 2.16 / 1.87 | 7 / 1.15 / 0.75 |
+| CO peak, measured at or above 0.0001 | 8 / 1.56 / 1.83 | 6 / 0.87 / 0.61 |
+| CO peak, measured at or above 0.0002 | 6 / 1.24 / 1.94 | 4 / 0.77 / 0.71 |
+| Time to a visibility of 10 m | 8 / 0.69 / 0.10 | 8 / 0.68 / 0.13 |
+| Asphyxiant dose, ratio at the end | 9 / 537 / 2.77 | 9 / 150 / 2.42 |
+| O₂ at 1.84 m, UL FSRI | 360 / 2.00 / 0.60 | 360 / 1.81 / 0.54 |
+| O₂ at 0.64 m, drop at or above 0.005 | 159 / 1.00 / 0.24 | 159 / 1.01 / 0.23 |
+| O₂ at 1.84 m, the chairs | 52 / 1.74 / 0.39 | 52 / 1.73 / 0.39 |
+
+- **CO did not improve: a test dropped out.** The stopped run, ISOHept26, held the two largest measured peaks (0.020 and 0.044), where the model was 40 to 85 times too low. On the seven devices both arms keep, 13.B reads 1.18 / 0.72 and R8 1.15 / 0.75. Device by device the model's peak changes by 8 % at most, but for one FSE probe (15 % lower). **The fall from 2.16 / 1.87 must not be read as item 8 improving CO.**
+- **The time to a visibility of 10 m does not move** (each model time shifts by 9 s at most): a third too soon, as before.
+- **The dose ratio falls and stays enormous.** NIST/NRC's five points read 0.9 to 2.7 (13.B: 1.0 to 3.0); FSE's four read 12 to 1200. It is the model's oxygen at FSE's probes, as in 16.57.
+- **O₂ at head height is a tenth nearer** (2.00 to 1.81) and still far out of band; low down and in the chairs nothing moves.
+- Dry against wet changes no word.
+
+**What closes a place first in the model, at the 1.8 m cells.** Temperature alone at 499 of 541 cells (13.B: 506); the asphyxiant dose never first, as before. **Twelve ATF cells never close in the run, against eight in 13.B**: with gas radiation the far corridor is cooler still, which is 16.56's finding seen again.
+
+**What this says.** Item 8 does nothing for what the egress reads besides the layer's temperature near the fire. It leaves smoke timing, CO and the dose where they were and makes the far corridor slightly later. With 16.56 to 16.58 this closes the night's order of work (16.54): every quantity the egress reads has been measured against what data exist, on the solver on the site and on the gas-radiation variant, and none passes.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
