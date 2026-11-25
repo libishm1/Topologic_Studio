@@ -124,6 +124,10 @@
       <dd><p>10 m by default, 1 to 30 m.</p></dd>
       <dt class="label">Smoke makes a place untenable</dt>
       <dd><p>On by default: visibility below the limit closes a node, as gas above the temperature does. Off, only the temperature and the doses close it. These three limits, with the ISO 13571 doses, are what the run card, the tenability index, the forecast, the exports, and the people and the slime mould that keep out of the fire read as untenable.</p></dd>
+      <dt class="label">Toxic gas dose</dt>
+      <dd><p>ISO 13571 by default: the dose from CO over 35,000 ppm minutes, times exp(CO₂ / 5) above 2 % CO₂, plus the low-oxygen dose. The other choice is Purser's form as FDS computes it, for the same three gases: 2.764 × 10<sup>-5</sup> × CO<sup>1.036</sup> per minute (light work), times exp(0.1903 × CO₂ + 2.0004) / 7.1 at every CO₂ level, plus the low-oxygen dose only below 20 % O₂. HCN, NOx and the irritants in FDS's sum are not modelled. The choice changes the asphyxiant dose wherever it is read: the tenability index, the forecast, the run's range, the exports, and the people and the slime mould.</p></dd>
+      <dt class="label">Smoke detectors respond with a delay</dt>
+      <dd><p>Off by default: a smoke detector reads the smoke at its place. On, it reads the smoke inside its sensing chamber, which follows the smoke outside at a rate set by the gas speed past it over Heskestad's characteristic length, 1.8 m (FDS's default); below 0.01 m/s the speed is taken as 0.01 m/s, an assumption of this app. It applies to the run's ceiling detectors and to the detectors of flooded and foamed rooms, from the next run, and is worked out once a frame. The detection time read from head-height smoke, used when a run has no ceiling detectors, has no chamber and is unchanged.</p></dd>
       <dt class="label">Run on</dt>
       <dd><p>The GPU where the browser offers WebGPU, else the CPU (the default), or the CPU on one core.</p></dd>
       <dt class="label">Windows and Ventilation</dt>

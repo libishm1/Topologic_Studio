@@ -580,3 +580,29 @@ test("a pan is a design fire grown to its large-pool rate and held there: it bur
   // Past its growth (about 10 s) it holds its pool rate, 19 kW, in a ventilated room.
   for (const kw of frames.slice(5)) assert.ok(Math.abs(kw * 1000 - peak) < 0.02 * peak, `${kw.toFixed(1)} kW against ${(peak / 1000).toFixed(1)} kW`);
 });
+
+test("with the detectors' entry lag they read their chambers, and the fire and the nodes are as they were", () => {
+  const { contentsFuel, ignitionFuel, item } = fuelsFor("A");
+  const make = () => buildScene(room(), { fire: [2.5, 0.75, 2], maxCells: 20000, minCell: 0.3, maxCell: 0.3, contentsFuel, ignitionFuel, item });
+  const nodes = Float32Array.from([2.5, 0.75, 2, 1, 0.75, 1, 4.5, 0.75, 3.5]);
+  const run = (extra) => runScene(make(), { nodes, horizon: 30, frameSeconds: 5, particles: 0, ...extra });
+  const plain = run({}), on = run({ detectorEntryLag: true });
+  const D = plain.detectorDistance.length;
+  assert.ok(D > 0, "the room has ceiling detectors");
+  // On, the fire and the nodes' readings are the same: only what the detectors read changes.
+  for (const key of ["T", "vis", "co", "soot", "co2", "o2", "hrr"]) assert.deepEqual(on[key], plain[key], key);
+  assert.equal(on.detectorVis.length, plain.detectorVis.length);
+  let differs = 0;
+  for (let d = 0; d < D; d += 1) {
+    // A chamber never holds more smoke than there has been outside it: its
+    // visibility is never under the least the smoke itself has given so far.
+    let least = 100;
+    for (let k = 0; k < plain.K; k += 1) {
+      least = Math.min(least, plain.detectorVis[k * D + d]);
+      const inside = on.detectorVis[k * D + d];
+      assert.ok(Number.isFinite(inside) && inside <= 100 && inside >= least - 1e-3, `detector ${d}, frame ${k}: ${inside} m inside, ${least} m the least outside`);
+      if (Math.abs(inside - plain.detectorVis[k * D + d]) > 1e-3) differs += 1;
+    }
+  }
+  assert.ok(differs > 0, "smoke reached a detector, and its chamber lagged it");
+});

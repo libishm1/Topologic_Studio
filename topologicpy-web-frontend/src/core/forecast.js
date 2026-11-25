@@ -46,7 +46,7 @@
  * the dose ranks routes under the model; it is not a measured FED.
  */
 import { Heap, csr, edgeLengths } from "./route.js";
-import { FED_CRIT, asphyxiantRate, heatRate } from "./tenability.js";
+import { DOSE_ISO, FED_CRIT, asphyxiantRate, heatRate } from "./tenability.js";
 import { AMBIENT, FIRE, floodTimeline, radialTimeline, temperatureSteps } from "./fire.js";
 
 /** Convective-heat FED per second at T degrees C: 1 / (5e7 T^-3.4 min). */
@@ -398,8 +398,10 @@ export function coDoseRate(ppm) {
  * `fedCrit`. The rate is the convected-heat FED rate plus the asphyxiant FED
  * rate: CO, times CO2's hyperventilation factor and plus the low-O2 dose
  * when the frames carry CO2 and O2 (they reduce to ISO's CO term without).
+ * With `doseForm` "purser" the asphyxiant rate is the one FDS integrates
+ * (tenability.js purserRate, at `activity`); ISO 13571's is the default.
  */
-export function forecastFromFrames(frames, { threshold = 60, smoke = true, visibilityLimit = 10, doses = true, fedCrit = FED_CRIT } = {}) {
+export function forecastFromFrames(frames, { threshold = 60, smoke = true, visibilityLimit = 10, doses = true, fedCrit = FED_CRIT, doseForm = DOSE_ISO, activity = "light" } = {}) {
   const { n, K: K0, frameSeconds, T, vis, co, co2 = null, o2 = null } = frames;
   const stride = Math.max(1, Math.ceil((K0 * n) / MAX_CELLS));
   const K = Math.ceil(K0 / stride);
@@ -412,7 +414,7 @@ export function forecastFromFrames(frames, { threshold = 60, smoke = true, visib
   for (let k0 = 0; k0 < K0; k0 += 1) {
     const row = k0 * n;
     for (let v = 0; v < n; v += 1) {
-      const gas = asphyxiantRate(co[row + v], co2 ? co2[row + v] : null, o2 ? o2[row + v] : null);
+      const gas = asphyxiantRate(co[row + v], co2 ? co2[row + v] : null, o2 ? o2[row + v] : null, doseForm, activity);
       const heat = heatRate(T[row + v]);
       const r = (heat + gas) / 60;
       if (r > peak[v]) peak[v] = r;
@@ -468,8 +470,8 @@ export function stackFrames(list, n) {
  * are stacked, with the run's `frameSeconds`, `hrr` (kW a frame) and
  * `stats.released` (J).
  */
-export function runSummary(frames, { threshold = 60, smoke = true, visibilityLimit = 10, fedCrit = FED_CRIT } = {}) {
-  const forecast = forecastFromFrames(frames, { threshold, smoke, visibilityLimit, fedCrit });
+export function runSummary(frames, { threshold = 60, smoke = true, visibilityLimit = 10, fedCrit = FED_CRIT, doseForm = DOSE_ISO, activity = "light" } = {}) {
+  const forecast = forecastFromFrames(frames, { threshold, smoke, visibilityLimit, fedCrit, doseForm, activity });
   let untenable = 0;
   let first = Infinity;
   for (let v = 0; v < forecast.n; v += 1) {

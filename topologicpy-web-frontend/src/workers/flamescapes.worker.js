@@ -134,6 +134,7 @@ async function repeatRuns(id, payload) {
         embers: payload.embers,
         sprinklers: payload.sprinklers ?? null,
         systems: payload.systems ?? null,
+        detectorEntryLag: Boolean(payload.detectorEntryLag),
         // Nothing to draw: particles and smoke snapshots only feed the view.
         particles: 0,
         smoke: false,
@@ -194,6 +195,8 @@ self.onmessage = async (event) => {
       sprinklers: payload.sprinklers ?? null,
       // Rooms flooded with clean agent or blanketed with foam (src/core/suppressionSystems.js); none when off.
       systems: payload.systems ?? null,
+      // Smoke detectors read their chamber's smoke, behind the smoke outside (core/tenability.js chamberStep); off by default.
+      detectorEntryLag: Boolean(payload.detectorEntryLag),
       // On the GPU: a run it cannot make throws (below, the scene is rebuilt
       // on the CPU's budget) instead of running the GPU-sized scene on the CPU.
       cpuFallback: false,
