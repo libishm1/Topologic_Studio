@@ -9045,6 +9045,29 @@ File: `benchmark/results/2026-11-25-tenability-times-r8b-020.md` on branch `flam
 **What this closes.** 16.52's steps are done. The standing of the solver on the site is unchanged on all three cells. What is open is what 16.56 and 16.57 named: the far field along corridors, and CO where the fire is short of air.
 
 
+### 16.59 The sources of three values: heptane's CO yield, the 880 nm meter, and σ_E for a crossing time (2026-11-25)
+
+The user asked that three values named in 16.55 to 16.57 as resting on no usable source be traced. No run was made and no result changes. What the coordinator read today is said for each; what was not opened is said too.
+
+**1. Heptane's CO yield, 0.008 kg/kg: sourced, and the same value FDS's own validation uses.**
+- NIST SP 1013-1, Table 3-3 (p. 16) gives it as "< 0.008", from Hamins et al. 2003, measured for the NIST/NRC spray burner (read by the agent of 16.55; the coordinator did not open the report).
+- **Read today in the FDS repository (firemodels/fds, master, `Validation/`):** `WTC/FDS_Input_Files/WTC_01.fds` has `CO_YIELD=0.008`, `SOOT_YIELD=0.015`; `NIST_FSE_2008/FDS_Input_Files/ISOHept25.fds` has `SOOT_YIELD=0.0149, CO_YIELD=0.008` with the note "NIST SP 1013-1"; `NIST_NRC/FDS_Input_Files/NIST_NRC_01.fds` lumps its products with 0.028619 mol of CO and 0.124188 mol of soot carbon for each mol of heptane, which is 0.0080 and 0.0149 kg/kg.
+- So the value is not unsourced: it is the documented input of the three series, the one the guide's own comparisons were made with. **What stands from 16.57 is narrower:** it is an upper bound taken as the value, and it does not rise when the fire is short of air. FDS's inputs share the first; for the second FDS has other means that this solver lacks.
+
+**2. The "880 nm": sourced in this project's own literature note; 16.55's "not verified" was the coordinator's slip.**
+- `wiki/research/fire-calibration-literature-2026-11-12.md` records it: the MIREX extinction meters of the EN 54 test room in Börger et al. 2024 work in the infrared at 880 nm, with meters at 1.52, 2.3 and 3.3 m, in a series burning n-heptane. The agent's draft of 16.55 said the same and added Gnendiger et al. (arXiv 2306.16182) for the source's peak of 0.88 µm.
+- 16.53 named the wavelength because that series is the candidate for smoke at head height. No meter in the nine data files is at 880 nm, which is what 16.55 should have said and no more.
+- **Not opened today:** Börger et al. and Gnendiger et al. themselves. The wavelength rests on the note's reading of them. The exponent of the scaling (K_m as 1/λ) is still unchecked in a primary source.
+
+**3. σ_E of 0.07 for a crossing time: borrowed, and a nearer value exists.**
+- 0.07 is the FDS Validation Guide's experimental uncertainty for a gas temperature (layer, ceiling jet, plume), which the suite carries (`tools/calibration/lib/stats.mjs`). 16.56 used it for a time and said so.
+- **Read today** in the FDS repository's table of the guide's scatter plots (`Utilities/Python/FDS_validation_scatterplot_inputs.csv`, column `Sigma_E`, in per cent): HGL temperature 7, HGL depth 5, ceiling jet 7, plume 7, O₂ 8, CO₂ 8, velocity 8, smoke obscuration 12, CO 19. For times: sprinkler activation time 6, **cable failure time (the measured time to a threshold temperature) 12**, smoke detector activation time 34, extinction time 10.
+- The suite's values for the quantities it shares with the guide agree with that table (0.07, 0.05, 0.08, 0.12, 0.19).
+- The guide's nearest quantity to "time to 60 °C" is the cable failure time, at 0.12. **16.56's rule is not changed after its result.** What 0.12 would do is small against scatters of 0.5 to 0.6: σ_M falls by about 0.01 (for 0.58: 0.57), and no word moves. A later section that reads crossing times again should fix 0.12 before it runs and name this as its source.
+
+**What is corrected by this.** 16.55's sentence on 880 nm, and the lines in `wiki/issues/` that called these three values unsourced. Of the three, only the third was borrowed; the first two were sourced and misreported.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.

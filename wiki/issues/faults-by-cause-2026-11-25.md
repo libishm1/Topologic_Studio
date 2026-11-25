@@ -7,7 +7,7 @@ A count of the faults found or fixed in the two days' work, each put under one c
 | Cause | Faults | Share |
 | --- | --- | --- |
 | B. A check made against a simplified case instead of the real thing | 7 | 30 % |
-| A. A value or fact taken from elsewhere, or from memory, without its source | 6 | 26 % |
+| A. A value or fact taken from elsewhere, or from memory, without checking its source | 6 | 26 % |
 | D. A setting or a piece of interface logic with no test | 4 | 17 % |
 | C. Text or evidence left stale after the code changed | 3 | 13 % |
 | E. A test that fails by chance or by machine load | 2 | 9 % |
@@ -28,8 +28,8 @@ A count of the faults found or fixed in the two days' work, each put under one c
 7. The smoke reducer assumed a thermocouple at the probe's own point; the data have it 2 cm away (plan 16.57).
 
 **A. Taken without its source (6)**
-8. Heptane's CO yield of 0.008 is the source's upper bound, used as the value (plan 16.55, 16.57).
-9. "880 nm" for the smoke meter: no instrument checked is at that wavelength; origin not found (plan 16.55).
+8. The uncertainty 0.07 for a crossing time was borrowed from the temperature; the guide's nearest value is 0.12 (plan 16.56, 16.59). Corrected 2026-11-25: this entry first named heptane's CO yield, which is sourced (plan 16.59).
+9. The plan said the origin of "880 nm" was not found, when the project's own literature note had it (plan 16.55, corrected in 16.59).
 10. The saved file for 0.27 m named from memory, wrongly (plan 16.57).
 11. IMO Test 10's placement of people written from memory, wrongly (PR 21).
 12. The stair and door node labels swapped in a diagnosis: the constants were assumed, not read.

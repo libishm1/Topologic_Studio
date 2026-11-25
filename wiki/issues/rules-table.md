@@ -40,7 +40,7 @@ Paths are from the repository root; `src/` is `topologicpy-web-frontend/src/`. A
 
 ## What the empty cells say
 
-- **R6 is a proposal, not a rule here.** It is kept in the table because three values found this week had no usable source: heptane's CO yield of 0.008 is the source's upper bound ("< 0.008") used as the value; the origin of "880 nm" for the smoke meter was never found; the uncertainty 0.07 for a crossing time was borrowed from the temperature. Most of this project's numbers do come from papers and standards by design (SFPE, ISO 13571, the test reports), so a rule against paper numbers would be wrong here; the narrower point is that each names where it came from. The owner decides whether that becomes a rule.
+- **R6 is a proposal, not a rule here.** Three values were named this week as having no usable source. Traced on 2026-11-25 (plan 16.59): heptane's CO yield of 0.008 is NIST SP 1013-1's and the value in FDS's own validation inputs; the 880 nm is the MIREX meter of Börger et al. 2024, recorded in this project's literature note; only the uncertainty 0.07 for a crossing time was borrowed, and the guide's nearest value is 0.12. So two of the three were sourced and misreported. The narrower point stands: a value should name where it came from at the place it is used. The owner decides whether that becomes a rule.
 - **R5, A3, G1, G2, G5 and G6 have no code at all.** G1 and G2 are the cheapest to close: one script in the repository, run by the tests, that scans committed prose.
 - **A1 has code but no test that pins the defaults,** so a default can change without any test failing.
 - Seven of the 18 rules (R6 set aside) have some enforcing code; two (R4, R7) have both code and a test on main; R4 will have all three once PR 26 is merged.
