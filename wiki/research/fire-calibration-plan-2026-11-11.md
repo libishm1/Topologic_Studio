@@ -9100,6 +9100,64 @@ The last part of 16.55's runs. The two R8 storing runs ended on 2026-11-25 at 07
 **What this says.** Item 8 does nothing for what the egress reads besides the layer's temperature near the fire. It leaves smoke timing, CO and the dose where they were and makes the far corridor slightly later. With 16.56 to 16.58 this closes the night's order of work (16.54): every quantity the egress reads has been measured against what data exist, on the solver on the site and on the gas-radiation variant, and none passes.
 
 
+### 16.61 After the FDS review: nine items and a verification suite, each rule fixed before it is built or run (2026-11-25)
+
+The user's word (2026-11-25): do all the actions the review recommends and all its verification cases (`wiki/research/fds-review-2026-11-25.md`). **Nothing below had been built or run when this was written.** The review's effect sizes are estimates; these items test them.
+
+**Rules for every item.**
+- A solver change sits behind its own switch, off by default. With the switch off the suite's output is identical on one test, shown before anything else.
+- An item's own checks and tools are committed before the commit that holds any result of it.
+- Each item is judged alone, from the solver at 98ca598, against the same arm without it. Items are not stacked until each has been judged.
+- A result is reported whatever it is. A rule below is not changed after its result. "Adopted" means only "kept for the next step"; nothing reaches the site without the full suite on three cells and the user's word.
+- No FDS code or table is copied. Constants taken from FDS or its guides are named with their source. Nothing of RadCal.
+- Full suite runs are queued by the coordinator, one at a time, at most 8 jobs.
+
+**Item 1. The pressure step (far field).** No code. Arms: the solver on the site (13.B) with the pressure step as it is (30 sweeps, 0.001 m/s) and tight (500 sweeps, 0.00001 m/s). Series: ATF and NBS. Cells: 0.34 m, then 0.27 m.
+- Logged in both arms: sweeps used, and the largest divergence error left after the step.
+- Read: the time to 60 °C (16.54's tool), the head-height temperature and the layer depth, for the two series.
+- **Supports the cause** if, on both cells, the misses do not rise, and the median of model over measured time at the far trees (NBS's corridor and target-room trees; ATF's trees beyond the first) moves toward 1 by at least a fifth of its distance in the logarithm, with the layer depth's word unchanged. Otherwise it does not. Either way the wall time is reported. Adoption is a later decision on the full suite.
+
+**Items 2 and 7. A verification suite of ten cases** (tests only, no solver change), from the FDS Verification Guide's descriptions:
+1. Isothermal through-flow: the largest divergence after the pressure step, each step. Pass: at or under the solver's own stopping bound converted to 1/s; the value is recorded.
+2. A block carried once across a periodic or through-flow box by a uniform velocity. Pass: values stay in [0, 1], total within 0.1 %; the L2 error is recorded.
+3. Solid-body rotation of a cosine profile on 16, 32 and 64 cells. The observed order is recorded for scalars and for velocity. No pass mark: it is a measurement.
+4. 16 kW into a sealed adiabatic 8 m³ box: 24 kPa at 30 s. Pass: within 2 %.
+5. Gas injected into a sealed box: +64,253 Pa, 1.365 kg/m³, 135.7 °C. Pass: within 2 %.
+6. 1 kg of a species injected is 1 kg found; mass fractions sum to 1. Pass: within 1 %, and within 10^-6.
+7. A reacting flow: each species' balance closes. Pass: the residual under 1 % of what is generated.
+8. A fire in a room with adiabatic walls: the mean enthalpy flow out equals the heat released. Pass: within 5 %.
+9. Radiation: the box's configuration factors, a bead between walls at 20 and 500 °C (380.3 °C), a plane layer. Pass: within 5 % (the bead within 5 K) at the default ray count, and the error falls as rays are added.
+10. A steady insulated steel plate: 1149 W/m² and each layer's temperature. Pass: within 1 %.
+- **A case that fails is recorded as failing.** Nothing in the solver is changed to pass it in this item. The expected answers are checked against the guide's text by the builder before any case is run.
+
+**Item 3. Temperatures read as a thermocouple bead**, as a second reading beside the present one. Post-processing; no solver change.
+- The bead: steady balance h (T_g - T_b) = ε σ (T_b⁴ - T_s⁴), diameter 1 mm, emissivity 0.85, h from the Ranz-Marshall relation with the model's own speed at the cell (FDS's bead, Technical Reference Guide; its lag of a few seconds is left out).
+- The surroundings T_s are not stored by the suite. Two readings bound it: T_s the mean of the nearest wall surface temperature if stored, else ambient (the largest correction), and T_s = T_g (none, the present reading).
+- Computed for the layer temperature, the ceiling jet and the head-height temperature on saved results where the speed is stored, else on one storing run.
+- **The words of record stay the present reading's.** The bead reading is reported beside them, quantity by quantity. Whether it becomes the reading of record is the user's decision after seeing both.
+
+**Item 4. An oxygen limit in combustion** (switch off by default). FDS's simplest form: no burning in a cell where the oxygen mass fraction is under Y_min (T_c - T) / (T_c - T_ambient), and free burning above 600 °C; T_c and Y_min per fuel from FDS's defaults, named.
+- Own checks: with air in excess, the heat released is unchanged within 1 %; a sealed box of fuel and air stops burning at the limit and keeps the oxygen the formula gives.
+- Judged on 0.34 m: O₂ at 1.84 m (UL FSRI and the chairs) and FSE's O₂. **Kept** if the head-height O₂ bias moves toward 1 by at least a fifth of its distance in the logarithm and no word of the suite worsens.
+
+**Item 5. CO in two steps** (switch off by default). One more transported quantity, the intermediate products: fuel carbon goes first to CO (two thirds, FDS's default) and soot; a second step burns them to the final yields with the oxygen left.
+- Own checks: with air in excess the final CO and soot are today's yields within 1 %; carbon, oxygen and energy close; with no oxygen left for the second step the CO equals the first step's.
+- Judged on 0.34 m, on the CO peaks of 16.57 with ISOHept26 counted where it runs: **kept** if FSE's heptane ratios (0.01 to 0.7 today) come within a factor of 3 of measured and NIST/NRC's stay within their present range (0.6 to 2.9), and no word of the suite worsens.
+
+**Item 6. Gas radiation at less cost** (two switches, off by default; only with item 8's gas radiation on).
+- (a) The stage every n-th step with the summed time. (b) One gray coefficient tabulated once from this project's own band tables at a fixed path length.
+- Own checks: with n = 1 and the banded model the output is identical to R8's; the gray table's emissivity against the banded model on 16.43's columns, reported (within 25 % asked).
+- Judged on 0.34 m against R8 (16.52): **equivalent** if the head-height temperature's pooled δ and σ_M are each within 0.03 of R8's, the layer temperature's likewise, and no final word differs. The wall time is reported; the aim is the 0.20 m cell inside 72 hours.
+
+**Item 8. Data.** Facts only, no run: open NBSIR 88-3752 and NIST TN 1455-1 for the heights of their smoke and gas instruments; prepare a data file for the DelCo Trainers (NIST TN 1953) if its data are public. A new series enters a comparison only under its own section. Downloaded files are data and stay out of the repository unless their licence allows.
+
+**Item 9. The app** (to main by a pull request, the user merging).
+- The asphyxiant dose in FDS's form (Purser's) as an option beside ISO 13571's, which stays the default. Tests: the FDS Verification Guide's FED values at fixed concentrations.
+- An entry lag for smoke detectors (Heskestad's length, 1.8 m over the speed), off by default. Test: the guide's closed form.
+
+**Order.** Items 1, 2, 3, 8 and 9 start now; they change no solver physics. Items 4, 5 and 6 are built and pass their own checks now; their suite runs are queued after item 1's. Results are recorded here as 16.62 onward, item by item.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
