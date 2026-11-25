@@ -9158,6 +9158,47 @@ The user's word (2026-11-25): do all the actions the review recommends and all i
 **Order.** Items 1, 2, 3, 8 and 9 start now; they change no solver physics. Items 4, 5 and 6 are built and pass their own checks now; their suite runs are queued after item 1's. Results are recorded here as 16.62 onward, item by item.
 
 
+### 16.62 The verification suite's first run: 2 of 9 judged cases pass; and item 9 (2026-11-25)
+
+16.61's items 2 and 7. An agent built the ten cases, a runner and a unit test and ran them on the solver at 98ca598, changing nothing in the solver (branch `flamescapes/verification-suite`: cases before any run 44f9fd6, known failures marked 46fef3f, result ca1bb93; `benchmark/results/2026-11-25-verification-suite.json`). It checked the expected answers against the FDS Verification Guide's text before running. **The figures are the agent's; the coordinator has not rerun the suite.** No mark was changed after a result.
+
+| Case | Expected | Got | Verdict |
+| --- | --- | --- | --- |
+| 1. Divergence left after the pressure step (1 m cube, 16 cells) | at most 0.016 1/s | 1.5 x 10^-6 with no blocks; 0.56 on the first step and a median of 0.078 with three blocks | fail |
+| 2. A block carried 1 m | in [0, 1], total 1 | bounds kept, total to 2 x 10^-9 | pass |
+| 3. Rotation, 16/32/64 cells | a measurement | scalar order 1.88 and 1.68; **velocity order 0.45 and 0.60** | recorded |
+| 4. 16 kW into a sealed 8 m³ box, 30 s | 24 kPa | 20.76 kPa (13.5 % low) | fail |
+| 5. Hot gas injected into a sealed box | +64,253 Pa, 135.7 °C | +44,189 to +53,033 Pa; 86 to 108 °C | fail |
+| 6. 1 kg of a species injected | 1 kg | 0.589 kg found; fractions sum exactly | fail |
+| 7. Reacting flow, species balances | under 1 % | 5.8 % sealed, 3.5 % open | fail |
+| 8. Adiabatic room, enthalpy out against 1200 kW | within 5 % | 1090 kW in the window fixed beforehand (9.2 % low) | fail |
+| 9. Radiation at the default 8 rays | 5 %; bead 5 K | factors 13 % low; bead 8.4 K low; a thick layer 60 % high | fail |
+| 10. Steady insulated steel plate | 1149 W/m² and four temperatures | within 0.6 % | pass |
+
+**What the failures say (the agent's diagnosis; none is yet a tested cause).**
+- **Cases 4, 5, 6: a local source fails where the same source spread over every cell is exact** (23.92 kPa; +64,311 Pa; 1.000 kg). A strong local plume loses heat (13 % also with 500 sweeps), and a local mass source dilutes its species: the zone's total mass is right, the species' is not.
+- **Case 7:** every product is found about 5.5 % short.
+- **Case 8** fails in the window fixed beforehand, while the room was still warming; over 300 to 360 s (recorded, not judged) it is 2.2 % low.
+- **Case 9:** with the surface-ray start of R8b (recorded) the factors are 1.2 % off and the bead 0.8 K. The default's error does not fall with more rays.
+- **Case 3: the velocity is carried at an order near one half.** A ring vortex keeps 34, 49 and 65 % of its kinetic energy on 16, 32 and 64 cells. Scalars are close to second order.
+
+**The corridor measurement, which bears on item 1** (50 cells of 0.34 m, 100 kW at the closed end, 60 s):
+
+| Pressure setting | Largest divergence left | Flow out of the open end against the expansion asked | Wall time |
+| --- | --- | --- | --- |
+| 30 sweeps, 0.001 m/s | 0.031 1/s | 21 % short | 1 |
+| 500 sweeps, 0.00001 m/s | 0.0017 1/s | 0.5 % short | 2.8 |
+
+- **The review's estimate holds as far as the flow goes: the default step leaves a fifth of the expansion undelivered at the far end of a corridor.**
+- **But the arrival of a 10 K rise under the ceiling barely moves** (17.7 against 18.0 s at mid-corridor, 30.5 against 30.4 s near the end). On this simple case a tighter pressure step does not by itself bring the front sooner. Item 1's runs on ATF and NBS decide for the measured fires; this is a warning not to expect much.
+
+**What could not be set up as the guide has it:** no inlet, periodic or mass-flux boundary; no fixed velocity field; no bead model; no gas radiation without soot. The agent's substitutes and their exact answers are in its cases file. Sizes the guide's text does not give (doors, yields, optical depths) are the agent's.
+
+**What follows, proposed and not started.** The failures of cases 4 to 7 are conservation faults at a local source, in a solver whose layer depth is right and whose temperatures read high. Each needs its own diagnosis before any fix, and each fix its own rule. They are added to the open items. The suite stays as it is, with its failures marked, and is rerun on every solver change from here on.
+
+**Item 9 (the app).** Built and opened as pull request 27 (`feature/purser-dose-detector-lag`, 7f3c809): the asphyxiant dose in Purser's form as an option and an entry lag for smoke detectors, both off by default, the default shown bit for bit unchanged; tests on FDS's own expected values for its O₂, CO₂, CO case (FDS's input file, 34,306 ppm of CO₂, where the guide's table prints 343,066). The agent's report: 571 of 572 unit tests (the one failure a wall-clock test that passes alone), lint and build clean. The detector lag's GPU path was not run in a browser.
+
+
 ## 17. The materials and furniture study (pre-registered 2026-11-15, before any study run)
 
 This is the study of the results paper (CDRF 2027; 16.7), on branch `study/materials`: 16.9's features (a) to (c) (c0329da), the runner `tools/studies/materials-study.mjs` (946466f) and the parametric family `tools/studies/parametric_family.py` (2bea556). With their options unset, every output is bit-identical: the fingerprints stay d62b581d and 29793d1a, and the unit suite passes 548 of 548.
