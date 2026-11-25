@@ -3623,6 +3623,23 @@ export function SimulatePanel({
               onChange={(flamescapesSmoke) => setSettings({ flamescapesSmoke })}
               hint="Visibility below the limit closes a node for the plan, as gas above the temperature does."
             />
+            {/* Both only here, with a Flamescapes fire: the graph fires give no gases and have no detectors. */}
+            <SelectField
+              label="Toxic gas dose"
+              value={settings.doseForm}
+              onChange={(doseForm) => setSettings({ doseForm })}
+              options={[
+                { value: "iso13571", label: "ISO 13571 (default)" },
+                { value: "purser", label: "Purser, as FDS" },
+              ]}
+              hint="How the dose from CO, CO₂ and low oxygen is added up: ISO 13571's sum, or Purser's as FDS computes it (light work), which counts CO₂'s faster breathing at every level."
+            />
+            <Toggle
+              label="Smoke detectors respond with a delay"
+              checked={settings.detectorEntryLag}
+              onChange={(detectorEntryLag) => setSettings({ detectorEntryLag })}
+              hint="Off by default: a detector reads the smoke around it. On, it reads the smoke inside its chamber, which fills more slowly the slower the gas moves past (Heskestad's 1.8 m length, as FDS). Applies from the next run."
+            />
             <SelectField
               label="Run on"
               value={settings.flamescapesBackend}

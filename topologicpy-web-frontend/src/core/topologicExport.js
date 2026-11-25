@@ -16,7 +16,7 @@
  * lift are undone, and the properties say so.
  */
 
-import { FED_CRIT, SOOT_EXTINCTION_G, tenabilityTracker } from "./tenability.js";
+import { DOSE_PURSER, FED_CRIT, SOOT_EXTINCTION_G, tenabilityTracker } from "./tenability.js";
 
 const KIND_NAMES = ["floor", "stair", "door", "lift"];
 const TURNS = {
@@ -92,7 +92,8 @@ export function viewerToIfc(points, change) {
  *   route         node indices of the route on screen, start to exit, or null
  *   frames        a Flamescapes run's frames ({time, T, vis, co, hrr}), or null
  *   burning       the graph fire models' burning nodes at the end of the run, or null
- *   tenability    {untenableC, smoke, visibilityLimit, fedCrit}: when a node counts as untenable
+ *   tenability    {untenableC, smoke, visibilityLimit, fedCrit, doseForm}: when a node counts as untenable
+ *                 (doseForm "purser": the asphyxiant dose as FDS integrates it, and the graph says so)
  *   properties    anything else the graph should carry (file, fire model, settings)
  */
 export function topologicGraph({ graph, coordination = null, route = null, frames = null, burning = null, tenability = {}, properties = {} }) {
@@ -101,14 +102,15 @@ export function topologicGraph({ graph, coordination = null, route = null, frame
   const ifc = viewerToIfc(graph.points, change);
   const n = graph.points.length / 3;
   const onRoute = new Map((route || []).map((v, i) => [v, i]));
-  const { untenableC = 60, smoke = true, visibilityLimit = 10, fedCrit } = tenability;
+  const { untenableC = 60, smoke = true, visibilityLimit = 10, fedCrit, doseForm } = tenability;
+  const purser = doseForm === DOSE_PURSER;
   const K = frames?.length || 0;
   // Soot, CO2 and O2 when the run recorded them; the tenability index and its
   // doses (core/tenability.js) from the frames, in order.
   const extras = Boolean(K && frames[0].soot && frames[0].co2 && frames[0].o2);
   let ti = null, tracker = null;
   if (K) {
-    tracker = tenabilityTracker(n, { limitC: untenableC, smoke, visibilityLimit, fedCrit });
+    tracker = tenabilityTracker(n, { limitC: untenableC, smoke, visibilityLimit, fedCrit, doseForm });
     let before = 0;
     ti = frames.map((f) => {
       const minutes = Math.max(0, f.time - before) / 60;
@@ -195,8 +197,11 @@ export function topologicGraph({ graph, coordination = null, route = null, frame
             smoke_untenable: smoke ? 1 : 0,
             visibility_limit_m: visibilityLimit,
             measures: extras ? "gas temperature, visibility, CO, soot, CO2, O2" : "gas temperature, visibility, CO",
-            tenability_method:
-              "Tenability index: the largest share of a limit reached (ISO 13571 cl. 4.1): gas temperature against untenable_C, visibility_limit_m over visibility, and the asphyxiant dose (CO / 35000 per min, times exp(CO2 / 5) above 2 % CO2, plus Purser's low-O2 dose) and convected-heat dose (T^3.4 / 5e7 per min) against fed_crit. Doses are summed over frames.",
+            tenability_method: purser
+              ? "Tenability index: the largest share of a limit reached (ISO 13571 cl. 4.1): gas temperature against untenable_C, visibility_limit_m over visibility, and the asphyxiant dose in Purser's form as FDS integrates it (2.764e-5 CO^1.036 per min for light work, times exp(0.1903 CO2 + 2.0004) / 7.1, plus the low-O2 dose below 20 % O2; CO, CO2 and O2 only) and convected-heat dose (T^3.4 / 5e7 per min) against fed_crit. Doses are summed over frames."
+              : "Tenability index: the largest share of a limit reached (ISO 13571 cl. 4.1): gas temperature against untenable_C, visibility_limit_m over visibility, and the asphyxiant dose (CO / 35000 per min, times exp(CO2 / 5) above 2 % CO2, plus Purser's low-O2 dose) and convected-heat dose (T^3.4 / 5e7 per min) against fed_crit. Doses are summed over frames.",
+            // Only when not the default, so a graph exported with ISO's dose reads as before.
+            ...(purser ? { dose_form: DOSE_PURSER } : {}),
             fed_crit: fedCrit ?? FED_CRIT,
             soot_extinction_m2_g: SOOT_EXTINCTION_G,
             visibility_sign_constant: 3,

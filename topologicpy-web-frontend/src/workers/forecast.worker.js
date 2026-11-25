@@ -75,7 +75,7 @@ self.onmessage = (event) => {
       return;
     }
     const t0 = performance.now();
-    const { graph: g, start, exits, seed, model, steps, secondsPerStep, threshold, speed, depart, limit, useWalls, withMap, blockNearExit, zone, frames } = payload;
+    const { graph: g, start, exits, seed, model, steps, secondsPerStep, threshold, speed, depart, limit, doseForm, useWalls, withMap, blockNearExit, zone, frames } = payload;
     const graph = { nodes: g.nodes, edges: g.edges, blocked: g.blocked };
     const blocked = useWalls ? graph.blocked : null;
     let forecast, zoneSummary = null, coverage = null, detection = null, ceiling = null;
@@ -93,7 +93,8 @@ self.onmessage = (event) => {
       zoneSummary = { ...forecast.zone, roomStats: rooms.stats };
     } else if (model === "flamescapes" || model === "flamescapes-embers") {
       if (!frames) throw new Error("Run the Flamescapes fire first.");
-      forecast = forecastFromFrames(frames, { threshold, smoke: frames.smoke, visibilityLimit: frames.visibilityLimit, fedCrit: limit });
+      // The asphyxiant dose's form (core/tenability.js): ISO 13571's unless the page asks for Purser's.
+      forecast = forecastFromFrames(frames, { threshold, smoke: frames.smoke, visibilityLimit: frames.visibilityLimit, fedCrit: limit, doseForm });
       coverage = { clipped: Boolean(frames.clipped), inGrid: frames.inGrid ?? 1 };
       // For the performance check (core/performanceCheck.js): the ceiling
       // detectors when the run read them, else smoke at head height.

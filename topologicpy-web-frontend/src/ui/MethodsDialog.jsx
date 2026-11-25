@@ -280,7 +280,9 @@ export function MethodsDialog({ open, onClose, studio }) {
                     each hazard: the gas temperature against the untenable temperature (60 °C by default); the visibility limit (10 m, or 5 m
                     in small rooms, PD 7974-6) over the visibility; the asphyxiant dose, the sum over minutes of CO / 35 000 ppm, times
                     exp(CO₂ / 5) above 2 % CO₂ (ISO 13571), plus Purser&apos;s low-oxygen dose 1 / exp(8.13 − 0.54 (20.9 − O₂)) (as in FDS),
-                    against FED 0.3 (ISO 13571&apos;s threshold for general occupancies); and the convected-heat dose, the sum of T<sup>3.4</sup>{" "}
+                    against FED 0.3 (ISO 13571&apos;s threshold for general occupancies), or, as an option, the dose in the form FDS uses after
+                    Purser, 2.764×10<sup>−5</sup> CO<sup>1.036</sup> per minute for light work times exp(0.1903 CO₂ + 2.0004) / 7.1, plus the
+                    low-oxygen dose below 20 % O₂; and the convected-heat dose, the sum of T<sup>3.4</sup>{" "}
                     / 5×10<sup>7</sup> per minute, against the same 0.3. At 1 a place is untenable; the plan closes nodes on the same four.
                     Left out because the solver does not give them: radiant heat at head height, irritant gases and HCN, and particle sizes
                     (no PM2.5 or PM10). The inputs come from an uncalibrated simulation, so the index ranks places and times under the model;

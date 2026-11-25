@@ -95,6 +95,9 @@ export const DEFAULT_SETTINGS = {
   walkSpeed: 1.2,
   untenableAbove: 80,
   doseLimit: 0.3,
+  // The asphyxiant dose's form with a Flamescapes fire (core/tenability.js):
+  // "iso13571" (the default) or "purser", the one FDS integrates.
+  doseForm: "iso13571",
   departAfter: 0,
   // "model": every exit door the IFC marks (or, failing that, doors with floor
   // on one side); "picked": the exit picked in the Route step.
@@ -197,6 +200,10 @@ export const DEFAULT_SETTINGS = {
   flamescapesUntenableC: 60, // gas at head height
   flamescapesSmoke: true, // visibility below the limit is untenable
   flamescapesVisibility: 10, // m
+  // Smoke detectors read the smoke in their chamber, which follows the smoke
+  // outside with Heskestad's entry lag (core/tenability.js chamberStep). Off
+  // by default: a detector reads the smoke at its cell.
+  detectorEntryLag: false,
   flamescapesBackend: "auto", // "auto" (WebGPU where offered) or "cpu"
   // The fire's grid: "standard", the same budget on every device so a GPU
   // and a CPU give the same fire (lib/hardware.js STANDARD_CELLS; a phone's
@@ -297,6 +304,7 @@ export const PLAN_SETTINGS = [
   "walkSpeed",
   "departAfter",
   "doseLimit",
+  "doseForm",
   "useWalls",
   "forecastExits",
   "zoneGrowth",
@@ -359,6 +367,7 @@ export const RUN_SETTINGS = [
   "sprinklerOpenOn",
   "suppressionSystems",
   "systemsAgentOnly",
+  "detectorEntryLag",
 ];
 
 /** Whether the loaded model has IfcSpace rooms, which the two-zone fire model needs. */

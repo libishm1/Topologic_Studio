@@ -39,6 +39,7 @@
 import { DEFAULTS, NS, SPECIES, MOLAR, SOLID as SOLID_KIND, burnerRate, cellSpeed, createSolver, flameHeight, healthReadings, healthVerdict, poolCap, step, substepsFor } from "./flamescapes.js";
 import { EVANS_MIN_DENSITY, activationFrame, activationSummary, createActivation, createSuppression, evansTau, openHeads, sprinklerSetup } from "./suppression.js";
 import { systemsDetect, systemsSetup, systemsSummary } from "./suppressionSystems.js";
+import { detectorChambers } from "./tenability.js";
 import { MATERIAL, gridFor, interiorCells, interiorFuel, occupancy, raysFor, rng, toLocal, toWorld, volumeFractions } from "./voxelize.js";
 // The CO dose and the forecast from frames live in forecast.js, so the
 // forecast worker does not load the solver; re-exported here.
@@ -790,8 +791,13 @@ export function sprinklerResult(run) {
  * {T (K), u (m/s)}. With `systems` (systemsRun), each frame's `systems`
  * says which rooms were detected in it and which have discharged, and the
  * result's `systems.rooms` when each was detected, discharged and what it did.
+ * With `detectorEntryLag` (off by default) the ceiling detectors and the
+ * systems' detectors read the smoke in their chambers, which follows the
+ * smoke at their cells with Heskestad's entry lag at the gas speed there
+ * (tenability.js chamberStep, a frame at a time): `detectors` and
+ * `detectorVis` are then the chambers' visibility.
  */
-export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true, sprinklers = null, sensorGas = false, systems = null } = {}) {
+export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, profileInto = null, keep = true, sprinklers = null, sensorGas = false, systems = null, detectorEntryLag = false } = {}) {
   const sim = createSolver(scene, { contentsFuel: scene.fuels.contentsFuel, ignitionFuel: scene.fuels.ignitionFuel, embers, dt, seed: 1, ...solverOptions });
   // Per-stage timing for the benchmark (tools/fire-bench.mjs).
   if (profileInto) sim.profile = profileInto;
@@ -814,6 +820,9 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
   const co2 = new Float32Array(rows * n);
   const o2 = new Float32Array(rows * n);
   const detectorVis = new Float32Array(rows * D);
+  // The detectors' chambers, only with the entry lag: none of this exists without it.
+  const chambers = detectorEntryLag ? { ceiling: detectorChambers(D), systems: sys ? detectorChambers(sys.detectorCells.length) : null } : null;
+  const speedsAt = (list) => Float64Array.from(list, (c) => (c >= 0 ? cellSpeed(sim, c) : 0));
   const hrr = new Float32Array(K);
   let released = 0;
   // Proposals A and B: each frame's steps cut by the frame before's fastest
@@ -839,7 +848,10 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
     const at = (a) => a.subarray(row * n, (row + 1) * n);
     const frame = readNodes(sim, cells, { T: at(T), vis: at(vis), co: at(co), soot: at(soot), co2: at(co2), o2: at(o2) });
     const atDetectors = detectorVis.subarray(row * D, (row + 1) * D);
-    if (D) atDetectors.set(readNodes(sim, detectors.cells).vis);
+    if (D) {
+      const read = readNodes(sim, detectors.cells);
+      atDetectors.set(chambers ? chambers.ceiling.step(read.soot, speedsAt(detectors.cells), frameSeconds) : read.vis);
+    }
     hrr[k] = (sim.stats.released - released) / frameSeconds / 1000;
     released = sim.stats.released;
     let sprinkled = null;
@@ -850,7 +862,11 @@ export function runScene(scene, { nodes, upAxis = "y", agentHeight = 0.75, headH
       sprinkled = sprinklerFrame(spr, { t0: end - frameSeconds, t1: end, T: Tk, u, hrr: hrr[k] });
       if (sensorGas) sprinkled.gas = { T: Tk, u };
     }
-    const flooded = sys ? systemsFrame(sys, { t1: end, vis: readNodes(sim, sys.detectorCells).vis }) : null;
+    let flooded = null;
+    if (sys) {
+      const read = readNodes(sim, sys.detectorCells);
+      flooded = systemsFrame(sys, { t1: end, vis: chambers ? chambers.systems.step(read.soot, speedsAt(sys.detectorCells), frameSeconds) : read.vis });
+    }
     itemSuppression(sim, spr, sys, end);
     onFrame?.({
       k,

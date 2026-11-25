@@ -45,6 +45,7 @@
  */
 
 import { DEFAULTS, NS, burnerHeat, createSolver, healthReadings, healthVerdict, substepsFor, surfaceFloorOf, topology, ventLeakList, warmRaysOf, zoneState } from "./flamescapes.js";
+import { detectorChambers } from "./tenability.js";
 import {
   KELVIN, ceilingDetectors, failedHealth, headCells, itemResult, itemSuppression, smokeCloud, sprinklerFrame, sprinklerResult, sprinklerRun, systemsFrame, systemsResult, systemsRun, withBurnerFlame, withDetectors, runScene as cpuRunScene,
 } from "./flamescapesRun.js";
@@ -179,7 +180,8 @@ class GpuSim {
    * opts: nodeCells (Int32Array, -1 outside), snapMax (particles per snapshot),
    *       slots (steps per frame to keep separately); for sprinklers,
    *       speedFrom (the first of nodeCells whose gas speed is read: the
-   *       heads' sensor cells, last) and suppression ({columns, eta}: the
+   *       heads' sensor cells, last; with the detectors' entry lag, from the
+   *       detectors on) and suppression ({columns, eta}: the
    *       `sup` buffer for Evans and the spray; null for none); systems
    *       (suppressionSystems.js systemsSetup: the `sys` buffer for flooded
    *       and foamed rooms; null for none); flameFrom (where a design-fire
@@ -1108,7 +1110,7 @@ function supported(sim) {
  * rebuilds the scene on the CPU's own budget instead.
  */
 async function runSceneGpu(ctx, scene, opts = {}) {
-  const { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, keep = true, cpuFallback = true } = opts;
+  const { nodes, agentHeight = 0.75, headHeight = 1.8, horizon = 300, frameSeconds = 5, embers = false, dt = DEFAULTS.dt, onFrame = null, shouldStop = null, particles = 3000, smoke = false, solverOptions = {}, keep = true, cpuFallback = true, detectorEntryLag = false } = opts;
   const fallback = (why) => {
     if (cpuFallback) return cpuRunScene(scene, opts);
     throw new Error(why);
@@ -1130,6 +1132,12 @@ async function runSceneGpu(ctx, scene, opts = {}) {
   const B = flame.length;
   const spr = sprinklerRun(scene, sim, opts.sprinklers, opts.upAxis);
   const S = spr ? spr.sensors.length : 0;
+  // With the detectors' entry lag (tenability.js chamberStep; off by default)
+  // the gas speed is read from the detectors on, not only at the sensor
+  // cells, and the sensors' speeds then start `speedSkip` in. Without it
+  // the readback is as it was.
+  const chambers = detectorEntryLag ? { ceiling: detectorChambers(D), systems: sys ? detectorChambers(Ds) : null } : null;
+  const speedSkip = chambers ? D + Ds + B : 0;
   const suppression = spr && spr.sup.mode !== "activation" ? { columns: spr.setup.heads.reduce((a, h) => a + h.columns.length / 2, 0), eta: spr.sup.eta, wet: spr.sup.wet } : null;
   const K = Math.max(1, Math.round(horizon / frameSeconds));
   let gpu;
@@ -1142,7 +1150,7 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       snapMax: particles || 0,
       // A frame's steps may be cut into up to maxSubsteps each (substepsFor).
       slots: Math.ceil(frameSeconds / dt) * Math.max(1, sim.P.maxSubsteps || 1) + 2,
-      speedFrom: n + D + Ds + B,
+      speedFrom: n + D + Ds + B - speedSkip,
       suppression,
       systems: sys,
       flameFrom: B ? n + D + Ds : null,
@@ -1210,7 +1218,10 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       soot.set(nodesOf(frame.soot), row * n);
       co2.set(nodesOf(frame.co2), row * n);
       o2.set(nodesOf(frame.o2), row * n);
-      if (D) detectorVis.set(frame.vis.subarray(n, n + D), row * D);
+      if (D) {
+        if (chambers) chambers.ceiling.step(frame.soot.subarray(n, n + D), frame.speed.subarray(0, D), frameSeconds, detectorVis.subarray(row * D, (row + 1) * D));
+        else detectorVis.set(frame.vis.subarray(n, n + D), row * D);
+      }
       hrr[k] = frame.released / frameSeconds / 1000;
       stats.released += frame.released;
       stats.burnt += frame.burnt;
@@ -1232,12 +1243,13 @@ async function runSceneGpu(ctx, scene, opts = {}) {
       if (spr) {
         spr.sup.stats.emitted += spr.sup.columns.reduce((a, col) => a + col.flux, 0) * frameSeconds;
         const Tk = Float64Array.from(frame.T.subarray(n + D + Ds + B, n + D + Ds + B + S), (t) => t + KELVIN);
-        sprinkled = sprinklerFrame(spr, { t0: end - frameSeconds, t1: end, T: Tk, u: frame.speed, hrr: hrr[k] });
+        sprinkled = sprinklerFrame(spr, { t0: end - frameSeconds, t1: end, T: Tk, u: speedSkip ? frame.speed.subarray(speedSkip) : frame.speed, hrr: hrr[k] });
         if (sprinkled.changed) gpu.applySuppression(spr.sup, sprinkled.changed);
       }
       // Flooded and foamed rooms: detection at their detectors; each step's
       // state follows from the discharge times (GpuSim.step).
-      const flooded = sys ? systemsFrame(sys, { t1: end, vis: frame.vis.subarray(n + D, n + D + Ds) }) : null;
+      const sysVis = !sys ? null : chambers ? chambers.systems.step(frame.soot.subarray(n + D, n + D + Ds), frame.speed.subarray(D, D + Ds), frameSeconds) : frame.vis.subarray(n + D, n + D + Ds);
+      const flooded = sys ? systemsFrame(sys, { t1: end, vis: sysVis }) : null;
       itemSuppression(sim, spr, sys, end);
       onFrame?.({
         k,
