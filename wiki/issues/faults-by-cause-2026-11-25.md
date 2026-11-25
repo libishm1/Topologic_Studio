@@ -44,7 +44,7 @@ A count of the faults found or fixed in the two days' work, each put under one c
 **C. Stale text or evidence (3)**
 18. Eighteen inconsistencies in the guide (PR 15).
 19. Stale text inside the app (PR 16).
-20. The stored people-model result file says 25 pass where the claim is 28 (open item 19).
+20. The stored people-model result file says 25 pass where the claim is 28 (open item 19; PR 26).
 
 **E. Tests that fail by chance or load (2)**
 21. A population test failed by sampling chance in quick mode (fixed with fixed seeds).
@@ -58,7 +58,7 @@ A count of the faults found or fixed in the two days' work, each put under one c
 | Cause | The cheapest guard | Rule it would protect (rules table) |
 | --- | --- | --- |
 | B | Every option and every drawing change is run on the seven example buildings before merge, by a script, not by hand | A2 |
-| A | Every default and every fuel property names its source in the code, and a test fails where one is missing | R6 |
+| A | Every default and every fuel property names its source in the code, and a test fails where one is missing | R6 (a proposal, not adopted) |
 | D | A test that pins the default settings and one for each setting's wiring | A1, R8 |
 | C | The guide check and the result files regenerated in the same PR as the change they describe | R4, R5 |
 

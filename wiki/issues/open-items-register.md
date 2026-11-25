@@ -8,7 +8,7 @@ An item is closed only when its closing evidence exists (a merged PR, a plan sec
 
 | Week ending | Open at start | Opened | Closed | Open at end | Closed of all handled |
 | --- | --- | --- | --- | --- | --- |
-| 2026-11-25 | n/a (first count) | 32 | 13 | 19 | 41 % |
+| 2026-11-25 | n/a (first count) | 32 | 13 | 19 | 41 % (item 19 has a PR open, not merged) |
 
 ## Open
 
@@ -32,7 +32,7 @@ An item is closed only when its closing evidence exists (a merged PR, a plan sec
 | 16 | PR 10 (RL card) open since 2026-11-15 | repo | 2026-11-15 | the user's decision | none |
 | 17 | `burnoutHeat` default; item 15, second attempt | solver | 2026-11-15 | the user's decision | F15 |
 | 18 | A timing test fails only when the machine is loaded | tests | 2026-11-24 | a looser or isolated test | none |
-| 19 | No stored result file for the people model at 28 of 29 (the stored one says 25 pass, 1 fail) | people | 2026-11-25 | one harness run with `--passage-flow`, written and committed | P1 |
+| 19 | No stored result file for the people model at 28 of 29 | people | 2026-11-25 | **PR 26 to be merged** (the run is done: 28 pass, 1 fail; 25 pass, 4 fail with capacity off) | P1 |
 
 ## Closed this week
 

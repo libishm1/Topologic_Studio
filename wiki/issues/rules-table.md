@@ -11,9 +11,9 @@ Paths are from the repository root; `src/` is `topologicpy-web-frontend/src/`. A
 | R1 | "Calibrated" only when a quantity passes the band (0.8 to 1.25, scatter at most 0.35) on every reading; the strictest word is the one reported | `tools/calibration/validation-suite.mjs` with `tools/calibration/lib/stats.mjs` | not looked up | the result files' final words; the comparison script's recomputation of 1956 stored values (plan 16.58) |
 | R2 | A rule for a comparison is written into the plan before the run it judges | none (commit order only) | none | plan sections 16.54 and 16.55 before 16.56 and 16.57; tool commits before result commits |
 | R3 | A stored rerun must reproduce the saved result before anything new is read from it | `tools/calibration/tenability-species.mjs pairs` (branch `flamescapes/head-height-species`, not on main) | its own tests on that branch (37) | plan 16.57, the pairs check |
-| R4 | The people model's failing test cases are exactly the known list | `tools/validation/crowd-validation.mjs` | `src/core/crowdValidation.test.mjs` | none at the current count (open item 19) |
+| R4 | The people model's failing test cases are exactly the known list | `tools/validation/crowd-validation.mjs` | `src/core/crowdValidation.test.mjs` | `benchmark/results/2026-11-25-crowd-validation-passage-flow.json` (PR 26, not yet merged) |
 | R5 | A claim is made only if it has a row in `claims-traceability.md` | none | none | none |
-| R6 | **A default value in the app carries its source, and a number from a paper is a default only if the paper's conditions cover ours** | none | none | none |
+| R6 | *Proposed, not a ruling of this project (the owner doubts it applies here):* a default value carries its source | none | none | none |
 | R7 | The tenability formulas are the standard's (ISO 13571), not our own | `src/core/tenability.js` | `src/core/tenability.test.mjs` | none stored |
 | R8 | The dose limit the user sets is the one every dose reading uses | `src/core/tenability.js` and its callers (PR 17) | not looked up | PR 17 |
 
@@ -40,10 +40,10 @@ Paths are from the repository root; `src/` is `topologicpy-web-frontend/src/`. A
 
 ## What the empty cells say
 
-- **R6 is unprotected in all three cells, and it is the rule with known breaches.** Found this week: heptane's CO yield of 0.008 is the source's upper bound ("< 0.008") used as the value; the origin of "880 nm" for the smoke meter was never found; the uncertainty 0.07 for a crossing time was borrowed from the temperature. A check that every default and every yield names its source would have listed these.
+- **R6 is a proposal, not a rule here.** It is kept in the table because three values found this week had no usable source: heptane's CO yield of 0.008 is the source's upper bound ("< 0.008") used as the value; the origin of "880 nm" for the smoke meter was never found; the uncertainty 0.07 for a crossing time was borrowed from the temperature. Most of this project's numbers do come from papers and standards by design (SFPE, ISO 13571, the test reports), so a rule against paper numbers would be wrong here; the narrower point is that each names where it came from. The owner decides whether that becomes a rule.
 - **R5, A3, G1, G2, G5 and G6 have no code at all.** G1 and G2 are the cheapest to close: one script in the repository, run by the tests, that scans committed prose.
 - **A1 has code but no test that pins the defaults,** so a default can change without any test failing.
-- Seven of the 19 rules have some enforcing code; two (R4, R7) have both code and a test on main; none has all three cells filled without a caveat.
+- Seven of the 18 rules (R6 set aside) have some enforcing code; two (R4, R7) have both code and a test on main; R4 will have all three once PR 26 is merged.
 
 ## Keeping it
 
